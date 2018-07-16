@@ -38,7 +38,7 @@
         </dependency>
         <dependency>
             <groupId>com.alibaba.dubbo</groupId>
-            <artifactId>registry-api</artifactId>
+            <artifactId>kubernetes-registry-api</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
