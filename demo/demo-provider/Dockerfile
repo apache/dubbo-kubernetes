@@ -4,6 +4,6 @@ COPY target/lib /app/lib
 COPY target/echo-client-lb-api-1.0-SNAPSHOT.jar /app/echo-client-lb-api.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/echo-client-lb-api.jar"]
+ENTRYPOINT ["java", "-jar", "/app/kubernetes-demo-provider-1.0.0-SNAPSHOT.jar"]
  
 
