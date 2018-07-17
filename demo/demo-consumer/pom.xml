@@ -153,10 +153,47 @@
         </extensions>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>com.alibaba.dubbo.demo.consumer.Consumer</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+
+
+                            <!--指定outputDirectory-->
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+
+
+                            <!--
+                                <outputDirectory>${project.build.directory}/classes/lib</outputDirectory>
+                                Alternatively use ${project.build.directory}/classes/lib as OutputDirectory to integrate all jar-files into the main jar, but then you will need to add custom classloading code to load the jars.
+                                -->
+
+
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
