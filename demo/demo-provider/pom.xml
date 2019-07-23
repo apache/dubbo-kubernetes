@@ -74,10 +74,12 @@
         <dependency>
             <groupId>com.thoughtworks.xstream</groupId>
             <artifactId>xstream</artifactId>
+            <version>1.4.11.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.bsf</groupId>
             <artifactId>bsf-api</artifactId>
+            <version>3.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.zookeeper</groupId>
@@ -86,10 +88,12 @@
         <dependency>
             <groupId>com.github.sgroschupf</groupId>
             <artifactId>zkclient</artifactId>
+            <version>0.1</version>
         </dependency>
         <dependency>
             <groupId>com.netflix.curator</groupId>
             <artifactId>curator-framework</artifactId>
+            <version>1.3.3</version>
         </dependency>
         <dependency>
             <groupId>com.googlecode.xmemcached</groupId>
@@ -114,6 +118,8 @@
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.mortbay.jetty</groupId>
@@ -162,7 +168,7 @@
                                 <!-- add Main-Class to manifest file -->
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.alibaba.dubbo.demo.consumer.Provider</mainClass>
+                                    <mainClass>com.alibaba.dubbo.demo.provider.Provider</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>
