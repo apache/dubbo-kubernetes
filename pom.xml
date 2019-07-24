@@ -22,6 +22,14 @@
         <skip_maven_deploy>false</skip_maven_deploy>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>dubbo</artifactId>
+            <version>2.6.1</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>
