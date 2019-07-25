@@ -66,11 +66,11 @@ public class KubernetesRegistry extends FailbackRegistry {
     @Override
     protected void doSubscribe(final URL url, final NotifyListener notifyListener) {
         String[] serviceDesc = url.getServiceKey().split("\\.");
-        String kubernateTarget = System.getenv(serviceDesc[serviceDesc.length - 1] + "_target");
-        if (StringUtils.isEmpty(kubernateTarget)) {
+        String kubernatesTarget = System.getenv(serviceDesc[serviceDesc.length - 1] + "_target");
+        if (StringUtils.isEmpty(kubernatesTarget)) {
             return;
         }
-        URI targetUri = URI.create(kubernateTarget);
+        URI targetUri = URI.create(kubernatesTarget);
         String targetPath = Preconditions.checkNotNull(targetUri.getPath(), "targetPath");
         Preconditions.checkArgument(targetPath.startsWith("/"),
                 "the path component (%s) of the target (%s) must start with '/'", targetPath, targetUri);
