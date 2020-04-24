@@ -3,7 +3,7 @@ Dubbo integration with k8s
 
 
 # 初步思考
-kubernetes是天然可作为微服务的地址注册中心，类似于zookeeper， 阿里巴巴内部用到的VIPserver，Configserver。 具体来说，kubernetes中的Pod是对于应用的运行实例，Pod的被调度部署/启停都会调用API-Server的服务来保持其状态到ETCD；kubernetes中的service是对应微服务的概念，定义如下
+kubernetes是天然可作为微服务的地址注册中心，类似于zookeeper、Consul。 具体来说，kubernetes中的Pod是对于应用的运行实例，Pod的被调度部署/启停都会调用API-Server的服务来保持其状态到ETCD；kubernetes中的service是对应微服务的概念，定义如下
 
 A Kubernetes Service is an abstraction layer which defines a logical set of Pods and enables external traffic exposure, load balancing and service discovery for those Pods.
 
