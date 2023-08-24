@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-github:
-  protected_branches:
-    develop:
-      foo: bar
+notifications:
+    commits:      commits@dubbo.apache.org
+    issues:       notifications@dubbo.apache.org
+    pullrequests: notifications@dubbo.apache.org
+    jira_options: link label link label
