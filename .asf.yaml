@@ -18,3 +18,26 @@ notifications:
     issues:       notifications@dubbo.apache.org
     pullrequests: notifications@dubbo.apache.org
     jira_options: link label link label
+
+github:
+  homepage: https://dubbo.apache.org/
+  description: "The Dubbo Kubernetes integration."
+  features:
+    # Enable wiki for documentation
+    wiki: true
+    # Enable issue management
+    issues: true
+    # Enable projects for project management boards
+    projects: true
+  protected_branches:
+    main:
+      # only disable force push
+      foo: bar
+  labels:
+    - kubernetes
+    - dubbo
+    - microservices
+    - service-mesh
+    - devops
+    - dubboctl
+    - control-plane
