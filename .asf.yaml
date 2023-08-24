@@ -30,7 +30,7 @@ github:
     # Enable projects for project management boards
     projects: true
   protected_branches:
-    main:
+    master:
       # only disable force push
       foo: bar
   labels:
