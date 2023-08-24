@@ -1,0 +1,303 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin-clusterrole
+  namespace: dubbo-system
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+      - pods
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - configmaps
+      - deployments
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin-clusterrolebinding
+  namespace: dubbo-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin-dubbo-admin-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: admin-dubbo-admin
+    namespace: dubbo-system
+---
+apiVersion: v1
+data:
+  admin.yml: |-
+    dubbo:
+      application:
+        logger: slf4j
+        name: null
+      enabled: true
+      registry:
+        address: ${admin.registry.address}
+    grafana:
+      address: grafana.dubbo-system.svc.cluster.local
+    mysql-dsn: root:password@tcp(127.0.0.1:3306)/dubbo-admin?charset=utf8&parseTime=true
+    nacos:
+      address: nacos://nacos:8848?group=DEFAULT_GROUP&namespace=public
+      center: nacos://nacos:8848?group=dubbo
+      enabled: false
+      group: dubbo
+      namespace: public
+    prometheus:
+      address: prometheus.dubbo-system.svc.cluster.local:3000
+    report:
+      nacos:
+        address: nacos://nacos:8848?group=dubbo
+        group: dubbo
+        namespace: public
+      zookeeper:
+        address: zookeeper://zookeeper:2181
+    zookeeper:
+      address: zookeeper://zookeeper:2181
+      center: zookeeper://zookeeper:2181
+      enabled: true
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin-config
+  namespace: dubbo-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin
+  namespace: dubbo-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: admin
+      app.kubernetes.io/name: dubbo-admin
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: admin
+        app.kubernetes.io/name: dubbo-admin
+    spec:
+      containers:
+        - env:
+            - name: ADMIN_CONFIG_PATH
+              value: /config/admin.yml
+          image: apache/dubbo-admin:0.5.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 30
+          name: dubbo-admin
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 30
+          resources: {}
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          startupProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 30
+          volumeMounts:
+            - mountPath: /config
+              name: application-properties
+              readOnly: true
+            - mountPath: /storage
+              name: storage
+              readOnly: true
+      serviceAccountName: admin-dubbo-admin
+      volumes:
+        - configMap:
+            name: admin-dubbo-admin-config
+          name: application-properties
+        - name: storage
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin
+  namespace: dubbo-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: admin
+      app.kubernetes.io/name: dubbo-admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin
+  namespace: dubbo-system
+rules:
+  - apiGroups:
+      - extensions
+    resourceNames:
+      - admin-dubbo-admin
+    resources:
+      - podsecuritypolicies
+    verbs:
+      - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin
+  namespace: dubbo-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: admin-dubbo-admin
+subjects:
+  - kind: ServiceAccount
+    name: admin-dubbo-admin
+    namespace: dubbo-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin
+  namespace: dubbo-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin-headless
+  namespace: dubbo-system
+spec:
+  clusterIP: None
+  ports:
+    - name: service
+      port: 38080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/name: dubbo-admin
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dubbo-admin
+    helm.sh/chart: dubbo-admin-0.5.0
+  name: admin-dubbo-admin
+  namespace: dubbo-system
+spec:
+  ports:
+    - name: service
+      port: 38080
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: admin
+    app.kubernetes.io/name: dubbo-admin
+  type: ClusterIP
+---
+

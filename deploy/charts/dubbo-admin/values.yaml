@@ -1,0 +1,520 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+## global.imageRegistry Global Docker image registry
+## global.imagePullSecrets Global Docker registry secret names as an array
+## global.storageClass Global StorageClass for Persistent Volume(s)
+##
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+
+
+rbac:
+  # Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
+  enabled: true
+  pspEnabled: true
+
+replicas: 1
+
+labels: {}
+
+annotations: {}
+
+nodeSelector: {}
+
+affinity: {}
+
+tolerations: {}
+
+## serviceAccount
+serviceAccount:
+  enabled: true
+  ## ## ServiceAccount name.
+  name: {}
+  ## ServiceAccount nameTests.
+  nameTest: {}
+  ## ServiceAccount labels.
+  labels: {}
+  ## ServiceAccount annotations.
+  annotations: {}
+
+
+# -- Optional array of imagePullSecrets containing private registry credentials
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# - name: secretName
+
+## admin configuration
+admin:
+  ## dubbo configuration when admin works as a provider
+  dubbo:
+    ## dubbo enabled
+    enabled: true
+
+    ## dubbo application
+    application:
+      ## dubbo application name
+      name: ~
+
+      ## dubbo application logger
+      logger: slf4j
+
+    registry:
+      ## dubbo registry address
+      address: ${admin.registry.address}
+  ## zookeeper configuration
+  zookeeper:
+    ## zookeeper enabled
+    enabled: true
+
+    ## zookeeper address
+    address: zookeeper://zookeeper:2181
+
+    ## zookeeper config-center
+    center: zookeeper://zookeeper:2181
+
+  ## nacos configuration
+  nacos:
+    ## nacos.enabled
+    enabled: false
+
+    ## nacos.address
+    address: nacos://nacos:8848?group=DEFAULT_GROUP&namespace=public
+
+    ## group (Deprecated it is recommended to use URL to add parameters,will be removed in the future)
+    group: dubbo
+
+    ## nacos namespace
+    namespace: public
+
+    ## nacos config-center
+    center: nacos://nacos:8848?group=dubbo
+
+  report:
+    ## zookeeper metadata-report address
+    zookeeper:
+      address: zookeeper://zookeeper:2181
+
+    ## nacos metadata-report address
+    nacos:
+      address: nacos://nacos:8848?group=dubbo
+
+      ## group (Deprecated it is recommended to use URL to add parameters,will be removed in the future)
+      group: dubbo
+
+      ## nacos namespace
+      namespace: public
+  prometheus:
+    address: prometheus.dubbo-system.svc.cluster.local:3000
+  grafana:
+    address: grafana.dubbo-system.svc.cluster.local
+  mysql-dsn: "root:password@tcp(127.0.0.1:3306)/dubbo-admin?charset=utf8&parseTime=true"
+
+## apollo configuration
+apollo:
+  ## apollo enabled
+  enabled: false
+
+  ## apollo token
+  token: ~
+
+  ## apollo appId
+  appid: test
+
+  ## apollo env
+  env: dev
+
+  ## apollo cluster
+  cluster: default
+
+  ## apollo config-center
+  center: apollo://localhost:8070?token=e16e5cd903fd0c97a116c873b448544b9d086de9&app.id=test&env=dev&cluster=default&namespace=dubbo
+
+
+  ## Login Configuration
+root:
+  user:
+    # default user=root
+    name: root
+    # default password=root
+    password: root
+
+  ## check configuration
+check:
+  ## check enabled
+  enabled: true
+
+  ## check sessionTimeoutMilli
+  sessionTimeoutMilli: ~
+
+  ## check tokenTimeoutMilli
+  tokenTimeoutMilli: ~
+
+  ## check signSecret
+  signSecret: ~
+
+## cp-server.compression configuration
+server:
+  compression:
+    ## cp-server compression enabled
+    enabled: true
+
+    ## cp-server compression mime-types
+    types: text/css,text/javascript,application/javascript
+
+    ## cp-server compression min-response-size
+    size: 10240
+
+## Spring datasource configuration
+spring:
+  ## spring datasource
+  datasource:
+    ## spring datasource enabled
+    enabled: false
+    driverclassname: ~
+    # url: jdbc:mysql://localhost:3306/dubbo-admin?characterEncoding=utf8&connectTimeout=1000&socketTimeout=10000&autoReconnect=true
+    url: jdbc:h2:mem:~/dubbo-admin;MODE=MYSQL;
+    # username: root
+    username: sa
+    # password: mysql
+    password: ~
+
+## mybatis-plus configuration
+mybatis:
+  type: none
+
+image:
+  registry: docker.io
+  ##  E.g registry.k8s.io
+  ##
+  repository: apache/dubbo-admin
+  ##
+  ##
+  tag: "0.5.0"
+  ##
+  ##
+  debug: false
+  ##
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  pullPolicy: IfNotPresent
+  ##
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## Can be templated.
+  ##
+  pullSecrets: []
+  #   - RegisterKeySecretName
+
+
+## Create HorizontalPodAutoscaler object for deployment type
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPU: "60"
+  targetMemory: ""
+  behavior: {}
+
+
+## See `kubectl explain deployment.spec.strategy` for more
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+deploymentStrategy:
+  type: RollingUpdate
+
+## See `kubectl explain statefulset.spec.strategy` for more
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate: {}
+
+## @param readinessProbe.enabled Enable readinessProbe on containers
+readinessProbe:
+  httpGet:
+    path: /
+    port: 8080
+  ## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+  initialDelaySeconds: 60
+  ## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+  timeoutSeconds: 30
+  ## @param readinessProbe.periodSeconds Period seconds for readinessProbe
+  periodSeconds: 10
+  ## @param readinessProbe.successThreshold Success threshold for readinessProbe
+  successThreshold: 1
+  ## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
+  failureThreshold: 3
+  ## @param readinessProbe.probeCommandTimeout Probe command timeout for readinessProbe
+  probeCommandTimeout: 1
+
+
+## @param livenessProbe.enabled Enable livenessProbe on containers
+livenessProbe:
+  httpGet:
+    path: /
+    port: 8080
+  ## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+  initialDelaySeconds: 60
+  ## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+  timeoutSeconds: 30
+  ## @param livenessProbe.periodSeconds Period seconds for livenessProbe
+  periodSeconds: 10
+  ## @param livenessProbe.successThreshold Success threshold for livenessProbe
+  successThreshold: 1
+  ## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
+  failureThreshold: 3
+  ## @param livenessProbe.probeCommandTimeout Probe command timeout for livenessProbe
+  probeCommandTimeout: 1
+
+
+## @param startupProbe.enabled Enable startupProbe on containers
+startupProbe:
+  httpGet:
+    path: /
+    port: 8080
+  ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
+  initialDelaySeconds: 60
+  ## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
+  timeoutSeconds: 30
+  ## @param startupProbe.periodSeconds Period seconds for startupProbe
+  periodSeconds: 10
+  ## @param startupProbe.successThreshold Success threshold for startupProbe
+  successThreshold: 1
+  ## @param startupProbe.failureThreshold Failure threshold for startupProbe
+  failureThreshold: 3
+
+
+## configmap mounts
+ConfigmapMounts: []
+  # - name: configMap-file
+  #   mountPath: /config
+  #   configMap: configMap-file
+  #   readOnly: true
+
+
+## secret mounts
+SecretMounts:
+#  - name: secret-file
+#    secret:
+#      secretName: secret-file
+
+
+## emptyDir mounts
+EmptyDirMounts: []
+# - name: ""
+#   mountPath: /
+
+
+## Expose the dubbo-admin service to be accessed from outside the cluster (LoadBalancer service).
+## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
+## ref: http://kubernetes.io/docs/user-guide/services/
+##
+service:
+  name: http
+  ##
+  ## Service name.
+  ##
+  enabled: true
+  ##
+  ## Service enable true or false.
+  ##
+  type: ClusterIP
+  ##
+  ## Service type.
+  ##
+  clusterIP: ""
+  ##
+  ## Service clusterIP.
+  ##
+  loadBalancerIP: ""
+  ##
+  ## Service loadBalancerIP.
+  ##
+  loadBalancerSourceRanges: ""
+  ##
+  ## Service loadBalancerSourceRanges.
+  ##
+  externalIPs: ""
+  ##
+  ## Service externalIPs.
+  ##
+  nodePort: ""
+  ##
+  ## Service nodePort.
+  ##
+  path: /
+  ##
+  ## Service path.
+  ##
+  port: 38080
+  ##
+  ## Service port.
+  ##
+  targetPort: http
+  ##
+  ## Service targetPort.
+  ##
+  containerPort: 8080
+  ##
+  ## Service containerPort.
+  ##
+  protocol: TCP
+  ##
+  ## Service protocol.
+  ##
+  ##
+  labels: {}
+  ##
+  ## Service labels.
+  ##
+  annotations: {}
+  ##
+  ## Service annotations. Can be templated.
+  ##
+  portName: service
+  ##
+  ## Service portName.
+  ##
+  appProtocol: ""
+  ##
+  ## Service appProtocol.
+  ##
+
+
+ingress:
+  enabled: false
+  # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
+  # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
+  # ingressClassName: nginx
+  # Values can be templated
+  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  labels: {}
+  path: /
+  ##
+  ##
+  # pathType is only for k8s >= 1.1=
+  pathType: Prefix
+  ##
+  ##
+  hosts:
+    - chart-example.local
+  ## Extra paths to prepend to every host configuration. This is useful when working with annotation based services.
+  extraPaths: []
+  # - path: /*
+  #   backend:
+  #     serviceName: ssl-redirect
+  #     servicePort: use-annotation
+  ## Or for k8s > 1.19
+  # - path: /*
+  #   pathType: Prefix
+  #   backend:
+  #     service:
+  #       name: ssl-redirect
+  #       port:
+  #         name: use-annotation
+  ##
+  ##
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+
+resources: {}
+#  limits:
+#    cpu: 100m
+#    memory: 128Mi
+#  requests:
+#    cpu: 100m
+#    memory: 128Mi
+
+
+## Enable persistence using Persistent Volume Claims
+## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+##
+persistence:
+  enabled: false
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  ## Name of an existing PVC. Can be templated.
+  ClaimName: {}
+  ##
+  ## persistence emptyDir
+  emptyDir: {}
+
+
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+
+
+## Container Lifecycle Hooks. Execute a specific bash command or make an HTTP request
+lifecycleHooks: {}
+  # postStart:
+  #   exec:
+  #     command: []
+  # preStop:
+  #   exec:
+  #     command: []
+
+
+## See `kubectl explain poddisruptionbudget.spec` for more
+## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
+
+networkPolicy:
+  ## @param networkPolicy.enabled Enable creation of NetworkPolicy resources. Only Ingress traffic is filtered for now.
+  ##
+  enabled: false
+  ## @param networkPolicy.allowExternal Don't require clientgen label for connections
+  ## The Policy model to apply. When set to false, only pods with the correct
+  ## clientgen label will have network access to  dubbo-admin port defined.
+  ## When true, dubbo-admin will accept connections from any source
+  ## (with the correct destination port).
+  ##
+  ingress: true
+  ## @param networkPolicy.ingress When true enables the creation
+  ## an ingress network policy
+  ##
+  ##
+  ##
+  ##
+  egress:
+    ## @param networkPolicy.egress.enabled When enabled, an egress network policy will be
+    ## created allowing dubbo-admin to connect to external data sources from kubernetes cluster.
+    enabled: false
+    ##
+    ## @param networkPolicy.egress.ports Add individual ports to be allowed by the egress
+    ports: []
+      ## Add ports to the egress by specifying - port: <port number>
+      ## E.X.
+      ## ports:
+      ## - port: 80
+      ## - port: 443
