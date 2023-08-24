@@ -15,7 +15,5 @@
 
 github:
   protected_branches:
-    master:
-      foo: bar
-    master-0.2.0:
+    develop:
       foo: bar
