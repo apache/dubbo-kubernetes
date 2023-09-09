@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apache/dubbo-admin/pkg/core/runtime/component"
-	"github.com/apache/dubbo-admin/test/util/retry"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/test/util/retry"
 
 	"go.uber.org/atomic"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -24,12 +24,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apache/dubbo-admin/api/mesh"
-	gvks "github.com/apache/dubbo-admin/pkg/core/schema/gvk"
+	"github.com/apache/dubbo-kubernetes/api/mesh"
+	gvks "github.com/apache/dubbo-kubernetes/pkg/core/schema/gvk"
 
-	"github.com/apache/dubbo-admin/api/dds"
-	api "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/api/dds"
+	api "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/cenkalti/backoff"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"

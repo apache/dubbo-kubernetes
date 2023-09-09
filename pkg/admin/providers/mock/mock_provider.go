@@ -20,16 +20,16 @@ package mock
 import (
 	"context"
 
-	"github.com/apache/dubbo-admin/pkg/config/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
 	_ "dubbo.apache.org/dubbo-go/v3/imports"
-	"github.com/apache/dubbo-admin/pkg/admin/mapper"
-	"github.com/apache/dubbo-admin/pkg/admin/providers/mock/api"
-	"github.com/apache/dubbo-admin/pkg/admin/services"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/mapper"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/providers/mock/api"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/services"
 )
 
 var _ api.MockServiceServer = (*MockServiceServer)(nil)

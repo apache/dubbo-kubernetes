@@ -26,16 +26,16 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/identifier"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/manifest"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"

@@ -18,10 +18,10 @@
 package storage
 
 import (
-	api "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/endpoint"
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	"github.com/apache/dubbo-admin/pkg/core/tools/generate"
+	api "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/tools/generate"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 

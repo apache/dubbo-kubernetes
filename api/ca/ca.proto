@@ -21,7 +21,7 @@ import "google/protobuf/struct.proto";
 
 package dubbo.apache.org.v1alpha1;
 
-option go_package = "github.com/apache/dubbo-admin/api/ca";
+option go_package = "github.com/apache/dubbo-kubernetes/api/ca";
 option java_multiple_files = true;
 
 

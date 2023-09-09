@@ -17,7 +17,7 @@
 
 package universe
 
-import "github.com/apache/dubbo-admin/pkg/core/runtime/component"
+import "github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 
 type UniverseLeaderElection struct {
 	// TODO Implement a leader election mechanism that does not depend on k8s

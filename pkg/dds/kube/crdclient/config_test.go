@@ -21,9 +21,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	"github.com/apache/dubbo-admin/pkg/core/schema/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/resource"
 	"github.com/davecgh/go-spew/spew"
 )
 

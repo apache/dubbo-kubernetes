@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 type delayTask struct {

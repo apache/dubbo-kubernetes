@@ -19,7 +19,7 @@ limitations under the License.
 package internalinterfaces
 
 import (
-	versioned "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned"
+	versioned "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

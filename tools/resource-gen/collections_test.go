@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema/ast"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/ast"
 
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
@@ -95,10 +95,10 @@ package collections
 import (
 	"reflect"
 
-	api "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	"github.com/apache/dubbo-admin/pkg/core/schema/resource"
-	"github.com/apache/dubbo-admin/pkg/core/validation"
+	api "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/validation"
 )
 
 var (

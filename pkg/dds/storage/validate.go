@@ -22,9 +22,9 @@ import (
 	"net/netip"
 	"strings"
 
-	api "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/endpoint"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	api "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/tidwall/gjson"
 )
 

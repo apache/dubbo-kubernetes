@@ -21,7 +21,7 @@ import "google/protobuf/any.proto";
 
 package org.apache.dubbo.auth.v1alpha1;
 
-option go_package = "github.com/apache/dubbo-admin/ca/v1alpha1";
+option go_package = "github.com/apache/dubbo-kubernetes/ca/v1alpha1";
 option java_multiple_files = true;
 
 message ObserveRequest {

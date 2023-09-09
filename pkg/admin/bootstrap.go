@@ -21,11 +21,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/apache/dubbo-admin/pkg/admin/cache/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 
-	"github.com/apache/dubbo-admin/pkg/admin/providers/mock"
-	"github.com/apache/dubbo-admin/pkg/admin/services"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/providers/mock"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/services"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
@@ -34,14 +34,14 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/apache/dubbo-admin/pkg/admin/config"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
-	"github.com/apache/dubbo-admin/pkg/config/admin"
-	core_runtime "github.com/apache/dubbo-admin/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 
-	_ "github.com/apache/dubbo-admin/pkg/admin/cache/registry/kube"
-	_ "github.com/apache/dubbo-admin/pkg/admin/cache/registry/universal"
+	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/kube"
+	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/universal"
 )
 
 func RegisterDatabase(rt core_runtime.Runtime) error {

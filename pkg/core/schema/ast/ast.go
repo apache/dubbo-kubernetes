@@ -20,8 +20,8 @@ package ast
 import (
 	"encoding/json"
 
-	"github.com/apache/dubbo-admin/pkg/core/tools/resource"
-	"github.com/apache/dubbo-admin/pkg/core/validation"
+	"github.com/apache/dubbo-kubernetes/pkg/core/tools/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/validation"
 	"github.com/ghodss/yaml"
 )
 

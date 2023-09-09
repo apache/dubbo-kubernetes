@@ -23,13 +23,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/apache/dubbo-admin/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/core"
-	"github.com/apache/dubbo-admin/pkg/core/cert/provider"
-	"github.com/apache/dubbo-admin/pkg/core/runtime/component"
-	"github.com/apache/dubbo-admin/pkg/cp-server/server"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/cp-server/server"
 	"github.com/pkg/errors"
 )
 

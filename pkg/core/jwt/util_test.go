@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apache/dubbo-admin/pkg/core/jwt"
+	"github.com/apache/dubbo-kubernetes/pkg/core/jwt"
 
 	v4 "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"

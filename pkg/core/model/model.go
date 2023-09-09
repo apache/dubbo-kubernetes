@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	gogoproto "github.com/gogo/protobuf/proto"
 	// nolint

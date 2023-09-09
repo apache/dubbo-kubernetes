@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apache/dubbo-admin/app/dubbo-cp/cmd"
+	"github.com/apache/dubbo-kubernetes/app/dubbo-cp/cmd"
 )
 
 func main() {

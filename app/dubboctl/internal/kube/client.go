@@ -69,7 +69,7 @@ func WithCli(cli client.Client) CtlClientOption {
 // ApplyManifest applies manifest to certain namespace
 // If there is not this namespace, create it first
 func (cli *CtlClient) ApplyManifest(manifest string, ns string) error {
-	if err := cli.createNamespace(ns); err != nil {
+	if err := cli.CreateNamespace(ns); err != nil {
 		return err
 	}
 	objs, err := ParseObjectsFromManifest(manifest, false)
@@ -133,7 +133,7 @@ func (cli *CtlClient) ApplyObject(obj *unstructured.Unstructured) error {
 	return nil
 }
 
-func (cli *CtlClient) createNamespace(ns string) error {
+func (cli *CtlClient) CreateNamespace(ns string) error {
 	key := client.ObjectKey{
 		Namespace: metav1.NamespaceSystem,
 		Name:      ns,

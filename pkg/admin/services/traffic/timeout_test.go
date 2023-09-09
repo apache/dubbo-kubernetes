@@ -22,9 +22,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/apache/dubbo-admin/pkg/admin/config"
-	"github.com/apache/dubbo-admin/pkg/admin/config/mock_config"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config/mock_config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/golang/mock/gomock"
 

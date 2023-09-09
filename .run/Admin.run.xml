@@ -22,7 +22,7 @@
       <env name="ADMIN_CONFIG_PATH" value="conf/admin.yml" />
     </envs>
     <kind value="PACKAGE" />
-    <package value="github.com/apache/dubbo-admin/cmd/admin" />
+    <package value="github.com/apache/dubbo-kubernetes/cmd/admin" />
     <directory value="$PROJECT_DIR$" />
     <filePath value="$PROJECT_DIR$/cmd/admin/main.go" />
     <method v="2" />

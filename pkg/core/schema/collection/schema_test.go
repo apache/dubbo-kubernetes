@@ -20,8 +20,8 @@ package collection_test
 import (
 	"testing"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	"github.com/apache/dubbo-admin/pkg/core/schema/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/resource"
 
 	. "github.com/onsi/gomega"
 )

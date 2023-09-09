@@ -19,9 +19,9 @@ limitations under the License.
 package externalversions
 
 import (
-	versioned "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned"
-	dubboapacheorg "github.com/apache/dubbo-admin/pkg/core/gen/generated/informers/externalversions/dubbo.apache.org"
-	internalinterfaces "github.com/apache/dubbo-admin/pkg/core/gen/generated/informers/externalversions/internalinterfaces"
+	versioned "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned"
+	dubboapacheorg "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/informers/externalversions/dubbo.apache.org"
+	internalinterfaces "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/informers/externalversions/internalinterfaces"
 	reflect "reflect"
 	sync "sync"
 	time "time"

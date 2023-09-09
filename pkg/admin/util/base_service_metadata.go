@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 )
 
 func BuildServiceKey(app, service, version, group string) string {

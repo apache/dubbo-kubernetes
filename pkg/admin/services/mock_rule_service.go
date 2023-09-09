@@ -20,7 +20,7 @@ package services
 import (
 	"context"
 
-	"github.com/apache/dubbo-admin/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 type MockRuleService interface {

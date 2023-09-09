@@ -20,11 +20,11 @@ package schema
 import (
 	"fmt"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema/ast"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	"github.com/apache/dubbo-admin/pkg/core/schema/resource"
-	resource2 "github.com/apache/dubbo-admin/pkg/core/tools/resource"
-	"github.com/apache/dubbo-admin/pkg/core/validation"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/ast"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/resource"
+	resource2 "github.com/apache/dubbo-kubernetes/pkg/core/tools/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/validation"
 	"github.com/google/go-cmp/cmp"
 )
 

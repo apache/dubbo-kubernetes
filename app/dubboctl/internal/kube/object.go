@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"

@@ -16,7 +16,6 @@
 package cmd
 
 import (
-	"github.com/apache/dubbo-admin/app/dubboctl/cmd/subcmd"
 	"github.com/spf13/cobra"
 )
 
@@ -26,12 +25,12 @@ func addDashboard(rootCmd *cobra.Command) {
 		Short: "Commands related to control plane components dashboards",
 		Long:  "Commands help user to open control plane components dashboards directly. Now support Admin, Grafana, Nacos, Prometheus, Skywalking and Zipkin",
 	}
-	subcmd.ConfigDashboardAdminCmd(dashboardCmd)
-	subcmd.ConfigDashboardGrafanaCmd(dashboardCmd)
-	subcmd.ConfigDashboardNacosCmd(dashboardCmd)
-	subcmd.ConfigDashboardPrometheusCmd(dashboardCmd)
-	subcmd.ConfigDashboardSkywalkingCmd(dashboardCmd)
-	subcmd.ConfigDashboardZipkinCmd(dashboardCmd)
+	ConfigDashboardAdminCmd(dashboardCmd)
+	ConfigDashboardGrafanaCmd(dashboardCmd)
+	ConfigDashboardNacosCmd(dashboardCmd)
+	ConfigDashboardPrometheusCmd(dashboardCmd)
+	ConfigDashboardSkywalkingCmd(dashboardCmd)
+	ConfigDashboardZipkinCmd(dashboardCmd)
 
 	rootCmd.AddCommand(dashboardCmd)
 }

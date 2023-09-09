@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"dubbo.apache.org/dubbo-go/v3/metadata/definition"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 var (

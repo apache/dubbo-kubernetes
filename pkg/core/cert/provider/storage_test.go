@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/config/security"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/security"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 func TestIsValid(t *testing.T) {

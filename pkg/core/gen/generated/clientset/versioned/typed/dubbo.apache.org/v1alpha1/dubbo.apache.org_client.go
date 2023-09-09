@@ -19,8 +19,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/apache/dubbo-admin/pkg/core/gen/apis/dubbo.apache.org/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned/scheme"
+	v1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/gen/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned/scheme"
 	"net/http"
 
 	rest "k8s.io/client-go/rest"

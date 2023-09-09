@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/apache/dubbo-admin/test"
+	"github.com/apache/dubbo-kubernetes/test"
 )
 
 const (

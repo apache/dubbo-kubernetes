@@ -20,7 +20,7 @@ package versioned
 
 import (
 	"fmt"
-	dubbov1alpha1 "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned/typed/dubbo.apache.org/v1alpha1"
+	dubbov1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned/typed/dubbo.apache.org/v1alpha1"
 	"net/http"
 
 	discovery "k8s.io/client-go/discovery"

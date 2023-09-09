@@ -17,7 +17,7 @@
 
 package cp_server
 
-import "github.com/apache/dubbo-admin/pkg/core/runtime"
+import "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 
 func Setup(rt runtime.Runtime) error {
 	if err := rt.Add(rt.GrpcServer()); err != nil {

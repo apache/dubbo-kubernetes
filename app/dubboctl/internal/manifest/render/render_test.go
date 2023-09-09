@@ -19,7 +19,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/identifier"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 )
 
 const (
@@ -342,7 +342,7 @@ func TestRemoteRenderer_Init(t *testing.T) {
 	}
 }
 
-//func TestRemoteRenderer_RenderManifest(t *testing.T) {
+//dubbo TestRemoteRenderer_RenderManifest(t *testing.T) {
 //	renderer, err := NewRemoteRenderer([]RendererOption{
 //		WithName("grafana"),
 //		WithNamespace(TestNamespace),

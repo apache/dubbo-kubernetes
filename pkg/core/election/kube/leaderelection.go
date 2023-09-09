@@ -22,8 +22,8 @@ import (
 	syncatomic "sync/atomic"
 	"time"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
-	"github.com/apache/dubbo-admin/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	"go.uber.org/atomic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"

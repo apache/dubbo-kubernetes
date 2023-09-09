@@ -33,7 +33,7 @@ package labels_test
 import (
 	"testing"
 
-	"github.com/apache/dubbo-admin/pkg/core/labels"
+	"github.com/apache/dubbo-kubernetes/pkg/core/labels"
 )
 
 func TestCollection(t *testing.T) {

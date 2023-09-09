@@ -16,7 +16,7 @@
 package cert
 
 import (
-	core_runtime "github.com/apache/dubbo-admin/pkg/core/runtime"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/pkg/errors"
 )
 

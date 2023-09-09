@@ -4,8 +4,8 @@ about: If you would like to report a issue to Dubbo-Admin, please use this templ
 
 ---
 
-- [ ] I have searched the [issues](https://github.com/apache/dubbo-admin/issues) of this repository and believe that this is not a duplicate.
-- [ ] I have checked the [REAMDE](https://github.com/apache/dubbo-admin/blob/develop/README.md) of this repository and believe that this is not a duplicate.
+- [ ] I have searched the [issues](https://github.com/apache/dubbo-kubernetes/issues) of this repository and believe that this is not a duplicate.
+- [ ] I have checked the [REAMDE](https://github.com/apache/dubbo-kubernetes/blob/develop/README.md) of this repository and believe that this is not a duplicate.
 
 ### Environment
 

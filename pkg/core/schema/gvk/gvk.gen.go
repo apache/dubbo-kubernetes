@@ -17,7 +17,7 @@
 
 package gvk
 
-import "github.com/apache/dubbo-admin/pkg/core/model"
+import "github.com/apache/dubbo-kubernetes/pkg/core/model"
 
 var (
 	AuthenticationPolicy = model.GroupVersionKind{Group: "dubbo.apache.org", Version: "v1alpha1", Kind: "AuthenticationPolicy"}.String()

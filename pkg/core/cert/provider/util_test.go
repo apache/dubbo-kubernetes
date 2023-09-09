@@ -22,8 +22,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/apache/dubbo-admin/pkg/core/endpoint"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	"github.com/stretchr/testify/assert"
 )

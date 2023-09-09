@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 )
 
 type Override struct {

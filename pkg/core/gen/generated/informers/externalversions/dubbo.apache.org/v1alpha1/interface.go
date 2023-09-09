@@ -19,7 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/apache/dubbo-admin/pkg/core/gen/generated/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

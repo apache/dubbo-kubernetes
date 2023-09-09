@@ -78,6 +78,11 @@ header:
     - '**/ui/tests/**'
     - '**/dubbo-ui/**'
     - '**/governance_config_mock.go'
+    - '/templates/**'
+    - '**/testdata/**'
+    - '**/dockerTplGo.tpl'
+    - '**/dockerTplJava.tpl'
+    - '**/deploy.tpl'
   comment: on-failure
 
   license-location-threshold: 130

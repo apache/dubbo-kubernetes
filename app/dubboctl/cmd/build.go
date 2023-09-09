@@ -1,0 +1,170 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/dockerfile"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/pack"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
+	"github.com/ory/viper"
+	"github.com/spf13/cobra"
+)
+
+func addBuild(baseCmd *cobra.Command, newClient ClientFactory) {
+	cmd := &cobra.Command{
+		Use:     "build",
+		Short:   "Build the image for the application",
+		Long:    ``,
+		PreRunE: bindEnv("useDockerfile", "image", "path", "push", "force"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runBuildCmd(cmd, newClient)
+		},
+	}
+
+	cmd.Flags().BoolP("useDockerfile", "d", false,
+		"Use the dockerfile with the specified path to build")
+	cmd.Flags().StringP("image", "i", "",
+		"Container image( [registry]/[namespace]/[name]:[tag] )")
+	cmd.Flags().BoolP("push", "", false,
+		"Whether to push the image to the registry center by the way")
+	cmd.Flags().BoolP("force", "f", false,
+		"Whether to force push")
+	addPathFlag(cmd)
+	baseCmd.AddCommand(cmd)
+}
+
+func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
+	if err := util.CreatePaths(); err != nil {
+		return err
+	}
+	cfg := newBuildConfig()
+	f, err := dubbo.NewDubbo(cfg.Path)
+
+	cfg, err = cfg.Prompt(f)
+	if err != nil {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+	if !f.Initialized() {
+		return dubbo.NewErrNotInitialized(f.Root)
+	}
+	cfg.Configure(f)
+
+	clientOptions, err := cfg.clientOptions()
+	if err != nil {
+		return err
+	}
+	client, done := newClient(clientOptions...)
+	defer done()
+	if f.Built() && !cfg.Force {
+		fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`")
+		return nil
+	}
+	if f, err = client.Build(cmd.Context(), f); err != nil {
+		return err
+	}
+	if cfg.Push {
+		if f, err = client.Push(cmd.Context(), f); err != nil {
+			return err
+		}
+	}
+
+	if err = f.Write(); err != nil {
+		return err
+	}
+
+	// Stamp is a performance optimization: treat the application as being built
+	// (cached) unless the fs changes.
+	return f.Stamp()
+}
+
+func (c buildConfig) Prompt(d *dubbo.Dubbo) (buildConfig, error) {
+	var err error
+	if !util.InteractiveTerminal() {
+		return c, nil
+	}
+
+	if c.Image == "" && d.Image == "" {
+
+		qs := []*survey.Question{
+			{
+				Name:     "image",
+				Validate: survey.Required,
+				Prompt: &survey.Input{
+					Message: "the container image( [registry]/[namespace]/[name]:[tag] ). For example: docker.io/sjmshsh/testapp:latest",
+					Default: c.Image,
+				},
+			},
+		}
+		if err = survey.Ask(qs, &c); err != nil {
+			return c, err
+		}
+	}
+	return c, err
+}
+
+func (c buildConfig) clientOptions() ([]dubbo.Option, error) {
+	var o []dubbo.Option
+
+	if c.UseDockerfile {
+		o = append(o, dubbo.WithBuilder(dockerfile.NewBuilder()),
+			dubbo.WithPusher(dockerfile.NewPusher()))
+	} else {
+		o = append(o, dubbo.WithBuilder(pack.NewBuilder()),
+			dubbo.WithPusher(pack.NewPusher()))
+	}
+	return o, nil
+}
+
+type buildConfig struct {
+	Force         bool
+	UseDockerfile bool
+	// Push the resulting image to the registry after building.
+	Push bool
+	// BuilderImage is the image (name or mapping) to use for building.  Usually
+	// set automatically.
+	BuilderImage string
+	Image        string
+
+	// Path of the application implementation on local disk. Defaults to current
+	// working directory of the process.
+	Path string
+}
+
+func newBuildConfig() buildConfig {
+	return buildConfig{
+		Force:         viper.GetBool("force"),
+		UseDockerfile: viper.GetBool("useDockerfile"),
+		Push:          viper.GetBool("push"),
+		Image:         viper.GetString("image"),
+		Path:          viper.GetString("path"),
+	}
+}
+
+func (c *buildConfig) Configure(f *dubbo.Dubbo) {
+	if c.BuilderImage != "" {
+		f.Build.BuilderImages["pack"] = c.BuilderImage
+	}
+	if c.Image != "" {
+		f.Image = c.Image
+	}
+}

@@ -20,7 +20,7 @@ package externalversions
 
 import (
 	"fmt"
-	v1alpha1 "github.com/apache/dubbo-admin/pkg/core/gen/apis/dubbo.apache.org/v1alpha1"
+	v1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/gen/apis/dubbo.apache.org/v1alpha1"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"

@@ -20,9 +20,9 @@ import (
 	"reflect"
 	"strings"
 
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/core/endpoint"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	admissionregistrationV1 "k8s.io/api/admissionregistration/v1"
 	k8sauth "k8s.io/api/authentication/v1"

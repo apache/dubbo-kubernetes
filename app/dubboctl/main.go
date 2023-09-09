@@ -20,7 +20,7 @@ package main
 import (
 	"os"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/cmd"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/cmd"
 )
 
 func main() {
