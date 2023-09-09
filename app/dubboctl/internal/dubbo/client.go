@@ -164,7 +164,7 @@ func WithRepositoriesPath(path string) Option {
 // <name> will default to the current working directory.
 // When <name> is provided but <path> is not, a directory <name> is created
 // in the current working directory and used for <path>.
-func (c *Client) Init(cfg *Dubbo) (*Dubbo, error) {
+func (c *Client) Init(cfg *Dubbo, init bool) (*Dubbo, error) {
 	// convert Root path to absolute
 	var err error
 	oldRoot := cfg.Root
@@ -199,29 +199,32 @@ func (c *Client) Init(cfg *Dubbo) (*Dubbo, error) {
 		cfg.Name = nameFromPath(cfg.Root)
 	}
 
-	// The path for the new function should not have any contentious files
-	// (hidden files OK, unless it's one used by dubbo)
-	if err := assertEmptyRoot(cfg.Root); err != nil {
-		return cfg, err
+	if !init {
+		// The path for the new function should not have any contentious files
+		// (hidden files OK, unless it's one used by dubbo)
+		if err := assertEmptyRoot(cfg.Root); err != nil {
+			return cfg, err
+		}
 	}
 
 	// Create a new application (in memory)
-	f := NewDubboWith(cfg)
+	f := NewDubboWith(cfg, init)
 
 	// Create a .dubbo directory which is also added to a .gitignore
 	if err = EnsureRunDataDir(f.Root); err != nil {
 		return f, err
 	}
 
-	// Write out the new function's Template files.
-	// Templates contain values which may result in the function being mutated
-	// (default builders, etc), so a new (potentially mutated) function is
-	// returned from Templates.Write
-	err = c.Templates().Write(f)
-	if err != nil {
-		return f, err
+	if !init {
+		// Write out the new function's Template files.
+		// Templates contain values which may result in the function being mutated
+		// (default builders, etc), so a new (potentially mutated) function is
+		// returned from Templates.Write
+		err = c.Templates().Write(f)
+		if err != nil {
+			return f, err
+		}
 	}
-
 	f.Created = time.Now()
 	err = f.Write()
 	if err != nil {

@@ -191,7 +191,7 @@ func nameFromPath(path string) string {
 // assertEmptyRoot ensures that the directory is empty enough to be used for
 // initializing a new function.
 func assertEmptyRoot(path string) (err error) {
-	// If there exists contentious files (congig files for instance), this function may have already been initialized.
+	// If there exists contentious files (config files for instance), this function may have already been initialized.
 	files, err := contentiousFilesIn(path)
 	if err != nil {
 		return
@@ -246,9 +246,13 @@ func isEffectivelyEmpty(dir string) (bool, error) {
 }
 
 // NewDubboWith defaults as provided.
-func NewDubboWith(defaults *Dubbo) *Dubbo {
-	if defaults.Template == "" {
-		defaults.Template = DefaultTemplate
+func NewDubboWith(defaults *Dubbo, init bool) *Dubbo {
+	if !init {
+		if defaults.Template == "" {
+			defaults.Template = DefaultTemplate
+		}
+	} else {
+		defaults.Template = "init"
 	}
 	if defaults.Build.BuilderImages == nil {
 		defaults.Build.BuilderImages = make(map[string]string)

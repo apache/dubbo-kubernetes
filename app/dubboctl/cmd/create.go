@@ -85,7 +85,7 @@ EXAMPLES
 	  $ {{.Name}} create -l go -t common myfunc
 		`,
 		SuggestFor: []string{"vreate", "creaet", "craete", "new"},
-		PreRunE:    bindEnv("language", "template", "repository", "confirm"),
+		PreRunE:    bindEnv("language", "template", "repository", "confirm", "init"),
 		Aliases:    []string{"init"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCreate(cmd, args, newClient)
@@ -94,8 +94,10 @@ EXAMPLES
 
 	// Flags
 	cmd.Flags().StringP("language", "l", "", "Language Runtime (see help text for list) ($DUBBO_LANGUAGE)")
-	cmd.Flags().StringP("template", "t", dubbo.DefaultTemplate, "Function template. (see help text for list) ($DUBBO_TEMPLATE)")
+	cmd.Flags().StringP("template", "t", "", "Application template. (see help text for list) ($DUBBO_TEMPLATE)")
 	cmd.Flags().StringP("repository", "r", "", "URI to a Git repository containing the specified template ($DUBBO_REPOSITORY)")
+	cmd.Flags().BoolP("init", "i", false,
+		"")
 
 	addConfirmFlag(cmd, false)
 
@@ -142,7 +144,7 @@ func runCreate(cmd *cobra.Command, args []string, newClient ClientFactory) (err 
 		Root:     cfg.Path,
 		Runtime:  cfg.Runtime,
 		Template: cfg.Template,
-	})
+	}, cfg.Init)
 	if err != nil {
 		return err
 	}
@@ -163,6 +165,8 @@ type createConfig struct {
 
 	// Name of the function
 	Name string
+
+	Init bool
 }
 
 // newCreateConfig returns a config populated from the current execution context
@@ -192,6 +196,7 @@ func newCreateConfig(cmd *cobra.Command, args []string, newClient ClientFactory)
 		Runtime:    viper.GetString("language"), // users refer to it is language
 		Template:   viper.GetString("template"),
 		Confirm:    viper.GetBool("confirm"),
+		Init:       viper.GetBool("init"),
 	}
 	// If not in confirm/prompting mode, this cfg structure is complete.
 	if !cfg.Confirm {
@@ -359,7 +364,23 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 		return createConfig{}, err
 	}
 
-	// First ask for path...
+	init := false
+
+	// ask for init
+	qs = []*survey.Question{
+		{
+			Name: "Init",
+			Prompt: &survey.Confirm{
+				Message: "Create a new dubbo project or directly initialize it into a dubbo project",
+				Default: init,
+			},
+		},
+	}
+	if err = survey.Ask(qs, &init); err != nil {
+		return createConfig{}, err
+	}
+
+	// ask for path...
 	qs = []*survey.Question{
 		{
 			Name: "Path",
@@ -388,27 +409,28 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 		return c, err
 	}
 
-	// Second loop: choose template with autocompletion filtered by chosen runtime
-	qs = []*survey.Question{
-		{
-			Name: "Template",
-			Prompt: &survey.Input{
-				Message: "Template:",
-				Default: c.Template,
-				Suggest: func(prefix string) []string {
-					suggestions, err := templatesWithPrefix(prefix, c.Runtime, client)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "unable to suggest: %v", err)
-					}
-					return suggestions
+	if !init {
+		// Second loop: choose template with autocompletion filtered by chosen runtime
+		qs = []*survey.Question{
+			{
+				Name: "Template",
+				Prompt: &survey.Input{
+					Message: "Template:",
+					Default: c.Template,
+					Suggest: func(prefix string) []string {
+						suggestions, err := templatesWithPrefix(prefix, c.Runtime, client)
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "unable to suggest: %v", err)
+						}
+						return suggestions
+					},
 				},
 			},
-		},
+		}
+		if err := survey.Ask(qs, &c); err != nil {
+			return c, err
+		}
 	}
-	if err := survey.Ask(qs, &c); err != nil {
-		return c, err
-	}
-
 	return c, nil
 }
 

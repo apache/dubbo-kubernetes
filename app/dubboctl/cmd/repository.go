@@ -493,7 +493,7 @@ func runRepositoryRemove(_ *cobra.Command, args []string, newClient ClientFactor
 		params.Name = args[0]
 	}
 	// "Are you sure" confirmation flag
-	// (not using name 'Confirm' to avoid confustion with cfg.Confirm)
+	// (not using name 'Confirm' to avoid confusion with cfg.Confirm)
 	// defaults to Yes.  This is debatable, but I don't want to choose the repo
 	// to remove and then have to see a prompt and then have to hit 'y'.  Just
 	// prompting once to make sure, which requires another press of enter, seems

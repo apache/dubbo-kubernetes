@@ -31,6 +31,7 @@ func NewBuilder() *DockerBuilder {
 	return &DockerBuilder{}
 }
 
+// TODO use docker client go
 func (b *DockerBuilder) Build(ctx context.Context, f *dubbo.Dubbo) error {
 	c := exec.CommandContext(ctx, "docker", "build", f.Root, "-t", f.Image)
 	c.Stdout = os.Stdout

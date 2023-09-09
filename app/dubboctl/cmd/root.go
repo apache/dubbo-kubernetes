@@ -65,11 +65,8 @@ func getRootCmd(args []string) *cobra.Command {
 }
 
 func addSubCommands(rootCmd *cobra.Command, newClient ClientFactory) {
-	addInit(rootCmd, newClient)
 	addBuild(rootCmd, newClient)
 	addCreate(rootCmd, newClient)
-	addLanguages(rootCmd, newClient)
-	addTemplates(rootCmd, newClient)
 	addRepository(rootCmd, newClient)
 	addDeploy(rootCmd, newClient)
 	addDocker(rootCmd)

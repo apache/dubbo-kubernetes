@@ -124,7 +124,7 @@ func TestTemplates_Embedded(t *testing.T) {
 		Root:     root,
 		Runtime:  TestRuntime,
 		Template: "common",
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestTemplates_Custom(t *testing.T) {
 		Root:     root,
 		Runtime:  "customRuntime",
 		Template: "customTemplateRepo/customTemplate",
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestTemplates_Remote(t *testing.T) {
 		Root:     root,
 		Runtime:  "go",
 		Template: "remote",
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestTemplates_Default(t *testing.T) {
 
 	// The runtime is specified, and explicitly includes a
 	// file for the default template of fn.DefaultTemplate
-	_, err := client.Init(&dubbo.Dubbo{Root: root, Runtime: TestRuntime})
+	_, err := client.Init(&dubbo.Dubbo{Root: root, Runtime: TestRuntime}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func TestTemplates_InvalidErrors(t *testing.T) {
 	_, err = client.Init(&dubbo.Dubbo{
 		Root:    root,
 		Runtime: "invalid",
-	})
+	}, false)
 	if !errors.Is(err, dubbo.ErrRuntimeNotFound) {
 		t.Fatalf("Expected ErrRuntimeNotFound, got %v", err)
 	}
@@ -252,7 +252,7 @@ func TestTemplates_InvalidErrors(t *testing.T) {
 		Root:     root,
 		Runtime:  TestRuntime,
 		Template: "invalid",
-	})
+	}, false)
 	if !errors.Is(err, dubbo.ErrTemplateNotFound) {
 		t.Fatalf("Expected ErrTemplateNotFound, got %v", err)
 	}
@@ -278,7 +278,7 @@ func TestTemplates_ModeEmbedded(t *testing.T) {
 		Root:     root,
 		Runtime:  "quarkus",
 		Template: "http",
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +312,7 @@ func TestTemplates_ModeCustom(t *testing.T) {
 		Root:     root,
 		Runtime:  "test",
 		Template: "customTemplateRepo/tplb",
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +350,7 @@ func TestTemplates_ModeRemote(t *testing.T) {
 		Root:     root,
 		Runtime:  "node",
 		Template: "remote",
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,7 +364,7 @@ func TestTemplates_ModeRemote(t *testing.T) {
 		t.Fatalf("The remote repositry directory mode should be 0755 but was %#o", file.Mode())
 	}
 
-	// Verify remote executible file mode was preserved.
+	// Verify remote executable file mode was preserved.
 	file, err = os.Stat(filepath.Join(root, "test", "executable.sh"))
 	if err != nil {
 		t.Fatal(err)

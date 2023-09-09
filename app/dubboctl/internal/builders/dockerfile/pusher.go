@@ -30,6 +30,7 @@ func NewPusher() *DockerPusher {
 	return &DockerPusher{}
 }
 
+// TODO use docker client go
 func (p *DockerPusher) Push(ctx context.Context, f *dubbo.Dubbo) error {
 	fmt.Fprintf(os.Stderr, greenText(), fmt.Sprintf("\nUploading image %s...", f.Image))
 	c := exec.CommandContext(ctx, "docker", "push", f.Image)
