@@ -60,7 +60,7 @@ type Builder interface {
 type Pusher interface {
 	// Push the image of the function.
 	// Returns Image Digest - SHA256 hash of the produced image
-	Push(ctx context.Context, f *Dubbo) error
+	Push(ctx context.Context, f *Dubbo) (string, error)
 }
 
 // Deployer of function source to running status.
@@ -483,7 +483,7 @@ func (c *Client) Push(ctx context.Context, f *Dubbo) (*Dubbo, error) {
 		return f, ErrNotBuilt
 	}
 	var err error
-	if err = c.pusher.Push(ctx, f); err != nil {
+	if f.ImageDigest, err = c.pusher.Push(ctx, f); err != nil {
 		return f, err
 	}
 

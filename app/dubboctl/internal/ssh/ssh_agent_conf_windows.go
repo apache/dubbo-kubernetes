@@ -13,33 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dockerfile
+package ssh
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"os/exec"
+	"net"
+	"strings"
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
+	"github.com/Microsoft/go-winio"
 )
 
-type DockerPusher struct{}
-
-func NewPusher() *DockerPusher {
-	return &DockerPusher{}
-}
-
-// TODO use docker client go
-func (p *DockerPusher) Push(ctx context.Context, f *dubbo.Dubbo) error {
-	fmt.Fprintf(os.Stderr, greenText(), fmt.Sprintf("\nUploading image %s...", f.Image))
-	c := exec.CommandContext(ctx, "docker", "push", f.Image)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
-}
-
-// greenText returns the ANSI escape code for a green colored text.
-func greenText() string {
-	return "\033[32m%s\033[0m\n"
+func dialSSHAgentConnection(sock string) (agentConn net.Conn, error error) {
+	if strings.Contains(sock, "\\pipe\\") {
+		agentConn, error = winio.DialPipe(sock, nil)
+	} else {
+		agentConn, error = net.Dial("unix", sock)
+	}
+	return
 }

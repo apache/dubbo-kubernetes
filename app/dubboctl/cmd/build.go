@@ -126,11 +126,9 @@ func (c buildConfig) clientOptions() ([]dubbo.Option, error) {
 	var o []dubbo.Option
 
 	if c.UseDockerfile {
-		o = append(o, dubbo.WithBuilder(dockerfile.NewBuilder()),
-			dubbo.WithPusher(dockerfile.NewPusher()))
+		o = append(o, dubbo.WithBuilder(dockerfile.NewBuilder()))
 	} else {
-		o = append(o, dubbo.WithBuilder(pack.NewBuilder()),
-			dubbo.WithPusher(pack.NewPusher()))
+		o = append(o, dubbo.WithBuilder(pack.NewBuilder()))
 	}
 	return o, nil
 }

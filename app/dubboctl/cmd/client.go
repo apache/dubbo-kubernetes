@@ -16,8 +16,15 @@
 package cmd
 
 import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/dockerfile"
+	"net/http"
+	"os"
+
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/cmd/prompt"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/pack"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker/creds"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
+	dubbohttp "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/http"
 	config "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 
@@ -31,11 +38,15 @@ type ClientFactory func(...dubbo.Option) (*dubbo.Client, func())
 
 func NewClient(options ...dubbo.Option) (*dubbo.Client, func()) {
 	var (
+		t = newTransport(false)
+		c = newCredentialsProvider(config.Dir(), t)
 		d = newDubboDeployer()
 		o = []dubbo.Option{
 			dubbo.WithRepositoriesPath(config.RepositoriesPath()),
-			dubbo.WithBuilder(dockerfile.NewBuilder()),
-			dubbo.WithPusher(dockerfile.NewPusher()),
+			dubbo.WithBuilder(pack.NewBuilder()),
+			dubbo.WithPusher(docker.NewPusher(
+				docker.WithCredentialsProvider(c),
+				docker.WithTransport(t))),
 			dubbo.WithDeployer(d),
 		}
 	)
@@ -51,4 +62,24 @@ func newDubboDeployer() dubbo.Deployer {
 	var options []dubbo.DeployerOpt
 
 	return dubbo.NewDeployer(options...)
+}
+
+// newTransport returns a transport with cluster-flavor-specific variations
+// which take advantage of additional features offered by cluster variants.
+func newTransport(insecureSkipVerify bool) dubbohttp.RoundTripCloser {
+	return dubbohttp.NewRoundTripper(dubbohttp.WithInsecureSkipVerify(insecureSkipVerify))
+}
+
+// newCredentialsProvider returns a credentials provider which possibly
+// has cluster-flavor specific additional credential loaders to take advantage
+// of features or configuration nuances of cluster variants.
+func newCredentialsProvider(configPath string, t http.RoundTripper) docker.CredentialsProvider {
+	options := []creds.Opt{
+		creds.WithPromptForCredentials(prompt.NewPromptForCredentials(os.Stdin, os.Stdout, os.Stderr)),
+		creds.WithPromptForCredentialStore(prompt.NewPromptForCredentialStore()),
+		creds.WithTransport(t),
+	}
+
+	// Other cluster variants can be supported here
+	return creds.NewCredentialsProvider(configPath, options...)
 }
