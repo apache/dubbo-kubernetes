@@ -109,7 +109,9 @@ func authorization(config model.Config, rootNamespace string) model.Config {
 		})
 	} else {
 		for _, rule := range policy.Rules {
-			rule.To = &api.AuthorizationPolicyTarget{}
+			if rule.To == nil {
+				rule.To = &api.AuthorizationPolicyTarget{}
+			}
 			if !slices.Contains(rule.To.Namespaces, deepCopy.Namespace) {
 				rule.To.Namespaces = append(rule.To.Namespaces, deepCopy.Namespace)
 			}
