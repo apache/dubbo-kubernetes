@@ -105,10 +105,8 @@ type BuildSpec struct {
 	//   pack: example.com/user/my-pack-node-builder
 	BuilderImages map[string]string `yaml:"builderImages,omitempty"`
 
-	// Optional list of build-packs to use when building the function
+	// Optional list of build-packs to use when building the application
 	Buildpacks []string `yaml:"buildpacks,omitempty"`
-
-	Verbose bool `json:"-"`
 
 	BuildEnvs []Env `json:"buildEnvs,omitempty"`
 }

@@ -118,11 +118,7 @@ func GetRegistry(img string) (string, error) {
 func (n *Pusher) Push(ctx context.Context, f *dubbo.Dubbo) (digest string, err error) {
 	var output io.Writer
 
-	if f.Build.Verbose {
-		output = os.Stderr
-	} else {
-		output = io.Discard
-	}
+	output = os.Stderr
 
 	if f.Image == "" {
 		return "", errors.New("Function has no associated image.  Has it been built?")

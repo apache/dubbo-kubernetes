@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	Pack = "pack(coming soon...)"
+	Pack = "pack"
 )
 
 type Known []string
@@ -92,7 +92,7 @@ func (e ErrNoDefaultImage) Error() string {
 //   - ErrRuntimeRequired if no runtime was provided on the given function
 //   - ErrNoDefaultImage if the function has no builder image already defined
 //     for the given runtime and there is no default in the provided map.
-func Image(f dubbo.Dubbo, builder string, defaults map[string]string) (string, error) {
+func Image(f *dubbo.Dubbo, builder string, defaults map[string]string) (string, error) {
 	v, ok := f.Build.BuilderImages[builder]
 	if ok {
 		return v, nil
@@ -101,6 +101,7 @@ func Image(f dubbo.Dubbo, builder string, defaults map[string]string) (string, e
 		return "", ErrRuntimeRequired{Builder: builder}
 	}
 	v, ok = defaults[f.Runtime]
+	f.Build.BuilderImages[builder] = v
 	if ok {
 		return v, nil
 	}

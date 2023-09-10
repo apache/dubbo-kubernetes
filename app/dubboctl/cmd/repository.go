@@ -42,11 +42,11 @@ NAME
 	dubboctl - Manage set of installed repositories.
 
 SYNOPSIS
-	dubboctl repo [-c|--confirm] [-v|--verbose]
-	dubboctl repo list [-r|--repositories] [-c|--confirm] [-v|--verbose]
-	dubboctl repo add <name> <url>[-r|--repositories] [-c|--confirm] [-v|--verbose]
-	dubboctl repo rename <old> <new> [-r|--repositories] [-c|--confirm] [-v|--verbose]
-	dubboctl repo remove <name> [-r|--repositories] [-c|--confirm] [-v|--verbose]
+	dubboctl repo [-c|--confirm]
+	dubboctl repo list [-r|--repositories] [-c|--confirm]
+	dubboctl repo add <name> <url>[-r|--repositories] [-c|--confirm]
+	dubboctl repo rename <old> <new> [-r|--repositories] [-c|--confirm]
+	dubboctl repo remove <name> [-r|--repositories] [-c|--confirm]
 
 DESCRIPTION
 	Manage template repositories installed on disk at either the default location
@@ -103,8 +103,7 @@ COMMANDS
 
 	list
 	  List all available repositories, including the installed default
-	  repository.  Repositories available are listed by name.  To see the URL
-	  which was used to install remotes, use --verbose (-v).
+	  repository.  Repositories available are listed by name. 
 
 	rename
 	  Rename a previously installed repository from <old> to <new>. Only installed
@@ -300,7 +299,7 @@ func runRepositoryList(_ *cobra.Command, args []string, newClient ClientFactory)
 		return
 	}
 
-	// Print repository names, or name plus url if verbose
+	// Print repository names, or name plus url
 	// This follows the format of `git remote`, as it is likely familiar.
 	for _, r := range rr {
 		fmt.Fprintln(os.Stdout, r.Name+"\t"+r.URL())

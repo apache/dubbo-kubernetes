@@ -17,6 +17,7 @@ package pack
 
 import (
 	"context"
+	"io"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
@@ -27,14 +28,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
 	pack "github.com/buildpacks/pack/pkg/client"
 	"github.com/buildpacks/pack/pkg/logging"
 	"github.com/buildpacks/pack/pkg/project/types"
@@ -78,8 +75,7 @@ var (
 
 // Builder will build Function using Pack.
 type Builder struct {
-	name    string
-	verbose bool
+	name string
 	// in non-verbose mode contains std[err,out], so it can be printed on error
 	outBuff       bytes.Buffer
 	logger        logging.Logger
@@ -98,13 +94,8 @@ func NewBuilder(options ...Option) *Builder {
 	for _, o := range options {
 		o(b)
 	}
-
 	// Stream logs to stdout or buffer only for display on error.
-	if b.verbose {
-		b.logger = logging.NewLogWithWriters(color.Stdout(), color.Stderr(), logging.WithVerbose())
-	} else {
-		b.logger = logging.NewSimpleLogger(&b.outBuff)
-	}
+	b.logger = logging.NewLogWithWriters(color.Stdout(), color.Stderr(), logging.WithVerbose())
 
 	return b
 }
@@ -114,12 +105,6 @@ type Option func(*Builder)
 func WithName(n string) Option {
 	return func(b *Builder) {
 		b.name = n
-	}
-}
-
-func WithVerbose(v bool) Option {
-	return func(b *Builder) {
-		b.verbose = v
 	}
 }
 
@@ -157,7 +142,7 @@ func transportEnv(ee []dubbo.Env) (map[string]string, error) {
 // Build the Function at path.
 func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 	// Builder image from the function if defined, default otherwise.
-	image, err := BuilderImage(*f, b.name)
+	image, err := BuilderImage(f, b.name)
 	if err != nil {
 		return
 	}
@@ -167,23 +152,6 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 		buildpacks = defaultBuildpacks[f.Runtime]
 	}
 
-	// Reading .dubboignore file
-	var excludes []string
-	filePath := filepath.Join(f.Root, ".dubboignore")
-	file, err := os.Open(filePath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("\nfailed to open file: %s", err)
-		}
-	} else {
-		defer file.Close()
-		buf := new(bytes.Buffer)
-		_, err := io.Copy(buf, file)
-		if err != nil {
-			return fmt.Errorf("\nfailed to read file: %s", err)
-		}
-		excludes = strings.Split(buf.String(), "\n")
-	}
 	// Pack build options
 	opts := pack.BuildOptions{
 		AppPath:        f.Root,
@@ -193,7 +161,7 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 		Buildpacks:     buildpacks,
 		ProjectDescriptor: types.Descriptor{
 			Build: types.Build{
-				Exclude: excludes,
+				Exclude: []string{},
 			},
 		},
 		ContainerConfig: struct {
@@ -232,10 +200,6 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 		defer cli.Close()
 		opts.DockerHost = dockerHost
 
-		if ok, _ := isPodmanV43(ctx, cli); ok {
-			return fmt.Errorf("podman 4.3 is not supported, use podman 4.2 or 4.4")
-		}
-
 		// Client with a logger which is enabled if in Verbose mode and a dockerClient that supports SSH docker daemon connection.
 		if impl, err = pack.NewClient(pack.WithLogger(b.logger), pack.WithDockerClient(cli)); err != nil {
 			return fmt.Errorf("cannot create pack client: %w", err)
@@ -246,29 +210,11 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 	if err = impl.Build(ctx, opts); err != nil {
 		if ctx.Err() != nil {
 			return // SIGINT
-		} else if !b.verbose {
-			err = fmt.Errorf("failed to build the function: %w", err)
+		} else {
+			err = fmt.Errorf("failed to build the application: %w", err)
 			fmt.Fprintln(color.Stderr(), "")
 			_, _ = io.Copy(color.Stderr(), &b.outBuff)
 			fmt.Fprintln(color.Stderr(), "")
-		}
-	}
-	return
-}
-
-func isPodmanV43(ctx context.Context, cli client.CommonAPIClient) (b bool, err error) {
-	version, err := cli.ServerVersion(ctx)
-	if err != nil {
-		return
-	}
-
-	for _, component := range version.Components {
-		if component.Name == "Podman Engine" {
-			v := semver.MustParse(version.Version)
-			if v.Major() == 4 && v.Minor() == 3 {
-				return true, nil
-			}
-			break
 		}
 	}
 	return
@@ -290,7 +236,7 @@ func TrustBuilder(b string) bool {
 }
 
 // BuilderImage Image chooses the correct builder image or defaults.
-func BuilderImage(f dubbo.Dubbo, builderName string) (string, error) {
+func BuilderImage(f *dubbo.Dubbo, builderName string) (string, error) {
 	return builders.Image(f, builderName, DefaultBuilderImages)
 }
 

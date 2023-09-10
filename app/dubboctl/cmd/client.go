@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/progress"
+
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/cmd/prompt"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/pack"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
@@ -38,10 +40,12 @@ type ClientFactory func(...dubbo.Option) (*dubbo.Client, func())
 
 func NewClient(options ...dubbo.Option) (*dubbo.Client, func()) {
 	var (
+		p = progress.New()
 		t = newTransport(false)
 		c = newCredentialsProvider(config.Dir(), t)
 		d = newDubboDeployer()
 		o = []dubbo.Option{
+			dubbo.WithProgressListener(p),
 			dubbo.WithRepositoriesPath(config.RepositoriesPath()),
 			dubbo.WithBuilder(pack.NewBuilder()),
 			dubbo.WithPusher(docker.NewPusher(

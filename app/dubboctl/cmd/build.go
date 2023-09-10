@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/dockerfile"
@@ -29,15 +30,18 @@ import (
 
 func addBuild(baseCmd *cobra.Command, newClient ClientFactory) {
 	cmd := &cobra.Command{
-		Use:     "build",
-		Short:   "Build the image for the application",
-		Long:    ``,
-		PreRunE: bindEnv("useDockerfile", "image", "path", "push", "force"),
+		Use:   "build",
+		Short: "Build the image for the application",
+		Long:  ``,
+		PreRunE: bindEnv("useDockerfile", "image", "path", "push", "force", "envs",
+			"builder-image"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runBuildCmd(cmd, newClient)
 		},
 	}
 
+	cmd.Flags().StringP("builder-image", "b", "",
+		"Specify a custom builder image for use by the builder other than its default.")
 	cmd.Flags().BoolP("useDockerfile", "d", false,
 		"Use the dockerfile with the specified path to build")
 	cmd.Flags().StringP("image", "i", "",
@@ -46,6 +50,8 @@ func addBuild(baseCmd *cobra.Command, newClient ClientFactory) {
 		"Whether to push the image to the registry center by the way")
 	cmd.Flags().BoolP("force", "f", false,
 		"Whether to force push")
+	cmd.Flags().StringArrayP("envs", "e", []string{},
+		"environment variable for an application, KEY=VALUE format")
 	addPathFlag(cmd)
 	baseCmd.AddCommand(cmd)
 }
@@ -54,7 +60,7 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	if err := util.CreatePaths(); err != nil {
 		return err
 	}
-	cfg := newBuildConfig()
+	cfg := newBuildConfig(cmd)
 	f, err := dubbo.NewDubbo(cfg.Path)
 
 	cfg, err = cfg.Prompt(f)
@@ -76,7 +82,7 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	client, done := newClient(clientOptions...)
 	defer done()
 	if f.Built() && !cfg.Force {
-		fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`")
+		fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`\n")
 		return nil
 	}
 	if f, err = client.Build(cmd.Context(), f); err != nil {
@@ -97,7 +103,7 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	return f.Stamp()
 }
 
-func (c buildConfig) Prompt(d *dubbo.Dubbo) (buildConfig, error) {
+func (c *buildConfig) Prompt(d *dubbo.Dubbo) (*buildConfig, error) {
 	var err error
 	if !util.InteractiveTerminal() {
 		return c, nil
@@ -115,7 +121,7 @@ func (c buildConfig) Prompt(d *dubbo.Dubbo) (buildConfig, error) {
 				},
 			},
 		}
-		if err = survey.Ask(qs, &c); err != nil {
+		if err = survey.Ask(qs, c); err != nil {
 			return c, err
 		}
 	}
@@ -134,6 +140,7 @@ func (c buildConfig) clientOptions() ([]dubbo.Option, error) {
 }
 
 type buildConfig struct {
+	Envs          []string
 	Force         bool
 	UseDockerfile bool
 	// Push the resulting image to the registry after building.
@@ -148,14 +155,22 @@ type buildConfig struct {
 	Path string
 }
 
-func newBuildConfig() buildConfig {
-	return buildConfig{
+func newBuildConfig(cmd *cobra.Command) *buildConfig {
+	c := &buildConfig{
+		Envs:          viper.GetStringSlice("envs"),
 		Force:         viper.GetBool("force"),
 		UseDockerfile: viper.GetBool("useDockerfile"),
 		Push:          viper.GetBool("push"),
+		BuilderImage:  viper.GetString("builder-image"),
 		Image:         viper.GetString("image"),
 		Path:          viper.GetString("path"),
 	}
+
+	var err error
+	if c.Envs, err = cmd.Flags().GetStringArray("envs"); err != nil {
+		fmt.Fprintf(cmd.OutOrStdout(), "error reading envs: %v", err)
+	}
+	return c
 }
 
 func (c *buildConfig) Configure(f *dubbo.Dubbo) {
@@ -165,4 +180,20 @@ func (c *buildConfig) Configure(f *dubbo.Dubbo) {
 	if c.Image != "" {
 		f.Image = c.Image
 	}
+
+	var envs []dubbo.Env
+	for _, pair := range c.Envs {
+		parts := strings.Split(pair, "=")
+
+		if len(parts) == 2 {
+			key := &parts[0]
+			value := &parts[1]
+			env := dubbo.Env{
+				Name:  key,
+				Value: value,
+			}
+			envs = append(envs, env)
+		}
+	}
+	f.Build.BuildEnvs = envs
 }

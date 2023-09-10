@@ -28,7 +28,7 @@ import (
 // TestImage_Named ensures that a builder image is returned when
 // it exists on the function for a given builder, no defaults.
 func TestImage_Named(t *testing.T) {
-	f := dubbo.Dubbo{
+	f := &dubbo.Dubbo{
 		Build: dubbo.BuildSpec{
 			BuilderImages: map[string]string{
 				builders.Pack: "example.com/my/builder-image",
@@ -49,7 +49,7 @@ func TestImage_Named(t *testing.T) {
 // the function has no builder image yet defined for the named builder, and
 // also no runtime to choose from the defaults.
 func TestImage_ErrRuntimeRequired(t *testing.T) {
-	_, err := builders.Image(dubbo.Dubbo{}, "", make(map[string]string))
+	_, err := builders.Image(&dubbo.Dubbo{}, "", make(map[string]string))
 	if err == nil {
 		t.Fatalf("did not receive expected error")
 	}
@@ -60,7 +60,7 @@ func TestImage_ErrRuntimeRequired(t *testing.T) {
 
 // TestImage_ErrNoDefaultImage ensures that when
 func TestImage_ErrNoDefaultImage(t *testing.T) {
-	_, err := builders.Image(dubbo.Dubbo{Runtime: "go"}, "", make(map[string]string))
+	_, err := builders.Image(&dubbo.Dubbo{Runtime: "go"}, "", make(map[string]string))
 	if err == nil {
 		t.Fatalf("did not receive expected error")
 	}
@@ -76,7 +76,7 @@ func TestImage_Defaults(t *testing.T) {
 	defaults := map[string]string{
 		"go": "example.com/go/default-builder-image",
 	}
-	builderImage, err := builders.Image(dubbo.Dubbo{Runtime: "go"}, "", defaults)
+	builderImage, err := builders.Image(&dubbo.Dubbo{Runtime: "go"}, "", defaults)
 	if err != nil {
 		t.Fatal(err)
 	}
