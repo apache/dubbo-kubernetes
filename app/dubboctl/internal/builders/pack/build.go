@@ -154,11 +154,11 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 
 	// Pack build options
 	opts := pack.BuildOptions{
-		AppPath:        f.Root,
-		Image:          f.Image,
-		LifecycleImage: DefaultLifecycleImage,
-		Builder:        image,
-		Buildpacks:     buildpacks,
+		AppPath: f.Root,
+		Image:   f.Image,
+		Builder: image,
+		// LifecycleImage: DefaultLifecycleImage, // TODO add it or not?
+		Buildpacks: buildpacks,
 		ProjectDescriptor: types.Descriptor{
 			Build: types.Build{
 				Exclude: []string{},
@@ -181,8 +181,9 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 		opts.ContainerConfig.Network = "host"
 	}
 
+	// TODO add it or not ?
 	// only trust our known builders
-	opts.TrustBuilder = TrustBuilder
+	// opts.TrustBuilder = TrustBuilder
 
 	impl := b.impl
 	// Instantiate the pack build client implementation
