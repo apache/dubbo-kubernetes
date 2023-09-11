@@ -69,7 +69,6 @@ func addSubCommands(rootCmd *cobra.Command, newClient ClientFactory) {
 	addCreate(rootCmd, newClient)
 	addRepository(rootCmd, newClient)
 	addDeploy(rootCmd, newClient)
-	addDocker(rootCmd)
 	addManifest(rootCmd)
 	addProfile(rootCmd)
 	addDashboard(rootCmd)

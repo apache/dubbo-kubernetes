@@ -28,12 +28,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"gopkg.in/yaml.v2"
 )
 
 const (
 	// DubboFile is the file used for the serialized form of a function.
 	DubboFile = "dubbo.yaml"
+
+	Dockerfile = "Dockerfile"
 
 	// RunDataDir holds transient runtime metadata
 	// By default it is excluded from source control.
@@ -336,12 +340,12 @@ func (f *Dubbo) Write() (err error) {
 	if err = f.Validate(); err != nil {
 		return
 	}
-	path := filepath.Join(f.Root, DubboFile)
-	var bb []byte
-	if bb, err = yaml.Marshal(f); err != nil {
+	dubboyamlpath := filepath.Join(f.Root, DubboFile)
+	var dubbobytes []byte
+	if dubbobytes, err = yaml.Marshal(f); err != nil {
 		return
 	}
-	if err = os.WriteFile(path, bb, 0o644); err != nil {
+	if err = os.WriteFile(dubboyamlpath, dubbobytes, 0o644); err != nil {
 		return
 	}
 	return
@@ -397,6 +401,19 @@ func (f Dubbo) Stamp(oo ...stampOption) (err error) {
 	}
 	defer logfile.Close()
 	_, err = fmt.Fprintln(logfile, log)
+	return
+}
+
+func (f *Dubbo) EnsureDockerfile(cmd *cobra.Command) (err error) {
+	dockerfilepath := filepath.Join(f.Root, Dockerfile)
+	dockerfilebytes, ok := DockerfileByRuntime[f.Runtime]
+	if !ok {
+		fmt.Fprintf(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.\n")
+		return
+	}
+	if err = os.WriteFile(dockerfilepath, []byte(dockerfilebytes), 0o644); err != nil {
+		return
+	}
 	return
 }
 

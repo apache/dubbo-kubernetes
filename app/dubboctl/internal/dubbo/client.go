@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 	"gopkg.in/yaml.v2"
 )
@@ -189,7 +191,7 @@ func WithProgressListener(p ProgressListener) Option {
 // <name> will default to the current working directory.
 // When <name> is provided but <path> is not, a directory <name> is created
 // in the current working directory and used for <path>.
-func (c *Client) Init(cfg *Dubbo, init bool) (*Dubbo, error) {
+func (c *Client) Init(cfg *Dubbo, init bool, cmd *cobra.Command) (*Dubbo, error) {
 	// convert Root path to absolute
 	var err error
 	oldRoot := cfg.Root
@@ -252,6 +254,10 @@ func (c *Client) Init(cfg *Dubbo, init bool) (*Dubbo, error) {
 	}
 	f.Created = time.Now()
 	err = f.Write()
+	if err != nil {
+		return f, err
+	}
+	err = f.EnsureDockerfile(cmd)
 	if err != nil {
 		return f, err
 	}

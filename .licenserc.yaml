@@ -80,8 +80,6 @@ header:
     - '**/governance_config_mock.go'
     - '/templates/**'
     - '**/testdata/**'
-    - '**/dockerTplGo.tpl'
-    - '**/dockerTplJava.tpl'
     - '**/deploy.tpl'
   comment: on-failure
 
