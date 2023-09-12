@@ -13,48 +13,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dockerfile
+package docker_test
 
 import (
 	"context"
-	"os"
-
-	"github.com/containers/storage/pkg/archive"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/moby/term"
+	"fmt"
+	"testing"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
+
+	"github.com/Microsoft/go-winio"
+	"github.com/docker/docker/client"
 )
 
-type Builder struct{}
+func TestNewClientWinPipe(t *testing.T) {
+	const testNPipe = "test-npipe"
 
-func (b Builder) Build(ctx context.Context, f *dubbo.Dubbo) error {
-	cli, _, err := docker.NewClient(client.DefaultDockerHost)
+	startMockDaemonWinPipe(t, testNPipe)
+	t.Setenv("DOCKER_HOST", fmt.Sprintf("npipe:////./pipe/%s", testNPipe))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+	defer cancel()
+
+	dockerClient, dockerHostToMount, err := docker.NewClient(client.DefaultDockerHost)
 	if err != nil {
-		return err
+		t.Error(err)
 	}
-	buildOpts := types.ImageBuildOptions{
-		Dockerfile: "Dockerfile",
-		Tags:       []string{f.Image},
+	defer dockerClient.Close()
+
+	if dockerHostToMount != "" {
+		t.Error("dockerHostToMount should be empty for npipe")
 	}
 
-	buildCtx, _ := archive.TarWithOptions(f.Root, &archive.TarOptions{})
-	resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
+	_, err = dockerClient.Ping(ctx)
 	if err != nil {
-		return err
+		t.Error(err)
 	}
-	defer resp.Body.Close()
-	termFd, isTerm := term.GetFdInfo(os.Stderr)
-	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
-func NewBuilder() *Builder {
-	return &Builder{}
+func startMockDaemonWinPipe(t *testing.T, pipeName string) {
+	p, err := winio.ListenPipe(`\\.\pipe\`+pipeName, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	startMockDaemon(t, p)
 }
