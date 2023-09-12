@@ -18,18 +18,42 @@ package dockerfile
 import (
 	"context"
 	"os"
-	"os/exec"
 
+	"github.com/containers/storage/pkg/archive"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/term"
+
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 )
 
 type Builder struct{}
 
 func (b Builder) Build(ctx context.Context, f *dubbo.Dubbo) error {
-	c := exec.CommandContext(ctx, "docker", "build", f.Root, "-t", f.Image)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
+	cli, _, err := docker.NewClient(client.DefaultDockerHost)
+	if err != nil {
+		return err
+	}
+	buildOpts := types.ImageBuildOptions{
+		Dockerfile: "Dockerfile",
+		Tags:       []string{f.Image},
+	}
+
+	buildCtx, _ := archive.TarWithOptions(f.Root, &archive.TarOptions{})
+	resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	termFd, isTerm := term.GetFdInfo(os.Stderr)
+	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
+	if err != nil {
+		return err
+
+	}
+	return nil
 }
 
 func NewBuilder() *Builder {

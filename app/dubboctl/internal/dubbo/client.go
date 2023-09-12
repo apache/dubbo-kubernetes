@@ -43,32 +43,13 @@ const (
 )
 
 type Client struct {
-	repositoriesPath string // path to repositories
-	repositoriesURI  string // repo URI (overrides repositories path)
-	progressListener ProgressListener
+	repositoriesPath string        // path to repositories
+	repositoriesURI  string        // repo URI (overrides repositories path)
 	templates        *Templates    // Templates management
 	repositories     *Repositories // Repositories management
 	builder          Builder       // Builds a runnable image source
 	pusher           Pusher        // Pushes function image to a remote
 	deployer         Deployer      // Deploys or Updates a function}
-}
-
-// ProgressListener is notified of task progress.
-type ProgressListener interface {
-	// SetTotal steps of the given task.
-	SetTotal(int)
-	// Increment to the next step with the given message.
-	Increment(message string)
-	// Complete signals completion, which is expected to be somewhat different
-	// than a step increment.
-	Complete(message string)
-	// Stopping indicates the process is in the state of stopping, such as when a
-	// context cancelation has been received
-	Stopping()
-	// Done signals a cessation of progress updates.  Should be called in a defer
-	// statement to ensure the progress listener can stop any outstanding tasks
-	// such as synchronous user updates.
-	Done()
 }
 
 // Builder of function source to runnable image.
@@ -174,12 +155,6 @@ func WithDeployer(d Deployer) Option {
 func WithRepositoriesPath(path string) Option {
 	return func(c *Client) {
 		c.repositoriesPath = path
-	}
-}
-
-func WithProgressListener(p ProgressListener) Option {
-	return func(c *Client) {
-		c.progressListener = p
 	}
 }
 
@@ -371,11 +346,9 @@ type BuildOption func(c *BuildOptions)
 // Build the function at path. Errors if the function is either unloadable or does
 // not contain a populated Image.
 func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*Dubbo, error) {
-	c.progressListener.Increment("Building application image")
+	fmt.Fprintf(os.Stderr, "Building application image")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	c.printBuildActivity(ctx) // print friendly messages until context is canceled
 
 	// Options for the build task
 	oo := BuildOptions{}
@@ -398,37 +371,8 @@ func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*
 	if runtime.GOOS == "windows" {
 		message = fmt.Sprintf("Application built: %v", f.Image)
 	}
-	c.progressListener.Increment(message)
+	fmt.Fprintf(os.Stderr, message)
 	return f, err
-}
-
-// printBuildActivity is a helper for ensuring the user gets feedback from
-// the long task of containerized builds.
-func (c *Client) printBuildActivity(ctx context.Context) {
-	m := []string{
-		"Still building",
-		"Still building",
-		"Yes, still building",
-		"Don't give up on me",
-		"Still building",
-		"This is taking a while",
-	}
-	i := 0
-	ticker := time.NewTicker(10 * time.Second)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				c.progressListener.Increment(m[i])
-				i++
-				i = i % len(m)
-			case <-ctx.Done():
-				c.progressListener.Stopping()
-				ticker.Stop()
-				return
-			}
-		}
-	}()
 }
 
 type DeployParams struct {
