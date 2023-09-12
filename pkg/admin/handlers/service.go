@@ -296,7 +296,7 @@ func ClusterMetrics(c *gin.Context) {
 // @Failure      500  {object}  model.HTTPError
 // @Router       /api/{env}/metrics/metadata [get]
 func Metadata(c *gin.Context) {
-	res, err := monitorService.ClusterMetrics()
+	res, err := monitorService.Metadata()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
