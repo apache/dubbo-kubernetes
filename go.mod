@@ -51,9 +51,9 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heroku/color v0.0.6
-	github.com/hinshun/vt10x v0.0.0-20220119200601-820417d04eec
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattbaird/jsonpatch v0.0.0-20230413205102-771768614e91
+	github.com/moby/term v0.5.0
 	github.com/onsi/gomega v1.27.10
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1
@@ -257,7 +257,6 @@ require (
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect

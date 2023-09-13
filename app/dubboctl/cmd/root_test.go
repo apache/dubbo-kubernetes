@@ -18,7 +18,6 @@ package cmd
 import (
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -32,15 +31,7 @@ func fromTempDirectory(t *testing.T) string {
 	t.Helper()
 	ClearEnvs(t)
 
-	// We have to define KUBECONFIG, or the file at ~/.kube/config (if extant)
-	// will be used (disrupting tests by using the current user's environment).
-	// The test kubeconfig set below has the current namespace set to 'func'
-	// NOTE: the below settings affect unit tests only, and we do explicitly
-	// want all unit tests to start in an empty environment with tests "opting in"
-	// to config, not opting out.
-	t.Setenv("KUBECONFIG", filepath.Join(cwd(), "testdata", "default_kubeconfig"))
-
-	// By default unit tests presum no config exists unless provided in testdata.
+	// By default unit tests presume no config exists unless provided in testdata.
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
 	// creates and CDs to a temp directory
