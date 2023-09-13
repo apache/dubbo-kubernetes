@@ -18,13 +18,15 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 	"github.com/ory/viper"
-
 	"github.com/spf13/cobra"
 )
 
@@ -45,25 +47,26 @@ SYNOPSIS
 	dubboctl deploy [flags]
 `,
 		SuggestFor: []string{"delpoy", "deplyo"},
-		PreRunE: bindEnv("path", "output", "namespace", "image", "env", "labels",
-			"name", "secret", "replicas", "revisions", "containerPort", "targetPort", "nodePort", "requestCpu", "limitMem",
-			"minReplicas", "serviceAccount", "serviceAccount", "imagePullPolicy", "usePromScrape", "promPath",
-			"promPort", "useSkywalking", "maxReplicas", "limitCpu", "requestMem"),
+		PreRunE: bindEnv("path", "output", "namespace", "image", "envs", "name", "secret", "replicas",
+			"revisions", "containerPort", "targetPort", "nodePort", "requestCpu", "limitMem",
+			"minReplicas", "serviceAccount", "serviceAccount", "imagePullPolicy", "maxReplicas", "limitCpu", "requestMem",
+			"apply", "useDockerfile", "push", "force", "builder-image", "nobuild"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, newClient)
 		},
 	}
 
+	cmd.Flags().BoolP("nobuild", "", false,
+		"Skip the step of building the image.")
+	cmd.Flags().BoolP("apply", "a", false,
+		"Whether to apply the application to the k8s cluster by the way")
 	cmd.Flags().StringP("output", "o", "kube.yaml",
 		"output kubernetes manifest")
 	cmd.Flags().StringP("namespace", "n", "dubbo-system",
 		"Deploy into a specific namespace")
-	cmd.Flags().StringP("image", "i", "",
-		"Full image name in the form [registry]/[namespace]/[name]:[tag]@[digest]")
-	cmd.Flags().StringArrayP("env", "e", nil,
-		"Environment variable to set in the form NAME=VALUE. ")
-	cmd.Flags().StringArrayP("labels", "l", nil,
-		"Labels variable to set in the form KEY=VALUE. ")
+	cmd.Flags().StringArrayP("envs", "e", nil,
+		"Environment variable to set in the form NAME=VALUE. "+
+			"This is for the environment variables passed in by the builderpack build method.")
 	cmd.Flags().StringP("name", "", "",
 		"The name of deployment (required)")
 	cmd.Flags().StringP("secret", "", "",
@@ -94,14 +97,16 @@ SYNOPSIS
 		"TheServiceAccount for the deployment")
 	cmd.Flags().StringP("imagePullPolicy", "", "",
 		"The image pull policy of the deployment, default to IfNotPresent")
-	cmd.Flags().BoolP("usePromScrape", "", false,
-		"use promScrape or not")
-	cmd.Flags().StringP("promPath", "", "",
-		"prometheus path")
-	cmd.Flags().IntP("promPort", "", 0,
-		"prometheus port")
-	cmd.Flags().BoolP("useSkywalking", "", false,
-		"use SkyWalking or not")
+	cmd.Flags().StringP("builder-image", "b", "",
+		"Specify a custom builder image for use by the builder other than its default.")
+	cmd.Flags().BoolP("useDockerfile", "d", false,
+		"Use the dockerfile with the specified path to build")
+	cmd.Flags().StringP("image", "i", "",
+		"Container image( [registry]/[namespace]/[name]:[tag] )")
+	cmd.Flags().BoolP("push", "", false,
+		"Whether to push the image to the registry center by the way")
+	cmd.Flags().BoolP("force", "f", false,
+		"Whether to force push")
 
 	addPathFlag(cmd)
 	baseCmd.AddCommand(cmd)
@@ -130,20 +135,55 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 	if !f.Initialized() {
 		return dubbo.NewErrNotInitialized(f.Root)
 	}
-	f, err = cfg.Configure(f)
+
+	cfg.Configure(f)
+
+	clientOptions, err := cfg.clientOptions()
 	if err != nil {
 		return err
 	}
-
-	client, done := newClient()
+	client, done := newClient(clientOptions...)
 	defer done()
-
+	if !cfg.NoBuild {
+		if f.Built() && !cfg.Force {
+			fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`\n")
+			return nil
+		}
+		if f, err = client.Build(cmd.Context(), f); err != nil {
+			return err
+		}
+		if cfg.Push {
+			if f, err = client.Push(cmd.Context(), f); err != nil {
+				return err
+			}
+		}
+	}
 	f, err = client.Deploy(cmd.Context(), f)
 	if err != nil {
 		return err
 	}
 
-	return f.Write()
+	if cfg.Apply {
+		err := applyTok8s(cmd, f)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = f.Write(); err != nil {
+		return err
+	}
+
+	return f.Stamp()
+}
+
+func applyTok8s(cmd *cobra.Command, d *dubbo.Dubbo) error {
+	file := filepath.Join(d.Root, d.Deploy.Output)
+	c := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	err := c.Run()
+	return err
 }
 
 func (c DeployConfig) Validate(cmd *cobra.Command) (err error) {
@@ -159,22 +199,12 @@ func (c *DeployConfig) Prompt(d *dubbo.Dubbo) (*DeployConfig, error) {
 	if !util.InteractiveTerminal() {
 		return c, nil
 	}
-
-	if d.Image == "" && c.Image == "" {
-		qs := []*survey.Question{
-			{
-				Name:     "image",
-				Validate: survey.Required,
-				Prompt: &survey.Input{
-					Message: "The container image( [registry]/[namespace]/[name]:[tag] ). For example: docker.io/sjmshsh/testapp:latest",
-					Default: c.Image,
-				},
-			},
-		}
-		if err = survey.Ask(qs, c); err != nil {
-			return c, err
-		}
+	buildconfig, err := c.buildConfig.Prompt(d)
+	if err != nil {
+		return c, err
 	}
+	c.buildConfig = buildconfig
+
 	if d.Deploy.ContainerPort == 0 && c.ContainerPort == 0 {
 		qs := []*survey.Question{
 			{
@@ -192,21 +222,8 @@ func (c *DeployConfig) Prompt(d *dubbo.Dubbo) (*DeployConfig, error) {
 	return c, err
 }
 
-func (c DeployConfig) Configure(f *dubbo.Dubbo) (*dubbo.Dubbo, error) {
-	if c.Path == "" {
-		f.Root = "."
-	} else {
-		f.Root = c.Path
-	}
-	if c.Image != "" {
-		f.Image = c.Image
-	}
-	if c.Labels != nil {
-		f.Deploy.Labels = c.Labels
-	}
-	if c.Envs != nil {
-		f.Deploy.Envs = c.Envs
-	}
+func (c DeployConfig) Configure(f *dubbo.Dubbo) {
+	c.buildConfig.Configure(f)
 	if c.Namespace != "" {
 		f.Deploy.Namespace = c.Namespace
 	}
@@ -255,25 +272,12 @@ func (c DeployConfig) Configure(f *dubbo.Dubbo) (*dubbo.Dubbo, error) {
 	if c.ImagePullPolicy != "" {
 		f.Deploy.ImagePullPolicy = c.ImagePullPolicy
 	}
-	f.Deploy.UsePromScrape = c.UsePromScrape
-	if c.PromPath != "" {
-		f.Deploy.PromPath = c.PromPath
-	}
-	if c.PromPort != 0 {
-		f.Deploy.PromPort = c.PromPort
-	}
-
-	if c.UseSkywalking != false || (c.UseSkywalking == false && f.Deploy.UseSkywalking == true) {
-		f.Deploy.UseSkywalking = c.UseSkywalking
-	}
-	return f, nil
 }
 
 type DeployConfig struct {
-	Path            string
-	Image           string
-	Labels          []string
-	Envs            []string
+	*buildConfig
+	NoBuild         bool
+	Apply           bool
 	Namespace       string
 	Secret          string
 	Replicas        int
@@ -291,19 +295,14 @@ type DeployConfig struct {
 	MaxReplicas     int
 	ServiceAccount  string
 	ImagePullPolicy string
-	UsePromScrape   bool
-	PromPath        string
-	PromPort        int
-	UseSkywalking   bool
 }
 
 func newDeployConfig(cmd *cobra.Command) (c *DeployConfig) {
 	c = &DeployConfig{
-		Path:            viper.GetString("path"),
-		Image:           viper.GetString("image"),
+		buildConfig:     newBuildConfig(cmd),
+		NoBuild:         viper.GetBool("nobuild"),
+		Apply:           viper.GetBool("apply"),
 		Output:          viper.GetString("output"),
-		Labels:          viper.GetStringSlice("labels"),
-		Envs:            viper.GetStringSlice("env"),
 		Namespace:       viper.GetString("namespace"),
 		Secret:          viper.GetString("secret"),
 		Replicas:        viper.GetInt("replicas"),
@@ -320,20 +319,6 @@ func newDeployConfig(cmd *cobra.Command) (c *DeployConfig) {
 		MaxReplicas:     viper.GetInt("maxReplicas"),
 		ServiceAccount:  viper.GetString("serviceAccount"),
 		ImagePullPolicy: viper.GetString("imagePullPolicy"),
-		UsePromScrape:   viper.GetBool("usePromScrape"),
-		PromPath:        viper.GetString("promPath"),
-		PromPort:        viper.GetInt("promPort"),
-		UseSkywalking:   viper.GetBool("useSkywalking"),
-	}
-	// NOTE: .Env should be viper.GetStringSlice, but this returns unparsed
-	// results and appears to be an open issue since 2017:
-	// https://github.com/spf13/viper/issues/380
-	var err error
-	if c.Envs, err = cmd.Flags().GetStringArray("env"); err != nil {
-		fmt.Fprintf(cmd.OutOrStdout(), "error reading envs: %v", err)
-	}
-	if c.Labels, err = cmd.Flags().GetStringArray("labels"); err != nil {
-		fmt.Fprintf(cmd.OutOrStdout(), "error reading labels: %v", err)
 	}
 	return
 }

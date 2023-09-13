@@ -55,7 +55,7 @@ func TestRepositories_GetInvalid(t *testing.T) {
 	// invalid should error
 	_, err := client.Repositories().Get("invalid")
 	if err == nil {
-		t.Fatal("did not receive expected error getting inavlid repository")
+		t.Fatal("did not receive expected error getting invalid repository")
 	}
 }
 
@@ -181,7 +181,7 @@ func TestRepositories_AddDeafultName(t *testing.T) {
 }
 
 // TestRepositories_AddWithManifest ensures that a repository with
-// a manfest wherein a default name is specified, is used as the name for the
+// a manifest wherein a default name is specified, is used as the name for the
 // added repository when a name is not explicitly specified.
 func TestRepositories_AddWithManifest(t *testing.T) {
 	// repository-b is meant to exemplify the use case of a repository which

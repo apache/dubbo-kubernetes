@@ -49,14 +49,8 @@ var (
 
 var (
 	DefaultBuilderImages = map[string]string{
-		"node":       DefaultBaseBuilder,
-		"nodejs":     DefaultBaseBuilder,
-		"typescript": DefaultBaseBuilder,
-		"go":         DefaultTinyBuilder,
-		"python":     DefaultBaseBuilder,
-		"quarkus":    DefaultTinyBuilder,
-		"rust":       DefaultBaseBuilder,
-		"springboot": DefaultBaseBuilder,
+		"go":   DefaultTinyBuilder,
+		"java": DefaultBaseBuilder,
 	}
 
 	// Ensure that all entries in this list are terminated with a trailing "/"

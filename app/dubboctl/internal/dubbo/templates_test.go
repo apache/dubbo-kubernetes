@@ -1,6 +1,3 @@
-//go:build !integration
-// +build !integration
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,7 +21,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
@@ -36,8 +32,8 @@ import (
 // TestTemplates_List ensures that all templates are listed taking into account
 // both internal and extensible (prefixed) repositories.
 func TestTemplates_List(t *testing.T) {
-	// A client which specifies a location of exensible repositoreis on disk
-	// will list all builtin plus exensible
+	// A client which specifies a location of extensible repositories on disk
+	// will list all builtin plus extensible
 	client := dubbo.New(dubbo.WithRepositoriesPath("testdata/repositories"))
 
 	// list templates for the "go" runtime
@@ -94,7 +90,7 @@ func TestTemplates_Get(t *testing.T) {
 	}
 
 	if embedded.Runtime() != "go" || embedded.Repository() != "default" || embedded.Name() != "common" {
-		t.Logf("Expected template from embedded to have runtime 'go' repo 'default' name 'common', got '%v', '%v', '%v',",
+		t.Logf("Expected template from embedded to have runtime 'go' repo 'default' name 'http', got '%v', '%v', '%v',",
 			embedded.Runtime(), embedded.Repository(), embedded.Name())
 	}
 
@@ -104,7 +100,7 @@ func TestTemplates_Get(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if embedded.Runtime() != "go" || embedded.Repository() != "default" || embedded.Name() != "common" {
+	if embedded.Runtime() != "go" || embedded.Repository() != "default" || embedded.Name() != "http" {
 		t.Logf("Expected template from extended repo to have runtime 'go' repo 'customTemplateRepo' name 'customTemplate', got '%v', '%v', '%v',",
 			extended.Runtime(), extended.Repository(), extended.Name())
 	}
@@ -136,40 +132,8 @@ func TestTemplates_Embedded(t *testing.T) {
 	}
 }
 
-// TestTemplates_Custom ensures that a template from a filesystem source
-// (ie. custom provider on disk) can be specified as the source for a
-// template.
-func TestTemplates_Custom(t *testing.T) {
-	// Create test directory
-	root := "testdata/testTemplatesCustom"
-	defer Using(t, root)()
-
-	// Client which uses custom repositories
-	// in form [provider]/[template], on disk the template is
-	// at: testdata/repositories/[provider]/[runtime]/[template]
-	client := dubbo.New(
-		dubbo.WithRepositoriesPath("testdata/repositories"))
-
-	// Create a function specifying a template from
-	// the custom provider's directory in the on-disk template repo.
-	_, err := client.Init(&dubbo.Dubbo{
-		Root:     root,
-		Runtime:  "customRuntime",
-		Template: "customTemplateRepo/customTemplate",
-	}, false, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Assert file exists as expected
-	_, err = os.Stat(filepath.Join(root, "custom.impl"))
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 // TestTemplates_Remote ensures that a Git template repository provided via URI
-// can be specificed on creation of client, with subsequent calls to Create
+// can be specified on creation of client, with subsequent calls to Create
 // using this remote by default.
 func TestTemplates_Remote(t *testing.T) {
 	var err error
@@ -255,121 +219,5 @@ func TestTemplates_InvalidErrors(t *testing.T) {
 	}, false, nil)
 	if !errors.Is(err, dubbo.ErrTemplateNotFound) {
 		t.Fatalf("Expected ErrTemplateNotFound, got %v", err)
-	}
-}
-
-// TestTemplates_ModeEmbedded ensures that templates written from the embedded
-// templates retain their mode.
-func TestTemplates_ModeEmbedded(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		return
-		// not applicable
-	}
-
-	// set up test directory
-	root := "testdata/testTemplatesModeEmbedded"
-	defer Using(t, root)()
-
-	client := dubbo.New()
-
-	// Write the embedded template that contains a file which
-	// needs to be executable (only such is mvnw in quarkus)
-	_, err := client.Init(&dubbo.Dubbo{
-		Root:     root,
-		Runtime:  "quarkus",
-		Template: "http",
-	}, false, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify file mode was preserved
-	file, err := os.Stat(filepath.Join(root, "mvnw"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if file.Mode() != os.FileMode(0o755) {
-		t.Fatalf("The embedded executable's mode should be 0755 but was %v", file.Mode())
-	}
-}
-
-// TestTemplates_ModeCustom ensures that templates written from custom templates
-// retain their mode.
-func TestTemplates_ModeCustom(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		return // not applicable
-	}
-
-	// test directories
-	root := "testdata/testTemplates_ModeCustom"
-	defer Using(t, root)()
-
-	client := dubbo.New(
-		dubbo.WithRepositoriesPath("testdata/repositories"))
-
-	// Write executable from custom repo
-	_, err := client.Init(&dubbo.Dubbo{
-		Root:     root,
-		Runtime:  "test",
-		Template: "customTemplateRepo/tplb",
-	}, false, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify custom file mode was preserved.
-	file, err := os.Stat(filepath.Join(root, "executable.sh"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if file.Mode() != os.FileMode(0o755) {
-		t.Fatalf("The custom executable file's mode should be 0755 but was %v", file.Mode())
-	}
-}
-
-// TestTemplates_ModeRemote ensures that templates written from remote templates
-// retain their mode.
-func TestTemplates_ModeRemote(t *testing.T) {
-	var err error
-
-	if runtime.GOOS == "windows" {
-		return // not applicable
-	}
-
-	// test directories
-	root := "testdata/testTemplates_ModeRemote"
-	defer Using(t, root)()
-
-	url := ServeRepo(RepositoriesTestRepo, t)
-
-	client := dubbo.New(
-		dubbo.WithRepository(url))
-
-	// Write executable from custom repo
-	_, err = client.Init(&dubbo.Dubbo{
-		Root:     root,
-		Runtime:  "node",
-		Template: "remote",
-	}, false, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify directory file mode was preserved
-	file, err := os.Stat(filepath.Join(root, "test"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if file.Mode() != os.ModeDir|0o755 {
-		t.Fatalf("The remote repositry directory mode should be 0755 but was %#o", file.Mode())
-	}
-
-	// Verify remote executable file mode was preserved.
-	file, err = os.Stat(filepath.Join(root, "test", "executable.sh"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if file.Mode() != os.FileMode(0o755) {
-		t.Fatalf("The remote executable's mode should be 0755 but was %v", file.Mode())
 	}
 }

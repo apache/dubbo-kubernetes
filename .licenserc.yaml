@@ -78,7 +78,7 @@ header:
     - '**/ui/tests/**'
     - '**/dubbo-ui/**'
     - '**/governance_config_mock.go'
-    - '/templates/**'
+    - '**/templates/**'
     - '**/testdata/**'
     - '**/deploy.tpl'
   comment: on-failure

@@ -21,7 +21,6 @@ import (
 	"context"
 	_ "embed"
 	"os"
-	"strings"
 	template2 "text/template"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
@@ -49,8 +48,6 @@ func NewDeployer(opts ...DeployerOpt) *DeployApp {
 }
 
 type Deployment struct {
-	Labels          []Label
-	Envs            []Env
 	Name            string
 	Namespace       string
 	Image           string
@@ -69,11 +66,6 @@ type Deployment struct {
 	MaxReplicas     int
 	ServiceAccount  string
 	ImagePullPolicy string
-	UseProm         bool
-	UsePromScrape   bool
-	PromPath        string
-	PromPort        int
-	UseSkywalking   bool
 }
 
 func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption) (DeploymentResult, error) {
@@ -81,9 +73,6 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 
 	var nodePort int
 	var err error
-	if f.Deploy.NodePort == 0 {
-		nodePort = 0
-	}
 	nodePort = f.Deploy.NodePort
 
 	text, err := util.LoadTemplate("", deployTemplateFile, deployTemplate)
@@ -99,36 +88,6 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 		targetPort = f.Deploy.ContainerPort
 	}
 
-	var envs []Env
-	for _, pair := range f.Deploy.Envs {
-		parts := strings.Split(pair, "=")
-
-		if len(parts) == 2 {
-			key := &parts[0]
-			value := &parts[1]
-			env := Env{
-				Name:  key,
-				Value: value,
-			}
-			envs = append(envs, env)
-		}
-	}
-
-	var labels []Label
-	for _, pair := range f.Deploy.Labels {
-		parts := strings.Split(pair, "=")
-
-		if len(parts) == 2 {
-			key := &parts[0]
-			value := &parts[1]
-			label := Label{
-				Key:   key,
-				Value: value,
-			}
-			labels = append(labels, label)
-		}
-	}
-
 	path := f.Root + "/" + f.Deploy.Output
 	out, err := os.Create(path)
 	if err != nil {
@@ -138,8 +97,6 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 		}, err
 	}
 
-	promPath := f.Deploy.PromPath
-	promPort := f.Deploy.PromPort
 	t := template2.Must(template2.New("deployTemplate").Parse(text))
 	err = t.Execute(out, Deployment{
 		Name:            f.Name,
@@ -160,13 +117,6 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 		MaxReplicas:     f.Deploy.MaxReplicas,
 		ServiceAccount:  f.Deploy.ServiceAccount,
 		ImagePullPolicy: f.Deploy.ImagePullPolicy,
-		UseProm:         f.Deploy.PromPath != "" || f.Deploy.PromPort > 0,
-		UsePromScrape:   true,
-		PromPath:        promPath,
-		PromPort:        promPort,
-		UseSkywalking:   f.Deploy.UseSkywalking,
-		Envs:            envs,
-		Labels:          labels,
 	})
 	if err != nil {
 		return DeploymentResult{

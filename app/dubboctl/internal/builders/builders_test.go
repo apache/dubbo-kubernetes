@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/pack"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 )
 
@@ -36,7 +37,7 @@ func TestImage_Named(t *testing.T) {
 		},
 	}
 
-	builderImage, err := builders.Image(f, builders.Pack, make(map[string]string))
+	builderImage, err := builders.Image(f, builders.Pack, pack.DefaultBuilderImages)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +50,7 @@ func TestImage_Named(t *testing.T) {
 // the function has no builder image yet defined for the named builder, and
 // also no runtime to choose from the defaults.
 func TestImage_ErrRuntimeRequired(t *testing.T) {
-	_, err := builders.Image(&dubbo.Dubbo{}, "", make(map[string]string))
+	_, err := builders.Image(&dubbo.Dubbo{}, "", pack.DefaultBuilderImages)
 	if err == nil {
 		t.Fatalf("did not receive expected error")
 	}
@@ -60,7 +61,13 @@ func TestImage_ErrRuntimeRequired(t *testing.T) {
 
 // TestImage_ErrNoDefaultImage ensures that when
 func TestImage_ErrNoDefaultImage(t *testing.T) {
-	_, err := builders.Image(&dubbo.Dubbo{Runtime: "go"}, "", make(map[string]string))
+	d := &dubbo.Dubbo{
+		Runtime: "go",
+		Build: dubbo.BuildSpec{
+			BuilderImages: map[string]string{},
+		},
+	}
+	_, err := builders.Image(d, "", map[string]string{})
 	if err == nil {
 		t.Fatalf("did not receive expected error")
 	}
@@ -73,10 +80,16 @@ func TestImage_ErrNoDefaultImage(t *testing.T) {
 // map, it is chosen when both runtime is defined on the function and no
 // builder image has yet to be defined on the function.
 func TestImage_Defaults(t *testing.T) {
+	d := &dubbo.Dubbo{
+		Runtime: "go",
+		Build: dubbo.BuildSpec{
+			BuilderImages: map[string]string{},
+		},
+	}
 	defaults := map[string]string{
 		"go": "example.com/go/default-builder-image",
 	}
-	builderImage, err := builders.Image(&dubbo.Dubbo{Runtime: "go"}, "", defaults)
+	builderImage, err := builders.Image(d, "", defaults)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +99,7 @@ func TestImage_Defaults(t *testing.T) {
 	}
 }
 
-// Test_ErrUnknownBuilder ensures that the error properfly formats.
+// Test_ErrUnknownBuilder ensures that the error properly formats.
 // This error is used externally by packages which share builders but may
 // define their own custom builder, thus actually throwing this error
 // is the responsibility of whomever is instantiating builders.

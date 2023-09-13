@@ -5,40 +5,26 @@ metadata:
   namespace: {{.Namespace}}
   labels:
     app: {{.Name}}
-    app-type: dubbo{{range .Labels}}
-    {{.Key}}: {{.Value}}{{end}}
+    app-type: dubbo
 spec:
   replicas: {{.Replicas}}
   revisionHistoryLimit: {{.Revisions}}
   selector:
     matchLabels:
       app: {{.Name}}
-      app-type: dubbo{{range .Labels}}
-      {{.Key}}: {{.Value}}{{end}}
+      app-type: dubbo
   template:
     metadata:
       labels:
         app: {{.Name}}
-        app-type: dubbo{{range .Labels}}
-        {{.Key}}: {{.Value}}{{end}}{{if .UseProm}}
+        app-type: dubbo
       #helm-charts 配置  https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus
       annotations:
-        prometheus.io/scrape: "{{.UsePromScrape}}"
-        prometheus.io/path: {{.PromPath}}
-        prometheus.io/port: "{{.PromPort}}" {{end}}
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /management/prometheus
+        prometheus.io/port: "18081"
     spec:{{if .ServiceAccount}}
-      serviceAccountName: {{.ServiceAccount}}{{end}}{{if .UseSkywalking}}
-      volumes:
-        - name: skywalking-agent
-          emptyDir: { }
-      initContainers:
-        - name: agent-container
-          image: apache/skywalking-java-agent:8.13.0-java17
-          volumeMounts:
-            - name: skywalking-agent
-              mountPath: /agent
-          command: [ "/bin/sh" ]
-          args: [ "-c", "cp -R /skywalking/agent /agent/" ]{{end}}
+      serviceAccountName: {{.ServiceAccount}}{{end}}
       containers:
       - name: {{.Name}}
         image: {{.Image}}
@@ -46,24 +32,7 @@ spec:
         {{end}}ports:
         - containerPort: {{.Port}}
           name: dubbo
-          protocol: TCP{{if .UseProm}}
-        - containerPort: {{.PromPort}}
-          name: metrics
-          protocol: TCP{{end}}{{if .UseSkywalking}}
-        volumeMounts:
-          - name: skywalking-agent
-            mountPath: /skywalking{{end}}
-        env:
-          - name: DUBBO_CTL_VERSION
-            value: 0.0.1{{if .UseSkywalking}}
-          - name: SW_AGENT_NAME
-            value: {{.Name}}
-          - name: JAVA_TOOL_OPTIONS
-            value: "-javaagent:/skywalking/agent/skywalking-agent.jar"
-          - name: SW_AGENT_COLLECTOR_BACKEND_SERVICES
-            value: "skywalking-oap-server.{{.Namespace}}.svc:11800"{{end}}{{range .Envs}}
-          - name: {{.Name}}
-            value: {{.Value}} {{end}}
+          protocol: TCP
         readinessProbe:
           tcpSocket:
             port: {{.Port}}
@@ -97,9 +66,7 @@ spec:
     protocol: TCP
     targetPort: {{.TargetPort}}
   type: NodePort{{else}}- port: {{.Port}}
-    targetPort: {{.TargetPort}}{{end}}{{if .UseProm}}
-  - port: {{.PromPort}}
-    targetPort: {{.PromPort}}{{end}}
+    targetPort: {{.TargetPort}}{{end}}
   selector:
     app: {{.Name}}
 
