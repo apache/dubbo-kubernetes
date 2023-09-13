@@ -18,8 +18,8 @@
 package crdclient
 
 import (
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
 )
 
 type ConfigStore interface {

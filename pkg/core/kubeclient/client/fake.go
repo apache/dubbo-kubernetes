@@ -18,8 +18,8 @@
 package client
 
 import (
-	fake2 "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned/fake"
-	dubboinformer "github.com/apache/dubbo-admin/pkg/core/gen/generated/informers/externalversions"
+	fake2 "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned/fake"
+	dubboinformer "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/informers/externalversions"
 	"go.uber.org/atomic"
 	extfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/apimachinery/pkg/watch"

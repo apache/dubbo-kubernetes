@@ -18,7 +18,7 @@ package endpoint
 import (
 	"encoding/json"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 type Endpoint struct {

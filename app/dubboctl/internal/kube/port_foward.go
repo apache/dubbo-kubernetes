@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"

@@ -25,12 +25,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/apache/dubbo-admin/api/dds"
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/core/endpoint"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	gvks "github.com/apache/dubbo-admin/pkg/core/schema/gvk"
+	"github.com/apache/dubbo-kubernetes/api/dds"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	gvks "github.com/apache/dubbo-kubernetes/pkg/core/schema/gvk"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/anypb"
 

@@ -23,16 +23,16 @@ import (
 	"reflect"
 	"time"
 
-	clientset "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned"
-	"github.com/apache/dubbo-admin/pkg/core/gen/generated/informers/externalversions"
+	clientset "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned"
+	"github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/informers/externalversions"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 
 	"go.uber.org/atomic"
 
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

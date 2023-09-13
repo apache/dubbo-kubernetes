@@ -22,12 +22,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/apache/dubbo-admin/pkg/admin/config"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
-	"github.com/apache/dubbo-admin/app/dubbo-ui"
-	"github.com/apache/dubbo-admin/pkg/admin/handlers"
-	"github.com/apache/dubbo-admin/pkg/admin/handlers/traffic"
+	"github.com/apache/dubbo-kubernetes/app/dubbo-ui"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/handlers"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/handlers/traffic"
 	"github.com/gin-gonic/gin"
 )
 

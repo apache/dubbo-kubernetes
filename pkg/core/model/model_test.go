@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	network "github.com/apache/dubbo-admin/api/resource/v1alpha1"
+	network "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 )
 

@@ -36,7 +36,7 @@ const (
 	wantPath  = "./testdata/want"
 )
 
-// we have tested ApplyObject, so we just need to test createNamespace
+// we have tested ApplyObject, so we just need to test CreateNamespace
 func TestCtlClient_ApplyManifest(t *testing.T) {
 	tests := []struct {
 		input string
@@ -66,7 +66,7 @@ func TestCtlClient_ApplyManifest(t *testing.T) {
 		}
 		receiver := &corev1.Namespace{}
 		if err := ctlCli.Get(context.Background(), nsKey, receiver); err != nil {
-			t.Errorf("createNamespace failed, err: %s", err)
+			t.Errorf("CreateNamespace failed, err: %s", err)
 			return
 		}
 		assert.Equal(t, testNs, receiver.Name)

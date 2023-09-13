@@ -18,15 +18,15 @@ package services
 import (
 	"strings"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	"github.com/dubbogo/gost/encoding/yaml"
 
-	"github.com/apache/dubbo-admin/pkg/admin/config"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
-	"github.com/apache/dubbo-admin/pkg/admin/model/util"
-	util2 "github.com/apache/dubbo-admin/pkg/admin/util"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model/util"
+	util2 "github.com/apache/dubbo-kubernetes/pkg/admin/util"
 )
 
 type OverrideServiceImpl struct{}

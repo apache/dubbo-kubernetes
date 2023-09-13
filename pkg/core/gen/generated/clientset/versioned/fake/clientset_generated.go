@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned"
-	dubbov1alpha1 "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned/typed/dubbo.apache.org/v1alpha1"
-	fakedubbov1alpha1 "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned/typed/dubbo.apache.org/v1alpha1/fake"
+	clientset "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned"
+	dubbov1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned/typed/dubbo.apache.org/v1alpha1"
+	fakedubbov1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned/typed/dubbo.apache.org/v1alpha1/fake"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

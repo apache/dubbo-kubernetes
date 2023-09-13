@@ -38,7 +38,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 
 	"gopkg.in/yaml.v2"
 	yaml2 "sigs.k8s.io/yaml"

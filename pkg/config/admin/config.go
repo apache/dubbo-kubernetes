@@ -18,7 +18,7 @@
 package admin
 
 import (
-	"github.com/apache/dubbo-admin/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/pkg/errors"
 )
 

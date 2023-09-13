@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema"
-	"github.com/apache/dubbo-admin/pkg/core/schema/ast"
-	"github.com/apache/dubbo-admin/tools/resource-gen"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/ast"
+	"github.com/apache/dubbo-kubernetes/tools/resource-gen"
 )
 
 func main() {

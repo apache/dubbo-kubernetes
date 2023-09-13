@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/apache/dubbo-admin/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 )
 
 func TestGetDiscoveryPath(t *testing.T) {

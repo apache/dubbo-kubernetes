@@ -22,7 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema/ast"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/ast"
 )
 
 const staticResourceTemplate = `
@@ -45,7 +45,7 @@ const staticResourceTemplate = `
 
 package gvk
 
-import "github.com/apache/dubbo-admin/pkg/core/model"
+import "github.com/apache/dubbo-kubernetes/pkg/core/model"
 
 var (
 {{- range .Entries }}
@@ -77,10 +77,10 @@ package collections
 import (
 	"reflect"
 
-	api "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	"github.com/apache/dubbo-admin/pkg/core/schema/resource"
-	"github.com/apache/dubbo-admin/pkg/core/validation"
+	api "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/validation"
 )
 
 var (

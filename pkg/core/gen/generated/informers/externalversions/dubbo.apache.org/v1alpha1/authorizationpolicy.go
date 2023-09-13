@@ -20,10 +20,10 @@ package v1alpha1
 
 import (
 	"context"
-	dubboapacheorgv1alpha1 "github.com/apache/dubbo-admin/pkg/core/gen/apis/dubbo.apache.org/v1alpha1"
-	versioned "github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned"
-	internalinterfaces "github.com/apache/dubbo-admin/pkg/core/gen/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/apache/dubbo-admin/pkg/core/gen/generated/listers/dubbo.apache.org/v1alpha1"
+	dubboapacheorgv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/gen/apis/dubbo.apache.org/v1alpha1"
+	versioned "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned"
+	internalinterfaces "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/listers/dubbo.apache.org/v1alpha1"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -20,7 +20,7 @@ package model
 import (
 	"strings"
 
-	"github.com/apache/dubbo-admin/pkg/admin/util"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/util"
 )
 
 const (

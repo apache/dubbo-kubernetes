@@ -28,10 +28,10 @@ endif
 
 BUILDDATE = $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-LDFLAGS = "-X github.com/apache/dubbo-admin/pkg/version.gitTag=$(GIT_VERSION) \
-                      -X github.com/apache/dubbo-admin/pkg/version.gitCommit=$(GIT_COMMIT_HASH) \
-                      -X github.com/apache/dubbo-admin/pkg/version.gitTreeState=$(GIT_TREESTATE) \
-                      -X github.com/apache/dubbo-admin/pkg/version.buildDate=$(BUILDDATE)"
+LDFLAGS = "-X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=$(GIT_VERSION) \
+                      -X github.com/apache/dubbo-kubernetes/pkg/version.gitCommit=$(GIT_COMMIT_HASH) \
+                      -X github.com/apache/dubbo-kubernetes/pkg/version.gitTreeState=$(GIT_TREESTATE) \
+                      -X github.com/apache/dubbo-kubernetes/pkg/version.buildDate=$(BUILDDATE)"
 
 # Images management
 REGISTRY ?= docker.io
@@ -129,15 +129,15 @@ test: fmt vet  ## Run all tests.
 
 .PHONY: test-dubboctl
 test-dubboctl: fmt vet  ## Run tests for dubboctl
-	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-admin/pkg/dubboctl/...
+	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/pkg/dubboctl/...
 
 .PHONY: test-admin
 test-admin: fmt vet  ## Run tests for admin
-	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-admin/pkg/admin/...
+	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/pkg/admin/...
 
 .PHONY: test-authority
 test-authority: fmt vet  ## Run tests for authority
-	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-admin/pkg/authority/...
+	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/pkg/authority/...
 
 
 .PHONY: echoLDFLAGS

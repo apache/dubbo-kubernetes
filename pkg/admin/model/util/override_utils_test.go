@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 func TestOldOverride2URL(t *testing.T) {

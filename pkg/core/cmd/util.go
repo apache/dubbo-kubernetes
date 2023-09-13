@@ -20,7 +20,7 @@ package cmd
 import (
 	"context"
 
-	"github.com/apache/dubbo-admin/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
 
 type RunCmdOpts struct {

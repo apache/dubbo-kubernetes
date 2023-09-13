@@ -22,7 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apache/dubbo-admin/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"

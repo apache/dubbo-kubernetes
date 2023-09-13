@@ -17,7 +17,7 @@
 
 package validation
 
-import "github.com/apache/dubbo-admin/pkg/core/model"
+import "github.com/apache/dubbo-kubernetes/pkg/core/model"
 
 type Warning error
 

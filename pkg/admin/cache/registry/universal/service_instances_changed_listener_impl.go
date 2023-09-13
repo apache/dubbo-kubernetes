@@ -32,7 +32,7 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
 
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 )
 
 // DubboSDNotifyListener The Service Discovery Changed  Event Listener

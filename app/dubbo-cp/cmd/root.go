@@ -20,9 +20,9 @@ package cmd
 import (
 	"os"
 
-	cmd2 "github.com/apache/dubbo-admin/pkg/core/cmd"
-	"github.com/apache/dubbo-admin/pkg/core/cmd/version"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	cmd2 "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/core/cmd/version"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/spf13/cobra"
 )
 

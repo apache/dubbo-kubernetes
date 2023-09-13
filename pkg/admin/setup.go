@@ -18,8 +18,8 @@
 package admin
 
 import (
-	"github.com/apache/dubbo-admin/pkg/admin/router"
-	core_runtime "github.com/apache/dubbo-admin/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/router"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/pkg/errors"
 )
 

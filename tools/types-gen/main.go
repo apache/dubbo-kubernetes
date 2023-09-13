@@ -26,8 +26,8 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collections"
 )
 
 // ConfigData is data struct to feed to types.go template

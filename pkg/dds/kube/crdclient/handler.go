@@ -20,12 +20,12 @@ package crdclient
 import (
 	"sync"
 
-	api "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	gvks "github.com/apache/dubbo-admin/pkg/core/schema/gvk"
-	"github.com/apache/dubbo-admin/pkg/dds/storage"
+	api "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	gvks "github.com/apache/dubbo-kubernetes/pkg/core/schema/gvk"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/storage"
 	"k8s.io/utils/strings/slices"
 )
 
@@ -109,7 +109,9 @@ func authorization(config model.Config, rootNamespace string) model.Config {
 		})
 	} else {
 		for _, rule := range policy.Rules {
-			rule.To = &api.AuthorizationPolicyTarget{}
+			if rule.To == nil {
+				rule.To = &api.AuthorizationPolicyTarget{}
+			}
 			if !slices.Contains(rule.To.Namespaces, deepCopy.Namespace) {
 				rule.To.Namespaces = append(rule.To.Namespaces, deepCopy.Namespace)
 			}

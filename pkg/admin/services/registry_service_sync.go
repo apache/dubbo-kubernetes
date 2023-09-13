@@ -23,13 +23,13 @@ import (
 
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
-	"github.com/apache/dubbo-admin/pkg/admin/cache/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
-	"github.com/apache/dubbo-admin/pkg/admin/cache"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
-	util2 "github.com/apache/dubbo-admin/pkg/admin/util"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	util2 "github.com/apache/dubbo-kubernetes/pkg/admin/util"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
 )

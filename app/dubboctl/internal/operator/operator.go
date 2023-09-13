@@ -19,12 +19,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/kube"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/identifier"
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 )
 
 type DubboOperator struct {

@@ -22,10 +22,10 @@ import (
 	"sync"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
-	"github.com/apache/dubbo-admin/pkg/admin/cache"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
-	"github.com/apache/dubbo-admin/pkg/admin/util"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/util"
 )
 
 const (

@@ -29,9 +29,9 @@ import (
 	"testing"
 	"time"
 
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/config/security"
-	"github.com/apache/dubbo-admin/pkg/core/cert/provider"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/security"
+	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -42,7 +42,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/apache/dubbo-admin/pkg/authority/webhook"
+	"github.com/apache/dubbo-kubernetes/pkg/authority/webhook"
 )
 
 func TestServe(t *testing.T) {

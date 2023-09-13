@@ -20,8 +20,8 @@ package mapper
 import (
 	"context"
 
-	"github.com/apache/dubbo-admin/pkg/admin/config"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 type MockRuleMapper interface {

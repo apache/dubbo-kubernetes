@@ -21,8 +21,8 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/apache/dubbo-admin/pkg/core/logger"
-	"github.com/apache/dubbo-admin/pkg/core/tools/channels"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/tools/channels"
 )
 
 // Component defines a process that will be run in the application

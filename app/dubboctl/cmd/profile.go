@@ -16,7 +16,6 @@
 package cmd
 
 import (
-	"github.com/apache/dubbo-admin/app/dubboctl/cmd/subcmd"
 	"github.com/spf13/cobra"
 )
 
@@ -26,8 +25,8 @@ func addProfile(rootCmd *cobra.Command) {
 		Short: "Commands related to profiles",
 		Long:  "Commands help user to list and describe profiles",
 	}
-	subcmd.ConfigProfileListCmd(profileCmd)
-	subcmd.ConfigProfileDiffCmd(profileCmd)
+	ConfigProfileListCmd(profileCmd)
+	ConfigProfileDiffCmd(profileCmd)
 
 	rootCmd.AddCommand(profileCmd)
 }

@@ -20,7 +20,7 @@ package crdclient
 import (
 	"reflect"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )

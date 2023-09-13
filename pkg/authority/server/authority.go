@@ -20,14 +20,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/apache/dubbo-admin/api/ca"
-	"github.com/apache/dubbo-admin/pkg/authority/patch"
-	"github.com/apache/dubbo-admin/pkg/authority/webhook"
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	cert "github.com/apache/dubbo-admin/pkg/core/cert/provider"
-	"github.com/apache/dubbo-admin/pkg/core/jwt"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
-	"github.com/apache/dubbo-admin/pkg/core/tools/endpoint"
+	"github.com/apache/dubbo-kubernetes/api/ca"
+	"github.com/apache/dubbo-kubernetes/pkg/authority/patch"
+	"github.com/apache/dubbo-kubernetes/pkg/authority/webhook"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	cert "github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/core/jwt"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/tools/endpoint"
 	"google.golang.org/grpc/peer"
 )
 

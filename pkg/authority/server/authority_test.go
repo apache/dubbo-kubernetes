@@ -19,14 +19,14 @@ import (
 	"net"
 	"testing"
 
-	"github.com/apache/dubbo-admin/api/ca"
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/config/kube"
-	"github.com/apache/dubbo-admin/pkg/config/security"
-	"github.com/apache/dubbo-admin/pkg/core/cert/provider"
-	"github.com/apache/dubbo-admin/pkg/core/endpoint"
-	"github.com/apache/dubbo-admin/pkg/core/jwt"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/api/ca"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/config/security"
+	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
+	"github.com/apache/dubbo-kubernetes/pkg/core/jwt"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	"github.com/stretchr/testify/assert"
 

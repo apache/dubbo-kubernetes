@@ -21,18 +21,18 @@ import (
 	"net/http"
 	"time"
 
-	logger2 "github.com/apache/dubbo-admin/pkg/core/logger"
+	logger2 "github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	set "github.com/dubbogo/gost/container/set"
 
 	"github.com/prometheus/client_golang/api"
 	prom_v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 
-	"github.com/apache/dubbo-admin/pkg/admin/config"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
-	"github.com/apache/dubbo-admin/pkg/admin/model"
-	util2 "github.com/apache/dubbo-admin/pkg/admin/util"
-	"github.com/apache/dubbo-admin/pkg/core/monitor/prometheus"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	util2 "github.com/apache/dubbo-kubernetes/pkg/admin/util"
+	"github.com/apache/dubbo-kubernetes/pkg/core/monitor/prometheus"
 )
 
 var (

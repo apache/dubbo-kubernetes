@@ -23,21 +23,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/apache/dubbo-admin/pkg/core/gen/generated/clientset/versioned"
-	"github.com/apache/dubbo-admin/pkg/core/kubeclient/client"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collections"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
 
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	"github.com/apache/dubbo-admin/pkg/core/queue"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/queue"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )

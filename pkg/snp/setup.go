@@ -18,9 +18,9 @@
 package snp
 
 import (
-	"github.com/apache/dubbo-admin/api/mesh"
-	core_runtime "github.com/apache/dubbo-admin/pkg/core/runtime"
-	"github.com/apache/dubbo-admin/pkg/snp/server"
+	"github.com/apache/dubbo-kubernetes/api/mesh"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/snp/server"
 	"github.com/pkg/errors"
 )
 

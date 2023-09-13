@@ -21,14 +21,14 @@ import (
 	"time"
 
 	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
-	"github.com/apache/dubbo-admin/pkg/config"
-	"github.com/apache/dubbo-admin/pkg/config/option"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/option"
 	"github.com/pkg/errors"
 
-	"github.com/apache/dubbo-admin/pkg/config/admin"
-	"github.com/apache/dubbo-admin/pkg/config/kube"
-	"github.com/apache/dubbo-admin/pkg/config/security"
-	"github.com/apache/dubbo-admin/pkg/config/server"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/config/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/config/security"
+	"github.com/apache/dubbo-kubernetes/pkg/config/server"
 )
 
 type Config struct {

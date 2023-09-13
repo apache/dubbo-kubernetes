@@ -20,15 +20,15 @@ package bootstrap
 import (
 	"context"
 
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/core/cert/provider"
-	"github.com/apache/dubbo-admin/pkg/core/election/kube"
-	"github.com/apache/dubbo-admin/pkg/core/election/universe"
-	"github.com/apache/dubbo-admin/pkg/core/kubeclient/client"
-	"github.com/apache/dubbo-admin/pkg/core/logger"
-	core_runtime "github.com/apache/dubbo-admin/pkg/core/runtime"
-	"github.com/apache/dubbo-admin/pkg/core/runtime/component"
-	"github.com/apache/dubbo-admin/pkg/cp-server/server"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/core/election/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/core/election/universe"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/cp-server/server"
 )
 
 func buildRuntime(appCtx context.Context, cfg *dubbo_cp.Config) (core_runtime.Runtime, error) {

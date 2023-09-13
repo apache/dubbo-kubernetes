@@ -21,11 +21,11 @@ import (
 	"sync"
 	"testing"
 
-	dubbo_apache_org_v1alpha1 "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	dubbo_cp "github.com/apache/dubbo-admin/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collections"
-	"github.com/apache/dubbo-admin/pkg/dds/storage"
+	dubbo_apache_org_v1alpha1 "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/storage"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/util/workqueue"
 )

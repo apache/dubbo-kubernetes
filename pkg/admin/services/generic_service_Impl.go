@@ -18,9 +18,9 @@ package services
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboConfig "dubbo.apache.org/dubbo-go/v3/config"
-	"github.com/apache/dubbo-admin/pkg/admin/config"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
-	"github.com/apache/dubbo-admin/pkg/admin/util"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/util"
 
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	dubboconfig "dubbo.apache.org/dubbo-go/v3/config"

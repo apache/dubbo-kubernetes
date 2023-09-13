@@ -20,12 +20,12 @@ package storage
 import (
 	"testing"
 
-	dubbo_apache_org_v1alpha1 "github.com/apache/dubbo-admin/api/resource/v1alpha1"
-	"github.com/apache/dubbo-admin/pkg/core/endpoint"
-	"github.com/apache/dubbo-admin/pkg/core/model"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collection"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collections"
-	"github.com/apache/dubbo-admin/pkg/core/schema/gvk"
+	dubbo_apache_org_v1alpha1 "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
+	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/gvk"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )

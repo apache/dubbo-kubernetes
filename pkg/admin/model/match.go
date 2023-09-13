@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
-	"github.com/apache/dubbo-admin/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 )
 
 type ConditionMatch struct {

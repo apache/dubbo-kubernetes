@@ -24,7 +24,7 @@ ARG LDFLAGS
 ARG PKGNAME
 ARG BUILD
 
-WORKDIR /go/src/github.com/apache/dubbo-admin
+WORKDIR /go/src/github.com/apache/dubbo-kubernetes
 
 # Copy the Go Modules manifests
 COPY go.mod go.mod
@@ -44,7 +44,7 @@ COPY cmd cmd/
 
 # Build
 RUN env
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o ${PKGNAME} /go/src/github.com/apache/dubbo-admin/cmd/${PKGNAME}/main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o ${PKGNAME} /go/src/github.com/apache/dubbo-kubernetes/cmd/${PKGNAME}/main.go
 
 
 FROM alpine:3.17
@@ -55,5 +55,5 @@ RUN apk add --no-cache tzdata
 # Build
 WORKDIR /
 ARG PKGNAME
-COPY --from=builder /go/src/github.com/apache/dubbo-admin/${PKGNAME} .
+COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/${PKGNAME} .
 

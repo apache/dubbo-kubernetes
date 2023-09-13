@@ -18,12 +18,12 @@
 package dds
 
 import (
-	"github.com/apache/dubbo-admin/api/dds"
-	core_runtime "github.com/apache/dubbo-admin/pkg/core/runtime"
-	"github.com/apache/dubbo-admin/pkg/core/schema/collections"
-	"github.com/apache/dubbo-admin/pkg/dds/kube/crdclient"
-	"github.com/apache/dubbo-admin/pkg/dds/server"
-	"github.com/apache/dubbo-admin/pkg/dds/storage"
+	"github.com/apache/dubbo-kubernetes/api/dds"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/kube/crdclient"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/server"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/storage"
 	"github.com/pkg/errors"
 )
 

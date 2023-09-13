@@ -20,9 +20,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/apache/dubbo-admin/app/dubboctl/identifier"
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
-	"github.com/apache/dubbo-admin/app/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 
 const (

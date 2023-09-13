@@ -20,8 +20,8 @@ package kube
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-	"github.com/apache/dubbo-admin/pkg/admin/cache/registry"
-	"github.com/apache/dubbo-admin/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 )
 
 func init() {

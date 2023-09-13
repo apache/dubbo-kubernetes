@@ -16,7 +16,6 @@
 package cmd
 
 import (
-	subcmd "github.com/apache/dubbo-admin/app/dubboctl/cmd/subcmd"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +25,9 @@ func addManifest(rootCmd *cobra.Command) {
 		Short: "Commands related to manifest",
 		Long:  "Commands help user to generate manifest and install manifest",
 	}
-	subcmd.ConfigManifestGenerateCmd(manifestCmd)
-	subcmd.ConfigManifestInstallCmd(manifestCmd)
-	subcmd.ConfigManifestUninstallCmd(manifestCmd)
-	subcmd.ConfigManifestDiffCmd(manifestCmd)
+	ConfigManifestGenerateCmd(manifestCmd)
+	ConfigManifestInstallCmd(manifestCmd)
+	ConfigManifestUninstallCmd(manifestCmd)
+	ConfigManifestDiffCmd(manifestCmd)
 	rootCmd.AddCommand(manifestCmd)
 }

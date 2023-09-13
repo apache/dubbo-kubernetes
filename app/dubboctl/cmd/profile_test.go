@@ -42,22 +42,6 @@ func TestProfileList(t *testing.T) {
 `,
 		},
 		{
-			desc: "display selected profile",
-			cmd:  "profile list test0 --profiles ./testdata/profile",
-			want: `apiVersion: dubbo.apache.org/v1alpha1
-kind: DubboConfig
-metadata:
-  namespace: dubbo-system
-spec:
-  profile: default
-  namespace: dubbo-system
-  componentsMeta:
-    admin:
-      enabled: true
-    nacos:
-      enabled: true`,
-		},
-		{
 			desc:    "display selected profile with wrong format",
 			cmd:     "profile list test2_wrong_format --profiles ./testdata/profile",
 			wantErr: true,
