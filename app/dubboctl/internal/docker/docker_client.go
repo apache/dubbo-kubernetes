@@ -212,7 +212,6 @@ type clientWithAdditionalCleanup struct {
 	cleanUp func()
 }
 
-// Close function need to stop associated podman service
 func (w clientWithAdditionalCleanup) Close() error {
 	defer w.cleanUp()
 	return w.CommonAPIClient.Close()

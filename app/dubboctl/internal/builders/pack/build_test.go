@@ -8,7 +8,7 @@
 //	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
+// distrTestNonDaemonPush ibuted under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -61,11 +61,14 @@ func TestBuild_BuilderImageDefault(t *testing.T) {
 	var (
 		i = &mockImpl{}
 		b = NewBuilder(WithImpl(i))
-		f = dubbo.Dubbo{Runtime: "node"}
+		f = dubbo.Dubbo{
+			Runtime: "go",
+			Build:   dubbo.BuildSpec{BuilderImages: map[string]string{}},
+		}
 	)
 
 	i.BuildFn = func(ctx context.Context, opts pack.BuildOptions) error {
-		expected := DefaultBuilderImages["node"]
+		expected := DefaultBuilderImages["go"]
 		if opts.Builder != expected {
 			t.Fatalf("expected pack builder image '%v', got '%v'", expected, opts.Builder)
 		}
@@ -84,7 +87,10 @@ func TestBuild_BuildpacksDefault(t *testing.T) {
 	var (
 		i = &mockImpl{}
 		b = NewBuilder(WithImpl(i))
-		f = dubbo.Dubbo{Runtime: "go"}
+		f = dubbo.Dubbo{
+			Runtime: "go",
+			Build:   dubbo.BuildSpec{BuilderImages: map[string]string{}},
+		}
 	)
 
 	i.BuildFn = func(ctx context.Context, opts pack.BuildOptions) error {

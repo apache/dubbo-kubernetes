@@ -62,6 +62,9 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	}
 	cfg := newBuildConfig(cmd)
 	f, err := dubbo.NewDubbo(cfg.Path)
+	if err != nil {
+		return err
+	}
 
 	cfg, err = cfg.Prompt(f)
 	if err != nil {
@@ -174,6 +177,11 @@ func newBuildConfig(cmd *cobra.Command) *buildConfig {
 }
 
 func (c *buildConfig) Configure(f *dubbo.Dubbo) {
+	if c.Path == "" {
+		f.Root = "."
+	} else {
+		f.Root = c.Path
+	}
 	if c.BuilderImage != "" {
 		f.Build.BuilderImages["pack"] = c.BuilderImage
 	}

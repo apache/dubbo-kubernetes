@@ -116,28 +116,22 @@ type BuildSpec struct {
 }
 
 type DeploySpec struct {
-	Labels          []string `yaml:"labels,omitempty"`
-	Envs            []string `yaml:"envs,omitempty"`
-	Namespace       string   `yaml:"namespace,omitempty"`
-	Output          string   `yaml:"output,omitempty"`
-	Secret          string   `yaml:"secret,omitempty"`
-	Replicas        int      `yaml:"replicas,omitempty"`
-	Revisions       int      `yaml:"revisions,omitempty"`
-	ContainerPort   int      `yaml:"containerPort"`
-	TargetPort      int      `yaml:"targetPort,omitempty"`
-	NodePort        int      `yaml:"nodePort,omitempty"`
-	RequestCpu      int      `yaml:"requestCpu,omitempty"`
-	RequestMem      int      `yaml:"requestMem,omitempty"`
-	LimitCpu        int      `yaml:"limitCpu,omitempty"`
-	LimitMem        int      `yaml:"limitMem,omitempty"`
-	MinReplicas     int      `yaml:"minReplicas,omitempty"`
-	MaxReplicas     int      `yaml:"maxReplicas,omitempty"`
-	ServiceAccount  string   `yaml:"serviceAccount,omitempty"`
-	ImagePullPolicy string   `yaml:"imagePullPolicy,omitempty"`
-	UsePromScrape   bool     `yaml:"-"`
-	PromPath        string   `yaml:"promPath,omitempty"`
-	PromPort        int      `yaml:"promPort,omitempty"`
-	UseSkywalking   bool     `yaml:"-"`
+	Namespace       string `yaml:"namespace,omitempty"`
+	Output          string `yaml:"output,omitempty"`
+	Secret          string `yaml:"secret,omitempty"`
+	Replicas        int    `yaml:"replicas,omitempty"`
+	Revisions       int    `yaml:"revisions,omitempty"`
+	ContainerPort   int    `yaml:"containerPort"`
+	TargetPort      int    `yaml:"targetPort,omitempty"`
+	NodePort        int    `yaml:"nodePort,omitempty"`
+	RequestCpu      int    `yaml:"requestCpu,omitempty"`
+	RequestMem      int    `yaml:"requestMem,omitempty"`
+	LimitCpu        int    `yaml:"limitCpu,omitempty"`
+	LimitMem        int    `yaml:"limitMem,omitempty"`
+	MinReplicas     int    `yaml:"minReplicas,omitempty"`
+	MaxReplicas     int    `yaml:"maxReplicas,omitempty"`
+	ServiceAccount  string `yaml:"serviceAccount,omitempty"`
+	ImagePullPolicy string `yaml:"imagePullPolicy,omitempty"`
 }
 
 func (f Dubbo) Validate() error {

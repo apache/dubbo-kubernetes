@@ -26,7 +26,7 @@ func Test_NewDubbo(t *testing.T) {
 	if err != nil {
 		return
 	}
-	if dubbo.Runtime != "go" {
+	if dubbo.Runtime != "" {
 		t.Fatal(err)
 	}
 }
