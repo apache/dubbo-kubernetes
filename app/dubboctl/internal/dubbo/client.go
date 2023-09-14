@@ -24,7 +24,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -366,11 +365,8 @@ func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*
 		return f, err
 	}
 
-	// use by the cli for user echo (rather than rely on verbose mode here)
+	// use by the cli for user echo
 	message := fmt.Sprintf("🙌 Application built: %v", f.Image)
-	if runtime.GOOS == "windows" {
-		message = fmt.Sprintf("Application built: %v", f.Image)
-	}
 	fmt.Fprintf(os.Stderr, message)
 	return f, err
 }
