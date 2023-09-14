@@ -44,17 +44,17 @@ type ErrInvalidTemplate error
 func addCreate(baseCmd *cobra.Command, newClient ClientFactory) {
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a application",
+		Short: "Create an application",
 		Long: `
 NAME
-	{{.Name}} create - Create a function
+	{{.Name}} create - Create an application
 
 SYNOPSIS
 	{{.Name}} create [-l|--language] [-t|--template] [-r|--repository]
 	            [-c|--confirm] [path]
 
 DESCRIPTION
-	Creates a new function project.
+	Creates a new application.
 
 	  $ {{.Name}} create -l go
 
@@ -67,6 +67,9 @@ DESCRIPTION
 	To complete this command interactively, use --confirm (-c):
 	  $ {{.Name}} create -c
 
+	Initialize the current project directly into a dubbo project without using a template
+      $ dubboctl create --init
+
 	Available Language Runtimes and Templates:
 {{ .Options | indent 2 " " | indent 1 "\t" }}
 
@@ -78,11 +81,11 @@ EXAMPLES
 	  handles http events (the default template).
 	  $ {{.Name}} create -l java
 
-	o Create a java common in the directory 'myfunc'.
-	  $ {{.Name}} create -l java myfunc
+	o Create a java common in the directory 'mydubbo'.
+	  $ {{.Name}} create -l java mydubbo
 
-	o Create a Main common in ./myfunc.
-	  $ {{.Name}} create -l go -t common myfunc
+	o Create a Main common in ./mydubbo.
+	  $ {{.Name}} create -l go -t common mydubbo
 		`,
 		SuggestFor: []string{"vreate", "creaet", "craete", "new"},
 		PreRunE:    bindEnv("language", "template", "repository", "confirm", "init"),
@@ -97,7 +100,7 @@ EXAMPLES
 	cmd.Flags().StringP("template", "t", "", "Application template. (see help text for list) ($DUBBO_TEMPLATE)")
 	cmd.Flags().StringP("repository", "r", "", "URI to a Git repository containing the specified template ($DUBBO_REPOSITORY)")
 	cmd.Flags().BoolP("init", "i", false,
-		"")
+		"Initialize the current project directly into a dubbo project without using a template")
 
 	addConfirmFlag(cmd, false)
 

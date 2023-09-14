@@ -76,7 +76,7 @@ func TestRepositories_Get(t *testing.T) {
 }
 
 // TestRepositories_All ensures repos are returned from
-// .All accessor.  Tests both builtin and buitlin+extensible cases.
+// .All accessor.  Tests both builtin and building+extensible cases.
 func TestRepositories_All(t *testing.T) {
 	uri := ServeRepo(RepositoriesTestRepo, t)
 	root, rm := Mktemp(t)

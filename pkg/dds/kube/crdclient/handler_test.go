@@ -93,7 +93,7 @@ func TestAuthentication(t *testing.T) {
 
 func TestAuthorization(t *testing.T) {
 	configName := "name"
-	configNamespace := "namespace"
+	configNamespace := "test-namespace"
 	c := collections.DubboApacheOrgV1Alpha1AuthorizationPolicy
 	name := c.Resource().Kind()
 	t.Run(name, func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestAuthorization(t *testing.T) {
 
 func TestAuthorizationNilField(t *testing.T) {
 	configName := "name"
-	configNamespace := "namespace"
+	configNamespace := "ns"
 	c := collections.DubboApacheOrgV1Alpha1AuthorizationPolicy
 	name := c.Resource().Kind()
 	t.Run(name, func(t *testing.T) {

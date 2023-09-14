@@ -227,11 +227,11 @@ func Cwd() (cwd string) {
 
 // ClearEnvs sets all environment variables with the prefix of FUNC_ to
 // empty (unsets) for the duration of the test t and is used when
-// a test needs to completely clear dubbo-releated envs prior to running.
+// a test needs to completely clear dubbo-related envs prior to running.
 func ClearEnvs(t *testing.T) {
 	t.Helper()
 	for _, v := range os.Environ() {
-		if strings.HasPrefix(v, "FUNC_") {
+		if strings.HasPrefix(v, "DUBBO_") {
 			parts := strings.SplitN(v, "=", 2)
 			t.Setenv(parts[0], "")
 		}

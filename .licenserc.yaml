@@ -81,6 +81,7 @@ header:
     - '**/templates/**'
     - '**/testdata/**'
     - '**/deploy.tpl'
+    - '**/docs/**'
   comment: on-failure
 
   license-location-threshold: 130
