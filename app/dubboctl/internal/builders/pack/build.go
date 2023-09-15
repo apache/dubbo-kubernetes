@@ -108,12 +108,6 @@ func WithImpl(i Impl) Option {
 	}
 }
 
-func WithTimestamp(v bool) Option {
-	return func(b *Builder) {
-		b.withTimestamp = v
-	}
-}
-
 var DefaultLifecycleImage = "quay.io/boson/lifecycle@sha256:f53fea9ec9188b92cab0b8a298ff852d76a6c2aaf56f968a08637e13de0e0c59"
 
 func transportEnv(ee []dubbo.Env) (map[string]string, error) {
