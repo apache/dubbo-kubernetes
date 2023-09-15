@@ -375,8 +375,7 @@ func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*
 	}
 
 	// use by the cli for user echo
-	message := fmt.Sprintf("🙌 Application built: %v", f.Image)
-	fmt.Fprintf(os.Stderr, message)
+	fmt.Fprintf(os.Stderr, "🙌 Application built: %v", f.Image)
 	return f, err
 }
 
