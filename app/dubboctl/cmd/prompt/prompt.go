@@ -77,14 +77,14 @@ func NewPromptForCredentials(in io.Reader, out, errOut io.Writer) func(registry 
 		} else {
 			reader := bufio.NewReader(in)
 
-			fmt.Fprintf(out, "Username: ")
+			fmt.Fprint(out, "Username: ")
 			u, err := reader.ReadString('\n')
 			if err != nil {
 				return docker.Credentials{}, err
 			}
 			u = strings.Trim(u, "\r\n")
 
-			fmt.Fprintf(out, "Password: ")
+			fmt.Fprint(out, "Password: ")
 			p, err := reader.ReadString('\n')
 			if err != nil {
 				return docker.Credentials{}, err

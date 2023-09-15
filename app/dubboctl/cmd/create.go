@@ -315,7 +315,7 @@ func isValidTemplate(client *dubbo.Client, runtime, template string) bool {
 
 func noRuntimeError(client *dubbo.Client) error {
 	b := strings.Builder{}
-	fmt.Fprintf(&b, "Required flag \"language\" not set.\n")
+	fmt.Fprintln(&b, "Required flag \"language\" not set.")
 	fmt.Fprintln(&b, "Available language runtimes are:")
 	runtimes, err := client.Runtimes()
 	if err != nil {

@@ -86,7 +86,7 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	client, done := newClient(clientOptions...)
 	defer done()
 	if f.Built() && !cfg.Force {
-		fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`\n")
+		fmt.Fprintln(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`")
 		return nil
 	}
 	if f, err = client.Build(cmd.Context(), f); err != nil {
