@@ -1,2 +1,0 @@
-# Exclude specific files or directories from formatting.
-go.sum
