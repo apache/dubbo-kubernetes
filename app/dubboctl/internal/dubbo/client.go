@@ -24,9 +24,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
 
 	"github.com/spf13/cobra"
 
@@ -43,13 +44,14 @@ const (
 )
 
 type Client struct {
-	repositoriesPath string        // path to repositories
-	repositoriesURI  string        // repo URI (overrides repositories path)
-	templates        *Templates    // Templates management
-	repositories     *Repositories // Repositories management
-	builder          Builder       // Builds a runnable image source
-	pusher           Pusher        // Pushes function image to a remote
-	deployer         Deployer      // Deploys or Updates a function}
+	repositoriesPath string          // path to repositories
+	repositoriesURI  string          // repo URI (overrides repositories path)
+	templates        *Templates      // Templates management
+	repositories     *Repositories   // Repositories management
+	builder          Builder         // Builds a runnable image source
+	pusher           Pusher          // Pushes function image to a remote
+	deployer         Deployer        // Deploys or Updates a function}
+	KubeCtl          *kube.CtlClient // Kube Client
 }
 
 // Builder of function source to runnable image.
@@ -120,6 +122,12 @@ func (c *Client) Runtimes() ([]string, error) {
 // Option defines a function which when passed to the Client constructor
 // optionally mutates private members at time of instantiation.
 type Option func(*Client)
+
+func WithKubeClient(client *kube.CtlClient) Option {
+	return func(c *Client) {
+		c.KubeCtl = client
+	}
+}
 
 func WithPusher(pusher Pusher) Option {
 	return func(c *Client) {
@@ -346,7 +354,7 @@ type BuildOption func(c *BuildOptions)
 // Build the function at path. Errors if the function is either unloadable or does
 // not contain a populated Image.
 func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*Dubbo, error) {
-	fmt.Fprintf(os.Stderr, "Building application image")
+	fmt.Fprintln(os.Stderr, "Building application image")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -366,12 +374,8 @@ func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*
 		return f, err
 	}
 
-	// use by the cli for user echo (rather than rely on verbose mode here)
-	message := fmt.Sprintf("🙌 Application built: %v", f.Image)
-	if runtime.GOOS == "windows" {
-		message = fmt.Sprintf("Application built: %v", f.Image)
-	}
-	fmt.Fprintf(os.Stderr, message)
+	// use by the cli for user echo
+	fmt.Fprintf(os.Stderr, "🙌 Application built: %v", f.Image)
 	return f, err
 }
 
@@ -402,7 +406,7 @@ func (c *Client) Deploy(ctx context.Context, d *Dubbo, opts ...DeployOption) (*D
 		return d, ErrNameRequired
 	}
 
-	fmt.Fprintf(os.Stderr, "⬆️  Deploying function to the cluster or generate manifest\n")
+	fmt.Fprintln(os.Stderr, "⬆️  Deploying application to the cluster or generate manifest")
 	result, err := c.deployer.Deploy(ctx, d)
 	if err != nil {
 		fmt.Printf("deploy error: %v\n", err)

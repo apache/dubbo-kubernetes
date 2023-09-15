@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operator
+package kube
 
 import (
 	"os"
@@ -23,10 +23,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-)
-
-const (
-	wantPath = "./testdata/want"
 )
 
 type newComponentFunc func(t *testing.T) Component

@@ -22,6 +22,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
+
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	"go.uber.org/zap/zapcore"
@@ -31,7 +33,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest/render"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/operator"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 	"github.com/spf13/cobra"
 
@@ -165,7 +166,7 @@ func generateValues(mgArgs *ManifestGenerateArgs) (*v1alpha1.DubboConfig, string
 }
 
 func generateManifests(mgArgs *ManifestGenerateArgs, cfg *v1alpha1.DubboConfig) error {
-	op, err := operator.NewDubboOperator(cfg.Spec, nil)
+	op, err := kube.NewDubboOperator(cfg.Spec, nil)
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func generateManifests(mgArgs *ManifestGenerateArgs, cfg *v1alpha1.DubboConfig) 
 	return nil
 }
 
-func sortManifests(manifestMap map[operator.ComponentName]string) (string, error) {
+func sortManifests(manifestMap map[kube.ComponentName]string) (string, error) {
 	var names []string
 	var resBuilder strings.Builder
 	for name := range manifestMap {
@@ -199,7 +200,7 @@ func sortManifests(manifestMap map[operator.ComponentName]string) (string, error
 	}
 	sort.Strings(names)
 	for _, name := range names {
-		file := manifestMap[operator.ComponentName(name)]
+		file := manifestMap[kube.ComponentName(name)]
 		if !strings.HasSuffix(file, render.YAMLSeparator) {
 			resBuilder.WriteString(file + render.YAMLSeparator)
 		} else {
@@ -209,7 +210,7 @@ func sortManifests(manifestMap map[operator.ComponentName]string) (string, error
 	return resBuilder.String(), nil
 }
 
-func writeManifests(manifestMap map[operator.ComponentName]string, outputPath string) error {
+func writeManifests(manifestMap map[kube.ComponentName]string, outputPath string) error {
 	if err := os.MkdirAll(outputPath, os.ModePerm); err != nil {
 		return err
 	}

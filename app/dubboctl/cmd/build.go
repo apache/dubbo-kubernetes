@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -78,14 +79,14 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	}
 	cfg.Configure(f)
 
-	clientOptions, err := cfg.clientOptions()
+	clientOptions, err := cfg.buildclientOptions()
 	if err != nil {
 		return err
 	}
 	client, done := newClient(clientOptions...)
 	defer done()
 	if f.Built() && !cfg.Force {
-		fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`\n")
+		fmt.Fprintln(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`")
 		return nil
 	}
 	if f, err = client.Build(cmd.Context(), f); err != nil {
@@ -131,7 +132,7 @@ func (c *buildConfig) Prompt(d *dubbo.Dubbo) (*buildConfig, error) {
 	return c, err
 }
 
-func (c buildConfig) clientOptions() ([]dubbo.Option, error) {
+func (c buildConfig) buildclientOptions() ([]dubbo.Option, error) {
 	var o []dubbo.Option
 
 	if c.UseDockerfile {
@@ -139,6 +140,7 @@ func (c buildConfig) clientOptions() ([]dubbo.Option, error) {
 	} else {
 		o = append(o, dubbo.WithBuilder(pack.NewBuilder()))
 	}
+
 	return o, nil
 }
 
@@ -178,7 +180,11 @@ func newBuildConfig(cmd *cobra.Command) *buildConfig {
 
 func (c *buildConfig) Configure(f *dubbo.Dubbo) {
 	if c.Path == "" {
-		f.Root = "."
+		root, err := os.Getwd()
+		if err != nil {
+			return
+		}
+		f.Root = root
 	} else {
 		f.Root = c.Path
 	}

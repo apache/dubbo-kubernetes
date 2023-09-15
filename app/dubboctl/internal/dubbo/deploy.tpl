@@ -17,22 +17,36 @@ spec:
     metadata:
       labels:
         app: {{.Name}}
-        app-type: dubbo
+        app-type: dubbo{{if .UseProm}}
       #helm-charts 配置  https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/path: /management/prometheus
-        prometheus.io/port: "18081"
+        prometheus.io/port: "18081"{{end}}
     spec:{{if .ServiceAccount}}
       serviceAccountName: {{.ServiceAccount}}{{end}}
       containers:
       - name: {{.Name}}
         image: {{.Image}}
+        env:
+          - name: DUBBO_CTL_VERSION
+            value: 0.0.1{{if .Zookeeper}}
+          - name: zookeeper.address
+            value: {{.Zookeeper}}
+          - name: ZOOKEEPER_ADDRESS
+            value: {{.Zookeeper}}{{end}}{{if .Nacos}}
+          - name: nacos.address
+            value: {{.Nacos}}
+          - name: NACOS_ADDRESS
+            value: {{.Nacos}}{{end}}
         {{if .ImagePullPolicy}}imagePullPolicy: {{.ImagePullPolicy}}
         {{end}}ports:
         - containerPort: {{.Port}}
           name: dubbo
-          protocol: TCP
+          protocol: TCP{{if .UseProm}}
+        - containerPort: 18081
+          name: metrics
+          protocol: TCP{{end}}
         readinessProbe:
           tcpSocket:
             port: {{.Port}}
@@ -66,7 +80,9 @@ spec:
     protocol: TCP
     targetPort: {{.TargetPort}}
   type: NodePort{{else}}- port: {{.Port}}
-    targetPort: {{.TargetPort}}{{end}}
+    targetPort: {{.TargetPort}}{{end}}{{if .UseProm}}
+  - port: 18081
+    targetPort: 18081{{end}}
   selector:
     app: {{.Name}}
 

@@ -29,7 +29,6 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/operator"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
@@ -41,22 +40,22 @@ import (
 var (
 	// TODO: think about a efficient way to change selectors and ports when yaml files change
 	// ports are coming from /deploy/charts and /deploy/kubernetes
-	ComponentPortMap = map[operator.ComponentName]int{
-		operator.Admin:      8080,
-		operator.Grafana:    3000,
-		operator.Nacos:      8848,
-		operator.Prometheus: 9090,
-		operator.Skywalking: 8080,
-		operator.Zipkin:     9411,
+	ComponentPortMap = map[kube.ComponentName]int{
+		kube.Admin:      8080,
+		kube.Grafana:    3000,
+		kube.Nacos:      8848,
+		kube.Prometheus: 9090,
+		kube.Skywalking: 8080,
+		kube.Zipkin:     9411,
 	}
 	// ComponentSelectorMap selectors are coming from /deploy/charts and /deploy/kubernetes
-	ComponentSelectorMap = map[operator.ComponentName]string{
-		operator.Admin:      "app.kubernetes.io/name=dubbo-admin",
-		operator.Grafana:    "app.kubernetes.io/name=grafana",
-		operator.Nacos:      "app.kubernetes.io/name=nacos",
-		operator.Prometheus: "app=prometheus",
-		operator.Skywalking: "app=skywalking, component=ui",
-		operator.Zipkin:     "app.kubernetes.io/name=zipkin",
+	ComponentSelectorMap = map[kube.ComponentName]string{
+		kube.Admin:      "app.kubernetes.io/name=dubbo-admin",
+		kube.Grafana:    "app.kubernetes.io/name=grafana",
+		kube.Nacos:      "app.kubernetes.io/name=nacos",
+		kube.Prometheus: "app=prometheus",
+		kube.Skywalking: "app=skywalking, component=ui",
+		kube.Zipkin:     "app.kubernetes.io/name=zipkin",
 	}
 )
 
@@ -82,7 +81,7 @@ func (dca *DashboardCommonArgs) setDefault() {
 	}
 }
 
-func commonDashboardCmd(baseCmd *cobra.Command, compName operator.ComponentName) {
+func commonDashboardCmd(baseCmd *cobra.Command, compName kube.ComponentName) {
 	nameStr := string(compName)
 	lowerNameStr := strings.ToLower(nameStr)
 	dcArgs := &DashboardCommonArgs{}
@@ -125,30 +124,30 @@ func commonDashboardCmd(baseCmd *cobra.Command, compName operator.ComponentName)
 }
 
 func ConfigDashboardAdminCmd(baseCmd *cobra.Command) {
-	commonDashboardCmd(baseCmd, operator.Admin)
+	commonDashboardCmd(baseCmd, kube.Admin)
 }
 
 func ConfigDashboardGrafanaCmd(baseCmd *cobra.Command) {
-	commonDashboardCmd(baseCmd, operator.Grafana)
+	commonDashboardCmd(baseCmd, kube.Grafana)
 }
 
 func ConfigDashboardNacosCmd(baseCmd *cobra.Command) {
-	commonDashboardCmd(baseCmd, operator.Nacos)
+	commonDashboardCmd(baseCmd, kube.Nacos)
 }
 
 func ConfigDashboardPrometheusCmd(baseCmd *cobra.Command) {
-	commonDashboardCmd(baseCmd, operator.Prometheus)
+	commonDashboardCmd(baseCmd, kube.Prometheus)
 }
 
 func ConfigDashboardSkywalkingCmd(baseCmd *cobra.Command) {
-	commonDashboardCmd(baseCmd, operator.Skywalking)
+	commonDashboardCmd(baseCmd, kube.Skywalking)
 }
 
 func ConfigDashboardZipkinCmd(baseCmd *cobra.Command) {
-	commonDashboardCmd(baseCmd, operator.Zipkin)
+	commonDashboardCmd(baseCmd, kube.Zipkin)
 }
 
-func portForward(args *DashboardCommonArgs, compName operator.ComponentName, writer io.Writer) error {
+func portForward(args *DashboardCommonArgs, compName kube.ComponentName, writer io.Writer) error {
 	// process args
 	var podPort int
 	podPort = ComponentPortMap[compName]

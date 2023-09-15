@@ -16,11 +16,19 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
+	corev1 "k8s.io/api/core/v1"
+	errors2 "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	client2 "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
@@ -50,7 +58,7 @@ SYNOPSIS
 		PreRunE: bindEnv("path", "output", "namespace", "image", "envs", "name", "secret", "replicas",
 			"revisions", "containerPort", "targetPort", "nodePort", "requestCpu", "limitMem",
 			"minReplicas", "serviceAccount", "serviceAccount", "imagePullPolicy", "maxReplicas", "limitCpu", "requestMem",
-			"apply", "useDockerfile", "push", "force", "builder-image", "nobuild"),
+			"apply", "useDockerfile", "force", "builder-image", "nobuild", "context", "kubeConfig", "push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, newClient)
 		},
@@ -103,10 +111,14 @@ SYNOPSIS
 		"Use the dockerfile with the specified path to build")
 	cmd.Flags().StringP("image", "i", "",
 		"Container image( [registry]/[namespace]/[name]:[tag] )")
-	cmd.Flags().BoolP("push", "", false,
+	cmd.Flags().BoolP("push", "", true,
 		"Whether to push the image to the registry center by the way")
 	cmd.Flags().BoolP("force", "f", false,
 		"Whether to force push")
+	cmd.Flags().StringP("context", "", "",
+		"Context in kubeconfig to use")
+	cmd.Flags().StringP("kubeConfig", "k", "",
+		"Path to kubeconfig")
 
 	addPathFlag(cmd)
 	baseCmd.AddCommand(cmd)
@@ -138,12 +150,97 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 
 	cfg.Configure(f)
 
-	clientOptions, err := cfg.clientOptions()
+	clientOptions, err := cfg.deployclientOptions()
 	if err != nil {
 		return err
 	}
 	client, done := newClient(clientOptions...)
 	defer done()
+
+	key := client2.ObjectKey{
+		Namespace: metav1.NamespaceSystem,
+		Name:      cfg.Namespace,
+	}
+
+	err = client.KubeCtl.Get(context.Background(), key, &corev1.Namespace{})
+	if err != nil {
+		if errors2.IsNotFound(err) {
+			nsObj := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: metav1.NamespaceSystem,
+					Name:      cfg.Namespace,
+				},
+			}
+			if err := client.KubeCtl.Create(context.Background(), nsObj); err != nil {
+				return err
+			}
+			return nil
+		} else {
+			return fmt.Errorf("failed to check if namespace %v exists: %v", cfg.Namespace, err)
+		}
+	}
+
+	namespaceSelector := client2.MatchingLabels{
+		"dubbo-deploy": "enabled",
+	}
+	nsList := &corev1.NamespaceList{}
+	if err = client.KubeCtl.List(context.Background(), nsList, namespaceSelector); err != nil {
+		return err
+	}
+	var namespace string
+	if len(nsList.Items) > 0 {
+		namespace = nsList.Items[0].Name
+	}
+
+	env := os.Getenv("DUBBO_DEPLOY_NS")
+	if env != "" {
+		namespace = env
+	}
+
+	if namespace != "" {
+		zkSelector := client2.MatchingLabels{
+			"dubbo.apache.org/zookeeper": "true",
+		}
+
+		zkList := &corev1.ServiceList{}
+		if err := client.KubeCtl.List(context.Background(), zkList, zkSelector, client2.InNamespace(namespace)); err != nil {
+			return err
+		}
+		var name string
+		var dns string
+		if len(zkList.Items) > 0 {
+			name = zkList.Items[0].Name
+			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
+			f.Deploy.ZookeeperAddress = dns
+		}
+
+		nacosSelector := client2.MatchingLabels{
+			"dubbo.apache.org/nacos": "true",
+		}
+
+		nacosList := &corev1.ServiceList{}
+		if err := client.KubeCtl.List(context.Background(), nacosList, nacosSelector, client2.InNamespace(namespace)); err != nil {
+			return err
+		}
+		if len(nacosList.Items) > 0 {
+			name = nacosList.Items[0].Name
+			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
+			f.Deploy.NacosAddress = dns
+		}
+
+		promSelector := client2.MatchingLabels{
+			"dubbo.apache.org/prometheus": "true",
+		}
+
+		promList := &corev1.ServiceList{}
+		if err := client.KubeCtl.List(context.Background(), promList, promSelector, client2.InNamespace(namespace)); err != nil {
+			return err
+		}
+		if len(promList.Items) > 0 {
+			f.Deploy.UseProm = true
+		}
+	}
+
 	if !cfg.NoBuild {
 		if f.Built() && !cfg.Force {
 			fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`\n")
@@ -175,6 +272,24 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 	}
 
 	return f.Stamp()
+}
+
+func (d DeployConfig) deployclientOptions() ([]dubbo.Option, error) {
+	o, err := d.buildclientOptions()
+	if err != nil {
+		return o, err
+	}
+	var cliOpts []kube.CtlClientOption
+	cliOpts = []kube.CtlClientOption{
+		kube.WithKubeConfigPath(d.KubeConfig),
+		kube.WithContext(d.Context),
+	}
+	cli, err := kube.NewCtlClient(cliOpts...)
+	if err != nil {
+		return o, err
+	}
+	o = append(o, dubbo.WithKubeClient(cli))
+	return o, nil
 }
 
 func applyTok8s(cmd *cobra.Command, d *dubbo.Dubbo) error {
@@ -276,6 +391,8 @@ func (c DeployConfig) Configure(f *dubbo.Dubbo) {
 
 type DeployConfig struct {
 	*buildConfig
+	KubeConfig      string
+	Context         string
 	NoBuild         bool
 	Apply           bool
 	Namespace       string
@@ -300,6 +417,8 @@ type DeployConfig struct {
 func newDeployConfig(cmd *cobra.Command) (c *DeployConfig) {
 	c = &DeployConfig{
 		buildConfig:     newBuildConfig(cmd),
+		KubeConfig:      viper.GetString("kubeConfig"),
+		Context:         viper.GetString("context"),
 		NoBuild:         viper.GetBool("nobuild"),
 		Apply:           viper.GetBool("apply"),
 		Output:          viper.GetString("output"),

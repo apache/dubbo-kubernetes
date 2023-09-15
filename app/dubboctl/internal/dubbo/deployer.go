@@ -66,6 +66,12 @@ type Deployment struct {
 	MaxReplicas     int
 	ServiceAccount  string
 	ImagePullPolicy string
+	Zookeeper       string
+	Nacos           string
+	UseProm         bool
+	PromScratch     bool
+	PromPath        string
+	PromPort        int
 }
 
 func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption) (DeploymentResult, error) {
@@ -117,6 +123,9 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 		MaxReplicas:     f.Deploy.MaxReplicas,
 		ServiceAccount:  f.Deploy.ServiceAccount,
 		ImagePullPolicy: f.Deploy.ImagePullPolicy,
+		Zookeeper:       f.Deploy.ZookeeperAddress,
+		Nacos:           f.Deploy.NacosAddress,
+		UseProm:         f.Deploy.UseProm,
 	})
 	if err != nil {
 		return DeploymentResult{

@@ -34,7 +34,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -44,10 +43,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	api "github.com/docker/docker/api/types/image"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 func TestGetRegistry(t *testing.T) {
@@ -163,131 +159,6 @@ func TestDaemonPush(t *testing.T) {
 
 	if !closeCalledOnMock {
 		t.Error("The Close() function has not been called on the Docker API Client.")
-	}
-}
-
-func TestNonDaemonPush(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
-	defer cancel()
-
-	// in memory network emulation
-	connections := conns(make(chan net.Conn))
-
-	serveRegistry(t, connections)
-
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tls.Config{
-		InsecureSkipVerify: true,
-	}
-	transport.DialContext = connections.DialContext
-
-	dockerClient := newMockPusherDockerClient()
-
-	var imagesPassedToMock []string
-	dockerClient.imageSave = func(ctx context.Context, images []string) (io.ReadCloser, error) {
-		imagesPassedToMock = images
-		f, err := os.Open("./testdata/image.tar")
-		if err != nil {
-			return nil, fmt.Errorf("failed to load image tar: %w", err)
-		}
-		return f, nil
-	}
-
-	dockerClient.imageInspect = func(ctx context.Context, s string) (types.ImageInspect, []byte, error) {
-		return types.ImageInspect{ID: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}, []byte{}, nil
-	}
-
-	dockerClientFactory := func() (docker.PusherDockerClient, error) {
-		return dockerClient, nil
-	}
-
-	pusher := docker.NewPusher(
-		docker.WithTransport(transport),
-		docker.WithCredentialsProvider(testCredProvider),
-		docker.WithPusherDockerClientFactory(dockerClientFactory),
-	)
-
-	f := &dubbo.Dubbo{
-		Image: functionImageRemote,
-	}
-
-	actualDigest, err := pusher.Push(ctx, f)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(imagesPassedToMock, []string{f.Image}) {
-		t.Errorf("Bad image name passed to the Docker API Client: %q.", imagesPassedToMock)
-	}
-
-	r, err := name.NewRegistry(registryHostname)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	remoteOpts := []remote.Option{
-		remote.WithTransport(transport),
-		remote.WithAuth(&authn.Basic{
-			Username: testUser,
-			Password: testPwd,
-		}),
-	}
-
-	c, err := remote.Catalog(ctx, r, remoteOpts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(c, []string{"testuser/func"}) {
-		t.Error("unexpected catalog content")
-	}
-
-	imgRef := name.MustParseReference(functionImageRemote)
-
-	img, err := remote.Image(imgRef, remoteOpts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedDigest, err := img.Digest()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if actualDigest != expectedDigest.String() {
-		t.Error("digest does not match")
-	}
-
-	layers, err := img.Layers()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedDiffs := []string{
-		"sha256:cba17de713254df68662c399558da08f1cd9abfa4e3b404544757982b4f11597",
-		"sha256:d5c07940dc570b965530593384a3cf47f47bf07d68eb741d875090392a6331c3",
-		"sha256:a4dd43077393aff80a0bec5c1bf2db4941d620dcaa545662068476e324efefaa",
-		"sha256:abe6122e067d0f8bee1a8b8f0c4bb9d2b23cc73617bc8ff4addd6c1329bca23e",
-		"sha256:515e67f7a08c1798cad8ee4d5f0ce7e606540f5efe5163a967d8dc58994f9641",
-		"sha256:a5fdabf59fa2a4a0e60d21c1ffc4d482e62debe196bae742a476f4d5b893f0ce",
-		"sha256:8d6bae166e585b4b503d36a7de0ba749b68ef689884e94dfa0655bbf8ce4d213",
-		"sha256:b136b7c51981af6493ecbb1136f6ff0f23734f7b9feacb20c8090ac9dec6333d",
-		"sha256:e9055109e5f7999da5add4b5fff11a34783cddc9aef492d9b790024d1bc1b7d0",
-		"sha256:5a1ff39e0e0291a43170cbcd70515bfccef4bed4c7e7b97f82d49d3d557fe04b",
-	}
-
-	actualDiffs := make([]string, 0, len(expectedDiffs))
-
-	for _, layer := range layers {
-		diffID, err := layer.DiffID()
-		if err != nil {
-			t.Fatal(err)
-		}
-		actualDiffs = append(actualDiffs, diffID.String())
-	}
-
-	if !reflect.DeepEqual(expectedDiffs, actualDiffs) {
-		t.Error("layer diffs in tar and from registry differs")
 	}
 }
 

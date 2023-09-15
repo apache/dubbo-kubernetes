@@ -81,7 +81,7 @@ type Meta struct {
 	// exact equality to implement optimistic concurrency of read-write operations.
 	//
 	// The lifetime of an object of a particular revision depends on the underlying data store.
-	// The data store may compactify old revisions in the interest of storage optimization.
+	// The data store may compaction old revisions in the interest of storage optimization.
 	//
 	// An empty revision carries a special meaning that the associated object has
 	// not been stored and assigned a revision.
@@ -152,7 +152,7 @@ func DeepCopy(s interface{}) interface{} {
 		return dc.DeepCopyInterface()
 	}
 
-	// golang protobuf. Use protoreflect.ProtoMessage to distinguish from gogo
+	// golang protobuf. Use proto reflect.ProtoMessage to distinguish from gogo
 	// golang/protobuf 1.4+ will have this interface. Older golang/protobuf are gogo compatible
 	if _, ok := s.(protoreflect.ProtoMessage); ok {
 		if pb, ok := s.(proto.Message); ok {

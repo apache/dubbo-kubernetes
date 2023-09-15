@@ -36,7 +36,9 @@ Create an application
 	o Create a Main common in ./myfunc.
 	  $ dubboctl create -l go -t common myfunc
 
--t is followed by the warehouse name + application name. If it is the template provided by dubboctl by default, then there is only the application name, which is common. Otherwise, for example, if the user's warehouse is named ruiyi and the application is named mesh, -t should be followed by ruiyi/mesh.
+-t is followed by the warehouse name + application name. If it is the template provided by dubboctl by default, then
+there is only the application name, which is common. Otherwise, for example, if the user's warehouse is named ruiyi and
+the application is named mesh, -t should be followed by ruiyi/mesh.
 
 ### Usage:
 
@@ -54,6 +56,25 @@ Create an application
     -l, --language string     Language Runtime (see help text for list) ($DUBBO_LANGUAGE)
     -r, --repository string   URI to a Git repository containing the specified template ($DUBBO_REPOSITORY) 
     -t, --template string     Application template. (see help text for list) ($DUBBO_TEMPLATE)
+
+Please note that the languages (runtime) and templates you can use will be dynamically generated in dubboctl create -h,
+and you can view them, for example:
+
+```sh
+Available Language Runtimes and Templates:
+Language Template
+-------- --------
+go common
+go lxy/dubbogo
+go lxy/http
+golang ruiyi/dubbogo
+golang ruiyi/http
+java common
+java lxy/dubbo
+jvav ruiyi/dubbo
+```
+
+Then you can use dubboctl create -l java -t ruiyi/dubbo
 
 ### SEE ALSO
 

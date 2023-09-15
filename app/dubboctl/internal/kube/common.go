@@ -43,7 +43,7 @@ func OverlayObject(base *unstructured.Unstructured, overlay *unstructured.Unstru
 	}
 
 	overlayUpdated := overlay.DeepCopy()
-	if strings.EqualFold(base.GetKind(), "service") {
+	if strings.EqualFold(base.GetKind(), "Service") {
 		if err := saveClusterIP(base, overlayUpdated); err != nil {
 			return err
 		}

@@ -116,22 +116,26 @@ type BuildSpec struct {
 }
 
 type DeploySpec struct {
-	Namespace       string `yaml:"namespace,omitempty"`
-	Output          string `yaml:"output,omitempty"`
-	Secret          string `yaml:"secret,omitempty"`
-	Replicas        int    `yaml:"replicas,omitempty"`
-	Revisions       int    `yaml:"revisions,omitempty"`
-	ContainerPort   int    `yaml:"containerPort"`
-	TargetPort      int    `yaml:"targetPort,omitempty"`
-	NodePort        int    `yaml:"nodePort,omitempty"`
-	RequestCpu      int    `yaml:"requestCpu,omitempty"`
-	RequestMem      int    `yaml:"requestMem,omitempty"`
-	LimitCpu        int    `yaml:"limitCpu,omitempty"`
-	LimitMem        int    `yaml:"limitMem,omitempty"`
-	MinReplicas     int    `yaml:"minReplicas,omitempty"`
-	MaxReplicas     int    `yaml:"maxReplicas,omitempty"`
-	ServiceAccount  string `yaml:"serviceAccount,omitempty"`
-	ImagePullPolicy string `yaml:"imagePullPolicy,omitempty"`
+	Namespace        string   `yaml:"namespace,omitempty"`
+	Output           string   `yaml:"output,omitempty"`
+	Secret           string   `yaml:"secret,omitempty"`
+	Replicas         int      `yaml:"replicas,omitempty"`
+	Revisions        int      `yaml:"revisions,omitempty"`
+	ContainerPort    int      `yaml:"containerPort"`
+	TargetPort       int      `yaml:"targetPort,omitempty"`
+	NodePort         int      `yaml:"nodePort,omitempty"`
+	RequestCpu       int      `yaml:"requestCpu,omitempty"`
+	RequestMem       int      `yaml:"requestMem,omitempty"`
+	LimitCpu         int      `yaml:"limitCpu,omitempty"`
+	LimitMem         int      `yaml:"limitMem,omitempty"`
+	MinReplicas      int      `yaml:"minReplicas,omitempty"`
+	MaxReplicas      int      `yaml:"maxReplicas,omitempty"`
+	ServiceAccount   string   `yaml:"serviceAccount,omitempty"`
+	ImagePullPolicy  string   `yaml:"imagePullPolicy,omitempty"`
+	Envs             []string `yaml:"-"`
+	ZookeeperAddress string   `yaml:"-"`
+	NacosAddress     string   `yaml:"-"`
+	UseProm          bool     `yaml:"-"`
 }
 
 func (f Dubbo) Validate() error {
@@ -402,7 +406,7 @@ func (f *Dubbo) EnsureDockerfile(cmd *cobra.Command) (err error) {
 	dockerfilepath := filepath.Join(f.Root, Dockerfile)
 	dockerfilebytes, ok := DockerfileByRuntime[f.Runtime]
 	if !ok {
-		fmt.Fprintf(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.\n")
+		fmt.Fprintln(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.")
 		return
 	}
 	if err = os.WriteFile(dockerfilepath, []byte(dockerfilebytes), 0o644); err != nil {

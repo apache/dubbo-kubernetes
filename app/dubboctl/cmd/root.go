@@ -52,7 +52,7 @@ func getRootCmd(args []string) *cobra.Command {
 	// Environment Variables
 	// Evaluated first after static defaults, set all flags to be associated with
 	// a version prefixed by "DUBBO_"
-	viper.AutomaticEnv()        // read in environment variables for FUNC_<flag>
+	viper.AutomaticEnv()        // read in environment variables for DUBBO_<flag>
 	viper.SetEnvPrefix("dubbo") // ensure that all have the prefix
 	newClient := cfg.NewClient
 	if newClient == nil {

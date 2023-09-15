@@ -58,6 +58,7 @@ metadata:
     app.kubernetes.io/name: alertmanager
     app.kubernetes.io/version: v0.25.0
     helm.sh/chart: alertmanager-0.24.1
+
   name: prometheus-alertmanager
   namespace: dubbo-system
 spec:
