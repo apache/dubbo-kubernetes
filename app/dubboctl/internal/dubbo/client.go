@@ -354,7 +354,7 @@ type BuildOption func(c *BuildOptions)
 // Build the function at path. Errors if the function is either unloadable or does
 // not contain a populated Image.
 func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*Dubbo, error) {
-	fmt.Fprintf(os.Stderr, "Building application image")
+	fmt.Fprintln(os.Stderr, "Building application image")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -406,7 +406,7 @@ func (c *Client) Deploy(ctx context.Context, d *Dubbo, opts ...DeployOption) (*D
 		return d, ErrNameRequired
 	}
 
-	fmt.Fprintf(os.Stderr, "⬆️  Deploying application to the cluster or generate manifest\n")
+	fmt.Fprintln(os.Stderr, "⬆️  Deploying application to the cluster or generate manifest")
 	result, err := c.deployer.Deploy(ctx, d)
 	if err != nil {
 		fmt.Printf("deploy error: %v\n", err)
