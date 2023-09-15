@@ -82,6 +82,7 @@ header:
     - '**/testdata/**'
     - '**/deploy.tpl'
     - '**/docs/**'
+    - '**/.gofmt/**'
   comment: on-failure
 
   license-location-threshold: 130
