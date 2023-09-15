@@ -68,7 +68,7 @@ func WithCli(cli client.Client) CtlClientOption {
 
 // ApplyManifest applies manifest to certain namespace
 // If there is not this namespace, create it first
-func (cli *CtlClient) ApplyManifest(manifest string, ns string) error {
+func (cli *CtlClient) ApplyManifest(manifest string, ns string, name ComponentName) error {
 	if err := cli.CreateNamespace(ns); err != nil {
 		return err
 	}
@@ -77,11 +77,38 @@ func (cli *CtlClient) ApplyManifest(manifest string, ns string) error {
 		return err
 	}
 	for _, obj := range objs {
+		o := obj.Unstructured()
 		if obj.Namespace == "" {
 			obj.SetNamespace(ns)
 		}
-		if err := cli.ApplyObject(obj.Unstructured()); err != nil {
+		if err := cli.ApplyObject(o); err != nil {
 			return err
+		}
+
+		if name == Zookeeper && o.GetKind() == "Service" {
+			labels := o.GetLabels()
+			labels["dubbo.apache.org/zookeeper"] = "true"
+			o.SetLabels(labels)
+			err := cli.Update(context.Background(), o)
+			if err != nil {
+				return err
+			}
+		} else if name == Nacos && o.GetKind() == "Service" {
+			labels := o.GetLabels()
+			labels["dubbo.apache.org/nacos"] = "true"
+			o.SetLabels(labels)
+			err := cli.Update(context.Background(), o)
+			if err != nil {
+				return err
+			}
+		} else if name == Prometheus && o.GetKind() == "Service" {
+			labels := o.GetLabels()
+			labels["dubbo.apache.org/prometheus"] = "true"
+			o.SetLabels(labels)
+			err := cli.Update(context.Background(), o)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -101,6 +128,7 @@ func (cli *CtlClient) ApplyObject(obj *unstructured.Unstructured) error {
 		}
 		return nil
 	}
+
 	key := client.ObjectKeyFromObject(obj)
 	receiver := &unstructured.Unstructured{}
 	receiver.SetGroupVersionKind(obj.GroupVersionKind())
@@ -122,6 +150,10 @@ func (cli *CtlClient) ApplyObject(obj *unstructured.Unstructured) error {
 		if err := OverlayObject(receiver, obj); err != nil {
 			return err
 		}
+		// TODO We really don’t know the reason for this, and we still need to verify it.
+		if receiver.GetName() == "prometheus-alertmanager-test-connection" {
+			return nil
+		}
 		if err := cli.Update(context.Background(), receiver); err != nil {
 			return err
 		}
@@ -138,21 +170,36 @@ func (cli *CtlClient) CreateNamespace(ns string) error {
 		Namespace: metav1.NamespaceSystem,
 		Name:      ns,
 	}
-	if err := cli.Get(context.Background(), key, &corev1.Namespace{}); err != nil {
+
+	namespace := &corev1.Namespace{}
+
+	err := cli.Get(context.Background(), key, namespace)
+	if err != nil {
 		if errors.IsNotFound(err) {
 			nsObj := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: metav1.NamespaceSystem,
 					Name:      ns,
+					Labels: map[string]string{
+						"dubbo-deploy": "enabled",
+					},
 				},
 			}
 			if err := cli.Create(context.Background(), nsObj); err != nil {
 				return err
 			}
 			return nil
+		} else {
+			return fmt.Errorf("failed to check if namespace %v exists: %v", ns, err)
 		}
+	}
 
-		return fmt.Errorf("failed to check if namespace %v exists: %v", ns, err)
+	labels := namespace.Labels
+	labels["dubbo-deploy"] = "enabled"
+
+	err = cli.Update(context.Background(), namespace)
+	if err != nil {
+		return err
 	}
 
 	return nil

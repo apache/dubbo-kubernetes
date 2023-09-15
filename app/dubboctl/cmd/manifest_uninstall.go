@@ -18,7 +18,6 @@ package cmd
 import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/operator"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
@@ -80,7 +79,7 @@ func uninstallManifests(muArgs *ManifestUninstallArgs, cfg *v1alpha1.DubboConfig
 	if err != nil {
 		return err
 	}
-	op, err := operator.NewDubboOperator(cfg.Spec, cli)
+	op, err := kube.NewDubboOperator(cfg.Spec, cli)
 	if err != nil {
 		return err
 	}

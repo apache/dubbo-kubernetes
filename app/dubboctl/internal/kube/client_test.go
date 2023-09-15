@@ -17,7 +17,6 @@ package kube
 
 import (
 	"context"
-	"os"
 	"path"
 	"testing"
 
@@ -56,7 +55,7 @@ func TestCtlClient_ApplyManifest(t *testing.T) {
 			t.Fatalf("read input manifest %s err: %s", test.input, err)
 		}
 		testNs := "test"
-		if err := ctlCli.ApplyManifest(inputManifest, testNs); err != nil {
+		if err := ctlCli.ApplyManifest(inputManifest, testNs, ""); err != nil {
 			t.Errorf("ApplyManifest failed, err: %s", err)
 			return
 		}
@@ -160,7 +159,7 @@ func TestCtlClient_RemoveManifest(t *testing.T) {
 			t.Fatalf("read before manifest %s err: %s", test.before, err)
 		}
 		testNs := "test"
-		if err := ctlCli.ApplyManifest(beforeManifest, testNs); err != nil {
+		if err := ctlCli.ApplyManifest(beforeManifest, testNs, ""); err != nil {
 			t.Fatalf("ApplyManifest failed, err: %s", err)
 			return
 		}
@@ -250,12 +249,4 @@ func newFakeCli(t *testing.T, before string) client.Client {
 		fakeCli = fake.NewClientBuilder().Build()
 	}
 	return fakeCli
-}
-
-func readManifest(path string) (string, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(content), nil
 }

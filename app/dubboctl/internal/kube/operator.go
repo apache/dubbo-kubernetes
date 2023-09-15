@@ -13,15 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operator
+package kube
 
 import (
 	"errors"
 	"fmt"
 
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
@@ -31,7 +29,7 @@ type DubboOperator struct {
 	spec       *v1alpha1.DubboConfigSpec
 	started    bool
 	components map[ComponentName]Component
-	kubeCli    *kube.CtlClient
+	kubeCli    *CtlClient
 }
 
 // Run must be invoked before invoking other functions.
@@ -68,7 +66,7 @@ func (do *DubboOperator) ApplyManifest(manifestMap map[ComponentName]string) err
 	}
 	for name, manifest := range manifestMap {
 		logger.CmdSugar().Infof("Start applying bootstrap %s\n", name)
-		if err := do.kubeCli.ApplyManifest(manifest, do.spec.Namespace); err != nil {
+		if err := do.kubeCli.ApplyManifest(manifest, do.spec.Namespace, name); err != nil {
 			return fmt.Errorf("bootstrap %s ApplyManifest err: %v", name, err)
 		}
 		logger.CmdSugar().Infof("Applying bootstrap %s successfully\n", name)
@@ -93,7 +91,7 @@ func (do *DubboOperator) RemoveManifest(manifestMap map[ComponentName]string) er
 
 // NewDubboOperator accepts cli directly for testing and normal use.
 // For now, every related command needs a dedicated DubboOperator.
-func NewDubboOperator(spec *v1alpha1.DubboConfigSpec, cli *kube.CtlClient) (*DubboOperator, error) {
+func NewDubboOperator(spec *v1alpha1.DubboConfigSpec, cli *CtlClient) (*DubboOperator, error) {
 	if spec == nil {
 		return nil, errors.New("DubboConfigSpec is empty")
 	}

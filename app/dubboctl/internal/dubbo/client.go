@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
+
 	"github.com/spf13/cobra"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
@@ -42,13 +44,14 @@ const (
 )
 
 type Client struct {
-	repositoriesPath string        // path to repositories
-	repositoriesURI  string        // repo URI (overrides repositories path)
-	templates        *Templates    // Templates management
-	repositories     *Repositories // Repositories management
-	builder          Builder       // Builds a runnable image source
-	pusher           Pusher        // Pushes function image to a remote
-	deployer         Deployer      // Deploys or Updates a function}
+	repositoriesPath string          // path to repositories
+	repositoriesURI  string          // repo URI (overrides repositories path)
+	templates        *Templates      // Templates management
+	repositories     *Repositories   // Repositories management
+	builder          Builder         // Builds a runnable image source
+	pusher           Pusher          // Pushes function image to a remote
+	deployer         Deployer        // Deploys or Updates a function}
+	KubeCtl          *kube.CtlClient // Kube Client
 }
 
 // Builder of function source to runnable image.
@@ -119,6 +122,12 @@ func (c *Client) Runtimes() ([]string, error) {
 // Option defines a function which when passed to the Client constructor
 // optionally mutates private members at time of instantiation.
 type Option func(*Client)
+
+func WithKubeClient(client *kube.CtlClient) Option {
+	return func(c *Client) {
+		c.KubeCtl = client
+	}
+}
 
 func WithPusher(pusher Pusher) Option {
 	return func(c *Client) {
@@ -398,7 +407,7 @@ func (c *Client) Deploy(ctx context.Context, d *Dubbo, opts ...DeployOption) (*D
 		return d, ErrNameRequired
 	}
 
-	fmt.Fprintf(os.Stderr, "⬆️  Deploying function to the cluster or generate manifest\n")
+	fmt.Fprintf(os.Stderr, "⬆️  Deploying application to the cluster or generate manifest\n")
 	result, err := c.deployer.Deploy(ctx, d)
 	if err != nil {
 		fmt.Printf("deploy error: %v\n", err)
