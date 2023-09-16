@@ -16,21 +16,18 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
-	corev1 "k8s.io/api/core/v1"
-	errors2 "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	client2 "sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -46,65 +43,43 @@ const (
 func addDeploy(baseCmd *cobra.Command, newClient ClientFactory) {
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Generate deploy manifests or apply it by the way",
+		Short: "Generate the k8s yaml of the application. By the way, you can choose to build the image, push the image and apply to the k8s cluster.",
 		Long: `
 NAME
-	dubboctl deploy - Deploy an application
+	dubboctl deploy - Generate the k8s yaml of the application. By the way, you can choose to build the image, push the image and apply to the k8s cluster.
 
 SYNOPSIS
 	dubboctl deploy [flags]
 `,
 		SuggestFor: []string{"delpoy", "deplyo"},
-		PreRunE: bindEnv("path", "output", "namespace", "image", "envs", "name", "secret", "replicas",
-			"revisions", "containerPort", "targetPort", "nodePort", "requestCpu", "limitMem",
-			"minReplicas", "serviceAccount", "serviceAccount", "imagePullPolicy", "maxReplicas", "limitCpu", "requestMem",
-			"apply", "useDockerfile", "force", "builder-image", "nobuild", "context", "kubeConfig", "push"),
+		PreRunE: bindEnv("path", "output", "namespace", "image", "envs", "name", "containerPort",
+			"targetPort", "nodePort", "apply", "useDockerfile", "force", "builder-image", "build", "context",
+			"kubeConfig", "push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, newClient)
 		},
 	}
-
-	cmd.Flags().BoolP("nobuild", "", false,
-		"Skip the step of building the image.")
-	cmd.Flags().BoolP("apply", "a", false,
-		"Whether to apply the application to the k8s cluster by the way")
-	cmd.Flags().StringP("output", "o", "kube.yaml",
-		"output kubernetes manifest")
 	cmd.Flags().StringP("namespace", "n", "dubbo-system",
 		"Deploy into a specific namespace")
-	cmd.Flags().StringArrayP("envs", "e", nil,
-		"Environment variable to set in the form NAME=VALUE. "+
-			"This is for the environment variables passed in by the builderpack build method.")
+	cmd.Flags().StringP("output", "o", "kube.yaml",
+		"output kubernetes manifest")
 	cmd.Flags().StringP("name", "", "",
-		"The name of deployment (required)")
-	cmd.Flags().StringP("secret", "", "",
-		"The secret to image pull from registry")
-	cmd.Flags().IntP("replicas", "", 3,
-		"The number of replicas to deploy")
-	cmd.Flags().IntP("revisions", "", 5,
-		"The number of replicas to deploy")
+		"The name of application")
 	cmd.Flags().IntP("containerPort", "", 0,
 		"The port of the deployment to listen on pod (required)")
 	cmd.Flags().IntP("targetPort", "", 0,
 		"The targetPort of the deployment, default to port")
 	cmd.Flags().IntP("nodePort", "", 0,
 		"The nodePort of the deployment to expose")
-	cmd.Flags().IntP("requestCpu", "", 500,
-		"The request cpu to deploy")
-	cmd.Flags().IntP("requestMem", "", 512,
-		"The request memory to deploy")
-	cmd.Flags().IntP("limitCpu", "", 1000,
-		"The limit cpu to deploy")
-	cmd.Flags().IntP("limitMem", "", 1024,
-		"The limit memory to deploy")
-	cmd.Flags().IntP("minReplicas", "", 3,
-		"The min replicas to deploy")
-	cmd.Flags().IntP("maxReplicas", "", 10,
-		"The max replicas to deploy")
-	cmd.Flags().StringP("serviceAccount", "", "",
-		"TheServiceAccount for the deployment")
-	cmd.Flags().StringP("imagePullPolicy", "", "",
-		"The image pull policy of the deployment, default to IfNotPresent")
+
+	cmd.Flags().StringP("context", "", "",
+		"Context in kubeconfig to use")
+	cmd.Flags().StringP("kubeConfig", "k", "",
+		"Path to kubeconfig")
+
+	cmd.Flags().StringArrayP("envs", "e", nil,
+		"Environment variable to set in the form NAME=VALUE. "+
+			"This is for the environment variables passed in by the builderpack build method.")
 	cmd.Flags().StringP("builder-image", "b", "",
 		"Specify a custom builder image for use by the builder other than its default.")
 	cmd.Flags().BoolP("useDockerfile", "d", false,
@@ -114,13 +89,15 @@ SYNOPSIS
 	cmd.Flags().BoolP("push", "", true,
 		"Whether to push the image to the registry center by the way")
 	cmd.Flags().BoolP("force", "f", false,
-		"Whether to force push")
-	cmd.Flags().StringP("context", "", "",
-		"Context in kubeconfig to use")
-	cmd.Flags().StringP("kubeConfig", "k", "",
-		"Path to kubeconfig")
+		"Whether to force build")
+
+	cmd.Flags().BoolP("build", "", true,
+		"Whether to build the image")
+	cmd.Flags().BoolP("apply", "a", false,
+		"Whether to apply the application to the k8s cluster by the way")
 
 	addPathFlag(cmd)
+	cmd.Flags().SetInterspersed(false)
 	baseCmd.AddCommand(cmd)
 }
 
@@ -157,91 +134,35 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 	client, done := newClient(clientOptions...)
 	defer done()
 
-	key := client2.ObjectKey{
-		Namespace: metav1.NamespaceSystem,
-		Name:      cfg.Namespace,
-	}
-
-	err = client.KubeCtl.Get(context.Background(), key, &corev1.Namespace{})
+	kubeEnv := true
+	_, err = rest.InClusterConfig()
 	if err != nil {
-		if errors2.IsNotFound(err) {
-			nsObj := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: metav1.NamespaceSystem,
-					Name:      cfg.Namespace,
-				},
+		kubeconfig := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
+		if len(kubeconfig) <= 0 {
+			if home := homedir.HomeDir(); home != "" {
+				kubeconfig = filepath.Join(home, ".kube", "config")
 			}
-			if err := client.KubeCtl.Create(context.Background(), nsObj); err != nil {
-				return err
-			}
-			return nil
-		} else {
-			return fmt.Errorf("failed to check if namespace %v exists: %v", cfg.Namespace, err)
+		}
+		_, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			kubeEnv = false
 		}
 	}
 
-	namespaceSelector := client2.MatchingLabels{
-		"dubbo-deploy": "enabled",
+	if kubeEnv {
+		err := f.CheckLabels(cfg.Namespace, client)
+		if err != nil {
+			return err
+		}
 	}
-	nsList := &corev1.NamespaceList{}
-	if err = client.KubeCtl.List(context.Background(), nsList, namespaceSelector); err != nil {
+
+	// generate template first
+	f, err = client.Deploy(cmd.Context(), f)
+	if err != nil {
 		return err
 	}
-	var namespace string
-	if len(nsList.Items) > 0 {
-		namespace = nsList.Items[0].Name
-	}
 
-	env := os.Getenv("DUBBO_DEPLOY_NS")
-	if env != "" {
-		namespace = env
-	}
-
-	if namespace != "" {
-		zkSelector := client2.MatchingLabels{
-			"dubbo.apache.org/zookeeper": "true",
-		}
-
-		zkList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), zkList, zkSelector, client2.InNamespace(namespace)); err != nil {
-			return err
-		}
-		var name string
-		var dns string
-		if len(zkList.Items) > 0 {
-			name = zkList.Items[0].Name
-			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
-			f.Deploy.ZookeeperAddress = dns
-		}
-
-		nacosSelector := client2.MatchingLabels{
-			"dubbo.apache.org/nacos": "true",
-		}
-
-		nacosList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), nacosList, nacosSelector, client2.InNamespace(namespace)); err != nil {
-			return err
-		}
-		if len(nacosList.Items) > 0 {
-			name = nacosList.Items[0].Name
-			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
-			f.Deploy.NacosAddress = dns
-		}
-
-		promSelector := client2.MatchingLabels{
-			"dubbo.apache.org/prometheus": "true",
-		}
-
-		promList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), promList, promSelector, client2.InNamespace(namespace)); err != nil {
-			return err
-		}
-		if len(promList.Items) > 0 {
-			f.Deploy.UseProm = true
-		}
-	}
-
-	if !cfg.NoBuild {
+	if cfg.Build {
 		if f.Built() && !cfg.Force {
 			fmt.Fprintf(cmd.OutOrStdout(), "The Application is up to date, If you still want to build, use `--force true`\n")
 			return nil
@@ -255,10 +176,6 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 			}
 		}
 	}
-	f, err = client.Deploy(cmd.Context(), f)
-	if err != nil {
-		return err
-	}
 
 	if cfg.Apply {
 		err := applyTok8s(cmd, f)
@@ -271,7 +188,7 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 		return err
 	}
 
-	return f.Stamp()
+	return nil
 }
 
 func (d DeployConfig) deployclientOptions() ([]dubbo.Option, error) {
@@ -342,17 +259,8 @@ func (c DeployConfig) Configure(f *dubbo.Dubbo) {
 	if c.Namespace != "" {
 		f.Deploy.Namespace = c.Namespace
 	}
-	if c.Secret != "" {
-		f.Deploy.Secret = c.Secret
-	}
 	if c.Output != "" {
 		f.Deploy.Output = c.Output
-	}
-	if c.Replicas != 0 {
-		f.Deploy.Replicas = c.Replicas
-	}
-	if c.Revisions != 0 {
-		f.Deploy.Revisions = c.Revisions
 	}
 	if c.ContainerPort != 0 {
 		f.Deploy.ContainerPort = c.ContainerPort
@@ -363,81 +271,35 @@ func (c DeployConfig) Configure(f *dubbo.Dubbo) {
 	if c.NodePort != 0 {
 		f.Deploy.NodePort = c.NodePort
 	}
-	if c.RequestCpu != 0 {
-		f.Deploy.RequestCpu = c.RequestCpu
-	}
-	if c.RequestMem != 0 {
-		f.Deploy.RequestMem = c.RequestMem
-	}
-	if c.LimitCpu != 0 {
-		f.Deploy.LimitCpu = c.LimitCpu
-	}
-	if c.LimitMem != 0 {
-		f.Deploy.LimitMem = c.LimitMem
-	}
-	if c.MinReplicas != 0 {
-		f.Deploy.MinReplicas = c.MinReplicas
-	}
-	if c.MaxReplicas != 0 {
-		f.Deploy.MaxReplicas = c.MaxReplicas
-	}
-	if c.ServiceAccount != "" {
-		f.Deploy.ServiceAccount = c.ServiceAccount
-	}
-	if c.ImagePullPolicy != "" {
-		f.Deploy.ImagePullPolicy = c.ImagePullPolicy
-	}
 }
 
 type DeployConfig struct {
 	*buildConfig
-	KubeConfig      string
-	Context         string
-	NoBuild         bool
-	Apply           bool
-	Namespace       string
-	Secret          string
-	Replicas        int
-	Revisions       int
-	ContainerPort   int
-	Output          string
-	Force           bool
-	TargetPort      int
-	NodePort        int
-	RequestCpu      int
-	RequestMem      int
-	LimitCpu        int
-	LimitMem        int
-	MinReplicas     int
-	MaxReplicas     int
-	ServiceAccount  string
-	ImagePullPolicy string
+	KubeConfig    string
+	Context       string
+	Build         bool
+	Apply         bool
+	Namespace     string
+	ContainerPort int
+	Output        string
+	Force         bool
+	TargetPort    int
+	NodePort      int
 }
 
 func newDeployConfig(cmd *cobra.Command) (c *DeployConfig) {
 	c = &DeployConfig{
-		buildConfig:     newBuildConfig(cmd),
-		KubeConfig:      viper.GetString("kubeConfig"),
-		Context:         viper.GetString("context"),
-		NoBuild:         viper.GetBool("nobuild"),
-		Apply:           viper.GetBool("apply"),
-		Output:          viper.GetString("output"),
-		Namespace:       viper.GetString("namespace"),
-		Secret:          viper.GetString("secret"),
-		Replicas:        viper.GetInt("replicas"),
-		Force:           viper.GetBool("force"),
-		Revisions:       viper.GetInt("revisions"),
-		ContainerPort:   viper.GetInt("containerPort"),
-		TargetPort:      viper.GetInt("targetPort"),
-		NodePort:        viper.GetInt("nodePort"),
-		RequestCpu:      viper.GetInt("requestCpu"),
-		RequestMem:      viper.GetInt("requestMem"),
-		LimitCpu:        viper.GetInt("limitCpu"),
-		LimitMem:        viper.GetInt("limitMem"),
-		MinReplicas:     viper.GetInt("minReplicas"),
-		MaxReplicas:     viper.GetInt("maxReplicas"),
-		ServiceAccount:  viper.GetString("serviceAccount"),
-		ImagePullPolicy: viper.GetString("imagePullPolicy"),
+		buildConfig:   newBuildConfig(cmd),
+		KubeConfig:    viper.GetString("kubeConfig"),
+		Context:       viper.GetString("context"),
+		Build:         viper.GetBool("build"),
+		Apply:         viper.GetBool("apply"),
+		Output:        viper.GetString("output"),
+		Namespace:     viper.GetString("namespace"),
+		Force:         viper.GetBool("force"),
+		ContainerPort: viper.GetInt("containerPort"),
+		TargetPort:    viper.GetInt("targetPort"),
+		NodePort:      viper.GetInt("nodePort"),
 	}
 	return
 }

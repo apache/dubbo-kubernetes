@@ -304,7 +304,7 @@ func EnsureRunDataDir(root string) error {
 	// Flush to disk immediately since this may affect subsequent calculations
 	// of the build stamp
 	if err = rwFile.Sync(); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: error when syncing .gitignore. %s", err)
+		fmt.Fprintf(os.Stderr, "warning: error when syncing .gitignore. %s\n", err)
 	}
 	return nil
 }
@@ -375,7 +375,7 @@ func (c *Client) Build(ctx context.Context, f *Dubbo, options ...BuildOption) (*
 	}
 
 	// use by the cli for user echo
-	fmt.Fprintf(os.Stderr, "🙌 Application built: %v", f.Image)
+	fmt.Fprintf(os.Stderr, "🙌 Application built: %v\n", f.Image)
 	return f, err
 }
 
@@ -441,7 +441,7 @@ func (f Dubbo) BuildStamp() string {
 // Built returns true if the application is considered built.
 // Note that this only considers the application as it exists on-disk at
 // f.Root.
-func (f Dubbo) Built() bool {
+func (f *Dubbo) Built() bool {
 	// If there is no build stamp, it is not built.
 	stamp := f.BuildStamp()
 	if stamp == "" {
@@ -471,7 +471,7 @@ func (f Dubbo) Built() bool {
 	// It's a pretty good chance the thing doesn't need to be rebuilt, though
 	// of course filesystem racing conditions do exist, including both direct
 	// source code modifications or changes to the image cache.
-	hash, _, err := Fingerprint(f.Root)
+	hash, _, err := Fingerprint(f)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error calculating function's fingerprint: %v\n", err)
 		return false
