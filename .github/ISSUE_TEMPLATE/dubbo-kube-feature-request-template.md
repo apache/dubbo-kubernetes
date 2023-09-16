@@ -1,11 +1,11 @@
 ---
-name: Dubbo-Admin feature request template
-about: If you would like to request a feature to Dubbo-Admin, please use this template.
+name: dubbo-kube feature request template
+about: If you would like to request a feature to dubbo-kube, please use this template.
 
 ---
 
 - [ ] I have searched the [issues](https://github.com/apache/dubbo-kubernetes/issues) of this repository and believe that this is not a duplicate.
-- [ ] I have checked the [REAMDE](https://github.com/apache/dubbo-kubernetes/blob/develop/README.md) of this repository and believe that this is not a duplicate.
+- [ ] I have checked the [REAMDE](https://github.com/apache/dubbo-kubernetes/blob/master/README.md) of this repository and believe that this is not a duplicate.
 
 ### Is your feature request related to a problem? Please describe.
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
