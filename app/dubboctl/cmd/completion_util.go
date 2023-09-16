@@ -27,7 +27,7 @@ import (
 func CompleteRuntimeList(cmd *cobra.Command, args []string, toComplete string, client *dubbo.Client) (matches []string, directive cobra.ShellCompDirective) {
 	runtimes, err := client.Runtimes()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error listing runtimes for flag completion: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error listing runtimes for flag completion: %v", err)
 		return
 	}
 	for _, runtime := range runtimes {
@@ -43,7 +43,7 @@ func CompleteTemplateList(cmd *cobra.Command, args []string, toComplete string, 
 
 	lang, err := cmd.Flags().GetString("language")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot list templates: %v\n", err)
+		fmt.Fprintf(os.Stderr, "cannot list templates: %v", err)
 		return
 	}
 	if lang == "" {
@@ -53,7 +53,7 @@ func CompleteTemplateList(cmd *cobra.Command, args []string, toComplete string, 
 
 	templates, err := client.Templates().List(lang)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cannot list templates: %v\n", err)
+		fmt.Fprintf(os.Stderr, "cannot list templates: %v", err)
 		return
 	}
 

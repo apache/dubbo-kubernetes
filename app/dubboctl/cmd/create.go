@@ -109,10 +109,10 @@ EXAMPLES
 
 	// Tab completion
 	if err := cmd.RegisterFlagCompletionFunc("language", newRuntimeCompletionFunc(newClient)); err != nil {
-		fmt.Fprintf(os.Stderr, "unable to provide language runtime suggestions: %v\n", err)
+		fmt.Fprintf(os.Stderr, "unable to provide language runtime suggestions: %v", err)
 	}
 	if err := cmd.RegisterFlagCompletionFunc("template", newTemplateCompletionFunc(newClient)); err != nil {
-		fmt.Fprintf(os.Stderr, "unable to provide template suggestions: %v\n", err)
+		fmt.Fprintf(os.Stderr, "unable to provide template suggestions: %v", err)
 	}
 
 	baseCmd.AddCommand(cmd)
@@ -423,7 +423,7 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 					Suggest: func(prefix string) []string {
 						suggestions, err := templatesWithPrefix(prefix, c.Runtime, client)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "unable to suggest: %v\n", err)
+							fmt.Fprintf(os.Stderr, "unable to suggest: %v", err)
 						}
 						return suggestions
 					},
@@ -446,7 +446,7 @@ func newRuntimeCompletionFunc(newClient ClientFactory) flagCompletionFunc {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		_, err := newCreateConfig(cmd, args, newClient)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error creating client config for flag completion: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error creating client config for flag completion: %v", err)
 		}
 		client, done := newClient()
 		defer done()
@@ -458,7 +458,7 @@ func newTemplateCompletionFunc(newClient ClientFactory) flagCompletionFunc {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		_, err := newCreateConfig(cmd, args, newClient)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error creating client config for flag completion: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error creating client config for flag completion: %v", err)
 		}
 		client, done := newClient()
 		defer done()
@@ -489,7 +489,7 @@ func templatesWithPrefix(prefix, runtime string, client *dubbo.Client) ([]string
 func runCreateHelp(cmd *cobra.Command, args []string, newClient ClientFactory) {
 	failSoft := func(err error) {
 		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "error: help text may be partial: %v\n", err)
+			fmt.Fprintf(cmd.OutOrStderr(), "error: help text may be partial: %v", err)
 		}
 	}
 
@@ -514,7 +514,7 @@ func runCreateHelp(cmd *cobra.Command, args []string, newClient ClientFactory) {
 	}
 
 	if err := tpl.Execute(cmd.OutOrStdout(), data); err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "unable to display help text: %v\n", err)
+		fmt.Fprintf(cmd.ErrOrStderr(), "unable to display help text: %v", err)
 	}
 }
 

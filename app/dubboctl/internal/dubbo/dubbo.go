@@ -19,7 +19,6 @@ package dubbo
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -28,12 +27,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	corev1 "k8s.io/api/core/v1"
-	errors2 "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	client2 "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/spf13/cobra"
 
@@ -123,17 +116,29 @@ type BuildSpec struct {
 }
 
 type DeploySpec struct {
-	Namespace        string `yaml:"namespace,omitempty"`
-	Output           string `yaml:"output,omitempty"`
-	ContainerPort    int    `yaml:"containerPort,omitempty"`
-	TargetPort       int    `yaml:"targetPort,omitempty"`
-	NodePort         int    `yaml:"nodePort,omitempty"`
-	ZookeeperAddress string `yaml:"-"`
-	NacosAddress     string `yaml:"-"`
-	UseProm          bool   `yaml:"-"`
+	Namespace        string   `yaml:"namespace,omitempty"`
+	Output           string   `yaml:"output,omitempty"`
+	Secret           string   `yaml:"secret,omitempty"`
+	Replicas         int      `yaml:"replicas,omitempty"`
+	Revisions        int      `yaml:"revisions,omitempty"`
+	ContainerPort    int      `yaml:"containerPort"`
+	TargetPort       int      `yaml:"targetPort,omitempty"`
+	NodePort         int      `yaml:"nodePort,omitempty"`
+	RequestCpu       int      `yaml:"requestCpu,omitempty"`
+	RequestMem       int      `yaml:"requestMem,omitempty"`
+	LimitCpu         int      `yaml:"limitCpu,omitempty"`
+	LimitMem         int      `yaml:"limitMem,omitempty"`
+	MinReplicas      int      `yaml:"minReplicas,omitempty"`
+	MaxReplicas      int      `yaml:"maxReplicas,omitempty"`
+	ServiceAccount   string   `yaml:"serviceAccount,omitempty"`
+	ImagePullPolicy  string   `yaml:"imagePullPolicy,omitempty"`
+	Envs             []string `yaml:"-"`
+	ZookeeperAddress string   `yaml:"-"`
+	NacosAddress     string   `yaml:"-"`
+	UseProm          bool     `yaml:"-"`
 }
 
-func (f *Dubbo) Validate() error {
+func (f Dubbo) Validate() error {
 	if f.Root == "" {
 		return errors.New("dubbo root path is required")
 	}
@@ -165,7 +170,7 @@ func (f *Dubbo) Validate() error {
 
 // Initialized returns if the function has been initialized.
 // Any errors are considered failure (invalid or inaccessible root, config file, etc).
-func (f *Dubbo) Initialized() bool {
+func (f Dubbo) Initialized() bool {
 	return !f.Created.IsZero()
 }
 
@@ -313,7 +318,7 @@ func NewDubbo(path string) (*Dubbo, error) {
 
 // buildStamp returns the current (last) build stamp for the function
 // at the given path, if it can be found.
-func (f *Dubbo) buildStamp() string {
+func (f Dubbo) buildStamp() string {
 	buildstampPath := filepath.Join(f.Root, RunDataDir, buildstamp)
 	if _, err := os.Stat(buildstampPath); err != nil {
 		return ""
@@ -323,112 +328,6 @@ func (f *Dubbo) buildStamp() string {
 		return ""
 	}
 	return string(b)
-}
-
-func (f *Dubbo) CheckLabels(ns string, client *Client) error {
-	key := client2.ObjectKey{
-		Namespace: metav1.NamespaceSystem,
-		Name:      ns,
-	}
-
-	var err error
-
-	err = client.KubeCtl.Get(context.Background(), key, &corev1.Namespace{})
-	if err != nil {
-		if errors2.IsNotFound(err) {
-			nsObj := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: metav1.NamespaceSystem,
-					Name:      ns,
-				},
-			}
-			if err := client.KubeCtl.Create(context.Background(), nsObj); err != nil {
-				return err
-			}
-			return nil
-		} else {
-			return fmt.Errorf("failed to check if namespace %v exists: %v", ns, err)
-		}
-	}
-
-	namespaceSelector := client2.MatchingLabels{
-		"dubbo-deploy": "enabled",
-	}
-	nsList := &corev1.NamespaceList{}
-	if err = client.KubeCtl.List(context.Background(), nsList, namespaceSelector); err != nil {
-		if errors2.IsNotFound(err) {
-			return nil
-		} else {
-			return err
-		}
-	}
-	var namespace string
-	if len(nsList.Items) > 0 {
-		namespace = nsList.Items[0].Name
-	}
-
-	env := os.Getenv("DUBBO_DEPLOY_NS")
-	if env != "" {
-		namespace = env
-	}
-
-	if namespace != "" {
-		zkSelector := client2.MatchingLabels{
-			"dubbo.apache.org/zookeeper": "true",
-		}
-
-		zkList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), zkList, zkSelector, client2.InNamespace(namespace)); err != nil {
-			if errors2.IsNotFound(err) {
-				return nil
-			} else {
-				return err
-			}
-		}
-		var name string
-		var dns string
-		if len(zkList.Items) > 0 {
-			name = zkList.Items[0].Name
-			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
-			f.Deploy.ZookeeperAddress = dns
-		}
-
-		nacosSelector := client2.MatchingLabels{
-			"dubbo.apache.org/nacos": "true",
-		}
-
-		nacosList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), nacosList, nacosSelector, client2.InNamespace(namespace)); err != nil {
-			if errors2.IsNotFound(err) {
-				return nil
-			} else {
-				return err
-			}
-		}
-		if len(nacosList.Items) > 0 {
-			name = nacosList.Items[0].Name
-			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
-			f.Deploy.NacosAddress = dns
-		}
-
-		promSelector := client2.MatchingLabels{
-			"dubbo.apache.org/prometheus": "true",
-		}
-
-		promList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), promList, promSelector, client2.InNamespace(namespace)); err != nil {
-			if errors2.IsNotFound(err) {
-				return nil
-			} else {
-				return err
-			}
-		}
-		if len(promList.Items) > 0 {
-			f.Deploy.UseProm = true
-		}
-	}
-
-	return nil
 }
 
 // Write aka (save, serialize, marshal) the function to disk at its path.
@@ -460,16 +359,16 @@ type (
 // This is a performance optimization used when updates to the
 // function are known to have no effect on its built container.  This
 // stamp is checked before certain operations, and if it has been updated,
-// the build can be skipped.  If in doubt, just use .Write only.
+// the build can be skuipped.  If in doubt, just use .Write only.
 //
 // Updates the build stamp at ./dubbo/built (and the log
 // at .dubbo/built.log) to reflect the current state of the filesystem.
 // Note that the caller should call .Write first to flush any changes to the
-// application in-memory to the filesystem prior to calling stamp.
+// function in-memory to the filesystem prior to calling stamp.
 //
-// The runtime data directory .dubbo is created in the application root if
+// The runtime data directory .dubbo is created in the function root if
 // necessary.
-func (f *Dubbo) Stamp(oo ...stampOption) (err error) {
+func (f Dubbo) Stamp(oo ...stampOption) (err error) {
 	options := &stampOptions{}
 	for _, o := range oo {
 		o(options)
@@ -480,7 +379,7 @@ func (f *Dubbo) Stamp(oo ...stampOption) (err error) {
 
 	// Calculate the hash and a logfile of what comprised it
 	var hash, log string
-	if hash, log, err = Fingerprint(f); err != nil {
+	if hash, log, err = Fingerprint(f.Root); err != nil {
 		return
 	}
 
@@ -526,22 +425,20 @@ func timestamp(s string) string {
 
 // Fingerprint the files at a given path.  Returns a hash calculated from the
 // filenames and modification timestamps of the files within the given root.
-// Also returns a logfile consisting of the filenames and modification times
+// Also returns a logfile consiting of the filenames and modification times
 // which contributed to the hash.
 // Intended to determine if there were appreciable changes to a function's
 // source code, certain directories and files are ignored, such as
 // .git and .dubbo.
-func Fingerprint(f *Dubbo) (hash, log string, err error) {
+// Future updates will include files explicitly marked as ignored by a
+func Fingerprint(root string) (hash, log string, err error) {
 	h := sha256.New()   // Hash builder
 	l := bytes.Buffer{} // Log buffer
 
-	root := f.Root
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return "", "", err
 	}
-	output := f.Deploy.Output
-
 	err = filepath.Walk(abs, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -549,14 +446,11 @@ func Fingerprint(f *Dubbo) (hash, log string, err error) {
 		if path == root {
 			return nil
 		}
-		// Always ignore .dubbo, .git etc
-		if info.IsDir() && (info.Name() == RunDataDir || info.Name() == ".git" || info.Name() == ".idea") {
+		// Always ignore .dubbo, .git
+		if info.IsDir() && (info.Name() == RunDataDir || info.Name() == ".git" || info.Name() == "dubbo.yaml") {
 			return filepath.SkipDir
 		}
-		if info.Name() == DubboFile || info.Name() == Dockerfile || info.Name() == output {
-			return nil
-		}
-		fmt.Fprintf(h, "%v:%v:", path, info.ModTime().UnixNano())   // Write to the Hashed
+		fmt.Fprintf(h, "%v:%v:", path, info.ModTime().UnixNano())   // Write to the Hasher
 		fmt.Fprintf(&l, "%v:%v\n", path, info.ModTime().UnixNano()) // Write to the Log
 		return nil
 	})

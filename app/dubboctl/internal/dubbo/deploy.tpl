@@ -7,8 +7,8 @@ metadata:
     app: {{.Name}}
     app-type: dubbo
 spec:
-  replicas: 3
-  revisionHistoryLimit: 5
+  replicas: {{.Replicas}}
+  revisionHistoryLimit: {{.Revisions}}
   selector:
     matchLabels:
       app: {{.Name}}
@@ -23,7 +23,8 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/path: /management/prometheus
         prometheus.io/port: "18081"{{end}}
-    spec:
+    spec:{{if .ServiceAccount}}
+      serviceAccountName: {{.ServiceAccount}}{{end}}
       containers:
       - name: {{.Name}}
         image: {{.Image}}
@@ -38,7 +39,8 @@ spec:
             value: {{.Nacos}}
           - name: NACOS_ADDRESS
             value: {{.Nacos}}{{end}}
-        ports:
+        {{if .ImagePullPolicy}}imagePullPolicy: {{.ImagePullPolicy}}
+        {{end}}ports:
         - containerPort: {{.Port}}
           name: dubbo
           protocol: TCP{{if .UseProm}}
@@ -57,12 +59,13 @@ spec:
           periodSeconds: 20
         resources:
           requests:
-            cpu: 500m
-            memory: 512Mi
+            cpu: {{.RequestCpu}}m
+            memory: {{.RequestMem}}Mi
           limits:
-            cpu: 1000m
-            memory: 1024Mi
-
+            cpu: {{.LimitCpu}}m
+            memory: {{.LimitMem}}Mi
+      {{if .Secret}}imagePullSecrets:
+      - name: {{.Secret}}{{end}}
 ---
 
 apiVersion: v1
@@ -97,8 +100,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{.Name}}
-  minReplicas: 3
-  maxReplicas: 10
+  minReplicas: {{.MinReplicas}}
+  maxReplicas: {{.MaxReplicas}}
   metrics:
   - type: Resource
     resource:
@@ -121,8 +124,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{.Name}}
-  minReplicas: 3
-  maxReplicas: 10
+  minReplicas: {{.MinReplicas}}
+  maxReplicas: {{.MaxReplicas}}
   metrics:
   - type: Resource
     resource:
