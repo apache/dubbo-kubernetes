@@ -31,10 +31,9 @@ import (
 
 func addBuild(baseCmd *cobra.Command, newClient ClientFactory) {
 	cmd := &cobra.Command{
-		Use:        "build",
-		Short:      "Build the image for the application",
-		Long:       ``,
-		SuggestFor: []string{"biuld", "buidl", "built"},
+		Use:   "build",
+		Short: "Build the image for the application",
+		Long:  ``,
 		PreRunE: bindEnv("useDockerfile", "image", "path", "push", "force", "envs",
 			"builder-image"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -51,7 +50,7 @@ func addBuild(baseCmd *cobra.Command, newClient ClientFactory) {
 	cmd.Flags().BoolP("push", "", false,
 		"Whether to push the image to the registry center by the way")
 	cmd.Flags().BoolP("force", "f", false,
-		"Whether to force build")
+		"Whether to force push")
 	cmd.Flags().StringArrayP("envs", "e", []string{},
 		"environment variable for an application, KEY=VALUE format")
 	addPathFlag(cmd)
@@ -103,7 +102,9 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 		return err
 	}
 
-	return nil
+	// Stamp is a performance optimization: treat the application as being built
+	// (cached) unless the fs changes.
+	return f.Stamp()
 }
 
 func (c *buildConfig) Prompt(d *dubbo.Dubbo) (*buildConfig, error) {
@@ -172,7 +173,7 @@ func newBuildConfig(cmd *cobra.Command) *buildConfig {
 
 	var err error
 	if c.Envs, err = cmd.Flags().GetStringArray("envs"); err != nil {
-		fmt.Fprintf(cmd.OutOrStdout(), "error reading envs: %v\n", err)
+		fmt.Fprintf(cmd.OutOrStdout(), "error reading envs: %v", err)
 	}
 	return c
 }
