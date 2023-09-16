@@ -1,18 +1,18 @@
 ---
-name: Dubbo-Admin issue report template
-about: If you would like to report a issue to Dubbo-Admin, please use this template.
+name: dubbo-kube issue report template
+about: If you would like to report a issue to dubbo-kube, please use this template.
 
 ---
 
 - [ ] I have searched the [issues](https://github.com/apache/dubbo-kubernetes/issues) of this repository and believe that this is not a duplicate.
-- [ ] I have checked the [REAMDE](https://github.com/apache/dubbo-kubernetes/blob/develop/README.md) of this repository and believe that this is not a duplicate.
+- [ ] I have checked the [REAMDE](https://github.com/apache/dubbo-kubernetes/blob/master/README.md) of this repository and believe that this is not a duplicate.
 
 ### Environment
 
-* Dubbo Admin version: xxx
-* Registry center detail (type and version): xxx
+* dubboctl or control-plane version: xxx
 * Operating System version: xxx
-* Java version: xxx
+* Go version: xxx
+* Other information: xxx
 
 ### Steps to reproduce this issue
 
@@ -24,7 +24,7 @@ Pls. provide [GitHub address] to reproduce this issue.
 
 ### Expected Result
 
-What do you expected from the above steps？
+What do you expect from the above steps？
 
 ### Actual Result
 
