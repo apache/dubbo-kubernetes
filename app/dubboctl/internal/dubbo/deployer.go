@@ -48,30 +48,16 @@ func NewDeployer(opts ...DeployerOpt) *DeployApp {
 }
 
 type Deployment struct {
-	Name            string
-	Namespace       string
-	Image           string
-	Secret          string
-	Replicas        int
-	Revisions       int
-	Port            int
-	TargetPort      int
-	NodePort        int
-	UseNodePort     bool
-	RequestCpu      int
-	RequestMem      int
-	LimitCpu        int
-	LimitMem        int
-	MinReplicas     int
-	MaxReplicas     int
-	ServiceAccount  string
-	ImagePullPolicy string
-	Zookeeper       string
-	Nacos           string
-	UseProm         bool
-	PromScratch     bool
-	PromPath        string
-	PromPort        int
+	Name        string
+	Namespace   string
+	Image       string
+	Port        int
+	TargetPort  int
+	NodePort    int
+	UseNodePort bool
+	Zookeeper   string
+	Nacos       string
+	UseProm     bool
 }
 
 func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption) (DeploymentResult, error) {
@@ -98,38 +84,27 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 	out, err := os.Create(path)
 	if err != nil {
 		return DeploymentResult{
-			Status:    Deployed,
+			Status:    Failed,
 			Namespace: ns,
 		}, err
 	}
 
 	t := template2.Must(template2.New("deployTemplate").Parse(text))
 	err = t.Execute(out, Deployment{
-		Name:            f.Name,
-		Namespace:       ns,
-		Image:           f.Image,
-		Secret:          f.Deploy.Secret,
-		Replicas:        f.Deploy.Replicas,
-		Revisions:       f.Deploy.Revisions,
-		Port:            f.Deploy.ContainerPort,
-		TargetPort:      targetPort,
-		NodePort:        f.Deploy.NodePort,
-		UseNodePort:     nodePort > 0,
-		RequestCpu:      f.Deploy.RequestCpu,
-		RequestMem:      f.Deploy.RequestMem,
-		LimitCpu:        f.Deploy.LimitCpu,
-		LimitMem:        f.Deploy.LimitMem,
-		MinReplicas:     f.Deploy.MinReplicas,
-		MaxReplicas:     f.Deploy.MaxReplicas,
-		ServiceAccount:  f.Deploy.ServiceAccount,
-		ImagePullPolicy: f.Deploy.ImagePullPolicy,
-		Zookeeper:       f.Deploy.ZookeeperAddress,
-		Nacos:           f.Deploy.NacosAddress,
-		UseProm:         f.Deploy.UseProm,
+		Name:        f.Name,
+		Namespace:   ns,
+		Image:       f.Image,
+		Port:        f.Deploy.ContainerPort,
+		TargetPort:  targetPort,
+		NodePort:    f.Deploy.NodePort,
+		UseNodePort: nodePort > 0,
+		Zookeeper:   f.Deploy.ZookeeperAddress,
+		Nacos:       f.Deploy.NacosAddress,
+		UseProm:     f.Deploy.UseProm,
 	})
 	if err != nil {
 		return DeploymentResult{
-			Status:    Deployed,
+			Status:    Failed,
 			Namespace: ns,
 		}, err
 	}
