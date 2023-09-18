@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if .Values.admin.nacos.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -32,12 +31,10 @@ metadata:
     {{- end }}
 spec:
   serviceName: {{ include "dubbo-admin.name" . }}
-  {{- if .Values.updateStrategy }}
-  updateStrategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- if .Values.statefulsetStrategy }}
+  updateStrategy: {{- toYaml .Values.statefulsetStrategy | nindent 4 }}
   {{- end }}
-  {{- if and (not .Values.autoscaling.enabled) (.Values.replicas) }}
   replicas: {{ .Values.replicas }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "dubbo-admin.selectorLabels" . | nindent 8 }}
@@ -120,5 +117,4 @@ spec:
         resources:
           requests:
             storage: {{ .size }}
-        {{- end -}}
         {{- end -}}

@@ -1,0 +1,42 @@
+{{- if and .Values.keda.autoscaling.enabled (not .Values.hpa.autoscaling.enabled) -}}
+apiVersion: {{ .Values.keda.apiVersion }}
+kind: ScaledObject
+metadata:
+  name: {{ include "dubbo-admin.fullname" . }}
+  namespace: {{ include "dubbo-admin.namespace" . }}
+  labels:
+      {{- include "dubbo-admin.labels" . | nindent 4 }}
+      {{- with .Values.labels }}
+      {{- toYaml . | nindent 4 }}
+      {{- end }}
+  {{- if .Values.keda.autoscaling.scaledObject.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    name: {{ include "dubbo-admin.fullname" . }}
+  {{- with .Values.keda.autoscaling }}
+  pollingInterval: {{ .pollingInterval }}
+  cooldownPeriod: {{ .cooldownPeriod }}
+  minReplicaCount: {{ .minReplicas }}
+  maxReplicaCount: {{ .maxReplicas }}
+  {{- end -}}
+{{- with .Values.keda.autoscaling.fallback }}
+  fallback:
+    failureThreshold: {{ .failureThreshold | default 3 }}
+    replicas: {{ .replicas | default $.Values.keda.autoscaling.maxReplicas }}
+{{- end }}
+  triggers:
+{{- with .Values.keda.autoscaling.triggers }}
+{{ toYaml . | indent 2 }}
+{{ end }}
+  advanced:
+    restoreToOriginalReplicaCount: {{ .Values.keda.autoscaling.restoreToOriginalReplicaCount }}
+{{- if .Values.keda.autoscaling.behavior }}
+    horizontalPodAutoscalerConfig:
+      behavior:
+{{ with .Values.keda.autoscaling.behavior -}}
+{{ toYaml . | indent 8 }}
+{{ end }}
+{{- end }}
+{{- end }}

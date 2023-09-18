@@ -1,0 +1,46 @@
+{{- if and .Values.hpa.autoscaling.enabled (not .Values.keda.autoscaling.enabled) -}}
+apiVersion: {{ .Values.hpa.apiVersion }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "dubbo-admin.fullname" . }}
+  namespace: {{ include "dubbo-admin.namespace" . }}
+  labels:
+    {{- include "dubbo-admin.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.hpa.autoscaling.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "dubbo-admin.fullname" . }}
+  minReplicas: {{ .Values.hpa.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.hpa.autoscaling.maxReplicas }}
+  metrics:
+  {{- with .Values.hpa.autoscaling.targetMemory }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ . }}
+  {{- end }}
+  {{- with .Values.hpa.autoscaling.targetCPU }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ . }}
+  {{- end }}
+  {{- with .Values.hpa.autoscaling.autoscalingTemplate }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  {{- with .Values.hpa.autoscaling.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

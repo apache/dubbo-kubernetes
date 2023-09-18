@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if .Values.admin.zookeeper.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,9 +31,7 @@ metadata:
         {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
-  {{- if and (not .Values.autoscaling.enabled) (.Values.replicas) }}
   replicas: {{ .Values.replicas }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "dubbo-admin.selectorLabels" . | nindent 6 }}
@@ -128,7 +125,6 @@ spec:
             claimName: {{ .ClaimName }}
             {{- else -}}
           emptyDir: {{ .emptyDir }}
-              {{- end -}}
               {{- end -}}
               {{- end -}}
               {{- end -}}

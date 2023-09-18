@@ -228,14 +228,76 @@ image:
 
 
 ## Create HorizontalPodAutoscaler object for deployment type
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 5
-  targetCPU: "60"
-  targetMemory: ""
-  behavior: {}
+hpa:
+  apiVersion: "autoscaling/v2"
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPU: "60"
+    targetMemory: ""
+    behavior: {}
+    # scaleDown:
+    #   stabilizationWindowSeconds: 600
+    #   policies:
+    #   - type: Pods
+    #     value: 1
+    #     periodSeconds: 600
+    # scaleUp:
+    #   stabilizationWindowSeconds: 600
+    #   policies:
+    #   - type: Pods
+    #     value: 5
+    #     periodSeconds: 600
+    autoscalingTemplate: []
+    # Custom or additional autoscaling metrics
+    # ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-custom-metrics
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: nginx_ingress_controller_nginx_process_requests_total
+    #     target:
+    #       type: AverageValue
+    #       averageValue: 10000m
+    annotations: []
 
+keda:
+  apiVersion: "keda.sh/v1alpha1"
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    pollingInterval: 60
+    cooldownPeriod: 600
+    restoreToOriginalReplicaCount: false
+    fallback: []
+      # failureThreshold: 10
+    # replicas: 5
+    scaledObject:
+      annotations: {}
+      # Custom annotations for ScaledObject resource
+      #  annotations:
+      # key: value
+    triggers: []
+      # - type: prometheus
+      # metadata:
+      # serverAddress: http://localhost:9090
+      # metricName: http_requests_total
+      # threshold: '100'
+    # query: sum(rate(http_requests_total{deployment="my-deployment"}[2m]))
+    behavior: {}
+    # scaleDown:
+    #   stabilizationWindowSeconds: 600
+    #   policies:
+    #   - type: Pods
+    #     value: 1
+    #     periodSeconds: 600
+    # scaleUp:
+    #   stabilizationWindowSeconds: 600
+    #   policies:
+    #   - type: Pods
+    #     value: 5
+    #     periodSeconds: 600
 
 ## See `kubectl explain deployment.spec.strategy` for more
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
@@ -244,7 +306,7 @@ deploymentStrategy:
 
 ## See `kubectl explain statefulset.spec.strategy` for more
 ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
-updateStrategy:
+statefulsetStrategy:
   type: RollingUpdate
   rollingUpdate: {}
 
