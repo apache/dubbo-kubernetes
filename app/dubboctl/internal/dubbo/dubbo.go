@@ -128,7 +128,7 @@ type DeploySpec struct {
 	ContainerPort int    `yaml:"containerPort,omitempty"`
 	TargetPort    int    `yaml:"targetPort,omitempty"`
 	NodePort      int    `yaml:"nodePort,omitempty"`
-	Registry      string `json:"-"`
+	Registry      string `yaml:"registry,omitempty"`
 	UseProm       bool   `yaml:"-"`
 }
 
