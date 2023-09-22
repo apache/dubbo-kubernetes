@@ -20,6 +20,7 @@ package dubbo
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"os"
 	template2 "text/template"
 
@@ -55,8 +56,7 @@ type Deployment struct {
 	TargetPort  int
 	NodePort    int
 	UseNodePort bool
-	Zookeeper   string
-	Nacos       string
+	Registry    string
 	UseProm     bool
 }
 
@@ -81,6 +81,10 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 	}
 
 	path := f.Root + "/" + f.Deploy.Output
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, "WARNING! The file already exists in this directory and has been overwritten.")
+	}
+
 	out, err := os.Create(path)
 	if err != nil {
 		return DeploymentResult{
@@ -98,8 +102,7 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 		TargetPort:  targetPort,
 		NodePort:    f.Deploy.NodePort,
 		UseNodePort: nodePort > 0,
-		Zookeeper:   f.Deploy.ZookeeperAddress,
-		Nacos:       f.Deploy.NacosAddress,
+		Registry:    f.Deploy.Registry,
 		UseProm:     f.Deploy.UseProm,
 	})
 	if err != nil {

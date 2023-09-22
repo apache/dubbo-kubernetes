@@ -48,7 +48,7 @@ func addBuild(baseCmd *cobra.Command, newClient ClientFactory) {
 		"Use the dockerfile with the specified path to build")
 	cmd.Flags().StringP("image", "i", "",
 		"Container image( [registry]/[namespace]/[name]:[tag] )")
-	cmd.Flags().BoolP("push", "", false,
+	cmd.Flags().BoolP("push", "", true,
 		"Whether to push the image to the registry center by the way")
 	cmd.Flags().BoolP("force", "f", false,
 		"Whether to force build")
