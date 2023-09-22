@@ -123,14 +123,13 @@ type BuildSpec struct {
 }
 
 type DeploySpec struct {
-	Namespace        string `yaml:"namespace,omitempty"`
-	Output           string `yaml:"output,omitempty"`
-	ContainerPort    int    `yaml:"containerPort,omitempty"`
-	TargetPort       int    `yaml:"targetPort,omitempty"`
-	NodePort         int    `yaml:"nodePort,omitempty"`
-	ZookeeperAddress string `yaml:"-"`
-	NacosAddress     string `yaml:"-"`
-	UseProm          bool   `yaml:"-"`
+	Namespace     string `yaml:"namespace,omitempty"`
+	Output        string `yaml:"output,omitempty"`
+	ContainerPort int    `yaml:"containerPort,omitempty"`
+	TargetPort    int    `yaml:"targetPort,omitempty"`
+	NodePort      int    `yaml:"nodePort,omitempty"`
+	Registry      string `json:"-"`
+	UseProm       bool   `yaml:"-"`
 }
 
 func (f *Dubbo) Validate() error {
@@ -373,25 +372,8 @@ func (f *Dubbo) CheckLabels(ns string, client *Client) error {
 	}
 
 	if namespace != "" {
-		zkSelector := client2.MatchingLabels{
-			"dubbo.apache.org/zookeeper": "true",
-		}
-
-		zkList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), zkList, zkSelector, client2.InNamespace(namespace)); err != nil {
-			if errors2.IsNotFound(err) {
-				return nil
-			} else {
-				return err
-			}
-		}
 		var name string
 		var dns string
-		if len(zkList.Items) > 0 {
-			name = zkList.Items[0].Name
-			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
-			f.Deploy.ZookeeperAddress = dns
-		}
 
 		nacosSelector := client2.MatchingLabels{
 			"dubbo.apache.org/nacos": "true",
@@ -407,8 +389,27 @@ func (f *Dubbo) CheckLabels(ns string, client *Client) error {
 		}
 		if len(nacosList.Items) > 0 {
 			name = nacosList.Items[0].Name
-			dns = fmt.Sprintf("%s.%s.svc", name, namespace)
-			f.Deploy.NacosAddress = dns
+			dns = fmt.Sprintf("nacos://%s.%s.svc", name, namespace)
+			f.Deploy.Registry = dns
+		}
+
+		zkSelector := client2.MatchingLabels{
+			"dubbo.apache.org/zookeeper": "true",
+		}
+
+		zkList := &corev1.ServiceList{}
+		if err := client.KubeCtl.List(context.Background(), zkList, zkSelector, client2.InNamespace(namespace)); err != nil {
+			if errors2.IsNotFound(err) {
+				return nil
+			} else {
+				return err
+			}
+		}
+
+		if len(zkList.Items) > 0 {
+			name = zkList.Items[0].Name
+			dns = fmt.Sprintf("zookeeper://%s.%s.svc", name, namespace)
+			f.Deploy.Registry = dns
 		}
 
 		promSelector := client2.MatchingLabels{

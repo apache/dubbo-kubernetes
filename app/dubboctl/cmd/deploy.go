@@ -59,7 +59,7 @@ SYNOPSIS
 			return runDeploy(cmd, newClient)
 		},
 	}
-	cmd.Flags().StringP("namespace", "n", "dubbo-system",
+	cmd.Flags().StringP("namespace", "n", "default",
 		"Deploy into a specific namespace")
 	cmd.Flags().StringP("output", "o", "kube.yaml",
 		"output kubernetes manifest")

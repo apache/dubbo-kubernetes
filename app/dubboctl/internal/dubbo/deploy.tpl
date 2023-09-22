@@ -29,15 +29,9 @@ spec:
         image: {{.Image}}
         env:
           - name: DUBBO_CTL_VERSION
-            value: 0.0.1{{if .Zookeeper}}
-          - name: zookeeper.address
-            value: {{.Zookeeper}}
-          - name: ZOOKEEPER_ADDRESS
-            value: {{.Zookeeper}}{{end}}{{if .Nacos}}
-          - name: nacos.address
-            value: {{.Nacos}}
-          - name: NACOS_ADDRESS
-            value: {{.Nacos}}{{end}}
+            value: 0.0.1{{if .Registry}}
+          - name: DUBBO_REGISTRY_ADDRESS
+            value: {{.Registry}}{{end}}
         ports:
         - containerPort: {{.Port}}
           name: dubbo
