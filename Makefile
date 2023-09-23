@@ -178,7 +178,7 @@ buildx-dubbocp:  ## Build and push docker image with the dubbo control plane for
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile_dubbocp.cross
 	- docker buildx create --name project-dubbo-cp-builder
 	docker buildx use project-dubbo-cp-builder
-	- docker buildx build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=dubbo-cp  --push --platform=$(PLATFORMS) --tag ${DUBBO_CP_IMG} -f Dockerfile_dubbocp.cross .
+	- docker buildx build --build-arg LDFLAGS=$(LDFLAGS) --push --platform=$(PLATFORMS) --tag ${DUBBO_CP_IMG} -f Dockerfile_dubbocp.cross .
 	- docker buildx rm project-dubbo-cp-builder
 	rm Dockerfile_dubbocp.cross
 

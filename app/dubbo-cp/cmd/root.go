@@ -29,7 +29,7 @@ import (
 func GetRootCmd(args []string) *cobra.Command {
 	// rootCmd represents the base command when called without any subcommands
 	cmd := &cobra.Command{
-		Use:   "dubbocp",
+		Use:   "dubbo-cp",
 		Short: "Console and control plane for microservices built with Apache Dubbo.",
 		Long:  `Console and control plane for microservices built with Apache Dubbo.`,
 
