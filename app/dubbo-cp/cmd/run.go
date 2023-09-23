@@ -49,8 +49,8 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 	}{}
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Launch Dubbo Admin",
-		Long:  `Launch Dubbo Admin.`,
+		Short: "Launch Dubbo Control plane",
+		Long:  `Launch Dubbo Control plane.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := dubbo_cp.DefaultConfig()
 			err := config.Load(args.configPath, &cfg)
