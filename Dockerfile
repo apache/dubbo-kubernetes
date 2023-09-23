@@ -58,4 +58,4 @@ COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/${PKGNAME} .
 COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/conf/admin.yml .
 ENV ADMIN_CONFIG_PATH=./admin.yml
 
-ENTRYPOINT ["./dubbocp", "run"]
+ENTRYPOINT ["./${PKGNAME}", "run"]
