@@ -34,8 +34,9 @@ func Setup(rt core_runtime.Runtime) error {
 			})
 		webhookServer.WebhookServer.Init(rt.Config())
 		webhookServer.JavaInjector = patch.NewJavaSdk(rt.Config(), rt.WebHookClient(), rt.KubeClient().GetKubernetesClientSet())
-		webhookServer.WebhookServer.Patches = append(webhookServer.WebhookServer.Patches, webhookServer.JavaInjector.NewPodWithDubboCa)
-		webhookServer.WebhookServer.Patches = append(webhookServer.WebhookServer.Patches, webhookServer.JavaInjector.NewPodWithDubboRegistryInject)
+		webhookServer.WebhookServer.Patches = append(webhookServer.WebhookServer.Patches,
+			webhookServer.JavaInjector.NewPodWithDubboCa,
+			webhookServer.JavaInjector.NewPodWithDubboRegistryInject)
 		webhookServer.CertStorage = rt.CertStorage()
 		webhookServer.WebhookClient = rt.WebHookClient()
 	}
