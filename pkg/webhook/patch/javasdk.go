@@ -16,13 +16,13 @@
 package patch
 
 import (
-	"k8s.io/client-go/kubernetes"
 	"strconv"
 
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
 
-	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 type JavaSdk struct {
