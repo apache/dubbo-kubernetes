@@ -16,6 +16,7 @@
 package patch
 
 import (
+	"k8s.io/client-go/kubernetes"
 	"strconv"
 
 	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
@@ -27,12 +28,14 @@ import (
 type JavaSdk struct {
 	options       *dubbo_cp.Config
 	webhookClient webhook.Client
+	kubeClient    kubernetes.Interface
 }
 
-func NewJavaSdk(options *dubbo_cp.Config, webhookClient webhook.Client) *JavaSdk {
+func NewJavaSdk(options *dubbo_cp.Config, webhookClient webhook.Client, kubeClient kubernetes.Interface) *JavaSdk {
 	return &JavaSdk{
 		options:       options,
 		webhookClient: webhookClient,
+		kubeClient:    kubeClient,
 	}
 }
 
