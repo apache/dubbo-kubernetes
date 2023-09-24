@@ -41,6 +41,10 @@ const (
 	Labeled       = "true"
 )
 
+func (s *JavaSdk) NewPodWithDubboRegistryInject(origin *v1.Pod) (*v1.Pod, error) {
+	return nil, nil
+}
+
 func (s *JavaSdk) NewPodWithDubboCa(origin *v1.Pod) (*v1.Pod, error) {
 	target := origin.DeepCopy()
 	expireSeconds := int64(ExpireSeconds)
