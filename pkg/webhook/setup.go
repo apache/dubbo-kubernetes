@@ -13,33 +13,33 @@
 //See the License for the specific language governing permissions and
 //limitations under the License.
 
-package authority
+package webhook
 
 import (
-	"github.com/apache/dubbo-kubernetes/api/ca"
-	"github.com/apache/dubbo-kubernetes/pkg/authority/server"
+	"crypto/tls"
+
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/webhook/patch"
+	"github.com/apache/dubbo-kubernetes/pkg/webhook/server"
+	"github.com/apache/dubbo-kubernetes/pkg/webhook/webhook"
 	"github.com/pkg/errors"
 )
 
 func Setup(rt core_runtime.Runtime) error {
-	server := server.NewServer(rt.Config())
+	webhookServer := server.NewServer(rt.Config())
 	if rt.Config().KubeConfig.InPodEnv {
-		server.CertClient = rt.CertStorage().GetCertClient()
-		server.CertStorage = rt.CertStorage()
+		webhookServer.WebhookServer = webhook.NewWebhook(
+			func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				return rt.CertStorage().GetServerCert(info.ServerName), nil
+			})
+		webhookServer.WebhookServer.Init(rt.Config())
+		webhookServer.JavaInjector = patch.NewJavaSdk(rt.Config(), rt.WebHookClient())
+		webhookServer.WebhookServer.Patches = append(webhookServer.WebhookServer.Patches, webhookServer.JavaInjector.NewPodWithDubboCa)
+		webhookServer.CertStorage = rt.CertStorage()
+		webhookServer.WebhookClient = rt.WebHookClient()
 	}
-	if err := RegisterCertificateService(rt, server); err != nil {
-		return errors.Wrap(err, "CertificateService register failed")
-	}
-
-	if err := rt.Add(server); err != nil {
+	if err := rt.Add(webhookServer); err != nil {
 		return errors.Wrap(err, "Add Authority Component failed")
 	}
-	return nil
-}
-
-func RegisterCertificateService(rt core_runtime.Runtime, service *server.AuthorityService) error {
-	ca.RegisterAuthorityServiceServer(rt.GrpcServer().PlainServer, service)
-	ca.RegisterAuthorityServiceServer(rt.GrpcServer().SecureServer, service)
 	return nil
 }

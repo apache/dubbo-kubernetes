@@ -42,7 +42,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/apache/dubbo-kubernetes/pkg/authority/webhook"
+	"github.com/apache/dubbo-kubernetes/pkg/webhook/webhook"
 )
 
 func TestServe(t *testing.T) {

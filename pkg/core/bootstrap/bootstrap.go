@@ -20,6 +20,9 @@ package bootstrap
 import (
 	"context"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/core/election/kube"
@@ -52,6 +55,10 @@ func buildRuntime(appCtx context.Context, cfg *dubbo_cp.Config) (core_runtime.Ru
 		return nil, err
 	}
 
+	if err := initWebhookClient(cfg, builder); err != nil {
+		return nil, err
+	}
+
 	if err := initGrpcServer(cfg, builder); err != nil {
 		return nil, err
 	}
@@ -79,8 +86,14 @@ func Bootstrap(appCtx context.Context, cfg *dubbo_cp.Config) (core_runtime.Runti
 	return runtime, nil
 }
 
+func initWebhookClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
+	webhookClient := webhook.NewClient(builder.KubeClient().GetKubernetesClientSet())
+	builder.WithWebhookClient(webhookClient)
+	return nil
+}
+
 func initCertClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
-	certClient := provider.NewClient(builder.KubeClient().GetKubernetesClientSet())
+	certClient := cert.NewClient(builder.KubeClient().GetKubernetesClientSet())
 	builder.WithCertClient(certClient)
 	return nil
 }
@@ -98,7 +111,7 @@ func initKubeClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) bool {
 }
 
 func initCertStorage(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
-	client := provider.NewClient(builder.KubeClient().GetKubernetesClientSet())
+	client := cert.NewClient(builder.KubeClient().GetKubernetesClientSet())
 	storage := provider.NewStorage(cfg, client)
 	loadRootCert()
 	loadAuthorityCert(storage, cfg, builder)

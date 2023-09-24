@@ -45,7 +45,7 @@ COPY conf conf/
 
 # Build
 RUN env
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o dubbo-cp /go/src/github.com/apache/dubbo-kubernetes/app/dubbo-cp/main.go
+RUN GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o dubbo-cp /go/src/github.com/apache/dubbo-kubernetes/app/dubbo-cp/main.go
 
 
 FROM scratch

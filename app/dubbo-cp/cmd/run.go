@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/webhook"
+
 	"github.com/apache/dubbo-kubernetes/pkg/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient"
 	"github.com/apache/dubbo-kubernetes/pkg/dds"
@@ -87,6 +89,10 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 
 			if err := authority.Setup(rt); err != nil {
 				logger.Sugar().Error(err, "unable to set up authority")
+			}
+
+			if err := webhook.Setup(rt); err != nil {
+				logger.Sugar().Error(err, "unable to set up webhook")
 			}
 
 			if err := dds.Setup(rt); err != nil {

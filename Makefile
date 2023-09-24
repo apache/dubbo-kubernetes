@@ -136,7 +136,7 @@ all: test build
 
 .PHONY: build-dubbocp
 build-dubbocp:  ## Build binary with the dubbo control plane.
-	CGO_ENABLED=0 GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/dubbocp app/dubbo-cp/main.go
+	GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/dubbo-cp app/dubbo-cp/main.go
 
 .PHONY: build-dubboctl
 build-dubboctl: ## Build binary with the dubbo dubboctl.

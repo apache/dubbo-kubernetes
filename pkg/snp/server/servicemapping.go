@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	cert2 "github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+
 	"github.com/apache/dubbo-kubernetes/api/mesh"
 	cert "github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
 	endpoint2 "github.com/apache/dubbo-kubernetes/pkg/core/tools/endpoint"
@@ -48,7 +50,7 @@ type Snp struct {
 
 	queue       chan *RegisterRequest
 	config      *dubbo_cp.Config
-	CertClient  cert.Client
+	CertClient  cert2.Client
 	CertStorage *cert.CertStorage
 
 	KubeClient versioned.Interface

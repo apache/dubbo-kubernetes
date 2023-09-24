@@ -19,17 +19,17 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/config/security"
 	"github.com/apache/dubbo-kubernetes/pkg/config/server"
-	kube2 "github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
-
 	v1 "k8s.io/api/core/v1"
 )
 
 type fakeKubeClient struct {
-	kube2.Client
+	webhook.Client
 }
 
 func (f *fakeKubeClient) GetNamespaceLabels(namespace string) map[string]string {
@@ -67,7 +67,7 @@ func TestEmpty(t *testing.T) {
 	sdk := NewJavaSdk(options, &fakeKubeClient{})
 	pod := &v1.Pod{}
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -102,7 +102,7 @@ func TestInjectFromLabel(t *testing.T) {
 	pod.Labels = make(map[string]string)
 	pod.Labels["dubbo-ca.inject"] = "true"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if reflect.DeepEqual(newPod, pod) {
 		t.Error("should not be equal")
@@ -135,7 +135,7 @@ func TestInjectFromNs(t *testing.T) {
 
 	pod.Namespace = "matched"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if reflect.DeepEqual(newPod, pod) {
 		t.Error("should not be equal")
@@ -168,7 +168,7 @@ func TestInjectVolumes(t *testing.T) {
 
 	pod.Namespace = "matched"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if reflect.DeepEqual(newPod, pod) {
 		t.Error("should not be equal")
@@ -253,7 +253,7 @@ func TestInjectOneContainer(t *testing.T) {
 	pod.Spec.Containers = make([]v1.Container, 1)
 	pod.Spec.Containers[0].Name = "test"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if reflect.DeepEqual(newPod, pod) {
 		t.Error("should not be equal")
@@ -297,7 +297,7 @@ func TestInjectTwoContainer(t *testing.T) {
 	pod.Spec.Containers[0].Name = "test"
 	pod.Spec.Containers[1].Name = "test"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if reflect.DeepEqual(newPod, pod) {
 		t.Error("should not be equal")
@@ -409,7 +409,7 @@ func TestCheckVolume1(t *testing.T) {
 	pod.Spec.Volumes = make([]v1.Volume, 1)
 	pod.Spec.Volumes[0].Name = "dubbo-ca-token"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -449,7 +449,7 @@ func TestCheckVolume2(t *testing.T) {
 	pod.Spec.Volumes = make([]v1.Volume, 1)
 	pod.Spec.Volumes[0].Name = "dubbo-ca-cert"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -489,7 +489,7 @@ func TestCheckEnv1(t *testing.T) {
 	pod.Spec.Containers[0].Env = make([]v1.EnvVar, 1)
 	pod.Spec.Containers[0].Env[0].Name = "DUBBO_CA_ADDRESS"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -529,7 +529,7 @@ func TestCheckEnv2(t *testing.T) {
 	pod.Spec.Containers[0].Env = make([]v1.EnvVar, 1)
 	pod.Spec.Containers[0].Env[0].Name = "DUBBO_CA_CERT_PATH"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -569,7 +569,7 @@ func TestCheckEnv3(t *testing.T) {
 	pod.Spec.Containers[0].Env = make([]v1.EnvVar, 1)
 	pod.Spec.Containers[0].Env[0].Name = "DUBBO_OIDC_TOKEN"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -610,7 +610,7 @@ func TestCheckEnv4(t *testing.T) {
 	pod.Spec.Containers[1].Env = make([]v1.EnvVar, 1)
 	pod.Spec.Containers[1].Env[0].Name = "DUBBO_OIDC_TOKEN"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -650,7 +650,7 @@ func TestCheckContainerVolume1(t *testing.T) {
 	pod.Spec.Containers[0].VolumeMounts = make([]v1.VolumeMount, 1)
 	pod.Spec.Containers[0].VolumeMounts[0].Name = "dubbo-ca-token"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -690,7 +690,7 @@ func TestCheckContainerVolume2(t *testing.T) {
 	pod.Spec.Containers[0].VolumeMounts = make([]v1.VolumeMount, 1)
 	pod.Spec.Containers[0].VolumeMounts[0].Name = "dubbo-ca-cert"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
@@ -731,7 +731,7 @@ func TestCheckContainerVolume3(t *testing.T) {
 	pod.Spec.Containers[1].VolumeMounts = make([]v1.VolumeMount, 1)
 	pod.Spec.Containers[1].VolumeMounts[0].Name = "dubbo-ca-cert"
 
-	newPod, _ := sdk.NewPod(pod)
+	newPod, _ := sdk.NewPodWithDubboCa(pod)
 
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")

@@ -18,21 +18,21 @@ package patch
 import (
 	"strconv"
 
-	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
 
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	v1 "k8s.io/api/core/v1"
 )
 
 type JavaSdk struct {
-	options    *dubbo_cp.Config
-	kubeClient provider.Client
+	options       *dubbo_cp.Config
+	webhookClient webhook.Client
 }
 
-func NewJavaSdk(options *dubbo_cp.Config, kubeClient provider.Client) *JavaSdk {
+func NewJavaSdk(options *dubbo_cp.Config, webhookClient webhook.Client) *JavaSdk {
 	return &JavaSdk{
-		options:    options,
-		kubeClient: kubeClient,
+		options:       options,
+		webhookClient: webhookClient,
 	}
 }
 
@@ -41,7 +41,7 @@ const (
 	Labeled       = "true"
 )
 
-func (s *JavaSdk) NewPod(origin *v1.Pod) (*v1.Pod, error) {
+func (s *JavaSdk) NewPodWithDubboCa(origin *v1.Pod) (*v1.Pod, error) {
 	target := origin.DeepCopy()
 	expireSeconds := int64(ExpireSeconds)
 
@@ -51,7 +51,7 @@ func (s *JavaSdk) NewPod(origin *v1.Pod) (*v1.Pod, error) {
 		shouldInject = true
 	}
 
-	if !shouldInject && s.kubeClient.GetNamespaceLabels(target.Namespace)["dubbo-ca.inject"] == Labeled {
+	if !shouldInject && s.webhookClient.GetNamespaceLabels(target.Namespace)["dubbo-ca.inject"] == Labeled {
 		shouldInject = true
 	}
 

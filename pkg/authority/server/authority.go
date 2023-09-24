@@ -17,12 +17,11 @@ package server
 
 import (
 	"context"
-	"net/http"
 	"time"
 
+	cert2 "github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+
 	"github.com/apache/dubbo-kubernetes/api/ca"
-	"github.com/apache/dubbo-kubernetes/pkg/authority/patch"
-	"github.com/apache/dubbo-kubernetes/pkg/authority/webhook"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	cert "github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/core/jwt"
@@ -34,11 +33,8 @@ import (
 type AuthorityService struct {
 	ca.UnimplementedAuthorityServiceServer
 	Options     *dubbo_cp.Config
-	CertClient  cert.Client
+	CertClient  cert2.Client
 	CertStorage *cert.CertStorage
-
-	WebhookServer *webhook.Webhook
-	JavaInjector  *patch.JavaSdk
 }
 
 func (s *AuthorityService) NeedLeaderElection() bool {
@@ -46,31 +42,6 @@ func (s *AuthorityService) NeedLeaderElection() bool {
 }
 
 func (s *AuthorityService) Start(stop <-chan struct{}) error {
-	errChan := make(chan error)
-	if s.Options.KubeConfig.InPodEnv {
-		go func() {
-			err := s.WebhookServer.Server.ListenAndServeTLS("", "")
-			if err != nil {
-				switch err {
-				case http.ErrServerClosed:
-					logger.Sugar().Info("[Webhook] shutting down HTTP Server")
-				default:
-					logger.Sugar().Error(err, "[Webhook] could not start an HTTP Server")
-					errChan <- err
-				}
-			}
-		}()
-		s.CertClient.UpdateWebhookConfig(s.Options, s.CertStorage)
-		select {
-		case <-stop:
-			logger.Sugar().Info("[Webhook] stopping Authority")
-			if s.WebhookServer.Server != nil {
-				return s.WebhookServer.Server.Shutdown(context.Background())
-			}
-		case err := <-errChan:
-			return err
-		}
-	}
 	return nil
 }
 

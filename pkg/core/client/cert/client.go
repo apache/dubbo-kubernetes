@@ -13,18 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package cert
 
 import (
 	"context"
-	"reflect"
 	"strings"
 
-	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/endpoint"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
-	admissionregistrationV1 "k8s.io/api/admissionregistration/v1"
 	k8sauth "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,8 +34,6 @@ type Client interface {
 	UpdateAuthorityCert(cert string, pri string, namespace string)
 	UpdateAuthorityPublicKey(cert string) bool
 	VerifyServiceAccount(token string, authorizationType string) (*endpoint.Endpoint, bool)
-	UpdateWebhookConfig(options *dubbo_cp.Config, storage *CertStorage)
-	GetNamespaceLabels(namespace string) map[string]string
 	GetKubClient() kubernetes.Interface
 }
 
@@ -50,6 +45,10 @@ func NewClient(kubeClient kubernetes.Interface) Client {
 	return &ClientImpl{
 		kubeClient: kubeClient,
 	}
+}
+
+func (c *ClientImpl) GetKubClient() kubernetes.Interface {
+	return c.kubeClient
 }
 
 func (c *ClientImpl) GetAuthorityCert(namespace string) (string, string) {
@@ -137,18 +136,6 @@ func (c *ClientImpl) UpdateAuthorityPublicKey(cert string) bool {
 	return true
 }
 
-func (c *ClientImpl) GetNamespaceLabels(namespace string) map[string]string {
-	ns, err := c.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
-	if err != nil {
-		logger.Sugar().Warnf("[Authority] Failed to validate token. " + err.Error())
-		return map[string]string{}
-	}
-	if ns.Labels != nil {
-		return ns.Labels
-	}
-	return map[string]string{}
-}
-
 func (c *ClientImpl) VerifyServiceAccount(token string, authorizationType string) (*endpoint.Endpoint, bool) {
 	var tokenReview *k8sauth.TokenReview
 	if authorizationType == "dubbo-ca-token" {
@@ -230,84 +217,4 @@ func (c *ClientImpl) VerifyServiceAccount(token string, authorizationType string
 	}
 
 	return e, true
-}
-
-func (c *ClientImpl) UpdateWebhookConfig(options *dubbo_cp.Config, storage *CertStorage) {
-	path := "/mutating-services"
-	failurePolicy := admissionregistrationV1.Ignore
-	sideEffects := admissionregistrationV1.SideEffectClassNone
-	bundle := storage.GetAuthorityCert().CertPem
-	mwConfig, err := c.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(context.TODO(), "dubbo-ca", metav1.GetOptions{})
-	if err != nil {
-		logger.Sugar().Warnf("[Webhook] Unable to find dubbo-ca webhook config. Will create. " + err.Error())
-		mwConfig = &admissionregistrationV1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "dubbo-ca",
-			},
-			Webhooks: []admissionregistrationV1.MutatingWebhook{
-				{
-					Name: "dubbo-ca" + ".k8s.io",
-					ClientConfig: admissionregistrationV1.WebhookClientConfig{
-						Service: &admissionregistrationV1.ServiceReference{
-							Name:      options.KubeConfig.ServiceName,
-							Namespace: options.KubeConfig.Namespace,
-							Port:      &options.Security.WebhookPort,
-							Path:      &path,
-						},
-						CABundle: []byte(bundle),
-					},
-					FailurePolicy: &failurePolicy,
-					Rules: []admissionregistrationV1.RuleWithOperations{
-						{
-							Operations: []admissionregistrationV1.OperationType{
-								admissionregistrationV1.Create,
-							},
-							Rule: admissionregistrationV1.Rule{
-								APIGroups:   []string{""},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"pods"},
-							},
-						},
-					},
-					//NamespaceSelector: &metav1.LabelSelector{
-					//	MatchLabels: map[string]string{
-					//		"dubbo-injection": "enabled",
-					//	},
-					//},
-					//ObjectSelector: &metav1.LabelSelector{
-					//	MatchLabels: map[string]string{
-					//		"dubbo-injection": "enabled",
-					//	},
-					//},
-					SideEffects:             &sideEffects,
-					AdmissionReviewVersions: []string{"v1"},
-				},
-			},
-		}
-
-		_, err := c.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.TODO(), mwConfig, metav1.CreateOptions{})
-		if err != nil {
-			logger.Sugar().Warnf("[Webhook] Failed to create webhook config. " + err.Error())
-		} else {
-			logger.Sugar().Info("[Webhook] Create webhook config success.")
-		}
-		return
-	}
-
-	if reflect.DeepEqual(mwConfig.Webhooks[0].ClientConfig.CABundle, []byte(bundle)) {
-		logger.Sugar().Info("[Webhook] Ignore override webhook config. Cause: Already exist.")
-		return
-	}
-
-	mwConfig.Webhooks[0].ClientConfig.CABundle = []byte(bundle)
-	_, err = c.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.TODO(), mwConfig, metav1.UpdateOptions{})
-	if err != nil {
-		logger.Sugar().Warnf("[Webhook] Failed to update webhook config. " + err.Error())
-	} else {
-		logger.Sugar().Info("[Webhook] Update webhook config success.")
-	}
-}
-
-func (c *ClientImpl) GetKubClient() kubernetes.Interface {
-	return c.kubeClient
 }
