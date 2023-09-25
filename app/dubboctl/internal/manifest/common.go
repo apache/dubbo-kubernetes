@@ -17,7 +17,7 @@ package manifest
 
 import (
 	"fmt"
-	"os"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"path"
 	"strings"
 
@@ -68,7 +68,7 @@ func ReadYamlAndProfile(filenames []string, setFlags []string) (string, string, 
 func ReadAndOverlayYamls(filenames []string) (string, error) {
 	var output string
 	for _, filename := range filenames {
-		file, err := os.ReadFile(strings.TrimSpace(filename))
+		file, err := identifier.UnionFS.ReadFile(strings.TrimSpace(filename))
 		if err != nil {
 			return "", err
 		}
@@ -108,7 +108,7 @@ func OverlaySetFlags(base string, setFlags []string) (string, error) {
 // It may add some filters in the future.
 func ReadProfilesNames(profilesPath string) ([]string, error) {
 	var res []string
-	dir, err := os.ReadDir(profilesPath)
+	dir, err := identifier.UnionFS.ReadDir(profilesPath)
 	if err != nil {
 		return nil, err
 	}

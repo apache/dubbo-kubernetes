@@ -16,19 +16,36 @@
 package identifier
 
 import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
+	"github.com/apache/dubbo-kubernetes/deploy"
+	"net/url"
 	"path/filepath"
-	"runtime"
 )
 
 var (
-	_, b, _, _ = runtime.Caller(0)
-	// Root folder of dubbo-admin
-	// This relies on the fact this file is 3 levels up from the root; if this changes, adjust the path below
-	Root            = filepath.Join(filepath.Dir(b), "../../..")
-	Deploy          = filepath.Join(Root, "/deploy")
-	Charts          = filepath.Join(Deploy, "/charts")
-	Profiles        = filepath.Join(Deploy, "profiles")
-	Addons          = filepath.Join(Deploy, "addons")
-	AddonDashboards = filepath.Join(Addons, "dashboards")
-	AddonManifests  = filepath.Join(Addons, "manifests")
+	// deploy dir is root in embed.FS
+	deployUri = &url.URL{
+		Scheme:   filesystem.EmbedSchema,
+		OmitHost: true,
+	}
+
+	chartsUri          = deployUri.JoinPath("charts")
+	profilesUri        = deployUri.JoinPath("profiles")
+	addonsUri          = deployUri.JoinPath("addons")
+	addonDashboardsUri = addonsUri.JoinPath("dashboards")
+	addonManifestsUri  = addonsUri.JoinPath("manifests")
+
+	Charts          = chartsUri.String()
+	Profiles        = profilesUri.String()
+	Addons          = addonsUri.String()
+	AddonDashboards = addonDashboardsUri.String()
+	AddonManifests  = addonManifestsUri.String()
 )
+
+var (
+	UnionFS filesystem.UnionFS
+)
+
+func init() {
+	UnionFS = filesystem.NewUnionFS(deploy.EmbedRootFS, filesystem.NewOsFilesystem(filepath.Dir("/")))
+}
