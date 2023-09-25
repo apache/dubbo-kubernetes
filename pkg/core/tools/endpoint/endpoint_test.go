@@ -20,6 +20,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/config/security"
@@ -46,7 +48,7 @@ func (f *fakeAddr) Network() string {
 }
 
 type fakeKubeClient struct {
-	provider.Client
+	cert.Client
 }
 
 func (c fakeKubeClient) VerifyServiceAccount(token string, authorizationType string) (*endpoint.Endpoint, bool) {
@@ -82,7 +84,7 @@ func TestKubernetes(t *testing.T) {
 			IsKubernetesConnected: false,
 		},
 	}
-	storage := provider.NewStorage(options, &provider.ClientImpl{})
+	storage := provider.NewStorage(options, &cert.ClientImpl{})
 	storage.SetAuthorityCert(provider.GenerateAuthorityCert(nil, options.Security.CaValidity))
 	storage.AddTrustedCert(storage.GetAuthorityCert())
 
@@ -165,7 +167,7 @@ func TestJwt(t *testing.T) {
 			IsKubernetesConnected: false,
 		},
 	}
-	storage := provider.NewStorage(options, &provider.ClientImpl{})
+	storage := provider.NewStorage(options, &cert.ClientImpl{})
 	storage.SetAuthorityCert(provider.GenerateAuthorityCert(nil, options.Security.CaValidity))
 	storage.AddTrustedCert(storage.GetAuthorityCert())
 
@@ -224,7 +226,7 @@ func TestConnection(t *testing.T) {
 			IsKubernetesConnected: false,
 		},
 	}
-	storage := provider.NewStorage(options, &provider.ClientImpl{})
+	storage := provider.NewStorage(options, &cert.ClientImpl{})
 	storage.SetAuthorityCert(provider.GenerateAuthorityCert(nil, options.Security.CaValidity))
 	storage.AddTrustedCert(storage.GetAuthorityCert())
 

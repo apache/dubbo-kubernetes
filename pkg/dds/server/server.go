@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+
 	"github.com/apache/dubbo-kubernetes/api/dds"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
@@ -39,7 +41,7 @@ type DdsServer struct {
 
 	Config      *dubbo_cp.Config
 	CertStorage *provider.CertStorage
-	CertClient  provider.Client
+	CertClient  cert.Client
 	Storage     *storage.Storage
 	CrdClient   model2.ConfigStoreCache
 }

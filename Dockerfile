@@ -21,7 +21,6 @@ FROM golang:1.20.1-alpine3.17 as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG LDFLAGS
-ARG PKGNAME
 ARG BUILD
 
 WORKDIR /go/src/github.com/apache/dubbo-kubernetes
@@ -40,20 +39,22 @@ RUN go mod download
 
 # Copy the go source
 COPY pkg pkg/
-COPY cmd cmd/
+COPY app app/
+COPY api api/
+COPY conf conf/
 
 # Build
 RUN env
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o ${PKGNAME} /go/src/github.com/apache/dubbo-kubernetes/cmd/${PKGNAME}/main.go
+RUN GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o dubbo-cp /go/src/github.com/apache/dubbo-kubernetes/app/dubbo-cp/main.go
 
 
-FROM alpine:3.17
-# Add tzdata package
-RUN apk add --no-cache tzdata
-# Set Timezone
+FROM scratch
 
 # Build
 WORKDIR /
 ARG PKGNAME
-COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/${PKGNAME} .
+COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/dubbo-cp .
+COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/conf/admin.yml .
+ENV ADMIN_CONFIG_PATH=./admin.yml
 
+ENTRYPOINT ["./dubbo-cp", "run"]

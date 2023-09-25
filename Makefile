@@ -40,9 +40,8 @@ REGISTRY_USER_NAME?=""
 REGISTRY_PASSWORD?=""
 
 # Image URL to use all building/pushing image targets
-DUBBO_ADMIN_IMG ?= "${REGISTRY}/${REGISTRY_NAMESPACE}/dubbo-admin:${GIT_VERSION}"
-DUBBO_AUTHORITY_IMG ?= "${REGISTRY}/${REGISTRY_NAMESPACE}/dubbo-ca:${GIT_VERSION}"
-DUBBO_ADMIN_UI_IMG ?= "${REGISTRY}/${REGISTRY_NAMESPACE}/dubbo-admin-ui:${GIT_VERSION}"
+DUBBO_CP_IMG ?= "${REGISTRY}/${REGISTRY_NAMESPACE}/dubbo-cp:${GIT_VERSION}"
+DUBBO_UI_IMG ?= "${REGISTRY}/${REGISTRY_NAMESPACE}/dubbo-ui:${GIT_VERSION}"
 DUBBO_DUBBOCTL_BUILDX_DIR ?= "./bin/dubboctl"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -57,21 +56,18 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 SWAGGER ?= $(LOCALBIN)/swag
 GOLANG_LINT ?= $(LOCALBIN)/golangci-lint
 GOFUMPT  ?= $(LOCALBIN)/gofumpt
 
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.10.0
 SWAGGER_VERSION ?= v1.16.1
 GOLANG_LINT_VERSION ?= v1.52.2
 GOFUMPT_VERSION ?= latest
 ## docker buildx support platform
 PLATFORMS ?= linux/arm64,linux/amd64
+
 
 ##@ General
 
@@ -92,17 +88,9 @@ help: ## Display this help.
 
 ##@ Development
 
-.PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt"  crd:allowDangerousTypes=true webhook paths="./pkg/authority/apis/..." output:crd:artifacts:config=deploy/manifests
-
-.PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	#$(CONTROLLER_GEN) object:headerFile="./hack/boilerplate.go.txt"  crd:allowDangerousTypes=true paths="./..."
-
 .PHONY: swagger
-swagger: swagger-install ## Generate dubbo-admin swagger docs.
-	$(SWAGGER) init --parseDependency -d cmd/admin,pkg/admin -o hack/swagger
+swagger: swagger-install ## Generate dubbocp swagger docs.
+	$(SWAGGER) init --parseDependency -d app/dubbo-cp,pkg/admin -o hack/swagger
 	@rm -f hack/swagger/docs.go hack/swagger/swagger.yaml
 
 .PHONY: fmt
@@ -129,15 +117,11 @@ test: fmt vet  ## Run all tests.
 
 .PHONY: test-dubboctl
 test-dubboctl: fmt vet  ## Run tests for dubboctl
-	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/pkg/dubboctl/...
+	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/app/dubboctl/...
 
-.PHONY: test-admin
-test-admin: fmt vet  ## Run tests for admin
-	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/pkg/admin/...
-
-.PHONY: test-authority
-test-authority: fmt vet  ## Run tests for authority
-	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/pkg/authority/...
+.PHONY: test-dubbocp
+test-dubbocp: fmt vet  ## Run tests for dubbo control-plane
+	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/pkg/...
 
 
 .PHONY: echoLDFLAGS
@@ -145,83 +129,68 @@ echoLDFLAGS:
 	@echo $(LDFLAGS)
 
 .PHONY: build
-build: build-admin build-authority build-dubboctl ## Build binary with the dubbo admin, authority, and dubboctl
+build: build-dubbocp build-dubboctl ## Build binary with the dubbo control-plane and dubboctl
 
 .PHONY: all
-all: generate test build
+all: test build
 
-.PHONY: build-admin
-build-admin:  ## Build binary with the dubbo admin.
-	CGO_ENABLED=0 GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/admin cmd/admin/main.go
-
-.PHONY: build-authority
-build-authority: ## Build binary with the dubbo authority.
-	CGO_ENABLED=0 GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/authority cmd/authority/main.go
+.PHONY: build-dubbocp
+build-dubbocp:  ## Build binary with the dubbo control plane.
+	GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/dubbo-cp app/dubbo-cp/main.go
 
 .PHONY: build-dubboctl
 build-dubboctl: ## Build binary with the dubbo dubboctl.
-	CGO_ENABLED=0 GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/dubboctl cmd/dubboctl/main.go
+	CGO_ENABLED=0 GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/dubboctl app/dubboctl/main.go
+
 
 .PHONY: build-ui
-build-ui: ## Build  the distribution of the admin ui pages.
-	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=dubbo-admin-ui -t ${DUBBO_ADMIN_UI_IMG} ./dubbo-admin-ui -o type=local,dest=./bin/build/dubbo-admin-ui
-	rm -f -R ./cmd/ui/dist/*
-	rm -f ./bin/build/dubbo-admin-ui/usr/share/nginx/html/50x.html
-	cp -R ./bin/build/dubbo-admin-ui/usr/share/nginx/html/* ./cmd/ui/dist/
-	rm -f -R ./bin/build/dubbo-admin-ui
+build-ui: $(LOCALBIN)## Build the distribution of the dubbocp ui pages.
+	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=ui -t ${DUBBO_UI_IMG} ./ui
+	docker run -d --name dubbo-ui ${DUBBO_UI_IMG}
+	docker cp dubbo-ui:/usr/share/nginx/html/ $(LOCALBIN)/ui
+	rm -f -R ./app/dubbo-ui/dist/*
+	rm -f ./bin/ui/50x.html
+	mkdir -p ./app/dubbo-ui/dist
+	cp -R ./bin/ui/* ./app/dubbo-ui/dist/
+	rm -f -R ./bin/ui
 
 .PHONY: image
-image: image-admin image-authority image-admin-ui ## Build docker image with the dubbo admin, authority and admin-ui
+image: image-dubbocp  image-ui ## Build docker image with the dubbocp dubbo-ui
 
-.PHONY: image-admin
-image-admin: ## Build docker image with the dubbo admin.
-	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=admin -t ${DUBBO_ADMIN_IMG} .
+.PHONY: image-dubbocp
+image-dubbocp: ## Build docker image with the dubbocp.
+	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=dubbo-cp -t ${DUBBO_CP_IMG} .
 
-.PHONY: image-authority
-image-authority: ## Build docker image with the dubbo authority.
-	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=authority -t ${DUBBO_AUTHORITY_IMG} .
 
 .PHONY: image-ui
-image-ui: ## Build docker image with the dubbo admin ui.
-	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=dubbo-admin-ui -t ${DUBBO_ADMIN_UI_IMG} ./dubbo-admin-ui
+image-ui: ## Build docker image with the dubbo ui.
+	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=dubbo-ui -t ${DUBBO_UI_IMG} ./ui
 
 
 
 .PHONY: buildx
-buildx: buildx-admin buildx-authority  ## Build and push docker cross-platform image for the dubbo admin and authority
+buildx: buildx-dubbocp ## Build and push docker cross-platform image for the dubbo control-plane
 
 
-.PHONY: buildx-admin
-buildx-admin:  ## Build and push docker image with the dubbo admin for cross-platform support
+.PHONY: buildx-dubbocp
+buildx-dubbocp:  ## Build and push docker image with the dubbo control plane for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile_admin.cross
-	- docker buildx create --name project-dubbo-admin-builder
-	docker buildx use project-dubbo-admin-builder
-	- docker buildx build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=admin  --push --platform=$(PLATFORMS) --tag ${DUBBO_ADMIN_IMG} -f Dockerfile_admin.cross .
-	#- docker buildx build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=admin  --output type=local,dest=./bin/buildx/dubbo-admin --platform=$(PLATFORMS) --tag ${DUBBO_ADMIN_IMG} -f Dockerfile_admin.cross .
-	- docker buildx rm project-dubbo-admin-builder
-	rm Dockerfile_admin.cross
-
-.PHONY: buildx-authority
-buildx-authority:  ## Build and push docker image with the dubbo authority for cross-platform support
-	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile_authority.cross
-	- docker buildx create --name project-dubbo-authority-builder
-	docker buildx use project-dubbo-authority-builder
-	- docker buildx build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=authority  --push --platform=$(PLATFORMS) --tag ${DUBBO_AUTHORITY_IMG} -f Dockerfile_authority.cross .
-	#- docker buildx build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=authority  --output type=local,dest=./bin/buildx/dubbo-authority --platform=$(PLATFORMS) --tag ${DUBBO_AUTHORITY_IMG} -f Dockerfile_authority.cross .
-	- docker buildx rm project-dubbo-authority-builder
-	rm Dockerfile_authority.cross
+	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile_dubbocp.cross
+	- docker buildx create --name project-dubbo-cp-builder
+	docker buildx use project-dubbo-cp-builder
+	- docker buildx build --build-arg LDFLAGS=$(LDFLAGS) --push --platform=$(PLATFORMS) --tag ${DUBBO_CP_IMG} -f Dockerfile_dubbocp.cross .
+	- docker buildx rm project-dubbo-cp-builder
+	rm Dockerfile_dubbocp.cross
 
 .PHONY: buildx-dubboctl
 buildx-dubboctl:  ## Build the dubboctl distribution for cross-platform support
 	@rm -f -R $(DUBBO_DUBBOCTL_BUILDX_DIR)
 	@mkdir $(DUBBO_DUBBOCTL_BUILDX_DIR)
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/linux/amd64/dubboctl cmd/dubboctl/main.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/linux/arm64/dubboctl cmd/dubboctl/main.go
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/darwin/amd64/dubboctl cmd/dubboctl/main.go
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/darwin/arm64/dubboctl cmd/dubboctl/main.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/windows/amd64/dubboctl.exe cmd/dubboctl/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/linux/amd64/dubboctl app/dubboctl/main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/linux/arm64/dubboctl app/dubboctl/main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/darwin/amd64/dubboctl app/dubboctl/main.go
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/darwin/arm64/dubboctl app/dubboctl/main.go
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags $(LDFLAGS) -o $(DUBBO_DUBBOCTL_BUILDX_DIR)/windows/amd64/dubboctl.exe app/dubboctl/main.go
 
 	tar -cvzf $(DUBBO_DUBBOCTL_BUILDX_DIR)/dubboctl-${GIT_VERSION}-linux-amd64.tar.gz  -C $(DUBBO_DUBBOCTL_BUILDX_DIR)/linux/amd64/ dubboctl
 	tar -cvzf $(DUBBO_DUBBOCTL_BUILDX_DIR)/dubboctl-${GIT_VERSION}-linux-arm64.tar.gz  -C $(DUBBO_DUBBOCTL_BUILDX_DIR)/linux/arm64/ dubboctl
@@ -233,45 +202,25 @@ buildx-dubboctl:  ## Build the dubboctl distribution for cross-platform support
 
 
 .PHONY: push-images
-push-images: push-image-admin push-image-ui push-image-authority
+push-images: push-image-dubbocp push-image-ui
 
-.PHONY: push-image-admin
-push-image-admin: ## Push admin images.
+.PHONY: push-image-dubbocp
+push-image-dubbocp: ## Push dubbocp images.
 ifneq ($(REGISTRY_USER_NAME), "")
 	docker login -u $(REGISTRY_USER_NAME) -p $(REGISTRY_PASSWORD) ${REGISTRY}
 endif
-	docker push ${DUBBO_ADMIN_IMG}
+	docker push ${DUBBO_CP_IMG}
 
-.PHONY: push-image-authority
-push-image-authority: ## Push authority images.
-ifneq ($(REGISTRY_USER_NAME), "")
-	docker login -u $(REGISTRY_USER_NAME) -p $(REGISTRY_PASSWORD) ${REGISTRY}
-endif
-	docker push ${DUBBO_AUTHORITY_IMG}
 
 .PHONY: push-image-ui
-push-image-ui: ## Push admin ui images.
+push-image-ui: ## Push dubbocp ui images.
 ifneq ($(REGISTRY_USER_NAME), "")
 	docker login -u $(REGISTRY_USER_NAME) -p $(REGISTRY_PASSWORD) ${REGISTRY}
 endif
-	docker push ${DUBBO_ADMIN_UI_IMG}
+	docker push ${DUBBO_UI_IMG}
 
 
 
-
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
-.PHONY: kustomize
-kustomize: $(LOCALBIN) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
-	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
-		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
-		rm -rf $(LOCALBIN)/kustomize; \
-	fi
-	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
-
-.PHONY: controller-gen
-controller-gen: $(LOCALBIN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: swagger-install
 swagger-install: $(LOCALBIN) ## Download swagger locally if necessary.
