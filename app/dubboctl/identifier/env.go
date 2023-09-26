@@ -19,7 +19,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"github.com/apache/dubbo-kubernetes/deploy"
 	"net/url"
-	"path/filepath"
 )
 
 var (
@@ -47,5 +46,5 @@ var (
 )
 
 func init() {
-	UnionFS = filesystem.NewUnionFS(deploy.EmbedRootFS, filesystem.NewOsFilesystem(filepath.Dir("/")))
+	UnionFS = filesystem.NewUnionFS(deploy.EmbedRootFS)
 }

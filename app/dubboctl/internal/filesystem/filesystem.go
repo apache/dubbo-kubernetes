@@ -278,13 +278,11 @@ const (
 // Files in embed.FS has the header "embed://", and files in os.FS don't have this header.
 type UnionFS struct {
 	embedFS embed.FS
-	osFS    osFilesystem
 }
 
-func NewUnionFS(embedFS embed.FS, osFS osFilesystem) UnionFS {
+func NewUnionFS(embedFS embed.FS) UnionFS {
 	return UnionFS{
 		embedFS: embedFS,
-		osFS:    osFS,
 	}
 }
 
@@ -295,12 +293,7 @@ func (u UnionFS) ReadFile(name string) ([]byte, error) {
 		return u.embedFS.ReadFile(name)
 	}
 
-	f, err := u.osFS.Open(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return io.ReadAll(f)
+	return os.ReadFile(name)
 }
 
 func (u UnionFS) Open(name string) (fs.File, error) {
@@ -310,7 +303,7 @@ func (u UnionFS) Open(name string) (fs.File, error) {
 		return u.embedFS.Open(name)
 	}
 
-	return u.osFS.Open(name)
+	return os.Open(name)
 }
 
 func (u UnionFS) ReadDir(name string) ([]fs.DirEntry, error) {
@@ -320,7 +313,7 @@ func (u UnionFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		return u.embedFS.ReadDir(name)
 	}
 
-	return u.osFS.ReadDir(name)
+	return os.ReadDir(name)
 }
 
 func (u UnionFS) Stat(name string) (fs.FileInfo, error) {
@@ -338,7 +331,7 @@ func (u UnionFS) Readlink(link string) (string, error) {
 		return "", errors.New("embed FS not support read link")
 	}
 
-	return u.osFS.Readlink(link)
+	return os.Readlink(link)
 }
 
 // CopyFromFS copies files from the `src` dir on the accessor Filesystem to local filesystem into `dest` dir.
