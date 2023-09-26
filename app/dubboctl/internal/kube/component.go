@@ -16,7 +16,6 @@
 package kube
 
 import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"path"
 	"strings"
 	"unicode/utf8"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest/render"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"

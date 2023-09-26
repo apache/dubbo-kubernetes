@@ -16,9 +16,10 @@
 package identifier
 
 import (
+	"net/url"
+
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"github.com/apache/dubbo-kubernetes/deploy"
-	"net/url"
 )
 
 var (

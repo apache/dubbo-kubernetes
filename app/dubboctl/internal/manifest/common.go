@@ -17,10 +17,10 @@ package manifest
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"path"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 
