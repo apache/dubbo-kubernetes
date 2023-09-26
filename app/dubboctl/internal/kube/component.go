@@ -117,7 +117,7 @@ func (ac *AdminComponent) RenderManifest() (string, error) {
 	if !ac.started {
 		return "", nil
 	}
-	manifest, err := renderManifest(ac.spec, ac.renderer, true, Admin, ac.opts.Namespace)
+	manifest, err := renderManifest(ac.spec, ac.renderer, false, Admin, ac.opts.Namespace)
 	if err != nil {
 		return "", err
 	}
