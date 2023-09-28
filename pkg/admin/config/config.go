@@ -36,8 +36,7 @@ var (
 )
 
 var (
-	PrometheusIp          string
-	PrometheusPort        string
+	PrometheusAddress     string
 	PrometheusMonitorPort string
 	AdminPort             int
 )
