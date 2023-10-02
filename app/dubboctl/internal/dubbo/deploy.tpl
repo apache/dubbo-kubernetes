@@ -29,7 +29,9 @@ spec:
         image: {{.Image}}
         env:
           - name: DUBBO_CTL_VERSION
-            value: 0.0.1
+            value: 0.0.1{{if .Registry}}
+          - name: DUBBO_REGISTRY_ADDRESS
+            value: {{.Registry}}{{end}}
         ports:
         - containerPort: {{.Port}}
           name: dubbo
