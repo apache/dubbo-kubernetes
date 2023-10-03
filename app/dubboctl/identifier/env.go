@@ -42,9 +42,7 @@ var (
 	AddonManifests  = addonManifestsUri.String()
 )
 
-var (
-	UnionFS filesystem.UnionFS
-)
+var UnionFS filesystem.UnionFS
 
 func init() {
 	UnionFS = filesystem.NewUnionFS(deploy.EmbedRootFS)
