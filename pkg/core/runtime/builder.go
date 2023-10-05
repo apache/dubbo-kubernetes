@@ -23,6 +23,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
+
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
@@ -38,7 +41,7 @@ type BuilderContext interface {
 	Config() *dubbo_cp.Config
 	CertStorage() *provider.CertStorage
 	KubeClient() *client.KubeClient
-	CertClient() provider.Client
+	CertClient() cert.Client
 }
 
 var _ BuilderContext = &Builder{}
@@ -48,14 +51,15 @@ type Builder struct {
 	cm     component.Manager
 	appCtx context.Context
 
-	kubeClient  *client.KubeClient
-	grpcServer  *server.GrpcServer
-	certStorage *provider.CertStorage
-	certClient  provider.Client
+	kubeClient    *client.KubeClient
+	grpcServer    *server.GrpcServer
+	certStorage   *provider.CertStorage
+	certClient    cert.Client
+	webhookClient webhook.Client
 	*runtimeInfo
 }
 
-func (b *Builder) CertClient() provider.Client {
+func (b *Builder) CertClient() cert.Client {
 	return b.certClient
 }
 
@@ -111,7 +115,12 @@ func (b *Builder) Build() (Runtime, error) {
 	}, nil
 }
 
-func (b *Builder) WithCertClient(certClient provider.Client) *Builder {
+func (b *Builder) WithWebhookClient(webhookClient webhook.Client) *Builder {
+	b.webhookClient = webhookClient
+	return b
+}
+
+func (b *Builder) WithCertClient(certClient cert.Client) *Builder {
 	b.certClient = certClient
 	return b
 }

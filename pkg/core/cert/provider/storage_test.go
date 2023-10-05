@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/security"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
@@ -217,7 +219,7 @@ func TestRefreshServerCert(t *testing.T) {
 			CaValidity:   24 * 60 * 60 * 1000,
 			CertValidity: 10,
 		},
-	}, &ClientImpl{})
+	}, &cert.ClientImpl{})
 	s.SetAuthorityCert(GenerateAuthorityCert(nil, 24*60*60*1000))
 
 	go s.RefreshServerCert(stop)

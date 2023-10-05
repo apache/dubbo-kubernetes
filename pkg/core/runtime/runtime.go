@@ -21,6 +21,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
+
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
@@ -74,8 +77,9 @@ type RuntimeContext interface {
 	Config() *dubbo_cp.Config
 	GrpcServer() *server.GrpcServer
 	CertStorage() *provider.CertStorage
-	CertClient() provider.Client
+	CertClient() cert.Client
 	KubeClient() *client.KubeClient
+	WebHookClient() webhook.Client
 }
 
 type runtime struct {
@@ -89,14 +93,19 @@ var _ RuntimeInfo = &runtimeInfo{}
 var _ RuntimeContext = &runtimeContext{}
 
 type runtimeContext struct {
-	cfg         *dubbo_cp.Config
-	grpcServer  *server.GrpcServer
-	certStorage *provider.CertStorage
-	kubeClient  *client.KubeClient
-	certClient  provider.Client
+	cfg           *dubbo_cp.Config
+	grpcServer    *server.GrpcServer
+	certStorage   *provider.CertStorage
+	kubeClient    *client.KubeClient
+	certClient    cert.Client
+	webhookClient webhook.Client
 }
 
-func (rc *runtimeContext) CertClient() provider.Client {
+func (rc *runtimeContext) WebHookClient() webhook.Client {
+	return rc.webhookClient
+}
+
+func (rc *runtimeContext) CertClient() cert.Client {
 	return rc.certClient
 }
 

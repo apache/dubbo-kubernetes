@@ -19,6 +19,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+
 	"github.com/apache/dubbo-kubernetes/api/ca"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/kube"
@@ -36,7 +38,7 @@ import (
 )
 
 type fakeKubeClient struct {
-	provider.Client
+	cert.Client
 }
 
 func (c fakeKubeClient) VerifyServiceAccount(token string, authorizationType string) (*endpoint.Endpoint, bool) {
@@ -70,7 +72,7 @@ func TestCSRFailed(t *testing.T) {
 			CaValidity:   365 * 24 * 60 * 60 * 1000,
 		},
 	}
-	storage := provider.NewStorage(options, &provider.ClientImpl{})
+	storage := provider.NewStorage(options, &cert.ClientImpl{})
 	storage.SetAuthorityCert(provider.GenerateAuthorityCert(nil, options.Security.CaValidity))
 
 	kubeClient := &fakeKubeClient{}
@@ -141,7 +143,7 @@ func TestTokenFailed(t *testing.T) {
 			EnableOIDCCheck: true,
 		},
 	}
-	storage := provider.NewStorage(options, &provider.ClientImpl{})
+	storage := provider.NewStorage(options, &cert.ClientImpl{})
 	storage.SetAuthorityCert(provider.GenerateAuthorityCert(nil, options.Security.CaValidity))
 
 	kubeClient := &fakeKubeClient{}
@@ -256,7 +258,7 @@ func TestSuccess(t *testing.T) {
 		},
 	}
 
-	storage := provider.NewStorage(options, &provider.ClientImpl{})
+	storage := provider.NewStorage(options, &cert.ClientImpl{})
 	storage.SetAuthorityCert(provider.GenerateAuthorityCert(nil, options.Security.CaValidity))
 	storage.AddTrustedCert(storage.GetAuthorityCert())
 

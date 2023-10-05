@@ -128,7 +128,6 @@ type DeploySpec struct {
 	ContainerPort int    `yaml:"containerPort,omitempty"`
 	TargetPort    int    `yaml:"targetPort,omitempty"`
 	NodePort      int    `yaml:"nodePort,omitempty"`
-	Registry      string `yaml:"registry,omitempty"`
 	UseProm       bool   `yaml:"-"`
 }
 
@@ -372,46 +371,6 @@ func (f *Dubbo) CheckLabels(ns string, client *Client) error {
 	}
 
 	if namespace != "" {
-		var name string
-		var dns string
-
-		nacosSelector := client2.MatchingLabels{
-			"dubbo.apache.org/nacos": "true",
-		}
-
-		nacosList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), nacosList, nacosSelector, client2.InNamespace(namespace)); err != nil {
-			if errors2.IsNotFound(err) {
-				return nil
-			} else {
-				return err
-			}
-		}
-		if len(nacosList.Items) > 0 {
-			name = nacosList.Items[0].Name
-			dns = fmt.Sprintf("nacos://%s.%s.svc", name, namespace)
-			f.Deploy.Registry = dns
-		}
-
-		zkSelector := client2.MatchingLabels{
-			"dubbo.apache.org/zookeeper": "true",
-		}
-
-		zkList := &corev1.ServiceList{}
-		if err := client.KubeCtl.List(context.Background(), zkList, zkSelector, client2.InNamespace(namespace)); err != nil {
-			if errors2.IsNotFound(err) {
-				return nil
-			} else {
-				return err
-			}
-		}
-
-		if len(zkList.Items) > 0 {
-			name = zkList.Items[0].Name
-			dns = fmt.Sprintf("zookeeper://%s.%s.svc", name, namespace)
-			f.Deploy.Registry = dns
-		}
-
 		promSelector := client2.MatchingLabels{
 			"dubbo.apache.org/prometheus": "true",
 		}

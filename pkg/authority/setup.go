@@ -16,12 +16,8 @@
 package authority
 
 import (
-	"crypto/tls"
-
 	"github.com/apache/dubbo-kubernetes/api/ca"
-	"github.com/apache/dubbo-kubernetes/pkg/authority/patch"
 	"github.com/apache/dubbo-kubernetes/pkg/authority/server"
-	"github.com/apache/dubbo-kubernetes/pkg/authority/webhook"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/pkg/errors"
 )
@@ -29,13 +25,6 @@ import (
 func Setup(rt core_runtime.Runtime) error {
 	server := server.NewServer(rt.Config())
 	if rt.Config().KubeConfig.InPodEnv {
-		server.WebhookServer = webhook.NewWebhook(
-			func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
-				return rt.CertStorage().GetServerCert(info.ServerName), nil
-			})
-		server.WebhookServer.Init(rt.Config())
-		server.JavaInjector = patch.NewJavaSdk(rt.Config(), rt.CertStorage().GetCertClient())
-		server.WebhookServer.Patches = append(server.WebhookServer.Patches, server.JavaInjector.NewPod)
 		server.CertClient = rt.CertStorage().GetCertClient()
 		server.CertStorage = rt.CertStorage()
 	}

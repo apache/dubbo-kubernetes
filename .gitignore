@@ -33,11 +33,10 @@ target/
 .DS_Store
 Thumbs.db
 
-dubbo-admin-server/src/main/resources/public
-dubbo-admin-server/target
-dubbo-admin-ui/dist
-dubbo-admin-ui/node
-dubbo-admin-ui/node-modules
+
+ui/dist
+ui/node
+ui/node-modules
 
 coverage.txt
 

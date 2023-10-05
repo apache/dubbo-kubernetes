@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/webhook"
+
 	"github.com/apache/dubbo-kubernetes/pkg/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient"
 	"github.com/apache/dubbo-kubernetes/pkg/dds"
@@ -49,8 +51,8 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 	}{}
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Launch Dubbo Admin",
-		Long:  `Launch Dubbo Admin.`,
+		Short: "Launch Dubbo Control plane",
+		Long:  `Launch Dubbo Control plane.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := dubbo_cp.DefaultConfig()
 			err := config.Load(args.configPath, &cfg)
@@ -87,6 +89,10 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 
 			if err := authority.Setup(rt); err != nil {
 				logger.Sugar().Error(err, "unable to set up authority")
+			}
+
+			if err := webhook.Setup(rt); err != nil {
+				logger.Sugar().Error(err, "unable to set up webhook")
 			}
 
 			if err := dds.Setup(rt); err != nil {

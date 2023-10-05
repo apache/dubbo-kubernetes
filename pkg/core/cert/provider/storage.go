@@ -24,6 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
@@ -31,7 +34,8 @@ import (
 type CertStorage struct {
 	config *dubbo_cp.Config
 
-	certClient Client
+	certClient    cert.Client
+	webhookClient webhook.Client
 
 	mutex *sync.Mutex
 
@@ -70,7 +74,7 @@ func (s *CertStorage) Start(stop <-chan struct{}) error {
 					}
 					if s.config.KubeConfig.IsKubernetesConnected {
 						s.certClient.UpdateAuthorityCert(s.GetAuthorityCert().CertPem, EncodePrivateKey(s.GetAuthorityCert().PrivateKey), s.config.KubeConfig.Namespace)
-						s.certClient.UpdateWebhookConfig(s.config, s)
+						s.webhookClient.UpdateWebhookConfig(s.config, s.GetAuthorityCert().CertPem)
 						if s.certClient.UpdateAuthorityPublicKey(s.GetAuthorityCert().CertPem) {
 							logger.Sugar().Infof("[Authority] Write ca to config maps success.")
 						} else {
@@ -96,7 +100,7 @@ type Cert struct {
 	tlsCert *tls.Certificate
 }
 
-func NewStorage(options *dubbo_cp.Config, certClient Client) *CertStorage {
+func NewStorage(options *dubbo_cp.Config, certClient cert.Client) *CertStorage {
 	return &CertStorage{
 		mutex: &sync.Mutex{},
 
@@ -230,6 +234,6 @@ func (s *CertStorage) GetConfig() *dubbo_cp.Config {
 	return s.config
 }
 
-func (s *CertStorage) GetCertClient() Client {
+func (s *CertStorage) GetCertClient() cert.Client {
 	return s.certClient
 }
