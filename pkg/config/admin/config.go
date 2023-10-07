@@ -33,8 +33,7 @@ type Admin struct {
 }
 
 type Prometheus struct {
-	Ip          string `json:"ip"`
-	Port        string `json:"port"`
+	Address     string `json:"address"`
 	MonitorPort string `json:"monitor-port"`
 }
 

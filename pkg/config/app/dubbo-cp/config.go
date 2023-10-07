@@ -84,8 +84,7 @@ var DefaultConfig = func() Config {
 				Address: "zookeeper://127.0.0.1:2181",
 			},
 			Prometheus: admin.Prometheus{
-				Ip:          "127.0.0.1",
-				Port:        "9090",
+				Address:     "127.0.0.1:9090",
 				MonitorPort: "22222",
 			},
 			// MysqlDSN: "root:password@tcp(127.0.0.1:3306)/dubbo-admin?charset=utf8&parseTime=true",
