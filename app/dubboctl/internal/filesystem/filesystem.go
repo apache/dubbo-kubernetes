@@ -19,9 +19,12 @@ package filesystem
 
 import (
 	"archive/zip"
+	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -265,6 +268,70 @@ func (m maskingFS) Readlink(link string) (string, error) {
 		return "", &fs.PathError{Op: "readlink", Path: link, Err: fs.ErrNotExist}
 	}
 	return m.fs.Readlink(link)
+}
+
+const (
+	EmbedSchema = "embed"
+)
+
+// UnionFS is an os.FS and embed.FS union fs.
+// Files in embed.FS has the header "embed://", and files in os.FS don't have this header.
+type UnionFS struct {
+	embedFS embed.FS
+}
+
+func NewUnionFS(embedFS embed.FS) UnionFS {
+	return UnionFS{
+		embedFS: embedFS,
+	}
+}
+
+func (u UnionFS) ReadFile(name string) ([]byte, error) {
+	uri, _ := url.Parse(name)
+	if uri != nil && uri.Scheme == EmbedSchema {
+		name = strings.TrimLeft(uri.Opaque, "/")
+		return u.embedFS.ReadFile(name)
+	}
+
+	return os.ReadFile(name)
+}
+
+func (u UnionFS) Open(name string) (fs.File, error) {
+	uri, _ := url.Parse(name)
+	if uri != nil && uri.Scheme == EmbedSchema {
+		name = strings.TrimLeft(uri.Opaque, "/")
+		return u.embedFS.Open(name)
+	}
+
+	return os.Open(name)
+}
+
+func (u UnionFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	uri, _ := url.Parse(name)
+	if uri != nil && uri.Scheme == EmbedSchema {
+		name = strings.TrimLeft(uri.Opaque, "/")
+		return u.embedFS.ReadDir(name)
+	}
+
+	return os.ReadDir(name)
+}
+
+func (u UnionFS) Stat(name string) (fs.FileInfo, error) {
+	f, err := u.Open(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.Stat()
+}
+
+func (u UnionFS) Readlink(link string) (string, error) {
+	uri, _ := url.Parse(link)
+	if uri != nil && uri.Scheme == EmbedSchema {
+		return "", errors.New("embed FS not support read link")
+	}
+
+	return os.Readlink(link)
 }
 
 // CopyFromFS copies files from the `src` dir on the accessor Filesystem to local filesystem into `dest` dir.

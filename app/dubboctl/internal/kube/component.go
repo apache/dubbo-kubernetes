@@ -16,7 +16,6 @@
 package kube
 
 import (
-	"os"
 	"path"
 	"strings"
 	"unicode/utf8"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest/render"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
@@ -133,7 +133,7 @@ func NewAdminComponent(spec *v1alpha1.AdminSpec, opts ...ComponentOption) (Compo
 	renderer, err := render.NewLocalRenderer(
 		render.WithName(string(Admin)),
 		render.WithNamespace(newOpts.Namespace),
-		render.WithFS(os.DirFS(newOpts.ChartPath)),
+		render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
 		render.WithDir("dubbo-admin"))
 	if err != nil {
 		return nil, err
@@ -195,7 +195,7 @@ func NewGrafanaComponent(spec *v1alpha1.GrafanaSpec, opts ...ComponentOption) (C
 		renderer, err = render.NewLocalRenderer(
 			render.WithName(string(Grafana)),
 			render.WithNamespace(newOpts.Namespace),
-			render.WithFS(os.DirFS(newOpts.ChartPath)),
+			render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
 			render.WithDir("grafana"),
 		)
 		if err != nil {
@@ -247,7 +247,7 @@ func NewNacosComponent(spec *v1alpha1.NacosSpec, opts ...ComponentOption) (Compo
 	renderer, err := render.NewLocalRenderer(
 		render.WithName(string(Nacos)),
 		render.WithNamespace(newOpts.Namespace),
-		render.WithFS(os.DirFS(newOpts.ChartPath)),
+		render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
 		render.WithDir("nacos"))
 	if err != nil {
 		return nil, err
@@ -309,7 +309,7 @@ func NewZookeeperComponent(spec *v1alpha1.ZookeeperSpec, opts ...ComponentOption
 		renderer, err = render.NewLocalRenderer(
 			render.WithName(string(Zookeeper)),
 			render.WithNamespace(newOpts.Namespace),
-			render.WithFS(os.DirFS(newOpts.ChartPath)),
+			render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
 			render.WithDir("zookeeper"),
 		)
 		if err != nil {
@@ -374,7 +374,7 @@ func NewPrometheusComponent(spec *v1alpha1.PrometheusSpec, opts ...ComponentOpti
 		renderer, err = render.NewLocalRenderer(
 			render.WithName(string(Prometheus)),
 			render.WithNamespace(newOpts.Namespace),
-			render.WithFS(os.DirFS(newOpts.ChartPath)),
+			render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
 			render.WithDir("prometheus"),
 		)
 		if err != nil {
@@ -439,7 +439,7 @@ func NewSkywalkingComponent(spec *v1alpha1.SkywalkingSpec, opts ...ComponentOpti
 		renderer, err = render.NewLocalRenderer(
 			render.WithName(string(Skywalking)),
 			render.WithNamespace(newOpts.Namespace),
-			render.WithFS(os.DirFS(newOpts.ChartPath)),
+			render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
 			render.WithDir("skywalking"),
 		)
 		if err != nil {
@@ -504,7 +504,7 @@ func NewZipkinComponent(spec *v1alpha1.ZipkinSpec, opts ...ComponentOption) (Com
 		renderer, err = render.NewLocalRenderer(
 			render.WithName(string(Zipkin)),
 			render.WithNamespace(newOpts.Namespace),
-			render.WithFS(os.DirFS(newOpts.ChartPath)),
+			render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
 			render.WithDir("zipkin"),
 		)
 		if err != nil {
@@ -583,7 +583,7 @@ func addDashboards(base string, namespace string) (string, error) {
 	configMap.Data = make(map[string]string)
 	dashboardName := "external-dashboard.json"
 	dashboardPath := path.Join(identifier.AddonDashboards, dashboardName)
-	content, err := os.ReadFile(dashboardPath)
+	content, err := identifier.UnionFS.ReadFile(dashboardPath)
 	if err != nil {
 		return "", err
 	}
