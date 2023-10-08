@@ -37,7 +37,6 @@ func Setup(rt core_runtime.Runtime) error {
 		webhookServer.WebhookServer.Patches = append(webhookServer.WebhookServer.Patches,
 			webhookServer.JavaInjector.NewPodWithDubboCa,
 			webhookServer.JavaInjector.NewPodWithDubboRegistryInject,
-			webhookServer.JavaInjector.NewPodWithDubboPrometheusInject,
 		)
 		webhookServer.CertStorage = rt.CertStorage()
 		webhookServer.WebhookClient = rt.WebHookClient()
