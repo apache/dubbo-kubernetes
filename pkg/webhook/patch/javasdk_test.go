@@ -16,16 +16,18 @@
 package patch
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
-
-	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/config/security"
 	"github.com/apache/dubbo-kubernetes/pkg/config/server"
+	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
+
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type fakeKubeClient struct {
@@ -35,11 +37,47 @@ type fakeKubeClient struct {
 func (f *fakeKubeClient) GetNamespaceLabels(namespace string) map[string]string {
 	if namespace == "matched" {
 		return map[string]string{
-			"dubbo-ca.inject": "true",
+			"dubbo-ca.inject":             "true",
+			"dubbo.apache.org/prometheus": "true",
 		}
 	} else {
 		return map[string]string{}
 	}
+}
+
+func (f *fakeKubeClient) ListServices(namespace string, listOptions metav1.ListOptions) *v1.ServiceList {
+	if namespace != "matched" {
+		return nil
+	}
+
+	for _, registry := range registryInjectPriorities {
+		if listOptions.LabelSelector == fmt.Sprintf("%s=%s", registry, Labeled) {
+			return &v1.ServiceList{
+				Items: []v1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      registry,
+							Namespace: namespace,
+						},
+					},
+				},
+			}
+		}
+	}
+
+	if listOptions.LabelSelector == fmt.Sprintf("%s=%s", "dubbo.apache.org/prometheus", Labeled) {
+		return &v1.ServiceList{
+			Items: []v1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+					},
+				},
+			},
+		}
+	}
+
+	return nil
 }
 
 func TestEmpty(t *testing.T) {
@@ -736,4 +774,351 @@ func TestCheckContainerVolume3(t *testing.T) {
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
 	}
+}
+
+func TestZkRegistryInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
+			WebhookPort:       30080,
+			WebhookAllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+			Labels: map[string]string{
+				"dubbo.apache.org/zookeeper": Labeled,
+			},
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://dubbo.apache.org/zookeeper.matched.svc") {
+		t.Error("registry should be injected")
+	}
+}
+
+func TestNacosRegistryInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
+			WebhookPort:       30080,
+			WebhookAllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+			Labels: map[string]string{
+				"dubbo.apache.org/nacos": Labeled,
+			},
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "nacos://dubbo.apache.org/nacos.matched.svc") {
+		t.Error("registry should be injected")
+	}
+}
+
+func TestDefaultRegistryInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
+			WebhookPort:       30080,
+			WebhookAllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://dubbo.apache.org/zookeeper.matched.svc") {
+		t.Error("registry should be injected")
+	}
+}
+
+func TestRegistryNotInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
+			WebhookPort:       30080,
+			WebhookAllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	userSpecifiedAddress := "some address"
+	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Env: []v1.EnvVar{
+						{
+							Name:  EnvDubboRegistryAddress,
+							Value: userSpecifiedAddress,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, userSpecifiedAddress) {
+		t.Error("registry should not be injected")
+	}
+}
+
+func TestRegistryInjectFromNs(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
+			WebhookPort:       30080,
+			WebhookAllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	pod.Namespace = "matched"
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://dubbo.apache.org/zookeeper.matched.svc") {
+		t.Error("registry should be injected")
+	}
+}
+
+func checkExpectedEnv(pod *v1.Pod, expectedEnvName, expectedEnvValue string) bool {
+	if len(pod.Spec.Containers) <= 0 || len(pod.Spec.Containers[0].Env) <= 0 {
+		return false
+	}
+
+	for _, env := range pod.Spec.Containers[0].Env {
+		if env.Name == expectedEnvName {
+			if env.Value == expectedEnvValue {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func TestPromInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
+			WebhookPort:       30080,
+			WebhookAllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"dubbo.apache.org/prometheus": Labeled,
+			},
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+	pod.Namespace = "matched"
+
+	newPod, err := sdk.NewPodWithDubboPrometheusInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkPromAnnotations(newPod) {
+		t.Error("prom should be injected")
+	}
+}
+
+func TestPromInjectFromNs(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
+			WebhookPort:       30080,
+			WebhookAllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+	pod.Namespace = "matched"
+
+	newPod, err := sdk.NewPodWithDubboPrometheusInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkPromAnnotations(newPod) {
+		t.Error("prom should be injected")
+	}
+}
+
+func checkPromAnnotations(pod *v1.Pod) bool {
+	if pod.Annotations == nil {
+		return false
+	}
+
+	for k, expected := range prometheusAnnotations {
+		if anno, ok := pod.Annotations[k]; ok {
+			if anno != expected {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+
+	return true
 }
