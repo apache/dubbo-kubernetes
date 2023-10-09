@@ -34,7 +34,7 @@ type WebhookServer struct {
 	CertStorage   *cert.CertStorage
 
 	WebhookServer *webhook.Webhook
-	JavaInjector  *patch.JavaSdk
+	JavaInjector  *patch.DubboSdk
 }
 
 func NewServer(options *dubbo_cp.Config) *WebhookServer {

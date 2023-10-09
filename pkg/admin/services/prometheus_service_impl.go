@@ -17,7 +17,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -125,11 +124,8 @@ func (p *PrometheusServiceImpl) FlowMetrics() (model.FlowMetricsRes, error) {
 		Data: make(map[string]float64),
 	}
 
-	ip := config.PrometheusIp
-	port := config.PrometheusPort
-	address := fmt.Sprintf("http://%s:%s", ip, port)
 	client, err := api.NewClient(api.Config{
-		Address: address,
+		Address: config.PrometheusAddress,
 	})
 	if err != nil {
 		logger2.Sugar().Errorf("Error creating clientgen: %v\n", err)
