@@ -23,6 +23,9 @@ import (
 )
 
 func Setup(rt core_runtime.Runtime) error {
+	if !rt.Config().KubeConfig.IsKubernetesConnected {
+		return nil
+	}
 	server := server.NewServer(rt.Config())
 	if rt.Config().KubeConfig.InPodEnv {
 		server.CertClient = rt.CertStorage().GetCertClient()
