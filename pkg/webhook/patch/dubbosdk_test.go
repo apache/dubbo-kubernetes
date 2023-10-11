@@ -16,9 +16,10 @@
 package patch
 
 import (
-	webhook2 "github.com/apache/dubbo-kubernetes/pkg/config/webhook"
 	"reflect"
 	"testing"
+
+	webhook2 "github.com/apache/dubbo-kubernetes/pkg/config/webhook"
 
 	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
 
