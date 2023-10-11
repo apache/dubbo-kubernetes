@@ -32,7 +32,7 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// SharedInformerOption defines the functional dds type for SharedInformerFactory.
+// SharedInformerOption defines the functional option type for SharedInformerFactory.
 type SharedInformerOption func(*sharedInformerFactory) *sharedInformerFactory
 
 type sharedInformerFactory struct {
