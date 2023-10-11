@@ -18,13 +18,11 @@
 package security
 
 type SecurityConfig struct {
-	CaValidity           int64  `yaml:"ca-validity"`
-	CertValidity         int64  `yaml:"cert-validity"`
-	IsTrustAnyone        bool   `yaml:"is-trust-anyone"`
-	EnableOIDCCheck      bool   `yaml:"enable-oidc-check"`
-	ResourcelockIdentity string `yaml:"resourcelock-identity"`
-	WebhookPort          int32  `yaml:"webhook-port"`
-	WebhookAllowOnErr    bool   `yaml:"webhook-allow-on-err"`
+	CaValidity           int64  `yaml:"caValidity"`
+	CertValidity         int64  `yaml:"certValidity"`
+	IsTrustAnyone        bool   `yaml:"isTrustAnyone"`
+	EnableOIDCCheck      bool   `yaml:"enableOIDCCheck"`
+	ResourceLockIdentity string `yaml:"-"`
 }
 
 func (o *SecurityConfig) Sanitize() {}

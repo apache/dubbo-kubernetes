@@ -61,7 +61,7 @@ func (s *DdsServer) Observe(stream dds.RuleService_ObserveServer) error {
 	c := &GrpcEndpointConnection{
 		stream:      stream,
 		stopChan:    make(chan struct{}),
-		sendTimeout: s.Config.Options.SendTimeout,
+		sendTimeout: s.Config.Dds.SendTimeout,
 	}
 
 	p, ok := peer.FromContext(stream.Context())

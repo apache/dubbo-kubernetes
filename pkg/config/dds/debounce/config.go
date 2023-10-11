@@ -15,20 +15,18 @@
  * limitations under the License.
  */
 
-package option
+package debounce
 
 import "time"
 
-type Options struct {
-	DebounceAfter   time.Duration `yaml:"debounce-after"`
-	DebounceMax     time.Duration `yaml:"debounce-max"`
-	EnableDebounce  bool          `yaml:"enable-debounce"`
-	SendTimeout     time.Duration `yaml:"send-timeout"`
-	DdsBlockMaxTime time.Duration `yaml:"dds-block-max-time"`
+type Debounce struct {
+	After  time.Duration `yaml:"after"`
+	Max    time.Duration `yaml:"max"`
+	Enable bool          `yaml:"enable"`
 }
 
-func (o *Options) Sanitize() {}
+func (o *Debounce) Sanitize() {}
 
-func (o *Options) Validate() error {
+func (o *Debounce) Validate() error {
 	return nil
 }

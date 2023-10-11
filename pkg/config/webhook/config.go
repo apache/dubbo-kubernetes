@@ -15,17 +15,15 @@
  * limitations under the License.
  */
 
-package server
+package webhook
 
-type ServerConfig struct {
-	PlainServerPort  int `yaml:"plainServerPort"`
-	SecureServerPort int `yaml:"secureServerPort"`
-	DebugPort        int `yaml:"debugPort"`
+type Webhook struct {
+	Port       int32 `yaml:"port"`
+	AllowOnErr bool  `yaml:"allowOnErr"`
 }
 
-func (s *ServerConfig) Sanitize() {}
+func (w *Webhook) Sanitize() {}
 
-func (s *ServerConfig) Validate() error {
-	// TODO Validate ServerConfig
+func (w *Webhook) Validate() error {
 	return nil
 }
