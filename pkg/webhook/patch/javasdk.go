@@ -47,53 +47,27 @@ const (
 	EnvDubboRegistryAddress = "DUBBO_REGISTRY_ADDRESS"
 )
 
+const (
+	RegistryInjectZookeeperLabel = "registry-zookeeper-inject"
+	RegistryInjectNacosLabel     = "registry-nacos-inject"
+	RegistryInjectK8sLabel       = "registry-k8s-inject"
+
+	DefaultK8sRegistryAddress = "kubernetes://DEFAULT_MASTER_HOST"
+)
+
 // the priority of registry
 // default is zk > nacos
 var (
-	registryInjectPriorities = []string{
-		"dubbo.apache.org/zookeeper",
-		"dubbo.apache.org/nacos",
+	registryInjectLabelPriorities = []string{
+		RegistryInjectZookeeperLabel,
+		RegistryInjectNacosLabel,
+		RegistryInjectK8sLabel,
 	}
 	registrySchemas = map[string]string{
-		"dubbo.apache.org/zookeeper": "zookeeper",
-		"dubbo.apache.org/nacos":     "nacos",
-	}
-
-	prometheusAnnotations = map[string]string{
-		"prometheus.io/scrape": "true",
-		"prometheus.io/path":   "management/prometheus",
-		"prometheus.io/port":   "18081",
+		RegistryInjectZookeeperLabel: "zookeeper",
+		RegistryInjectNacosLabel:     "nacos",
 	}
 )
-
-func (s *JavaSdk) NewPodWithDubboPrometheusInject(origin *v1.Pod) (*v1.Pod, error) {
-	target := origin.DeepCopy()
-
-	shouldInject := false
-	if target.Labels["dubbo.apache.org/prometheus"] == Labeled { // find in pod labels
-		shouldInject = true
-	}
-	if s.webhookClient.GetNamespaceLabels(target.Namespace)["dubbo.apache.org/prometheus"] == Labeled {
-		// find in namespace labels
-		shouldInject = true
-	}
-	if !shouldInject {
-		return target, nil
-	}
-
-	serviceList := s.webhookClient.ListServices(target.Namespace, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", "dubbo.apache.org/prometheus", Labeled),
-	})
-
-	if serviceList == nil || len(serviceList.Items) < 1 {
-		return target, nil
-	}
-
-	// inject prometheus into annotations
-	s.injectAnnotations(target, prometheusAnnotations)
-
-	return target, nil
-}
 
 func (s *JavaSdk) injectAnnotations(target *v1.Pod, annotations map[string]string) {
 	if target.Annotations == nil {
@@ -113,25 +87,38 @@ func (s *JavaSdk) NewPodWithDubboRegistryInject(origin *v1.Pod) (*v1.Pod, error)
 	// find specific registry inject label (such as zookeeper-registry-inject)
 	// in pod labels and namespace labels
 	var registryInjects []string
-	for _, registryInject := range registryInjectPriorities {
+	// 1. find in pod labels
+	for _, registryInject := range registryInjectLabelPriorities {
 		if target.Labels[registryInject] == Labeled { // find in pod labels
 			registryInjects = []string{registryInject}
 			break
 		}
-
-		if s.webhookClient.GetNamespaceLabels(target.Namespace)[registryInject] == Labeled {
-			// find in namespace labels
-			registryInjects = []string{registryInject}
-			break
+	}
+	// 2. find in namespace labels
+	if len(registryInjects) == 0 {
+		for _, registryInject := range registryInjectLabelPriorities {
+			if s.webhookClient.GetNamespaceLabels(target.Namespace)[registryInject] == Labeled {
+				// find in namespace labels
+				registryInjects = []string{registryInject}
+				break
+			}
 		}
 	}
+
+	// default is zk > nacos > k8s
 	if len(registryInjects) == 0 {
-		registryInjects = registryInjectPriorities
+		registryInjects = registryInjectLabelPriorities
 	}
 
 	// find registry service in k8s
 	var registryAddress string
 	for _, registryInject := range registryInjects {
+		if registryInject == RegistryInjectK8sLabel { // k8s registry
+			registryAddress = DefaultK8sRegistryAddress
+			continue
+		}
+
+		// other registry
 		serviceList := s.webhookClient.ListServices(target.Namespace, metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("%s=%s", registryInject, Labeled),
 		})

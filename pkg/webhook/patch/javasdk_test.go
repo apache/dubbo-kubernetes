@@ -37,8 +37,8 @@ type fakeKubeClient struct {
 func (f *fakeKubeClient) GetNamespaceLabels(namespace string) map[string]string {
 	if namespace == "matched" {
 		return map[string]string{
-			"dubbo-ca.inject":             "true",
-			"dubbo.apache.org/prometheus": "true",
+			"dubbo-ca.inject":        "true",
+			RegistryInjectNacosLabel: Labeled,
 		}
 	} else {
 		return map[string]string{}
@@ -50,13 +50,17 @@ func (f *fakeKubeClient) ListServices(namespace string, listOptions metav1.ListO
 		return nil
 	}
 
-	for _, registry := range registryInjectPriorities {
+	for _, registry := range registryInjectLabelPriorities {
 		if listOptions.LabelSelector == fmt.Sprintf("%s=%s", registry, Labeled) {
+			if registry == RegistryInjectK8sLabel { // k8s registry
+				return nil
+			}
+
 			return &v1.ServiceList{
 				Items: []v1.Service{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      registry,
+							Name:      fmt.Sprintf("%s-registry", registrySchemas[registry]),
 							Namespace: namespace,
 						},
 					},
@@ -803,7 +807,7 @@ func TestZkRegistryInjectFromLabel(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "matched",
 			Labels: map[string]string{
-				"dubbo.apache.org/zookeeper": Labeled,
+				RegistryInjectZookeeperLabel: Labeled,
 			},
 		},
 		Spec: v1.PodSpec{
@@ -817,7 +821,7 @@ func TestZkRegistryInjectFromLabel(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://dubbo.apache.org/zookeeper.matched.svc") {
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://zookeeper-registry.matched.svc") {
 		t.Error("registry should be injected")
 	}
 }
@@ -849,7 +853,7 @@ func TestNacosRegistryInjectFromLabel(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "matched",
 			Labels: map[string]string{
-				"dubbo.apache.org/nacos": Labeled,
+				RegistryInjectNacosLabel: Labeled,
 			},
 		},
 		Spec: v1.PodSpec{
@@ -863,12 +867,12 @@ func TestNacosRegistryInjectFromLabel(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "nacos://dubbo.apache.org/nacos.matched.svc") {
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "nacos://nacos-registry.matched.svc") {
 		t.Error("registry should be injected")
 	}
 }
 
-func TestDefaultRegistryInjectFromLabel(t *testing.T) {
+func TestK8sRegistryInjectFromLabel(t *testing.T) {
 	t.Parallel()
 
 	options := &dubbo_cp.Config{
@@ -894,6 +898,9 @@ func TestDefaultRegistryInjectFromLabel(t *testing.T) {
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "matched",
+			Labels: map[string]string{
+				RegistryInjectK8sLabel: Labeled,
+			},
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
@@ -906,7 +913,7 @@ func TestDefaultRegistryInjectFromLabel(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://dubbo.apache.org/zookeeper.matched.svc") {
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, DefaultK8sRegistryAddress) {
 		t.Error("registry should be injected")
 	}
 }
@@ -998,7 +1005,7 @@ func TestRegistryInjectFromNs(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://dubbo.apache.org/zookeeper.matched.svc") {
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "nacos://nacos-registry.matched.svc") {
 		t.Error("registry should be injected")
 	}
 }
@@ -1017,108 +1024,4 @@ func checkExpectedEnv(pod *v1.Pod, expectedEnvName, expectedEnvValue string) boo
 	}
 
 	return false
-}
-
-func TestPromInjectFromLabel(t *testing.T) {
-	t.Parallel()
-
-	options := &dubbo_cp.Config{
-		KubeConfig: kube.KubeConfig{
-			IsKubernetesConnected: false,
-			Namespace:             "dubbo-system",
-			ServiceName:           "dubbo-ca",
-		},
-		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
-		},
-		GrpcServer: server.ServerConfig{
-			PlainServerPort:  30060,
-			SecureServerPort: 30062,
-			DebugPort:        30070,
-		},
-	}
-
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
-	pod := &v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"dubbo.apache.org/prometheus": Labeled,
-			},
-		},
-		Spec: v1.PodSpec{
-			Containers: []v1.Container{
-				{},
-			},
-		},
-	}
-	pod.Namespace = "matched"
-
-	newPod, err := sdk.NewPodWithDubboPrometheusInject(pod)
-	if err != nil {
-		t.Error(err.Error())
-	}
-	if !checkPromAnnotations(newPod) {
-		t.Error("prom should be injected")
-	}
-}
-
-func TestPromInjectFromNs(t *testing.T) {
-	t.Parallel()
-
-	options := &dubbo_cp.Config{
-		KubeConfig: kube.KubeConfig{
-			IsKubernetesConnected: false,
-			Namespace:             "dubbo-system",
-			ServiceName:           "dubbo-ca",
-		},
-		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
-		},
-		GrpcServer: server.ServerConfig{
-			PlainServerPort:  30060,
-			SecureServerPort: 30062,
-			DebugPort:        30070,
-		},
-	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
-	pod := &v1.Pod{
-		Spec: v1.PodSpec{
-			Containers: []v1.Container{
-				{},
-			},
-		},
-	}
-	pod.Namespace = "matched"
-
-	newPod, err := sdk.NewPodWithDubboPrometheusInject(pod)
-	if err != nil {
-		t.Error(err.Error())
-	}
-	if !checkPromAnnotations(newPod) {
-		t.Error("prom should be injected")
-	}
-}
-
-func checkPromAnnotations(pod *v1.Pod) bool {
-	if pod.Annotations == nil {
-		return false
-	}
-
-	for k, expected := range prometheusAnnotations {
-		if anno, ok := pod.Annotations[k]; ok {
-			if anno != expected {
-				return false
-			}
-		} else {
-			return false
-		}
-	}
-
-	return true
 }
