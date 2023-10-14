@@ -23,7 +23,7 @@ import (
 )
 
 type Admin struct {
-	AdminPort      int           `yaml:"adminPort"`
+	AdminPort      int           `yaml:"Port"`
 	ConfigCenter   string        `yaml:"configCenter"`
 	MetadataReport AddressConfig `yaml:"metadataReport"`
 	Registry       AddressConfig `yaml:"registry"`
