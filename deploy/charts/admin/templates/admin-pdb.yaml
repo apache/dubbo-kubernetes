@@ -1,0 +1,30 @@
+{{- $pdb := .Values.podDisruptionBudget -}}
+{{- if $pdb.enabled }}
+apiVersion: {{ template "poddisruptionbudget.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- with $pdb.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $pdb.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $pdb.minAvailable }}
+  minAvailable: {{ . }}
+  {{- end }}
+  {{- with $pdb.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{ include "admin.matchLabels" . | nindent 6 }}
+  {{- with $pdb.unhealthyPodEvictionPolicy }}
+  unhealthyPodEvictionPolicy: {{ . }}
+  {{- end }}
+  {{- end -}}
+
