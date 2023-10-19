@@ -29,8 +29,9 @@ import (
 	"testing"
 	"time"
 
+	webhook2 "github.com/apache/dubbo-kubernetes/pkg/config/webhook"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-kubernetes/pkg/config/security"
 	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
 
 	v1 "k8s.io/api/core/v1"
@@ -58,8 +59,8 @@ func TestServe(t *testing.T) {
 	port := getAvailablePort()
 
 	server.Init(&dubbo_cp.Config{
-		Security: security.SecurityConfig{
-			WebhookPort: port,
+		Webhook: webhook2.Webhook{
+			Port: port,
 		},
 	})
 

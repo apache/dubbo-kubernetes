@@ -19,6 +19,8 @@ import (
 	"reflect"
 	"testing"
 
+	webhook2 "github.com/apache/dubbo-kubernetes/pkg/config/webhook"
+
 	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
@@ -52,10 +54,12 @@ func TestEmpty(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -84,10 +88,12 @@ func TestInjectFromLabel(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -119,10 +125,12 @@ func TestInjectFromNs(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -152,10 +160,12 @@ func TestInjectVolumes(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -233,10 +243,12 @@ func TestInjectOneContainer(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -277,10 +289,12 @@ func TestInjectTwoContainer(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -386,10 +400,12 @@ func TestCheckVolume1(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -426,10 +442,12 @@ func TestCheckVolume2(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -466,10 +484,12 @@ func TestCheckEnv1(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -506,10 +526,12 @@ func TestCheckEnv2(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -546,10 +568,12 @@ func TestCheckEnv3(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -586,10 +610,12 @@ func TestCheckEnv4(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -627,10 +653,12 @@ func TestCheckContainerVolume1(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -667,10 +695,12 @@ func TestCheckContainerVolume2(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,
@@ -707,10 +737,12 @@ func TestCheckContainerVolume3(t *testing.T) {
 			ServiceName:           "dubbo-ca",
 		},
 		Security: security.SecurityConfig{
-			CaValidity:        30 * 24 * 60 * 60 * 1000, // 30 day
-			CertValidity:      1 * 60 * 60 * 1000,       // 1 hour
-			WebhookPort:       30080,
-			WebhookAllowOnErr: false,
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,

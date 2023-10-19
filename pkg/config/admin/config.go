@@ -23,18 +23,17 @@ import (
 )
 
 type Admin struct {
-	AdminPort      int           `yaml:"admin-port"`
-	ConfigCenter   string        `yaml:"config-center"`
-	MetadataReport AddressConfig `yaml:"metadata-report"`
+	AdminPort      int           `yaml:"Port"`
+	ConfigCenter   string        `yaml:"configCenter"`
+	MetadataReport AddressConfig `yaml:"metadataReport"`
 	Registry       AddressConfig `yaml:"registry"`
 	Prometheus     Prometheus    `yaml:"prometheus"`
-	MysqlDSN       string        `yaml:"mysql-dsn"`
-	AdminOnly      bool          `yaml:"admin-only"`
+	MysqlDSN       string        `yaml:"mysqlDSN"`
 }
 
 type Prometheus struct {
-	Address     string `json:"address"`
-	MonitorPort string `json:"monitor-port"`
+	Address     string `yaml:"address"`
+	MonitorPort string `yaml:"monitorPort"`
 }
 
 func (c *Prometheus) Sanitize() {}

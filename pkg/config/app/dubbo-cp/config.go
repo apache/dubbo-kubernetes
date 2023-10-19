@@ -20,9 +20,12 @@ package dubbo_cp
 import (
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/config/dds/debounce"
+	"github.com/apache/dubbo-kubernetes/pkg/config/webhook"
+
 	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/option"
+	"github.com/apache/dubbo-kubernetes/pkg/config/dds"
 	"github.com/pkg/errors"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
@@ -33,23 +36,29 @@ import (
 
 type Config struct {
 	Admin      admin.Admin             `yaml:"admin"`
-	GrpcServer server.ServerConfig     `yaml:"grpc-cp-server"`
+	GrpcServer server.ServerConfig     `yaml:"grpcServer"`
 	Security   security.SecurityConfig `yaml:"security"`
-	KubeConfig kube.KubeConfig         `yaml:"kube-config"`
+	KubeConfig kube.KubeConfig         `yaml:"kubeConfig"`
+	Webhook    webhook.Webhook         `yaml:"webhook"`
 	Dubbo      dubbogo.RootConfig      `yaml:"dubbo"`
-	Options    option.Options          `yaml:"options"`
+	Dds        dds.Dds                 `yaml:"dds"`
 }
 
 func (c *Config) Sanitize() {
 	c.Security.Sanitize()
 	c.Admin.Sanitize()
+	c.Webhook.Sanitize()
 	c.GrpcServer.Sanitize()
 	c.KubeConfig.Sanitize()
-	c.Options.Sanitize()
+	c.Dds.Sanitize()
 }
 
 func (c *Config) Validate() error {
-	err := c.Security.Validate()
+	err := c.Webhook.Validate()
+	if err != nil {
+		return errors.Wrap(err, "Webhook validation failed")
+	}
+	err = c.Security.Validate()
 	if err != nil {
 		return errors.Wrap(err, "SecurityConfig validation failed")
 	}
@@ -65,7 +74,7 @@ func (c *Config) Validate() error {
 	if err != nil {
 		return errors.Wrap(err, "KubeConfig validation failed")
 	}
-	err = c.Options.Validate()
+	err = c.Dds.Validate()
 	if err != nil {
 		return errors.Wrap(err, "options validation failed")
 	}
@@ -99,27 +108,28 @@ var DefaultConfig = func() Config {
 			CertValidity:         1 * 60 * 60 * 1000,
 			IsTrustAnyone:        false,
 			EnableOIDCCheck:      true,
-			ResourcelockIdentity: config.GetStringEnv("POD_NAME", config.GetDefaultResourcelockIdentity()),
-			WebhookPort:          30080,
-			WebhookAllowOnErr:    true,
+			ResourceLockIdentity: config.GetStringEnv("POD_NAME", config.GetDefaultResourceLockIdentity()),
+		},
+		Webhook: webhook.Webhook{
+			Port:       30080,
+			AllowOnErr: true,
 		},
 		KubeConfig: kube.KubeConfig{
-			Namespace:             "dubbo-system",
-			ServiceName:           "dubbo-cp",
-			InPodEnv:              false,
-			IsKubernetesConnected: false,
-			RestConfigQps:         50,
-			RestConfigBurst:       100,
-			KubeFileConfig:        "",
-			DomainSuffix:          "cluster.local",
+			Namespace:       "dubbo-system",
+			ServiceName:     "dubbo-cp",
+			RestConfigQps:   50,
+			RestConfigBurst: 100,
+			KubeFileConfig:  "",
+			DomainSuffix:    "cluster.local",
 		},
 		Dubbo: dubbogo.RootConfig{},
-		Options: option.Options{
-			DebounceAfter:   100 * time.Millisecond,
-			DebounceMax:     10 * time.Second,
-			EnableDebounce:  true,
-			SendTimeout:     5 * time.Second,
-			DdsBlockMaxTime: 15 * time.Second,
+		Dds: dds.Dds{
+			Debounce: debounce.Debounce{
+				After:  100 * time.Millisecond,
+				Max:    10 * time.Second,
+				Enable: true,
+			},
+			SendTimeout: 5 * time.Second,
 		},
 	}
 }

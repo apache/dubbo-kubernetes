@@ -38,7 +38,7 @@ func NewleaderElection() LeaderElection {
 }
 
 func (c *leaderElectionImpl) Election(storage *CertStorage, options *dubbo_cp.Config, kubeClient kubernetes.Interface) error {
-	identity := options.Security.ResourcelockIdentity
+	identity := options.Security.ResourceLockIdentity
 	rlConfig := resourcelock.ResourceLockConfig{
 		Identity: identity,
 	}
