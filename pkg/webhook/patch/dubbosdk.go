@@ -27,14 +27,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-type JavaSdk struct {
+type DubboSdk struct {
 	options       *dubbo_cp.Config
 	webhookClient webhook.Client
 	kubeClient    kubernetes.Interface
 }
 
-func NewJavaSdk(options *dubbo_cp.Config, webhookClient webhook.Client, kubeClient kubernetes.Interface) *JavaSdk {
-	return &JavaSdk{
+func NewDubboSdk(options *dubbo_cp.Config, webhookClient webhook.Client, kubeClient kubernetes.Interface) *DubboSdk {
+	return &DubboSdk{
 		options:       options,
 		webhookClient: webhookClient,
 		kubeClient:    kubeClient,
@@ -69,7 +69,7 @@ var (
 	}
 )
 
-func (s *JavaSdk) injectAnnotations(target *v1.Pod, annotations map[string]string) {
+func (s *DubboSdk) injectAnnotations(target *v1.Pod, annotations map[string]string) {
 	if target.Annotations == nil {
 		target.Annotations = make(map[string]string)
 	}
@@ -81,7 +81,7 @@ func (s *JavaSdk) injectAnnotations(target *v1.Pod, annotations map[string]strin
 	}
 }
 
-func (s *JavaSdk) NewPodWithDubboRegistryInject(origin *v1.Pod) (*v1.Pod, error) {
+func (s *DubboSdk) NewPodWithDubboRegistryInject(origin *v1.Pod) (*v1.Pod, error) {
 	target := origin.DeepCopy()
 
 	// find specific registry inject label (such as zookeeper-registry-inject)
@@ -149,7 +149,7 @@ func (s *JavaSdk) NewPodWithDubboRegistryInject(origin *v1.Pod) (*v1.Pod, error)
 	return target, nil
 }
 
-func (s *JavaSdk) injectEnv(container *v1.Container, name, value string) (found bool) {
+func (s *DubboSdk) injectEnv(container *v1.Container, name, value string) (found bool) {
 	for j, env := range container.Env {
 		if env.Name == name {
 			found = true
@@ -174,7 +174,7 @@ func (s *JavaSdk) injectEnv(container *v1.Container, name, value string) (found 
 	return
 }
 
-func (s *JavaSdk) NewPodWithDubboCa(origin *v1.Pod) (*v1.Pod, error) {
+func (s *DubboSdk) NewPodWithDubboCa(origin *v1.Pod) (*v1.Pod, error) {
 	target := origin.DeepCopy()
 	expireSeconds := int64(ExpireSeconds)
 
@@ -211,7 +211,7 @@ func (s *JavaSdk) NewPodWithDubboCa(origin *v1.Pod) (*v1.Pod, error) {
 	return target, nil
 }
 
-func (s *JavaSdk) injectContainers(c *v1.Container) {
+func (s *DubboSdk) injectContainers(c *v1.Container) {
 	c.Env = append(c.Env, v1.EnvVar{
 		Name:  "DUBBO_CA_ADDRESS",
 		Value: s.options.KubeConfig.ServiceName + "." + s.options.KubeConfig.Namespace + ".svc:" + strconv.Itoa(s.options.GrpcServer.SecureServerPort),
@@ -241,7 +241,7 @@ func (s *JavaSdk) injectContainers(c *v1.Container) {
 	})
 }
 
-func (s *JavaSdk) injectVolumes(target *v1.Pod, expireSeconds int64) {
+func (s *DubboSdk) injectVolumes(target *v1.Pod, expireSeconds int64) {
 	target.Spec.Volumes = append(target.Spec.Volumes, v1.Volume{
 		Name: "dubbo-ca-token",
 		VolumeSource: v1.VolumeSource{
@@ -282,7 +282,7 @@ func (s *JavaSdk) injectVolumes(target *v1.Pod, expireSeconds int64) {
 	})
 }
 
-func (s *JavaSdk) checkContainers(c v1.Container, shouldInject bool) bool {
+func (s *DubboSdk) checkContainers(c v1.Container, shouldInject bool) bool {
 	for _, e := range c.Env {
 		if e.Name == "DUBBO_CA_ADDRESS" {
 			shouldInject = false
@@ -315,7 +315,7 @@ func (s *JavaSdk) checkContainers(c v1.Container, shouldInject bool) bool {
 	return shouldInject
 }
 
-func (s *JavaSdk) checkVolume(target *v1.Pod, shouldInject bool) bool {
+func (s *DubboSdk) checkVolume(target *v1.Pod, shouldInject bool) bool {
 	for _, v := range target.Spec.Volumes {
 		if v.Name == "dubbo-ca-token" {
 			shouldInject = false

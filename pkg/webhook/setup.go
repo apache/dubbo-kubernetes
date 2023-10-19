@@ -33,10 +33,10 @@ func Setup(rt core_runtime.Runtime) error {
 				return rt.CertStorage().GetServerCert(info.ServerName), nil
 			})
 		webhookServer.WebhookServer.Init(rt.Config())
-		webhookServer.JavaInjector = patch.NewJavaSdk(rt.Config(), rt.WebHookClient(), rt.KubeClient().GetKubernetesClientSet())
+		webhookServer.DubboInjector = patch.NewDubboSdk(rt.Config(), rt.WebHookClient(), rt.KubeClient().GetKubernetesClientSet())
 		webhookServer.WebhookServer.Patches = append(webhookServer.WebhookServer.Patches,
-			webhookServer.JavaInjector.NewPodWithDubboCa,
-			webhookServer.JavaInjector.NewPodWithDubboRegistryInject,
+			webhookServer.DubboInjector.NewPodWithDubboCa,
+			webhookServer.DubboInjector.NewPodWithDubboRegistryInject,
 		)
 		webhookServer.CertStorage = rt.CertStorage()
 		webhookServer.WebhookClient = rt.WebHookClient()

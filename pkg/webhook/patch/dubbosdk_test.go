@@ -106,7 +106,7 @@ func TestEmpty(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	newPod, _ := sdk.NewPodWithDubboCa(pod)
@@ -138,7 +138,7 @@ func TestInjectFromLabel(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Labels = make(map[string]string)
@@ -172,7 +172,7 @@ func TestInjectFromNs(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -205,7 +205,7 @@ func TestInjectVolumes(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -287,7 +287,7 @@ func TestInjectOneContainer(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -330,7 +330,7 @@ func TestInjectTwoContainer(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -440,7 +440,7 @@ func TestCheckVolume1(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -480,7 +480,7 @@ func TestCheckVolume2(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -520,7 +520,7 @@ func TestCheckEnv1(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -560,7 +560,7 @@ func TestCheckEnv2(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -600,7 +600,7 @@ func TestCheckEnv3(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -640,7 +640,7 @@ func TestCheckEnv4(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -681,7 +681,7 @@ func TestCheckContainerVolume1(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -721,7 +721,7 @@ func TestCheckContainerVolume2(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -761,7 +761,7 @@ func TestCheckContainerVolume3(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -802,7 +802,7 @@ func TestZkRegistryInjectFromLabel(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "matched",
@@ -848,7 +848,7 @@ func TestNacosRegistryInjectFromLabel(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "matched",
@@ -894,7 +894,7 @@ func TestK8sRegistryInjectFromLabel(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "matched",
@@ -941,7 +941,7 @@ func TestRegistryNotInjectFromLabel(t *testing.T) {
 	}
 
 	userSpecifiedAddress := "some address"
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "matched",
@@ -990,7 +990,7 @@ func TestRegistryInjectFromNs(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
