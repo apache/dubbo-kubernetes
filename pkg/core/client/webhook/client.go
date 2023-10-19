@@ -21,7 +21,9 @@ import (
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+
 	admissionregistrationV1 "k8s.io/api/admissionregistration/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -29,6 +31,7 @@ import (
 type Client interface {
 	UpdateWebhookConfig(options *dubbo_cp.Config, CertPem string)
 	GetNamespaceLabels(namespace string) map[string]string
+	ListServices(namespace string, listOptions metav1.ListOptions) *v1.ServiceList
 	GetKubClient() kubernetes.Interface
 }
 
@@ -52,6 +55,16 @@ func (c *ClientImpl) GetNamespaceLabels(namespace string) map[string]string {
 		return ns.Labels
 	}
 	return map[string]string{}
+}
+
+func (c *ClientImpl) ListServices(namespace string, listOptions metav1.ListOptions) *v1.ServiceList {
+	serviceList, err := c.kubeClient.CoreV1().Services(namespace).List(context.Background(), listOptions)
+	if err != nil {
+		logger.Sugar().Warnf("[Webhook] Unable to list services. " + err.Error())
+		return nil
+	}
+
+	return serviceList
 }
 
 func (c *ClientImpl) UpdateWebhookConfig(options *dubbo_cp.Config, CertPem string) {

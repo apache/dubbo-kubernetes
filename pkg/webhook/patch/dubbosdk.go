@@ -16,12 +16,14 @@
 package patch
 
 import (
+	"fmt"
 	"strconv"
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -31,7 +33,8 @@ type DubboSdk struct {
 	kubeClient    kubernetes.Interface
 }
 
-func NewJavaSdk(options *dubbo_cp.Config, webhookClient webhook.Client, kubeClient kubernetes.Interface) *DubboSdk {
+func NewDubboSdk(options *dubbo_cp.Config, webhookClient webhook.Client, kubeClient kubernetes.Interface) *DubboSdk {
+
 	return &DubboSdk{
 		options:       options,
 		webhookClient: webhookClient,
@@ -40,12 +43,136 @@ func NewJavaSdk(options *dubbo_cp.Config, webhookClient webhook.Client, kubeClie
 }
 
 const (
-	ExpireSeconds = 1800
-	Labeled       = "true"
+	ExpireSeconds           = 1800
+	Labeled                 = "true"
+	EnvDubboRegistryAddress = "DUBBO_REGISTRY_ADDRESS"
 )
 
+const (
+	RegistryInjectZookeeperLabel = "registry-zookeeper-inject"
+	RegistryInjectNacosLabel     = "registry-nacos-inject"
+	RegistryInjectK8sLabel       = "registry-k8s-inject"
+
+	DefaultK8sRegistryAddress = "kubernetes://DEFAULT_MASTER_HOST"
+)
+
+// the priority of registry
+// default is zk > nacos
+var (
+	registryInjectLabelPriorities = []string{
+		RegistryInjectZookeeperLabel,
+		RegistryInjectNacosLabel,
+		RegistryInjectK8sLabel,
+	}
+	registrySchemas = map[string]string{
+		RegistryInjectZookeeperLabel: "zookeeper",
+		RegistryInjectNacosLabel:     "nacos",
+	}
+)
+
+func (s *DubboSdk) injectAnnotations(target *v1.Pod, annotations map[string]string) {
+	if target.Annotations == nil {
+		target.Annotations = make(map[string]string)
+	}
+
+	for k, v := range annotations {
+		if _, ok := target.Annotations[k]; !ok {
+			target.Annotations[k] = v
+		}
+	}
+}
+
 func (s *DubboSdk) NewPodWithDubboRegistryInject(origin *v1.Pod) (*v1.Pod, error) {
-	return nil, nil
+	target := origin.DeepCopy()
+
+	// find specific registry inject label (such as zookeeper-registry-inject)
+	// in pod labels and namespace labels
+	var registryInjects []string
+	// 1. find in pod labels
+	for _, registryInject := range registryInjectLabelPriorities {
+		if target.Labels[registryInject] == Labeled { // find in pod labels
+			registryInjects = []string{registryInject}
+			break
+		}
+	}
+	// 2. find in namespace labels
+	if len(registryInjects) == 0 {
+		for _, registryInject := range registryInjectLabelPriorities {
+			if s.webhookClient.GetNamespaceLabels(target.Namespace)[registryInject] == Labeled {
+				// find in namespace labels
+				registryInjects = []string{registryInject}
+				break
+			}
+		}
+	}
+
+	// default is zk > nacos > k8s
+	if len(registryInjects) == 0 {
+		registryInjects = registryInjectLabelPriorities
+	}
+
+	// find registry service in k8s
+	var registryAddress string
+	for _, registryInject := range registryInjects {
+		if registryInject == RegistryInjectK8sLabel { // k8s registry
+			registryAddress = DefaultK8sRegistryAddress
+			continue
+		}
+
+		// other registry
+		serviceList := s.webhookClient.ListServices(target.Namespace, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", registryInject, Labeled),
+		})
+
+		if serviceList == nil || len(serviceList.Items) < 1 {
+			continue
+		}
+
+		schema := registrySchemas[registryInject]
+		registryAddress = fmt.Sprintf("%s://%s.%s.svc", schema, serviceList.Items[0].Name, serviceList.Items[0].Namespace)
+		break
+	}
+
+	var found bool
+	if len(registryAddress) > 0 {
+		// inject into env
+		var targetContainers []v1.Container
+		for _, c := range target.Spec.Containers {
+			if !found { // found DUBBO_REGISTRY_ADDRESS ENV, stop inject
+				found = s.injectEnv(&c, EnvDubboRegistryAddress, registryAddress)
+			}
+
+			targetContainers = append(targetContainers, c)
+		}
+		target.Spec.Containers = targetContainers
+	}
+
+	return target, nil
+}
+
+func (s *DubboSdk) injectEnv(container *v1.Container, name, value string) (found bool) {
+	for j, env := range container.Env {
+		if env.Name == name {
+			found = true
+			// env is not empty, inject into env
+			if len(env.Value) > 0 {
+				break
+			}
+
+			container.Env[j].Value = value
+			break
+		}
+	}
+	if found { // found registry env in pod, stop inject
+		return
+	}
+
+	container.Env = append(container.Env, v1.EnvVar{
+		Name:  name,
+		Value: value,
+	})
+
+	return
 }
 
 func (s *DubboSdk) NewPodWithDubboCa(origin *v1.Pod) (*v1.Pod, error) {

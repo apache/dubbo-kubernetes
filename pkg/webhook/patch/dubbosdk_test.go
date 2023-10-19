@@ -16,6 +16,7 @@
 package patch
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -27,7 +28,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/config/security"
 	"github.com/apache/dubbo-kubernetes/pkg/config/server"
+
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type fakeKubeClient struct {
@@ -37,11 +40,51 @@ type fakeKubeClient struct {
 func (f *fakeKubeClient) GetNamespaceLabels(namespace string) map[string]string {
 	if namespace == "matched" {
 		return map[string]string{
-			"dubbo-ca.inject": "true",
+			"dubbo-ca.inject":        "true",
+			RegistryInjectNacosLabel: Labeled,
 		}
 	} else {
 		return map[string]string{}
 	}
+}
+
+func (f *fakeKubeClient) ListServices(namespace string, listOptions metav1.ListOptions) *v1.ServiceList {
+	if namespace != "matched" {
+		return nil
+	}
+
+	for _, registry := range registryInjectLabelPriorities {
+		if listOptions.LabelSelector == fmt.Sprintf("%s=%s", registry, Labeled) {
+			if registry == RegistryInjectK8sLabel { // k8s registry
+				return nil
+			}
+
+			return &v1.ServiceList{
+				Items: []v1.Service{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-registry", registrySchemas[registry]),
+							Namespace: namespace,
+						},
+					},
+				},
+			}
+		}
+	}
+
+	if listOptions.LabelSelector == fmt.Sprintf("%s=%s", "dubbo.apache.org/prometheus", Labeled) {
+		return &v1.ServiceList{
+			Items: []v1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+					},
+				},
+			},
+		}
+	}
+
+	return nil
 }
 
 func TestEmpty(t *testing.T) {
@@ -68,7 +111,7 @@ func TestEmpty(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	newPod, _ := sdk.NewPodWithDubboCa(pod)
@@ -102,7 +145,7 @@ func TestInjectFromLabel(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Labels = make(map[string]string)
@@ -138,7 +181,8 @@ func TestInjectFromNs(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -173,7 +217,8 @@ func TestInjectVolumes(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -257,7 +302,7 @@ func TestInjectOneContainer(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -302,7 +347,8 @@ func TestInjectTwoContainer(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -414,7 +460,7 @@ func TestCheckVolume1(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -456,7 +502,7 @@ func TestCheckVolume2(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -498,7 +544,7 @@ func TestCheckEnv1(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -540,7 +586,7 @@ func TestCheckEnv2(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -582,7 +628,7 @@ func TestCheckEnv3(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -624,7 +670,7 @@ func TestCheckEnv4(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -667,7 +713,7 @@ func TestCheckContainerVolume1(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -709,7 +755,7 @@ func TestCheckContainerVolume2(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -751,7 +797,7 @@ func TestCheckContainerVolume3(t *testing.T) {
 		},
 	}
 
-	sdk := NewJavaSdk(options, &fakeKubeClient{}, nil)
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
 
 	pod.Namespace = "matched"
@@ -768,4 +814,260 @@ func TestCheckContainerVolume3(t *testing.T) {
 	if !reflect.DeepEqual(newPod, pod) {
 		t.Error("should be equal")
 	}
+}
+
+func TestZkRegistryInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+			Labels: map[string]string{
+				RegistryInjectZookeeperLabel: Labeled,
+			},
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "zookeeper://zookeeper-registry.matched.svc") {
+		t.Error("registry should be injected")
+	}
+}
+
+func TestNacosRegistryInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+			Labels: map[string]string{
+				RegistryInjectNacosLabel: Labeled,
+			},
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "nacos://nacos-registry.matched.svc") {
+		t.Error("registry should be injected")
+	}
+}
+
+func TestK8sRegistryInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+			Labels: map[string]string{
+				RegistryInjectK8sLabel: Labeled,
+			},
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, DefaultK8sRegistryAddress) {
+		t.Error("registry should be injected")
+	}
+}
+
+func TestRegistryNotInjectFromLabel(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+
+	userSpecifiedAddress := "some address"
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "matched",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Env: []v1.EnvVar{
+						{
+							Name:  EnvDubboRegistryAddress,
+							Value: userSpecifiedAddress,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, userSpecifiedAddress) {
+		t.Error("registry should not be injected")
+	}
+}
+
+func TestRegistryInjectFromNs(t *testing.T) {
+	t.Parallel()
+
+	options := &dubbo_cp.Config{
+		KubeConfig: kube.KubeConfig{
+			IsKubernetesConnected: false,
+			Namespace:             "dubbo-system",
+			ServiceName:           "dubbo-ca",
+		},
+		Security: security.SecurityConfig{
+			CaValidity:   30 * 24 * 60 * 60 * 1000, // 30 day
+			CertValidity: 1 * 60 * 60 * 1000,       // 1 hour
+		},
+		Webhook: webhook2.Webhook{
+			Port:       30080,
+			AllowOnErr: false,
+		},
+		GrpcServer: server.ServerConfig{
+			PlainServerPort:  30060,
+			SecureServerPort: 30062,
+			DebugPort:        30070,
+		},
+	}
+	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{},
+			},
+		},
+	}
+
+	pod.Namespace = "matched"
+
+	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !checkExpectedEnv(newPod, EnvDubboRegistryAddress, "nacos://nacos-registry.matched.svc") {
+		t.Error("registry should be injected")
+	}
+}
+
+func checkExpectedEnv(pod *v1.Pod, expectedEnvName, expectedEnvValue string) bool {
+	if len(pod.Spec.Containers) <= 0 || len(pod.Spec.Containers[0].Env) <= 0 {
+		return false
+	}
+
+	for _, env := range pod.Spec.Containers[0].Env {
+		if env.Name == expectedEnvName {
+			if env.Value == expectedEnvValue {
+				return true
+			}
+		}
+	}
+
+	return false
 }
