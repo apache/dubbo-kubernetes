@@ -16,13 +16,12 @@
 package patch
 
 import (
-
 	"fmt"
 	"reflect"
 	"testing"
 
 	webhook2 "github.com/apache/dubbo-kubernetes/pkg/config/webhook"
-  
+
 	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
@@ -48,7 +47,6 @@ func (f *fakeKubeClient) GetNamespaceLabels(namespace string) map[string]string 
 		return map[string]string{}
 	}
 }
-
 
 func (f *fakeKubeClient) ListServices(namespace string, listOptions metav1.ListOptions) *v1.ServiceList {
 	if namespace != "matched" {
@@ -112,7 +110,6 @@ func TestEmpty(t *testing.T) {
 			DebugPort:        30070,
 		},
 	}
-
 
 	sdk := NewDubboSdk(options, &fakeKubeClient{}, nil)
 	pod := &v1.Pod{}
@@ -855,7 +852,7 @@ func TestZkRegistryInjectFromLabel(t *testing.T) {
 			Containers: []v1.Container{
 				{},
 			},
-		
+		},
 	}
 
 	newPod, err := sdk.NewPodWithDubboRegistryInject(pod)

@@ -128,14 +128,6 @@ func (s *DubboSdk) NewPodWithDubboRegistryInject(origin *v1.Pod) (*v1.Pod, error
 			continue
 		}
 
-	return target, nil
-}
-
-func (s *DubboSdk) injectEnv(container *v1.Container, name, value string) (found bool) {
-	for j, env := range container.Env {
-		if env.Name == name {
-			found = true
-			// env is not empty, inject into env
 		schema := registrySchemas[registryInject]
 		registryAddress = fmt.Sprintf("%s://%s.%s.svc", schema, serviceList.Items[0].Name, serviceList.Items[0].Namespace)
 		break
@@ -155,6 +147,14 @@ func (s *DubboSdk) injectEnv(container *v1.Container, name, value string) (found
 		target.Spec.Containers = targetContainers
 	}
 
+	return target, nil
+}
+
+func (s *DubboSdk) injectEnv(container *v1.Container, name, value string) (found bool) {
+	for j, env := range container.Env {
+		if env.Name == name {
+			found = true
+			// env is not empty, inject into env
 			if len(env.Value) > 0 {
 				break
 			}
@@ -173,7 +173,6 @@ func (s *DubboSdk) injectEnv(container *v1.Container, name, value string) (found
 	})
 
 	return
-
 }
 
 func (s *DubboSdk) NewPodWithDubboCa(origin *v1.Pod) (*v1.Pod, error) {
