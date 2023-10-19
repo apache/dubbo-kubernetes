@@ -65,8 +65,8 @@ func (wh *Webhook) NewServer(port int32) *http.Server {
 }
 
 func (wh *Webhook) Init(options *dubbo_cp.Config) {
-	wh.Server = wh.NewServer(options.Security.WebhookPort)
-	wh.AllowOnErr = options.Security.WebhookAllowOnErr
+	wh.Server = wh.NewServer(options.Webhook.Port)
+	wh.AllowOnErr = options.Webhook.AllowOnErr
 }
 
 // Serve only for test

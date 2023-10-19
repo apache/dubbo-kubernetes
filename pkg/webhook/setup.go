@@ -26,6 +26,9 @@ import (
 )
 
 func Setup(rt core_runtime.Runtime) error {
+	if !rt.Config().KubeConfig.IsKubernetesConnected {
+		return nil
+	}
 	webhookServer := server.NewServer(rt.Config())
 	if rt.Config().KubeConfig.InPodEnv {
 		webhookServer.WebhookServer = webhook.NewWebhook(

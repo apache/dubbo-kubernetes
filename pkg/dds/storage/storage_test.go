@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/config/option"
-
 	"github.com/apache/dubbo-kubernetes/api/dds"
 	dubboapacheorgv1alpha1 "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
 	dubbocp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
@@ -79,11 +77,7 @@ func (f *fakeConnection) Disconnect() {
 func TestStorage_CloseEOF(t *testing.T) {
 	t.Parallel()
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	fake := &fakeConnection{
 		recvChan: make(chan recvResult, 1),
 	}
@@ -109,11 +103,7 @@ func TestStorage_CloseEOF(t *testing.T) {
 func TestStorage_CloseErr(t *testing.T) {
 	t.Parallel()
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	fake := &fakeConnection{
 		recvChan: make(chan recvResult, 1),
 	}
@@ -139,11 +129,7 @@ func TestStorage_CloseErr(t *testing.T) {
 func TestStorage_UnknowType(t *testing.T) {
 	t.Parallel()
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	fake := &fakeConnection{
 		recvChan: make(chan recvResult, 1),
 	}
@@ -187,11 +173,7 @@ func TestStorage_UnknowType(t *testing.T) {
 func TestStorage_StartNonEmptyNonce(t *testing.T) {
 	t.Parallel()
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	fake := &fakeConnection{
 		recvChan: make(chan recvResult, 1),
 	}
@@ -226,11 +208,7 @@ func TestStorage_StartNonEmptyNonce(t *testing.T) {
 func TestStorage_Listen(t *testing.T) {
 	t.Parallel()
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	fake := &fakeConnection{
 		recvChan: make(chan recvResult, 1),
 	}
@@ -337,11 +315,7 @@ func TestStorage_PreNotify(t *testing.T) {
 				}
 				return nil
 			}, timeout)
-			s := storage.NewStorage(&dubbocp.Config{
-				Options: option.Options{
-					DdsBlockMaxTime: 15000000000,
-				},
-			})
+			s := storage.NewStorage(&dubbocp.Config{})
 
 			handler := crdclient.NewHandler(s, "dubbo-demo", store)
 			err = handler.NotifyWithIndex(c)
@@ -463,11 +437,7 @@ func TestStorage_AfterNotify(t *testing.T) {
 				}
 				return nil
 			}, timeout)
-			s := storage.NewStorage(&dubbocp.Config{
-				Options: option.Options{
-					DdsBlockMaxTime: 15000000000,
-				},
-			})
+			s := storage.NewStorage(&dubbocp.Config{})
 			handler := crdclient.NewHandler(s, "dubbo-demo", store)
 
 			fake := &fakeConnection{
@@ -594,11 +564,7 @@ func TestStore_MissNotify(t *testing.T) {
 		t.Fatalf("Create(%v) => got %v", tag.Kind(), err)
 	}
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	tagHanlder := crdclient.NewHandler(s, "dubbo-demo", store)
 	conditionHandler := crdclient.NewHandler(s, "dubbo-demo", store)
 
@@ -722,11 +688,7 @@ func (e errOrigin) Exact(gen map[string]storage.DdsResourceGenerator, endpoint *
 func TestStorage_MulitiNotify(t *testing.T) {
 	t.Parallel()
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	fake := &fakeConnection{
 		recvChan: make(chan recvResult, 1),
 	}
@@ -912,11 +874,7 @@ func TestStorage_ReturnMisNonce(t *testing.T) {
 		t.Fatalf("Create(%v) => got %v", tag.Kind(), err)
 	}
 
-	s := storage.NewStorage(&dubbocp.Config{
-		Options: option.Options{
-			DdsBlockMaxTime: 15000000000,
-		},
-	})
+	s := storage.NewStorage(&dubbocp.Config{})
 	tagHanlder := crdclient.NewHandler(s, "dubbo-system", store)
 	err = tagHanlder.NotifyWithIndex(collections.DubboApacheOrgV1Alpha1TagRoute)
 	if err != nil {

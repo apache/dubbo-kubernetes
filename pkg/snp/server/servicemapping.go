@@ -160,7 +160,7 @@ func (s *Snp) debounce(stopCh <-chan struct{}, pushFn func(req *RegisterRequest)
 	pushWorker := func() {
 		eventDelay := time.Since(startDebounce)
 		quietTime := time.Since(lastConfigUpdateTime)
-		if eventDelay >= s.config.Options.DebounceMax || quietTime >= s.config.Options.DebounceAfter {
+		if eventDelay >= s.config.Dds.Debounce.Max || quietTime >= s.config.Dds.Debounce.After {
 			if req != nil {
 				pushCounter++
 
@@ -175,7 +175,7 @@ func (s *Snp) debounce(stopCh <-chan struct{}, pushFn func(req *RegisterRequest)
 				debouncedEvents = 0
 			}
 		} else {
-			timeChan = time.After(s.config.Options.DebounceAfter - quietTime)
+			timeChan = time.After(s.config.Dds.Debounce.After - quietTime)
 		}
 	}
 
@@ -185,7 +185,7 @@ func (s *Snp) debounce(stopCh <-chan struct{}, pushFn func(req *RegisterRequest)
 			free = true
 			pushWorker()
 		case r := <-ch:
-			if !s.config.Options.EnableDebounce {
+			if !s.config.Dds.Debounce.Enable {
 				go push(r)
 				req = nil
 				continue

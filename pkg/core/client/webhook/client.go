@@ -86,7 +86,7 @@ func (c *ClientImpl) UpdateWebhookConfig(options *dubbo_cp.Config, CertPem strin
 						Service: &admissionregistrationV1.ServiceReference{
 							Name:      options.KubeConfig.ServiceName,
 							Namespace: options.KubeConfig.Namespace,
-							Port:      &options.Security.WebhookPort,
+							Port:      &options.Webhook.Port,
 							Path:      &path,
 						},
 						CABundle: []byte(bundle),

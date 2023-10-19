@@ -19,18 +19,18 @@ package kube
 
 type KubeConfig struct {
 	Namespace   string `yaml:"namespace"`
-	ServiceName string `yaml:"service-name"`
+	ServiceName string `yaml:"serviceName"`
 
-	InPodEnv              bool `yaml:"in-pod-env"`
-	IsKubernetesConnected bool `yaml:"is-kubernetes-connected"`
+	InPodEnv              bool `yaml:"-"`
+	IsKubernetesConnected bool `yaml:"-"`
 	// Qps for rest config
-	RestConfigQps int `yaml:"rest-config-qps"`
+	RestConfigQps int `yaml:"restConfigQps"`
 	// Burst for rest config
-	RestConfigBurst int `yaml:"rest-config-burst"`
+	RestConfigBurst int `yaml:"restConfigBurst"`
 
-	KubeFileConfig string `yaml:"kube-file-config"`
+	KubeFileConfig string `yaml:"kubeFileConfig"`
 
-	DomainSuffix string `yaml:"domain-suffix"`
+	DomainSuffix string `yaml:"domainSuffix"`
 }
 
 func (o *KubeConfig) Sanitize() {}

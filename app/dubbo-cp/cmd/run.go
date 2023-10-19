@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/webhook"
@@ -39,7 +40,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const gracefullyShutdownDuration = 3 * time.Second
+const (
+	gracefullyShutdownDuration = 3 * time.Second
+	AdminRegistryAddress       = "ADMIN_REGISTRY_ADDRESS"
+	AdminPrometheusAddress     = "ADMIN_PROMETHEUS_ADDRESS"
+)
 
 // This is the open file limit below which the control plane may not
 // reasonably have enough descriptors to accept all its clients.
@@ -56,6 +61,16 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := dubbo_cp.DefaultConfig()
 			err := config.Load(args.configPath, &cfg)
+			registryenv := os.Getenv(AdminRegistryAddress)
+			promenv := os.Getenv(AdminPrometheusAddress)
+			if registryenv != "" {
+				cfg.Admin.Registry.Address = registryenv
+				cfg.Admin.MetadataReport.Address = registryenv
+				cfg.Admin.ConfigCenter = registryenv
+			}
+			if promenv != "" {
+				cfg.Admin.Prometheus.Address = promenv
+			}
 			if err != nil {
 				logger.Sugar().Error(err, "could not load the configuration")
 				return err

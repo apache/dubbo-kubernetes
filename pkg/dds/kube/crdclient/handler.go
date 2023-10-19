@@ -84,10 +84,11 @@ func (p *PushContext) NotifyWithIndex(schema collection.Schema) error {
 		Rev:  p.revision[gvk.String()],
 		Data: data,
 	}
-	p.storage.LatestRules[gvk.String()] = origin
 
-	p.storage.Mutex.RLock()
-	defer p.storage.Mutex.RUnlock()
+	p.storage.Mutex.Lock()
+	defer p.storage.Mutex.Unlock()
+
+	p.storage.LatestRules[gvk.String()] = origin
 	for _, c := range p.storage.Connection {
 		c.RawRuleQueue.Add(origin)
 	}

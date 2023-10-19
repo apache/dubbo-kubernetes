@@ -15,17 +15,21 @@
  * limitations under the License.
  */
 
-package server
+package dds
 
-type ServerConfig struct {
-	PlainServerPort  int `yaml:"plainServerPort"`
-	SecureServerPort int `yaml:"secureServerPort"`
-	DebugPort        int `yaml:"debugPort"`
+import (
+	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/config/dds/debounce"
+)
+
+type Dds struct {
+	Debounce    debounce.Debounce `yaml:"debounce"`
+	SendTimeout time.Duration     `yaml:"sendTimeout"`
 }
 
-func (s *ServerConfig) Sanitize() {}
+func (o *Dds) Sanitize() {}
 
-func (s *ServerConfig) Validate() error {
-	// TODO Validate ServerConfig
+func (o *Dds) Validate() error {
 	return nil
 }
