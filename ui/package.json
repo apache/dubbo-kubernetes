@@ -12,7 +12,7 @@
     "dev": "vue-cli-service serve"
   },
   "dependencies": {
-    "axios": "^0.18.1",
+    "axios": "^1.6.0",
     "brace": "^0.11.1",
     "core-js": "^3.6.5",
     "echarts": "^4.2.1",
