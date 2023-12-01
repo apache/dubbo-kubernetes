@@ -134,7 +134,7 @@ func NewAdminComponent(spec *v1alpha1.AdminSpec, opts ...ComponentOption) (Compo
 		render.WithName(string(Admin)),
 		render.WithNamespace(newOpts.Namespace),
 		render.WithFS(filesystem.NewSubFS(newOpts.ChartPath, identifier.UnionFS)),
-		render.WithDir("dubbo-admin"))
+		render.WithDir("admin"))
 	if err != nil {
 		return nil, err
 	}

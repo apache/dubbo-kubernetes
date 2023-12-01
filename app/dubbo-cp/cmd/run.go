@@ -44,6 +44,7 @@ const (
 	gracefullyShutdownDuration = 3 * time.Second
 	AdminRegistryAddress       = "ADMIN_REGISTRY_ADDRESS"
 	AdminPrometheusAddress     = "ADMIN_PROMETHEUS_ADDRESS"
+	AdminGrafanaAddress        = "ADMIN_GRAFANA_ADDRESS"
 )
 
 // This is the open file limit below which the control plane may not
@@ -61,16 +62,7 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := dubbo_cp.DefaultConfig()
 			err := config.Load(args.configPath, &cfg)
-			registryenv := os.Getenv(AdminRegistryAddress)
-			promenv := os.Getenv(AdminPrometheusAddress)
-			if registryenv != "" {
-				cfg.Admin.Registry.Address = registryenv
-				cfg.Admin.MetadataReport.Address = registryenv
-				cfg.Admin.ConfigCenter = registryenv
-			}
-			if promenv != "" {
-				cfg.Admin.Prometheus.Address = promenv
-			}
+			readFromEnv(cfg)
 			if err != nil {
 				logger.Sugar().Error(err, "could not load the configuration")
 				return err
@@ -147,4 +139,23 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&args.configPath, "config-file", "c", "", "configuration file")
 
 	return cmd
+}
+
+func readFromEnv(cfg dubbo_cp.Config) {
+	registryEnv := os.Getenv(AdminRegistryAddress)
+	if registryEnv != "" {
+		cfg.Admin.Registry.Address = registryEnv
+		cfg.Admin.MetadataReport.Address = registryEnv
+		cfg.Admin.ConfigCenter = registryEnv
+	}
+
+	promEnv := os.Getenv(AdminPrometheusAddress)
+	if promEnv != "" {
+		cfg.Admin.Prometheus.Address = promEnv
+	}
+
+	grafanaEnv := os.Getenv(AdminGrafanaAddress)
+	if grafanaEnv != "" {
+		cfg.Admin.Grafana.Address = grafanaEnv
+	}
 }
