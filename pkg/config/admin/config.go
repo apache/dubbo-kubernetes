@@ -28,6 +28,7 @@ type Admin struct {
 	MetadataReport AddressConfig `yaml:"metadataReport"`
 	Registry       AddressConfig `yaml:"registry"`
 	Prometheus     Prometheus    `yaml:"prometheus"`
+	Grafana        Grafana       `yaml:"grafana"`
 	MysqlDSN       string        `yaml:"mysqlDSN"`
 }
 
@@ -39,6 +40,17 @@ type Prometheus struct {
 func (c *Prometheus) Sanitize() {}
 
 func (c *Prometheus) Validate() error {
+	// TODO Validate admin
+	return nil
+}
+
+type Grafana struct {
+	Address string `yaml:"address"`
+}
+
+func (g *Grafana) Sanitize() {}
+
+func (g *Grafana) Validate() error {
 	// TODO Validate admin
 	return nil
 }
