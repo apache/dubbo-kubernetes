@@ -96,7 +96,9 @@ var DefaultConfig = func() Config {
 				Address:     "127.0.0.1:9090",
 				MonitorPort: "22222",
 			},
-			// MysqlDSN: "root:password@tcp(127.0.0.1:3306)/dubbo-admin?charset=utf8&parseTime=true",
+			Grafana: admin.Grafana{
+				Address: "127.0.0.1:93030",
+			},
 		},
 		GrpcServer: server.ServerConfig{
 			PlainServerPort:  30060,

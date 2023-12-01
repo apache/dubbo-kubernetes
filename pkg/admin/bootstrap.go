@@ -18,6 +18,8 @@
 package admin
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/services"
 	"net/url"
 	"strings"
 
@@ -100,7 +102,7 @@ func RegisterOther(rt core_runtime.Runtime) error {
 		if err != nil {
 			panic(err)
 		}
-		// config.AdminRegistry, err = registry.Registry(c.GetProtocol(), addrUrl)
+		config.AdminRegistry, err = registry.Registry(c.GetProtocol(), addrUrl)
 		if err != nil {
 			panic(err)
 		}
@@ -117,10 +119,10 @@ func RegisterOther(rt core_runtime.Runtime) error {
 	}
 
 	// start go routines to subscribe to registries
-	//services.StartSubscribe(config.AdminRegistry)
-	//defer func() {
-	//	services.DestroySubscribe(config.AdminRegistry)
-	//}()
+	services.StartSubscribe(config.AdminRegistry)
+	defer func() {
+		services.DestroySubscribe(config.AdminRegistry)
+	}()
 
 	// start mock cp-server
 	go mock.RunMockServiceServer(rt.Config().Admin, rt.Config().Dubbo)
