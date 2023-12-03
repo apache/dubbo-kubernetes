@@ -172,6 +172,7 @@ export default {
       resultPage: {},
       filter: '',
       headers: [],
+      services: [],
       pagination: {
         page: 1,
         rowsPerPage: 10 // -1 for All
@@ -197,26 +198,26 @@ export default {
     area () {
       return this.$i18n.locale
     },
-    services () {
-      if (!this.resultPage || !this.resultPage.content) {
-        return []
-      }
-      const instanceRegistry = this.$t('instanceRegistry')
-      const interfaceRegistry = this.$t('interfaceRegistry')
-      const allRegistry = this.$t('allRegistry')
-      return this.resultPage.content.filter(function (item) {
-        if (item.registrySource === 'INSTANCE') {
-          item.registrySource = instanceRegistry
-        }
-        if (item.registrySource === 'INTERFACE') {
-          item.registrySource = interfaceRegistry
-        }
-        if (item.registrySource === 'ALL') {
-          item.registrySource = allRegistry
-        }
-        return item
-      })
-    }
+    // services () {
+    //   if (!this.resultPage || !this.resultPage.content) {
+    //     return []
+    //   }
+    //   const instanceRegistry = this.$t('instanceRegistry')
+    //   const interfaceRegistry = this.$t('interfaceRegistry')
+    //   const allRegistry = this.$t('allRegistry')
+    //   return this.resultPage.content.filter(function (item) {
+    //     if (item.registrySource === 'INSTANCE') {
+    //       item.registrySource = instanceRegistry
+    //     }
+    //     if (item.registrySource === 'INTERFACE') {
+    //       item.registrySource = interfaceRegistry
+    //     }
+    //     if (item.registrySource === 'ALL') {
+    //       item.registrySource = allRegistry
+    //     }
+    //     return item
+    //   })
+    // }
   },
   watch: {
     input (val) {
@@ -274,6 +275,7 @@ export default {
       ]
     },
     querySelections (v) {
+      console.log(v);
       if (this.timerID) {
         clearTimeout(this.timerID)
       }
@@ -282,9 +284,12 @@ export default {
         if (v && v.length >= 4) {
           this.searchLoading = true
           if (this.selected === 0) {
-            this.typeAhead = store.getters.getServiceItems(v)
+            console.log(this.$store.state.serviceItems);
+            console.log(v);
+            this.services = this.$store.getters.getServiceItems(v)
+            console.log(this.typeAhead);
           } else if (this.selected === 2) {
-            this.typeAhead = store.getters.getAppItems(v)
+            this.services = store.getters.getAppItems(v)
           }
           this.searchLoading = false
           this.timerID = null
@@ -341,8 +346,9 @@ export default {
           size
         }
       }).then(response => {
-        this.resultPage = response.data
-        this.totalItems = 1
+        this.services = response.data.content;
+        this.totalItems = response.data.totalElements;
+        this.$store.commit('setServiceItems',  this.services)
         if (rewrite) {
           this.$router.push({ path: 'service', query: { filter: filter, pattern: pattern } })
         }
