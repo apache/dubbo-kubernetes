@@ -24,7 +24,7 @@ export const store = new Vuex.Store({
   state: {
     appTitle: 'Dubbo Admin',
     area: null,
-    serviceItems: null,
+    serviceItems: [],
     appItems: null,
     consumerItems: null
   },
@@ -100,9 +100,11 @@ export const store = new Vuex.Store({
      * Get service item arrays with filter
      */
     getServiceItems: (state) => (filter) => {
-      return state.serviceItems.filter(e => {
-        return (e || '').toLowerCase().indexOf((filter || '').toLowerCase()) > -1
-      })
+      return state.serviceItems.filter(item => {
+        const itemName = (item.service || '').toLowerCase();
+        const filterString = (filter || '').toLowerCase();
+        return itemName.includes(filterString);
+      });
     },
     /**
      * Get application item arrays with filter
