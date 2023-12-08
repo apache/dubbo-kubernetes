@@ -7,6 +7,7 @@ metadata:
   name: {{ template "nacos.name" . }}
   namespace: {{ template "nacos.namespace" . }}
   labels:
+  {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -56,11 +57,12 @@ metadata:
   name: {{ template "nacos.name" . }}-headless
   namespace: {{ template "nacos.namespace" . }}
   labels:
+  {{- include "nacos.labels" . | nindent 4 }}
   {{- with .Values.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
   annotations:
-  {{- with .Values.annotations }}
+  {{- with $nacos.annotations }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:

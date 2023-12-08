@@ -16,23 +16,20 @@
 ## Specifies the type of Kubernetes resource, such as "Deployment" or "StatefulSet."
 deployType: Deployment
 
-## Override the name of the resource.
-nameOverride: {}
-
 ## Override the namespace where the resource is deployed.
-namespaceOverride: {}
+namespaceOverride: ~
 
 ## Labels to attach to the resource.
-labels: {}
+labels: ~
 
 ## Annotations to attach to the resource.
-annotations: {}
+annotations: ~
 
 ## Node selector to constrain where the pods can be scheduled.
-nodeSelector: {}
+nodeSelector: ~
 
 ## List of image pull secrets for pulling private container images.
-imagePullSecrets: []
+imagePullSecrets: ~
 
 ## Specifies the cluster's domain name for DNS resolution.
 clusterDomain: cluster.local
@@ -52,33 +49,33 @@ rbac:
   # Whether to enable the RBAC.
   enabled: true
   # Labels for RBAC resources.
-  labels: {}
+  labels: ~
   # Annotations for RBAC resources.
-  annotations: {}
+  annotations: ~
 
 serviceAccount:
   # Whether to enable the ServiceAccount.
   enabled: true
   # Labels to be applied to the ServiceAccount.
-  labels: {}
+  labels: ~
   # Annotations to be added to the ServiceAccount.
-  annotations: {}
+  annotations: ~
 
 ## Define volume mounts for the application, Each item in the list represents a separate volume mount.
-volumeMounts: {}
+volumeMounts: ~
 ## Example:
 #  - name: vol
 #    mountPath: /data
 #    readOnly: true
 
 ## Define volumes for the application, Each item in the list represents a separate volume.
-volumes: []
+volumes: ~
 #  - name: vol
 #    hostPath:
 #      path: /data
 
 ## Define a ConfigMap for the application, You can create a ConfigMap and specify its name, items, and defaultMode.
-configMap: {}
+configMap: ~
 #  name: config-file
 #  items:
 #  - key: file
@@ -86,7 +83,7 @@ configMap: {}
 #  defaultMode: 420
 
 ## Define a Secret for the application, You can create a Secret and specify its name, items, and their corresponding keys and paths.
-secret: {}
+secret: ~
 #  secretName: secret-file
 #  items:
 #  - key: tls.crt
@@ -108,7 +105,7 @@ updateStrategy:
   # Define the update strategy for the application's statefulSet.
   type: RollingUpdate
   # Additional configuration for the RollingUpdate update strategy can be specified here.
-  rollingUpdate: {}
+  rollingUpdate: ~
 
 ## Minimum time a pod must be ready before being considered available.
 minReadySeconds: 0
@@ -168,7 +165,7 @@ livenessProbe:
     port: 8080
 
 ## Define lifecycle hooks for the application container.
-lifecycleHooks: {}
+lifecycleHooks: ~
 #  postStart:
 #    exec:
 #      command: ["/bin/sh", "-c", "echo Discover Infinite Possibilities, Starting Now! >> /var/log/postStart.log"]
@@ -180,9 +177,9 @@ service:
   # Whether to enable the service.
   enabled: true
   # Labels to be applied to the service.
-  labels: {}
+  labels: ~
   # Annotations to be added to the service.
-  annotations: {}
+  annotations: ~
   # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
   type: ClusterIP
   # Specifies the ClusterIP for the service, or use "~" to auto-assign.
@@ -217,7 +214,7 @@ resources:
     memory: 512Mi
 
 ## Define toleration's for the application pods.
-tolerations: []
+tolerations: ~
 #  - key: CriticalAddonsOnly
 #    operator: Exists
 #  - effect: NoSchedule
@@ -227,9 +224,9 @@ persistence:
   # Whether to enable the persistence volume.
   enabled: false
   # Labels to be applied to the persistence volume.
-  labels: {}
+  labels: ~
   # Annotations to be added to the persistence volume.
-  annotations: {}
+  annotations: ~
   # Name of the PersistentVolumeClaim.
   claimName: ""
   # Storage class for the PersistentVolumeClaim.
@@ -255,9 +252,9 @@ podDisruptionBudget:
   # Whether to enable the PDB.
   enabled: false
   # Labels to be applied to the PDB.
-  labels: {}
+  labels: ~
   # Annotations to be added to the PDB.
-  annotations: {}
+  annotations: ~
   # Minimum number of pods that must be available during disruptions.
   minAvailable: 1
   # Maximum number of pods that can be unavailable during disruptions.
@@ -269,21 +266,21 @@ podSecurityPolicy:
   # Whether to enable the PSP.
   enabled: false
   # Labels to be applied to the PSP.
-  labels: {}
+  labels: ~
   # Annotations to be added to the PSP.
-  annotations: {}
+  annotations: ~
 
 networkPolicy:
   # Whether to enable the network policies.
   enabled: false
   # Labels to be applied to the network policy.
-  labels: {}
+  labels: ~
   # Annotations to be added to the network policy
-  annotations: {}
+  annotations: ~
   # Define the pod selector for network policy.
-  podSelector: {}
+  podSelector: ~
   # Define ingress rules for network policy.
-  ingress: []
+  ingress: ~
 #  - from:
 #    - ipBlock:
 #        cidr: 172.16.0.0/16
@@ -300,7 +297,7 @@ networkPolicy:
 #      endPort: 10002
 #      protocol: TCP
   # Define egress rules for network policy.
-  egress: []
+  egress: ~
 #  - ports:
 #    - port: 10001
 #      endPort: 10002
@@ -319,21 +316,118 @@ networkPolicy:
 #          - frontend
 #          - backend
 
-zookeeper:
-  ## Whether to enable the zookeeper.
+jobs:
+  # Override the namespace where the resource is deployed.
+  namespaceOverride: ~
+  # Labels to attach to the resource.
+  labels: ~
+  # Annotations to attach to the resource.
+  annotations: ~
+  # Specify the restart policy (OnFailure, Never, Always, etc.).
+  restartPolicy: OnFailure
+
+  image:
+    # Source of the container image.
+    registry: docker.io/bitnami/kubectl
+    # Version tag of the container image.
+    tag: 1.28.4
+    # Image pull policy, available options are: Always, IfNotPresent, Never.
+    pullPolicy: IfNotPresent
+
+auth:
+  ## Whether to enable the control-plane auth control.
+  enabled: false
+
+  authorization:
+    # Specify the action for authorization (DENY, ALLOW, etc.)
+    action: DENY
+
+    # Specify the match type for authorization (anyMatch, allMatch, etc.)
+    matchType: anyMatch
+
+    # Specify the match type for authorization rule sampling rate has a range of 0 to 100.
+    samples: 0
+
+  authentication:
+    # Specify the action for authentication (STRICT, PERMISSIVE, etc.)
+    action: STRICT
+
+    # Specify the action for authentication port number for applying the authentication policy
+    port: 38080
+
+traffic:
+  ## Whether to enable the traffic.
+  enabled: false
+
+  conditionRoute:
+    # Supports service and application scope rules.
+    scope: service
+    # Whether enable this rule or not, set enabled:false to disable this rule.
+    enabled: true
+    # The behaviour when the instance subset is empty after routing.
+    force: true
+    # Whether run routing rule for every rpc invocation or use routing cache if available.
+    runtime: true
+    # Specify the specific priority for traffic (adjust within the range 1 ~ 100).
+    priority: 100
+    # The version of the condition rule definition, currently available version is v3.0.
+    configVersion: v3.0
+    # The identifier of the target service or application that this rule is about to apply to.
+    # If scope:service is set, then keyshould be specified as the Dubbo service key that this rule targets to control.
+    # If scope:application is set, then keyshould be specified as the name of the application that this rule targets to control, application should always be a Dubbo Consumer.
+    key: org.apache.dubbo.samples.CommentService
+    # The condition routing rule definition of this configuration. Check Condition for details.
+    conditions: method=getComment => region=Hangzhou
+
+  dynamicConfig:
+    # Supports service and application scope rules.
+    scope: service
+    # The version of the tag rule definition, currently available version is v3.0.
+    configVersion: v3.0
+    # The identifier of the target service or application that this rule is about to apply to.
+    # If scope:service is set, then keyshould be specified as the Dubbo service key that this rule targets to control.
+    # If scope:application is set, then keyshould be specified as the name of the application that this rule targets to control, application should always be a Dubbo Consumer.
+    key: org.apache.dubbo.samples.UserService
+    # Especially useful when scope:service is set.
+    # side: providermeans this Config will only take effect on the provider instances of the service key.
+    # side: consumermeans this Config will only take effect on the consumer instances of the service key
+    side: consumer
+    # The application matching condition for this config rule to take effect.
+    # Effective when scope:service is set.
+    # https://github.com/google/re2/wiki/Syntax.
+    # exact: value for exact string
+    exact: shop-frontend
+
+  tagRoute:
+    # The name of the tag used to match the dubbo tag value in the request context.
+    name: gray
+    # Whether enable this rule or not, set enabled:false to disable this rule.
+    enabled: false
+    # The behaviour when the instance subset is empty after routing.
+    force: true
+    # The version of the tag rule definition, currently available version is v3.0.
+    configVersion: v3.0
+    # Specify the specific priority for traffic (adjust within the range 1 ~ 100).
+    priority: 99
+    # The identifier of the target application that this rule is about to control.
+    key: details
+
+observable:
+  ## Whether to enable the observability.
   enabled: true
 
-  ## Override the name of the resource.
-  nameOverride: {}
+zookeeper:
+  ## Whether to enable the zookeeper.
+  enabled: false
 
   ## Override the namespace where the resource is deployed.
-  namespaceOverride: {}
+  namespaceOverride: ~
 
   ## Labels to attach to the resource.
-  labels: {}
+  labels: ~
 
   ## Annotations to attach to the resource.
-  annotations: {}
+  annotations: ~
 
   ## Specifies the cluster's domain name for DNS resolution.
   clusterDomain: cluster.local
@@ -369,9 +463,9 @@ zookeeper:
 
   service:
     # Labels to be applied to the service.
-    labels: {}
+    labels: ~
     # Annotations to be added to the service.
-    annotations: {}
+    annotations: ~
     # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
     type: ClusterIP
     # Specifies the ClusterIP for the service, or use "~" to auto-assign.
@@ -511,22 +605,19 @@ zookeeper:
 
 nacos:
   ## Whether to enable the nacos.
-  enabled: false
+  enabled: true
 
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: standalone
 
-  ## Override the name of the resource.
-  nameOverride: {}
-
   ## Override the namespace where the resource is deployed.
-  namespaceOverride: {}
+  namespaceOverride: ~
 
   ## Labels to attach to the resource.
-  labels: {}
+  labels: ~
 
   ## Annotations to attach to the resource.
-  annotations: {}
+  annotations: ~
 
   ## Specifies the cluster's domain name for DNS resolution.
   clusterDomain: cluster.local
@@ -572,9 +663,9 @@ nacos:
 
   service:
     # Labels to be applied to the service.
-    labels: {}
+    labels: ~
     # Annotations to be added to the service.
-    annotations: {}
+    annotations: ~
     # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
     type: NodePort
     # Specifies the ClusterIP for the service, or use "~" to auto-assign.
@@ -683,26 +774,27 @@ ingress:
   enabled: false
 
   hosts:
-    admin: admin.dubbo.domain
-
-    prometheus: prom.dubbo.domain
-
-    grafana: grafana.dubbo.domain
+    # Specify the host for the admin Ingress
+    admin: admin.k8s.example
+    # Specify the host for the Prometheus Ingress
+    prometheus: prom.k8s.example
+    # Specify the host for the Grafana Ingress
+    grafana: grafana.k8s.example
 
   ## Override the name of the resource.
-  nameOverride: {}
+  nameOverride: ~
 
   ## Override the namespace where the resource is deployed.
-  namespaceOverride: {}
+  namespaceOverride: ~
 
   ## Labels to attach to the resource.
-  labels: {}
+  labels: ~
 
   ## Annotations to attach to the resource.
-  annotations: {}
+  annotations: ~
 
   ## Node selector to constrain where the pods can be scheduled.
-  nodeSelector: {}
+  nodeSelector: ~
 
   ## Number of replicas for the Deployment.
   replicas: 1
@@ -795,23 +887,3 @@ ingress:
       cpu: 100m
       # Memory usage request.
       memory: 100Mi
-
-observable:
-  skywalking:
-    enabled: false
-
-  opentelemetry:
-    enabled: false
-
-trace:
-  zipkin:
-    enabled: false
-
-metrics:
-  enabled: false
-
-  admin:
-    path: /metrics
-    port: 10000
-    serviceMonitor:
-      enabled: false
