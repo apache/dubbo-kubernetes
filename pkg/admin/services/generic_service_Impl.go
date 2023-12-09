@@ -17,12 +17,15 @@ package services
 
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
+	// nolint
 	dubboConfig "dubbo.apache.org/dubbo-go/v3/config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/util"
 
+	// nolint
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
+	// nolint
 	dubboconfig "dubbo.apache.org/dubbo-go/v3/config"
 )
 

@@ -25,6 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
+	// nolint
 	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
 	_ "dubbo.apache.org/dubbo-go/v3/imports"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/mapper"
