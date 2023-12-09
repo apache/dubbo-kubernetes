@@ -98,6 +98,9 @@ func (kr *Registry) Subscribe(listener registry.AdminNotifyListener) error {
 
 	go func() {
 		mappings, err := getMappingList("mapping")
+		if err != nil {
+			logger.Error("Failed to get mapping")
+		}
 		for interfaceKey, oldApps := range mappings {
 			mappingListener := NewMappingListener(oldApps, delRegistryListener)
 			apps, _ := config.MetadataReportCenter.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
@@ -118,6 +121,9 @@ func (kr *Registry) Subscribe(listener registry.AdminNotifyListener) error {
 			}
 			delSDListener.AddListenerAndNotify(interfaceKey, delRegistryListener)
 			err = kr.sdDelegate.AddListener(delSDListener)
+			if err != nil {
+				logger.Warnf("Failed to Add Listener")
+			}
 		}
 	}()
 
