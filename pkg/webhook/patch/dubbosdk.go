@@ -34,7 +34,6 @@ type DubboSdk struct {
 }
 
 func NewDubboSdk(options *dubbo_cp.Config, webhookClient webhook.Client, kubeClient kubernetes.Interface) *DubboSdk {
-
 	return &DubboSdk{
 		options:       options,
 		webhookClient: webhookClient,

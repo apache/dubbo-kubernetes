@@ -18,6 +18,8 @@
 package universal
 
 import (
+	"net/url"
+
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
@@ -26,7 +28,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	gxset "github.com/dubbogo/gost/container/set"
 	"github.com/dubbogo/gost/log/logger"
-	"net/url"
 )
 
 var SUBSCRIBE *common.URL
