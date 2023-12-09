@@ -34,21 +34,6 @@ func TestRenderManifest(t *testing.T) {
 		componentFunc newComponentFunc
 	}{
 		{
-			name:   "AdminComponent",
-			golden: "admin_component-render_manifest.golden.yaml",
-			componentFunc: func(t *testing.T) Component {
-				testSpec := &v1alpha1.AdminSpec{}
-				admin, err := NewAdminComponent(testSpec, []ComponentOption{
-					WithNamespace(identifier.DubboSystemNamespace),
-					WithChartPath(identifier.Charts),
-				}...)
-				if err != nil {
-					t.Fatalf("NewAdminComponent failed, err: %s", err)
-				}
-				return admin
-			},
-		},
-		{
 			name:   "NacosComponent",
 			golden: "nacos_component-render_manifest.golden.yaml",
 			componentFunc: func(t *testing.T) Component {
