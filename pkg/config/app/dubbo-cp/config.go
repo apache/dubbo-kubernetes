@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/dds/debounce"
 	"github.com/apache/dubbo-kubernetes/pkg/config/webhook"
 
+	// nolint
 	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/dds"

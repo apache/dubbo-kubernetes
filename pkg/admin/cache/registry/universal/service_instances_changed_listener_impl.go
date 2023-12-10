@@ -18,12 +18,13 @@
 package universal
 
 import (
+	"reflect"
+	"sync"
+
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
 	"github.com/dubbogo/gost/log/logger"
-	"reflect"
-	"sync"
 )
 
 import (
