@@ -18,9 +18,10 @@
 package universal
 
 import (
-	"github.com/dubbogo/gost/gof/observer"
 	"strings"
 	"sync"
+
+	"github.com/dubbogo/gost/gof/observer"
 
 	"dubbo.apache.org/dubbo-go/v3/registry"
 )
