@@ -20,13 +20,14 @@ package resource
 import (
 	"errors"
 	"fmt"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"reflect"
 
 	"github.com/apache/dubbo-kubernetes/pkg/core/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/core/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/validation"
-	"github.com/gogo/protobuf/proto"
 	"github.com/hashicorp/go-multierror"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -229,11 +230,12 @@ func (b Builder) BuildNoValidate() Schema {
 
 // getProtoMessageType returns the Go lang type of the proto with the specified name.
 func getProtoMessageType(protoMessageName string) reflect.Type {
-	t := protoMessageType(protoMessageName)
-	if t == nil {
+	t, err := protoMessageType(protoreflect.FullName(protoMessageName))
+	if err != nil || t == nil {
 		return nil
 	}
-	return t.Elem()
+	t.New().Interface()
+	return reflect.TypeOf(t.Zero().Interface())
 }
 
-var protoMessageType = proto.MessageType
+var protoMessageType = protoregistry.GlobalTypes.FindMessageByName
