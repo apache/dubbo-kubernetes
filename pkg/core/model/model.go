@@ -20,16 +20,12 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"reflect"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-
-	gogoproto "github.com/gogo/protobuf/proto"
-	// nolint
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/known/anypb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -107,39 +103,33 @@ type Config struct {
 	Spec Spec
 }
 
-// Spec defines the spec for the config. In order to use below helper methods,
-// * golang/protobuf Message
+// Spec defines the spec for the config.
 type Spec interface{}
 
-func ToProtoGogo(s Spec) (*anypb.Any, error) {
-	pb := s.(proto.Message)
-
-	return MessageToAny(pb), nil
-}
-
-// MessageToAny converts from proto message to proto Any
-func MessageToAny(msg proto.Message) *anypb.Any {
-	out, err := MessageToAnyWithError(msg)
-	if err != nil {
-		logger.Sugar().Error(fmt.Sprintf("error marshaling Any %s: %v", msg.String(), err))
-		return nil
+func ToProto(s Spec) (*anypb.Any, error) {
+	if pb, ok := s.(protoreflect.ProtoMessage); ok {
+		return MessageToAnyWithError(pb)
 	}
-	return out
+
+	return nil, nil
 }
 
 // MessageToAnyWithError converts from proto message to proto Any
-// nolint
 func MessageToAnyWithError(msg proto.Message) (*anypb.Any, error) {
-	b := proto.NewBuffer(nil)
-	b.SetDeterministic(true)
-	err := b.Marshal(msg)
+	b, err := marshal(msg)
 	if err != nil {
 		return nil, err
 	}
 	return &anypb.Any{
-		TypeUrl: "type.googleapis.com/" + proto.MessageName(msg),
-		Value:   b.Bytes(),
+		TypeUrl: "type.googleapis.com/" + string(msg.ProtoReflect().Descriptor().FullName()),
+		Value:   b,
 	}, nil
+}
+
+func marshal(msg proto.Message) ([]byte, error) {
+	return proto.MarshalOptions{
+		Deterministic: true,
+	}.Marshal(msg)
 }
 
 type deepCopier interface {
@@ -152,21 +142,13 @@ func DeepCopy(s interface{}) interface{} {
 		return dc.DeepCopyInterface()
 	}
 
-	// golang protobuf. Use proto reflect.ProtoMessage to distinguish from gogo
-	// golang/protobuf 1.4+ will have this interface. Older golang/protobuf are gogo compatible
 	if _, ok := s.(protoreflect.ProtoMessage); ok {
 		if pb, ok := s.(proto.Message); ok {
 			return proto.Clone(pb)
 		}
 	}
 
-	// gogo protobuf
-	if pb, ok := s.(gogoproto.Message); ok {
-		return gogoproto.Clone(pb)
-	}
-
-	// If we don't have a deep copy method, we will have to do some reflection magic. Its not ideal,
-	// but all Dubbo types have an efficient deep copy.
+	// If we don't have a deep copy method, we will have to do some reflection magic.
 	js, err := json.Marshal(s)
 	if err != nil {
 		return nil
