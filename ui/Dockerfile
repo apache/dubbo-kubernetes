@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # -- BUILD --
-FROM node:14.17-alpine as build
+FROM node:18-alpine as build
 
 WORKDIR /app/ui/src
 
