@@ -31,8 +31,8 @@ import (
 	api "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/cenkalti/backoff"
-	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 var (

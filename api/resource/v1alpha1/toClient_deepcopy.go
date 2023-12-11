@@ -23,8 +23,7 @@ import (
 	fmt "fmt"
 	math "math"
 
-	proto "github.com/gogo/protobuf/proto"
-	_ "github.com/gogo/protobuf/types"
+	proto "google.golang.org/protobuf/proto"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
