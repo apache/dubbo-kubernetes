@@ -26,7 +26,7 @@ fi
 # Determine the latest Dubbo version by version number ignoring alpha, beta, and rc versions.
 if [ "${DUBBO_VERSION}" = "" ] ; then
   DUBBO_VERSION="$(curl -sL https://github.com/dawnzzz/dubbo-kubernetes/releases | \
-                  grep -E -o 'dubboctl/([v,V]?)[0-9]*.[0-9]*.[0-9]*' | sort -V | \
+                  grep -E -o 'dubbo/([v,V]?)[0-9]*.[0-9]*.[0-9]*' | sort -V | \
                   tail -1 | awk -F'/' '{ print $2}')"
   DUBBO_VERSION="${DUBBO_VERSION##*/}"
 fi
@@ -66,7 +66,7 @@ download_failed () {
 tmp=$(mktemp -d /tmp/dubboctl.XXXXXX)
 NAME="dubboctl-${DUBBO_VERSION}"
 
-ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/dubboctl%2F${DUBBO_VERSION}/dubboctl-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/dubbo%2F${DUBBO_VERSION}/dubbo-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
 
 with_arch() {
   printf "\nDownloading %s from %s ...\n" "${NAME}" "$ARCH_URL"
