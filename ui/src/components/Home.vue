@@ -62,97 +62,6 @@
       </template>
     </v-data-iterator>
         </v-container>
-        <v-container fluid grid-list-md>
-    <v-data-iterator
-      :items=metaDate
-      content-tag="v-layout"
-      hide-actions
-      row
-      wrap
-    >
-      <template v-slot:header>
-        <v-toolbar
-          class="mb-2"
-          color="indigo darken-5"
-          dark
-          flat
-        >
-          <v-toolbar-title>MetadataOverview</v-toolbar-title>
-        </v-toolbar>
-      </template>
-      <template v-slot:item="props">
-        <v-flex
-          xs12
-          sm6
-          md4
-          lg6
-        >
-          <v-card>
-            <v-card-title class="subheading font-weight-bold">{{ props.item.name }}</v-card-title>
-
-            <v-divider></v-divider>
-            <template v-if="Array.isArray(props.item.value)">
-              <v-list dense>
-              <v-list-tile>
-                <v-list-tile-content>Value:</v-list-tile-content>
-                <v-list-tile-content class="align-end">{{joinArray(props.item.value) }}</v-list-tile-content>
-              </v-list-tile>
-              </v-list>
-            </template>
-            <template v-else>
-              <v-list dense>
-              <v-list-tile>
-                <v-list-tile-content>Value:</v-list-tile-content>
-                <v-list-tile-content class="align-end">{{ props.item.value }}</v-list-tile-content>
-              </v-list-tile>
-              </v-list>
-            </template>
-          </v-card>
-        </v-flex>
-      </template>
-    </v-data-iterator>
-        </v-container>
-        <v-container fluid grid-list-md>
-    <v-data-iterator
-      :items=version
-      content-tag="v-layout"
-      hide-actions
-      row
-      wrap
-    >
-      <template v-slot:header>
-        <v-toolbar
-          class="mb-2"
-          color="indigo darken-5"
-          dark
-          flat
-        >
-          <v-toolbar-title>VersionOverview</v-toolbar-title>
-        </v-toolbar>
-      </template>
-      <template v-slot:item="props">
-        <v-flex
-          xs12
-          sm6
-          md4
-          lg4
-        >
-          <v-card>
-            <v-card-title class="subheading font-weight-bold">{{ props.item.name }}</v-card-title>
-
-            <v-divider></v-divider>
-
-            <v-list dense>
-              <v-list-tile>
-                <v-list-tile-content>Value:</v-list-tile-content>
-                <v-list-tile-content class="align-end">{{ props.item.value }}</v-list-tile-content>
-              </v-list-tile>
-            </v-list>
-          </v-card>
-        </v-flex>
-      </template>
-    </v-data-iterator>
-        </v-container>
     </v-container>
 </template>
 <script>
@@ -168,29 +77,12 @@ export default {
       }
     ],
     clusterData:[],
-    version:[],
-    metaDate:[],
   }),
   methods:{
     getCluster () {
       this.$axios.get('/metrics/cluster').then(response => {
         console.log(response)
         this.clusterData =  Object.entries(response.data.data).map(([name, number]) => ({ name, number }));
-        console.log(this.clusterData)
-      })
-    },
-    getVersion () {
-      this.$axios.get('/version').then(response => {
-        console.log(response)
-        this.version =  Object.entries(response.data.data).map(([name, value]) => ({ name, value }));
-        console.log(this.version)
-      })
-    },
-    getMeta () {
-      this.$axios.get('/metrics/metadata').then(response => {
-        console.log(response)
-        this.metaDate =  Object.entries(response.data.data).map(([name, value]) => ({ name, value }));
-        console.log(this.metaDate)
       })
     },
     joinArray(arr) {
@@ -199,8 +91,6 @@ export default {
   },
   mounted(){
      this.getCluster();
-     this.getVersion();
-     this.getMeta();
   }
 }
 </script>
