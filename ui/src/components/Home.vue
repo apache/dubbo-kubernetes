@@ -83,9 +83,7 @@ export default {
       this.$axios.get('/metrics/cluster').then(response => {
         console.log(response)
         this.clusterData =  Object.entries(response.data.data).map(([name, number]) => ({ name, number }));
-        console.log(this.clusterData)
       })
-    }
     },
     joinArray(arr) {
       return arr.join(', ');
