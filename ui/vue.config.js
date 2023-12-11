@@ -18,10 +18,10 @@
 const path = require('path');
 
 module.exports = {
-  outputDir: "dist",
+  outputDir: "dist/admin",
   lintOnSave: false,
   assetsDir: 'static',
-  publicPath: '/',
+  publicPath: '/admin',
   devServer: {
     port: 38082,
     historyApiFallback: {
