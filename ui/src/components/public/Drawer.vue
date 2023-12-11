@@ -85,7 +85,7 @@ export default {
     window.getApp.$on('DRAWER_TOGGLED', () => {
       this.drawer = (!this.drawer)
     })
-    axios.get('/dubbo-admin-info.json').then(response => {
+    axios.get('/admin/dubbo-admin-info.json').then(response => {
       this.config = response.data
     })
   },
