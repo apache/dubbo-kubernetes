@@ -30,7 +30,7 @@ import (
 var Data embed.FS
 
 var FS = func() fs.FS {
-	fsys, err := fs.Sub(Data, "dist")
+	fsys, err := fs.Sub(Data, "dist/admin")
 	if err != nil {
 		panic(err)
 	}
