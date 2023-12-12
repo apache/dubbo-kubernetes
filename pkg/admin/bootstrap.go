@@ -104,7 +104,7 @@ func RegisterOther(rt core_runtime.Runtime) error {
 		if err != nil {
 			panic(err)
 		}
-		config.AdminRegistry, err = registry.Registry(c.GetProtocol(), addrUrl)
+		config.AdminRegistry, err = registry.Registry(c.GetProtocol(), addrUrl) // TODO: support k8s
 		if err != nil {
 			panic(err)
 		}
@@ -121,9 +121,15 @@ func RegisterOther(rt core_runtime.Runtime) error {
 	}
 
 	// start go routines to subscribe to registries
-	services.StartSubscribe(config.AdminRegistry)
+	if err := config.AdminRegistry.Subscribe(); err != nil {
+		logger.Errorf("Failed to subscribe to registry, error msg is %s.", err.Error())
+		return err
+	}
 	defer func() {
-		services.DestroySubscribe(config.AdminRegistry)
+		if err := config.AdminRegistry.Destroy(); err != nil {
+			logger.Errorf("Failed to destroy registry, error msg is %s.", err.Error())
+			return
+		}
 	}()
 
 	// start mock cp-server
