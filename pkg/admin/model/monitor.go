@@ -33,6 +33,8 @@ type Metadata struct {
 	ConfigCenter   string        `json:"configCenter"`
 	Registry       string        `json:"registry"`
 	MetadataCenter string        `json:"metadataCenter"`
+	Grafana        string        `json:"grafana"`
+	Prometheus     string        `json:"prometheus"`
 	Protocols      []interface{} `json:"protocols"`
 	Rules          []string      `json:"rules"`
 }
