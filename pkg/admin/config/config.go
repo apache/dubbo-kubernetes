@@ -39,4 +39,5 @@ var (
 	PrometheusAddress     string
 	PrometheusMonitorPort string
 	AdminPort             int
+	GrafanaAddress        string
 )
