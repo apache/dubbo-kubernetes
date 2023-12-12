@@ -15,60 +15,59 @@
   ~ limitations under the License.
 -->
 <template>
-    <v-container grid-list-xl fluid>
-        <v-layout row wrap>
-            <v-flex lg12>
+  <v-container grid-list-xl fluid>
+    <v-layout row wrap>
+      <v-flex lg12>
         <Breadcrumb title="homePage" :items="breads"></breadcrumb>
+      </v-flex>
+    </v-layout>
+    <v-container fluid grid-list-md>
+      <v-data-iterator
+          :items=clusterData
+          content-tag="v-layout"
+          hide-actions
+          row
+          wrap
+      >
+        <template v-slot:header>
+          <v-toolbar
+              class="mb-2"
+              color="indigo darken-5"
+              dark
+              flat
+          >
+            <v-toolbar-title>ClusterOverview</v-toolbar-title>
+          </v-toolbar>
+        </template>
+        <template v-slot:item="props">
+          <v-flex
+              xs12
+              sm6
+              md4
+              lg4
+          >
+
+            <v-card>
+              <v-card-title class="subheading font-weight-bold">{{ props.item.name }}</v-card-title>
+
+              <v-divider></v-divider>
+              <v-list dense>
+                <home-echarts style="width: 100%; height: 25vh" :value="props.item"></home-echarts>
+              </v-list>
+            </v-card>
           </v-flex>
-        </v-layout>
-        <v-container fluid grid-list-md>
-    <v-data-iterator
-      :items=clusterData
-      content-tag="v-layout"
-      hide-actions
-      row
-      wrap
-    >
-      <template v-slot:header>
-        <v-toolbar
-          class="mb-2"
-          color="indigo darken-5"
-          dark
-          flat
-        >
-          <v-toolbar-title>ClusterOverview</v-toolbar-title>
-        </v-toolbar>
-      </template>
-      <template v-slot:item="props">
-        <v-flex
-          xs12
-          sm6
-          md4
-          lg4
-        >
-          <v-card>
-            <v-card-title class="subheading font-weight-bold">{{ props.item.name }}</v-card-title>
-
-            <v-divider></v-divider>
-
-            <v-list dense>
-              <v-list-tile>
-                <v-list-tile-content>Number:</v-list-tile-content>
-                <v-list-tile-content class="align-end">{{ props.item.number }}</v-list-tile-content>
-              </v-list-tile>
-            </v-list>
-          </v-card>
-        </v-flex>
-      </template>
-    </v-data-iterator>
-        </v-container>
+        </template>
+      </v-data-iterator>
     </v-container>
+  </v-container>
 </template>
 <script>
 import Breadcrumb from './public/Breadcrumb.vue'
+import HomeEcharts from "./dashboard/homeEcharts.vue";
+
 export default {
   name: 'ClusterOverview',
-  components: { Breadcrumb },
+  components: {HomeEcharts, Breadcrumb},
   data: () => ({
     breads: [
       {
@@ -76,21 +75,21 @@ export default {
         href: ''
       }
     ],
-    clusterData:[],
+    clusterData: [],
   }),
-  methods:{
-    getCluster () {
+  methods: {
+    getCluster() {
       this.$axios.get('/metrics/cluster').then(response => {
         console.log(response)
-        this.clusterData =  Object.entries(response.data.data).map(([name, number]) => ({ name, number }));
+        this.clusterData = Object.entries(response.data.data).map(([name, number]) => ({name, number}));
       })
     },
     joinArray(arr) {
       return arr.join(', ');
     }
   },
-  mounted(){
-     this.getCluster();
+  mounted() {
+    this.getCluster();
   }
 }
 </script>

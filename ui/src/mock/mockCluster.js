@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -25,13 +24,13 @@ console.log(random) // 简单使用就不操作了，需要操作的可以去看
 
 // 3、基本用法 Mock.mock(url, type, data) // 参数文档 https://github.com/nuysoft/Mock/wiki
 Mock.mock('/mock/metrics/cluster', 'get', {
-  code: 200,
-  message: '成功',
-  data: {
-    all:0,
-    application:0,
-    consumers:0,
-    providers:0,
-    services:0
-  }
+    code: 200,
+    message: '成功',
+    data: {
+        all: Mock.mock('@integer(100, 500)'),
+        application: Mock.mock('@integer(20, 39)'),
+        consumers: Mock.mock('@integer(20, 39)'),
+        providers: Mock.mock('@integer(20, 39)'),
+        services: Mock.mock('@integer(20, 39)'),
+    }
 })
