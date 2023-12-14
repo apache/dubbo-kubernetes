@@ -65,6 +65,7 @@ GOFUMPT  ?= $(LOCALBIN)/gofumpt
 SWAGGER_VERSION ?= v1.16.1
 GOLANG_LINT_VERSION ?= v1.52.2
 GOFUMPT_VERSION ?= latest
+NODE_VERSION ?= $(shell cat ./ui-vue3/.nvmrc | tr -cd [:digit:].)
 ## docker buildx support platform
 PLATFORMS ?= linux/arm64,linux/amd64
 
@@ -145,14 +146,13 @@ build-dubboctl: ## Build binary with the dubbo dubboctl.
 
 .PHONY: build-ui
 build-ui: $(LOCALBIN)## Build the distribution of the dubbocp ui pages.
-	docker build --build-arg LDFLAGS=$(LDFLAGS) --build-arg PKGNAME=ui -t ${DUBBO_UI_IMG} ./ui
-	docker run -d --name dubbo-ui ${DUBBO_UI_IMG}
+	docker build --build-arg NODE_VERSION=${NODE_VERSION} -t ${DUBBO_UI_IMG} ./ui-vue3
+	docker create --name dubbo-ui ${DUBBO_UI_IMG}
 	docker cp dubbo-ui:/usr/share/nginx/html/ $(LOCALBIN)/ui
-	rm -f -R ./app/dubbo-ui/dist/*
-	rm -f ./bin/ui/50x.html
-	mkdir -p ./app/dubbo-ui/dist
-	cp -R ./bin/ui/* ./app/dubbo-ui/dist/
-	rm -f -R ./bin/ui
+	docker rm -f dubbo-ui
+	rm -f -R ./app/dubbo-ui/dist/
+	rm -f $(LOCALBIN)/ui/50x.html $(LOCALBIN)/ui/index.html
+	mv $(LOCALBIN)/ui/ ./app/dubbo-ui/dist/
 
 .PHONY: image
 image: image-dubbocp  image-ui ## Build docker image with the dubbocp dubbo-ui
