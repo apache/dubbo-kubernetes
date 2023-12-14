@@ -34,7 +34,10 @@ import (
 	"sync"
 )
 
-var subscribeUrl *common.URL
+var (
+	subscribeUrl *common.URL
+	urlIdsMapper sync.Map // use to cache service key md5 value
+)
 
 func init() {
 	registry.AddRegistry("universal", func(u *common.URL) (registry.AdminRegistry, error) {
@@ -157,8 +160,7 @@ func (r *Registry) Destroy() error {
 }
 
 type notifyListener struct {
-	mu           sync.Mutex
-	urlIdsMapper sync.Map
+	mu sync.Mutex
 }
 
 func (l *notifyListener) Notify(event *dubboRegistry.ServiceEvent) {
@@ -216,12 +218,12 @@ func (l *notifyListener) Notify(event *dubboRegistry.ServiceEvent) {
 			ids = make(map[string]*common.URL)
 			services[service] = ids
 		}
-		if md5, ok := l.urlIdsMapper.Load(serviceURL.Key()); ok {
+		if md5, ok := urlIdsMapper.Load(serviceURL.Key()); ok {
 			ids[md5.(string)] = getURLToAdd(nil, serviceURL)
 		} else {
 			md5 := util2.Md5_16bit(serviceURL.Key())
 			ids[md5] = getURLToAdd(nil, serviceURL)
-			l.urlIdsMapper.LoadOrStore(serviceURL.Key(), md5)
+			urlIdsMapper.LoadOrStore(serviceURL.Key(), md5)
 		}
 	}
 	// check categories size
@@ -249,9 +251,9 @@ func (l *notifyListener) Notify(event *dubboRegistry.ServiceEvent) {
 				})
 
 				for k, v := range value {
-					_, ok := services.(*sync.Map).Load(k)
+					_, ok := servicesMap.Load(k)
 					if !ok {
-						services.(*sync.Map).Store(k, v)
+						servicesMap.Store(k, v)
 					}
 				}
 			} else {
