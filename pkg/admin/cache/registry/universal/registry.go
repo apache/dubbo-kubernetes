@@ -22,21 +22,16 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
-	util2 "github.com/apache/dubbo-kubernetes/pkg/admin/util"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	gxset "github.com/dubbogo/gost/container/set"
 	"net/url"
-	"strings"
-	"sync"
 )
 
 var (
 	subscribeUrl *common.URL
-	urlIdsMapper sync.Map // use to cache service key md5 value
 )
 
 func init() {
@@ -159,157 +154,19 @@ func (r *Registry) Destroy() error {
 	return nil
 }
 
-type notifyListener struct {
-	mu sync.Mutex
-}
+type notifyListener struct{}
 
 func (l *notifyListener) Notify(event *dubboRegistry.ServiceEvent) {
-	var interfaceName string
-	l.mu.Lock()
-	serviceURL := event.Service
-	categories := make(map[string]map[string]map[string]*common.URL)
-	category := serviceURL.GetParam(constant.CategoryKey, "")
-	if len(category) == 0 {
-		if constant.ConsumerSide == serviceURL.GetParam(constant.Side, "") ||
-			constant.ConsumerProtocol == serviceURL.Protocol {
-			category = constant.ConsumersCategory
-		} else {
-			category = constant.ProvidersCategory
-		}
+	switch event.Action {
+	case remoting.EventTypeAdd, remoting.EventTypeUpdate:
+		UniversalCacheInstance.store(event.Service)
+	case remoting.EventTypeDel:
+		UniversalCacheInstance.delete(event.Service)
 	}
-	if event.Action == remoting.EventTypeDel {
-		if services, ok := cache.InterfaceRegistryCache.Load(category); ok {
-			if services != nil {
-				servicesMap, ok := services.(*sync.Map)
-				if !ok {
-					// servicesMap type error
-					logger.Logger().Error("servicesMap type not *sync.Map")
-					return
-				}
-				group := serviceURL.Group()
-				version := serviceURL.Version()
-				if constant.AnyValue != group && constant.AnyValue != version {
-					deleteURL(servicesMap, serviceURL)
-				} else {
-					// iterator services
-					servicesMap.Range(func(key, value interface{}) bool {
-						if util2.GetInterface(key.(string)) == serviceURL.Service() &&
-							(constant.AnyValue == group || group == util2.GetGroup(key.(string))) &&
-							(constant.AnyValue == version || version == util2.GetVersion(key.(string))) {
-							deleteURL(servicesMap, serviceURL)
-						}
-						return true
-					})
-				}
-			}
-		}
-	} else {
-		interfaceName = serviceURL.Service()
-		var services map[string]map[string]*common.URL
-		if s, ok := categories[category]; ok {
-			services = s
-		} else {
-			services = make(map[string]map[string]*common.URL)
-			categories[category] = services
-		}
-		service := serviceURL.ServiceKey()
-		ids, found := services[service]
-		if !found {
-			ids = make(map[string]*common.URL)
-			services[service] = ids
-		}
-		if md5, ok := urlIdsMapper.Load(serviceURL.Key()); ok {
-			ids[md5.(string)] = getURLToAdd(nil, serviceURL)
-		} else {
-			md5 := util2.Md5_16bit(serviceURL.Key())
-			ids[md5] = getURLToAdd(nil, serviceURL)
-			urlIdsMapper.LoadOrStore(serviceURL.Key(), md5)
-		}
-	}
-	// check categories size
-	if len(categories) > 0 {
-		for category, value := range categories {
-			services, ok := cache.InterfaceRegistryCache.Load(category)
-			if ok {
-				servicesMap, ok := services.(*sync.Map)
-				if !ok {
-					// servicesMap type error
-					logger.Logger().Error("servicesMap type not *sync.Map")
-					return
-				}
-				// iterator services key set
-				servicesMap.Range(func(key, inner any) bool {
-					ids, ok := value[key.(string)]
-					if util2.GetInterface(key.(string)) == interfaceName && !ok {
-						servicesMap.Delete(key)
-					} else {
-						for k, v := range ids {
-							inner.(map[string]*common.URL)[k] = getURLToAdd(inner.(map[string]*common.URL)[k], v)
-						}
-					}
-					return true
-				})
-
-				for k, v := range value {
-					_, ok := servicesMap.Load(k)
-					if !ok {
-						servicesMap.Store(k, v)
-					}
-				}
-			} else {
-				services = &sync.Map{}
-				cache.InterfaceRegistryCache.Store(category, services)
-				for k, v := range value {
-					services.(*sync.Map).Store(k, v)
-				}
-			}
-		}
-	}
-
-	l.mu.Unlock()
 }
 
 func (l *notifyListener) NotifyAll(events []*dubboRegistry.ServiceEvent, f func()) {
 	for _, event := range events {
 		l.Notify(event)
-	}
-}
-func getURLToAdd(url *common.URL, newURL *common.URL) *common.URL {
-	if url == nil {
-		newURL = newURL.Clone()
-		if currentType, ok := newURL.GetNonDefaultParam(constant.RegistryType); !ok {
-			newURL.SetParam(constant.RegistryType, constant.RegistryInterface)
-		} else {
-			newURL.SetParam(constant.RegistryType, strings.ToUpper(currentType))
-		}
-	} else {
-		currentType, _ := url.GetNonDefaultParam(constant.RegistryType)
-		changedType, _ := newURL.GetNonDefaultParam(constant.RegistryType)
-		if currentType == constant.RegistryAll || currentType != changedType {
-			newURL = newURL.Clone()
-			newURL.SetParam(constant.RegistryType, constant.RegistryAll)
-		}
-	}
-	return newURL
-}
-
-func deleteURL(servicesMap *sync.Map, serviceURL *common.URL) {
-	if innerServices, ok := servicesMap.Load(serviceURL.Service()); ok {
-		innerServicesMap := innerServices.(map[string]*common.URL)
-		if len(innerServicesMap) > 0 {
-			for _, url := range innerServicesMap {
-				currentType, _ := url.GetNonDefaultParam(constant.RegistryType)
-				changedType := serviceURL.GetParam(constant.RegistryType, constant.RegistryInterface)
-				if currentType == constant.RegistryAll {
-					if changedType == constant.RegistryInstance {
-						url.SetParam(constant.RegistryType, constant.RegistryInterface)
-					} else {
-						url.SetParam(constant.RegistryType, constant.RegistryInstance)
-					}
-				} else if currentType == changedType {
-					servicesMap.Delete(serviceURL.Service())
-				}
-			}
-		}
 	}
 }
