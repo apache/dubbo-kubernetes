@@ -20,7 +20,7 @@
     <a-flex wrap="wrap" gap="small" :vertical="false" justify="space-between" align="center">
       <a-card
           class="statistic-card"
-          v-for="(v, k, i) in clusterInfo.report">
+          v-for="(v, k) in clusterInfo.report">
         <a-flex gap="middle" :vertical="false" justify="space-between" align="center">
           <a-statistic :value="v.value" class="statistic">
             <template #prefix>
@@ -40,20 +40,20 @@
                     layout="horizontal">
 
       <a-descriptions-item label="versions">
-        <a-tag :color="PRIMARY_COLOR" v-for="v in clusterInfo.info.versions">{{ v }}</a-tag>
+        <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.versions">{{ v }}</a-tag>
       </a-descriptions-item>
       <a-descriptions-item label="protocols">
-        <a-tag :color="PRIMARY_COLOR" v-for="v in clusterInfo.info.protocols">{{ v }}</a-tag>
+        <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.protocols">{{ v }}</a-tag>
       </a-descriptions-item>
-      <a-descriptions-item label="configCenter">{{ clusterInfo.info.configCenter }}</a-descriptions-item>
-      <a-descriptions-item label="registry">{{ clusterInfo.info.registry }}</a-descriptions-item>
-      <a-descriptions-item label="metadataCenter">{{ clusterInfo.info.metadataCenter }}</a-descriptions-item>
-      <a-descriptions-item label="grafana">{{ clusterInfo.info.grafana }}</a-descriptions-item>
-      <a-descriptions-item label="prometheus">{{ clusterInfo.info.prometheus }}</a-descriptions-item>
-      <a-descriptions-item label="rules" :span="4">
-        <a-tag :color="PRIMARY_COLOR" v-for="v in clusterInfo.info.rules">{{ v }}</a-tag>
-      </a-descriptions-item>
+      <a-descriptions-item label="configCenter">{{ metricsMetadata.info.configCenter }}</a-descriptions-item>
+      <a-descriptions-item label="registry">{{ metricsMetadata.info.registry }}</a-descriptions-item>
+      <a-descriptions-item label="metadataCenter">{{ metricsMetadata.info.metadataCenter }}</a-descriptions-item>
+      <a-descriptions-item label="grafana">{{ metricsMetadata.info.grafana }}</a-descriptions-item>
+      <a-descriptions-item label="prometheus">{{ metricsMetadata.info.prometheus }}</a-descriptions-item>
       <a-descriptions-item label="Remark">empty</a-descriptions-item>
+      <a-descriptions-item label="rules" :span="4">
+        <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.rules">{{ v }}</a-tag>
+      </a-descriptions-item>
     </a-descriptions>
     <div id="report_container"></div>
 
@@ -65,6 +65,7 @@ import {Icon} from '@iconify/vue'
 import {PRIMARY_COLOR} from '@/base/constants'
 import {onMounted, reactive} from 'vue'
 import {getClusterInfo} from '@/api/service/clusterInfo'
+import {getMetricsMetadata} from '@/api/service/serverInfo'
 import {useRoute} from "vue-router";
 import {Chart} from '@antv/g2';
 
@@ -77,29 +78,34 @@ let clusterInfo = reactive({
   report: <{ [key: string]: { value: string, icon: string } }>{}
 })
 
+let metricsMetadata = reactive({
+  info: <{ [key: string]: string }>{}
+})
+
 onMounted(async () => {
-  let {data} = await getClusterInfo({})
-  clusterInfo.info = data
+  let clusterData = (await getClusterInfo({})).data
+  metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
+  clusterInfo.info = <{ [key: string]: string }>clusterData
   clusterInfo.report = {
     all: {
       icon: 'ic:outline-all-inclusive',
-      value: data.all
+      value: clusterInfo.info.all
     },
     application: {
       icon: 'cil:applications-settings',
-      value: data.application
+      value: clusterInfo.info.application
     },
     services: {
       icon: 'carbon:microservices-1',
-      value: data.services
+      value: clusterInfo.info.services
     },
     providers: {
       icon: 'arcticons:newsprovider',
-      value: data.providers
+      value: clusterInfo.info.providers
     },
     consumers: {
       icon: 'iconoir:consumable',
-      value: data.consumers
+      value: clusterInfo.info.consumers
     }
   };
 
@@ -112,11 +118,11 @@ onMounted(async () => {
   chart
       .interval()
       .data([
-        {name: 'all', value: data.all},
-        {name: 'application', value: data.application},
-        {name: 'services', value: data.services},
-        {name: 'providers', value: data.providers},
-        {name: 'consumers', value: data.consumers},
+        {name: 'all', value: clusterInfo.info.all},
+        {name: 'application', value: clusterInfo.info.application},
+        {name: 'services', value: clusterInfo.info.services},
+        {name: 'providers', value: clusterInfo.info.providers},
+        {name: 'consumers', value: clusterInfo.info.consumers},
       ])
       .encode('x', 'name')
       .encode('y', 'value')

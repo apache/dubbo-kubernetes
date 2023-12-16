@@ -15,18 +15,13 @@
  * limitations under the License.
  */
 
-import Mock from 'mockjs'
 
+import request from "@/base/http/request";
 
-Mock.mock('/mock/metrics/metadata', 'get', {
-  code: 200,
-  message: '成功',
-  data: {
-    versions: [],
-    configCenter: '127.0.0.1:2181',
-    registry: '127.0.0.1:2181',
-    metadataCenter: '127.0.0.1:2181',
-    protocols: [],
-    rules: ['DemoService:1.0.0:test.configurators', 'DemoService4:bb:aa.configurators']
-  }
-})
+export const getMetricsMetadata = (params: any):Promise<any> => {
+    return request({
+        url: '/metrics/metadata',
+        method: 'get',
+        params
+    })
+}
