@@ -26,7 +26,7 @@
             <template #prefix>
               <Icon class="statistic-icon" icon="svg-spinners:pulse-ring"></Icon>
             </template>
-            <template #title> {{ $t(k) }}</template>
+            <template #title> {{ $t(k.toString()) }}</template>
           </a-statistic>
           <div class="statistic-icon-big">
             <Icon :icon="v.icon"></Icon>

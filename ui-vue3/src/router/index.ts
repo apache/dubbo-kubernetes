@@ -20,7 +20,8 @@ import type { RouterMeta } from '@/router/RouterMeta'
 import { routes } from '@/router/defaultRoutes'
 
 const options = {
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory('/admin'),
+
   routes
 }
 const router = createRouter(options)

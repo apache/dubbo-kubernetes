@@ -16,7 +16,7 @@
 -->
 <template>
   <div class="__container_home_index">
-    <h1>{{ $t(useRoute().name) }}</h1>
+    <h1>{{ $t(routeName) }}</h1>
   </div>
 </template>
 
@@ -24,6 +24,6 @@
 import { Icon } from '@iconify/vue'
 import IconCommunity from '@/components/icons/IconCommunity.vue'
 import {useRoute} from "vue-router";
-const routeName:string = useRoute().name
+const  routeName = <string>useRoute().name
 </script>
 <style lang="less" scoped></style>
