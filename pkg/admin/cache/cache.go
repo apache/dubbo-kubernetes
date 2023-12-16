@@ -20,7 +20,6 @@ type ServiceModel struct {
 	Port         string
 	RegistryType string
 
-	//URL      *common.URL
 	Provider *model.Provider
 	Consumer *model.Consumer
 }
