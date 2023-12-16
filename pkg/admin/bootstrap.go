@@ -68,6 +68,7 @@ func RegisterDatabase(rt core_runtime.Runtime) error {
 
 func RegisterOther(rt core_runtime.Runtime) error {
 	config.AdminPort = rt.Config().Admin.AdminPort
+	config.GrafanaAddress = rt.Config().Admin.Grafana.Address
 	config.PrometheusAddress = rt.Config().Admin.Prometheus.Address
 	config.PrometheusMonitorPort = rt.Config().Admin.Prometheus.MonitorPort
 	address := rt.Config().Admin.ConfigCenter

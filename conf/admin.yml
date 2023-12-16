@@ -19,6 +19,8 @@ admin:
     address: zookeeper://127.0.0.1:2181
   registry:
     address: zookeeper://127.0.0.1:2181
+  grafana:
+    address: 127.0.0.1:3000
   prometheus:
     address: 127.0.0.1:9090
     monitorPort: 22222
