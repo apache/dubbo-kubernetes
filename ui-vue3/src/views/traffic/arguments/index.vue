@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import IconCommunity from '@/components/icons/IconCommunity.vue'
+
 import {useRoute} from "vue-router";
 const  routeName = <string>useRoute().name
 </script>
