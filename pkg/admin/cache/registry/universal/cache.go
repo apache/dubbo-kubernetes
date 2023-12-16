@@ -1,12 +1,13 @@
 package universal
 
 import (
+	"sync"
+
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/util"
-	"sync"
 )
 
 var UniversalCacheInstance *UniversalCache
@@ -19,6 +20,11 @@ type UniversalCache struct {
 
 func NewUniversalCache() *UniversalCache {
 	return &UniversalCache{}
+}
+
+func (uc *UniversalCache) GetProviders(namespace string, selector cache.Selector) ([]*cache.ServiceModel, error) {
+	// TODO: implement
+	return nil, nil
 }
 
 func (uc *UniversalCache) getId(key string) string {

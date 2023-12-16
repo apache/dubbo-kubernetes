@@ -5,12 +5,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"k8s.io/client-go/informers"
-	appsv1 "k8s.io/client-go/listers/apps/v1"
-	corev1 "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
+	appsv1Listers "k8s.io/client-go/listers/apps/v1"
+	corev1Listers "k8s.io/client-go/listers/core/v1"
+	kubeToolsCache "k8s.io/client-go/tools/cache"
 )
 
 var KubernetesCacheInstance *KubernetesCache
@@ -35,17 +36,22 @@ type KubernetesCache struct {
 	namespaceStopChan    map[string]chan struct{}
 }
 
-type cacheLister struct {
-	configMapLister   corev1.ConfigMapLister
-	daemonSetLister   appsv1.DaemonSetLister
-	deploymentLister  appsv1.DeploymentLister
-	endpointLister    corev1.EndpointsLister
-	podLister         corev1.PodLister
-	replicaSetLister  appsv1.ReplicaSetLister
-	serviceLister     corev1.ServiceLister
-	statefulSetLister appsv1.StatefulSetLister
+func (c *KubernetesCache) GetProviders(namespace string, selector cache.Selector) ([]*cache.ServiceModel, error) {
+	// TODO: implement
+	return nil, nil
+}
 
-	cachesSynced []cache.InformerSynced
+type cacheLister struct {
+	configMapLister   corev1Listers.ConfigMapLister
+	daemonSetLister   appsv1Listers.DaemonSetLister
+	deploymentLister  appsv1Listers.DeploymentLister
+	endpointLister    corev1Listers.EndpointsLister
+	podLister         corev1Listers.PodLister
+	replicaSetLister  appsv1Listers.ReplicaSetLister
+	serviceLister     corev1Listers.ServiceLister
+	statefulSetLister appsv1Listers.StatefulSetLister
+
+	cachesSynced []kubeToolsCache.InformerSynced
 }
 
 func (c *KubernetesCache) getCacheLister(namespace string) *cacheLister {
@@ -126,7 +132,7 @@ func (c *KubernetesCache) startInformer(namespace string) error {
 	go informer.Start(stop)
 
 	logger.Infof("[dubbo-cp cache] Waiting for %s informer caches to sync", scope)
-	if !cache.WaitForCacheSync(stop, c.getCacheLister(namespace).cachesSynced...) {
+	if !kubeToolsCache.WaitForCacheSync(stop, c.getCacheLister(namespace).cachesSynced...) {
 		logger.Errorf("[dubbo-cp cache] Failed to sync %s informer caches", scope)
 		return fmt.Errorf("failed to sync %s informer caches", scope)
 	}
@@ -160,4 +166,3 @@ func (c *KubernetesCache) stopInformer(namespace string) {
 		}
 	}
 }
-

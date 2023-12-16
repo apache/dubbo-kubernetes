@@ -6,7 +6,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
-type Cache interface{}
+type Cache interface {
+	GetProviders(namespace string, selector Selector) ([]*ServiceModel, error)
+	// TODO: add more methods
+}
 
 // ServiceModel is a struct that contains the service information in the cache
 type ServiceModel struct {
