@@ -231,6 +231,8 @@ func (p *PrometheusServiceImpl) Metadata() (model.Metadata, error) {
 	metadata.Registry = config.RegistryCenter.GetURL().Location
 	metadata.MetadataCenter = config.RegistryCenter.GetURL().Location
 	metadata.ConfigCenter = config.RegistryCenter.GetURL().Location
+	metadata.Grafana = config.GrafanaAddress
+	metadata.Prometheus = config.PrometheusAddress
 
 	// rules
 	rules, err := GetRules("", "*")
