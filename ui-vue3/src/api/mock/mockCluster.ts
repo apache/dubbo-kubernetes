@@ -14,20 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {createApp} from 'vue'
-import Antd from 'ant-design-vue'
 
-import router from './router'
-import App from './App.vue'
-import 'ant-design-vue/dist/reset.css'
-import {i18n} from '@/base/i18n'
-import './api/mock/mockServer'
-import './api/mock/mockCluster'
-import './api/mock/mockVersion'
+import Mock from 'mockjs'
+Mock.mock('/mock/metrics/cluster', 'get', {
+    code: 200,
+    message: '成功',
+    data: {
+        all: Mock.mock('@integer(100, 500)'),
+        application: Mock.mock('@integer(80, 200)'),
+        consumers: Mock.mock('@integer(80, 200)'),
+        providers: Mock.mock('@integer(80, 200)'),
+        services: Mock.mock('@integer(80, 200)'),
 
-import Vue3ColorPicker from 'vue3-colorpicker'
-import 'vue3-colorpicker/style.css'
-
-const app = createApp(App)
-
-app.use(Antd).use(Vue3ColorPicker).use(i18n).use(router).mount('#app')
+    }
+})
