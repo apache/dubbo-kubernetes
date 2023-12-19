@@ -23,16 +23,16 @@ else
   OSEXT="linux"
 fi
 
-# Determine the latest Dubbo version by version number ignoring alpha, beta, and rc versions.
-if [ "${DUBBO_VERSION}" = "" ] ; then
-  DUBBO_VERSION="$(curl -sL https://github.com/dawnzzz/dubbo-kubernetes/releases | \
+# Determine the latest Dubboctl version by version number ignoring alpha, beta, and rc versions.
+if [ "${DUBBOCTL_VERSION}" = "" ] ; then
+  DUBBOCTL_VERSION="$(curl -sL https://github.com/apache/dubbo-kubernetes/releases | \
                   grep -E -o 'dubboctl/([v,V]?)[0-9]*.[0-9]*.[0-9]*' | sort -V | \
                   tail -1 | awk -F'/' '{ print $2}')"
-  DUBBO_VERSION="${DUBBO_VERSION##*/}"
+  DUBBOCTL_VERSION="${DUBBOCTL_VERSION##*/}"
 fi
 
-if [ "${DUBBO_VERSION}" = "" ] ; then
-  printf "Unable to get latest Dubbo version. Set DUBBO_VERSION env var and re-run. For example: export DUBBO_VERSION=0.0.1\n"
+if [ "${DUBBOCTL_VERSION}" = "" ] ; then
+  printf "Unable to get latest Dubboctl version. Set DUBBOCTL_VERSION env var and re-run. For example: export DUBBOCTL_VERSION=0.0.1\n"
   exit 1;
 fi
 
@@ -43,13 +43,13 @@ fi
 
 case "${LOCAL_ARCH}" in
   x86_64|amd64)
-    DUBBO_ARCH=amd64
+    DUBBOCTL_ARCH=amd64
     ;;
   armv8*|aarch64*|arm64)
-    DUBBO_ARCH=arm64
+    DUBBOCTL_ARCH=arm64
     ;;
   armv*)
-    DUBBO_ARCH=armv7
+    DUBBOCTL_ARCH=armv7
     ;;
   *)
     echo "This system's architecture, ${LOCAL_ARCH}, isn't supported"
@@ -64,17 +64,17 @@ download_failed () {
 
 # Downloads the dubboctl binary archive.
 tmp=$(mktemp -d /tmp/dubboctl.XXXXXX)
-NAME="dubboctl-${DUBBO_VERSION}"
+NAME="dubboctl-${DUBBOCTL_VERSION}"
 
-ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/dubboctl%2F${DUBBO_VERSION}/dubboctl-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/dubboctl%2F${DUBBOCTL_VERSION}/dubboctl-${DUBBOCTL_VERSION}-${OSEXT}-${DUBBOCTL_ARCH}.tar.gz"
 
 with_arch() {
   printf "\nDownloading %s from %s ...\n" "${NAME}" "$ARCH_URL"
   if ! curl -o /dev/null -sIf "$ARCH_URL"; then
-    printf "\n%s is not found, please specify a valid DUBBO_VERSION and TARGET_ARCH\n" "$ARCH_URL"
+    printf "\n%s is not found, please specify a valid DUBBOCTL_VERSION and TARGET_ARCH\n" "$ARCH_URL"
     exit 1
   fi
-  filename="dubboctl-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+  filename="dubboctl-${DUBBOCTL_VERSION}-${OSEXT}-${DUBBOCTL_ARCH}.tar.gz"
   curl -fsL -o "${tmp}/${filename}" "$ARCH_URL"
   tar -xzf "${tmp}/${filename}" -C "${tmp}"
 }
@@ -98,3 +98,4 @@ printf "\n"
 printf "Begin the Dubbo pre-installation check by running:\n"
 printf "\t dubboctl x precheck \n"
 printf "\n"
+
