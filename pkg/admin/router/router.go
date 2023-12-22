@@ -134,6 +134,7 @@ func InitRouter() *Router {
 		mockRoute.POST("/", handlers.CreateOrUpdateMockRule)
 		mockRoute.DELETE("/", handlers.DeleteMockRuleById)
 		mockRoute.GET("/list", handlers.ListMockRulesByPage)
+		mockRoute.POST("/testing", handlers.MockProtobufRequest)
 	}
 
 	trafficTimeout := router.Group("/api/:env/traffic/timeout")
