@@ -12,7 +12,9 @@ import (
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
-func LoadFileDesc(filename string) (*descriptorpb.FileDescriptorProto, []byte) {
+type MockRequest struct{}
+
+func (m *MockRequest) LoadFileDesc(filename string) (*descriptorpb.FileDescriptorProto, []byte) {
 	fd, err := protoregistry.GlobalFiles.FindFileByPath(filename)
 	if err != nil {
 		panic(err)
@@ -26,13 +28,13 @@ func LoadFileDesc(filename string) (*descriptorpb.FileDescriptorProto, []byte) {
 	return fdProto, b
 }
 
-func LoadFileDescDynamic(b []byte) (*descriptorpb.FileDescriptorProto, protoreflect.FileDescriptor, []byte) {
-	m := new(descriptorpb.FileDescriptorProto)
-	if err := proto.Unmarshal(b, m); err != nil {
+func (m *MockRequest) LoadFileDescDynamic(b []byte) (*descriptorpb.FileDescriptorProto, protoreflect.FileDescriptor, []byte) {
+	fileDescriptorProto := new(descriptorpb.FileDescriptorProto)
+	if err := proto.Unmarshal(b, fileDescriptorProto); err != nil {
 		panic(fmt.Sprintf("failed to unmarshal dynamic proto raw descriptor"))
 	}
 
-	fd, err := protodesc.NewFile(m, nil)
+	fd, err := protodesc.NewFile(fileDescriptorProto, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -43,16 +45,16 @@ func LoadFileDescDynamic(b []byte) (*descriptorpb.FileDescriptorProto, protorefl
 	}
 
 	for i := 0; i < fd.Messages().Len(); i++ {
-		m := fd.Messages().Get(i)
-		if err := protoregistry.GlobalTypes.RegisterMessage(dynamicpb.NewMessageType(m)); err != nil {
+		fileDescriptorProto := fd.Messages().Get(i)
+		if err := protoregistry.GlobalTypes.RegisterMessage(dynamicpb.NewMessageType(fileDescriptorProto)); err != nil {
 			panic(err)
 		}
 	}
 
-	return m, fd, b
+	return fileDescriptorProto, fd, b
 }
 
-func GetListServices(stream rpb.ServerReflection_ServerReflectionInfoClient) []*rpb.ServiceResponse {
+func (m *MockRequest) GetListServices(stream rpb.ServerReflection_ServerReflectionInfoClient) []*rpb.ServiceResponse {
 	if err := stream.Send(&rpb.ServerReflectionRequest{
 		MessageRequest: &rpb.ServerReflectionRequest_ListServices{},
 	}); err != nil {

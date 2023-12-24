@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
+	g "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	rf "google.golang.org/grpc/reflection"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
@@ -38,20 +38,23 @@ var (
 	fdProto2ExtByte  []byte
 	fdProto2Ext2Byte []byte
 	fdDynamicByte    []byte
+	mr               *MockRequest
 )
 
 func TestAtomic(t *testing.T) {
+	initProtoFile()
 	assert.Equal(t, romanRegex, romanRegex)
 }
 
 func initProtoFile() {
 	romanRegex = regexp.MustCompile(`^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$`)
-	fdTest, fdTestByte = LoadFileDesc("app/dubboctl/internal/mock/proto/test.proto")
-	fdTestv3, fdTestv3Byte = LoadFileDesc("app/dubboctl/internal/mock/proto/testv3.proto")
-	fdProto2, fdProto2Byte = LoadFileDesc("app/dubboctl/internal/mock/proto/proto2.proto")
-	fdProto2Ext, fdProto2ExtByte = LoadFileDesc("app/dubboctl/internal/mock/proto/proto2_ext.proto")
-	fdProto2Ext2, fdProto2Ext2Byte = LoadFileDesc("app/dubboctl/internal/mock/proto/proto2_ext2.proto")
-	fdDynamic, fdDynamicFile, fdDynamicByte = LoadFileDescDynamic(pbv3.FileDynamicProtoRawDesc)
+	//fdTest, fdTestByte = LoadFileDesc("app/dubboctl/internal/mock/proto/test.proto")
+	//fdTestv3, fdTestv3Byte = LoadFileDesc("app/dubboctl/internal/mock/proto/testv3.proto")
+	//fdProto2, fdProto2Byte = LoadFileDesc("app/dubboctl/internal/mock/proto/proto2.proto")
+	//fdProto2Ext, fdProto2ExtByte = LoadFileDesc("app/dubboctl/internal/mock/proto/proto2_ext.proto")
+	mr = &MockRequest{}
+	fdProto2Ext2, fdProto2Ext2Byte = mr.LoadFileDesc("app/dubboctl/internal/mock/proto/proto2_ext2.proto")
+	fdDynamic, fdDynamicFile, fdDynamicByte = mr.LoadFileDescDynamic(pbv3.FileDynamicProtoRawDesc)
 }
 
 func TestReflectionEnd2end(t *testing.T) {
@@ -62,7 +65,7 @@ func TestReflectionEnd2end(t *testing.T) {
 		fmt.Printf("failed to listen: %v", err)
 	}
 	//reflect server
-	s := grpc.NewServer()
+	s := g.NewServer()
 	pb.RegisterSearchServiceServer(s, &server{})
 	pbv3.RegisterSearchServiceV3Server(s, &serverV3{})
 
@@ -73,7 +76,7 @@ func TestReflectionEnd2end(t *testing.T) {
 	go s.Serve(lis)
 
 	// Create client.
-	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := g.Dial(lis.Addr().String(), g.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		fmt.Printf("cannot connect to server: %v", err)
 	}
@@ -82,7 +85,7 @@ func TestReflectionEnd2end(t *testing.T) {
 	c := rpb.NewServerReflectionClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
 	defer cancel()
-	stream, err := c.ServerReflectionInfo(ctx, grpc.WaitForReady(true))
+	stream, err := c.ServerReflectionInfo(ctx, g.WaitForReady(true))
 	if err != nil {
 		fmt.Printf("cannot get ServerReflectionInfo: %v", err)
 	}
@@ -94,7 +97,7 @@ func TestReflectionEnd2end(t *testing.T) {
 
 func testListServices(t *testing.T, stream rpb.ServerReflection_ServerReflectionInfoClient) {
 
-	services := GetListServices(stream)
+	services := mr.GetListServices(stream)
 	want := []string{
 		"grpc.testingv3.SearchServiceV3",
 		"grpc.testing.SearchService",
