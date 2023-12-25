@@ -6,8 +6,11 @@ import (
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/selector"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	appsv1Listers "k8s.io/client-go/listers/apps/v1"
 	corev1Listers "k8s.io/client-go/listers/core/v1"
@@ -36,11 +39,6 @@ type KubernetesCache struct {
 	namespaceStopChan    map[string]chan struct{}
 }
 
-func (c *KubernetesCache) GetProviders(namespace string, selector cache.Selector) ([]*cache.ServiceModel, error) {
-	// TODO: implement
-	return nil, nil
-}
-
 type cacheLister struct {
 	configMapLister   corev1Listers.ConfigMapLister
 	daemonSetLister   appsv1Listers.DaemonSetLister
@@ -54,6 +52,264 @@ type cacheLister struct {
 	cachesSynced []kubeToolsCache.InformerSynced
 }
 
+func (c *KubernetesCache) GetApplications(namespace string) ([]*cache.ApplicationModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	applicationSet := make(map[string]struct{})
+	deployments, err := c.getCacheLister(namespace).deploymentLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*cache.ApplicationModel, 0)
+	for _, deployment := range deployments {
+		if _, ok := deployment.Labels[constant.ApplicationLabel]; ok {
+			if _, exist := applicationSet[constant.ApplicationLabel]; !exist {
+				applicationSet[deployment.Labels[constant.ApplicationLabel]] = struct{}{} // mark as exist
+				res = append(res, &cache.ApplicationModel{
+					Name: deployment.Name,
+				})
+			}
+		}
+	}
+
+	return res, nil
+}
+
+func (c *KubernetesCache) GetWorkloads(namespace string) ([]*cache.WorkloadModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	res := make([]*cache.WorkloadModel, 0)
+
+	deployments, err := c.getCacheLister(namespace).deploymentLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, deployment := range deployments {
+		if _, ok := deployment.Labels[constant.ApplicationLabel]; ok {
+			res = append(res, &cache.WorkloadModel{
+				Application: &cache.ApplicationModel{
+					Name: deployment.Labels[constant.ApplicationLabel],
+				},
+				Name:   deployment.Name,
+				Type:   constant.DeploymentType,
+				Image:  deployment.Spec.Template.Spec.Containers[0].Image,
+				Labels: deployment.Labels,
+			})
+		}
+	}
+
+	statefulSets, err := c.getCacheLister(namespace).statefulSetLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, statefulSet := range statefulSets {
+		if _, ok := statefulSet.Labels[constant.ApplicationLabel]; ok {
+			res = append(res, &cache.WorkloadModel{
+				Application: &cache.ApplicationModel{
+					Name: statefulSet.Labels[constant.ApplicationLabel],
+				},
+				Name:   statefulSet.Name,
+				Type:   constant.StatefulSetType,
+				Image:  statefulSet.Spec.Template.Spec.Containers[0].Image,
+				Labels: statefulSet.Labels,
+			})
+		}
+	}
+
+	daemonSets, err := c.getCacheLister(namespace).daemonSetLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, daemonSet := range daemonSets {
+		if _, ok := daemonSet.Labels[constant.ApplicationLabel]; ok {
+			res = append(res, &cache.WorkloadModel{
+				Application: &cache.ApplicationModel{
+					Name: daemonSet.Labels[constant.ApplicationLabel],
+				},
+				Name:   daemonSet.Name,
+				Type:   constant.DaemonSetType,
+				Image:  daemonSet.Spec.Template.Spec.Containers[0].Image,
+				Labels: daemonSet.Labels,
+			})
+		}
+	}
+
+	return res, nil
+}
+
+func (c *KubernetesCache) GetWorkloadsWithSelector(namespace string, selector selector.Selector) ([]*cache.WorkloadModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	res := make([]*cache.WorkloadModel, 0)
+
+	deployments, err := c.getCacheLister(namespace).deploymentLister.List(selector.AsLabelsSelector())
+	if err != nil {
+		return nil, err
+	}
+	for _, deployment := range deployments {
+		res = append(res, &cache.WorkloadModel{
+			Application: &cache.ApplicationModel{
+				Name: deployment.Labels[constant.ApplicationLabel],
+			},
+			Name:   deployment.Name,
+			Type:   constant.DeploymentType,
+			Image:  deployment.Spec.Template.Spec.Containers[0].Image,
+			Labels: deployment.Labels,
+		})
+	}
+
+	statefulSets, err := c.getCacheLister(namespace).statefulSetLister.List(selector.AsLabelsSelector())
+	if err != nil {
+		return nil, err
+	}
+	for _, statefulSet := range statefulSets {
+		res = append(res, &cache.WorkloadModel{
+			Application: &cache.ApplicationModel{
+				Name: statefulSet.Labels[constant.ApplicationLabel],
+			},
+			Name:   statefulSet.Name,
+			Type:   constant.StatefulSetType,
+			Image:  statefulSet.Spec.Template.Spec.Containers[0].Image,
+			Labels: statefulSet.Labels,
+		})
+	}
+
+	daemonSets, err := c.getCacheLister(namespace).daemonSetLister.List(selector.AsLabelsSelector())
+	if err != nil {
+		return nil, err
+	}
+	for _, daemonSet := range daemonSets {
+		res = append(res, &cache.WorkloadModel{
+			Application: &cache.ApplicationModel{
+				Name: daemonSet.Labels[constant.ApplicationLabel],
+			},
+			Name:   daemonSet.Name,
+			Type:   constant.DaemonSetType,
+			Image:  daemonSet.Spec.Template.Spec.Containers[0].Image,
+			Labels: daemonSet.Labels,
+		})
+	}
+
+	return res, nil
+}
+
+func (c *KubernetesCache) GetInstances(namespace string) ([]*cache.InstanceModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	res := make([]*cache.InstanceModel, 0)
+
+	pods, err := c.getCacheLister(namespace).podLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, pod := range pods {
+		if _, ok := pod.Labels[constant.ApplicationLabel]; ok {
+			res = append(res, &cache.InstanceModel{
+				Application: &cache.ApplicationModel{
+					Name: pod.Labels[constant.ApplicationLabel],
+				},
+				Workload: &cache.WorkloadModel{
+					// TODO: implement me
+				},
+				Name:   pod.Name,
+				Ip:     pod.Status.PodIP,
+				Status: string(pod.Status.Phase),
+				Node:   pod.Spec.NodeName,
+				Labels: pod.Labels,
+			})
+		}
+	}
+
+	return res, nil
+}
+
+func (c *KubernetesCache) GetInstancesWithSelector(namespace string, selector selector.Selector) ([]*cache.InstanceModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	res := make([]*cache.InstanceModel, 0)
+
+	pods, err := c.getCacheLister(namespace).podLister.List(selector.AsLabelsSelector())
+	if err != nil {
+		return nil, err
+	}
+	for _, pod := range pods {
+		res = append(res, &cache.InstanceModel{
+			Application: &cache.ApplicationModel{
+				Name: pod.Labels[constant.ApplicationLabel],
+			},
+			Workload: &cache.WorkloadModel{
+				// TODO: implement me
+			},
+			Name:   pod.Name,
+			Ip:     pod.Status.PodIP,
+			Status: string(pod.Status.Phase),
+			Node:   pod.Spec.NodeName,
+			Labels: pod.Labels,
+		})
+	}
+
+	return res, nil
+}
+
+func (c *KubernetesCache) GetServices(namespace string) ([]*cache.ServiceModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	res := make([]*cache.ServiceModel, 0)
+	services, err := c.getCacheLister(namespace).serviceLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, service := range services {
+		if _, ok := service.Labels[constant.ApplicationLabel]; ok {
+			res = append(res, &cache.ServiceModel{
+				Application: &cache.ApplicationModel{
+					Name: service.Labels[constant.ApplicationLabel],
+				},
+				Name:       service.Name,
+				Labels:     service.Labels,
+				ServiceKey: service.Labels[constant.ServiceKeyLabel],
+				Group:      service.Labels[constant.GroupLabel],
+				Version:    service.Labels[constant.VersionLabel],
+			})
+		}
+	}
+
+	return res, nil
+}
+
+func (c *KubernetesCache) GetServicesWithSelector(namespace string, selector selector.Selector) ([]*cache.ServiceModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	res := make([]*cache.ServiceModel, 0)
+	services, err := c.getCacheLister(namespace).serviceLister.List(selector.AsLabelsSelector())
+	if err != nil {
+		return nil, err
+	}
+	for _, service := range services {
+		res = append(res, &cache.ServiceModel{
+			Application: &cache.ApplicationModel{
+				Name: service.Labels[constant.ApplicationLabel],
+			},
+			Name:       service.Name,
+			Labels:     service.Labels,
+			ServiceKey: service.Labels[constant.ServiceKeyLabel],
+			Group:      service.Labels[constant.GroupLabel],
+			Version:    service.Labels[constant.VersionLabel],
+		})
+	}
+
+	return res, nil
+}
+
+// getCacheLister returns the cache lister for the given namespace if the cache is namespace scoped, otherwise it returns the cluster cache lister.
 func (c *KubernetesCache) getCacheLister(namespace string) *cacheLister {
 	if c.clusterScoped {
 		return c.clusterCacheLister
@@ -99,6 +355,7 @@ func (c *KubernetesCache) createInformer(namespace string) informers.SharedInfor
 	return informer
 }
 
+// startInformers starts informers to sync data from kubernetes.
 func (c *KubernetesCache) startInformers(namespaces ...string) error {
 	logger.Infof("[dubbo-cp cache] Starting informers")
 	c.lock.Lock()
@@ -117,6 +374,7 @@ func (c *KubernetesCache) startInformers(namespaces ...string) error {
 	return nil
 }
 
+// startInformer starts the informer for the given namespace.
 func (c *KubernetesCache) startInformer(namespace string) error {
 	informer := c.createInformer(namespace)
 	var scope string
