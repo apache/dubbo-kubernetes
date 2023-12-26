@@ -16,6 +16,7 @@ type MockRequest struct{}
 
 func (m *MockRequest) LoadFileDesc(filename string) (*descriptorpb.FileDescriptorProto, []byte) {
 	fd, err := protoregistry.GlobalFiles.FindFileByPath(filename)
+	fmt.Sprint(protoregistry.GlobalFiles.NumFiles())
 	if err != nil {
 		panic(err)
 	}

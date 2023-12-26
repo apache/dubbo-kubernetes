@@ -14,19 +14,17 @@
 
 syntax = "proto2";
 
-option go_package = "google.golang.org/grpc/reflection/grpc_testing";
+option go_package = "github.com/apache/dubbo-kubernetes/pkg/mock/proto";
 
-package grpc.testing;
+package mock/proto;
 
-import "reflection/grpc_testing/proto2.proto";
-import "reflection/grpc_testing/test.proto";
+import "mock/proto/proto2.proto";
 
 extend ToBeExtended {
-  optional int32 foo = 13;
-  optional Extension bar = 17;
-  optional SearchRequest baz = 19;
+  optional string frob = 23;
+  optional AnotherExtension nitz = 29;
 }
 
-message Extension {
-  optional int32 whatzit = 1;
+message AnotherExtension {
+  optional int32 whatchamacallit = 1;
 }

@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"net"
+	"reflect"
 	"regexp"
 	"testing"
 	"time"
@@ -42,18 +43,16 @@ var (
 )
 
 func TestAtomic(t *testing.T) {
-	initProtoFile()
 	assert.Equal(t, romanRegex, romanRegex)
 }
 
 func initProtoFile() {
-	romanRegex = regexp.MustCompile(`^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$`)
-	//fdTest, fdTestByte = LoadFileDesc("app/dubboctl/internal/mock/proto/test.proto")
-	//fdTestv3, fdTestv3Byte = LoadFileDesc("app/dubboctl/internal/mock/proto/testv3.proto")
-	//fdProto2, fdProto2Byte = LoadFileDesc("app/dubboctl/internal/mock/proto/proto2.proto")
-	//fdProto2Ext, fdProto2ExtByte = LoadFileDesc("app/dubboctl/internal/mock/proto/proto2_ext.proto")
+	fdTest, fdTestByte = mr.LoadFileDesc("mock/proto/test.proto")
+	fdTestv3, fdTestv3Byte = mr.LoadFileDesc("mock/proto/testv3.proto")
+	fdProto2, fdProto2Byte = mr.LoadFileDesc("mock/proto/proto2.proto")
+	fdProto2Ext, fdProto2ExtByte = mr.LoadFileDesc("mock/proto/proto2_ext.proto")
 	mr = &MockRequest{}
-	fdProto2Ext2, fdProto2Ext2Byte = mr.LoadFileDesc("app/dubboctl/internal/mock/proto/proto2_ext2.proto")
+	fdProto2Ext2, fdProto2Ext2Byte = mr.LoadFileDesc("mock/proto/proto2_ext2.proto")
 	fdDynamic, fdDynamicFile, fdDynamicByte = mr.LoadFileDescDynamic(pbv3.FileDynamicProtoRawDesc)
 }
 
@@ -92,17 +91,50 @@ func TestReflectionEnd2end(t *testing.T) {
 
 	testListServices(t, stream)
 
+	testFileByFilename(t, stream)
+
 	s.Stop()
+}
+
+func testFileByFilename(t *testing.T, stream rpb.ServerReflection_ServerReflectionInfoClient) {
+	for _, test := range []struct {
+		filename string
+		want     []byte
+	}{
+		{"mock/proto/test.proto", fdTestByte},
+		{"mock/proto/proto2.proto", fdProto2Byte},
+		{"mock/proto/proto2_ext.proto", fdProto2ExtByte},
+	} {
+		if err := stream.Send(&rpb.ServerReflectionRequest{
+			MessageRequest: &rpb.ServerReflectionRequest_FileByFilename{
+				FileByFilename: test.filename,
+			},
+		}); err != nil {
+			t.Fatalf("failed to send request: %v", err)
+		}
+		r, err := stream.Recv()
+		if err != nil {
+			// io.EOF is not ok.
+			t.Fatalf("failed to recv response: %v", err)
+		}
+
+		switch r.MessageResponse.(type) {
+		case *rpb.ServerReflectionResponse_FileDescriptorResponse:
+			if !reflect.DeepEqual(r.GetFileDescriptorResponse().FileDescriptorProto[0], test.want) {
+				t.Errorf("FileByFilename(%v)\nreceived: %q,\nwant: %q", test.filename, r.GetFileDescriptorResponse().FileDescriptorProto[0], test.want)
+			}
+		default:
+			t.Errorf("FileByFilename(%v) = %v, want type <ServerReflectionResponse_FileDescriptorResponse>", test.filename, r.MessageResponse)
+		}
+	}
 }
 
 func testListServices(t *testing.T, stream rpb.ServerReflection_ServerReflectionInfoClient) {
 
 	services := mr.GetListServices(stream)
 	want := []string{
-		"grpc.testingv3.SearchServiceV3",
-		"grpc.testing.SearchService",
-		"grpc.reflection.v1alpha.ServerReflection",
-		"grpc.testing.DynamicService",
+		"mock.proto.SearchServiceV3",
+		"mock.proto.SearchService",
 	}
 
 	m := make(map[string]int)
