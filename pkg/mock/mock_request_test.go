@@ -14,7 +14,6 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 	"net"
 	"reflect"
-	"regexp"
 	"testing"
 	"time"
 )
@@ -22,7 +21,6 @@ import (
 const defaultTestTimeout = 10 * time.Second
 
 var (
-	romanRegex *regexp.Regexp
 	// fileDescriptor of each  proto file.
 	fdTest       *descriptorpb.FileDescriptorProto
 	fdTestv3     *descriptorpb.FileDescriptorProto
@@ -42,16 +40,12 @@ var (
 	mr               *MockRequest
 )
 
-func TestAtomic(t *testing.T) {
-	assert.Equal(t, romanRegex, romanRegex)
-}
-
 func initProtoFile() {
+	mr = &MockRequest{}
 	fdTest, fdTestByte = mr.LoadFileDesc("mock/proto/test.proto")
 	fdTestv3, fdTestv3Byte = mr.LoadFileDesc("mock/proto/testv3.proto")
 	fdProto2, fdProto2Byte = mr.LoadFileDesc("mock/proto/proto2.proto")
 	fdProto2Ext, fdProto2ExtByte = mr.LoadFileDesc("mock/proto/proto2_ext.proto")
-	mr = &MockRequest{}
 	fdProto2Ext2, fdProto2Ext2Byte = mr.LoadFileDesc("mock/proto/proto2_ext2.proto")
 	fdDynamic, fdDynamicFile, fdDynamicByte = mr.LoadFileDescDynamic(pbv3.FileDynamicProtoRawDesc)
 }
