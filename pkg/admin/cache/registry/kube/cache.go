@@ -272,6 +272,7 @@ func (c *KubernetesCache) GetServices(namespace string) ([]*cache.ServiceModel, 
 				Application: &cache.ApplicationModel{
 					Name: service.Labels[constant.ApplicationLabel],
 				},
+				Category:   constant.ProviderSide,
 				Name:       service.Name,
 				Labels:     service.Labels,
 				ServiceKey: service.Labels[constant.ServiceKeyLabel],
@@ -298,6 +299,7 @@ func (c *KubernetesCache) GetServicesWithSelector(namespace string, selector sel
 			Application: &cache.ApplicationModel{
 				Name: service.Labels[constant.ApplicationLabel],
 			},
+			Category:   constant.ProviderSide,
 			Name:       service.Name,
 			Labels:     service.Labels,
 			ServiceKey: service.Labels[constant.ServiceKeyLabel],

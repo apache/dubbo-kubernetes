@@ -1,10 +1,7 @@
 package cache
 
 import (
-	"dubbo.apache.org/dubbo-go/v3/common"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/selector"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 type Cache interface {
@@ -49,64 +46,10 @@ type InstanceModel struct {
 
 type ServiceModel struct {
 	Application *ApplicationModel
+	Category    string
 	Name        string
 	Labels      map[string]string
 	ServiceKey  string
 	Group       string
 	Version     string
-}
-
-// DubboModel is a dubbo provider or consumer in registry
-type DubboModel struct {
-	Application  string
-	Category     string // provider or consumer
-	ServiceKey   string // service key
-	Group        string
-	Version      string
-	Protocol     string
-	Ip           string
-	Port         string
-	RegistryType string
-
-	Provider *model.Provider
-	Consumer *model.Consumer
-}
-
-func (m *DubboModel) InitByProvider(provider *model.Provider, url *common.URL) {
-	m.Provider = provider
-
-	m.Category = constant.ProviderSide
-	m.ServiceKey = provider.Service
-	m.Group = url.Group()
-	m.Version = url.Version()
-	m.Application = provider.Application
-	m.Protocol = url.Protocol
-	m.Ip = url.Ip
-	m.Port = url.Port
-	m.RegistryType = url.GetParam(constant.RegistryType, constant.RegistryInstance)
-}
-
-func (m *DubboModel) InitByConsumer(consumer *model.Consumer, url *common.URL) {
-	m.Consumer = consumer
-
-	m.Category = constant.ConsumerSide
-	m.ServiceKey = consumer.Service
-	m.Group = url.Group()
-	m.Version = url.Version()
-	m.Application = consumer.Application
-	m.Protocol = url.Protocol
-	m.Ip = url.Ip
-	m.Port = url.Port
-	m.RegistryType = url.GetParam(constant.RegistryType, constant.RegistryInstance)
-}
-
-func (m *DubboModel) ToggleRegistryType(deleteType string) {
-	if m.RegistryType != constant.RegistryAll {
-		return
-	}
-	if deleteType == constant.RegistryInstance {
-		m.RegistryType = constant.RegistryInterface
-	} else {
-		m.RegistryType = constant.RegistryInstance
-	}
 }
