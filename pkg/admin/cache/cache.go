@@ -20,12 +20,10 @@ type Cache interface {
 	// DynamicConfigurationRule
 }
 
-// ApplicationModel is an application in dubbo or kubernetes
 type ApplicationModel struct {
 	Name string
 }
 
-// WorkloadModel is a dubbo process or a deployment in kubernetes
 type WorkloadModel struct {
 	Application *ApplicationModel
 	Name        string
@@ -39,6 +37,7 @@ type InstanceModel struct {
 	Workload    *WorkloadModel
 	Name        string
 	Ip          string
+	Port        string
 	Status      string
 	Node        string
 	Labels      map[string]string
