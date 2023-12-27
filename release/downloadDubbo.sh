@@ -25,7 +25,7 @@ fi
 
 # Determine the latest Dubbo version by version number ignoring alpha, beta, and rc versions.
 if [ "${DUBBO_VERSION}" = "" ] ; then
-  DUBBO_VERSION="$(curl -sL https://github.com/dawnzzz/dubbo-kubernetes/releases | \
+  DUBBO_VERSION="$(curl -sL  https://github.com/apache/dubbo-kubernetes/releases | \
                   grep -E -o 'dubbo/([v,V]?)[0-9]*.[0-9]*.[0-9]*' | sort -V | \
                   tail -1 | awk -F'/' '{ print $2}')"
   DUBBO_VERSION="${DUBBO_VERSION##*/}"
@@ -62,11 +62,11 @@ download_failed () {
   exit 1
 }
 
-# Downloads the dubboctl binary archive.
-tmp=$(mktemp -d /tmp/dubboctl.XXXXXX)
+# Downloads the dubbo binary archive.
+tmp=$(mktemp -d /tmp/dubbo.XXXXXX)
 NAME="dubboctl-${DUBBO_VERSION}"
 
-ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/dubbo%2F${DUBBO_VERSION}/dubbo-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+ARCH_URL=" https://github.com/apache/dubbo-kubernetes/releases/download/dubbo%2F${DUBBO_VERSION}/dubbo-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
 
 with_arch() {
   printf "\nDownloading %s from %s ...\n" "${NAME}" "$ARCH_URL"
@@ -74,7 +74,7 @@ with_arch() {
     printf "\n%s is not found, please specify a valid DUBBO_VERSION and TARGET_ARCH\n" "$ARCH_URL"
     exit 1
   fi
-  filename="dubboctl-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+  filename="dubbo-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
   curl -fsL -o "${tmp}/${filename}" "$ARCH_URL"
   tar -xzf "${tmp}/${filename}" -C "${tmp}"
 }
@@ -84,17 +84,18 @@ with_arch
 printf "%s download complete!\n" "${filename}"
 
 # setup dubboctl
-mkdir -p "$HOME/.dubboctl/bin"
-mv "${tmp}/dubboctl" "$HOME/.dubboctl/bin/dubboctl"
-chmod +x "$HOME/.dubboctl/bin/dubboctl"
+mkdir -p "$HOME/.dubbo/bin"
+mv "${tmp}/dubbo" "$HOME/.dubbo/bin/dubbo"
+chmod +x "$HOME/.dubbo/bin/dubbo"
 rm -r "${tmp}"
 
 # Print message
 printf "\n"
 printf "Add the dubboctl to your path with:"
 printf "\n"
-printf "  export PATH=\$HOME/.dubboctl/bin:\$PATH \n"
+printf "  export PATH=\$HOME/.dubbo/bin:\$PATH \n"
 printf "\n"
 printf "Begin the Dubbo pre-installation check by running:\n"
 printf "\t dubboctl x precheck \n"
 printf "\n"
+
