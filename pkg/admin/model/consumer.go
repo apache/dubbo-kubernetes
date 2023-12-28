@@ -16,9 +16,10 @@
 package model
 
 import (
+	"time"
+
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
-	"time"
 )
 
 type Consumer struct {

@@ -18,6 +18,8 @@
 package universal
 
 import (
+	"net/url"
+
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
@@ -27,12 +29,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	gxset "github.com/dubbogo/gost/container/set"
-	"net/url"
 )
 
-var (
-	subscribeUrl *common.URL
-)
+var subscribeUrl *common.URL
 
 func init() {
 	registry.AddRegistry("universal", func(u *common.URL) (registry.AdminRegistry, error) {
