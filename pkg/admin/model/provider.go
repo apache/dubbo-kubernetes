@@ -15,7 +15,16 @@
 
 package model
 
-import "time"
+import (
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+
+	"dubbo.apache.org/dubbo-go/v3/common"
+
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+)
 
 type Provider struct {
 	Entity
@@ -34,4 +43,33 @@ type Provider struct {
 	Expired        time.Duration `json:"expired"`
 	Alived         int64         `json:"alived"`
 	RegistrySource string        `json:"registrySource"`
+}
+
+func (p *Provider) InitByUrl(id string, url *common.URL) {
+	if url == nil {
+		return
+	}
+
+	mapToString := func(params map[string]string) string {
+		pairs := make([]string, 0, len(params))
+		for key, val := range params {
+			pairs = append(pairs, fmt.Sprintf("%s=%s", key, val))
+		}
+		sort.Strings(pairs)
+		return strings.Join(pairs, "&")
+	}
+
+	p.Entity = Entity{Hash: id}
+	p.Service = url.ServiceKey()
+	p.Address = url.Location
+	p.Application = url.GetParam(constant.ApplicationKey, "")
+	p.URL = url.String()
+	p.Parameters = mapToString(url.ToMap())
+	p.Dynamic = url.GetParamBool(constant.DynamicKey, true)
+	p.Enabled = url.GetParamBool(constant.EnabledKey, true)
+	p.Serialization = url.GetParam(constant.SerializationKey, "hessian2")
+	p.Timeout = url.GetParamInt(constant.TimeoutKey, constant.DefaultTimeout)
+	p.Weight = url.GetParamInt(constant.WeightKey, constant.DefaultWeight)
+	p.Username = url.GetParam(constant.OwnerKey, "")
+	p.RegistrySource = url.GetParam(constant.RegistryType, constant.RegistryInterface)
 }
