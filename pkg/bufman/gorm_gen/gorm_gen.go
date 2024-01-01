@@ -23,7 +23,7 @@ import (
 )
 
 func main() {
-	dsn := "root:qwas617.@tcp(127.0.0.1:3306)/idl_manager?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:123456@tcp(127.0.0.1:3306)/idl_manager?charset=utf8mb4&parseTime=True&loc=Local"
 
 	// Initialize the generator with configuration
 	g := gen.NewGenerator(gen.Config{
