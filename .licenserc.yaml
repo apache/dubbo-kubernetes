@@ -82,6 +82,7 @@ header:
     - '**/deploy.tpl'
     - '**/docs/**'
     - '**/.nvmrc'
+    - '**/**.txtar'
   comment: on-failure
 
   license-location-threshold: 130
