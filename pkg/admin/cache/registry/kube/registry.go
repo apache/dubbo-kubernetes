@@ -21,31 +21,46 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 )
 
 func init() {
 	registry.AddRegistry("kube", func(u *common.URL) (registry.AdminRegistry, error) {
-		return NewRegistry()
+		return NewRegistry(true, []string{"ns1", "ns2"}) // FIXME: get fields from config
 	})
 }
 
 type Registry struct {
-	client *client.KubeClient
+	clusterScoped bool
+	namespaces    []string
 }
 
-func NewRegistry() (*Registry, error) {
-	return nil, nil
+func NewRegistry(clusterScoped bool, namespaces []string) (*Registry, error) {
+	return &Registry{
+		clusterScoped: clusterScoped,
+		namespaces:    namespaces,
+	}, nil
 }
 
 func (kr *Registry) Delegate() dubboRegistry.Registry {
 	return nil
 }
 
-func (kr *Registry) Subscribe(listener registry.AdminNotifyListener) error {
+func (kr *Registry) Subscribe() error {
+	if kr.clusterScoped {
+		err := KubernetesCacheInstance.startInformers()
+		if err != nil {
+			return err
+		}
+	} else {
+		err := KubernetesCacheInstance.startInformers(kr.namespaces...)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (kr *Registry) Destroy() error {
+	KubernetesCacheInstance.stopInformers()
 	return nil
 }

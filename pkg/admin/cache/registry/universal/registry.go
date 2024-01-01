@@ -23,14 +23,15 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+	"dubbo.apache.org/dubbo-go/v3/remoting"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	gxset "github.com/dubbogo/gost/container/set"
-	"github.com/dubbogo/gost/log/logger"
 )
 
-var SUBSCRIBE *common.URL
+var subscribeUrl *common.URL
 
 func init() {
 	registry.AddRegistry("universal", func(u *common.URL) (registry.AdminRegistry, error) {
@@ -63,13 +64,11 @@ func init() {
 		constant.EnabledKey: {constant.AnyValue},
 		constant.CheckKey:   {"false"},
 	}
-	SUBSCRIBE, _ = common.NewURL(common.GetLocalIp()+":0",
+	subscribeUrl, _ = common.NewURL(common.GetLocalIp()+":0",
 		common.WithProtocol(constant.AdminProtocol),
 		common.WithParams(queryParams),
 	)
 }
-
-type MappingListener struct{}
 
 type Registry struct {
 	delegate   dubboRegistry.Registry
@@ -83,18 +82,38 @@ func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.Servi
 	}
 }
 
-func (kr *Registry) Delegate() dubboRegistry.Registry {
-	return kr.delegate
+func (r *Registry) Delegate() dubboRegistry.Registry {
+	return r.delegate
 }
 
-func (kr *Registry) Subscribe(listener registry.AdminNotifyListener) error {
-	delRegistryListener := DubboRegistryNotifyListener{listener: listener}
+func (r *Registry) Subscribe() error {
+	listener := &notifyListener{}
 	go func() {
-		err := kr.delegate.Subscribe(SUBSCRIBE, delRegistryListener)
+		err := r.delegate.Subscribe(subscribeUrl, listener)
 		if err != nil {
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}
 	}()
+
+	getMappingList := func(group string) (map[string]*gxset.HashSet, error) {
+		keys, err := config.MetadataReportCenter.GetConfigKeysByGroup(group)
+		if err != nil {
+			return nil, err
+		}
+
+		list := make(map[string]*gxset.HashSet)
+		for k := range keys.Items {
+			interfaceKey, _ := k.(string)
+			if !(interfaceKey == "org.apache.dubbo.mock.api.MockService") {
+				rule, err := config.MetadataReportCenter.GetServiceAppMapping(interfaceKey, group, nil)
+				if err != nil {
+					return nil, err
+				}
+				list[interfaceKey] = rule
+			}
+		}
+		return list, nil
+	}
 
 	go func() {
 		mappings, err := getMappingList("mapping")
@@ -102,12 +121,12 @@ func (kr *Registry) Subscribe(listener registry.AdminNotifyListener) error {
 			logger.Error("Failed to get mapping")
 		}
 		for interfaceKey, oldApps := range mappings {
-			mappingListener := NewMappingListener(oldApps, delRegistryListener)
+			mappingListener := NewMappingListener(oldApps, listener)
 			apps, _ := config.MetadataReportCenter.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
 			delSDListener := NewDubboSDNotifyListener(apps)
 			for appTmp := range apps.Items {
 				app := appTmp.(string)
-				instances := kr.sdDelegate.GetInstances(app)
+				instances := r.sdDelegate.GetInstances(app)
 				logger.Infof("Synchronized instance notification on subscription, instance list size %s", len(instances))
 				if len(instances) > 0 {
 					err = delSDListener.OnEvent(&dubboRegistry.ServiceInstancesChangedEvent{
@@ -119,8 +138,8 @@ func (kr *Registry) Subscribe(listener registry.AdminNotifyListener) error {
 					}
 				}
 			}
-			delSDListener.AddListenerAndNotify(interfaceKey, delRegistryListener)
-			err = kr.sdDelegate.AddListener(delSDListener)
+			delSDListener.AddListenerAndNotify(interfaceKey, listener)
+			err = r.sdDelegate.AddListener(delSDListener)
 			if err != nil {
 				logger.Warnf("Failed to Add Listener")
 			}
@@ -130,40 +149,23 @@ func (kr *Registry) Subscribe(listener registry.AdminNotifyListener) error {
 	return nil
 }
 
-func (kr *Registry) Destroy() error {
+func (r *Registry) Destroy() error {
 	return nil
 }
 
-type DubboRegistryNotifyListener struct {
-	listener registry.AdminNotifyListener
+type notifyListener struct{}
+
+func (l *notifyListener) Notify(event *dubboRegistry.ServiceEvent) {
+	switch event.Action {
+	case remoting.EventTypeAdd, remoting.EventTypeUpdate:
+		UniversalCacheInstance.store(event.Service)
+	case remoting.EventTypeDel:
+		UniversalCacheInstance.delete(event.Service)
+	}
 }
 
-func (l DubboRegistryNotifyListener) Notify(event *dubboRegistry.ServiceEvent) {
-	l.listener.Notify(event)
-}
-
-func (l DubboRegistryNotifyListener) NotifyAll(events []*dubboRegistry.ServiceEvent, f func()) {
+func (l *notifyListener) NotifyAll(events []*dubboRegistry.ServiceEvent, f func()) {
 	for _, event := range events {
 		l.Notify(event)
 	}
-}
-
-func getMappingList(group string) (map[string]*gxset.HashSet, error) {
-	keys, err := config.MetadataReportCenter.GetConfigKeysByGroup(group)
-	if err != nil {
-		return nil, err
-	}
-
-	list := make(map[string]*gxset.HashSet)
-	for k := range keys.Items {
-		interfaceKey, _ := k.(string)
-		if !(interfaceKey == "org.apache.dubbo.mock.api.MockService") {
-			rule, err := config.MetadataReportCenter.GetServiceAppMapping(interfaceKey, group, nil)
-			if err != nil {
-				return nil, err
-			}
-			list[interfaceKey] = rule
-		}
-	}
-	return list, nil
 }

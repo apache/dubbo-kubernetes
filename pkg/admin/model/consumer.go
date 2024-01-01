@@ -15,7 +15,12 @@
 
 package model
 
-import "time"
+import (
+	"time"
+
+	"dubbo.apache.org/dubbo-go/v3/common"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+)
 
 type Consumer struct {
 	Entity
@@ -30,4 +35,17 @@ type Consumer struct {
 	Collected   time.Duration `json:"collected"`
 	Expired     time.Duration `json:"expired"`
 	Alived      int64         `json:"alived"`
+}
+
+func (c *Consumer) InitByUrl(id string, url *common.URL) {
+	if url == nil {
+		return
+	}
+
+	c.Entity = Entity{Hash: id}
+	c.Service = url.ServiceKey()
+	c.Address = url.Location
+	c.Application = url.GetParam(constant.ApplicationKey, "")
+	c.Parameters = url.String()
+	c.Username = url.GetParam(constant.OwnerKey, "")
 }

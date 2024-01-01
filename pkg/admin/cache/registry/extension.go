@@ -41,11 +41,8 @@ func Registry(name string, config *common.URL) (AdminRegistry, error) {
 }
 
 type AdminRegistry interface {
-	Subscribe(listener AdminNotifyListener) error
+	// Subscribe start to subscribe the registry (zk, nacos, kubernetes) and sync service list to cache
+	Subscribe() error
 	Destroy() error
 	Delegate() dubboRegistry.Registry
-}
-
-type AdminNotifyListener interface {
-	Notify(event *dubboRegistry.ServiceEvent)
 }
