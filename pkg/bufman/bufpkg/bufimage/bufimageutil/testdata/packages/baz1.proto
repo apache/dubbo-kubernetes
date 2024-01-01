@@ -1,0 +1,39 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package foo.bar.baz;
+
+message Foo {
+  enum Enum {
+    VALUE0 = 0; VALUE1 = 1; VALUE2 = 2;
+  }
+  Enum en = 1;
+  string name = 2;
+  oneof loc {
+    string address = 3;
+    uint32 zip_code = 4;
+    uint64 other_xref = 5;
+  }
+}
+
+message Bar {
+  map<string, int32> attributes = 1;
+}
+
+service BazService {
+  rpc GetBaz(Foo) returns (Bar);
+}
