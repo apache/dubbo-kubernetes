@@ -24,6 +24,11 @@ import (
 )
 
 func Setup(rt core_runtime.Runtime) error {
+	if !rt.Config().Bufman.OpenBufman {
+		// dont open bufman
+		return nil
+	}
+
 	if err := InitConfig(rt); err != nil {
 		return errors.Wrap(err, "Bufman init config failed")
 	}
