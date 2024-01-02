@@ -18,41 +18,39 @@
 package selector
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// Selector is an interface for selecting resources from cache
-type Selector interface {
-	AsLabelsSelector() labels.Selector
-
-	ApplicationOptions() (Options, bool)
-	ServiceNameOptions() (Options, bool)
-	ServiceGroupOptions() (Options, bool)
-	ServiceVersionOptions() (Options, bool)
+type ApplicationSelector struct {
+	Name string
 }
 
-// Options is an interface to represent possible options of a selector at a certain level(e.g. application, service)
-type Options interface {
-	Len() int
-	Exist(str string) bool
-}
-
-func newOptions(strs ...string) Options {
-	return options(strs)
-}
-
-// options is a slice of string, it implements Options interface
-type options []string
-
-func (o options) Len() int {
-	return len(o)
-}
-
-func (o options) Exist(str string) bool {
-	for _, s := range o {
-		if s == str {
-			return true
-		}
+func NewApplicationSelector(name string) *ApplicationSelector {
+	return &ApplicationSelector{
+		Name: name,
 	}
-	return false
+}
+
+func (s *ApplicationSelector) AsLabelsSelector() labels.Selector {
+	selector := labels.Set{
+		constant.ApplicationLabel: s.Name,
+	}
+	return selector.AsSelector()
+}
+
+func (s *ApplicationSelector) ApplicationOptions() (Options, bool) {
+	return newOptions(s.Name), true
+}
+
+func (s *ApplicationSelector) ServiceNameOptions() (Options, bool) {
+	return nil, false
+}
+
+func (s *ApplicationSelector) ServiceGroupOptions() (Options, bool) {
+	return nil, false
+}
+
+func (s *ApplicationSelector) ServiceVersionOptions() (Options, bool) {
+	return nil, false
 }
