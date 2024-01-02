@@ -123,6 +123,19 @@ func (commit *Commit) ToProtoRepositoryCommit() *registryv1alpha1.RepositoryComm
 	return repositoryCommit
 }
 
+func (commit *Commit) ToProtoSearchResult() *registryv1alpha1.CommitSearchResult {
+	if commit == nil {
+		return (&Commit{}).ToProtoSearchResult()
+	}
+
+	return &registryv1alpha1.CommitSearchResult{
+		Id:             commit.CommitID,
+		Name:           commit.CommitName,
+		Owner:          commit.UserName,
+		RepositoryName: commit.RepositoryName,
+	}
+}
+
 type Commits []*Commit
 
 func (commits *Commits) ToProtoRepositoryCommits() []*registryv1alpha1.RepositoryCommit {
@@ -141,4 +154,13 @@ func (commits *Commits) ToProtoModulePins() []*modulev1alpha1.ModulePin {
 	}
 
 	return modulePins
+}
+
+func (commits *Commits) ToProtoSearchResults() []*registryv1alpha1.CommitSearchResult {
+	commitSearchResults := make([]*registryv1alpha1.CommitSearchResult, len(*commits))
+	for i := 0; i < len(*commits); i++ {
+		commitSearchResults[i] = (*commits)[i].ToProtoSearchResult()
+	}
+
+	return commitSearchResults
 }

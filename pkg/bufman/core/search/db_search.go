@@ -17,33 +17,100 @@ package search
 
 import (
 	"context"
+
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/dal"
+	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 )
 
 type DBSearcherImpl struct {
 }
 
-func (searcher *DBSearcherImpl) SearchUsers(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.User, error) {
-	//TODO implement me
-	panic("implement me")
+func NewDBSearcher() *DBSearcherImpl {
+	return &DBSearcherImpl{}
 }
 
-func (searcher *DBSearcherImpl) SearchRepositories(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Repository, error) {
-	//TODO implement me
-	panic("implement me")
+func (searcher *DBSearcherImpl) SearchUsers(ctx context.Context, query string, offset, limit int, reverse bool) (model.Users, error) {
+	order := dal.User.ID.Asc()
+	if reverse {
+		order = dal.User.ID.Desc()
+	}
+	return dal.User.Where(dal.User.UserName.Like("%" + query + "%")).Or(dal.User.Description.Like("%" + query + "query")).Offset(offset).Limit(limit).Order(order).Find()
 }
 
-func (searcher *DBSearcherImpl) SearchCommitsByContent(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Repository, error) {
-	//TODO implement me
-	panic("implement me")
+func (searcher *DBSearcherImpl) SearchRepositories(ctx context.Context, query string, offset, limit int, reverse bool) (model.Repositories, error) {
+	order := dal.Repository.ID.Asc()
+	if reverse {
+		order = dal.Repository.ID.Desc()
+	}
+	return dal.Repository.Where(dal.Repository.RepositoryName.Like("%" + query + "%")).Or(dal.Repository.Description.Like("%" + query + "query")).
+		Offset(offset).Limit(limit).Order(order).Find()
 }
 
-func (searcher *DBSearcherImpl) SearchTag(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Tag, error) {
-	//TODO implement me
-	panic("implement me")
+func (searcher *DBSearcherImpl) SearchCommitsByContent(ctx context.Context, userID, query string, offset, limit int, reverse bool) (model.Commits, error) {
+	// search file content
+	blobs, err := dal.FileBlob.Where(dal.FileBlob.Content.Like("%" + query + "%")).Find()
+	if err != nil {
+		return nil, err
+	}
+	digestSet := make(map[string]struct{})
+	for _, blob := range blobs {
+		digestSet[blob.Digest] = struct{}{}
+	}
+	digests := make([]string, len(digestSet))
+	for digest := range digestSet {
+		digests = append(digests, digest)
+	}
+
+	// search commit file by digest
+	commitFiles, err := dal.CommitFile.Where(dal.CommitFile.Digest.In(digests...)).Find()
+	if err != nil {
+		return nil, err
+	}
+	commitIDSet := make(map[string]struct{})
+	for _, commitFile := range commitFiles {
+		commitIDSet[commitFile.CommitID] = struct{}{}
+	}
+	commitIDs := make([]string, len(commitIDSet))
+	for commitID := range commitIDSet {
+		commitIDs = append(commitIDs, commitID)
+	}
+
+	// search repository by userID
+	repositories, err := dal.Repository.Where(dal.Repository.Visibility.Eq(uint8(registryv1alpha1.Visibility_VISIBILITY_PUBLIC))).Or(dal.Repository.UserID.Eq(userID)).Find()
+	if err != nil {
+		return nil, err
+	}
+	repositoryIDSet := make(map[string]struct{})
+	for _, repository := range repositories {
+		repositoryIDSet[repository.RepositoryID] = struct{}{}
+	}
+	repositoryIDs := make([]string, 0, len(repositoryIDSet))
+	for repositoryID := range repositoryIDSet {
+		repositoryIDs = append(repositoryIDs, repositoryID)
+	}
+
+	// search commit by commitID
+	order := dal.Commit.ID.Asc()
+	if reverse {
+		order = dal.Commit.ID.Desc()
+	}
+
+	return dal.Commit.Where(dal.Commit.RepositoryID.In(repositoryIDs...), dal.Commit.CommitID.In(commitIDs...), dal.Commit.DraftName.Eq("")).Offset(offset).Limit(limit).Order(order).Find()
 }
 
-func (searcher *DBSearcherImpl) SearchDraft(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Commit, error) {
-	//TODO implement me
-	panic("implement me")
+func (searcher *DBSearcherImpl) SearchTag(ctx context.Context, repositoryID string, query string, offset, limit int, reverse bool) (model.Tags, error) {
+	order := dal.Tag.ID.Asc()
+	if reverse {
+		order = dal.Tag.ID.Desc()
+	}
+	return dal.Tag.Where(dal.Repository.RepositoryID.Eq(repositoryID), dal.Tag.TagName.Like("%"+query+"%")).Offset(offset).Limit(limit).Order(order).Find()
+}
+
+func (searcher *DBSearcherImpl) SearchDraft(ctx context.Context, repositoryID string, query string, offset, limit int, reverse bool) (model.Commits, error) {
+	order := dal.Commit.ID.Asc()
+	if reverse {
+		order = dal.Commit.ID.Desc()
+	}
+	return dal.Commit.Where(dal.Repository.RepositoryID.Eq(repositoryID), dal.Commit.DraftName.Like("%"+query+"%")).Offset(offset).Limit(limit).Order(order).Find()
 }

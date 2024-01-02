@@ -58,6 +58,18 @@ func (user *User) ToProtoUser() *registryv1alpha1.User {
 	}
 }
 
+func (user *User) ToProtoSearchResult() *registryv1alpha1.UserSearchResult {
+	if user == nil {
+		return (&User{}).ToProtoSearchResult()
+	}
+
+	return &registryv1alpha1.UserSearchResult{
+		Id:          user.UserID,
+		Username:    user.UserName,
+		Deactivated: user.Deactivated,
+	}
+}
+
 type Users []*User
 
 func (users *Users) ToProtoUsers() []*registryv1alpha1.User {
@@ -67,4 +79,13 @@ func (users *Users) ToProtoUsers() []*registryv1alpha1.User {
 	}
 
 	return protoUsers
+}
+
+func (users *Users) ToProtoSearchResults() []*registryv1alpha1.UserSearchResult {
+	protoResults := make([]*registryv1alpha1.UserSearchResult, 0, len(*users))
+	for i := 0; i < len(*users); i++ {
+		protoResults = append(protoResults, (*users)[i].ToProtoSearchResult())
+	}
+
+	return protoResults
 }

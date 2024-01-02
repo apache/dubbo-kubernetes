@@ -33,12 +33,13 @@ import (
 )
 
 type Validator interface {
-	CheckUserName(username string) e.ResponseError                                            // 检查用户名合法性
-	CheckPassword(password string) e.ResponseError                                            // 检查密码合法性
-	CheckRepositoryName(repositoryName string) e.ResponseError                                // 检查repo name合法性
-	CheckTagName(tagName string) e.ResponseError                                              // 检查tag name合法性
-	CheckDraftName(draftName string) e.ResponseError                                          // 检查draft name合法性
-	CheckPageSize(pageSize uint32) e.ResponseError                                            // 检查page size合法性
+	CheckUserName(username string) e.ResponseError             // 检查用户名合法性
+	CheckPassword(password string) e.ResponseError             // 检查密码合法性
+	CheckRepositoryName(repositoryName string) e.ResponseError // 检查repo name合法性
+	CheckTagName(tagName string) e.ResponseError               // 检查tag name合法性
+	CheckDraftName(draftName string) e.ResponseError           // 检查draft name合法性
+	CheckPageSize(pageSize uint32) e.ResponseError             // 检查page size合法性
+	CheckQuery(query string) e.ResponseError
 	SplitFullName(fullName string) (userName, repositoryName string, respErr e.ResponseError) // 分割full name
 
 	// CheckManifestAndBlobs 检查上传的文件是否合法
@@ -103,6 +104,15 @@ func (validator *ValidatorImpl) CheckDraftName(draftName string) e.ResponseError
 func (validator *ValidatorImpl) CheckPageSize(pageSize uint32) e.ResponseError {
 	if pageSize < constant.MinPageSize || pageSize > constant.MaxPageSize {
 		return e.NewInvalidArgumentError(fmt.Errorf("page size: length is limited between %v and %v", constant.MinPageSize, constant.MaxPageSize))
+	}
+
+	return nil
+}
+
+func (validator *ValidatorImpl) CheckQuery(query string) e.ResponseError {
+	err := validator.doCheckByLengthAndPattern(query, constant.MinQueryLength, constant.MaxQueryLength, constant.QueryPattern)
+	if err != nil {
+		return e.NewInvalidArgumentError(err)
 	}
 
 	return nil

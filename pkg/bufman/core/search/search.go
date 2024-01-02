@@ -17,13 +17,32 @@ package search
 
 import (
 	"context"
+	"sync"
+
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 )
 
 type Searcher interface {
-	SearchUsers(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.User, error)
-	SearchRepositories(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Repository, error)
-	SearchCommitsByContent(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Repository, error)
-	SearchTag(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Tag, error)
-	SearchDraft(ctx context.Context, query string, offset, limit int, reverse bool) ([]*model.Commit, error)
+	SearchUsers(ctx context.Context, query string, offset, limit int, reverse bool) (model.Users, error)
+	SearchRepositories(ctx context.Context, query string, offset, limit int, reverse bool) (model.Repositories, error)
+	SearchCommitsByContent(ctx context.Context, userID string, query string, offset, limit int, reverse bool) (model.Commits, error)
+	SearchTag(ctx context.Context, repositoryID string, query string, offset, limit int, reverse bool) (model.Tags, error)
+	SearchDraft(ctx context.Context, repositoryID string, query string, offset, limit int, reverse bool) (model.Commits, error)
+}
+
+// 单例模式
+var (
+	searcher Searcher
+	once     sync.Once
+)
+
+func NewSearcher() Searcher {
+	if searcher == nil {
+		// 对象初始化
+		once.Do(func() {
+			searcher = NewDBSearcher()
+		})
+	}
+
+	return searcher
 }

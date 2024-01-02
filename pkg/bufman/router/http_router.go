@@ -130,6 +130,15 @@ func InitHTTPRouter() *HTTPRouter {
 			doc.GET("/package/:repository_owner/:repository_name/:reference", http_handlers.DocGroup.GetModulePackages)                     // 获取repo packages
 			doc.GET("/package/:repository_owner/:repository_name/:reference/:package_name", http_handlers.DocGroup.GetPackageDocumentation) // 获取包说明文档
 		}
+
+		search := router.Group("/search")
+		{
+			search.POST("/user", http_handlers.SearchGroup.SearchUser)                  // 搜索用户
+			search.POST("/repository", http_handlers.SearchGroup.SearchRepository)      // 搜索仓库
+			search.POST("/commit", http_handlers.SearchGroup.SearchLastCommitByContent) // 搜索根据内容搜索最近一次提交
+			search.POST("/tag", http_handlers.SearchGroup.SearchTag)                    // 搜索tag
+			search.POST("/draft", http_handlers.SearchGroup.SearchDraft)                // 搜索草稿
+		}
 	}
 
 	return &HTTPRouter{
