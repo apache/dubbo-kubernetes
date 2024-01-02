@@ -45,12 +45,12 @@ type Commit struct {
 
 	SequenceID int64
 
-	// 文件清单
-	FileManifest *FileManifest `gorm:"foreignKey:CommitID;references:CommitID"`
-	// 文件blobs
-	FileBlobs FileBlobs `gorm:"foreignKey:CommitID;references:CommitID"`
+	// 清单文件
+	CommitManifest *CommitFile `gorm:"-"`
+	// 其他所有文件
+	CommitFiles CommitFiles `gorm:"-"`
 	// 关联的tag
-	Tags Tags `gorm:"foreignKey:RepositoryID;references:RepositoryID"`
+	Tags Tags `gorm:"-"`
 }
 
 func (commit *Commit) TableName() string {

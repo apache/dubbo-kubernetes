@@ -16,21 +16,21 @@ import (
 )
 
 var (
-	Q            = new(Query)
-	Commit       *commit
-	FileBlob     *fileBlob
-	FileManifest *fileManifest
-	Repository   *repository
-	Tag          *tag
-	Token        *token
-	User         *user
+	Q          = new(Query)
+	Commit     *commit
+	CommitFile *commitFile
+	FileBlob   *fileBlob
+	Repository *repository
+	Tag        *tag
+	Token      *token
+	User       *user
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
 	Commit = &Q.Commit
+	CommitFile = &Q.CommitFile
 	FileBlob = &Q.FileBlob
-	FileManifest = &Q.FileManifest
 	Repository = &Q.Repository
 	Tag = &Q.Tag
 	Token = &Q.Token
@@ -39,41 +39,41 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:           db,
-		Commit:       newCommit(db, opts...),
-		FileBlob:     newFileBlob(db, opts...),
-		FileManifest: newFileManifest(db, opts...),
-		Repository:   newRepository(db, opts...),
-		Tag:          newTag(db, opts...),
-		Token:        newToken(db, opts...),
-		User:         newUser(db, opts...),
+		db:         db,
+		Commit:     newCommit(db, opts...),
+		CommitFile: newCommitFile(db, opts...),
+		FileBlob:   newFileBlob(db, opts...),
+		Repository: newRepository(db, opts...),
+		Tag:        newTag(db, opts...),
+		Token:      newToken(db, opts...),
+		User:       newUser(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	Commit       commit
-	FileBlob     fileBlob
-	FileManifest fileManifest
-	Repository   repository
-	Tag          tag
-	Token        token
-	User         user
+	Commit     commit
+	CommitFile commitFile
+	FileBlob   fileBlob
+	Repository repository
+	Tag        tag
+	Token      token
+	User       user
 }
 
 func (q *Query) Available() bool { return q.db != nil }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:           db,
-		Commit:       q.Commit.clone(db),
-		FileBlob:     q.FileBlob.clone(db),
-		FileManifest: q.FileManifest.clone(db),
-		Repository:   q.Repository.clone(db),
-		Tag:          q.Tag.clone(db),
-		Token:        q.Token.clone(db),
-		User:         q.User.clone(db),
+		db:         db,
+		Commit:     q.Commit.clone(db),
+		CommitFile: q.CommitFile.clone(db),
+		FileBlob:   q.FileBlob.clone(db),
+		Repository: q.Repository.clone(db),
+		Tag:        q.Tag.clone(db),
+		Token:      q.Token.clone(db),
+		User:       q.User.clone(db),
 	}
 }
 
@@ -87,36 +87,36 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:           db,
-		Commit:       q.Commit.replaceDB(db),
-		FileBlob:     q.FileBlob.replaceDB(db),
-		FileManifest: q.FileManifest.replaceDB(db),
-		Repository:   q.Repository.replaceDB(db),
-		Tag:          q.Tag.replaceDB(db),
-		Token:        q.Token.replaceDB(db),
-		User:         q.User.replaceDB(db),
+		db:         db,
+		Commit:     q.Commit.replaceDB(db),
+		CommitFile: q.CommitFile.replaceDB(db),
+		FileBlob:   q.FileBlob.replaceDB(db),
+		Repository: q.Repository.replaceDB(db),
+		Tag:        q.Tag.replaceDB(db),
+		Token:      q.Token.replaceDB(db),
+		User:       q.User.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	Commit       ICommitDo
-	FileBlob     IFileBlobDo
-	FileManifest IFileManifestDo
-	Repository   IRepositoryDo
-	Tag          ITagDo
-	Token        ITokenDo
-	User         IUserDo
+	Commit     ICommitDo
+	CommitFile ICommitFileDo
+	FileBlob   IFileBlobDo
+	Repository IRepositoryDo
+	Tag        ITagDo
+	Token      ITokenDo
+	User       IUserDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		Commit:       q.Commit.WithContext(ctx),
-		FileBlob:     q.FileBlob.WithContext(ctx),
-		FileManifest: q.FileManifest.WithContext(ctx),
-		Repository:   q.Repository.WithContext(ctx),
-		Tag:          q.Tag.WithContext(ctx),
-		Token:        q.Token.WithContext(ctx),
-		User:         q.User.WithContext(ctx),
+		Commit:     q.Commit.WithContext(ctx),
+		CommitFile: q.CommitFile.WithContext(ctx),
+		FileBlob:   q.FileBlob.WithContext(ctx),
+		Repository: q.Repository.WithContext(ctx),
+		Tag:        q.Tag.WithContext(ctx),
+		Token:      q.Token.WithContext(ctx),
+		User:       q.User.WithContext(ctx),
 	}
 }
 

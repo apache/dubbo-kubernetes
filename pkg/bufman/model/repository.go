@@ -40,9 +40,9 @@ type Repository struct {
 	Description    string    // 描述信息
 
 	// 拥有的draft
-	DraftCommits []*Commit `gorm:"foreignKey:RepositoryID;references:RepositoryID"`
+	DraftCommits []*Commit `gorm:"-"`
 	// 拥有的tag
-	Tags []*Tag `gorm:"foreignKey:RepositoryID;references:RepositoryID"`
+	Tags []*Tag `gorm:"-"`
 }
 
 func (repository *Repository) TableName() string {

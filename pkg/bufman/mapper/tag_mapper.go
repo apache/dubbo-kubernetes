@@ -22,6 +22,7 @@ import (
 
 type TagMapper interface {
 	Create(tag *model.Tag) error
+	CreateInBatch(tags ...*model.Tag) error
 	GetCountsByRepositoryID(repositoryID string) (int64, error)
 	FindPageByRepositoryID(repositoryID string, offset, limit int, reverse bool) (model.Tags, error)
 	FindPageByRepositoryIDAndQuery(repositoryID, query string, offset, limit int, reverse bool) (model.Tags, error)
@@ -31,6 +32,10 @@ type TagMapperImpl struct{}
 
 func (t *TagMapperImpl) Create(tag *model.Tag) error {
 	return dal.Tag.Create(tag)
+}
+
+func (t *TagMapperImpl) CreateInBatch(tags ...*model.Tag) error {
+	return dal.Tag.Create(tags...)
 }
 
 func (t *TagMapperImpl) GetCountsByRepositoryID(repositoryID string) (int64, error) {

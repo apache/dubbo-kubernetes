@@ -39,32 +39,6 @@ func newRepository(db *gorm.DB, opts ...gen.DOOption) repository {
 	_repository.DeprecationMsg = field.NewString(tableName, "deprecation_msg")
 	_repository.Url = field.NewString(tableName, "url")
 	_repository.Description = field.NewString(tableName, "description")
-	_repository.DraftCommits = repositoryHasManyDraftCommits{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("DraftCommits", "model.Commit"),
-		FileManifest: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("DraftCommits.FileManifest", "model.FileManifest"),
-		},
-		FileBlobs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("DraftCommits.FileBlobs", "model.FileBlobs"),
-		},
-		Tags: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("DraftCommits.Tags", "model.Tags"),
-		},
-	}
-
-	_repository.Tags = repositoryHasManyTags{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("Tags", "model.Tag"),
-	}
 
 	_repository.fillFieldMap()
 
@@ -87,9 +61,6 @@ type repository struct {
 	DeprecationMsg field.String
 	Url            field.String
 	Description    field.String
-	DraftCommits   repositoryHasManyDraftCommits
-
-	Tags repositoryHasManyTags
 
 	fieldMap map[string]field.Expr
 }
@@ -134,7 +105,7 @@ func (r *repository) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (r *repository) fillFieldMap() {
-	r.fieldMap = make(map[string]field.Expr, 14)
+	r.fieldMap = make(map[string]field.Expr, 12)
 	r.fieldMap["id"] = r.ID
 	r.fieldMap["user_id"] = r.UserID
 	r.fieldMap["user_name"] = r.UserName
@@ -147,7 +118,6 @@ func (r *repository) fillFieldMap() {
 	r.fieldMap["deprecation_msg"] = r.DeprecationMsg
 	r.fieldMap["url"] = r.Url
 	r.fieldMap["description"] = r.Description
-
 }
 
 func (r repository) clone(db *gorm.DB) repository {
@@ -158,158 +128,6 @@ func (r repository) clone(db *gorm.DB) repository {
 func (r repository) replaceDB(db *gorm.DB) repository {
 	r.repositoryDo.ReplaceDB(db)
 	return r
-}
-
-type repositoryHasManyDraftCommits struct {
-	db *gorm.DB
-
-	field.RelationField
-
-	FileManifest struct {
-		field.RelationField
-	}
-	FileBlobs struct {
-		field.RelationField
-	}
-	Tags struct {
-		field.RelationField
-	}
-}
-
-func (a repositoryHasManyDraftCommits) Where(conds ...field.Expr) *repositoryHasManyDraftCommits {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a repositoryHasManyDraftCommits) WithContext(ctx context.Context) *repositoryHasManyDraftCommits {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a repositoryHasManyDraftCommits) Session(session *gorm.Session) *repositoryHasManyDraftCommits {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a repositoryHasManyDraftCommits) Model(m *model.Repository) *repositoryHasManyDraftCommitsTx {
-	return &repositoryHasManyDraftCommitsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type repositoryHasManyDraftCommitsTx struct{ tx *gorm.Association }
-
-func (a repositoryHasManyDraftCommitsTx) Find() (result []*model.Commit, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a repositoryHasManyDraftCommitsTx) Append(values ...*model.Commit) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a repositoryHasManyDraftCommitsTx) Replace(values ...*model.Commit) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a repositoryHasManyDraftCommitsTx) Delete(values ...*model.Commit) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a repositoryHasManyDraftCommitsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a repositoryHasManyDraftCommitsTx) Count() int64 {
-	return a.tx.Count()
-}
-
-type repositoryHasManyTags struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a repositoryHasManyTags) Where(conds ...field.Expr) *repositoryHasManyTags {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a repositoryHasManyTags) WithContext(ctx context.Context) *repositoryHasManyTags {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a repositoryHasManyTags) Session(session *gorm.Session) *repositoryHasManyTags {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a repositoryHasManyTags) Model(m *model.Repository) *repositoryHasManyTagsTx {
-	return &repositoryHasManyTagsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type repositoryHasManyTagsTx struct{ tx *gorm.Association }
-
-func (a repositoryHasManyTagsTx) Find() (result []*model.Tag, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a repositoryHasManyTagsTx) Append(values ...*model.Tag) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a repositoryHasManyTagsTx) Replace(values ...*model.Tag) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a repositoryHasManyTagsTx) Delete(values ...*model.Tag) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a repositoryHasManyTagsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a repositoryHasManyTagsTx) Count() int64 {
-	return a.tx.Count()
 }
 
 type repositoryDo struct{ gen.DO }

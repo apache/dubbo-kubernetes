@@ -21,21 +21,31 @@ import (
 )
 
 type FileMapper interface {
-	FindAllBlobsByCommitID(commitID string) (model.FileBlobs, error)
-	FindManifestByCommitID(commitID string) (*model.FileManifest, error)
-	FindBlobByCommitIDAndPath(commitID, path string) (*model.FileBlob, error)
+	FindCommitFilesExceptManifestByCommitID(commitID string) (model.CommitFiles, error)
+	FindCommitManifestByCommitID(commitID string) (*model.CommitFile, error)
+	FindCommitFileByCommitIDAndPath(commitID, path string) (*model.CommitFile, error)
 }
 
 type FileMapperImpl struct{}
 
-func (f *FileMapperImpl) FindAllBlobsByCommitID(commitID string) (model.FileBlobs, error) {
-	return dal.FileBlob.Where(dal.FileBlob.CommitID.Eq(commitID)).Find()
+func (f *FileMapperImpl) FindCommitFilesExceptManifestByCommitID(commitID string) (model.CommitFiles, error) {
+	commit, err := dal.Commit.Where(dal.Commit.CommitID.Eq(commitID)).First()
+	if err != nil {
+		return nil, err
+	}
+
+	return dal.CommitFile.Where(dal.CommitFile.CommitID.Eq(commitID), dal.CommitFile.Digest.Neq(commit.ManifestDigest)).Find()
 }
 
-func (f *FileMapperImpl) FindManifestByCommitID(commitID string) (*model.FileManifest, error) {
-	return dal.FileManifest.Where(dal.FileManifest.CommitID.Eq(commitID)).First()
+func (f *FileMapperImpl) FindCommitManifestByCommitID(commitID string) (*model.CommitFile, error) {
+	commit, err := dal.Commit.Where(dal.Commit.CommitID.Eq(commitID)).First()
+	if err != nil {
+		return nil, err
+	}
+
+	return dal.CommitFile.Where(dal.CommitFile.CommitID.Eq(commitID), dal.CommitFile.Digest.Eq(commit.ManifestDigest)).First()
 }
 
-func (f *FileMapperImpl) FindBlobByCommitIDAndPath(commitID, path string) (*model.FileBlob, error) {
-	return dal.FileBlob.Where(dal.FileBlob.CommitID.Eq(commitID), dal.FileBlob.FileName.Eq(path)).First()
+func (f *FileMapperImpl) FindCommitFileByCommitIDAndPath(commitID, path string) (*model.CommitFile, error) {
+	return dal.CommitFile.Where(dal.CommitFile.CommitID.Eq(commitID), dal.CommitFile.FileName.Eq(path)).First()
 }

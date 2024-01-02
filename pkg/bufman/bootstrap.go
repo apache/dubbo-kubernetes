@@ -56,7 +56,7 @@ func RegisterDatabase(rt core_runtime.Runtime) error {
 			&model.Tag{},
 			&model.User{},
 			&model.Token{},
-			&model.FileManifest{},
+			&model.CommitFile{},
 			&model.FileBlob{},
 		)
 		if initErr != nil {

@@ -28,18 +28,18 @@ import (
 )
 
 type BaseStorageHelper interface {
-	StoreBlob(ctx context.Context, blob *model.FileBlob) error
-	StoreManifest(ctx context.Context, manifest *model.FileManifest) error
-	StoreDocumentation(ctx context.Context, blob *model.FileBlob) error
+	StoreBlob(ctx context.Context, blob *model.CommitFile) error
+	StoreManifest(ctx context.Context, manifest *model.CommitFile) error
+	StoreDocumentation(ctx context.Context, blob *model.CommitFile) error
 	ReadBlobToReader(ctx context.Context, digest string) (io.Reader, error) // 读取内容
-	ReadBlob(ctx context.Context, fileName string) ([]byte, error)
-	ReadManifestToReader(ctx context.Context, fileName string) (io.Reader, error)
-	ReadManifest(ctx context.Context, fileName string) ([]byte, error)
+	ReadBlob(ctx context.Context, digest string) ([]byte, error)
+	ReadManifestToReader(ctx context.Context, digest string) (io.Reader, error)
+	ReadManifest(ctx context.Context, digest string) ([]byte, error)
 }
 
 type StorageHelper interface {
 	BaseStorageHelper
-	ReadToManifestAndBlobSet(ctx context.Context, modelFileManifest *model.FileManifest, fileBlobs model.FileBlobs) (*manifest2.Manifest, *manifest2.BlobSet, error) // 读取为manifest和blob set
+	ReadToManifestAndBlobSet(ctx context.Context, modelFileManifest *model.CommitFile, fileBlobs model.CommitFiles) (*manifest2.Manifest, *manifest2.BlobSet, error) // 读取为manifest和blob set
 	GetDocumentAndLicenseFromBlob(ctx context.Context, fileManifest *manifest2.Manifest, blobSet *manifest2.BlobSet) (manifest2.Blob, manifest2.Blob, error)
 	GetBufManConfigFromBlob(ctx context.Context, fileManifest *manifest2.Manifest, blobSet *manifest2.BlobSet) (manifest2.Blob, error)
 	GetDocumentFromBlob(ctx context.Context, fileManifest *manifest2.Manifest, blobSet *manifest2.BlobSet) (manifest2.Blob, error)
@@ -61,10 +61,7 @@ func NewStorageHelper() StorageHelper {
 		// 对象初始化
 		once.Do(func() {
 			storageHelperImpl = &StorageHelperImpl{
-				BaseStorageHelper: &DiskStorageHelperImpl{
-					muDict:       map[string]*sync.RWMutex{},
-					pluginMuDict: map[string]*sync.RWMutex{},
-				},
+				BaseStorageHelper: NewDBStorageHelper(),
 			}
 		})
 	}
@@ -72,7 +69,7 @@ func NewStorageHelper() StorageHelper {
 	return storageHelperImpl
 }
 
-func (helper *StorageHelperImpl) ReadToManifestAndBlobSet(ctx context.Context, modelFileManifest *model.FileManifest, fileBlobs model.FileBlobs) (*manifest2.Manifest, *manifest2.BlobSet, error) {
+func (helper *StorageHelperImpl) ReadToManifestAndBlobSet(ctx context.Context, modelFileManifest *model.CommitFile, fileBlobs model.CommitFiles) (*manifest2.Manifest, *manifest2.BlobSet, error) {
 	// 读取文件清单
 	reader, err := helper.ReadManifestToReader(ctx, modelFileManifest.Digest)
 	if err != nil {

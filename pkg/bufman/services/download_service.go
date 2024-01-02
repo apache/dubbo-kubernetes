@@ -57,7 +57,7 @@ func (downloadService *DownloadServiceImpl) DownloadManifestAndBlobs(ctx context
 	}
 
 	// 查询文件清单
-	modelFileManifest, err := downloadService.fileMapper.FindManifestByCommitID(commit.CommitID)
+	modelFileManifest, err := downloadService.fileMapper.FindCommitManifestByCommitID(commit.CommitID)
 	if err != nil {
 		if err != nil {
 			return nil, nil, e.NewInternalError(err)
@@ -65,7 +65,7 @@ func (downloadService *DownloadServiceImpl) DownloadManifestAndBlobs(ctx context
 	}
 
 	// 接着查询blobs
-	fileBlobs, err := downloadService.fileMapper.FindAllBlobsByCommitID(commit.CommitID)
+	fileBlobs, err := downloadService.fileMapper.FindCommitFilesExceptManifestByCommitID(commit.CommitID)
 	if err != nil {
 		return nil, nil, e.NewInternalError(err)
 	}

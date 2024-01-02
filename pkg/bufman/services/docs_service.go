@@ -36,7 +36,7 @@ import (
 )
 
 type DocsService interface {
-	GetSourceDirectoryInfo(ctx context.Context, repositoryID, reference string) (model.FileBlobs, e.ResponseError)
+	GetSourceDirectoryInfo(ctx context.Context, repositoryID, reference string) (model.CommitFiles, e.ResponseError)
 	GetSourceFile(ctx context.Context, repositoryID, reference, path string) ([]byte, e.ResponseError)
 	GetModulePackages(ctx context.Context, repositoryID, reference string) ([]*registryv1alpha1.ModulePackage, e.ResponseError)
 	GetModuleDocumentation(ctx context.Context, repositoryID, reference string) (*registryv1alpha1.ModuleDocumentation, e.ResponseError)
@@ -61,7 +61,7 @@ func NewDocsService() DocsService {
 	}
 }
 
-func (docsService *DocsServiceImpl) GetSourceDirectoryInfo(ctx context.Context, repositoryID, reference string) (model.FileBlobs, e.ResponseError) {
+func (docsService *DocsServiceImpl) GetSourceDirectoryInfo(ctx context.Context, repositoryID, reference string) (model.CommitFiles, e.ResponseError) {
 	// 根据reference查询commit
 	commit, err := docsService.commitMapper.FindByRepositoryIDAndReference(repositoryID, reference)
 	if err != nil {
@@ -73,7 +73,7 @@ func (docsService *DocsServiceImpl) GetSourceDirectoryInfo(ctx context.Context, 
 	}
 
 	// 查询所有文件
-	fileBlobs, err := docsService.fileMapper.FindAllBlobsByCommitID(commit.CommitID)
+	fileBlobs, err := docsService.fileMapper.FindCommitFilesExceptManifestByCommitID(commit.CommitID)
 	if err != nil {
 		return nil, e.NewInternalError(err)
 	}
@@ -93,7 +93,7 @@ func (docsService *DocsServiceImpl) GetSourceFile(ctx context.Context, repositor
 	}
 
 	// 查询file
-	fileBlob, err := docsService.fileMapper.FindBlobByCommitIDAndPath(commit.CommitID, path)
+	fileBlob, err := docsService.fileMapper.FindCommitFileByCommitIDAndPath(commit.CommitID, path)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, e.NewNotFoundError(err)
@@ -331,7 +331,7 @@ func (docsService *DocsServiceImpl) getManifestAndBlobSet(ctx context.Context, r
 
 func (docsService *DocsServiceImpl) getManifestAndBlobSetByCommitID(ctx context.Context, commitID string) (*manifest2.Manifest, *manifest2.BlobSet, e.ResponseError) {
 	// 查询文件清单
-	modelFileManifest, err := docsService.fileMapper.FindManifestByCommitID(commitID)
+	modelFileManifest, err := docsService.fileMapper.FindCommitManifestByCommitID(commitID)
 	if err != nil {
 		if err != nil {
 			return nil, nil, e.NewInternalError(err)
@@ -339,7 +339,7 @@ func (docsService *DocsServiceImpl) getManifestAndBlobSetByCommitID(ctx context.
 	}
 
 	// 接着查询blobs
-	fileBlobs, err := docsService.fileMapper.FindAllBlobsByCommitID(commitID)
+	fileBlobs, err := docsService.fileMapper.FindCommitFilesExceptManifestByCommitID(commitID)
 	if err != nil {
 		return nil, nil, e.NewInternalError(err)
 	}

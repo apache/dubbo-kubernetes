@@ -29,8 +29,7 @@ func newFileBlob(db *gorm.DB, opts ...gen.DOOption) fileBlob {
 	_fileBlob.ALL = field.NewAsterisk(tableName)
 	_fileBlob.ID = field.NewInt64(tableName, "id")
 	_fileBlob.Digest = field.NewString(tableName, "digest")
-	_fileBlob.CommitID = field.NewString(tableName, "commit_id")
-	_fileBlob.FileName = field.NewString(tableName, "file_name")
+	_fileBlob.Content = field.NewBytes(tableName, "content")
 
 	_fileBlob.fillFieldMap()
 
@@ -40,11 +39,10 @@ func newFileBlob(db *gorm.DB, opts ...gen.DOOption) fileBlob {
 type fileBlob struct {
 	fileBlobDo
 
-	ALL      field.Asterisk
-	ID       field.Int64
-	Digest   field.String
-	CommitID field.String
-	FileName field.String
+	ALL     field.Asterisk
+	ID      field.Int64
+	Digest  field.String
+	Content field.Bytes
 
 	fieldMap map[string]field.Expr
 }
@@ -63,8 +61,7 @@ func (f *fileBlob) updateTableName(table string) *fileBlob {
 	f.ALL = field.NewAsterisk(table)
 	f.ID = field.NewInt64(table, "id")
 	f.Digest = field.NewString(table, "digest")
-	f.CommitID = field.NewString(table, "commit_id")
-	f.FileName = field.NewString(table, "file_name")
+	f.Content = field.NewBytes(table, "content")
 
 	f.fillFieldMap()
 
@@ -81,11 +78,10 @@ func (f *fileBlob) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (f *fileBlob) fillFieldMap() {
-	f.fieldMap = make(map[string]field.Expr, 4)
+	f.fieldMap = make(map[string]field.Expr, 3)
 	f.fieldMap["id"] = f.ID
 	f.fieldMap["digest"] = f.Digest
-	f.fieldMap["commit_id"] = f.CommitID
-	f.fieldMap["file_name"] = f.FileName
+	f.fieldMap["content"] = f.Content
 }
 
 func (f fileBlob) clone(db *gorm.DB) fileBlob {

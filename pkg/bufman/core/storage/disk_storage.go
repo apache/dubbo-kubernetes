@@ -27,6 +27,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 )
 
+// DiskStorageHelperImpl
+// Deprecated
 type DiskStorageHelperImpl struct {
 	mu     sync.Mutex
 	muDict map[string]*sync.RWMutex
@@ -35,7 +37,7 @@ type DiskStorageHelperImpl struct {
 	pluginMuDict map[string]*sync.RWMutex
 }
 
-func (helper *DiskStorageHelperImpl) StoreBlob(ctx context.Context, blob *model.FileBlob) error {
+func (helper *DiskStorageHelperImpl) StoreBlob(ctx context.Context, blob *model.CommitFile) error {
 	return helper.store(ctx, blob.Digest, []byte(blob.Content))
 }
 
@@ -70,16 +72,16 @@ func (helper *DiskStorageHelperImpl) store(ctx context.Context, digest string, c
 	return nil
 }
 
-func (helper *DiskStorageHelperImpl) StoreManifest(ctx context.Context, manifest *model.FileManifest) error {
+func (helper *DiskStorageHelperImpl) StoreManifest(ctx context.Context, manifest *model.CommitFile) error {
 	return helper.store(ctx, manifest.Digest, []byte(manifest.Content))
 }
 
-func (helper *DiskStorageHelperImpl) StoreDocumentation(ctx context.Context, blob *model.FileBlob) error {
+func (helper *DiskStorageHelperImpl) StoreDocumentation(ctx context.Context, blob *model.CommitFile) error {
 	return nil
 }
 
-func (helper *DiskStorageHelperImpl) ReadBlobToReader(ctx context.Context, fileName string) (io.Reader, error) {
-	content, err := helper.ReadBlob(ctx, fileName)
+func (helper *DiskStorageHelperImpl) ReadBlobToReader(ctx context.Context, digest string) (io.Reader, error) {
+	content, err := helper.ReadBlob(ctx, digest)
 	if err != nil {
 		return nil, err
 	}
@@ -87,12 +89,12 @@ func (helper *DiskStorageHelperImpl) ReadBlobToReader(ctx context.Context, fileN
 	return bytes.NewReader(content), nil
 }
 
-func (helper *DiskStorageHelperImpl) ReadBlob(ctx context.Context, fileName string) ([]byte, error) {
-	return helper.read(ctx, fileName)
+func (helper *DiskStorageHelperImpl) ReadBlob(ctx context.Context, digest string) ([]byte, error) {
+	return helper.read(ctx, digest)
 }
 
-func (helper *DiskStorageHelperImpl) ReadManifestToReader(ctx context.Context, fileName string) (io.Reader, error) {
-	content, err := helper.ReadManifest(ctx, fileName)
+func (helper *DiskStorageHelperImpl) ReadManifestToReader(ctx context.Context, digest string) (io.Reader, error) {
+	content, err := helper.ReadManifest(ctx, digest)
 	if err != nil {
 		return nil, err
 	}
@@ -100,24 +102,24 @@ func (helper *DiskStorageHelperImpl) ReadManifestToReader(ctx context.Context, f
 	return bytes.NewReader(content), nil
 }
 
-func (helper *DiskStorageHelperImpl) ReadManifest(ctx context.Context, fileName string) ([]byte, error) {
-	return helper.read(ctx, fileName)
+func (helper *DiskStorageHelperImpl) ReadManifest(ctx context.Context, digest string) ([]byte, error) {
+	return helper.read(ctx, digest)
 }
 
-func (helper *DiskStorageHelperImpl) read(ctx context.Context, fileName string) ([]byte, error) {
+func (helper *DiskStorageHelperImpl) read(ctx context.Context, digest string) ([]byte, error) {
 	helper.mu.Lock()
 	defer helper.mu.Unlock()
 
-	if _, ok := helper.muDict[fileName]; !ok {
-		helper.muDict[fileName] = &sync.RWMutex{}
+	if _, ok := helper.muDict[digest]; !ok {
+		helper.muDict[digest] = &sync.RWMutex{}
 	}
 
 	// 上读锁
-	helper.muDict[fileName].RLock()
-	defer helper.muDict[fileName].RUnlock()
+	helper.muDict[digest].RLock()
+	defer helper.muDict[digest].RUnlock()
 
 	// 读取文件
-	filePath := helper.GetFilePath(fileName)
+	filePath := helper.GetFilePath(digest)
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -126,6 +128,6 @@ func (helper *DiskStorageHelperImpl) read(ctx context.Context, fileName string) 
 	return content, nil
 }
 
-func (helper *DiskStorageHelperImpl) GetFilePath(fileName string) string {
-	return path.Join(constant.FileSavaDir, fileName)
+func (helper *DiskStorageHelperImpl) GetFilePath(digest string) string {
+	return path.Join(constant.FileSavaDir, digest)
 }

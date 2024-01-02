@@ -121,7 +121,7 @@ func (resolver *ResolverImpl) GetDirectDependenciesFromModuleRefs(ctx context.Co
 
 func (resolver *ResolverImpl) GetBufConfigFromCommitID(ctx context.Context, commitID string) (*bufconfig.Config, e.ResponseError) {
 	// 查询manifest名称
-	manifestModel, err := resolver.fileMapper.FindManifestByCommitID(commitID)
+	manifestModel, err := resolver.fileMapper.FindCommitManifestByCommitID(commitID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, e.NewNotFoundError(fmt.Errorf("manifest(commit id = %s)", commitID))

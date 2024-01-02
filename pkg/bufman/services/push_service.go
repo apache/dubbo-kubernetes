@@ -44,6 +44,7 @@ type PushServiceImpl struct {
 	repositoryMapper mapper.RepositoryMapper
 	fileMapper       mapper.FileMapper
 	commitMapper     mapper.CommitMapper
+	tagMapper        mapper.TagMapper
 	storageHelper    storage.StorageHelper
 }
 
@@ -52,6 +53,7 @@ func NewPushService() PushService {
 		userMapper:       &mapper.UserMapperImpl{},
 		repositoryMapper: &mapper.RepositoryMapperImpl{},
 		commitMapper:     &mapper.CommitMapperImpl{},
+		tagMapper:        &mapper.TagMapperImpl{},
 		fileMapper:       &mapper.FileMapperImpl{},
 		storageHelper:    storage.NewStorageHelper(),
 	}
@@ -69,7 +71,7 @@ func (pushService *PushServiceImpl) GetManifestAndBlobSet(ctx context.Context, r
 	}
 
 	// 查询文件清单
-	modelFileManifest, err := pushService.fileMapper.FindManifestByCommitID(commit.CommitID)
+	modelFileManifest, err := pushService.fileMapper.FindCommitManifestByCommitID(commit.CommitID)
 	if err != nil {
 		if err != nil {
 			return nil, nil, e.NewInternalError(err)
@@ -77,7 +79,7 @@ func (pushService *PushServiceImpl) GetManifestAndBlobSet(ctx context.Context, r
 	}
 
 	// 接着查询blobs
-	fileBlobs, err := pushService.fileMapper.FindAllBlobsByCommitID(commit.CommitID)
+	fileBlobs, err := pushService.fileMapper.FindCommitFilesExceptManifestByCommitID(commit.CommitID)
 	if err != nil {
 		return nil, nil, e.NewInternalError(err)
 	}
@@ -144,7 +146,21 @@ func (pushService *PushServiceImpl) PushManifestAndBlobsWithTags(ctx context.Con
 		return nil, err
 	}
 
+	// 写入commit
 	createErr := pushService.commitMapper.Create(commit)
+	if createErr != nil {
+		if errors.Is(createErr, mapper.ErrTagAndDraftDuplicated) || errors.Is(createErr, gorm.ErrDuplicatedKey) {
+			return nil, e.NewInternalError(createErr)
+		}
+		if errors.Is(createErr, mapper.ErrLastCommitDuplicated) {
+			return nil, e.NewAlreadyExistsError(createErr)
+		}
+
+		return nil, e.NewInternalError(createErr)
+	}
+
+	// 写入tag
+	createErr = pushService.tagMapper.CreateInBatch(tags...)
 	if createErr != nil {
 		if errors.Is(createErr, mapper.ErrTagAndDraftDuplicated) || errors.Is(createErr, gorm.ErrDuplicatedKey) {
 			return nil, e.NewInternalError(createErr)
@@ -205,7 +221,7 @@ func (pushService *PushServiceImpl) toCommit(ctx context.Context, userID, ownerN
 	createTime := time.Now()
 
 	// 生成file blobs
-	modelBlobs := make([]*model.FileBlob, 0, len(fileManifest.Paths()))
+	modelBlobs := make([]*model.CommitFile, 0, len(fileManifest.Paths()))
 	err = fileManifest.Range(func(path string, digest manifest2.Digest) error {
 		// 读取文件内容
 		blob, ok := fileBlobs.BlobFor(digest.String())
@@ -223,11 +239,11 @@ func (pushService *PushServiceImpl) toCommit(ctx context.Context, userID, ownerN
 			return e.NewInternalError(err)
 		}
 
-		modelBlobs = append(modelBlobs, &model.FileBlob{
+		modelBlobs = append(modelBlobs, &model.CommitFile{
 			Digest:         digest.Hex(),
 			CommitID:       commitID,
 			FileName:       path,
-			Content:        string(content),
+			Content:        content,
 			UserID:         user.UserID,
 			UserName:       user.UserName,
 			RepositoryID:   repository.RepositoryID,
@@ -254,11 +270,11 @@ func (pushService *PushServiceImpl) toCommit(ctx context.Context, userID, ownerN
 	if err != nil {
 		return nil, e.NewInternalError(err)
 	}
-	modelFileManifest := &model.FileManifest{
+	modelFileManifest := &model.CommitFile{
 		ID:             0,
 		Digest:         fileManifestBlob.Digest().Hex(),
 		CommitID:       commitID,
-		Content:        string(content),
+		Content:        content,
 		UserID:         user.UserID,
 		UserName:       user.UserName,
 		RepositoryID:   repository.RepositoryID,
@@ -288,8 +304,8 @@ func (pushService *PushServiceImpl) toCommit(ctx context.Context, userID, ownerN
 		CreatedTime:    createTime,
 		ManifestDigest: fileManifestBlob.Digest().Hex(),
 		SequenceID:     0,
-		FileManifest:   modelFileManifest,
-		FileBlobs:      modelBlobs,
+		CommitManifest: modelFileManifest,
+		CommitFiles:    modelBlobs,
 	}
 	if configBlob != nil {
 		commit.BufManConfigDigest = configBlob.Digest().Hex()
@@ -306,8 +322,8 @@ func (pushService *PushServiceImpl) toCommit(ctx context.Context, userID, ownerN
 
 func (pushService *PushServiceImpl) saveFileManifestAndBlobs(ctx context.Context, commit *model.Commit) e.ResponseError {
 	// 保存file blobs
-	for i := 0; i < len(commit.FileBlobs); i++ {
-		fileBlob := commit.FileBlobs[i]
+	for i := 0; i < len(commit.CommitFiles); i++ {
+		fileBlob := commit.CommitFiles[i]
 
 		// 如果是README文件
 		if fileBlob.Digest == commit.DocumentDigest {
@@ -326,7 +342,7 @@ func (pushService *PushServiceImpl) saveFileManifestAndBlobs(ctx context.Context
 	}
 
 	// 保存file manifest
-	err := pushService.storageHelper.StoreManifest(ctx, commit.FileManifest)
+	err := pushService.storageHelper.StoreManifest(ctx, commit.CommitManifest)
 	if err != nil {
 		return e.NewInternalError(err)
 	}
