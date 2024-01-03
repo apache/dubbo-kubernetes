@@ -18,7 +18,7 @@
 package resource
 
 import (
-	"reflect"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"testing"
 
 	"github.com/gogo/protobuf/types"
@@ -203,8 +203,8 @@ func TestMustNewProtoInstance_Panic_Nil(t *testing.T) {
 	defer func() {
 		protoMessageType = old
 	}()
-	protoMessageType = func(name string) reflect.Type {
-		return nil
+	protoMessageType = func(message protoreflect.FullName) (protoreflect.MessageType, error) {
+		return nil, nil
 	}
 
 	s := Builder{

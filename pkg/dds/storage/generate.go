@@ -63,7 +63,7 @@ func (g *AuthenticationGenerator) Generate(data []model.Config, endpoint *endpoi
 			}
 		}
 
-		gogo, err := model.ToProtoGogo(toClient)
+		gogo, err := model.ToProto(toClient)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +120,7 @@ func (g *AuthorizationGenerator) Generate(data []model.Config, endpoint *endpoin
 				}
 			}
 		}
-		gogo, err := model.ToProtoGogo(toClient)
+		gogo, err := model.ToProto(toClient)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +138,7 @@ func (g *ConditionRoutesGenerator) Generate(data []model.Config, endpoint *endpo
 		key := generate.GenerateKey(config.Name, config.Namespace)
 		toClient.Key = key
 		toClient.Spec = config.Spec.(*api.ConditionRoute)
-		gogo, err := model.ToProtoGogo(toClient)
+		gogo, err := model.ToProto(toClient)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +156,7 @@ func (g *DynamicConfigsGenerator) Generate(data []model.Config, endpoint *endpoi
 		key := generate.GenerateKey(config.Name, config.Namespace)
 		toClient.Key = key
 		toClient.Spec = config.Spec.(*api.DynamicConfig)
-		gogo, err := model.ToProtoGogo(toClient)
+		gogo, err := model.ToProto(toClient)
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func (g *ServiceMappingGenerator) Generate(data []model.Config, endpoint *endpoi
 		key := generate.GenerateKey(config.Name, config.Namespace)
 		toClient.Key = key
 		toClient.Spec = config.Spec.(*api.ServiceNameMapping)
-		gogo, err := model.ToProtoGogo(toClient)
+		gogo, err := model.ToProto(toClient)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (g *TagRoutesGenerator) Generate(data []model.Config, endpoint *endpoint.En
 		key := generate.GenerateKey(config.Name, config.Namespace)
 		toClient.Key = key
 		toClient.Spec = config.Spec.(*api.TagRoute)
-		gogo, err := model.ToProtoGogo(toClient)
+		gogo, err := model.ToProto(toClient)
 		if err != nil {
 			return nil, err
 		}
