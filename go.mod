@@ -54,6 +54,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattbaird/jsonpatch v0.0.0-20230413205102-771768614e91
 	github.com/moby/term v0.5.0
+	github.com/nacos-group/nacos-sdk-go v1.0.9
 	github.com/onsi/gomega v1.27.10
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1

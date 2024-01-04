@@ -36,7 +36,7 @@ func addZkRegistryCmd(rootCmd *cobra.Command) {
 }
 
 func addZkLsCmd(zkRegistryCmd *cobra.Command) {
-	var zkAddr = "127.0.0.1:2181"
+	zkAddr := "127.0.0.1:2181"
 
 	lsCmd := &cobra.Command{
 		Use:   "ls",
