@@ -19,6 +19,11 @@ clean/generated: clean/protos clean/builtin-crds clean/resources clean/policies 
 generate/protos:
 	find $(PROTO_DIRS) -name '*.proto' -exec $(PROTOC_GO) {} \;
 
+# Generate the embedded templates
+.PHONY: generate/templates
+generate/templates:
+	go generate app/dubboctl/internal/dubbo/templates_embedded.go
+
 .PHONY: clean/tools
 clean/tools:
 	rm -rf $(DUBBO_DIR)/build/tools-*
@@ -29,7 +34,7 @@ clean/protos: ## Dev: Remove auto-generated Protobuf files
 	find $(PROTO_DIRS) -name '*.pb.validate.go' -delete
 
 .PHONY: generate
-generate: generate/protos $(if $(findstring ./api,$(PROTO_DIRS)),resources/type generate/builtin-crds) generate/policies generate/oas $(EXTRA_GENERATE_DEPS_TARGETS) ## Dev: Run all code generation
+generate: generate/protos generate/templates $(if $(findstring ./api,$(PROTO_DIRS)),resources/type generate/builtin-crds) generate/policies generate/oas $(EXTRA_GENERATE_DEPS_TARGETS) ## Dev: Run all code generation
 
 $(POLICY_GEN):
 	cd $(DUBBO_DIR) && go build -o ./build/tools-${GOOS}-${GOARCH}/policy-gen/generator ./tools/policy-gen/generator/main.go
