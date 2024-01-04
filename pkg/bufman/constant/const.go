@@ -29,9 +29,12 @@ const (
 	AuthPrefix    = "Bearer"
 	TokenLength   = 16
 	CommitLength  = 32
-	UserIDKey     = "user_id"
 	DefaultBranch = "main"
 )
+
+type userIDKeyType struct{}
+
+var UserIDKey userIDKeyType
 
 const (
 	FileSavaDir = "blobs"

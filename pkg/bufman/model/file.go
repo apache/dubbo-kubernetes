@@ -50,17 +50,21 @@ type FileBlob struct {
 type CommitFiles []*CommitFile
 
 func (commitFiles *CommitFiles) ToProtoFileInfo() *registryv1alpha1.FileInfo {
+	if commitFiles == nil {
+		return nil
+	}
+
 	root := &registryv1alpha1.FileInfo{
 		Path:  ".",
 		IsDir: true,
 	}
 
 	for i := 0; i < len(*commitFiles); i++ {
-		fileBlob := (*commitFiles)[i]
-		if commitFiles == nil {
-			fileBlob = &CommitFile{}
+		commitFile := (*commitFiles)[i]
+		if commitFile == nil {
+			commitFile = &CommitFile{}
 		}
-		doToProtoFileInfo(root, fileBlob.FileName)
+		doToProtoFileInfo(root, commitFile.FileName)
 	}
 
 	return root

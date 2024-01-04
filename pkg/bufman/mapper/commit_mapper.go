@@ -165,20 +165,27 @@ func (c *CommitMapperImpl) FindByRepositoryIDAndReference(repositoryID string, r
 }
 
 func (c *CommitMapperImpl) FindByRepositoryNameAndReference(repositoryID string, reference string) (*model.Commit, error) {
-	var commit *model.Commit
-	var err error
 	if reference == "" || reference == constant.DefaultBranch {
-		commit, err = c.FindLastByRepositoryID(repositoryID)
-	} else if len(reference) == constant.CommitLength {
-		// 查询commit
-		commit, err = c.FindByRepositoryIDAndCommitName(repositoryID, reference)
+		commit, err := c.FindLastByRepositoryID(repositoryID)
 		if err != nil {
 			return nil, err
+		}
+
+		return commit, nil
+	} else if len(reference) == constant.CommitLength {
+		// 查询commit
+		commit, err := c.FindByRepositoryIDAndCommitName(repositoryID, reference)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+
+		if commit != nil {
+			return commit, nil
 		}
 	}
 
 	// 查询tag
-	commit, err = c.FindByRepositoryIDAndTagName(repositoryID, reference)
+	commit, err := c.FindByRepositoryIDAndTagName(repositoryID, reference)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}

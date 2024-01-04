@@ -24,8 +24,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 )
 
-type DBStorageHelperImpl struct {
-}
+type DBStorageHelperImpl struct{}
 
 func NewDBStorageHelper() *DBStorageHelperImpl {
 	return &DBStorageHelperImpl{}

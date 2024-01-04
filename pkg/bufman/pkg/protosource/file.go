@@ -385,6 +385,7 @@ func (f *file) populateEnum(
 			f.descriptor.locationStore,
 		),
 		enumDescriptorProto.GetOptions().GetAllowAlias(),
+		// nolint:staticcheck // SA1004 ignore this!
 		enumDescriptorProto.GetOptions().GetDeprecatedLegacyJsonFieldConflicts(),
 		enumDescriptorProto.GetOptions().GetDeprecated(),
 		getEnumAllowAliasPath(enumIndex, nestedMessageIndexes...),
@@ -482,6 +483,7 @@ func (f *file) populateMessage(
 		descriptorProto.GetOptions().GetMapEntry(),
 		descriptorProto.GetOptions().GetMessageSetWireFormat(),
 		descriptorProto.GetOptions().GetNoStandardDescriptorAccessor(),
+		// nolint:staticcheck // SA1004 ignore this!
 		descriptorProto.GetOptions().GetDeprecatedLegacyJsonFieldConflicts(),
 		descriptorProto.GetOptions().GetDeprecated(),
 		getMessageMessageSetWireFormatPath(topLevelMessageIndex, nestedMessageIndexes...),

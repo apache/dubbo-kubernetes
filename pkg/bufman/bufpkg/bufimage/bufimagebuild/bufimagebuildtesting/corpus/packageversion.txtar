@@ -1,4 +1,0 @@
--- a.proto --
-package weather.v1alpha1;
-
-option go_package = "weather";

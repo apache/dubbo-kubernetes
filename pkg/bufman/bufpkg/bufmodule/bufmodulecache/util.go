@@ -18,6 +18,7 @@ package bufmodulecache
 import (
 	"context"
 	"fmt"
+
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"

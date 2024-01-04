@@ -54,7 +54,7 @@ func (l *Lru) Add(key interface{}, val interface{}) error {
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if e, ok := l.cache[key]; ok { //以及存在
+	if e, ok := l.cache[key]; ok { // 以及存在
 		e.Value.(*Node).Val = val
 		l.l.MoveToFront(e)
 		return nil
@@ -131,5 +131,4 @@ func (l *Lru) Del(key interface{}) {
 			}
 		}
 	}
-
 }

@@ -1,9 +1,0 @@
--- a/no_package.proto --
-syntax = "proto3";
--- buf.yaml --
-version: v1
-lint:
-  use:
-    - PACKAGE_DEFINED
--- no_package.proto --
-syntax = "proto3";
