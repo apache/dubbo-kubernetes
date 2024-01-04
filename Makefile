@@ -102,6 +102,10 @@ fmt: gofumpt-install ## Run gofumpt against code.
 vet: ## Run go vet against code.
 	@find . -type f -name '*.go'| grep -v "/vendor/" | xargs gofmt -w -s
 
+.PHONY: generate
+generate:
+	go generate app/dubboctl/internal/dubbo/templates_embedded.go
+
 # Run mod tidy against code
 .PHONY: tidy
 tidy:
@@ -117,7 +121,7 @@ test: fmt vet  ## Run all tests.
 
 
 .PHONY: test-dubboctl
-test-dubboctl: fmt vet  ## Run tests for dubboctl
+test-dubboctl: generate fmt vet ## Run tests for dubboctl
 	go test -coverprofile coverage.out -covermode=atomic github.com/apache/dubbo-kubernetes/app/dubboctl/...
 
 .PHONY: test-dubbocp
@@ -140,7 +144,7 @@ build-dubbocp:  ## Build binary with the dubbo control plane.
 	GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/dubbo-cp app/dubbo-cp/main.go
 
 .PHONY: build-dubboctl
-build-dubboctl: ## Build binary with the dubbo dubboctl.
+build-dubboctl: generate ## Build binary with the dubbo dubboctl.
 	CGO_ENABLED=0 GOOS=$(GOOS) go build -ldflags $(LDFLAGS) -o bin/dubboctl app/dubboctl/main.go
 
 
