@@ -200,7 +200,7 @@ func (i *plainPostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		i.logger.Sugar().Warn(
+		i.Logger.Warn(
 			"non_connect_unary_error",
 			zap.Error(err),
 		)
@@ -249,7 +249,7 @@ func (i *plainPostHandler) writeProtoMessage(w http.ResponseWriter, message prot
 	i.B64Encoding.Encode(responseB64Bytes, responseProtoBytes)
 	w.Header().Set("Content-Type", "text/plain")
 	if n, err := w.Write(responseB64Bytes); n != len(responseB64Bytes) && err != nil {
-		i.logger.Sugar().Error(
+		i.Logger.Error(
 			"write_error",
 			zap.Int("expected_bytes", len(responseB64Bytes)),
 			zap.Int("actual_bytes", n),

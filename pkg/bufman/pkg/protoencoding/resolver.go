@@ -38,7 +38,7 @@ func newResolver(fileDescriptors ...protodescriptor.FileDescriptor) (Resolver, e
 	if err != nil {
 		return nil, err
 	}
-	types := &protoregistryv1alpha1.Types{}
+	types := &protoregistry.Types{}
 	var rangeErr error
 	files.RangeFiles(func(fileDescriptor protoreflect.FileDescriptor) bool {
 		if err := registerDescriptors(types, fileDescriptor); err != nil {
@@ -54,8 +54,8 @@ func newResolver(fileDescriptors ...protodescriptor.FileDescriptor) (Resolver, e
 }
 
 type resolver struct {
-	*protoregistryv1alpha1.Files
-	*protoregistryv1alpha1.Types
+	*protoregistry.Files
+	*protoregistry.Types
 }
 
 type descriptorContainer interface {
@@ -64,7 +64,7 @@ type descriptorContainer interface {
 	Extensions() protoreflect.ExtensionDescriptors
 }
 
-func registerDescriptors(types *protoregistryv1alpha1.Types, container descriptorContainer) error {
+func registerDescriptors(types *protoregistry.Types, container descriptorContainer) error {
 	messageDescriptors := container.Messages()
 	for i, messagesLen := 0, messageDescriptors.Len(); i < messagesLen; i++ {
 		messageDescriptor := messageDescriptors.Get(i)

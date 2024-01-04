@@ -139,7 +139,7 @@ func makeCustomOption(t *testing.T, tag int32) protoreflect.ExtensionType {
 			},
 		},
 	}
-	fileDescriptor, err := protodesc.NewFile(fileDescriptorProto, protoregistryv1alpha1.GlobalFiles)
+	fileDescriptor, err := protodesc.NewFile(fileDescriptorProto, protoregistry.GlobalFiles)
 	require.NoError(t, err)
 	return dynamicpb.NewExtensionType(fileDescriptor.Extensions().Get(0))
 }

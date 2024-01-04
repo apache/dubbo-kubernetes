@@ -39,7 +39,7 @@ func (z *zapExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpa
 		if !span.SpanContext().IsSampled() {
 			continue
 		}
-		if checkedEntry := z.logger.Sugar().Check(zap.DebugLevel, span.Name()); checkedEntry != nil {
+		if checkedEntry := z.logger.Check(zap.DebugLevel, span.Name()); checkedEntry != nil {
 			fields := []zap.Field{
 				zap.Duration("duration", span.EndTime().Sub(span.StartTime())),
 			}

@@ -50,7 +50,7 @@ func newArchiveReader(
 	httpClient *http.Client,
 ) *archiveReader {
 	return &archiveReader{
-		logger:            logger.Sugar().Named("githubtesting"),
+		logger:            logger.Named("githubtesting"),
 		storageosProvider: storageosProvider,
 		httpClient:        httpClient,
 	}

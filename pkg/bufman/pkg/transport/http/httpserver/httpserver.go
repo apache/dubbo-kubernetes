@@ -116,7 +116,7 @@ func Run(
 	for _, option := range options {
 		option(s)
 	}
-	stdLogger, err := zap.NewStdLogAt(logger.Sugar().Named("httpserver"), zap.ErrorLevel)
+	stdLogger, err := zap.NewStdLogAt(logger.Named("httpserver"), zap.ErrorLevel)
 	if err != nil {
 		return err
 	}

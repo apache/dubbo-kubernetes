@@ -26,8 +26,8 @@ import (
 // Resolver can resolve files, messages, enums, and extensions.
 type Resolver interface {
 	protodesc.Resolver
-	protoregistryv1alpha1.ExtensionTypeResolver
-	protoregistryv1alpha1.MessageTypeResolver
+	protoregistry.ExtensionTypeResolver
+	protoregistry.MessageTypeResolver
 	FindEnumByName(enum protoreflect.FullName) (protoreflect.EnumType, error)
 }
 
