@@ -36,7 +36,7 @@ func init() {
 			clusterScoped = true
 		}
 		KubernetesCacheInstance = NewKubernetesCache(kc, clusterScoped) // init cache instance before start registry
-		return NewRegistry(clusterScoped, []string{}), KubernetesCacheInstance, nil
+		return NewRegistry(clusterScoped, namespaces), KubernetesCacheInstance, nil
 	})
 }
 
