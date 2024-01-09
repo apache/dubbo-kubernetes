@@ -82,6 +82,7 @@ header:
     - '**/deploy.tpl'
     - '**/docs/**'
     - '**/.nvmrc'
+    - 'app/dubboctl/internal/dubbo/dockerfiles/**'
   comment: on-failure
 
   license-location-threshold: 130
