@@ -24,6 +24,7 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
@@ -35,11 +36,11 @@ import (
 var subscribeUrl *common.URL
 
 func init() {
-	registry.AddRegistry("universal", func(u *common.URL, _ *client.KubeClient) (registry.AdminRegistry, error) {
+	registry.AddRegistry("universal", func(u *common.URL, _ *client.KubeClient) (registry.AdminRegistry, cache.Cache, error) {
 		delegate, err := extension.GetRegistry(u.Protocol, u)
 		if err != nil {
 			logger.Error("Error initialize registry instance.")
-			return nil, err
+			return nil, nil, err
 		}
 
 		sdUrl := u.Clone()
@@ -48,10 +49,10 @@ func init() {
 		sdDelegate, err := extension.GetServiceDiscovery(sdUrl)
 		if err != nil {
 			logger.Error("Error initialize service discovery instance.")
-			return nil, err
+			return nil, nil, err
 		}
 		UniversalCacheInstance = NewUniversalCache() // init cache instance before start registry
-		return NewRegistry(delegate, sdDelegate), nil
+		return NewRegistry(delegate, sdDelegate), UniversalCacheInstance, nil
 	})
 
 	queryParams := url.Values{

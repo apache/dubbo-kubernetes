@@ -20,13 +20,14 @@ package kube
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 )
 
 func init() {
-	registry.AddRegistry("kube", func(u *common.URL, kc *client.KubeClient) (registry.AdminRegistry, error) {
+	registry.AddRegistry("kube", func(u *common.URL, kc *client.KubeClient) (registry.AdminRegistry, cache.Cache, error) {
 		clusterScoped := false
 		namespaces := make([]string, 0)
 		if ns, ok := u.GetParams()[constant.NamespaceKey]; ok && ns[0] != constant.AnyValue {
@@ -35,7 +36,7 @@ func init() {
 			clusterScoped = true
 		}
 		KubernetesCacheInstance = NewKubernetesCache(kc, clusterScoped) // init cache instance before start registry
-		return NewRegistry(clusterScoped, []string{})
+		return NewRegistry(clusterScoped, []string{}), KubernetesCacheInstance, nil
 	})
 }
 
@@ -44,11 +45,11 @@ type Registry struct {
 	namespaces    []string
 }
 
-func NewRegistry(clusterScoped bool, namespaces []string) (*Registry, error) {
+func NewRegistry(clusterScoped bool, namespaces []string) *Registry {
 	return &Registry{
 		clusterScoped: clusterScoped,
 		namespaces:    namespaces,
-	}, nil
+	}
 }
 
 func (kr *Registry) Delegate() dubboRegistry.Registry {
