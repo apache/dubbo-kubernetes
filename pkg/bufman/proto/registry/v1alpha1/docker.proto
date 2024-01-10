@@ -1,0 +1,131 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+// manage docker repo access service
+service DockerRepoService {
+  // CreateDockerRepo create a docker repo for user
+  //
+  // This method requires authentication.
+  rpc CreateDockerRepo(CreateDockerRepoRequest) returns (CreateDockerRepoResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+  // GetDockerRepo get a user's docker repo by id
+  //
+  // This method requires authentication.
+  rpc GetDockerRepo(GetDockerRepoRequest) returns (GetDockerRepoResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // GetDockerRepoByName get a user's docker repo by name
+  //
+  // This method requires authentication.
+  rpc GetDockerRepoByName(GetDockerRepoByNameRequest) returns (GetDockerRepoByNameResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // ListDockerRepos lists the user's all docker repo entries
+  //
+  // This method requires authentication.
+  rpc ListDockerRepos(ListDockerReposRequest) returns (ListDockerReposResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // UpdateDockerRepoByName given a name, to update address、username、password
+  //
+  // This method requires authentication.
+  rpc UpdateDockerRepoByName(UpdateDockerRepoByNameRequest) returns (UpdateDockerRepoByNameResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+  // UpdateDockerRepoByName given a id, to update address、username、password
+  //
+  // This method requires authentication.
+  rpc UpdateDockerRepoByID(UpdateDockerRepoByIDRequest) returns (UpdateDockerRepoByIDResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+}
+
+message DockerRepo {
+  string id = 1;
+  string name = 2;
+  string address = 3;
+  string username = 4;
+  google.protobuf.Timestamp create_time = 5;
+  google.protobuf.Timestamp update_time = 6;
+  string note = 7;
+}
+
+message CreateDockerRepoRequest {
+  string name = 1;
+  string address = 2;
+  string username = 3;
+  string password = 4;
+  string note = 5;
+}
+
+message CreateDockerRepoResponse {
+  DockerRepo docker_repo = 1;
+}
+
+message GetDockerRepoRequest {
+  string id = 1;
+}
+
+message GetDockerRepoResponse {
+  DockerRepo docker_repo = 1;
+}
+
+message GetDockerRepoByNameRequest {
+  string name = 1;
+}
+
+message GetDockerRepoByNameResponse {
+  DockerRepo docker_repo = 1;
+}
+
+message ListDockerReposRequest {
+  uint32 page_size = 1;
+  // The first page is returned if this is empty.
+  string page_token = 2;
+  bool reverse = 3;
+}
+
+message ListDockerReposResponse {
+  repeated DockerRepo docker_repos = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+}
+
+message UpdateDockerRepoByIDRequest {
+  // given a id, to update address、username、password
+  string id = 1;
+  string address = 3;
+  string username = 4;
+  string password = 5;
+}
+
+message UpdateDockerRepoByIDResponse {}
+
+message UpdateDockerRepoByNameRequest {
+  // given a name, to update address、username、password
+  string name = 1;
+  string address = 3;
+  string username = 4;
+  string password = 5;
+}
+
+message UpdateDockerRepoByNameResponse {}

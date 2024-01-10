@@ -1,0 +1,42 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+message RepositoryBranch {
+  // primary key, unique, immutable
+  string id = 1;
+  // The name of the repository branch.
+  string name = 2;
+  // The name of the latest commit on the branch.
+  string latest_commit_name = 3;
+  // is_main_branch denotes whether this branch is considered the main branch of the repository.
+  bool is_main_branch = 4;
+  // The last update time of the branch.
+  google.protobuf.Timestamp last_update_time = 5;
+}
+
+// RepositoryBranchService is the Repository branch service.
+service RepositoryBranchService {
+  // ListRepositoryBranchs lists the repository branches associated with a Repository.
+  rpc ListRepositoryBranches(ListRepositoryBranchesRequest) returns (ListRepositoryBranchesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message ListRepositoryBranchesRequest {
+  // The ID of the repository whose branches should be listed.
+  string repository_id = 1;
+  uint32 page_size = 2;
+  // The first page is returned if this is empty.
+  string page_token = 3;
+}
+
+message ListRepositoryBranchesResponse {
+  repeated RepositoryBranch repository_branches = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+}

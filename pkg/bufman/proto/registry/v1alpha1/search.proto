@@ -1,0 +1,207 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "registry/v1alpha1/plugin.proto";
+import "registry/v1alpha1/repository.proto";
+import "registry/v1alpha1/repository_commit.proto";
+import "registry/v1alpha1/repository_tag.proto";
+
+enum OrderBy {
+  ORDER_BY_UNSPECIFIED = 0;
+  ORDER_BY_CREATE_TIME = 1;
+  ORDER_BY_UPDATE_TIME = 2;
+  ORDER_BY_NAME = 3;
+}
+
+message RepositorySearchResult {
+  string id = 1;
+  string name = 2;
+  // The name of the user
+  // who is the owner of this repository.
+  string owner = 3;
+  // The visibility of the repository.
+  Visibility visibility = 4;
+  bool deprecated = 5;
+}
+
+message CommitSearchResult {
+  string id = 1;  // commit id
+  string name = 2;  // commit name
+  // The name of the user
+  // who is the owner of this repository.
+  string owner = 3;
+  // The name of the repository.
+  string repository_name = 4;
+}
+
+message UserSearchResult {
+  string id = 1;
+  string username = 2;
+  bool deactivated = 3;
+}
+
+
+message CuratedPluginSearchResult {
+  string id = 1;
+  string name = 2;
+  // The name of the user or organization
+  // who is the owner of this plugin.
+  string owner = 3;
+  bool deprecated = 4;
+}
+
+// SearchService is the search service.
+service SearchService {
+
+  // SearchUser searches users by username
+  rpc SearchUser(SearchUserRequest) returns (SearchUserResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // SearchRepository searches repositories by name or description
+  rpc SearchRepository(SearchRepositoryRequest) returns (SearchRepositoryResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // SearchCommitByContent searches last commit in same repo by idl content
+  // that means, for a repo, search results only record last matched commit
+  rpc SearchLastCommitByContent(SearchLastCommitByContentRequest) returns (SearchLastCommitByContentResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // SearchCurationPlugin search plugins by name or description
+  rpc SearchCurationPlugin(SearchCuratedPluginRequest) returns (SearchCuratedPluginResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // SearchTag searches for tags in a repository
+  rpc SearchTag(SearchTagRequest) returns (SearchTagResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // SearchDraft searches for drafts in a repository
+  rpc SearchDraft(SearchDraftRequest) returns (SearchDraftResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message SearchUserRequest {
+  // The search string.
+  string query = 1;
+  uint32 page_size = 2;
+  // The first page is returned if this is empty.
+  string page_token = 3;
+  // The field to order results by.
+  OrderBy order_by = 4;
+  // Reverse orders results in descending order.
+  bool reverse = 5;
+}
+
+message SearchUserResponse {
+  repeated UserSearchResult users = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+}
+
+message SearchRepositoryRequest {
+  // The search string.
+  string query = 1;
+  uint32 page_size = 2;
+  // The first page is returned if this is empty.
+  string page_token = 3;
+  // The field to order results by.
+  OrderBy order_by = 4;
+  // Reverse orders results in descending order.
+  bool reverse = 5;
+}
+
+message SearchRepositoryResponse {
+  repeated RepositorySearchResult repositories = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+
+}
+
+message SearchLastCommitByContentRequest {
+  // The search string.
+  string query = 1;
+  uint32 page_size = 2;
+  // The first page is returned if this is empty.
+  string page_token = 3;
+  // The field to order results by.
+  OrderBy order_by = 4;
+  // Reverse orders results in descending order.
+  bool reverse = 5;
+}
+
+message SearchLastCommitByContentResponse {
+  repeated CommitSearchResult commits = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+
+}
+
+message SearchCuratedPluginRequest {
+  // The search string.
+  string query = 1;
+  uint32 page_size = 2;
+  // The first page is returned if this is empty.
+  string page_token = 3;
+  // The field to order results by.
+  OrderBy order_by = 4;
+  // Reverse orders results in descending order.
+  bool reverse = 5;
+}
+
+message SearchCuratedPluginResponse {
+  repeated CuratedPluginSearchResult plugins = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+
+}
+
+message SearchTagRequest {
+  // The owner of the repository.
+  string repository_owner = 1;
+  // The name of the repository.
+  string repository_name = 2;
+  // The search string.
+  string query = 3;
+  uint32 page_size = 4;
+  // The first page is returned if this is empty.
+  string page_token = 5;
+  // The field to order results by.
+  OrderBy order_by = 6;
+  // Reverse orders results in descending order.
+  bool reverse = 7;
+}
+
+message SearchTagResponse {
+  repeated RepositoryTag repository_tags = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+}
+
+message SearchDraftRequest {
+  // The owner of the repository.
+  string repository_owner = 1;
+  // The name of the repository.
+  string repository_name = 2;
+  // The search string.
+  string query = 3;
+  uint32 page_size = 4;
+  // The first page is returned if this is empty.
+  string page_token = 5;
+  // The field to order results by.
+  OrderBy order_by = 6;
+  // Reverse orders results in descending order.
+  bool reverse = 7;
+}
+
+message SearchDraftResponse {
+  repeated RepositoryCommit repository_commits = 1;
+  // There are no more pages if this is empty.
+  string next_page_token = 2;
+}

@@ -22,12 +22,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/webhook"
-
 	"github.com/apache/dubbo-kubernetes/pkg/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient"
 	"github.com/apache/dubbo-kubernetes/pkg/dds"
 	"github.com/apache/dubbo-kubernetes/pkg/snp"
+	"github.com/apache/dubbo-kubernetes/pkg/webhook"
 
 	"github.com/apache/dubbo-kubernetes/pkg/authority"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
@@ -88,6 +88,10 @@ func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
 
 			if err := admin.Setup(rt); err != nil {
 				logger.Sugar().Error(err, "unable to set up Metrics")
+			}
+
+			if err := bufman.Setup(rt); err != nil {
+				logger.Sugar().Error(err, "unable to set up bufman")
 			}
 
 			if err := cert.Setup(rt); err != nil {
