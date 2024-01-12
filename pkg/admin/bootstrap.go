@@ -103,7 +103,7 @@ func RegisterOther(rt core_runtime.Runtime) error {
 		if err != nil {
 			panic(err)
 		}
-		config.AdminRegistry, err = registry.Registry(c.GetProtocol(), addrUrl) // TODO: support k8s
+		config.AdminRegistry, config.Cache, err = registry.Registry(c.GetProtocol(), addrUrl, rt.KubeClient())
 		if err != nil {
 			panic(err)
 		}
