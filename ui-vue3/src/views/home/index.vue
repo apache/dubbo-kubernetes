@@ -18,9 +18,7 @@
   <div class="__container_home_index">
     <h1>{{ $t(routeName) }}</h1>
     <a-flex wrap="wrap" gap="small" :vertical="false" justify="space-between" align="center">
-      <a-card
-          class="statistic-card"
-          v-for="(v, k) in clusterInfo.report">
+      <a-card class="statistic-card" v-for="(v, k) in clusterInfo.report">
         <a-flex gap="middle" :vertical="false" justify="space-between" align="center">
           <a-statistic :value="v.value" class="statistic">
             <template #prefix>
@@ -34,48 +32,55 @@
         </a-flex>
       </a-card>
     </a-flex>
-    <a-descriptions title=" "
-                    bordered
-                    :column="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }"
-                    layout="horizontal">
-
+    <a-descriptions
+      title=" "
+      bordered
+      :column="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }"
+      layout="horizontal"
+    >
       <a-descriptions-item label="versions">
         <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.versions">{{ v }}</a-tag>
       </a-descriptions-item>
       <a-descriptions-item label="protocols">
         <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.protocols">{{ v }}</a-tag>
       </a-descriptions-item>
-      <a-descriptions-item label="configCenter">{{ metricsMetadata.info.configCenter }}</a-descriptions-item>
-      <a-descriptions-item label="registry">{{ metricsMetadata.info.registry }}</a-descriptions-item>
-      <a-descriptions-item label="metadataCenter">{{ metricsMetadata.info.metadataCenter }}</a-descriptions-item>
+      <a-descriptions-item label="configCenter">{{
+        metricsMetadata.info.configCenter
+      }}</a-descriptions-item>
+      <a-descriptions-item label="registry">{{
+        metricsMetadata.info.registry
+      }}</a-descriptions-item>
+      <a-descriptions-item label="metadataCenter">{{
+        metricsMetadata.info.metadataCenter
+      }}</a-descriptions-item>
       <a-descriptions-item label="grafana">{{ metricsMetadata.info.grafana }}</a-descriptions-item>
-      <a-descriptions-item label="prometheus">{{ metricsMetadata.info.prometheus }}</a-descriptions-item>
+      <a-descriptions-item label="prometheus">{{
+        metricsMetadata.info.prometheus
+      }}</a-descriptions-item>
       <a-descriptions-item label="Remark">empty</a-descriptions-item>
       <a-descriptions-item label="rules" :span="4">
         <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.rules">{{ v }}</a-tag>
       </a-descriptions-item>
     </a-descriptions>
     <div id="report_container"></div>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import {Icon} from '@iconify/vue'
-import {PRIMARY_COLOR} from '@/base/constants'
-import {onMounted, reactive} from 'vue'
-import {getClusterInfo} from '@/api/service/clusterInfo'
-import {getMetricsMetadata} from '@/api/service/serverInfo'
-import {useRoute} from "vue-router";
-import {Chart} from '@antv/g2';
-
+import { Icon } from '@iconify/vue'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { onMounted, reactive } from 'vue'
+import { getClusterInfo } from '@/api/service/clusterInfo'
+import { getMetricsMetadata } from '@/api/service/serverInfo'
+import { useRoute } from 'vue-router'
+import { Chart } from '@antv/g2'
 
 let __null = PRIMARY_COLOR
 
 const routeName = <string>useRoute().name
 let clusterInfo = reactive({
   info: <{ [key: string]: string }>{},
-  report: <{ [key: string]: { value: string, icon: string } }>{}
+  report: <{ [key: string]: { value: string; icon: string } }>{}
 })
 
 let metricsMetadata = reactive({
@@ -107,32 +112,31 @@ onMounted(async () => {
       icon: 'iconoir:consumable',
       value: clusterInfo.info.consumers
     }
-  };
-
+  }
 
   const chart = new Chart({
     container: 'report_container',
-    autoFit: true,
-  });
+    autoFit: true
+  })
 
   chart
-      .interval()
-      .data([
-        {name: 'all', value: clusterInfo.info.all},
-        {name: 'application', value: clusterInfo.info.application},
-        {name: 'services', value: clusterInfo.info.services},
-        {name: 'providers', value: clusterInfo.info.providers},
-        {name: 'consumers', value: clusterInfo.info.consumers},
-      ])
-      .encode('x', 'name')
-      .encode('y', 'value')
-      .encode('color', 'name')
-      .encode('size', 40)
-      .style('radiusTopLeft', 5)
-      .style('radiusTopRight', 10)
-      .style('radiusBottomRight', 15)
-      .style('radiusBottomLeft', 20);
-  chart.render();
+    .interval()
+    .data([
+      { name: 'all', value: clusterInfo.info.all },
+      { name: 'application', value: clusterInfo.info.application },
+      { name: 'services', value: clusterInfo.info.services },
+      { name: 'providers', value: clusterInfo.info.providers },
+      { name: 'consumers', value: clusterInfo.info.consumers }
+    ])
+    .encode('x', 'name')
+    .encode('y', 'value')
+    .encode('color', 'name')
+    .encode('size', 40)
+    .style('radiusTopLeft', 5)
+    .style('radiusTopRight', 10)
+    .style('radiusBottomRight', 15)
+    .style('radiusBottomLeft', 20)
+  chart.render()
 })
 </script>
 <style lang="less" scoped>

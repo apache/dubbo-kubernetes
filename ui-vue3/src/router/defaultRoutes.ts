@@ -15,180 +15,179 @@
  * limitations under the License.
  */
 
-import type {RouterMeta} from '@/router/RouterMeta'
-import type {RouteRecordRaw} from 'vue-router'
+import type { RouterMeta } from '@/router/RouterMeta'
+import type { RouteRecordRaw } from 'vue-router'
 import LayoutTab from '../layout/tab/layout_tab.vue'
 import _ from 'lodash'
 
 export declare type RouteRecordType = RouteRecordRaw & {
-    key?: string
-    name: string
-    children?: RouteRecordType[]
-    meta?: RouterMeta
+  key?: string
+  name: string
+  children?: RouteRecordType[]
+  meta?: RouterMeta
 }
 
 export const routes: Readonly<RouteRecordType[]> = [
-    {
-        path: '/',
-        name: 'Root',
-        redirect: 'home',
-        component: () => import('../layout/index.vue'),
+  {
+    path: '/',
+    name: 'Root',
+    redirect: 'home',
+    component: () => import('../layout/index.vue'),
+    meta: {
+      skip: true
+    },
+    children: [
+      {
+        path: '/home',
+        name: 'homePage',
+        component: () => import('../views/home/index.vue'),
         meta: {
-            skip: true
+          icon: 'carbon:web-services-cluster'
+        }
+      },
+      {
+        path: '/resources',
+        name: 'resources',
+        meta: {
+          icon: 'carbon:web-services-cluster'
         },
         children: [
-            {
-                path: '/home',
-                name: 'homePage',
-                component: () => import('../views/home/index.vue'),
+          {
+            path: '/applications',
+            name: 'applications',
+            component: LayoutTab,
+            redirect: 'index',
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'index',
+                component: () => import('../views/resources/applications/index.vue'),
                 meta: {
-                    icon: 'carbon:web-services-cluster'
+                  hidden: true
                 }
-            },
-            {
-                path: '/resources',
-                name: 'resources',
+              },
+              {
+                path: '/detail/:pathId',
+                name: 'application-tab1',
+                component: () => import('../views/resources/applications/tabs/tab1.vue'),
                 meta: {
-                    icon: 'carbon:web-services-cluster'
-                },
-                children: [
-                    {
-                        path: '/applications',
-                        name: 'applications',
-                        component: LayoutTab,
-                        redirect: 'index',
-                        meta: {
-                            tab_parent: true
-                        },
-                        children: [
-                            {
-                                path: '/index',
-                                name: 'index',
-                                component: () => import('../views/resources/applications/index.vue'),
-                                meta: {
-                                    hidden: true
-                                }
-                            },
-                            {
-                                path: '/detail/:pathId',
-                                name: 'application-tab1',
-                                component: () => import('../views/resources/applications/tabs/tab1.vue'),
-                                meta: {
-                                    tab: true
-                                }
-                            },
-                            {
-                                path: '/detail2/:pathId',
-                                name: 'application-tab2',
-                                component: () => import('../views/resources/applications/tabs/tab2.vue'),
-                                meta: {
-                                    tab: true
-                                }
-                            },
-                        ]
-                    },
-                    {
-                        path: '/instances',
-                        name: 'instances',
-                        component: () => import('../views/resources/instances/index.vue'),
-                        meta: {}
-                    },
-                    {
-                        path: '/services',
-                        name: 'services',
-                        component: () => import('../views/resources/services/index.vue'),
-                        meta: {}
-                    },
-                ]
-            },
-            {
-                path: '/common',
-                name: 'commonDemo',
-                redirect: 'tab',
+                  tab: true
+                }
+              },
+              {
+                path: '/detail2/:pathId',
+                name: 'application-tab2',
+                component: () => import('../views/resources/applications/tabs/tab2.vue'),
                 meta: {
-                    icon: 'tdesign:play-demo'
-                },
-                children: [
-                    {
-                        path: '/tab',
-                        name: 'tabDemo',
-                        component: LayoutTab,
-                        redirect: 'index',
-                        meta: {
-                            tab_parent: true
-                        },
-                        children: [
-                            {
-                                path: '/index',
-                                name: 'applications_index',
-                                component: () => import('../views/resources/applications/index.vue'),
-                                meta: {
-                                    // hidden: true,
-                                }
-                            },
-                            {
-                                path: '/tab1',
-                                name: 'tab1',
-                                component: () => import('../views/common/tab_demo/tab1.vue'),
-                                meta: {
-                                    icon: 'simple-icons:podman',
-                                    tab: true,
-                                }
-                            },
-                            {
-                                path: '/tab2',
-                                name: 'tab2',
-                                component: () => import('../views/common/tab_demo/tab2.vue'),
-                                meta: {
-                                    icon: 'fontisto:docker',
-                                    tab: true,
-                                }
-                            },
-                        ]
-
-                    },
-                    {
-                        path: '/placeholder',
-                        name: 'placeholder_demo',
-                        component: () => import('../views/common/placeholder_demo/index.vue')
-                    }
-                ]
-            }
+                  tab: true
+                }
+              }
+            ]
+          },
+          {
+            path: '/instances',
+            name: 'instances',
+            component: () => import('../views/resources/instances/index.vue'),
+            meta: {}
+          },
+          {
+            path: '/services',
+            name: 'services',
+            component: () => import('../views/resources/services/index.vue'),
+            meta: {}
+          }
         ]
-    }
+      },
+      {
+        path: '/common',
+        name: 'commonDemo',
+        redirect: 'tab',
+        meta: {
+          icon: 'tdesign:play-demo'
+        },
+        children: [
+          {
+            path: '/tab',
+            name: 'tabDemo',
+            component: LayoutTab,
+            redirect: 'index',
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'applications_index',
+                component: () => import('../views/resources/applications/index.vue'),
+                meta: {
+                  // hidden: true,
+                }
+              },
+              {
+                path: '/tab1',
+                name: 'tab1',
+                component: () => import('../views/common/tab_demo/tab1.vue'),
+                meta: {
+                  icon: 'simple-icons:podman',
+                  tab: true
+                }
+              },
+              {
+                path: '/tab2',
+                name: 'tab2',
+                component: () => import('../views/common/tab_demo/tab2.vue'),
+                meta: {
+                  icon: 'fontisto:docker',
+                  tab: true
+                }
+              }
+            ]
+          },
+          {
+            path: '/placeholder',
+            name: 'placeholder_demo',
+            component: () => import('../views/common/placeholder_demo/index.vue')
+          }
+        ]
+      }
+    ]
+  }
 ]
 
 function handlePath(...paths: any[]) {
-    return paths.join('/').replace(/\/+/g, "/")
+  return paths.join('/').replace(/\/+/g, '/')
 }
 
-function handleRoutes(routes: readonly RouteRecordType[] | undefined, parent: RouteRecordType | undefined) {
-    if (!routes) return
-    for (let route of routes) {
-        if (parent) {
-            route.path = handlePath(parent?.path, route.path)
-
-        }
-        if (route.redirect) {
-            route.redirect = handlePath(route.path, route.redirect || '')
-        }
-
-        if (route.meta) {
-            route.meta._router_key = _.uniqueId('__router_key')
-            route.meta.parent = parent
-            // fixme, its really useful for tab_router judging how to  show tab
-            route.meta.skip = (route.meta.skip === true ? true : false)
-        } else {
-            route.meta = {
-                _router_key: _.uniqueId('__router_key'),
-                skip: false
-            }
-        }
-        handleRoutes(route.children, route)
+function handleRoutes(
+  routes: readonly RouteRecordType[] | undefined,
+  parent: RouteRecordType | undefined
+) {
+  if (!routes) return
+  for (let route of routes) {
+    if (parent) {
+      route.path = handlePath(parent?.path, route.path)
     }
-}
+    if (route.redirect) {
+      route.redirect = handlePath(route.path, route.redirect || '')
+    }
 
+    if (route.meta) {
+      route.meta._router_key = _.uniqueId('__router_key')
+      route.meta.parent = parent
+      // fixme, its really useful for tab_router judging how to  show tab
+      route.meta.skip = route.meta.skip === true ? true : false
+    } else {
+      route.meta = {
+        _router_key: _.uniqueId('__router_key'),
+        skip: false
+      }
+    }
+    handleRoutes(route.children, route)
+  }
+}
 
 handleRoutes(routes, undefined)
 console.log(routes)
-

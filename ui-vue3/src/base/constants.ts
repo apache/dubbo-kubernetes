@@ -15,15 +15,13 @@
  * limitations under the License.
  */
 
-import {ref} from 'vue'
+import { ref } from 'vue'
 
 export const PRIMARY_COLOR_DEFAULT = '#17b392'
-
 
 export const LOCAL_STORAGE_LOCALE = 'LOCAL_STORAGE_LOCALE'
 export const LOCAL_STORAGE_THEME = 'LOCAL_STORAGE_THEME'
 
-
-let item = localStorage.getItem(LOCAL_STORAGE_THEME);
+let item = localStorage.getItem(LOCAL_STORAGE_THEME)
 
 export const PRIMARY_COLOR = ref(item || PRIMARY_COLOR_DEFAULT)

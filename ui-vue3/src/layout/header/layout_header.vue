@@ -66,7 +66,12 @@ import { MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined } from '@ant-design/
 import { inject, ref, watch } from 'vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { changeLanguage, localeConfig } from '@/base/i18n'
-import {LOCAL_STORAGE_LOCALE, LOCAL_STORAGE_THEME, PRIMARY_COLOR, PRIMARY_COLOR_DEFAULT} from '@/base/constants'
+import {
+  LOCAL_STORAGE_LOCALE,
+  LOCAL_STORAGE_THEME,
+  PRIMARY_COLOR,
+  PRIMARY_COLOR_DEFAULT
+} from '@/base/constants'
 import devTool from '@/utils/DevToolUtil'
 import { Icon } from '@iconify/vue'
 

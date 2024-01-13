@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "check:i18n": "node --loader ts-node/esm src/base/i18n/sortI18n.ts",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "prettier --write src/ && vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
     "build-only": "vite build",

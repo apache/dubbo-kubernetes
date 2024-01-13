@@ -18,54 +18,50 @@
   <div class="__container_layout_index">
     <a-layout style="min-height: 100vh">
       <a-layout-sider
-          width="268"
-          v-model:collapsed="collapsed"
-          theme="light"
-          :trigger="null"
-          collapsible
+        width="268"
+        v-model:collapsed="collapsed"
+        theme="light"
+        :trigger="null"
+        collapsible
       >
         <div class="logo">
-          <img :src="logo"/>
+          <img :src="logo" />
           <template v-if="!collapsed">Dubbo Admin</template>
         </div>
         <layout-menu></layout-menu>
       </a-layout-sider>
       <a-layout>
         <layout_header :collapsed="collapsed"></layout_header>
-          <layout_bread></layout_bread>
-          <a-layout-content
-
-              :style="{ margin: '16px', padding: '16px', background: '#fff', minHeight: '280px' }"
-          >
-
-            <router-view v-slot="{ Component }">
-              <transition name="slide-fade">
-                <component :is="Component" />
-              </transition>
-            </router-view>
-
-          </a-layout-content>
-        <a-layout-footer >todo</a-layout-footer>
-
+        <layout_bread></layout_bread>
+        <a-layout-content
+          :style="{ margin: '16px', padding: '16px', background: '#fff', minHeight: '280px' }"
+        >
+          <router-view v-slot="{ Component }">
+            <transition name="slide-fade">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </a-layout-content>
+        <a-layout-footer>todo</a-layout-footer>
       </a-layout>
     </a-layout>
   </div>
 </template>
 <script lang="ts" setup>
-import {provide, ref} from 'vue'
+import { provide, ref } from 'vue'
 import layoutMenu from './menu/layout_menu.vue'
 import logo from '@/assets/logo.png'
 import Layout_header from '@/layout/header/layout_header.vue'
-import {PROVIDE_INJECT_KEY} from '@/base/enums/ProvideInject'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import Layout_bread from '@/layout/breadcrumb/layout_bread.vue'
-import {PRIMARY_COLOR} from '@/base/constants'
-import {useRoute, useRouter} from "vue-router";
+import { PRIMARY_COLOR } from '@/base/constants'
+import { useRoute, useRouter } from 'vue-router'
 
 let __null = PRIMARY_COLOR
 const collapsed = ref<boolean>(false)
 provide(PROVIDE_INJECT_KEY.COLLAPSED, collapsed)
-const route = useRoute();
-const router = useRouter();
+const route = useRoute()
+const router = useRouter()
 let transitionFlag = ref(true)
 router.beforeEach((to, from, next) => {
   transitionFlag.value = false
@@ -98,16 +94,11 @@ router.beforeEach((to, from, next) => {
     }
   }
 }
-
 </style>
 <style>
-
 .slide-fade-enter-active {
   animation: slide-fade-in 0.5s;
 }
-
-
-
 
 @keyframes slide-fade-in {
   0% {
@@ -133,10 +124,9 @@ router.beforeEach((to, from, next) => {
   animation: fade-in 0.6s reverse;
 }
 
-
 @keyframes fade-in {
   0% {
-    transform: scale(.9);
+    transform: scale(0.9);
     opacity: 0;
   }
 

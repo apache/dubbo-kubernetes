@@ -15,16 +15,8 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_resources_services_index">
-    服务
-  </div>
-
-
+  <div class="__container_resources_services_index">服务</div>
 </template>
 
-<script setup lang="ts">
-
-</script>
-<style lang="less" scoped>
-
-</style>
+<script setup lang="ts"></script>
+<style lang="less" scoped></style>

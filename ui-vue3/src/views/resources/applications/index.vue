@@ -17,18 +17,14 @@
 <template>
   <div class="__container_resources_application_index">
     应用
-    <br>
+    <br />
     <a-button @click="router.push('detail/app123')"> to tab</a-button>
   </div>
-
-
 </template>
 
 <script setup lang="ts">
-import {useRouter} from "vue-router";
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
+const router = useRouter()
 </script>
-<style lang="less" scoped>
-
-</style>
+<style lang="less" scoped></style>

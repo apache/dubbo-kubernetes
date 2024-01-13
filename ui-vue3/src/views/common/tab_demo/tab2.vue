@@ -15,15 +15,8 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_tabDemo">
-    tab2
-  </div>
-
+  <div class="__container_tabDemo">tab2</div>
 </template>
 
-<script setup lang="ts">
-
-</script>
-<style lang="less" scoped>
-
-</style>
+<script setup lang="ts"></script>
+<style lang="less" scoped></style>

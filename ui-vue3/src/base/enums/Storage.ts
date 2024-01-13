@@ -15,9 +15,6 @@
  * limitations under the License.
  */
 
-
-
 const KEY_PREFIX = '__DUBBO_KUBE_'
 
-export const STORAGE_KEY = {
-}
+export const STORAGE_KEY = {}

@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
+import type { I18nType } from './type.ts'
 
-
-import type {I18nType} from "./type.ts";
-
-const words: I18nType =  {
+const words: I18nType = {
   service: '服务',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
@@ -260,10 +258,9 @@ const words: I18nType =  {
 
   groupInputPrompt: '请输入服务group(可选)',
   versionInputPrompt: '请输入服务version(可选)',
-  resources:'资源详情',
-  applications:'应用',
-  instances:'实例',
+  resources: '资源详情',
+  applications: '应用',
+  instances: '实例'
 }
 
-
-export default words;
+export default words

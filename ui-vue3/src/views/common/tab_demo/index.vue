@@ -16,25 +16,20 @@
 -->
 <template>
   <div class="__container_tab_index">
-      tab page
-    <br>
+    tab page
+    <br />
     <a href="/admin/common/tab/tab1">to tab1 by href</a>
-    <br>
+    <br />
     <a href="tab2">to tab2 by href</a>
-    <br>
+    <br />
     <a-button @click="router.push('/common/tab/tab1')">to tab1 by href</a-button>
-    <br>
+    <br />
     <a-button @click="router.push('tab2')">to tab2 by href</a-button>
-
   </div>
-
 </template>
 
 <script setup lang="ts">
-
-import {useRouter} from "vue-router";
-const router = useRouter();
+import { useRouter } from 'vue-router'
+const router = useRouter()
 </script>
-<style lang="less" scoped>
-
-</style>
+<style lang="less" scoped></style>
