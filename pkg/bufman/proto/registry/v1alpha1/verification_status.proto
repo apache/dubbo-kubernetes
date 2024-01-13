@@ -1,0 +1,16 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+// VerificationStatus is the verification status of an owner on if we recognize them,
+// an owner can be either user or organization.
+enum VerificationStatus {
+  VERIFICATION_STATUS_UNSPECIFIED = 0;
+  // OFFICIAL indicates that the owner is maintained by Buf.
+  VERIFICATION_STATUS_OFFICIAL = 1;
+  // VERIFIED_PUBLISHER indicates that the owner is a third-party that has been
+  // verified by Buf.
+  VERIFICATION_STATUS_VERIFIED_PUBLISHER = 2;
+}

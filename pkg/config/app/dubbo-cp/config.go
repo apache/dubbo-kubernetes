@@ -20,6 +20,7 @@ package dubbo_cp
 import (
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
 	"github.com/apache/dubbo-kubernetes/pkg/config/dds/debounce"
 	"github.com/apache/dubbo-kubernetes/pkg/config/webhook"
 
@@ -37,6 +38,7 @@ import (
 
 type Config struct {
 	Admin      admin.Admin             `yaml:"admin"`
+	Bufman     bufman.Bufman           `yaml:"bufman"`
 	GrpcServer server.ServerConfig     `yaml:"grpcServer"`
 	Security   security.SecurityConfig `yaml:"security"`
 	KubeConfig kube.KubeConfig         `yaml:"kubeConfig"`
@@ -99,6 +101,17 @@ var DefaultConfig = func() Config {
 			},
 			Grafana: admin.Grafana{
 				Address: "127.0.0.1:93030",
+			},
+		},
+		Bufman: bufman.Bufman{
+			OpenBufman: false,
+			Server: bufman.Server{
+				ServerHost:          "bufman",
+				HTTPPort:            39080,
+				GrpcPlainPort:       39091,
+				GrpcSecurePort:      39092,
+				PageTokenExpireTime: time.Hour,
+				PageTokenSecret:     "12345678",
 			},
 		},
 		GrpcServer: server.ServerConfig{

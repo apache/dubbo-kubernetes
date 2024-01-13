@@ -1,0 +1,34 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+// LocalModuleReference is a local module reference.
+//
+// It does not include a remote.
+message LocalModuleReference {
+  string owner = 1;
+  string repository = 2;
+  // either branch or commit
+  string reference = 3;
+}
+
+// LocalModulePin is a local module pin.
+//
+// It does not include a remote.
+message LocalModulePin {
+  reserved 5;
+  reserved "digest";
+
+  string owner = 1;
+  string repository = 2;
+  string branch = 3;
+  string commit = 4;
+  // Module's manifest digest. Replacement for previous b1/b3 digests.
+  string manifest_digest = 6;
+  google.protobuf.Timestamp create_time = 7;
+  string draft_name = 8;
+}

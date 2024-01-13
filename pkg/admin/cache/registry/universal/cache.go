@@ -194,26 +194,28 @@ func (uc *UniversalCache) GetInstancesWithSelector(namespace string, selector se
 
 	uc.providers.lock.RLock()
 	for application, serviceMap := range uc.providers.data {
-		if targetApplication, ok := selector.ApplicationOption(); ok && targetApplication != application {
+		if !selectByApplication(selector, application) {
 			continue
-		} else {
-			for serviceKey, instanceMap := range serviceMap {
-				for _, dubboModel := range instanceMap {
-					if _, ok := instanceSet[dubboModel.Ip+":"+dubboModel.Port]; ok {
-						continue
-					} else {
-						instanceSet[dubboModel.Ip+":"+dubboModel.Port] = struct{}{}
-						res = append(res, &cache.InstanceModel{
-							Application: &cache.ApplicationModel{Name: application},
-							Workload:    nil,
-							Name:        serviceKey + "#" + dubboModel.Ip + ":" + dubboModel.Port,
-							Ip:          dubboModel.Ip,
-							Port:        dubboModel.Port,
-							Status:      "",
-							Node:        "",
-							Labels:      nil,
-						})
-					}
+		}
+		for serviceKey, instanceMap := range serviceMap {
+			if !selectByServiceKey(selector, serviceKey) {
+				continue
+			}
+			for _, dubboModel := range instanceMap {
+				if _, ok := instanceSet[dubboModel.Ip+":"+dubboModel.Port]; ok {
+					continue
+				} else {
+					instanceSet[dubboModel.Ip+":"+dubboModel.Port] = struct{}{}
+					res = append(res, &cache.InstanceModel{
+						Application: &cache.ApplicationModel{Name: application},
+						Workload:    nil,
+						Name:        serviceKey + "#" + dubboModel.Ip + ":" + dubboModel.Port,
+						Ip:          dubboModel.Ip,
+						Port:        dubboModel.Port,
+						Status:      "",
+						Node:        "",
+						Labels:      nil,
+					})
 				}
 			}
 		}
@@ -222,26 +224,28 @@ func (uc *UniversalCache) GetInstancesWithSelector(namespace string, selector se
 
 	uc.consumers.lock.RLock()
 	for application, serviceMap := range uc.consumers.data {
-		if targetApplication, ok := selector.ApplicationOption(); ok && targetApplication != application {
+		if !selectByApplication(selector, application) {
 			continue
-		} else {
-			for serviceKey, instanceMap := range serviceMap {
-				for _, dubboModel := range instanceMap {
-					if _, ok := instanceSet[dubboModel.Ip+":"+dubboModel.Port]; ok {
-						continue
-					} else {
-						instanceSet[dubboModel.Ip+":"+dubboModel.Port] = struct{}{}
-						res = append(res, &cache.InstanceModel{
-							Application: &cache.ApplicationModel{Name: application},
-							Workload:    nil,
-							Name:        serviceKey + "#" + dubboModel.Ip + ":" + dubboModel.Port,
-							Ip:          dubboModel.Ip,
-							Port:        dubboModel.Port,
-							Status:      "",
-							Node:        "",
-							Labels:      nil,
-						})
-					}
+		}
+		for serviceKey, instanceMap := range serviceMap {
+			if !selectByServiceKey(selector, serviceKey) {
+				continue
+			}
+			for _, dubboModel := range instanceMap {
+				if _, ok := instanceSet[dubboModel.Ip+":"+dubboModel.Port]; ok {
+					continue
+				} else {
+					instanceSet[dubboModel.Ip+":"+dubboModel.Port] = struct{}{}
+					res = append(res, &cache.InstanceModel{
+						Application: &cache.ApplicationModel{Name: application},
+						Workload:    nil,
+						Name:        serviceKey + "#" + dubboModel.Ip + ":" + dubboModel.Port,
+						Ip:          dubboModel.Ip,
+						Port:        dubboModel.Port,
+						Status:      "",
+						Node:        "",
+						Labels:      nil,
+					})
 				}
 			}
 		}
@@ -294,41 +298,46 @@ func (uc *UniversalCache) GetServicesWithSelector(namespace string, selector sel
 
 	uc.providers.lock.RLock()
 	for application, serviceMap := range uc.providers.data {
-		if targetApplication, ok := selector.ApplicationOption(); ok && targetApplication != application {
+		if !selectByApplication(selector, application) {
 			continue
-		} else {
-			for serviceKey := range serviceMap {
-				res = append(res, &cache.ServiceModel{
-					Application: &cache.ApplicationModel{Name: application},
-					Category:    constant.ProviderSide,
-					Name:        util.GetInterface(serviceKey),
-					Labels:      nil,
-					ServiceKey:  serviceKey,
-					Group:       util.GetGroup(serviceKey),
-					Version:     util.GetVersion(serviceKey),
-				})
+		}
+		for serviceKey := range serviceMap {
+			if !selectByServiceKey(selector, serviceKey) {
+				continue
 			}
+			res = append(res, &cache.ServiceModel{
+				Application: &cache.ApplicationModel{Name: application},
+				Category:    constant.ProviderSide,
+				Name:        util.GetInterface(serviceKey),
+				Labels:      nil,
+				ServiceKey:  serviceKey,
+				Group:       util.GetGroup(serviceKey),
+				Version:     util.GetVersion(serviceKey),
+			})
 		}
 	}
 	uc.providers.lock.RUnlock()
 
 	uc.consumers.lock.RLock()
 	for application, serviceMap := range uc.consumers.data {
-		if targetApplication, ok := selector.ApplicationOption(); ok && targetApplication != application {
+		if !selectByApplication(selector, application) {
 			continue
-		} else {
-			for serviceKey := range serviceMap {
-				res = append(res, &cache.ServiceModel{
-					Application: &cache.ApplicationModel{Name: application},
-					Category:    constant.ConsumerSide,
-					Name:        util.GetInterface(serviceKey),
-					Labels:      nil,
-					ServiceKey:  serviceKey,
-					Group:       util.GetGroup(serviceKey),
-					Version:     util.GetVersion(serviceKey),
-				})
-			}
 		}
+		for serviceKey := range serviceMap {
+			if !selectByServiceKey(selector, serviceKey) {
+				continue
+			}
+			res = append(res, &cache.ServiceModel{
+				Application: &cache.ApplicationModel{Name: application},
+				Category:    constant.ConsumerSide,
+				Name:        util.GetInterface(serviceKey),
+				Labels:      nil,
+				ServiceKey:  serviceKey,
+				Group:       util.GetGroup(serviceKey),
+				Version:     util.GetVersion(serviceKey),
+			})
+		}
+
 	}
 	uc.consumers.lock.RUnlock()
 
@@ -488,4 +497,26 @@ func (m *DubboModel) ToggleRegistryType(deleteType string) {
 	} else {
 		m.RegistryType = constant.RegistryInstance
 	}
+}
+
+// selectByServiceKey is used to determine whether the serviceKey matches the selector
+func selectByServiceKey(selector selector.Selector, serviceKey string) bool {
+	if serviceNameOptions, ok := selector.ServiceNameOptions(); ok && !serviceNameOptions.Exist(util.GetInterface(serviceKey)) {
+		return false
+	}
+	if serviceGroupOptions, ok := selector.ServiceGroupOptions(); ok && !serviceGroupOptions.Exist(util.GetGroup(serviceKey)) {
+		return false
+	}
+	if serviceVersionOptions, ok := selector.ServiceVersionOptions(); ok && !serviceVersionOptions.Exist(util.GetVersion(serviceKey)) {
+		return false
+	}
+	return true
+}
+
+// selectByApplication is used to determine whether the application matches the selector
+func selectByApplication(selector selector.Selector, application string) bool {
+	if applicationOptions, ok := selector.ApplicationOptions(); ok && !applicationOptions.Exist(application) {
+		return false
+	}
+	return true
 }
