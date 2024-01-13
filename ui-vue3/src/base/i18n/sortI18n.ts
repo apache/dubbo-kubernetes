@@ -14,15 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { RouteMeta } from 'vue-router'
-import type {RouteRecordType} from "@/router/defaultRoutes";
 
-export interface RouterMeta extends RouteMeta {
-  icon?: string
-  hidden?: boolean
-  skip?:boolean
-  tab_parent?: boolean
-  tab?: boolean
-  _router_key?: string
-  parent?: RouteRecordType
+// resort words in en.ts and zh.ts;
+// check words exist in en.ts and zh.ts;
+
+import EN_MAP from "./en"
+import ZH_MAP from "./zh"
+
+let sortArr: { label: string, value: any }[] = []
+let checkArr: string[] = []
+
+
+function mapToArr() {
+    for (let enKey in EN_MAP) {
+        sortArr.push({
+            label: enKey,
+            value: EN_MAP[enKey]
+        })
+        let zh = ZH_MAP[enKey];
+        if (!zh) {
+            checkArr.push(enKey);
+        }
+    }
 }
+
+mapToArr();
+console.log(sortArr.sort((a, b) => a.label > b.label ? 1 : -1))
+

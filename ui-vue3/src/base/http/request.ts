@@ -24,6 +24,7 @@ import type {
 } from 'axios'
 import axios from 'axios'
 import {message} from 'ant-design-vue'
+import NProgress from 'nprogress'
 
 const service: AxiosInstance = axios.create({
     //  change this to decide where to go
@@ -39,6 +40,7 @@ request.use(
         config.headers = <AxiosRequestHeaders>{
             'Content-Type': 'application/json' //配置请求头
         }
+        NProgress.start()
         return config
     },
     (error) => {
@@ -48,12 +50,15 @@ request.use(
 
 response.use(
     (response) => {
+        NProgress.done()
+
         if (response.status === 200) {
             return Promise.resolve(response.data)
         }
         return Promise.reject(response)
     },
     (error) => {
+        NProgress.done()
         message.error(error.message)
         return Promise.resolve(error.response)
     }

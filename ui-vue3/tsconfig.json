@@ -12,6 +12,10 @@
     }
   ],
   "compilerOptions": {
-    "module": "NodeNext"
-  }
+    "target": "esnext",
+    "module": "ESNext"
+  },
+  "include": ["src/base/i18n/*"],
+  "esm": true
+
 }

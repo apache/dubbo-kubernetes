@@ -15,36 +15,20 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_layout_bread">
-    <a-breadcrumb>
-      <a-breadcrumb-item v-for="r in routes">{{ $t(r.name) }}</a-breadcrumb-item>
-      <a-breadcrumb-item>{{ pathId }}</a-breadcrumb-item>
-    </a-breadcrumb>
+  <div class="__container_resources_application_index">
+    应用
+    <br>
+    <a-button @click="router.push('detail/app123')"> to tab</a-button>
   </div>
+
+
 </template>
 
 <script setup lang="ts">
-import {useRoute, useRouter} from 'vue-router'
-import {computed} from 'vue'
+import {useRouter} from "vue-router";
 
-const route = useRoute()
-const router = useRouter()
-
-let pathId = computed(() => {
-  return route.params?.pathId ? route.params.pathId : ''
-})
-const routes = computed(() => {
-  return route.matched.slice(1).map((x, idx) => {
-    return {
-      name: <string>x.name,
-      handle: router.push(x)
-    }
-  })
-})
+const router = useRouter();
 </script>
 <style lang="less" scoped>
-.__container_layout_bread {
-  padding-left: 20px;
-  padding-top: 10px;
-}
+
 </style>

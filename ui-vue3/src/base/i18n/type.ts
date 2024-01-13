@@ -14,15 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { RouteMeta } from 'vue-router'
-import type {RouteRecordType} from "@/router/defaultRoutes";
 
-export interface RouterMeta extends RouteMeta {
-  icon?: string
-  hidden?: boolean
-  skip?:boolean
-  tab_parent?: boolean
-  tab?: boolean
-  _router_key?: string
-  parent?: RouteRecordType
+
+export type I18nType = {
+    [key: string]: string | I18nType
 }
