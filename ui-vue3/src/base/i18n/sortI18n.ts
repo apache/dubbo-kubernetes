@@ -15,20 +15,27 @@
  * limitations under the License.
  */
 
-import Mock from 'mockjs'
+// resort words in en.ts and zh.ts;
+// check words exist in en.ts and zh.ts;
 
-Mock.mock('/mock/metrics/metadata', 'get', {
-  code: 200,
-  message: '成功',
-  data: {
-    versions: ['dubbo-golang-3.0.4'],
-    protocols: ['tri'],
-    rules: ['DemoService:1.0.0:test.configurators', 'DemoService4:bb:aa.configurators'],
-    configCenter: '127.0.0.1:2181',
-    registry: '127.0.0.1:2181',
-    metadataCenter: '127.0.0.1:2181',
-    // make sure the X-Frame-Options is forbidden
-    grafana: `http://${window.location.host}/admin/home`,
-    prometheus: '127.0.0.1:9090'
+import EN_MAP from './en'
+import ZH_MAP from './zh'
+
+let sortArr: { label: string; value: any }[] = []
+let checkArr: string[] = []
+
+function mapToArr() {
+  for (let enKey in EN_MAP) {
+    sortArr.push({
+      label: enKey,
+      value: EN_MAP[enKey]
+    })
+    let zh = ZH_MAP[enKey]
+    if (!zh) {
+      checkArr.push(enKey)
+    }
   }
-})
+}
+
+mapToArr()
+console.log(sortArr.sort((a, b) => (a.label > b.label ? 1 : -1)))

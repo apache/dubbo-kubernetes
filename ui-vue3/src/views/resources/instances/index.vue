@@ -15,26 +15,8 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_home_index">
-    <h1>{{ $t(routeName) }}</h1>
-    <a-flex v-if="showIframe">
-      <iframe :src="metricsMetadata.grafana" width="1350" height="700" frameborder="0"></iframe>
-    </a-flex>
-  </div>
+  <div class="__container_resources_instance_index">实例</div>
 </template>
 
-<script setup lang="ts">
-import { useRoute } from 'vue-router'
-import { onMounted, reactive, ref } from 'vue'
-import { getMetricsMetadata } from '@/api/service/serverInfo'
-let metricsMetadata = reactive(<{ [key: string]: string }>{})
-let showIframe = ref(false)
-
-const routeName = <string>useRoute().name
-
-onMounted(async () => {
-  metricsMetadata = <{ [key: string]: string }>(await getMetricsMetadata({})).data
-  showIframe.value = true
-})
-</script>
+<script setup lang="ts"></script>
 <style lang="less" scoped></style>

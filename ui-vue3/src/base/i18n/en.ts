@@ -14,7 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export default {
+
+import type { I18nType } from './type.ts'
+
+const words: I18nType = {
   service: 'Service',
   serviceSearch: 'Search Service',
   serviceGovernance: 'Routing Rule',
@@ -36,6 +39,7 @@ export default {
   serviceInfo: 'Service Info',
   providers: 'Providers',
   consumers: 'Consumers',
+  common: 'Common',
   version: 'Version',
   app: 'Application',
   services: 'Services',
@@ -255,5 +259,10 @@ export default {
   trafficAccesslog: 'Accesslog',
   trafficHost: 'Host',
   homePage: 'Cluster Overview',
-  serviceManagement: 'Dev & Test'
+  serviceManagement: 'Dev & Test',
+  resources: 'Resources',
+  applications: 'Applications',
+  instances: 'Instances'
 }
+
+export default words

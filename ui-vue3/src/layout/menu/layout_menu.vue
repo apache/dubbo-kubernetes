@@ -16,46 +16,70 @@
 -->
 <template>
   <div class="__container_menu">
-    <a-menu mode="inline" :items="items" @click="handleClick">
-      <!--      <a-sub-menu v-if="!route.meta.hidden">-->
-      <!--        <template #title>{{ $t(route.name) }}</template>-->
-      <!--        <template v-if="route.children&&route.children.length>0">-->
-      <!--          <layout_sub_menu v-for="item in route.children" :menu-info="item" :key="item.key"/>-->
-      <!--        </template>-->
-      <!--      </a-sub-menu>-->
+    <a-menu
+      mode="inline"
+      :selectedKeys="selectedKeys"
+      :open-keys="openKeys"
+      @select="selectMenu"
+      :items="items"
+      @click="handleClick"
+    >
     </a-menu>
   </div>
 </template>
 
 <script setup lang="ts">
-import type {RouteRecordType} from '@/router/defaultRoutes'
-import {routes as defautlRoutes} from '@/router/defaultRoutes'
-import {deepCopy} from '@/utils/ObjectUtil'
-import type {ItemType, MenuProps} from 'ant-design-vue'
-import type {ComponentInternalInstance} from 'vue'
-import {computed, getCurrentInstance, h, reactive} from 'vue'
-import _ from 'lodash-es'
-import {Icon} from '@iconify/vue'
-import {useRouter} from 'vue-router'
+import type { RouteRecordType } from '@/router/defaultRoutes'
+import { routes as defaultRoutes } from '@/router/defaultRoutes'
+import type { ItemType, MenuProps } from 'ant-design-vue'
+import type { ComponentInternalInstance } from 'vue'
+import { computed, getCurrentInstance, h, reactive } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { RouterMeta } from '@/router/RouterMeta'
 
 const {
   appContext: {
-    config: {globalProperties}
+    config: { globalProperties }
   }
 } = <ComponentInternalInstance>getCurrentInstance()
 
-const routesForMenu = deepCopy(defautlRoutes)
+const routesForMenu = defaultRoutes
+
+const nowRoute = useRoute()
+
+// load active menu
+let selectedKeys = reactive([nowRoute.meta._router_key])
+let openKeys: any = reactive([])
+function loadSelectedKeys() {
+  let nowMeta: RouterMeta = nowRoute.meta
+  selectedKeys[0] = nowRoute.meta.tab ? nowMeta.parent?.meta?._router_key : nowMeta._router_key
+}
+function loadOpenedKeys() {
+  let p: any = nowRoute.meta.parent
+  while (p) {
+    openKeys.push(p.meta?._router_key)
+    p = p.meta?.parent
+  }
+}
+
+loadSelectedKeys()
+loadOpenedKeys()
+
+function selectMenu(e: any) {
+  selectedKeys[0] = e.key
+}
 
 function getItem(
-    label: any,
-    title: any,
-    key?: string,
-    icon?: any,
-    children?: ItemType[],
-    type?: 'group'
+  label: any,
+  title: any,
+  key?: string,
+  icon?: any,
+  children?: ItemType[],
+  type?: 'group'
 ): ItemType {
   if (icon) {
-    icon = h(Icon, {icon: icon})
+    icon = h(Icon, { icon: icon })
   }
 
   return {
@@ -78,23 +102,28 @@ const items: ItemType[] = reactive([])
  * @param arr
  * @param arr2
  */
-function prepareRoutes(arr: RouteRecordType[] | any, arr2: ItemType[]) {
+function prepareRoutes(
+  arr: readonly RouteRecordType[] | undefined,
+  arr2: ItemType[],
+  parent = 'root'
+) {
   if (!arr || arr.length === 0) return
   for (let r of arr) {
     if (r.meta?.skip) {
-      prepareRoutes(r.children, arr2)
+      prepareRoutes(r.children, arr2, r.name)
       continue
     }
     if (!r.meta?.hidden) {
-      let key = _.uniqueId('route_menu_')
-      if (!r.children || r.children.length === 0) {
-        arr2.push(getItem(r.name, r.path, key, r.meta?.icon))
+      if (!r.children || r.children.length === 0 || r.meta?.tab_parent) {
+        arr2.push(getItem(r.name, r.path, r.meta?._router_key, r.meta?.icon))
       } else if (r.children.length === 1) {
-        arr2.push(getItem(r.children[0].name, r.path, key, r.children[0].meta?.icon))
+        arr2.push(
+          getItem(r.children[0].name, r.path, r.meta?._router_key, r.children[0].meta?.icon)
+        )
       } else {
         const tmp: ItemType[] = reactive([])
-        prepareRoutes(r.children, tmp)
-        arr2.push(getItem(r.name, r.path, key, r.meta?.icon, tmp))
+        prepareRoutes(r.children, tmp, r.name)
+        arr2.push(getItem(r.name, r.path, r.meta?._router_key, r.meta?.icon, tmp))
       }
     }
   }
@@ -105,6 +134,7 @@ prepareRoutes(routesForMenu, items)
 const router = useRouter()
 
 const handleClick: MenuProps['onClick'] = (e) => {
+  // console.log(e.item?.title)
   router.push(<string>e.item?.title)
 }
 </script>

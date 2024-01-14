@@ -18,6 +18,7 @@
   <div class="__container_layout_bread">
     <a-breadcrumb>
       <a-breadcrumb-item v-for="r in routes">{{ $t(r.name) }}</a-breadcrumb-item>
+      <a-breadcrumb-item>{{ pathId }}</a-breadcrumb-item>
     </a-breadcrumb>
   </div>
 </template>
@@ -29,10 +30,13 @@ import { computed } from 'vue'
 const route = useRoute()
 const router = useRouter()
 
+let pathId = computed(() => {
+  return route.params?.pathId ? route.params.pathId : ''
+})
 const routes = computed(() => {
   return route.matched.slice(1).map((x, idx) => {
     return {
-      name: <string> x.name,
+      name: <string>x.name,
       handle: router.push(x)
     }
   })
