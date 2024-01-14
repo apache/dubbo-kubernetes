@@ -253,5 +253,12 @@ export default {
   serviceManagement: '开发测试',
 
   groupInputPrompt: '请输入服务group(可选)',
-  versionInputPrompt: '请输入服务version(可选)'
+  versionInputPrompt: '请输入服务version(可选)',
+
+  serviceDetails: '服务详情',
+  serviceDebug: '服务调试',
+  serviceDistribution: '服务分布',
+  monitor: '监控',
+  tracing: '链路追踪',
+  event: '事件'
 }

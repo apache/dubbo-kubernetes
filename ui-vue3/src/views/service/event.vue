@@ -16,13 +16,12 @@
 -->
 <template>
   <div class="__container_home_index">
-    <RouterView />
+    <h1>{{ $t(routeName) }}</h1>
   </div>
 </template>
 
 <script setup lang="ts">
 import {useRoute} from "vue-router";
-import { RouterView } from 'vue-router';
 const routeName = <string>useRoute().name
 
 </script>

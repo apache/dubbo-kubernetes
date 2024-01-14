@@ -16,14 +16,41 @@
 -->
 <template>
   <div class="__container_home_index">
-    <RouterView />
+    <a-tabs v-model:activeKey="activeKey">
+      <a-tab-pane v-for="tab in tabs" :key="tab.title" :tab="tab.title" @click="() => {
+        console.log(123)
+        router.push(tab.title)
+      }">
+        <router-view/>
+      </a-tab-pane>
+    </a-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import {useRoute} from "vue-router";
-import { RouterView } from 'vue-router';
-const routeName = <string>useRoute().name
+import { useRouter } from "vue-router";
 
+const router = useRouter();
+
+  const tabs = [
+  {
+    title: 'serviceDetails'
+  },
+  {
+    title: 'serviceDebug'
+  },
+  {
+    title: 'serviceDistribution',
+  },
+  {
+    title: 'monitor',
+  },
+  {
+    title: 'tracing',
+  },
+  {
+    title: 'event',
+  }
+]
 </script>
 <style lang="less" scoped></style>

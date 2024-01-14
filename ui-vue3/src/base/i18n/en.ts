@@ -255,5 +255,12 @@ export default {
   trafficAccesslog: 'Accesslog',
   trafficHost: 'Host',
   homePage: 'Cluster Overview',
-  serviceManagement: 'Dev & Test'
+  serviceManagement: 'Dev & Test',
+
+  serviceDetails: 'Service Details',
+  serviceDebug: 'Service Debug',
+  serviceDistribution: 'Service Distribution',
+  monitor: 'Monitor',
+  tracing: 'Tracing',
+  event: 'Event'
 }

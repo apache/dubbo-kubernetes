@@ -45,11 +45,55 @@ export const routes: Readonly<RouteRecordType[]> = [
       },
       {
         path: '/service',
-        name: 'serviceSearch',
+        name: 'service',
         component: () => import('../views/service/index.vue'),
         meta: {
           icon: 'material-symbols-light:screen-search-desktop-outline-rounded'
-        }
+        },
+        children: [
+          {
+            path: '/service',
+            name: 'serviceSearch',
+            component: () => import('../views/service/serviceSearch.vue')
+          },
+          {
+            path: '/serviceTab',
+            name: 'serviceTab',
+            component: () => import('../views/service/serviceTab.vue'),
+            children: [
+              {
+                path: '/serviceDetail',
+                name: 'serviceDetail',
+                component: () => import('../views/service/serviceDetail.vue')
+              },
+              {
+                path: '/serviceDebug',
+                name: 'serviceDebug',
+                component: () => import('../views/service/serviceDebug.vue')
+              },
+              {
+                path: '/serviceDistribution',
+                name: 'serviceDistribution',
+                component: () => import('../views/service/serviceDistribution.vue')
+              },
+              {
+                path: '/monitor',
+                name: 'monitor',
+                component: () => import('../views/service/monitor.vue')
+              },
+              {
+                path: '/tracing',
+                name: 'tracing',
+                component: () => import('../views/service/tracing.vue')
+              },
+              {
+                path: '/event',
+                name: 'event',
+                component: () => import('../views/service/event.vue')
+              }
+            ]
+          }
+        ]
       },
       {
         path: '/traffic',
