@@ -354,6 +354,14 @@ func (uc *UniversalCache) store(url *common.URL) {
 		return
 	}
 	category := url.GetParam(constant.CategoryKey, "")
+	if len(category) == 0 {
+		if constant.ConsumerSide == url.GetParam(constant.Side, "") ||
+			constant.ConsumerProtocol == url.Protocol {
+			category = constant.ConsumersCategory
+		} else {
+			category = constant.ProvidersCategory
+		}
+	}
 	application := url.GetParam(constant.ApplicationKey, "")
 	serviceKey := url.ServiceKey()
 	serviceId := uc.getId(url.Key())
