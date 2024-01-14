@@ -21,6 +21,16 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/selector"
 )
 
+var cache Cache
+
+func SetCache(c Cache) {
+	cache = c
+}
+
+func GetCache() Cache {
+	return cache
+}
+
 type Cache interface {
 	GetApplications(namespace string) ([]*ApplicationModel, error)
 	GetWorkloads(namespace string) ([]*WorkloadModel, error)

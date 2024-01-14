@@ -20,7 +20,6 @@ package config
 import (
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 	"gorm.io/gorm"
 
@@ -34,8 +33,6 @@ var (
 	MetadataReportCenter report.MetadataReport
 
 	DataBase *gorm.DB // for service mock
-
-	Cache cache.Cache
 )
 
 var (
