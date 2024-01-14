@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 
+import request from '@/base/http/request'
 
-import request from "@/base/http/request";
-
-export const getMetricsMetadata = (params: any):Promise<any> => {
-    return request({
-        url: '/metrics/metadata',
-        method: 'get',
-        params
-    })
+export const getMetricsMetadata = (params: any): Promise<any> => {
+  return request({
+    url: '/metrics/metadata',
+    method: 'get',
+    params
+  })
 }

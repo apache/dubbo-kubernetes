@@ -14,7 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export default {
+
+import type { I18nType } from './type.ts'
+
+const words: I18nType = {
   service: '服务',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
@@ -35,8 +38,9 @@ export default {
   consumers: '消费者',
   application: '应用',
   all: '全部',
+  common: '通用',
 
-  metrics: '统计',
+  metrics: '可观测',
   relation: '关系',
   group: '组',
   version: '版本',
@@ -254,6 +258,9 @@ export default {
 
   groupInputPrompt: '请输入服务group(可选)',
   versionInputPrompt: '请输入服务version(可选)',
+  resources: '资源详情',
+  applications: '应用',
+  instances: '实例',
 
   serviceDetails: '服务详情',
   serviceDebug: '服务调试',
@@ -262,3 +269,5 @@ export default {
   tracing: '链路追踪',
   event: '事件'
 }
+
+export default words

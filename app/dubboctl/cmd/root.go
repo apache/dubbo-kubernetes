@@ -82,6 +82,7 @@ func addSubCommands(rootCmd *cobra.Command, newClient ClientFactory) {
 	addManifest(rootCmd)
 	addProfile(rootCmd)
 	addDashboard(rootCmd)
+	addRegistryCmd(rootCmd)
 }
 
 // bindFunc which conforms to the cobra PreRunE method signature

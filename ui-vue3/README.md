@@ -209,6 +209,42 @@ function globalQuestion() {
    
    ```
 
+3. Config a tab route
+
+   > Note:  /tab is a middle layer for left-menu-item: must use LayoutTab as component; meta.tab must be true
+
+   ```ts
+   {
+       path: '/tab',
+       name: 'tabDemo',
+       component: LayoutTab,
+       redirect: 'index',
+       meta: {
+           tab_parent: true
+       },
+       children: [
+           {
+               path: '/index',
+               name: 'applications_index',
+               component: () => import('../views/resources/applications/index.vue'),
+               meta: {
+                   // hidden: true,
+               }
+           },
+           {
+               path: '/tab1',
+               name: 'tab1',
+               component: () => import('../views/common/tab_demo/tab1.vue'),
+               meta: {
+                   icon: 'simple-icons:podman',
+                   tab: true,
+               }
+           },
+   
+       ]
+   },
+   ```
+
    
 
    
