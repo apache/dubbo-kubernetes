@@ -122,6 +122,33 @@ func (uc *UniversalCache) GetApplications(namespace string) ([]*cache.Applicatio
 	return applications, nil
 }
 
+func (uc *UniversalCache) GetApplicationsWithSelector(namespace string, selector selector.Selector) ([]*cache.ApplicationModel, error) {
+	applicationSet := map[string]struct{}{}
+
+	uc.providers.lock.RLock()
+	for name := range uc.providers.data {
+		if selectByApplication(selector, name) {
+			applicationSet[name] = struct{}{}
+		}
+	}
+	uc.providers.lock.RUnlock()
+
+	uc.consumers.lock.RLock()
+	for name := range uc.consumers.data {
+		if selectByApplication(selector, name) {
+			applicationSet[name] = struct{}{}
+		}
+	}
+	uc.consumers.lock.RUnlock()
+
+	applications := make([]*cache.ApplicationModel, 0, len(applicationSet))
+	for name := range applicationSet {
+		applications = append(applications, &cache.ApplicationModel{Name: name})
+	}
+
+	return applications, nil
+}
+
 func (uc *UniversalCache) GetWorkloads(namespace string) ([]*cache.WorkloadModel, error) {
 	return []*cache.WorkloadModel{}, nil
 }

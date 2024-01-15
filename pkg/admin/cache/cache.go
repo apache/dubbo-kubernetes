@@ -33,6 +33,7 @@ func GetCache() Cache {
 
 type Cache interface {
 	GetApplications(namespace string) ([]*ApplicationModel, error)
+	GetApplicationsWithSelector(namespace string, selector selector.Selector) ([]*ApplicationModel, error)
 	GetWorkloads(namespace string) ([]*WorkloadModel, error)
 	GetWorkloadsWithSelector(namespace string, selector selector.Selector) ([]*WorkloadModel, error)
 	GetInstances(namespace string) ([]*InstanceModel, error)

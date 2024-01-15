@@ -18,10 +18,13 @@
 package selector
 
 import (
+	"strings"
+
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 // Selector is an interface for selecting resources from cache
+// TODO: add support for prefix matching
 type Selector interface {
 	AsLabelsSelector() labels.Selector
 
@@ -50,7 +53,7 @@ func (o options) Len() int {
 
 func (o options) Exist(str string) bool {
 	for _, s := range o {
-		if s == str {
+		if strings.HasPrefix(str, s) {
 			return true
 		}
 	}
