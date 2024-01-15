@@ -262,12 +262,15 @@ const words: I18nType = {
   applications: '应用',
   instances: '实例',
 
-  serviceDetails: '服务详情',
-  serviceDebug: '服务调试',
-  serviceDistribution: '服务分布',
+  details: '详情',
+  debug: '调试',
+  distribution: '分布',
   monitor: '监控',
   tracing: '链路追踪',
-  event: '事件'
+  event: '事件',
+
+  provideService: '提供服务',
+  dependentService: '依赖服务'
 }
 
 export default words

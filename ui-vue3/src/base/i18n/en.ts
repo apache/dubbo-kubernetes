@@ -264,12 +264,15 @@ const words: I18nType = {
   applications: 'Applications',
   instances: 'Instances',
 
-  serviceDetails: 'Service Details',
-  serviceDebug: 'Service Debug',
-  serviceDistribution: 'Service Distribution',
+  details: 'Details',
+  debug: 'Debug',
+  distribution: 'Distribution',
   monitor: 'Monitor',
   tracing: 'Tracing',
-  event: 'Event'
+  event: 'Event',
+
+  provideService: 'Provide Service',
+  dependentService: 'Dependent Service'
 }
 
 export default words
