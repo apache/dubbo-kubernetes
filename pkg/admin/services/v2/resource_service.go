@@ -20,13 +20,12 @@ package servicesV2
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/selector"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/errors"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model/resp"
 )
 
 type ResourceService interface {
 	SearchApplications(namespace string, keywords string) ([]*resp.ApplicationOverview, error)
-	FindApplications(namespace string) ([]string, error)
-	FindApplicationDetail(namespace string, application string) (*resp.ApplicationResp, error)
 }
 
 func NewResourceService() ResourceService {
@@ -44,7 +43,7 @@ func (s *resourceServiceImpl) SearchApplications(namespace string, keywords stri
 		appModels, err = cache.GetCache().GetApplicationsWithSelector(namespace, selector.NewApplicationSelector(keywords))
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.NewBizErrorWithStack(resp.CoreCacheErrorCode, err)
 	}
 
 	var appOverviews []*resp.ApplicationOverview
@@ -52,7 +51,7 @@ func (s *resourceServiceImpl) SearchApplications(namespace string, keywords stri
 		appName := app.Name
 		instanceModels, err := cache.GetCache().GetInstancesWithSelector(namespace, selector.NewApplicationSelector(appName)) // TODO: create a new method to get instance count directly
 		if err != nil {
-			return nil, err
+			return nil, errors.NewBizErrorWithStack(resp.CoreCacheErrorCode, err)
 		}
 		appOverviews = append(appOverviews, &resp.ApplicationOverview{
 			Name:            appName,
@@ -63,46 +62,4 @@ func (s *resourceServiceImpl) SearchApplications(namespace string, keywords stri
 	}
 
 	return appOverviews, nil
-}
-
-func (s *resourceServiceImpl) FindApplications(namespace string) ([]string, error) {
-	appModels, err := cache.GetCache().GetApplications(namespace)
-	if err != nil {
-		return nil, err
-	}
-	var apps []string
-	for _, app := range appModels {
-		apps = append(apps, app.Name)
-	}
-	return apps, nil
-}
-
-func (s *resourceServiceImpl) FindApplicationDetail(namespace string, application string) (*resp.ApplicationResp, error) {
-	serviceModels, err := cache.GetCache().GetServicesWithSelector(namespace, selector.NewApplicationSelector(application))
-	if err != nil {
-		return nil, err
-	}
-	serviceRespSlice := make([]*resp.ServiceResp, 0, len(serviceModels))
-	for _, service := range serviceModels {
-		item := &resp.ServiceResp{}
-		item.FromCacheModel(service)
-		serviceRespSlice = append(serviceRespSlice, item)
-	}
-
-	instanceModels, err := cache.GetCache().GetInstancesWithSelector(namespace, selector.NewApplicationSelector(application))
-	if err != nil {
-		return nil, err
-	}
-	instanceRespSlice := make([]*resp.InstanceResp, 0, len(instanceModels))
-	for _, instance := range instanceModels {
-		item := &resp.InstanceResp{}
-		item.FromCacheModel(instance)
-		instanceRespSlice = append(instanceRespSlice, item)
-	}
-
-	return &resp.ApplicationResp{
-		Name:      application,
-		Services:  serviceRespSlice,
-		Instances: instanceRespSlice,
-	}, nil
 }

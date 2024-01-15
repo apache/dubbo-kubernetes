@@ -43,6 +43,7 @@ const (
 	successCode            Code = 200
 	InvalidParamCode       Code = 400
 	DefaultServerErrorCode Code = 500
+	CoreCacheErrorCode     Code = 501
 )
 
 func NewSuccessResp(data interface{}) *SuccessResp {

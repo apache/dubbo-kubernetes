@@ -34,16 +34,6 @@ var (
 	resourceService = servicesV2.NewResourceService()
 )
 
-func AllApplications(c *gin.Context) {
-	namespace := c.Query("namespace")
-	appNames, err := resourceService.FindApplications(namespace)
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
-	c.JSON(http.StatusOK, resp.NewSuccessResp(appNames))
-}
-
 func SearchApplication(c *gin.Context) {
 	// request params validation and binding
 	namespace := c.DefaultQuery(req.Namespace, "")
@@ -93,21 +83,10 @@ func SearchApplication(c *gin.Context) {
 	p.SetPage(pageQuery.Page)
 	var results []*resp.ApplicationOverview
 	if err := p.Results(&results); err != nil {
-		_ = c.Error(err)
+		_ = c.Error(errors.NewBizError(resp.InvalidParamCode, err))
 		return
 	}
 
 	// return response
 	c.JSON(http.StatusOK, resp.NewSuccessPageResp(results, p, pageQuery))
-}
-
-func ApplicationDetail(c *gin.Context) {
-	namespace := c.Query("namespace")
-	appName := c.Query("appName")
-	appDetail, err := resourceService.FindApplicationDetail(namespace, appName)
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
-	c.JSON(http.StatusOK, resp.NewSuccessResp(appDetail))
 }
