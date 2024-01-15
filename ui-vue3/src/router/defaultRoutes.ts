@@ -90,8 +90,66 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/instances',
             name: 'instances',
-            component: () => import('../views/resources/instances/index.vue'),
-            meta: {}
+            component: LayoutTab,
+            redirect: 'all',
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/all',
+                name: 'all',
+                component: () => import('../views/resources/instances/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/details/:pathId',
+                name: 'details',
+                component: () =>
+                  import('../views/resources/instances/instanceDetail/tabs/details.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/monitor/:pathId',
+                name: 'monitor',
+                component: () =>
+                  import('../views/resources/instances/instanceDetail/tabs/monitor.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/linktracking/:pathId',
+                name: 'linkTracking',
+                component: () =>
+                  import('../views/resources/instances/instanceDetail//tabs/linkTracking.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/configuration/:pathId',
+                name: 'configuration',
+                component: () =>
+                  import('../views/resources/instances/instanceDetail/tabs/configuration.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/event/:pathId',
+                name: 'event',
+                component: () =>
+                  import('../views/resources/instances/instanceDetail/tabs/event.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+            ]
           },
           {
             path: '/services',
