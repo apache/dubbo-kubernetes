@@ -6,6 +6,7 @@ metadata:
   name: {{ template "nacos.name" . }}
   namespace: {{ template "nacos.namespace" . }}
   labels:
+  {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}

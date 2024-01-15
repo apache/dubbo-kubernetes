@@ -6,6 +6,7 @@ metadata:
   name: {{ template "zoo.name" . }}
   namespace: {{ template "zoo.namespace" . }}
   labels:
+  {{- include "admin.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}

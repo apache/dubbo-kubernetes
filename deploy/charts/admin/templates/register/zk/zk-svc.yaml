@@ -7,6 +7,7 @@ metadata:
   name: {{ template "zoo.name" . }}
   namespace: {{ template "zoo.namespace" . }}
   labels:
+  {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -52,11 +53,12 @@ metadata:
   name: {{ template "zoo.name" . }}-headless
   namespace: {{ template "zoo.namespace" . }}
   labels:
+  {{- include "zoo.labels" . | nindent 4 }}
   {{- with .Values.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
   annotations:
-  {{- with .Values.annotations }}
+  {{- with $zoo.annotations }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:

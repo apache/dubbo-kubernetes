@@ -1,12 +1,12 @@
-{{- if .Values.ingress.enabled }}
 {{- $ingress := .Values.ingress -}}
+{{- if $ingress.enabled }}
 apiVersion: {{ template "network.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ template "admin.name" . }}-ingress
-  namespace: {{ template "ingress.namespace" . }}
+  namespace: {{ template "system.namespaces" . }}
 spec:
-  ingressClassName: {{ template "dubbo.name" . }}
+  ingressClassName: {{ template "traefik.name" . }}
   rules:
   - host: {{ $ingress.hosts.admin }}
     http:
@@ -23,9 +23,9 @@ apiVersion: {{ template "network.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ template "prom.name" . }}-ingress
-  namespace: {{ template "ingress.namespace" . }}
+  namespace: {{ template "system.namespaces" . }}
 spec:
-  ingressClassName: {{ template "dubbo.name" . }}
+  ingressClassName: {{ template "traefik.name" . }}
   rules:
   - host: {{ $ingress.hosts.prometheus }}
     http:
@@ -42,9 +42,9 @@ apiVersion: {{ template "network.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ template "grafana.name" . }}-ingress
-  namespace: {{ template "ingress.namespace" . }}
+  namespace: {{ template "system.namespaces" . }}
 spec:
-  ingressClassName: {{ template "dubbo.name" . }}
+  ingressClassName: {{ template "traefik.name" . }}
   rules:
   - host: {{ $ingress.hosts.grafana }}
     http:
