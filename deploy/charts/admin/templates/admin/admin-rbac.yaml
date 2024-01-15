@@ -8,6 +8,9 @@ metadata:
   name: {{ template "admin.name" . }}
   namespace: {{ template "admin.namespace" . }}
   labels:
+  {{- if $sa.labels }}
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- end }}
   {{- with $sa.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -24,6 +27,7 @@ metadata:
   name: {{ include "admin.name" . }}
   namespace: {{ include "admin.namespace" . }}
   labels:
+  {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -57,6 +61,7 @@ metadata:
   name: {{ include "admin.name" . }}
   namespace: {{ include "admin.namespace" . }}
   labels:
+  {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -68,7 +73,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: {{ include "admin.name" . }}
-
 subjects:
 - kind: ServiceAccount
   name: {{ include "admin.name" . }}
@@ -79,6 +83,7 @@ kind: ClusterRole
 metadata:
   name: {{ include "admin.name" . }}-clusterrole
   labels:
+  {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -126,6 +131,7 @@ kind: ClusterRoleBinding
 metadata:
   name: {{ include "admin.name" . }}-clusterrolebinding
   labels:
+  {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}

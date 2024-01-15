@@ -6,6 +6,7 @@ metadata:
   name: {{ template "zoo.name" . }}-scripts
   namespace: {{ template "zoo.namespace" . }}
   labels:
+  {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}

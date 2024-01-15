@@ -6,6 +6,7 @@ metadata:
   name: {{ template "admin.name" . }}
   namespace: {{ template "admin.namespace" . }}
   labels:
+  {{- include "admin.labels" . | nindent 4 }}
   {{- with $svc.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -49,6 +50,7 @@ metadata:
   name: {{ include "admin.name" . }}-headless
   namespace: {{ include "admin.namespace" . }}
   labels:
+  {{- include "admin.labels" . | nindent 4 }}
   {{- with $svc.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}

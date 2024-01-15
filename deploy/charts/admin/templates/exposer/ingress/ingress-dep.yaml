@@ -1,4 +1,5 @@
-{{- if .Values.ingress.enabled }}
+{{- $ingress := .Values.ingress -}}
+{{- if $ingress.enabled }}
 apiVersion: {{ template "apiVersion" . }}
 kind: Deployment
 metadata:
@@ -8,27 +9,27 @@ spec:
   replicas: {{ .Values.ingress.replicas }}
   selector:
     matchLabels:
-      {{- include "traefik.labels" . | nindent 6 }}
+    {{- include "traefik.labels" . | nindent 6 }}
   strategy:
-  {{- toYaml .Values.ingress.strategy | nindent 4 }}
+  {{- toYaml $ingress.strategy | nindent 4 }}
   template:
     metadata:
-      annotations:
-        {{- include "traefik.annotations" . | nindent 8 }}
       labels:
-        {{- include "traefik.labels" . | nindent 8 }}
+      {{- include "traefik.labels" . | nindent 8 }}
+      annotations:
+      {{- include "traefik.annotations" . | nindent 8 }}
     spec:
       serviceAccountName: {{ template "traefik.name" }}
       containers:
       - name: traefik
-        image: {{ .Values.ingress.image.registry }}:{{ .Values.ingress.image.tag }}
-        imagePullPolicy: {{ .Values.ingress.image.pullPolicy }}
+        image: {{ $ingress.image.registry }}:{{ $ingress.image.tag }}
+        imagePullPolicy: {{ $ingress.image.pullPolicy }}
         resources:
-        {{- toYaml .Values.ingress.resources | nindent 10 }}
+        {{- toYaml $ingress.resources | nindent 10 }}
         readinessProbe:
-        {{- toYaml .Values.ingress.readinessProbe | nindent 10 }}
+        {{- toYaml $ingress.readinessProbe | nindent 10 }}
         livenessProbe:
-        {{- toYaml .Values.ingress.livenessProbe | nindent 10 }}
+        {{- toYaml $ingress.livenessProbe | nindent 10 }}
         ports:
         - name: metrics
           containerPort: {{ template "traefik.metrics.containerPort" . }}
@@ -46,7 +47,7 @@ spec:
           hostPort: {{ template "traefik.websecure.hostPort" . }}
           protocol: TCP
         securityContext:
-        {{- toYaml .Values.ingress.containersecurityContext | nindent 10 }}
+        {{- toYaml $ingress.containersecurityContext | nindent 10 }}
         volumeMounts:
         - name: data
           mountPath: /data
@@ -79,7 +80,7 @@ spec:
       - name: tmp
         emptyDir: {}
       nodeSelector:
-      {{- toYaml .Values.ingress.nodeSelector | nindent 8 }}
+      {{- toYaml $ingress.nodeSelector | nindent 8 }}
       securityContext:
-      {{- toYaml .Values.ingress.securityContext | nindent 8 }}
+      {{- toYaml $ingress.securityContext | nindent 8 }}
 {{- end -}}
