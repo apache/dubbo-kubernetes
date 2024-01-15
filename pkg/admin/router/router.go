@@ -23,6 +23,8 @@ import (
 	"strconv"
 
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	handlersV2 "github.com/apache/dubbo-kubernetes/pkg/admin/handlers/v2"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/middlewares"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
 	"github.com/apache/dubbo-kubernetes/app/dubbo-ui"
@@ -80,6 +82,13 @@ func (r *Router) NeedLeaderElection() bool {
 
 func InitRouter() *Router {
 	router := gin.Default()
+	v2 := router.Group("/api/:env/v2")
+	v2.Use(middlewares.ErrorHandler())
+	{
+		v2.GET("/test/error", handlersV2.TestError)
+		v2.GET("/applications", handlersV2.AllApplications)
+		v2.GET("/application/detail", handlersV2.ApplicationDetail)
+	}
 
 	server := router.Group("/api/:env")
 	{
