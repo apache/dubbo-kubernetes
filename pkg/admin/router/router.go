@@ -87,6 +87,7 @@ func InitRouter() *Router {
 	{
 		v2.GET("/test/error", handlersV2.TestError)
 		v2.GET("/applications", handlersV2.AllApplications)
+		v2.GET("/application/search", handlersV2.SearchApplication)
 		v2.GET("/application/detail", handlersV2.ApplicationDetail)
 	}
 

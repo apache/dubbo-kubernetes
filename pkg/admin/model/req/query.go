@@ -15,35 +15,23 @@
  * limitations under the License.
  */
 
-package middlewares
+package req
 
-import (
-	"errors"
-	"net/http"
-
-	adminErrors "github.com/apache/dubbo-kubernetes/pkg/admin/errors"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/model/resp"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"github.com/gin-gonic/gin"
+const (
+	Namespace = "namespace"
+	Keywords  = "keywords"
+)
+const (
+	Asc  = "asc"
+	Desc = "desc"
 )
 
-func ErrorHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Next()
-		for _, e := range c.Errors {
-			err := e.Err
-			// business error
-			var bizErr *adminErrors.BizError
-			if ok := errors.As(err, &bizErr); ok {
-				logger.Errorf("%+v", bizErr.Err)
-				c.JSON(http.StatusOK, resp.NewErrorResp(bizErr.Code, bizErr.Err))
-				return
-			}
+type PageQuery struct {
+	Page int `json:"page" form:"page" binding:"required"`
+	Size int `json:"size" form:"size" binding:"required"`
+}
 
-			// unhandled server error
-			logger.Errorf("unhandled err: %+v", err)
-			c.JSON(http.StatusInternalServerError, resp.NewErrorResp(resp.DefaultServerErrorCode, err))
-			return
-		}
-	}
+type SortQuery struct {
+	SortType string `json:"sortType" form:"sortType"`
+	Order    string `json:"order" form:"order"`
 }

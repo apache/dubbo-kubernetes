@@ -24,6 +24,7 @@ import (
 )
 
 type ResourceService interface {
+	SearchApplications(namespace string, keywords string) ([]*resp.ApplicationOverview, error)
 	FindApplications(namespace string) ([]string, error)
 	FindApplicationDetail(namespace string, application string) (*resp.ApplicationResp, error)
 }
@@ -34,7 +35,37 @@ func NewResourceService() ResourceService {
 
 type resourceServiceImpl struct{}
 
-func (p *resourceServiceImpl) FindApplications(namespace string) ([]string, error) {
+func (s *resourceServiceImpl) SearchApplications(namespace string, keywords string) ([]*resp.ApplicationOverview, error) {
+	var appModels []*cache.ApplicationModel
+	var err error
+	if keywords == "" {
+		appModels, err = cache.GetCache().GetApplications(namespace)
+	} else {
+		appModels, err = cache.GetCache().GetApplicationsWithSelector(namespace, selector.NewApplicationSelector(keywords))
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var appOverviews []*resp.ApplicationOverview
+	for _, app := range appModels {
+		appName := app.Name
+		instanceModels, err := cache.GetCache().GetInstancesWithSelector(namespace, selector.NewApplicationSelector(appName)) // TODO: create a new method to get instance count directly
+		if err != nil {
+			return nil, err
+		}
+		appOverviews = append(appOverviews, &resp.ApplicationOverview{
+			Name:            appName,
+			InstanceCount:   len(instanceModels),
+			DeployCluster:   "", // TODO: add support for deploy cluster
+			RegisterCluster: "", // TODO: add support for register cluster
+		})
+	}
+
+	return appOverviews, nil
+}
+
+func (s *resourceServiceImpl) FindApplications(namespace string) ([]string, error) {
 	appModels, err := cache.GetCache().GetApplications(namespace)
 	if err != nil {
 		return nil, err
@@ -46,7 +77,7 @@ func (p *resourceServiceImpl) FindApplications(namespace string) ([]string, erro
 	return apps, nil
 }
 
-func (p *resourceServiceImpl) FindApplicationDetail(namespace string, application string) (*resp.ApplicationResp, error) {
+func (s *resourceServiceImpl) FindApplicationDetail(namespace string, application string) (*resp.ApplicationResp, error) {
 	serviceModels, err := cache.GetCache().GetServicesWithSelector(namespace, selector.NewApplicationSelector(application))
 	if err != nil {
 		return nil, err

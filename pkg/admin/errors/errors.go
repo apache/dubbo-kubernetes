@@ -15,35 +15,32 @@
  * limitations under the License.
  */
 
-package middlewares
+package errors
 
 import (
-	"errors"
-	"net/http"
-
-	adminErrors "github.com/apache/dubbo-kubernetes/pkg/admin/errors"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model/resp"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
-func ErrorHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Next()
-		for _, e := range c.Errors {
-			err := e.Err
-			// business error
-			var bizErr *adminErrors.BizError
-			if ok := errors.As(err, &bizErr); ok {
-				logger.Errorf("%+v", bizErr.Err)
-				c.JSON(http.StatusOK, resp.NewErrorResp(bizErr.Code, bizErr.Err))
-				return
-			}
+type BizError struct {
+	Code resp.Code
+	Err  error
+}
 
-			// unhandled server error
-			logger.Errorf("unhandled err: %+v", err)
-			c.JSON(http.StatusInternalServerError, resp.NewErrorResp(resp.DefaultServerErrorCode, err))
-			return
-		}
+func (e *BizError) Error() string {
+	return e.Err.Error()
+}
+
+func NewBizError(code resp.Code, err error) *BizError {
+	return &BizError{
+		Code: code,
+		Err:  err,
+	}
+}
+
+func NewBizErrorWithStack(code resp.Code, err error) *BizError {
+	return &BizError{
+		Code: code,
+		Err:  errors.WithStack(err),
 	}
 }

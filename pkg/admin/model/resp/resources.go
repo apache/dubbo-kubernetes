@@ -19,6 +19,13 @@ package resp
 
 import "github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 
+type ApplicationOverview struct {
+	Name            string `json:"name"`
+	InstanceCount   int    `json:"instanceCount"`
+	DeployCluster   string `json:"deployCluster"`
+	RegisterCluster string `json:"registerCluster"`
+}
+
 type ApplicationResp struct {
 	Name      string          `json:"name"`
 	Instances []*InstanceResp `json:"instances"`

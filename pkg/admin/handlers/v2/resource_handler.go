@@ -19,10 +19,15 @@ package handlersV2
 
 import (
 	"net/http"
+	"sort"
 
+	"github.com/apache/dubbo-kubernetes/pkg/admin/errors"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model/req"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model/resp"
 	servicesV2 "github.com/apache/dubbo-kubernetes/pkg/admin/services/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/vcraescu/go-paginator"
+	"github.com/vcraescu/go-paginator/adapter"
 )
 
 var (
@@ -37,6 +42,63 @@ func AllApplications(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp.NewSuccessResp(appNames))
+}
+
+func SearchApplication(c *gin.Context) {
+	// request params validation and binding
+	namespace := c.DefaultQuery(req.Namespace, "")
+	keywords := c.DefaultQuery(req.Keywords, "")
+	pageQuery := &req.PageQuery{}
+	if err := c.ShouldBindQuery(pageQuery); err != nil {
+		_ = c.Error(errors.NewBizError(resp.InvalidParamCode, err))
+		return
+	}
+	sortQuery := &req.SortQuery{}
+	if err := c.ShouldBindQuery(sortQuery); err != nil {
+		_ = c.Error(errors.NewBizError(resp.InvalidParamCode, err))
+		return
+	}
+
+	// invoke service
+	appOverviews, err := resourceService.SearchApplications(namespace, keywords)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	// sort
+	switch sortQuery.SortType {
+	case "appName":
+		sort.Slice(appOverviews, func(i, j int) bool {
+			if sortQuery.Order == req.Asc {
+				return appOverviews[i].Name < appOverviews[j].Name
+			} else if sortQuery.Order == req.Desc {
+				return appOverviews[i].Name > appOverviews[j].Name
+			}
+			return false
+		})
+	case "instanceNum":
+		sort.Slice(appOverviews, func(i, j int) bool {
+			if sortQuery.Order == req.Asc {
+				return appOverviews[i].InstanceCount < appOverviews[j].InstanceCount
+			} else if sortQuery.Order == req.Desc {
+				return appOverviews[i].InstanceCount > appOverviews[j].InstanceCount
+			}
+			return false
+		})
+	}
+
+	// paging
+	p := paginator.New(adapter.NewSliceAdapter(appOverviews), pageQuery.Size)
+	p.SetPage(pageQuery.Page)
+	var results []*resp.ApplicationOverview
+	if err := p.Results(&results); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	// return response
+	c.JSON(http.StatusOK, resp.NewSuccessPageResp(results, p, pageQuery))
 }
 
 func ApplicationDetail(c *gin.Context) {

@@ -17,6 +17,11 @@
 
 package resp
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model/req"
+	"github.com/vcraescu/go-paginator"
+)
+
 type BaseResp struct {
 	Code    Code        `json:"code"`
 	Message string      `json:"message"`
@@ -35,8 +40,9 @@ type Code int
 
 // TODO: refactor this
 const (
-	successCode      Code = 200
-	DefaultErrorCode Code = 500
+	successCode            Code = 200
+	InvalidParamCode       Code = 400
+	DefaultServerErrorCode Code = 500
 )
 
 func NewSuccessResp(data interface{}) *SuccessResp {
@@ -53,6 +59,33 @@ func NewErrorResp(code Code, err error) *ErrorResp {
 		BaseResp: BaseResp{
 			Code:    code,
 			Message: err.Error(),
+		},
+	}
+}
+
+type PageResp struct {
+	Content       any  `json:"content"`
+	TotalPages    int  `json:"totalPages"`
+	TotalElements int  `json:"totalElements"`
+	Size          int  `json:"size"`
+	First         bool `json:"first"`
+	Last          bool `json:"last"`
+	PageNumber    int  `json:"pageNumber"`
+	Offset        int  `json:"offset"`
+}
+
+func NewSuccessPageResp(content any, p paginator.Paginator, pq *req.PageQuery) *BaseResp {
+	return &BaseResp{
+		Code: successCode,
+		Data: &PageResp{
+			Content:       content,
+			TotalPages:    p.PageNums(),
+			TotalElements: p.Nums(),
+			Size:          pq.Size, // page size
+			First:         pq.Page == 1,
+			Last:          p.PageNums() == pq.Page,
+			PageNumber:    pq.Page,
+			Offset:        (pq.Page - 1) * pq.Size,
 		},
 	}
 }
