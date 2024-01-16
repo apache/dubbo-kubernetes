@@ -154,6 +154,14 @@ export const routes: Readonly<RouteRecordType[]> = [
         ]
       }
     ]
+  },
+  {
+    path: '/:catchAll(.*)',
+    name: 'notFound',
+    component: () => import('../views/error/notFound.vue'),
+    meta: {
+      skip: true
+    }
   }
 ]
 
