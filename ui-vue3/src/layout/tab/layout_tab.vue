@@ -15,7 +15,7 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_router_tab_index">
+  <div class="__container_router_tab_index" :key="key">
     <a-tabs
       v-if="tabRoute.meta.tab"
       @change="router.push({ name: activeKey || '' })"
