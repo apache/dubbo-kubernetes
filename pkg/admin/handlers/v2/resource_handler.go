@@ -30,9 +30,7 @@ import (
 	"github.com/vcraescu/go-paginator/adapter"
 )
 
-var (
-	resourceService = servicesV2.NewResourceService()
-)
+var resourceService = servicesV2.NewResourceService()
 
 func SearchApplication(c *gin.Context) {
 	// request params validation and binding
