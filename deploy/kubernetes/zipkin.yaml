@@ -12,18 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 ---
 # Source: zipkin/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: zipkin
+  namespace: dubbo-system
   labels:
-    helm.sh/chart: zipkin-0.3.0
+    helm.sh/chart: zipkin-0.1.2
     app.kubernetes.io/name: zipkin
     app.kubernetes.io/instance: zipkin
-    app.kubernetes.io/version: "2.23.16"
+    app.kubernetes.io/version: "3.0.3"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: zipkin/templates/service.yaml
@@ -31,11 +31,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: zipkin
+  namespace: dubbo-system
   labels:
-    helm.sh/chart: zipkin-0.3.0
+    helm.sh/chart: zipkin-0.1.2
     app.kubernetes.io/name: zipkin
     app.kubernetes.io/instance: zipkin
-    app.kubernetes.io/version: "2.23.16"
+    app.kubernetes.io/version: "3.0.3"
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
@@ -53,11 +54,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: zipkin
+  namespace: dubbo-system
   labels:
-    helm.sh/chart: zipkin-0.3.0
+    helm.sh/chart: zipkin-0.1.2
     app.kubernetes.io/name: zipkin
     app.kubernetes.io/instance: zipkin
-    app.kubernetes.io/version: "2.23.16"
+    app.kubernetes.io/version: "3.0.3"
     app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
@@ -83,7 +85,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1000
-          image: "openzipkin/zipkin-slim:2.23.16"
+          image: "openzipkin/zipkin-slim:3.0.3"
           env:
             - name: STORAGE_TYPE
               value: "mem"
