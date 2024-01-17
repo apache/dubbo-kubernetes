@@ -18,22 +18,32 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
-  executionLog:"Execution Log",
-  clusterApproach:"Cluster Approach",
-  retryCount:"Retry Count",
-  event:"Event",
-  configuration:"Configuration",
-  linkTracking:"Link Tracking",
-  monitor:"Monitor",
-  details:"Details",
-  creationTime_k8s:"creationTime(k8s)",
-  dubboPort:"Dubbo Port",
-  whichApplication: "application",
-  registerTime:"Register Time",
-  startTime_k8s:"Start Time(k8s)",
+  adjusting_the_timeout_for_application_service_provision:
+    'Adjusting the timeout for application service provision',
+  enable_access_logs_for_all_instances_of_this_application:
+    'Enable access logs for all instances of this application',
+  adjust_the_load_balancing_strategy_for_application_services:
+    'Adjusting the load balancing strategy for application service provision',
+  adjusting_the_number_of_retries_for_application_provided_services:
+    'Adjusting the number of retries for application provided services',
+  adjusting_the_negative_clustering_method_for_application_service_provision:
+    'Adjusting the negative clustering method for application service provision',
+  executionLog: 'Execution Log',
+  clusterApproach: 'Cluster Approach',
+  retryCount: 'Retry Count',
+  event: 'Event',
+  configuration: 'Configuration',
+  linkTracking: 'Link Tracking',
+  monitor: 'Monitor',
+  details: 'Details',
+  creationTime_k8s: 'creationTime(k8s)',
+  dubboPort: 'Dubbo Port',
+  whichApplication: 'application',
+  registerTime: 'Register Time',
+  startTime_k8s: 'Start Time(k8s)',
   registerStates: 'Register States',
   deployState: 'Deployment Status',
-  deployCluster:"Deploy Cluster",
+  deployCluster: 'Deploy Cluster',
   registerCluster: 'Register Cluster',
   owningWorkload_k8s: 'Owning Workload(k8s)',
   creationTime: 'Creation Time',

@@ -148,7 +148,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 meta: {
                   tab: true
                 }
-              },
+              }
             ]
           },
           {

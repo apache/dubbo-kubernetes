@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRoute, useRouter } from 'vue-router'
 import _ from 'lodash'
@@ -44,8 +44,10 @@ import { PRIMARY_COLOR } from '@/base/constants'
 import type { RouterMeta } from '@/router/RouterMeta'
 const router = useRouter()
 const tabRoute = useRoute()
-let meta: any = tabRoute.meta
-const tabRouters = meta?.parent?.children?.filter((x: any): any => x.meta.tab)
+const tabRouters = computed(() => {
+  let meta: any = tabRoute.meta
+  return meta?.parent?.children?.filter((x: any): any => x.meta.tab)
+})
 let activeKey = ref(tabRoute.name)
 let transitionFlag = ref(true)
 let key = _.uniqueId('__tab_page')
