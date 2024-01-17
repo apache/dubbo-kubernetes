@@ -30,20 +30,20 @@ import (
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
-		for _, e := range c.Errors {
-			err := e.Err
-			// business error
-			var bizErr *adminErrors.BizError
-			if ok := errors.As(err, &bizErr); ok {
-				logger.Errorf("%+v", bizErr.Err)
-				c.JSON(http.StatusOK, resp.NewErrorResp(bizErr.Code, bizErr.Err))
-				return
+		if len(c.Errors) > 0 {
+			for _, e := range c.Errors {
+				err := e.Err
+				// business error
+				var bizErr *adminErrors.BizError
+				if ok := errors.As(err, &bizErr); ok {
+					logger.Errorf("%+v", bizErr.Err)
+					c.JSON(http.StatusOK, resp.NewErrorResp(bizErr.Code, bizErr.Err))
+					return
+				}
 			}
-
 			// unhandled server error
-			logger.Errorf("unhandled err: %+v", err)
-			c.JSON(http.StatusInternalServerError, resp.NewErrorResp(resp.DefaultServerErrorCode, err))
-			return
+			logger.Errorf("unhandled errors: %+v", c.Errors)
+			c.JSON(http.StatusInternalServerError, resp.NewErrorResp(resp.DefaultServerErrorCode, c.Errors.Last()))
 		}
 	}
 }
