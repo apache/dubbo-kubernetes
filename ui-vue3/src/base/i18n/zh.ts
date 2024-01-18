@@ -260,7 +260,10 @@ const words: I18nType = {
   versionInputPrompt: '请输入服务version(可选)',
   resources: '资源详情',
   applications: '应用',
-  instances: '实例'
+  instances: '实例',
+
+  backHome: '回到首页',
+  noPageTip: '抱歉，你访问的页面不存在'
 }
 
 export default words

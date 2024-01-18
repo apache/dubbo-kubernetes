@@ -262,7 +262,10 @@ const words: I18nType = {
   serviceManagement: 'Dev & Test',
   resources: 'Resources',
   applications: 'Applications',
-  instances: 'Instances'
+  instances: 'Instances',
+
+  backHome: 'Back Home',
+  noPageTip: 'Sorry, the page you visited does not exist.'
 }
 
 export default words

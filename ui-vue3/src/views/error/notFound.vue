@@ -16,21 +16,25 @@
 -->
 <template>
   <div class="__container_error_notFound">
-    <a-result class="result" status="404" title="404" sub-title="Sorry, the page you visited does not exist.">
+    <a-result class="result" title="404" :sub-title="$t('noPageTip')">
+      <template #icon>
+        <img :src="dubbo" />
+      </template>
       <template #extra>
-        <a-button type="primary" @click="backHome">Back Home</a-button>
+        <a-button type="primary" @click="backHome">{{ $t('backHome') }}</a-button>
       </template>
     </a-result>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import { useRouter } from 'vue-router'
+import dubbo from '@/assets/dubbo.png'
 
-const router = useRouter();
+const router = useRouter()
 
 const backHome = () => {
-  router.push('/home');
+  router.push('/home')
 }
 </script>
 <style lang="less" scoped>
