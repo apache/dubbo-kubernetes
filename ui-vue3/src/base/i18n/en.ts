@@ -264,6 +264,9 @@ const words: I18nType = {
   applications: 'Applications',
   instances: 'Instances',
 
+  backHome: 'Back Home',
+  noPageTip: 'Sorry, the page you visited does not exist.',
+
   details: 'Details',
   debug: 'Debug',
   distribution: 'Distribution',

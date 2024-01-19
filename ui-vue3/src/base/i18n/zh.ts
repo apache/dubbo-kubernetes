@@ -262,6 +262,9 @@ const words: I18nType = {
   applications: '应用',
   instances: '实例',
 
+  backHome: '回到首页',
+  noPageTip: '抱歉，你访问的页面不存在',
+
   details: '详情',
   debug: '调试',
   distribution: '分布',
