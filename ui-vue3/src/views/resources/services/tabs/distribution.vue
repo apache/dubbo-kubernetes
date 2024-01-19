@@ -20,59 +20,81 @@
       <a-flex class="service-filter">
         <a-flex>
           <div>
-            <span>版本&分组：</span>
-            <a-select v-model:value="value" :options="options" class="service-filter-select"></a-select>
+            <span>版本&分组:</span>
+            <a-select
+              v-model:value="versionAndGroup"
+              :options="versionAndGroupOptions"
+              class="service-filter-select"
+            ></a-select>
           </div>
-          <div>
-            <a-radio-group v-model:value="value1" button-style="solid" class="service-filter-radios">
-              <a-radio-button value="producer">生产者</a-radio-button>
-              <a-radio-button value="consumer">消费者</a-radio-button>
-            </a-radio-group>
-          </div>
+          <a-input-search
+            v-model:value="searchValue"
+            placeholder="搜索应用，ip，支持前缀搜索"
+            class="service-filter-input"
+            @search="() => {}"
+            enter-button
+          />
         </a-flex>
-        <a-input-search
-          v-model:value="searchValue"
-          placeholder="请输入"
-          style="width: 300px"
-          @search="()=>{}"
-          enter-button
-        />
+        <div>
+          <a-radio-group
+            v-model:value="type"
+            button-style="solid"
+          >
+            <a-radio-button value="producer">生产者</a-radio-button>
+            <a-radio-button value="consumer">消费者</a-radio-button>
+          </a-radio-group>
+        </div>
       </a-flex>
-      <a-table :columns="tableColumns" :data-source="dataSource"></a-table>
+      <a-table :columns="tableColumns" :data-source="tableData">
+        <template #bodyCell="{ column, text }">
+          <template v-if="column.dataIndex === 'applicationName'">
+            <a-button type="link">{{ text }}</a-button>
+          </template>
+          <template v-if="column.dataIndex === 'instanceIP'">
+            <a-flex justify="">
+              <a-button v-for="ip in text.slice(0, 3)" :key="ip" type="link">{{ ip }}</a-button>
+              <a-button v-if="text.length > 3" type="link">更多</a-button>
+            </a-flex>
+          </template>
+        </template>
+      </a-table>
     </a-flex>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive } from 'vue'
 
-const searchValue = ref('');
-const options = reactive([
+const searchValue = ref('')
+const versionAndGroupOptions = reactive([
   {
-    value: 'version=,group='
+    value: '不指定'
   },
   {
-    value: 'version=1.0.0,group='
+    value: 'version=1.0.0'
   },
   {
-    value: 'version=,group=group1'
+    value: 'group=group1'
   },
   {
     value: 'version=1.0.0,group=group1'
   }
 ])
-const value = ref(options[0].value)
-const value1 = ref('producer')
+const versionAndGroup = ref(versionAndGroupOptions[0].value)
+const type = ref('producer')
+
 const tableColumns = [
   {
     title: '应用名',
     dataIndex: 'applicationName',
-    width: '25%'
+    width: '25%',
+    sorter: true
   },
   {
     title: '实例数',
     dataIndex: 'instanceNum',
-    width: '25%'
+    width: '25%',
+    sorter: true
   },
   {
     title: '实例ip',
@@ -80,7 +102,24 @@ const tableColumns = [
     width: '50%'
   }
 ]
-const dataSource = reactive([])
+
+const tableData = reactive([
+  {
+    applicationName: 'shop-order',
+    instanceNum: 15,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080', '192.168.32.22:20880']
+  },
+  {
+    applicationName: 'shop-order',
+    instanceNum: 15,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-user',
+    instanceNum: 12,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+  }
+])
 </script>
 <style lang="less" scoped>
 .__container_services_tabs_distribution {
@@ -88,10 +127,12 @@ const dataSource = reactive([])
     justify-content: space-between;
     margin-bottom: 20px;
     .service-filter-select {
-      width: 300px;
+      margin-left: 10px;
+      width: 250px;
     }
-    .service-filter-radios {
-      margin-left: 50px;
+    .service-filter-input {
+      margin-left: 30px;
+      width: 300px
     }
   }
 }

@@ -18,10 +18,6 @@
   <div class="__container_services_index">
     <a-flex vertical>
       <a-flex class="service-filter">
-        <a-radio-group v-model:value="serviceType" button-style="solid">
-          <a-radio-button value="provide">{{ $t('provideService') }}</a-radio-button>
-          <a-radio-button value="dependent">{{ $t('dependentService') }}</a-radio-button>
-        </a-radio-group>
         <a-input-search
           v-model:value="serviceName"
           placeholder="请输入"
@@ -41,7 +37,6 @@
         </template>
       </a-table>
     </a-flex>
-    
   </div>
 </template>
 
@@ -50,12 +45,11 @@ import { useRouter } from 'vue-router'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { ref } from 'vue'
 
-const serviceType = ref('provide');
-const serviceName = ref('');
+const serviceName = ref('')
 
-const onSearch = () => {};
+const onSearch = () => {}
 
-const router = useRouter();
+const router = useRouter()
 const columns = [
   {
     title: '服务',
@@ -149,7 +143,7 @@ const dataSource = [
 ]
 
 const viewDetail = (serviceName: string) => {
-  router.push({ name: 'detail', params: { serviceName }});
+  router.push({ name: 'detail', params: { serviceName } })
 }
 </script>
 <style lang="less" scoped>
@@ -158,9 +152,7 @@ const viewDetail = (serviceName: string) => {
     margin-bottom: 20px;
     .service-name-input {
       width: 500px;
-      margin-left: 100px;
     }
   }
 }
-
 </style>
