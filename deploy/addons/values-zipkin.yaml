@@ -13,15 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-image:
-  repository: openzipkin/zipkin-slim
-  pullPolicy: IfNotPresent
+ui:
+  image:
+    repository: openzipkin/zipkin-ui
 
-serviceAccount:
-  create: true
+collector:
+  image:
+    repository: openzipkin/zipkin
 
-ingress:
+dependencies:
   enabled: false
-
-autoscaling:
-  enabled: false
+  cron: "* 0 * * *"
+  image:
+    repository: openzipkin/zipkin-dependencies
