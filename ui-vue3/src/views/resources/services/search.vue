@@ -32,9 +32,6 @@
             <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
           </template>
         </template>
-        <template #customFilterIcon="{ filtered }">
-          <search-outlined :style="{ color: filtered ? '#108ee9' : undefined }" />
-        </template>
       </a-table>
     </a-flex>
   </div>
@@ -42,7 +39,6 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { SearchOutlined } from '@ant-design/icons-vue'
 import { ref } from 'vue'
 
 const serviceName = ref('')
