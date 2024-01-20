@@ -24,61 +24,42 @@
       :tabBarStyle="{ width: '200px' }"
     >
       <a-tab-pane v-for="tabName in methodTabs" :key="tabName" :tab="`${tabName}`">
-        <a-flex vertical>
-          <a-flex>
-            <div class="div-column">
-              <a-card title="接口:" class="card-content" size="small">
-                <p>org.apache.dubbo.samples.UserService:getPermissions</p>
-              </a-card>
-            </div>
-            <a-flex class="div-column">
-              <div class="div-column">
-                <a-card title="版本&分组:" class="card-content" size="small">
-                  <a-select
-                    v-model:value="versionAndGroup"
-                    size="large"
-                    :options="versionAndGroupOptions"
-                    style="width: 100%"
-                  ></a-select>
-                </a-card>
-              </div>
-              <div class="div-column">
-                <a-card title="指定生产者:" class="card-content" size="small">
-                  <a-select
-                    v-model:value="versionAndGroup"
-                    size="large"
-                    :options="versionAndGroupOptions"
-                    style="width: 100%"
-                  ></a-select>
-                </a-card>
-              </div>
-            </a-flex>
-          </a-flex>
-          <a-flex>
-            <div class="div-column">
-              <a-card title="入参类型:" class="card-content" size="small">
-                <a-tree block-node :tree-data="enterParamType" />
-              </a-card>
-            </div>
-            <div class="div-column">
-              <a-card title="出参类型:" class="card-content" size="small">
-                <a-tree block-node :tree-data="outputParamType" />
-              </a-card>
-            </div>
-          </a-flex>
-          <a-flex>
-            <div class="div-column">
-              <a-card title="请求:" class="card-content" size="small">
-                <a-textarea v-model:value="requestValue" placeholder="请输入" :rows="4" />
-              </a-card>
-            </div>
-            <div class="div-column">
-              <a-card title="响应:" class="card-content" size="small">
-                <a-textarea v-model:value="responseValue" placeholder="请输入" :rows="4" />
-              </a-card>
-            </div>
-          </a-flex>
-        </a-flex>
+        <a-descriptions :column="4" layout="vertical">
+          <a-descriptions-item label="接口" :span="2">
+            <p class="description-item-content">org.apache.dubbo.samples.UserService:getPermissions</p>
+          </a-descriptions-item>
+          <a-descriptions-item label="版本&分组">
+            <div class="description-item-content">
+            <a-select
+              v-model:value="versionAndGroup"
+              size="large"
+              :options="versionAndGroupOptions"
+              style="width: 100%"
+            ></a-select>
+          </div>
+          </a-descriptions-item>
+          <a-descriptions-item label="指定生产者">
+            <a-select
+              v-model:value="versionAndGroup"
+              size="large"
+              :options="versionAndGroupOptions"
+              style="width: 100%"
+              class="description-item-content"
+            ></a-select>
+          </a-descriptions-item>
+          <a-descriptions-item label="入参类型" :span="2">
+            <a-tree block-node :tree-data="enterParamType" class="description-item-content" />
+          </a-descriptions-item>
+          <a-descriptions-item label="出参类型" :span="2">
+            <a-tree block-node :tree-data="outputParamType" class="description-item-content" />
+          </a-descriptions-item>
+          <a-descriptions-item label="请求" :span="2">
+            <a-textarea v-model:value="requestValue" placeholder="请输入" :rows="4" class="description-item-content" />
+          </a-descriptions-item>
+          <a-descriptions-item label="响应" :span="2">
+            <a-textarea v-model:value="responseValue" placeholder="请输入" :rows="4" class="description-item-content" />
+          </a-descriptions-item>
+        </a-descriptions>
         <a-button type="primary">发送请求</a-button>
       </a-tab-pane>
     </a-tabs>
@@ -176,12 +157,9 @@ const responseValue = ref('')
     width: 200px;
     text-align: center;
   }
-  .div-column {
-    width: 50%;
-    .card-content {
-      width: 90%;
-      margin-bottom: 10px;
-    }
+  .description-item-content {
+    margin-left: 20px;
+    width: 90%;
   }
 }
 </style>
