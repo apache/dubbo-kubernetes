@@ -72,7 +72,7 @@ The Dubbo Kubernetes Integration
             ...
     ```
     
-    > If you want to create your own Dubbo application from scratch and deploy it, please use `[dubboctl]()`we provided below.
+    > If you want to create your own Dubbo application from scratch and deploy it, please use [dubboctl]() we provided below.
 
 
 5. Open the following page to check deployment status on control plane UI:
