@@ -94,25 +94,25 @@ The microservcice architecture built with Dubbo Control Plane consists of two ma
 - The **`Dubbo Control Plane`** configures the data plane - applications developed with Dubbo SDK, for handling service traffic. Users create [policies]() that the dubbo control plane processes to generate configurations for the data plane.
 - The data plane - the **`Dubbo SDK`**, connets directly to control plane and receives configurations that can work as the sources for service discovery, traffic routing, load balancing, etc.
 
-Dubbo Control Plane supports two depoyment modes: **`kubernetes`** and **`universal`**.
+Dubbo Control Plane supports two deployment modes: **`kubernetes`** and **`universal`**.
 
-- **`kubernetes`** is like the classic Service Mesh architecture, with all microservices concepts bond to kubernetes resources. Comparing to classic service mesh solutions like istio, Dubbo favors a proxyless mode - with no envoy sidecar.
-- **`universal`** is the traditional microservice architecture that all Dubbo users are already familar with. Unlike service mesh, it usually needs a dedicatd registry like Nacos or Zookeeper for service discovery, etc.
+- **`kubernetes`** mode is like the classic Service Mesh architecture, with all microservices concepts bonded to kubernetes resources. Unlike classic service mesh solutions like istio, Dubbo favors a proxyless data plane deployment - with no envoy sidecar.
+- **`universal`** is the traditional microservice architecture that all Dubbo users are already familiar with. Unlike the kubernetes mode, it usually needs a dedicated registry like Nacos or Zookeeper for service discovery, etc.
 
 ### Kubernetes
-In kubernetes mode, the control plane will interact directly with the Kubernetes API-SERVER, watching the kubernetes resources and tranform them as xDS resources for service discovery and traffic management configurations.
+In kubernetes mode, the control plane will interact directly with the Kubernetes API-SERVER, watching the kubernetes resources and transform them as xDS resources for service discovery and traffic management configurations.
 
 ![kubernetes-mode](./docs/images/homepage/kubernetes-mode.png)
 
-We all know the `service`definition of Kubernetes and Dubo are different, `Kubernetes Service` is more like an application concent run on a selected group of pods while `Dubbo Service` can mean a specific RPC service inside the application process. So how does dubbo control plane manages to bridge the `interface-application` gap, check here for more details.
+We all know the `service` definitions of Kubernetes and Dubo are different, `Kubernetes Service` is more like an application concept run on a selected group of pods while `Dubbo Service` can mean a specific RPC service inside the application process. So how does dubbo control plane manages to bridge the `interface-application` gap, check [here]() for more details.
 
 ### Universal
 In Universal mode, Dubbo still uses Nacos or Zookeeper as registries for service discovery, control plane then interact with registry directly to work as the console UI,  as the entry point for viewing and managing the cluster.
 
 ![universal-mode](./docs/images/homepage/universal-mode.png)
 
-### Multiple cluster
-Dubbo Control Plane supports running your services in multiple zones. It is even possible to run with a mix of Kubernetes and Universal zones. Your microservice environment can include multiple isolated services, and workloads running in different regions, on different clouds, or in different datacenters. A zone can be a Kubernetes cluster, a VPC, or any other deployment you need to include in the same distributed mesh environment. The only condition is that all the data planes running within the zone must be able to connect to the other data planes in this same zone.
+### Multiple clusters
+Dubbo Control Plane supports running your services in multiple zones. It is even possible to run with a mix of Kubernetes and Universal zones. Your microservice environment can include multiple isolated services, and workloads running in different regions, on different clouds, or in different datacenters. A zone can be a Kubernetes cluster, a VPC, or any other deployment you need to include in the same distributed microservice environment. The only condition is that all the data planes running within the zone must be able to connect to the other data planes in this same zone.
 
 Dubbo Control Plane supports a **`global`** deployment mode that can connect different **`zone`** region clusters. The picture below shows how it works.
 
