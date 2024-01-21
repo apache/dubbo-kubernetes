@@ -66,7 +66,7 @@ spec:
     metadata:
       ...
       labels:
-        kuma.io/sidecar-injection: enabled
+        dubbo.apache.org/sidecar-injection: enabled
     spec:
       containers:
         ...
@@ -88,7 +88,7 @@ visit, 127.0.0.1:5681/admin
 
 The microservcice architecture built with Dubbo Control Plane consists of two main components:
 
-- The `**Dubbo Control Plane**` configures the data plane - applications developed with Dubbo SDK, for handling service traffic. Users create [policies](https://kuma.io/docs/2.5.x/policies/introduction) that the dubbo control plane processes to generate configurations for the data plane.
+- The `**Dubbo Control Plane**` configures the data plane - applications developed with Dubbo SDK, for handling service traffic. Users create [policies]() that the dubbo control plane processes to generate configurations for the data plane.
 - The data plane - the `**Dubbo SDK**`, connets directly to control plane and receives configurations that can work as the sources for service discovery, traffic routing, load balancing, etc.
 
 Dubbo Control Plane supports two depoyment modes:`**kubernetes**`and `**universal**.`
