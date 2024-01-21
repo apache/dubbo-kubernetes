@@ -83,6 +83,8 @@ The Dubbo Kubernetes Integration
     
     visit, 127.0.0.1:5681/admin
 
+   ![ui-demo](./docs/images/homepage/ui-demo.png)
+
 ## Architecture
 
 ![architecture](./docs/images/homepage/arch2.png)
