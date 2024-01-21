@@ -37,6 +37,7 @@ const words: I18nType = {
   providers: '提供者',
   consumers: '消费者',
   application: '应用',
+  instance: '实例',
   all: '全部',
   common: '通用',
 
@@ -263,7 +264,9 @@ const words: I18nType = {
   instances: '实例',
 
   backHome: '回到首页',
-  noPageTip: '抱歉，你访问的页面不存在'
+  noPageTip: '抱歉，你访问的页面不存在',
+
+  globalSearchTip: '搜索ip，应用，实例，服务'
 }
 
 export default words
