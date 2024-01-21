@@ -49,11 +49,10 @@ const routesForMenu = defaultRoutes
 const nowRoute = useRoute()
 
 // load active menu
-let selectedKeys = reactive([nowRoute.meta._router_key])
+let selectedKeys = reactive([getLoadSelectedKeys(nowRoute.meta)])
 let openKeys: any = reactive([])
-function loadSelectedKeys() {
-  const nowMeta: RouterMeta = nowRoute.meta
-  selectedKeys[0] = nowMeta.tab || nowMeta.hidden ? nowMeta.parent?.meta?._router_key : nowMeta._router_key
+function getLoadSelectedKeys(meta: RouterMeta): string {
+  return meta.tab || meta.hidden ? getLoadSelectedKeys(meta.parent?.meta!) : meta._router_key!
 }
 function loadOpenedKeys() {
   let p: any = nowRoute.meta.parent
@@ -63,7 +62,6 @@ function loadOpenedKeys() {
   }
 }
 
-loadSelectedKeys()
 loadOpenedKeys()
 
 function selectMenu(e: any) {
