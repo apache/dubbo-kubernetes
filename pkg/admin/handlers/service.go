@@ -53,7 +53,6 @@ var (
 	monitorService     services.MonitorService      = &services.PrometheusServiceImpl{}
 	testingService     services.TestingService      = &services.TestingServiceImpl{}
 	genericServiceImpl *services.GenericServiceImpl = &services.GenericServiceImpl{}
-	serviceTesting     *services.ServiceTestingV3   = &services.ServiceTestingV3{}
 )
 
 // AllServices get all services
