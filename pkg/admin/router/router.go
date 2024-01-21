@@ -201,8 +201,10 @@ func InitRouter() *Router {
 	}
 
 	// ServiceTest
-	router.POST("/api/:env/test", handlers.Test)
-	router.GET("/api/:env/test/method", handlers.MethodDetail)
+	router.GET("/api/:env/test/list", handlers.ListMethods)
+	router.GET("/api/:env/test/describe", handlers.DescribeMethod)
+	router.GET("/api/:env/test/template", handlers.MessageTemplate)
+	router.GET("/api/:env/test/", handlers.HTTPTest)
 
 	// Admin UI
 	router.StaticFS("/admin", http.FS(ui.FS()))

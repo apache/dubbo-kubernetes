@@ -47,3 +47,10 @@ type MethodMetadata struct {
 	ParameterTypes []interface{} `json:"parameterTypes"`
 	ReturnType     string        `json:"returnType"`
 }
+
+type MethodDescribe struct {
+	InputName      string `json:"inputName"`
+	InputDescribe  string `json:"inputDescribe"`
+	OutputName     string `json:"outputName"`
+	OutputDescribe string `json:"outputDescribe"`
+}

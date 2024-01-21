@@ -18,7 +18,9 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -49,6 +51,7 @@ var (
 	providerService    services.ProviderService     = &services.ProviderServiceImpl{}
 	consumerService    services.ConsumerService     = &services.ConsumerServiceImpl{}
 	monitorService     services.MonitorService      = &services.PrometheusServiceImpl{}
+	testingService     services.TestingService      = &services.TestingServiceImpl{}
 	genericServiceImpl *services.GenericServiceImpl = &services.GenericServiceImpl{}
 	serviceTesting     *services.ServiceTestingV3   = &services.ServiceTestingV3{}
 )
@@ -352,20 +355,6 @@ func Test(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// HttpTest works for triple protocol
-func HttpTest(c *gin.Context) {
-	// pattern := c.Query("service")
-	// filter := c.Query("method")
-	// address := c.Query("address")
-
-	// send standard http request to backend http://address/service/method content-type:json
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": 1,
-		"data": "implement me",
-	})
-}
-
 func MethodDetail(c *gin.Context) {
 	service := c.Query("service")
 	group := util.GetGroup(service)
@@ -406,4 +395,91 @@ func MethodDetail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, methodMetadata)
+}
+
+// ListMethods list all methods of a service
+func ListMethods(c *gin.Context) {
+	service := c.Query("service")
+	address := c.Query("address")
+
+	methodList, err := testingService.GetMethodsNames(context.Background(), address, service)
+	if err != nil {
+		logger.Error("Error get methods names", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"methods": methodList,
+	})
+	return
+}
+
+// DescribeMethod describe a method of a service
+func DescribeMethod(c *gin.Context) {
+	m := c.Query("method")
+	address := c.Query("address")
+
+	// get method describe
+	desc, err := testingService.GetMethodDescribe(context.Background(), address, m)
+	if err != nil {
+		logger.Error("Error get method describe", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, desc)
+	return
+}
+
+// MessageTemplate get a method template
+func MessageTemplate(c *gin.Context) {
+	m := c.Query("method")
+	address := c.Query("address")
+
+	templ, err := testingService.GetMessageTemplateString(context.Background(), address, m)
+	if err != nil {
+		logger.Error("Error get message template", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"template": templ,
+	})
+	return
+}
+
+// HTTPTest invoke a rpc method using HTTP
+func HTTPTest(c *gin.Context) {
+	m := c.Query("method")          // method name
+	address := c.Query("address")   // server address
+	input := c.Query("input")       // json string
+	headers := c.QueryMap("header") // header map
+
+	// invoke
+	resp, success, err := testingService.Invoke(context.Background(), address, m, input, headers)
+	if err != nil {
+		logger.Error("Error do http invoke for service test", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !success {
+		c.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("rpc request is sended to server but response an error: %v", resp),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "success",
+		"response": resp,
+	})
 }
