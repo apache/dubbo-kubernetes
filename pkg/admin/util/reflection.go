@@ -35,7 +35,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 type RPCReflection interface {
@@ -53,6 +52,8 @@ type RPCReflection interface {
 	SetRPCHeaders(headers map[string]string)
 	// Dail to the target, you should call this method before send reflection request and rpc request
 	Dail(ctx context.Context) error
+	// Close the connection.
+	Close()
 	// ListServices returns all services in the target.
 	ListServices() ([]string, error)
 	// ListMethods returns all methods in the service.
@@ -63,6 +64,8 @@ type RPCReflection interface {
 	TemplateString(messageName string) (string, error)
 	// DescribeString returns the description string of the message.
 	DescribeString(symbol string) (string, error)
+	// Descriptor returns the desc.Descriptor.
+	Descriptor(symbol string) (desc.Descriptor, error)
 }
 
 type rpcReflection struct {
@@ -79,11 +82,12 @@ type rpcReflection struct {
 	rpcHeaders map[string]string
 
 	mu         sync.Mutex // to protect descSource and clientConn
+	refClient  *grpcreflect.Client
 	clientConn *grpc.ClientConn
 	descSource grpcurl.DescriptorSource
 }
 
-func NewRPCReflection(ctx context.Context, target string) RPCReflection {
+func NewRPCReflection(target string) RPCReflection {
 	r := &rpcReflection{
 		target: target,
 	}
@@ -151,11 +155,28 @@ func (r *rpcReflection) Dail(ctx context.Context) error {
 		return errors.Wrapf(err, "Failed to dial target host %s", r.target)
 	}
 
+	r.clientConn = cc
 	reflectionClient := grpcreflect.NewClientAuto(ctx, cc)
+	r.refClient = reflectionClient
 	reflectionSource := grpcurl.DescriptorSourceFromServer(ctx, reflectionClient)
 	r.descSource = reflectionSource
 
 	return nil
+}
+
+func (r *rpcReflection) Close() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.refClient != nil {
+		r.refClient.Reset()
+		r.refClient = nil
+	}
+
+	if r.clientConn != nil {
+		r.clientConn.Close()
+		r.clientConn = nil
+	}
 }
 
 func (r *rpcReflection) ListServices() ([]string, error) {
@@ -268,65 +289,12 @@ func (r *rpcReflection) DescribeString(symbol string) (string, error) {
 		return "", err
 	}
 
-	fqn := dsc.GetFullyQualifiedName()
-	var elementType string
-	switch d := dsc.(type) {
-	case *desc.MessageDescriptor:
-		elementType = "a message"
-		parent, ok := d.GetParent().(*desc.MessageDescriptor)
-		if ok {
-			if d.IsMapEntry() {
-				for _, f := range parent.GetFields() {
-					if f.IsMap() && f.GetMessageType() == d {
-						// found it: describe the map field instead
-						elementType = "the entry type for a map field"
-						dsc = f
-						break
-					}
-				}
-			} else {
-				// see if it'symbol a group
-				for _, f := range parent.GetFields() {
-					if f.GetType() == descriptorpb.FieldDescriptorProto_TYPE_GROUP && f.GetMessageType() == d {
-						// found it: describe the map field instead
-						elementType = "the type of a group field"
-						dsc = f
-						break
-					}
-				}
-			}
-		}
-	case *desc.FieldDescriptor:
-		elementType = "a field"
-		if d.GetType() == descriptorpb.FieldDescriptorProto_TYPE_GROUP {
-			elementType = "a group field"
-		} else if d.IsExtension() {
-			elementType = "an extension"
-		}
-	case *desc.OneOfDescriptor:
-		elementType = "a one-of"
-	case *desc.EnumDescriptor:
-		elementType = "an enum"
-	case *desc.EnumValueDescriptor:
-		elementType = "an enum value"
-	case *desc.ServiceDescriptor:
-		elementType = "a service"
-	case *desc.MethodDescriptor:
-		elementType = "a method"
-	default:
-		err = fmt.Errorf("descriptor has unrecognized type %T", dsc)
-		return "", errors.Wrapf(err, "Failed to describe symbol %q", symbol)
-	}
-
 	txt, err := grpcurl.GetDescriptorText(dsc, r.descSource)
 	if err != nil {
 		return "", errors.Wrapf(err, "Failed to describe symbol %q", symbol)
 	}
 
-	var describeStringBuilder strings.Builder
-	describeStringBuilder.WriteString(fmt.Sprintf("%symbol is %symbol:\n", fqn, elementType))
-	describeStringBuilder.WriteString(txt)
-	return describeStringBuilder.String(), nil
+	return txt, nil
 }
 
 func (r *rpcReflection) Descriptor(symbol string) (desc.Descriptor, error) {
