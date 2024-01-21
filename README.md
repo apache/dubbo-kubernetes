@@ -50,8 +50,7 @@ The Dubbo Kubernetes Integration
       type: ClusterIP
       ports:
         - name: port1
-          protocol: TCP
-          appProtocol: http
+          protocol: http
           port: 80
           targetPort: 8080
     ---
@@ -66,7 +65,8 @@ The Dubbo Kubernetes Integration
         metadata:
           ...
           labels:
-            dubbo.apache.org/sidecar-injection: enabled
+            app: dubbo-demo
+            dubbo.apache.org/service: dubbo-demo
         spec:
           containers:
             ...
