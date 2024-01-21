@@ -96,11 +96,7 @@ import { Icon } from '@iconify/vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { globalSearch } from '@/api/service/globalSearch'
 import { debounce } from 'lodash'
-
-type option = {
-  label: string
-  value: string
-}
+import type { SelectOption } from '@/types/common.ts'
 
 const {
   appContext: {
@@ -155,7 +151,6 @@ const onSearch = async () => {
     keywords: keywords.value
   })
   if (data.find) {
-    console.log(data.candidates)
     for (let i = 0; i < data.candidates.length; i++) {
       candidates.value[i] = {
         label: data.candidates[i],
@@ -167,7 +162,7 @@ const onSearch = async () => {
   }
 }
 
-const candidates = ref<Array<option>>([])
+const candidates = ref<Array<SelectOption>>([])
 
 const inputChange = debounce(onSearch, 300)
 
