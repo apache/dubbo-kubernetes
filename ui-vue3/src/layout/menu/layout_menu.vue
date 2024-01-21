@@ -52,8 +52,8 @@ const nowRoute = useRoute()
 let selectedKeys = reactive([nowRoute.meta._router_key])
 let openKeys: any = reactive([])
 function loadSelectedKeys() {
-  let nowMeta: RouterMeta = nowRoute.meta
-  selectedKeys[0] = nowRoute.meta.tab ? nowMeta.parent?.meta?._router_key : nowMeta._router_key
+  const nowMeta: RouterMeta = nowRoute.meta
+  selectedKeys[0] = nowMeta.tab || nowMeta.hidden ? nowMeta.parent?.meta?._router_key : nowMeta._router_key
 }
 function loadOpenedKeys() {
   let p: any = nowRoute.meta.parent
