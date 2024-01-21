@@ -116,7 +116,7 @@ func (r *rpcReflection) SetReflectionHeaders(headers map[string]string) {
 }
 
 func (r *rpcReflection) SetRPCHeaders(headers map[string]string) {
-
+	r.rpcHeaders = headers
 }
 
 // Dail to the target, you should call this method before send reflection request and rpc request
@@ -180,7 +180,6 @@ func (r *rpcReflection) Close() {
 }
 
 func (r *rpcReflection) ListServices() ([]string, error) {
-
 	svcs, err := grpcurl.ListServices(r.descSource)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to list services")
@@ -190,7 +189,6 @@ func (r *rpcReflection) ListServices() ([]string, error) {
 }
 
 func (r *rpcReflection) ListMethods(service string) ([]string, error) {
-
 	methods, err := grpcurl.ListMethods(r.descSource, service)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to list methods for service %s", service)
