@@ -355,48 +355,6 @@ func Test(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func MethodDetail(c *gin.Context) {
-	service := c.Query("service")
-	group := util.GetGroup(service)
-	version := util.GetVersion(service)
-	interfaze := util.GetInterface(service)
-	application := c.Query("application")
-	method := c.Query("method")
-
-	identifier := &identifier.MetadataIdentifier{
-		Application: application,
-		BaseMetadataIdentifier: identifier.BaseMetadataIdentifier{
-			ServiceInterface: interfaze,
-			Version:          version,
-			Group:            group,
-			Side:             constant.ProviderSide,
-		},
-	}
-	metadata, _ := config.MetadataReportCenter.GetServiceDefinition(identifier)
-	var methodMetadata model.MethodMetadata
-	if metadata != "" {
-		serviceDefinition := &definition.FullServiceDefinition{}
-		err := json.Unmarshal([]byte(metadata), &serviceDefinition)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-		methods := serviceDefinition.Methods
-		if methods != nil {
-			for _, m := range methods {
-				if serviceTesting.SameMethod(m, method) {
-					methodMetadata = serviceTesting.GenerateMethodMeta(*serviceDefinition, m)
-					break
-				}
-			}
-		}
-	}
-
-	c.JSON(http.StatusOK, methodMetadata)
-}
-
 // ListMethods list all methods of a service
 func ListMethods(c *gin.Context) {
 	service := c.Query("service")
