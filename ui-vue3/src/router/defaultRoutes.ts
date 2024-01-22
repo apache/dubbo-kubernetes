@@ -123,7 +123,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'applications_index',
                 component: () => import('../views/resources/applications/index.vue'),
                 meta: {
-                  // hidden: true,
+                  hidden: true
                 }
               },
               {
@@ -149,7 +149,8 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/placeholder',
             name: 'placeholder_demo',
-            component: () => import('../views/common/placeholder_demo/index.vue')
+            component: () => import('../views/common/placeholder_demo/index.vue'),
+            meta: {}
           }
         ]
       }
