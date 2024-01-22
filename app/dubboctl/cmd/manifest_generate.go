@@ -21,22 +21,24 @@ import (
 	"path"
 	"sort"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
-
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+import (
+	"github.com/spf13/cobra"
 
 	"go.uber.org/zap/zapcore"
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
+	"sigs.k8s.io/yaml"
+)
 
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest/render"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-	"github.com/spf13/cobra"
-
-	"sigs.k8s.io/yaml"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 type ManifestGenerateArgs struct {

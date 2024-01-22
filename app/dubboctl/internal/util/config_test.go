@@ -21,10 +21,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+)
 
-	config "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
+import (
 	. "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/testing"
+	config "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 
 // TestPath ensures that the Path accessor returns

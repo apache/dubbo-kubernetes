@@ -1,0 +1,122 @@
+openapi: 3.0.3
+info:
+  version: v1alpha1
+  title: Dubbo API
+  description: Dubbo API
+  x-ref-schema-name: "ServiceNameMapping"
+
+paths:
+  /meshes/{mesh}/servicenamemappings/{name}:
+    get:
+      summary: Returns ServiceNameMapping entity
+      tags: [ "ServiceNameMapping" ]
+      parameters:
+        - in: path
+          name: mesh
+          schema:
+            type: string
+          required: true
+          description: name of the mesh
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: name of the ServiceNameMapping
+      responses:
+        '200':
+          $ref: "#/components/responses/ServiceNameMappingItem"
+
+    put:
+      summary: Creates or Updates ServiceNameMapping entity
+      tags: [ "ServiceNameMapping" ]
+      parameters:
+        - in: path
+          name: mesh
+          schema:
+            type: string
+          required: true
+          description: name of the mesh
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: name of the ServiceNameMapping
+      requestBody:
+        description: Put request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceNameMappingItem'
+      responses:
+        '200':
+          description: Updated
+        '201':
+          description: Created
+
+    delete:
+      summary: Deletes ServiceNameMapping entity
+      tags: [ "ServiceNameMapping" ]
+      parameters:
+        - in: path
+          name: mesh
+          schema:
+            type: string
+          required: true
+          description: name of the mesh
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: name of the ServiceNameMapping
+      responses:
+        '200':
+          description: Successful response
+
+
+  /meshes/{mesh}/servicenamemappings:
+    get:
+      summary: Returns a list of ServiceNameMapping in the mesh.
+      tags: [ "ServiceNameMapping" ]
+      parameters:
+        - in: path
+          name: mesh
+          schema:
+            type: string
+          required: true
+          description: name of the mesh
+      responses:
+        '200':
+          $ref: "#/components/responses/ServiceNameMappingList"
+
+components:
+  schemas:
+    ServiceNameMappingItem:
+      $ref: 'schema.yaml'
+  responses:
+    ServiceNameMappingItem:
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ServiceNameMappingItem'
+    ServiceNameMappingList:
+      description: List
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceNameMappingItem"
+              total:
+                type: number
+                description: The total number of entities
+              next:
+                type: string
+                description: URL to the next page

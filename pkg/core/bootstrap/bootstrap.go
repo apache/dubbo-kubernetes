@@ -19,154 +19,169 @@ package bootstrap
 
 import (
 	"context"
-
-	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
-	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
-
-	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
-	"github.com/apache/dubbo-kubernetes/pkg/core/election/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/core/election/universe"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"github.com/apache/dubbo-kubernetes/pkg/cp-server/server"
 )
 
-func buildRuntime(appCtx context.Context, cfg *dubbo_cp.Config) (core_runtime.Runtime, error) {
+import (
+	"github.com/pkg/errors"
+)
+
+import (
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
+	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
+	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/events"
+)
+
+var log = core.Log.WithName("bootstrap")
+
+func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Runtime, error) {
+	if err := autoconfigure(&cfg); err != nil {
+		return nil, err
+	}
 	builder, err := core_runtime.BuilderFor(appCtx, cfg)
 	if err != nil {
 		return nil, err
 	}
-
-	kubeenv := true
-
-	if !initKubeClient(cfg, builder) {
-		// Non-k8s environment
-		kubeenv = false
+	for _, plugin := range core_plugins.Plugins().BootstrapPlugins() {
+		if err := plugin.BeforeBootstrap(builder, cfg); err != nil {
+			return nil, errors.Wrapf(err, "failed to run beforeBootstrap plugin:'%s'", plugin.Name())
+		}
 	}
-
-	if err := initCertStorage(cfg, builder); err != nil {
+	if err := initializeResourceStore(cfg, builder); err != nil {
+		return nil, err
+	}
+	if err := initializeConfigStore(cfg, builder); err != nil {
 		return nil, err
 	}
 
-	if err := initCertClient(cfg, builder); err != nil {
+	builder.ResourceStore().Customize(system.ConfigType, builder.ConfigStore())
+
+	initializeConfigManager(builder)
+
+	if err := initializeResourceManager(cfg, builder); err != nil { //nolint:contextcheck
 		return nil, err
 	}
 
-	if err := initWebhookClient(cfg, builder); err != nil {
-		return nil, err
-	}
+	leaderInfoComponent := &component.LeaderInfoComponent{}
+	builder.WithLeaderInfo(leaderInfoComponent)
 
-	if err := initGrpcServer(cfg, builder); err != nil {
-		return nil, err
-	}
-
-	if kubeenv == true {
-		builder.WithComponentManager(component.NewManager(kube.NewLeaderElection(builder.Config().KubeConfig.Namespace,
-			builder.Config().KubeConfig.ServiceName,
-			"dubbo-cp-lock",
-			builder.CertStorage().GetCertClient().GetKubClient())))
-	} else {
-		builder.WithComponentManager(component.NewManager(universe.NewLeaderElection()))
+	for _, plugin := range core_plugins.Plugins().BootstrapPlugins() {
+		if err := plugin.AfterBootstrap(builder, cfg); err != nil {
+			return nil, errors.Wrapf(err, "failed to run afterBootstrap plugin:'%s'", plugin.Name())
+		}
 	}
 	rt, err := builder.Build()
 	if err != nil {
 		return nil, err
 	}
+
+	if err := rt.Add(leaderInfoComponent); err != nil {
+		return nil, err
+	}
+
+	for name, plugin := range core_plugins.Plugins().RuntimePlugins() {
+		if err := plugin.Customize(rt); err != nil {
+			return nil, errors.Wrapf(err, "failed to configure runtime plugin:'%s'", name)
+		}
+	}
 	return rt, nil
 }
 
-func Bootstrap(appCtx context.Context, cfg *dubbo_cp.Config) (core_runtime.Runtime, error) {
+func Bootstrap(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Runtime, error) {
 	runtime, err := buildRuntime(appCtx, cfg)
 	if err != nil {
 		return nil, err
 	}
+
 	return runtime, nil
 }
 
-func initWebhookClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
-	webhookClient := webhook.NewClient(builder.KubeClient().GetKubernetesClientSet())
-	builder.WithWebhookClient(webhookClient)
+func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder) error {
+	var pluginName core_plugins.PluginName
+	var pluginConfig core_plugins.PluginConfig
+	switch cfg.Store.Type {
+	case store.KubernetesStore:
+		pluginName = core_plugins.Kubernetes
+		pluginConfig = nil
+	case store.MemoryStore:
+		pluginName = core_plugins.Memory
+		pluginConfig = nil
+	default:
+		return errors.Errorf("unknown store type %s", cfg.Store.Type)
+	}
+	plugin, err := core_plugins.Plugins().ResourceStore(pluginName)
+	if err != nil {
+		return errors.Wrapf(err, "could not retrieve store %s plugin", pluginName)
+	}
+
+	rs, transactions, err := plugin.NewResourceStore(builder, pluginConfig)
+	if err != nil {
+		return err
+	}
+	builder.WithResourceStore(core_store.NewCustomizableResourceStore(rs))
+	builder.WithTransactions(transactions)
+	eventBus, err := events.NewEventBus(cfg.EventBus.BufferSize)
+	if err != nil {
+		return err
+	}
+	if err := plugin.EventListener(builder, eventBus); err != nil {
+		return err
+	}
+	builder.WithEventBus(eventBus)
 	return nil
 }
 
-func initCertClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
-	certClient := cert.NewClient(builder.KubeClient().GetKubernetesClientSet())
-	builder.WithCertClient(certClient)
-	return nil
-}
-
-func initKubeClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) bool {
-	kubeClient := client.NewKubeClient()
-	if !kubeClient.Init(cfg) {
-		logger.Sugar().Warnf("Failed to connect to Kubernetes cluster. Will ignore OpenID Connect check.")
-		cfg.KubeConfig.IsKubernetesConnected = false
+func initializeConfigStore(cfg dubbo_cp.Config, builder *core_runtime.Builder) error {
+	var pluginName core_plugins.PluginName
+	var pluginConfig core_plugins.PluginConfig
+	switch cfg.Store.Type {
+	case store.KubernetesStore:
+		pluginName = core_plugins.Kubernetes
+	case store.MemoryStore:
+		pluginName = core_plugins.Universal
+	default:
+		return errors.Errorf("unknown store type %s", cfg.Store.Type)
+	}
+	plugin, err := core_plugins.Plugins().ConfigStore(pluginName)
+	if err != nil {
+		return errors.Wrapf(err, "could not retrieve secret store %s plugin", pluginName)
+	}
+	if cs, err := plugin.NewConfigStore(builder, pluginConfig); err != nil {
+		return err
 	} else {
-		cfg.KubeConfig.IsKubernetesConnected = true
+		builder.WithConfigStore(cs)
+		return nil
 	}
-	builder.WithKubeClient(kubeClient)
-	return cfg.KubeConfig.IsKubernetesConnected
 }
 
-func initCertStorage(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
-	client := cert.NewClient(builder.KubeClient().GetKubernetesClientSet())
-	storage := provider.NewStorage(cfg, client)
-	loadRootCert()
-	loadAuthorityCert(storage, cfg, builder)
+func initializeResourceManager(cfg dubbo_cp.Config, builder *core_runtime.Builder) error {
+	defaultManager := core_manager.NewResourceManager(builder.ResourceStore())
+	customizableManager := core_manager.NewCustomizableResourceManager(defaultManager, nil)
 
-	storage.GetServerCert("localhost")
-	storage.GetServerCert("dubbo-ca." + storage.GetConfig().KubeConfig.Namespace + ".svc")
-	storage.GetServerCert("dubbo-ca." + storage.GetConfig().KubeConfig.Namespace + ".svc." + storage.GetConfig().KubeConfig.DomainSuffix)
-	builder.WithCertStorage(storage)
-	return nil
-}
+	builder.WithResourceManager(customizableManager)
 
-func loadRootCert() {
-	// TODO loadRootCert
-}
-
-func loadAuthorityCert(storage *provider.CertStorage, cfg *dubbo_cp.Config, builder *core_runtime.Builder) {
-	if cfg.KubeConfig.IsKubernetesConnected {
-		certStr, priStr := storage.GetCertClient().GetAuthorityCert(cfg.KubeConfig.Namespace)
-		if certStr != "" && priStr != "" {
-			storage.GetAuthorityCert().Cert = provider.DecodeCert(certStr)
-			storage.GetAuthorityCert().CertPem = certStr
-			storage.GetAuthorityCert().PrivateKey = provider.DecodePrivateKey(priStr)
+	if builder.Config().Store.Cache.Enabled {
+		cachedManager, err := core_manager.NewCachedManager(
+			customizableManager,
+			builder.Config().Store.Cache.ExpirationTime.Duration,
+		)
+		if err != nil {
+			return err
 		}
-	}
-	refreshAuthorityCert(storage, cfg)
-}
-
-func refreshAuthorityCert(storage *provider.CertStorage, cfg *dubbo_cp.Config) {
-	if storage.GetAuthorityCert().IsValid() {
-		logger.Sugar().Infof("Load authority cert from kubernetes secrect success.")
+		builder.WithReadOnlyResourceManager(cachedManager)
 	} else {
-		logger.Sugar().Warnf("Load authority cert from kubernetes secrect failed.")
-		storage.SetAuthorityCert(provider.GenerateAuthorityCert(storage.GetRootCert(), cfg.Security.CaValidity))
-
-		// TODO lock if multi cp-server
-		if storage.GetConfig().KubeConfig.IsKubernetesConnected {
-			storage.GetCertClient().UpdateAuthorityCert(storage.GetAuthorityCert().CertPem,
-				provider.EncodePrivateKey(storage.GetAuthorityCert().PrivateKey), storage.GetConfig().KubeConfig.Namespace)
-		}
+		builder.WithReadOnlyResourceManager(customizableManager)
 	}
-
-	if storage.GetConfig().KubeConfig.IsKubernetesConnected {
-		logger.Sugar().Info("Writing ca to config maps.")
-		if storage.GetCertClient().UpdateAuthorityPublicKey(storage.GetAuthorityCert().CertPem) {
-			logger.Sugar().Info("Write ca to config maps success.")
-		} else {
-			logger.Sugar().Warnf("Write ca to config maps failed.")
-		}
-	}
-
-	storage.AddTrustedCert(storage.GetAuthorityCert())
+	return nil
 }
 
-func initGrpcServer(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
-	grpcServer := server.NewGrpcServer(builder.CertStorage(), cfg)
-	builder.WithGrpcServer(grpcServer)
-	return nil
+func initializeConfigManager(builder *core_runtime.Builder) {
+	builder.WithConfigManager(config_manager.NewConfigManager(builder.ConfigStore()))
 }

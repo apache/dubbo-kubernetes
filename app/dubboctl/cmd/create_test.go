@@ -18,7 +18,9 @@ package cmd
 import (
 	"errors"
 	"testing"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 

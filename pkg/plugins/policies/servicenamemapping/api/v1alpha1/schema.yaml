@@ -1,0 +1,30 @@
+type: object
+properties:
+  type:
+    description: 'the type of the resource'
+    type: string
+    enum:
+      - ServiceNameMapping
+  mesh:
+    description: 'Mesh is the name of the Dubbo mesh this resource belongs to. It may be omitted for cluster-scoped resources.'
+    type: string
+    default: default
+  name:
+    description: 'Name of the Dubbo resource'
+    type: string
+  spec:
+    description: Spec is the specification of the Dubbo ServiceNameMapping resource.
+    properties:
+      applicationNames:
+        items:
+          type: string
+        type: array
+      interfaceName:
+        type: string
+      namespace:
+        type: string
+    required:
+      - applicationNames
+      - interfaceName
+      - namespace
+    type: object
