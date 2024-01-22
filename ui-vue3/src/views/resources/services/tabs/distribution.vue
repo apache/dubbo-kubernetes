@@ -36,16 +36,18 @@
           />
         </a-flex>
         <div>
-          <a-radio-group
-            v-model:value="type"
-            button-style="solid"
-          >
+          <a-radio-group v-model:value="type" button-style="solid">
             <a-radio-button value="producer">生产者</a-radio-button>
             <a-radio-button value="consumer">消费者</a-radio-button>
           </a-radio-group>
         </div>
       </a-flex>
-      <a-table :columns="tableColumns" :data-source="tableData">
+      <a-table
+        :columns="tableColumns"
+        :data-source="tableData"
+        :scroll="{ y: '45vh' }"
+        :pagination="pagination"
+      >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'applicationName'">
             <a-button type="link">{{ text }}</a-button>
@@ -63,7 +65,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import type { ComponentInternalInstance } from 'vue'
+import { ref, reactive, getCurrentInstance } from 'vue'
+
+const {
+  appContext: {
+    config: { globalProperties }
+  }
+} = <ComponentInternalInstance>getCurrentInstance()
 
 const searchValue = ref('')
 const versionAndGroupOptions = reactive([
@@ -127,8 +136,62 @@ const tableData = reactive([
     applicationName: 'shop-user',
     instanceNum: 12,
     instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-order',
+    instanceNum: 15,
+    instanceIP: [
+      '192.168.32.28:8697',
+      '192.168.32.26:20880',
+      '192.168.32.24:28080',
+      '192.168.32.22:20880'
+    ]
+  },
+  {
+    applicationName: 'shop-order',
+    instanceNum: 15,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-user',
+    instanceNum: 12,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-order',
+    instanceNum: 15,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-user',
+    instanceNum: 12,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-user',
+    instanceNum: 12,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-order',
+    instanceNum: 15,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+  },
+  {
+    applicationName: 'shop-user',
+    instanceNum: 12,
+    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
   }
 ])
+
+const pagination = {
+  showTotal: (v: any) =>
+    globalProperties.$t('searchDomain.total') +
+    ': ' +
+    v +
+    ' ' +
+    globalProperties.$t('searchDomain.unit')
+}
 </script>
 <style lang="less" scoped>
 .__container_services_tabs_distribution {

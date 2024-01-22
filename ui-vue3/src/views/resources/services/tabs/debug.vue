@@ -17,11 +17,7 @@
 <template>
   <div class="__container_services_tabs_debug">
     <div class="tabs-title">方法列表</div>
-    <a-tabs
-      v-model:activeKey="activeKey"
-      tab-position="left"
-      :tabBarStyle="{ width: '200px' }"
-    >
+    <a-tabs v-model:activeKey="activeKey" tab-position="left" :tabBarStyle="{ width: '200px' }">
       <a-tab-pane v-for="tabName in methodTabs" :key="tabName" :tab="`${tabName}`">
         <a-descriptions :column="4" layout="vertical">
           <a-descriptions-item label="接口" :span="2">
