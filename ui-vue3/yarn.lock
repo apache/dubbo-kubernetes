@@ -4480,6 +4480,11 @@ pinia@^2.1.7:
     "@vue/devtools-api" "^6.5.0"
     vue-demi ">=0.14.5"
 
+pinyin-pro@^3.19.3:
+  version "3.19.3"
+  resolved "https://registry.npmmirror.com/pinyin-pro/-/pinyin-pro-3.19.3.tgz#804ee7bf2266a927194a87764b4c3a2be06ddedc"
+  integrity sha512-tIBL4ibq3P+MFbSwOTTi42Xf6jau726swgKqEmSkkiZiE1iUMhQdguR9aavLt9nqnRDpcBSIanNV8tPuKPSmvw==
+
 pkg-types@^1.0.3:
   version "1.0.3"
   resolved "https://registry.npmmirror.com/pkg-types/-/pkg-types-1.0.3.tgz#988b42ab19254c01614d13f4f65a2cfc7880f868"

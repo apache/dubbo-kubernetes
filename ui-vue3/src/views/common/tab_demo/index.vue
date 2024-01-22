@@ -18,13 +18,13 @@
   <div class="__container_tab_index">
     tab page
     <br />
-    <a href="/admin/common/tab/tab1">to tab1 by href</a>
+    <a href="/admin/common/tab/tab1/pathId1">to tab1 by href</a>
     <br />
-    <a href="tab2">to tab2 by href</a>
+    <a href="tab2/pathId1">to tab2 by href</a>
     <br />
-    <a-button @click="router.push('/common/tab/tab1')">to tab1 by href</a-button>
+    <a-button @click="router.push('/common/tab/tab1/pathId1')">to tab1 by href</a-button>
     <br />
-    <a-button @click="router.push('tab2')">to tab2 by href</a-button>
+    <a-button @click="router.push('tab2/pathId1')">to tab2 by href</a-button>
   </div>
 </template>
 

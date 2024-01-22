@@ -262,7 +262,15 @@ const words: I18nType = {
   serviceManagement: 'Dev & Test',
   resources: 'Resources',
   applications: 'Applications',
-  instances: 'Instances'
+  instances: 'Instances',
+  applicationDomain: {
+    name: 'Application Name',
+    detail: 'Application Detail'
+  },
+  searchDomain: {
+    total: 'Total',
+    unit: 'items'
+  }
 }
 
 export default words

@@ -260,7 +260,15 @@ const words: I18nType = {
   versionInputPrompt: '请输入服务version(可选)',
   resources: '资源详情',
   applications: '应用',
-  instances: '实例'
+  instances: '实例',
+  applicationDomain: {
+    name: '应用名',
+    detail: '应用详情'
+  },
+  searchDomain: {
+    total: '共计',
+    unit: '条'
+  }
 }
 
 export default words
