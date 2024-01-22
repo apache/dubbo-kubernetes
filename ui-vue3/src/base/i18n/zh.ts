@@ -37,6 +37,7 @@ const words: I18nType = {
   providers: '提供者',
   consumers: '消费者',
   application: '应用',
+  instance: '实例',
   all: '全部',
   common: '通用',
 
@@ -261,9 +262,17 @@ const words: I18nType = {
   resources: '资源详情',
   applications: '应用',
   instances: '实例',
-
+  applicationDomain: {
+    name: '应用名',
+    detail: '应用详情'
+  },
+  searchDomain: {
+    total: '共计',
+    unit: '条'
+  },
   backHome: '回到首页',
   noPageTip: '抱歉，你访问的页面不存在',
+  globalSearchTip: '搜索ip，应用，实例，服务',
 
   details: '详情',
   debug: '调试',

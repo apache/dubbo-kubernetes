@@ -71,10 +71,11 @@ export const routes: Readonly<RouteRecordType[]> = [
               },
               {
                 path: '/detail/:pathId',
-                name: 'application-tab1',
+                name: 'applicationDomain.detail',
                 component: () => import('../views/resources/applications/tabs/tab1.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'material-symbols:view-in-ar'
                 }
               },
               {
@@ -181,14 +182,14 @@ export const routes: Readonly<RouteRecordType[]> = [
             children: [
               {
                 path: '/index',
-                name: 'applications_index',
-                component: () => import('../views/resources/applications/index.vue'),
+                name: 'tab_demo_index',
+                component: () => import('../views/common/tab_demo/index.vue'),
                 meta: {
-                  // hidden: true,
+                  hidden: true
                 }
               },
               {
-                path: '/tab1',
+                path: '/tab1/:pathId',
                 name: 'tab1',
                 component: () => import('../views/common/tab_demo/tab1.vue'),
                 meta: {
@@ -197,7 +198,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/tab2',
+                path: '/tab2/:pathId',
                 name: 'tab2',
                 component: () => import('../views/common/tab_demo/tab2.vue'),
                 meta: {
@@ -210,7 +211,8 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/placeholder',
             name: 'placeholder_demo',
-            component: () => import('../views/common/placeholder_demo/index.vue')
+            component: () => import('../views/common/placeholder_demo/index.vue'),
+            meta: {}
           }
         ]
       }

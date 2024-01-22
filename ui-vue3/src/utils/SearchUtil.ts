@@ -15,34 +15,40 @@
  * limitations under the License.
  */
 
-import { createI18n } from 'vue-i18n'
-import { LOCAL_STORAGE_LOCALE } from '@/base/constants'
-import { messages } from '@/base/i18n/messages'
-import { reactive } from 'vue'
+import type { TableColumnsType } from 'ant-design-vue'
 
-export const localeConfig = reactive({
-  // todo use system's locale
-  locale: localStorage.getItem(LOCAL_STORAGE_LOCALE) || 'cn',
-  opts: [
-    {
-      value: 'en',
-      title: 'en'
-    },
-    {
-      value: 'cn',
-      title: '中文'
-    }
-  ]
-})
+export class SearchDomain {
+  params: any
+  searchApi: Function
+  result: any
+  table: {
+    columns: TableColumnsType
+  } = { columns: [] }
+  paged = {
+    curPage: 1,
+    total: 0,
+    pageSize: 10
+  }
 
-export const i18n: any = createI18n({
-  locale: localeConfig.locale,
-  legacy: false,
-  globalInjection: true,
-  messages
-})
+  constructor(query: any, searchApi: any, columns: TableColumnsType) {
+    this.params = query
+    this.table.columns = columns
+    this.searchApi = searchApi
+    this.onSearch()
+  }
 
-export const changeLanguage = (l: any) => {
-  localStorage.setItem(LOCAL_STORAGE_LOCALE, l)
-  i18n.global.locale.value = l
+  async onSearch() {
+    let res = (await this.searchApi({})).data
+    this.result = res.data
+    this.paged.total = res.total
+    this.paged.curPage = res.curPage
+    this.paged.pageSize = res.pageSize
+  }
+}
+
+export function sortString(a: any, b: any) {
+  if (!isNaN(a - b)) {
+    return a - b
+  }
+  return a.localeCompare(b)
 }
