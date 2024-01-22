@@ -124,7 +124,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'tab_demo_index',
                 component: () => import('../views/common/tab_demo/index.vue'),
                 meta: {
-                  // hidden: true,
+                  hidden: true
                 }
               },
               {
@@ -150,11 +150,20 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/placeholder',
             name: 'placeholder_demo',
-            component: () => import('../views/common/placeholder_demo/index.vue')
+            component: () => import('../views/common/placeholder_demo/index.vue'),
+            meta: {}
           }
         ]
       }
     ]
+  },
+  {
+    path: '/:catchAll(.*)',
+    name: 'notFound',
+    component: () => import('../views/error/notFound.vue'),
+    meta: {
+      skip: true
+    }
   }
 ]
 

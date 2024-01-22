@@ -10,7 +10,3 @@ ingress.kubernetes.io/proxy-body-size: "0"
 nginx.ingress.kubernetes.io/ssl-redirect: "true"
 nginx.ingress.kubernetes.io/proxy-body-size: "0"
 {{- end -}}
-
-{{- define "traefik.ingressclass.annotations" -}}
-ingressclass.kubernetes.io/is-default-class: "false"
-{{- end -}}

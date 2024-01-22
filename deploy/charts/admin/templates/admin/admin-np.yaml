@@ -1,0 +1,32 @@
+{{- $np := .Values.networkPolicy -}}
+{{- if $np.enabled }}
+apiVersion: {{ template "networkpolicy.apiVersion" . }}
+kind: NetworkPolicy
+metadata:
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- with $np.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $np.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels:
+    {{- toYaml $np.podSelector | nindent 6 }}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  {{- if $np.ingress }}
+  {{- toYaml $np.ingress | nindent 2 }}
+  {{- end }}
+  egress:
+  {{- if $np.egress }}
+  {{- toYaml $np.egress | nindent 2 }}
+  {{- end }}
+  {{- end -}}

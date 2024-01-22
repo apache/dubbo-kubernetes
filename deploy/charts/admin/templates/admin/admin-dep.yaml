@@ -1,0 +1,150 @@
+{{- $admin := .Values -}}
+{{- $zoo := .Values.zookeeper -}}
+{{- $nacos := .Values.nacos -}}
+{{- $observable := $admin.observable -}}
+{{- if eq $admin.deployType "Deployment" }}
+apiVersion: {{ template "apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- with $admin.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $admin.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ $admin.replicas }}
+  {{- if $admin.revisionHistoryLimit }}
+  revisionHistoryLimit: {{ $admin.revisionHistoryLimit }}
+  {{- end }}
+  {{- if $admin.minReadySeconds }}
+  minReadySeconds: {{ $admin.minReadySeconds }}
+  {{- end }}
+  strategy:
+  {{- if $admin.strategy }}
+  {{- toYaml $admin.strategy | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+    {{- include "admin.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "admin.labels" . | nindent 8 }}
+    spec:
+      {{- if $admin.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml $admin.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      {{- if $admin.nodeSelector }}
+      nodeSelector: {{ toYaml $admin.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if $admin.tolerations }}
+      tolerations: {{ toYaml $admin.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if $admin.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ $admin.terminationGracePeriodSeconds }}
+      {{- end }}
+      serviceAccountName: {{ template "admin.name" . }}
+      containers:
+      - name: admin
+        image: {{ $admin.image.registry }}:{{ $admin.image.tag }}
+        imagePullPolicy: {{ $admin.image.pullPolicy }}
+        lifecycle:
+        {{- if $admin.lifecycleHooks }}
+        {{- toYaml $admin.lifecycleHooks | nindent 10 }}
+        {{- end }}
+        ports:
+        - name: http
+          {{- if $admin.service.protocol }}
+          protocol: {{ $admin.service.protocol }}
+          {{- end }}
+          containerPort: {{ template "admin.containerPort" . }}
+        env:
+        {{- $zooName := include "zoo.name" . -}}
+        {{- $nacosName := include "nacos.name" . -}}
+        {{- $zooReplicas := int $zoo.replicas -}}
+        {{- $nacosReplicas := int $nacos.replicas -}}
+        {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 -}}
+        {{- $nacosHeadless := printf "%s-%s" $nacosName "headless" | trunc 63 -}}
+        {{- $zooNamespace := include "zoo.namespace" . -}}
+        {{- $nacosNamespace := include "nacos.namespace" . -}}
+        {{- $clusterDomain := $admin.clusterDomain -}}
+        {{- $zooPort := include "zoo.client" . -}}
+        {{- $nacosPort := $nacos.serverPort -}}
+        {{- if $zoo.enabled }}
+        - name: ADMIN_REGISTRY_ADDRESS
+          value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }} {{ end }}
+        {{- else if $nacos.enabled }}
+        - name: ADMIN_REGISTRY_ADDRESS
+          value: nacos://{{ range $k, $v := until $nacosReplicas }}{{ $nacosName }}-{{ $v }}.{{ $nacosName }}.{{ $nacosNamespace }}.svc.{{ $clusterDomain }}:{{ $nacosPort }} {{ end }}
+        {{- else }}
+        - name: ADMIN_REGISTRY_ADDRESS
+          value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }} {{ end }}
+        {{- end }}
+        {{- $promName := include "prom.name" . -}}
+        {{- $promPort := include "prom.port" . -}}
+        {{- if $observable.enabled }}
+        - name: ADMIN_PROMETHEUS_ADDRESS
+          value: {{ $promName }}:{{ $promPort }}
+        {{- end }}
+        {{- $grafanaName := include "grafana.name" . -}}
+        {{- $grafanaPort := include "grafana.port" . -}}
+        {{- if $observable.enabled }}
+        - name: ADMIN_GRAFANA_ADDRESS
+          value: {{ $grafanaName }}:{{ $grafanaPort }}
+        {{- end }}
+        volumeMounts:
+        {{- if $admin.volumeMounts }}
+        {{- toYaml $admin.volumeMounts | nindent 8 }}
+        {{- end }}
+        securityContext:
+        {{- if $admin.securityContext }}
+        {{- toYaml $admin.securityContext | nindent 10 }}
+        {{- end }}
+        startupProbe:
+        {{- if $admin.startupProbe }}
+        {{- toYaml $admin.startupProbe | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+        {{- if $admin.livenessProbe }}
+        {{- toYaml $admin.livenessProbe | nindent 10 }}
+        {{- end }}
+        readinessProbe:
+        {{- if $admin.readinessProbe }}
+        {{- toYaml $admin.readinessProbe | nindent 10 }}
+        {{- end }}
+        resources:
+        {{- if $admin.resources }}
+        {{- toYaml $admin.resources | nindent 10 }}
+        {{- end }}
+      volumes:
+      {{- if $admin.volumes }}
+      {{- toYaml $admin.volumes | nindent 6 }}
+      {{- end }}
+      - name: config
+        configMap:
+        {{- if $admin.configMap }}
+        {{- toYaml $admin.configMap | nindent 10 }}
+        {{- end }}
+      - name: secret
+        secret:
+        {{- if $admin.secret }}
+        {{- toYaml $admin.secret | nindent 10 }}
+        {{- end }}
+      - name: storage
+        {{- if $admin.persistence.enabled }}
+        persistentVolumeClaim:
+        {{- with $admin.persistence }}
+        {{- if .claimName }}
+          claimName: {{ .claimName }}
+        {{- else }}
+        emptyDir: {}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

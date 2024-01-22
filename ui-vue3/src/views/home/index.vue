@@ -58,7 +58,7 @@
         metricsMetadata.info.prometheus
       }}</a-descriptions-item>
       <a-descriptions-item label="Remark">empty</a-descriptions-item>
-      <a-descriptions-item label="rules" :span="4">
+      <a-descriptions-item label="rules">
         <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.rules">{{ v }}</a-tag>
       </a-descriptions-item>
     </a-descriptions>

@@ -1,0 +1,44 @@
+{{- $psp := .Values.podSecurityPolicy -}}
+{{- if (semverCompare "<1.25.0-0" .Capabilities.KubeVersion.Version) }}
+{{- if $psp.enabled }}
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- with $psp.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $psp.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  privileged: true
+  allowPrivilegeEscalation: true
+  requiredDropCapabilities:
+  - ALL
+  volumes:
+  - *
+  hostNetwork: true
+  hostIPC: true
+  hostPID: true
+  runAsUser:
+    rule: 'RunAsAny'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+    - min: 1
+      max: 65535
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+    - min: 1
+      max: 65535
+  readOnlyRootFilesystem: true
+{{- end -}}
+{{- end -}}

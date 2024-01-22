@@ -44,6 +44,7 @@ const words: I18nType = {
   app: 'Application',
   services: 'Services',
   application: 'Application',
+  instance: 'Instance',
   all: 'All',
   ip: 'IP',
   qps: 'qps',
@@ -270,7 +271,10 @@ const words: I18nType = {
   searchDomain: {
     total: 'Total',
     unit: 'items'
-  }
+  },
+  backHome: 'Back Home',
+  noPageTip: 'Sorry, the page you visited does not exist.',
+  globalSearchTip: 'Search ip, application, instance, service'
 }
 
 export default words
