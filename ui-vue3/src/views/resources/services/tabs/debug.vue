@@ -20,30 +20,28 @@
     <a-tabs
       v-model:activeKey="activeKey"
       tab-position="left"
-      :style="{ height: '800px' }"
       :tabBarStyle="{ width: '200px' }"
     >
       <a-tab-pane v-for="tabName in methodTabs" :key="tabName" :tab="`${tabName}`">
         <a-descriptions :column="4" layout="vertical">
           <a-descriptions-item label="接口" :span="2">
-            <p class="description-item-content">org.apache.dubbo.samples.UserService:getPermissions</p>
+            <p class="description-item-content">
+              org.apache.dubbo.samples.UserService:getPermissions
+            </p>
           </a-descriptions-item>
           <a-descriptions-item label="版本&分组">
-            <div class="description-item-content">
             <a-select
               v-model:value="versionAndGroup"
               size="large"
               :options="versionAndGroupOptions"
-              style="width: 100%"
+              class="description-item-content"
             ></a-select>
-          </div>
           </a-descriptions-item>
           <a-descriptions-item label="指定生产者">
             <a-select
               v-model:value="versionAndGroup"
               size="large"
               :options="versionAndGroupOptions"
-              style="width: 100%"
               class="description-item-content"
             ></a-select>
           </a-descriptions-item>
@@ -54,10 +52,20 @@
             <a-tree block-node :tree-data="outputParamType" class="description-item-content" />
           </a-descriptions-item>
           <a-descriptions-item label="请求" :span="2">
-            <a-textarea v-model:value="requestValue" placeholder="请输入" :rows="4" class="description-item-content" />
+            <a-textarea
+              v-model="requestValue"
+              placeholder="请输入"
+              :rows="4"
+              class="description-item-content"
+            />
           </a-descriptions-item>
           <a-descriptions-item label="响应" :span="2">
-            <a-textarea v-model:value="responseValue" placeholder="请输入" :rows="4" class="description-item-content" />
+            <a-textarea
+              v-model="responseValue"
+              placeholder="请输入"
+              :rows="4"
+              class="description-item-content"
+            />
           </a-descriptions-item>
         </a-descriptions>
         <a-button type="primary">发送请求</a-button>

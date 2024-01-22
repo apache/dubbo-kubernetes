@@ -68,15 +68,19 @@ import { ref, reactive } from 'vue'
 const searchValue = ref('')
 const versionAndGroupOptions = reactive([
   {
-    value: '不指定'
+    label: '不指定',
+    value: ''
   },
   {
+    label: 'version=1.0.0',
     value: 'version=1.0.0'
   },
   {
+    label: 'group=group1',
     value: 'group=group1'
   },
   {
+    label: 'version=1.0.0,group=group1',
     value: 'version=1.0.0,group=group1'
   }
 ])
@@ -107,7 +111,12 @@ const tableData = reactive([
   {
     applicationName: 'shop-order',
     instanceNum: 15,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080', '192.168.32.22:20880']
+    instanceIP: [
+      '192.168.32.28:8697',
+      '192.168.32.26:20880',
+      '192.168.32.24:28080',
+      '192.168.32.22:20880'
+    ]
   },
   {
     applicationName: 'shop-order',
@@ -132,7 +141,7 @@ const tableData = reactive([
     }
     .service-filter-input {
       margin-left: 30px;
-      width: 300px
+      width: 300px;
     }
   }
 }

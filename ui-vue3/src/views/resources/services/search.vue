@@ -22,11 +22,16 @@
           v-model:value="serviceName"
           placeholder="请输入"
           class="service-name-input"
-          @search="onSearch"
+          @search="debounceSearch"
           enter-button
         />
       </a-flex>
-      <a-table :columns="columns" :data-source="dataSource" :pagination="{ pageSize: 5 }">
+      <a-table
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="pagination"
+        :scroll="{ y: '55vh' }"
+      >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'serviceName'">
             <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
@@ -39,11 +44,18 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref } from 'vue'
+import type { ComponentInternalInstance } from 'vue'
+import { ref, getCurrentInstance } from 'vue'
+import { searchService } from '@/api/service/service.ts'
+import { debounce } from 'lodash'
+
+const {
+  appContext: {
+    config: { globalProperties }
+  }
+} = <ComponentInternalInstance>getCurrentInstance()
 
 const serviceName = ref('')
-
-const onSearch = () => {}
 
 const router = useRouter()
 const columns = [
@@ -61,13 +73,13 @@ const columns = [
   },
   {
     title: '近 1min QPS',
-    dataIndex: 'QPS',
+    dataIndex: 'avgQPS',
     sorter: true,
     width: '15%'
   },
   {
     title: '近 1min RT',
-    dataIndex: 'RT',
+    dataIndex: 'avgRT',
     sorter: true,
     width: '15%'
   },
@@ -79,67 +91,28 @@ const columns = [
   }
 ]
 
-const dataSource = [
-  {
-    serviceName: 'org.apache.dubbo.samples.UserService',
-    interfaceNum: 4,
-    QPS: 6,
-    RT: '194ms',
-    requestTotal: 200
-  },
-  {
-    serviceName: 'org.apache.dubbo.samples.OrderService',
-    interfaceNum: 12,
-    QPS: 13,
-    RT: '189ms',
-    requestTotal: 164
-  },
-  {
-    serviceName: 'org.apache.dubbo.samples.DetailService',
-    interfaceNum: 14,
-    QPS: 0.5,
-    RT: '268ms',
-    requestTotal: 1324
-  },
-  {
-    serviceName: 'org.apache.dubbo.samples.PayService',
-    interfaceNum: 8,
-    QPS: 9,
-    RT: '346ms',
-    requestTotal: 189
-  },
-  {
-    serviceName: 'org.apache.dubbo.samples.CommentService',
-    interfaceNum: 9,
-    QPS: 8,
-    RT: '936ms',
-    requestTotal: 200
-  },
-  {
-    serviceName: 'org.apache.dubbo.samples.RepayService',
-    interfaceNum: 16,
-    QPS: 17,
-    RT: '240ms',
-    requestTotal: 146
-  },
-  {
-    serviceName: 'org.apche.dubbo.samples.TransportService',
-    interfaceNum: 5,
-    QPS: 43,
-    RT: '89ms',
-    requestTotal: 367
-  },
-  {
-    serviceName: 'org.apche.dubbo.samples.DistributionService',
-    interfaceNum: 5,
-    QPS: 4,
-    RT: '78ms',
-    requestTotal: 145
-  }
-]
+const dataSource = ref([])
+
+const onSearch = async () => {
+  let { data } = await searchService({})
+  dataSource.value = data.data
+}
+
+onSearch()
+
+const debounceSearch = debounce(onSearch, 300)
 
 const viewDetail = (serviceName: string) => {
   router.push({ name: 'detail', params: { serviceName } })
+}
+
+const pagination = {
+  showTotal: (v: any) =>
+    globalProperties.$t('searchDomain.total') +
+    ': ' +
+    v +
+    ' ' +
+    globalProperties.$t('searchDomain.unit')
 }
 </script>
 <style lang="less" scoped>
