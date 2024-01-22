@@ -16,7 +16,7 @@
 -->
 <template>
   <div class="__container_layout_index">
-    <a-layout style="min-height: 100vh">
+    <a-layout style="height: 100vh">
       <a-layout-sider
         width="268"
         v-model:collapsed="collapsed"
@@ -33,9 +33,7 @@
       <a-layout>
         <layout_header :collapsed="collapsed"></layout_header>
         <layout_bread></layout_bread>
-        <a-layout-content
-          :style="{ margin: '16px', padding: '16px', background: '#fff', minHeight: '280px' }"
-        >
+        <a-layout-content class="layout-content">
           <router-view v-slot="{ Component }">
             <transition name="slide-fade">
               <component :is="Component" />
@@ -92,6 +90,13 @@ router.beforeEach((to, from, next) => {
       margin-bottom: 5px;
       margin-right: 5px;
     }
+  }
+  .layout-content {
+    margin: 16px;
+    padding: 16px;
+    background: #fff;
+    overflow: auto;
+    max-height: 80vh;
   }
 }
 </style>

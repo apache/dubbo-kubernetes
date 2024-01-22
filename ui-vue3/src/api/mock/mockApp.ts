@@ -15,34 +15,27 @@
  * limitations under the License.
  */
 
-import { createI18n } from 'vue-i18n'
-import { LOCAL_STORAGE_LOCALE } from '@/base/constants'
-import { messages } from '@/base/i18n/messages'
-import { reactive } from 'vue'
+import Mock from 'mockjs'
 
-export const localeConfig = reactive({
-  // todo use system's locale
-  locale: localStorage.getItem(LOCAL_STORAGE_LOCALE) || 'cn',
-  opts: [
-    {
-      value: 'en',
-      title: 'en'
-    },
-    {
-      value: 'cn',
-      title: '中文'
-    }
-  ]
+Mock.mock('/mock/application/search', 'get', () => {
+  let total = Mock.mock('@integer(8, 1000)')
+  let list = []
+  for (let i = 0; i < total; i++) {
+    list.push({
+      appName: 'app_' + Mock.mock('@string(2,10)'),
+      instanceNum: Mock.mock('@integer(80, 200)'),
+      deployCluster: 'cluster_' + Mock.mock('@string(5)'),
+      'registerClusters|1-3': ['cluster_' + Mock.mock('@string(5)')]
+    })
+  }
+  return {
+    code: 200,
+    message: 'success',
+    data: Mock.mock({
+      total: total,
+      curPage: 1,
+      pageSize: 10,
+      data: list
+    })
+  }
 })
-
-export const i18n: any = createI18n({
-  locale: localeConfig.locale,
-  legacy: false,
-  globalInjection: true,
-  messages
-})
-
-export const changeLanguage = (l: any) => {
-  localStorage.setItem(LOCAL_STORAGE_LOCALE, l)
-  i18n.global.locale.value = l
-}

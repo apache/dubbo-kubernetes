@@ -264,10 +264,16 @@ const words: I18nType = {
   resources: 'Resources',
   applications: 'Applications',
   instances: 'Instances',
-
+  applicationDomain: {
+    name: 'Application Name',
+    detail: 'Application Detail'
+  },
+  searchDomain: {
+    total: 'Total',
+    unit: 'items'
+  },
   backHome: 'Back Home',
   noPageTip: 'Sorry, the page you visited does not exist.',
-
   globalSearchTip: 'Search ip, application, instance, service'
 }
 
