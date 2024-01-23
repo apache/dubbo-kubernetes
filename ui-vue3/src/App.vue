@@ -71,4 +71,8 @@ const localeGlobal = reactive(i18n.global.locale)
 .__global_float_button_question {
   right: 24px;
 }
+
+#nprogress .bar {
+  background: #000000 !important;
+}
 </style>
