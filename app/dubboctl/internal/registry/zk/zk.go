@@ -21,9 +21,13 @@ import (
 	"net/url"
 	"strings"
 	"time"
+)
 
+import (
 	"github.com/dubbogo/go-zookeeper/zk"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/registry"
 )
 

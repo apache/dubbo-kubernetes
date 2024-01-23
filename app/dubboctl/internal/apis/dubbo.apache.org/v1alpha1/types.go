@@ -17,15 +17,17 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+
 	netv1 "k8s.io/api/networking/v1"
+
 	policyv1 "k8s.io/api/policy/v1"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +kubebuilder:subresource:status
 // +kubebuilder:object:root=true
-
 // DubboConfig describes configuration for DubboOperator
 type DubboConfig struct {
 	metav1.TypeMeta   `json:",inline"`

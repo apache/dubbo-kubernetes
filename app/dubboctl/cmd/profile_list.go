@@ -18,14 +18,19 @@ package cmd
 import (
 	"errors"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+import (
+	"github.com/spf13/cobra"
 
+	"go.uber.org/zap/zapcore"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-	"github.com/spf13/cobra"
-	"go.uber.org/zap/zapcore"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 type ProfileListArgs struct {

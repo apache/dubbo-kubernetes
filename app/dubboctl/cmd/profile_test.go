@@ -15,7 +15,9 @@
 
 package cmd
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestProfileList(t *testing.T) {
 	tests := []struct {

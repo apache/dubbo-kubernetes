@@ -19,9 +19,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
+import (
 	"github.com/spf13/cobra"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 )
 
 func CompleteRuntimeList(cmd *cobra.Command, args []string, toComplete string, client *dubbo.Client) (matches []string, directive cobra.ShellCompDirective) {

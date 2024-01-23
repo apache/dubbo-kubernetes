@@ -28,16 +28,19 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+)
+
+import (
+	"github.com/spf13/cobra"
+
+	"gopkg.in/yaml.v2"
 
 	corev1 "k8s.io/api/core/v1"
+
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	client2 "sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/spf13/cobra"
-
-	"gopkg.in/yaml.v2"
 )
 
 const (
