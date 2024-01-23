@@ -37,8 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { inject, onMounted, provide, reactive } from 'vue'
+import { onMounted, provide, reactive } from 'vue'
 import { searchApplications } from '@/api/service/app'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -81,9 +80,16 @@ let columns = [
 ]
 const searchDomain = reactive(
   new SearchDomain(
-    {
-      appName: ''
-    },
+    [
+      {
+        label: 'appName',
+        param: 'appName',
+        placeholder: 'typeAppName',
+        style: {
+          width: '200px'
+        }
+      }
+    ],
     searchApplications,
     columns
   )
