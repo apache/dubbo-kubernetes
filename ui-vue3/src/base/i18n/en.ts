@@ -54,6 +54,9 @@ const words: I18nType = {
   timeout: 'timeout(ms)',
   serialization: 'serialization',
   appName: 'Application Name',
+  instanceNum: 'Instance Number',
+  deployCluster: 'Deploy Cluster',
+  registerCluster: 'Register Cluster',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
   instanceRegistry: 'Instance Registry',
@@ -275,7 +278,11 @@ const words: I18nType = {
   backHome: 'Back Home',
   noPageTip: 'Sorry, the page you visited does not exist.',
   globalSearchTip: 'Search ip, application, instance, service',
-
+  placeholder: {
+    typeAppName: 'please type appName, support for prefix',
+    typeDefault: 'please type '
+  },
+  none: 'No Select',
   details: 'Details',
   debug: 'Debug',
   distribution: 'Distribution',

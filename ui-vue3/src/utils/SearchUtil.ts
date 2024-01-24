@@ -16,11 +16,27 @@
  */
 
 import type { TableColumnsType } from 'ant-design-vue'
+import { reactive } from 'vue'
 
 export class SearchDomain {
-  params: any
+  // form of search
+  queryForm: any
+  params: [
+    {
+      label: string
+      param: string
+      defaultValue: string
+      dict: [
+        {
+          label: string
+          value: string
+        }
+      ]
+    }
+  ]
   searchApi: Function
   result: any
+  tableStyle: any
   table: {
     columns: TableColumnsType
   } = { columns: [] }
@@ -32,13 +48,14 @@ export class SearchDomain {
 
   constructor(query: any, searchApi: any, columns: TableColumnsType) {
     this.params = query
+    this.queryForm = reactive({})
     this.table.columns = columns
     this.searchApi = searchApi
     this.onSearch()
   }
 
   async onSearch() {
-    let res = (await this.searchApi({})).data
+    let res = (await this.searchApi(this.queryForm || {})).data
     this.result = res.data
     this.paged.total = res.total
     this.paged.curPage = res.curPage

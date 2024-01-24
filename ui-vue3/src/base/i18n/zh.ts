@@ -55,6 +55,9 @@ const words: I18nType = {
   timeout: '超时(毫秒)',
   serialization: '序列化',
   appName: '应用名',
+  instanceNum: '实例数量',
+  deployCluster: '部署集群',
+  registerClusters: '注册集群列表',
   serviceName: '服务名',
   registrySource: '注册来源',
   instanceRegistry: '应用级',
@@ -274,6 +277,12 @@ const words: I18nType = {
   noPageTip: '抱歉，你访问的页面不存在',
   globalSearchTip: '搜索ip，应用，实例，服务',
 
+  globalSearchTip: '搜索ip，应用，实例，服务',
+  placeholder: {
+    typeAppName: '请输入应用名，支持前缀搜索',
+    typeDefault: '请输入'
+  },
+  none: '无',
   details: '详情',
   debug: '调试',
   distribution: '分布',

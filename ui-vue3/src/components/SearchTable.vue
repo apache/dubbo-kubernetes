@@ -17,27 +17,45 @@
 <template>
   <div class="__container_search_table">
     <a-form>
-      <a-row justify="start">
-        <a-col :span="10">
-          <a-form-item :label="$t('applicationDomain.name')">
-            <a-input-group compact>
-              <a-input-search
-                v-model:value="searchDomain.params.appName"
-                placeholder="input search text"
-                enter-button
-                @search="searchDomain.onSearch()"
-              ></a-input-search>
-            </a-input-group>
+      <a-flex wrap="wrap" gap="small">
+        <template v-for="q in searchDomain.params">
+          <a-form-item :label="$t(q.label)">
+            <a-select
+              class="select-type"
+              :style="q.style"
+              v-model:value="searchDomain.queryForm[q.param]"
+              v-if="q.dict && q.dict.length > 0"
+            >
+              <a-select-option
+                :value="item.value"
+                v-for="item in [...q.dict, { label: 'none', value: '' }]"
+              >
+                {{ $t(item.label) }}
+              </a-select-option>
+            </a-select>
+            <a-input
+              v-else
+              :style="q.style"
+              :placeholder="$t('placeholder.' + (q.placeholder || `typeDefault ${q.param}`))"
+              v-model:value="searchDomain.queryForm[q.param]"
+            ></a-input>
           </a-form-item>
-        </a-col>
-        <a-col :span="14"> </a-col>
-      </a-row>
+        </template>
+        <a-form-item :label="''">
+          <a-button type="primary" @click="searchDomain.onSearch()">
+            <Icon
+              style="margin-bottom: -2px; font-size: 1.3rem"
+              icon="ic:outline-manage-search"
+            ></Icon>
+          </a-button>
+        </a-form-item>
+      </a-flex>
     </a-form>
 
     <div class="search-table-container">
       <a-table
         :pagination="pagination"
-        :scroll="{ y: '55vh' }"
+        :scroll="{ y: searchDomain.tableStyle?.scrollY || '55vh' }"
         :columns="searchDomain?.table.columns"
         :data-source="searchDomain?.result"
       >
@@ -64,6 +82,7 @@ import { getCurrentInstance, inject } from 'vue'
 
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import type { SearchDomain } from '@/utils/SearchUtil'
+import { Icon } from '@iconify/vue'
 
 const {
   appContext: {
@@ -72,6 +91,9 @@ const {
 } = <ComponentInternalInstance>getCurrentInstance()
 
 const searchDomain: SearchDomain | any = inject(PROVIDE_INJECT_KEY.SEARCH_DOMAIN)
+searchDomain.table.columns.forEach((column: any) => {
+  column.title = globalProperties.$t(column.title)
+})
 console.log(searchDomain)
 const pagination = {
   showTotal: (v: any) =>
@@ -82,4 +104,10 @@ const pagination = {
     globalProperties.$t('searchDomain.unit')
 }
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.__container_search_table {
+  .select-type {
+    width: 200px;
+  }
+}
+</style>
