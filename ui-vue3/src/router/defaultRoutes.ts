@@ -97,8 +97,69 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/services',
             name: 'services',
+            redirect: 'search',
             component: () => import('../views/resources/services/index.vue'),
-            meta: {}
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/search',
+                name: 'search',
+                component: () => import('../views/resources/services/search.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/detail/:serviceName',
+                name: 'detail',
+                component: () => import('../views/resources/services/tabs/detail.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/debug/:serviceName',
+                name: 'debug',
+                component: () => import('../views/resources/services/tabs/debug.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/distribution/:serviceName',
+                name: 'distribution',
+                component: () => import('../views/resources/services/tabs/distribution.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/monitor/:serviceName',
+                name: 'monitor',
+                component: () => import('../views/resources/services/tabs/monitor.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/tracing/:serviceName',
+                name: 'tracing',
+                component: () => import('../views/resources/services/tabs/tracing.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/event/:serviceName',
+                name: 'event',
+                component: () => import('../views/resources/services/tabs/event.vue'),
+                meta: {
+                  tab: true
+                }
+              }
+            ]
           }
         ]
       },

@@ -282,7 +282,16 @@ const words: I18nType = {
     typeAppName: 'please type appName, support for prefix',
     typeDefault: 'please type '
   },
-  none: 'No Select'
+  none: 'No Select',
+  details: 'Details',
+  debug: 'Debug',
+  distribution: 'Distribution',
+  monitor: 'Monitor',
+  tracing: 'Tracing',
+  event: 'Event',
+
+  provideService: 'Provide Service',
+  dependentService: 'Dependent Service'
 }
 
 export default words

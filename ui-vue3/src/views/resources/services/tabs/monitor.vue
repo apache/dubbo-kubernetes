@@ -15,15 +15,8 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_home_index">
-    <h1>{{ $t(routeName) }}</h1>
-  </div>
+  <div class="__container_services_tabs_monitor">监控todo</div>
 </template>
 
-<script setup lang="ts">
-import { Icon } from '@iconify/vue'
-
-import { useRoute } from 'vue-router'
-const routeName = <string>useRoute().name
-</script>
+<script setup lang="ts"></script>
 <style lang="less" scoped></style>
