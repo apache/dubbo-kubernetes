@@ -36,6 +36,7 @@ export class SearchDomain {
   ]
   searchApi: Function
   result: any
+  tableStyle: any
   table: {
     columns: TableColumnsType
   } = { columns: [] }

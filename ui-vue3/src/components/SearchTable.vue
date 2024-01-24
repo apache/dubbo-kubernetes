@@ -55,7 +55,7 @@
     <div class="search-table-container">
       <a-table
         :pagination="pagination"
-        :scroll="{ y: '55vh' }"
+        :scroll="{ y: searchDomain.tableStyle?.scrollY || '55vh' }"
         :columns="searchDomain?.table.columns"
         :data-source="searchDomain?.result"
       >
