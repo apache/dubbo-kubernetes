@@ -481,3 +481,40 @@ func TestInvokeClientStream(t *testing.T) {
 		})
 	}
 }
+
+func TestInvokeBiStream(t *testing.T) {
+	lists := []struct {
+		name    string
+		ref     RPCReflection
+		service string
+		method  string
+		input   string
+	}{
+		{
+			name:    "grpc",
+			ref:     grpcRef,
+			service: "greet.GreetService",
+			method:  "greet.GreetService.GreetStream",
+			input:   "{\n  \"name\": \"dubbo-kubernetes-1\"\n}" + "{\n  \"name\": \"dubbo-kubernetes-2\"\n}",
+		},
+		{
+			name:    "triple",
+			ref:     tripleRef,
+			service: "greet.GreetService",
+			method:  "greet.GreetService.GreetStream",
+			input:   "{\n  \"name\": \"dubbo-kubernetes-1\"\n}" + "{\n  \"name\": \"dubbo-kubernetes-2\"\n}",
+		},
+	}
+
+	for _, list := range lists {
+		t.Run(list.name, func(t *testing.T) {
+			resp, err := list.ref.Invoke(context.Background(), list.method, list.input)
+			if err != nil {
+				t.Errorf("error int Invoke for %v, err=%v", list.method, err)
+				return
+			}
+
+			t.Logf("name:%#v method:%#v invoke success, response:\n%#v", list.name, list.method, resp)
+		})
+	}
+}
