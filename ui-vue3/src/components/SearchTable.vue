@@ -78,7 +78,7 @@
 
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
-import { getCurrentInstance, inject } from 'vue'
+import { computed, getCurrentInstance, inject } from 'vue'
 
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import type { SearchDomain } from '@/utils/SearchUtil'
@@ -92,7 +92,10 @@ const {
 
 const searchDomain: SearchDomain | any = inject(PROVIDE_INJECT_KEY.SEARCH_DOMAIN)
 searchDomain.table.columns.forEach((column: any) => {
-  column.title = globalProperties.$t(column.title)
+  if (column.title) {
+    const tmp = column.title
+    column.title = computed(() => globalProperties.$t(tmp))
+  }
 })
 console.log(searchDomain)
 const pagination = {

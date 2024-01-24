@@ -291,7 +291,8 @@ const words: I18nType = {
   event: '事件',
 
   provideService: '提供服务',
-  dependentService: '依赖服务'
+  dependentService: '依赖服务',
+  idx: '序号'
 }
 
 export default words

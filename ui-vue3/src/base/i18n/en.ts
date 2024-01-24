@@ -57,6 +57,7 @@ const words: I18nType = {
   instanceNum: 'Instance Number',
   deployCluster: 'Deploy Cluster',
   registerCluster: 'Register Cluster',
+  registerClusters: 'Register Clusters',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
   instanceRegistry: 'Instance Registry',
@@ -291,6 +292,7 @@ const words: I18nType = {
   event: 'Event',
 
   provideService: 'Provide Service',
+  idx: 'Index',
   dependentService: 'Dependent Service'
 }
 
