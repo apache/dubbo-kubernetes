@@ -28,5 +28,5 @@ type TestingService interface {
 	GetMethodDescribe(ctx context.Context, target, methodName string) (*model.MethodDescribe, error)
 	GetMessageTemplateString(ctx context.Context, target, messageName string) (string, error)
 	GetMessageDescribeString(ctx context.Context, target, messageName string) (string, error)
-	Invoke(ctx context.Context, target, methodName, input string, headers map[string]string) (string, bool, error)
+	Invoke(ctx context.Context, target, methodName, input string, headers map[string]string) (string, error)
 }

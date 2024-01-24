@@ -20,7 +20,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -421,17 +420,10 @@ func HTTPTest(c *gin.Context) {
 	headers := c.QueryMap("header") // header map
 
 	// invoke
-	resp, success, err := testingService.Invoke(context.Background(), address, m, input, headers)
+	resp, err := testingService.Invoke(context.Background(), address, m, input, headers)
 	if err != nil {
 		logger.Error("Error do http invoke for service test", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if !success {
-		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("rpc request is sended to server but response an error: %v", resp),
-		})
 		return
 	}
 

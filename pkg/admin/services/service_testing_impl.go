@@ -19,18 +19,16 @@ package services
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/jhump/protoreflect/desc"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/util/reflection"
 
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/util"
 )
 
 type TestingServiceImpl struct{}
 
 func (t *TestingServiceImpl) GetMethodsNames(ctx context.Context, target, serviceName string) ([]string, error) {
-	ref := util.NewRPCReflection(target)
+	ref := reflection.NewRPCReflection(target)
 
 	// dail the reflection server
 	err := ref.Dail(ctx)
@@ -48,9 +46,9 @@ func (t *TestingServiceImpl) GetMethodsNames(ctx context.Context, target, servic
 	return methods, nil
 }
 
-// GetMethodDDetail get the detail  of method
+// GetMethodDescribe get the detail  of method
 func (t *TestingServiceImpl) GetMethodDescribe(ctx context.Context, target, methodName string) (*model.MethodDescribe, error) {
-	ref := util.NewRPCReflection(target)
+	ref := reflection.NewRPCReflection(target)
 
 	// dail the reflection server
 	err := ref.Dail(ctx)
@@ -58,42 +56,33 @@ func (t *TestingServiceImpl) GetMethodDescribe(ctx context.Context, target, meth
 		return nil, err
 	}
 
-	// get descriptor of method
-	descriptor, err := ref.Descriptor(methodName)
+	// get input and output type
+	inputType, outputType, err := ref.InputAndOutputType(methodName)
 	if err != nil {
 		return nil, err
 	}
 
-	methodDesc, ok := descriptor.(*desc.MethodDescriptor)
-	if !ok {
-		return nil, fmt.Errorf("%s is not a method", methodName)
-	}
-
-	// get input and output descriptor
-	inputDesc := methodDesc.GetInputType()
-	outputDesc := methodDesc.GetOutputType()
 	// get input and output describe string
-	inputDescString, err := ref.DescribeString(inputDesc.GetFullyQualifiedName())
+	inputDescString, err := ref.DescribeString(inputType)
 	if err != nil {
 		return nil, err
 	}
-	outputDescString, err := ref.DescribeString(outputDesc.GetFullyQualifiedName())
+	outputDescString, err := ref.DescribeString(outputType)
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.MethodDescribe{
-		InputName:      inputDesc.GetFullyQualifiedName(),
+		InputType:      inputType,
 		InputDescribe:  inputDescString,
-		OutputName:     outputDesc.GetFullyQualifiedName(),
+		OutputType:     outputType,
 		OutputDescribe: outputDescString,
 	}, nil
-
 }
 
 // GetMessageTemplateString get the template string of message
 func (t *TestingServiceImpl) GetMessageTemplateString(ctx context.Context, target, messageName string) (string, error) {
-	ref := util.NewRPCReflection(target)
+	ref := reflection.NewRPCReflection(target)
 
 	// dail the reflection server
 	err := ref.Dail(ctx)
@@ -107,7 +96,7 @@ func (t *TestingServiceImpl) GetMessageTemplateString(ctx context.Context, targe
 
 // GetMessageDescribeString get the describe string (protobuf define string) of method
 func (t *TestingServiceImpl) GetMessageDescribeString(ctx context.Context, target, messageName string) (string, error) {
-	ref := util.NewRPCReflection(target)
+	ref := reflection.NewRPCReflection(target)
 
 	// dail the reflection server
 	err := ref.Dail(ctx)
@@ -121,13 +110,13 @@ func (t *TestingServiceImpl) GetMessageDescribeString(ctx context.Context, targe
 
 // Invoke the target method, input is json string,
 // and return the response, success and error.
-func (t *TestingServiceImpl) Invoke(ctx context.Context, target, methodName, input string, headers map[string]string) (string, bool, error) {
-	ref := util.NewRPCReflection(target)
+func (t *TestingServiceImpl) Invoke(ctx context.Context, target, methodName, input string, headers map[string]string) (string, error) {
+	ref := reflection.NewRPCReflection(target)
 
 	// dail the reflection server
 	err := ref.Dail(ctx)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 	defer ref.Close()
 
@@ -135,6 +124,6 @@ func (t *TestingServiceImpl) Invoke(ctx context.Context, target, methodName, inp
 	ref.SetRPCHeaders(headers)
 
 	// invoke
-	response, success, err := ref.Invoke(ctx, methodName, input)
-	return response, success, err
+	response, err := ref.Invoke(ctx, methodName, input)
+	return response, err
 }

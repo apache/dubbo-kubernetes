@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package util
+package reflection
 
 import (
 	"bytes"
@@ -34,6 +34,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -59,13 +60,15 @@ type RPCReflection interface {
 	// ListMethods returns all methods in the service.
 	ListMethods(service string) ([]string, error)
 	// Invoke invokes the method with input.
-	Invoke(ctx context.Context, methodName, input string) (response string, success bool, err error)
+	Invoke(ctx context.Context, methodName, input string) (response string, err error)
 	// TemplateString returns the template string of the message.
 	TemplateString(messageName string) (string, error)
 	// DescribeString returns the description string of the message.
 	DescribeString(symbol string) (string, error)
 	// Descriptor returns the desc.Descriptor.
 	Descriptor(symbol string) (desc.Descriptor, error)
+	// InputAndOutputType returns the input and output type of the method.
+	InputAndOutputType(methodName string) (string, string, error)
 }
 
 type rpcReflection struct {
@@ -128,35 +131,47 @@ func (r *rpcReflection) Dail(ctx context.Context) error {
 		return nil
 	}
 
-	// add time out and keep alive
-	dialTime := 10 * time.Second
-	if r.connectTimeout > 0 {
-		dialTime = r.connectTimeout
+	md := grpcurl.MetadataFromHeaders(append(headerMapToStrings(r.additionalHeaders), headerMapToStrings(r.reflectionHeaders)...))
+	refCtx := metadata.NewOutgoingContext(ctx, md)
+
+	dail := func(ctx context.Context) (*grpc.ClientConn, error) {
+		// add time out and keep alive
+		dialTime := 10 * time.Second
+		if r.connectTimeout > 0 {
+			dialTime = r.connectTimeout
+		}
+		ctx, cancel := context.WithTimeout(ctx, dialTime)
+		defer cancel()
+		var opts []grpc.DialOption
+		if r.keepaliveTime > 0 {
+			timeout := r.keepaliveTime
+			opts = append(opts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:    timeout,
+				Timeout: timeout,
+			}))
+		}
+
+		var creds credentials.TransportCredentials
+
+		// add user agent
+		opts = append(opts, grpc.WithUserAgent(r.userAgent))
+
+		network := "tcp"
+		cc, err := grpcurl.BlockingDial(ctx, network, r.target, creds, opts...)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Failed to dial target host %s", r.target)
+		}
+
+		return cc, nil
 	}
-	ctx, cancel := context.WithTimeout(ctx, dialTime)
-	defer cancel()
-	var opts []grpc.DialOption
-	if r.keepaliveTime > 0 {
-		timeout := r.keepaliveTime
-		opts = append(opts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:    timeout,
-			Timeout: timeout,
-		}))
-	}
 
-	var creds credentials.TransportCredentials
-
-	// add user agent
-	opts = append(opts, grpc.WithUserAgent(r.userAgent))
-
-	network := "tcp"
-	cc, err := grpcurl.BlockingDial(ctx, network, r.target, creds, opts...)
+	cc, err := dail(refCtx)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to dial target host %s", r.target)
+		return err
 	}
 
 	r.clientConn = cc
-	reflectionClient := grpcreflect.NewClientAuto(ctx, cc)
+	reflectionClient := grpcreflect.NewClientAuto(refCtx, cc)
 	r.refClient = reflectionClient
 	reflectionSource := grpcurl.DescriptorSourceFromServer(ctx, reflectionClient)
 	r.descSource = reflectionSource
@@ -205,8 +220,7 @@ func headerMapToStrings(headerMap map[string]string) []string {
 	return headers
 }
 
-func (r *rpcReflection) Invoke(ctx context.Context, methodName, input string) (response string, success bool, err error) {
-
+func (r *rpcReflection) Invoke(ctx context.Context, methodName, input string) (response string, err error) {
 	// Invoke an RPC
 	cc := r.clientConn
 
@@ -221,7 +235,7 @@ func (r *rpcReflection) Invoke(ctx context.Context, methodName, input string) (r
 	}
 	rf, formatter, err := grpcurl.RequestParserAndFormatter(grpcurl.FormatJSON, r.descSource, in, options)
 	if err != nil {
-		return "", false, errors.Wrapf(err, "Failed to construct request parser and formatter for %v", err)
+		return "", errors.Wrapf(err, "Failed to construct request parser and formatter for %v", err)
 	}
 
 	// invoke
@@ -239,19 +253,21 @@ func (r *rpcReflection) Invoke(ctx context.Context, methodName, input string) (r
 		if errStatus, ok := status.FromError(err); ok {
 			h.Status = errStatus
 		}
+
+		return "", err
 	}
 
 	if h.Status.Code() != codes.OK {
 		// failed to invoke
 		formattedStatus, err := formatter(h.Status.Proto())
 		if err != nil {
-			return fmt.Sprintf("ERROR: %v", err), false, nil
+			return "", nil
 		}
-		return formattedStatus, false, nil
+		return "", errors.New(formattedStatus)
 	}
 
 	// success invoke
-	return output.String(), true, nil
+	return output.String(), nil
 }
 
 func (r *rpcReflection) TemplateString(messageName string) (string, error) {
@@ -278,7 +294,6 @@ func (r *rpcReflection) TemplateString(messageName string) (string, error) {
 	}
 
 	return template, nil
-
 }
 
 func (r *rpcReflection) DescribeString(symbol string) (string, error) {
@@ -296,7 +311,6 @@ func (r *rpcReflection) DescribeString(symbol string) (string, error) {
 }
 
 func (r *rpcReflection) Descriptor(symbol string) (desc.Descriptor, error) {
-
 	if symbol[0] == '.' {
 		symbol = symbol[1:]
 	}
@@ -307,5 +321,23 @@ func (r *rpcReflection) Descriptor(symbol string) (desc.Descriptor, error) {
 	}
 
 	return dsc, nil
+}
 
+func (r *rpcReflection) InputAndOutputType(methodName string) (string, string, error) {
+	// get descriptor of method
+	descriptor, err := r.Descriptor(methodName)
+	if err != nil {
+		return "", "", err
+	}
+
+	methodDesc, ok := descriptor.(*desc.MethodDescriptor)
+	if !ok {
+		return "", "", fmt.Errorf("%s is not a method", methodName)
+	}
+
+	// get input and output descriptor
+	inputDesc := methodDesc.GetInputType()
+	outputDesc := methodDesc.GetOutputType()
+
+	return inputDesc.GetFullyQualifiedName(), outputDesc.GetFullyQualifiedName(), nil
 }
