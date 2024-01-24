@@ -18,7 +18,7 @@
   <div class="__container_layout_bread">
     <a-breadcrumb>
       <a-breadcrumb-item v-for="r in routes">{{ $t(r.name) }}</a-breadcrumb-item>
-      <a-breadcrumb-item>{{ pathId }}</a-breadcrumb-item>
+      <a-breadcrumb-item v-if="pathId">{{ pathId }}</a-breadcrumb-item>
     </a-breadcrumb>
   </div>
 </template>

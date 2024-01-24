@@ -15,15 +15,34 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_home_index">
-    <h1>{{ $t(routeName) }}</h1>
+  <div class="__container_error_notFound">
+    <a-result class="result" title="404" :sub-title="$t('noPageTip')">
+      <template #icon>
+        <img :src="dubbo" />
+      </template>
+      <template #extra>
+        <a-button type="primary" @click="backHome">{{ $t('backHome') }}</a-button>
+      </template>
+    </a-result>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
+import { useRouter } from 'vue-router'
+import dubbo from '@/assets/dubbo.png'
 
-import { useRoute } from 'vue-router'
-const routeName = <string>useRoute().name
+const router = useRouter()
+
+const backHome = () => {
+  router.push('/home')
+}
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.__container_error_notFound {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+</style>

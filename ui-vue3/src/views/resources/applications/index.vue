@@ -16,15 +16,95 @@
 -->
 <template>
   <div class="__container_resources_application_index">
-    应用
-    <br />
-    <a-button @click="router.push('detail/app123')"> to tab</a-button>
+    <search-table :search-domain="searchDomain">
+      <template #bodyCell="{ text, record, index, column }">
+        <template v-if="column.dataIndex === 'registerClusters'">
+          <a-tag v-for="t in text" color="warning">
+            {{ t }}
+          </a-tag>
+        </template>
+        <template v-else-if="column.dataIndex === 'deployCluster'">
+          <a-tag color="success">
+            {{ text }}
+          </a-tag>
+        </template>
+        <template v-else-if="column.dataIndex === 'appName'">
+          <router-link :to="`detail/${record[column.key]}`">{{ text }}</router-link>
+        </template>
+      </template>
+    </search-table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { onMounted, provide, reactive } from 'vue'
+import { searchApplications } from '@/api/service/app'
+import SearchTable from '@/components/SearchTable.vue'
+import { SearchDomain, sortString } from '@/utils/SearchUtil'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 
-const router = useRouter()
+let columns = [
+  {
+    title: 'idx',
+    key: 'idx',
+    dataIndex: 'idx',
+    width: 80
+  },
+  {
+    title: 'appName',
+    key: 'appName',
+    dataIndex: 'appName',
+    sorter: (a: any, b: any) => sortString(a.appName, b.appName),
+    width: 140
+  },
+  {
+    title: 'instanceNum',
+    key: 'instanceNum',
+    dataIndex: 'instanceNum',
+    width: 100,
+    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+  },
+
+  {
+    title: 'deployCluster',
+    key: 'deployCluster',
+    dataIndex: 'deployCluster',
+    width: 120
+  },
+  {
+    title: 'registerClusters',
+    key: 'registerClusters',
+    dataIndex: 'registerClusters',
+    width: 200
+  }
+]
+const searchDomain = reactive(
+  new SearchDomain(
+    [
+      {
+        label: 'appName',
+        param: 'appName',
+        placeholder: 'typeAppName',
+        style: {
+          width: '200px'
+        }
+      }
+    ],
+    searchApplications,
+    columns
+  )
+)
+
+onMounted(() => {
+  searchDomain.onSearch()
+  console.log(searchDomain.result)
+})
+
+provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.search-table-container {
+  min-height: 60vh;
+  //max-height: 70vh; //overflow: auto;
+}
+</style>

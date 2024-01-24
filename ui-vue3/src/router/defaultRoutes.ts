@@ -71,10 +71,11 @@ export const routes: Readonly<RouteRecordType[]> = [
               },
               {
                 path: '/detail/:pathId',
-                name: 'application-tab1',
+                name: 'applicationDomain.detail',
                 component: () => import('../views/resources/applications/tabs/tab1.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'material-symbols:view-in-ar'
                 }
               },
               {
@@ -154,8 +155,69 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/services',
             name: 'services',
+            redirect: 'search',
             component: () => import('../views/resources/services/index.vue'),
-            meta: {}
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/search',
+                name: 'search',
+                component: () => import('../views/resources/services/search.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/detail/:serviceName',
+                name: 'detail',
+                component: () => import('../views/resources/services/tabs/detail.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/debug/:serviceName',
+                name: 'debug',
+                component: () => import('../views/resources/services/tabs/debug.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/distribution/:serviceName',
+                name: 'distribution',
+                component: () => import('../views/resources/services/tabs/distribution.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/monitor/:serviceName',
+                name: 'monitor',
+                component: () => import('../views/resources/services/tabs/monitor.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/tracing/:serviceName',
+                name: 'tracing',
+                component: () => import('../views/resources/services/tabs/tracing.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/event/:serviceName',
+                name: 'event',
+                component: () => import('../views/resources/services/tabs/event.vue'),
+                meta: {
+                  tab: true
+                }
+              }
+            ]
           }
         ]
       },
@@ -178,14 +240,14 @@ export const routes: Readonly<RouteRecordType[]> = [
             children: [
               {
                 path: '/index',
-                name: 'applications_index',
-                component: () => import('../views/resources/applications/index.vue'),
+                name: 'tab_demo_index',
+                component: () => import('../views/common/tab_demo/index.vue'),
                 meta: {
-                  // hidden: true,
+                  hidden: true
                 }
               },
               {
-                path: '/tab1',
+                path: '/tab1/:pathId',
                 name: 'tab1',
                 component: () => import('../views/common/tab_demo/tab1.vue'),
                 meta: {
@@ -194,7 +256,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/tab2',
+                path: '/tab2/:pathId',
                 name: 'tab2',
                 component: () => import('../views/common/tab_demo/tab2.vue'),
                 meta: {
@@ -207,11 +269,20 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/placeholder',
             name: 'placeholder_demo',
-            component: () => import('../views/common/placeholder_demo/index.vue')
+            component: () => import('../views/common/placeholder_demo/index.vue'),
+            meta: {}
           }
         ]
       }
     ]
+  },
+  {
+    path: '/:catchAll(.*)',
+    name: 'notFound',
+    component: () => import('../views/error/notFound.vue'),
+    meta: {
+      skip: true
+    }
   }
 ]
 
