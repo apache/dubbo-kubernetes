@@ -272,8 +272,17 @@ const words: I18nType = {
   },
   backHome: '回到首页',
   noPageTip: '抱歉，你访问的页面不存在',
+  globalSearchTip: '搜索ip，应用，实例，服务',
 
-  globalSearchTip: '搜索ip，应用，实例，服务'
+  details: '详情',
+  debug: '调试',
+  distribution: '分布',
+  monitor: '监控',
+  tracing: '链路追踪',
+  event: '事件',
+
+  provideService: '提供服务',
+  dependentService: '依赖服务'
 }
 
 export default words

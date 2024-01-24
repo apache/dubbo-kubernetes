@@ -274,7 +274,17 @@ const words: I18nType = {
   },
   backHome: 'Back Home',
   noPageTip: 'Sorry, the page you visited does not exist.',
-  globalSearchTip: 'Search ip, application, instance, service'
+  globalSearchTip: 'Search ip, application, instance, service',
+
+  details: 'Details',
+  debug: 'Debug',
+  distribution: 'Distribution',
+  monitor: 'Monitor',
+  tracing: 'Tracing',
+  event: 'Event',
+
+  provideService: 'Provide Service',
+  dependentService: 'Dependent Service'
 }
 
 export default words

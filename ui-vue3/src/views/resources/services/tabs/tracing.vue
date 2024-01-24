@@ -15,33 +15,8 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_services">
-    <Icon
-      icon="material-symbols:arrow-back-ios-new-rounded"
-      v-if="route.name !== 'search'"
-      @click="backSearch"
-      class="icon-back"
-    />
-    <LayoutTab></LayoutTab>
-  </div>
+  <div class="__container_services_tabs_tracing">链路todo</div>
 </template>
 
-<script setup lang="ts">
-import LayoutTab from '@/layout/tab/layout_tab.vue'
-import { Icon } from '@iconify/vue'
-import { useRoute, useRouter } from 'vue-router'
-
-const route = useRoute()
-const router = useRouter()
-
-const backSearch = () => {
-  router.push({ name: 'search' })
-}
-</script>
-<style lang="less" scoped>
-.__container_services {
-  .icon-back:hover {
-    cursor: pointer;
-  }
-}
-</style>
+<script setup lang="ts"></script>
+<style lang="less" scoped></style>
