@@ -15,12 +15,12 @@
   ~ limitations under the License.
 -->
 
+<template>
+  <div>event</div>
+</template>
+
 <script lang="ts" setup>
 import { ref } from 'vue'
 </script>
 
-<template>
-  <div>monitor</div>
-</template>
-
-<style lang="less" scoped></style>
+<style lang="scss" scoped></style>

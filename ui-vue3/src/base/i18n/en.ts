@@ -18,6 +18,13 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
+  instanceDomain: {
+    details: 'Detail',
+    monitor: 'Monitor',
+    linkTracking: 'Link Tracking',
+    configuration: 'Configuration',
+    event: 'Event'
+  },
   adjusting_the_timeout_for_application_service_provision:
     'Adjusting the timeout for application service provision',
   enable_access_logs_for_all_instances_of_this_application:
@@ -87,7 +94,6 @@ const words: I18nType = {
   app: 'Application',
   services: 'Services',
   application: 'Application',
-  instance: 'Instance',
   all: 'All',
   ip: 'IP',
   qps: 'qps',
@@ -98,8 +104,6 @@ const words: I18nType = {
   serialization: 'serialization',
   appName: 'Application Name',
   instanceNum: 'Instance Number',
-  deployCluster: 'Deploy Cluster',
-  registerCluster: 'Register Cluster',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
   instanceRegistry: 'Instance Registry',
@@ -326,12 +330,9 @@ const words: I18nType = {
     typeDefault: 'please type '
   },
   none: 'No Select',
-  details: 'Details',
   debug: 'Debug',
   distribution: 'Distribution',
-  monitor: 'Monitor',
   tracing: 'Tracing',
-  event: 'Event',
 
   provideService: 'Provide Service',
   dependentService: 'Dependent Service'

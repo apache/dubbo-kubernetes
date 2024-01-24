@@ -106,46 +106,41 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/details/:pathId',
-                name: 'details',
-                component: () =>
-                  import('../views/resources/instances/instanceDetail/tabs/details.vue'),
+                path: '/detail/:instance',
+                name: 'instanceDomain.details',
+                component: () => import('../views/resources/instances/tabs/details.vue'),
                 meta: {
                   tab: true
                 }
               },
               {
-                path: '/monitor/:pathId',
-                name: 'monitor',
-                component: () =>
-                  import('../views/resources/instances/instanceDetail/tabs/monitor.vue'),
+                path: '/monitor/:instance',
+                name: 'instanceDomain.monitor',
+                component: () => import('../views/resources/instances/tabs/monitor.vue'),
                 meta: {
                   tab: true
                 }
               },
               {
-                path: '/linktracking/:pathId',
-                name: 'linkTracking',
-                component: () =>
-                  import('../views/resources/instances/instanceDetail//tabs/linkTracking.vue'),
+                path: '/linktracking/:instance',
+                name: 'instanceDomain.linkTracking',
+                component: () => import('../views/resources/instances/tabs/linkTracking.vue'),
                 meta: {
                   tab: true
                 }
               },
               {
-                path: '/configuration/:pathId',
-                name: 'configuration',
-                component: () =>
-                  import('../views/resources/instances/instanceDetail/tabs/configuration.vue'),
+                path: '/configuration/:instance',
+                name: 'instanceDomain.configuration',
+                component: () => import('../views/resources/instances/tabs/configuration.vue'),
                 meta: {
                   tab: true
                 }
               },
               {
-                path: '/event/:pathId',
-                name: 'event',
-                component: () =>
-                  import('../views/resources/instances/instanceDetail/tabs/event.vue'),
+                path: '/event/:instance',
+                name: 'instanceDomain.event',
+                component: () => import('../views/resources/instances/tabs/event.vue'),
                 meta: {
                   tab: true
                 }

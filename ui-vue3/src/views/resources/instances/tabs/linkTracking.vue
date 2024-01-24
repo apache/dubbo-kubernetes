@@ -15,12 +15,12 @@
   ~ limitations under the License.
 -->
 
-<script lang="ts" setup>
-import { ref } from 'vue'
-</script>
-
 <template>
   <div>linkTracking</div>
 </template>
+
+<script lang="ts" setup>
+import { ref } from 'vue'
+</script>
 
 <style lang="less" scoped></style>

@@ -18,6 +18,13 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
+  instanceDomain: {
+    details: '详情',
+    monitor: '监控',
+    linkTracking: '链路追踪',
+    configuration: '配置',
+    event: '事件'
+  },
   adjusting_the_timeout_for_application_service_provision: '调整应用提供服务的超时时间',
   enable_access_logs_for_all_instances_of_this_application: '开启该应用所有实例的访问日志',
   adjust_the_load_balancing_strategy_for_application_services: '调整应用提供服务的负载均衡策略',
@@ -39,7 +46,6 @@ const words: I18nType = {
   startTime_k8s: '启动时间(k8s)',
   registerStates: '注册状态',
   deployState: '部署状态',
-  deployCluster: '部署集群',
   registerCluster: '注册集群',
   owningWorkload_k8s: '所属工作负载(k8s)',
   creationTime: '创建时间',
@@ -76,7 +82,6 @@ const words: I18nType = {
   providers: '提供者',
   consumers: '消费者',
   application: '应用',
-  instance: '实例',
   all: '全部',
   common: '通用',
 
@@ -315,19 +320,14 @@ const words: I18nType = {
   backHome: '回到首页',
   noPageTip: '抱歉，你访问的页面不存在',
   globalSearchTip: '搜索ip，应用，实例，服务',
-
-  globalSearchTip: '搜索ip，应用，实例，服务',
   placeholder: {
     typeAppName: '请输入应用名，支持前缀搜索',
     typeDefault: '请输入'
   },
   none: '无',
-  details: '详情',
   debug: '调试',
   distribution: '分布',
-  monitor: '监控',
   tracing: '链路追踪',
-  event: '事件',
 
   provideService: '提供服务',
   dependentService: '依赖服务'

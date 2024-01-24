@@ -14,276 +14,162 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
-
-<script lang="ts" setup>
-import { ref } from 'vue'
-import { Icon } from '@iconify/vue'
-import type { SelectProps } from 'ant-design-vue'
-import { useRouter, RouterLink } from 'vue-router'
-import type { TableColumnType, TableProps } from 'ant-design-vue'
-
-const Router = useRouter()
-
-// Search Options
-const searchOptions = ref<SelectProps['options']>([
-  {
-    value: 'IP',
-    label: 'IP'
-  },
-  {
-    value: '名称',
-    label: '名称'
-  }
-])
-// Select search options
-const searchOption = ref('IP')
-
-// search keywords
-const keyword = ref('')
-
-// Search instances
-const onSearch = () => {}
-
-// defined types
-type TableDataType = {
-  instanceIP: string
-  instanceName: string
-  deployState: object
-  CPU: string
-  node: string
-  labels: Array<string>
-  memory: string
-  registerStates: object
-  registerCluster: string
-  startTime: string
-  registerTime: string
-}
-
-//  Configure instance list header
-const columns: TableColumnType<TableDataType>[] = [
-  {
-    title: '实例ip',
-    dataIndex: 'instanceIP',
-    key: 'instanceIP'
-  },
-  {
-    title: '实例名称',
-    dataIndex: 'instanceName',
-    key: 'instanceName'
-  },
-  {
-    title: '部署状态',
-    dataIndex: 'deployState',
-    key: 'deployState',
-    defaultSortOrder: 'descend'
-  },
-  {
-    title: '注册状态',
-    dataIndex: 'registerStates',
-    key: 'registerStates',
-    defaultSortOrder: 'descend'
-  },
-  {
-    title: '注册集群',
-    dataIndex: 'registerCluster',
-    key: 'registerCluster',
-    defaultSortOrder: 'descend'
-  },
-  {
-    title: 'CPU',
-    dataIndex: 'CPU',
-    key: 'CPU',
-    defaultSortOrder: 'descend',
-    sorter: (a: TableDataType, b: TableDataType) => parseFloat(a.CPU) - parseFloat(b.CPU)
-  },
-  {
-    title: '内存',
-    dataIndex: 'memory',
-    key: 'memory',
-    defaultSortOrder: 'descend',
-    sorter: (a: TableDataType, b: TableDataType) => parseFloat(a.memory) - parseFloat(b.memory)
-  },
-  {
-    title: '启动时间(k8s)',
-    dataIndex: 'startTime',
-    key: 'startTime',
-    defaultSortOrder: 'descend',
-    sorter: (a: TableDataType, b: TableDataType) => parseFloat(a.memory) - parseFloat(b.memory)
-  },
-  {
-    title: '注册时间',
-    dataIndex: 'registerTime',
-    key: 'registerTime'
-  },
-  {
-    title: '标签',
-    dataIndex: 'labels',
-    key: 'labels'
-  }
-]
-
-// Instance List Data
-const instanceList: TableDataType[] = [
-  {
-    deployState: {
-      label: 'Running',
-      value: 'Running',
-      level: 'healthy'
-    },
-    registerStates: {
-      label: 'Unregisted',
-      value: 'Unregisted',
-      level: 'warn'
-    },
-    CPU: '1.0',
-    memory: '1022',
-    instanceIP: '45.7.37.227',
-    instanceName: 'shop-user',
-    labels: ['app=shop-user', 'version=v1', 'region=beijing'],
-    startTime: '2023/12/19  22:12:34',
-    registerTime: '2023/12/19   22:16:56',
-    registerCluster: 'sz-ali-zk-f8otyo4r',
-    node: '30.33.0.1'
-  },
-  {
-    deployState: {
-      label: 'Running',
-      value: 'Running',
-      level: 'healthy'
-    },
-    registerStates: {
-      label: 'Unregisted',
-      value: 'Unregisted',
-      level: 'warn'
-    },
-    CPU: '1.0',
-    memory: '1022',
-    instanceIP: '45.7.37.227',
-    instanceName: 'shop-user',
-    labels: ['app=shop-user', 'version=v1', 'region=beijing'],
-    startTime: '2023/12/19  22:12:34',
-    registerTime: '2023/12/19   22:16:56',
-    registerCluster: 'sz-ali-zk-f8otyo4r',
-    node: '30.33.0.1'
-  },
-  {
-    deployState: {
-      label: 'Running',
-      value: 'Running',
-      level: 'healthy'
-    },
-    registerStates: {
-      label: 'Unregisted',
-      value: 'Unregisted',
-      level: 'warn'
-    },
-    CPU: '1.0',
-    memory: '1022',
-    instanceIP: '45.7.37.227',
-    instanceName: 'shop-user',
-    labels: ['app=shop-user', 'version=v1', 'region=beijing'],
-    startTime: '2023/12/19  22:12:34',
-    registerTime: '2023/12/19   22:16:56',
-    registerCluster: 'sz-ali-zk-f8otyo4r',
-    node: '30.33.0.1'
-  }
-]
-
-// Page Sorter Data
-const current = ref<number>(1)
-
-const onChangePageNum = (pageNumber: number) => {
-  console.log('Page: ', pageNumber)
-}
-
-// View instance details
-const checkDetail = (instanceName: string) => {
-  Router.push({
-    path: 'details/' + instanceName
-  })
-}
-</script>
-
 <template>
-  <div class="__container_home_index">
-    <a-card :title="$t('instance')" style="width: 100%">
-      <template #extra>
-        <a-space align="start">
-          <a-select
-            ref="select"
-            v-model:value="searchOption"
-            style="width: 120px"
-            :options="searchOptions"
-          >
-          </a-select>
+  <div class="__container_resources_application_index">
+    <search-table :search-domain="searchDomain">
+      <template #bodyCell="{ text, record, index, column }">
+        <template v-if="column.dataIndex === 'deployState'">
+          <a-typography-text type="success">{{ text.label }}</a-typography-text>
+        </template>
 
-          <a-input-search
-            v-model:value="keyword"
-            placeholder="input search text"
-            enter-button
-            @search="onSearch"
-          />
-        </a-space>
+        <template v-else-if="column.dataIndex === 'deployCluster'">
+          <a-tag color="success">
+            {{ text }}
+          </a-tag>
+        </template>
+
+        <template v-if="column.dataIndex === 'registerStates'">
+          <a-typography-text type="success" v-for="t in text">{{ t.label }}</a-typography-text>
+        </template>
+
+        <template v-if="column.dataIndex === 'registerClusters'">
+          <a-tag v-for="t in text" color="warning">
+            {{ t }}
+          </a-tag>
+        </template>
+
+        <template v-if="column.dataIndex === 'labels'">
+          <a-tag v-for="t in text" color="warning">
+            {{ t }}
+          </a-tag>
+        </template>
+        <template v-else-if="column.dataIndex === 'name'">
+          <router-link :to="`detail/${record[column.key]}`">{{ text }}</router-link>
+        </template>
+        <template v-else-if="column.dataIndex === 'ip'">
+          <router-link :to="`detail/${record[column.key]}`">{{ text }}</router-link>
+        </template>
       </template>
-
-      <!-- Instance List -->
-      <a-table
-        :dataSource="instanceList"
-        :columns="columns"
-        :pagination="false"
-        :scroll="{ x: 1500 }"
-      >
-        <!-- Table Header -->
-
-        <template #headerCell="{ column }">
-          {{ $t(column.dataIndex) }}
-        </template>
-
-        <!-- body -->
-        <template #bodyCell="{ column, text }">
-          <!-- The instance name can be clicked to jump to -->
-          <template v-if="column.key === 'instanceName'">
-            <router-link :to="`details/${text}`"> {{ text }} </router-link>
-          </template>
-
-          <!-- deployState -->
-          <template v-if="column.key === 'deployState'">
-            {{ text.label }}
-          </template>
-
-          <!-- registerStates -->
-          <template v-if="column.key === 'registerStates'">
-            {{ text.label }}
-          </template>
-
-          <!-- Used Memory -->
-          <template v-else-if="column.key === 'memory'"> {{ text }}MB </template>
-          <!-- Instance label -->
-          <template v-else-if="column.key === 'labels'">
-            <a-tag v-for="tag in text">{{ tag }}</a-tag>
-          </template>
-        </template>
-      </a-table>
-      <!--  pager -->
-      <a-space
-        style="
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-top: 10px;
-        "
-      >
-        <a-pagination
-          v-model:current="current"
-          show-quick-jumper
-          show-less-items
-          :total="500"
-          @change="onChangePageNum"
-        />
-      </a-space>
-    </a-card>
+    </search-table>
   </div>
 </template>
 
-<style lang="less" scoped></style>
+<script setup lang="ts">
+import { onMounted, provide, reactive } from 'vue'
+import { searchInstances } from '@/api/service/instance'
+import SearchTable from '@/components/SearchTable.vue'
+import { SearchDomain, sortString } from '@/utils/SearchUtil'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+
+let columns = [
+  {
+    title: 'instanceIP',
+    key: 'ip',
+    dataIndex: 'ip',
+    sorter: (a: any, b: any) => sortString(a.instanceIP, b.instanceIP),
+    width: 140
+  },
+  {
+    title: 'instanceName',
+    key: 'name',
+    dataIndex: 'name',
+    sorter: (a: any, b: any) => sortString(a.instanceName, b.instanceName),
+    width: 140
+  },
+  {
+    title: 'deployState',
+    key: 'deployState',
+    dataIndex: 'deployState',
+    width: 120,
+    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+  },
+
+  {
+    title: 'deployCluster',
+    key: 'deployCluster',
+    dataIndex: 'deployCluster',
+    sorter: (a: any, b: any) => sortString(a.deployCluster, b.deployCluster),
+    width: 120
+  },
+  {
+    title: 'registerStates',
+    key: 'registerStates',
+    dataIndex: 'registerStates',
+    sorter: (a: any, b: any) => sortString(a.registerStates, b.registerStates),
+    width: 120
+  },
+  {
+    title: 'registerCluster',
+    key: 'registerClusters',
+    dataIndex: 'registerClusters',
+    sorter: (a: any, b: any) => sortString(a.registerCluster, b.registerCluster),
+    width: 140
+  },
+  {
+    title: 'CPU',
+    key: 'cpu',
+    dataIndex: 'cpu',
+    sorter: (a: any, b: any) => sortString(a.CPU, b.CPU),
+    width: 140
+  },
+  {
+    title: 'memory',
+    key: 'memory',
+    dataIndex: 'memory',
+    sorter: (a: any, b: any) => sortString(a.memory, b.memory),
+    width: 80
+  },
+  {
+    title: 'startTime_k8s',
+    key: 'startTime_k8s',
+    dataIndex: 'startTime',
+    sorter: (a: any, b: any) => sortString(a.startTime_k8s, b.startTime_k8s),
+    width: 200
+  },
+  {
+    title: 'registerTime',
+    key: 'registerTime',
+    dataIndex: 'registerTime',
+    sorter: (a: any, b: any) => sortString(a.registerTime, b.registerTime),
+    width: 200
+  },
+  {
+    title: 'labels',
+    key: 'labels',
+    dataIndex: 'labels',
+    width: 140
+  }
+]
+
+// search
+const searchDomain = reactive(
+  new SearchDomain(
+    [
+      {
+        label: 'appName',
+        param: 'appName',
+        placeholder: 'typeAppName',
+        style: {
+          width: '200px'
+        }
+      }
+    ],
+    searchInstances,
+    columns
+  )
+)
+
+onMounted(() => {
+  searchDomain.onSearch()
+  console.log(searchDomain.result)
+})
+
+provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
+</script>
+<style lang="less" scoped>
+.search-table-container {
+  min-height: 60vh;
+  // overflow-x: scroll;
+  //max-height: 70vh; //overflow: auto;
+}
+</style>
