@@ -56,7 +56,6 @@ const words: I18nType = {
   appName: 'Application Name',
   instanceNum: 'Instance Number',
   deployCluster: 'Deploy Cluster',
-  registerCluster: 'Register Cluster',
   registerClusters: 'Register Clusters',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
