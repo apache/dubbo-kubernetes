@@ -169,7 +169,6 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 <style lang="less" scoped>
 .search-table-container {
   min-height: 60vh;
-  // overflow-x: scroll;
-  //max-height: 70vh; //overflow: auto;
+ 
 }
 </style>

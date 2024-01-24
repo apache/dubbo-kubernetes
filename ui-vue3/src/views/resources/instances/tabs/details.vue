@@ -95,7 +95,7 @@
 
     <!-- instanceLabel -->
     <a-descriptions-item :label="$t('instanceLabel')">
-      <div class="tagsBox">
+      <div class="tagsBox flexLayoutBox">
         <a-tag>app=shop-user</a-tag>
         <a-tag>version=v1</a-tag>
         <a-tag>region=shenzhen</a-tag>
@@ -104,7 +104,7 @@
 
     <!-- health examination -->
     <a-descriptions-item :label="$t('healthExamination')">
-      <div class="healthBox">
+      <div class="healthBox flexLayoutBox">
         <p class="white_space">启动探针(StartupProbe):关闭</p>
         <p class="white_space">就绪探针(ReadinessProbe):开启 类型: Http 端口:22222</p>
         <p class="white_space">存活探针(LivenessProbe):开启 类型: Http 端口:22222</p>
@@ -123,25 +123,25 @@ const instanceName = ref('shop-user-base-7e33f1e')
 const checkApplication = () => {}
 </script>
 
-<style lang="less">
+<style lang="less" scoped>
 .ant-descriptions-item-content {
   padding-left: 20px !important;
 }
 
-.tagsBox {
+.flexLayoutBox{
   border: 1px solid black;
   border-radius: 10px;
   padding: 10px;
   display: flex;
+}
+
+
+.tagsBox {
   align-items: center;
   justify-content: space-around;
 }
 
 .healthBox {
-  border: 1px solid black;
-  border-radius: 10px;
-  padding: 10px;
-  display: flex;
   align-items: flex-start;
   flex-direction: column;
   justify-content: center;
