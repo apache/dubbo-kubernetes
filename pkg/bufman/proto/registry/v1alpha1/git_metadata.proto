@@ -1,0 +1,31 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+// GitIdentity is a Git user identity, typically either an author or a commiter.
+message GitIdentity {
+  // Name is the name of the Git identity. This is not the BSR user's username.
+  string name = 1;
+  // Email is the email of the Git identity. This is not the BSR user's email.
+  string email = 2;
+  // Time is the time at which this identity was captured.
+  google.protobuf.Timestamp time = 3;
+}
+
+// GitCommitMetadata is Git metadata associated with a BSR commit.
+message GitCommitMetadata {
+  // Hash is the SHA1 has of the Git commit.
+  string hash = 1;
+  // Author is the author of the Git commit. This is typically an end-user.
+  GitIdentity author = 2;
+  // Commiter is the commiter of the Git commit. This typically a CI system.
+  GitIdentity commiter = 3;
+  // Branch is the Git branch to which this Git commit belongs.
+  string branch = 4;
+  // Tags are the Git tags which point to this commit.
+  repeated string tags = 5;
+}

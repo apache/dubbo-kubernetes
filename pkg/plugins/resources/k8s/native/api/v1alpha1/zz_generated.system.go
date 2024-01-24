@@ -6,15 +6,10 @@ package v1alpha1
 
 import (
 	"fmt"
-)
 
-import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
 
-import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/model"
@@ -33,7 +28,7 @@ type Zone struct {
 	//
 	// +kubebuilder:validation:Optional
 	Mesh string `json:"mesh,omitempty"`
-	// Spec is the specification of the Kuma Zone resource.
+	// Spec is the specification of the Dubbo Zone resource.
 	// +kubebuilder:validation:Optional
 	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
 }

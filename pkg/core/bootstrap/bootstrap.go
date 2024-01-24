@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 )
 
 import (
@@ -54,6 +55,9 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 			return nil, errors.Wrapf(err, "failed to run beforeBootstrap plugin:'%s'", plugin.Name())
 		}
 	}
+	if err := initKubeClient(&cfg, builder); err != nil {
+		return nil, err
+	}
 	if err := initializeResourceStore(cfg, builder); err != nil {
 		return nil, err
 	}
@@ -71,7 +75,6 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 
 	leaderInfoComponent := &component.LeaderInfoComponent{}
 	builder.WithLeaderInfo(leaderInfoComponent)
-
 	for _, plugin := range core_plugins.Plugins().BootstrapPlugins() {
 		if err := plugin.AfterBootstrap(builder, cfg); err != nil {
 			return nil, errors.Wrapf(err, "failed to run afterBootstrap plugin:'%s'", plugin.Name())
@@ -101,6 +104,13 @@ func Bootstrap(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Runtim
 	}
 
 	return runtime, nil
+}
+
+func initKubeClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
+	kubeClient := client.NewKubeClient()
+	kubeClient.Init(cfg)
+	builder.WithKubeClient(kubeClient)
+	return nil
 }
 
 func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder) error {

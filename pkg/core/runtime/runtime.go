@@ -19,6 +19,8 @@ package runtime
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
+	xds_hooks "github.com/apache/dubbo-kubernetes/pkg/xds/hooks"
 	"sync"
 	"time"
 )
@@ -65,6 +67,7 @@ type RuntimeContext interface {
 	ResourceValidators() ResourceValidators
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
+	KubeClient() *client.KubeClient
 	XDS() xds_runtime.XDSRuntimeContext
 }
 
@@ -119,20 +122,26 @@ func (i *runtimeInfo) GetMode() core.CpMode {
 var _ RuntimeContext = &runtimeContext{}
 
 type runtimeContext struct {
-	cfg      dubbo_cp.Config
-	rm       core_manager.ResourceManager
-	rs       core_store.ResourceStore
-	txs      core_store.Transactions
-	cs       core_store.ResourceStore
-	rom      core_manager.ReadOnlyResourceManager
-	ext      context.Context
-	configm  config_manager.ConfigManager
-	xds      xds_runtime.XDSRuntimeContext
-	leadInfo component.LeaderInfo
-	erf      events.EventBus
-	dps      *dp_server.DpServer
-	rv       ResourceValidators
-	appCtx   context.Context
+	cfg        dubbo_cp.Config
+	rm         core_manager.ResourceManager
+	rs         core_store.ResourceStore
+	txs        core_store.Transactions
+	cs         core_store.ResourceStore
+	rom        core_manager.ReadOnlyResourceManager
+	ext        context.Context
+	configm    config_manager.ConfigManager
+	xds        xds_runtime.XDSRuntimeContext
+	leadInfo   component.LeaderInfo
+	erf        events.EventBus
+	dps        *dp_server.DpServer
+	kubeclient *client.KubeClient
+	xdsh       *xds_hooks.Hooks
+	rv         ResourceValidators
+	appCtx     context.Context
+}
+
+func (rc *runtimeContext) KubeClient() *client.KubeClient {
+	return rc.kubeclient
 }
 
 func (rc *runtimeContext) XDS() xds_runtime.XDSRuntimeContext {

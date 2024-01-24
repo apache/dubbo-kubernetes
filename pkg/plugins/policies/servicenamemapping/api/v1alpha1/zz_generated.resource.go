@@ -7,15 +7,10 @@ package v1alpha1
 import (
 	_ "embed"
 	"fmt"
-)
 
-import (
 	"k8s.io/kube-openapi/pkg/validation/spec"
-
 	"sigs.k8s.io/yaml"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
