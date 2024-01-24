@@ -70,7 +70,8 @@ type ClientConfig struct {
 	Qps int `json:"qps" envconfig:"dubbo_runtime_kubernetes_client_config_qps"`
 	// BurstQps defines maximum burst requests kubernetes client is allowed to make per second
 	// Default value 100. If set to 0 kube-client default value of 10 will be used.
-	BurstQps int `json:"burstQps" envconfig:"dubbo_runtime_kubernetes_client_config_burst_qps"`
+	BurstQps       int    `json:"burstQps" envconfig:"dubbo_runtime_kubernetes_client_config_burst_qps"`
+	KubeFileConfig string `json:"kube_file_config" envconfig:"dubbo_runtime_kube_file_config"`
 }
 
 type LeaderElection struct {

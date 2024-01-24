@@ -19,6 +19,8 @@ package cmd
 
 import (
 	"fmt"
+	cmd2 "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/core/cmd/version"
 	"os"
 	"path/filepath"
 )
@@ -28,8 +30,6 @@ import (
 )
 
 import (
-	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/cmd/version"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 )
@@ -78,14 +78,14 @@ func newRootCmd() *cobra.Command {
 	cmd.SetOut(os.Stdout)
 
 	// root flags
-	cmd.PersistentFlags().StringVar(&args.logLevel, "log-level", dubbo_log.InfoLevel.String(), dubbo_cmd.UsageOptions("log level", dubbo_log.OffLevel, dubbo_log.InfoLevel, dubbo_log.DebugLevel))
+	cmd.PersistentFlags().StringVar(&args.logLevel, "log-level", dubbo_log.InfoLevel.String(), cmd2.UsageOptions("log level", dubbo_log.OffLevel, dubbo_log.InfoLevel, dubbo_log.DebugLevel))
 	cmd.PersistentFlags().StringVar(&args.outputPath, "log-output-path", args.outputPath, "path to the file that will be filled with logs. Example: if we set it to /tmp/dubbo.log then after the file is rotated we will have /tmp/dubbo-2021-06-07T09-15-18.265.log")
 	cmd.PersistentFlags().IntVar(&args.maxBackups, "log-max-retained-files", 1000, "maximum number of the old log files to retain")
 	cmd.PersistentFlags().IntVar(&args.maxSize, "log-max-size", 100, "maximum size in megabytes of a log file before it gets rotated")
 	cmd.PersistentFlags().IntVar(&args.maxAge, "log-max-age", 30, "maximum number of days to retain old log files based on the timestamp encoded in their filename")
 
 	// sub-commands
-	cmd.AddCommand(newRunCmdWithOpts(dubbo_cmd.DefaultRunCmdOpts))
+	cmd.AddCommand(newRunCmdWithOpts(cmd2.DefaultRunCmdOpts))
 	cmd.AddCommand(version.NewVersionCmd())
 
 	return cmd

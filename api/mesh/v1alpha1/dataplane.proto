@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "api/mesh/options.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+import "validate/validate.proto";
+
+
+// Dataplane defines configuration of a side-car proxy.
+message Dataplane {
+
+  option (dubbo.mesh.resource).name = "DataplaneResource";
+  option (dubbo.mesh.resource).type = "Dataplane";
+  option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).kds.send_to_zone = true;
+  option (dubbo.mesh.resource).ws.name = "dataplane";
+  option (dubbo.mesh.resource).ws.plural = "dataplanes";
+  option (dubbo.mesh.resource).allow_to_inspect = true;
+
+  // Networking describes inbound and outbound interfaces of a dataplane.
+  message Networking {
+
+    // Ingress allows us to configure dataplane in the Ingress mode. In this
+    // mode, dataplane has only inbound interfaces (outbound and gateway
+    // prohibited). Every inbound interface matches with services that reside in
+    // that cluster.
+    message Ingress {
+      // AvailableService contains tags that represent unique subset of
+      // endpoints
+      message AvailableService {
+        // tags of the service
+        map<string, string> tags = 1;
+        // number of instances available for given tags
+        uint32 instances = 2;
+        // mesh of the instances available for given tags
+        string mesh = 3;
+      }
+      repeated AvailableService availableServices = 1;
+
+      // PublicAddress defines IP or DNS name on which Ingress is accessible to
+      // other Dubbo clusters.
+      string publicAddress = 2;
+      // PublicPort defines port on which Ingress is accessible to other Dubbo
+      // clusters.
+      uint32 publicPort = 3;
+    }
+
+    // Ingress if not nil, dataplane will be work in the Ingress mode
+    Ingress ingress = 6;
+
+    // Public IP on which the dataplane is accessible in the network.
+    string address = 5;
+
+    // Inbound describes a service implemented by the dataplane.
+    message Inbound {
+      // Port of the inbound interface that will forward requests to the
+      // service.
+      uint32 port = 3;
+
+      // Port of the service that requests will be forwarded to.
+      uint32 servicePort = 4;
+
+      // Address of the service that requests will be forwarded to.
+      // Empty value defaults to '127.0.0.1', since Kuma DP should be deployed
+      // next to service.
+      string serviceAddress = 6;
+
+      // Address on which inbound listener will be exposed. Defaults to
+      // networking.address.
+      string address = 5;
+
+      // Tags associated with an application this dataplane is deployed next to,
+      // e.g. kuma.io/service=web, version=1.0.
+      // `kuma.io/service` tag is mandatory.
+      map<string, string> tags = 2 [ (validate.rules).map.min_pairs = 1 ];
+
+      // Health describes the status of an inbound
+      message Health { bool ready = 1; }
+
+      // Health is an optional field filled automatically by Kuma Control Plane
+      // on Kubernetes if Pod has ReadinessProbe configured. If 'health' is
+      // equal to nil we consider dataplane as healthy. Unhealthy dataplanes
+      // will be excluded from Endpoints Discovery Service (EDS)
+      Health health = 7;
+
+      // ServiceProbe defines parameters for probing service's port
+      message ServiceProbe {
+        // Interval between consecutive health checks.
+        google.protobuf.Duration interval = 1;
+
+        // Maximum time to wait for a health check response.
+        google.protobuf.Duration timeout = 2;
+
+        // Number of consecutive unhealthy checks before considering a host
+        // unhealthy.
+        google.protobuf.UInt32Value unhealthy_threshold = 3;
+
+        // Number of consecutive healthy checks before considering a host
+        // healthy.
+        google.protobuf.UInt32Value healthy_threshold = 4;
+
+        message Tcp {}
+        // Tcp checker tries to establish tcp connection with destination
+        Tcp tcp = 5;
+      }
+
+      // ServiceProbe defines parameters for probing service's port
+      ServiceProbe serviceProbe = 8;
+    }
+
+    // Outbound describes a service consumed by the dataplane.
+    message Outbound {
+      // Address on which the service will be available to this dataplane.
+      // Defaults to 127.0.0.1
+      string address = 3;
+
+      // Port on which the service will be available to this dataplane.
+      uint32 port = 4;
+
+      // DEPRECATED: use networking.outbound[].tags
+      // Service name.
+      string service = 2
+      [ (validate.rules).string.hostname = true, deprecated = true ];
+
+      // Tags
+      map<string, string> tags = 5;
+    }
+
+    // Inbound describes a list of inbound interfaces of the dataplane.
+    repeated Inbound inbound = 1;
+
+    // Outbound describes a list of outbound interfaces of the dataplane.
+    repeated Outbound outbound = 2;
+  }
+
+  // Networking describes inbound and outbound interfaces of the dataplane.
+  Networking networking = 1;
+
+  message Probes {
+    uint32 port = 1;
+
+    message Endpoint {
+      uint32 inbound_port = 1;
+      string inbound_path = 2;
+      string path = 3;
+    }
+
+    repeated Endpoint endpoints = 2;
+  }
+
+  // Probes describes list of endpoints which will redirect traffic from
+  // insecure port to localhost path
+  Probes probes = 3;
+}

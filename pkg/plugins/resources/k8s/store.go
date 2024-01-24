@@ -19,7 +19,7 @@ package k8s
 
 import (
 	"context"
-	"maps"
+	"golang.org/x/exp/maps"
 	"strings"
 	"time"
 )

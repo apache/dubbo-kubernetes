@@ -20,6 +20,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	"os"
 	"time"
 )
@@ -37,6 +38,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	xds_hooks "github.com/apache/dubbo-kubernetes/pkg/xds/hooks"
 )
 
 // BuilderContext provides access to Builder's interim state.
@@ -53,27 +55,30 @@ type BuilderContext interface {
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
 	ResourceValidators() ResourceValidators
+	KubeClient() *client.KubeClient
 }
 
 var _ BuilderContext = &Builder{}
 
 // Builder represents a multi-step initialization process.
 type Builder struct {
-	cfg dubbo_cp.Config
-	cm  component.Manager
-	rs  core_store.CustomizableResourceStore
-	cs  core_store.ResourceStore
-	txs core_store.Transactions
-	rm  core_manager.CustomizableResourceManager
-	rom core_manager.ReadOnlyResourceManager
+	cfg  dubbo_cp.Config
+	cm   component.Manager
+	rs   core_store.CustomizableResourceStore
+	cs   core_store.ResourceStore
+	txs  core_store.Transactions
+	rm   core_manager.CustomizableResourceManager
+	rom  core_manager.ReadOnlyResourceManager
+	xdsh *xds_hooks.Hooks
 
-	ext      context.Context
-	configm  config_manager.ConfigManager
-	leadInfo component.LeaderInfo
-	erf      events.EventBus
-	dps      *dp_server.DpServer
-	rv       ResourceValidators
-	appCtx   context.Context
+	kubeClient *client.KubeClient
+	ext        context.Context
+	configm    config_manager.ConfigManager
+	leadInfo   component.LeaderInfo
+	erf        events.EventBus
+	dps        *dp_server.DpServer
+	rv         ResourceValidators
+	appCtx     context.Context
 	*runtimeInfo
 }
 
@@ -160,6 +165,11 @@ func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
 	return b
 }
 
+func (b *Builder) WithKubeClient(kubeclient *client.KubeClient) *Builder {
+	b.kubeClient = kubeclient
+	return b
+}
+
 func (b *Builder) Build() (Runtime, error) {
 	if b.cm == nil {
 		return nil, errors.Errorf("ComponentManager has not been configured")
@@ -191,6 +201,9 @@ func (b *Builder) Build() (Runtime, error) {
 	if b.rv == (ResourceValidators{}) {
 		return nil, errors.Errorf("ResourceValidators have not been configured")
 	}
+	if b.xdsh == nil {
+		return nil, errors.Errorf("XDSHooks has not been configured")
+	}
 	return &runtime{
 		RuntimeInfo: b.runtimeInfo,
 		RuntimeContext: &runtimeContext{
@@ -202,6 +215,7 @@ func (b *Builder) Build() (Runtime, error) {
 			ext:      b.ext,
 			configm:  b.configm,
 			leadInfo: b.leadInfo,
+			xdsh:     b.xdsh,
 			erf:      b.erf,
 			dps:      b.dps,
 			rv:       b.rv,
@@ -265,4 +279,8 @@ func (b *Builder) ResourceValidators() ResourceValidators {
 
 func (b *Builder) AppCtx() context.Context {
 	return b.appCtx
+}
+
+func (b *Builder) KubeClient() *client.KubeClient {
+	return b.kubeClient
 }

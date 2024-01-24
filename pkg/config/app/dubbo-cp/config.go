@@ -1,6 +1,9 @@
 package dubbo_cp
 
 import (
+	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
 	"github.com/pkg/errors"
 
 	"go.uber.org/multierr"
@@ -40,7 +43,10 @@ type Config struct {
 	// Dataplane Server configuration
 	DpServer *dp_server.DpServerConfig `json:"dpServer"`
 	// EventBus is a configuration of the event bus which is local to one instance of CP.
-	EventBus eventbus.Config `json:"eventBus"`
+	EventBus eventbus.Config    `json:"eventBus"`
+	Bufman   bufman.Bufman      `json:"bufman"`
+	Admin    admin.Admin        `json:"admin"`
+	Dubbo    dubbogo.RootConfig `json:"dubbo"`
 }
 
 func (c *Config) Sanitize() {

@@ -43,7 +43,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec is the specification of the Kuma ServiceNameMapping
+            description: Spec is the specification of the Dubbo ServiceNameMapping
               resource.
             x-kubernetes-preserve-unknown-fields: true
         type: object

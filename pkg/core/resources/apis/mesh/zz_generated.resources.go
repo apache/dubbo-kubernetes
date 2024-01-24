@@ -6,13 +6,451 @@ package mesh
 
 import (
 	"fmt"
-)
 
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 )
+
+const (
+	DataplaneType model.ResourceType = "Dataplane"
+)
+
+var _ model.Resource = &DataplaneResource{}
+
+type DataplaneResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.Dataplane
+}
+
+func NewDataplaneResource() *DataplaneResource {
+	return &DataplaneResource{
+		Spec: &mesh_proto.Dataplane{},
+	}
+}
+
+func (t *DataplaneResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *DataplaneResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *DataplaneResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *DataplaneResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.Dataplane)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.Dataplane{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *DataplaneResource) Descriptor() model.ResourceTypeDescriptor {
+	return DataplaneResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &DataplaneResourceList{}
+
+type DataplaneResourceList struct {
+	Items      []*DataplaneResource
+	Pagination model.Pagination
+}
+
+func (l *DataplaneResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *DataplaneResourceList) GetItemType() model.ResourceType {
+	return DataplaneType
+}
+
+func (l *DataplaneResourceList) NewItem() model.Resource {
+	return NewDataplaneResource()
+}
+
+func (l *DataplaneResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*DataplaneResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*DataplaneResource)(nil), r)
+	}
+}
+
+func (l *DataplaneResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *DataplaneResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var DataplaneResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                DataplaneType,
+	Resource:            NewDataplaneResource(),
+	ResourceList:        &DataplaneResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	KDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "dataplanes",
+	DubboctlArg:         "dataplane",
+	DubboctlListArg:     "dataplanes",
+	AllowToInspect:      true,
+	IsPolicy:            false,
+	SingularDisplayName: "Dataplane",
+	PluralDisplayName:   "Dataplanes",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(DataplaneResourceTypeDescriptor)
+}
+
+const (
+	MeshType model.ResourceType = "Mesh"
+)
+
+var _ model.Resource = &MeshResource{}
+
+type MeshResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.Mesh
+}
+
+func NewMeshResource() *MeshResource {
+	return &MeshResource{
+		Spec: &mesh_proto.Mesh{},
+	}
+}
+
+func (t *MeshResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *MeshResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *MeshResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *MeshResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.Mesh)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.Mesh{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *MeshResource) Descriptor() model.ResourceTypeDescriptor {
+	return MeshResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &MeshResourceList{}
+
+type MeshResourceList struct {
+	Items      []*MeshResource
+	Pagination model.Pagination
+}
+
+func (l *MeshResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *MeshResourceList) GetItemType() model.ResourceType {
+	return MeshType
+}
+
+func (l *MeshResourceList) NewItem() model.Resource {
+	return NewMeshResource()
+}
+
+func (l *MeshResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*MeshResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*MeshResource)(nil), r)
+	}
+}
+
+func (l *MeshResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *MeshResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var MeshResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                MeshType,
+	Resource:            NewMeshResource(),
+	ResourceList:        &MeshResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	KDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "meshed",
+	DubboctlArg:         "mesh",
+	DubboctlListArg:     "meshed",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Mesh",
+	PluralDisplayName:   "Meshes",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(MeshResourceTypeDescriptor)
+}
+
+const (
+	ProxyTemplateType model.ResourceType = "ProxyTemplate"
+)
+
+var _ model.Resource = &ProxyTemplateResource{}
+
+type ProxyTemplateResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.ProxyTemplate
+}
+
+func NewProxyTemplateResource() *ProxyTemplateResource {
+	return &ProxyTemplateResource{
+		Spec: &mesh_proto.ProxyTemplate{},
+	}
+}
+
+func (t *ProxyTemplateResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *ProxyTemplateResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *ProxyTemplateResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *ProxyTemplateResource) Selectors() []*mesh_proto.Selector {
+	return t.Spec.GetSelectors()
+}
+
+func (t *ProxyTemplateResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.ProxyTemplate)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.ProxyTemplate{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *ProxyTemplateResource) Descriptor() model.ResourceTypeDescriptor {
+	return ProxyTemplateResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &ProxyTemplateResourceList{}
+
+type ProxyTemplateResourceList struct {
+	Items      []*ProxyTemplateResource
+	Pagination model.Pagination
+}
+
+func (l *ProxyTemplateResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *ProxyTemplateResourceList) GetItemType() model.ResourceType {
+	return ProxyTemplateType
+}
+
+func (l *ProxyTemplateResourceList) NewItem() model.Resource {
+	return NewProxyTemplateResource()
+}
+
+func (l *ProxyTemplateResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*ProxyTemplateResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*ProxyTemplateResource)(nil), r)
+	}
+}
+
+func (l *ProxyTemplateResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *ProxyTemplateResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var ProxyTemplateResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                ProxyTemplateType,
+	Resource:            NewProxyTemplateResource(),
+	ResourceList:        &ProxyTemplateResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	KDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "proxytemplates",
+	DubboctlArg:         "proxytemplate",
+	DubboctlListArg:     "proxytemplates",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Proxy Template",
+	PluralDisplayName:   "Proxy Templates",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(ProxyTemplateResourceTypeDescriptor)
+}
+
+const (
+	SelectorType model.ResourceType = "Selector"
+)
+
+var _ model.Resource = &SelectorResource{}
+
+type SelectorResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.Selector
+}
+
+func NewSelectorResource() *SelectorResource {
+	return &SelectorResource{
+		Spec: &mesh_proto.Selector{},
+	}
+}
+
+func (t *SelectorResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *SelectorResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *SelectorResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *SelectorResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.Selector)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.Selector{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *SelectorResource) Descriptor() model.ResourceTypeDescriptor {
+	return SelectorResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &SelectorResourceList{}
+
+type SelectorResourceList struct {
+	Items      []*SelectorResource
+	Pagination model.Pagination
+}
+
+func (l *SelectorResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *SelectorResourceList) GetItemType() model.ResourceType {
+	return SelectorType
+}
+
+func (l *SelectorResourceList) NewItem() model.Resource {
+	return NewSelectorResource()
+}
+
+func (l *SelectorResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*SelectorResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*SelectorResource)(nil), r)
+	}
+}
+
+func (l *SelectorResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *SelectorResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var SelectorResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                SelectorType,
+	Resource:            NewSelectorResource(),
+	ResourceList:        &SelectorResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	KDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "selectors",
+	DubboctlArg:         "selector",
+	DubboctlListArg:     "selectors",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Selector",
+	PluralDisplayName:   "Selectors",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(SelectorResourceTypeDescriptor)
+}
 
 const (
 	ServiceNameMappingType model.ResourceType = "ServiceNameMapping"
@@ -121,4 +559,113 @@ var ServiceNameMappingResourceTypeDescriptor = model.ResourceTypeDescriptor{
 
 func init() {
 	registry.RegisterType(ServiceNameMappingResourceTypeDescriptor)
+}
+
+const (
+	ZoneIngressType model.ResourceType = "ZoneIngress"
+)
+
+var _ model.Resource = &ZoneIngressResource{}
+
+type ZoneIngressResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.ZoneIngress
+}
+
+func NewZoneIngressResource() *ZoneIngressResource {
+	return &ZoneIngressResource{
+		Spec: &mesh_proto.ZoneIngress{},
+	}
+}
+
+func (t *ZoneIngressResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *ZoneIngressResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *ZoneIngressResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *ZoneIngressResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.ZoneIngress)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.ZoneIngress{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *ZoneIngressResource) Descriptor() model.ResourceTypeDescriptor {
+	return ZoneIngressResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &ZoneIngressResourceList{}
+
+type ZoneIngressResourceList struct {
+	Items      []*ZoneIngressResource
+	Pagination model.Pagination
+}
+
+func (l *ZoneIngressResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *ZoneIngressResourceList) GetItemType() model.ResourceType {
+	return ZoneIngressType
+}
+
+func (l *ZoneIngressResourceList) NewItem() model.Resource {
+	return NewZoneIngressResource()
+}
+
+func (l *ZoneIngressResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*ZoneIngressResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*ZoneIngressResource)(nil), r)
+	}
+}
+
+func (l *ZoneIngressResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *ZoneIngressResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var ZoneIngressResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                ZoneIngressType,
+	Resource:            NewZoneIngressResource(),
+	ResourceList:        &ZoneIngressResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	KDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "zoneingresses",
+	DubboctlArg:         "zoneingress",
+	DubboctlListArg:     "zoneingresses",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Zone Ingress",
+	PluralDisplayName:   "Zone Ingresses",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(ZoneIngressResourceTypeDescriptor)
 }

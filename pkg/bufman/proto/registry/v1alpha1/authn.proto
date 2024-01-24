@@ -1,0 +1,39 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "registry/v1alpha1/user.proto";
+
+// AuthnService supplies authenication helpers.
+service AuthnService {
+  // GetCurrentUser gets information associated with the current user.
+  //
+  // The user's ID is retrieved from the request's authentication header.
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // GetCurrentUserSubject gets the currently logged in users subject.
+  //
+  // The user's ID is retrieved from the request's authentication header.
+  rpc GetCurrentUserSubject(GetCurrentUserSubjectRequest) returns (GetCurrentUserSubjectResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetCurrentUserRequest {}
+
+message GetCurrentUserResponse {
+ bufman.dubbo.apache.org.registry.v1alpha1.User user = 1;
+}
+
+message GetCurrentUserSubjectRequest {}
+
+message GetCurrentUserSubjectResponse {
+  // The user's subject for mapping to user in identity provider.
+  // Note: we do not want to make it part of the User response as
+  // it contains potentially sensitive information and the User
+  // response is shared with other users.
+  string subject = 1;
+}
