@@ -124,17 +124,12 @@ const checkApplication = () => {}
 </script>
 
 <style lang="less" scoped>
-.ant-descriptions-item-content {
-  padding-left: 20px !important;
-}
-
-.flexLayoutBox{
+.flexLayoutBox {
   border: 1px solid black;
   border-radius: 10px;
   padding: 10px;
   display: flex;
 }
-
 
 .tagsBox {
   align-items: center;

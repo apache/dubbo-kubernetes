@@ -25,15 +25,11 @@ const words: I18nType = {
     configuration: 'Configuration',
     event: 'Event'
   },
-  adjusting_the_timeout_for_application_service_provision:
-    'Adjusting the timeout for application service provision',
-  enable_access_logs_for_all_instances_of_this_application:
-    'Enable access logs for all instances of this application',
-  adjust_the_load_balancing_strategy_for_application_services:
-    'Adjusting the load balancing strategy for application service provision',
-  adjusting_the_number_of_retries_for_application_provided_services:
-    'Adjusting the number of retries for application provided services',
-  adjusting_the_negative_clustering_method_for_application_service_provision:
+  appServiceTimeout: 'Adjusting the timeout for application service provision',
+  enableAppInstanceLogs: 'Enable access logs for all instances of this application',
+  appServiceLoadBalance: 'Adjusting the load balancing strategy for application service provision',
+  appServiceRetries: 'Adjusting the number of retries for application provided services',
+  appServiceNegativeClusteringMethod:
     'Adjusting the negative clustering method for application service provision',
   executionLog: 'Execution Log',
   clusterApproach: 'Cluster Approach',

@@ -22,9 +22,7 @@
       <template v-slot:label>
         {{ $t('executionLog') }}
         <a-tooltip placement="topLeft">
-          <template #title>
-            {{ $t('enable_access_logs_for_all_instances_of_this_application') }}(provider.accesslog)
-          </template>
+          <template #title> {{ $t('enableAppInstanceLogs') }}(provider.accesslog) </template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -43,9 +41,7 @@
       <template v-slot:label>
         {{ $t('retryCount') }}
         <a-tooltip placement="topLeft">
-          <template #title>{{
-            $t('adjusting_the_number_of_retries_for_application_provided_services')
-          }}</template>
+          <template #title>{{ $t('appServiceRetries') }}</template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -57,11 +53,7 @@
       <template v-slot:label>
         {{ $t('loadBalance') }}
         <a-tooltip placement="topLeft">
-          <template #title
-            >{{
-              $t('adjust_the_load_balancing_strategy_for_application_services')
-            }}(provider.loadbalance)</template
-          >
+          <template #title>{{ $t('appServiceLoadBalance') }}(provider.loadbalance)</template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -74,9 +66,7 @@
       <template v-slot:label>
         {{ $t('timeout') }}
         <a-tooltip placement="topLeft">
-          <template #title>
-            {{ $t('adjusting_the_timeout_for_application_service_provision') }}(provider.timeout)
-          </template>
+          <template #title> {{ $t('appServiceTimeout') }}(provider.timeout) </template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -89,9 +79,7 @@
       <template v-slot:label>
         {{ $t('clusterApproach') }}
         <a-tooltip placement="topLeft">
-          <template #title>{{
-            $t('adjusting_the_negative_clustering_method_for_application_service_provision')
-          }}</template>
+          <template #title>{{ $t('appServiceNegativeClusteringMethod') }}</template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>

@@ -25,12 +25,11 @@ const words: I18nType = {
     configuration: '配置',
     event: '事件'
   },
-  adjusting_the_timeout_for_application_service_provision: '调整应用提供服务的超时时间',
-  enable_access_logs_for_all_instances_of_this_application: '开启该应用所有实例的访问日志',
-  adjust_the_load_balancing_strategy_for_application_services: '调整应用提供服务的负载均衡策略',
-  adjusting_the_number_of_retries_for_application_provided_services: '调整应用提供服务的重试次数',
-  adjusting_the_negative_clustering_method_for_application_service_provision:
-    '调整应用提供服务的负集群方式',
+  appServiceTimeout: '调整应用提供服务的超时时间',
+  enableAppInstanceLogs: '开启该应用所有实例的访问日志',
+  appServiceLoadBalance: '调整应用提供服务的负载均衡策略',
+  appServiceRetries: '调整应用提供服务的重试次数',
+  appServiceNegativeClusteringMethod: '调整应用提供服务的负集群方式',
   executionLog: '执行日志',
   clusterApproach: '集群方式',
   retryCount: '重试次数',
