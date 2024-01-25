@@ -46,7 +46,6 @@ const words: I18nType = {
   startTime_k8s: 'Start Time(k8s)',
   registerStates: 'Register States',
   deployState: 'Deployment Status',
-  registerCluster: 'Register Cluster',
   owningWorkload_k8s: 'Owning Workload(k8s)',
   creationTime: 'Creation Time',
   nodeIP: 'Node IP',
@@ -100,7 +99,7 @@ const words: I18nType = {
   appName: 'Application Name',
   instanceNum: 'Instance Number',
   deployCluster: 'Deploy Cluster',
-  registerClusters: 'Register Clusters',
+  registerCluster: 'Register Cluster',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
   instanceRegistry: 'Instance Registry',
@@ -332,7 +331,6 @@ const words: I18nType = {
   tracing: 'Tracing',
 
   provideService: 'Provide Service',
-  idx: 'Index',
   dependentService: 'Dependent Service'
 }
 
