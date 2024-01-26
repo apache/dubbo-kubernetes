@@ -38,6 +38,26 @@ on:
       - Makefile
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Lint
+        run: |
+          # disable eslint for now as the new ui is under heavy development
+          # when the new ui is ready, we can enable eslint again (please also update the .lintstagedrc.json file)
+          # yarn lint
+          yarn prettier-check
+
   update-ui:
     runs-on: ubuntu-latest
     if: github.repository == 'apache/dubbo-kubernetes'
