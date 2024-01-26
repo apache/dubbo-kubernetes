@@ -40,13 +40,16 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui-vue3
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: "ui-vue3/.nvmrc"
 
       - name: Install dependencies
         run: yarn --frozen-lockfile
