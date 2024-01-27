@@ -28,10 +28,11 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { reactive } from 'vue'
+import { reactive, provide } from 'vue'
 import { searchService } from '@/api/service/service.ts'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 
 const router = useRouter()
 const columns = [
@@ -95,5 +96,6 @@ const viewDetail = (serviceName: string) => {
   router.push({ name: 'detail', params: { serviceName } })
 }
 
+provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
 <style lang="less" scoped></style>

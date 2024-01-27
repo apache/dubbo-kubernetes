@@ -17,7 +17,7 @@
 
 import Mock from 'mockjs'
 
-Mock.mock('/mock/service/search', 'get', {
+Mock.mock('/mock/service/distribution', 'get', {
   code: 200,
   message: 'success',
   data: {

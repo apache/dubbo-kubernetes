@@ -25,18 +25,19 @@
               v-model:value="versionAndGroup"
               :options="versionAndGroupOptions"
               class="service-filter-select"
+              @change="debounceSearch"
             ></a-select>
           </div>
           <a-input-search
             v-model:value="searchValue"
             placeholder="搜索应用，ip，支持前缀搜索"
             class="service-filter-input"
-            @search="() => {}"
+            @search="debounceSearch"
             enter-button
           />
         </a-flex>
         <div>
-          <a-radio-group v-model:value="type" button-style="solid">
+          <a-radio-group v-model:value="type" button-style="solid" @click="debounceSearch">
             <a-radio-button value="producer">生产者</a-radio-button>
             <a-radio-button value="consumer">消费者</a-radio-button>
           </a-radio-group>
@@ -67,6 +68,8 @@
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
 import { ref, reactive, getCurrentInstance } from 'vue'
+import { getServiceDistribution } from '@/api/service/serviceDistribution'
+import { debounce } from 'lodash'
 
 const {
   appContext: {
@@ -116,73 +119,15 @@ const tableColumns = [
   }
 ]
 
-const tableData = reactive([
-  {
-    applicationName: 'shop-order',
-    instanceNum: 15,
-    instanceIP: [
-      '192.168.32.28:8697',
-      '192.168.32.26:20880',
-      '192.168.32.24:28080',
-      '192.168.32.22:20880'
-    ]
-  },
-  {
-    applicationName: 'shop-order',
-    instanceNum: 15,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-user',
-    instanceNum: 12,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-order',
-    instanceNum: 15,
-    instanceIP: [
-      '192.168.32.28:8697',
-      '192.168.32.26:20880',
-      '192.168.32.24:28080',
-      '192.168.32.22:20880'
-    ]
-  },
-  {
-    applicationName: 'shop-order',
-    instanceNum: 15,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-user',
-    instanceNum: 12,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-order',
-    instanceNum: 15,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-user',
-    instanceNum: 12,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-user',
-    instanceNum: 12,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-order',
-    instanceNum: 15,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
-  },
-  {
-    applicationName: 'shop-user',
-    instanceNum: 12,
-    instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
-  }
-])
+const tableData = ref([])
+
+const onSearch = async () => {
+  let { data } = await getServiceDistribution({});
+  tableData.value = data.data
+}
+onSearch()
+
+const debounceSearch = debounce(onSearch, 300)
 
 const pagination = {
   showTotal: (v: any) =>
