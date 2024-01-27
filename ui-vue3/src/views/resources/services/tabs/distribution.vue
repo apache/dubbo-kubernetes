@@ -122,7 +122,7 @@ const tableColumns = [
 const tableData = ref([])
 
 const onSearch = async () => {
-  let { data } = await getServiceDistribution({});
+  let { data } = await getServiceDistribution({})
   tableData.value = data.data
 }
 onSearch()

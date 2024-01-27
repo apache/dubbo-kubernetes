@@ -18,10 +18,10 @@
   <div class="__container_services_index">
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ column, text }">
-          <template v-if="column.dataIndex === 'serviceName'">
-            <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
-          </template>
+        <template v-if="column.dataIndex === 'serviceName'">
+          <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
         </template>
+      </template>
     </search-table>
   </div>
 </template>
@@ -39,7 +39,7 @@ const columns = [
   {
     title: '服务',
     dataIndex: 'serviceName',
-    key:  'serviceName',
+    key: 'serviceName',
     sorter: true,
     width: '30%'
   },
