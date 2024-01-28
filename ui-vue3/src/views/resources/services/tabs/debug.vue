@@ -154,13 +154,12 @@ const createEditor = (element: HTMLElement) => {
     fontSize: 14,
     lineNumbers: 'off',
     roundedSelection: true
-  });
+  })
 }
 onMounted(() => {
-  createEditor(requestEditor.value![0]);
-  createEditor(responseEditor.value![0]);
+  createEditor(requestEditor.value![0])
+  createEditor(responseEditor.value![0])
 })
-
 </script>
 <style lang="less" scoped>
 .__container_services_tabs_debug {
