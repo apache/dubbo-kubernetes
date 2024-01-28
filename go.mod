@@ -26,7 +26,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/bakito/go-log-logr-adapter v0.0.2
 	github.com/bufbuild/connect-go v1.10.0
-	github.com/bufbuild/protocompile v0.5.1
+	github.com/bufbuild/protocompile v0.6.0
 	github.com/buildpacks/pack v0.30.0
 	github.com/containers/image/v5 v5.27.0
 	github.com/containers/storage v1.48.0
@@ -77,7 +77,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	github.com/tetratelabs/wazero v1.2.1
+	github.com/tetratelabs/wazero v1.6.0
 	github.com/vcraescu/go-paginator v1.0.0
 	go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/sdk v1.19.0
@@ -100,11 +100,11 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/driver/mysql v1.5.1
-	gorm.io/driver/sqlite v1.5.2
-	gorm.io/gen v0.3.24
-	gorm.io/gorm v1.25.2-0.20230530020048-26663ab9bf55
-	gorm.io/plugin/dbresolver v1.3.0
+	gorm.io/driver/mysql v1.5.2
+	gorm.io/driver/sqlite v1.5.4
+	gorm.io/gen v0.3.25
+	gorm.io/gorm v1.25.5
+	gorm.io/plugin/dbresolver v1.5.0
 	helm.sh/helm/v3 v3.12.3
 	k8s.io/api v0.29.0
 	k8s.io/apiextensions-apiserver v0.29.0
@@ -312,7 +312,7 @@ require (
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/polarismesh/polaris-go v1.4.0 // indirect
+	github.com/polarismesh/polaris-go v1.3.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
@@ -336,7 +336,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
+	github.com/uber/jaeger-client-go v2.29.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
@@ -384,4 +384,5 @@ require (
 replace (
 	github.com/docker/cli => github.com/docker/cli v23.0.1+incompatible
 	github.com/docker/docker => github.com/docker/docker v23.0.1+incompatible
+	google.golang.org/protobuf => google.golang.org/protobuf v1.31.0
 )
