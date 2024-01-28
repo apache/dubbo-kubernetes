@@ -30,6 +30,7 @@
     "less": "^4.2.0",
     "lodash": "^4.17.21",
     "mockjs": "^1.1.0",
+    "monaco-editor": "^0.45.0",
     "nprogress": "^0.2.0",
     "pinia": "^2.1.7",
     "pinyin-pro": "^3.19.3",

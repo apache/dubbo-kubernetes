@@ -277,7 +277,6 @@ const words: I18nType = {
   noPageTip: '抱歉，你访问的页面不存在',
   globalSearchTip: '搜索ip，应用，实例，服务',
 
-  globalSearchTip: '搜索ip，应用，实例，服务',
   placeholder: {
     typeAppName: '请输入应用名，支持前缀搜索',
     typeDefault: '请输入'

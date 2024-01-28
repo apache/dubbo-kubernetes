@@ -48,20 +48,10 @@
             <a-tree block-node :tree-data="outputParamType" class="description-item-content" />
           </a-descriptions-item>
           <a-descriptions-item label="请求" :span="2">
-            <a-textarea
-              v-model="requestValue"
-              placeholder="请输入"
-              :rows="4"
-              class="description-item-content"
-            />
+            <div ref="requestEditor" class="editor"></div>
           </a-descriptions-item>
           <a-descriptions-item label="响应" :span="2">
-            <a-textarea
-              v-model="responseValue"
-              placeholder="请输入"
-              :rows="4"
-              class="description-item-content"
-            />
+            <div ref="responseEditor" class="editor"></div>
           </a-descriptions-item>
         </a-descriptions>
         <a-button type="primary">发送请求</a-button>
@@ -71,7 +61,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import * as monaco from 'monaco-editor'
 
 const methodTabs = reactive([
   'login',
@@ -151,8 +142,25 @@ const outputParamType = [
   }
 ]
 
-const requestValue = ref('')
-const responseValue = ref('')
+const requestEditor = ref(null)
+const responseEditor = ref(null)
+
+const createEditor = (element: HTMLElement) => {
+  monaco.editor.create(element, {
+    value: '',
+    language: 'json',
+    theme: 'vs-dark',
+    automaticLayout: true,
+    fontSize: 14,
+    lineNumbers: 'off',
+    roundedSelection: true
+  });
+}
+onMounted(() => {
+  createEditor(requestEditor.value![0]);
+  createEditor(responseEditor.value![0]);
+})
+
 </script>
 <style lang="less" scoped>
 .__container_services_tabs_debug {
@@ -164,6 +172,10 @@ const responseValue = ref('')
   .description-item-content {
     margin-left: 20px;
     width: 90%;
+  }
+  .editor {
+    width: 90%;
+    height: 300px;
   }
 }
 </style>
