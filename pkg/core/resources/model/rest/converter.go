@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package rest
 
 import (
@@ -11,29 +28,6 @@ var From = &from{}
 
 type from struct{}
 
-// Resource method generates a resource representation to use with API server or CLI.
-// Representation is different depending on the resource type:
-//   - new resources which are provided by plugins are converted to 'v1alpha1.Resource'
-//   - old resources are converted to 'unversioned.Resource'
-//
-// The difference between 'v1alpha1.Resource' and 'unversioned.Resource' is 'spec' field
-// in 'v1alpha1.Resource':
-//
-//	type: MeshTrafficPermission
-//	name: mtp1
-//	mesh: default
-//	spec:
-//	  targetRef: {...}
-//	  from: [...]
-//
-// while 'unversioned.Resource' is:
-//
-//	type: CircuitBreaker
-//	name: cb1
-//	mesh: default
-//	sources: [...]
-//	destinations: [...]
-//	conf: {...}
 func (f *from) Resource(r core_model.Resource) Resource {
 	if r == nil {
 		return nil
