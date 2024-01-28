@@ -38,7 +38,7 @@ func Setup(rt core_runtime.Runtime) error {
 	}
 
 	httpRouter := router.InitHTTPRouter()
-	grpcRouter := router.InitGRPCRouter(rt.CertStorage(), rt.Config())
+	grpcRouter := router.InitGRPCRouter(rt.Config())
 
 	if err := rt.Add(httpRouter); err != nil {
 		return errors.Wrap(err, "Add Bufman HTTP Server Component failed")

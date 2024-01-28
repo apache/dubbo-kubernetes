@@ -22,13 +22,19 @@ import (
 	"strings"
 	"text/tabwriter"
 	"text/template"
+)
 
+import (
+	"github.com/AlecAivazis/survey/v2"
+
+	"github.com/ory/viper"
+
+	"github.com/spf13/cobra"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/ory/viper"
-	"github.com/spf13/cobra"
 )
 
 // ErrNoRuntime indicates that the language runtime flag was not passed.

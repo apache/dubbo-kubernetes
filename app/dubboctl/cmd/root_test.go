@@ -20,9 +20,14 @@ import (
 	"os"
 	"strings"
 	"testing"
+)
 
-	. "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/testing"
+import (
 	"github.com/ory/viper"
+)
+
+import (
+	. "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/testing"
 )
 
 // fromTempDirectory is a test helper which endeavors to create

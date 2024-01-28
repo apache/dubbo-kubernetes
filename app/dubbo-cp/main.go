@@ -18,15 +18,9 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/apache/dubbo-kubernetes/app/dubbo-cp/cmd"
 )
 
 func main() {
-	if err := cmd.GetRootCmd(os.Args[1:]).Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
+	cmd.Execute()
 }

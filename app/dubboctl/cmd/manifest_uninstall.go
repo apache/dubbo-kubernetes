@@ -16,11 +16,15 @@
 package cmd
 
 import (
+	"github.com/spf13/cobra"
+
+	"go.uber.org/zap/zapcore"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"github.com/spf13/cobra"
-	"go.uber.org/zap/zapcore"
 )
 
 type ManifestUninstallArgs struct {

@@ -1,0 +1,127 @@
+ENVOY_IMPORTS := ./pkg/xds/envoy/imports.go
+RESOURCE_GEN := $(DUBBO_DIR)/build/tools-${GOOS}-${GOARCH}/resource-gen
+POLICY_GEN := $(DUBBO_DIR)/build/tools-${GOOS}-${GOARCH}/policy-gen/generator
+
+PROTO_DIRS ?= ./pkg/config ./api ./pkg/plugins
+GO_MODULE ?= github.com/apache/dubbo-kubernetes
+
+HELM_VALUES_FILE ?= "deployments/charts/dubbo/values.yaml"
+HELM_CRD_DIR ?= "deployments/charts/dubbo/crds/"
+HELM_VALUES_FILE_POLICY_PATH ?= ".plugins.policies"
+
+GENERATE_OAS_PREREQUISITES ?=
+EXTRA_GENERATE_DEPS_TARGETS ?= generate/envoy-imports
+
+.PHONY: clean/generated
+clean/generated: clean/protos clean/builtin-crds clean/resources clean/policies clean/tools
+
+.PHONY: generate/protos
+generate/protos:
+	find $(PROTO_DIRS) -name '*.proto' -exec $(PROTOC_GO) {} \;
+
+.PHONY: clean/tools
+clean/tools:
+	rm -rf $(DUBBO_DIR)/build/tools-*
+
+.PHONY: clean/proto
+clean/protos: ## Dev: Remove auto-generated Protobuf files
+	find $(PROTO_DIRS) -name '*.pb.go' -delete
+	find $(PROTO_DIRS) -name '*.pb.validate.go' -delete
+
+.PHONY: generate
+generate: generate/protos $(if $(findstring ./api,$(PROTO_DIRS)),resources/type generate/builtin-crds) generate/policies generate/oas $(EXTRA_GENERATE_DEPS_TARGETS) ## Dev: Run all code generation
+
+$(POLICY_GEN):
+	cd $(DUBBO_DIR) && go build -o ./build/tools-${GOOS}-${GOARCH}/policy-gen/generator ./tools/policy-gen/generator/main.go
+
+$(RESOURCE_GEN):
+	cd $(DUBBO_DIR) && go build -o ./build/tools-${GOOS}-${GOARCH}/resource-gen ./tools/resource-gen/main.go
+
+.PHONY: resources/type
+resources/type: $(RESOURCE_GEN)
+	$(RESOURCE_GEN) -package mesh -generator type > pkg/core/resources/apis/mesh/zz_generated.resources.go
+	$(RESOURCE_GEN) -package system -generator type > pkg/core/resources/apis/system/zz_generated.resources.go
+
+.PHONY: clean/resources
+clean/resources:
+	find pkg -name 'zz_generated.*.go' -delete
+
+POLICIES_DIR := pkg/plugins/policies
+
+policies = $(foreach dir,$(shell find pkg/plugins/policies -maxdepth 1 -mindepth 1 -type d | grep -v -e core | sort),$(notdir $(dir)))
+
+generate/policies: $(addprefix generate/policy/,$(policies)) generate/policy-import generate/policy-helm ## Generate all policies written as plugins
+
+.PHONY: clean/policies
+clean/policies: $(addprefix clean/policy/,$(policies))
+
+# deletes all files in policy directory except *.proto, validator.go and schema.yaml
+clean/policy/%:
+	$(shell find $(POLICIES_DIR)/$* \( -name '*.pb.go' -o -name '*.yaml' -o -name 'zz_generated.*'  \) -not -path '*/testdata/*' -type f -delete)
+	@rm -fr $(POLICIES_DIR)/$*/k8s
+
+generate/policy/%: generate/schema/%
+	@echo "Policy $* successfully generated"
+
+generate/schema/%: generate/controller-gen/%
+	for version in $(foreach dir,$(wildcard $(POLICIES_DIR)/$*/api/*),$(notdir $(dir))); do \
+		PATH=$(CI_TOOLS_BIN_DIR):$$PATH $(TOOLS_DIR)/policy-gen/crd-extract-openapi.sh $* $$version $(TOOLS_DIR) ; \
+	done
+
+generate/policy-import:
+	$(TOOLS_DIR)/policy-gen/generate-policy-import.sh $(GO_MODULE) $(policies)
+
+generate/policy-helm:
+	PATH=$(CI_TOOLS_BIN_DIR):$$PATH $(TOOLS_DIR)/policy-gen/generate-policy-helm.sh $(HELM_VALUES_FILE) $(HELM_CRD_DIR) $(HELM_VALUES_FILE_POLICY_PATH) $(policies)
+
+generate/controller-gen/%: generate/dubbopolicy-gen/%
+	# touch is a fix for controller-gen complaining that there is no schema.yaml file
+	# controller-gen imports it a policy package and then the //go:embed match is triggered and causes an error
+	for version in $(foreach dir,$(wildcard $(POLICIES_DIR)/$*/api/*),$(notdir $(dir))); do \
+		touch $(POLICIES_DIR)/$*/api/$$version/schema.yaml && \
+		$(CONTROLLER_GEN) "crd:crdVersions=v1,ignoreUnexportedFields=true" paths="./$(POLICIES_DIR)/$*/k8s/..." output:crd:artifacts:config=$(POLICIES_DIR)/$*/k8s/crd && \
+		$(CONTROLLER_GEN) object paths=$(POLICIES_DIR)/$*/k8s/$$version/zz_generated.types.go && \
+		$(CONTROLLER_GEN) object paths=$(POLICIES_DIR)/$*/api/$$version/$*.go; \
+	done
+
+generate/dubbopolicy-gen/%: $(POLICY_GEN) generate/dirs/%
+	$(POLICY_GEN) core-resource --plugin-dir $(POLICIES_DIR)/$* --gomodule $(GO_MODULE) && \
+	$(POLICY_GEN) k8s-resource --plugin-dir $(POLICIES_DIR)/$* --gomodule $(GO_MODULE) && \
+	$(POLICY_GEN) openapi --plugin-dir $(POLICIES_DIR)/$* --openapi-template-path=$(TOOLS_DIR)/policy-gen/templates/endpoints.yaml --gomodule $(GO_MODULE) && \
+	$(POLICY_GEN) plugin-file --plugin-dir $(POLICIES_DIR)/$* --gomodule $(GO_MODULE)
+
+endpoints = $(foreach dir,$(shell find api/openapi/specs -type f | sort),$(basename $(dir)))
+
+generate/oas: $(GENERATE_OAS_PREREQUISITES)
+	for endpoint in $(endpoints); do \
+		DEST=$${endpoint#"api/openapi/specs"}; \
+		PATH=$(CI_TOOLS_BIN_DIR):$$PATH oapi-codegen -config api/openapi/openapi.cfg.yaml -o api/openapi/types/$$(dirname $${DEST}})/zz_generated.$$(basename $${DEST}).go $${endpoint}.yaml; \
+	done
+
+generate/dirs/%:
+	for version in $(foreach dir,$(wildcard $(POLICIES_DIR)/$*/api/*),$(notdir $(dir))); do \
+		mkdir -p $(POLICIES_DIR)/$*/api/$$version ; \
+		mkdir -p $(POLICIES_DIR)/$*/k8s/$$version ; \
+		mkdir -p $(POLICIES_DIR)/$*/k8s/crd ; \
+	done
+
+.PHONY: generate/builtin-crds
+generate/builtin-crds: $(RESOURCE_GEN)
+	$(RESOURCE_GEN) -package mesh -generator crd > ./pkg/plugins/resources/k8s/native/api/v1alpha1/zz_generated.mesh.go
+	$(RESOURCE_GEN) -package system -generator crd > ./pkg/plugins/resources/k8s/native/api/v1alpha1/zz_generated.system.go
+	$(CONTROLLER_GEN) "crd:crdVersions=v1" paths=./pkg/plugins/resources/k8s/native/api/... output:crd:artifacts:config=$(HELM_CRD_DIR)
+	$(CONTROLLER_GEN) object paths=./pkg/plugins/resources/k8s/native/api/...
+
+.PHONY: clean/builtin-crds
+clean/builtin-crds:
+	rm -f ./deployments/charts/dubbo/crds/*
+	rm -f ./pkg/plugins/resources/k8s/native/test/config/crd/bases/*
+
+.PHONY: generate/envoy-imports
+generate/envoy-imports:
+	printf 'package envoy\n\n' > ${ENVOY_IMPORTS}
+	echo '// Import all Envoy packages so protobuf are registered and are ready to used in functions such as MarshalAny.' >> ${ENVOY_IMPORTS}
+	echo '// This file is autogenerated. run "make generate/envoy-imports" to regenerate it after go-control-plane upgrade' >> ${ENVOY_IMPORTS}
+	echo 'import (' >> ${ENVOY_IMPORTS}
+	go list github.com/envoyproxy/go-control-plane/... | grep "github.com/envoyproxy/go-control-plane/envoy/" | awk '{printf "\t_ \"%s\"\n", $$1}' >> ${ENVOY_IMPORTS}
+	echo ')' >> ${ENVOY_IMPORTS}

@@ -31,7 +31,8 @@ import (
 )
 
 func InitConfig(rt core_runtime.Runtime) error {
-	config.Properties = &rt.Config().Bufman
+	bufman := rt.Config().Bufman
+	config.Properties = &bufman
 
 	return nil
 }

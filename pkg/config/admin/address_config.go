@@ -26,7 +26,7 @@ import (
 )
 
 type AddressConfig struct {
-	Address string `yaml:"address"`
+	Address string `json:"address"`
 	Url     *url.URL
 }
 

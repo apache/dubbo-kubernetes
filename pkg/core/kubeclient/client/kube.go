@@ -23,13 +23,9 @@ import (
 	"reflect"
 	"time"
 
-	clientset "github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/clientset/versioned"
-	"github.com/apache/dubbo-kubernetes/pkg/core/gen/generated/informers/externalversions"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
-
-	"go.uber.org/atomic"
 
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
@@ -45,29 +41,15 @@ type KubeClient struct {
 	kubernetesClientSet kubernetes.Interface
 	kubeInformer        informers.SharedInformerFactory
 	kubeConfig          *rest.Config
-	dubboClientSet      clientset.Interface
-	dubboInformer       externalversions.SharedInformerFactory
 	extSet              kubeExtClient.Interface
-
-	// only for test
-	fastSync               bool
-	informerWatchesPending *atomic.Int32
 }
 
 func NewKubeClient() *KubeClient {
 	return &KubeClient{}
 }
 
-func (c *KubeClient) DubboInformer() externalversions.SharedInformerFactory {
-	return c.dubboInformer
-}
-
 func (c *KubeClient) Ext() kubeExtClient.Interface {
 	return c.extSet
-}
-
-func (k *KubeClient) DubboClientSet() clientset.Interface {
-	return k.dubboClientSet
 }
 
 func (k *KubeClient) GetKubeConfig() *rest.Config {
@@ -80,21 +62,6 @@ func (k *KubeClient) GetKubernetesClientSet() kubernetes.Interface {
 
 // nolint
 func (k *KubeClient) Start(stop <-chan struct{}) error {
-	k.dubboInformer.Start(stop)
-	if k.fastSync {
-		// WaitForCacheSync will virtually never be synced on the first call, as its called immediately after Start()
-		// This triggers a 100ms delay per call, which is often called 2-3 times in a test, delaying tests.
-		// Instead, we add an aggressive sync polling
-		fastWaitForCacheSync(k.dubboInformer)
-		_ = wait.PollImmediate(time.Microsecond, wait.ForeverTestTimeout, func() (bool, error) {
-			if k.informerWatchesPending.Load() == 0 {
-				return true, nil
-			}
-			return false, nil
-		})
-	} else {
-		k.dubboInformer.WaitForCacheSync(stop)
-	}
 	return nil
 }
 
@@ -104,8 +71,7 @@ func (k *KubeClient) NeedLeaderElection() bool {
 
 func (k *KubeClient) Init(options *dubbo_cp.Config) bool {
 	config, err := rest.InClusterConfig()
-	options.KubeConfig.InPodEnv = err == nil
-	kubeconfig := options.KubeConfig.KubeFileConfig
+	kubeconfig := options.Runtime.Kubernetes.ClientConfig.KubeFileConfig
 	if err != nil {
 		logger.Sugar().Infof("Failed to load config from Pod. Will fall back to kube config file.")
 		// Read kubeconfig from command line
@@ -129,8 +95,8 @@ func (k *KubeClient) Init(options *dubbo_cp.Config) bool {
 	}
 
 	// set qps and burst for rest config
-	config.QPS = float32(options.KubeConfig.RestConfigQps)
-	config.Burst = options.KubeConfig.RestConfigBurst
+	config.QPS = float32(options.Runtime.Kubernetes.ClientConfig.Qps)
+	config.Burst = options.Runtime.Kubernetes.ClientConfig.BurstQps
 	k.kubeConfig = config
 	// creates the client
 	clientSet, err := kubernetes.NewForConfig(config)
@@ -143,14 +109,6 @@ func (k *KubeClient) Init(options *dubbo_cp.Config) bool {
 		return false
 	}
 	k.kubernetesClientSet = clientSet
-	genClient, err := clientset.NewForConfig(config)
-	if err != nil {
-		logger.Sugar().Warnf("Failed to create clientgen to kubernetes. " + err.Error())
-		return false
-	}
-	factory := externalversions.NewSharedInformerFactory(genClient, 0)
-	k.dubboInformer = factory
-	k.dubboClientSet = genClient
 	ext, err := kubeExtClient.NewForConfig(config)
 	if err != nil {
 		logger.Sugar().Warnf("Failed to create kubeExtClient to kubernetes. " + err.Error())

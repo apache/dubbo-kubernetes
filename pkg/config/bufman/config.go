@@ -20,9 +20,9 @@ import (
 )
 
 type Bufman struct {
-	OpenBufman bool   `yaml:"open_bufman"`
-	Server     Server `yaml:"server"`
-	MySQL      MySQL  `yaml:"mysql"`
+	OpenBufman bool   `json:"open_bufman"`
+	Server     Server `json:"server"`
+	MySQL      MySQL  `json:"mysql"`
 }
 
 func (bufman *Bufman) Sanitize() {
@@ -34,13 +34,13 @@ func (bufman *Bufman) Validate() error {
 }
 
 type Server struct {
-	ServerHost     string `yaml:"server_host"`
-	HTTPPort       int    `yaml:"port"`
-	GrpcPlainPort  int    `yaml:"grpc_plain_port"`
-	GrpcSecurePort int    `yaml:"grpc_secure_port"`
+	ServerHost     string `json:"server_host"`
+	HTTPPort       int    `json:"port"`
+	GrpcPlainPort  int    `json:"grpc_plain_port"`
+	GrpcSecurePort int    `json:"grpc_secure_port"`
 
-	PageTokenExpireTime time.Duration `yaml:"page_token_expire_time"`
-	PageTokenSecret     string        `yaml:"page_token_secret"`
+	PageTokenExpireTime time.Duration `json:"page_token_expire_time"`
+	PageTokenSecret     string        `json:"page_token_secret"`
 }
 
 func (s *Server) Sanitize() {
@@ -52,11 +52,11 @@ func (s *Server) Validate() error {
 }
 
 type MySQL struct {
-	MysqlDsn           string        `yaml:"mysql_dsn"`
-	MaxOpenConnections int           `yaml:"max_open_connections"`
-	MaxIdleConnections int           `yaml:"max_idle_connections"`
-	MaxLifeTime        time.Duration `yaml:"max_life_time"`
-	MaxIdleTime        time.Duration `yaml:"max_idle_time"`
+	MysqlDsn           string        `json:"mysql_dsn"`
+	MaxOpenConnections int           `json:"max_open_connections"`
+	MaxIdleConnections int           `json:"max_idle_connections"`
+	MaxLifeTime        time.Duration `json:"max_life_time"`
+	MaxIdleTime        time.Duration `json:"max_idle_time"`
 }
 
 func (mysql *MySQL) Sanitize() {

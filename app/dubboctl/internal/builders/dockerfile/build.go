@@ -18,13 +18,19 @@ package dockerfile
 import (
 	"context"
 	"os"
+)
 
+import (
 	"github.com/containers/storage/pkg/archive"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/moby/term"
 
+	"github.com/moby/term"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 )
