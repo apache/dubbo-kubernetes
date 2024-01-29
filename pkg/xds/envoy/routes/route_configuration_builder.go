@@ -18,11 +18,15 @@
 package routes
 
 import (
+	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+
+	"github.com/pkg/errors"
+)
+
+import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/routes/v3"
-	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	"github.com/pkg/errors"
 )
 
 // RouteConfigurationBuilderOpt is a configuration option for RouteConfigurationBuilder.

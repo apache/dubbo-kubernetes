@@ -23,12 +23,18 @@ import (
 	"fmt"
 	"io"
 	"math"
+)
 
+import (
+	"github.com/klauspost/compress/zip"
+
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageutil"
-	"github.com/klauspost/compress/zip"
-	"go.uber.org/multierr"
 )
 
 // ErrFileSizeLimit is returned when file read limit is reached.

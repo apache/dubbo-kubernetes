@@ -18,11 +18,14 @@
 package mesh
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"hash/fnv"
 	"net"
 	"strconv"
 	"strings"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
 // Protocol identifies a protocol supported by a service.

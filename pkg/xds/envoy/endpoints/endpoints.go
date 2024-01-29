@@ -19,9 +19,13 @@ package endpoints
 
 import (
 	"errors"
+)
 
+import (
 	"github.com/golang/protobuf/proto"
+)
 
+import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	endpoints_v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/endpoints/v3"

@@ -24,7 +24,9 @@ import (
 	"os"
 	"sort"
 	"strconv"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/interrupt"
 )
 

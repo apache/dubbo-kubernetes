@@ -18,8 +18,11 @@
 package clusters
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
 type LbSubsetConfigurer struct {

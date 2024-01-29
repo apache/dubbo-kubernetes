@@ -19,13 +19,14 @@ package k8s
 
 import (
 	"context"
-	"golang.org/x/exp/maps"
 	"strings"
 	"time"
 )
 
 import (
 	"github.com/pkg/errors"
+
+	"golang.org/x/exp/maps"
 
 	kube_apierrs "k8s.io/apimachinery/pkg/api/errors"
 	kube_meta "k8s.io/apimachinery/pkg/apis/meta/v1"

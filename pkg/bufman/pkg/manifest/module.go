@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+)
 
+import (
 	"go.uber.org/multierr"
 )
 

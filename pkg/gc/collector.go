@@ -20,6 +20,10 @@ package gc
 import (
 	"context"
 	"fmt"
+	"time"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
@@ -27,7 +31,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"time"
 )
 
 var gcLog = core.Log.WithName("dataplane-gc")

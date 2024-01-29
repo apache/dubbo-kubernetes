@@ -19,11 +19,17 @@ package catalog
 
 import (
 	"context"
+	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"github.com/pkg/errors"
-	"time"
 )
 
 var heartbeatLog = core.Log.WithName("intercp").WithName("catalog").WithName("heartbeat")

@@ -19,7 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 

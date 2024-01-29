@@ -19,9 +19,12 @@ package catalog
 
 import (
 	"context"
+	"time"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"time"
 )
 
 var writerLog = core.Log.WithName("intercp").WithName("catalog").WithName("writer")

@@ -16,8 +16,11 @@
 package services
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	set "github.com/dubbogo/gost/container/set"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 type ProviderService interface {

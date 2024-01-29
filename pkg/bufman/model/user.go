@@ -19,9 +19,14 @@ package model
 
 import (
 	"time"
+)
 
-	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
+import (
 	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+import (
+	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 )
 
 // User 用户表

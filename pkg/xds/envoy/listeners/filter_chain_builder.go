@@ -18,13 +18,18 @@
 package listeners
 
 import (
+	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	envoy_hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+
+	"github.com/pkg/errors"
+
+	"google.golang.org/protobuf/types/known/anypb"
+)
+
+import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners/v3"
-	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	envoy_hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	"github.com/pkg/errors"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // FilterChainBuilderOpt is a configuration option for FilterChainBuilder.

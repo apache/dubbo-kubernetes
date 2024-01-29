@@ -18,10 +18,13 @@
 package selector
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 // MultiSelectors is an implement of Selector to combine multiple selectors, use NewMultiSelector to create it, and use Add to build it

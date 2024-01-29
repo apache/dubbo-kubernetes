@@ -22,8 +22,11 @@ import (
 	"crypto/x509"
 	"io"
 	"net/url"
+)
 
+import (
 	"github.com/pkg/errors"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"

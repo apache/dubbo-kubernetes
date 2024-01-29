@@ -21,12 +21,16 @@ import (
 	"context"
 	"reflect"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+import (
+	"github.com/golang/mock/gomock"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/mapper"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	"github.com/golang/mock/gomock"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 func TestMockRuleServiceImpl_CreateOrUpdateMockRule(t *testing.T) {

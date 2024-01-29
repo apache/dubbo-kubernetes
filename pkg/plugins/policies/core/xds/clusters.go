@@ -18,12 +18,15 @@
 package xds
 
 import (
+	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
-	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
 type Clusters struct {

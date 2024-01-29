@@ -18,12 +18,15 @@
 package clusters
 
 import (
-	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/clusters/v3"
-	envoy_tags "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 
 	"google.golang.org/protobuf/types/known/wrapperspb"
+)
+
+import (
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/clusters/v3"
+	envoy_tags "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
 func EdsCluster() ClusterBuilderOpt {

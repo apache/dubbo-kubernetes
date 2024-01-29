@@ -19,6 +19,9 @@ package datasource
 
 import (
 	"context"
+)
+
+import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 )
 

@@ -17,6 +17,8 @@
 
 package lookup
 
-import "net"
+import (
+	"net"
+)
 
 type LookupIPFunc func(string) ([]net.IP, error)

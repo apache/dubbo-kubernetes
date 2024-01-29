@@ -19,10 +19,12 @@ package v3
 
 import (
 	envoy_kafka "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/filters/network/kafka_broker/v3"
+	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
-	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 )
 
 type KafkaConfigurer struct {

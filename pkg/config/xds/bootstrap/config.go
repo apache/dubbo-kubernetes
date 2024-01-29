@@ -18,14 +18,21 @@
 package bootstrap
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
-	"github.com/apache/dubbo-kubernetes/pkg/util/files"
-	"github.com/pkg/errors"
-	"go.uber.org/multierr"
 	"net"
 	"os"
 	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"go.uber.org/multierr"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
+	"github.com/apache/dubbo-kubernetes/pkg/util/files"
 )
 
 var _ config.Config = &BootstrapServerConfig{}

@@ -17,7 +17,9 @@
 
 package defaults
 
-import "time"
+import (
+	"time"
+)
 
 // Timeouts
 const (

@@ -18,9 +18,12 @@
 package gc
 
 import (
+	"time"
+)
+
+import (
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"time"
 )
 
 func Setup(rt runtime.Runtime) error {

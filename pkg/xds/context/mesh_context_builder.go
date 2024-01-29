@@ -21,20 +21,22 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
-	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
-	xds_topology "github.com/apache/dubbo-kubernetes/pkg/xds/topology"
 	"hash/fnv"
+)
 
+import (
 	"github.com/pkg/errors"
 )
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	xds_topology "github.com/apache/dubbo-kubernetes/pkg/xds/topology"
 )
 
 type meshContextBuilder struct {

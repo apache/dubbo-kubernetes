@@ -17,7 +17,9 @@
 
 package catalog
 
-import "sync"
+import (
+	"sync"
+)
 
 type Heartbeats struct {
 	instances map[Instance]struct{}

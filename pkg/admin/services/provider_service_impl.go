@@ -20,10 +20,15 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+)
+
+import (
+	"dubbo.apache.org/dubbo-go/v3/common"
 
 	set "github.com/dubbogo/gost/container/set"
+)
 
-	"dubbo.apache.org/dubbo-go/v3/common"
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"

@@ -19,6 +19,20 @@ package tracker
 
 import (
 	"context"
+	"sync"
+	"time"
+)
+
+import (
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_service_health "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
+
+	"github.com/go-logr/logr"
+
+	"github.com/pkg/errors"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/config/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
@@ -30,14 +44,7 @@ import (
 	hds_callbacks "github.com/apache/dubbo-kubernetes/pkg/hds/callbacks"
 	"github.com/apache/dubbo-kubernetes/pkg/util/watchdog"
 	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
-	"github.com/pkg/errors"
-
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/names"
-	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_service_health "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
-	"github.com/go-logr/logr"
-	"sync"
-	"time"
 )
 
 type streams struct {

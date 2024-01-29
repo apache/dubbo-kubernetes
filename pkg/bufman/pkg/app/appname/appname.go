@@ -25,7 +25,9 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/encoding"
 )

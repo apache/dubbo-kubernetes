@@ -21,13 +21,14 @@ import (
 	"strings"
 	"text/template"
 	"unicode"
+)
 
+import (
 	"github.com/spf13/cobra"
 )
 
 // The functions in this file are mostly copied from github.com/spf13/cobra.
 // https://github.com/spf13/cobra/blob/master/LICENSE.txt
-
 var templateFuncs = template.FuncMap{
 	"trim":                    strings.TrimSpace,
 	"trimRightSpace":          trimRightSpace,

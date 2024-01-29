@@ -19,11 +19,16 @@ import (
 	"context"
 	"fmt"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-
+import (
 	prom_v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+
 	"github.com/prometheus/common/model"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 func stitchingLabels(labels []string) string {

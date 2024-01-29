@@ -19,14 +19,20 @@ package server
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/config/intercp"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 	"net"
 	"net/http"
 	"time"
+)
+
+import (
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config/intercp"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 )
 
 var log = core.Log.WithName("intercp-server")

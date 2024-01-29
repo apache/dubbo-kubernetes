@@ -20,10 +20,13 @@ package config
 import (
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+
+	"gorm.io/gorm"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
-	"gorm.io/gorm"
-
 	_ "github.com/apache/dubbo-kubernetes/pkg/admin/imports"
 )
 

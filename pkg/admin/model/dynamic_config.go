@@ -15,7 +15,9 @@
 
 package model
 
-import "github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
+)
 
 type DynamicConfig struct {
 	Base

@@ -18,7 +18,9 @@
 
 package interrupt
 
-import "os"
+import (
+	"os"
+)
 
 // extraSignals are signals beyond os.Interrupt that we want to be handled
 // as interrupts.

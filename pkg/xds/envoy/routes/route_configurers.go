@@ -18,15 +18,23 @@
 package routes
 
 import (
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	envoy_virtual_hosts "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/virtualhosts"
+	"net/http"
+	"time"
+)
+
+import (
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+
 	"github.com/pkg/errors"
+
 	"google.golang.org/protobuf/types/known/anypb"
-	"net/http"
-	"time"
+)
+
+import (
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
+	envoy_virtual_hosts "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/virtualhosts"
 )
 
 // RouteMatchExactPath updates the route to match the exact path. This

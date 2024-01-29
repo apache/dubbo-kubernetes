@@ -19,9 +19,6 @@ package v3
 
 import (
 	"context"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
 	"time"
 )
 
@@ -32,11 +29,14 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
 	xds_callbacks "github.com/apache/dubbo-kubernetes/pkg/xds/server/callbacks"
 	xds_sync "github.com/apache/dubbo-kubernetes/pkg/xds/sync"
 )

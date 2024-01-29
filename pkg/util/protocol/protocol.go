@@ -1,6 +1,8 @@
 package protocol
 
-import core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+)
 
 // protocolStack is a mapping between a protocol and its full protocol stack, e.g.
 // HTTP has a protocol stack [HTTP, TCP],

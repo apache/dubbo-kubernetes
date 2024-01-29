@@ -19,18 +19,24 @@ package universal
 
 import (
 	"net/url"
+)
 
+import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
+
+	gxset "github.com/dubbogo/gost/container/set"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	gxset "github.com/dubbogo/gost/container/set"
 )
 
 var subscribeUrl *common.URL

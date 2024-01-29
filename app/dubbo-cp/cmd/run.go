@@ -19,12 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman"
-	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/defaults"
-	"github.com/apache/dubbo-kubernetes/pkg/gc"
-	"github.com/apache/dubbo-kubernetes/pkg/hds"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp"
 	"time"
 )
 
@@ -33,12 +27,18 @@ import (
 )
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/bootstrap"
+	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/defaults"
 	"github.com/apache/dubbo-kubernetes/pkg/diagnostics"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server"
+	"github.com/apache/dubbo-kubernetes/pkg/gc"
+	"github.com/apache/dubbo-kubernetes/pkg/hds"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp"
 	"github.com/apache/dubbo-kubernetes/pkg/util/os"
 	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"

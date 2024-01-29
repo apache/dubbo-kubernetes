@@ -20,23 +20,22 @@ package universal
 import (
 	"reflect"
 	"sync"
-
-	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
-	"dubbo.apache.org/dubbo-go/v3/common/extension"
-	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
-	"github.com/dubbogo/gost/log/logger"
-)
-
-import (
-	gxset "github.com/dubbogo/gost/container/set"
-	"github.com/dubbogo/gost/gof/observer"
 )
 
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
+	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
+	"dubbo.apache.org/dubbo-go/v3/common/extension"
+	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
 
+	gxset "github.com/dubbogo/gost/container/set"
+	"github.com/dubbogo/gost/gof/observer"
+	"github.com/dubbogo/gost/log/logger"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 )
 

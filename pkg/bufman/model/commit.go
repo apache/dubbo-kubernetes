@@ -19,13 +19,18 @@ package model
 
 import (
 	"time"
+)
 
+import (
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/config"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/constant"
 	modulev1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/module/v1alpha1"
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Commit struct {

@@ -3,21 +3,29 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"math/rand"
+	"net"
+	"os"
+	"time"
+)
+
+import (
+	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+
+	"github.com/pkg/errors"
+
+	"github.com/spf13/cobra"
+
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest/unversioned"
 	rest_v1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest/v1alpha1"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/tools/xds-client/stream"
-	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-
-	"go.uber.org/multierr"
-	"math/rand"
-	"net"
-	"os"
-	"time"
 )
 
 func newRootCmd() *cobra.Command {

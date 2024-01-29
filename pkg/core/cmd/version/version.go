@@ -20,8 +20,11 @@ package version
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"runtime"
+)
+
+import (
+	"github.com/spf13/cobra"
 )
 
 import (

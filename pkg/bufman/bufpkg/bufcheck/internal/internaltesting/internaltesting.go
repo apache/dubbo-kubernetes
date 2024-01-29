@@ -17,10 +17,15 @@ package internaltesting
 
 import (
 	"testing"
+)
 
+import (
+	"github.com/stretchr/testify/assert"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
-	"github.com/stretchr/testify/assert"
 )
 
 // RunTestVersionSpec tests the VersionSpec.

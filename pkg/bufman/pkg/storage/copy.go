@@ -19,9 +19,14 @@ import (
 	"context"
 	"io"
 	"sync"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
+import (
 	"go.uber.org/multierr"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
 )
 
 // Copy copies the bucket at from to the bucket at to.

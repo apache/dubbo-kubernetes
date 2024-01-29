@@ -19,6 +19,13 @@ package generator
 
 import (
 	"context"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
@@ -28,8 +35,6 @@ import (
 	envoy_clusters "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/clusters"
 	envoy_listeners "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners"
 	envoy_names "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/names"
-
-	"github.com/pkg/errors"
 )
 
 const OriginInbound = "inbound"

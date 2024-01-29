@@ -18,7 +18,9 @@ package bufmoduleconfig
 import (
 	"fmt"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/internal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"

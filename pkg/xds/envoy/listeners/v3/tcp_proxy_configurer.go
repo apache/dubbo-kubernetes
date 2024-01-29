@@ -18,12 +18,15 @@
 package v3
 
 import (
+	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	envoy_tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	envoy_metadata "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/metadata/v3"
-	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	envoy_tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 )
 
 type TcpProxyConfigurer struct {

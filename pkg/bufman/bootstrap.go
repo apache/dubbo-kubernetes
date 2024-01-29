@@ -19,15 +19,18 @@ package bufman
 
 import (
 	"gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 
+	"gorm.io/driver/sqlite"
+
+	"gorm.io/gorm"
+)
+
+import (
+	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/kube"
+	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/universal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/config"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-
-	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/kube"
-	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/universal"
 )
 
 func InitConfig(rt core_runtime.Runtime) error {

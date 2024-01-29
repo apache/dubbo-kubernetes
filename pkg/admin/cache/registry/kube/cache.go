@@ -21,17 +21,25 @@ import (
 	"fmt"
 	"sync"
 	"time"
+)
 
+import (
+	"k8s.io/apimachinery/pkg/labels"
+
+	"k8s.io/client-go/informers"
+
+	appsv1Listers "k8s.io/client-go/listers/apps/v1"
+	corev1Listers "k8s.io/client-go/listers/core/v1"
+
+	kubeToolsCache "k8s.io/client-go/tools/cache"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/selector"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/informers"
-	appsv1Listers "k8s.io/client-go/listers/apps/v1"
-	corev1Listers "k8s.io/client-go/listers/core/v1"
-	kubeToolsCache "k8s.io/client-go/tools/cache"
 )
 
 var KubernetesCacheInstance *KubernetesCache

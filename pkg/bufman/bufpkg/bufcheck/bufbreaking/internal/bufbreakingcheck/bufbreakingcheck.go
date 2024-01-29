@@ -23,11 +23,16 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+)
 
+import (
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protosource"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // CheckEnumNoDelete is a check function.

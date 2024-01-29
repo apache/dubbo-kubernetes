@@ -27,7 +27,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
 )
 

@@ -17,7 +17,9 @@ package util
 
 import (
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 )
 

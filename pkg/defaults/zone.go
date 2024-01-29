@@ -19,15 +19,23 @@ package defaults
 
 import (
 	"context"
+	"time"
+)
+
+import (
+	"github.com/go-logr/logr"
+
+	"github.com/pkg/errors"
+
+	"github.com/sethvargo/go-retry"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"github.com/sethvargo/go-retry"
-	"time"
 )
 
 type ZoneDefaultComponent struct {

@@ -20,12 +20,20 @@ package envoy
 import (
 	"context"
 	"fmt"
+	"sort"
+)
+
+import (
+	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+
+	"github.com/pkg/errors"
+
+	"google.golang.org/protobuf/proto"
+)
+
+import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
-	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/pkg/errors"
-	"google.golang.org/protobuf/proto"
-	"sort"
 )
 
 type Cluster interface {

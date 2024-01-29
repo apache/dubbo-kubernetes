@@ -19,16 +19,19 @@ package sync
 
 import (
 	"context"
-	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
-	"github.com/apache/dubbo-kubernetes/pkg/plugins/policies/core/ordered"
+)
+
+import (
 	"github.com/pkg/errors"
 )
 
 import (
+	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	"github.com/apache/dubbo-kubernetes/pkg/plugins/policies/core/ordered"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 )
 

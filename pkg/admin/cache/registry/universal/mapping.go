@@ -20,14 +20,13 @@ package universal
 import (
 	"strings"
 	"sync"
-
-	"github.com/dubbogo/gost/gof/observer"
-
-	"dubbo.apache.org/dubbo-go/v3/registry"
 )
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/registry"
+
 	gxset "github.com/dubbogo/gost/container/set"
+	"github.com/dubbogo/gost/gof/observer"
 )
 
 type ServiceMappingChangedListenerImpl struct {

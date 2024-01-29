@@ -20,6 +20,9 @@ package kube
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"

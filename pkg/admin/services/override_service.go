@@ -15,7 +15,9 @@
 
 package services
 
-import "github.com/apache/dubbo-kubernetes/pkg/admin/model"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+)
 
 type OverrideService interface {
 	SaveOverride(override *model.DynamicConfig) error

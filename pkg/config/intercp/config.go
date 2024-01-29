@@ -19,11 +19,17 @@ package intercp
 
 import (
 	"time"
+)
 
+import (
 	"github.com/asaskevich/govalidator"
-	"github.com/pkg/errors"
-	"go.uber.org/multierr"
 
+	"github.com/pkg/errors"
+
+	"go.uber.org/multierr"
+)
+
+import (
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
 )
 

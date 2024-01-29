@@ -23,13 +23,19 @@ import (
 	"os"
 	"sync"
 	"time"
+)
 
+import (
+	"go.uber.org/multierr"
+
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/filelock"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storagearchive"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
-	"go.uber.org/multierr"
-	"go.uber.org/zap"
 )
 
 // since we are in testing, we care less about making sure this times out early

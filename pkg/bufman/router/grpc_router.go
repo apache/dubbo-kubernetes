@@ -18,14 +18,19 @@ package router
 import (
 	"fmt"
 	"net"
+)
 
+import (
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+)
+
+import (
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/handlers/grpc_handlers"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/interceptors"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 type GRPCRouter struct {

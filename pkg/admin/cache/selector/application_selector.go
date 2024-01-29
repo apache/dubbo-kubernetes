@@ -18,8 +18,11 @@
 package selector
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"k8s.io/apimachinery/pkg/labels"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 )
 
 type ApplicationSelector struct {

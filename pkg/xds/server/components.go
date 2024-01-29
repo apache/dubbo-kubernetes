@@ -18,13 +18,13 @@
 package server
 
 import (
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	"github.com/pkg/errors"
 )
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/cla"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"

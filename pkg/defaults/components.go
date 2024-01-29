@@ -19,17 +19,25 @@ package defaults
 
 import (
 	"context"
+	"sync"
+	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"github.com/sethvargo/go-retry"
+
+	"go.uber.org/multierr"
+)
+
+import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"github.com/pkg/errors"
-	"github.com/sethvargo/go-retry"
-	"go.uber.org/multierr"
-	"sync"
-	"time"
 )
 
 var log = core.Log.WithName("defaults")

@@ -17,7 +17,9 @@
 
 package xds
 
-import "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
+)
 
 type Split struct {
 	clusterName string

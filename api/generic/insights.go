@@ -18,8 +18,11 @@
 package generic
 
 import (
-	"google.golang.org/protobuf/proto"
 	"time"
+)
+
+import (
+	"google.golang.org/protobuf/proto"
 )
 
 func AllSubscriptions[S Subscription, T interface{ GetSubscriptions() []S }](t T) []Subscription {

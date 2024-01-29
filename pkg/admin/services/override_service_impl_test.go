@@ -20,13 +20,17 @@ package services
 import (
 	"reflect"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/admin/config/mock_config"
+import (
+	"github.com/golang/mock/gomock"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config/mock_config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	"github.com/golang/mock/gomock"
 )
 
 func TestOverrideServiceImpl_SaveOverride(t *testing.T) {

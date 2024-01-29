@@ -19,8 +19,13 @@ import (
 	"regexp"
 	"strings"
 	"time"
+)
 
+import (
 	"dubbo.apache.org/dubbo-go/v3/metadata/definition"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 

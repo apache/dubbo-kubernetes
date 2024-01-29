@@ -18,10 +18,13 @@
 package lookup
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"net"
 	"sync"
 	"time"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
 
 type cacheRecord struct {

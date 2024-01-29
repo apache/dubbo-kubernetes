@@ -19,6 +19,9 @@ package catalog
 
 import (
 	"context"
+)
+
+import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"

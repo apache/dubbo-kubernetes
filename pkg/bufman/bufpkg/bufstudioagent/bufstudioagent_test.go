@@ -27,16 +27,25 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+)
 
-	studiov1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/studio/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
+import (
 	"github.com/bufbuild/connect-go"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.uber.org/zap/zaptest"
+
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
 	"google.golang.org/protobuf/proto"
+)
+
+import (
+	studiov1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/studio/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
 )
 
 const (

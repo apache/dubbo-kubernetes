@@ -16,12 +16,15 @@
 package bufmodulecache
 
 import (
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/connect/registry/v1alpha1/registryv1alpha1connect"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/connectclient"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/verbose"
-	"go.uber.org/zap"
 )
 
 type RepositoryServiceClientFactory func(address string) registryv1alpha1connect.RepositoryServiceClient

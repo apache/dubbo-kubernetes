@@ -18,10 +18,13 @@
 package clusters
 
 import (
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_upstream_http "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+)
+
+import (
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 // Window size defaults.

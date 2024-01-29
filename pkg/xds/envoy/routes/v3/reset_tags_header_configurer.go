@@ -18,8 +18,11 @@
 package v3
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
 type ResetTagsHeaderConfigurer struct{}

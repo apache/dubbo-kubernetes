@@ -18,8 +18,11 @@
 package admin
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/pkg/errors"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 )
 
 type Admin struct {

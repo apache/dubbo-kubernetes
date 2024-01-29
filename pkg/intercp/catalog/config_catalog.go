@@ -20,12 +20,15 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"sort"
+)
+
+import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
-	"sort"
 )
 
 type ConfigInstances struct {

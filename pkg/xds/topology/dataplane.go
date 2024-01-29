@@ -18,12 +18,19 @@
 package topology
 
 import (
+	"net"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"google.golang.org/protobuf/proto"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	"github.com/pkg/errors"
-	"google.golang.org/protobuf/proto"
-	"net"
 )
 
 // ResolveDataplaneAddress resolves 'dataplane.networking.address' if it has DNS name in it. This is a crucial feature for

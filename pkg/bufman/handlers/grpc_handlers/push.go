@@ -19,7 +19,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/core/parser"

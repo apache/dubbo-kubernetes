@@ -21,14 +21,20 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/config/mock_config"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+import (
 	jsonpatch "github.com/evanphx/json-patch/v5"
+
 	"github.com/golang/mock/gomock"
 
 	"sigs.k8s.io/yaml"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config/mock_config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 func TestCreateTimeout(t *testing.T) {

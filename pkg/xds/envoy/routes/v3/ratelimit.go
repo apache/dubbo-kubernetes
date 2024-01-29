@@ -18,12 +18,19 @@
 package v3
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
+	"time"
+)
+
+import (
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_extensions_filters_http_local_ratelimit_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 	envoy_type_v3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+
 	"google.golang.org/protobuf/types/known/anypb"
-	"time"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 type RateLimitConfiguration struct {

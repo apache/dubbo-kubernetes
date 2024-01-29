@@ -19,8 +19,11 @@ package tags
 
 import (
 	"fmt"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"strings"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 func Serialize(tags mesh_proto.MultiValueTagSet) string {
