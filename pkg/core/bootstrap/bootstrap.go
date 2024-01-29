@@ -19,7 +19,14 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
+	mesh_cache "github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
+	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
+	xds_server "github.com/apache/dubbo-kubernetes/pkg/xds/server"
+	"net"
 )
 
 import (
@@ -73,13 +80,24 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 		return nil, err
 	}
 
+	builder.WithDataSourceLoader(datasource.NewDataSourceLoader(builder.ReadOnlyResourceManager()))
+
 	leaderInfoComponent := &component.LeaderInfoComponent{}
 	builder.WithLeaderInfo(leaderInfoComponent)
+
+	builder.WithLookupIP(lookup.CacheLookupIP(net.LookupIP, cfg.General.DNSCacheTTL.Duration))
+	builder.WithDpServer(server.NewDpServer(*cfg.DpServer))
+
+	if err := initializeMeshCache(builder); err != nil {
+		return nil, err
+	}
+
 	for _, plugin := range core_plugins.Plugins().BootstrapPlugins() {
 		if err := plugin.AfterBootstrap(builder, cfg); err != nil {
 			return nil, errors.Wrapf(err, "failed to run afterBootstrap plugin:'%s'", plugin.Name())
 		}
 	}
+
 	rt, err := builder.Build()
 	if err != nil {
 		return nil, err
@@ -194,4 +212,22 @@ func initializeResourceManager(cfg dubbo_cp.Config, builder *core_runtime.Builde
 
 func initializeConfigManager(builder *core_runtime.Builder) {
 	builder.WithConfigManager(config_manager.NewConfigManager(builder.ConfigStore()))
+}
+
+func initializeMeshCache(builder *core_runtime.Builder) error {
+	meshContextBuilder := xds_context.NewMeshContextBuilder(
+		builder.ReadOnlyResourceManager(),
+		xds_server.MeshResourceTypes(),
+		builder.LookupIP(),
+		builder.Config().Multizone.Zone.Name)
+
+	meshSnapshotCache, err := mesh_cache.NewCache(
+		builder.Config().Store.Cache.ExpirationTime.Duration,
+		meshContextBuilder)
+	if err != nil {
+		return err
+	}
+
+	builder.WithMeshCache(meshSnapshotCache)
+	return nil
 }

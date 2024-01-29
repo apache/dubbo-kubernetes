@@ -19,6 +19,10 @@ package v3
 
 import (
 	"context"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
+	"time"
 )
 
 import (
@@ -48,8 +52,7 @@ func RegisterXDS(
 	metadataTracker := xds_callbacks.NewDataplaneMetadataTracker()
 	reconciler := DefaultReconciler(rt, xdsContext, statsCallbacks)
 	ingressReconciler := DefaultIngressReconciler(rt, xdsContext, statsCallbacks)
-	egressReconciler := DefaultEgressReconciler(rt, xdsContext, statsCallbacks)
-	watchdogFactory, err := xds_sync.DefaultDataplaneWatchdogFactory(rt, metadataTracker, reconciler, ingressReconciler, egressReconciler, envoyCpCtx, envoy.APIV3)
+	watchdogFactory, err := xds_sync.DefaultDataplaneWatchdogFactory(rt, metadataTracker, reconciler, ingressReconciler, nil, envoyCpCtx, core_xds.APIVersion(envoy.APIV3))
 	if err != nil {
 		return err
 	}
@@ -59,7 +62,10 @@ func RegisterXDS(
 		util_xds_v3.AdaptCallbacks(statsCallbacks),
 		util_xds_v3.AdaptCallbacks(xds_callbacks.DataplaneCallbacksToXdsCallbacks(metadataTracker)),
 		util_xds_v3.AdaptCallbacks(xds_callbacks.DataplaneCallbacksToXdsCallbacks(xds_callbacks.NewDataplaneSyncTracker(watchdogFactory.New))),
-
+		util_xds_v3.AdaptCallbacks(xds_callbacks.DataplaneCallbacksToXdsCallbacks(
+			xds_callbacks.NewDataplaneLifecycle(rt.AppContext(), rt.ResourceManager(), rt.Config().XdsServer.DataplaneDeregistrationDelay.Duration, rt.GetInstanceId())),
+		),
+		util_xds_v3.AdaptCallbacks(DefaultDataplaneStatusTracker(rt)),
 		util_xds_v3.AdaptCallbacks(xds_callbacks.NewNackBackoff(10)),
 	}
 
@@ -78,7 +84,15 @@ func DefaultReconciler(
 	xdsContext XdsContext,
 	statsCallbacks util_xds.StatsCallbacks,
 ) xds_sync.SnapshotReconciler {
-	return nil
+	return &reconciler{
+		generator: &TemplateSnapshotGenerator{
+			[]string{
+				generator.DefaultProxy,
+			},
+		},
+		cacher:         &simpleSnapshotCacher{xdsContext.Hasher(), xdsContext.Cache()},
+		statsCallbacks: statsCallbacks,
+	}
 }
 
 func DefaultIngressReconciler(
@@ -86,13 +100,27 @@ func DefaultIngressReconciler(
 	xdsContext XdsContext,
 	statsCallbacks util_xds.StatsCallbacks,
 ) xds_sync.SnapshotReconciler {
-	return nil
+	return &reconciler{
+		generator:      &TemplateSnapshotGenerator{[]string{generator.IngressProxy}},
+		cacher:         &simpleSnapshotCacher{xdsContext.Hasher(), xdsContext.Cache()},
+		statsCallbacks: nil,
+	}
 }
 
-func DefaultEgressReconciler(
-	rt core_runtime.Runtime,
-	xdsContext XdsContext,
-	statsCallbacks util_xds.StatsCallbacks,
-) xds_sync.SnapshotReconciler {
-	return nil
+func DefaultDataplaneStatusTracker(rt core_runtime.Runtime) xds_callbacks.DataplaneStatusTracker {
+	return xds_callbacks.NewDataplaneStatusTracker(rt,
+		func(dataplaneType core_model.ResourceType, accessor xds_callbacks.SubscriptionStatusAccessor) xds_callbacks.DataplaneInsightSink {
+			return xds_callbacks.NewDataplaneInsightSink(
+				dataplaneType,
+				accessor,
+				func() *time.Ticker {
+					return time.NewTicker(rt.Config().XdsServer.DataplaneStatusFlushInterval.Duration)
+				},
+				func() *time.Ticker {
+					return nil
+				},
+				rt.Config().XdsServer.DataplaneStatusFlushInterval.Duration/10,
+				xds_callbacks.NewDataplaneInsightStore(rt.ResourceManager()),
+			)
+		})
 }

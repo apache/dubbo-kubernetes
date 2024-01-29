@@ -19,6 +19,7 @@ package k8s
 
 import (
 	"context"
+	kube_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
 )
 
@@ -37,7 +38,6 @@ import (
 	kube_client "sigs.k8s.io/controller-runtime/pkg/client"
 	kube_manager "sigs.k8s.io/controller-runtime/pkg/manager"
 	kube_metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	kube_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 import (
@@ -86,6 +86,7 @@ func (p *plugin) BeforeBootstrap(b *core_runtime.Builder, cfg core_plugins.Plugi
 			WebhookServer: kube_webhook.NewServer(kube_webhook.Options{
 				Host: b.Config().Runtime.Kubernetes.AdmissionServer.Address,
 				Port: int(b.Config().Runtime.Kubernetes.AdmissionServer.Port),
+				//CertDir: b.Config().Runtime.Kubernetes.AdmissionServer.CertDir,
 			}),
 			LeaderElection:          true,
 			LeaderElectionID:        "cp-leader-lease",

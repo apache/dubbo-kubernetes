@@ -54,6 +54,9 @@ const words: I18nType = {
   timeout: 'timeout(ms)',
   serialization: 'serialization',
   appName: 'Application Name',
+  instanceNum: 'Instance Number',
+  deployCluster: 'Deploy Cluster',
+  registerClusters: 'Register Clusters',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
   instanceRegistry: 'Instance Registry',
@@ -264,11 +267,32 @@ const words: I18nType = {
   resources: 'Resources',
   applications: 'Applications',
   instances: 'Instances',
-
+  applicationDomain: {
+    name: 'Application Name',
+    detail: 'Application Detail'
+  },
+  searchDomain: {
+    total: 'Total',
+    unit: 'items'
+  },
   backHome: 'Back Home',
   noPageTip: 'Sorry, the page you visited does not exist.',
+  globalSearchTip: 'Search ip, application, instance, service',
+  placeholder: {
+    typeAppName: 'please type appName, support for prefix',
+    typeDefault: 'please type '
+  },
+  none: 'No Select',
+  details: 'Details',
+  debug: 'Debug',
+  distribution: 'Distribution',
+  monitor: 'Monitor',
+  tracing: 'Tracing',
+  event: 'Event',
 
-  globalSearchTip: 'Search ip, application, instance, service'
+  provideService: 'Provide Service',
+  idx: 'Index',
+  dependentService: 'Dependent Service'
 }
 
 export default words

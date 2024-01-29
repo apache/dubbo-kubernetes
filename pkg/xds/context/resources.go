@@ -18,10 +18,54 @@
 package context
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/util/maps"
+	"hash/fnv"
 )
 
-type Resources struct {
+type ResourceMap map[core_model.ResourceType]core_model.ResourceList
+
+func (rm ResourceMap) listOrEmpty(resourceType core_model.ResourceType) core_model.ResourceList {
+	list, ok := rm[resourceType]
+	if !ok {
+		list, err := registry.Global().NewList(resourceType)
+		if err != nil {
+			panic(err)
+		}
+		return list
+	}
+	return list
 }
 
-type ResourceMap map[core_model.ResourceType]core_model.ResourceList
+func (rm ResourceMap) Hash() []byte {
+	hasher := fnv.New128a()
+	for _, k := range maps.SortedKeys(rm) {
+		hasher.Write(core_model.ResourceListHash(rm[k]))
+	}
+	return hasher.Sum(nil)
+}
+
+// Resources mulity mesh soon
+type Resources struct {
+	MeshLocalResources ResourceMap
+}
+
+func NewResources() Resources {
+	return Resources{
+		MeshLocalResources: map[core_model.ResourceType]core_model.ResourceList{},
+	}
+}
+
+func (r Resources) ListOrEmpty(resourceType core_model.ResourceType) core_model.ResourceList {
+	return r.MeshLocalResources.listOrEmpty(resourceType)
+}
+
+func (r Resources) ZoneIngresses() *core_mesh.ZoneIngressResourceList {
+	return r.ListOrEmpty(core_mesh.ZoneIngressType).(*core_mesh.ZoneIngressResourceList)
+}
+
+func (r Resources) Dataplanes() *core_mesh.DataplaneResourceList {
+	return r.ListOrEmpty(core_mesh.DataplaneType).(*core_mesh.DataplaneResourceList)
+}

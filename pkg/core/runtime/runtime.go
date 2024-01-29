@@ -20,7 +20,6 @@ package runtime
 import (
 	"context"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
-	xds_hooks "github.com/apache/dubbo-kubernetes/pkg/xds/hooks"
 	"sync"
 	"time"
 )
@@ -135,7 +134,6 @@ type runtimeContext struct {
 	erf        events.EventBus
 	dps        *dp_server.DpServer
 	kubeclient *client.KubeClient
-	xdsh       *xds_hooks.Hooks
 	rv         ResourceValidators
 	appCtx     context.Context
 }

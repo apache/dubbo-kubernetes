@@ -20,7 +20,10 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
 	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	"os"
 	"time"
 )
@@ -38,7 +41,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
-	xds_hooks "github.com/apache/dubbo-kubernetes/pkg/xds/hooks"
 )
 
 // BuilderContext provides access to Builder's interim state.
@@ -62,20 +64,22 @@ var _ BuilderContext = &Builder{}
 
 // Builder represents a multi-step initialization process.
 type Builder struct {
-	cfg  dubbo_cp.Config
-	cm   component.Manager
-	rs   core_store.CustomizableResourceStore
-	cs   core_store.ResourceStore
-	txs  core_store.Transactions
-	rm   core_manager.CustomizableResourceManager
-	rom  core_manager.ReadOnlyResourceManager
-	xdsh *xds_hooks.Hooks
+	cfg dubbo_cp.Config
+	cm  component.Manager
+	rs  core_store.CustomizableResourceStore
+	cs  core_store.ResourceStore
+	txs core_store.Transactions
+	rm  core_manager.CustomizableResourceManager
+	rom core_manager.ReadOnlyResourceManager
 
+	lif        lookup.LookupIPFunc
 	kubeClient *client.KubeClient
 	ext        context.Context
+	meshCache  *mesh.Cache
 	configm    config_manager.ConfigManager
 	leadInfo   component.LeaderInfo
 	erf        events.EventBus
+	dsl        datasource.Loader
 	dps        *dp_server.DpServer
 	rv         ResourceValidators
 	appCtx     context.Context
@@ -150,8 +154,23 @@ func (b *Builder) WithLeaderInfo(leadInfo component.LeaderInfo) *Builder {
 	return b
 }
 
+func (b *Builder) WithLookupIP(lif lookup.LookupIPFunc) *Builder {
+	b.lif = lif
+	return b
+}
+
+func (b *Builder) WithMeshCache(meshCache *mesh.Cache) *Builder {
+	b.meshCache = meshCache
+	return b
+}
+
 func (b *Builder) WithEventBus(erf events.EventBus) *Builder {
 	b.erf = erf
+	return b
+}
+
+func (b *Builder) WithDataSourceLoader(loader datasource.Loader) *Builder {
+	b.dsl = loader
 	return b
 }
 
@@ -198,12 +217,7 @@ func (b *Builder) Build() (Runtime, error) {
 	if b.dps == nil {
 		return nil, errors.Errorf("DpServer has not been configured")
 	}
-	if b.rv == (ResourceValidators{}) {
-		return nil, errors.Errorf("ResourceValidators have not been configured")
-	}
-	if b.xdsh == nil {
-		return nil, errors.Errorf("XDSHooks has not been configured")
-	}
+
 	return &runtime{
 		RuntimeInfo: b.runtimeInfo,
 		RuntimeContext: &runtimeContext{
@@ -215,7 +229,6 @@ func (b *Builder) Build() (Runtime, error) {
 			ext:      b.ext,
 			configm:  b.configm,
 			leadInfo: b.leadInfo,
-			xdsh:     b.xdsh,
 			erf:      b.erf,
 			dps:      b.dps,
 			rv:       b.rv,
@@ -247,6 +260,9 @@ func (b *Builder) ResourceManager() core_manager.CustomizableResourceManager {
 
 func (b *Builder) ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager {
 	return b.rom
+}
+func (b *Builder) LookupIP() lookup.LookupIPFunc {
+	return b.lif
 }
 
 func (b *Builder) Config() dubbo_cp.Config {

@@ -20,4 +20,4 @@ include mk/dev.mk
 include mk/api.mk
 include mk/check.mk
 include mk/generate.mk
-
+include mk/run.mk

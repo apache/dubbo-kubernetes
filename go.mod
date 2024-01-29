@@ -15,7 +15,7 @@
 
 module github.com/apache/dubbo-kubernetes
 
-go 1.20
+go 1.21
 
 require (
 	dubbo.apache.org/dubbo-go/v3 v3.1.1-0.20231129133927-778c1bd1b58a
@@ -40,6 +40,7 @@ require (
 	github.com/dubbogo/triple v1.2.2-rc3
 	github.com/emicklei/go-restful/v3 v3.11.0
 	github.com/envoyproxy/go-control-plane v0.12.0
+	github.com/envoyproxy/protoc-gen-validate v1.0.2
 	github.com/evanphx/json-patch/v5 v5.8.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-chi/chi/v5 v5.0.11
@@ -61,7 +62,6 @@ require (
 	github.com/heroku/color v0.0.6
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/jdxcode/netrc v1.0.0
-	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.17.1
 	github.com/kylelemons/godebug v1.1.0
 	github.com/moby/term v0.5.0
@@ -94,6 +94,7 @@ require (
 	golang.org/x/term v0.15.0
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.16.1
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d
 	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -199,7 +200,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.0.2 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fatih/color v1.16.0 // indirect
@@ -364,7 +364,6 @@ require (
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230726155614-23370e0ffb3e // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

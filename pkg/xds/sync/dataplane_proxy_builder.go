@@ -19,6 +19,8 @@ package sync
 
 import (
 	"context"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 )
 
 import (
@@ -33,5 +35,20 @@ type DataplaneProxyBuilder struct {
 }
 
 func (p *DataplaneProxyBuilder) Build(ctx context.Context, key core_model.ResourceKey, meshContext xds_context.MeshContext) (*core_xds.Proxy, error) {
-	return &core_xds.Proxy{}, nil
+	dp, found := meshContext.DataplanesByName[key.Name]
+	if !found {
+		return nil, core_store.ErrorResourceNotFound(core_mesh.DataplaneType, key.Name, key.Mesh)
+	}
+
+	proxy := &core_xds.Proxy{
+		Id:         core_xds.FromResourceKey(key),
+		APIVersion: p.APIVersion,
+		Dataplane:  dp,
+		Zone:       p.Zone,
+	}
+	return proxy, nil
+}
+
+func (p *DataplaneProxyBuilder) matchPolicies(meshContext xds_context.MeshContext, dataplane *core_xds.DestinationMap, outboundSelectors core_xds.DestinationMap) (*core_xds.MatchedPolicies, error) {
+	return nil, nil
 }

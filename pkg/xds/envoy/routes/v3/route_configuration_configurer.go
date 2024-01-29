@@ -17,9 +17,7 @@
 
 package v3
 
-import (
-	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-)
+import envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 
 // RouteConfigurationConfigurer is responsible for configuring a single aspect of the entire Envoy RouteConfiguration,
 // such as VirtualHost, HTTP headers to add or remove, etc.

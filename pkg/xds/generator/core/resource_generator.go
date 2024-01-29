@@ -36,9 +36,7 @@ type ResourceGenerator interface {
 
 type CompositeResourceGenerator []ResourceGenerator
 
-func (c CompositeResourceGenerator) Generate(
-	ctx context.Context, resources *model.ResourceSet, xdsCtx xds_context.Context, proxy *model.Proxy,
-) (*model.ResourceSet, error) {
+func (c CompositeResourceGenerator) Generator(ctx context.Context, resources *model.ResourceSet, xdsCtx xds_context.Context, proxy *model.Proxy) (*model.ResourceSet, error) {
 	for _, gen := range c {
 		rs, err := gen.Generator(ctx, resources, xdsCtx, proxy)
 		if err != nil {

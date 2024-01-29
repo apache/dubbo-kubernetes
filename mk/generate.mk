@@ -50,7 +50,7 @@ POLICIES_DIR := pkg/plugins/policies
 
 policies = $(foreach dir,$(shell find pkg/plugins/policies -maxdepth 1 -mindepth 1 -type d | grep -v -e core | sort),$(notdir $(dir)))
 
-generate/policies: $(addprefix generate/policy/,$(policies)) generate/policy-import ## Generate all policies written as plugins
+generate/policies: $(addprefix generate/policy/,$(policies)) generate/policy-import generate/policy-helm ## Generate all policies written as plugins
 
 .PHONY: clean/policies
 clean/policies: $(addprefix clean/policy/,$(policies))

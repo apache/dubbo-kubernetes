@@ -19,9 +19,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/defaults"
+	"github.com/apache/dubbo-kubernetes/pkg/gc"
+	"github.com/apache/dubbo-kubernetes/pkg/hds"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp"
 	"time"
 )
 
@@ -99,9 +102,9 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 					"minimim-open-files", minOpenFileLimit)
 			}
 
-			if err := admin.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up admin server")
-			}
+			//if err := admin.Setup(rt); err != nil {
+			//	runLog.Error(err, "unable to set up admin server")
+			//}
 			if err := bufman.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up bufman server")
 			}
@@ -109,12 +112,28 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 				runLog.Error(err, "unable to set up xds server")
 				return err
 			}
+			if err := hds.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up HDS")
+				return err
+			}
 			if err := dp_server.SetupServer(rt); err != nil {
 				runLog.Error(err, "unable to set up DP Server")
 				return err
 			}
+			if err := defaults.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Defaults")
+				return err
+			}
 			if err := diagnostics.SetupServer(rt); err != nil {
 				runLog.Error(err, "unable to set up Diagnostics server")
+				return err
+			}
+			if err := gc.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up GC")
+				return err
+			}
+			if err := intercp.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Control Plane Intercommunication")
 				return err
 			}
 

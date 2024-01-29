@@ -14,7 +14,7 @@ spec:
     listKind: ServiceNameMappingList
     plural: servicenamemappings
     singular: servicenamemapping
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
@@ -35,17 +35,25 @@ spec:
               In CamelCase.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
-          mesh:
-            description: |-
-              Mesh is the name of the dubbo mesh this resource belongs to.
-              It may be omitted for cluster-scoped resources.
-            type: string
           metadata:
             type: object
           spec:
             description: Spec is the specification of the Dubbo ServiceNameMapping
               resource.
-            x-kubernetes-preserve-unknown-fields: true
+            properties:
+              applicationNames:
+                items:
+                  type: string
+                type: array
+              interfaceName:
+                type: string
+              namespace:
+                type: string
+            required:
+            - applicationNames
+            - interfaceName
+            - namespace
+            type: object
         type: object
     served: true
     storage: true

@@ -17,12 +17,10 @@
 
 package envoy
 
-import (
-	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
-)
+type APIVersion string
 
 const (
-	APIV3 core_xds.APIVersion = "v3"
+	APIV3 APIVersion = "v3"
 	// AnonymousResource is an empty name for the resources
 	AnonymousResource = ""
 )

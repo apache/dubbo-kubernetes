@@ -33,7 +33,6 @@ import (
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 )
 
 const (
@@ -388,19 +387,6 @@ type ResourceMeta interface {
 	GetCreationTime() time.Time
 	GetModificationTime() time.Time
 	GetLabels() map[string]string
-}
-
-func IsLocallyOriginated(mode config_core.CpMode, r Resource) bool {
-	switch mode {
-	case config_core.Global:
-		origin, ok := r.GetMeta().GetLabels()[mesh_proto.ResourceOriginLabel]
-		return !ok || origin == mesh_proto.ResourceOriginGlobal
-	case config_core.Zone:
-		origin, ok := r.GetMeta().GetLabels()[mesh_proto.ResourceOriginLabel]
-		return !ok || origin == mesh_proto.ResourceOriginZone
-	default:
-		return true
-	}
 }
 
 // ZoneOfResource returns zone from which the resource was synced to Global CP

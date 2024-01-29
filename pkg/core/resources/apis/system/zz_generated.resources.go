@@ -122,6 +122,222 @@ func init() {
 }
 
 const (
+	DataSourceType model.ResourceType = "DataSource"
+)
+
+var _ model.Resource = &DataSourceResource{}
+
+type DataSourceResource struct {
+	Meta model.ResourceMeta
+	Spec *system_proto.DataSource
+}
+
+func NewDataSourceResource() *DataSourceResource {
+	return &DataSourceResource{
+		Spec: &system_proto.DataSource{},
+	}
+}
+
+func (t *DataSourceResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *DataSourceResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *DataSourceResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *DataSourceResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*system_proto.DataSource)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &system_proto.DataSource{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *DataSourceResource) Descriptor() model.ResourceTypeDescriptor {
+	return DataSourceResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &DataSourceResourceList{}
+
+type DataSourceResourceList struct {
+	Items      []*DataSourceResource
+	Pagination model.Pagination
+}
+
+func (l *DataSourceResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *DataSourceResourceList) GetItemType() model.ResourceType {
+	return DataSourceType
+}
+
+func (l *DataSourceResourceList) NewItem() model.Resource {
+	return NewDataSourceResource()
+}
+
+func (l *DataSourceResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*DataSourceResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*DataSourceResource)(nil), r)
+	}
+}
+
+func (l *DataSourceResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *DataSourceResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var DataSourceResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                DataSourceType,
+	Resource:            NewDataSourceResource(),
+	ResourceList:        &DataSourceResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeGlobal,
+	WsPath:              "datasources",
+	DubboctlArg:         "datasource",
+	DubboctlListArg:     "datasources",
+	AllowToInspect:      false,
+	IsPolicy:            false,
+	SingularDisplayName: "Data Source",
+	PluralDisplayName:   "Data Sources",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(DataSourceResourceTypeDescriptor)
+}
+
+const (
+	SecretType model.ResourceType = "Secret"
+)
+
+var _ model.Resource = &SecretResource{}
+
+type SecretResource struct {
+	Meta model.ResourceMeta
+	Spec *system_proto.Secret
+}
+
+func NewSecretResource() *SecretResource {
+	return &SecretResource{
+		Spec: &system_proto.Secret{},
+	}
+}
+
+func (t *SecretResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *SecretResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *SecretResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *SecretResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*system_proto.Secret)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &system_proto.Secret{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *SecretResource) Descriptor() model.ResourceTypeDescriptor {
+	return SecretResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &SecretResourceList{}
+
+type SecretResourceList struct {
+	Items      []*SecretResource
+	Pagination model.Pagination
+}
+
+func (l *SecretResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *SecretResourceList) GetItemType() model.ResourceType {
+	return SecretType
+}
+
+func (l *SecretResourceList) NewItem() model.Resource {
+	return NewSecretResource()
+}
+
+func (l *SecretResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*SecretResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*SecretResource)(nil), r)
+	}
+}
+
+func (l *SecretResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *SecretResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var SecretResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                SecretType,
+	Resource:            NewSecretResource(),
+	ResourceList:        &SecretResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeGlobal,
+	WsPath:              "secrets",
+	DubboctlArg:         "secret",
+	DubboctlListArg:     "secrets",
+	AllowToInspect:      false,
+	IsPolicy:            false,
+	SingularDisplayName: "Secret",
+	PluralDisplayName:   "Secrets",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(SecretResourceTypeDescriptor)
+}
+
+const (
 	ZoneType model.ResourceType = "Zone"
 )
 

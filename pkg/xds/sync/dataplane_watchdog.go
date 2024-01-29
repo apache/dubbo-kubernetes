@@ -42,8 +42,6 @@ type DataplaneWatchdogDependencies struct {
 	DataplaneReconciler   SnapshotReconciler
 	IngressProxyBuilder   *IngressProxyBuilder
 	IngressReconciler     SnapshotReconciler
-	EgressProxyBuilder    *EgressProxyBuilder
-	EgressReconciler      SnapshotReconciler
 	EnvoyCpCtx            *xds_context.ControlPlaneContext
 	MetadataTracker       DataplaneMetadataTracker
 	ResManager            core_manager.ReadOnlyResourceManager
@@ -112,8 +110,6 @@ func (d *DataplaneWatchdog) Cleanup() error {
 		return d.DataplaneReconciler.Clear(&proxyID)
 	case mesh_proto.IngressProxyType:
 		return d.IngressReconciler.Clear(&proxyID)
-	case mesh_proto.EgressProxyType:
-		return d.EgressReconciler.Clear(&proxyID)
 	default:
 		return nil
 	}
@@ -127,6 +123,45 @@ func (d *DataplaneWatchdog) syncEgress(ctx context.Context, metadata *core_xds.D
 	return SyncResult{}, nil
 }
 
+// syncDataplane syncs state of the Dataplane.
+// It uses Mesh Hash to decide if we need to regenerate configuration or not.
 func (d *DataplaneWatchdog) syncDataplane(ctx context.Context, metadata *core_xds.DataplaneMetadata) (SyncResult, error) {
-	return SyncResult{}, nil
+	meshCtx, err := d.MeshCache.GetMeshContext(ctx, d.key.Mesh)
+	if err != nil {
+		return SyncResult{}, errors.Wrap(err, "could not get mesh context")
+	}
+	// check if we need to regenerate config because Dubbo policies has changed.
+	syncForConfig := meshCtx.Hash != d.lastHash
+	result := SyncResult{
+		ProxyType: mesh_proto.DataplaneProxyType,
+	}
+	if !syncForConfig {
+		result.Status = SkipStatus
+		return result, nil
+	}
+	if syncForConfig {
+		d.log.V(1).Info("snapshot hash updated, reconcile", "prev", d.lastHash, "current", meshCtx.Hash)
+	}
+
+	envoyCtx := &xds_context.Context{
+		ControlPlane: d.EnvoyCpCtx,
+		Mesh:         meshCtx,
+	}
+	proxy, err := d.DataplaneProxyBuilder.Build(ctx, d.key, meshCtx)
+	if err != nil {
+		return SyncResult{}, errors.Wrap(err, "could not build dataplane proxy")
+	}
+	proxy.Metadata = metadata
+	changed, err := d.DataplaneReconciler.Reconcile(ctx, *envoyCtx, proxy)
+	if err != nil {
+		return SyncResult{}, errors.Wrap(err, "could not reconcile")
+	}
+	d.lastHash = meshCtx.Hash
+
+	if changed {
+		result.Status = ChangedStatus
+	} else {
+		result.Status = GeneratedStatus
+	}
+	return result, nil
 }

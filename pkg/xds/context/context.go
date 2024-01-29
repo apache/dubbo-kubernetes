@@ -18,6 +18,9 @@
 package context
 
 import (
+	"encoding/base64"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
 
@@ -31,23 +34,11 @@ type ConnectionInfo struct {
 	Authority string
 }
 
-// MeshContext contains shared data within one mesh that is required for generating XDS config.
-// This data is the same for all data plane proxies within one mesh.
-// If there is an information that can be precomputed and shared between all data plane proxies
-// it should be put here. This way we can save CPU cycles of computing the same information.
-type MeshContext struct {
-	Hash      string
-	Resources Resources
-}
-
+// ControlPlaneContext contains shared global data and components that are required for generating XDS
+// This data is the same regardless of a data plane proxy and mesh we are generating the data for.
 type ControlPlaneContext struct {
 	CLACache envoy.CLACache
 	Zone     string
-}
-
-type AggregatedMeshContexts struct {
-	Hash               string
-	MeshContextsByName map[string]MeshContext
 }
 
 // GlobalContext holds resources that are Global
@@ -56,8 +47,14 @@ type GlobalContext struct {
 	hash        []byte
 }
 
-// BaseMeshContext holds for a Mesh a set of resources that are changing less often (policies, external services...)
-type BaseMeshContext struct {
-	ResourceMap ResourceMap
-	hash        []byte
+// Hash base64 version of the hash mostly used for testing
+func (g GlobalContext) Hash() string {
+	return base64.StdEncoding.EncodeToString(g.hash)
+}
+
+type MeshContext struct {
+	Hash             string
+	Resources        Resources
+	DataplanesByName map[string]*core_mesh.DataplaneResource
+	EndpointMap      xds.EndpointMap
 }

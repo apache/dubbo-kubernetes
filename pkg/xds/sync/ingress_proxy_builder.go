@@ -39,7 +39,7 @@ type IngressProxyBuilder struct {
 func (p *IngressProxyBuilder) Build(
 	ctx context.Context,
 	key core_model.ResourceKey,
-	aggregatedMeshCtxs xds_context.AggregatedMeshContexts,
+	aggregatedMeshCtxs xds_context.MeshContext,
 ) (*core_xds.Proxy, error) {
 	return &core_xds.Proxy{}, nil
 }

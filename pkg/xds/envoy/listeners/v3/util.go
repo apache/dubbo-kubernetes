@@ -19,26 +19,18 @@ package v3
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
 	"math"
 	"strconv"
-)
 
-import (
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	envoy_tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-
 	"github.com/pkg/errors"
-
 	"google.golang.org/protobuf/proto"
-
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
 )
 
 func UpdateHTTPConnectionManager(filterChain *envoy_listener.FilterChain, updateFunc func(manager *envoy_hcm.HttpConnectionManager) error) error {
@@ -61,7 +53,7 @@ func UpdateTCPProxy(filterChain *envoy_listener.FilterChain, updateFunc func(*en
 	})
 }
 
-func UpdateFilterConfig(filterChain *envoy_listener.FilterChain, filterName string, updateFunc func(message proto.Message) error) error {
+func UpdateFilterConfig(filterChain *envoy_listener.FilterChain, filterName string, updateFunc func(proto.Message) error) error {
 	for i, filter := range filterChain.Filters {
 		if filter.Name == filterName {
 			if filter.GetTypedConfig() == nil {

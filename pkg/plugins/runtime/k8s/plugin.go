@@ -19,7 +19,6 @@ package k8s
 
 import (
 	"github.com/pkg/errors"
-
 	kube_ctrl "sigs.k8s.io/controller-runtime"
 	kube_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	kube_admission "sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -74,9 +73,9 @@ func (p *plugin) Customize(rt core_runtime.Runtime) error {
 		return err
 	}
 
-	if err := addMutators(mgr, rt, simpleConverter); err != nil {
-		return err
-	}
+	//if err := addMutators(mgr, rt, simpleConverter); err != nil {
+	//	return err
+	//}
 
 	return nil
 }

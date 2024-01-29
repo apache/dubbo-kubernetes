@@ -18,6 +18,9 @@
 package server
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	"github.com/pkg/errors"
 )
 
@@ -26,6 +29,16 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/cla"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/server/v3"
+)
+
+var (
+	// HashMeshExcludedResources defines Mesh-scoped resources that are not used in XDS therefore when counting hash mesh we can skip them
+	HashMeshExcludedResources = map[core_model.ResourceType]bool{
+		core_mesh.DataplaneInsightType: true,
+	}
+	HashMeshIncludedGlobalResources = map[core_model.ResourceType]bool{
+		core_mesh.ZoneIngressType: true,
+	}
 )
 
 func RegisterXDS(rt core_runtime.Runtime) error {
@@ -42,4 +55,17 @@ func RegisterXDS(rt core_runtime.Runtime) error {
 		return errors.Wrap(err, "could not register V3 XDS")
 	}
 	return nil
+}
+
+func MeshResourceTypes() []core_model.ResourceType {
+	types := []core_model.ResourceType{}
+	for _, desc := range registry.Global().ObjectDescriptors() {
+		if desc.Scope == core_model.ScopeMesh && !HashMeshExcludedResources[desc.Name] {
+			types = append(types, desc.Name)
+		}
+	}
+	for typ := range HashMeshIncludedGlobalResources {
+		types = append(types, typ)
+	}
+	return types
 }

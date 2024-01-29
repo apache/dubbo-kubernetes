@@ -115,6 +115,103 @@ func init() {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
+type DataplaneInsight struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Mesh is the name of the dubbo mesh this resource belongs to.
+	// It may be omitted for cluster-scoped resources.
+	//
+	// +kubebuilder:validation:Optional
+	Mesh string `json:"mesh,omitempty"`
+	// Status is the status the dubbo resource.
+	// +kubebuilder:validation:Optional
+	Status *apiextensionsv1.JSON `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
+type DataplaneInsightList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DataplaneInsight `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&DataplaneInsight{}, &DataplaneInsightList{})
+}
+
+func (cb *DataplaneInsight) GetObjectMeta() *metav1.ObjectMeta {
+	return &cb.ObjectMeta
+}
+
+func (cb *DataplaneInsight) SetObjectMeta(m *metav1.ObjectMeta) {
+	cb.ObjectMeta = *m
+}
+
+func (cb *DataplaneInsight) GetMesh() string {
+	return cb.Mesh
+}
+
+func (cb *DataplaneInsight) SetMesh(mesh string) {
+	cb.Mesh = mesh
+}
+
+func (cb *DataplaneInsight) GetSpec() (core_model.ResourceSpec, error) {
+	spec := cb.Status
+	m := mesh_proto.DataplaneInsight{}
+
+	if spec == nil || len(spec.Raw) == 0 {
+		return &m, nil
+	}
+
+	err := util_proto.FromJSON(spec.Raw, &m)
+	return &m, err
+}
+
+func (cb *DataplaneInsight) SetSpec(spec core_model.ResourceSpec) {
+	if spec == nil {
+		cb.Status = nil
+		return
+	}
+
+	s, ok := spec.(*mesh_proto.DataplaneInsight)
+	if !ok {
+		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
+	}
+
+	cb.Status = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
+}
+
+func (cb *DataplaneInsight) Scope() model.Scope {
+	return model.ScopeNamespace
+}
+
+func (l *DataplaneInsightList) GetItems() []model.KubernetesObject {
+	result := make([]model.KubernetesObject, len(l.Items))
+	for i := range l.Items {
+		result[i] = &l.Items[i]
+	}
+	return result
+}
+
+func init() {
+	registry.RegisterObjectType(&mesh_proto.DataplaneInsight{}, &DataplaneInsight{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "DataplaneInsight",
+		},
+	})
+	registry.RegisterListType(&mesh_proto.DataplaneInsight{}, &DataplaneInsightList{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "DataplaneInsightList",
+		},
+	})
+}
+
+// +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=dubbo,scope=Cluster
 type Mesh struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -213,297 +310,6 @@ func init() {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=dubbo,scope=Cluster
-type ProxyTemplate struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	// Mesh is the name of the dubbo mesh this resource belongs to.
-	// It may be omitted for cluster-scoped resources.
-	//
-	// +kubebuilder:validation:Optional
-	Mesh string `json:"mesh,omitempty"`
-	// Spec is the specification of the Dubbo ProxyTemplate resource.
-	// +kubebuilder:validation:Optional
-	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
-type ProxyTemplateList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProxyTemplate `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ProxyTemplate{}, &ProxyTemplateList{})
-}
-
-func (cb *ProxyTemplate) GetObjectMeta() *metav1.ObjectMeta {
-	return &cb.ObjectMeta
-}
-
-func (cb *ProxyTemplate) SetObjectMeta(m *metav1.ObjectMeta) {
-	cb.ObjectMeta = *m
-}
-
-func (cb *ProxyTemplate) GetMesh() string {
-	return cb.Mesh
-}
-
-func (cb *ProxyTemplate) SetMesh(mesh string) {
-	cb.Mesh = mesh
-}
-
-func (cb *ProxyTemplate) GetSpec() (core_model.ResourceSpec, error) {
-	spec := cb.Spec
-	m := mesh_proto.ProxyTemplate{}
-
-	if spec == nil || len(spec.Raw) == 0 {
-		return &m, nil
-	}
-
-	err := util_proto.FromJSON(spec.Raw, &m)
-	return &m, err
-}
-
-func (cb *ProxyTemplate) SetSpec(spec core_model.ResourceSpec) {
-	if spec == nil {
-		cb.Spec = nil
-		return
-	}
-
-	s, ok := spec.(*mesh_proto.ProxyTemplate)
-	if !ok {
-		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
-	}
-
-	cb.Spec = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
-}
-
-func (cb *ProxyTemplate) Scope() model.Scope {
-	return model.ScopeCluster
-}
-
-func (l *ProxyTemplateList) GetItems() []model.KubernetesObject {
-	result := make([]model.KubernetesObject, len(l.Items))
-	for i := range l.Items {
-		result[i] = &l.Items[i]
-	}
-	return result
-}
-
-func init() {
-	registry.RegisterObjectType(&mesh_proto.ProxyTemplate{}, &ProxyTemplate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: GroupVersion.String(),
-			Kind:       "ProxyTemplate",
-		},
-	})
-	registry.RegisterListType(&mesh_proto.ProxyTemplate{}, &ProxyTemplateList{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: GroupVersion.String(),
-			Kind:       "ProxyTemplateList",
-		},
-	})
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
-type Selector struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	// Mesh is the name of the dubbo mesh this resource belongs to.
-	// It may be omitted for cluster-scoped resources.
-	//
-	// +kubebuilder:validation:Optional
-	Mesh string `json:"mesh,omitempty"`
-	// Spec is the specification of the Dubbo Selector resource.
-	// +kubebuilder:validation:Optional
-	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
-type SelectorList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Selector `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Selector{}, &SelectorList{})
-}
-
-func (cb *Selector) GetObjectMeta() *metav1.ObjectMeta {
-	return &cb.ObjectMeta
-}
-
-func (cb *Selector) SetObjectMeta(m *metav1.ObjectMeta) {
-	cb.ObjectMeta = *m
-}
-
-func (cb *Selector) GetMesh() string {
-	return cb.Mesh
-}
-
-func (cb *Selector) SetMesh(mesh string) {
-	cb.Mesh = mesh
-}
-
-func (cb *Selector) GetSpec() (core_model.ResourceSpec, error) {
-	spec := cb.Spec
-	m := mesh_proto.Selector{}
-
-	if spec == nil || len(spec.Raw) == 0 {
-		return &m, nil
-	}
-
-	err := util_proto.FromJSON(spec.Raw, &m)
-	return &m, err
-}
-
-func (cb *Selector) SetSpec(spec core_model.ResourceSpec) {
-	if spec == nil {
-		cb.Spec = nil
-		return
-	}
-
-	s, ok := spec.(*mesh_proto.Selector)
-	if !ok {
-		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
-	}
-
-	cb.Spec = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
-}
-
-func (cb *Selector) Scope() model.Scope {
-	return model.ScopeCluster
-}
-
-func (l *SelectorList) GetItems() []model.KubernetesObject {
-	result := make([]model.KubernetesObject, len(l.Items))
-	for i := range l.Items {
-		result[i] = &l.Items[i]
-	}
-	return result
-}
-
-func init() {
-	registry.RegisterObjectType(&mesh_proto.Selector{}, &Selector{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: GroupVersion.String(),
-			Kind:       "Selector",
-		},
-	})
-	registry.RegisterListType(&mesh_proto.Selector{}, &SelectorList{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: GroupVersion.String(),
-			Kind:       "SelectorList",
-		},
-	})
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
-type ServiceNameMapping struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	// Mesh is the name of the dubbo mesh this resource belongs to.
-	// It may be omitted for cluster-scoped resources.
-	//
-	// +kubebuilder:validation:Optional
-	Mesh string `json:"mesh,omitempty"`
-	// Spec is the specification of the Dubbo ServiceNameMapping resource.
-	// +kubebuilder:validation:Optional
-	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
-type ServiceNameMappingList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ServiceNameMapping `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ServiceNameMapping{}, &ServiceNameMappingList{})
-}
-
-func (cb *ServiceNameMapping) GetObjectMeta() *metav1.ObjectMeta {
-	return &cb.ObjectMeta
-}
-
-func (cb *ServiceNameMapping) SetObjectMeta(m *metav1.ObjectMeta) {
-	cb.ObjectMeta = *m
-}
-
-func (cb *ServiceNameMapping) GetMesh() string {
-	return cb.Mesh
-}
-
-func (cb *ServiceNameMapping) SetMesh(mesh string) {
-	cb.Mesh = mesh
-}
-
-func (cb *ServiceNameMapping) GetSpec() (core_model.ResourceSpec, error) {
-	spec := cb.Spec
-	m := mesh_proto.ServiceNameMapping{}
-
-	if spec == nil || len(spec.Raw) == 0 {
-		return &m, nil
-	}
-
-	err := util_proto.FromJSON(spec.Raw, &m)
-	return &m, err
-}
-
-func (cb *ServiceNameMapping) SetSpec(spec core_model.ResourceSpec) {
-	if spec == nil {
-		cb.Spec = nil
-		return
-	}
-
-	s, ok := spec.(*mesh_proto.ServiceNameMapping)
-	if !ok {
-		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
-	}
-
-	cb.Spec = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
-}
-
-func (cb *ServiceNameMapping) Scope() model.Scope {
-	return model.ScopeCluster
-}
-
-func (l *ServiceNameMappingList) GetItems() []model.KubernetesObject {
-	result := make([]model.KubernetesObject, len(l.Items))
-	for i := range l.Items {
-		result[i] = &l.Items[i]
-	}
-	return result
-}
-
-func init() {
-	registry.RegisterObjectType(&mesh_proto.ServiceNameMapping{}, &ServiceNameMapping{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: GroupVersion.String(),
-			Kind:       "ServiceNameMapping",
-		},
-	})
-	registry.RegisterListType(&mesh_proto.ServiceNameMapping{}, &ServiceNameMappingList{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: GroupVersion.String(),
-			Kind:       "ServiceNameMappingList",
-		},
-	})
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
 type ZoneIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -595,6 +401,103 @@ func init() {
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: GroupVersion.String(),
 			Kind:       "ZoneIngressList",
+		},
+	})
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
+type ZoneIngressInsight struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Mesh is the name of the dubbo mesh this resource belongs to.
+	// It may be omitted for cluster-scoped resources.
+	//
+	// +kubebuilder:validation:Optional
+	Mesh string `json:"mesh,omitempty"`
+	// Spec is the specification of the Dubbo ZoneIngressInsight resource.
+	// +kubebuilder:validation:Optional
+	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
+type ZoneIngressInsightList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ZoneIngressInsight `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&ZoneIngressInsight{}, &ZoneIngressInsightList{})
+}
+
+func (cb *ZoneIngressInsight) GetObjectMeta() *metav1.ObjectMeta {
+	return &cb.ObjectMeta
+}
+
+func (cb *ZoneIngressInsight) SetObjectMeta(m *metav1.ObjectMeta) {
+	cb.ObjectMeta = *m
+}
+
+func (cb *ZoneIngressInsight) GetMesh() string {
+	return cb.Mesh
+}
+
+func (cb *ZoneIngressInsight) SetMesh(mesh string) {
+	cb.Mesh = mesh
+}
+
+func (cb *ZoneIngressInsight) GetSpec() (core_model.ResourceSpec, error) {
+	spec := cb.Spec
+	m := mesh_proto.ZoneIngressInsight{}
+
+	if spec == nil || len(spec.Raw) == 0 {
+		return &m, nil
+	}
+
+	err := util_proto.FromJSON(spec.Raw, &m)
+	return &m, err
+}
+
+func (cb *ZoneIngressInsight) SetSpec(spec core_model.ResourceSpec) {
+	if spec == nil {
+		cb.Spec = nil
+		return
+	}
+
+	s, ok := spec.(*mesh_proto.ZoneIngressInsight)
+	if !ok {
+		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
+	}
+
+	cb.Spec = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
+}
+
+func (cb *ZoneIngressInsight) Scope() model.Scope {
+	return model.ScopeNamespace
+}
+
+func (l *ZoneIngressInsightList) GetItems() []model.KubernetesObject {
+	result := make([]model.KubernetesObject, len(l.Items))
+	for i := range l.Items {
+		result[i] = &l.Items[i]
+	}
+	return result
+}
+
+func init() {
+	registry.RegisterObjectType(&mesh_proto.ZoneIngressInsight{}, &ZoneIngressInsight{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "ZoneIngressInsight",
+		},
+	})
+	registry.RegisterListType(&mesh_proto.ZoneIngressInsight{}, &ZoneIngressInsightList{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "ZoneIngressInsightList",
 		},
 	})
 }

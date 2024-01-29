@@ -46,13 +46,6 @@ func DefaultIngressProxyBuilder(
 	}
 }
 
-func DefaultEgressProxyBuilder(rt core_runtime.Runtime, apiVersion core_xds.APIVersion) *EgressProxyBuilder {
-	return &EgressProxyBuilder{
-		apiVersion: apiVersion,
-		zone:       "",
-	}
-}
-
 func DefaultDataplaneWatchdogFactory(
 	rt core_runtime.Runtime,
 	metadataTracker DataplaneMetadataTracker,
@@ -74,15 +67,11 @@ func DefaultDataplaneWatchdogFactory(
 		apiVersion,
 	)
 
-	egressProxyBuilder := DefaultEgressProxyBuilder(rt, apiVersion)
-
 	deps := DataplaneWatchdogDependencies{
 		DataplaneProxyBuilder: dataplaneProxyBuilder,
 		DataplaneReconciler:   dataplaneReconciler,
 		IngressProxyBuilder:   ingressProxyBuilder,
 		IngressReconciler:     ingressReconciler,
-		EgressProxyBuilder:    egressProxyBuilder,
-		EgressReconciler:      egressReconciler,
 		EnvoyCpCtx:            envoyCpCtx,
 		MetadataTracker:       metadataTracker,
 		ResManager:            rt.ReadOnlyResourceManager(),

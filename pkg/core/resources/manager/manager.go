@@ -71,7 +71,7 @@ func (r *resourcesManager) Create(ctx context.Context, resource model.Resource, 
 	if err := model.Validate(resource); err != nil {
 		return err
 	}
-	return r.Store.Create(ctx, resource)
+	return r.Store.Create(ctx, resource, fs...)
 }
 
 func (r *resourcesManager) Delete(ctx context.Context, resource model.Resource, fs ...store.DeleteOptionsFunc) error {

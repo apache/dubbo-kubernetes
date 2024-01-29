@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package k8s
 
 import (
@@ -93,6 +110,10 @@ type AdmissionServerConfig struct {
 	Address string `json:"address" envconfig:"dubbo_runtime_kubernetes_admission_server_address"`
 	// Port the Admission WebHook Server should be listening on.
 	Port uint32 `json:"port" envconfig:"dubbo_runtime_kubernetes_admission_server_port"`
+	// Directory with a TLS cert and private key for the Admission WebHook Server.
+	// TLS certificate file must be named `tls.crt`.
+	// TLS key file must be named `tls.key`.
+	CertDir string `json:"certDir" envconfig:"dubbo_runtime_kubernetes_admission_server_cert_dir"`
 }
 
 var _ config.Config = &KubernetesRuntimeConfig{}
@@ -121,5 +142,8 @@ func (c *AdmissionServerConfig) Validate() error {
 	if 65535 < c.Port {
 		errs = multierr.Append(errs, errors.Errorf(".Port must be in the range [0, 65535]"))
 	}
+	//if c.CertDir == "" {
+	//	errs = multierr.Append(errs, errors.Errorf(".CertDir should not be empty"))
+	//}
 	return errs
 }

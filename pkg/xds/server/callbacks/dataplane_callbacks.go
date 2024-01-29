@@ -19,21 +19,15 @@ package callbacks
 
 import (
 	"context"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
+	"github.com/pkg/errors"
 	"os"
 	"sync"
 )
 
-import (
-	"github.com/pkg/errors"
-)
-
-import (
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
-)
-
-// DataplaneCallbacks are XDS callbacks that keep the context of dubbo Dataplane.
+// DataplaneCallbacks are XDS callbacks that keep the context of Kuma Dataplane.
 // In the ideal world we could assume that one Dataplane has one xDS stream.
 // Due to race network latencies etc. there might be a situation when one Dataplane has many xDS streams for the short period of time.
 // Those callbacks helps us to deal with such situation.
@@ -75,16 +69,6 @@ type dpStream struct {
 
 var _ util_xds.Callbacks = &xdsCallbacks{}
 
-func (d *xdsCallbacks) OnStreamOpen(ctx context.Context, streamID int64, _ string) error {
-	d.Lock()
-	defer d.Unlock()
-	dps := dpStream{
-		ctx: ctx,
-	}
-	d.dpStreams[streamID] = dps
-	return nil
-}
-
 func (d *xdsCallbacks) OnStreamClosed(streamID core_xds.StreamID) {
 	var lastStreamDpKey *core_model.ResourceKey
 	d.Lock()
@@ -124,7 +108,7 @@ func (d *xdsCallbacks) OnStreamRequest(streamID core_xds.StreamID, request util_
 
 	proxyId, err := core_xds.ParseProxyIdFromString(request.NodeId())
 	if err != nil {
-		return errors.Wrap(err, "invalid node ID")
+		return errors.Wrap(err, "invalid1 node ID")
 	}
 	dpKey := proxyId.ToResourceKey()
 	metadata := core_xds.DataplaneMetadataFromXdsMetadata(request.Metadata(), os.TempDir(), dpKey)
@@ -158,6 +142,16 @@ func (d *xdsCallbacks) OnStreamRequest(streamID core_xds.StreamID, request util_
 			return err
 		}
 	}
+	return nil
+}
+
+func (d *xdsCallbacks) OnStreamOpen(ctx context.Context, streamID core_xds.StreamID, _ string) error {
+	d.Lock()
+	defer d.Unlock()
+	dps := dpStream{
+		ctx: ctx,
+	}
+	d.dpStreams[streamID] = dps
 	return nil
 }
 

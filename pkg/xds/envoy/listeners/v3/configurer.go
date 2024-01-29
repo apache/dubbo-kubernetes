@@ -32,6 +32,7 @@ type ListenerConfigurer interface {
 // FilterChainConfigurer is responsible for configuring a single aspect of the entire Envoy filter chain,
 // such as TcpProxy filter, RBAC filter, access log, etc.
 type FilterChainConfigurer interface {
+	// Configure configures a single aspect on a given Envoy filter chain.
 	Configure(filterChain *envoy_listener.FilterChain) error
 }
 
