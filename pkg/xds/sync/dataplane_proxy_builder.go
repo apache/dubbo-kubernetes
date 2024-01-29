@@ -19,8 +19,11 @@ package sync
 
 import (
 	"context"
+	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	"github.com/apache/dubbo-kubernetes/pkg/plugins/policies/core/ordered"
+	"github.com/pkg/errors"
 )
 
 import (
@@ -40,15 +43,34 @@ func (p *DataplaneProxyBuilder) Build(ctx context.Context, key core_model.Resour
 		return nil, core_store.ErrorResourceNotFound(core_mesh.DataplaneType, key.Name, key.Mesh)
 	}
 
+	matchedPolicies, err := p.matchPolicies(meshContext, dp, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not match policies")
+	}
 	proxy := &core_xds.Proxy{
 		Id:         core_xds.FromResourceKey(key),
 		APIVersion: p.APIVersion,
+		Policies:   *matchedPolicies,
 		Dataplane:  dp,
 		Zone:       p.Zone,
 	}
 	return proxy, nil
 }
 
-func (p *DataplaneProxyBuilder) matchPolicies(meshContext xds_context.MeshContext, dataplane *core_xds.DestinationMap, outboundSelectors core_xds.DestinationMap) (*core_xds.MatchedPolicies, error) {
-	return nil, nil
+func (p *DataplaneProxyBuilder) matchPolicies(meshContext xds_context.MeshContext, dataplane *core_mesh.DataplaneResource, outboundSelectors core_xds.DestinationMap) (*core_xds.MatchedPolicies, error) {
+	resources := meshContext.Resources
+	matchedPolicies := &core_xds.MatchedPolicies{
+		Dynamic: core_xds.PluginOriginatedPolicies{},
+	}
+	for _, p := range core_plugins.Plugins().PolicyPlugins(ordered.Policies) {
+		res, err := p.Plugin.MatchedPolicies(dataplane, resources)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not apply policy plugin %s", p.Name)
+		}
+		if res.Type == "" {
+			return nil, errors.Wrapf(err, "matched policy didn't set type for policy plugin %s", p.Name)
+		}
+		matchedPolicies.Dynamic[res.Type] = res
+	}
+	return matchedPolicies, nil
 }

@@ -15,32 +15,15 @@
  * limitations under the License.
  */
 
-package xds
+package matchers
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 )
 
-// TypedMatchingPolicies all policies of this type matching
-type TypedMatchingPolicies struct {
-	Type              core_model.ResourceType
-	InboundPolicies   map[mesh_proto.InboundInterface][]core_model.Resource
-	OutboundPolicies  map[mesh_proto.OutboundInterface][]core_model.Resource
-	ServicePolicies   map[ServiceName][]core_model.Resource
-	DataplanePolicies []core_model.Resource
-}
-
-type PluginOriginatedPolicies map[core_model.ResourceType]TypedMatchingPolicies
-
-type MatchedPolicies struct {
-	// Inbound(Listener) -> Policy
-
-	// Service(Cluster) -> Policy
-
-	// Outbound(Listener) -> Policy
-
-	// Dataplane -> Policy
-
-	Dynamic PluginOriginatedPolicies
+func MatchedPolicies(rType core_model.ResourceType, dpp *core_mesh.DataplaneResource, resource xds_context.Resources) (core_xds.TypedMatchingPolicies, error) {
+	return core_xds.TypedMatchingPolicies{}, nil
 }
