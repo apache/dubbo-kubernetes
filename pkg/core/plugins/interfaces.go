@@ -18,6 +18,7 @@
 package plugins
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/pkg/errors"
 )
 
@@ -86,6 +87,8 @@ type RuntimePlugin interface {
 // PolicyPlugin a plugin to add a Policy to dubbo
 type PolicyPlugin interface {
 	Plugin
+	// MatchedPolicies accessible in Apply through `proxy.Policies.Dynamic`
+	MatchedPolicies(dataplane *core_mesh.DataplaneResource, resource xds_context.Resources) (core_xds.TypedMatchingPolicies, error)
 	// Apply to `rs` using the `ctx` and `proxy` the mutation for all policies of the type this plugin implements.
 	// You can access matching policies by using `proxy.Policies.Dynamic`.
 	Apply(rs *core_xds.ResourceSet, ctx xds_context.Context, proxy *core_xds.Proxy) error

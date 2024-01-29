@@ -42,4 +42,5 @@ type MatchedPolicies struct {
 
 	// Dataplane -> Policy
 
+	Dynamic PluginOriginatedPolicies
 }

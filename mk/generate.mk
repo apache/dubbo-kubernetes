@@ -5,8 +5,8 @@ POLICY_GEN := $(DUBBO_DIR)/build/tools-${GOOS}-${GOARCH}/policy-gen/generator
 PROTO_DIRS ?= ./pkg/config ./api ./pkg/plugins
 GO_MODULE ?= github.com/apache/dubbo-kubernetes
 
-HELM_VALUES_FILE ?= "deployments/charts/dubbo/values.yaml"
-HELM_CRD_DIR ?= "deployments/charts/dubbo/crds/"
+HELM_VALUES_FILE ?= "deploy/charts/admin/values.yaml"
+HELM_CRD_DIR ?= "deploy/charts/admin/crds/"
 HELM_VALUES_FILE_POLICY_PATH ?= ".plugins.policies"
 
 GENERATE_OAS_PREREQUISITES ?=
