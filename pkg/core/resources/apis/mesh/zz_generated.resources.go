@@ -323,13 +323,13 @@ var MeshResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ResourceList:        &MeshResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               model.ScopeMesh,
+	Scope:               model.ScopeGlobal,
 	DDSFlags:            model.GlobalToAllZonesFlag,
-	WsPath:              "meshes",
-	DubboctlArg:         "mesh",
-	DubboctlListArg:     "meshes",
-	AllowToInspect:      true,
-	IsPolicy:            true,
+	WsPath:              "",
+	DubboctlArg:         "",
+	DubboctlListArg:     "",
+	AllowToInspect:      false,
+	IsPolicy:            false,
 	SingularDisplayName: "Mesh",
 	PluralDisplayName:   "Meshes",
 	IsExperimental:      false,
@@ -337,6 +337,114 @@ var MeshResourceTypeDescriptor = model.ResourceTypeDescriptor{
 
 func init() {
 	registry.RegisterType(MeshResourceTypeDescriptor)
+}
+
+const (
+	MeshInsightType model.ResourceType = "MeshInsight"
+)
+
+var _ model.Resource = &MeshInsightResource{}
+
+type MeshInsightResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.MeshInsight
+}
+
+func NewMeshInsightResource() *MeshInsightResource {
+	return &MeshInsightResource{
+		Spec: &mesh_proto.MeshInsight{},
+	}
+}
+
+func (t *MeshInsightResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *MeshInsightResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *MeshInsightResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *MeshInsightResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.MeshInsight)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.MeshInsight{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *MeshInsightResource) Descriptor() model.ResourceTypeDescriptor {
+	return MeshInsightResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &MeshInsightResourceList{}
+
+type MeshInsightResourceList struct {
+	Items      []*MeshInsightResource
+	Pagination model.Pagination
+}
+
+func (l *MeshInsightResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *MeshInsightResourceList) GetItemType() model.ResourceType {
+	return MeshInsightType
+}
+
+func (l *MeshInsightResourceList) NewItem() model.Resource {
+	return NewMeshInsightResource()
+}
+
+func (l *MeshInsightResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*MeshInsightResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*MeshInsightResource)(nil), r)
+	}
+}
+
+func (l *MeshInsightResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *MeshInsightResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var MeshInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                MeshInsightType,
+	Resource:            NewMeshInsightResource(),
+	ResourceList:        &MeshInsightResourceList{},
+	ReadOnly:            true,
+	AdminOnly:           false,
+	Scope:               model.ScopeGlobal,
+	WsPath:              "mesh-insights",
+	DubboctlArg:         "",
+	DubboctlListArg:     "",
+	AllowToInspect:      false,
+	IsPolicy:            false,
+	SingularDisplayName: "Mesh Insight",
+	PluralDisplayName:   "Mesh Insights",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(MeshInsightResourceTypeDescriptor)
 }
 
 const (

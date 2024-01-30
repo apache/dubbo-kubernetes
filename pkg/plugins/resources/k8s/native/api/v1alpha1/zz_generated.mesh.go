@@ -213,7 +213,7 @@ func init() {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=dubbo,scope=Cluster
-type Mesh struct {
+type MeshInsight struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -222,42 +222,42 @@ type Mesh struct {
 	//
 	// +kubebuilder:validation:Optional
 	Mesh string `json:"mesh,omitempty"`
-	// Spec is the specification of the Dubbo Mesh resource.
+	// Spec is the specification of the Dubbo MeshInsight resource.
 	// +kubebuilder:validation:Optional
 	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
-type MeshList struct {
+type MeshInsightList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Mesh `json:"items"`
+	Items           []MeshInsight `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Mesh{}, &MeshList{})
+	SchemeBuilder.Register(&MeshInsight{}, &MeshInsightList{})
 }
 
-func (cb *Mesh) GetObjectMeta() *metav1.ObjectMeta {
+func (cb *MeshInsight) GetObjectMeta() *metav1.ObjectMeta {
 	return &cb.ObjectMeta
 }
 
-func (cb *Mesh) SetObjectMeta(m *metav1.ObjectMeta) {
+func (cb *MeshInsight) SetObjectMeta(m *metav1.ObjectMeta) {
 	cb.ObjectMeta = *m
 }
 
-func (cb *Mesh) GetMesh() string {
+func (cb *MeshInsight) GetMesh() string {
 	return cb.Mesh
 }
 
-func (cb *Mesh) SetMesh(mesh string) {
+func (cb *MeshInsight) SetMesh(mesh string) {
 	cb.Mesh = mesh
 }
 
-func (cb *Mesh) GetSpec() (core_model.ResourceSpec, error) {
+func (cb *MeshInsight) GetSpec() (core_model.ResourceSpec, error) {
 	spec := cb.Spec
-	m := mesh_proto.Mesh{}
+	m := mesh_proto.MeshInsight{}
 
 	if spec == nil || len(spec.Raw) == 0 {
 		return &m, nil
@@ -267,13 +267,13 @@ func (cb *Mesh) GetSpec() (core_model.ResourceSpec, error) {
 	return &m, err
 }
 
-func (cb *Mesh) SetSpec(spec core_model.ResourceSpec) {
+func (cb *MeshInsight) SetSpec(spec core_model.ResourceSpec) {
 	if spec == nil {
 		cb.Spec = nil
 		return
 	}
 
-	s, ok := spec.(*mesh_proto.Mesh)
+	s, ok := spec.(*mesh_proto.MeshInsight)
 	if !ok {
 		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
 	}
@@ -281,11 +281,11 @@ func (cb *Mesh) SetSpec(spec core_model.ResourceSpec) {
 	cb.Spec = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
 }
 
-func (cb *Mesh) Scope() model.Scope {
+func (cb *MeshInsight) Scope() model.Scope {
 	return model.ScopeCluster
 }
 
-func (l *MeshList) GetItems() []model.KubernetesObject {
+func (l *MeshInsightList) GetItems() []model.KubernetesObject {
 	result := make([]model.KubernetesObject, len(l.Items))
 	for i := range l.Items {
 		result[i] = &l.Items[i]
@@ -294,16 +294,16 @@ func (l *MeshList) GetItems() []model.KubernetesObject {
 }
 
 func init() {
-	registry.RegisterObjectType(&mesh_proto.Mesh{}, &Mesh{
+	registry.RegisterObjectType(&mesh_proto.MeshInsight{}, &MeshInsight{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: GroupVersion.String(),
-			Kind:       "Mesh",
+			Kind:       "MeshInsight",
 		},
 	})
-	registry.RegisterListType(&mesh_proto.Mesh{}, &MeshList{
+	registry.RegisterListType(&mesh_proto.MeshInsight{}, &MeshInsightList{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: GroupVersion.String(),
-			Kind:       "MeshList",
+			Kind:       "MeshInsightList",
 		},
 	})
 }
