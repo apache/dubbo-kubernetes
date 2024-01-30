@@ -19,13 +19,6 @@ package bootstrap
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
-	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
-	"github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
-	mesh_cache "github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
-	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
-	xds_server "github.com/apache/dubbo-kubernetes/pkg/xds/server"
 	"net"
 )
 
@@ -38,13 +31,20 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
+	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	mesh_cache "github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
+	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
+	xds_server "github.com/apache/dubbo-kubernetes/pkg/xds/server"
 )
 
 var log = core.Log.WithName("bootstrap")

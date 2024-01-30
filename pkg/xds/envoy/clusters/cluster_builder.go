@@ -18,11 +18,13 @@
 package clusters
 
 import (
-	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	"github.com/pkg/errors"
-
 	envoy_api "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 
+	"github.com/pkg/errors"
+)
+
+import (
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/clusters/v3"
 )

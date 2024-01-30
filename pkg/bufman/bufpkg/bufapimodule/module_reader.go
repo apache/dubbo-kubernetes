@@ -18,13 +18,18 @@ package bufapimodule
 import (
 	"context"
 	"errors"
+)
 
+import (
+	"github.com/bufbuild/connect-go"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmanifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
-	"github.com/bufbuild/connect-go"
 )
 
 type moduleReader struct {

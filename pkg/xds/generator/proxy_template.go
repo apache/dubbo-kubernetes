@@ -20,6 +20,9 @@ package generator
 import (
 	"context"
 	"fmt"
+)
+
+import (
 	model "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/plugins/policies/core/generator"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"

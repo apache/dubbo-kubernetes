@@ -18,10 +18,14 @@
 package routes
 
 import (
+	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+
+	"google.golang.org/protobuf/types/known/anypb"
+)
+
+import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
-	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 type RouteConfigurer interface {

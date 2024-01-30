@@ -20,12 +20,18 @@ package tags
 import (
 	"crypto/sha256"
 	"fmt"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/util/maps"
-	"github.com/pkg/errors"
 	"regexp"
 	"sort"
 	"strings"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/util/maps"
 )
 
 const TagsHeaderName = "x-dubbo-tags"

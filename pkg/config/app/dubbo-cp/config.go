@@ -18,28 +18,32 @@
 package dubbo_cp
 
 import (
-	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
-	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
-	"github.com/apache/dubbo-kubernetes/pkg/config/intercp"
-	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
-	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
-	"github.com/apache/dubbo-kubernetes/pkg/config/xds"
-	"github.com/apache/dubbo-kubernetes/pkg/config/xds/bootstrap"
-	"github.com/pkg/errors"
 	"time"
+)
+
+import (
+	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
+
+	"github.com/pkg/errors"
 
 	"go.uber.org/multierr"
 )
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/config/diagnostics"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/config/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/config/eventbus"
+	"github.com/apache/dubbo-kubernetes/pkg/config/intercp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
 	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime"
+	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
+	"github.com/apache/dubbo-kubernetes/pkg/config/xds"
+	"github.com/apache/dubbo-kubernetes/pkg/config/xds/bootstrap"
 )
 
 var _ config.Config = &Config{}

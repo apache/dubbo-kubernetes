@@ -6,7 +6,9 @@ package mesh
 
 import (
 	"fmt"
+)
 
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"

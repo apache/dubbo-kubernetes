@@ -19,7 +19,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+)
 
+import (
+	"github.com/bufbuild/protocompile"
+	"github.com/bufbuild/protocompile/linker"
+	"github.com/bufbuild/protocompile/parser"
+	"github.com/bufbuild/protocompile/protoutil"
+	"github.com/bufbuild/protocompile/reporter"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/reflect/protoreflect"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
@@ -28,16 +46,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/data/datawkt"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
-	"github.com/bufbuild/protocompile"
-	"github.com/bufbuild/protocompile/linker"
-	"github.com/bufbuild/protocompile/parser"
-	"github.com/bufbuild/protocompile/protoutil"
-	"github.com/bufbuild/protocompile/reporter"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 const (

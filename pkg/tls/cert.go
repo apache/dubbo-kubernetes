@@ -28,7 +28,9 @@ import (
 	"math/big"
 	"net"
 	"time"
+)
 
+import (
 	"github.com/pkg/errors"
 )
 

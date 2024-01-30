@@ -22,17 +22,27 @@ import (
 	"path/filepath"
 	"reflect"
 	"time"
+)
 
+import (
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+
 	"k8s.io/apimachinery/pkg/util/wait"
+
 	"k8s.io/client-go/informers"
 
+	"k8s.io/client-go/kubernetes"
+
+	"k8s.io/client-go/rest"
+
+	"k8s.io/client-go/tools/clientcmd"
+
+	"k8s.io/client-go/util/homedir"
+)
+
+import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 )
 
 type KubeClient struct {

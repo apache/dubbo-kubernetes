@@ -18,10 +18,13 @@
 package v3
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
 type TagsHeaderConfigurer struct {

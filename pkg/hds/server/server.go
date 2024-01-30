@@ -19,20 +19,27 @@ package server
 
 import (
 	"context"
+	"sync/atomic"
+)
+
+import (
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_service_health "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
+	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	envoy_stream "github.com/envoyproxy/go-control-plane/pkg/server/stream/v3"
+
+	"github.com/pkg/errors"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	hds_cache "github.com/apache/dubbo-kubernetes/pkg/hds/cache"
 	hds_callbacks "github.com/apache/dubbo-kubernetes/pkg/hds/callbacks"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_service_health "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
-	envoy_stream "github.com/envoyproxy/go-control-plane/pkg/server/stream/v3"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	"google.golang.org/grpc"
-	"sync/atomic"
 )
 
 type Stream interface {

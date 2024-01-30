@@ -19,6 +19,14 @@ package hds
 
 import (
 	"context"
+)
+
+import (
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_service_health "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
+)
+
+import (
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
@@ -27,8 +35,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/hds/tracker"
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
-	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_service_health "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
 )
 
 var hdsServerLog = core.Log.WithName("hds-server")

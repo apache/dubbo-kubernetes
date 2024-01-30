@@ -18,11 +18,13 @@
 package v3
 
 import (
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_grpc_stats "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_stats/v3"
-
 	envoy_hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+)
+
+import (
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 type GrpcStatsConfigurer struct{}

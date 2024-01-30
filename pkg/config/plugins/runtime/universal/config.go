@@ -18,11 +18,18 @@
 package universal
 
 import (
+	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
-	"github.com/pkg/errors"
-	"go.uber.org/multierr"
-	"time"
 )
 
 func DefaultUniversalRuntimeConfig() *UniversalRuntimeConfig {

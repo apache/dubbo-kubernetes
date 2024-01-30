@@ -17,10 +17,15 @@ package bufmoduleref
 
 import (
 	"time"
+)
 
+import (
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+import (
 	modulev1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/module/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/prototime"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type modulePin struct {

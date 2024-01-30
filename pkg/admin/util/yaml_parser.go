@@ -17,7 +17,9 @@
 
 package util
 
-import "github.com/dubbogo/gost/encoding/yaml"
+import (
+	"github.com/dubbogo/gost/encoding/yaml"
+)
 
 func DumpObject(obj interface{}) (string, error) {
 	bytes, err := yaml.MarshalYML(obj)

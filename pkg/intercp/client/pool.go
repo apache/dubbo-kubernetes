@@ -19,12 +19,18 @@ package client
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc/connectivity"
-
 	"sync"
 	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"google.golang.org/grpc/connectivity"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
 
 var poolLog = core.Log.WithName("intercp").WithName("client").WithName("pool")

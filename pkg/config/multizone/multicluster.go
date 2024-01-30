@@ -18,10 +18,16 @@
 package multizone
 
 import (
+	"time"
+)
+
+import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
-	"go.uber.org/multierr"
-	"time"
 )
 
 var _ config.Config = &MultizoneConfig{}

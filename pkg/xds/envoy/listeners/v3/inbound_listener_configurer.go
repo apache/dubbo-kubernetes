@@ -18,10 +18,13 @@
 package v3
 
 import (
-	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+)
+
+import (
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 type InboundListenerConfigurer struct {

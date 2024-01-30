@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storagemem/internal"

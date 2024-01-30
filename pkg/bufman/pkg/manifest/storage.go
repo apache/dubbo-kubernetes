@@ -19,11 +19,16 @@ import (
 	"context"
 	"fmt"
 	"io"
+)
 
+import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageutil"
-	"go.uber.org/multierr"
 )
 
 // manifestBucket is a storage.ReadBucket implementation from a manifest and an

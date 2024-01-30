@@ -18,13 +18,16 @@
 package v3
 
 import (
+	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	envoy_names "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/names"
 	envoy_routes "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/routes"
 	envoy_virtual_hosts "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/virtualhosts"
-	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 )
 
 type HttpOutboundRouteConfigurer struct {

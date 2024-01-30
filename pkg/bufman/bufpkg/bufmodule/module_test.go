@@ -21,14 +21,19 @@ import (
 	"fmt"
 	"testing"
 	"time"
+)
 
+import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduletesting"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storagemem"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewModuleForBucket(t *testing.T) {

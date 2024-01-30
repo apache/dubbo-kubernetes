@@ -18,12 +18,15 @@
 package xds
 
 import (
+	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	core_rules "github.com/apache/dubbo-kubernetes/pkg/plugins/policies/core/rules"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
-	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
 type Listeners struct {

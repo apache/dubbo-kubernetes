@@ -17,7 +17,9 @@
 
 package clusters
 
-import envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+import (
+	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+)
 
 type PassThroughClusterConfigurer struct{}
 

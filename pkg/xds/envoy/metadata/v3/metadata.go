@@ -18,11 +18,14 @@
 package envoy
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	"google.golang.org/protobuf/types/known/structpb"
 
+	"google.golang.org/protobuf/types/known/structpb"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
 func EndpointMetadata(tags tags.Tags) *envoy_core.Metadata {

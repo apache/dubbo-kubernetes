@@ -20,14 +20,18 @@ package services
 import (
 	"reflect"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/admin/config/mock_config"
+import (
+	"github.com/golang/mock/gomock"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/config/mock_config"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/util"
-	"github.com/golang/mock/gomock"
 )
 
 func TestRouteServiceImpl_CreateTagRoute(t *testing.T) {

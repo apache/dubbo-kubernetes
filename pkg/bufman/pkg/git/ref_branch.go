@@ -15,7 +15,9 @@
 
 package git
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type refWithBranch struct {
 	ref    string

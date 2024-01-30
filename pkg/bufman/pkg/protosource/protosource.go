@@ -30,11 +30,17 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+)
 
+import (
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 const (

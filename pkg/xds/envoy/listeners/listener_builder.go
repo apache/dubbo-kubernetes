@@ -18,12 +18,16 @@
 package listeners
 
 import (
+	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+
+	"github.com/pkg/errors"
+)
+
+import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners/v3"
 	envoy_names "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/names"
-	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	"github.com/pkg/errors"
 )
 
 // ListenerBuilderOpt is a configuration option for ListenerBuilder.

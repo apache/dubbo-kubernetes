@@ -20,6 +20,9 @@ package xds
 import (
 	"errors"
 	"fmt"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 

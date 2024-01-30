@@ -19,15 +19,22 @@ package callbacks
 
 import (
 	"context"
+	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"google.golang.org/protobuf/proto"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
-	"github.com/pkg/errors"
-	"google.golang.org/protobuf/proto"
-	"time"
 )
 
 var sinkLog = core.Log.WithName("xds").WithName("sink")

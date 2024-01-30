@@ -18,9 +18,12 @@
 package v3
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_extensions_filters_listener_tls_inspector_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 type TLSInspectorConfigurer struct{}

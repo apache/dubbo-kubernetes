@@ -19,11 +19,16 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginref"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/data/dataspdx"
+import (
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginref"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/data/dataspdx"
 )
 
 func newConfig(externalConfig ExternalConfig, options []ConfigOption) (*Config, error) {

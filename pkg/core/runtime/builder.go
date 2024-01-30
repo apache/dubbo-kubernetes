@@ -20,10 +20,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
-	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	"os"
 	"time"
 )
@@ -36,11 +32,15 @@ import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
+	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 )
 
 // BuilderContext provides access to Builder's interim state.

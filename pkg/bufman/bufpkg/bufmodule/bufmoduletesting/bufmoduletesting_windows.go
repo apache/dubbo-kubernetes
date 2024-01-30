@@ -21,9 +21,14 @@ package bufmoduletesting
 import (
 	"path/filepath"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
+import (
 	"github.com/stretchr/testify/require"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 )
 
 // NewFileInfo returns a new FileInfo for testing.

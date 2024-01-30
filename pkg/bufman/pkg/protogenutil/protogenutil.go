@@ -23,12 +23,19 @@ import (
 	"path"
 	"sort"
 	"strings"
+)
 
+import (
+	"google.golang.org/protobuf/compiler/protogen"
+
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appproto"
-	"google.golang.org/protobuf/compiler/protogen"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 // NewHandler returns a new appproto.Handler for the protogen.Plugin function.

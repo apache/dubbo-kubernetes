@@ -15,7 +15,9 @@
 
 package protosource
 
-import "google.golang.org/protobuf/types/descriptorpb"
+import (
+	"google.golang.org/protobuf/types/descriptorpb"
+)
 
 type location struct {
 	sourceCodeInfoLocation *descriptorpb.SourceCodeInfo_Location

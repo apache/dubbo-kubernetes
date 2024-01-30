@@ -18,15 +18,21 @@ package bandeps
 import (
 	"context"
 	"sync"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
+import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
 	"go.uber.org/zap"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
 )
 
 type state struct {

@@ -18,13 +18,18 @@ package bufmodule_test
 import (
 	"context"
 	"testing"
+)
 
+import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduletesting"
 	modulev1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/module/v1alpha1"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTargetingModuleBasic(t *testing.T) {

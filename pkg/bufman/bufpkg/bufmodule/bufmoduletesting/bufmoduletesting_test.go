@@ -18,11 +18,16 @@ package bufmoduletesting_test
 import (
 	"context"
 	"testing"
+)
 
+import (
+	"github.com/stretchr/testify/require"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduletesting"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storagemem"
-	"github.com/stretchr/testify/require"
 )
 
 func TestModuleDigestB3(t *testing.T) {

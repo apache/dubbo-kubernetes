@@ -19,13 +19,15 @@ package config
 
 import (
 	"errors"
+)
 
-	perrors "github.com/pkg/errors"
+import (
+	"dubbo.apache.org/dubbo-go/v3/common"
+	"dubbo.apache.org/dubbo-go/v3/config_center"
 
 	gozk "github.com/dubbogo/go-zookeeper/zk"
 
-	"dubbo.apache.org/dubbo-go/v3/common"
-	"dubbo.apache.org/dubbo-go/v3/config_center"
+	perrors "github.com/pkg/errors"
 )
 
 const group = "dubbo"

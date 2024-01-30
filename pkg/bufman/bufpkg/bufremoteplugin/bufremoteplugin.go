@@ -18,7 +18,9 @@ package bufremoteplugin
 import (
 	"fmt"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appcmd"
 )
 

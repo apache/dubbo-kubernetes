@@ -18,14 +18,19 @@
 package xds
 
 import (
+	"strconv"
+)
+
+import (
+	"google.golang.org/protobuf/types/known/structpb"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest"
-	"google.golang.org/protobuf/types/known/structpb"
-
-	"strconv"
 )
 
 var metadataLog = core.Log.WithName("xds-server").WithName("metadata-tracker")

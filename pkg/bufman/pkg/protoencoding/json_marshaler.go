@@ -18,8 +18,11 @@ package protoencoding
 import (
 	"bytes"
 	"encoding/json"
+)
 
+import (
 	"google.golang.org/protobuf/encoding/protojson"
+
 	"google.golang.org/protobuf/proto"
 )
 

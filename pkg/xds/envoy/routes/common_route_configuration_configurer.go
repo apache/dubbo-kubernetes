@@ -18,8 +18,11 @@
 package routes
 
 import (
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+)
+
+import (
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 type CommonRouteConfigurationConfigurer struct{}

@@ -18,9 +18,14 @@ package protosource
 import (
 	"fmt"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
+import (
 	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 )
 
 type file struct {

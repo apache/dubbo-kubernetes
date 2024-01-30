@@ -18,10 +18,13 @@
 package listeners
 
 import (
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners/v3"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+)
+
+import (
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
+	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners/v3"
 )
 
 // MatchTransportProtocol sets the transport protocol match for the filter chain.

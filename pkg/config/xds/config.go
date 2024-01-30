@@ -18,10 +18,16 @@
 package xds
 
 import (
+	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
-	"github.com/pkg/errors"
-	"time"
 )
 
 var _ config.Config = &XdsServerConfig{}

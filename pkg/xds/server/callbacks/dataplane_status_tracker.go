@@ -19,6 +19,16 @@ package callbacks
 
 import (
 	"context"
+	"os"
+	"strings"
+	"sync"
+)
+
+import (
+	"google.golang.org/protobuf/proto"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
@@ -27,10 +37,6 @@ import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
-	"google.golang.org/protobuf/proto"
-	"os"
-	"strings"
-	"sync"
 )
 
 var statusTrackerLog = core.Log.WithName("xds").WithName("status-tracker")

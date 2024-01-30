@@ -18,12 +18,15 @@
 package xds
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
 )
 
 type EndpointMap map[xds.ServiceName][]*endpointv3.ClusterLoadAssignment

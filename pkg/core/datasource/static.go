@@ -19,11 +19,17 @@ package datasource
 
 import (
 	"context"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
-	"github.com/pkg/errors"
 )
 
 type staticLoader struct {

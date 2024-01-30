@@ -19,8 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	cmd2 "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/core/cmd/version"
 	"os"
 	"path/filepath"
 )
@@ -31,6 +29,8 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	cmd2 "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/core/cmd/version"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 

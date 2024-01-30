@@ -18,11 +18,15 @@
 package cache
 
 import (
-	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
 	envoy_service_health_v3 "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
 	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+
 	"github.com/pkg/errors"
+)
+
+import (
+	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
 )
 
 const HealthCheckSpecifierType = "envoy.service.health.v3.HealthCheckSpecifier"

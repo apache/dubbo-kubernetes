@@ -16,7 +16,9 @@
 // Package bufstyle defines lint analyzers that help enforce Buf's Go code standards.
 package bufstyle
 
-import "golang.org/x/tools/go/analysis"
+import (
+	"golang.org/x/tools/go/analysis"
+)
 
 // ExternalConfig is an external configuration for bufstyle.
 type ExternalConfig struct {

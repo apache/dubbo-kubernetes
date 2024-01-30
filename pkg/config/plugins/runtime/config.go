@@ -18,7 +18,6 @@
 package runtime
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime/universal"
 	"github.com/pkg/errors"
 
 	"go.uber.org/multierr"
@@ -27,6 +26,7 @@ import (
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime/k8s"
+	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime/universal"
 )
 
 func DefaultRuntimeConfig() *RuntimeConfig {

@@ -17,8 +17,11 @@ package bufpluginexec
 
 import (
 	"testing"
+)
 
+import (
 	"github.com/stretchr/testify/assert"
+
 	"google.golang.org/protobuf/types/pluginpb"
 )
 

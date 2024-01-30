@@ -18,9 +18,14 @@ package security
 import (
 	"errors"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/config"
+import (
 	"github.com/golang-jwt/jwt/v4"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/config"
 )
 
 type PageTokenChaim struct {

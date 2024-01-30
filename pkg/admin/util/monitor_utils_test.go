@@ -18,7 +18,9 @@ package util
 import (
 	"reflect"
 	"testing"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/config"
 )
 

@@ -20,9 +20,12 @@ package catalog
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"net"
 	"strconv"
+)
+
+import (
+	"github.com/pkg/errors"
 )
 
 type Instance struct {

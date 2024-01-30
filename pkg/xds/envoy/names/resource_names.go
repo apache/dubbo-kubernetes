@@ -22,7 +22,9 @@ import (
 	"net"
 	"strconv"
 	"strings"
+)
 
+import (
 	"github.com/pkg/errors"
 )
 

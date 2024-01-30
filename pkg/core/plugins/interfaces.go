@@ -18,11 +18,11 @@
 package plugins
 
 import (
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/pkg/errors"
 )
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"

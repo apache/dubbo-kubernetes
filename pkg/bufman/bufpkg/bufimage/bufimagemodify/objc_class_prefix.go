@@ -19,13 +19,20 @@ import (
 	"context"
 	"strings"
 	"unicode"
+)
 
+import (
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoversion"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // ObjcClassPrefixID is the ID of the objc_class_prefix modifier.

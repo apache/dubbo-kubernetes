@@ -24,9 +24,14 @@ package mapper
 import (
 	context "context"
 	reflect "reflect"
+)
 
-	model "github.com/apache/dubbo-kubernetes/pkg/admin/model"
+import (
 	gomock "github.com/golang/mock/gomock"
+)
+
+import (
+	model "github.com/apache/dubbo-kubernetes/pkg/admin/model"
 )
 
 // MockMockRuleMapper is a mock of MockRuleMapper interface.

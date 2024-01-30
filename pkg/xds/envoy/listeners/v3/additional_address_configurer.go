@@ -18,9 +18,12 @@
 package v3
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 type AdditionalAddressConfigurer struct {

@@ -19,7 +19,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 )
 

@@ -19,11 +19,17 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
+import (
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 )
 
 // FileDescriptor is an interface that matches the methods on a *descriptorpb.FileDescriptorProto.

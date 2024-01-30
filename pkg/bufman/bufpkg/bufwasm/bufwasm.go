@@ -24,17 +24,25 @@ import (
 	"strconv"
 	"strings"
 	"testing/fstest"
+)
 
-	wasmpluginv1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/wasmplugin/v1"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
+import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/experimental/gojs"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"github.com/tetratelabs/wazero/sys"
+
 	"go.uber.org/multierr"
+
 	"google.golang.org/protobuf/encoding/protowire"
+
 	"google.golang.org/protobuf/proto"
+)
+
+import (
+	wasmpluginv1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/wasmplugin/v1"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
 )
 
 // CustomSectionName is the name of the custom wasm section we look into for buf

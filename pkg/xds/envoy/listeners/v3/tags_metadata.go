@@ -18,10 +18,14 @@
 package v3
 
 import (
-	envoy_metadata "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/metadata/v3"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_api "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+
 	"google.golang.org/protobuf/types/known/structpb"
+)
+
+import (
+	envoy_metadata "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/metadata/v3"
 )
 
 type TagsMetadataConfigurer struct {

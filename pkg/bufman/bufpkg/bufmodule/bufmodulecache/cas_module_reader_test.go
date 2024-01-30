@@ -22,7 +22,18 @@ import (
 	"strings"
 	"testing"
 	"time"
+)
 
+import (
+	"github.com/bufbuild/connect-go"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.uber.org/zap/zaptest"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/connect/registry/v1alpha1/registryv1alpha1connect"
@@ -32,10 +43,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/verbose"
-	"github.com/bufbuild/connect-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 )
 
 const pingProto = `syntax = "proto3";

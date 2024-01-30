@@ -25,16 +25,25 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+)
 
+import (
+	"github.com/google/go-cmp/cmp"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.uber.org/multierr"
+
+	"google.golang.org/protobuf/testing/protocmp"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/diff"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
-	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/multierr"
-	"google.golang.org/protobuf/testing/protocmp"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // GetProtocFileDescriptorSet gets the validated FileDescriptorSet using

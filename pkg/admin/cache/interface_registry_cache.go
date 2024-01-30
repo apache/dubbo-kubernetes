@@ -17,6 +17,8 @@
 
 package cache
 
-import "sync"
+import (
+	"sync"
+)
 
 var InterfaceRegistryCache sync.Map

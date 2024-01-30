@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+)
 
+import (
 	"golang.org/x/mod/semver"
 )
 

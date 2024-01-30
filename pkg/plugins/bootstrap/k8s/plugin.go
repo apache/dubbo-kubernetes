@@ -19,7 +19,6 @@ package k8s
 
 import (
 	"context"
-	kube_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
 )
 
@@ -38,6 +37,7 @@ import (
 	kube_client "sigs.k8s.io/controller-runtime/pkg/client"
 	kube_manager "sigs.k8s.io/controller-runtime/pkg/manager"
 	kube_metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	kube_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 import (

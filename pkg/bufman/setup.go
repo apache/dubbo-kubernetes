@@ -18,9 +18,12 @@
 package bufman
 
 import (
+	"github.com/pkg/errors"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/router"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"github.com/pkg/errors"
 )
 
 func Setup(rt core_runtime.Runtime) error {

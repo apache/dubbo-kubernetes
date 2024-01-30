@@ -20,7 +20,9 @@ import (
 	"io"
 	"os/exec"
 	"sort"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/ioextended"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
 )

@@ -21,7 +21,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/git"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"

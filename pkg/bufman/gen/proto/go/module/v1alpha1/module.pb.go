@@ -7,13 +7,21 @@
 package modulev1alpha1
 
 import (
-	v1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/breaking/v1"
-	v11 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/lint/v1"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
+)
+
+import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+)
+
+import (
+	v1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/breaking/v1"
+	v11 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/lint/v1"
 )
 
 const (

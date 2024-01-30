@@ -18,13 +18,16 @@
 package v3
 
 import (
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
-	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	envoy_type_matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+)
+
+import (
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
+	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
+	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
 
 type StaticEndpointsConfigurer struct {

@@ -6,8 +6,11 @@ package mock_config
 
 import (
 	reflect "reflect"
+)
 
+import (
 	common "dubbo.apache.org/dubbo-go/v3/common"
+
 	gomock "github.com/golang/mock/gomock"
 )
 

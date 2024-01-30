@@ -19,12 +19,18 @@ package callbacks
 
 import (
 	"context"
+	"os"
+	"sync"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
-	"github.com/pkg/errors"
-	"os"
-	"sync"
 )
 
 // DataplaneCallbacks are XDS callbacks that keep the context of Kuma Dataplane.

@@ -19,7 +19,6 @@ package runtime
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	"sync"
 	"time"
 )
@@ -28,6 +27,7 @@ import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"

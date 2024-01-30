@@ -19,6 +19,9 @@ package callbacks
 
 import (
 	"context"
+)
+
+import (
 	envoy_service_health "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
 )
 

@@ -19,11 +19,17 @@ package xds
 
 import (
 	"fmt"
+	"strings"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/pkg/errors"
-	"strings"
 )
 
 type APIVersion string

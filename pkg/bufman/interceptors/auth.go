@@ -18,10 +18,15 @@ package interceptors
 import (
 	"context"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/constant"
+import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/constant"
 )
 
 func Auth() grpc.UnaryServerInterceptor {

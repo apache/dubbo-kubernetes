@@ -19,6 +19,17 @@ package callbacks
 
 import (
 	"context"
+	"sync"
+	"time"
+)
+
+import (
+	"github.com/go-logr/logr"
+
+	"github.com/pkg/errors"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/api/generic"
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
@@ -28,10 +39,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/util/maps"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"sync"
-	"time"
 )
 
 var lifecycleLog = core.Log.WithName("xds").WithName("dp-lifecycle")

@@ -17,8 +17,11 @@ package bufstyle
 
 import (
 	"path/filepath"
+)
 
+import (
 	"go.uber.org/multierr"
+
 	"golang.org/x/tools/go/analysis"
 )
 
