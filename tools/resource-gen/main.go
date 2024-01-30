@@ -326,8 +326,8 @@ var {{.ResourceName}}TypeDescriptor = model.ResourceTypeDescriptor{
 		ReadOnly: {{.WsReadOnly}},
 		AdminOnly: {{.WsAdminOnly}},
 		Scope: {{if .Global}}model.ScopeGlobal{{else}}model.ScopeMesh{{end}},
-		{{- if ne .KdsDirection ""}}
-		KDSFlags: {{.KdsDirection}},
+		{{- if ne .DdsDirection ""}}
+		DDSFlags: {{.DdsDirection}},
 		{{- end}}
 		WsPath: "{{.WsPath}}",
 		DubboctlArg: "{{.DubboctlSingular}}",

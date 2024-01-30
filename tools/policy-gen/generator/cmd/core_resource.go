@@ -170,7 +170,7 @@ var {{.Name}}ResourceTypeDescriptor = model.ResourceTypeDescriptor{
 		Resource: New{{.Name}}Resource(),
 		ResourceList: &{{.Name}}ResourceList{},
 		Scope: model.ScopeMesh,
-		KDSFlags: model.GlobalToAllZonesFlag | model.ZoneToGlobalFlag,
+		DDSFlags: model.GlobalToAllZonesFlag | model.ZoneToGlobalFlag,
 		WsPath: "{{.Path}}",
 		DubboctlArg: "{{index .AlternativeNames 0}}",
 		DubboctlListArg: "{{.Path}}",

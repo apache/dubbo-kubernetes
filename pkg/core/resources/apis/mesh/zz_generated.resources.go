@@ -6,9 +6,7 @@ package mesh
 
 import (
 	"fmt"
-)
 
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
@@ -108,7 +106,7 @@ var DataplaneResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            false,
 	AdminOnly:           false,
 	Scope:               model.ScopeMesh,
-	KDSFlags:            model.GlobalToAllZonesFlag,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "dataplanes",
 	DubboctlArg:         "dataplane",
 	DubboctlListArg:     "dataplanes",
@@ -217,7 +215,7 @@ var DataplaneInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            true,
 	AdminOnly:           false,
 	Scope:               model.ScopeMesh,
-	KDSFlags:            model.ZoneToGlobalFlag,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "dataplane-insights",
 	DubboctlArg:         "",
 	DubboctlListArg:     "",
@@ -326,7 +324,7 @@ var MeshResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            false,
 	AdminOnly:           false,
 	Scope:               model.ScopeMesh,
-	KDSFlags:            model.GlobalToAllZonesFlag,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "meshes",
 	DubboctlArg:         "mesh",
 	DubboctlListArg:     "meshes",
@@ -435,7 +433,7 @@ var ZoneIngressResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            false,
 	AdminOnly:           false,
 	Scope:               model.ScopeMesh,
-	KDSFlags:            model.GlobalToAllZonesFlag,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "zoneingresses",
 	DubboctlArg:         "zoneingress",
 	DubboctlListArg:     "zoneingresses",
@@ -544,7 +542,7 @@ var ZoneIngressInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            true,
 	AdminOnly:           false,
 	Scope:               model.ScopeGlobal,
-	KDSFlags:            model.ZoneToGlobalFlag,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "zone-ingress-insights",
 	DubboctlArg:         "",
 	DubboctlListArg:     "",

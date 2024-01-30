@@ -37,11 +37,11 @@ const ConfigInFlightThreshold = 100_000
 
 type StatsCallbacks interface {
 	// ConfigReadyForDelivery marks a configuration as a ready to be delivered.
-	// This means that any config (EDS/CDS/KDS policies etc.) with specified version was set to a Snapshot
+	// This means that any config (EDS/CDS/DDS policies etc.) with specified version was set to a Snapshot
 	// and it's scheduled to be delivered.
 	ConfigReadyForDelivery(configVersion string)
 	// DiscardConfig removes a configuration from being delivered.
-	// This should be called when the client of xDS/KDS server disconnects.
+	// This should be called when the client of xDS/DDS server disconnects.
 	DiscardConfig(configVersion string)
 	Callbacks
 	DeltaCallbacks
@@ -116,8 +116,8 @@ func NewStatsCallbacks(metrics prometheus.Registerer, dsType string) (StatsCallb
 
 	stats.deliveryMetricName = dsType + "_delivery"
 	stats.deliveryMetric = prometheus.NewSummary(prometheus.SummaryOpts{
-		Name:       stats.deliveryMetricName,
-		Help:       "Summary of config delivery including a response (ACK/NACK) from the client",
+		Name: stats.deliveryMetricName,
+		Help: "Summary of config delivery including a response (ACK/NACK) from the client",
 	})
 	if err := metrics.Register(stats.deliveryMetric); err != nil {
 		return nil, err

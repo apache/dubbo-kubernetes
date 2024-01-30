@@ -11,7 +11,7 @@ message Mesh {
   option (dubbo.mesh.resource).name = "MeshResource";
   option (dubbo.mesh.resource).type = "Mesh";
   option (dubbo.mesh.resource).package = "mesh";
-  option (dubbo.mesh.resource).kds.send_to_zone = true;
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
   option (dubbo.mesh.resource).ws.name = "mesh";
   option (dubbo.mesh.resource).ws.plural = "meshes";
   option (dubbo.mesh.resource).allow_to_inspect = true;

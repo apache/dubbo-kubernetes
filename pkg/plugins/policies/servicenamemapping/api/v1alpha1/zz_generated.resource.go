@@ -7,15 +7,10 @@ package v1alpha1
 import (
 	_ "embed"
 	"fmt"
-)
 
-import (
 	"k8s.io/kube-openapi/pkg/validation/spec"
-
 	"sigs.k8s.io/yaml"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
@@ -131,7 +126,7 @@ var ServiceNameMappingResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Resource:            NewServiceNameMappingResource(),
 	ResourceList:        &ServiceNameMappingResourceList{},
 	Scope:               model.ScopeMesh,
-	KDSFlags:            model.GlobalToAllZonesFlag | model.ZoneToGlobalFlag,
+	DDSFlags:            model.GlobalToAllZonesFlag | model.ZoneToGlobalFlag,
 	WsPath:              "servicenamemappings",
 	DubboctlArg:         "servicenamemapping",
 	DubboctlListArg:     "servicenamemappings",

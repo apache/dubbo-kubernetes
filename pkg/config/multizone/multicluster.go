@@ -35,7 +35,7 @@ var _ config.Config = &MultizoneConfig{}
 // GlobalConfig defines Global configuration
 type GlobalConfig struct {
 	// DDS Configuration
-	DDS *DdsServerConfig `json:"kds,omitempty"`
+	DDS *DdsServerConfig `json:"dds,omitempty"`
 }
 
 func (g *GlobalConfig) Sanitize() {

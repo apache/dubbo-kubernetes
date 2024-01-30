@@ -62,7 +62,7 @@ type ResourceInfo struct {
 	WsReadOnly               bool
 	WsAdminOnly              bool
 	WsPath                   string
-	KdsDirection             string
+	DdsDirection             string
 	AllowToInspect           bool
 	StorageVersion           bool
 	IsPolicy                 bool
@@ -118,18 +118,18 @@ func ToResourceInfo(desc protoreflect.MessageDescriptor) ResourceInfo {
 	// Anything global can't be a policy as it need to be on a mesh. Anything with locked Ws config is something internal and therefore not a policy
 	out.IsPolicy = !out.SkipRegistration && !out.Global && !out.WsAdminOnly && !out.WsReadOnly && out.ResourceType != "Dataplane" && out.ResourceType != "ExternalService"
 	switch {
-	case r.Kds == nil || (!r.Kds.SendToZone && !r.Kds.SendToGlobal):
-		out.KdsDirection = ""
-	case r.Kds.SendToGlobal && r.Kds.SendToZone:
-		out.KdsDirection = "model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag"
-	case r.Kds.SendToGlobal:
-		out.KdsDirection = "model.ZoneToGlobalFlag"
-	case r.Kds.SendToZone:
-		out.KdsDirection = "model.GlobalToAllZonesFlag"
+	case r.Dds == nil || (!r.Dds.SendToZone && !r.Dds.SendToGlobal):
+		out.DdsDirection = ""
+	case r.Dds.SendToGlobal && r.Dds.SendToZone:
+		out.DdsDirection = "model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag"
+	case r.Dds.SendToGlobal:
+		out.DdsDirection = "model.ZoneToGlobalFlag"
+	case r.Dds.SendToZone:
+		out.DdsDirection = "model.GlobalToAllZonesFlag"
 	}
 
 	if out.ResourceType == "MeshGateway" {
-		out.KdsDirection = "model.ZoneToGlobalFlag | model.GlobalToAllZonesFlag"
+		out.DdsDirection = "model.ZoneToGlobalFlag | model.GlobalToAllZonesFlag"
 	}
 
 	if p := desc.Parent(); p != nil {

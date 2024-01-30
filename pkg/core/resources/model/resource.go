@@ -66,27 +66,27 @@ const (
 	ScopeGlobal = "Global"
 )
 
-type KDSFlagType uint32
+type DDSFlagType uint32
 
 const (
-	// KDSDisabledFlag is a flag that indicates that this resource type is not sent using KDS.
-	KDSDisabledFlag = KDSFlagType(0)
+	// DDSDisabledFlag is a flag that indicates that this resource type is not sent using DDS.
+	DDSDisabledFlag = DDSFlagType(0)
 
 	// ZoneToGlobalFlag is a flag that indicates that this resource type is sent from Zone CP to Global CP.
-	ZoneToGlobalFlag = KDSFlagType(1)
+	ZoneToGlobalFlag = DDSFlagType(1)
 
 	// GlobalToAllZonesFlag is a flag that indicates that this resource type is sent from Global CP to all zones.
-	GlobalToAllZonesFlag = KDSFlagType(1 << 2)
+	GlobalToAllZonesFlag = DDSFlagType(1 << 2)
 
 	// GlobalToAllButOriginalZoneFlag is a flag that indicates that this resource type is sent from Global CP to
 	// all zones except the zone where the resource was originally created. Today the only resource that has this
 	// flag is ZoneIngress.
-	GlobalToAllButOriginalZoneFlag = KDSFlagType(1 << 3)
+	GlobalToAllButOriginalZoneFlag = DDSFlagType(1 << 3)
 )
 
 const (
 	// GlobalToZoneSelector is selector for all flags that indicate resource sync from Global to Zone.
-	// Can't be used as KDS flag for resource type.
+	// Can't be used as DDS flag for resource type.
 	GlobalToZoneSelector = GlobalToAllZonesFlag | GlobalToAllButOriginalZoneFlag
 
 	// AllowedOnGlobalSelector is selector for all flags that indicate resource can be created on Global.
@@ -97,7 +97,7 @@ const (
 )
 
 // Has return whether this flag has all the passed flags on.
-func (kt KDSFlagType) Has(flag KDSFlagType) bool {
+func (kt DDSFlagType) Has(flag DDSFlagType) bool {
 	return kt&flag != 0
 }
 
@@ -165,8 +165,8 @@ type ResourceTypeDescriptor struct {
 	AdminOnly bool
 	// Scope whether this resource is Global or Mesh scoped.
 	Scope ResourceScope
-	// KDSFlags a set of flags that defines how this entity is sent using KDS (if unset KDS is disabled).
-	KDSFlags KDSFlagType
+	// DDSFlags a set of flags that defines how this entity is sent using DDS (if unset DDS is disabled).
+	DDSFlags DDSFlagType
 	// WsPath the path to access on the REST api.
 	WsPath string
 	// DubboctlArg the name of the cmdline argument when doing `get` or `delete`.
@@ -260,15 +260,15 @@ func (f TypeFilterFn) Apply(descriptor ResourceTypeDescriptor) bool {
 	return f(descriptor)
 }
 
-func HasKDSFlag(flagType KDSFlagType) TypeFilter {
+func HasDDSFlag(flagType DDSFlagType) TypeFilter {
 	return TypeFilterFn(func(descriptor ResourceTypeDescriptor) bool {
-		return descriptor.KDSFlags.Has(flagType)
+		return descriptor.DDSFlags.Has(flagType)
 	})
 }
 
-func HasKdsEnabled() TypeFilter {
+func HasDdsEnabled() TypeFilter {
 	return TypeFilterFn(func(descriptor ResourceTypeDescriptor) bool {
-		return descriptor.KDSFlags != KDSDisabledFlag
+		return descriptor.DDSFlags != DDSDisabledFlag
 	})
 }
 

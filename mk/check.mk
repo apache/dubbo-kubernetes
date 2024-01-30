@@ -40,7 +40,7 @@ dubbogofmt:
 
 .PHONY: helm-lint
 helm-lint:
-	find ./deployments/charts -maxdepth 1 -mindepth 1 -type d -exec $(HELM) lint --strict {} \;
+	find ./deploy/charts -maxdepth 1 -mindepth 1 -type d -exec $(HELM) lint --strict {} \;
 
 .PHONY: ginkgo/unfocus
 ginkgo/unfocus:
@@ -61,7 +61,7 @@ hadolint:
 	find ./tools/releases/dockerfiles/ -type f -iname "Dockerfile*" | grep -v dockerignore | xargs -I {} $(HADOLINT) {}
 
 .PHONY: lint
-lint: helm-lint golangci-lint shellcheck kube-lint hadolint ginkgo/lint
+lint: helm-lint golangci-lint shellcheck hadolint ginkgo/lint
 
 .PHONY: check
 check: format/common lint ## Dev: Run code checks (go fmt, go vet, ...)

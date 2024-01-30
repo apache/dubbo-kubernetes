@@ -14,7 +14,7 @@ message ZoneIngressInsight {
   option (dubbo.mesh.resource).type = "ZoneIngressInsight";
   option (dubbo.mesh.resource).package = "mesh";
   option (dubbo.mesh.resource).global = true;
-  option (dubbo.mesh.resource).kds.send_to_global = true;
+  option (dubbo.mesh.resource).dds.send_to_global = true;
   option (dubbo.mesh.resource).ws.name = "zone-ingress-insight";
   option (dubbo.mesh.resource).ws.read_only = true;
   option (dubbo.mesh.resource).scope_namespace = true;

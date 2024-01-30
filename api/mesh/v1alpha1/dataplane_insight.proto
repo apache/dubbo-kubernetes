@@ -14,7 +14,7 @@ message DataplaneInsight {
   option (dubbo.mesh.resource).name = "DataplaneInsightResource";
   option (dubbo.mesh.resource).type = "DataplaneInsight";
   option (dubbo.mesh.resource).package = "mesh";
-  option (dubbo.mesh.resource).kds.send_to_global = true;
+  option (dubbo.mesh.resource).dds.send_to_global = true;
   option (dubbo.mesh.resource).ws.name = "dataplane-insight";
   option (dubbo.mesh.resource).ws.read_only = true;
   option (dubbo.mesh.resource).scope_namespace = true;

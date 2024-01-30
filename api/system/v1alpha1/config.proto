@@ -15,7 +15,7 @@ message Config {
   option (dubbo.mesh.resource).package = "system";
   option (dubbo.mesh.resource).global = true;
   option (dubbo.mesh.resource).skip_kubernetes_wrappers = true;
-  option (dubbo.mesh.resource).kds.send_to_zone = true;
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
 
   // configuration that is stored (ex. in JSON)
   string config = 1;
