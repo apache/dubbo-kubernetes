@@ -61,8 +61,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import {ref, reactive, onMounted} from 'vue'
 import MonacoEditor from '@/components/editor/MonacoEditor.vue';
+
 
 const methodTabs = reactive([
   'login',
