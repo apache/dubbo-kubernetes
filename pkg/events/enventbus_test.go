@@ -19,8 +19,11 @@ package events_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
+	. "github.com/onsi/gomega"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 )
 

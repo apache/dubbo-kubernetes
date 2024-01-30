@@ -19,7 +19,9 @@ package memory_test
 
 import (
 	"testing"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 

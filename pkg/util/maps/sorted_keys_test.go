@@ -1,9 +1,13 @@
 package maps_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/maps"
 	. "github.com/onsi/ginkgo/v2"
+
 	. "github.com/onsi/gomega"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/maps"
 )
 
 var _ = Describe("SortedKeys", func() {

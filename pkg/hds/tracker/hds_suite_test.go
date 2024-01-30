@@ -18,8 +18,11 @@
 package tracker_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"testing"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 
 func TestHDSTracker(t *testing.T) {

@@ -19,8 +19,11 @@ package protocol_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
+	. "github.com/onsi/gomega"
+)
+
+import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	. "github.com/apache/dubbo-kubernetes/pkg/util/protocol"
 )

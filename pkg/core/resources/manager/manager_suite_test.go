@@ -19,7 +19,9 @@ package manager_test
 
 import (
 	"testing"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 

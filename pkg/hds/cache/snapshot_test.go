@@ -18,14 +18,21 @@
 package cache_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/hds/cache"
-	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"time"
+)
 
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
+import (
 	envoy_service_health_v3 "github.com/envoyproxy/go-control-plane/envoy/service/health/v3"
+	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+
+	. "github.com/onsi/ginkgo/v2"
+
+	. "github.com/onsi/gomega"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/hds/cache"
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 var _ = Describe("Snapshot", func() {

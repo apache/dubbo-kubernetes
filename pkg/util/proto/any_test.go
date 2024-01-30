@@ -19,8 +19,11 @@ package proto_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+
 	. "github.com/onsi/gomega"
-	
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/test/matchers"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_metadata "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/metadata/v3"

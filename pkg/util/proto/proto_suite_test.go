@@ -18,8 +18,11 @@
 package proto_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"testing"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 
 func TestProtoUtils(t *testing.T) {

@@ -18,9 +18,12 @@
 package memory_test
 
 import (
+	. "github.com/onsi/ginkgo/v2"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/plugins/resources/memory"
 	test_store "github.com/apache/dubbo-kubernetes/pkg/test/store"
-	. "github.com/onsi/ginkgo/v2"
 )
 
 var _ = Describe("MemoryStore template", func() {

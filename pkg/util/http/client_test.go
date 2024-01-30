@@ -20,10 +20,16 @@ package http_test
 import (
 	"net/http"
 	"net/url"
+)
 
-	util_http "github.com/apache/dubbo-kubernetes/pkg/util/http"
+import (
 	. "github.com/onsi/ginkgo/v2"
+
 	. "github.com/onsi/gomega"
+)
+
+import (
+	util_http "github.com/apache/dubbo-kubernetes/pkg/util/http"
 )
 
 var _ = Describe("Http Util", func() {

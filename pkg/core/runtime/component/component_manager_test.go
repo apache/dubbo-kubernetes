@@ -19,8 +19,11 @@ package component_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
+	. "github.com/onsi/gomega"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	leader_memory "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/memory"
 )

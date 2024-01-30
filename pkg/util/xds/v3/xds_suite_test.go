@@ -18,8 +18,11 @@
 package v3_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"testing"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 
 func TestXds(t *testing.T) {

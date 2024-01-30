@@ -19,13 +19,20 @@ package proto_test
 
 import (
 	"time"
+)
 
+import (
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"google.golang.org/protobuf/types/known/durationpb"
 
+	. "github.com/onsi/ginkgo/v2"
+
+	. "github.com/onsi/gomega"
+
+	"google.golang.org/protobuf/types/known/durationpb"
+)
+
+import (
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 

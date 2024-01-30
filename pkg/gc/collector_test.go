@@ -20,7 +20,18 @@ package gc_test
 import (
 	"context"
 	"fmt"
+	"time"
+)
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+
+	. "github.com/onsi/gomega"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
@@ -29,12 +40,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/test/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/test/resources/samples"
 	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	"time"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 )
 
 var _ = Describe("Dataplane Collector", func() {

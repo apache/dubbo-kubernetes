@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"reflect"
 	"time"
 )
@@ -31,6 +30,7 @@ import (
 )
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 )

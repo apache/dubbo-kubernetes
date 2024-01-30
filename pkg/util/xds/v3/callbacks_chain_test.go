@@ -20,13 +20,19 @@ package v3_test
 import (
 	"context"
 	"fmt"
+)
 
+import (
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	envoy_xds "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
+	. "github.com/onsi/ginkgo/v2"
+
+	. "github.com/onsi/gomega"
+)
+
+import (
 	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
 )
 

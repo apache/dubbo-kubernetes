@@ -19,11 +19,17 @@ package net
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"net"
+)
 
+import (
 	. "github.com/onsi/ginkgo/v2"
+
 	. "github.com/onsi/gomega"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 
 var _ = Describe("ReserveTCPAddr()", func() {
