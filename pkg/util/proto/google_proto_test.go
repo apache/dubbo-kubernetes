@@ -36,7 +36,7 @@ import (
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
-var _ = Describe("MergeKuma", func() {
+var _ = Describe("MergeDubbo", func() {
 	It("should merge durations by replacing them", func() {
 		dest := &envoy_cluster.Cluster{
 			Name:           "old",

@@ -15,18 +15,16 @@
  * limitations under the License.
  */
 
-package multizone
+package defaults_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
+	"testing"
 )
 
-type DdsServerConfig struct {
-	config.BaseConfig
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/test"
+)
 
-	// Port of a gRPC server that serves Dubbo Discovery Service (DDS).
-	GrpcPort uint32 `json:"grpcPort" envconfig:"dubbo_multizone_global_dds_grpc_port"`
-	// Interval for refreshing state of the world
-	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"dubbo_multizone_global_dds_refresh_interval"`
+func TestDefaults(t *testing.T) {
+	test.RunSpecs(t, "Defaults")
 }

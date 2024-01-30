@@ -34,8 +34,8 @@ message MeshInsight {
   // DpVersions defines statistics grouped by dataplane versions
   message DpVersions {
 
-    // Dataplane stats grouped by KumaDP version
-    map<string, DataplaneStat> kumaDp = 1;
+    // Dataplane stats grouped by DubboDP version
+    map<string, DataplaneStat> dubboDp = 1;
 
     // Dataplane stats grouped by Envoy version
     map<string, DataplaneStat> envoy = 2;

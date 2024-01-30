@@ -127,7 +127,7 @@ type CertificateAuthorityBackend struct {
 
 	// Name of the backend
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Type of the backend. Has to be one of the loaded plugins (Kuma ships with
+	// Type of the backend. Has to be one of the loaded plugins (Dubbo ships with
 	// builtin and provided)
 	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// Dataplane certificate settings
@@ -316,7 +316,7 @@ type TracingBackend struct {
 	// Percentage of traces that will be sent to the backend (range 0.0 - 100.0).
 	// Empty value defaults to 100.0%
 	Sampling *wrapperspb.DoubleValue `protobuf:"bytes,2,opt,name=sampling,proto3" json:"sampling,omitempty"`
-	// Type of the backend (Kuma ships with 'zipkin')
+	// Type of the backend (Dubbo ships with 'zipkin')
 	Type string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	// Configuration of the backend
 	Conf *structpb.Struct `protobuf:"bytes,4,opt,name=conf,proto3" json:"conf,omitempty"`
@@ -531,7 +531,7 @@ type LoggingBackend struct {
 	// Format of access logs. Placehodlers available on
 	// https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log
 	Format string `protobuf:"bytes,2,opt,name=format,proto3" json:"format,omitempty"`
-	// Type of the backend (Kuma ships with 'tcp' and 'file')
+	// Type of the backend (Dubbo ships with 'tcp' and 'file')
 	Type string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	// Configuration of the backend
 	Conf *structpb.Struct `protobuf:"bytes,4,opt,name=conf,proto3" json:"conf,omitempty"`

@@ -72,35 +72,35 @@ var _ = Describe("Http Util", func() {
 				Expect(actualURL.String()).To(Equal(given.expectedURL))
 			},
 			Entry("baseURL without path", testCase{
-				baseURL:     "https://kuma-control-plane:5681",
+				baseURL:     "https://dubbo-control-plane:5681",
 				requestURL:  "/meshes/default/dataplanes",
-				expectedURL: "https://kuma-control-plane:5681/meshes/default/dataplanes",
+				expectedURL: "https://dubbo-control-plane:5681/meshes/default/dataplanes",
 			}),
 			Entry("baseURL without path and request with a relative path", testCase{
-				baseURL:     "https://kuma-control-plane:5681",
+				baseURL:     "https://dubbo-control-plane:5681",
 				requestURL:  "meshes/default/dataplanes",
-				expectedURL: "https://kuma-control-plane:5681/meshes/default/dataplanes",
+				expectedURL: "https://dubbo-control-plane:5681/meshes/default/dataplanes",
 			}),
 			Entry("baseURL with path", testCase{
-				baseURL:     "https://kuma-control-plane:5681/proxy/foo/bar",
+				baseURL:     "https://dubbo-control-plane:5681/proxy/foo/bar",
 				requestURL:  "/test",
-				expectedURL: "https://kuma-control-plane:5681/proxy/foo/bar/test",
+				expectedURL: "https://dubbo-control-plane:5681/proxy/foo/bar/test",
 			}),
 			Entry("baseURL that ends with /", testCase{
-				baseURL:     "https://kuma-control-plane:5681/",
+				baseURL:     "https://dubbo-control-plane:5681/",
 				requestURL:  "/meshes/default/dataplanes",
-				expectedURL: "https://kuma-control-plane:5681/meshes/default/dataplanes",
+				expectedURL: "https://dubbo-control-plane:5681/meshes/default/dataplanes",
 			}),
 			Entry("baseURL and/or requestURL with double slashes", testCase{
-				baseURL:     "https://kuma-control-plane:5681//proxy/foo/bar",
+				baseURL:     "https://dubbo-control-plane:5681//proxy/foo/bar",
 				requestURL:  "/test//baz",
-				expectedURL: "https://kuma-control-plane:5681/proxy/foo/bar/test/baz",
+				expectedURL: "https://dubbo-control-plane:5681/proxy/foo/bar/test/baz",
 			}),
 		)
 
 		It("should tolerate nil URL", func() {
 			// setup
-			baseURL, err := url.Parse("https://kuma-control-plane:5681")
+			baseURL, err := url.Parse("https://dubbo-control-plane:5681")
 			Expect(err).ToNot(HaveOccurred())
 
 			// and

@@ -52,7 +52,7 @@ func ServiceFromClusterName(name string) string {
 }
 
 // DestinationClusterName generates a unique cluster name for the
-// destination. identifyingTags are useful for adding extra metadata outside of just tags. Tags must at least contain `kuma.io/service`
+// destination. identifyingTags are useful for adding extra metadata outside of just tags. Tags must at least contain `dubbo.io/service`
 func (t Tags) DestinationClusterName(
 	additionalIdentifyingTags map[string]string,
 ) (string, error) {

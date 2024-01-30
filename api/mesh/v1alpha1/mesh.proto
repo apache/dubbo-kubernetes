@@ -52,7 +52,7 @@ message CertificateAuthorityBackend {
   // Name of the backend
   string name = 1;
 
-  // Type of the backend. Has to be one of the loaded plugins (Kuma ships with
+  // Type of the backend. Has to be one of the loaded plugins (Dubbo ships with
   // builtin and provided)
   string type = 2;
 
@@ -108,7 +108,7 @@ message TracingBackend {
   // Empty value defaults to 100.0%
   google.protobuf.DoubleValue sampling = 2;
 
-  // Type of the backend (Kuma ships with 'zipkin')
+  // Type of the backend (Dubbo ships with 'zipkin')
   string type = 3;
 
   // Configuration of the backend
@@ -153,7 +153,7 @@ message LoggingBackend {
   // https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log
   string format = 2;
 
-  // Type of the backend (Kuma ships with 'tcp' and 'file')
+  // Type of the backend (Dubbo ships with 'tcp' and 'file')
   string type = 3;
 
   // Configuration of the backend

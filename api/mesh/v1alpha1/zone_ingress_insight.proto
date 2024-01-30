@@ -19,6 +19,6 @@ message ZoneIngressInsight {
   option (dubbo.mesh.resource).ws.read_only = true;
   option (dubbo.mesh.resource).scope_namespace = true;
 
-  // List of ADS subscriptions created by a given Zone Kuma CP.
+  // List of ADS subscriptions created by a given Zone Dubbo CP.
   repeated DiscoverySubscription subscriptions = 1;
 }

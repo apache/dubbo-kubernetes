@@ -89,7 +89,7 @@ func (x *DataplaneInsight) UpdateSubscription(s generic.Subscription) error {
 	return nil
 }
 
-// If Kuma CP was killed ungracefully then we can get a subscription without a DisconnectTime.
+// If Dubbo CP was killed ungracefully then we can get a subscription without a DisconnectTime.
 // Because of the way we process subscriptions the lack of DisconnectTime on old subscription
 // will cause wrong status.
 func (x *DataplaneInsight) finalizeSubscriptions() {

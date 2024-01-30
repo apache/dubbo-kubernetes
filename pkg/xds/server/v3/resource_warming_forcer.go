@@ -60,21 +60,21 @@ var warmingForcerLog = xdsServerLog.WithName("warming-forcer")
 //	Nonce is a sequence indicator of a sent DiscoveryResponse on a stream. We use ADS therefore every single DiscoveryResponse regardless of a type is sent with incremented nonce.
 //	Typical sequence of CDS + EDS looks like this:
 //	1) Envoy sends DiscoveryRequest [type=CDS, version="", nonce=""] // ask for the clusters
-//	2) Kuma sends DiscoveryResponse [type=CDS, version="UUID-1", nonce="1"] // response with clusters
+//	2) Dubbo sends DiscoveryResponse [type=CDS, version="UUID-1", nonce="1"] // response with clusters
 //	3) Envoy sends DiscoveryRequest [type=EDS, version="", nonce=""] // ask for the endpoints
 //	4) Envoy sends DiscoveryRequest [type=CDS, version="UUID-1", nonce="1"] // confirmations that it received clusters (ACK)
-//	5) Kuma sends DiscoveryResponse [type=EDS, version="UUID-2", nonce="2"] // response with endpoints
+//	5) Dubbo sends DiscoveryResponse [type=EDS, version="UUID-2", nonce="2"] // response with endpoints
 //	6) Envoy sends DiscoveryRequest [type=EDS, version="UUID-2", nonce="2"] // confirmations that it received endpoints (ACK)
 //
 //	Then if we send a Cluster update (continuing the flow above)
-//	7) Kuma sends DiscoveryResponse [type=CDS, version="UUID-2", nonce="3"] // response with cluster update
+//	7) Dubbo sends DiscoveryResponse [type=CDS, version="UUID-2", nonce="3"] // response with cluster update
 //	8) Envoy sends DiscoveryRequest [type=CDS, version="UUID-2", nonce="3"] // ACK
 //	9) Envoy sends DiscoveryRequest [type=EDS, version="UUID-2", nonce="2"] // Envoy sends a request which looks like the second ACK for the previous endpoints
 //
 //	Updated Cluster is now in warming state until we send DiscoveryResponse with EDS.
 //	We could sent the same DiscoveryResponse again: DiscoveryRequest [type=EDS, version="UUID-2", nonce="2"], but there is no API in go-control-plane to do it.
 //	Instead we set a new version of the Endpoints to force a new EDS exchange:
-//	10) Kuma sends DiscoveryResponse [type=EDS, version="UUID-3", nonce="3"] // triggered because we set snapshot with a new version
+//	10) Dubbo sends DiscoveryResponse [type=EDS, version="UUID-3", nonce="3"] // triggered because we set snapshot with a new version
 //	11) Envoy sends DiscoveryRequest [type=EDS, version="UUID-3", nonce="3"] // ACK
 //	After this exchange, cluster is now out of the warming state.
 //

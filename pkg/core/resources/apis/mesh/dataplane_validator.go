@@ -200,7 +200,7 @@ func validateOutbound(outbound *mesh_proto.Dataplane_Networking_Outbound) valida
 	if len(outbound.Tags) == 0 {
 		// nolint:staticcheck
 		if outbound.GetService() == "" {
-			result.AddViolationAt(validators.RootedAt("tags"), `mandatory tag "kuma.io/service" is missing`)
+			result.AddViolationAt(validators.RootedAt("tags"), `mandatory tag "dubbo.io/service" is missing`)
 		}
 	} else {
 		result.Add(ValidateTags(validators.RootedAt("tags"), outbound.Tags, ValidateTagsOpts{

@@ -64,11 +64,11 @@ var _ config.Config = &ZoneConfig{}
 // ZoneConfig defines zone configuration
 type ZoneConfig struct {
 	// Dubbo Zone name used to mark the zone dataplane resources
-	Name string `json:"name,omitempty" envconfig:"kuma_multizone_zone_name"`
-	// GlobalAddress URL of Global Kuma CP
-	GlobalAddress string `json:"globalAddress,omitempty" envconfig:"kuma_multizone_zone_global_address"`
+	Name string `json:"name,omitempty" envconfig:"dubbo_multizone_zone_name"`
+	// GlobalAddress URL of Global Dubbo CP
+	GlobalAddress string `json:"globalAddress,omitempty" envconfig:"dubbo_multizone_zone_global_address"`
 	// DisableOriginLabelValidation disables validation of the origin label when applying resources on Zone CP
-	DisableOriginLabelValidation bool `json:"disableOriginLabelValidation,omitempty" envconfig:"kuma_multizone_zone_disable_origin_label_validation"`
+	DisableOriginLabelValidation bool `json:"disableOriginLabelValidation,omitempty" envconfig:"dubbo_multizone_zone_disable_origin_label_validation"`
 }
 
 func (r *ZoneConfig) Sanitize() {

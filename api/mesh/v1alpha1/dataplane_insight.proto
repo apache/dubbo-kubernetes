@@ -73,7 +73,7 @@ message DiscoverySubscription {
   DiscoverySubscriptionStatus status = 5
   [ (validate.rules).message.required = true ];
 
-  // Version of Envoy and Kuma dataplane
+  // Version of Envoy and Dubbo dataplane
   Version version = 6;
 
   // Generation is an integer number which is periodically increased by the

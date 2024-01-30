@@ -40,8 +40,6 @@ func Join(parts ...string) string {
 	return strings.Join(parts, Separator)
 }
 
-// Renaming might break metrics
-// https://github.com/kumahq/kuma/issues/3249
 func GetLocalClusterName(port uint32) string {
 	return Join("localhost", formatPort(port))
 }
@@ -118,7 +116,7 @@ func GetMeshClusterName(meshName string, serviceName string) string {
 // example, is this a TLS certificate, or a ValidationContext, or something else.
 //
 // scope is a qualifier within which identifier can be considered to be unique.
-// For example, the name of a Kuma file DataSource is unique across file
+// For example, the name of a Dubbo file DataSource is unique across file
 // DataSources, but may collide with the name of a secret DataSource.
 //
 // identifier is a name that should be unique within a category and scope.

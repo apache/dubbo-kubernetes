@@ -114,7 +114,7 @@ type DiscoverySubscription struct {
 	DisconnectTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=disconnect_time,json=disconnectTime,proto3" json:"disconnect_time,omitempty"`
 	// Status of the ADS subscription.
 	Status *DiscoverySubscriptionStatus `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	// Version of Envoy and Kuma dataplane
+	// Version of Envoy and Dubbo dataplane
 	Version *Version `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
 	// Generation is an integer number which is periodically increased by the
 	// status sink
