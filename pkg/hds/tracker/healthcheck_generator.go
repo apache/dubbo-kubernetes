@@ -37,11 +37,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/hds/cache"
-	"github.com/apache/dubbo-kubernetes/pkg/util/net"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/names"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/generator"
 )
 
 type SnapshotGenerator struct {
@@ -141,14 +139,6 @@ func (g *SnapshotGenerator) GenerateSnapshot(ctx context.Context, node *envoy_co
 			},
 		}
 
-		if intf.WorkloadIP != mesh.IPv4Loopback.String() && intf.WorkloadIP != mesh.IPv6Loopback.String() {
-			if net.IsAddressIPv6(intf.WorkloadIP) {
-				hc.UpstreamBindConfig = g.upstreamBindConfig(generator.InPassThroughIPv6, 0)
-			} else {
-				hc.UpstreamBindConfig = g.upstreamBindConfig(generator.InPassThroughIPv4, 0)
-			}
-		}
-
 		healthChecks = append(healthChecks, hc)
 	}
 
@@ -190,17 +180,6 @@ func (g *SnapshotGenerator) envoyHealthCheck(port uint32) *envoy_service_health.
 						Path: "/ready",
 					},
 				},
-			},
-		},
-	}
-}
-
-func (g *SnapshotGenerator) upstreamBindConfig(addr string, port uint32) *envoy_core.BindConfig {
-	return &envoy_core.BindConfig{
-		SourceAddress: &envoy_core.SocketAddress{
-			Address: addr,
-			PortSpecifier: &envoy_core.SocketAddress_PortValue{
-				PortValue: port,
 			},
 		},
 	}
