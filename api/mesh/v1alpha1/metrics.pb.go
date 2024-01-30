@@ -7,12 +7,17 @@
 package v1alpha1
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	structpb "google.golang.org/protobuf/types/known/structpb"
-	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
+)
+
+import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+
+	structpb "google.golang.org/protobuf/types/known/structpb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (

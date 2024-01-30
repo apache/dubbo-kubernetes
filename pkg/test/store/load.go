@@ -19,12 +19,17 @@ package store
 
 import (
 	"context"
+	"os"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	util_yaml "github.com/apache/dubbo-kubernetes/pkg/util/yaml"
-	"github.com/pkg/errors"
-
-	"os"
 )
 
 func LoadResourcesFromFile(ctx context.Context, rs store.ResourceStore, fileName string) error {
