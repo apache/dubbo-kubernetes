@@ -28,9 +28,10 @@
             {{ $t(v.name) }}
           </span>
         </template>
-        <router-view :key="key" />
+       
       </a-tab-pane>
     </a-tabs>
+    <router-view />
     <router-view v-if="!tabRoute.meta.tab" />
   </div>
 </template>
