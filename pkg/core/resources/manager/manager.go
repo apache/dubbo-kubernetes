@@ -30,6 +30,7 @@ import (
 )
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 )
@@ -71,7 +72,21 @@ func (r *resourcesManager) Create(ctx context.Context, resource model.Resource, 
 	if err := model.Validate(resource); err != nil {
 		return err
 	}
-	return r.Store.Create(ctx, resource, fs...)
+	opts := store.NewCreateOptions(fs...)
+	var owner model.Resource
+	if resource.Descriptor().Scope == model.ScopeMesh {
+		owner = core_mesh.NewMeshResource()
+		if err := r.Store.Get(ctx, owner, store.GetByKey(opts.Mesh, model.NoMesh)); err != nil {
+			return MeshNotFound(opts.Mesh)
+		}
+	}
+	if resource.Descriptor().Name == core_mesh.MeshInsightType {
+		owner = core_mesh.NewMeshResource()
+		if err := r.Store.Get(ctx, owner, store.GetByKey(opts.Name, model.NoMesh)); err != nil {
+			return MeshNotFound(opts.Name)
+		}
+	}
+	return r.Store.Create(ctx, resource, append(fs, store.CreatedAt(time.Now()), store.CreateWithOwner(owner))...)
 }
 
 func (r *resourcesManager) Delete(ctx context.Context, resource model.Resource, fs ...store.DeleteOptionsFunc) error {

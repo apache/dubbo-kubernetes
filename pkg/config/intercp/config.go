@@ -68,11 +68,11 @@ func (i *InterCpConfig) Validate() error {
 type CatalogConfig struct {
 	// InstanceAddress indicates an address on which other control planes can communicate with this CP
 	// If empty then it's autoconfigured by taking the first IP of the nonloopback network interface.
-	InstanceAddress string `json:"instanceAddress" envconfig:"kuma_inter_cp_catalog_instance_address"`
+	InstanceAddress string `json:"instanceAddress" envconfig:"dubbo_inter_cp_catalog_instance_address"`
 	// Interval on which CP will send heartbeat to a leader.
-	HeartbeatInterval config_types.Duration `json:"heartbeatInterval" envconfig:"kuma_inter_cp_catalog_heartbeat_interval"`
+	HeartbeatInterval config_types.Duration `json:"heartbeatInterval" envconfig:"dubbo_inter_cp_catalog_heartbeat_interval"`
 	// Interval on which CP will write all instances to a catalog.
-	WriterInterval config_types.Duration `json:"writerInterval" envconfig:"kuma_inter_cp_catalog_writer_interval"`
+	WriterInterval config_types.Duration `json:"writerInterval" envconfig:"dubbo_inter_cp_catalog_writer_interval"`
 }
 
 func (i *CatalogConfig) Validate() error {
@@ -84,13 +84,13 @@ func (i *CatalogConfig) Validate() error {
 
 type InterCpServerConfig struct {
 	// Port on which Intercommunication CP server will listen
-	Port uint16 `json:"port" envconfig:"kuma_inter_cp_server_port"`
+	Port uint16 `json:"port" envconfig:"dubbo_inter_cp_server_port"`
 	// TlsMinVersion defines the minimum TLS version to be used
-	TlsMinVersion string `json:"tlsMinVersion" envconfig:"kuma_inter_cp_server_tls_min_version"`
+	TlsMinVersion string `json:"tlsMinVersion" envconfig:"dubbo_inter_cp_server_tls_min_version"`
 	// TlsMaxVersion defines the maximum TLS version to be used
-	TlsMaxVersion string `json:"tlsMaxVersion" envconfig:"kuma_inter_cp_server_tls_max_version"`
+	TlsMaxVersion string `json:"tlsMaxVersion" envconfig:"dubbo_inter_cp_server_tls_max_version"`
 	// TlsCipherSuites defines the list of ciphers to use
-	TlsCipherSuites []string `json:"tlsCipherSuites" envconfig:"kuma_inter_cp_server_tls_cipher_suites"`
+	TlsCipherSuites []string `json:"tlsCipherSuites" envconfig:"dubbo_inter_cp_server_tls_cipher_suites"`
 }
 
 func (i *InterCpServerConfig) Validate() error {

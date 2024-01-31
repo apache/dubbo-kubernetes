@@ -131,7 +131,7 @@ var ServiceNameMappingResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Resource:            NewServiceNameMappingResource(),
 	ResourceList:        &ServiceNameMappingResourceList{},
 	Scope:               model.ScopeMesh,
-	KDSFlags:            model.GlobalToAllZonesFlag | model.ZoneToGlobalFlag,
+	DDSFlags:            model.GlobalToAllZonesFlag | model.ZoneToGlobalFlag,
 	WsPath:              "servicenamemappings",
 	DubboctlArg:         "servicenamemapping",
 	DubboctlListArg:     "servicenamemappings",

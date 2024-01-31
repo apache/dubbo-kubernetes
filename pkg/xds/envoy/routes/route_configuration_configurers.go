@@ -27,7 +27,7 @@ import (
 	envoy_virtual_hosts "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/virtualhosts"
 )
 
-// ResetTagsHeader adds x-kuma-tags header to the RequestHeadersToRemove list. x-kuma-tags header is planned to be used
+// ResetTagsHeader adds x-dubbo-tags header to the RequestHeadersToRemove list. x-dubbo-tags header is planned to be used
 // internally, so we don't want to expose it to the destination application.
 func ResetTagsHeader() RouteConfigurationBuilderOpt {
 	return AddRouteConfigurationConfigurer(&v3.ResetTagsHeaderConfigurer{})

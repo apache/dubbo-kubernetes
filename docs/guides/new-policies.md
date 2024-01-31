@@ -1,4 +1,4 @@
-## How to generate a new Kuma policy
+## How to generate a new Dubbo policy
 
 Use the tool:
 

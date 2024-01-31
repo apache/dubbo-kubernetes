@@ -13,7 +13,7 @@ message ZoneIngress {
   option (dubbo.mesh.resource).name = "ZoneIngressResource";
   option (dubbo.mesh.resource).type = "ZoneIngress";
   option (dubbo.mesh.resource).package = "mesh";
-  option (dubbo.mesh.resource).kds.send_to_zone = true;
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
   option (dubbo.mesh.resource).ws.name = "zoneingress";
   option (dubbo.mesh.resource).ws.plural = "zoneingresses";
   option (dubbo.mesh.resource).allow_to_inspect = true;

@@ -97,9 +97,9 @@ func (d *DataplaneLifecycle) OnProxyReconnected(streamID core_xds.StreamID, prox
 
 func (d *DataplaneLifecycle) OnProxyDisconnected(ctx context.Context, streamID core_xds.StreamID, proxyKey core_model.ResourceKey) {
 	// OnStreamClosed method could be called either in case data plane proxy is down or
-	// Kuma CP is gracefully shutting down. If Kuma CP is gracefully shutting down we
+	// Dubbo CP is gracefully shutting down. If Dubbo CP is gracefully shutting down we
 	// must not delete Dataplane resource, data plane proxy will be reconnected to another
-	// instance of Kuma CP.
+	// instance of Dubbo CP.
 	select {
 	case <-d.appCtx.Done():
 		lifecycleLog.Info("graceful shutdown, don't delete Dataplane resource")
@@ -145,7 +145,7 @@ func (d *DataplaneLifecycle) register(
 			info.deleted = true
 			d.proxyInfos.Delete(proxyKey)
 		}
-		return errors.Wrap(err, "could not register proxy passed in kuma-dp run")
+		return errors.Wrap(err, "could not register proxy passed in dubbo-dp run")
 	}
 
 	info.connected = true

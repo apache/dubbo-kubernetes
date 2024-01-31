@@ -33,7 +33,7 @@ import (
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 )
 
-// DataplaneCallbacks are XDS callbacks that keep the context of Kuma Dataplane.
+// DataplaneCallbacks are XDS callbacks that keep the context of Dubbo Dataplane.
 // In the ideal world we could assume that one Dataplane has one xDS stream.
 // Due to race network latencies etc. there might be a situation when one Dataplane has many xDS streams for the short period of time.
 // Those callbacks helps us to deal with such situation.

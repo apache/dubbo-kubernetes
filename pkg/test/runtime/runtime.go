@@ -157,7 +157,7 @@ func (d *DummyEnvoyAdminClient) Stats(ctx context.Context, proxy core_model.Reso
 
 func (d *DummyEnvoyAdminClient) Clusters(ctx context.Context, proxy core_model.ResourceWithAddress) ([]byte, error) {
 	d.ClustersCalled++
-	return []byte("kuma:envoy:admin\n"), nil
+	return []byte("dubbo:envoy:admin\n"), nil
 }
 
 func (d *DummyEnvoyAdminClient) GenerateAPIToken(dp *core_mesh.DataplaneResource) (string, error) {

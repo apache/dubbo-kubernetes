@@ -21,7 +21,7 @@ const (
 )
 
 const (
-	// Mandatory tag that has a reserved meaning in Kuma.
+	// Mandatory tag that has a reserved meaning in Dubbo.
 	ServiceTag     = "dubbo.io/service"
 	ServiceUnknown = "unknown"
 
@@ -30,8 +30,8 @@ const (
 
 	MeshTag = "dubbo.io/mesh"
 
-	// Optional tag that has a reserved meaning in Kuma.
-	// If absent, Kuma will treat application's protocol as opaque TCP.
+	// Optional tag that has a reserved meaning in Dubbo.
+	// If absent, Dubbo will treat application's protocol as opaque TCP.
 	ProtocolTag = "dubbo.io/protocol"
 	// InstanceTag is set only for Dataplanes that implements headless services
 	InstanceTag = "dubbo.io/instance"
@@ -46,7 +46,7 @@ const (
 	TCPPortReserved = 49151 // IANA Reserved
 
 	// DisplayName is a standard label that can be used to easier recognize policy name.
-	// On Kubernetes, Kuma resource name contains namespace. Display name is original name without namespace.
+	// On Kubernetes, Dubbo resource name contains namespace. Display name is original name without namespace.
 	// The name contains hash when the resource is synced from global to zone. In this case, display name is original name from originated CP.
 	DisplayName = "dubbo.io/display-name"
 

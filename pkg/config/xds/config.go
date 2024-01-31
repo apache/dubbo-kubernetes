@@ -37,17 +37,17 @@ type XdsServerConfig struct {
 	config.BaseConfig
 
 	// Interval for re-generating configuration for Dataplanes connected to the Control Plane
-	DataplaneConfigurationRefreshInterval config_types.Duration `json:"dataplaneConfigurationRefreshInterval" envconfig:"kuma_xds_server_dataplane_configuration_refresh_interval"`
+	DataplaneConfigurationRefreshInterval config_types.Duration `json:"dataplaneConfigurationRefreshInterval" envconfig:"dubbo_xds_server_dataplane_configuration_refresh_interval"`
 	// Interval for flushing status of Dataplanes connected to the Control Plane
-	DataplaneStatusFlushInterval config_types.Duration `json:"dataplaneStatusFlushInterval" envconfig:"kuma_xds_server_dataplane_status_flush_interval"`
+	DataplaneStatusFlushInterval config_types.Duration `json:"dataplaneStatusFlushInterval" envconfig:"dubbo_xds_server_dataplane_status_flush_interval"`
 	// DataplaneDeregistrationDelay is a delay between proxy terminating a connection and the CP trying to deregister the proxy.
 	// It is used only in universal mode when you use direct lifecycle.
 	// Setting this setting to 0s disables the delay.
 	// Disabling this may cause race conditions that one instance of CP removes proxy object
 	// while proxy is connected to another instance of the CP.
-	DataplaneDeregistrationDelay config_types.Duration `json:"dataplaneDeregistrationDelay" envconfig:"kuma_xds_dataplane_deregistration_delay"`
+	DataplaneDeregistrationDelay config_types.Duration `json:"dataplaneDeregistrationDelay" envconfig:"dubbo_xds_dataplane_deregistration_delay"`
 	// Backoff that is executed when Control Plane is sending the response that was previously rejected by Dataplane
-	NACKBackoff config_types.Duration `json:"nackBackoff" envconfig:"kuma_xds_server_nack_backoff"`
+	NACKBackoff config_types.Duration `json:"nackBackoff" envconfig:"dubbo_xds_server_nack_backoff"`
 }
 
 func (x *XdsServerConfig) Validate() error {

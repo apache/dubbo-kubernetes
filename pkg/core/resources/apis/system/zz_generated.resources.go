@@ -108,7 +108,7 @@ var ConfigResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            false,
 	AdminOnly:           false,
 	Scope:               model.ScopeGlobal,
-	KDSFlags:            model.GlobalToAllZonesFlag,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "",
 	DubboctlArg:         "",
 	DubboctlListArg:     "",

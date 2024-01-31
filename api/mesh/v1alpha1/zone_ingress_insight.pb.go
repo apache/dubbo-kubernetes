@@ -34,7 +34,7 @@ type ZoneIngressInsight struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// List of ADS subscriptions created by a given Zone Kuma CP.
+	// List of ADS subscriptions created by a given Zone Dubbo CP.
 	Subscriptions []*DiscoverySubscription `protobuf:"bytes,1,rep,name=subscriptions,proto3" json:"subscriptions,omitempty"`
 }
 

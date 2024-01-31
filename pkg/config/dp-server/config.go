@@ -95,11 +95,11 @@ type HdsConfig struct {
 
 	// Enabled if true then Envoy will actively check application's ports, but only on Universal.
 	// On Kubernetes this feature disabled for now regardless the flag value
-	Enabled bool `json:"enabled" envconfig:"kuma_dp_server_hds_enabled"`
+	Enabled bool `json:"enabled" envconfig:"dubbo_dp_server_hds_enabled"`
 	// Interval for Envoy to send statuses for HealthChecks
-	Interval config_types.Duration `json:"interval" envconfig:"kuma_dp_server_hds_interval"`
+	Interval config_types.Duration `json:"interval" envconfig:"dubbo_dp_server_hds_interval"`
 	// RefreshInterval is an interval for re-genarting configuration for Dataplanes connected to the Control Plane
-	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"kuma_dp_server_hds_refresh_interval"`
+	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"dubbo_dp_server_hds_refresh_interval"`
 	// CheckDefaults defines a HealthCheck configuration
 	CheckDefaults *HdsCheck `json:"checkDefaults"`
 }
@@ -123,18 +123,18 @@ type HdsCheck struct {
 
 	// Timeout is a time to wait for a health check response. If the timeout is reached the
 	// health check attempt will be considered a failure.
-	Timeout config_types.Duration `json:"timeout" envconfig:"kuma_dp_server_hds_check_timeout"`
+	Timeout config_types.Duration `json:"timeout" envconfig:"dubbo_dp_server_hds_check_timeout"`
 	// Interval between health checks.
-	Interval config_types.Duration `json:"interval" envconfig:"kuma_dp_server_hds_check_interval"`
+	Interval config_types.Duration `json:"interval" envconfig:"dubbo_dp_server_hds_check_interval"`
 	// NoTrafficInterval is a special health check interval that is used when a cluster has
 	// never had traffic routed to it.
-	NoTrafficInterval config_types.Duration `json:"noTrafficInterval" envconfig:"kuma_dp_server_hds_check_no_traffic_interval"`
+	NoTrafficInterval config_types.Duration `json:"noTrafficInterval" envconfig:"dubbo_dp_server_hds_check_no_traffic_interval"`
 	// HealthyThreshold is a number of healthy health checks required before a host is marked
 	// healthy.
-	HealthyThreshold uint32 `json:"healthyThreshold" envconfig:"kuma_dp_server_hds_check_healthy_threshold"`
+	HealthyThreshold uint32 `json:"healthyThreshold" envconfig:"dubbo_dp_server_hds_check_healthy_threshold"`
 	// UnhealthyThreshold is a number of unhealthy health checks required before a host is marked
 	// unhealthy.
-	UnhealthyThreshold uint32 `json:"unhealthyThreshold" envconfig:"kuma_dp_server_hds_check_unhealthy_threshold"`
+	UnhealthyThreshold uint32 `json:"unhealthyThreshold" envconfig:"dubbo_dp_server_hds_check_unhealthy_threshold"`
 }
 
 func (h *HdsCheck) Validate() error {

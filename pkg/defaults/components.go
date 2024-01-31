@@ -94,7 +94,7 @@ func (d *defaultsComponent) Start(stop <-chan struct{}) error {
 	errChan := make(chan error)
 
 	if d.config.SkipMeshCreation {
-		log.V(1).Info("skipping default Mesh creation because KUMA_DEFAULTS_SKIP_MESH_CREATION is set to true")
+		log.V(1).Info("skipping default Mesh creation because DUBBO_DEFAULTS_SKIP_MESH_CREATION is set to true")
 	} else {
 		wg.Add(1)
 		go func() {

@@ -15,7 +15,7 @@ message Dataplane {
   option (dubbo.mesh.resource).name = "DataplaneResource";
   option (dubbo.mesh.resource).type = "Dataplane";
   option (dubbo.mesh.resource).package = "mesh";
-  option (dubbo.mesh.resource).kds.send_to_zone = true;
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
   option (dubbo.mesh.resource).ws.name = "dataplane";
   option (dubbo.mesh.resource).ws.plural = "dataplanes";
   option (dubbo.mesh.resource).allow_to_inspect = true;

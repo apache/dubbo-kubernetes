@@ -45,7 +45,7 @@ type UniversalRuntimeConfig struct {
 	config.BaseConfig
 
 	// DataplaneCleanupAge defines how long Dataplane should be offline to be cleaned up by GC
-	DataplaneCleanupAge config_types.Duration `json:"dataplaneCleanupAge" envconfig:"kuma_runtime_universal_dataplane_cleanup_age"`
+	DataplaneCleanupAge config_types.Duration `json:"dataplaneCleanupAge" envconfig:"dubbo_runtime_universal_dataplane_cleanup_age"`
 }
 
 func (u *UniversalRuntimeConfig) Validate() error {

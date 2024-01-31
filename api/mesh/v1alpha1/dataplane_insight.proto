@@ -14,7 +14,7 @@ message DataplaneInsight {
   option (dubbo.mesh.resource).name = "DataplaneInsightResource";
   option (dubbo.mesh.resource).type = "DataplaneInsight";
   option (dubbo.mesh.resource).package = "mesh";
-  option (dubbo.mesh.resource).kds.send_to_global = true;
+  option (dubbo.mesh.resource).dds.send_to_global = true;
   option (dubbo.mesh.resource).ws.name = "dataplane-insight";
   option (dubbo.mesh.resource).ws.read_only = true;
   option (dubbo.mesh.resource).scope_namespace = true;
@@ -73,7 +73,7 @@ message DiscoverySubscription {
   DiscoverySubscriptionStatus status = 5
   [ (validate.rules).message.required = true ];
 
-  // Version of Envoy and Kuma dataplane
+  // Version of Envoy and Dubbo dataplane
   Version version = 6;
 
   // Generation is an integer number which is periodically increased by the

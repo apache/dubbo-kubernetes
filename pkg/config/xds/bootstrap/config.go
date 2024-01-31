@@ -69,19 +69,19 @@ type BootstrapParamsConfig struct {
 	config.BaseConfig
 
 	// Address of Envoy Admin
-	AdminAddress string `json:"adminAddress" envconfig:"kuma_bootstrap_server_params_admin_address"`
+	AdminAddress string `json:"adminAddress" envconfig:"dubbo_bootstrap_server_params_admin_address"`
 	// Port of Envoy Admin
-	AdminPort uint32 `json:"adminPort" envconfig:"kuma_bootstrap_server_params_admin_port"`
+	AdminPort uint32 `json:"adminPort" envconfig:"dubbo_bootstrap_server_params_admin_port"`
 	// Path to access log file of Envoy Admin
-	AdminAccessLogPath string `json:"adminAccessLogPath" envconfig:"kuma_bootstrap_server_params_admin_access_log_path"`
-	// Host of XDS Server. By default it is the same host as the one used by kuma-dp to connect to the control plane
-	XdsHost string `json:"xdsHost" envconfig:"kuma_bootstrap_server_params_xds_host"`
-	// Port of XDS Server. By default it is autoconfigured from KUMA_XDS_SERVER_GRPC_PORT
-	XdsPort uint32 `json:"xdsPort" envconfig:"kuma_bootstrap_server_params_xds_port"`
+	AdminAccessLogPath string `json:"adminAccessLogPath" envconfig:"dubbo_bootstrap_server_params_admin_access_log_path"`
+	// Host of XDS Server. By default it is the same host as the one used by dubbo-dp to connect to the control plane
+	XdsHost string `json:"xdsHost" envconfig:"dubbo_bootstrap_server_params_xds_host"`
+	// Port of XDS Server. By default it is autoconfigured from DUBBo_XDS_SERVER_GRPC_PORT
+	XdsPort uint32 `json:"xdsPort" envconfig:"dubbo_bootstrap_server_params_xds_port"`
 	// Connection timeout to the XDS Server
-	XdsConnectTimeout config_types.Duration `json:"xdsConnectTimeout" envconfig:"kuma_bootstrap_server_params_xds_connect_timeout"`
+	XdsConnectTimeout config_types.Duration `json:"xdsConnectTimeout" envconfig:"dubbo_bootstrap_server_params_xds_connect_timeout"`
 	// Path to the template of Corefile for data planes to use
-	CorefileTemplatePath string `json:"corefileTemplatePath" envconfig:"kuma_bootstrap_server_params_corefile_template_path"`
+	CorefileTemplatePath string `json:"corefileTemplatePath" envconfig:"dubbo_bootstrap_server_params_corefile_template_path"`
 }
 
 func (b *BootstrapParamsConfig) Validate() error {
@@ -114,8 +114,8 @@ func DefaultBootstrapParamsConfig() *BootstrapParamsConfig {
 		AdminAddress:         "127.0.0.1", // by default, Envoy Admin interface should listen on loopback address
 		AdminPort:            9901,
 		AdminAccessLogPath:   os.DevNull,
-		XdsHost:              "", // by default, it is the same host as the one used by kuma-dp to connect to the control plane
-		XdsPort:              0,  // by default, it is autoconfigured from KUMA_XDS_SERVER_GRPC_PORT
+		XdsHost:              "", // by default, it is the same host as the one used by dubbo-dp to connect to the control plane
+		XdsPort:              0,  // by default, it is autoconfigured from DUBBO_XDS_SERVER_GRPC_PORT
 		XdsConnectTimeout:    config_types.Duration{Duration: 1 * time.Second},
 		CorefileTemplatePath: "", // by default, data plane will use the embedded Corefile to be the template
 	}
