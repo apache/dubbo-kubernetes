@@ -16,36 +16,39 @@
 -->
 <template>
   <div class="__container_router_tab_index">
-    <a-tabs
-      v-if="tabRoute.meta.tab"
-      @change="router.push({ name: activeKey || '' })"
-      v-model:activeKey="activeKey"
-    >
-      <a-tab-pane :key="v.name" v-for="v in tabRouters">
-        <template #tab>
+    <div :key="key">
+      <a-tabs
+          v-if="tabRoute.meta.tab"
+          @change="router.push({ name: activeKey || '' })"
+          v-model:activeKey="activeKey"
+      >
+        <a-tab-pane :key="v.name" v-for="v in tabRouters">
+          <template #tab>
           <span>
             <Icon style="margin-bottom: -2px" :icon="v.meta.icon"></Icon>
             {{ $t(v.name) }}
           </span>
-        </template>
-        <router-view :key="key" />
-      </a-tab-pane>
-    </a-tabs>
-    <router-view v-if="!tabRoute.meta.tab" />
+          </template>
+        </a-tab-pane>
+      </a-tabs>
+      <router-view/>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Icon } from '@iconify/vue'
-import { useRoute, useRouter } from 'vue-router'
+import {computed, ref} from 'vue'
+import {Icon} from '@iconify/vue'
+import {useRoute, useRouter} from 'vue-router'
 import _ from 'lodash'
-import { PRIMARY_COLOR } from '@/base/constants'
-import type { RouterMeta } from '@/router/RouterMeta'
+
 const router = useRouter()
 const tabRoute = useRoute()
 let meta: any = tabRoute.meta
-const tabRouters = meta?.parent?.children?.filter((x: any): any => x.meta.tab)
+const tabRouters = computed(() => {
+  let meta: any = tabRoute.meta
+  return meta?.parent?.children?.filter((x: any): any => x.meta.tab)
+})
 let activeKey = ref(tabRoute.name)
 let transitionFlag = ref(true)
 let key = _.uniqueId('__tab_page')
@@ -58,6 +61,5 @@ router.beforeEach((to, from, next) => {
     transitionFlag.value = true
   }, 500)
 })
-console.log(tabRoute)
 </script>
 <style lang="less" scoped></style>

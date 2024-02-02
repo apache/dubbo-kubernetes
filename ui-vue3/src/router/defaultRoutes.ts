@@ -85,6 +85,14 @@ export const routes: Readonly<RouteRecordType[]> = [
                 meta: {
                   tab: true
                 }
+              },
+              {
+                path: '/detail3/:pathId',
+                name: 'application-tab3',
+                component: () => import('../views/resources/applications/tabs/tab3.vue'),
+                meta: {
+                  tab: true
+                }
               }
             ]
           },
@@ -98,7 +106,7 @@ export const routes: Readonly<RouteRecordType[]> = [
             path: '/services',
             name: 'services',
             redirect: 'search',
-            component: () => import('../views/resources/services/index.vue'),
+            component: LayoutTab,
             meta: {
               tab_parent: true
             },

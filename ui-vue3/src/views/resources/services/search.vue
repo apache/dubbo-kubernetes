@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { reactive, provide } from 'vue'
-import { searchService } from '@/api/service/service.ts'
+import { searchService } from '@/api/service/service'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
