@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -49,11 +50,12 @@ var (
 	tripleRef    RPCReflection
 )
 
-func init() {
+func TestMain(m *testing.M) {
 	initGRpcServer()
 	initTripleServer()
 	initGrpcReflection()
 	initTripleReflection()
+	os.Exit(m.Run())
 }
 
 func initGRpcServer() {
@@ -222,9 +224,11 @@ func TestMethodDescribeString(t *testing.T) {
 			methods: []string{"greet.GreetService.Greet", "greet.GreetService.GreetClientStream", "greet.GreetService.GreetServerStream", "greet.GreetService.GreetStream"},
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
+			var result string
 			for _, method := range list.methods {
 				txt, err := list.ref.DescribeString(method)
 				if err != nil {
@@ -232,6 +236,13 @@ func TestMethodDescribeString(t *testing.T) {
 					return
 				}
 				t.Logf("name:%#v method:%#v txt:\n%#v", list.name, method, txt)
+				result = result + txt
+			}
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], result)
+			} else {
+				results = append(results, result)
 			}
 		})
 	}
@@ -257,9 +268,11 @@ func TestInputAndOutputType(t *testing.T) {
 			methods: []string{"greet.GreetService.Greet", "greet.GreetService.GreetClientStream", "greet.GreetService.GreetServerStream", "greet.GreetService.GreetStream"},
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
+			var result string
 			for _, method := range list.methods {
 
 				inputType, outputType, err := list.ref.InputAndOutputType(method)
@@ -268,6 +281,14 @@ func TestInputAndOutputType(t *testing.T) {
 					return
 				}
 				t.Logf("name:%#v method:%#v inputType:%#v outputType:%#v", list.name, method, inputType, outputType)
+
+				result = inputType + outputType
+			}
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], result)
+			} else {
+				results = append(results, result)
 			}
 		})
 	}
@@ -293,9 +314,12 @@ func TestMessageDescribeString(t *testing.T) {
 			methods: []string{"greet.GreetService.Greet", "greet.GreetService.GreetClientStream", "greet.GreetService.GreetServerStream", "greet.GreetService.GreetStream"},
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
+			var result string
+
 			for _, method := range list.methods {
 
 				inputType, outputType, err := list.ref.InputAndOutputType(method)
@@ -310,6 +334,7 @@ func TestMessageDescribeString(t *testing.T) {
 					return
 				}
 				t.Logf("name:%#v inputType:%#v txt:\n%#v", list.name, inputType, txt)
+				result = result + txt
 
 				txt, err = list.ref.DescribeString(outputType)
 				if err != nil {
@@ -317,6 +342,14 @@ func TestMessageDescribeString(t *testing.T) {
 					return
 				}
 				t.Logf("name:%#v outputType:%#v txt:\n%#v", list.name, outputType, txt)
+
+				result = result + txt
+			}
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], result)
+			} else {
+				results = append(results, result)
 			}
 		})
 	}
@@ -342,9 +375,12 @@ func TestTemplateString(t *testing.T) {
 			methods: []string{"greet.GreetService.Greet", "greet.GreetService.GreetClientStream", "greet.GreetService.GreetServerStream", "greet.GreetService.GreetStream"},
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
+			var result string
+
 			for _, method := range list.methods {
 
 				inputType, outputType, err := list.ref.InputAndOutputType(method)
@@ -359,6 +395,7 @@ func TestTemplateString(t *testing.T) {
 					return
 				}
 				t.Logf("name:%#v inputType:%#v txt:\n%#v", list.name, inputType, txt)
+				result = result + txt
 
 				txt, err = list.ref.TemplateString(outputType)
 				if err != nil {
@@ -366,6 +403,13 @@ func TestTemplateString(t *testing.T) {
 					return
 				}
 				t.Logf("name:%#v outputType:%#v txt:\n%#v", list.name, outputType, txt)
+				result = result + txt
+			}
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], result)
+			} else {
+				results = append(results, result)
 			}
 		})
 	}
@@ -394,6 +438,7 @@ func TestInvokeUnary(t *testing.T) {
 			input:   "{\n  \"name\": \"dubbo-kubernetes\"\n}",
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
@@ -404,6 +449,12 @@ func TestInvokeUnary(t *testing.T) {
 			}
 
 			t.Logf("name:%#v method:%#v invoke success, response:\n%#v", list.name, list.method, resp)
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], resp)
+			} else {
+				results = append(results, resp)
+			}
 		})
 	}
 }
@@ -431,6 +482,7 @@ func TestInvokeServerStream(t *testing.T) {
 			input:   "{\n  \"name\": \"dubbo-kubernetes\"\n}",
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
@@ -441,6 +493,12 @@ func TestInvokeServerStream(t *testing.T) {
 			}
 
 			t.Logf("name:%#v method:%#v invoke success, response:\n%#v", list.name, list.method, resp)
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], resp)
+			} else {
+				results = append(results, resp)
+			}
 		})
 	}
 }
@@ -468,6 +526,7 @@ func TestInvokeClientStream(t *testing.T) {
 			input:   "{\n  \"name\": \"dubbo-kubernetes-1\"\n}" + "{\n  \"name\": \"dubbo-kubernetes-2\"\n}",
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
@@ -478,6 +537,12 @@ func TestInvokeClientStream(t *testing.T) {
 			}
 
 			t.Logf("name:%#v method:%#v invoke success, response:\n%#v", list.name, list.method, resp)
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], resp)
+			} else {
+				results = append(results, resp)
+			}
 		})
 	}
 }
@@ -505,6 +570,7 @@ func TestInvokeBiStream(t *testing.T) {
 			input:   "{\n  \"name\": \"dubbo-kubernetes-1\"\n}" + "{\n  \"name\": \"dubbo-kubernetes-2\"\n}",
 		},
 	}
+	var results []string
 
 	for _, list := range lists {
 		t.Run(list.name, func(t *testing.T) {
@@ -515,6 +581,12 @@ func TestInvokeBiStream(t *testing.T) {
 			}
 
 			t.Logf("name:%#v method:%#v invoke success, response:\n%#v", list.name, list.method, resp)
+
+			if len(results) > 0 {
+				assert.Equal(t, results[0], resp)
+			} else {
+				results = append(results, resp)
+			}
 		})
 	}
 }
