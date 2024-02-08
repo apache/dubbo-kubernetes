@@ -15,14 +15,14 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_tabDemo2">tab2</div>
+  <div class="__container_app_tracing">tracing todo </div>
 </template>
 
 <script setup lang="ts">
 import {onMounted} from "vue";
 
 onMounted(()=>{
-  console.log(222)
+  console.log(333)
 })
 
 </script>

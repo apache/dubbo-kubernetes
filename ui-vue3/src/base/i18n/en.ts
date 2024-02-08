@@ -268,12 +268,47 @@ const words: I18nType = {
   applications: 'Applications',
   instances: 'Instances',
   applicationDomain: {
-    name: 'Application Name',
-    detail: 'Application Detail'
+
+    detail: 'Detail',
+    instance: 'Instance',
+    service: 'Service',
+    monitor: 'Monitor',
+    tracing: 'Tracing',
+    config: 'Config',
+    event: 'Event',
+    appName: 'Application Name',
+    rpcProtocols: 'Rpc Protocols',
+    dubboVersions: 'Dubbo Versions',
+    dubboPorts: 'Dubbo Ports',
+    serialProtocols: 'Serial Protocols',
+    appTypes: 'Application Types',
+    images: 'Images',
+    workloads: 'Workloads',
+    deployCluster: 'Deploy Cluster',
+    registerCluster: 'Register Cluster',
+    registerMode: 'Register Mode',
   },
+  instanceDomain:{
+    ip: 'Ip',
+    name: 'Name',
+    deployState: 'Deploy State',
+    deployCluster: 'Deploy Cluster',
+    registerStates: 'Register States',
+    registerClusters: 'Register Clusters',
+    cpu: 'Cpu',
+    memory: 'Memory',
+    startTime: 'Start Time',
+    registerTime: 'Register Time',
+    labels: 'Labels',
+},
   searchDomain: {
     total: 'Total',
     unit: 'items'
+  },
+  messageDomain: {
+    success: {
+      copy: "You have successfully copied a piece of information"
+    }
   },
   backHome: 'Back Home',
   noPageTip: 'Sorry, the page you visited does not exist.',

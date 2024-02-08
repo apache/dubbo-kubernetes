@@ -16,14 +16,15 @@
  */
 
 import Mock from 'mockjs'
+import devTool from "@/utils/DevToolUtil";
 
-Mock.mock('/mock/service/search', 'get', {
+Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
   code: 200,
   message: 'success',
   data: {
     total: 8,
     curPage: 1,
-    pageSize: 1,
+    pageSize: 5,
     data: [
       {
         serviceName: 'org.apache.dubbo.samples.UserService',
