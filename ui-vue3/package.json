@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "vite",
     "check:i18n": "node --loader ts-node/esm src/base/i18n/sortI18n.ts",
-    "build": "prettier --write src/ && vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
-    "build-only": "vite build",
+    "build": "vite build",
     "type-check": "vue-tsc --build --force",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/"
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore",
+    "lint:fix": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "prepare": "husky install",
+    "prettier-format": "prettier --write src/",
+    "prettier-check": "prettier --check src/"
   },
   "resolutions": {
     "jackspeak": "2.1.1"
@@ -28,6 +30,7 @@
     "less": "^4.2.0",
     "lodash": "^4.17.21",
     "mockjs": "^1.1.0",
+    "monaco-editor": "^0.45.0",
     "nprogress": "^0.2.0",
     "pinia": "^2.1.7",
     "pinyin-pro": "^3.19.3",
@@ -54,6 +57,7 @@
     "eslint": "^8.49.0",
     "eslint-plugin-cypress": "^2.15.1",
     "eslint-plugin-vue": "^9.17.0",
+    "husky": "^9.0.6",
     "jsdom": "^23.0.1",
     "npm-run-all2": "^6.1.1",
     "prettier": "^3.0.3",

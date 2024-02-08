@@ -48,20 +48,10 @@
             <a-tree block-node :tree-data="outputParamType" class="description-item-content" />
           </a-descriptions-item>
           <a-descriptions-item label="请求" :span="2">
-            <a-textarea
-              v-model="requestValue"
-              placeholder="请输入"
-              :rows="4"
-              class="description-item-content"
-            />
+            <monaco-editor editorId="requestEditor" width="90%" height="300px" />
           </a-descriptions-item>
           <a-descriptions-item label="响应" :span="2">
-            <a-textarea
-              v-model="responseValue"
-              placeholder="请输入"
-              :rows="4"
-              class="description-item-content"
-            />
+            <monaco-editor editorId="responseEditor" width="90%" height="300px" />
           </a-descriptions-item>
         </a-descriptions>
         <a-button type="primary">发送请求</a-button>
@@ -71,7 +61,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import {reactive, ref} from 'vue'
+import MonacoEditor from '@/components/editor/MonacoEditor.vue';
+
 
 const methodTabs = reactive([
   'login',
@@ -150,10 +142,8 @@ const outputParamType = [
     ]
   }
 ]
-
-const requestValue = ref('')
-const responseValue = ref('')
 </script>
+
 <style lang="less" scoped>
 .__container_services_tabs_debug {
   width: 100%;
