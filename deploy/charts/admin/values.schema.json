@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "traffic": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "conditionRoute": {
+          "type": "object",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": ["service", "application"]
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "force": {
+              "type": "boolean",
+              "default": true
+            },
+            "runtime": {
+              "type": "boolean",
+              "default": true
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 100
+            },
+            "configVersion": {
+              "type": "string",
+              "enum": ["v3.0"]
+            },
+            "key": {
+              "type": "string"
+            },
+            "conditions": {
+              "type": "string"
+            }
+          },
+          "required": ["scope", "key", "conditions"]
+        },
+        "dynamicConfig": {
+          "type": "object",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": ["service", "application"]
+            },
+            "configVersion": {
+              "type": "string",
+              "enum": ["v3.0"]
+            },
+            "key": {
+              "type": "string"
+            },
+            "side": {
+              "type": "string",
+              "enum": ["provider", "consumer"]
+            },
+            "exact": {
+              "type": "string"
+            }
+          },
+          "required": ["scope", "key"]
+        },
+        "tagRoute": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "force": {
+              "type": "boolean",
+              "default": true
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 99
+            },
+            "configVersion": {
+              "type": "string",
+              "enum": ["v3.0"]
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": ["name", "key"]
+        }
+      },
+      "required": ["enabled"]
+    }
+  },
+  "required": ["traffic"]
+}
