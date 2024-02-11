@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package controllers
+package dds
 
-import (
-	kube_core "k8s.io/api/core/v1"
+const (
+	googleApis = "type.googleapis.com/"
+
+	// DubboResource is the type URL of the DubboResource protobuf.
+	DubboResource = googleApis + "dubbo.mesh.v1alpha1.DubboResource"
+
+	MetadataFieldConfig    = "config"
+	MetadataFieldVersion   = "version"
+	MetadataFeatures       = "features"
+	MetadataControlPlaneId = "control-plane-id"
 )
-
-import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-)
-
-func ProbesFor(pod *kube_core.Pod) (*mesh_proto.Dataplane_Probes, error) {
-	return &mesh_proto.Dataplane_Probes{}, nil
-}

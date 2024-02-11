@@ -19,18 +19,22 @@ package controllers
 
 import (
 	"context"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/metadata"
-	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
+)
+
+import (
 	kube_core "k8s.io/api/core/v1"
+
 	kube_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
+	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/metadata"
+	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
 )
 
 var (

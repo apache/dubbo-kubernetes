@@ -102,9 +102,6 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 					"minimim-open-files", minOpenFileLimit)
 			}
 
-			//if err := admin.Setup(rt); err != nil {
-			//	runLog.Error(err, "unable to set up admin server")
-			//}
 			if err := bufman.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up bufman server")
 			}

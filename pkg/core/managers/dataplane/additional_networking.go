@@ -15,16 +15,13 @@
  * limitations under the License.
  */
 
-package controllers
-
-import (
-	kube_core "k8s.io/api/core/v1"
-)
+package dataplane
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 )
 
-func ProbesFor(pod *kube_core.Pod) (*mesh_proto.Dataplane_Probes, error) {
-	return &mesh_proto.Dataplane_Probes{}, nil
+func PrometheusInbound(dataplane *core_mesh.DataplaneResource, mesh *core_mesh.MeshResource) (*mesh_proto.Dataplane_Networking_Inbound, error) {
+	return nil, nil
 }

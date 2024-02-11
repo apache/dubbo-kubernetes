@@ -15,16 +15,18 @@
  * limitations under the License.
  */
 
-package controllers
+package dataplane
 
 import (
-	kube_core "k8s.io/api/core/v1"
+	"context"
 )
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
-func ProbesFor(pod *kube_core.Pod) (*mesh_proto.Dataplane_Probes, error) {
-	return &mesh_proto.Dataplane_Probes{}, nil
+type Validator interface {
+	ValidateCreate(ctx context.Context, key model.ResourceKey, newDp *core_mesh.DataplaneResource, mesh *core_mesh.MeshResource) error
+	ValidateUpdate(ctx context.Context, newDp *core_mesh.DataplaneResource, mesh *core_mesh.MeshResource) error
 }

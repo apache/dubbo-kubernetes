@@ -19,23 +19,17 @@ package controllers
 
 import (
 	"context"
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
-	k8s_model "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/model"
-	"github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/metadata"
-	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
-	"github.com/pkg/errors"
-	kube_meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kube_controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 import (
 	"github.com/go-logr/logr"
 
+	"github.com/pkg/errors"
+
 	kube_core "k8s.io/api/core/v1"
 
 	kube_apierrs "k8s.io/apimachinery/pkg/api/errors"
+	kube_meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kube_runtime "k8s.io/apimachinery/pkg/runtime"
 	kube_types "k8s.io/apimachinery/pkg/types"
 
@@ -44,12 +38,19 @@ import (
 	kube_ctrl "sigs.k8s.io/controller-runtime"
 	kube_client "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	kube_controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	kube_handler "sigs.k8s.io/controller-runtime/pkg/handler"
 	kube_reconcile "sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
+	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
+	k8s_model "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/metadata"
+	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
 )
 
 const (
