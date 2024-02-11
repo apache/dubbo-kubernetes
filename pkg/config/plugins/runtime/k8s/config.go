@@ -147,3 +147,47 @@ func (c *AdmissionServerConfig) Validate() error {
 	//}
 	return errs
 }
+
+// DataplaneContainer defines the configuration of a Kuma dataplane proxy container.
+type DataplaneContainer struct {
+	// Deprecated: Use DUBBO_BOOTSTRAP_SERVER_PARAMS_ADMIN_PORT instead.
+	AdminPort uint32 `json:"adminPort,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_admin_port"`
+	// Drain time for listeners.
+	DrainTime config_types.Duration `json:"drainTime,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_drain_time"`
+	// Readiness probe.
+	ReadinessProbe SidecarReadinessProbe `json:"readinessProbe,omitempty"`
+	// Liveness probe.
+	LivenessProbe SidecarLivenessProbe `json:"livenessProbe,omitempty"`
+	// EnvVars are additional environment variables that can be placed on Kuma DP sidecar
+	EnvVars map[string]string `json:"envVars" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_env_vars"`
+}
+
+// SidecarReadinessProbe defines periodic probe of container service readiness.
+type SidecarReadinessProbe struct {
+	config.BaseConfig
+
+	// Number of seconds after the container has started before readiness probes are initiated.
+	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_initial_delay_seconds"`
+	// Number of seconds after which the probe times out.
+	TimeoutSeconds int32 `json:"timeoutSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_timeout_seconds"`
+	// Number of seconds after which the probe times out.
+	PeriodSeconds int32 `json:"periodSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_period_seconds"`
+	// Minimum consecutive successes for the probe to be considered successful after having failed.
+	SuccessThreshold int32 `json:"successThreshold,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_success_threshold"`
+	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
+	FailureThreshold int32 `json:"failureThreshold,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_failure_threshold"`
+}
+
+// SidecarLivenessProbe defines periodic probe of container service liveness.
+type SidecarLivenessProbe struct {
+	config.BaseConfig
+
+	// Number of seconds after the container has started before liveness probes are initiated.
+	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_initial_delay_seconds"`
+	// Number of seconds after which the probe times out.
+	TimeoutSeconds int32 `json:"timeoutSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_timeout_seconds"`
+	// How often (in seconds) to perform the probe.
+	PeriodSeconds int32 `json:"periodSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_period_seconds"`
+	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
+	FailureThreshold int32 `json:"failureThreshold,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_failure_threshold"`
+}
