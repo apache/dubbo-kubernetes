@@ -24,6 +24,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+)
+
+import (
 	"github.com/pkg/errors"
 )
 

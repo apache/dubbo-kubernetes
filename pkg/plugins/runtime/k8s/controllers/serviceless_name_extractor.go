@@ -19,10 +19,15 @@ package controllers
 
 import (
 	"context"
+)
 
+import (
 	kube_apps "k8s.io/api/apps/v1"
+
 	kube_batch "k8s.io/api/batch/v1"
+
 	kube_core "k8s.io/api/core/v1"
+
 	kube_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 

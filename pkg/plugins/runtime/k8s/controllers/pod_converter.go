@@ -34,4 +34,6 @@ type PodConverter struct {
 	ServiceGetter     kube_client.Reader
 	NodeGetter        kube_client.Reader
 	ResourceConverter k8s_common.Converter
+	InboundConverter  InboundConverter
+	Zone              string
 }

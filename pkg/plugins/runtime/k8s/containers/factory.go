@@ -18,13 +18,21 @@
 package containers
 
 import (
-	runtime_k8s "github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime/k8s"
-	"github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/metadata"
-	kube_core "k8s.io/api/core/v1"
-	kube_intstr "k8s.io/apimachinery/pkg/util/intstr"
-	kube_client "sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"time"
+)
+
+import (
+	kube_core "k8s.io/api/core/v1"
+
+	kube_intstr "k8s.io/apimachinery/pkg/util/intstr"
+
+	kube_client "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+import (
+	runtime_k8s "github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime/k8s"
+	"github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/metadata"
 )
 
 type EnvVarsByName []kube_core.EnvVar

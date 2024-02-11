@@ -24,12 +24,18 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	util_rsa "github.com/apache/dubbo-kubernetes/pkg/util/rsa"
-	"github.com/pkg/errors"
 	"math/big"
 	"net"
 	"time"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	util_rsa "github.com/apache/dubbo-kubernetes/pkg/util/rsa"
 )
 
 var DefaultValidityPeriod = 10 * 365 * 24 * time.Hour

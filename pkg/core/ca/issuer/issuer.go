@@ -26,10 +26,15 @@ import (
 	"math/big"
 	"net/url"
 	"time"
+)
 
+import (
 	"github.com/pkg/errors"
-	"github.com/spiffe/go-spiffe/v2/spiffeid"
 
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	util_tls "github.com/apache/dubbo-kubernetes/pkg/tls"

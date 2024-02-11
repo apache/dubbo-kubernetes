@@ -18,10 +18,13 @@
 package metadata
 
 import (
-	"github.com/pkg/errors"
 	"strconv"
 	"strings"
 	"time"
+)
+
+import (
+	"github.com/pkg/errors"
 )
 
 const (
