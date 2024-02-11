@@ -34,6 +34,7 @@ const (
 	configStorePlugin   pluginType = "config-store"
 	runtimePlugin       pluginType = "runtime"
 	policyPlugin        pluginType = "policy"
+	caPlugin            pluginType = "ca"
 )
 
 type PluginName string
@@ -42,6 +43,8 @@ const (
 	Kubernetes PluginName = "k8s"
 	Universal  PluginName = "universal"
 	Memory     PluginName = "memory"
+
+	CaBuiltin PluginName = "builtin"
 )
 
 type RegisteredPolicyPlugin struct {
