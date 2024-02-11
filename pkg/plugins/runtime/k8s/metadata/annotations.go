@@ -62,7 +62,8 @@ const (
 
 // Annotations that are being automatically set by the Dubbo SDK.
 const (
-	DubboEnvoyAdminPort = "dubbo.io/envoy-admin-port"
+	DubboEnvoyAdminPort            = "dubbo.io/envoy-admin-port"
+	DubboSidecarInjectedAnnotation = "dubbo.io/sidecar-injected"
 )
 
 const (
