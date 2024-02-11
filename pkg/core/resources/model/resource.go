@@ -19,6 +19,7 @@ package model
 
 import (
 	"fmt"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"hash/fnv"
 	"reflect"
 	"strings"
@@ -398,6 +399,26 @@ func ZoneOfResource(res Resource) string {
 	}
 	parts := strings.Split(res.GetMeta().GetName(), ".")
 	return parts[0]
+}
+
+func ResourceOrigin(rm ResourceMeta) (mesh_proto.ResourceOrigin, bool) {
+	if labels := rm.GetLabels(); labels != nil && labels[mesh_proto.ResourceOriginLabel] != "" {
+		return mesh_proto.ResourceOrigin(labels[mesh_proto.ResourceOriginLabel]), true
+	}
+	return "", false
+}
+
+func IsLocallyOriginated(mode config_core.CpMode, r Resource) bool {
+	switch mode {
+	case config_core.Global:
+		origin, ok := ResourceOrigin(r.GetMeta())
+		return !ok || origin == mesh_proto.GlobalResourceOrigin
+	case config_core.Zone:
+		origin, ok := ResourceOrigin(r.GetMeta())
+		return !ok || origin == mesh_proto.ZoneResourceOrigin
+	default:
+		return true
+	}
 }
 
 func MetaToResourceKey(meta ResourceMeta) ResourceKey {
