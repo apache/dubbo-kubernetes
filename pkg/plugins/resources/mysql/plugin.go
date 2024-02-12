@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package nacos
+package mysql
 
 import (
 	"errors"
@@ -26,14 +26,14 @@ import (
 )
 
 var (
-	log                                  = core.Log.WithName("plugins").WithName("resources").WithName("nacos")
+	log                                  = core.Log.WithName("plugins").WithName("resources").WithName("mysql")
 	_   core_plugins.ResourceStorePlugin = &plugin{}
 )
 
 type plugin struct{}
 
 func init() {
-	core_plugins.Register(core_plugins.Nacos, &plugin{})
+	core_plugins.Register(core_plugins.MySQL, &plugin{})
 }
 
 func (p *plugin) NewResourceStore(pc core_plugins.PluginContext, _ core_plugins.PluginConfig) (core_store.ResourceStore, core_store.Transactions, error) {
@@ -46,6 +46,6 @@ func (p *plugin) Migrate(pc core_plugins.PluginContext, config core_plugins.Plug
 }
 
 func (p *plugin) EventListener(context core_plugins.PluginContext, writer events.Emitter) error {
-	context.ResourceStore().DefaultResourceStore().(*nacosStore).SetEventWriter(writer)
+	context.ResourceStore().DefaultResourceStore().(*mySqlStore).SetEventWriter(writer)
 	return nil
 }

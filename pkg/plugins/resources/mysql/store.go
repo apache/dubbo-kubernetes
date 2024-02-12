@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package nacos
+package mysql
 
 import (
 	"context"
@@ -24,32 +24,32 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 )
 
-type nacosStore struct {
+type mySqlStore struct {
 }
 
 func NewStore() store.ResourceStore {
-	return &nacosStore{}
+	return &mySqlStore{}
 }
 
-func (c *nacosStore) SetEventWriter(writer events.Emitter) {
+func (c *mySqlStore) SetEventWriter(writer events.Emitter) {
 }
 
-func (c *nacosStore) Create(_ context.Context, r core_model.Resource, fs ...store.CreateOptionsFunc) error {
+func (c *mySqlStore) Create(_ context.Context, r core_model.Resource, fs ...store.CreateOptionsFunc) error {
 	return nil
 }
 
-func (c *nacosStore) Update(_ context.Context, r core_model.Resource, fs ...store.UpdateOptionsFunc) error {
+func (c *mySqlStore) Update(_ context.Context, r core_model.Resource, fs ...store.UpdateOptionsFunc) error {
 	return nil
 }
 
-func (c *nacosStore) Delete(ctx context.Context, r core_model.Resource, fs ...store.DeleteOptionsFunc) error {
+func (c *mySqlStore) Delete(ctx context.Context, r core_model.Resource, fs ...store.DeleteOptionsFunc) error {
 	return nil
 }
 
-func (c *nacosStore) Get(_ context.Context, r core_model.Resource, fs ...store.GetOptionsFunc) error {
+func (c *mySqlStore) Get(_ context.Context, r core_model.Resource, fs ...store.GetOptionsFunc) error {
 	return nil
 }
 
-func (c *nacosStore) List(_ context.Context, rs core_model.ResourceList, fs ...store.ListOptionsFunc) error {
+func (c *mySqlStore) List(_ context.Context, rs core_model.ResourceList, fs ...store.ListOptionsFunc) error {
 	return nil
 }

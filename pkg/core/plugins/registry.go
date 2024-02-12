@@ -45,6 +45,7 @@ const (
 	Memory     PluginName = "memory"
 	Zookeeper  PluginName = "zookeeper"
 	Nacos      PluginName = "nacos"
+	MySQL      PluginName = "mysql"
 
 	CaBuiltin PluginName = "builtin"
 )
