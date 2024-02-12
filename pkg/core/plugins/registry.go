@@ -43,6 +43,8 @@ const (
 	Kubernetes PluginName = "k8s"
 	Universal  PluginName = "universal"
 	Memory     PluginName = "memory"
+	Zookeeper  PluginName = "zookeeper"
+	Nacos      PluginName = "nacos"
 
 	CaBuiltin PluginName = "builtin"
 )
