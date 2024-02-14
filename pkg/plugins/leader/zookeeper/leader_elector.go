@@ -15,19 +15,31 @@
  * limitations under the License.
  */
 
-package registry
+package zookeeper
 
-type RegistryCache struct {
+import "github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+
+type zookeeperLeaderElector struct {
+	alwaysLeader bool
+	callbacks    []component.LeaderCallbacks
 }
 
-func NewRegistryCache() *RegistryCache {
-	return nil
+func NewZookeeperLeaderElector() component.LeaderElector {
+	return &zookeeperLeaderElector{}
 }
 
-func (d *RegistryCache) Start(stop <-chan struct{}) error {
-	return nil
+func (n *zookeeperLeaderElector) AddCallbacks(callbacks component.LeaderCallbacks) {
+	n.callbacks = append(n.callbacks, callbacks)
 }
 
-func (d *RegistryCache) NeedLeaderElection() bool {
-	return true
+func (n *zookeeperLeaderElector) IsLeader() bool {
+	return n.alwaysLeader
+}
+
+func (n *zookeeperLeaderElector) Start(stop <-chan struct{}) {
+	if n.alwaysLeader {
+		for _, callback := range n.callbacks {
+			callback.OnStartedLeading()
+		}
+	}
 }

@@ -26,12 +26,18 @@ import (
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	leader_memory "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/memory"
+	leader_nacos "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/nacos"
+	leader_zookeeper "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/zookeeper"
 )
 
 func NewLeaderElector(b *core_runtime.Builder) (component.LeaderElector, error) {
 	switch b.Config().Store.Type {
 	case store.MemoryStore:
 		return leader_memory.NewAlwaysLeaderElector(), nil
+	case store.ZookeeperStore:
+		return leader_zookeeper.NewZookeeperLeaderElector(), nil
+	case store.NacosStore:
+		return leader_nacos.NewNacosLeaderElector(), nil
 	// In case of Kubernetes, Leader Elector is embedded in a Kubernetes ComponentManager
 	default:
 		return nil, errors.Errorf("no election leader for storage of type %s", b.Config().Store.Type)

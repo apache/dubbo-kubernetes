@@ -15,19 +15,31 @@
  * limitations under the License.
  */
 
-package registry
+package nacos
 
-type RegistryCache struct {
+import "github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+
+type nacosLeaderElector struct {
+	alwaysLeader bool
+	callbacks    []component.LeaderCallbacks
 }
 
-func NewRegistryCache() *RegistryCache {
-	return nil
+func NewNacosLeaderElector() component.LeaderElector {
+	return &nacosLeaderElector{}
 }
 
-func (d *RegistryCache) Start(stop <-chan struct{}) error {
-	return nil
+func (n *nacosLeaderElector) AddCallbacks(callbacks component.LeaderCallbacks) {
+	n.callbacks = append(n.callbacks, callbacks)
 }
 
-func (d *RegistryCache) NeedLeaderElection() bool {
-	return true
+func (n *nacosLeaderElector) IsLeader() bool {
+	return n.alwaysLeader
+}
+
+func (n *nacosLeaderElector) Start(stop <-chan struct{}) {
+	if n.alwaysLeader {
+		for _, callback := range n.callbacks {
+			callback.OnStartedLeading()
+		}
+	}
 }
