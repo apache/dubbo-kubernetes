@@ -38,7 +38,7 @@ type latestReceived struct {
 }
 
 type stream struct {
-	streamClient   KDSSyncServiceStream
+	streamClient   DDSSyncServiceStream
 	latestACKed    map[core_model.ResourceType]string
 	latestReceived map[core_model.ResourceType]*latestReceived
 	clientId       string
@@ -46,12 +46,12 @@ type stream struct {
 	runtimeInfo    core_runtime.RuntimeInfo
 }
 
-type KDSSyncServiceStream interface {
+type DDSSyncServiceStream interface {
 	Send(*envoy_sd.DeltaDiscoveryRequest) error
 	Recv() (*envoy_sd.DeltaDiscoveryResponse, error)
 }
 
-func NewDeltaKDSStream(s KDSSyncServiceStream, clientId string, runtimeInfo core_runtime.RuntimeInfo, cpConfig string) DeltaDDSStream {
+func NewDeltaDDSStream(s DDSSyncServiceStream, clientId string, runtimeInfo core_runtime.RuntimeInfo, cpConfig string) DeltaDDSStream {
 	return &stream{
 		streamClient:   s,
 		runtimeInfo:    runtimeInfo,

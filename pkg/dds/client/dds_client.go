@@ -47,11 +47,11 @@ type DeltaDDSStream interface {
 	NACK(resourceType model.ResourceType, err error) error
 }
 
-type KDSSyncClient interface {
+type DDSSyncClient interface {
 	Receive() error
 }
 
-type kdsSyncClient struct {
+type ddsSyncClient struct {
 	log             logr.Logger
 	resourceTypes   []core_model.ResourceType
 	callbacks       *Callbacks
@@ -59,23 +59,23 @@ type kdsSyncClient struct {
 	responseBackoff time.Duration
 }
 
-func NewKDSSyncClient(
+func NewDDSSyncClient(
 	log logr.Logger,
 	rt []core_model.ResourceType,
-	kdsStream DeltaDDSStream,
+	ddsStream DeltaDDSStream,
 	cb *Callbacks,
 	responseBackoff time.Duration,
-) KDSSyncClient {
-	return &kdsSyncClient{
+) DDSSyncClient {
+	return &ddsSyncClient{
 		log:             log,
 		resourceTypes:   rt,
-		ddsStream:       kdsStream,
+		ddsStream:       ddsStream,
 		callbacks:       cb,
 		responseBackoff: responseBackoff,
 	}
 }
 
-func (s *kdsSyncClient) Receive() error {
+func (s *ddsSyncClient) Receive() error {
 	for _, typ := range s.resourceTypes {
 		s.log.V(1).Info("sending DeltaDiscoveryRequest", "type", typ)
 		if err := s.ddsStream.DeltaDiscoveryRequest(typ); err != nil {

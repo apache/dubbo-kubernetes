@@ -310,7 +310,7 @@ func ZoneSyncCallback(ctx context.Context, configToSync map[string]bool, syncer 
 
 // isExpectedOnZoneCP returns true if it's possible for the resource type to be on Zone CP. Some resource types
 // (i.e. Mesh, Secret) are allowed on non-federated Zone CPs, but after transition to federated Zone CP they're moved
-// to Global and must be replaced during the KDS sync.
+// to Global and must be replaced during the DDS sync.
 func isExpectedOnZoneCP(desc core_model.ResourceTypeDescriptor) bool {
 	return desc.DDSFlags.Has(core_model.ZoneToGlobalFlag)
 }
