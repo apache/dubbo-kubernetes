@@ -37,7 +37,7 @@ func init() {
 }
 
 func (p *plugin) NewResourceStore(pc core_plugins.PluginContext, _ core_plugins.PluginConfig) (core_store.ResourceStore, core_store.Transactions, error) {
-	log.Info("dubbo-cp runs with an in-memory database and its state isn't preserved between restarts. Keep in mind that an in-memory database cannot be used with multiple instances of the control plane.")
+	log.Info("dubbo-cp runs with an in-zookeeper database and its state isn't preserved between restarts. Keep in mind that an in-memory database cannot be used with multiple instances of the control plane.")
 	return NewStore(), core_store.NoTransactions{}, nil
 }
 
