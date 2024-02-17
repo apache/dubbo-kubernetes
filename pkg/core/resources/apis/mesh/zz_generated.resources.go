@@ -6,9 +6,7 @@ package mesh
 
 import (
 	"fmt"
-)
 
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
@@ -230,6 +228,115 @@ var DataplaneInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 
 func init() {
 	registry.RegisterType(DataplaneInsightResourceTypeDescriptor)
+}
+
+const (
+	MappingType model.ResourceType = "Mapping"
+)
+
+var _ model.Resource = &MappingResource{}
+
+type MappingResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.Mapping
+}
+
+func NewMappingResource() *MappingResource {
+	return &MappingResource{
+		Spec: &mesh_proto.Mapping{},
+	}
+}
+
+func (t *MappingResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *MappingResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *MappingResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *MappingResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.Mapping)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.Mapping{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *MappingResource) Descriptor() model.ResourceTypeDescriptor {
+	return MappingResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &MappingResourceList{}
+
+type MappingResourceList struct {
+	Items      []*MappingResource
+	Pagination model.Pagination
+}
+
+func (l *MappingResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *MappingResourceList) GetItemType() model.ResourceType {
+	return MappingType
+}
+
+func (l *MappingResourceList) NewItem() model.Resource {
+	return NewMappingResource()
+}
+
+func (l *MappingResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*MappingResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*MappingResource)(nil), r)
+	}
+}
+
+func (l *MappingResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *MappingResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var MappingResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                MappingType,
+	Resource:            NewMappingResource(),
+	ResourceList:        &MappingResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "mappings",
+	DubboctlArg:         "mapping",
+	DubboctlListArg:     "mappings",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Mapping",
+	PluralDisplayName:   "Mappings",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(MappingResourceTypeDescriptor)
 }
 
 const (

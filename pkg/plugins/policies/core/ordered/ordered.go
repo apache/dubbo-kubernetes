@@ -19,9 +19,6 @@ package ordered
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/plugins"
-	meshcircuitbreaker_api "github.com/apache/dubbo-kubernetes/pkg/plugins/policies/servicenamemapping/api/v1alpha1"
 )
 
-var Policies = []plugins.PluginName{
-	plugins.PluginName(meshcircuitbreaker_api.ServiceNameMappingResourceTypeDescriptor.DubboctlArg),
-}
+var Policies = []plugins.PluginName{}

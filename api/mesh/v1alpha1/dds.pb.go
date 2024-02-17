@@ -7,19 +7,13 @@
 package v1alpha1
 
 import (
-	reflect "reflect"
-	sync "sync"
-)
-
-import (
 	v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (

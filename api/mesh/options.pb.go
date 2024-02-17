@@ -7,16 +7,11 @@
 package mesh
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
 	reflect "reflect"
 	sync "sync"
-)
-
-import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-
-	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 const (
