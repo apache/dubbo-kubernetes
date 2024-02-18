@@ -100,7 +100,7 @@ func (c *DdsServerConfig) Validate() error {
 	return errs
 }
 
-type KdsClientConfig struct {
+type DdsClientConfig struct {
 	config.BaseConfig
 
 	// Interval for refreshing state of the world
@@ -122,7 +122,7 @@ type KdsClientConfig struct {
 	ResponseBackoff config_types.Duration `json:"responseBackoff" envconfig:"kuma_multizone_zone_kds_response_backoff"`
 }
 
-var _ config.Config = &KdsClientConfig{}
+var _ config.Config = &DdsClientConfig{}
 
 var _ config.Config = ZoneHealthCheckConfig{}
 

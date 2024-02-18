@@ -44,10 +44,10 @@ import (
 var log = core.Log.WithName("dds")
 
 type Context struct {
-	ZoneClientCtx         context.Context
-	GlobalProvidedFilter  reconcile.ResourceFilter
-	ZoneProvidedFilter    reconcile.ResourceFilter
-	GlobalServerFiltersV2 []mux.Filter
+	ZoneClientCtx        context.Context
+	GlobalProvidedFilter reconcile.ResourceFilter
+	ZoneProvidedFilter   reconcile.ResourceFilter
+	GlobalServerFilters  []mux.Filter
 	// Configs contains the names of system.ConfigResource that will be transferred from Global to Zone
 	Configs map[string]bool
 

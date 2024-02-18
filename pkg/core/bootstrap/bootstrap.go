@@ -19,7 +19,12 @@ package bootstrap
 
 import (
 	"context"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/catalog"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/envoyadmin"
 	"net"
 )
 
@@ -88,6 +93,26 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	resourceManager := builder.ResourceManager()
 	kdsContext := dds_context.DefaultContext(appCtx, resourceManager, cfg)
 	builder.WithDDSContext(kdsContext)
+
+	if cfg.Mode == config_core.Global {
+		kdsEnvoyAdminClient := dubbo.NewDDSEnvoyAdminClient(
+			builder.DDSContext().EnvoyAdminRPCs,
+			cfg.Store.Type == store.KubernetesStore,
+		)
+		forwardingClient := envoyadmin.NewForwardingEnvoyAdminClient(
+			builder.ReadOnlyResourceManager(),
+			catalog.NewConfigCatalog(resourceManager),
+			builder.GetInstanceId(),
+			intercp.PooledEnvoyAdminClientFn(builder.InterCPClientPool()),
+			kdsEnvoyAdminClient,
+		)
+		builder.WithEnvoyAdminClient(forwardingClient)
+	} else {
+		builder.WithEnvoyAdminClient(dubbo.NewEnvoyAdminClient(
+			resourceManager,
+			builder.Config().GetEnvoyAdminPort(),
+		))
+	}
 
 	if err := initializeMeshCache(builder); err != nil {
 		return nil, err

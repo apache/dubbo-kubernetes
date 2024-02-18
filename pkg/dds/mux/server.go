@@ -41,16 +41,6 @@ const (
 
 var muxServerLog = core.Log.WithName("dds-mux-server")
 
-type Callbacks interface {
-	OnSessionStarted(session Session) error
-}
-
-type OnSessionStartedFunc func(session Session) error
-
-func (f OnSessionStartedFunc) OnSessionStarted(session Session) error {
-	return f(session)
-}
-
 type OnGlobalToZoneSyncStartedFunc func(session mesh_proto.DDSSyncService_GlobalToZoneSyncClient, errorCh chan error)
 
 func (f OnGlobalToZoneSyncStartedFunc) OnGlobalToZoneSyncStarted(session mesh_proto.DDSSyncService_GlobalToZoneSyncClient, errorCh chan error) {
@@ -65,7 +55,6 @@ func (f OnZoneToGlobalSyncStartedFunc) OnZoneToGlobalSyncStarted(session mesh_pr
 
 type server struct {
 	config               multizone.DdsServerConfig
-	callbacks            Callbacks
 	CallbacksGlobal      OnGlobalToZoneSyncConnectFunc
 	CallbacksZone        OnZoneToGlobalSyncConnectFunc
 	filters              []Filter
@@ -77,7 +66,6 @@ type server struct {
 }
 
 func NewServer(
-	callbacks Callbacks,
 	filters []Filter,
 	streamInterceptors []grpc.StreamServerInterceptor,
 	unaryInterceptors []grpc.UnaryServerInterceptor,
@@ -86,7 +74,6 @@ func NewServer(
 	ddsSyncServiceServer *DDSSyncServiceServer,
 ) component.Component {
 	return &server{
-		callbacks:            callbacks,
 		filters:              filters,
 		config:               config,
 		serviceServer:        serviceServer,

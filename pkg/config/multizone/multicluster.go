@@ -67,6 +67,8 @@ type ZoneConfig struct {
 	Name string `json:"name,omitempty" envconfig:"dubbo_multizone_zone_name"`
 	// GlobalAddress URL of Global Dubbo CP
 	GlobalAddress string `json:"globalAddress,omitempty" envconfig:"dubbo_multizone_zone_global_address"`
+	// DDS Configuration
+	DDS *DdsClientConfig `json:"dds,omitempty"`
 	// DisableOriginLabelValidation disables validation of the origin label when applying resources on Zone CP
 	DisableOriginLabelValidation bool `json:"disableOriginLabelValidation,omitempty" envconfig:"dubbo_multizone_zone_disable_origin_label_validation"`
 }

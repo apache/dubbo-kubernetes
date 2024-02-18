@@ -19,6 +19,7 @@ package runtime
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"sync"
 	"time"
 )
@@ -59,6 +60,7 @@ type RuntimeContext interface {
 	ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager
 	ConfigStore() core_store.ResourceStore
 	Extensions() context.Context
+	EnvoyAdminClient() dubbo.EnvoyAdminClient
 	ConfigManager() config_manager.ConfigManager
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
@@ -128,6 +130,7 @@ type runtimeContext struct {
 	cs       core_store.ResourceStore
 	rom      core_manager.ReadOnlyResourceManager
 	ext      context.Context
+	eac      dubbo.EnvoyAdminClient
 	configm  config_manager.ConfigManager
 	xds      xds_runtime.XDSRuntimeContext
 	leadInfo component.LeaderInfo
@@ -136,6 +139,10 @@ type runtimeContext struct {
 	rv       ResourceValidators
 	ddsctx   *dds_context.Context
 	appCtx   context.Context
+}
+
+func (rc *runtimeContext) EnvoyAdminClient() dubbo.EnvoyAdminClient {
+	return rc.eac
 }
 
 func (rc *runtimeContext) DDSContext() *dds_context.Context {

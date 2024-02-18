@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
 	"os"
 	"time"
 )
@@ -56,6 +58,7 @@ type BuilderContext interface {
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
+	InterCPClientPool() *client.Pool
 	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
 }
@@ -72,17 +75,19 @@ type Builder struct {
 	rm  core_manager.CustomizableResourceManager
 	rom core_manager.ReadOnlyResourceManager
 
-	lif       lookup.LookupIPFunc
-	ext       context.Context
-	meshCache *mesh.Cache
-	configm   config_manager.ConfigManager
-	leadInfo  component.LeaderInfo
-	erf       events.EventBus
-	dsl       datasource.Loader
-	dps       *dp_server.DpServer
-	rv        ResourceValidators
-	ddsctx    *dds_context.Context
-	appCtx    context.Context
+	lif         lookup.LookupIPFunc
+	eac         dubbo.EnvoyAdminClient
+	ext         context.Context
+	meshCache   *mesh.Cache
+	configm     config_manager.ConfigManager
+	leadInfo    component.LeaderInfo
+	erf         events.EventBus
+	dsl         datasource.Loader
+	interCpPool *client.Pool
+	dps         *dp_server.DpServer
+	rv          ResourceValidators
+	ddsctx      *dds_context.Context
+	appCtx      context.Context
 	*runtimeInfo
 }
 
@@ -179,6 +184,11 @@ func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
 	return b
 }
 
+func (b *Builder) WithEnvoyAdminClient(eac dubbo.EnvoyAdminClient) *Builder {
+	b.eac = eac
+	return b
+}
+
 func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
 	b.ddsctx = ddsctx
 	return b
@@ -232,6 +242,7 @@ func (b *Builder) Build() (Runtime, error) {
 			leadInfo: b.leadInfo,
 			erf:      b.erf,
 			dps:      b.dps,
+			eac:      b.eac,
 			rv:       b.rv,
 			appCtx:   b.appCtx,
 		},
@@ -262,6 +273,11 @@ func (b *Builder) ResourceManager() core_manager.CustomizableResourceManager {
 func (b *Builder) ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager {
 	return b.rom
 }
+
+func (b *Builder) InterCPClientPool() *client.Pool {
+	return b.interCpPool
+}
+
 func (b *Builder) LookupIP() lookup.LookupIPFunc {
 	return b.lif
 }

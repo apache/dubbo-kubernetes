@@ -19,6 +19,8 @@ package cmd
 
 import (
 	"fmt"
+	dds_global "github.com/apache/dubbo-kubernetes/pkg/dds/global"
+	dds_zone "github.com/apache/dubbo-kubernetes/pkg/dds/zone"
 	"github.com/apache/dubbo-kubernetes/pkg/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/snp"
 	"time"
@@ -127,6 +129,14 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 			}
 			if err := defaults.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up Defaults")
+				return err
+			}
+			if err := dds_zone.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Zone DDS")
+				return err
+			}
+			if err := dds_global.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Global DDS")
 				return err
 			}
 			if err := diagnostics.SetupServer(rt); err != nil {
