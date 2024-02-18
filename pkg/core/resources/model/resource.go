@@ -454,6 +454,16 @@ func ResourceListByMesh(rl ResourceList) (map[string]ResourceList, error) {
 	return res, nil
 }
 
+func GetDisplayName(r Resource) string {
+	// prefer display name as it's more predictable, because
+	// * Kubernetes expects sorting to be by just a name. Considering suffix with namespace breaks this
+	// * When policies are synced to Zone, hash suffix also breaks sorting
+	if labels := r.GetMeta().GetLabels(); labels != nil && labels[mesh_proto.DisplayName] != "" {
+		return labels[mesh_proto.DisplayName]
+	}
+	return r.GetMeta().GetName()
+}
+
 func ResourceListHash(rl ResourceList) []byte {
 	hasher := fnv.New128()
 	for _, entity := range rl.GetItems() {

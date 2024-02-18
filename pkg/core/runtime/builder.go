@@ -20,6 +20,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	"os"
 	"time"
 )
@@ -34,7 +35,6 @@ import (
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
@@ -56,8 +56,8 @@ type BuilderContext interface {
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
+	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
-	KubeClient() *client.KubeClient
 }
 
 var _ BuilderContext = &Builder{}
@@ -72,17 +72,17 @@ type Builder struct {
 	rm  core_manager.CustomizableResourceManager
 	rom core_manager.ReadOnlyResourceManager
 
-	lif        lookup.LookupIPFunc
-	kubeClient *client.KubeClient
-	ext        context.Context
-	meshCache  *mesh.Cache
-	configm    config_manager.ConfigManager
-	leadInfo   component.LeaderInfo
-	erf        events.EventBus
-	dsl        datasource.Loader
-	dps        *dp_server.DpServer
-	rv         ResourceValidators
-	appCtx     context.Context
+	lif       lookup.LookupIPFunc
+	ext       context.Context
+	meshCache *mesh.Cache
+	configm   config_manager.ConfigManager
+	leadInfo  component.LeaderInfo
+	erf       events.EventBus
+	dsl       datasource.Loader
+	dps       *dp_server.DpServer
+	rv        ResourceValidators
+	ddsctx    *dds_context.Context
+	appCtx    context.Context
 	*runtimeInfo
 }
 
@@ -179,13 +179,13 @@ func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
 	return b
 }
 
-func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
-	b.rv = rv
+func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
+	b.ddsctx = ddsctx
 	return b
 }
 
-func (b *Builder) WithKubeClient(kubeclient *client.KubeClient) *Builder {
-	b.kubeClient = kubeclient
+func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
+	b.rv = rv
 	return b
 }
 
@@ -226,6 +226,7 @@ func (b *Builder) Build() (Runtime, error) {
 			rom:      b.rom,
 			rs:       b.rs,
 			txs:      b.txs,
+			ddsctx:   b.ddsctx,
 			ext:      b.ext,
 			configm:  b.configm,
 			leadInfo: b.leadInfo,
@@ -269,6 +270,10 @@ func (b *Builder) Config() dubbo_cp.Config {
 	return b.cfg
 }
 
+func (b *Builder) DDSContext() *dds_context.Context {
+	return b.ddsctx
+}
+
 func (b *Builder) Extensions() context.Context {
 	return b.ext
 }
@@ -295,8 +300,4 @@ func (b *Builder) ResourceValidators() ResourceValidators {
 
 func (b *Builder) AppCtx() context.Context {
 	return b.appCtx
-}
-
-func (b *Builder) KubeClient() *client.KubeClient {
-	return b.kubeClient
 }

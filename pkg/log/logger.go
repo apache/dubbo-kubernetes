@@ -18,6 +18,8 @@
 package log
 
 import (
+	"context"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	"os"
 )
@@ -32,8 +34,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	logger_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/logger"
 	"gopkg.in/natefinch/lumberjack.v2"
-
 	kube_log_zap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -109,4 +111,36 @@ func newZapLoggerTo(destWriter io.Writer, level LogLevel, opts ...zap.Option) *z
 	opts = append(opts, zap.AddCallerSkip(1), zap.ErrorOutput(sink))
 	return zap.New(zapcore.NewCore(&kube_log_zap.KubeAwareEncoder{Encoder: enc, Verbose: level == DebugLevel}, sink, lvl)).
 		WithOptions(opts...)
+}
+
+// AddFieldsFromCtx will check if provided context contain tracing span and
+// if the span is currently recording. If so, it will call spanLogValuesProcessor
+// function if it's also present in the context. If not it will add trace_id
+// and span_id to logged values. It will also add the tenant id to the logged
+// values.
+func AddFieldsFromCtx(
+	logger logr.Logger,
+	ctx context.Context,
+	extensions context.Context,
+) logr.Logger {
+	return addSpanValuesToLogger(logger, ctx, extensions)
+}
+
+func addSpanValuesToLogger(
+	logger logr.Logger,
+	ctx context.Context,
+	extensions context.Context,
+) logr.Logger {
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		if fn, ok := logger_extensions.FromSpanLogValuesProcessorContext(extensions); ok {
+			return logger.WithValues(fn(span)...)
+		}
+
+		return logger.WithValues(
+			"trace_id", span.SpanContext().TraceID(),
+			"span_id", span.SpanContext().SpanID(),
+		)
+	}
+
+	return logger
 }

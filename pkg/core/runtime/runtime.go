@@ -27,10 +27,10 @@ import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	xds_runtime "github.com/apache/dubbo-kubernetes/pkg/xds/runtime"
@@ -63,10 +63,10 @@ type RuntimeContext interface {
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
+	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
-	KubeClient() *client.KubeClient
 	XDS() xds_runtime.XDSRuntimeContext
 }
 
@@ -121,25 +121,25 @@ func (i *runtimeInfo) GetMode() core.CpMode {
 var _ RuntimeContext = &runtimeContext{}
 
 type runtimeContext struct {
-	cfg        dubbo_cp.Config
-	rm         core_manager.ResourceManager
-	rs         core_store.ResourceStore
-	txs        core_store.Transactions
-	cs         core_store.ResourceStore
-	rom        core_manager.ReadOnlyResourceManager
-	ext        context.Context
-	configm    config_manager.ConfigManager
-	xds        xds_runtime.XDSRuntimeContext
-	leadInfo   component.LeaderInfo
-	erf        events.EventBus
-	dps        *dp_server.DpServer
-	kubeclient *client.KubeClient
-	rv         ResourceValidators
-	appCtx     context.Context
+	cfg      dubbo_cp.Config
+	rm       core_manager.ResourceManager
+	rs       core_store.ResourceStore
+	txs      core_store.Transactions
+	cs       core_store.ResourceStore
+	rom      core_manager.ReadOnlyResourceManager
+	ext      context.Context
+	configm  config_manager.ConfigManager
+	xds      xds_runtime.XDSRuntimeContext
+	leadInfo component.LeaderInfo
+	erf      events.EventBus
+	dps      *dp_server.DpServer
+	rv       ResourceValidators
+	ddsctx   *dds_context.Context
+	appCtx   context.Context
 }
 
-func (rc *runtimeContext) KubeClient() *client.KubeClient {
-	return rc.kubeclient
+func (rc *runtimeContext) DDSContext() *dds_context.Context {
+	return rc.ddsctx
 }
 
 func (rc *runtimeContext) XDS() xds_runtime.XDSRuntimeContext {

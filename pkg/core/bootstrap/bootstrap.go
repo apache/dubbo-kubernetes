@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"context"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	"net"
 )
 
@@ -33,7 +34,6 @@ import (
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
@@ -62,9 +62,6 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 			return nil, errors.Wrapf(err, "failed to run beforeBootstrap plugin:'%s'", plugin.Name())
 		}
 	}
-	if err := initKubeClient(&cfg, builder); err != nil {
-		return nil, err
-	}
 	if err := initializeResourceStore(cfg, builder); err != nil {
 		return nil, err
 	}
@@ -87,6 +84,10 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 
 	builder.WithLookupIP(lookup.CacheLookupIP(net.LookupIP, cfg.General.DNSCacheTTL.Duration))
 	builder.WithDpServer(server.NewDpServer(*cfg.DpServer))
+
+	resourceManager := builder.ResourceManager()
+	kdsContext := dds_context.DefaultContext(appCtx, resourceManager, cfg)
+	builder.WithDDSContext(kdsContext)
 
 	if err := initializeMeshCache(builder); err != nil {
 		return nil, err
@@ -122,13 +123,6 @@ func Bootstrap(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Runtim
 	}
 
 	return runtime, nil
-}
-
-func initKubeClient(cfg *dubbo_cp.Config, builder *core_runtime.Builder) error {
-	kubeClient := client.NewKubeClient()
-	kubeClient.Init(cfg)
-	builder.WithKubeClient(kubeClient)
-	return nil
 }
 
 func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder) error {
