@@ -93,3 +93,8 @@ type PolicyPlugin interface {
 	// You can access matching policies by using `proxy.Policies.Dynamic`.
 	Apply(rs *core_xds.ResourceSet, ctx xds_context.Context, proxy *core_xds.Proxy) error
 }
+
+type CaPlugin interface {
+	Plugin
+	NewCaManager(PluginContext, PluginConfig)
+}

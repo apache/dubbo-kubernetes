@@ -19,6 +19,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/snp"
 	"time"
 )
 
@@ -102,9 +104,12 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 					"minimim-open-files", minOpenFileLimit)
 			}
 
-			//if err := admin.Setup(rt); err != nil {
-			//	runLog.Error(err, "unable to set up admin server")
-			//}
+			if err := snp.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up snp server")
+			}
+			if err := registry.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up registry cache")
+			}
 			if err := bufman.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up bufman server")
 			}
