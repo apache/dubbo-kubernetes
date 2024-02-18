@@ -19,6 +19,14 @@ package mux
 
 import (
 	"context"
+	"time"
+)
+
+import (
+	"github.com/go-logr/logr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
@@ -28,8 +36,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
-	"github.com/go-logr/logr"
-	"time"
 )
 
 type zone struct {

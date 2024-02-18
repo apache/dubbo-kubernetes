@@ -18,10 +18,16 @@
 package util
 
 import (
+	"time"
+)
+
+import (
+	"golang.org/x/exp/maps"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"golang.org/x/exp/maps"
-	"time"
 )
 
 // DDS ResourceMeta only contains name and mesh.

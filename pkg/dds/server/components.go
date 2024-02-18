@@ -19,6 +19,18 @@ package server
 
 import (
 	"context"
+	"time"
+)
+
+import (
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	envoy_xds "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+
+	"github.com/go-logr/logr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/reconcile"
@@ -26,11 +38,6 @@ import (
 	util_watchdog "github.com/apache/dubbo-kubernetes/pkg/util/watchdog"
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
-	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	envoy_xds "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	"github.com/go-logr/logr"
-	"time"
 )
 
 func New(

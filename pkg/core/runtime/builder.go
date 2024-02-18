@@ -20,9 +20,6 @@ package runtime
 import (
 	"context"
 	"fmt"
-	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
-	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
 	"os"
 	"time"
 )
@@ -40,8 +37,11 @@ import (
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 )
 

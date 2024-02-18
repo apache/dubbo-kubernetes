@@ -20,7 +20,9 @@ package dds
 import (
 	"context"
 	"slices"
+)
 
+import (
 	"google.golang.org/grpc/metadata"
 )
 

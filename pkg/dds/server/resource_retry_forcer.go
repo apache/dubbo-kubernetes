@@ -19,16 +19,23 @@ package server
 
 import (
 	"errors"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	"github.com/apache/dubbo-kubernetes/pkg/dds/cache"
-	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
+	"sync"
+)
+
+import (
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	envoy_xds "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+
 	"github.com/go-logr/logr"
-	"sync"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/cache"
+	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
 )
 
 type ddsRetryForcer struct {

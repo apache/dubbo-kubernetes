@@ -18,6 +18,10 @@
 package zone
 
 import (
+	"github.com/pkg/errors"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
@@ -32,7 +36,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	dds_sync_store "github.com/apache/dubbo-kubernetes/pkg/dds/store"
 	resources_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s"
-	"github.com/pkg/errors"
 )
 
 var (

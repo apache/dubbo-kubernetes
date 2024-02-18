@@ -18,10 +18,13 @@
 package mesh
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"hash/fnv"
 	"net"
 	"strconv"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
 func (r *ZoneIngressResource) UsesInboundInterface(address net.IP, port uint32) bool {

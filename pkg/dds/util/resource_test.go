@@ -19,10 +19,17 @@ package util_test
 
 import (
 	"fmt"
+)
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+
+	. "github.com/onsi/gomega"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds/util"
 	test_model "github.com/apache/dubbo-kubernetes/pkg/test/resources/model"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("TrimSuffixFromName", func() {

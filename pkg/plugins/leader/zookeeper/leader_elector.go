@@ -17,7 +17,9 @@
 
 package zookeeper
 
-import "github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+)
 
 type zookeeperLeaderElector struct {
 	alwaysLeader bool

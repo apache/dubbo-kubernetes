@@ -18,11 +18,14 @@
 package zookeeper
 
 import (
+	"github.com/pkg/errors"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
-	"github.com/pkg/errors"
 )
 
 var (

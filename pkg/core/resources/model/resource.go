@@ -19,7 +19,6 @@ package model
 
 import (
 	"fmt"
-	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"hash/fnv"
 	"reflect"
 	"strings"
@@ -34,6 +33,7 @@ import (
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 )
 
 const (

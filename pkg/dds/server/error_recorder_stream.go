@@ -18,10 +18,13 @@
 package server
 
 import (
-	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/server/stream/v3"
 	"io"
 	"sync"
+)
+
+import (
+	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/server/stream/v3"
 )
 
 // ErrorRecorderStream is a DeltaStream that records an error

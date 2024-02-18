@@ -17,7 +17,9 @@
 
 package registry
 
-import core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+import (
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+)
 
 func Setup(rt core_runtime.Runtime) error {
 	registryCache := NewRegistryCache()

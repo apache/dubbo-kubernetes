@@ -18,9 +18,12 @@
 package server
 
 import (
+	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds"
 	util_xds_v3 "github.com/apache/dubbo-kubernetes/pkg/util/xds/v3"
-	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 )
 
 // We are using go-control-plane's server and cache for DDA exchange.

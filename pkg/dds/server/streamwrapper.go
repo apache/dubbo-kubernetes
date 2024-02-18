@@ -19,10 +19,17 @@ package server
 
 import (
 	"context"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+)
+
+import (
 	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/stream/v3"
+
 	"google.golang.org/grpc/metadata"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 type ServerStream interface {

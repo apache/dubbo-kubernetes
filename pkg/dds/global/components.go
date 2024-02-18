@@ -19,6 +19,16 @@ package global
 
 import (
 	"context"
+	"time"
+)
+
+import (
+	"github.com/go-logr/logr"
+
+	"github.com/pkg/errors"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
@@ -41,9 +51,6 @@ import (
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 	resources_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"time"
 )
 
 var (

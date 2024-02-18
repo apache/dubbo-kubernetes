@@ -19,7 +19,6 @@ package runtime
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"sync"
 	"time"
 )
@@ -33,6 +32,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	xds_runtime "github.com/apache/dubbo-kubernetes/pkg/xds/runtime"
 )

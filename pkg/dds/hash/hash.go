@@ -21,8 +21,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash/fnv"
+)
 
+import (
 	"k8s.io/apimachinery/pkg/util/rand"
+
 	k8s_strings "k8s.io/utils/strings"
 )
 

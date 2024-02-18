@@ -19,6 +19,20 @@ package context
 
 import (
 	"context"
+	"reflect"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"google.golang.org/grpc"
+
+	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/reflect/protoreflect"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
@@ -34,11 +48,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds/reconcile"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/util"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"reflect"
 )
 
 var log = core.Log.WithName("dds")

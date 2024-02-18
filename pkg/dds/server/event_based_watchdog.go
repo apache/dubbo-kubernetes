@@ -20,15 +20,23 @@ package server
 import (
 	"context"
 	"errors"
+	"strings"
+	"time"
+)
+
+import (
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+
+	"github.com/go-logr/logr"
+
+	"golang.org/x/exp/maps"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/reconcile"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	util_maps "github.com/apache/dubbo-kubernetes/pkg/util/maps"
-	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	"github.com/go-logr/logr"
-	"golang.org/x/exp/maps"
-	"strings"
-	"time"
 )
 
 type EventBasedWatchdog struct {

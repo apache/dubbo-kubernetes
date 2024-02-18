@@ -17,7 +17,9 @@
 
 package dubbo
 
-import envoy_admin_v3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
+import (
+	envoy_admin_v3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
+)
 
 func Sanitize(configDump *envoy_admin_v3.ConfigDump) error {
 	for _, config := range configDump.Configs {

@@ -20,6 +20,20 @@ package store
 import (
 	"context"
 	"fmt"
+	"maps"
+	"strings"
+	"time"
+)
+
+import (
+	"github.com/go-logr/logr"
+
+	"github.com/pkg/errors"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
@@ -34,12 +48,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds/util"
 	resources_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s"
 	k8s_model "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/model"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"maps"
-	"strings"
-	"time"
 )
 
 // ResourceSyncer allows to synchronize resources in Store

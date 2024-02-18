@@ -19,10 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	dds_global "github.com/apache/dubbo-kubernetes/pkg/dds/global"
-	dds_zone "github.com/apache/dubbo-kubernetes/pkg/dds/zone"
-	"github.com/apache/dubbo-kubernetes/pkg/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/snp"
 	"time"
 )
 
@@ -37,12 +33,16 @@ import (
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/bootstrap"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	dds_global "github.com/apache/dubbo-kubernetes/pkg/dds/global"
+	dds_zone "github.com/apache/dubbo-kubernetes/pkg/dds/zone"
 	"github.com/apache/dubbo-kubernetes/pkg/defaults"
 	"github.com/apache/dubbo-kubernetes/pkg/diagnostics"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/gc"
 	"github.com/apache/dubbo-kubernetes/pkg/hds"
 	"github.com/apache/dubbo-kubernetes/pkg/intercp"
+	"github.com/apache/dubbo-kubernetes/pkg/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/snp"
 	"github.com/apache/dubbo-kubernetes/pkg/util/os"
 	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"

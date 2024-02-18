@@ -19,7 +19,6 @@ package log
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/trace"
 	"io"
 	"os"
 )
@@ -31,12 +30,18 @@ import (
 
 	"github.com/pkg/errors"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	logger_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/logger"
 	"gopkg.in/natefinch/lumberjack.v2"
+
 	kube_log_zap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+)
+
+import (
+	logger_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/logger"
 )
 
 type LogLevel int

@@ -19,12 +19,17 @@ package server
 
 import (
 	"context"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+)
+
+import (
 	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/delta/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/stream/v3"
-
 	envoy_server "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 type Server interface {

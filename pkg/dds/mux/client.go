@@ -21,15 +21,16 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"github.com/apache/dubbo-kubernetes/pkg/dds"
-	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
-	"github.com/apache/dubbo-kubernetes/pkg/version"
+	"net/url"
+	"os"
+	"time"
+)
+
+import (
 	"github.com/go-logr/logr"
+
 	"github.com/pkg/errors"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -37,9 +38,16 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"net/url"
-	"os"
-	"time"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/dds"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
+	"github.com/apache/dubbo-kubernetes/pkg/version"
 )
 
 var muxClientLog = core.Log.WithName("dds-mux-client")

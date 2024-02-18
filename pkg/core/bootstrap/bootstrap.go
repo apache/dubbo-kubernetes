@@ -19,12 +19,6 @@ package bootstrap
 
 import (
 	"context"
-	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
-	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
-	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp/catalog"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp/envoyadmin"
 	"net"
 )
 
@@ -34,6 +28,7 @@ import (
 
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
@@ -45,8 +40,13 @@ import (
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	"github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/catalog"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/envoyadmin"
 	mesh_cache "github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 	xds_server "github.com/apache/dubbo-kubernetes/pkg/xds/server"

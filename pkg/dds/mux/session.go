@@ -20,10 +20,13 @@ package mux
 import (
 	"context"
 	"errors"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"io"
 	"sync"
 	"time"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 type Session interface {

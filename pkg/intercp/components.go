@@ -18,12 +18,15 @@
 package intercp
 
 import (
+	"time"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
 	"github.com/apache/dubbo-kubernetes/pkg/intercp/envoyadmin"
-	"time"
 )
 
 var log = core.Log.WithName("inter-cp")
