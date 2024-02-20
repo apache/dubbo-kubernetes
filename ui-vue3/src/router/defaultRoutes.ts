@@ -72,28 +72,69 @@ export const routes: Readonly<RouteRecordType[]> = [
               {
                 path: '/detail/:pathId',
                 name: 'applicationDomain.detail',
-                component: () => import('../views/resources/applications/tabs/tab1.vue'),
+                component: () => import('../views/resources/applications/tabs/detail.vue'),
                 meta: {
                   tab: true,
-                  icon: 'material-symbols:view-in-ar'
+                  icon: 'tabler:list-details'
                 }
               },
               {
-                path: '/detail2/:pathId',
-                name: 'application-tab2',
-                component: () => import('../views/resources/applications/tabs/tab2.vue'),
+                path: '/instance/:pathId',
+                name: 'applicationDomain.instance',
+                component: () => import('../views/resources/applications/tabs/instance.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'ooui:instance-ltr'
                 }
               },
               {
-                path: '/detail3/:pathId',
-                name: 'application-tab3',
-                component: () => import('../views/resources/applications/tabs/tab3.vue'),
+                path: '/service/:pathId',
+                name: 'applicationDomain.service',
+                component: () => import('../views/resources/applications/tabs/service.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'carbon:web-services-definition'
                 }
-              }
+              },
+
+
+              {
+                path: '/monitor/:pathId',
+                name: 'applicationDomain.monitor',
+                component: () => import('../views/resources/applications/tabs/monitor.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols-light:monitor-heart-outline'
+                }
+              },
+              {
+                path: '/tracing/:pathId',
+                name: 'applicationDomain.tracing',
+                component: () => import('../views/resources/applications/tabs/tracing.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'game-icons:digital-trace'
+                }
+              },
+              {
+                path: '/config/:pathId',
+                name: 'applicationDomain.config',
+                component: () => import('../views/resources/applications/tabs/config.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols:settings'
+                }
+              },
+              {
+                path: '/event/:pathId',
+                name: 'applicationDomain.event',
+                component: () => import('../views/resources/applications/tabs/event.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols:date-range'
+                }
+              },
+
             ]
           },
           {
