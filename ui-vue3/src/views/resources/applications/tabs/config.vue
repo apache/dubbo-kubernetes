@@ -15,15 +15,15 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_tabDemo1">tab1</div>
+  <div class="__container_app_config">config</div>
 </template>
 
 <script setup lang="ts">
-
 import {onMounted} from "vue";
 
 onMounted(()=>{
-  console.log(111)
+  console.log(333)
 })
+
 </script>
 <style lang="less" scoped></style>

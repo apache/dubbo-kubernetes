@@ -40,7 +40,9 @@
             </transition>
           </router-view>
         </a-layout-content>
-        <a-layout-footer>todo</a-layout-footer>
+        <a-layout-footer
+        class="layout-footer"
+        >todo</a-layout-footer>
       </a-layout>
     </a-layout>
   </div>
@@ -93,10 +95,13 @@ router.beforeEach((to, from, next) => {
   }
   .layout-content {
     margin: 16px;
-    padding: 16px;
+    padding: 16px 16px 24px;
     background: #fff;
-    overflow: auto;
-    max-height: 80vh;
+    overflow-y: auto;
+    max-height: 88vh;
+  }
+  .layout-footer{
+    height: 40px;
   }
 }
 </style>

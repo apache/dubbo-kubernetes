@@ -31,7 +31,9 @@
           </template>
         </a-tab-pane>
       </a-tabs>
-      <router-view/>
+      <a-spin class="tab-spin" :spinning="transitionFlag">
+        <router-view v-show="!transitionFlag"/>
+      </a-spin>
     </div>
   </div>
 </template>
@@ -50,16 +52,23 @@ const tabRouters = computed(() => {
   return meta?.parent?.children?.filter((x: any): any => x.meta.tab)
 })
 let activeKey = ref(tabRoute.name)
-let transitionFlag = ref(true)
+let transitionFlag = ref(false)
 let key = _.uniqueId('__tab_page')
 router.beforeEach((to, from, next) => {
   key = _.uniqueId('__tab_page')
-  transitionFlag.value = false
+  transitionFlag.value = true
   activeKey.value = <string>to.name
   next()
   setTimeout(() => {
-    transitionFlag.value = true
+    transitionFlag.value = false
   }, 500)
 })
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.__container_router_tab_index {
+  :deep(.tab-spin){
+    margin-top: 20vh;
+  }
+}
+
+</style>

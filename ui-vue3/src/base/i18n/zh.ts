@@ -267,11 +267,46 @@ const words: I18nType = {
   instances: '实例',
   applicationDomain: {
     name: '应用名',
-    detail: '应用详情'
+    detail: '详情',
+    instance: '实例',
+    service: '服务',
+    monitor: '监控',
+    tracing: '链路追踪',
+    config: '配置',
+    event: '事件',
+    appName: '应用名',
+    rpcProtocols: 'RPC 协议',
+    dubboVersions: 'Dubbo 版本',
+    dubboPorts: 'Dubbo 端口',
+    serialProtocols: '序列化协议',
+    appTypes: '应用类型',
+    images: '应用镜像',
+    workloads: '工作负载',
+    deployCluster: '部署集群',
+    registerCluster: '注册集群',
+    registerMode: '注册模式',
+  },
+  instanceDomain:{
+    ip: 'IP',
+    name: '实例名称',
+    deployState: '部署状态',
+    deployCluster: '部署集群',
+    registerStates: '注册状态',
+    registerClusters: '注册集群',
+    cpu: 'CPU',
+    memory: '内存',
+    startTime: '启动时间',
+    registerTime: '注册时间',
+    labels: '标签',
   },
   searchDomain: {
     total: '共计',
     unit: '条'
+  },
+  messageDomain: {
+    success: {
+      copy: "您已经成功复制一条信息"
+    }
   },
   backHome: '回到首页',
   noPageTip: '抱歉，你访问的页面不存在',

@@ -24,3 +24,29 @@ export const searchApplications = (params: any): Promise<any> => {
     params
   })
 }
+
+
+export const getApplicationDetail = (params: any): Promise<any> => {
+  return request({
+    url: '/application/detail',
+    method: 'get',
+    params
+  })
+}
+
+export const getApplicationInstanceStatistics = (params: any): Promise<any> => {
+  return request({
+    url: '/application/instance/statistics',
+    method: 'get',
+    params
+  })
+}
+export const getApplicationInstanceInfo = (params: any): Promise<any> => {
+  return request({
+    url: '/application/instance/info',
+    method: 'get',
+    params
+  })
+}
+
+
