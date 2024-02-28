@@ -180,7 +180,6 @@ func GenerateCSR() (string, *ecdsa.PrivateKey, error) {
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csrBytes,
 	})
-
 	if err != nil {
 		logger.Sugar().Warnf("[Authority] Failed to encode certificate. " + err.Error())
 		return "", nil, err
