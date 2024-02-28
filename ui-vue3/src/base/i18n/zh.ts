@@ -14,7 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export default {
+
+import type { I18nType } from './type.ts'
+
+const words: I18nType = {
   service: '服务',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
@@ -34,9 +37,11 @@ export default {
   providers: '提供者',
   consumers: '消费者',
   application: '应用',
+  instance: '实例',
   all: '全部',
+  common: '通用',
 
-  metrics: '统计',
+  metrics: '可观测',
   relation: '关系',
   group: '组',
   version: '版本',
@@ -50,6 +55,9 @@ export default {
   timeout: '超时(毫秒)',
   serialization: '序列化',
   appName: '应用名',
+  instanceNum: '实例数量',
+  deployCluster: '部署集群',
+  registerClusters: '注册集群列表',
   serviceName: '服务名',
   registrySource: '注册来源',
   instanceRegistry: '应用级',
@@ -253,5 +261,72 @@ export default {
   serviceManagement: '开发测试',
 
   groupInputPrompt: '请输入服务group(可选)',
-  versionInputPrompt: '请输入服务version(可选)'
+  versionInputPrompt: '请输入服务version(可选)',
+  resources: '资源详情',
+  applications: '应用',
+  instances: '实例',
+  applicationDomain: {
+    name: '应用名',
+    detail: '详情',
+    instance: '实例',
+    service: '服务',
+    monitor: '监控',
+    tracing: '链路追踪',
+    config: '配置',
+    event: '事件',
+    appName: '应用名',
+    rpcProtocols: 'RPC 协议',
+    dubboVersions: 'Dubbo 版本',
+    dubboPorts: 'Dubbo 端口',
+    serialProtocols: '序列化协议',
+    appTypes: '应用类型',
+    images: '应用镜像',
+    workloads: '工作负载',
+    deployCluster: '部署集群',
+    registerCluster: '注册集群',
+    registerMode: '注册模式',
+  },
+  instanceDomain:{
+    ip: 'IP',
+    name: '实例名称',
+    deployState: '部署状态',
+    deployCluster: '部署集群',
+    registerStates: '注册状态',
+    registerClusters: '注册集群',
+    cpu: 'CPU',
+    memory: '内存',
+    startTime: '启动时间',
+    registerTime: '注册时间',
+    labels: '标签',
+  },
+  searchDomain: {
+    total: '共计',
+    unit: '条'
+  },
+  messageDomain: {
+    success: {
+      copy: "您已经成功复制一条信息"
+    }
+  },
+  backHome: '回到首页',
+  noPageTip: '抱歉，你访问的页面不存在',
+  globalSearchTip: '搜索ip，应用，实例，服务',
+
+  placeholder: {
+    typeAppName: '请输入应用名，支持前缀搜索',
+    typeDefault: '请输入'
+  },
+  none: '无',
+  details: '详情',
+  debug: '调试',
+  distribution: '分布',
+  monitor: '监控',
+  tracing: '链路追踪',
+  event: '事件',
+
+  provideService: '提供服务',
+  dependentService: '依赖服务',
+  idx: '序号'
 }
+
+export default words

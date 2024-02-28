@@ -1,0 +1,36 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "registry/v1alpha1/organization.proto";
+import "registry/v1alpha1/user.proto";
+
+message Owner {
+  oneof owner {
+    // The requested owner is a `User`.
+    User user = 1;
+    // The requested owner is a `Organization`.
+    Organization organization = 2;
+  }
+}
+
+// OwnerService is a service that provides RPCs that allow the BSR to query
+// for owner information.
+service OwnerService {
+  // GetOwnerByName takes an owner name and returns the owner as
+  // either a user or organization.
+  rpc GetOwnerByName(GetOwnerByNameRequest) returns (GetOwnerByNameResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetOwnerByNameRequest {
+  // Name of the requested owner.
+  string name = 1;
+}
+
+message GetOwnerByNameResponse {
+  Owner owner = 1;
+}

@@ -17,6 +17,8 @@
 
 import type { RouterMeta } from '@/router/RouterMeta'
 import type { RouteRecordRaw } from 'vue-router'
+import LayoutTab from '../layout/tab/layout_tab.vue'
+import _ from 'lodash'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -44,125 +46,268 @@ export const routes: Readonly<RouteRecordType[]> = [
         }
       },
       {
-        path: '/service',
-        name: 'serviceSearch',
-        component: () => import('../views/service/index.vue'),
+        path: '/resources',
+        name: 'resources',
         meta: {
-          icon: 'material-symbols-light:screen-search-desktop-outline-rounded'
-        }
-      },
-      {
-        path: '/traffic',
-        name: 'trafficManagement',
-        meta: {
-          icon: 'carbon:traffic-flow'
+          icon: 'carbon:web-services-cluster'
         },
+        children: [
+          {
+            path: '/applications',
+            name: 'applications',
+            component: LayoutTab,
+            redirect: 'index',
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'index',
+                component: () => import('../views/resources/applications/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/detail/:pathId',
+                name: 'applicationDomain.detail',
+                component: () => import('../views/resources/applications/tabs/detail.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'tabler:list-details'
+                }
+              },
+              {
+                path: '/instance/:pathId',
+                name: 'applicationDomain.instance',
+                component: () => import('../views/resources/applications/tabs/instance.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'ooui:instance-ltr'
+                }
+              },
+              {
+                path: '/service/:pathId',
+                name: 'applicationDomain.service',
+                component: () => import('../views/resources/applications/tabs/service.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'carbon:web-services-definition'
+                }
+              },
 
-        children: [
+
+              {
+                path: '/monitor/:pathId',
+                name: 'applicationDomain.monitor',
+                component: () => import('../views/resources/applications/tabs/monitor.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols-light:monitor-heart-outline'
+                }
+              },
+              {
+                path: '/tracing/:pathId',
+                name: 'applicationDomain.tracing',
+                component: () => import('../views/resources/applications/tabs/tracing.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'game-icons:digital-trace'
+                }
+              },
+              {
+                path: '/config/:pathId',
+                name: 'applicationDomain.config',
+                component: () => import('../views/resources/applications/tabs/config.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols:settings'
+                }
+              },
+              {
+                path: '/event/:pathId',
+                name: 'applicationDomain.event',
+                component: () => import('../views/resources/applications/tabs/event.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols:date-range'
+                }
+              },
+
+            ]
+          },
           {
-            path: '/timeout',
-            name: 'trafficTimeout',
-            component: () => import('../views/traffic/timeout/index.vue'),
+            path: '/instances',
+            name: 'instances',
+            component: () => import('../views/resources/instances/index.vue'),
             meta: {}
           },
           {
-            path: '/retry',
-            name: 'trafficRetry',
-            component: () => import('../views/traffic/retry/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/region',
-            name: 'trafficRegion',
-            component: () => import('../views/traffic/region/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/weight',
-            name: 'trafficWeight',
-            component: () => import('../views/traffic/weight/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/arguments',
-            name: 'trafficArguments',
-            component: () => import('../views/traffic/arguments/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/mock',
-            name: 'trafficMock',
-            component: () => import('../views/traffic/mock/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/accesslog',
-            name: 'trafficAccesslog',
-            component: () => import('../views/traffic/accesslog/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/gray',
-            name: 'trafficGray',
-            component: () => import('../views/traffic/gray/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/routingRule',
-            name: 'routingRule',
-            component: () => import('../views/traffic/routingRule/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/tagRule',
-            name: 'tagRule',
-            component: () => import('../views/traffic/tagRule/index.vue'),
-            meta: {}
-          },
-          {
-            path: '/dynamicConfig',
-            name: 'dynamicConfig',
-            component: () => import('../views/traffic/dynamicConfig/index.vue'),
-            meta: {}
+            path: '/services',
+            name: 'services',
+            redirect: 'search',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/search',
+                name: 'search',
+                component: () => import('../views/resources/services/search.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/detail/:serviceName',
+                name: 'detail',
+                component: () => import('../views/resources/services/tabs/detail.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/debug/:serviceName',
+                name: 'debug',
+                component: () => import('../views/resources/services/tabs/debug.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/distribution/:serviceName',
+                name: 'distribution',
+                component: () => import('../views/resources/services/tabs/distribution.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/monitor/:serviceName',
+                name: 'monitor',
+                component: () => import('../views/resources/services/tabs/monitor.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/tracing/:serviceName',
+                name: 'tracing',
+                component: () => import('../views/resources/services/tabs/tracing.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/event/:serviceName',
+                name: 'event',
+                component: () => import('../views/resources/services/tabs/event.vue'),
+                meta: {
+                  tab: true
+                }
+              }
+            ]
           }
         ]
       },
       {
-        path: '/test',
-        name: 'serviceManagement',
-        redirect: '/test',
+        path: '/common',
+        name: 'commonDemo',
+        redirect: 'tab',
         meta: {
-          icon: 'file-icons:testcafe'
+          icon: 'tdesign:play-demo'
         },
         children: [
           {
-            path: '/test',
-            name: 'serviceTest',
-            component: () => import('../views/test/test/index.vue')
+            path: '/tab',
+            name: 'tabDemo',
+            component: LayoutTab,
+            redirect: 'index',
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'tab_demo_index',
+                component: () => import('../views/common/tab_demo/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/tab1/:pathId',
+                name: 'tab1',
+                component: () => import('../views/common/tab_demo/tab1.vue'),
+                meta: {
+                  icon: 'simple-icons:podman',
+                  tab: true
+                }
+              },
+              {
+                path: '/tab2/:pathId',
+                name: 'tab2',
+                component: () => import('../views/common/tab_demo/tab2.vue'),
+                meta: {
+                  icon: 'fontisto:docker',
+                  tab: true
+                }
+              }
+            ]
           },
           {
-            path: '/mock',
-            name: 'serviceMock',
-            component: () => import('../views/test/mock/index.vue')
+            path: '/placeholder',
+            name: 'placeholder_demo',
+            component: () => import('../views/common/placeholder_demo/index.vue'),
+            meta: {}
           }
         ]
-      },
-      {
-        path: '/metrics',
-        name: 'serviceMetrics',
-        component: () => import('../views/metrics/index.vue'),
-        meta: {
-          icon: 'material-symbols-light:screen-search-desktop-outline-rounded'
-        }
-      },
-      {
-        path: '/kubernetes',
-        name: 'kubernetes',
-        component: () => import('../views/kubernetes/index.vue'),
-        meta: {
-          icon: 'carbon:logo-kubernetes'
-        }
       }
     ]
+  },
+  {
+    path: '/:catchAll(.*)',
+    name: 'notFound',
+    component: () => import('../views/error/notFound.vue'),
+    meta: {
+      skip: true
+    }
   }
 ]
+
+function handlePath(...paths: any[]) {
+  return paths.join('/').replace(/\/+/g, '/')
+}
+
+function handleRoutes(
+  routes: readonly RouteRecordType[] | undefined,
+  parent: RouteRecordType | undefined
+) {
+  if (!routes) return
+  for (let route of routes) {
+    if (parent) {
+      route.path = handlePath(parent?.path, route.path)
+    }
+    if (route.redirect) {
+      route.redirect = handlePath(route.path, route.redirect || '')
+    }
+
+    if (route.meta) {
+      route.meta._router_key = _.uniqueId('__router_key')
+      route.meta.parent = parent
+      // fixme, its really useful for tab_router judging how to  show tab
+      route.meta.skip = route.meta.skip === true ? true : false
+    } else {
+      route.meta = {
+        _router_key: _.uniqueId('__router_key'),
+        skip: false
+      }
+    }
+    handleRoutes(route.children, route)
+  }
+}
+
+handleRoutes(routes, undefined)
+console.log(routes)

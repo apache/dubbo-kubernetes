@@ -81,7 +81,10 @@ header:
     - '**/testdata/**'
     - '**/deploy.tpl'
     - '**/docs/**'
+    - '**/.husky/pre-commit'
     - '**/.nvmrc'
+    - '**/**.txtar'
+    - '**/**gen.go'
   comment: on-failure
 
   license-location-threshold: 130

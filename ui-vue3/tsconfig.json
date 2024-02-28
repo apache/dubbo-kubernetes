@@ -6,12 +6,14 @@
     },
     {
       "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.vitest.json"
     }
+
   ],
   "compilerOptions": {
-    "module": "NodeNext"
-  }
+    "target": "esnext",
+    "module": "ESNext"
+  },
+  "include": ["src/base/i18n/*"],
+  "esm": true
+
 }

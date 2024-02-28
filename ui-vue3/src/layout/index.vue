@@ -16,7 +16,7 @@
 -->
 <template>
   <div class="__container_layout_index">
-    <a-layout style="min-height: 100vh">
+    <a-layout style="height: 100vh">
       <a-layout-sider
         width="268"
         v-model:collapsed="collapsed"
@@ -33,12 +33,16 @@
       <a-layout>
         <layout_header :collapsed="collapsed"></layout_header>
         <layout_bread></layout_bread>
-        <a-layout-content
-          :style="{ margin: '16px', padding: '16px', background: '#fff', minHeight: '280px' }"
-        >
-          <router-view />
+        <a-layout-content class="layout-content">
+          <router-view v-slot="{ Component }">
+            <transition name="slide-fade">
+              <component :is="Component" />
+            </transition>
+          </router-view>
         </a-layout-content>
-        <a-layout-footer>todo</a-layout-footer>
+        <a-layout-footer
+        class="layout-footer"
+        >todo</a-layout-footer>
       </a-layout>
     </a-layout>
   </div>
@@ -51,10 +55,21 @@ import Layout_header from '@/layout/header/layout_header.vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import Layout_bread from '@/layout/breadcrumb/layout_bread.vue'
 import { PRIMARY_COLOR } from '@/base/constants'
+import { useRoute, useRouter } from 'vue-router'
 
 let __null = PRIMARY_COLOR
 const collapsed = ref<boolean>(false)
 provide(PROVIDE_INJECT_KEY.COLLAPSED, collapsed)
+const route = useRoute()
+const router = useRouter()
+let transitionFlag = ref(true)
+router.beforeEach((to, from, next) => {
+  transitionFlag.value = false
+  next()
+  setTimeout(() => {
+    transitionFlag.value = true
+  }, 500)
+})
 </script>
 <style lang="less" scoped>
 .__container_layout_index {
@@ -77,6 +92,57 @@ provide(PROVIDE_INJECT_KEY.COLLAPSED, collapsed)
       margin-bottom: 5px;
       margin-right: 5px;
     }
+  }
+  .layout-content {
+    margin: 16px;
+    padding: 16px 16px 24px;
+    background: #fff;
+    overflow-y: auto;
+    max-height: 88vh;
+  }
+  .layout-footer{
+    height: 40px;
+  }
+}
+</style>
+<style>
+.slide-fade-enter-active {
+  animation: slide-fade-in 0.5s;
+}
+
+@keyframes slide-fade-in {
+  0% {
+    transform: translateX(80px);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateX(-2px);
+    opacity: 20;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 100;
+  }
+}
+
+.fade-enter-active {
+  animation: fade-in 0.6s ease-in-out;
+}
+
+.fade-leave-active {
+  animation: fade-in 0.6s reverse;
+}
+
+@keyframes fade-in {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 100;
   }
 }
 </style>

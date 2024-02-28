@@ -20,24 +20,26 @@ package registry
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
+	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
 )
 
-var registries = make(map[string]func(u *common.URL) (AdminRegistry, error))
+var registries = make(map[string]func(u *common.URL, kc *client.KubeClient) (AdminRegistry, cache.Cache, error))
 
 // AddRegistry sets the registry extension with @name
-func AddRegistry(name string, v func(u *common.URL) (AdminRegistry, error)) {
+func AddRegistry(name string, v func(u *common.URL, kc *client.KubeClient) (AdminRegistry, cache.Cache, error)) {
 	registries[name] = v
 }
 
 // Registry finds the registry extension with @name
-func Registry(name string, config *common.URL) (AdminRegistry, error) {
+func Registry(name string, config *common.URL, kc *client.KubeClient) (AdminRegistry, cache.Cache, error) {
 	if name != "kubernetes" && name != "kube" && name != "k8s" {
 		name = "universal"
 	}
 	if registries[name] == nil {
 		panic("registry for " + name + " does not exist. please make sure that you have imported the package dubbo.apache.org/dubbo-go/v3/registry/" + name + ".")
 	}
-	return registries[name](config)
+	return registries[name](config, kc)
 }
 
 type AdminRegistry interface {

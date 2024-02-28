@@ -14,7 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export default {
+
+import type { I18nType } from './type.ts'
+
+const words: I18nType = {
   service: 'Service',
   serviceSearch: 'Search Service',
   serviceGovernance: 'Routing Rule',
@@ -36,10 +39,12 @@ export default {
   serviceInfo: 'Service Info',
   providers: 'Providers',
   consumers: 'Consumers',
+  common: 'Common',
   version: 'Version',
   app: 'Application',
   services: 'Services',
   application: 'Application',
+  instance: 'Instance',
   all: 'All',
   ip: 'IP',
   qps: 'qps',
@@ -49,6 +54,9 @@ export default {
   timeout: 'timeout(ms)',
   serialization: 'serialization',
   appName: 'Application Name',
+  instanceNum: 'Instance Number',
+  deployCluster: 'Deploy Cluster',
+  registerClusters: 'Register Clusters',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
   instanceRegistry: 'Instance Registry',
@@ -255,5 +263,71 @@ export default {
   trafficAccesslog: 'Accesslog',
   trafficHost: 'Host',
   homePage: 'Cluster Overview',
-  serviceManagement: 'Dev & Test'
+  serviceManagement: 'Dev & Test',
+  resources: 'Resources',
+  applications: 'Applications',
+  instances: 'Instances',
+  applicationDomain: {
+
+    detail: 'Detail',
+    instance: 'Instance',
+    service: 'Service',
+    monitor: 'Monitor',
+    tracing: 'Tracing',
+    config: 'Config',
+    event: 'Event',
+    appName: 'Application Name',
+    rpcProtocols: 'Rpc Protocols',
+    dubboVersions: 'Dubbo Versions',
+    dubboPorts: 'Dubbo Ports',
+    serialProtocols: 'Serial Protocols',
+    appTypes: 'Application Types',
+    images: 'Images',
+    workloads: 'Workloads',
+    deployCluster: 'Deploy Cluster',
+    registerCluster: 'Register Cluster',
+    registerMode: 'Register Mode',
+  },
+  instanceDomain:{
+    ip: 'Ip',
+    name: 'Name',
+    deployState: 'Deploy State',
+    deployCluster: 'Deploy Cluster',
+    registerStates: 'Register States',
+    registerClusters: 'Register Clusters',
+    cpu: 'Cpu',
+    memory: 'Memory',
+    startTime: 'Start Time',
+    registerTime: 'Register Time',
+    labels: 'Labels',
+},
+  searchDomain: {
+    total: 'Total',
+    unit: 'items'
+  },
+  messageDomain: {
+    success: {
+      copy: "You have successfully copied a piece of information"
+    }
+  },
+  backHome: 'Back Home',
+  noPageTip: 'Sorry, the page you visited does not exist.',
+  globalSearchTip: 'Search ip, application, instance, service',
+  placeholder: {
+    typeAppName: 'please type appName, support for prefix',
+    typeDefault: 'please type '
+  },
+  none: 'No Select',
+  details: 'Details',
+  debug: 'Debug',
+  distribution: 'Distribution',
+  monitor: 'Monitor',
+  tracing: 'Tracing',
+  event: 'Event',
+
+  provideService: 'Provide Service',
+  idx: 'Index',
+  dependentService: 'Dependent Service'
 }
+
+export default words
