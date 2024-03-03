@@ -25,7 +25,6 @@ export const searchApplications = (params: any): Promise<any> => {
   })
 }
 
-
 export const getApplicationDetail = (params: any): Promise<any> => {
   return request({
     url: '/application/detail',
@@ -48,5 +47,3 @@ export const getApplicationInstanceInfo = (params: any): Promise<any> => {
     params
   })
 }
-
-

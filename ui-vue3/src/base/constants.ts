@@ -26,18 +26,16 @@ let item = localStorage.getItem(LOCAL_STORAGE_THEME)
 
 export const PRIMARY_COLOR = ref(item || PRIMARY_COLOR_DEFAULT)
 
-
-
-export const INSTANCE_REGISTER_COLOR:{ [key: string]: string } = {
-    HEALTHY: 'green'
+export const INSTANCE_REGISTER_COLOR: { [key: string]: string } = {
+  HEALTHY: 'green'
 }
 
 /**
  * 'Running','Pending', 'Terminating', 'Crashing'
  */
-export const INSTANCE_DEPLOY_COLOR:{ [key: string]: string } = {
-    RUNNING: 'green',
-    PENDING: 'yellow',
-    TERMINATING: 'red',
-    CRASHING: 'darkRed',
+export const INSTANCE_DEPLOY_COLOR: { [key: string]: string } = {
+  RUNNING: 'green',
+  PENDING: 'yellow',
+  TERMINATING: 'red',
+  CRASHING: 'darkRed'
 }

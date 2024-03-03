@@ -42,19 +42,19 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, reactive} from "vue";
-import ServiceList from "@/views/resources/services/search.vue"
-import {getClusterInfo} from "@/api/service/clusterInfo";
-import {getMetricsMetadata} from "@/api/service/serverInfo";
-import {Chart} from "@antv/g2";
-import {PRIMARY_COLOR} from "@/base/constants";
-import {Icon} from "@iconify/vue";
-import SearchTable from "@/components/SearchTable.vue";
-import {SearchDomain} from "@/utils/SearchUtil";
-import {searchService} from "@/api/service/service";
-import {provide} from "vue";
-import {PROVIDE_INJECT_KEY} from "@/base/enums/ProvideInject";
-import {useRoute, useRouter} from "vue-router";
+import { computed, onMounted, reactive } from 'vue'
+import ServiceList from '@/views/resources/services/search.vue'
+import { getClusterInfo } from '@/api/service/clusterInfo'
+import { getMetricsMetadata } from '@/api/service/serverInfo'
+import { Chart } from '@antv/g2'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { Icon } from '@iconify/vue'
+import SearchTable from '@/components/SearchTable.vue'
+import { SearchDomain } from '@/utils/SearchUtil'
+import { searchService } from '@/api/service/service'
+import { provide } from 'vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { useRoute, useRouter } from 'vue-router'
 
 let __null = PRIMARY_COLOR
 let clusterInfo = reactive({
@@ -80,14 +80,12 @@ onMounted(async () => {
       value: clusterInfo.info.consumers
     }
   }
-
 })
-
 
 const columns = [
   {
     title: 'idx',
-    key: 'idx',
+    key: 'idx'
   },
   {
     title: '服务',
@@ -127,28 +125,27 @@ const columns = [
 ]
 
 const searchDomain = reactive(
-    new SearchDomain(
-        [
-
-          {
-            label: '',
-            param: 'type',
-            defaultValue: 1,
-            dict: [
-              {label: 'providers', value: 1},
-              {label: 'consumers', value: 2}
-            ],
-            dictType: 'BUTTON'
-          },
-          {
-            label: 'serviceName',
-            param: 'serviceName',
-          },
+  new SearchDomain(
+    [
+      {
+        label: '',
+        param: 'type',
+        defaultValue: 1,
+        dict: [
+          { label: 'providers', value: 1 },
+          { label: 'consumers', value: 2 }
         ],
-        searchService,
-        columns,
-        {pageSize: 4}
-    )
+        dictType: 'BUTTON'
+      },
+      {
+        label: 'serviceName',
+        param: 'serviceName'
+      }
+    ],
+    searchService,
+    columns,
+    { pageSize: 4 }
+  )
 )
 searchDomain.onSearch()
 const route = useRoute()
@@ -159,16 +156,14 @@ const viewDetail = (serviceName: string) => {
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
-
 </script>
 <style lang="less" scoped>
-
 .__container_app_service {
   .statistic {
     width: 8vw;
   }
   :deep(.ant-card-body) {
-      padding: 12px;
+    padding: 12px;
   }
 
   .statistic-card {

@@ -22,7 +22,9 @@
       <template v-slot:label>
         {{ $t('instanceDomain.executionLog') }}
         <a-tooltip placement="topLeft">
-          <template #title> {{ $t('instanceDomain.enableAppInstanceLogs') }}(provider.accesslog) </template>
+          <template #title>
+            {{ $t('instanceDomain.enableAppInstanceLogs') }}(provider.accesslog)
+          </template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -38,7 +40,6 @@
 
     <!-- retry count -->
     <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-
       <template v-slot:label>
         {{ $t('instanceDomain.retryCount') }}
         <a-tooltip placement="topLeft">
@@ -51,11 +52,12 @@
 
     <!-- Load Balance -->
     <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-
       <template v-slot:label>
         {{ $t('instanceDomain.loadBalance') }}
         <a-tooltip placement="topLeft">
-          <template #title>{{ $t('instanceDomain.appServiceLoadBalance') }}(provider.loadbalance)</template>
+          <template #title
+            >{{ $t('instanceDomain.appServiceLoadBalance') }}(provider.loadbalance)</template
+          >
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -64,11 +66,12 @@
 
     <!-- timeout -->
     <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-
       <template v-slot:label>
         {{ $t('instanceDomain.timeout_ms') }}
         <a-tooltip placement="topLeft">
-          <template #title> {{ $t('instanceDomain.appServiceTimeout') }}(provider.timeout) </template>
+          <template #title>
+            {{ $t('instanceDomain.appServiceTimeout') }}(provider.timeout)
+          </template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -78,7 +81,6 @@
 
     <!-- Cluster approach -->
     <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-
       <template v-slot:label>
         {{ $t('instanceDomain.clusterApproach') }}
         <a-tooltip placement="topLeft">
