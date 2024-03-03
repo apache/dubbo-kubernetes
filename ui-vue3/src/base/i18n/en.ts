@@ -19,11 +19,45 @@ import type { I18nType } from './type.ts'
 
 const words: I18nType = {
   instanceDomain: {
+    enableAppInstanceLogs:"Enable access logs for all instances of this application",
+    appServiceRetries:"Adjust the number of retries for the service provided by this application",
+    appServiceLoadBalance:"Adjusting the load balancing strategy for application service provision",
+    appServiceNegativeClusteringMethod:"Adjusting the clustering approach for application service provision",
+    appServiceTimeout:"Adjusting the timeout for application service provision",
+    close:"Close",
+    enable:"Enable",
+    executionLog:"ExecutionLog",
+    loadBalance:"LoadBalance",
+    instanceIP: 'InstanceIP',
+    clusterApproach:"ClusterApproach",
     details: 'Detail',
+    retryCount:"RetryCount",
+    timeout_ms:"Timeout(ms)",
     monitor: 'Monitor',
-    linkTracking: 'Link Tracking',
+    linkTracking: 'LinkTracking',
     configuration: 'Configuration',
-    event: 'Event'
+    event: 'Event',
+    instanceName: 'InstanceName',
+    ip: 'Ip',
+    name: 'Name',
+    deployState: 'DeployState',
+    deployCluster: 'DeployCluster',
+    registerStates: 'RegisterState',
+    registerCluster: 'RegisterCluster',
+    CPU: 'CPU',
+    node:"Node",
+    memory: 'Memory',
+    owningWorkload_k8s:"OwningWorkload(k8s)",
+    creationTime_k8s:"CreationTime(k8s)",
+    startTime: 'StartTime',
+    dubboPort:"DubboPort",
+    instanceImage_k8s:"Image(k8s)",
+    instanceLabel:"InstanceLabel",
+    whichApplication:"OwningApplication",
+    healthExamination_k8s:"HealthExamination(k8s)",
+    registerTime: 'RegisterTime',
+    labels: 'Labels',
+    startTime_k8s: 'StartTime(k8s)'
   },
   appServiceTimeout: 'Adjusting the timeout for application service provision',
   enableAppInstanceLogs: 'Enable access logs for all instances of this application',
@@ -311,7 +345,6 @@ const words: I18nType = {
   applications: 'Applications',
   instances: 'Instances',
   applicationDomain: {
-
     detail: 'Detail',
     instance: 'Instance',
     service: 'Service',
@@ -329,28 +362,15 @@ const words: I18nType = {
     workloads: 'Workloads',
     deployCluster: 'Deploy Cluster',
     registerCluster: 'Register Cluster',
-    registerMode: 'Register Mode',
+    registerMode: 'Register Mode'
   },
-  instanceDomain:{
-    ip: 'Ip',
-    name: 'Name',
-    deployState: 'Deploy State',
-    deployCluster: 'Deploy Cluster',
-    registerStates: 'Register States',
-    registerClusters: 'Register Clusters',
-    cpu: 'Cpu',
-    memory: 'Memory',
-    startTime: 'Start Time',
-    registerTime: 'Register Time',
-    labels: 'Labels',
-},
   searchDomain: {
     total: 'Total',
     unit: 'items'
   },
   messageDomain: {
     success: {
-      copy: "You have successfully copied a piece of information"
+      copy: 'You have successfully copied a piece of information'
     }
   },
   backHome: 'Back Home',

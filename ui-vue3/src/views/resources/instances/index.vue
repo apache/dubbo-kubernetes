@@ -22,7 +22,7 @@
           <a-typography-text type="success">{{ text.label }}</a-typography-text>
         </template>
 
-        <template v-else-if="column.dataIndex === 'deployCluster'">
+        <template v-if="column.dataIndex === 'deployCluster'">
           <a-tag color="success">
             {{ text }}
           </a-tag>
@@ -43,10 +43,10 @@
             {{ t }}
           </a-tag>
         </template>
-        <template v-else-if="column.dataIndex === 'name'">
+        <template v-if="column.dataIndex === 'name'">
           <router-link :to="`detail/${record[column.key]}`">{{ text }}</router-link>
         </template>
-        <template v-else-if="column.dataIndex === 'ip'">
+        <template v-if="column.dataIndex === 'ip'">
           <router-link :to="`detail/${record[column.key]}`">{{ text }}</router-link>
         </template>
       </template>
@@ -63,21 +63,21 @@ import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 
 let columns = [
   {
-    title: 'instanceIP',
+    title: 'instanceDomain.instanceIP',
     key: 'ip',
     dataIndex: 'ip',
     sorter: (a: any, b: any) => sortString(a.instanceIP, b.instanceIP),
     width: 140
   },
   {
-    title: 'instanceName',
+    title: 'instanceDomain.instanceName',
     key: 'name',
     dataIndex: 'name',
     sorter: (a: any, b: any) => sortString(a.instanceName, b.instanceName),
     width: 140
   },
   {
-    title: 'deployState',
+    title: 'instanceDomain.deployState',
     key: 'deployState',
     dataIndex: 'deployState',
     width: 120,
@@ -85,56 +85,56 @@ let columns = [
   },
 
   {
-    title: 'deployCluster',
+    title: 'instanceDomain.deployCluster',
     key: 'deployCluster',
     dataIndex: 'deployCluster',
     sorter: (a: any, b: any) => sortString(a.deployCluster, b.deployCluster),
     width: 120
   },
   {
-    title: 'registerStates',
+    title: 'instanceDomain.registerStates',
     key: 'registerStates',
     dataIndex: 'registerStates',
     sorter: (a: any, b: any) => sortString(a.registerStates, b.registerStates),
     width: 120
   },
   {
-    title: 'registerCluster',
+    title: 'instanceDomain.registerCluster',
     key: 'registerClusters',
     dataIndex: 'registerClusters',
     sorter: (a: any, b: any) => sortString(a.registerCluster, b.registerCluster),
     width: 140
   },
   {
-    title: 'CPU',
+    title: 'instanceDomain.CPU',
     key: 'cpu',
     dataIndex: 'cpu',
     sorter: (a: any, b: any) => sortString(a.CPU, b.CPU),
     width: 140
   },
   {
-    title: 'memory',
+    title: 'instanceDomain.memory',
     key: 'memory',
     dataIndex: 'memory',
     sorter: (a: any, b: any) => sortString(a.memory, b.memory),
-    width: 80
+    width: 100
   },
   {
-    title: 'startTime_k8s',
+    title: 'instanceDomain.startTime_k8s',
     key: 'startTime_k8s',
     dataIndex: 'startTime',
     sorter: (a: any, b: any) => sortString(a.startTime_k8s, b.startTime_k8s),
     width: 200
   },
   {
-    title: 'registerTime',
+    title: 'instanceDomain.registerTime',
     key: 'registerTime',
     dataIndex: 'registerTime',
     sorter: (a: any, b: any) => sortString(a.registerTime, b.registerTime),
     width: 200
   },
   {
-    title: 'labels',
+    title: 'instanceDomain.labels',
     key: 'labels',
     dataIndex: 'labels',
     width: 140

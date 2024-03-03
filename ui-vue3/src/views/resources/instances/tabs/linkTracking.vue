@@ -16,7 +16,7 @@
 -->
 
 <template>
-  <div>linkTracking</div>
+  <div>linkTracking todo</div>
 </template>
 
 <script lang="ts" setup>

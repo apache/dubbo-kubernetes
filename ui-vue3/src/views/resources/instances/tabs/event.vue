@@ -16,7 +16,7 @@
 -->
 
 <template>
-  <div>event</div>
+  <div>event todo</div>
 </template>
 
 <script lang="ts" setup>

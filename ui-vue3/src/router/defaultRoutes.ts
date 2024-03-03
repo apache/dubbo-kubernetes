@@ -96,8 +96,6 @@ export const routes: Readonly<RouteRecordType[]> = [
                   icon: 'carbon:web-services-definition'
                 }
               },
-
-
               {
                 path: '/monitor/:pathId',
                 name: 'applicationDomain.monitor',
@@ -133,8 +131,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                   tab: true,
                   icon: 'material-symbols:date-range'
                 }
-              },
-
+              }
             ]
           },
           {
@@ -159,7 +156,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'instanceDomain.details',
                 component: () => import('../views/resources/instances/tabs/details.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'tabler:list-details'
                 }
               },
               {
@@ -167,7 +165,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'instanceDomain.monitor',
                 component: () => import('../views/resources/instances/tabs/monitor.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'ooui:instance-ltr'
                 }
               },
               {
@@ -175,7 +174,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'instanceDomain.linkTracking',
                 component: () => import('../views/resources/instances/tabs/linkTracking.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'material-symbols-light:monitor-heart-outline'
                 }
               },
               {
@@ -183,7 +183,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'instanceDomain.configuration',
                 component: () => import('../views/resources/instances/tabs/configuration.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'material-symbols:settings'
                 }
               },
               {
@@ -191,7 +192,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'instanceDomain.event',
                 component: () => import('../views/resources/instances/tabs/event.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'material-symbols:date-range'
                 }
               }
             ]

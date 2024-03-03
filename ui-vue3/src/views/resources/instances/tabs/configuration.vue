@@ -18,30 +18,31 @@
 <template>
   <a-descriptions title="" layout="vertical" :column="2">
     <!-- execution log -->
-    <a-descriptions-item>
+    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
       <template v-slot:label>
-        {{ $t('executionLog') }}
+        {{ $t('instanceDomain.executionLog') }}
         <a-tooltip placement="topLeft">
-          <template #title> {{ $t('enableAppInstanceLogs') }}(provider.accesslog) </template>
+          <template #title> {{ $t('instanceDomain.enableAppInstanceLogs') }}(provider.accesslog) </template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
 
       <span :class="{ active: !state }" :style="{ color: 'black' }">
-        {{ $t('close') }}
+        {{ $t('instanceDomain.close') }}
       </span>
       <a-switch v-model:checked="state" :loading="loading" />
       <span :class="{ active: state }" :style="{ color: state ? PRIMARY_COLOR : 'black' }">
-        {{ $t('enabled') }}
+        {{ $t('instanceDomain.enable') }}
       </span>
     </a-descriptions-item>
 
     <!-- retry count -->
-    <a-descriptions-item>
+    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
+
       <template v-slot:label>
-        {{ $t('retryCount') }}
+        {{ $t('instanceDomain.retryCount') }}
         <a-tooltip placement="topLeft">
-          <template #title>{{ $t('appServiceRetries') }}</template>
+          <template #title>{{ $t('instanceDomain.appServiceRetries') }}</template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -49,24 +50,25 @@
     </a-descriptions-item>
 
     <!-- Load Balance -->
-    <a-descriptions-item>
+    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
+
       <template v-slot:label>
-        {{ $t('loadBalance') }}
+        {{ $t('instanceDomain.loadBalance') }}
         <a-tooltip placement="topLeft">
-          <template #title>{{ $t('appServiceLoadBalance') }}(provider.loadbalance)</template>
+          <template #title>{{ $t('instanceDomain.appServiceLoadBalance') }}(provider.loadbalance)</template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
-
       <a-typography-paragraph editable v-model:content="loadBalance"> </a-typography-paragraph>
     </a-descriptions-item>
 
     <!-- timeout -->
-    <a-descriptions-item>
+    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
+
       <template v-slot:label>
-        {{ $t('timeout') }}
+        {{ $t('instanceDomain.timeout_ms') }}
         <a-tooltip placement="topLeft">
-          <template #title> {{ $t('appServiceTimeout') }}(provider.timeout) </template>
+          <template #title> {{ $t('instanceDomain.appServiceTimeout') }}(provider.timeout) </template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
@@ -75,11 +77,12 @@
     </a-descriptions-item>
 
     <!-- Cluster approach -->
-    <a-descriptions-item>
+    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
+
       <template v-slot:label>
-        {{ $t('clusterApproach') }}
+        {{ $t('instanceDomain.clusterApproach') }}
         <a-tooltip placement="topLeft">
-          <template #title>{{ $t('appServiceNegativeClusteringMethod') }}</template>
+          <template #title>{{ $t('instanceDomain.appServiceNegativeClusteringMethod') }}</template>
           <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
         </a-tooltip>
       </template>
