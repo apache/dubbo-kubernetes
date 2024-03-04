@@ -68,6 +68,10 @@ const localeGlobal = reactive(i18n.global.locale)
 </template>
 
 <style lang="less">
+.ant-descriptions-item-content {
+  padding-left: 20px !important;
+}
+
 .__global_float_button_question {
   right: 24px;
 }

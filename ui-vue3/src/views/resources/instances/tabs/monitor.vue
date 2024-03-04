@@ -14,15 +14,13 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
+
 <template>
-  <div class="__container_tabDemo3">tab3</div>
+  <div>monitor todo</div>
 </template>
 
-<script setup lang="ts">
-import { onMounted } from 'vue'
-
-onMounted(() => {
-  console.log(333)
-})
+<script lang="ts" setup>
+import { ref } from 'vue'
 </script>
+
 <style lang="less" scoped></style>

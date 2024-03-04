@@ -173,15 +173,19 @@ const onSelect = () => {}
   .header {
     background: v-bind('PRIMARY_COLOR');
     padding: 0;
+
     .search-group {
       display: flex;
       align-items: center;
+
       .select-type {
         width: 120px;
       }
+
       .input-keywords {
         width: calc(100% - 152px);
       }
+
       .search-icon {
         width: 32px;
       }

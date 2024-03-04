@@ -18,30 +18,30 @@
   <div class="__container_router_tab_index">
     <div :key="key">
       <a-tabs
-          v-if="tabRoute.meta.tab"
-          @change="router.push({ name: activeKey || '' })"
-          v-model:activeKey="activeKey"
+        v-if="tabRoute.meta.tab"
+        @change="router.push({ name: activeKey || '' })"
+        v-model:activeKey="activeKey"
       >
         <a-tab-pane :key="v.name" v-for="v in tabRouters">
           <template #tab>
-          <span>
-            <Icon style="margin-bottom: -2px" :icon="v.meta.icon"></Icon>
-            {{ $t(v.name) }}
-          </span>
+            <span>
+              <Icon style="margin-bottom: -2px" :icon="v.meta.icon"></Icon>
+              {{ $t(v.name) }}
+            </span>
           </template>
         </a-tab-pane>
       </a-tabs>
       <a-spin class="tab-spin" :spinning="transitionFlag">
-        <router-view v-show="!transitionFlag"/>
+        <router-view v-show="!transitionFlag" />
       </a-spin>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from 'vue'
-import {Icon} from '@iconify/vue'
-import {useRoute, useRouter} from 'vue-router'
+import { computed, ref } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useRoute, useRouter } from 'vue-router'
 import _ from 'lodash'
 
 const router = useRouter()
@@ -66,9 +66,8 @@ router.beforeEach((to, from, next) => {
 </script>
 <style lang="less" scoped>
 .__container_router_tab_index {
-  :deep(.tab-spin){
+  :deep(.tab-spin) {
     margin-top: 20vh;
   }
 }
-
 </style>

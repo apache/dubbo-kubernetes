@@ -15,15 +15,14 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_app_tracing">tracing todo </div>
+  <div class="__container_app_tracing">tracing todo</div>
 </template>
 
 <script setup lang="ts">
-import {onMounted} from "vue";
+import { onMounted } from 'vue'
 
-onMounted(()=>{
+onMounted(() => {
   console.log(333)
 })
-
 </script>
 <style lang="less" scoped></style>

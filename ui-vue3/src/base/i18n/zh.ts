@@ -18,6 +18,49 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
+  instanceDomain: {
+    CPU: 'CPU',
+    enableAppInstanceLogs: '开启该应用所有实例的访问日志',
+    appServiceLoadBalance: '调整应用提供服务的负载均衡策略',
+    appServiceNegativeClusteringMethod: '调整应用提供服务的的集群方式',
+    appServiceRetries: '调整该应用提供服务的重试次数',
+    appServiceTimeout: '调整应用提供服务的超时时间',
+    close: '关闭',
+    enable: '开启',
+    executionLog: '执行日志',
+    retryCount: '重试次数',
+    clusterApproach: '集群方式',
+    timeout_ms: '超时时间(ms)',
+    details: '详情',
+    loadBalance: '负载均衡',
+    monitor: '监控',
+    linkTracking: '链路追踪',
+    configuration: '配置',
+    event: '事件',
+    healthExamination_k8s: '健康检查(k8s)',
+    instanceLabel: '实例标签',
+    instanceImage_k8s: '镜像(k8s)',
+    owningWorkload_k8s: '所属工作负载(k8s)',
+    node: '节点',
+    whichApplication: '所属应用',
+    registerCluster: '注册集群',
+    dubboPort: 'Dubbo端口',
+    instanceIP: '实例IP',
+    ip: 'IP',
+    name: '实例名称',
+    deployState: '部署状态',
+    deployCluster: '部署集群',
+    registerStates: '注册状态',
+    registerClusters: '注册集群',
+    cpu: 'CPU',
+    memory: '内存',
+    startTime: '启动时间',
+    registerTime: '注册时间',
+    labels: '标签',
+    instanceName: '实例名称',
+    creationTime_k8s: '创建时间(k8s)',
+    startTime_k8s: '启动时间(k8s)'
+  },
   service: '服务',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
@@ -284,28 +327,16 @@ const words: I18nType = {
     workloads: '工作负载',
     deployCluster: '部署集群',
     registerCluster: '注册集群',
-    registerMode: '注册模式',
+    registerMode: '注册模式'
   },
-  instanceDomain:{
-    ip: 'IP',
-    name: '实例名称',
-    deployState: '部署状态',
-    deployCluster: '部署集群',
-    registerStates: '注册状态',
-    registerClusters: '注册集群',
-    cpu: 'CPU',
-    memory: '内存',
-    startTime: '启动时间',
-    registerTime: '注册时间',
-    labels: '标签',
-  },
+
   searchDomain: {
     total: '共计',
     unit: '条'
   },
   messageDomain: {
     success: {
-      copy: "您已经成功复制一条信息"
+      copy: '您已经成功复制一条信息'
     }
   },
   backHome: '回到首页',
