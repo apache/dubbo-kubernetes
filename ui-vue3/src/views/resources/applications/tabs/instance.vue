@@ -100,17 +100,11 @@ onMounted(async () => {
 
 const columns = [
   {
-    title: 'idx',
-    key: 'idx',
-    width: 60,
-    fixed: 'left'
-  },
-  {
     title: 'instanceDomain.ip',
     dataIndex: 'ip',
     key: 'ip',
     sorter: true,
-    width: 160,
+    width: 150,
     fixed: 'left'
   },
   {
@@ -118,28 +112,28 @@ const columns = [
     dataIndex: 'name',
     key: 'name',
     sorter: true,
-    width: 200
+    width: 180
   },
   {
     title: 'instanceDomain.deployState',
     dataIndex: 'deployState',
     key: 'deployState',
     sorter: true,
-    width: 200
+    width: 150
   },
   {
     title: 'instanceDomain.deployCluster',
     dataIndex: 'deployCluster',
     key: 'deployCluster',
     sorter: true,
-    width: 200
+    width: 180
   },
   {
     title: 'instanceDomain.registerStates',
     dataIndex: 'registerStates',
     key: 'registerStates',
     sorter: true,
-    width: 200
+    width: 150
   },
   {
     title: 'instanceDomain.registerClusters',
@@ -153,14 +147,14 @@ const columns = [
     dataIndex: 'cpu',
     key: 'cpu',
     sorter: true,
-    width: 150
+    width: 120
   },
   {
     title: 'instanceDomain.memory',
     dataIndex: 'memory',
     key: 'memory',
     sorter: true,
-    width: 150
+    width: 120
   },
   {
     title: 'instanceDomain.startTime',
