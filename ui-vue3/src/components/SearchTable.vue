@@ -70,7 +70,7 @@
         :pagination="pagination"
         :scroll="{
           scrollToFirstRowOnChange: true,
-          y: searchDomain.tableStyle?.scrollY || '55vh',
+          y: searchDomain.tableStyle?.scrollY || '',
           x: searchDomain.tableStyle?.scrollX || ''
         }"
         :columns="searchDomain?.table.columns"
