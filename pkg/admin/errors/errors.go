@@ -15,29 +15,32 @@
  * limitations under the License.
  */
 
-package config
+package errors
 
 import (
-	"dubbo.apache.org/dubbo-go/v3/metadata/report"
-	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
-	"gorm.io/gorm"
-
-	_ "github.com/apache/dubbo-kubernetes/pkg/admin/imports"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model/resp"
+	"github.com/pkg/errors"
 )
 
-var (
-	Governance           GovernanceConfig
-	RegistryCenter       dubboRegistry.Registry
-	AdminRegistry        registry.AdminRegistry
-	MetadataReportCenter report.MetadataReport
+type BizError struct {
+	Code resp.Code
+	Err  error
+}
 
-	DataBase *gorm.DB // for service mock
-)
+func (e *BizError) Error() string {
+	return e.Err.Error()
+}
 
-var (
-	PrometheusAddress     string
-	PrometheusMonitorPort string
-	AdminPort             int
-	GrafanaAddress        string
-)
+func NewBizError(code resp.Code, err error) *BizError {
+	return &BizError{
+		Code: code,
+		Err:  err,
+	}
+}
+
+func NewBizErrorWithStack(code resp.Code, err error) *BizError {
+	return &BizError{
+		Code: code,
+		Err:  errors.WithStack(err),
+	}
+}

@@ -15,29 +15,24 @@
  * limitations under the License.
  */
 
-package config
+package req
 
-import (
-	"dubbo.apache.org/dubbo-go/v3/metadata/report"
-	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
-	"gorm.io/gorm"
-
-	_ "github.com/apache/dubbo-kubernetes/pkg/admin/imports"
+const (
+	Namespace = "namespace"
+	Keywords  = "keywords"
 )
 
-var (
-	Governance           GovernanceConfig
-	RegistryCenter       dubboRegistry.Registry
-	AdminRegistry        registry.AdminRegistry
-	MetadataReportCenter report.MetadataReport
-
-	DataBase *gorm.DB // for service mock
+const (
+	Asc  = "asc"
+	Desc = "desc"
 )
 
-var (
-	PrometheusAddress     string
-	PrometheusMonitorPort string
-	AdminPort             int
-	GrafanaAddress        string
-)
+type PageQuery struct {
+	Page int `json:"page" form:"page" binding:"required"`
+	Size int `json:"size" form:"size" binding:"required"`
+}
+
+type SortQuery struct {
+	SortType string `json:"sortType" form:"sortType"`
+	Order    string `json:"order" form:"order"`
+}

@@ -15,29 +15,15 @@
  * limitations under the License.
  */
 
-package config
+package handlersV2
 
 import (
-	"dubbo.apache.org/dubbo-go/v3/metadata/report"
-	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
-	"gorm.io/gorm"
+	"github.com/pkg/errors"
 
-	_ "github.com/apache/dubbo-kubernetes/pkg/admin/imports"
+	"github.com/gin-gonic/gin"
 )
 
-var (
-	Governance           GovernanceConfig
-	RegistryCenter       dubboRegistry.Registry
-	AdminRegistry        registry.AdminRegistry
-	MetadataReportCenter report.MetadataReport
-
-	DataBase *gorm.DB // for service mock
-)
-
-var (
-	PrometheusAddress     string
-	PrometheusMonitorPort string
-	AdminPort             int
-	GrafanaAddress        string
-)
+func TestError(c *gin.Context) {
+	_ = c.Error(errors.New("test error"))
+	return
+}

@@ -94,6 +94,31 @@ func (c *KubernetesCache) GetApplications(namespace string) ([]*cache.Applicatio
 	return res, nil
 }
 
+func (c *KubernetesCache) GetApplicationsWithSelector(namespace string, selector selector.Selector) ([]*cache.ApplicationModel, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	applicationSet := make(map[string]struct{})
+	deployments, err := c.getCacheLister(namespace).deploymentLister.List(selector.AsLabelsSelector())
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*cache.ApplicationModel, 0)
+	for _, deployment := range deployments {
+		if _, ok := deployment.Labels[constant.ApplicationLabel]; ok {
+			if _, exist := applicationSet[constant.ApplicationLabel]; !exist {
+				applicationSet[deployment.Labels[constant.ApplicationLabel]] = struct{}{} // mark as exist
+				res = append(res, &cache.ApplicationModel{
+					Name: deployment.Name,
+				})
+			}
+		}
+	}
+
+	return res, nil
+}
+
 func (c *KubernetesCache) GetWorkloads(namespace string) ([]*cache.WorkloadModel, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()

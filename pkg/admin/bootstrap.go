@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/pkg/admin/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry"
 
 	"github.com/apache/dubbo-kubernetes/pkg/admin/providers/mock"
@@ -103,7 +104,9 @@ func RegisterOther(rt core_runtime.Runtime) error {
 		if err != nil {
 			panic(err)
 		}
-		config.AdminRegistry, config.Cache, err = registry.Registry(c.GetProtocol(), addrUrl, rt.KubeClient())
+		var cacheInstance cache.Cache
+		config.AdminRegistry, cacheInstance, err = registry.Registry(c.GetProtocol(), addrUrl, rt.KubeClient())
+		cache.SetCache(cacheInstance)
 		if err != nil {
 			panic(err)
 		}
