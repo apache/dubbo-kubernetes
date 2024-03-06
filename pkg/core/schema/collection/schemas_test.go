@@ -23,8 +23,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/core/schema/resource"
-
-	_ "github.com/gogo/protobuf/types"
 	. "github.com/onsi/gomega"
 )
 

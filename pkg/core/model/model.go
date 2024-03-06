@@ -25,7 +25,6 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 
-	gogoproto "github.com/gogo/protobuf/proto"
 	// nolint
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -161,8 +160,8 @@ func DeepCopy(s interface{}) interface{} {
 	}
 
 	// gogo protobuf
-	if pb, ok := s.(gogoproto.Message); ok {
-		return gogoproto.Clone(pb)
+	if pb, ok := s.(proto.Message); ok {
+		return proto.Clone(pb)
 	}
 
 	// If we don't have a deep copy method, we will have to do some reflection magic. Its not ideal,

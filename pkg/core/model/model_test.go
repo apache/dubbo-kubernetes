@@ -24,6 +24,7 @@ import (
 
 	network "github.com/apache/dubbo-kubernetes/api/resource/v1alpha1"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDeepCopy(t *testing.T) {
@@ -39,11 +40,7 @@ func TestDeepCopy(t *testing.T) {
 	}
 
 	copied := cfg.DeepCopy()
-
-	if diff := cmp.Diff(copied, cfg); diff != "" {
-		t.Fatalf("cloned config is not identical: %v", diff)
-	}
-
+	assert.Equal(t, copied, cfg)
 	copied.Labels["app"] = "cloned-app"
 	copied.Annotations["test-annotations"] = "0"
 	if cfg.Labels["app"] == copied.Labels["app"] ||
@@ -84,19 +81,14 @@ func TestDeepCopyTypes(t *testing.T) {
 				route.Tags[0].Addresses = []string{"zyq"}
 				return c
 			},
-			option: nil,
 		},
 	}
 	for _, tt := range cases {
 		t.Run(fmt.Sprintf("%T", tt.input), func(t *testing.T) {
 			cpy := DeepCopy(tt.input)
-			if diff := cmp.Diff(tt.input, cpy, tt.option); diff != "" {
-				t.Fatalf("Type was %T now is %T. Diff: %v", tt.input, cpy, diff)
-			}
+			assert.Equal(t, tt.input, cpy)
 			changed := tt.modify(tt.input)
-			if cmp.Equal(cpy, changed, tt.option) {
-				t.Fatalf("deep copy allowed modification")
-			}
+			assert.NotEqual(t, cpy, changed)
 		})
 	}
 }
