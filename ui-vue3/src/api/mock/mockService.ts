@@ -16,7 +16,7 @@
  */
 
 import Mock from 'mockjs'
-import devTool from "@/utils/DevToolUtil";
+import devTool from '@/utils/DevToolUtil'
 
 Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
   code: 200,

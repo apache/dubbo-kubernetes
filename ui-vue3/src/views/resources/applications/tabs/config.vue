@@ -19,11 +19,10 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted} from "vue";
+import { onMounted } from 'vue'
 
-onMounted(()=>{
+onMounted(() => {
   console.log(333)
 })
-
 </script>
 <style lang="less" scoped></style>

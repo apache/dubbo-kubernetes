@@ -18,11 +18,7 @@
 import type { TableColumnsType } from 'ant-design-vue'
 import { reactive } from 'vue'
 
-export type DICT_TYPE =
-  'SELECT'|
-  'BUTTON'|
-  'RADIO'
-    ;
+export type DICT_TYPE = 'SELECT' | 'BUTTON' | 'RADIO'
 
 export class SearchDomain {
   // form of search
@@ -38,7 +34,7 @@ export class SearchDomain {
           label: string
           value: string
         }
-      ],
+      ]
       dictType: DICT_TYPE
     }
   ]
@@ -46,7 +42,7 @@ export class SearchDomain {
   result: any
   tableStyle: any
   table: {
-    loading?: boolean,
+    loading?: boolean
     columns: TableColumnsType
   } = { columns: [] }
   paged = {
@@ -55,31 +51,36 @@ export class SearchDomain {
     pageSize: 10
   }
 
-  constructor(query: any, searchApi: any, columns: TableColumnsType|any, paged?: any|undefined) {
+  constructor(
+    query: any,
+    searchApi: any,
+    columns: TableColumnsType | any,
+    paged?: any | undefined
+  ) {
     this.params = query
     this.queryForm = reactive({})
     this.table.columns = columns
-    query.forEach((c:any)=>{
-      if(c.defaultValue) {
+    query.forEach((c: any) => {
+      if (c.defaultValue) {
         this.queryForm[c.param] = c.defaultValue
       }
     })
-    if(paged) {
-      this.paged = {...this.paged, ...paged}
+    if (paged) {
+      this.paged = { ...this.paged, ...paged }
     }
     this.searchApi = searchApi
     this.onSearch()
   }
 
   async onSearch() {
-    this.table.loading = true;
-    setTimeout(()=>{
-      this.table.loading = false;
+    this.table.loading = true
+    setTimeout(() => {
+      this.table.loading = false
     }, 5000)
     let res = (await this.searchApi(this.queryForm || {})).data
     this.result = res.data
     this.paged.total = res.total
-    this.table.loading = false;
+    this.table.loading = false
   }
 }
 

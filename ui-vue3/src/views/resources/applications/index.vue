@@ -96,9 +96,6 @@ const searchDomain = reactive(
 )
 
 onMounted(() => {
-  searchDomain.tableStyle = {
-    scrollY: '40vh',
-  }
   searchDomain.onSearch()
 })
 

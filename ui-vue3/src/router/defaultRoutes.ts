@@ -96,8 +96,6 @@ export const routes: Readonly<RouteRecordType[]> = [
                   icon: 'carbon:web-services-definition'
                 }
               },
-
-
               {
                 path: '/monitor/:pathId',
                 name: 'applicationDomain.monitor',
@@ -133,15 +131,72 @@ export const routes: Readonly<RouteRecordType[]> = [
                   tab: true,
                   icon: 'material-symbols:date-range'
                 }
-              },
-
+              }
             ]
           },
           {
             path: '/instances',
             name: 'instances',
-            component: () => import('../views/resources/instances/index.vue'),
-            meta: {}
+            component: LayoutTab,
+            redirect: 'all',
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/all',
+                name: 'all',
+                component: () => import('../views/resources/instances/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/detail/:instance',
+                name: 'instanceDomain.details',
+                component: () => import('../views/resources/instances/tabs/details.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'tabler:list-details'
+                }
+              },
+              {
+                path: '/monitor/:instance',
+                name: 'instanceDomain.monitor',
+                component: () => import('../views/resources/instances/tabs/monitor.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'ooui:instance-ltr'
+                }
+              },
+              {
+                path: '/linktracking/:instance',
+                name: 'instanceDomain.linkTracking',
+                component: () => import('../views/resources/instances/tabs/linkTracking.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols-light:monitor-heart-outline'
+                }
+              },
+              {
+                path: '/configuration/:instance',
+                name: 'instanceDomain.configuration',
+                component: () => import('../views/resources/instances/tabs/configuration.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols:settings'
+                }
+              },
+              {
+                path: '/event/:instance',
+                name: 'instanceDomain.event',
+                component: () => import('../views/resources/instances/tabs/event.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'material-symbols:date-range'
+                }
+              }
+            ]
           },
           {
             path: '/services',

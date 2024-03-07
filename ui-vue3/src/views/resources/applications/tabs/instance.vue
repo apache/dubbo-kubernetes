@@ -37,21 +37,18 @@
           <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
         </template>
         <template v-if="column.dataIndex === 'deployState'">
-         <a-tag
-             :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]"
-             >{{text}}</a-tag>
+          <a-tag :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
         </template>
         <template v-if="column.dataIndex === 'registerStates'">
-         <a-tag
-             :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]"
-             v-for="t in text">{{t.label}}</a-tag>
+          <a-tag :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]" v-for="t in text">{{
+            t.label
+          }}</a-tag>
         </template>
         <template v-if="column.dataIndex === 'registerClusters'">
-         <a-tag
-             v-for="t in text">{{t}}</a-tag>
+          <a-tag v-for="t in text">{{ t }}</a-tag>
         </template>
         <template v-if="column.dataIndex === 'labels'">
-         <a-tag :color="PRIMARY_COLOR" v-for="t in text">{{t}}</a-tag>
+          <a-tag :color="PRIMARY_COLOR" v-for="t in text">{{ t }}</a-tag>
         </template>
       </template>
     </search-table>
@@ -59,26 +56,24 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, provide, reactive} from "vue";
-import {getClusterInfo} from "@/api/service/clusterInfo";
-import {getMetricsMetadata} from "@/api/service/serverInfo";
-import {Chart} from "@antv/g2";
-import {INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR} from "@/base/constants";
-import {Icon} from "@iconify/vue";
-import SearchTable from "@/components/SearchTable.vue";
-import {SearchDomain} from "@/utils/SearchUtil";
-import {searchService} from "@/api/service/service";
-import {PROVIDE_INJECT_KEY} from "@/base/enums/ProvideInject";
-import {useRoute, useRouter} from "vue-router";
-import {getApplicationInstanceInfo, getApplicationInstanceStatistics} from "@/api/service/app";
+import { onMounted, provide, reactive } from 'vue'
+import { getClusterInfo } from '@/api/service/clusterInfo'
+import { getMetricsMetadata } from '@/api/service/serverInfo'
+import { Chart } from '@antv/g2'
+import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR } from '@/base/constants'
+import { Icon } from '@iconify/vue'
+import SearchTable from '@/components/SearchTable.vue'
+import { SearchDomain } from '@/utils/SearchUtil'
+import { searchService } from '@/api/service/service'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { useRoute, useRouter } from 'vue-router'
+import { getApplicationInstanceInfo, getApplicationInstanceStatistics } from '@/api/service/app'
 
 let __null = PRIMARY_COLOR
 let statisticsInfo = reactive({
   info: <{ [key: string]: string }>{},
   report: <{ [key: string]: { value: string; icon: string } }>{}
 })
-
-
 
 onMounted(async () => {
   let statistics = (await getApplicationInstanceStatistics({})).data
@@ -99,24 +94,17 @@ onMounted(async () => {
     memory: {
       icon: 'mdi:merge',
       value: statisticsInfo.info.memoryTotal
-    },
+    }
   }
 })
 
-
 const columns = [
-  {
-    title: 'idx',
-    key: 'idx',
-    width: 60,
-    fixed: 'left'
-  },
   {
     title: 'instanceDomain.ip',
     dataIndex: 'ip',
     key: 'ip',
     sorter: true,
-    width: 160,
+    width: 150,
     fixed: 'left'
   },
   {
@@ -124,63 +112,63 @@ const columns = [
     dataIndex: 'name',
     key: 'name',
     sorter: true,
-    width: 200,
+    width: 180
   },
   {
     title: 'instanceDomain.deployState',
     dataIndex: 'deployState',
     key: 'deployState',
     sorter: true,
-    width: 200,
+    width: 150
   },
   {
     title: 'instanceDomain.deployCluster',
     dataIndex: 'deployCluster',
     key: 'deployCluster',
     sorter: true,
-    width: 200,
+    width: 180
   },
   {
     title: 'instanceDomain.registerStates',
     dataIndex: 'registerStates',
     key: 'registerStates',
     sorter: true,
-    width: 200,
+    width: 150
   },
   {
     title: 'instanceDomain.registerClusters',
     dataIndex: 'registerClusters',
     key: 'registerClusters',
     sorter: true,
-    width: 200,
+    width: 200
   },
   {
     title: 'instanceDomain.cpu',
     dataIndex: 'cpu',
     key: 'cpu',
     sorter: true,
-    width: 150,
+    width: 120
   },
   {
     title: 'instanceDomain.memory',
     dataIndex: 'memory',
     key: 'memory',
     sorter: true,
-    width: 150,
+    width: 120
   },
   {
     title: 'instanceDomain.startTime',
     dataIndex: 'startTime',
     key: 'startTime',
     sorter: true,
-    width: 150,
+    width: 150
   },
   {
     title: 'instanceDomain.registerTime',
     dataIndex: 'registerTime',
     key: 'registerTime',
     sorter: true,
-    width: 150,
+    width: 150
   },
   {
     title: 'instanceDomain.labels',
@@ -188,43 +176,43 @@ const columns = [
     key: 'labels',
     sorter: true,
     fixed: 'right',
-    width: 200,
-  },
+    width: 200
+  }
 ]
 
 const searchDomain = reactive(
-    new SearchDomain(
-        [
-          {
-            label: '',
-            param: 'type',
-            defaultValue: 1,
-            dict: [
-              {label: 'ip', value: 1},
-              {label: 'name', value: 2},
-              {label: 'label', value: 3}
-            ],
-            style: {
-              width: '100px',
-            }
-          },
-          {
-            label: '',
-            param: 'search',
-            style: {
-              width: '300px',
-            }
-          },
+  new SearchDomain(
+    [
+      {
+        label: '',
+        param: 'type',
+        defaultValue: 1,
+        dict: [
+          { label: 'ip', value: 1 },
+          { label: 'name', value: 2 },
+          { label: 'label', value: 3 }
         ],
-        getApplicationInstanceInfo,
-        columns,
-        {pageSize: 4}
-    )
+        style: {
+          width: '100px'
+        }
+      },
+      {
+        label: '',
+        param: 'search',
+        style: {
+          width: '300px'
+        }
+      }
+    ],
+    getApplicationInstanceInfo,
+    columns,
+    { pageSize: 4 }
+  )
 )
 
-onMounted(()=>{
+onMounted(() => {
   searchDomain.tableStyle = {
-    scrollX: '100',
+    scrollX: '100'
   }
   searchDomain.onSearch()
 })
@@ -236,10 +224,8 @@ const viewDetail = (serviceName: string) => {
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
-
 </script>
 <style lang="less" scoped>
-
 .__container_app_instance {
   .statistic {
     width: 8vw;

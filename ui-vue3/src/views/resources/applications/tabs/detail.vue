@@ -15,50 +15,41 @@
   ~ limitations under the License.
 -->
 <template>
-
-<div class="__container_app_detail">
-  <a-flex>
-    <a-descriptions
-        class="description-column" :column="2" layout="vertical">
-      <a-descriptions-item
-          v-for=" (v, key, idx) in apiData.detail?.data"
+  <div class="__container_app_detail">
+    <a-flex>
+      <a-descriptions class="description-column" :column="2" layout="vertical">
+        <a-descriptions-item
+          v-for="(v, key, idx) in apiData.detail?.data"
           v-show="!!v"
-          :labelStyle="{fontWeight: 'bold'}"
-          :label="$t('applicationDomain.' + key)">
-        <template #title>
-          111
-        </template>
-        <template v-if="v.length<3">
-          <p v-for="item in v" class="description-item-content no-card" >
-            {{ item }}
-          </p>
-        </template>
+          :labelStyle="{ fontWeight: 'bold' }"
+          :label="$t('applicationDomain.' + key)"
+        >
+          <template #title> 111 </template>
+          <template v-if="v.length < 3">
+            <p v-for="item in v" class="description-item-content no-card">
+              {{ item }}
+            </p>
+          </template>
 
-        <a-card
-            class="description-item-card"
-            v-else>
-          <p v-for="item in v"
-             @click="copyIt(item)"
-             class="description-item-content with-card" >
-            {{ item }} <CopyOutlined />
-          </p>
-        </a-card>
-      </a-descriptions-item>
-    </a-descriptions>
-  </a-flex>
-</div>
+          <a-card class="description-item-card" v-else>
+            <p v-for="item in v" @click="copyIt(item)" class="description-item-content with-card">
+              {{ item }} <CopyOutlined />
+            </p>
+          </a-card>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-flex>
+  </div>
 </template>
 
 <script setup lang="ts">
-import {
-  PRIMARY_COLOR,
-} from '@/base/constants'
-import {getApplicationDetail} from "@/api/service/app";
-import {computed, onMounted, reactive, getCurrentInstance} from "vue";
-import {CopyOutlined} from "@ant-design/icons-vue"
+import { PRIMARY_COLOR } from '@/base/constants'
+import { getApplicationDetail } from '@/api/service/app'
+import { computed, onMounted, reactive, getCurrentInstance } from 'vue'
+import { CopyOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
-import {message} from "ant-design-vue";
-import type {ComponentInternalInstance} from "vue"
+import { message } from 'ant-design-vue'
+import type { ComponentInternalInstance } from 'vue'
 const apiData: any = reactive({})
 const {
   appContext: {
@@ -66,33 +57,29 @@ const {
   }
 } = <ComponentInternalInstance>getCurrentInstance()
 
-let __ = PRIMARY_COLOR;
+let __ = PRIMARY_COLOR
 onMounted(async () => {
   apiData.detail = await getApplicationDetail({})
 })
-const toClipboard = useClipboard().toClipboard;
+const toClipboard = useClipboard().toClipboard
 
-
-function copyIt(v:string) {
-  message.success(globalProperties.$t("messageDomain.success.copy"));
+function copyIt(v: string) {
+  message.success(globalProperties.$t('messageDomain.success.copy'))
   toClipboard(v)
 }
 </script>
 <style lang="less" scoped>
-
-.__container_app_detail{
-  .description-item-content{
-
-   &.no-card{
-     padding-left: 20px;
-   }
-    &.with-card:hover{
+.__container_app_detail {
+  .description-item-content {
+    &.no-card {
+      padding-left: 20px;
+    }
+    &.with-card:hover {
       color: v-bind('PRIMARY_COLOR');
     }
   }
-  .description-item-card{
+  .description-item-card {
     width: 80%;
   }
-
 }
 </style>

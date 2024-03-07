@@ -15,27 +15,12 @@
  * limitations under the License.
  */
 
-import { ref } from 'vue'
+import request from '@/base/http/request'
 
-export const PRIMARY_COLOR_DEFAULT = '#17b392'
-
-export const LOCAL_STORAGE_LOCALE = 'LOCAL_STORAGE_LOCALE'
-export const LOCAL_STORAGE_THEME = 'LOCAL_STORAGE_THEME'
-
-let item = localStorage.getItem(LOCAL_STORAGE_THEME)
-
-export const PRIMARY_COLOR = ref(item || PRIMARY_COLOR_DEFAULT)
-
-export const INSTANCE_REGISTER_COLOR: { [key: string]: string } = {
-  HEALTHY: 'green'
-}
-
-/**
- * 'Running','Pending', 'Terminating', 'Crashing'
- */
-export const INSTANCE_DEPLOY_COLOR: { [key: string]: string } = {
-  RUNNING: 'green',
-  PENDING: 'yellow',
-  TERMINATING: 'red',
-  CRASHING: 'darkRed'
+export const searchInstances = (params: any): Promise<any> => {
+  return request({
+    url: '/instance/search',
+    method: 'get',
+    params
+  })
 }
