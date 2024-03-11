@@ -36,7 +36,13 @@
         <a-layout-content class="layout-content">
           <router-view v-slot="{ Component }">
             <transition name="slide-fade">
-              <component :is="Component" />
+              <component :is="Component">
+                <template v-slot:tabTitle>
+                  <h1>
+                    {{ route.params && Object.values(route.params)[0] }}
+                  </h1>
+                </template>
+              </component>
             </transition>
           </router-view>
         </a-layout-content>
@@ -91,6 +97,7 @@ router.beforeEach((to, from, next) => {
       margin-right: 5px;
     }
   }
+
   .layout-content {
     margin: 16px;
     padding: 16px 16px 24px;
@@ -98,6 +105,7 @@ router.beforeEach((to, from, next) => {
     overflow-y: auto;
     max-height: 88vh;
   }
+
   .layout-footer {
     height: 40px;
   }
