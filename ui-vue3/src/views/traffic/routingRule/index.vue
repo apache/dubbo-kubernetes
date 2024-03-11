@@ -15,15 +15,89 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_home_index">
-    <h1>{{ $t(routeName) }}</h1>
+  <div class="__container_resources_application_index">
+    <search-table :search-domain="searchDomain">
+      <template #bodyCell="{ text, record, index, column }">
+        <template v-if="column.dataIndex === 'enable'">
+          {{ text ? '是' : '否' }}
+        </template>
+        <template v-if="column.dataIndex === 'protection'">
+          {{ text ? '是' : '否' }}
+        </template>
+      </template>
+    </search-table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
+import { onMounted, provide, reactive } from 'vue'
+import { searchRoutingRule } from '@/api/service/traffic'
+import SearchTable from '@/components/SearchTable.vue'
+import { SearchDomain, sortString } from '@/utils/SearchUtil'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 
-import { useRoute } from 'vue-router'
-const routeName = <string>useRoute().name
+let columns = [
+  {
+    title: 'ruleName',
+    key: 'ruleName',
+    dataIndex: 'ruleName',
+    sorter: (a: any, b: any) => sortString(a.appName, b.appName),
+    width: 140
+  },
+  {
+    title: 'ruleGranularity',
+    key: 'ruleGranularity',
+    dataIndex: 'ruleGranularity',
+    width: 100,
+    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+  },
+  {
+    title: 'enable',
+    key: 'enable',
+    dataIndex: 'enable',
+    render: (text, record) => (record.enable ? '是' : '否'),
+    width: 120
+  },
+  {
+    title: 'effectiveTime',
+    key: 'effectiveTime',
+    dataIndex: 'effectiveTime',
+    width: 120
+  },
+  {
+    title: 'protection',
+    key: 'protection',
+    dataIndex: 'protection',
+    render: (text, record) => (record.protection ? '是' : '否'),
+    width: 200
+  }
+]
+const searchDomain = reactive(
+  new SearchDomain(
+    [
+      {
+        label: 'serviceGovernance',
+        param: 'serviceGovernance',
+        placeholder: 'typeRoutingRules',
+        style: {
+          width: '200px'
+        }
+      }
+    ],
+    searchRoutingRule,
+    columns
+  )
+)
+
+onMounted(() => {
+  searchDomain.onSearch()
+})
+
+provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.search-table-container {
+  min-height: 60vh;
+  //max-height: 70vh; //overflow: auto;
+}
+</style>

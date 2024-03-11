@@ -268,6 +268,32 @@ export const routes: Readonly<RouteRecordType[]> = [
         ]
       },
       {
+        path: '/traffic',
+        name: 'trafficManagement',
+        meta: {
+          icon: 'eos-icons:cluster-management'
+        },
+        children: [
+          {
+            path: '/routingRule',
+            name: 'routingRule',
+            component: () => import('../views/traffic/routingRule/index.vue'),
+          },
+          {
+            path: '/tagRule',
+            name: 'tagRule',
+            component: () => import('../views/traffic/tagRule/index.vue'),
+            meta: {}
+          },
+          {
+            path: '/dynamicConfig',
+            name: 'dynamicConfig',
+            component: () => import('../views/traffic/dynamicConfig/index.vue'),
+            meta: {}
+          }
+        ]
+      },
+      {
         path: '/common',
         name: 'commonDemo',
         redirect: 'tab',
