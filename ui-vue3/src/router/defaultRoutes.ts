@@ -152,7 +152,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/detail/:instance',
+                path: '/detail/:pathId',
                 name: 'instanceDomain.details',
                 component: () => import('../views/resources/instances/tabs/details.vue'),
                 meta: {
@@ -161,7 +161,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/monitor/:instance',
+                path: '/monitor/:pathId',
                 name: 'instanceDomain.monitor',
                 component: () => import('../views/resources/instances/tabs/monitor.vue'),
                 meta: {
@@ -170,7 +170,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/linktracking/:instance',
+                path: '/linktracking/:pathId',
                 name: 'instanceDomain.linkTracking',
                 component: () => import('../views/resources/instances/tabs/linkTracking.vue'),
                 meta: {
@@ -179,7 +179,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/configuration/:instance',
+                path: '/configuration/:pathId',
                 name: 'instanceDomain.configuration',
                 component: () => import('../views/resources/instances/tabs/configuration.vue'),
                 meta: {
@@ -188,7 +188,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/event/:instance',
+                path: '/event/:pathId',
                 name: 'instanceDomain.event',
                 component: () => import('../views/resources/instances/tabs/event.vue'),
                 meta: {

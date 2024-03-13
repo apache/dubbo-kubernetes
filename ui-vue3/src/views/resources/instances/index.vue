@@ -66,14 +66,14 @@ let columns = [
     title: 'instanceDomain.instanceIP',
     key: 'ip',
     dataIndex: 'ip',
-    sorter: (a: any, b: any) => sortString(a.instanceIP, b.instanceIP),
+    sorter: (a: any, b: any) => sortString(a.ip, b.ip),
     width: 140
   },
   {
     title: 'instanceDomain.instanceName',
     key: 'name',
     dataIndex: 'name',
-    sorter: (a: any, b: any) => sortString(a.instanceName, b.instanceName),
+    sorter: (a: any, b: any) => sortString(a.name, b.name),
     width: 140
   },
   {
@@ -81,7 +81,7 @@ let columns = [
     key: 'deployState',
     dataIndex: 'deployState',
     width: 120,
-    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+    sorter: (a: any, b: any) => sortString(a.deployState, b.deployState)
   },
 
   {
@@ -102,14 +102,14 @@ let columns = [
     title: 'instanceDomain.registerCluster',
     key: 'registerClusters',
     dataIndex: 'registerClusters',
-    sorter: (a: any, b: any) => sortString(a.registerCluster, b.registerCluster),
+    sorter: (a: any, b: any) => sortString(a.registerClusters, b.registerClusters),
     width: 140
   },
   {
     title: 'instanceDomain.CPU',
     key: 'cpu',
     dataIndex: 'cpu',
-    sorter: (a: any, b: any) => sortString(a.CPU, b.CPU),
+    sorter: (a: any, b: any) => sortString(a.cpu, b.cpu),
     width: 140
   },
   {
@@ -123,7 +123,7 @@ let columns = [
     title: 'instanceDomain.startTime_k8s',
     key: 'startTime_k8s',
     dataIndex: 'startTime',
-    sorter: (a: any, b: any) => sortString(a.startTime_k8s, b.startTime_k8s),
+    sorter: (a: any, b: any) => sortString(a.startTime, b.startTime),
     width: 200
   },
   {

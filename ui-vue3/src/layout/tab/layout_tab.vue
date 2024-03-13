@@ -17,6 +17,7 @@
 <template>
   <div class="__container_router_tab_index">
     <div :key="key">
+      <slot name="tabTitle"></slot>
       <a-tabs
         v-if="tabRoute.meta.tab"
         @change="router.push({ name: activeKey || '' })"
@@ -46,6 +47,7 @@ import _ from 'lodash'
 
 const router = useRouter()
 const tabRoute = useRoute()
+
 let meta: any = tabRoute.meta
 const tabRouters = computed(() => {
   let meta: any = tabRoute.meta
@@ -55,6 +57,7 @@ let activeKey = ref(tabRoute.name)
 let transitionFlag = ref(false)
 let key = _.uniqueId('__tab_page')
 router.beforeEach((to, from, next) => {
+  console.log(tabRoute)
   key = _.uniqueId('__tab_page')
   transitionFlag.value = true
   activeKey.value = <string>to.name
