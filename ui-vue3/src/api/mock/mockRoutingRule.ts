@@ -19,8 +19,8 @@ import Mock from 'mockjs'
 import devTool from '@/utils/DevToolUtil'
 
 Mock.mock('/mock/routingRule/search', 'get', () => {
-    let total = Mock.mock('@integer(8, 1000)');
-    let list = [];
+    const total = Mock.mock('@integer(8, 1000)');
+    const list = [];
     for (let i = 0; i < total; i++) {
       list.push({
         ruleName: 'app_' + Mock.mock('@string(2,10)'),
