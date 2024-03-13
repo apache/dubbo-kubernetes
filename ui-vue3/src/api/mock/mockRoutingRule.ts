@@ -16,7 +16,6 @@
  */
 
 import Mock from 'mockjs'
-import devTool from '@/utils/DevToolUtil'
 
 Mock.mock('/mock/routingRule/search', 'get', () => {
     const total = Mock.mock('@integer(8, 1000)');
