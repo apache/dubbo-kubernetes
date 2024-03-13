@@ -1,0 +1,1 @@
+import{d as o,O as e,f as t,o as n}from"./index-tamXPwks.js";const a={class:"__container_tabDemo3"},m=o({__name:"monitor",setup(s){return e(()=>{console.log(333)}),(_,c)=>(n(),t("div",a,"tab3"))}});export{m as default};

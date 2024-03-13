@@ -1,0 +1,1 @@
+import{_ as e,f as t,o as c}from"./index-tamXPwks.js";const o={},s={class:"__container_services_tabs_event"};function _(n,r){return c(),t("div",s,"事件todo")}const f=e(o,[["render",_]]);export{f as default};

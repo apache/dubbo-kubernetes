@@ -1,0 +1,1 @@
+import{_ as o,f as e,o as t}from"./index-tamXPwks.js";const c={},s={class:"__container_services_tabs_monitor"};function _(n,r){return t(),e("div",s,"监控todo")}const i=o(c,[["render",_]]);export{i as default};

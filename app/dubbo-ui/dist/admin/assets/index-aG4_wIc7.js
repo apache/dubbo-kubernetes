@@ -1,0 +1,1 @@
+import{_ as e,f as o,o as c}from"./index-tamXPwks.js";const n={},_={class:"__container_common_index"};function t(r,s){return c(),o("div",_,"placeholder demo")}const d=e(n,[["render",t]]);export{d as default};

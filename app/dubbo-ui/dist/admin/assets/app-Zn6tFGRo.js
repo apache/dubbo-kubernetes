@@ -1,0 +1,1 @@
+import{r as a}from"./request-TA53RnaN.js";const i=t=>a({url:"/application/search",method:"get",params:t}),n=t=>a({url:"/application/detail",method:"get",params:t}),s=t=>a({url:"/application/instance/statistics",method:"get",params:t}),o=t=>a({url:"/application/instance/info",method:"get",params:t});export{s as a,o as b,n as g,i as s};

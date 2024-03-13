@@ -1,0 +1,1 @@
+import{d as o,O as e,f as n,o as t}from"./index-tamXPwks.js";const a={class:"__container_app_tracing"},i=o({__name:"tracing",setup(c){return e(()=>{console.log(333)}),(s,_)=>(t(),n("div",a,"tracing todo"))}});export{i as default};

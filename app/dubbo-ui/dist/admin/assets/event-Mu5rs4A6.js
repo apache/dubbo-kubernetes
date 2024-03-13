@@ -1,0 +1,1 @@
+import{d as e,O as n,f as o,o as t}from"./index-tamXPwks.js";const s={class:"__container_app_event"},p=e({__name:"event",setup(_){return n(()=>{console.log(333)}),(a,c)=>(t(),o("div",s,"Event"))}});export{p as default};

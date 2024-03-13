@@ -1,0 +1,1 @@
+import{d as o,O as e,f as n,o as c}from"./index-tamXPwks.js";const t={class:"__container_app_config"},i=o({__name:"config",setup(s){return e(()=>{console.log(333)}),(_,a)=>(c(),n("div",t,"config"))}});export{i as default};
