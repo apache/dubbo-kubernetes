@@ -277,7 +277,7 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/routingRule',
             name: 'routingRule',
-            component: () => import('../views/traffic/routingRule/index.vue'),
+            component: () => import('../views/traffic/routingRule/index.vue')
           },
           {
             path: '/tagRule',
@@ -367,7 +367,7 @@ function handleRoutes(
   parent: RouteRecordType | undefined
 ) {
   if (!routes) return
-  for (let route of routes) {
+  for (const route of routes) {
     if (parent) {
       route.path = handlePath(parent?.path, route.path)
     }
