@@ -18,6 +18,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -49,8 +50,8 @@ var (
 	providerService    services.ProviderService     = &services.ProviderServiceImpl{}
 	consumerService    services.ConsumerService     = &services.ConsumerServiceImpl{}
 	monitorService     services.MonitorService      = &services.PrometheusServiceImpl{}
+	testingService     services.TestingService      = &services.TestingServiceImpl{}
 	genericServiceImpl *services.GenericServiceImpl = &services.GenericServiceImpl{}
-	serviceTesting     *services.ServiceTestingV3   = &services.ServiceTestingV3{}
 )
 
 // AllServices get all services
@@ -352,58 +353,82 @@ func Test(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// HttpTest works for triple protocol
-func HttpTest(c *gin.Context) {
-	// pattern := c.Query("service")
-	// filter := c.Query("method")
-	// address := c.Query("address")
+// ListMethods list all methods of a service
+func ListMethods(c *gin.Context) {
+	service := c.Query("service")
+	address := c.Query("address")
 
-	// send standard http request to backend http://address/service/method content-type:json
+	methodList, err := testingService.GetMethodsNames(context.Background(), address, service)
+	if err != nil {
+		logger.Error("Error get methods names", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code": 1,
-		"data": "implement me",
+		"methods": methodList,
 	})
+	return
 }
 
-func MethodDetail(c *gin.Context) {
-	service := c.Query("service")
-	group := util.GetGroup(service)
-	version := util.GetVersion(service)
-	interfaze := util.GetInterface(service)
-	application := c.Query("application")
-	method := c.Query("method")
+// DescribeMethod describe a method of a service
+func DescribeMethod(c *gin.Context) {
+	m := c.Query("method")
+	address := c.Query("address")
 
-	identifier := &identifier.MetadataIdentifier{
-		Application: application,
-		BaseMetadataIdentifier: identifier.BaseMetadataIdentifier{
-			ServiceInterface: interfaze,
-			Version:          version,
-			Group:            group,
-			Side:             constant.ProviderSide,
-		},
-	}
-	metadata, _ := config.MetadataReportCenter.GetServiceDefinition(identifier)
-	var methodMetadata model.MethodMetadata
-	if metadata != "" {
-		serviceDefinition := &definition.FullServiceDefinition{}
-		err := json.Unmarshal([]byte(metadata), &serviceDefinition)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-		methods := serviceDefinition.Methods
-		if methods != nil {
-			for _, m := range methods {
-				if serviceTesting.SameMethod(m, method) {
-					methodMetadata = serviceTesting.GenerateMethodMeta(*serviceDefinition, m)
-					break
-				}
-			}
-		}
+	// get method describe
+	desc, err := testingService.GetMethodDescribe(context.Background(), address, m)
+	if err != nil {
+		logger.Error("Error get method describe", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
 	}
 
-	c.JSON(http.StatusOK, methodMetadata)
+	c.JSON(http.StatusOK, desc)
+	return
+}
+
+// MessageTemplate get a method template
+func MessageTemplate(c *gin.Context) {
+	m := c.Query("method")
+	address := c.Query("address")
+
+	templ, err := testingService.GetMessageTemplateString(context.Background(), address, m)
+	if err != nil {
+		logger.Error("Error get message template", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"template": templ,
+	})
+	return
+}
+
+// HTTPTest invoke a rpc method using HTTP
+func HTTPTest(c *gin.Context) {
+	m := c.Query("method")          // method name
+	address := c.Query("address")   // server address
+	input := c.Query("input")       // json string
+	headers := c.QueryMap("header") // header map
+
+	// invoke
+	resp, err := testingService.Invoke(context.Background(), address, m, input, headers)
+	if err != nil {
+		logger.Error("Error do http invoke for service test", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "success",
+		"response": resp,
+	})
 }

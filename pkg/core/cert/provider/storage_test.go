@@ -163,7 +163,6 @@ func TestGetServerCert(t *testing.T) {
 		Roots:   pool,
 		DNSName: "localhost",
 	})
-
 	if err != nil {
 		t.Errorf(err.Error())
 		return
@@ -191,7 +190,6 @@ func TestGetServerCert(t *testing.T) {
 		Roots:   pool,
 		DNSName: "localhost",
 	})
-
 	if err != nil {
 		t.Errorf(err.Error())
 		return
