@@ -75,7 +75,7 @@ helm template skywalking skywalking \
 # Set up zipkin
 helm template zipkin zipkin \
   --namespace dubbo-system \
-  --version 0.3.0 \
-  --repo https://openzipkin.github.io/zipkin \
+  --version 0.1.2 \
+  --repo https://zipkin.io/zipkin-helm \
   -f "${WORKDIR}/values-zipkin.yaml" \
   > "${KUBERNETES}/zipkin.yaml"
