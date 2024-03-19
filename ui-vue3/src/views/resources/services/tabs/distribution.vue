@@ -68,7 +68,7 @@
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
 import { ref, reactive, getCurrentInstance } from 'vue'
-import { getServiceDistribution } from '@/api/service/serviceDistribution'
+import { getServiceDistribution } from '@/api/service/service'
 import { debounce } from 'lodash'
 
 const {

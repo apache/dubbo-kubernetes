@@ -61,11 +61,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { getServiceDetail } from '@/api/service/serviceDetail'
+import { getServiceDetail } from '@/api/service/service'
 
 const serviceDetail = ref({})
 const onSearch = async () => {
-  const { data } = await getServiceDetail()
+  const { data } = await getServiceDetail({})
   serviceDetail.value = data.data
 }
 
