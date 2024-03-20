@@ -18,6 +18,14 @@
 import Mock from 'mockjs'
 import devTool from '@/utils/DevToolUtil'
 
+Mock.mock('/mock/application/metrics', 'get', () => {
+  return {
+    code: 200,
+    message: 'success',
+    data: 'http://101.201.225.179:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application?orgId=1&refresh=1m&from=1710644821536&to=1710731221536&theme=light'
+  }
+})
+
 Mock.mock('/mock/application/search', 'get', () => {
   let total = Mock.mock('@integer(8, 1000)')
   let list = []

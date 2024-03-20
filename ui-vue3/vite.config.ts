@@ -33,7 +33,8 @@ export default defineConfig({
                 target: 'http://jsonplaceholder.typicode.com',
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api/, ''),
-            }
+            },
+
         },
     },
     plugins: [
