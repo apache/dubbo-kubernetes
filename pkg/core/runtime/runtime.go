@@ -24,13 +24,25 @@ import (
 )
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/config_center"
+	"dubbo.apache.org/dubbo-go/v3/metadata/report"
+	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+)
+
+import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/admin"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
+	managers_dataplane "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
+	managers_mesh "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/reg_client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	xds_runtime "github.com/apache/dubbo-kubernetes/pkg/xds/runtime"
@@ -49,28 +61,39 @@ type RuntimeInfo interface {
 	GetClusterId() string
 	GetStartTime() time.Time
 	GetMode() core.CpMode
+	GetDeployMode() core.DeployMode
 }
 
 type RuntimeContext interface {
 	Config() dubbo_cp.Config
 	ResourceManager() core_manager.ResourceManager
-	ResourceStore() core_store.ResourceStore
 	Transactions() core_store.Transactions
 	ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager
 	ConfigStore() core_store.ResourceStore
 	Extensions() context.Context
+	EnvoyAdminClient() admin.EnvoyAdminClient
 	ConfigManager() config_manager.ConfigManager
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
+	DataplaneCache() *sync.Map
+	DDSContext() *dds_context.Context
+	RegistryCenter() dubboRegistry.Registry
+	ServiceDiscovery() dubboRegistry.ServiceDiscovery
+	MetadataReportCenter() report.MetadataReport
+	Governance() governance.GovernanceConfig
+	ConfigCenter() config_center.DynamicConfiguration
+	AdminRegistry() *registry.Registry
+	RegClient() reg_client.RegClient
 	ResourceValidators() ResourceValidators
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
-	KubeClient() *client.KubeClient
 	XDS() xds_runtime.XDSRuntimeContext
 }
 
 type ResourceValidators struct {
+	Dataplane managers_dataplane.Validator
+	Mesh      managers_mesh.MeshValidator
 }
 
 type ExtraReportsFn func(Runtime) (map[string]string, error)
@@ -92,6 +115,7 @@ type runtimeInfo struct {
 	clusterId  string
 	startTime  time.Time
 	mode       core.CpMode
+	deployMode core.DeployMode
 }
 
 func (i *runtimeInfo) GetInstanceId() string {
@@ -118,28 +142,76 @@ func (i *runtimeInfo) GetMode() core.CpMode {
 	return i.mode
 }
 
+func (i *runtimeInfo) GetDeployMode() core.DeployMode {
+	return i.deployMode
+}
+
 var _ RuntimeContext = &runtimeContext{}
 
 type runtimeContext struct {
-	cfg        dubbo_cp.Config
-	rm         core_manager.ResourceManager
-	rs         core_store.ResourceStore
-	txs        core_store.Transactions
-	cs         core_store.ResourceStore
-	rom        core_manager.ReadOnlyResourceManager
-	ext        context.Context
-	configm    config_manager.ConfigManager
-	xds        xds_runtime.XDSRuntimeContext
-	leadInfo   component.LeaderInfo
-	erf        events.EventBus
-	dps        *dp_server.DpServer
-	kubeclient *client.KubeClient
-	rv         ResourceValidators
-	appCtx     context.Context
+	cfg                  dubbo_cp.Config
+	rm                   core_manager.ResourceManager
+	txs                  core_store.Transactions
+	cs                   core_store.ResourceStore
+	rom                  core_manager.ReadOnlyResourceManager
+	ext                  context.Context
+	eac                  admin.EnvoyAdminClient
+	configm              config_manager.ConfigManager
+	xds                  xds_runtime.XDSRuntimeContext
+	leadInfo             component.LeaderInfo
+	erf                  events.EventBus
+	dps                  *dp_server.DpServer
+	dCache               *sync.Map
+	rv                   ResourceValidators
+	ddsctx               *dds_context.Context
+	registryCenter       dubboRegistry.Registry
+	metadataReportCenter report.MetadataReport
+	configCenter         config_center.DynamicConfiguration
+	adminRegistry        *registry.Registry
+	governance           governance.GovernanceConfig
+	appCtx               context.Context
+	regClient            reg_client.RegClient
+	serviceDiscovery     dubboRegistry.ServiceDiscovery
 }
 
-func (rc *runtimeContext) KubeClient() *client.KubeClient {
-	return rc.kubeclient
+func (b *runtimeContext) RegClient() reg_client.RegClient {
+	return b.regClient
+}
+
+func (b *runtimeContext) ServiceDiscovery() dubboRegistry.ServiceDiscovery {
+	return b.serviceDiscovery
+}
+
+func (b *runtimeContext) DataplaneCache() *sync.Map {
+	return b.dCache
+}
+
+func (b *runtimeContext) Governance() governance.GovernanceConfig {
+	return b.governance
+}
+
+func (b *runtimeContext) ConfigCenter() config_center.DynamicConfiguration {
+	return b.configCenter
+}
+
+func (b *runtimeContext) AdminRegistry() *registry.Registry {
+	return b.adminRegistry
+}
+
+func (b *runtimeContext) RegistryCenter() dubboRegistry.Registry {
+	return b.registryCenter
+}
+
+func (b *runtimeContext) MetadataReportCenter() report.MetadataReport {
+	return b.metadataReportCenter
+}
+
+func (rc *runtimeContext) EnvoyAdminClient() admin.EnvoyAdminClient {
+	return rc.eac
+}
+
+func (rc *runtimeContext) DDSContext() *dds_context.Context {
+	return rc.ddsctx
 }
 
 func (rc *runtimeContext) XDS() xds_runtime.XDSRuntimeContext {
@@ -156,10 +228,6 @@ func (rc *runtimeContext) Config() dubbo_cp.Config {
 
 func (rc *runtimeContext) ResourceManager() core_manager.ResourceManager {
 	return rc.rm
-}
-
-func (rc *runtimeContext) ResourceStore() core_store.ResourceStore {
-	return rc.rs
 }
 
 func (rc *runtimeContext) Transactions() core_store.Transactions {

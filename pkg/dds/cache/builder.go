@@ -18,11 +18,13 @@
 package cache
 
 import (
+	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+)
+
+import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	util_dds "github.com/apache/dubbo-kubernetes/pkg/dds/util"
-	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-
-	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
 
 type ResourceBuilder interface{}

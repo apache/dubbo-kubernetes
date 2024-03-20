@@ -17,8 +17,13 @@
 
 package envoy
 
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+)
+
 type Route struct {
-	Clusters []Cluster
+	RateLimit *mesh_proto.RateLimit
+	Clusters  []Cluster
 }
 
 func NewRouteFromCluster(cluster Cluster) Route {

@@ -18,13 +18,19 @@
 package client
 
 import (
+	"io"
+	"time"
+)
+
+import (
+	"github.com/go-logr/logr"
+
+	"github.com/pkg/errors"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"io"
-
-	"time"
 )
 
 type UpstreamResponse struct {

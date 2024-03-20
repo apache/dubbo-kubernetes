@@ -21,25 +21,35 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/config_center"
+	"dubbo.apache.org/dubbo-go/v3/metadata/report"
+	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+
 	"github.com/pkg/errors"
 )
 
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/admin"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
+	"github.com/apache/dubbo-kubernetes/pkg/core/reg_client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 )
 
@@ -51,38 +61,56 @@ type BuilderContext interface {
 	ConfigStore() core_store.ResourceStore
 	ResourceManager() core_manager.CustomizableResourceManager
 	Config() dubbo_cp.Config
+	RegistryCenter() dubboRegistry.Registry
+	RegClient() reg_client.RegClient
+	MetadataReportCenter() report.MetadataReport
+	AdminRegistry() *registry.Registry
+	ServiceDiscovery() dubboRegistry.ServiceDiscovery
+	ConfigCenter() config_center.DynamicConfiguration
+	Governance() governance.GovernanceConfig
 	Extensions() context.Context
 	ConfigManager() config_manager.ConfigManager
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
+	DataplaneCache() *sync.Map
+	InterCPClientPool() *client.Pool
+	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
-	KubeClient() *client.KubeClient
 }
 
 var _ BuilderContext = &Builder{}
 
 // Builder represents a multi-step initialization process.
 type Builder struct {
-	cfg dubbo_cp.Config
-	cm  component.Manager
-	rs  core_store.CustomizableResourceStore
-	cs  core_store.ResourceStore
-	txs core_store.Transactions
-	rm  core_manager.CustomizableResourceManager
-	rom core_manager.ReadOnlyResourceManager
-
-	lif        lookup.LookupIPFunc
-	kubeClient *client.KubeClient
-	ext        context.Context
-	meshCache  *mesh.Cache
-	configm    config_manager.ConfigManager
-	leadInfo   component.LeaderInfo
-	erf        events.EventBus
-	dsl        datasource.Loader
-	dps        *dp_server.DpServer
-	rv         ResourceValidators
-	appCtx     context.Context
+	cfg                  dubbo_cp.Config
+	cm                   component.Manager
+	rs                   core_store.CustomizableResourceStore
+	cs                   core_store.ResourceStore
+	txs                  core_store.Transactions
+	rm                   core_manager.CustomizableResourceManager
+	rom                  core_manager.ReadOnlyResourceManager
+	eac                  admin.EnvoyAdminClient
+	ext                  context.Context
+	meshCache            *mesh.Cache
+	lif                  lookup.LookupIPFunc
+	configm              config_manager.ConfigManager
+	leadInfo             component.LeaderInfo
+	erf                  events.EventBus
+	dsl                  datasource.Loader
+	interCpPool          *client.Pool
+	dps                  *dp_server.DpServer
+	registryCenter       dubboRegistry.Registry
+	metadataReportCenter report.MetadataReport
+	configCenter         config_center.DynamicConfiguration
+	adminRegistry        *registry.Registry
+	governance           governance.GovernanceConfig
+	rv                   ResourceValidators
+	ddsctx               *dds_context.Context
+	appCtx               context.Context
+	dCache               *sync.Map
+	regClient            reg_client.RegClient
+	serviceDiscover      dubboRegistry.ServiceDiscovery
 	*runtimeInfo
 }
 
@@ -99,6 +127,7 @@ func BuilderFor(appCtx context.Context, cfg dubbo_cp.Config) (*Builder, error) {
 			instanceId: fmt.Sprintf("%s-%s", hostname, suffix),
 			startTime:  time.Now(),
 			mode:       cfg.Mode,
+			deployMode: cfg.DeployMode,
 		},
 		appCtx: appCtx,
 	}, nil
@@ -154,6 +183,11 @@ func (b *Builder) WithLeaderInfo(leadInfo component.LeaderInfo) *Builder {
 	return b
 }
 
+func (b *Builder) WithDataplaneCache(cache *sync.Map) *Builder {
+	b.dCache = cache
+	return b
+}
+
 func (b *Builder) WithLookupIP(lif lookup.LookupIPFunc) *Builder {
 	b.lif = lif
 	return b
@@ -179,13 +213,53 @@ func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
 	return b
 }
 
+func (b *Builder) WithEnvoyAdminClient(eac admin.EnvoyAdminClient) *Builder {
+	b.eac = eac
+	return b
+}
+
+func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
+	b.ddsctx = ddsctx
+	return b
+}
+
 func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
 	b.rv = rv
 	return b
 }
 
-func (b *Builder) WithKubeClient(kubeclient *client.KubeClient) *Builder {
-	b.kubeClient = kubeclient
+func (b *Builder) WithRegClient(regClient reg_client.RegClient) *Builder {
+	b.regClient = regClient
+	return b
+}
+
+func (b *Builder) WithRegistryCenter(rg dubboRegistry.Registry) *Builder {
+	b.registryCenter = rg
+	return b
+}
+
+func (b *Builder) WithGovernanceConfig(gc governance.GovernanceConfig) *Builder {
+	b.governance = gc
+	return b
+}
+
+func (b *Builder) WithMetadataReport(mr report.MetadataReport) *Builder {
+	b.metadataReportCenter = mr
+	return b
+}
+
+func (b *Builder) WithConfigCenter(cc config_center.DynamicConfiguration) *Builder {
+	b.configCenter = cc
+	return b
+}
+
+func (b *Builder) WithAdminRegistry(ag *registry.Registry) *Builder {
+	b.adminRegistry = ag
+	return b
+}
+
+func (b *Builder) WithServiceDiscovery(discovery dubboRegistry.ServiceDiscovery) *Builder {
+	b.serviceDiscover = discovery
 	return b
 }
 
@@ -221,21 +295,62 @@ func (b *Builder) Build() (Runtime, error) {
 	return &runtime{
 		RuntimeInfo: b.runtimeInfo,
 		RuntimeContext: &runtimeContext{
-			cfg:      b.cfg,
-			rm:       b.rm,
-			rom:      b.rom,
-			rs:       b.rs,
-			txs:      b.txs,
-			ext:      b.ext,
-			configm:  b.configm,
-			leadInfo: b.leadInfo,
-			erf:      b.erf,
-			dps:      b.dps,
-			rv:       b.rv,
-			appCtx:   b.appCtx,
+			cfg:                  b.cfg,
+			rm:                   b.rm,
+			rom:                  b.rom,
+			txs:                  b.txs,
+			ddsctx:               b.ddsctx,
+			ext:                  b.ext,
+			configm:              b.configm,
+			registryCenter:       b.registryCenter,
+			metadataReportCenter: b.metadataReportCenter,
+			configCenter:         b.configCenter,
+			adminRegistry:        b.adminRegistry,
+			governance:           b.governance,
+			leadInfo:             b.leadInfo,
+			erf:                  b.erf,
+			dCache:               b.dCache,
+			dps:                  b.dps,
+			eac:                  b.eac,
+			serviceDiscovery:     b.serviceDiscover,
+			rv:                   b.rv,
+			appCtx:               b.appCtx,
+			regClient:            b.regClient,
 		},
 		Manager: b.cm,
 	}, nil
+}
+
+func (b *Builder) RegClient() reg_client.RegClient {
+	return b.regClient
+}
+
+func (b *Builder) DataplaneCache() *sync.Map {
+	return b.dCache
+}
+
+func (b *Builder) Governance() governance.GovernanceConfig {
+	return b.governance
+}
+
+func (b *Builder) AdminRegistry() *registry.Registry {
+	return b.adminRegistry
+}
+
+func (b *Builder) ConfigCenter() config_center.DynamicConfiguration {
+	return b.configCenter
+}
+
+func (b *Builder) ServiceDiscovery() dubboRegistry.ServiceDiscovery {
+	return b.serviceDiscover
+}
+
+func (b *Builder) RegistryCenter() dubboRegistry.Registry {
+	return b.registryCenter
+}
+
+func (b *Builder) MetadataReportCenter() report.MetadataReport {
+	return b.metadataReportCenter
 }
 
 func (b *Builder) ComponentManager() component.Manager {
@@ -261,12 +376,21 @@ func (b *Builder) ResourceManager() core_manager.CustomizableResourceManager {
 func (b *Builder) ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager {
 	return b.rom
 }
+
+func (b *Builder) InterCPClientPool() *client.Pool {
+	return b.interCpPool
+}
+
 func (b *Builder) LookupIP() lookup.LookupIPFunc {
 	return b.lif
 }
 
 func (b *Builder) Config() dubbo_cp.Config {
 	return b.cfg
+}
+
+func (b *Builder) DDSContext() *dds_context.Context {
+	return b.ddsctx
 }
 
 func (b *Builder) Extensions() context.Context {
@@ -295,8 +419,4 @@ func (b *Builder) ResourceValidators() ResourceValidators {
 
 func (b *Builder) AppCtx() context.Context {
 	return b.appCtx
-}
-
-func (b *Builder) KubeClient() *client.KubeClient {
-	return b.kubeClient
 }

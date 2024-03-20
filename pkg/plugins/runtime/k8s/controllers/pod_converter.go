@@ -37,9 +37,7 @@ import (
 	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
 )
 
-var (
-	converterLog = core.Log.WithName("discovery").WithName("k8s").WithName("pod-to-dataplane-converter")
-)
+var converterLog = core.Log.WithName("discovery").WithName("k8s").WithName("pod-to-dataplane-converter")
 
 type PodConverter struct {
 	ServiceGetter     kube_client.Reader

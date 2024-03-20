@@ -26,22 +26,18 @@ import (
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime/k8s"
-	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime/universal"
 )
 
 func DefaultRuntimeConfig() *RuntimeConfig {
 	return &RuntimeConfig{
 		Kubernetes: k8s.DefaultKubernetesRuntimeConfig(),
-		Universal:  universal.DefaultUniversalRuntimeConfig(),
 	}
 }
 
-// RuntimeConfig defines Environment-specific configuration
+// RuntimeConfig defines DeployMode-specific configuration
 type RuntimeConfig struct {
 	// Kubernetes-specific configuration
 	Kubernetes *k8s.KubernetesRuntimeConfig `json:"kubernetes"`
-	// Universal-specific configuration
-	Universal *universal.UniversalRuntimeConfig `json:"universal"`
 }
 
 func (c *RuntimeConfig) Sanitize() {
@@ -54,13 +50,13 @@ func (c *RuntimeConfig) PostProcess() error {
 	)
 }
 
-func (c *RuntimeConfig) Validate(env core.EnvironmentType) error {
+func (c *RuntimeConfig) Validate(env core.DeployMode) error {
 	switch env {
-	case core.KubernetesEnvironment:
+	case core.KubernetesMode, core.HalfHostMode:
 		if err := c.Kubernetes.Validate(); err != nil {
 			return errors.Wrap(err, "Kubernetes validation failed")
 		}
-	case core.UniversalEnvironment:
+	case core.UniversalMode:
 	default:
 		return errors.Errorf("unknown environment type %q", env)
 	}

@@ -22,8 +22,6 @@ import (
 )
 
 import (
-	dubbogo "dubbo.apache.org/dubbo-go/v3/config"
-
 	"github.com/pkg/errors"
 
 	"go.uber.org/multierr"
@@ -31,12 +29,11 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
-	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/config/diagnostics"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/config/dp-server"
+	"github.com/apache/dubbo-kubernetes/pkg/config/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/config/eventbus"
 	"github.com/apache/dubbo-kubernetes/pkg/config/intercp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
@@ -81,8 +78,8 @@ type GeneralConfig struct {
 type Config struct {
 	// General configuration
 	General *GeneralConfig `json:"general,omitempty"`
-	// Environment Type, can be either "kubernetes" or "universal"
-	Environment core.EnvironmentType `json:"environment,omitempty" envconfig:"dubbo_environment"`
+	// DeployMode Type, can be either "kubernetes" or "universal" and "half"
+	DeployMode core.DeployMode `json:"deploy_mode,omitempty" envconfig:"dubbo_deploymode"`
 	// Mode in which dubbo CP is running. Available values are: "standalone", "global", "zone"
 	Mode core.CpMode `json:"mode" envconfig:"dubbo_mode"`
 	// Configuration of Bootstrap Server, which provides bootstrap config to Dataplanes
@@ -91,7 +88,7 @@ type Config struct {
 	Store *store.StoreConfig `json:"store,omitempty"`
 	// Envoy XDS server configuration
 	XdsServer *xds.XdsServerConfig `json:"xdsServer,omitempty"`
-	// Environment-specific configuration
+	// DeployMode-specific configuration
 	Runtime *runtime.RuntimeConfig `json:"runtime,omitempty"`
 	// Multizone Config
 	Multizone *multizone.MultizoneConfig `json:"multizone,omitempty"`
@@ -105,9 +102,18 @@ type Config struct {
 	EventBus eventbus.Config `json:"eventBus"`
 	// Intercommunication CP configuration
 	InterCp intercp.InterCpConfig `json:"interCp"`
-	Bufman  bufman.Bufman         `json:"bufman"`
-	Admin   admin.Admin           `json:"admin"`
-	Dubbo   dubbogo.RootConfig    `json:"dubbo"`
+	// SNP configuration
+	DubboConfig           dubbo.DubboConfig     `json:"dubbo_config"`
+	DDSEventBasedWatchdog DDSEventBasedWatchdog `json:"dds_event_based_watchdog"`
+}
+
+type DDSEventBasedWatchdog struct {
+	// How often we flush changes when experimental event based watchdog is used.
+	FlushInterval config_types.Duration `json:"flushInterval" envconfig:"DUBBO_EXPERIMENTAL_KDS_EVENT_BASED_WATCHDOG_FLUSH_INTERVAL"`
+	// How often we schedule full KDS resync when experimental event based watchdog is used.
+	FullResyncInterval config_types.Duration `json:"fullResyncInterval" envconfig:"DUBBO_EXPERIMENTAL_KDS_EVENT_BASED_WATCHDOG_FULL_RESYNC_INTERVAL"`
+	// If true, then initial full resync is going to be delayed by 0 to FullResyncInterval.
+	DelayFullResync bool `json:"delayFullResync" envconfig:"DUBBO_EXPERIMENTAL_KDS_EVENT_BASED_WATCHDOG_DELAY_FULL_RESYNC"`
 }
 
 func (c Config) IsFederatedZoneCP() bool {
@@ -138,7 +144,7 @@ func (c *Config) PostProcess() error {
 
 var DefaultConfig = func() Config {
 	return Config{
-		Environment: core.KubernetesEnvironment,
+		DeployMode:  core.UniversalMode,
 		Mode:        core.Zone,
 		XdsServer:   xds.DefaultXdsServerConfig(),
 		Store:       store.DefaultStoreConfig(),
@@ -148,6 +154,8 @@ var DefaultConfig = func() Config {
 		Multizone:   multizone.DefaultMultizoneConfig(),
 		Diagnostics: diagnostics.DefaultDiagnosticsConfig(),
 		DpServer:    dp_server.DefaultDpServerConfig(),
+		InterCp:     intercp.DefaultInterCpConfig(),
+		DubboConfig: dubbo.DefaultServiceNameMappingConfig(),
 		EventBus:    eventbus.Default(),
 	}
 }
@@ -174,10 +182,10 @@ func (c *Config) Validate() error {
 	switch c.Mode {
 	case core.Global:
 	case core.Zone:
-		if c.Environment != core.KubernetesEnvironment && c.Environment != core.UniversalEnvironment {
-			return errors.Errorf("Environment should be either %s or %s", core.KubernetesEnvironment, core.UniversalEnvironment)
+		if c.DeployMode != core.KubernetesMode && c.DeployMode != core.UniversalMode && c.DeployMode != core.HalfHostMode {
+			return errors.Errorf("DeployMode should be either %s or %s or %s", core.KubernetesMode, core.UniversalMode, core.HalfHostMode)
 		}
-		if err := c.Runtime.Validate(c.Environment); err != nil {
+		if err := c.Runtime.Validate(c.DeployMode); err != nil {
 			return errors.Wrap(err, "Runtime validation failed")
 		}
 	}

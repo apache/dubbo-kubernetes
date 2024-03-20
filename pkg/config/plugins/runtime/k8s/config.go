@@ -142,9 +142,9 @@ func (c *AdmissionServerConfig) Validate() error {
 	if 65535 < c.Port {
 		errs = multierr.Append(errs, errors.Errorf(".Port must be in the range [0, 65535]"))
 	}
-	//if c.CertDir == "" {
-	//	errs = multierr.Append(errs, errors.Errorf(".CertDir should not be empty"))
-	//}
+	if c.CertDir == "" {
+		errs = multierr.Append(errs, errors.Errorf(".CertDir should not be empty"))
+	}
 	return errs
 }
 

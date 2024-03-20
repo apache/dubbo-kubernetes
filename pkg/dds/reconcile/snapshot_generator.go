@@ -19,6 +19,17 @@ package reconcile
 
 import (
 	"context"
+	"strings"
+)
+
+import (
+	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+)
+
+import (
+	config_store "github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
@@ -26,10 +37,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds"
 	cache_dds "github.com/apache/dubbo-kubernetes/pkg/dds/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/util"
-
-	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	envoy_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
 
 type (
@@ -43,6 +50,56 @@ func NoopResourceMapper(_ dds.Features, r model.Resource) (model.Resource, error
 
 func Any(context.Context, string, dds.Features, model.Resource) bool {
 	return true
+}
+
+func TypeIs(rtype core_model.ResourceType) func(core_model.Resource) bool {
+	return func(r core_model.Resource) bool {
+		return r.Descriptor().Name == rtype
+	}
+}
+
+func IsKubernetes(storeType config_store.StoreType) func(core_model.Resource) bool {
+	return func(_ core_model.Resource) bool {
+		return storeType == config_store.KubernetesStore
+	}
+}
+
+func ScopeIs(s core_model.ResourceScope) func(core_model.Resource) bool {
+	return func(r core_model.Resource) bool {
+		return r.Descriptor().Scope == s
+	}
+}
+
+func NameHasPrefix(prefix string) func(core_model.Resource) bool {
+	return func(r core_model.Resource) bool {
+		return strings.HasPrefix(r.GetMeta().GetName(), prefix)
+	}
+}
+
+func Not(f func(core_model.Resource) bool) func(core_model.Resource) bool {
+	return func(r core_model.Resource) bool {
+		return !f(r)
+	}
+}
+
+func And(fs ...func(core_model.Resource) bool) func(core_model.Resource) bool {
+	return func(r core_model.Resource) bool {
+		for _, f := range fs {
+			if !f(r) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+func If(condition func(core_model.Resource) bool, m ResourceMapper) ResourceMapper {
+	return func(features dds.Features, r core_model.Resource) (core_model.Resource, error) {
+		if condition(r) {
+			return m(features, r)
+		}
+		return r, nil
+	}
 }
 
 func NewSnapshotGenerator(resourceManager core_manager.ReadOnlyResourceManager, filter ResourceFilter, mapper ResourceMapper) SnapshotGenerator {

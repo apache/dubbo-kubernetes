@@ -23,7 +23,12 @@ import (
 )
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+)
+
+const (
+	PathLabel = "dubbo.io/path"
 )
 
 type CreateOptions struct {
@@ -42,6 +47,42 @@ func NewCreateOptions(fs ...CreateOptionsFunc) *CreateOptions {
 		f(opts)
 	}
 	return opts
+}
+
+func CreateByApplication(app string) CreateOptionsFunc {
+	return func(opts *CreateOptions) {
+		opts.Labels[mesh_proto.Application] = app
+	}
+}
+
+func CreateByService(service string) CreateOptionsFunc {
+	return func(opts *CreateOptions) {
+		opts.Labels[mesh_proto.Service] = service
+	}
+}
+
+func CreateByID(id string) CreateOptionsFunc {
+	return func(opts *CreateOptions) {
+		opts.Labels[mesh_proto.ID] = id
+	}
+}
+
+func CreateByServiceVersion(serviceVersion string) CreateOptionsFunc {
+	return func(opts *CreateOptions) {
+		opts.Labels[mesh_proto.ServiceVersion] = serviceVersion
+	}
+}
+
+func CreateByServiceGroup(serviceGroup string) CreateOptionsFunc {
+	return func(opts *CreateOptions) {
+		opts.Labels[mesh_proto.ServiceGroup] = serviceGroup
+	}
+}
+
+func CreateByPath(path string) CreateOptionsFunc {
+	return func(opts *CreateOptions) {
+		opts.Labels[PathLabel] = path
+	}
 }
 
 func CreateBy(key core_model.ResourceKey) CreateOptionsFunc {
@@ -74,6 +115,8 @@ func CreateWithLabels(labels map[string]string) CreateOptionsFunc {
 }
 
 type UpdateOptions struct {
+	Name             string
+	Mesh             string
 	ModificationTime time.Time
 	Labels           map[string]string
 }
@@ -81,6 +124,49 @@ type UpdateOptions struct {
 func ModifiedAt(modificationTime time.Time) UpdateOptionsFunc {
 	return func(opts *UpdateOptions) {
 		opts.ModificationTime = modificationTime
+	}
+}
+
+func UpdateByApplication(app string) UpdateOptionsFunc {
+	return func(opts *UpdateOptions) {
+		opts.Labels[mesh_proto.Application] = app
+	}
+}
+
+func UpdateByService(service string) UpdateOptionsFunc {
+	return func(opts *UpdateOptions) {
+		opts.Labels[mesh_proto.Service] = service
+	}
+}
+
+func UpdateByID(id string) UpdateOptionsFunc {
+	return func(opts *UpdateOptions) {
+		opts.Labels[mesh_proto.ID] = id
+	}
+}
+
+func UpdateByServiceVersion(serviceVersion string) UpdateOptionsFunc {
+	return func(opts *UpdateOptions) {
+		opts.Labels[mesh_proto.ServiceVersion] = serviceVersion
+	}
+}
+
+func UpdateByServiceGroup(serviceGroup string) UpdateOptionsFunc {
+	return func(opts *UpdateOptions) {
+		opts.Labels[mesh_proto.ServiceGroup] = serviceGroup
+	}
+}
+
+func UpdateByKey(name, mesh string) UpdateOptionsFunc {
+	return func(opts *UpdateOptions) {
+		opts.Name = name
+		opts.Mesh = mesh
+	}
+}
+
+func UpdateWithPath(path string) UpdateOptionsFunc {
+	return func(opts *UpdateOptions) {
+		opts.Labels[PathLabel] = path
 	}
 }
 
@@ -101,8 +187,9 @@ func NewUpdateOptions(fs ...UpdateOptionsFunc) *UpdateOptions {
 }
 
 type DeleteOptions struct {
-	Name string
-	Mesh string
+	Name   string
+	Mesh   string
+	Labels map[string]string
 }
 
 type DeleteOptionsFunc func(*DeleteOptions)
@@ -113,6 +200,42 @@ func NewDeleteOptions(fs ...DeleteOptionsFunc) *DeleteOptions {
 		f(opts)
 	}
 	return opts
+}
+
+func DeleteByPath(path string) DeleteOptionsFunc {
+	return func(opts *DeleteOptions) {
+		opts.Labels[PathLabel] = path
+	}
+}
+
+func DeleteByApplication(app string) DeleteOptionsFunc {
+	return func(opts *DeleteOptions) {
+		opts.Labels[mesh_proto.Application] = app
+	}
+}
+
+func DeleteByService(service string) DeleteOptionsFunc {
+	return func(opts *DeleteOptions) {
+		opts.Labels[mesh_proto.Service] = service
+	}
+}
+
+func DeleteByID(id string) DeleteOptionsFunc {
+	return func(opts *DeleteOptions) {
+		opts.Labels[mesh_proto.ID] = id
+	}
+}
+
+func DeleteByServiceVersion(serviceVersion string) DeleteOptionsFunc {
+	return func(opts *DeleteOptions) {
+		opts.Labels[mesh_proto.ServiceVersion] = serviceVersion
+	}
+}
+
+func DeleteByServiceGroup(serviceGroup string) DeleteOptionsFunc {
+	return func(opts *DeleteOptions) {
+		opts.Labels[mesh_proto.ServiceGroup] = serviceGroup
+	}
 }
 
 func DeleteBy(key core_model.ResourceKey) DeleteOptionsFunc {
@@ -151,6 +274,7 @@ type GetOptions struct {
 	Mesh       string
 	Version    string
 	Consistent bool
+	Labels     map[string]string
 }
 
 type GetOptionsFunc func(*GetOptions)
@@ -161,6 +285,52 @@ func NewGetOptions(fs ...GetOptionsFunc) *GetOptions {
 		f(opts)
 	}
 	return opts
+}
+
+func (g *GetOptions) HashCode() string {
+	return fmt.Sprintf("%s:%s", g.Name, g.Mesh)
+}
+
+func GetByPath(path string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Labels[PathLabel] = path
+	}
+}
+
+func GetByRevision(revision string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Labels[mesh_proto.Revision] = revision
+	}
+}
+
+func GetByApplication(app string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Labels[mesh_proto.Application] = app
+	}
+}
+
+func GetByService(service string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Labels[mesh_proto.Service] = service
+	}
+}
+
+func GetByID(id string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Labels[mesh_proto.ID] = id
+	}
+}
+
+func GetByServiceVersion(serviceVersion string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Labels[mesh_proto.ServiceVersion] = serviceVersion
+	}
+}
+
+func GetByServiceGroup(serviceGroup string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Labels[mesh_proto.ServiceGroup] = serviceGroup
+	}
 }
 
 func GetBy(key core_model.ResourceKey) GetOptionsFunc {
@@ -187,16 +357,13 @@ func GetConsistent() GetOptionsFunc {
 	}
 }
 
-func (g *GetOptions) HashCode() string {
-	return fmt.Sprintf("%s:%s", g.Name, g.Mesh)
-}
-
 type (
 	ListFilterFunc func(rs core_model.Resource) bool
 )
 
 type ListOptions struct {
 	Mesh         string
+	Labels       map[string]string
 	PageSize     int
 	PageOffset   string
 	FilterFunc   ListFilterFunc
@@ -222,6 +389,12 @@ func (l *ListOptions) Filter(rs core_model.Resource) bool {
 	}
 
 	return l.FilterFunc(rs)
+}
+
+func ListByPath(path string) ListOptionsFunc {
+	return func(opts *ListOptions) {
+		opts.Labels[PathLabel] = path
+	}
 }
 
 func ListByNameContains(name string) ListOptionsFunc {

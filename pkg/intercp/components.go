@@ -18,12 +18,33 @@
 package intercp
 
 import (
+	"time"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/envoyadmin"
 )
 
 var log = core.Log.WithName("inter-cp")
 
 func Setup(rt runtime.Runtime) error {
 	return nil
+}
+
+func DefaultClientPool() *client.Pool {
+	return client.NewPool(client.New, 5*time.Minute, core.Now)
+}
+
+func PooledEnvoyAdminClientFn(pool *client.Pool) envoyadmin.NewClientFn {
+	return func(url string) (mesh_proto.InterCPEnvoyAdminForwardServiceClient, error) {
+		conn, err := pool.Client(url)
+		if err != nil {
+			return nil, err
+		}
+		return mesh_proto.NewInterCPEnvoyAdminForwardServiceClient(conn), nil
+	}
 }

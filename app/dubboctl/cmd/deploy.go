@@ -86,7 +86,7 @@ SYNOPSIS
 		"Path to kubeconfig")
 
 	cmd.Flags().StringArrayP("envs", "e", nil,
-		"Environment variable to set in the form NAME=VALUE. "+
+		"DeployMode variable to set in the form NAME=VALUE. "+
 			"This is for the environment variables passed in by the builderpack build method.")
 	cmd.Flags().StringP("builder-image", "b", "",
 		"Specify a custom builder image for use by the builder other than its default.")

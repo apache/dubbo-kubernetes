@@ -19,13 +19,19 @@ package util
 
 import (
 	"fmt"
+	"strings"
+)
+
+import (
+	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"strings"
 )
 
 type NameToVersion map[string]string

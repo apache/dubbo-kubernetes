@@ -25,8 +25,6 @@ import (
 	kube_runtime "k8s.io/apimachinery/pkg/runtime"
 
 	kube_client_scheme "k8s.io/client-go/kubernetes/scheme"
-
-	gatewayapi "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 import (
@@ -34,7 +32,7 @@ import (
 	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
 )
 
-// NewScheme creates a new scheme with all the necessary schemas added already (dubbo CRD, builtin resources, cni CRDs...).
+// NewScheme creates a new scheme with all the necessary schemas added already (dubbo CRD, builtin resources).
 func NewScheme() (*kube_runtime.Scheme, error) {
 	s := kube_runtime.NewScheme()
 	if err := kube_client_scheme.AddToScheme(s); err != nil {
@@ -45,9 +43,6 @@ func NewScheme() (*kube_runtime.Scheme, error) {
 	}
 	if err := apiextensionsv1.AddToScheme(s); err != nil {
 		return nil, errors.Wrapf(err, "could not add %q to scheme", apiextensionsv1.SchemeGroupVersion)
-	}
-	if err := gatewayapi.Install(s); err != nil {
-		return nil, errors.Wrapf(err, "could not add %q to scheme", gatewayapi.SchemeGroupVersion)
 	}
 	if err := policies.AddToScheme(s); err != nil {
 		return nil, err

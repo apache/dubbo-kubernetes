@@ -9,11 +9,12 @@ import (
 // GRPC has a protocol stack [GRPC, HTTP2, TCP],
 // TCP  has a protocol stack [TCP].
 var protocolStacks = map[core_mesh.Protocol]core_mesh.ProtocolList{
-	core_mesh.ProtocolGRPC:  {core_mesh.ProtocolGRPC, core_mesh.ProtocolHTTP2, core_mesh.ProtocolTCP},
-	core_mesh.ProtocolHTTP2: {core_mesh.ProtocolHTTP2, core_mesh.ProtocolTCP},
-	core_mesh.ProtocolHTTP:  {core_mesh.ProtocolHTTP, core_mesh.ProtocolTCP},
-	core_mesh.ProtocolKafka: {core_mesh.ProtocolKafka, core_mesh.ProtocolTCP},
-	core_mesh.ProtocolTCP:   {core_mesh.ProtocolTCP},
+	core_mesh.ProtocolTriple: {core_mesh.ProtocolTriple, core_mesh.ProtocolGRPC, core_mesh.ProtocolHTTP2, core_mesh.ProtocolHTTP, core_mesh.ProtocolTCP},
+	core_mesh.ProtocolGRPC:   {core_mesh.ProtocolGRPC, core_mesh.ProtocolHTTP2, core_mesh.ProtocolTCP},
+	core_mesh.ProtocolHTTP2:  {core_mesh.ProtocolHTTP2, core_mesh.ProtocolTCP},
+	core_mesh.ProtocolHTTP:   {core_mesh.ProtocolHTTP, core_mesh.ProtocolTCP},
+	core_mesh.ProtocolKafka:  {core_mesh.ProtocolKafka, core_mesh.ProtocolTCP},
+	core_mesh.ProtocolTCP:    {core_mesh.ProtocolTCP},
 }
 
 // GetCommonProtocol returns a common protocol between given two.

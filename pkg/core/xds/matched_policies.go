@@ -43,4 +43,8 @@ type MatchedPolicies struct {
 	// Dataplane -> Policy
 
 	Dynamic PluginOriginatedPolicies
+
+	RateLimitsOutbound OutboundRateLimitsMap
+	// Actual Envoy Configuration is generated without taking this TrafficRoutes into account
+	TrafficRoutes RouteMap
 }

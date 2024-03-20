@@ -19,8 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/snp"
 	"time"
 )
 
@@ -29,16 +27,18 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/bufman"
+	"github.com/apache/dubbo-kubernetes/pkg/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/bootstrap"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	dds_global "github.com/apache/dubbo-kubernetes/pkg/dds/global"
+	dds_zone "github.com/apache/dubbo-kubernetes/pkg/dds/zone"
 	"github.com/apache/dubbo-kubernetes/pkg/defaults"
 	"github.com/apache/dubbo-kubernetes/pkg/diagnostics"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server"
-	"github.com/apache/dubbo-kubernetes/pkg/gc"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/hds"
 	"github.com/apache/dubbo-kubernetes/pkg/intercp"
 	"github.com/apache/dubbo-kubernetes/pkg/util/os"
@@ -104,14 +104,12 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 					"minimim-open-files", minOpenFileLimit)
 			}
 
-			if err := snp.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up snp server")
+			if err := admin.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up admin")
+				return err
 			}
-			if err := registry.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up registry cache")
-			}
-			if err := bufman.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up bufman server")
+			if err := dubbo.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up dubbo server")
 			}
 			if err := xds.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up xds server")
@@ -129,12 +127,16 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 				runLog.Error(err, "unable to set up Defaults")
 				return err
 			}
-			if err := diagnostics.SetupServer(rt); err != nil {
-				runLog.Error(err, "unable to set up Diagnostics server")
+			if err := dds_zone.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Zone DDS")
 				return err
 			}
-			if err := gc.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up GC")
+			if err := dds_global.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Global DDS")
+				return err
+			}
+			if err := diagnostics.SetupServer(rt); err != nil {
+				runLog.Error(err, "unable to set up Diagnostics server")
 				return err
 			}
 			if err := intercp.Setup(rt); err != nil {

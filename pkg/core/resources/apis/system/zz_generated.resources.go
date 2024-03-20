@@ -6,7 +6,9 @@ package system
 
 import (
 	"fmt"
+)
 
+import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
@@ -443,4 +445,112 @@ var ZoneResourceTypeDescriptor = model.ResourceTypeDescriptor{
 
 func init() {
 	registry.RegisterType(ZoneResourceTypeDescriptor)
+}
+
+const (
+	ZoneInsightType model.ResourceType = "ZoneInsight"
+)
+
+var _ model.Resource = &ZoneInsightResource{}
+
+type ZoneInsightResource struct {
+	Meta model.ResourceMeta
+	Spec *system_proto.ZoneInsight
+}
+
+func NewZoneInsightResource() *ZoneInsightResource {
+	return &ZoneInsightResource{
+		Spec: &system_proto.ZoneInsight{},
+	}
+}
+
+func (t *ZoneInsightResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *ZoneInsightResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *ZoneInsightResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *ZoneInsightResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*system_proto.ZoneInsight)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &system_proto.ZoneInsight{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *ZoneInsightResource) Descriptor() model.ResourceTypeDescriptor {
+	return ZoneInsightResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &ZoneInsightResourceList{}
+
+type ZoneInsightResourceList struct {
+	Items      []*ZoneInsightResource
+	Pagination model.Pagination
+}
+
+func (l *ZoneInsightResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *ZoneInsightResourceList) GetItemType() model.ResourceType {
+	return ZoneInsightType
+}
+
+func (l *ZoneInsightResourceList) NewItem() model.Resource {
+	return NewZoneInsightResource()
+}
+
+func (l *ZoneInsightResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*ZoneInsightResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*ZoneInsightResource)(nil), r)
+	}
+}
+
+func (l *ZoneInsightResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *ZoneInsightResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var ZoneInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                ZoneInsightType,
+	Resource:            NewZoneInsightResource(),
+	ResourceList:        &ZoneInsightResourceList{},
+	ReadOnly:            true,
+	AdminOnly:           false,
+	Scope:               model.ScopeGlobal,
+	WsPath:              "zone-insights",
+	DubboctlArg:         "",
+	DubboctlListArg:     "",
+	AllowToInspect:      false,
+	IsPolicy:            false,
+	SingularDisplayName: "Zone Insight",
+	PluralDisplayName:   "Zone Insights",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(ZoneInsightResourceTypeDescriptor)
 }

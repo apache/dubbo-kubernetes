@@ -7,14 +7,23 @@
 package v1alpha1
 
 import (
-	_ "github.com/apache/dubbo-kubernetes/api/mesh"
-	_ "github.com/envoyproxy/protoc-gen-validate/validate"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	durationpb "google.golang.org/protobuf/types/known/durationpb"
-	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
+)
+
+import (
+	_ "github.com/envoyproxy/protoc-gen-validate/validate"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+
+	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
+)
+
+import (
+	_ "github.com/apache/dubbo-kubernetes/api/mesh"
 )
 
 const (
@@ -87,11 +96,18 @@ type Dataplane struct {
 	// Networking describes inbound and outbound interfaces of the data plane
 	// proxy.
 	Networking *Dataplane_Networking `protobuf:"bytes,1,opt,name=networking,proto3" json:"networking,omitempty"`
+	// Configuration for metrics that should be collected and exposed by the
+	// data plane proxy.
+	//
+	// Settings defined here will override their respective defaults
+	// defined at a Mesh level.
+	Metrics *MetricsBackend `protobuf:"bytes,2,opt,name=metrics,proto3" json:"metrics,omitempty"`
 	// Probes describe a list of endpoints that will be exposed without mTLS.
 	// This is useful to expose the health endpoints of the application so the
 	// orchestration system (e.g. Kubernetes) can still health check the
 	// application.
-	Probes *Dataplane_Probes `protobuf:"bytes,3,opt,name=probes,proto3" json:"probes,omitempty"`
+	Probes     *Dataplane_Probes `protobuf:"bytes,3,opt,name=probes,proto3" json:"probes,omitempty"`
+	Extensions map[string]string `protobuf:"bytes,4,rep,name=extensions,proto3" json:"extensions,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *Dataplane) Reset() {
@@ -133,9 +149,23 @@ func (x *Dataplane) GetNetworking() *Dataplane_Networking {
 	return nil
 }
 
+func (x *Dataplane) GetMetrics() *MetricsBackend {
+	if x != nil {
+		return x.Metrics
+	}
+	return nil
+}
+
 func (x *Dataplane) GetProbes() *Dataplane_Probes {
 	if x != nil {
 		return x.Probes
+	}
+	return nil
+}
+
+func (x *Dataplane) GetExtensions() map[string]string {
+	if x != nil {
+		return x.Extensions
 	}
 	return nil
 }
@@ -355,7 +385,7 @@ type Dataplane_Networking_Inbound struct {
 func (x *Dataplane_Networking_Inbound) Reset() {
 	*x = Dataplane_Networking_Inbound{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[3]
+		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -368,7 +398,7 @@ func (x *Dataplane_Networking_Inbound) String() string {
 func (*Dataplane_Networking_Inbound) ProtoMessage() {}
 
 func (x *Dataplane_Networking_Inbound) ProtoReflect() protoreflect.Message {
-	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[3]
+	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -468,7 +498,7 @@ type Dataplane_Networking_Outbound struct {
 func (x *Dataplane_Networking_Outbound) Reset() {
 	*x = Dataplane_Networking_Outbound{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[4]
+		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -481,7 +511,7 @@ func (x *Dataplane_Networking_Outbound) String() string {
 func (*Dataplane_Networking_Outbound) ProtoMessage() {}
 
 func (x *Dataplane_Networking_Outbound) ProtoReflect() protoreflect.Message {
-	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[4]
+	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +562,7 @@ type Dataplane_Networking_Inbound_Health struct {
 func (x *Dataplane_Networking_Inbound_Health) Reset() {
 	*x = Dataplane_Networking_Inbound_Health{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[6]
+		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -545,7 +575,7 @@ func (x *Dataplane_Networking_Inbound_Health) String() string {
 func (*Dataplane_Networking_Inbound_Health) ProtoMessage() {}
 
 func (x *Dataplane_Networking_Inbound_Health) ProtoReflect() protoreflect.Message {
-	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[6]
+	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -591,7 +621,7 @@ type Dataplane_Networking_Inbound_ServiceProbe struct {
 func (x *Dataplane_Networking_Inbound_ServiceProbe) Reset() {
 	*x = Dataplane_Networking_Inbound_ServiceProbe{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[7]
+		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -604,7 +634,7 @@ func (x *Dataplane_Networking_Inbound_ServiceProbe) String() string {
 func (*Dataplane_Networking_Inbound_ServiceProbe) ProtoMessage() {}
 
 func (x *Dataplane_Networking_Inbound_ServiceProbe) ProtoReflect() protoreflect.Message {
-	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[7]
+	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -664,7 +694,7 @@ type Dataplane_Networking_Inbound_ServiceProbe_Tcp struct {
 func (x *Dataplane_Networking_Inbound_ServiceProbe_Tcp) Reset() {
 	*x = Dataplane_Networking_Inbound_ServiceProbe_Tcp{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[8]
+		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -677,7 +707,7 @@ func (x *Dataplane_Networking_Inbound_ServiceProbe_Tcp) String() string {
 func (*Dataplane_Networking_Inbound_ServiceProbe_Tcp) ProtoMessage() {}
 
 func (x *Dataplane_Networking_Inbound_ServiceProbe_Tcp) ProtoReflect() protoreflect.Message {
-	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[8]
+	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -711,7 +741,7 @@ type Dataplane_Probes_Endpoint struct {
 func (x *Dataplane_Probes_Endpoint) Reset() {
 	*x = Dataplane_Probes_Endpoint{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[10]
+		mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -724,7 +754,7 @@ func (x *Dataplane_Probes_Endpoint) String() string {
 func (*Dataplane_Probes_Endpoint) ProtoMessage() {}
 
 func (x *Dataplane_Probes_Endpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[10]
+	mi := &file_api_mesh_v1alpha1_dataplane_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -773,20 +803,31 @@ var file_api_mesh_v1alpha1_dataplane_proto_rawDesc = []byte{
 	0x66, 0x2f, 0x64, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
 	0x1a, 0x1e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
 	0x66, 0x2f, 0x77, 0x72, 0x61, 0x70, 0x70, 0x65, 0x72, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x1a, 0x23, 0x61, 0x70, 0x69, 0x2f, 0x6d, 0x65, 0x73, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2f, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x5f, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x17, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x2f,
-	0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xb0,
-	0x0f, 0x0a, 0x09, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0x12, 0x49, 0x0a, 0x0a,
-	0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x29, 0x2e, 0x64, 0x75, 0x62, 0x62, 0x6f, 0x2e, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65,
-	0x2e, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x52, 0x0a, 0x6e, 0x65, 0x74,
-	0x77, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x12, 0x3d, 0x0a, 0x06, 0x70, 0x72, 0x6f, 0x62, 0x65,
+	0x1a, 0x1f, 0x61, 0x70, 0x69, 0x2f, 0x6d, 0x65, 0x73, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2f, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x1a, 0x23, 0x61, 0x70, 0x69, 0x2f, 0x6d, 0x65, 0x73, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x2f, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x5f, 0x61, 0x64, 0x6d, 0x69, 0x6e,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x17, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65,
+	0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22,
+	0xfe, 0x10, 0x0a, 0x09, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0x12, 0x49, 0x0a,
+	0x0a, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x29, 0x2e, 0x64, 0x75, 0x62, 0x62, 0x6f, 0x2e, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x76,
+	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e,
+	0x65, 0x2e, 0x4e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x52, 0x0a, 0x6e, 0x65,
+	0x74, 0x77, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x12, 0x3d, 0x0a, 0x07, 0x6d, 0x65, 0x74, 0x72,
+	0x69, 0x63, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x23, 0x2e, 0x64, 0x75, 0x62, 0x62,
+	0x6f, 0x2e, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
+	0x4d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x42, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x52, 0x07,
+	0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x12, 0x3d, 0x0a, 0x06, 0x70, 0x72, 0x6f, 0x62, 0x65,
 	0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x64, 0x75, 0x62, 0x62, 0x6f, 0x2e,
 	0x6d, 0x65, 0x73, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x61,
 	0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x62, 0x65, 0x73, 0x52, 0x06,
-	0x70, 0x72, 0x6f, 0x62, 0x65, 0x73, 0x1a, 0xd4, 0x0b, 0x0a, 0x0a, 0x4e, 0x65, 0x74, 0x77, 0x6f,
+	0x70, 0x72, 0x6f, 0x62, 0x65, 0x73, 0x12, 0x4e, 0x0a, 0x0a, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73,
+	0x69, 0x6f, 0x6e, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x64, 0x75, 0x62,
+	0x62, 0x6f, 0x2e, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0x2e, 0x45, 0x78, 0x74, 0x65, 0x6e,
+	0x73, 0x69, 0x6f, 0x6e, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x0a, 0x65, 0x78, 0x74, 0x65,
+	0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x1a, 0xd4, 0x0b, 0x0a, 0x0a, 0x4e, 0x65, 0x74, 0x77, 0x6f,
 	0x72, 0x6b, 0x69, 0x6e, 0x67, 0x12, 0x18, 0x0a, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73,
 	0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x12,
 	0x2c, 0x0a, 0x11, 0x61, 0x64, 0x76, 0x65, 0x72, 0x74, 0x69, 0x73, 0x65, 0x64, 0x41, 0x64, 0x64,
@@ -893,18 +934,21 @@ var file_api_mesh_v1alpha1_dataplane_proto_rawDesc = []byte{
 	0x6f, 0x75, 0x6e, 0x64, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
 	0x0b, 0x69, 0x6e, 0x62, 0x6f, 0x75, 0x6e, 0x64, 0x50, 0x61, 0x74, 0x68, 0x12, 0x12, 0x0a, 0x04,
 	0x70, 0x61, 0x74, 0x68, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68,
-	0x3a, 0x6f, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x13, 0x0a, 0x11, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c,
-	0x61, 0x6e, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0xaa, 0x8c, 0x89, 0xa6, 0x01,
-	0x0b, 0x12, 0x09, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0xaa, 0x8c, 0x89, 0xa6,
-	0x01, 0x06, 0x22, 0x04, 0x6d, 0x65, 0x73, 0x68, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x04, 0x52, 0x02,
-	0x10, 0x01, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x0d, 0x3a, 0x0b, 0x0a, 0x09, 0x64, 0x61, 0x74, 0x61,
-	0x70, 0x6c, 0x61, 0x6e, 0x65, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x0e, 0x3a, 0x0c, 0x12, 0x0a, 0x64,
-	0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0x73, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x02, 0x68,
-	0x01, 0x42, 0x36, 0x5a, 0x34, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x61, 0x70, 0x61, 0x63, 0x68, 0x65, 0x2f, 0x64, 0x75, 0x62, 0x62, 0x6f, 0x2d, 0x6b, 0x75, 0x62,
-	0x65, 0x72, 0x6e, 0x65, 0x74, 0x65, 0x73, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x6d, 0x65, 0x73, 0x68,
-	0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x1a, 0x3d, 0x0a, 0x0f, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x45, 0x6e,
+	0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x3a,
+	0x6f, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x13, 0x0a, 0x11, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61,
+	0x6e, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x0b,
+	0x12, 0x09, 0x44, 0x61, 0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0xaa, 0x8c, 0x89, 0xa6, 0x01,
+	0x06, 0x22, 0x04, 0x6d, 0x65, 0x73, 0x68, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x04, 0x52, 0x02, 0x10,
+	0x01, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x0d, 0x3a, 0x0b, 0x0a, 0x09, 0x64, 0x61, 0x74, 0x61, 0x70,
+	0x6c, 0x61, 0x6e, 0x65, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x0e, 0x3a, 0x0c, 0x12, 0x0a, 0x64, 0x61,
+	0x74, 0x61, 0x70, 0x6c, 0x61, 0x6e, 0x65, 0x73, 0xaa, 0x8c, 0x89, 0xa6, 0x01, 0x02, 0x68, 0x01,
+	0x42, 0x36, 0x5a, 0x34, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61,
+	0x70, 0x61, 0x63, 0x68, 0x65, 0x2f, 0x64, 0x75, 0x62, 0x62, 0x6f, 0x2d, 0x6b, 0x75, 0x62, 0x65,
+	0x72, 0x6e, 0x65, 0x74, 0x65, 0x73, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x6d, 0x65, 0x73, 0x68, 0x2f,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -920,46 +964,50 @@ func file_api_mesh_v1alpha1_dataplane_proto_rawDescGZIP() []byte {
 }
 
 var file_api_mesh_v1alpha1_dataplane_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_mesh_v1alpha1_dataplane_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_api_mesh_v1alpha1_dataplane_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_api_mesh_v1alpha1_dataplane_proto_goTypes = []interface{}{
-	(Dataplane_Networking_Inbound_State)(0),               // 0: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.State
-	(*Dataplane)(nil),                                     // 1: dubbo.mesh.v1alpha1.Dataplane
-	(*Dataplane_Networking)(nil),                          // 2: dubbo.mesh.v1alpha1.Dataplane.Networking
-	(*Dataplane_Probes)(nil),                              // 3: dubbo.mesh.v1alpha1.Dataplane.Probes
-	(*Dataplane_Networking_Inbound)(nil),                  // 4: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound
-	(*Dataplane_Networking_Outbound)(nil),                 // 5: dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound
-	nil,                                                   // 6: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.TagsEntry
-	(*Dataplane_Networking_Inbound_Health)(nil),           // 7: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.Health
-	(*Dataplane_Networking_Inbound_ServiceProbe)(nil),     // 8: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe
-	(*Dataplane_Networking_Inbound_ServiceProbe_Tcp)(nil), // 9: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.Tcp
-	nil,                               // 10: dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound.TagsEntry
-	(*Dataplane_Probes_Endpoint)(nil), // 11: dubbo.mesh.v1alpha1.Dataplane.Probes.Endpoint
-	(*EnvoyAdmin)(nil),                // 12: dubbo.mesh.v1alpha1.EnvoyAdmin
-	(*durationpb.Duration)(nil),       // 13: google.protobuf.Duration
-	(*wrapperspb.UInt32Value)(nil),    // 14: google.protobuf.UInt32Value
+	(Dataplane_Networking_Inbound_State)(0), // 0: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.State
+	(*Dataplane)(nil),                       // 1: dubbo.mesh.v1alpha1.Dataplane
+	(*Dataplane_Networking)(nil),            // 2: dubbo.mesh.v1alpha1.Dataplane.Networking
+	(*Dataplane_Probes)(nil),                // 3: dubbo.mesh.v1alpha1.Dataplane.Probes
+	nil,                                     // 4: dubbo.mesh.v1alpha1.Dataplane.ExtensionsEntry
+	(*Dataplane_Networking_Inbound)(nil),    // 5: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound
+	(*Dataplane_Networking_Outbound)(nil),   // 6: dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound
+	nil,                                     // 7: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.TagsEntry
+	(*Dataplane_Networking_Inbound_Health)(nil),           // 8: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.Health
+	(*Dataplane_Networking_Inbound_ServiceProbe)(nil),     // 9: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe
+	(*Dataplane_Networking_Inbound_ServiceProbe_Tcp)(nil), // 10: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.Tcp
+	nil,                               // 11: dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound.TagsEntry
+	(*Dataplane_Probes_Endpoint)(nil), // 12: dubbo.mesh.v1alpha1.Dataplane.Probes.Endpoint
+	(*MetricsBackend)(nil),            // 13: dubbo.mesh.v1alpha1.MetricsBackend
+	(*EnvoyAdmin)(nil),                // 14: dubbo.mesh.v1alpha1.EnvoyAdmin
+	(*durationpb.Duration)(nil),       // 15: google.protobuf.Duration
+	(*wrapperspb.UInt32Value)(nil),    // 16: google.protobuf.UInt32Value
 }
 var file_api_mesh_v1alpha1_dataplane_proto_depIdxs = []int32{
 	2,  // 0: dubbo.mesh.v1alpha1.Dataplane.networking:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking
-	3,  // 1: dubbo.mesh.v1alpha1.Dataplane.probes:type_name -> dubbo.mesh.v1alpha1.Dataplane.Probes
-	4,  // 2: dubbo.mesh.v1alpha1.Dataplane.Networking.inbound:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound
-	5,  // 3: dubbo.mesh.v1alpha1.Dataplane.Networking.outbound:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound
-	12, // 4: dubbo.mesh.v1alpha1.Dataplane.Networking.admin:type_name -> dubbo.mesh.v1alpha1.EnvoyAdmin
-	11, // 5: dubbo.mesh.v1alpha1.Dataplane.Probes.endpoints:type_name -> dubbo.mesh.v1alpha1.Dataplane.Probes.Endpoint
-	6,  // 6: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.tags:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.TagsEntry
-	7,  // 7: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.health:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.Health
-	8,  // 8: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.serviceProbe:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe
-	0,  // 9: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.state:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.State
-	10, // 10: dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound.tags:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound.TagsEntry
-	13, // 11: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.interval:type_name -> google.protobuf.Duration
-	13, // 12: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.timeout:type_name -> google.protobuf.Duration
-	14, // 13: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.unhealthy_threshold:type_name -> google.protobuf.UInt32Value
-	14, // 14: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.healthy_threshold:type_name -> google.protobuf.UInt32Value
-	9,  // 15: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.tcp:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.Tcp
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	13, // 1: dubbo.mesh.v1alpha1.Dataplane.metrics:type_name -> dubbo.mesh.v1alpha1.MetricsBackend
+	3,  // 2: dubbo.mesh.v1alpha1.Dataplane.probes:type_name -> dubbo.mesh.v1alpha1.Dataplane.Probes
+	4,  // 3: dubbo.mesh.v1alpha1.Dataplane.extensions:type_name -> dubbo.mesh.v1alpha1.Dataplane.ExtensionsEntry
+	5,  // 4: dubbo.mesh.v1alpha1.Dataplane.Networking.inbound:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound
+	6,  // 5: dubbo.mesh.v1alpha1.Dataplane.Networking.outbound:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound
+	14, // 6: dubbo.mesh.v1alpha1.Dataplane.Networking.admin:type_name -> dubbo.mesh.v1alpha1.EnvoyAdmin
+	12, // 7: dubbo.mesh.v1alpha1.Dataplane.Probes.endpoints:type_name -> dubbo.mesh.v1alpha1.Dataplane.Probes.Endpoint
+	7,  // 8: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.tags:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.TagsEntry
+	8,  // 9: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.health:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.Health
+	9,  // 10: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.serviceProbe:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe
+	0,  // 11: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.state:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.State
+	11, // 12: dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound.tags:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Outbound.TagsEntry
+	15, // 13: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.interval:type_name -> google.protobuf.Duration
+	15, // 14: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.timeout:type_name -> google.protobuf.Duration
+	16, // 15: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.unhealthy_threshold:type_name -> google.protobuf.UInt32Value
+	16, // 16: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.healthy_threshold:type_name -> google.protobuf.UInt32Value
+	10, // 17: dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.tcp:type_name -> dubbo.mesh.v1alpha1.Dataplane.Networking.Inbound.ServiceProbe.Tcp
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_api_mesh_v1alpha1_dataplane_proto_init() }
@@ -967,6 +1015,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 	if File_api_mesh_v1alpha1_dataplane_proto != nil {
 		return
 	}
+	file_api_mesh_v1alpha1_metrics_proto_init()
 	file_api_mesh_v1alpha1_envoy_admin_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
@@ -1005,7 +1054,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 				return nil
 			}
 		}
-		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Dataplane_Networking_Inbound); i {
 			case 0:
 				return &v.state
@@ -1017,7 +1066,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 				return nil
 			}
 		}
-		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Dataplane_Networking_Outbound); i {
 			case 0:
 				return &v.state
@@ -1029,7 +1078,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 				return nil
 			}
 		}
-		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Dataplane_Networking_Inbound_Health); i {
 			case 0:
 				return &v.state
@@ -1041,7 +1090,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 				return nil
 			}
 		}
-		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Dataplane_Networking_Inbound_ServiceProbe); i {
 			case 0:
 				return &v.state
@@ -1053,7 +1102,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 				return nil
 			}
 		}
-		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Dataplane_Networking_Inbound_ServiceProbe_Tcp); i {
 			case 0:
 				return &v.state
@@ -1065,7 +1114,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 				return nil
 			}
 		}
-		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_api_mesh_v1alpha1_dataplane_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Dataplane_Probes_Endpoint); i {
 			case 0:
 				return &v.state
@@ -1084,7 +1133,7 @@ func file_api_mesh_v1alpha1_dataplane_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_mesh_v1alpha1_dataplane_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

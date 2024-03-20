@@ -28,10 +28,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	cmd2 "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+)
+
 type RootCommandConfig struct {
 	Name      string
 	NewClient ClientFactory
 }
+
+var controlPlaneLog = core.Log.WithName("dubboctl")
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -62,7 +69,7 @@ func getRootCmd(args []string) *cobra.Command {
 		Name: "dubboctl",
 	}
 
-	// Environment Variables
+	// DeployMode Variables
 	// Evaluated first after static defaults, set all flags to be associated with
 	// a version prefixed by "DUBBO_"
 	viper.AutomaticEnv()        // read in environment variables for DUBBO_<flag>
@@ -83,9 +90,11 @@ func addSubCommands(rootCmd *cobra.Command, newClient ClientFactory) {
 	addRepository(rootCmd, newClient)
 	addDeploy(rootCmd, newClient)
 	addManifest(rootCmd)
+	addGenerate(rootCmd)
 	addProfile(rootCmd)
 	addDashboard(rootCmd)
 	addRegistryCmd(rootCmd)
+	addProxy(cmd2.DefaultRunCmdOpts, rootCmd)
 }
 
 // bindFunc which conforms to the cobra PreRunE method signature

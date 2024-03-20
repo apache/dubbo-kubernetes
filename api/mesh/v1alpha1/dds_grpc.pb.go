@@ -4,7 +4,11 @@ package v1alpha1
 
 import (
 	context "context"
+)
+
+import (
 	v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -142,8 +146,9 @@ type GlobalDDSServiceClient interface {
 	// to leverage existing connection from Zone CP to Global CP.
 	StreamXDSConfigs(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamXDSConfigsClient, error)
 	// StreamStats is logically a service exposed by Zone CP so Global CP can
-	// execute dubbo-dp stats requests. It is however represented by bi-directional
-	// streaming to leverage existing connection from Zone CP to Global CP.
+	// execute dubbo-dp stats requests. It is however represented by
+	// bi-directional streaming to leverage existing connection from Zone CP to
+	// Global CP.
 	StreamStats(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamStatsClient, error)
 	// StreamStats is logically a service exposed by Zone CP so Global CP can
 	// execute dubbo-dp clusters request. It is however represented by
@@ -274,8 +279,9 @@ type GlobalDDSServiceServer interface {
 	// to leverage existing connection from Zone CP to Global CP.
 	StreamXDSConfigs(GlobalDDSService_StreamXDSConfigsServer) error
 	// StreamStats is logically a service exposed by Zone CP so Global CP can
-	// execute dubbo-dp stats requests. It is however represented by bi-directional
-	// streaming to leverage existing connection from Zone CP to Global CP.
+	// execute dubbo-dp stats requests. It is however represented by
+	// bi-directional streaming to leverage existing connection from Zone CP to
+	// Global CP.
 	StreamStats(GlobalDDSService_StreamStatsServer) error
 	// StreamStats is logically a service exposed by Zone CP so Global CP can
 	// execute dubbo-dp clusters request. It is however represented by

@@ -18,9 +18,14 @@
 package universal
 
 import (
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
+
+var log = core.Log.WithName("plugin").WithName("runtime").WithName("universal")
 
 type plugin struct{}
 
@@ -29,5 +34,21 @@ func init() {
 }
 
 func (p *plugin) Customize(rt core_runtime.Runtime) error {
+	// 半托管和纯VM模式都应该用这个插件
+	if rt.Config().DeployMode == config_core.KubernetesMode {
+		return nil
+	}
+
+	if err := rt.AdminRegistry().Subscribe(rt.MetadataReportCenter(), rt.ResourceManager(), rt.DataplaneCache()); err != nil {
+		logger.Errorf("Failed to subscribe to registry, error msg is %s.", err.Error())
+		return err
+	}
+
+	defer func() {
+		if err := rt.AdminRegistry().Destroy(); err != nil {
+			logger.Errorf("Failed to subscribe to registry, error msg is %s.", err.Error())
+			return
+		}
+	}()
 	return nil
 }

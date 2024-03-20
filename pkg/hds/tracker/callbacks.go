@@ -92,7 +92,6 @@ func (t *tracker) OnStreamOpen(ctx context.Context, streamID int64) error {
 }
 
 func (t *tracker) OnStreamClosed(streamID xds.StreamID) {
-
 	t.Lock()
 	defer t.Unlock()
 
@@ -112,7 +111,6 @@ func (t *tracker) OnStreamClosed(streamID xds.StreamID) {
 }
 
 func (t *tracker) OnHealthCheckRequest(streamID xds.StreamID, req *envoy_service_health.HealthCheckRequest) error {
-
 	proxyId, err := xds.ParseProxyIdFromString(req.GetNode().GetId())
 	if err != nil {
 		t.log.Error(err, "failed to parse Dataplane Id out of HealthCheckRequest", "streamid", streamID, "req", req)
@@ -164,7 +162,6 @@ func (t *tracker) newWatchdog(node *envoy_core.Node) watchdog.Watchdog {
 }
 
 func (t *tracker) OnEndpointHealthResponse(streamID xds.StreamID, resp *envoy_service_health.EndpointHealthResponse) error {
-
 	healthMap := map[uint32]bool{}
 	envoyHealth := true // if there is no Envoy HC, assume it's healthy
 

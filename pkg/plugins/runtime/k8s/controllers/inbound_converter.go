@@ -108,6 +108,7 @@ func inboundForServiceless(zone string, pod *kube_core.Pod, name string) *mesh_p
 		Health: &health, // write health for backwards compatibility with Kuma 2.5 and older
 	}
 }
+
 func (i *InboundConverter) InboundInterfacesFor(ctx context.Context, zone string, pod *kube_core.Pod, services []*kube_core.Service) ([]*mesh_proto.Dataplane_Networking_Inbound, error) {
 	var ifaces []*mesh_proto.Dataplane_Networking_Inbound
 	for _, svc := range services {

@@ -7,7 +7,6 @@ option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
 import "api/mesh/options.proto";
 import "api/mesh/v1alpha1/envoy_admin.proto";
 
-
 message ZoneEgress {
   option (dubbo.mesh.resource).name = "ZoneEgressResource";
   option (dubbo.mesh.resource).type = "ZoneEgress";

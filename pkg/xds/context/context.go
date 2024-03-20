@@ -56,8 +56,23 @@ func (g GlobalContext) Hash() string {
 }
 
 type MeshContext struct {
-	Hash             string
-	Resources        Resources
-	DataplanesByName map[string]*core_mesh.DataplaneResource
-	EndpointMap      xds.EndpointMap
+	Hash                string
+	Resource            *core_mesh.MeshResource
+	Resources           Resources
+	DataplanesByName    map[string]*core_mesh.DataplaneResource
+	EndpointMap         xds.EndpointMap
+	ServicesInformation map[string]*ServiceInformation
+}
+
+type ServiceInformation struct {
+	TLSReadiness      bool
+	Protocol          core_mesh.Protocol
+	IsExternalService bool
+}
+
+func (mc *MeshContext) GetServiceProtocol(serviceName string) core_mesh.Protocol {
+	if info, found := mc.ServicesInformation[serviceName]; found {
+		return info.Protocol
+	}
+	return core_mesh.ProtocolUnknown
 }

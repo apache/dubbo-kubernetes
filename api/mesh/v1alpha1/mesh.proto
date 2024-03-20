@@ -13,10 +13,10 @@ message Mesh {
   option (dubbo.mesh.resource).name = "MeshResource";
   option (dubbo.mesh.resource).type = "Mesh";
   option (dubbo.mesh.resource).package = "mesh";
-  option (dubbo.mesh.resource).global = true;
-  option (dubbo.mesh.resource).skip_kubernetes_wrappers = true;
   option (dubbo.mesh.resource).dds.send_to_zone = true;
-
+  option (dubbo.mesh.resource).ws.name = "mesh";
+  option (dubbo.mesh.resource).ws.plural = "meshes";
+  option (dubbo.mesh.resource).allow_to_inspect = true;
   // mTLS settings of a Mesh.
   message Mtls {
 
@@ -176,4 +176,8 @@ message TcpLoggingBackendConfig {
 message Routing {
   // Enable the Locality Aware Load Balancing
   bool localityAwareLoadBalancing = 1;
+
+  // Enable routing traffic to services in other zone or external services
+  // through ZoneEgress. Default: false
+  bool zoneEgress = 2;
 }

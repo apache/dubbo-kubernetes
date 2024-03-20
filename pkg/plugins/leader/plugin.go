@@ -22,23 +22,23 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
+	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	leader_memory "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/memory"
-	leader_nacos "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/nacos"
-	leader_zookeeper "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/zookeeper"
+	"github.com/apache/dubbo-kubernetes/pkg/plugins/leader/memory"
 )
 
 func NewLeaderElector(b *core_runtime.Builder) (component.LeaderElector, error) {
-	switch b.Config().Store.Type {
-	case store.MemoryStore:
-		return leader_memory.NewAlwaysLeaderElector(), nil
-	case store.ZookeeperStore:
-		return leader_zookeeper.NewZookeeperLeaderElector(), nil
-	case store.NacosStore:
-		return leader_nacos.NewNacosLeaderElector(), nil
-	// In case of Kubernetes, Leader Elector is embedded in a Kubernetes ComponentManager
+	switch b.Config().DeployMode {
+	case core.UniversalMode:
+		//cfg := *b.Config().Store.Mysql
+		//db, err := common_mysql.ConnectToDb(cfg)
+		//if err != nil {
+		//	return nil, errors.Wrap(err, "cloud not connect to mysql")
+		//}
+		//return leader_mysql.NewMysqlLeaderElector(db), nil
+		return memory.NewAlwaysLeaderElector(), nil
+	// In case of Kubernetes or half, Leader Elector is embedded in a Kubernetes ComponentManager
 	default:
 		return nil, errors.Errorf("no election leader for storage of type %s", b.Config().Store.Type)
 	}

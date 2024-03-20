@@ -32,8 +32,10 @@ import (
 )
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_registry "github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
+	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
 	k8s_model "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/model"
 	k8s_registry "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/registry"
 )
@@ -64,8 +66,23 @@ func (m *OwnerReferenceMutator) Handle(ctx context.Context, req admission.Reques
 	}
 
 	var owner k8s_model.KubernetesObject
+	switch resType {
+	case core_mesh.DataplaneInsightType:
+		owner = &mesh_k8s.Dataplane{}
+		if err := m.Client.Get(ctx, kube_client.ObjectKey{Name: obj.GetName(), Namespace: obj.GetNamespace()}, owner); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+	default:
+		// we need to also validate Mesh here because OwnerReferenceMutator is executed before validatingHandler
+		if err := core_mesh.ValidateMesh(obj.GetMesh(), coreRes.Descriptor().Scope); err.HasViolations() {
+			return convertValidationErrorOf(err, obj, obj.GetObjectMeta())
+		}
 
-	// TODO
+		owner = &mesh_k8s.Mesh{}
+		if err := m.Client.Get(ctx, kube_client.ObjectKey{Name: obj.GetMesh()}, owner); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+	}
 	if err := controllerutil.SetOwnerReference(owner, obj, m.Scheme); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}

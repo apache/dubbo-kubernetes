@@ -1,5 +1,6 @@
 GO = go
-GO_GET = $(GO) get
+GO_INSTALL = $(GO) install
+GO_BIN = $(shell go env GOPATH)/bin
 
 .PHONY: fmt
 fmt: dubbogofmt golangci-lint-fmt fmt/proto ## Dev: Run various format tools
@@ -34,9 +35,11 @@ golangci-lint-fmt:
 		--enable gofumpt
 
 .PHONY: dubbogofmt
-dubbogofmt:
-	$(GO_GET) -u github.com/dubbogo/tools/cmd/imports-formatter
-	imports-formatter
+dubbogofmt: $(GO_BIN)/imports-formatter
+	GOROOT=$(shell go env GOROOT) $(GO_BIN)/imports-formatter
+
+$(GO_BIN)/imports-formatter:
+	$(GO_INSTALL) github.com/dubbogo/tools/cmd/imports-formatter@latest
 
 .PHONY: helm-lint
 helm-lint:

@@ -35,7 +35,6 @@ import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 )
@@ -47,7 +46,6 @@ func Setup(runtime runtime.Runtime) error {
 		defaultsComponent := NewDefaultsComponent(
 			runtime.Config().Defaults,
 			runtime.ResourceManager(),
-			runtime.ResourceStore(),
 			runtime.Extensions(),
 		)
 
@@ -62,13 +60,11 @@ func Setup(runtime runtime.Runtime) error {
 func NewDefaultsComponent(
 	config *dubbo_cp.Defaults,
 	resManager core_manager.ResourceManager,
-	resStore store.ResourceStore,
 	extensions context.Context,
 ) component.Component {
 	return &defaultsComponent{
 		config:     config,
 		resManager: resManager,
-		resStore:   resStore,
 		extensions: extensions,
 	}
 }
@@ -78,7 +74,6 @@ var _ component.Component = &defaultsComponent{}
 type defaultsComponent struct {
 	config     *dubbo_cp.Defaults
 	resManager core_manager.ResourceManager
-	resStore   store.ResourceStore
 	extensions context.Context
 }
 

@@ -39,8 +39,9 @@ service GlobalDDSService {
   rpc StreamXDSConfigs(stream XDSConfigResponse)
       returns (stream XDSConfigRequest);
   // StreamStats is logically a service exposed by Zone CP so Global CP can
-  // execute dubbo-dp stats requests. It is however represented by bi-directional
-  // streaming to leverage existing connection from Zone CP to Global CP.
+  // execute dubbo-dp stats requests. It is however represented by
+  // bi-directional streaming to leverage existing connection from Zone CP to
+  // Global CP.
   rpc StreamStats(stream StatsResponse) returns (stream StatsRequest);
   // StreamStats is logically a service exposed by Zone CP so Global CP can
   // execute dubbo-dp clusters request. It is however represented by
@@ -124,7 +125,8 @@ message StatsResponse {
     // Error that was captured by the Zone CP when executing dubbo-dp stats
     // request.
     string error = 2;
-    // The stats content that is a successful result of dubbo-dp stats execution.
+    // The stats content that is a successful result of dubbo-dp stats
+    // execution.
     bytes stats = 3;
   }
 }

@@ -40,12 +40,13 @@ const (
 type PluginName string
 
 const (
-	Kubernetes PluginName = "k8s"
-	Universal  PluginName = "universal"
-	Memory     PluginName = "memory"
-	Zookeeper  PluginName = "zookeeper"
-	Nacos      PluginName = "nacos"
-	MySQL      PluginName = "mysql"
+	Kubernetes  PluginName = "k8s"
+	Universal   PluginName = "universal"
+	Memory      PluginName = "memory"
+	Zookeeper   PluginName = "zookeeper"
+	Traditional PluginName = "traditional"
+	Nacos       PluginName = "nacos"
+	MySQL       PluginName = "mysql"
 
 	CaBuiltin PluginName = "builtin"
 )

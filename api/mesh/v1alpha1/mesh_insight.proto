@@ -61,8 +61,6 @@ message MeshInsight {
   ServiceStat services = 6;
 
   // DataplanesByType defines statistics splitted by dataplane types
-  message DataplanesByType {
-    DataplaneStat standard = 1;
-  }
+  message DataplanesByType { DataplaneStat standard = 1; }
   DataplanesByType dataplanesByType = 7;
 }

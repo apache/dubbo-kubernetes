@@ -18,8 +18,11 @@
 package util_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"testing"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 
 func TestZoneSync(t *testing.T) {

@@ -34,14 +34,13 @@ func init() {
 }
 
 func (p *plugin) BeforeBootstrap(b *core_runtime.Builder, _ core_plugins.PluginConfig) error {
-	if b.Config().Environment != config_core.UniversalEnvironment {
-		return nil
+	if b.Config().DeployMode == config_core.UniversalMode {
+		leaderElector, err := plugin_leader.NewLeaderElector(b)
+		if err != nil {
+			return err
+		}
+		b.WithComponentManager(component.NewManager(leaderElector))
 	}
-	leaderElector, err := plugin_leader.NewLeaderElector(b)
-	if err != nil {
-		return err
-	}
-	b.WithComponentManager(component.NewManager(leaderElector))
 	return nil
 }
 

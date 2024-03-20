@@ -128,7 +128,6 @@ var _ = Describe("Cached Resource Manager", func() {
 		// then
 		Expect(fetch().Spec).To(MatchProto(res.Spec))
 		Expect(int(countingManager.getQueries)).To(Equal(2))
-
 	})
 
 	It("should not cache Get() not found", func() {

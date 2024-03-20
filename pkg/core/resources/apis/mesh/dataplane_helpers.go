@@ -38,6 +38,7 @@ const (
 	ProtocolHTTP2   = "http2"
 	ProtocolGRPC    = "grpc"
 	ProtocolKafka   = "kafka"
+	ProtocolTriple  = "triple"
 )
 
 func ParseProtocol(tag string) Protocol {

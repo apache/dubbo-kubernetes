@@ -50,7 +50,7 @@ var _ = Describe("Defaults Component", func() {
 			}
 			store := resources_memory.NewStore()
 			manager = core_manager.NewResourceManager(store)
-			component = defaults.NewDefaultsComponent(cfg, manager, store, context.Background())
+			component = defaults.NewDefaultsComponent(cfg, manager, context.Background())
 		})
 
 		It("should create default mesh", func() {
@@ -103,7 +103,7 @@ var _ = Describe("Defaults Component", func() {
 			}
 			store := resources_memory.NewStore()
 			manager = core_manager.NewResourceManager(store)
-			component = defaults.NewDefaultsComponent(cfg, manager, store, context.Background())
+			component = defaults.NewDefaultsComponent(cfg, manager, context.Background())
 		})
 
 		It("should not create default mesh", func() {
