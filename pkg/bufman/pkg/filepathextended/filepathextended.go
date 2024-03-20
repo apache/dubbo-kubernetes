@@ -28,9 +28,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/osextended"
+import (
 	"go.uber.org/multierr"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/osextended"
 )
 
 // RealClean does filepath.Clean and filepath.FromSlash,

@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"path"
 	"strings"
+)
 
+import (
 	"google.golang.org/protobuf/compiler/protogen"
 )
 

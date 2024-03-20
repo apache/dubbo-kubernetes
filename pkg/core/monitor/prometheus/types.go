@@ -15,7 +15,9 @@
 
 package prometheus
 
-import "github.com/prometheus/common/model"
+import (
+	"github.com/prometheus/common/model"
+)
 
 type Metric struct {
 	Vector model.Vector `json:"vector"`

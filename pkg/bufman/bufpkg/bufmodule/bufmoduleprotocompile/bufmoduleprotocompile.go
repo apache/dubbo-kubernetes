@@ -18,12 +18,17 @@ package bufmoduleprotocompile
 import (
 	"context"
 	"io"
+)
 
+import (
+	"github.com/bufbuild/protocompile/reporter"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
-	"github.com/bufbuild/protocompile/reporter"
 )
 
 // ParserAccessorHandler handles source file access operations for protocompile.

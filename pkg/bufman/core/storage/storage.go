@@ -20,7 +20,9 @@ import (
 	"errors"
 	"io"
 	"sync"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"

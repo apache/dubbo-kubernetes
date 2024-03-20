@@ -21,7 +21,9 @@ import (
 	"runtime"
 	"testing"
 	"time"
+)
 
+import (
 	"github.com/stretchr/testify/require"
 )
 

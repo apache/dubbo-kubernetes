@@ -18,7 +18,9 @@ package bufmanifest
 import (
 	"context"
 	"fmt"
+)
 
+import (
 	modulev1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/module/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"

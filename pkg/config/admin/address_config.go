@@ -20,13 +20,15 @@ package admin
 import (
 	"net/url"
 	"strings"
+)
 
+import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 )
 
 type AddressConfig struct {
-	Address string `yaml:"address"`
+	Address string `json:"address"`
 	Url     *url.URL
 }
 

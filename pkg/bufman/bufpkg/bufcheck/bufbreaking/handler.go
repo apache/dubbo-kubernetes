@@ -17,14 +17,19 @@ package bufbreaking
 
 import (
 	"context"
+)
 
+import (
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/bufbreaking/bufbreakingconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage/bufimageutil"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protosource"
-	"go.uber.org/zap"
 )
 
 type handler struct {

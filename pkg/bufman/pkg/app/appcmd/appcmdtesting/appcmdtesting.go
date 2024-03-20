@@ -21,12 +21,17 @@ import (
 	"io"
 	"os"
 	"testing"
+)
 
+import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appcmd"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // RunCommandSuccessStdout runs the command and makes sure it was successful, and compares the stdout output.

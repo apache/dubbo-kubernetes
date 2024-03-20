@@ -18,18 +18,25 @@ package internal
 import (
 	"context"
 	"strings"
+)
 
+import (
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
+	"go.uber.org/multierr"
+
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protosource"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoversion"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/multierr"
-	"go.uber.org/zap"
 )
 
 const (

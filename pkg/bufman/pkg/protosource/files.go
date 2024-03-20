@@ -17,9 +17,14 @@ package protosource
 
 import (
 	"context"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
+import (
 	"go.uber.org/multierr"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
 )
 
 const defaultChunkSizeThreshold = 8

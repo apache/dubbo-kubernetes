@@ -17,7 +17,9 @@ package uuidutil
 
 import (
 	"fmt"
+)
 
+import (
 	"github.com/gofrs/uuid/v5"
 )
 

@@ -23,7 +23,23 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+)
 
+import (
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
+	"go.uber.org/multierr"
+
+	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appproto"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
@@ -32,14 +48,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/tmp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/multierr"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type protocProxyHandler struct {

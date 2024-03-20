@@ -20,7 +20,9 @@ package builders_test
 import (
 	"errors"
 	"testing"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/pack"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"

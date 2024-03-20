@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "api/mesh/options.proto";
+import "api/mesh/v1alpha1/envoy_admin.proto";
+
+
+message ZoneEgress {
+  option (dubbo.mesh.resource).name = "ZoneEgressResource";
+  option (dubbo.mesh.resource).type = "ZoneEgress";
+  option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
+  option (dubbo.mesh.resource).ws.name = "zoneegress";
+  option (dubbo.mesh.resource).ws.plural = "zoneegresses";
+  option (dubbo.mesh.resource).allow_to_inspect = true;
+
+  // Zone field contains Zone name where egress is serving, field will be
+  // automatically set by Global Kuma CP
+  string zone = 1;
+
+  message Networking {
+    // Address on which inbound listener will be exposed
+    string address = 1;
+
+    // Port of the inbound interface that will forward requests to the service.
+    uint32 port = 2;
+
+    // Admin contains configuration related to Envoy Admin API
+    EnvoyAdmin admin = 3;
+  }
+
+  // Networking defines the address and port of the Egress to listen on.
+  Networking networking = 2;
+}

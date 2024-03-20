@@ -21,13 +21,19 @@ import (
 	"path"
 	"strconv"
 	"strings"
+)
 
+import (
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/data/datawkt"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoversion"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // Modifier modifies Images.

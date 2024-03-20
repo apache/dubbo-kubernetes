@@ -15,7 +15,9 @@
 
 package bufmodulecache
 
-import "sync"
+import (
+	"sync"
+)
 
 type cacheStats struct {
 	lock  sync.RWMutex

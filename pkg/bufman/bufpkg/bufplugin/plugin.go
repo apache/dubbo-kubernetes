@@ -18,10 +18,15 @@ package bufplugin
 import (
 	"errors"
 	"fmt"
+)
 
+import (
+	"golang.org/x/mod/semver"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginref"
-	"golang.org/x/mod/semver"
 )
 
 type plugin struct {

@@ -18,7 +18,9 @@ package bufbreakingconfig
 import (
 	"encoding/json"
 	"sort"
+)
 
+import (
 	breakingv1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/breaking/v1"
 )
 

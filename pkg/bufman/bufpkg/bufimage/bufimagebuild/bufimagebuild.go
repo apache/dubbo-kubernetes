@@ -17,12 +17,17 @@ package bufimagebuild
 
 import (
 	"context"
+)
 
+import (
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
-	"go.uber.org/zap"
 )
 
 // Builder builds Protobuf files into Images.

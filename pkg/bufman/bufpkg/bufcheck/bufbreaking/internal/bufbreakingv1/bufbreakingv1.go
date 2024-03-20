@@ -20,7 +20,9 @@
 // There were no changes from v1beta1.
 package bufbreakingv1
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
+)
 
 // VersionSpec is the version specification for v1.
 //

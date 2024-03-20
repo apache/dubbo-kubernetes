@@ -20,11 +20,17 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+)
 
+import (
+	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type responseBuilder struct {

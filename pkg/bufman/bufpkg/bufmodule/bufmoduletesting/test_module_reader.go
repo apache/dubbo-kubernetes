@@ -17,7 +17,9 @@ package bufmoduletesting
 
 import (
 	"context"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"

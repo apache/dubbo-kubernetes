@@ -21,8 +21,10 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+)
 
-	"gopkg.in/yaml.v2"
+import (
+	"sigs.k8s.io/yaml"
 )
 
 func ConfigForDisplay(cfg Config) (Config, error) {
@@ -58,5 +60,5 @@ func DumpToFile(filename string, cfg Config) error {
 		return err
 	}
 
-	return os.WriteFile(filename, b, 0o666)
+	return os.WriteFile(filename, b, 0o600)
 }

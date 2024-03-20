@@ -15,7 +15,9 @@
 
 package protosource
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type reservedName struct {
 	locationDescriptor

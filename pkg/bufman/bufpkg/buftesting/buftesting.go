@@ -22,16 +22,23 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+)
 
+import (
+	"github.com/stretchr/testify/require"
+
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmodulebuild"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/github/githubtesting"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/prototesting"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 const (

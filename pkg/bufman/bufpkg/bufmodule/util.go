@@ -19,11 +19,16 @@ import (
 	"context"
 	"io"
 	"sort"
+)
 
+import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	modulev1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/module/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
-	"go.uber.org/multierr"
 )
 
 func putModuleFileToBucket(ctx context.Context, module Module, path string, writeBucket storage.WriteBucket) (retErr error) {

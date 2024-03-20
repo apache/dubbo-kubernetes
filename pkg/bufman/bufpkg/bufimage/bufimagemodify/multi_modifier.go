@@ -17,7 +17,9 @@ package bufimagemodify
 
 import (
 	"context"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 )
 

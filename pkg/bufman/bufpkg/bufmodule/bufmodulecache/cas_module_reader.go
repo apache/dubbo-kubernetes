@@ -18,13 +18,18 @@ package bufmodulecache
 import (
 	"context"
 	"fmt"
+)
 
+import (
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/verbose"
-	"go.uber.org/zap"
 )
 
 type casModuleReader struct {

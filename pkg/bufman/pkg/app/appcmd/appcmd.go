@@ -21,11 +21,17 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+
 	"github.com/spf13/pflag"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 
 // Command is a command.

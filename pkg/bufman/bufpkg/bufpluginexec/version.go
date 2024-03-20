@@ -20,8 +20,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+)
 
+import (
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/types/pluginpb"
 )
 

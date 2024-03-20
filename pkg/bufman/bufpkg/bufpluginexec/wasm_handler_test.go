@@ -19,7 +19,9 @@ import (
 	"errors"
 	"os"
 	"testing"
+)
 
+import (
 	"github.com/stretchr/testify/assert"
 )
 

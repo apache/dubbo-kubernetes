@@ -33,7 +33,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 )
 

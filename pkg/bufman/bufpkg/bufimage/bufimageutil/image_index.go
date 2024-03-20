@@ -18,12 +18,20 @@ package bufimageutil
 import (
 	"fmt"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
+import (
 	"github.com/bufbuild/protocompile/walk"
+
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
+
 	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 )
 
 // imageIndex holds an index that allows for easily navigating a descriptor

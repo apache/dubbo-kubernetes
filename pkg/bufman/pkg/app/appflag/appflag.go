@@ -19,12 +19,17 @@ package appflag
 import (
 	"context"
 	"time"
+)
 
+import (
+	"github.com/spf13/pflag"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/applog"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appname"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appverbose"
-	"github.com/spf13/pflag"
 )
 
 // Container is a container.

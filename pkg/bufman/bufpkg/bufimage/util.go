@@ -19,18 +19,26 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+)
 
+import (
+	"google.golang.org/protobuf/encoding/protowire"
+
+	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/data/datawkt"
 	imagev1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/image/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
-	"google.golang.org/protobuf/encoding/protowire"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 // Must match the tag number for ImageFile.buf_extensions defined in proto/buf/alpha/image/v1/image.proto.

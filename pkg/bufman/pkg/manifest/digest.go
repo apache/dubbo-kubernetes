@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"io"
 	"strings"
+)
 
+import (
 	"golang.org/x/crypto/sha3"
 )
 

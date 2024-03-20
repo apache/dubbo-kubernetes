@@ -17,6 +17,7 @@ package protoencoding
 
 import (
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

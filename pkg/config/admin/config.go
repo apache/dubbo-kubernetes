@@ -18,23 +18,26 @@
 package admin
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/pkg/errors"
 )
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+)
+
 type Admin struct {
-	AdminPort      int           `yaml:"Port"`
-	ConfigCenter   string        `yaml:"configCenter"`
-	MetadataReport AddressConfig `yaml:"metadataReport"`
-	Registry       AddressConfig `yaml:"registry"`
-	Prometheus     Prometheus    `yaml:"prometheus"`
-	Grafana        Grafana       `yaml:"grafana"`
-	MysqlDSN       string        `yaml:"mysqlDSN"`
+	AdminPort      int           `json:"Port"`
+	ConfigCenter   string        `json:"configCenter"`
+	MetadataReport AddressConfig `json:"metadataReport"`
+	Registry       AddressConfig `json:"registry"`
+	Prometheus     Prometheus    `json:"prometheus"`
+	Grafana        Grafana       `json:"grafana"`
+	MysqlDSN       string        `json:"mysqlDSN"`
 }
 
 type Prometheus struct {
-	Address     string `yaml:"address"`
-	MonitorPort string `yaml:"monitorPort"`
+	Address     string `json:"address"`
+	MonitorPort string `json:"monitorPort"`
 }
 
 func (c *Prometheus) Sanitize() {}
@@ -45,7 +48,7 @@ func (c *Prometheus) Validate() error {
 }
 
 type Grafana struct {
-	Address string `yaml:"address"`
+	Address string `json:"address"`
 }
 
 func (g *Grafana) Sanitize() {}

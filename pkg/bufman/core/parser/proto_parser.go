@@ -18,7 +18,14 @@ package parser
 import (
 	"context"
 	"strings"
+)
 
+import (
+	"github.com/bufbuild/protocompile"
+	"github.com/bufbuild/protocompile/linker"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleprotocompile"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
@@ -26,8 +33,6 @@ import (
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	manifest2 "github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
-	"github.com/bufbuild/protocompile"
-	"github.com/bufbuild/protocompile/linker"
 )
 
 type ProtoParser interface {

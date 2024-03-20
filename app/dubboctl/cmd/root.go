@@ -20,8 +20,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+)
 
+import (
 	"github.com/ory/viper"
+
 	"github.com/spf13/cobra"
 )
 
