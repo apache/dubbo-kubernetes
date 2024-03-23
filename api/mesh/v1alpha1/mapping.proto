@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "api/mesh/options.proto";
+
+// ServiceNameMappingService is a service that mapping application name and
+// interface names
+service ServiceNameMappingService {
+  // MappingRegister from dp to cp, data plane register snp information to
+  // control plane.
+  rpc MappingRegister(MappingRegisterRequest) returns (MappingRegisterResponse);
+  // MappingSync from cp to dp, control plane sync snp information to data
+  // plane. Only in Kubernetes environment without zk/nacos, this rpc works. In
+  // other case (exists zk/nacos), data plane search in zk/nacos.
+  //
+  // data plane and control plane keep a streaming link:
+  // when Mapping Resource updated, control plane sync Mapping Resource to
+  // data plane.
+  rpc MappingSync(stream MappingSyncRequest)
+      returns (stream MappingSyncResponse);
+}
+
+message MappingRegisterRequest {
+  string applicationName = 1;
+  repeated string interfaceNames = 2;
+}
+
+message MappingRegisterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message MappingSyncRequest {
+  string nonce = 1;
+  string interfaceName = 2;
+}
+
+message MappingSyncResponse {
+  string nonce = 1;
+  int64 revision = 2;
+  repeated Mapping mappings = 3;
+}
+
+message Mapping {
+  option (dubbo.mesh.resource).name = "MappingResource";
+  option (dubbo.mesh.resource).type = "Mapping";
+  option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
+  option (dubbo.mesh.resource).ws.name = "mapping";
+  option (dubbo.mesh.resource).ws.plural = "mappings";
+  option (dubbo.mesh.resource).allow_to_inspect = true;
+
+  string zone = 1;
+  string interfaceName = 2;
+  repeated string applicationNames = 3;
+}

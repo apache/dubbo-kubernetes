@@ -1,0 +1,105 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: zipkin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: zipkin
+    app.kubernetes.io/version: 2.23.16
+    helm.sh/chart: zipkin-0.3.0
+  name: zipkin
+  namespace: dubbo-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: zipkin
+      app.kubernetes.io/name: zipkin
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app.kubernetes.io/instance: zipkin
+        app.kubernetes.io/name: zipkin
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - env:
+            - name: STORAGE_TYPE
+              value: mem
+          image: openzipkin/zipkin-slim:2.23.16
+          imagePullPolicy: IfNotPresent
+          name: zipkin
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9411
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 4096Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+      securityContext: {}
+      serviceAccountName: zipkin
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: zipkin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: zipkin
+    app.kubernetes.io/version: 2.23.16
+    helm.sh/chart: zipkin-0.3.0
+  name: zipkin
+  namespace: dubbo-system
+spec:
+  ports:
+    - name: http-query
+      port: 9411
+      protocol: TCP
+      targetPort: 9411
+  selector:
+    app.kubernetes.io/instance: zipkin
+    app.kubernetes.io/name: zipkin
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/instance: zipkin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: zipkin
+    app.kubernetes.io/version: 2.23.16
+    helm.sh/chart: zipkin-0.3.0
+  name: zipkin
+  namespace: dubbo-system
+
+---
