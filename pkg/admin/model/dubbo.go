@@ -16,3 +16,15 @@
  */
 
 package model
+
+// Application dubbo 应用
+type Application struct{}
+
+// Workload dubbo 工作负载
+type Workload struct{}
+
+// Instance dubbo 实例
+type Instance struct{}
+
+// Service dubbo 服务
+type Service struct{}

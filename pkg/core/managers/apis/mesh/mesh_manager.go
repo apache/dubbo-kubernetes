@@ -19,6 +19,8 @@ package mesh
 
 import (
 	"context"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 	"time"
 )
 
@@ -43,6 +45,8 @@ func NewMeshManager(
 	validator MeshValidator,
 	extensions context.Context,
 	config dubbo_cp.Config,
+	manager kube_ctrl.Manager,
+	mode config_core.DeployMode,
 ) core_manager.ResourceManager {
 	meshManager := &meshManager{
 		store:         store,
@@ -51,6 +55,8 @@ func NewMeshManager(
 		meshValidator: validator,
 		unsafeDelete:  config.Store.UnsafeDelete,
 		extensions:    extensions,
+		manager:       manager,
+		deployMode:    mode,
 	}
 	if config.Store.Type == config_store.KubernetesStore {
 		meshManager.k8sStore = true
@@ -68,6 +74,8 @@ type meshManager struct {
 	extensions      context.Context
 	k8sStore        bool
 	systemNamespace string
+	manager         kube_ctrl.Manager
+	deployMode      config_core.DeployMode
 }
 
 func (m *meshManager) Get(ctx context.Context, resource core_model.Resource, fs ...core_store.GetOptionsFunc) error {

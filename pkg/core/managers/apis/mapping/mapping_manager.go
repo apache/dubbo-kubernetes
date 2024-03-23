@@ -19,6 +19,8 @@ package mapping
 
 import (
 	"context"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
@@ -30,13 +32,17 @@ import (
 
 type mappingManager struct {
 	core_manager.ResourceManager
-	store core_store.ResourceStore
+	store      core_store.ResourceStore
+	manager    kube_ctrl.Manager
+	deployMode config_core.DeployMode
 }
 
-func NewMappingManager(store core_store.ResourceStore) core_manager.ResourceManager {
+func NewMappingManager(store core_store.ResourceStore, manager kube_ctrl.Manager, mode config_core.DeployMode) core_manager.ResourceManager {
 	return &mappingManager{
 		ResourceManager: core_manager.NewResourceManager(store),
 		store:           store,
+		manager:         manager,
+		deployMode:      mode,
 	}
 }
 

@@ -17,14 +17,73 @@
 
 package server
 
-type AdminServer struct{}
+import (
+	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	"github.com/gin-gonic/gin"
+	"net/http"
+	"strconv"
+)
 
-func NewAdminServer() *AdminServer {
-	return &AdminServer{}
+type AdminServer struct {
+	Engine   *gin.Engine
+	adminCfg admin.Admin
+}
+
+func NewAdminServer(adminCfg admin.Admin) *AdminServer {
+	return &AdminServer{
+		adminCfg: adminCfg,
+	}
+}
+
+func (a *AdminServer) InitHTTPRouter() *AdminServer {
+	r := gin.Default()
+
+	router := r.Group("/api/v1")
+	router.Group("/")
+
+	a.Engine = r
+	return a
 }
 
 func (a *AdminServer) Start(stop <-chan struct{}) error {
+	errChan := make(chan error)
+
+	var httpServer *http.Server
+	httpServer = a.startHttpServer(errChan)
+	select {
+	case <-stop:
+		logger.Sugar().Info("stopping bufman")
+		if httpServer != nil {
+			return httpServer.Shutdown(context.Background())
+		}
+	case err := <-errChan:
+		return err
+	}
 	return nil
+}
+
+func (a *AdminServer) startHttpServer(errChan chan error) *http.Server {
+	server := &http.Server{
+		Addr:    ":" + strconv.Itoa(a.adminCfg.Port),
+		Handler: a.Engine,
+	}
+
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil {
+			switch err {
+			case http.ErrServerClosed:
+				logger.Sugar().Info("shutting down bufman HTTP Server")
+			default:
+				logger.Sugar().Error(err, "could not start bufman HTTP Server")
+				errChan <- err
+			}
+		}
+	}()
+
+	return server
 }
 
 func (a *AdminServer) NeedLeaderElection() bool {

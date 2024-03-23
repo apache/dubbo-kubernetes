@@ -19,6 +19,8 @@ package metadata
 
 import (
 	"context"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
@@ -37,13 +39,17 @@ import (
 
 type metadataManager struct {
 	core_manager.ResourceManager
-	store core_store.ResourceStore
+	store      core_store.ResourceStore
+	manager    kube_ctrl.Manager
+	deployMode config_core.DeployMode
 }
 
-func NewMetadataManager(store core_store.ResourceStore) core_manager.ResourceManager {
+func NewMetadataManager(store core_store.ResourceStore, manage kube_ctrl.Manager, mode config_core.DeployMode) core_manager.ResourceManager {
 	return &metadataManager{
 		ResourceManager: core_manager.NewResourceManager(store),
 		store:           store,
+		deployMode:      mode,
+		manager:         manage,
 	}
 }
 

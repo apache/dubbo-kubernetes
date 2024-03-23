@@ -18,18 +18,24 @@
 package dynamic_config
 
 import (
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type dynamicConfigManager struct {
 	core_manager.ResourceManager
-	store core_store.ResourceStore
+	store      core_store.ResourceStore
+	manager    kube_ctrl.Manager
+	deployMode config_core.DeployMode
 }
 
-func NewDynamicConfigManager(store core_store.ResourceStore) core_manager.ResourceManager {
+func NewDynamicConfigManager(store core_store.ResourceStore, manager kube_ctrl.Manager, mode config_core.DeployMode) core_manager.ResourceManager {
 	return &dynamicConfigManager{
 		ResourceManager: core_manager.NewResourceManager(store),
 		store:           store,
+		manager:         manager,
+		deployMode:      mode,
 	}
 }

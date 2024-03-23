@@ -19,6 +19,8 @@ package dataplane
 
 import (
 	"context"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
@@ -37,15 +39,19 @@ import (
 
 type dataplaneManager struct {
 	core_manager.ResourceManager
-	store core_store.ResourceStore
-	zone  string
+	store      core_store.ResourceStore
+	zone       string
+	manager    kube_ctrl.Manager
+	deployMode config_core.DeployMode
 }
 
-func NewDataplaneManager(store core_store.ResourceStore, zone string) core_manager.ResourceManager {
+func NewDataplaneManager(store core_store.ResourceStore, zone string, manager kube_ctrl.Manager, mode config_core.DeployMode) core_manager.ResourceManager {
 	return &dataplaneManager{
 		ResourceManager: core_manager.NewResourceManager(store),
 		store:           store,
 		zone:            zone,
+		manager:         manager,
+		deployMode:      mode,
 	}
 }
 
@@ -72,6 +78,9 @@ func (m *dataplaneManager) Get(ctx context.Context, r core_model.Resource, opts 
 	}
 	m.setInboundsClusterTag(dataplane)
 	m.setHealth(dataplane)
+	if m.deployMode != config_core.UniversalMode {
+		m.setExtensions(dataplane)
+	}
 	return nil
 }
 
@@ -86,6 +95,9 @@ func (m *dataplaneManager) List(ctx context.Context, r core_model.ResourceList, 
 	for _, item := range dataplanes.Items {
 		m.setHealth(item)
 		m.setInboundsClusterTag(item)
+		if m.deployMode != config_core.UniversalMode {
+			m.setExtensions(item)
+		}
 	}
 	return nil
 }
@@ -130,3 +142,5 @@ func (m *dataplaneManager) setHealth(dp *core_mesh.DataplaneResource) {
 		}
 	}
 }
+
+func (m *dataplaneManager) setExtensions(dp *core_mesh.DataplaneResource) {}

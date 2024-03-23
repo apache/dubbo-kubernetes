@@ -19,8 +19,10 @@ package bootstrap
 
 import (
 	"context"
+	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 	"net/http"
 	"net/url"
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 	"sync"
 )
@@ -378,41 +380,64 @@ func initializeResourceManager(cfg dubbo_cp.Config, builder *core_runtime.Builde
 	defaultManager := core_manager.NewResourceManager(builder.ResourceStore())
 	customizableManager := core_manager.NewCustomizableResourceManager(defaultManager, nil)
 
+	var (
+		manager kube_ctrl.Manager
+		ok      bool
+	)
+	deployMode := builder.GetDeployMode()
+	if deployMode != config_core.UniversalMode {
+		manager, ok = k8s_extensions.FromManagerContext(builder.Extensions())
+		if !ok {
+			return errors.New("get kube manager err")
+		}
+	}
 	customizableManager.Customize(
 		mesh.DataplaneType,
 		dataplane_managers.NewDataplaneManager(
 			builder.ResourceStore(),
 			cfg.Multizone.Zone.Name,
+			manager,
+			deployMode,
 		))
 
 	customizableManager.Customize(
 		mesh.MappingType,
 		mapping_managers.NewMappingManager(
 			builder.ResourceStore(),
+			manager,
+			deployMode,
 		))
 
 	customizableManager.Customize(
 		mesh.MetaDataType,
 		metadata_managers.NewMetadataManager(
 			builder.ResourceStore(),
+			manager,
+			deployMode,
 		))
 
 	customizableManager.Customize(
 		mesh.ConditionRouteType,
 		condition_route.NewConditionRouteManager(
 			builder.ResourceStore(),
+			manager,
+			deployMode,
 		))
 
 	customizableManager.Customize(
 		mesh.TagRouteType,
 		tag_route.NewTagRouteManager(
 			builder.ResourceStore(),
+			manager,
+			deployMode,
 		))
 
 	customizableManager.Customize(
 		mesh.DynamicConfigType,
 		dynamic_config.NewDynamicConfigManager(
 			builder.ResourceStore(),
+			manager,
+			deployMode,
 		))
 
 	customizableManager.Customize(
@@ -424,6 +449,8 @@ func initializeResourceManager(cfg dubbo_cp.Config, builder *core_runtime.Builde
 			builder.ResourceValidators().Mesh,
 			builder.Extensions(),
 			cfg,
+			manager,
+			deployMode,
 		),
 	)
 
