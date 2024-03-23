@@ -24,9 +24,17 @@ import (
 	"math"
 	"path/filepath"
 	"sort"
+)
+
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/spf13/pflag"
 
 	"golang.org/x/exp/constraints"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage/bufimagebuild"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage/bufimageutil"
@@ -37,8 +45,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protosource"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 const (

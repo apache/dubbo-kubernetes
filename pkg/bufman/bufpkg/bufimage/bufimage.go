@@ -18,14 +18,19 @@ package bufimage
 import (
 	"fmt"
 	"sort"
+)
 
+import (
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	imagev1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/image/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 // ImageFile is a Protobuf file within an image.

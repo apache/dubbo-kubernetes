@@ -15,7 +15,9 @@
 
 package bufmoduleconfig
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
+)
 
 // Config is a configuration for build.
 type Config struct {

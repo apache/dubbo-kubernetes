@@ -15,7 +15,9 @@
 
 package bufconnect
 
-import "errors"
+import (
+	"errors"
+)
 
 // AuthError wraps the error returned in the auth provider to add additional context.
 type AuthError struct {

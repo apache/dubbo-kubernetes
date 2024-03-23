@@ -15,7 +15,9 @@
 
 package cmd
 
-import "sigs.k8s.io/controller-runtime/pkg/client"
+import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
 var (
 	// TestInstallFlag and TestCli are uses for black box testing

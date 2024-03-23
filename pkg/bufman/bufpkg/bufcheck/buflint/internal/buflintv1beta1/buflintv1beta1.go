@@ -18,7 +18,9 @@
 // It uses buflintcheck and buflintbuild.
 package buflintv1beta1
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
+)
 
 // VersionSpec is the version specification for v1beta1.
 var VersionSpec = &internal.VersionSpec{

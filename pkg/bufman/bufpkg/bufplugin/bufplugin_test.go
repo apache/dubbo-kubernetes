@@ -17,11 +17,16 @@ package bufplugin
 
 import (
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginconfig"
-	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
+import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginconfig"
+	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 )
 
 func TestPluginToProtoPluginRegistryType(t *testing.T) {

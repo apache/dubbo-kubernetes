@@ -19,11 +19,16 @@ import (
 	"context"
 	"io"
 	"testing"
+)
 
+import (
+	"github.com/stretchr/testify/require"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/bufbreaking/bufbreakingconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/buflint/buflintconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWriteConfigSuccess(t *testing.T) {

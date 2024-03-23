@@ -26,7 +26,9 @@ import (
 	"io"
 	"strings"
 	"text/tabwriter"
+)
 
+import (
 	"go.uber.org/multierr"
 )
 

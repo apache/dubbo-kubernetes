@@ -29,11 +29,18 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+import (
 	"github.com/spf13/cobra"
+
 	"github.com/spf13/pflag"
+
 	"gopkg.in/yaml.v3"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 
 const (

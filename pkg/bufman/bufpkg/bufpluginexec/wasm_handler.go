@@ -23,17 +23,24 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufwasm"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appproto"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
+import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
 	"go.uber.org/multierr"
+
 	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufwasm"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appproto"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
 )
 
 type wasmHandler struct {

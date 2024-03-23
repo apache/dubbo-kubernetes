@@ -17,7 +17,9 @@ package protosource
 
 import (
 	"fmt"
+)
 
+import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 

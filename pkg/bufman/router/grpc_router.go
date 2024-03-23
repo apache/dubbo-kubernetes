@@ -16,20 +16,21 @@
 package router
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net"
+)
 
+import (
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+)
+
+import (
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/handlers/grpc_handlers"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/interceptors"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/reflection"
 )
 
 type GRPCRouter struct {
@@ -45,27 +46,16 @@ type GrpcServer struct {
 	SecureServerPort int
 }
 
-func newGrpcServer(s *provider.CertStorage, config *dubbo_cp.Config) *GRPCRouter {
+func newGrpcServer(config dubbo_cp.Config) *GRPCRouter {
 	router := &GRPCRouter{
 		PlainServerPort:  config.Bufman.Server.GrpcPlainPort,
 		SecureServerPort: config.Bufman.Server.GrpcSecurePort,
-	}
-	pool := x509.NewCertPool()
-	tlsConfig := &tls.Config{
-		GetCertificate: func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			for _, cert := range s.GetTrustedCerts() {
-				pool.AddCert(cert.Cert)
-			}
-			return s.GetServerCert(info.ServerName), nil
-		},
-		ClientCAs:  pool,
-		ClientAuth: tls.VerifyClientCertIfGiven,
 	}
 
 	router.PlainServer = grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors.Auth()))
 	reflection.Register(router.PlainServer)
 
-	router.SecureServer = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.ChainUnaryInterceptor(interceptors.Auth()))
+	router.SecureServer = grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors.Auth()))
 	reflection.Register(router.SecureServer)
 	return router
 }
@@ -117,8 +107,8 @@ func (r *GRPCRouter) Start(stop <-chan struct{}) error {
 	}
 }
 
-func InitGRPCRouter(s *provider.CertStorage, config *dubbo_cp.Config) *GRPCRouter {
-	r := newGrpcServer(s, config)
+func InitGRPCRouter(config dubbo_cp.Config) *GRPCRouter {
+	r := newGrpcServer(config)
 
 	register(r.PlainServer)
 	register(r.SecureServer)

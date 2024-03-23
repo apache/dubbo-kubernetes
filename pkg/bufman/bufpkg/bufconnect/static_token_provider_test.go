@@ -17,9 +17,14 @@ package bufconnect
 
 import (
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+import (
 	"github.com/stretchr/testify/assert"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 
 func TestNewTokenProviderFromContainer(t *testing.T) {

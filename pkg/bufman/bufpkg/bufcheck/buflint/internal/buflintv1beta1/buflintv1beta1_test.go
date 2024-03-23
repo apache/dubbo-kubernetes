@@ -17,7 +17,9 @@ package buflintv1beta1
 
 import (
 	"testing"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal/internaltesting"
 )
 

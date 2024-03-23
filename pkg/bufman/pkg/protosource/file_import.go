@@ -15,7 +15,9 @@
 
 package protosource
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type fileImport struct {
 	descriptor

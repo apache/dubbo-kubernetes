@@ -17,8 +17,11 @@ package bufpluginexec
 
 import (
 	"errors"
+)
 
+import (
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/types/pluginpb"
 )
 

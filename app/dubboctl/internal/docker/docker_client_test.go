@@ -25,10 +25,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
-
+import (
 	"github.com/docker/docker/client"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
 )
 
 // Test that we are creating client in accordance

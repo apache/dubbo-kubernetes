@@ -22,15 +22,6 @@ import (
 type Bufman struct {
 	OpenBufman bool   `yaml:"open_bufman"`
 	Server     Server `yaml:"server"`
-	MySQL      MySQL  `yaml:"mysql"`
-}
-
-func (bufman *Bufman) Sanitize() {
-}
-
-func (bufman *Bufman) Validate() error {
-	// TODO Validate bufman
-	return nil
 }
 
 type Server struct {
@@ -51,18 +42,16 @@ func (s *Server) Validate() error {
 	return nil
 }
 
-type MySQL struct {
-	MysqlDsn           string        `yaml:"mysql_dsn"`
-	MaxOpenConnections int           `yaml:"max_open_connections"`
-	MaxIdleConnections int           `yaml:"max_idle_connections"`
-	MaxLifeTime        time.Duration `yaml:"max_life_time"`
-	MaxIdleTime        time.Duration `yaml:"max_idle_time"`
-}
-
-func (mysql *MySQL) Sanitize() {
-}
-
-func (mysql *MySQL) Validate() error {
-	// TODO Validate mysql
-	return nil
+func DefaultBufmanConfig() Bufman {
+	return Bufman{
+		OpenBufman: false,
+		Server: Server{
+			ServerHost:          "bufman",
+			HTTPPort:            39080,
+			GrpcPlainPort:       39091,
+			GrpcSecurePort:      39092,
+			PageTokenExpireTime: time.Hour,
+			PageTokenSecret:     "12345678",
+		},
+	}
 }

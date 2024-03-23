@@ -15,7 +15,9 @@
 
 package storageos
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
+)
 
 type provider struct {
 	symlinks bool

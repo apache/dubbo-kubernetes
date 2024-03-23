@@ -17,11 +17,16 @@ package bufgraph
 
 import (
 	"context"
+)
 
+import (
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/dag"
-	"go.uber.org/zap"
 )
 
 // Node is a node in a dependency graph.

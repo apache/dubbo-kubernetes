@@ -18,7 +18,9 @@ package search
 import (
 	"context"
 	"sync"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 )
 

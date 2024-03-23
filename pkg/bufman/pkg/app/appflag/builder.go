@@ -20,16 +20,25 @@ import (
 	"fmt"
 	"os"
 	"time"
+)
 
+import (
+	"github.com/pkg/profile"
+
+	"github.com/spf13/pflag"
+
+	"go.opentelemetry.io/otel"
+
+	"go.uber.org/multierr"
+
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/applog"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appverbose"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/observabilityzap"
-	"github.com/pkg/profile"
-	"github.com/spf13/pflag"
-	"go.opentelemetry.io/otel"
-	"go.uber.org/multierr"
-	"go.uber.org/zap"
 )
 
 type builder struct {

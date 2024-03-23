@@ -20,7 +20,13 @@ package buflint
 
 import (
 	"context"
+)
 
+import (
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/buflint/buflintconfig"
@@ -29,7 +35,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
-	"go.uber.org/zap"
 )
 
 // AllFormatStrings are all format strings.

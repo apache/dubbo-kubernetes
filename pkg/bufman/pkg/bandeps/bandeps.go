@@ -18,10 +18,15 @@ package bandeps
 import (
 	"context"
 	"fmt"
+)
 
+import (
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
-	"go.uber.org/zap"
 )
 
 const (

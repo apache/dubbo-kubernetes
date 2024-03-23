@@ -17,11 +17,18 @@ package bufimagemodify
 
 import (
 	"context"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
+import (
 	"go.uber.org/zap"
+
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 )
 
 const (

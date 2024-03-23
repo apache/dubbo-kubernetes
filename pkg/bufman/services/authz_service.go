@@ -18,12 +18,17 @@ package services
 import (
 	"errors"
 	"fmt"
+)
 
+import (
+	"gorm.io/gorm"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/e"
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/mapper"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
-	"gorm.io/gorm"
 )
 
 // AuthorizationService 用户权限验证

@@ -15,7 +15,9 @@
 
 package bufimageutil
 
-import "sort"
+import (
+	"sort"
+)
 
 // sourcePathsRemapTrieNode is a node in a trie. Each node represents the
 // path of a source code location.

@@ -21,7 +21,9 @@ import (
 	"io"
 	"sort"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	lintv1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/lint/v1"
 )

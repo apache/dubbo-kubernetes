@@ -18,7 +18,9 @@ package kube
 import (
 	"strings"
 	"testing"
+)
 
+import (
 	"github.com/stretchr/testify/assert"
 )
 

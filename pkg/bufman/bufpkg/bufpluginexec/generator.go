@@ -17,14 +17,20 @@ package bufpluginexec
 
 import (
 	"context"
+)
 
+import (
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufwasm"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appproto"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type generator struct {

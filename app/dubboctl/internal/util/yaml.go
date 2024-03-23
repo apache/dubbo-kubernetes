@@ -34,9 +34,13 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+)
 
+import (
 	jsonpatch "github.com/evanphx/json-patch/v5"
+
 	"github.com/kylelemons/godebug/diff"
+
 	"sigs.k8s.io/yaml"
 )
 
