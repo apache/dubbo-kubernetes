@@ -74,9 +74,9 @@ func (p *plugin) Customize(rt core_runtime.Runtime) error {
 		return err
 	}
 
-	//if err := addMutators(mgr, rt, simpleConverter); err != nil {
-	//	return err
-	//}
+	if err := addMutators(mgr, rt, simpleConverter); err != nil {
+		return err
+	}
 
 	return nil
 }
