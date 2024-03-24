@@ -104,12 +104,12 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req kube_ctrl.Request) (k
 		return kube_ctrl.Result{}, r.reconcileZoneEgress(ctx, pod, log)
 	}
 
-	// only Pods with injected Dubbo need a Dataplane descriptor
-	injected, _, err := metadata.Annotations(pod.Annotations).GetEnabled(metadata.DubboSidecarInjectedAnnotation)
+	xdsEnable, xdsExist, err := metadata.Annotations(pod.Annotations).GetEnabled(metadata.DubboXdsEnableAnnotation)
 	if err != nil {
 		return kube_ctrl.Result{}, err
 	}
-	if injected {
+
+	if xdsExist && xdsEnable {
 		return kube_ctrl.Result{}, r.reconcileDataplane(ctx, pod, log)
 	}
 
