@@ -180,9 +180,9 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 			return nil
 		},
 	}
-	cmd.PersistentFlags().StringVar(&cfg.Dataplane.Name, "name", cfg.Dataplane.Name, "Name of the Dataplane")
-	cmd.PersistentFlags().StringVar(&cfg.Dataplane.Mesh, "mesh", cfg.Dataplane.Mesh, "Mesh that Dataplane belongs to")
-	cmd.PersistentFlags().StringVar(&cfg.Dataplane.ProxyType, "proxy-type", "dataplane", `type of the Dataplane ("dataplane", "ingress")`)
-	cmd.PersistentFlags().StringVarP(&cfg.DataplaneRuntime.ResourcePath, "dataplane-file", "d", "", "Path to Ingress and Egress template to apply (YAML or JSON)")
+	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.Name, "name", cfg.Dataplane.Name, "Name of the Dataplane")
+	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.Mesh, "mesh", cfg.Dataplane.Mesh, "Mesh that Dataplane belongs to")
+	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.ProxyType, "proxy-type", "dataplane", `type of the Dataplane ("dataplane", "ingress")`)
+	proxyCmd.PersistentFlags().StringVar(&cfg.DataplaneRuntime.ResourcePath, "dataplane-file", "Path to Ingress and Egress template to apply (YAML or JSON)", "data-plane-file")
 	cmd.AddCommand(proxyCmd)
 }
