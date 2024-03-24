@@ -46,7 +46,9 @@
             </transition>
           </router-view>
         </a-layout-content>
-        <a-layout-footer class="layout-footer">todo</a-layout-footer>
+        <a-layout-footer class="layout-footer"
+          >© 2024 The Apache Software Foundation.
+        </a-layout-footer>
       </a-layout>
     </a-layout>
   </div>
@@ -103,11 +105,12 @@ router.beforeEach((to, from, next) => {
     padding: 16px 16px 24px;
     background: #fff;
     overflow-y: auto;
-    max-height: 88vh;
+    height: calc(100vh - 140px);
   }
 
   .layout-footer {
-    height: 40px;
+    height: 30px;
+    text-align: center;
   }
 }
 </style>

@@ -15,14 +15,66 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_tabDemo3">tab3</div>
+  <div class="__container_tabDemo3">
+    <div class="option">
+      <a-button class="btn" @click="refresh"> refresh </a-button>
+      <a-button class="btn" @click="newPageForGrafana"> grafana </a-button>
+    </div>
+    <a-spin class="spin" :spinning="!showIframe">
+      <div class="__container_iframe_container">
+        <iframe v-if="showIframe" id="grafanaIframe" :src="grafanaUrl" frameborder="0"></iframe>
+      </div>
+    </a-spin>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { getApplicationMetricsInfo } from '@/api/service/app'
 
-onMounted(() => {
-  console.log(333)
+let grafanaUrl = ref('')
+let showIframe = ref(true)
+onMounted(async () => {
+  let res = await getApplicationMetricsInfo({})
+  grafanaUrl.value = res.data
 })
+
+function refresh() {
+  showIframe.value = false
+  setTimeout(() => {
+    showIframe.value = true
+  }, 200)
+}
+
+function newPageForGrafana() {
+  window.open(grafanaUrl.value, '_blank')
+}
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.__container_tabDemo3 {
+  .option {
+    padding-left: 16px;
+    .btn {
+      margin-right: 10px;
+    }
+  }
+  :deep(.spin) {
+    margin-top: 30px;
+  }
+  .__container_iframe_container {
+    z-index: 1;
+    position: relative;
+    width: calc(100vw - 332px);
+    height: calc(100vh - 200px);
+    clip-path: inset(20px 10px);
+
+    #grafanaIframe {
+      z-index: 0;
+      top: -112px;
+      position: absolute;
+      width: calc(100vw - 332px);
+      height: calc(100vh - 200px);
+    }
+  }
+}
+</style>
