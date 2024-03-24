@@ -19,6 +19,8 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 	"net/http"
 	"net/url"
@@ -453,6 +455,13 @@ func initializeResourceManager(cfg dubbo_cp.Config, builder *core_runtime.Builde
 			deployMode,
 		),
 	)
+
+	customizableManager.Customize(
+		system.ZoneType,
+		zone.NewZoneManager(builder.ResourceStore(),
+			zone.Validator{Store: builder.ResourceStore()},
+			builder.Config().Store.UnsafeDelete,
+		))
 
 	builder.WithResourceManager(customizableManager)
 

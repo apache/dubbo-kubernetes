@@ -18,6 +18,7 @@
 package k8s
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
 	"github.com/pkg/errors"
 
 	kube_ctrl "sigs.k8s.io/controller-runtime"
@@ -112,6 +113,18 @@ func addValidators(mgr kube_ctrl.Manager, rt core_runtime.Runtime, converter k8s
 	}
 	handler := k8s_webhooks.NewValidatingWebhook(converter, core_registry.Global(), k8s_registry.Global(), rt.Config().Mode, rt.Config().IsFederatedZoneCP(), rt.Config().Multizone.Zone.DisableOriginLabelValidation)
 	composite.AddValidator(handler)
+
+	coreZoneValidator := zone.Validator{Store: rt.ResourceManager()}
+	k8sZoneValidator := k8s_webhooks.NewZoneValidatorWebhook(coreZoneValidator, rt.Config().Store.UnsafeDelete)
+	composite.AddValidator(k8sZoneValidator)
+
+	composite.AddValidator(&k8s_webhooks.PolicyNamespaceValidator{
+		SystemNamespace: rt.Config().Store.Kubernetes.SystemNamespace,
+	})
+
+	composite.AddValidator(&k8s_webhooks.ContainerPatchValidator{
+		SystemNamespace: rt.Config().Store.Kubernetes.SystemNamespace,
+	})
 
 	mgr.GetWebhookServer().Register("/validate-dubbo-io-v1alpha1", composite.IntoWebhook(mgr.GetScheme()))
 
