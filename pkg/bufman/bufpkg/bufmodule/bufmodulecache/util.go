@@ -18,12 +18,17 @@ package bufmodulecache
 import (
 	"context"
 	"fmt"
+)
 
-	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
-
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
+import (
 	"github.com/bufbuild/connect-go"
+
 	"go.uber.org/zap"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
+	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 )
 
 // warnIfDeprecated emits a warning message to logger if the repository

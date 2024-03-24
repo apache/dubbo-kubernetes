@@ -22,10 +22,16 @@ package webhookv1alpha1connect
 import (
 	context "context"
 	errors "errors"
-	v1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/webhook/v1alpha1"
-	connect_go "github.com/bufbuild/connect-go"
 	http "net/http"
 	strings "strings"
+)
+
+import (
+	connect_go "github.com/bufbuild/connect-go"
+)
+
+import (
+	v1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/webhook/v1alpha1"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are

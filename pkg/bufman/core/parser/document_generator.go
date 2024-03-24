@@ -17,13 +17,19 @@ package parser
 
 import (
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleprotocompile"
-	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
+import (
 	"github.com/bufbuild/protocompile/linker"
 	"github.com/bufbuild/protocompile/protoutil"
 	"github.com/bufbuild/protocompile/walk"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleprotocompile"
+	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 )
 
 type DocumentGenerator interface {

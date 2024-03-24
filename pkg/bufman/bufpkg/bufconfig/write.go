@@ -21,16 +21,20 @@ import (
 	"errors"
 	"fmt"
 	"text/template"
+)
 
+import (
+	"gopkg.in/yaml.v3"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/bufbreaking/bufbreakingconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/buflint/buflintconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
-	"gopkg.in/yaml.v3"
 )
 
 // If this is updated, make sure to update docs.buf.build TODO automate this
-
 const (
 	exampleName = "buf.build/acme/weather"
 	// This is only used for `buf mod init`.

@@ -21,11 +21,16 @@ import (
 	"encoding/json"
 	"regexp"
 	"strings"
+)
 
+import (
+	"github.com/spf13/cobra"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appcmd"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/spdx"
-	"github.com/spf13/cobra"
 )
 
 const (

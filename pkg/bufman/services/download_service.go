@@ -19,12 +19,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+)
 
+import (
+	"gorm.io/gorm"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/core/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/e"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/mapper"
 	manifest2 "github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
-	"gorm.io/gorm"
 )
 
 type DownloadService interface {

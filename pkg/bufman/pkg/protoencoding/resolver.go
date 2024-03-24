@@ -17,12 +17,18 @@ package protoencoding
 
 import (
 	"sync"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
+import (
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+
 	"google.golang.org/protobuf/types/dynamicpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 )
 
 func newResolver(fileDescriptors ...protodescriptor.FileDescriptor) (Resolver, error) {

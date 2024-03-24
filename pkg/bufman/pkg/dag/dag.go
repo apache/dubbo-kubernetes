@@ -39,7 +39,6 @@ import (
 // limitations under the License.
 //
 // See https://github.com/stevenle/topsort/blob/master/LICENSE.
-
 // CycleError is an error if the Graph had a cycle.
 type CycleError[Key comparable] struct {
 	Keys []Key

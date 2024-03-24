@@ -17,11 +17,17 @@ package bufimagemodify
 
 import (
 	"context"
+)
 
+import (
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // OptimizeForID is the ID for the optimize_for modifier.

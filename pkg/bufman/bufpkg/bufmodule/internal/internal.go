@@ -18,7 +18,9 @@ package internal
 import (
 	"fmt"
 	"sort"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 )
 
@@ -29,7 +31,6 @@ import (
 //   - All paths are normalized if pathType is Absolute.
 //
 // If sortAndCheckDuplicates is true:
-
 //   - All paths are unique.
 //   - No path contains another path.
 //

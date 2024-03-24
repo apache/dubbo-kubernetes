@@ -19,19 +19,23 @@ import (
 	"errors"
 	"fmt"
 	"os"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
-
+import (
 	"github.com/AlecAivazis/survey/v2"
+
 	"github.com/ory/viper"
+
 	"github.com/spf13/cobra"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 
 // command constructors
 // --------------------
-
 func addRepository(baseCmd *cobra.Command, newClient ClientFactory) {
 	cmd := &cobra.Command{
 		Short:   "Manage installed template repositories",

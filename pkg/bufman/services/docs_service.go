@@ -20,7 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+)
 
+import (
+	"gorm.io/gorm"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/config"
@@ -32,7 +38,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/mapper"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 	manifest2 "github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
-	"gorm.io/gorm"
 )
 
 type DocsService interface {

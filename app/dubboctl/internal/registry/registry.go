@@ -15,7 +15,9 @@
 
 package registry
 
-import "context"
+import (
+	"context"
+)
 
 // Registry is the interface that wraps the basic methods of registry.
 type Registry interface {

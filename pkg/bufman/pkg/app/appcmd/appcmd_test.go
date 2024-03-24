@@ -21,11 +21,17 @@ import (
 	"io"
 	"strings"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+import (
 	"github.com/spf13/pflag"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 
 func TestBasic(t *testing.T) {

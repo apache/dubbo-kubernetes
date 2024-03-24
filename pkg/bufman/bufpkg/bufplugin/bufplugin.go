@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginref"
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"

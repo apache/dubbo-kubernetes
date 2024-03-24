@@ -7,10 +7,12 @@ package dal
 import (
 	"context"
 	"database/sql"
+)
+
+import (
+	"gorm.io/gen"
 
 	"gorm.io/gorm"
-
-	"gorm.io/gen"
 
 	"gorm.io/plugin/dbresolver"
 )

@@ -17,7 +17,9 @@ package httpauth
 
 import (
 	"net/http"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 

@@ -19,7 +19,9 @@ import (
 	"bufio"
 	"io"
 	"strings"
+)
 
+import (
 	"github.com/google/yamlfmt/formatters/basic"
 )
 

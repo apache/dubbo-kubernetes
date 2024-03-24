@@ -33,11 +33,16 @@ import (
 	"strings"
 	"testing"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
-
+import (
 	"github.com/docker/docker/client"
+
 	"golang.org/x/crypto/ssh"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
 )
 
 func TestNewDockerClientWithSSH(t *testing.T) {

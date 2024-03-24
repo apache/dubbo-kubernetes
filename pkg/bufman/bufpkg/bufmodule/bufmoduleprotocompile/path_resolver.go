@@ -20,12 +20,17 @@ import (
 	"fmt"
 	"io"
 	"sync"
+)
 
+import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/data/datawkt"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
-	"go.uber.org/multierr"
 )
 
 // TODO: remove when we remove ModuleFileSet

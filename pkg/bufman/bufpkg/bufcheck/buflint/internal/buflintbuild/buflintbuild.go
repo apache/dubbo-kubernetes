@@ -18,7 +18,9 @@ package buflintbuild
 
 import (
 	"errors"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/buflint/internal/buflintcheck"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"

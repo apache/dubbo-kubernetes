@@ -18,12 +18,19 @@ package bufreflect
 import (
 	"context"
 	"fmt"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
+import (
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
 	"google.golang.org/protobuf/types/dynamicpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 )
 
 // NewMessage returns a new dynamic proto.Message for the fully qualified typeName

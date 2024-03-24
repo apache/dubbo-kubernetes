@@ -50,7 +50,9 @@ import (
 	"io"
 	"sort"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 )
 

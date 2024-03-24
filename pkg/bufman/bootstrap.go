@@ -19,25 +19,26 @@ package bufman
 
 import (
 	"gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 
+	"gorm.io/driver/sqlite"
+
+	"gorm.io/gorm"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/config"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-
-	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/kube"
-	_ "github.com/apache/dubbo-kubernetes/pkg/admin/cache/registry/universal"
 )
 
 func InitConfig(rt core_runtime.Runtime) error {
-	config.Properties = &rt.Config().Bufman
-
+	config.Properties = rt.Config().Bufman
+	config.AdminPort = rt.Config().Admin.Port
 	return nil
 }
 
 func RegisterDatabase(rt core_runtime.Runtime) error {
-	dsn := rt.Config().Bufman.MySQL.MysqlDsn
+	dsn := rt.Config().Store.Mysql.MysqlDsn
 	var db *gorm.DB
 	var err error
 	if dsn == "" {
@@ -69,10 +70,10 @@ func RegisterDatabase(rt core_runtime.Runtime) error {
 		return err
 	}
 
-	rawDB.SetMaxOpenConns(config.Properties.MySQL.MaxOpenConnections)
-	rawDB.SetMaxIdleConns(config.Properties.MySQL.MaxIdleConnections)
-	rawDB.SetConnMaxLifetime(config.Properties.MySQL.MaxLifeTime)
-	rawDB.SetConnMaxIdleTime(config.Properties.MySQL.MaxIdleTime)
+	rawDB.SetMaxOpenConns(rt.Config().Store.Mysql.MaxOpenConnections)
+	rawDB.SetMaxIdleConns(rt.Config().Store.Mysql.MaxIdleConnections)
+	rawDB.SetConnMaxLifetime(rt.Config().Store.Mysql.MaxLifeTime)
+	rawDB.SetConnMaxIdleTime(rt.Config().Store.Mysql.MaxIdleTime)
 
 	return nil
 }

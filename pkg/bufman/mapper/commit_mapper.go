@@ -17,11 +17,16 @@ package mapper
 
 import (
 	"errors"
+)
 
+import (
+	"gorm.io/gorm"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/dal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
-	"gorm.io/gorm"
 )
 
 type CommitMapper interface {

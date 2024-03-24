@@ -26,13 +26,21 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+)
 
+import (
+	"github.com/bufbuild/connect-go"
+
+	"go.uber.org/zap"
+
+	"golang.org/x/net/http2"
+
+	"google.golang.org/protobuf/proto"
+)
+
+import (
 	studiov1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/studio/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
-	"github.com/bufbuild/connect-go"
-	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"google.golang.org/protobuf/proto"
 )
 
 // MaxMessageSizeBytesDefault determines the maximum number of bytes to read

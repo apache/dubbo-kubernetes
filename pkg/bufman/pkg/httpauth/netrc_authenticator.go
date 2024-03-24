@@ -18,7 +18,9 @@ package httpauth
 import (
 	"errors"
 	"net/http"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/netrc"
 )

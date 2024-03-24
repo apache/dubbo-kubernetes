@@ -23,8 +23,11 @@ import (
 	"fmt"
 	"io"
 	"strings"
+)
 
+import (
 	"go.uber.org/multierr"
+
 	"gopkg.in/yaml.v3"
 )
 

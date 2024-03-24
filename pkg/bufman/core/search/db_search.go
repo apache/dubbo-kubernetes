@@ -17,7 +17,9 @@ package search
 
 import (
 	"context"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/dal"
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"

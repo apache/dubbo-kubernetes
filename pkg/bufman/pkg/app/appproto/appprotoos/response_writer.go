@@ -21,16 +21,23 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+)
 
+import (
+	"go.uber.org/multierr"
+
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appproto"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storagearchive"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storagemem"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
-	"go.uber.org/multierr"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 // Constants used to create .jar files.

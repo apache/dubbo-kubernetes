@@ -15,10 +15,11 @@
 
 package bandeps
 
-import "sync"
+import (
+	"sync"
+)
 
 // You can never hold more than one key at a time! We do not enforce lock ordering!
-
 type keyRWLock struct {
 	keyToRWLock map[string]*sync.RWMutex
 	lock        sync.Mutex

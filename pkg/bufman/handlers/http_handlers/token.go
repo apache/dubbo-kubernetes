@@ -17,10 +17,15 @@ package http_handlers
 
 import (
 	"net/http"
+)
 
+import (
+	"github.com/gin-gonic/gin"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/controllers"
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
-	"github.com/gin-gonic/gin"
 )
 
 type tokenGroup struct {
