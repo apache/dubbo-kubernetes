@@ -25,10 +25,11 @@ spec:
       app: dubbo-samples-apiserver-consumer
   template:
     metadata:
+      annotations:
+        dubbo.io/xds-enable: enabled
       labels:
         app: dubbo-samples-apiserver-consumer
     spec:
-      serviceAccountName: dubbo-sa
       containers:
         - name: server
           image: apache/dubbo-demo:dubbo-samples-apiserver-consumer_0.0.1
