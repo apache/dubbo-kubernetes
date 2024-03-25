@@ -20,6 +20,7 @@ package traditional
 import (
 	"context"
 	"fmt"
+	"github.com/dubbogo/go-zookeeper/zk"
 	"sync"
 )
 
@@ -582,6 +583,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		path := mesh_proto.GetRoutePath(id, consts.TagRoute)
 		cfg, err := c.governance.GetConfig(path)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		if cfg != "" {
@@ -606,6 +610,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		path := mesh_proto.GetRoutePath(id, consts.ConditionRoute)
 		cfg, err := c.governance.GetConfig(path)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		if cfg != "" {
@@ -630,6 +637,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		path := mesh_proto.GetOverridePath(id)
 		cfg, err := c.governance.GetConfig(path)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		if cfg != "" {
@@ -646,6 +656,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		key := opts.Name
 		set, err := c.metadataReport.GetServiceAppMapping(key, mappingGroup, nil)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		meta := &resourceMetaObject{
@@ -672,6 +685,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		if revision == "" {
 			children, err := c.regClient.GetChildren(getMetadataPath(app))
 			if err != nil {
+				if errors.Is(err, zk.ErrNoNode) {
+					return nil
+				}
 				return err
 			}
 			revision = children[0]
@@ -679,6 +695,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		id := dubbo_identifier.NewSubscriberMetadataIdentifier(app, revision)
 		appMetadata, err := c.metadataReport.GetAppMetadata(id)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		metaData := resource.GetSpec().(*mesh_proto.MetaData)
@@ -704,6 +723,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		path := GenerateCpGroupPath(string(resource.Descriptor().Name), opts.Name)
 		value, err := c.regClient.GetContent(path)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		if err := core_model.FromYAML(value, resource.GetSpec()); err != nil {
@@ -742,6 +764,9 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		// 1. 首先获取到所有到key
 		keys, err := c.metadataReport.GetConfigKeysByGroup(mappingGroup)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		for _, key := range keys.Values() {
@@ -749,6 +774,9 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			// 通过key得到所有的mapping映射关系
 			set, err := c.metadataReport.GetServiceAppMapping(key, mappingGroup, nil)
 			if err != nil {
+				if errors.Is(err, zk.ErrNoNode) {
+					return nil
+				}
 				return err
 			}
 			meta := &resourceMetaObject{
@@ -774,6 +802,9 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		rootDir := getMetadataPath()
 		appNames, err := c.regClient.GetChildren(rootDir)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		for _, app := range appNames {
@@ -781,6 +812,9 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			path := getMetadataPath(app)
 			revisions, err := c.regClient.GetChildren(path)
 			if err != nil {
+				if errors.Is(err, zk.ErrNoNode) {
+					return nil
+				}
 				return err
 			}
 			if revisions[0] == "provider" ||
@@ -791,6 +825,9 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				id := dubbo_identifier.NewSubscriberMetadataIdentifier(app, revision)
 				appMetadata, err := c.metadataReport.GetAppMetadata(id)
 				if err != nil {
+					if errors.Is(err, zk.ErrNoNode) {
+						return nil
+					}
 					return err
 				}
 				item := resources.NewItem()
@@ -830,12 +867,18 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		rootDir := getDubboCpPath(string(resources.GetItemType()))
 		names, err := c.regClient.GetChildren(rootDir)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		for _, name := range names {
 			path := getDubboCpPath(string(resources.GetItemType()), name)
 			bytes, err := c.regClient.GetContent(path)
 			if err != nil {
+				if errors.Is(err, zk.ErrNoNode) {
+					return nil
+				}
 				return err
 			}
 			item := resources.NewItem()

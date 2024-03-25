@@ -25,10 +25,6 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 	"dubbo.apache.org/dubbo-go/v3/registry"
-
-	gozk "github.com/dubbogo/go-zookeeper/zk"
-
-	perrors "github.com/pkg/errors"
 )
 
 const group = "dubbo"
@@ -158,9 +154,6 @@ func (zk *ZkGovImpl) GetConfig(key string) (string, error) {
 	}
 	rule, err := zk.configCenter.GetRule(key, config_center.WithGroup(zk.group))
 	if err != nil {
-		if perrors.Is(err, gozk.ErrNoNode) {
-			return "", &RuleNotFound{err}
-		}
 		return "", err
 	}
 	return rule, nil
@@ -173,9 +166,6 @@ func (zk *ZkGovImpl) SetConfig(key string, value string) error {
 	}
 	err := zk.configCenter.PublishConfig(key, zk.group, value)
 	if err != nil {
-		if perrors.Is(err, gozk.ErrNodeExists) {
-			return &RuleExists{err}
-		}
 		return err
 	}
 	return nil
