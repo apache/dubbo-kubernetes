@@ -20,9 +20,15 @@ package webhooks
 import (
 	"context"
 	"fmt"
+)
+
+import (
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 type PolicyNamespaceValidator struct {

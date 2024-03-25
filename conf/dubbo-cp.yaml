@@ -19,6 +19,6 @@ mode: test
 runtime:
   kubernetes:
     admissionServer:
-      address: 127.0.0.1
+      address: 10.23.132.51
       port: 5443
       certDir: test/cert

@@ -25,6 +25,8 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 	"dubbo.apache.org/dubbo-go/v3/registry"
+
+	"github.com/dubbogo/go-zookeeper/zk"
 )
 
 const group = "dubbo"
@@ -148,24 +150,30 @@ type ZkGovImpl struct {
 }
 
 // GetConfig transform ZK specified 'node does not exist' err into unified admin rule error
-func (zk *ZkGovImpl) GetConfig(key string) (string, error) {
+func (c *ZkGovImpl) GetConfig(key string) (string, error) {
 	if key == "" {
 		return "", errors.New("key is empty")
 	}
-	rule, err := zk.configCenter.GetRule(key, config_center.WithGroup(zk.group))
+	rule, err := c.configCenter.GetRule(key, config_center.WithGroup(c.group))
 	if err != nil {
+		if errors.Is(err, zk.ErrNoNode) {
+			return "", nil
+		}
 		return "", err
 	}
 	return rule, nil
 }
 
 // SetConfig transform ZK specified 'node already exist' err into unified admin rule error
-func (zk *ZkGovImpl) SetConfig(key string, value string) error {
+func (c *ZkGovImpl) SetConfig(key string, value string) error {
 	if key == "" || value == "" {
 		return errors.New("key or value is empty")
 	}
-	err := zk.configCenter.PublishConfig(key, zk.group, value)
+	err := c.configCenter.PublishConfig(key, c.group, value)
 	if err != nil {
+		if errors.Is(err, zk.ErrNoNode) {
+			return nil
+		}
 		return err
 	}
 	return nil

@@ -19,16 +19,17 @@ package metadata
 
 import (
 	"context"
-	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
-	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
 	"github.com/pkg/errors"
+
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"

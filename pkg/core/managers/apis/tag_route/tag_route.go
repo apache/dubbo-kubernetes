@@ -18,10 +18,13 @@
 package tag_route
 
 import (
+	kube_ctrl "sigs.k8s.io/controller-runtime"
+)
+
+import (
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
-	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type tagRouteManager struct {

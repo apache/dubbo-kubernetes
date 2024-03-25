@@ -19,18 +19,23 @@ package zone_test
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	"time"
+)
 
+import (
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
+	. "github.com/onsi/gomega"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/plugins/resources/memory"
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 var _ = Describe("Zone Manager", func() {

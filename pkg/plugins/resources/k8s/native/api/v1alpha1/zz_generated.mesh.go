@@ -120,7 +120,7 @@ func init() {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
 type Dataplane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -136,7 +136,7 @@ type Dataplane struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Cluster
 type DataplaneList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -190,7 +190,7 @@ func (cb *Dataplane) SetSpec(spec core_model.ResourceSpec) {
 }
 
 func (cb *Dataplane) Scope() model.Scope {
-	return model.ScopeCluster
+	return model.ScopeNamespace
 }
 
 func (l *DataplaneList) GetItems() []model.KubernetesObject {
@@ -896,7 +896,7 @@ func init() {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
 type ZoneEgress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -912,7 +912,7 @@ type ZoneEgress struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Cluster
 type ZoneEgressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -966,7 +966,7 @@ func (cb *ZoneEgress) SetSpec(spec core_model.ResourceSpec) {
 }
 
 func (cb *ZoneEgress) Scope() model.Scope {
-	return model.ScopeCluster
+	return model.ScopeNamespace
 }
 
 func (l *ZoneEgressList) GetItems() []model.KubernetesObject {
@@ -993,7 +993,104 @@ func init() {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
+type ZoneEgressInsight struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Mesh is the name of the dubbo mesh this resource belongs to.
+	// It may be omitted for cluster-scoped resources.
+	//
+	// +kubebuilder:validation:Optional
+	Mesh string `json:"mesh,omitempty"`
+	// Spec is the specification of the Dubbo ZoneEgressInsight resource.
+	// +kubebuilder:validation:Optional
+	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
+type ZoneEgressInsightList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ZoneEgressInsight `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&ZoneEgressInsight{}, &ZoneEgressInsightList{})
+}
+
+func (cb *ZoneEgressInsight) GetObjectMeta() *metav1.ObjectMeta {
+	return &cb.ObjectMeta
+}
+
+func (cb *ZoneEgressInsight) SetObjectMeta(m *metav1.ObjectMeta) {
+	cb.ObjectMeta = *m
+}
+
+func (cb *ZoneEgressInsight) GetMesh() string {
+	return cb.Mesh
+}
+
+func (cb *ZoneEgressInsight) SetMesh(mesh string) {
+	cb.Mesh = mesh
+}
+
+func (cb *ZoneEgressInsight) GetSpec() (core_model.ResourceSpec, error) {
+	spec := cb.Spec
+	m := mesh_proto.ZoneEgressInsight{}
+
+	if spec == nil || len(spec.Raw) == 0 {
+		return &m, nil
+	}
+
+	err := util_proto.FromJSON(spec.Raw, &m)
+	return &m, err
+}
+
+func (cb *ZoneEgressInsight) SetSpec(spec core_model.ResourceSpec) {
+	if spec == nil {
+		cb.Spec = nil
+		return
+	}
+
+	s, ok := spec.(*mesh_proto.ZoneEgressInsight)
+	if !ok {
+		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
+	}
+
+	cb.Spec = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
+}
+
+func (cb *ZoneEgressInsight) Scope() model.Scope {
+	return model.ScopeNamespace
+}
+
+func (l *ZoneEgressInsightList) GetItems() []model.KubernetesObject {
+	result := make([]model.KubernetesObject, len(l.Items))
+	for i := range l.Items {
+		result[i] = &l.Items[i]
+	}
+	return result
+}
+
+func init() {
+	registry.RegisterObjectType(&mesh_proto.ZoneEgressInsight{}, &ZoneEgressInsight{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "ZoneEgressInsight",
+		},
+	})
+	registry.RegisterListType(&mesh_proto.ZoneEgressInsight{}, &ZoneEgressInsightList{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "ZoneEgressInsightList",
+		},
+	})
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
 type ZoneIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -1009,7 +1106,7 @@ type ZoneIngress struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Cluster
 type ZoneIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -1063,7 +1160,7 @@ func (cb *ZoneIngress) SetSpec(spec core_model.ResourceSpec) {
 }
 
 func (cb *ZoneIngress) Scope() model.Scope {
-	return model.ScopeCluster
+	return model.ScopeNamespace
 }
 
 func (l *ZoneIngressList) GetItems() []model.KubernetesObject {

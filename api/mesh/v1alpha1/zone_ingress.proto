@@ -18,6 +18,7 @@ message ZoneIngress {
   option (dubbo.mesh.resource).ws.name = "zoneingress";
   option (dubbo.mesh.resource).ws.plural = "zoneingresses";
   option (dubbo.mesh.resource).allow_to_inspect = true;
+  option (dubbo.mesh.resource).scope_namespace = true;
 
   string zone = 1;
 

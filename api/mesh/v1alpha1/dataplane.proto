@@ -19,6 +19,7 @@ message Dataplane {
   option (dubbo.mesh.resource).dds.send_to_zone = true;
   option (dubbo.mesh.resource).ws.name = "dataplane";
   option (dubbo.mesh.resource).ws.plural = "dataplanes";
+  option (dubbo.mesh.resource).scope_namespace = true;
   option (dubbo.mesh.resource).allow_to_inspect = true;
 
   // Networking describes inbound and outbound interfaces of a data plane proxy.

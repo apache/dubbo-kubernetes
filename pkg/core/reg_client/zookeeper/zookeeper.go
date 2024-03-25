@@ -52,6 +52,9 @@ type zookeeperRegClient struct {
 func (z *zookeeperRegClient) GetChildren(path string) ([]string, error) {
 	children, err := z.client.GetChildren(path)
 	if err != nil {
+		if errors.Is(err, zk.ErrNoNode) {
+			return []string{}, nil
+		}
 		return nil, err
 	}
 	return children, nil
@@ -60,6 +63,9 @@ func (z *zookeeperRegClient) GetChildren(path string) ([]string, error) {
 func (z *zookeeperRegClient) SetContent(path string, value []byte) error {
 	err := z.client.CreateWithValue(path, value)
 	if err != nil {
+		if errors.Is(err, zk.ErrNoNode) {
+			return nil
+		}
 		if errors.Is(err, zk.ErrNodeExists) {
 			_, stat, _ := z.client.GetContent(path)
 			_, setErr := z.client.SetContent(path, value, stat.Version)
@@ -76,6 +82,9 @@ func (z *zookeeperRegClient) SetContent(path string, value []byte) error {
 func (z *zookeeperRegClient) GetContent(path string) ([]byte, error) {
 	content, _, err := z.client.GetContent(path)
 	if err != nil {
+		if errors.Is(err, zk.ErrNoNode) {
+			return []byte{}, nil
+		}
 		return []byte{}, errors.WithStack(err)
 	}
 	return content, nil
@@ -84,6 +93,9 @@ func (z *zookeeperRegClient) GetContent(path string) ([]byte, error) {
 func (z *zookeeperRegClient) DeleteContent(path string) error {
 	err := z.client.Delete(path)
 	if err != nil {
+		if errors.Is(err, zk.ErrNoNode) {
+			return nil
+		}
 		return errors.WithStack(err)
 	}
 	return nil
@@ -96,7 +108,7 @@ func (mf *zookeeperRegClientFactory) CreateRegClient(url *common.URL) reg_client
 		"zookeeperRegClient",
 		strings.Split(url.Location, ","),
 		false,
-		gxzookeeper.WithZkTimeOut(url.GetParamDuration(consts.TimeoutKey, "15s")),
+		gxzookeeper.WithZkTimeOut(url.GetParamDuration(consts.TimeoutKey, "25s")),
 	)
 	if err != nil {
 		panic(err)

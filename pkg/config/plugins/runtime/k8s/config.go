@@ -40,7 +40,7 @@ var logger = core.Log.WithName("kubernetes-config")
 func DefaultKubernetesRuntimeConfig() *KubernetesRuntimeConfig {
 	return &KubernetesRuntimeConfig{
 		AdmissionServer: AdmissionServerConfig{
-			Address: "localhost",
+			Address: "10.23.132.51",
 			Port:    5443,
 		},
 		MarshalingCacheExpirationTime: config_types.Duration{Duration: 5 * time.Minute},

@@ -4,17 +4,17 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: dataplanes.dubbo.io
+  name: zoneegresses.dubbo.io
 spec:
   group: dubbo.io
   names:
     categories:
     - dubbo
-    kind: Dataplane
-    listKind: DataplaneList
-    plural: dataplanes
-    singular: dataplane
-  scope: Cluster
+    kind: ZoneEgress
+    listKind: ZoneEgressList
+    plural: zoneegresses
+    singular: zoneegress
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
@@ -43,7 +43,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec is the specification of the Dubbo Dataplane resource.
+            description: Spec is the specification of the Dubbo ZoneEgress resource.
             x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true

@@ -19,17 +19,18 @@ package mesh
 
 import (
 	"context"
-	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
-	kube_ctrl "sigs.k8s.io/controller-runtime"
 	"time"
 )
 
 import (
 	"github.com/pkg/errors"
+
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	config_store "github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"

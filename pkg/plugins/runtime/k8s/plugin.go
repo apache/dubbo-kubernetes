@@ -18,7 +18,6 @@
 package k8s
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
 	"github.com/pkg/errors"
 
 	kube_ctrl "sigs.k8s.io/controller-runtime"
@@ -29,12 +28,12 @@ import (
 import (
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	core_registry "github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
 	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
-	"github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s"
 	k8s_registry "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/registry"
 	k8s_controllers "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/controllers"
 	k8s_webhooks "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/webhooks"
@@ -70,14 +69,14 @@ func (p *plugin) Customize(rt core_runtime.Runtime) error {
 
 	// Mutators and Validators convert resources from Request (not from the Store)
 	// these resources doesn't have ResourceVersion, we can't cache them
-	simpleConverter := k8s.NewSimpleConverter()
-	if err := addValidators(mgr, rt, simpleConverter); err != nil {
-		return err
-	}
-
-	if err := addMutators(mgr, rt, simpleConverter); err != nil {
-		return err
-	}
+	//simpleConverter := k8s.NewSimpleConverter()
+	//if err := addValidators(mgr, rt, simpleConverter); err != nil {
+	//	return err
+	//}
+	//
+	//if err := addMutators(mgr, rt, simpleConverter); err != nil {
+	//	return err
+	//}
 
 	return nil
 }

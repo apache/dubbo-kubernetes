@@ -4,17 +4,17 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: zoneingresses.dubbo.io
+  name: zoneegressinsights.dubbo.io
 spec:
   group: dubbo.io
   names:
     categories:
     - dubbo
-    kind: ZoneIngress
-    listKind: ZoneIngressList
-    plural: zoneingresses
-    singular: zoneingress
-  scope: Cluster
+    kind: ZoneEgressInsight
+    listKind: ZoneEgressInsightList
+    plural: zoneegressinsights
+    singular: zoneegressinsight
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
@@ -43,7 +43,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec is the specification of the Dubbo ZoneIngress resource.
+            description: Spec is the specification of the Dubbo ZoneEgressInsight
+              resource.
             x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
