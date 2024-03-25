@@ -32,7 +32,7 @@ type ServiceValidator struct {
 	Decoder *admission.Decoder
 }
 
-// Handle admits a Service only if Kuma-specific annotations have proper values.
+// Handle admits a Service only if Dubbo-specific annotations have proper values.
 func (v *ServiceValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	svc := &kube_core.Service{}
 
