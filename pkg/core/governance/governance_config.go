@@ -19,13 +19,14 @@ package governance
 
 import (
 	"errors"
-	"github.com/dubbogo/go-zookeeper/zk"
 )
 
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 	"dubbo.apache.org/dubbo-go/v3/registry"
+
+	"github.com/dubbogo/go-zookeeper/zk"
 )
 
 const group = "dubbo"

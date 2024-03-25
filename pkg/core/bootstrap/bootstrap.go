@@ -19,12 +19,8 @@ package bootstrap
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
-	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 	"net/http"
 	"net/url"
-	kube_ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 	"sync"
 )
@@ -36,6 +32,8 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 
 	"github.com/pkg/errors"
+
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
@@ -57,9 +55,11 @@ import (
 	mesh_managers "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/mesh"
 	metadata_managers "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/metadata"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/tag_route"
+	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	dubbo_registry "github.com/apache/dubbo-kubernetes/pkg/core/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
@@ -71,6 +71,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/intercp"
 	"github.com/apache/dubbo-kubernetes/pkg/intercp/catalog"
 	"github.com/apache/dubbo-kubernetes/pkg/intercp/envoyadmin"
+	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 	mesh_cache "github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 	xds_server "github.com/apache/dubbo-kubernetes/pkg/xds/server"

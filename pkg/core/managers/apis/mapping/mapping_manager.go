@@ -19,11 +19,14 @@ package mapping
 
 import (
 	"context"
-	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
+)
+
+import (
 	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"

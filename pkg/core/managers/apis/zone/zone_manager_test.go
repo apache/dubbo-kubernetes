@@ -18,8 +18,11 @@
 package zone_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"testing"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 
 func TestZoneManager(t *testing.T) {

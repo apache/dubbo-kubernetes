@@ -14,7 +14,7 @@ spec:
     listKind: ZoneIngressList
     plural: zoneingresses
     singular: zoneingress
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

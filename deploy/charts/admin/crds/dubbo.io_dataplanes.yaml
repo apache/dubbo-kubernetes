@@ -14,7 +14,7 @@ spec:
     listKind: DataplaneList
     plural: dataplanes
     singular: dataplane
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

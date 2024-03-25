@@ -14,7 +14,7 @@ spec:
     listKind: ZoneEgressList
     plural: zoneegresses
     singular: zoneegress
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

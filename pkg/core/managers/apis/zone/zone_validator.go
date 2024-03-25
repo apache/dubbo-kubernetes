@@ -19,11 +19,17 @@ package zone
 
 import (
 	"context"
+)
+
+import (
+	"github.com/pkg/errors"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
-	"github.com/pkg/errors"
 )
 
 type Validator struct {
