@@ -19,6 +19,7 @@ package test
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
@@ -26,6 +27,9 @@ import (
 )
 
 func Setup(rt core_runtime.Runtime) error {
+	if rt.GetDeployMode() == core.KubernetesMode {
+		return nil
+	}
 	// 测试mapping资源
 	if err := testMapping(rt); err != nil {
 		return err
