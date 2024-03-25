@@ -132,6 +132,10 @@ func (m *dataplaneManager) setInboundsClusterTag(dp *core_mesh.DataplaneResource
 }
 
 func (m *dataplaneManager) setHealth(dp *core_mesh.DataplaneResource) {
+	if m.zone == "" || dp.Spec.Networking == nil {
+		return
+	}
+
 	for _, inbound := range dp.Spec.Networking.Inbound {
 		if inbound.ServiceProbe != nil {
 			inbound.State = mesh_proto.Dataplane_Networking_Inbound_NotReady
@@ -143,4 +147,9 @@ func (m *dataplaneManager) setHealth(dp *core_mesh.DataplaneResource) {
 	}
 }
 
-func (m *dataplaneManager) setExtensions(dp *core_mesh.DataplaneResource) {}
+func (m *dataplaneManager) setExtensions(dp *core_mesh.DataplaneResource) {
+	if m.zone == "" || dp.Spec.Networking == nil {
+		return
+	}
+
+}

@@ -45,6 +45,8 @@ const (
 	// which is crucial for Multizone communication
 	DubboEgressAnnotation = "dubbo.io/egress"
 
+	DubboXdsEnableAnnotation = "dubbo.io/xds-enable"
+
 	// DubboSidecarDrainTime allows to specify drain time of Dubbo DP sidecar.
 	DubboSidecarDrainTime = "dubbo.io/sidecar-drain-time"
 
