@@ -19,17 +19,14 @@ package test
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"strings"
 )
 
 func Setup(rt core_runtime.Runtime) error {
-	if rt.GetDeployMode() == core.KubernetesMode {
-		return nil
-	}
 	// 测试mapping资源
 	if err := testMapping(rt); err != nil {
 		return err
@@ -65,19 +62,6 @@ func testDataplane(rt core_runtime.Runtime) error {
 // metadata资源没有删除能力
 func testMetadata(rt core_runtime.Runtime) error {
 	manager := rt.ResourceManager()
-	metadata1 := mesh.NewMetaDataResource()
-	// get
-	if err := manager.Get(rt.AppContext(), metadata1, store.GetByApplication("dubbo-springboot-demo-provider")); err != nil {
-		return err
-	}
-
-	// list
-	metadataList := &mesh.MetaDataResourceList{}
-
-	if err := manager.List(rt.AppContext(), metadataList); err != nil {
-		return err
-	}
-
 	// create
 	metadata2 := mesh.NewMetaDataResource()
 	err := metadata2.SetSpec(&mesh_proto.MetaData{
@@ -92,7 +76,22 @@ func testMetadata(rt core_runtime.Runtime) error {
 	if err != nil {
 		return err
 	}
-	if err := manager.Create(rt.AppContext(), metadata2); err != nil {
+	if err := manager.Create(rt.AppContext(), metadata2, store.CreateBy(core_model.ResourceKey{
+		Name: metadata2.Spec.App,
+	})); err != nil {
+		return err
+	}
+
+	metadata1 := mesh.NewMetaDataResource()
+	// get
+	if err := manager.Get(rt.AppContext(), metadata1, store.GetByApplication("dubbo-springboot-demo-provider")); err != nil {
+		return err
+	}
+
+	// list
+	metadataList := &mesh.MetaDataResourceList{}
+
+	if err := manager.List(rt.AppContext(), metadataList); err != nil {
 		return err
 	}
 
@@ -119,14 +118,6 @@ func testMetadata(rt core_runtime.Runtime) error {
 // mapping资源没有删除功能
 func testMapping(rt core_runtime.Runtime) error {
 	manager := rt.ResourceManager()
-	// mapping test
-	mapping1 := mesh.NewMappingResource()
-	// get
-	if err := manager.Get(rt.AppContext(), mapping1, store.GetBy(core_model.ResourceKey{
-		Name: "org.apache.dubbo.springboot.demo.DemoService",
-	})); err != nil {
-		return err
-	}
 
 	mapping2 := mesh.NewMappingResource()
 	err := mapping2.SetSpec(&mesh_proto.Mapping{
@@ -141,7 +132,18 @@ func testMapping(rt core_runtime.Runtime) error {
 	}
 
 	// create
-	if err := manager.Create(rt.AppContext(), mapping2); err != nil {
+	if err := manager.Create(rt.AppContext(), mapping2, store.CreateBy(core_model.ResourceKey{
+		Name: strings.ToLower(strings.ReplaceAll(mapping2.Spec.InterfaceName, ".", "-")),
+	})); err != nil {
+		return err
+	}
+
+	// mapping test
+	mapping1 := mesh.NewMappingResource()
+	// get
+	if err := manager.Get(rt.AppContext(), mapping1, store.GetBy(core_model.ResourceKey{
+		Name: strings.ToLower(strings.ReplaceAll("org.apache.dubbo.springboot.demo.DemoService1", ".", "-")),
+	})); err != nil {
 		return err
 	}
 
