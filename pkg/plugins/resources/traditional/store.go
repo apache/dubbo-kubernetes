@@ -652,6 +652,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			}
 			return err
 		}
+
 		meta := &resourceMetaObject{
 			Name: opts.Name,
 			Mesh: opts.Mesh,
