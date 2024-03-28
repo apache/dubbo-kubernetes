@@ -85,6 +85,7 @@ func testDataplane(rt core_runtime.Runtime) error {
 		if err := manager.Get(rt.AppContext(), dataplaneResource,
 			store.GetBy(core_model.ResourceKey{
 				Name: dataplaneList.Items[0].Meta.GetName(),
+				Mesh: "default",
 			})); err != nil {
 			return err
 		}
@@ -112,6 +113,7 @@ func testMetadata(rt core_runtime.Runtime) error {
 	}
 	if err := manager.Create(rt.AppContext(), metadata2, store.CreateBy(core_model.ResourceKey{
 		Name: metadata2.Spec.App + "-" + metadata2.Spec.Revision,
+		Mesh: "default",
 	})); err != nil {
 		return err
 	}
@@ -120,6 +122,7 @@ func testMetadata(rt core_runtime.Runtime) error {
 	// get
 	if err := manager.Get(rt.AppContext(), metadata1, store.GetBy(core_model.ResourceKey{
 		Name: metadata2.Spec.App + "-" + metadata2.Spec.Revision,
+		Mesh: "default",
 	})); err != nil {
 		return err
 	}
@@ -171,6 +174,7 @@ func testMapping(rt core_runtime.Runtime) error {
 	// create
 	if err := manager.Create(rt.AppContext(), mapping2, store.CreateBy(core_model.ResourceKey{
 		Name: strings.ToLower(strings.ReplaceAll(mapping2.Spec.InterfaceName, ".", "-")),
+		Mesh: "default",
 	})); err != nil {
 		return err
 	}
@@ -180,6 +184,7 @@ func testMapping(rt core_runtime.Runtime) error {
 	// get
 	if err := manager.Get(rt.AppContext(), mapping1, store.GetBy(core_model.ResourceKey{
 		Name: strings.ToLower(strings.ReplaceAll("org.apache.dubbo.springboot.demo.DemoService1", ".", "-")),
+		Mesh: "default",
 	})); err != nil {
 		return err
 	}
