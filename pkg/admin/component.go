@@ -26,7 +26,8 @@ import (
 var adminServerLog = core.Log.WithName("admin")
 
 func Setup(rt core_runtime.Runtime) error {
-	adminServer := server.NewAdminServer(*rt.Config().Admin).InitHTTPRouter()
+	adminServer := server.NewAdminServer(*rt.Config().Admin).
+		InitHTTPRouter()
 	if err := rt.Add(adminServer); err != nil {
 		adminServerLog.Error(err, "fail to start the admin server")
 		return err
