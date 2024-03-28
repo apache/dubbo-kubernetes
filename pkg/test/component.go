@@ -77,11 +77,14 @@ func testDataplane(rt core_runtime.Runtime) error {
 		return err
 	}
 
-	// get
-	if err := manager.Get(rt.AppContext(), dataplaneResource,
-		store.GetByApplication("dubbo-springboot-demo-provider"),
-		store.GetByRevision("bdc0958191bba7a0f050a32709ee1262")); err != nil {
-		return err
+	if len(dataplaneList.Items) > 0 {
+		// get
+		if err := manager.Get(rt.AppContext(), dataplaneResource,
+			store.GetBy(core_model.ResourceKey{
+				Name: dataplaneList.Items[0].Meta.GetName(),
+			})); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -105,14 +108,16 @@ func testMetadata(rt core_runtime.Runtime) error {
 		return err
 	}
 	if err := manager.Create(rt.AppContext(), metadata2, store.CreateBy(core_model.ResourceKey{
-		Name: metadata2.Spec.App,
+		Name: metadata2.Spec.App + "-" + metadata2.Spec.Revision,
 	})); err != nil {
 		return err
 	}
 
 	metadata1 := mesh.NewMetaDataResource()
 	// get
-	if err := manager.Get(rt.AppContext(), metadata1, store.GetByApplication("dubbo-springboot-demo-provider")); err != nil {
+	if err := manager.Get(rt.AppContext(), metadata1, store.GetBy(core_model.ResourceKey{
+		Name: metadata2.Spec.App + "-" + metadata2.Spec.Revision,
+	})); err != nil {
 		return err
 	}
 
@@ -125,6 +130,7 @@ func testMetadata(rt core_runtime.Runtime) error {
 
 	// update
 	metadata3 := mesh.NewMetaDataResource()
+	metadata3.SetMeta(metadata1.GetMeta())
 	err = metadata3.SetSpec(&mesh_proto.MetaData{
 		App:      "dubbo-springboot-demo-lixinyang",
 		Revision: "bdc0958191bba7a0f050a32709ee1111",
@@ -183,6 +189,7 @@ func testMapping(rt core_runtime.Runtime) error {
 	}
 
 	mapping3 := mesh.NewMappingResource()
+	mapping3.SetMeta(mapping1.GetMeta())
 	err = mapping3.SetSpec(&mesh_proto.Mapping{
 		Zone:          "zone2",
 		InterfaceName: "org.apache.dubbo.springboot.demo.DemoService1",

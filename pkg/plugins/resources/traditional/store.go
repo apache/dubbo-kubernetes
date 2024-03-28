@@ -20,6 +20,7 @@ package traditional
 import (
 	"context"
 	"fmt"
+	"github.com/dubbogo/go-zookeeper/zk"
 	"sync"
 )
 
@@ -47,7 +48,6 @@ import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
-	"github.com/apache/dubbo-kubernetes/pkg/plugins/util/ccache"
 )
 
 const (
@@ -555,9 +555,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 
 	switch resource.Descriptor().Name {
 	case mesh.DataplaneType:
-		app := opts.Labels[mesh_proto.Application]
-		revision := opts.Labels[mesh_proto.Revision]
-		key := ccache.GetDataplaneKey(app, revision)
+		key := opts.Name
 		value, ok := c.dCache.Load(key)
 		if !ok {
 			return nil
@@ -649,6 +647,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		key := opts.Name
 		set, err := c.metadataReport.GetServiceAppMapping(key, mappingGroup, nil)
 		if err != nil {
+			if errors.Is(err, zk.ErrNoNode) {
+				return nil
+			}
 			return err
 		}
 		meta := &resourceMetaObject{
@@ -669,9 +670,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			Mesh: opts.Mesh,
 		})
 	case mesh.MetaDataType:
-		labels := opts.Labels
-		revision := labels[mesh_proto.Revision]
-		app := labels[mesh_proto.Application]
+		name := opts.Name
+		// 拆分name得到revision和app
+		app, revision := splitAppAndRevision(name)
 		if revision == "" {
 			children, err := c.regClient.GetChildren(getMetadataPath(app))
 			if err != nil {
