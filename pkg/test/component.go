@@ -19,6 +19,7 @@ package test
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
@@ -26,36 +27,63 @@ import (
 	"strings"
 )
 
+var testServerLog = core.Log.WithName("test")
+
 func Setup(rt core_runtime.Runtime) error {
+	testServer := NewTestServer(rt)
+	if err := rt.Add(testServer); err != nil {
+		testServerLog.Error(err, "fail to start the test server")
+	}
+	return nil
+}
+
+type TestServer struct {
+	rt core_runtime.Runtime
+}
+
+func NewTestServer(rt core_runtime.Runtime) *TestServer {
+	return &TestServer{rt: rt}
+}
+
+func (t *TestServer) Start(stop <-chan struct{}) error {
+	// 测试dataplane资源
+	if err := testDataplane(t.rt); err != nil {
+		return err
+	}
 	// 测试mapping资源
-	if err := testMapping(rt); err != nil {
+	if err := testMapping(t.rt); err != nil {
 		return err
 	}
 	// 测试metadata资源
-	if err := testMetadata(rt); err != nil {
+	if err := testMetadata(t.rt); err != nil {
 		return err
 	}
-	// 测试dataplane资源
-	if err := testDataplane(rt); err != nil {
-		return err
-	}
+
 	return nil
+}
+
+func (a *TestServer) NeedLeaderElection() bool {
+	return false
 }
 
 // dataplane资源只有get, list接口, 其余均不支持
 func testDataplane(rt core_runtime.Runtime) error {
 	manager := rt.ResourceManager()
 	dataplaneResource := mesh.NewDataplaneResource()
-	// get
-	if err := manager.Get(rt.AppContext(), dataplaneResource, store.GetByApplication("dubbo-springboot-demo-provider"), store.GetByRevision("bdc0958191bba7a0f050a32709ee1262")); err != nil {
-		return err
-	}
 
 	// list
 	dataplaneList := &mesh.DataplaneResourceList{}
 	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return err
 	}
+
+	// get
+	if err := manager.Get(rt.AppContext(), dataplaneResource,
+		store.GetByApplication("dubbo-springboot-demo-provider"),
+		store.GetByRevision("bdc0958191bba7a0f050a32709ee1262")); err != nil {
+		return err
+	}
+
 	return nil
 }
 
