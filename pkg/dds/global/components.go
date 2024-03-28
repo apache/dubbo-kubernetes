@@ -142,7 +142,7 @@ func Setup(rt runtime.Runtime) error {
 			return err
 		}
 	}
-	return rt.Add(component.NewResilientComponent(ddsDeltaGlobalLog.WithName("dds-mux-client"), mux.NewServer(
+	return rt.Add(mux.NewServer(
 		rt.DDSContext().GlobalServerFilters,
 		rt.DDSContext().ServerStreamInterceptors,
 		rt.DDSContext().ServerUnaryInterceptor,
@@ -166,7 +166,7 @@ func Setup(rt runtime.Runtime) error {
 			rt.Extensions(),
 			rt.EventBus(),
 		),
-	)))
+	))
 }
 
 func createZoneIfAbsent(ctx context.Context, log logr.Logger, name string, resManager core_manager.ResourceManager) error {

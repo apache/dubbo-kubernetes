@@ -143,7 +143,7 @@ func (c *client) Start(stop <-chan struct{}) (errs error) {
 func (c *client) startGlobalToZoneSync(ctx context.Context, log logr.Logger, conn *grpc.ClientConn, errorCh chan error) {
 	kdsClient := mesh_proto.NewDDSSyncServiceClient(conn)
 	log = log.WithValues("rpc", "global-to-zone")
-	log.Info("initializing Kuma Discovery Service (KDS) stream for global to zone sync of resources with delta xDS")
+	log.Info("initializing Dubbo Discovery Service (DDS) stream for global to zone sync of resources with delta xDS")
 	stream, err := kdsClient.GlobalToZoneSync(ctx)
 	if err != nil {
 		errorCh <- err
@@ -157,7 +157,7 @@ func (c *client) startGlobalToZoneSync(ctx context.Context, log logr.Logger, con
 func (c *client) startZoneToGlobalSync(ctx context.Context, log logr.Logger, conn *grpc.ClientConn, errorCh chan error) {
 	kdsClient := mesh_proto.NewDDSSyncServiceClient(conn)
 	log = log.WithValues("rpc", "zone-to-global")
-	log.Info("initializing Kuma Discovery Service (KDS) stream for zone to global sync of resources with delta xDS")
+	log.Info("initializing Dubbo Discovery Service (DDS) stream for zone to global sync of resources with delta xDS")
 	stream, err := kdsClient.ZoneToGlobalSync(ctx)
 	if err != nil {
 		errorCh <- err

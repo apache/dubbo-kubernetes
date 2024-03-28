@@ -19,6 +19,7 @@ package traditional
 
 import (
 	"fmt"
+	"strings"
 )
 
 func GenerateCpGroupPath(resourceName string, name string) string {
@@ -65,4 +66,11 @@ func getDubboCpPath(keys ...string) string {
 		}
 	}
 	return rootDir
+}
+
+func splitAppAndRevision(name string) (app string, revision string) {
+	split := strings.Split(name, "-")
+	n := len(split)
+	app = strings.Replace(name, "-"+split[n-1], "", -1)
+	return app, split[n-1]
 }

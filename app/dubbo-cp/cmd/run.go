@@ -19,6 +19,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/core"
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"time"
 )
 
@@ -31,7 +33,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/bootstrap"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
 	dds_global "github.com/apache/dubbo-kubernetes/pkg/dds/global"
@@ -42,7 +43,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/hds"
 	"github.com/apache/dubbo-kubernetes/pkg/intercp"
-	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"github.com/apache/dubbo-kubernetes/pkg/util/os"
 	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
@@ -100,13 +100,6 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 					"minimim-open-files", minOpenFileLimit)
 			}
 
-			if rt.GetMode() == core.Test {
-				if err := test.Setup(rt); err != nil {
-					runLog.Error(err, "unable to set up test")
-					return err
-				}
-			}
-
 			if err := admin.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up admin")
 				return err
@@ -149,6 +142,13 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 			if err := intercp.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up Control Plane Intercommunication")
 				return err
+			}
+
+			if rt.GetMode() == core.Test {
+				if err := test.Setup(rt); err != nil {
+					runLog.Error(err, "unable to set up test")
+					return err
+				}
 			}
 
 			runLog.Info("starting Control Plane", "version", dubbo_version.Build.Version)

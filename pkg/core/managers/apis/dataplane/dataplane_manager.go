@@ -31,7 +31,6 @@ import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
@@ -69,11 +68,7 @@ func (m *dataplaneManager) Get(ctx context.Context, r core_model.Resource, opts 
 	if err != nil {
 		return err
 	}
-	options := core_store.NewGetOptions(opts...)
-	if options.Labels[mesh_proto.Application] == "" || options.Labels[mesh_proto.Revision] == "" {
-		logger.Sugar().Error("需要携带application和revision才能查询")
-		return nil
-	}
+
 	if err := m.store.Get(ctx, dataplane, opts...); err != nil {
 		return err
 	}
