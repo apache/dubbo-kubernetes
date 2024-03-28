@@ -25,6 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"strings"
+	"time"
 )
 
 var testServerLog = core.Log.WithName("test")
@@ -46,16 +47,18 @@ func NewTestServer(rt core_runtime.Runtime) *TestServer {
 }
 
 func (t *TestServer) Start(stop <-chan struct{}) error {
-	// 测试dataplane资源
-	if err := testDataplane(t.rt); err != nil {
-		return err
-	}
 	// 测试mapping资源
 	if err := testMapping(t.rt); err != nil {
 		return err
 	}
 	// 测试metadata资源
 	if err := testMetadata(t.rt); err != nil {
+		return err
+	}
+
+	time.Sleep(3 * time.Second)
+	// 测试dataplane资源
+	if err := testDataplane(t.rt); err != nil {
 		return err
 	}
 
