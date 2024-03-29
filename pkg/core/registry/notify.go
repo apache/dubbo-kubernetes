@@ -125,6 +125,7 @@ func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, url *commo
 	dataplaneResource.Spec.Networking = &mesh_proto.Dataplane_Networking{}
 	dataplaneResource.Spec.Extensions = map[string]string{}
 	dataplaneResource.Spec.Extensions[mesh_proto.ApplicationName] = app
+	dataplaneResource.Spec.Extensions[mesh_proto.Revision] = revision
 	dataplaneResource.SetMeta(&resourceMetaObject{
 		Name: key,
 	})

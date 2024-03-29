@@ -19,6 +19,7 @@ package metadata
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
 	"strings"
 	"time"
@@ -94,6 +95,7 @@ func (m *MetadataServer) MetadataRegister(ctx context.Context, req *mesh_proto.M
 	mesh := core_model.DefaultMesh // todo: mesh
 	podName := req.GetPodName()
 	metadata := req.GetMetadata()
+	namespace := req.GetNamespace()
 	if metadata == nil {
 		return &mesh_proto.MetaDataRegisterResponse{
 			Success: false,
@@ -101,12 +103,13 @@ func (m *MetadataServer) MetadataRegister(ctx context.Context, req *mesh_proto.M
 		}, nil
 	}
 
-	// MetaData name = podName.revision
-	name := podName + "-" + metadata.Revision
-	registerReq := &RegisterRequest{ConfigsUpdated: map[core_model.ResourceKey]*mesh_proto.MetaData{}}
-	key := core_model.ResourceKey{
-		Mesh: mesh,
-		Name: name,
+	name := rmkey.GenerateMetadataResourceKey(metadata.App, metadata.Revision, req.GetNamespace())
+	registerReq := &RegisterRequest{ConfigsUpdated: map[core_model.ResourceReq]*mesh_proto.MetaData{}}
+	key := core_model.ResourceReq{
+		Mesh:      mesh,
+		Name:      name,
+		PodName:   podName,
+		Namespace: namespace,
 	}
 	registerReq.ConfigsUpdated[key] = metadata
 
@@ -328,14 +331,17 @@ func (m *MetadataServer) register(req *RegisterRequest) {
 	}
 }
 
-func (m *MetadataServer) tryRegister(key core_model.ResourceKey, newMetadata *mesh_proto.MetaData) error {
+func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *mesh_proto.MetaData) error {
 	err := core_store.InTx(m.ctx, m.transactions, func(ctx context.Context) error {
 
 		// get Metadata Resource first,
 		// if Metadata is not found, create it,
 		// else update it.
 		metadata := core_mesh.NewMetaDataResource()
-		err := m.resourceManager.Get(m.ctx, metadata, core_store.GetBy(key))
+		err := m.resourceManager.Get(m.ctx, metadata, core_store.GetBy(core_model.ResourceKey{
+			Mesh: key.Mesh,
+			Name: key.Name,
+		}))
 		if err != nil && !core_store.IsResourceNotFound(err) {
 			log.Error(err, "get Metadata Resource")
 			return err
@@ -344,14 +350,16 @@ func (m *MetadataServer) tryRegister(key core_model.ResourceKey, newMetadata *me
 		if core_store.IsResourceNotFound(err) {
 			// create if not found
 			metadata.Spec = newMetadata
-			err = m.resourceManager.Create(m.ctx, metadata, core_store.CreateBy(key), core_store.CreatedAt(time.Now()))
+			err = m.resourceManager.Create(m.ctx, metadata, core_store.CreateBy(core_model.ResourceKey{
+				Mesh: key.Mesh,
+				Name: key.Name,
+			}), core_store.CreatedAt(time.Now()))
 			if err != nil {
 				log.Error(err, "create Metadata Resource failed")
 				return err
 			}
 
 			log.Info("create Metadata Resource success", "key", key, "metadata", newMetadata)
-			return nil
 		} else {
 			// if found, update it
 			metadata.Spec = newMetadata
@@ -363,8 +371,31 @@ func (m *MetadataServer) tryRegister(key core_model.ResourceKey, newMetadata *me
 			}
 
 			log.Info("update Metadata Resource success", "key", key, "metadata", newMetadata)
-			return nil
 		}
+
+		// 更新dataplane资源
+		// 根据podName Get到dataplane资源
+		dataplane := core_mesh.NewDataplaneResource()
+		err = m.resourceManager.Get(m.ctx, dataplane, core_store.GetBy(core_model.ResourceKey{
+			Mesh: core_model.DefaultMesh,
+			Name: rmkey.GenerateNamespacedName(key.PodName, key.Namespace),
+		}))
+		if err != nil {
+			return err
+		}
+		if dataplane.Spec.Extensions == nil {
+			dataplane.Spec.Extensions = make(map[string]string)
+		}
+		// 拿到dataplane, 添加extensions, 设置revision
+		dataplane.Spec.Extensions[mesh_proto.Revision] = metadata.Spec.Revision
+
+		// 更新dataplane
+		err = m.resourceManager.Update(m.ctx, dataplane)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		log.Error(err, "transactions failed")

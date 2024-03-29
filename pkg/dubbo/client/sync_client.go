@@ -90,7 +90,12 @@ func (s *dubboSyncClient) HandleReceive() error {
 				s.log.Info("OnMappingSyncRequestReceived successed")
 			}
 		case *mesh_proto.MetadataSyncRequest:
-			panic("unimplemented")
+			err = s.callbacks.OnMetadataSyncRequestReceived(received.(*mesh_proto.MetadataSyncRequest))
+			if err != nil {
+				s.log.Error(err, "error in OnMetadataSyncRequestReceived")
+			} else {
+				s.log.Info("OnMetadataSyncRequestReceived successed")
+			}
 		default:
 			return errors.New("unknown type request")
 		}

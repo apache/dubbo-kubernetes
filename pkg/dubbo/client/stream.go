@@ -168,6 +168,7 @@ func (s *stream) SubscribedInterfaceNames() []string {
 
 	return result
 }
+
 func (s *stream) SubscribedApplicationNames() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

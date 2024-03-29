@@ -27,7 +27,7 @@ import (
 )
 
 type RegisterRequest struct {
-	ConfigsUpdated map[core_model.ResourceKey]*mesh_proto.MetaData
+	ConfigsUpdated map[core_model.ResourceReq]*mesh_proto.MetaData
 }
 
 func (q *RegisterRequest) merge(req *RegisterRequest) *RegisterRequest {
