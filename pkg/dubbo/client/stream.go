@@ -25,78 +25,104 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/pkg/errors"
+
+	"google.golang.org/grpc"
+
+	"google.golang.org/protobuf/proto"
 )
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
-var _ MappingSyncStream = &stream{}
+var _ DubboSyncStream = &stream{}
 
 type stream struct {
-	streamClient mesh_proto.ServiceNameMappingService_MappingSyncServer
+	streamClient grpc.ServerStream
 
-	// subscribedInterfaceNames records request's interfaceName in Mapping Request from data plane.
+	// subscribedInterfaceNames records request's interfaceName in MappingSync Request from data plane.
 	subscribedInterfaceNames map[string]struct{}
-	lastNonce                string
-	mu                       sync.RWMutex
+	// subscribedApplicationNames records request's applicationName in MetaDataSync Request from data plane.
+	subscribedApplicationNames map[string]struct{}
+
+	mappingLastNonce  string
+	metadataLastNonce string
+	mu                sync.RWMutex
 }
 
-func NewMappingSyncStream(streamClient mesh_proto.ServiceNameMappingService_MappingSyncServer) MappingSyncStream {
+func NewDubboSyncStream(streamClient grpc.ServerStream) DubboSyncStream {
 	return &stream{
 		streamClient: streamClient,
 
-		subscribedInterfaceNames: make(map[string]struct{}),
+		subscribedInterfaceNames:   make(map[string]struct{}),
+		subscribedApplicationNames: make(map[string]struct{}),
 	}
 }
 
-type MappingSyncStream interface {
-	Recv() (*mesh_proto.MappingSyncRequest, error)
-	Send(mappingList *core_mesh.MappingResourceList, revision int64) error
+type DubboSyncStream interface {
+	Recv() (proto.Message, error)
+	Send(resourceList core_model.ResourceList, revision int64) error
 	SubscribedInterfaceNames() []string
 }
 
-func (s *stream) Recv() (*mesh_proto.MappingSyncRequest, error) {
-	request, err := s.streamClient.Recv()
-	if err != nil {
-		return nil, err
+func (s *stream) Recv() (proto.Message, error) {
+	switch s.streamClient.(type) {
+	case mesh_proto.ServiceNameMappingService_MappingSyncServer:
+		request := &mesh_proto.MappingSyncRequest{}
+		err := s.streamClient.RecvMsg(request)
+		if err != nil {
+			return nil, err
+		}
+		if s.mappingLastNonce != "" && s.mappingLastNonce != request.GetNonce() {
+			return nil, errors.New("request's nonce is different to last nonce")
+		}
+
+		// subscribe Mapping
+		s.mu.Lock()
+		interfaceName := request.GetInterfaceName()
+		s.subscribedInterfaceNames[interfaceName] = struct{}{}
+		s.mu.Lock()
+
+		return request, nil
+	case mesh_proto.MetadataService_MetadataSyncServer:
+		return nil, nil
+	default:
+		return nil, errors.New("unknown type request")
 	}
-
-	if s.lastNonce != "" && s.lastNonce != request.GetNonce() {
-		return nil, errors.New("request's nonce is different to last nonce")
-	}
-
-	// subscribe Mapping
-	s.mu.Lock()
-	interfaceName := request.GetInterfaceName()
-	s.subscribedInterfaceNames[interfaceName] = struct{}{}
-	s.mu.Lock()
-
-	return request, nil
 }
 
-func (s *stream) Send(mappingList *core_mesh.MappingResourceList, revision int64) error {
+func (s *stream) Send(resourceList core_model.ResourceList, revision int64) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	nonce := uuid.NewString()
-	mappings := make([]*mesh_proto.Mapping, 0, len(mappingList.Items))
-	for _, item := range mappingList.Items {
-		mappings = append(mappings, &mesh_proto.Mapping{
-			Zone:             item.Spec.Zone,
-			InterfaceName:    item.Spec.InterfaceName,
-			ApplicationNames: item.Spec.ApplicationNames,
-		})
-	}
 
-	s.lastNonce = nonce
-	response := &mesh_proto.MappingSyncResponse{
-		Nonce:    nonce,
-		Revision: revision,
-		Mappings: mappings,
+	switch resourceList.(type) {
+	case *core_mesh.MappingResourceList:
+		mappingList := resourceList.(*core_mesh.MappingResourceList)
+		mappings := make([]*mesh_proto.Mapping, 0, len(mappingList.Items))
+		for _, item := range mappingList.Items {
+			mappings = append(mappings, &mesh_proto.Mapping{
+				Zone:             item.Spec.Zone,
+				InterfaceName:    item.Spec.InterfaceName,
+				ApplicationNames: item.Spec.ApplicationNames,
+			})
+		}
+
+		s.mappingLastNonce = nonce
+		response := &mesh_proto.MappingSyncResponse{
+			Nonce:    nonce,
+			Revision: revision,
+			Mappings: mappings,
+		}
+		return s.streamClient.SendMsg(response)
+	case *core_mesh.MetaDataResourceList:
+		return nil
+	default:
+		return errors.New("unknown type request")
 	}
-	return s.streamClient.Send(response)
 }
 
 func (s *stream) SubscribedInterfaceNames() []string {

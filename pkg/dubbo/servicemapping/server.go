@@ -126,14 +126,14 @@ func (s *SnpServer) MappingSync(stream mesh_proto.ServiceNameMappingService_Mapp
 	errChan := make(chan error)
 
 	clientID := uuid.NewString()
-	mappingSyncStream := client.NewMappingSyncStream(stream)
-	// MappingSyncClient is to handle MappingSyncRequest from data plane
-	mappingSyncClient := client.NewMappingSyncClient(
+	mappingSyncStream := client.NewDubboSyncStream(stream)
+	// DubboSyncClient is to handle MappingSyncRequest from data plane
+	mappingSyncClient := client.NewDubboSyncClient(
 		log.WithName("client"),
 		clientID,
 		mappingSyncStream,
 		&client.Callbacks{
-			OnRequestReceived: func(request *mesh_proto.MappingSyncRequest) error {
+			OnMappingSyncRequestReceived: func(request *mesh_proto.MappingSyncRequest) error {
 				// when received request, invoke callback
 				s.pusher.InvokeCallback(core_mesh.MappingType, clientID)
 				return nil
@@ -143,13 +143,13 @@ func (s *SnpServer) MappingSync(stream mesh_proto.ServiceNameMappingService_Mapp
 		// Handle requests from client
 		err := mappingSyncClient.HandleReceive()
 		if errors.Is(err, io.EOF) {
-			log.Info("MappingSyncClient finished gracefully")
+			log.Info("DubboSyncClient finished gracefully")
 			errChan <- nil
 			return
 		}
 
-		log.Error(err, "MappingSyncClient finished with an error")
-		errChan <- errors.Wrap(err, "MappingSyncClient finished with an error")
+		log.Error(err, "DubboSyncClient finished with an error")
+		errChan <- errors.Wrap(err, "DubboSyncClient finished with an error")
 	}()
 
 	s.pusher.AddCallback(
@@ -166,13 +166,13 @@ func (s *SnpServer) MappingSync(stream mesh_proto.ServiceNameMappingService_Mapp
 			err := mappingSyncClient.Send(mappingList, revision)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					log.Info("MappingSyncClient finished gracefully")
+					log.Info("DubboSyncClient finished gracefully")
 					errChan <- nil
 					return
 				}
 
 				log.Error(err, "send mapping sync response failed", "mappingList", mappingList, "revision", revision)
-				errChan <- errors.Wrap(err, "MappingSyncClient send with an error")
+				errChan <- errors.Wrap(err, "DubboSyncClient send with an error")
 			}
 		},
 		func(resourceList core_model.ResourceList) core_model.ResourceList {
