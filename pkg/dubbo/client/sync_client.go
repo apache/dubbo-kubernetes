@@ -29,29 +29,30 @@ import (
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
 type Callbacks struct {
-	OnRequestReceived func(request *mesh_proto.MappingSyncRequest) error
+	OnMappingSyncRequestReceived  func(request *mesh_proto.MappingSyncRequest) error
+	OnMetadataSyncRequestReceived func(request *mesh_proto.MetadataSyncRequest) error
 }
 
-// MappingSyncClient Handle MappingSyncRequest from client
-type MappingSyncClient interface {
+// DubboSyncClient Handle Dubbo Sync Request from client
+type DubboSyncClient interface {
 	ClientID() string
 	HandleReceive() error
-	Send(mappingList *core_mesh.MappingResourceList, revision int64) error
+	Send(resourceList core_model.ResourceList, revision int64) error
 }
 
-type mappingSyncClient struct {
+type dubboSyncClient struct {
 	log        logr.Logger
 	id         string
-	syncStream MappingSyncStream
+	syncStream DubboSyncStream
 	callbacks  *Callbacks
 }
 
-func NewMappingSyncClient(log logr.Logger, id string, syncStream MappingSyncStream, cb *Callbacks) MappingSyncClient {
-	return &mappingSyncClient{
+func NewDubboSyncClient(log logr.Logger, id string, syncStream DubboSyncStream, cb *Callbacks) DubboSyncClient {
+	return &dubboSyncClient{
 		log:        log,
 		id:         id,
 		syncStream: syncStream,
@@ -59,11 +60,11 @@ func NewMappingSyncClient(log logr.Logger, id string, syncStream MappingSyncStre
 	}
 }
 
-func (s *mappingSyncClient) ClientID() string {
+func (s *dubboSyncClient) ClientID() string {
 	return s.id
 }
 
-func (s *mappingSyncClient) HandleReceive() error {
+func (s *dubboSyncClient) HandleReceive() error {
 	for {
 		received, err := s.syncStream.Recv()
 		if err != nil {
@@ -80,16 +81,22 @@ func (s *mappingSyncClient) HandleReceive() error {
 		}
 
 		// callbacks
-		err = s.callbacks.OnRequestReceived(received)
-		if err != nil {
-			s.log.Error(err, "error in OnRequestReceived")
-		} else {
-			s.log.Info("OnRequestReceived successed")
+		switch received.(type) {
+		case *mesh_proto.MappingSyncRequest:
+			err = s.callbacks.OnMappingSyncRequestReceived(received.(*mesh_proto.MappingSyncRequest))
+			if err != nil {
+				s.log.Error(err, "error in OnMappingSyncRequestReceived")
+			} else {
+				s.log.Info("OnMappingSyncRequestReceived successed")
+			}
+		case *mesh_proto.MetadataSyncRequest:
+			panic("unimplemented")
+		default:
+			return errors.New("unknown type request")
 		}
-
 	}
 }
 
-func (s *mappingSyncClient) Send(mappingList *core_mesh.MappingResourceList, revision int64) error {
-	return s.syncStream.Send(mappingList, revision)
+func (s *dubboSyncClient) Send(resourceList core_model.ResourceList, revision int64) error {
+	return s.syncStream.Send(resourceList, revision)
 }

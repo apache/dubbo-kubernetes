@@ -28,6 +28,7 @@ import (
 type (
 	ResourceChangedCallbackFn  func(items PushedItems)
 	ResourceChangedEventFilter func(resourceList core_model.ResourceList) core_model.ResourceList
+	ResourceRequestFilter      func(request interface{}, resourceList core_model.ResourceList) core_model.ResourceList
 )
 
 type ResourceChangedCallback struct {

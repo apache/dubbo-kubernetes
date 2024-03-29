@@ -25,14 +25,15 @@ message MetaDataRegisterResponse {
 
 // 可以根据应用名和版本号进行获取
 message MetadataSyncRequest {
-  string applicationName = 1;
-  string revision = 2;
+  string nonce = 1;
+  string applicationName = 2;
+  string revision = 3;
 }
 
 message MetadataSyncResponse {
   string nonce = 1;
   int64 revision = 2;
-  repeated MetaData mappings = 3;
+  repeated MetaData metaDatum = 3;
 }
 
 message MetaData {
