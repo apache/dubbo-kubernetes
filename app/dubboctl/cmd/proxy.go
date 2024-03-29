@@ -19,20 +19,17 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
-)
-
-import (
-	"github.com/pkg/errors"
+	"strings"
 
 	"github.com/spf13/cobra"
 
-	"go.uber.org/zap/zapcore"
-)
-
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/envoy"
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
@@ -42,7 +39,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/util/template"
+	"go.uber.org/zap/zapcore"
 )
 
 var runLog = controlPlaneLog.WithName("proxy")
@@ -92,14 +91,39 @@ func writeFile(filename string, data []byte, perm os.FileMode) error {
 
 func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 	proxyArgs := DefaultProxyConfig()
+
 	cfg := proxyArgs.Config
 	var proxyResource model.Resource
+	arg := struct {
+		logLevel   string
+		outputPath string
+		maxSize    int
+		maxBackups int
+		maxAge     int
+	}{}
+
 	proxyCmd := &cobra.Command{
 		Use:   "proxy",
 		Short: "Commands related to proxy",
 		Long:  "Commands help user to generate Ingress and Egress",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger.InitCmdSugar(zapcore.AddSync(cmd.OutOrStdout()))
+			level, err := dubbo_log.ParseLogLevel(arg.logLevel)
+			if err != nil {
+				return err
+			}
+			proxyArgs.LogLevel = level
+			if arg.outputPath != "" {
+				output, err := filepath.Abs(arg.outputPath)
+				if err != nil {
+					return err
+				}
+
+				fmt.Printf("%s: logs will be stored in %q\n", "kuma-dp", output)
+				core.SetLogger(core.NewLoggerWithRotation(level, output, arg.maxSize, arg.maxBackups, arg.maxAge))
+			} else {
+				core.SetLogger(core.NewLogger(level))
+			}
 			return nil
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -110,6 +134,10 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 			if _, ok := proxyTypeMap[cfg.Dataplane.ProxyType]; !ok {
 				return errors.Errorf("invalid proxy type %q", cfg.Dataplane.ProxyType)
 			}
+			if cfg.DataplaneRuntime.EnvoyLogLevel == "" {
+				cfg.DataplaneRuntime.EnvoyLogLevel = proxyArgs.LogLevel.String()
+			}
+
 			proxyResource, err := readResource(cmd, &cfg.DataplaneRuntime)
 			if err != nil {
 				runLog.Error(err, "failed to read policy", "proxyType", cfg.Dataplane.ProxyType)
@@ -162,13 +190,12 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 				return errors.Errorf("Failed to generate Envoy bootstrap config. %v", err)
 			}
 			runLog.Info("received bootstrap configuration", "adminPort", bootstrap.GetAdmin().GetAddress().GetSocketAddress().GetPortValue())
+			opts.BootstrapConfig, err = proto.ToYAML(bootstrap)
+			if err != nil {
+				return errors.Errorf("could not convert to yaml. %v", err)
+			}
+			opts.AdminPort = bootstrap.GetAdmin().GetAddress().GetSocketAddress().GetPortValue()
 
-			//runLog.Info("received bootstrap configuration", "adminPort", bootstrap.GetAdmin().GetAddress().GetSocketAddress().GetPortValue())
-			//
-			//opts.BootstrapConfig, err = proto.ToYAML(&bootstrap)
-			//if err != nil {
-			//	return errors.Errorf("could not convert to yaml. %v", err)
-			//}
 			stopComponents := make(chan struct{})
 			envoyComponent, err := envoy.New(opts)
 			err = envoyComponent.Start(stopComponents)
@@ -180,9 +207,24 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 			return nil
 		},
 	}
+
+	// root flags
+	cmd.PersistentFlags().StringVar(&arg.logLevel, "log-level", dubbo_log.InfoLevel.String(), UsageOptions("log level", dubbo_log.OffLevel, dubbo_log.InfoLevel, dubbo_log.DebugLevel))
+	cmd.PersistentFlags().StringVar(&arg.outputPath, "log-output-path", arg.outputPath, "path to the file that will be filled with logs. Example: if we set it to /tmp/kuma.log then after the file is rotated we will have /tmp/kuma-2021-06-07T09-15-18.265.log")
+	cmd.PersistentFlags().IntVar(&arg.maxBackups, "log-max-retained-files", 1000, "maximum number of the old log files to retain")
+	cmd.PersistentFlags().IntVar(&arg.maxSize, "log-max-size", 100, "maximum size in megabytes of a log file before it gets rotated")
+	cmd.PersistentFlags().IntVar(&arg.maxAge, "log-max-age", 30, "maximum number of days to retain old log files based on the timestamp encoded in their filename")
+
 	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.Name, "name", cfg.Dataplane.Name, "Name of the Dataplane")
 	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.Mesh, "mesh", cfg.Dataplane.Mesh, "Mesh that Dataplane belongs to")
 	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.ProxyType, "proxy-type", "dataplane", `type of the Dataplane ("dataplane", "ingress")`)
 	proxyCmd.PersistentFlags().StringVar(&cfg.DataplaneRuntime.ResourcePath, "dataplane-file", "Path to Ingress and Egress template to apply (YAML or JSON)", "data-plane-file")
 	cmd.AddCommand(proxyCmd)
+}
+func UsageOptions(desc string, options ...interface{}) string {
+	values := make([]string, 0, len(options))
+	for _, option := range options {
+		values = append(values, fmt.Sprintf("%v", option))
+	}
+	return fmt.Sprintf("%s: one of %s", desc, strings.Join(values, "|"))
 }

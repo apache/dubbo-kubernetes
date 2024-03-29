@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -47,6 +48,7 @@ type ProxyConfig struct {
 	Config                   *dubboctl.Config
 	BootstrapGenerator       envoy.BootstrapConfigFactoryFunc
 	DataplaneTokenGenerator  func(cfg *dubboctl.Config) (component.Component, error)
+	LogLevel                 log.LogLevel
 }
 
 var features = []string{core_xds.FeatureTCPAccessLogViaNamedPipe}
