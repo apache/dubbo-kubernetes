@@ -85,22 +85,7 @@ func addControllers(mgr kube_ctrl.Manager, rt core_runtime.Runtime, converter k8
 	if err := addPodReconciler(mgr, rt, converter); err != nil {
 		return err
 	}
-	if err := addMetadataReconciler(mgr, rt, converter); err != nil {
-		return err
-	}
 	return nil
-}
-
-func addMetadataReconciler(mgr kube_ctrl.Manager, rt core_runtime.Runtime, converter k8s_common.Converter) error {
-	reconciler := &k8s_controllers.MedataReconciler{
-		Client:            mgr.GetClient(),
-		EventRecorder:     mgr.GetEventRecorderFor("k8s.dubbo.io/dataplane-generator"),
-		Schema:            mgr.GetScheme(),
-		Log:               core.Log.WithName("controllers").WithName("Metadata"),
-		ResourceConverter: converter,
-		SystemNamespace:   rt.Config().Store.Kubernetes.SystemNamespace,
-	}
-	return reconciler.SetupWithManager(mgr, rt.Config().Runtime.Kubernetes.ControllersConcurrency.PodController)
 }
 
 func addPodReconciler(mgr kube_ctrl.Manager, rt core_runtime.Runtime, converter k8s_common.Converter) error {

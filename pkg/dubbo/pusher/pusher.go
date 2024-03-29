@@ -19,6 +19,7 @@ package pusher
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	"reflect"
 	"time"
 )
@@ -75,6 +76,7 @@ func NewPusher(
 		newFullResyncTicker:           newFullResyncTicker,
 		resourceTypes:                 make(map[core_model.ResourceType]struct{}),
 		resourceRevisions:             make(map[core_model.ResourceType]revision),
+		resourceLastPushed:            make(map[core_model.ResourceType]core_model.ResourceList),
 		resourceChangedEventListeners: make(map[core_model.ResourceType]events.Listener),
 		eventsChannel:                 make(chan *changedEvent, eventsChannelSize),
 		requestChannel: make(chan struct {
@@ -156,8 +158,12 @@ func (p *pusher) Start(stop <-chan struct{}) error {
 			return nil
 		case ce := <-p.eventsChannel:
 			log.Info("event received", "ResourceType", ce.resourceType)
-			var resourceList core_model.ResourceList
-			err := p.resourceManager.List(ctx, resourceList)
+			resourceList, err := registry.Global().NewList(ce.resourceType)
+			if err != nil {
+				log.Error(err, "failed to get resourceList")
+				continue
+			}
+			err = p.resourceManager.List(ctx, resourceList)
 			if err != nil {
 				log.Error(err, "list resource failed", "ResourceType", ce.resourceType)
 				continue
