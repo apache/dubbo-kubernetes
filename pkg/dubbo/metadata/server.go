@@ -102,7 +102,7 @@ func (m *MetadataServer) MetadataRegister(ctx context.Context, req *mesh_proto.M
 	}
 
 	// MetaData name = podName.revision
-	name := podName + "." + metadata.Revision
+	name := podName + "-" + metadata.Revision
 	registerReq := &RegisterRequest{ConfigsUpdated: map[core_model.ResourceKey]*mesh_proto.MetaData{}}
 	key := core_model.ResourceKey{
 		Mesh: mesh,

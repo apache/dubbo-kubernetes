@@ -24,8 +24,12 @@ import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"strings"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"time"
+)
+
+const (
+	SystemNamespace = "dubbo-system"
 )
 
 var testServerLog = core.Log.WithName("test")
@@ -84,7 +88,7 @@ func testDataplane(rt core_runtime.Runtime) error {
 		// get
 		if err := manager.Get(rt.AppContext(), dataplaneResource,
 			store.GetBy(core_model.ResourceKey{
-				Name: dataplaneList.Items[0].Meta.GetName(),
+				Name: dataplaneList.Items[0].Meta.GetName(), // 这个GetName已经是name.namespace的格式了
 				Mesh: "default",
 			})); err != nil {
 			return err
@@ -112,7 +116,7 @@ func testMetadata(rt core_runtime.Runtime) error {
 		return err
 	}
 	if err := manager.Create(rt.AppContext(), metadata2, store.CreateBy(core_model.ResourceKey{
-		Name: metadata2.Spec.App + "-" + metadata2.Spec.Revision,
+		Name: rmkey.GenerateMetadataResourceKey(metadata2.Spec.App, metadata2.Spec.Revision, SystemNamespace),
 		Mesh: "default",
 	})); err != nil {
 		return err
@@ -121,7 +125,7 @@ func testMetadata(rt core_runtime.Runtime) error {
 	metadata1 := mesh.NewMetaDataResource()
 	// get
 	if err := manager.Get(rt.AppContext(), metadata1, store.GetBy(core_model.ResourceKey{
-		Name: metadata2.Spec.App + "-" + metadata2.Spec.Revision,
+		Name: rmkey.GenerateMetadataResourceKey(metadata2.Spec.App, metadata2.Spec.Revision, SystemNamespace),
 		Mesh: "default",
 	})); err != nil {
 		return err
@@ -173,7 +177,7 @@ func testMapping(rt core_runtime.Runtime) error {
 
 	// create
 	if err := manager.Create(rt.AppContext(), mapping2, store.CreateBy(core_model.ResourceKey{
-		Name: strings.ToLower(strings.ReplaceAll(mapping2.Spec.InterfaceName, ".", "-")),
+		Name: rmkey.GenerateMappingResourceKey(mapping2.Spec.InterfaceName, SystemNamespace),
 		Mesh: "default",
 	})); err != nil {
 		return err
@@ -183,7 +187,7 @@ func testMapping(rt core_runtime.Runtime) error {
 	mapping1 := mesh.NewMappingResource()
 	// get
 	if err := manager.Get(rt.AppContext(), mapping1, store.GetBy(core_model.ResourceKey{
-		Name: strings.ToLower(strings.ReplaceAll("org.apache.dubbo.springboot.demo.DemoService1", ".", "-")),
+		Name: rmkey.GenerateMappingResourceKey("org.apache.dubbo.springboot.demo.DemoService1", SystemNamespace),
 		Mesh: "default",
 	})); err != nil {
 		return err
