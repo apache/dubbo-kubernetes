@@ -248,7 +248,10 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 
 func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resource, fs ...store.UpdateOptionsFunc) error {
 	opts := store.NewUpdateOptions(fs...)
-
+	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+	if err != nil {
+		return err
+	}
 	switch resource.Descriptor().Name {
 	case mesh.DataplaneType:
 		// Dataplane资源无法更新, 只能获取和删除
@@ -420,16 +423,12 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 
-		path := GenerateCpGroupPath(string(resource.Descriptor().Name), opts.Name)
+		path := GenerateCpGroupPath(string(resource.Descriptor().Name), name)
 		// 使用RegClient
 		err = t.regClient.SetContent(path, bytes)
 		if err != nil {
 			return err
 		}
-	}
-	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
-	if err != nil {
-		return err
 	}
 	resource.SetMeta(&resourceMetaObject{
 		Name:             name,
