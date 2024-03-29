@@ -20,6 +20,7 @@ package metadata
 import (
 	"context"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -143,7 +144,8 @@ func (m *MetadataServer) MetadataSync(stream mesh_proto.MetadataService_Metadata
 						// only response the target MetaData Resource by application name or revision
 						respMetadataList := &core_mesh.MetaDataResourceList{}
 						for _, item := range metadataList.Items {
-							if item.Spec != nil && req.ApplicationName == item.Spec.App {
+							// MetaData.Name = AppName.Revision, so we need to check MedaData.Name has prefix of AppName
+							if item.Spec != nil && strings.HasPrefix(item.Spec.App, req.ApplicationName) {
 								if req.Revision != "" {
 									// revision is not empty, response the Metadata with application name and target revision
 									if req.Revision == item.Spec.Revision {
@@ -194,7 +196,7 @@ func (m *MetadataServer) MetadataSync(stream mesh_proto.MetadataService_Metadata
 					return
 				}
 
-				log.Error(err, "send mapping sync response failed", "metadataList", metadataList, "revision", revision)
+				log.Error(err, "send metadata sync response failed", "metadataList", metadataList, "revision", revision)
 				errChan <- errors.Wrap(err, "DubboSyncClient send with an error")
 			}
 		},
@@ -209,7 +211,8 @@ func (m *MetadataServer) MetadataSync(stream mesh_proto.MetadataService_Metadata
 				expected := false
 				metaData := resource.(*core_mesh.MetaDataResource)
 				for _, applicationName := range metadataSyncStream.SubscribedApplicationNames() {
-					if applicationName == metaData.Spec.GetApp() && mesh == resource.GetMeta().GetMesh() {
+					// MetaData.Name = AppName.Revision, so we need to check MedaData.Name has prefix of AppName
+					if strings.HasPrefix(metaData.Spec.GetApp(), applicationName) && mesh == resource.GetMeta().GetMesh() {
 						expected = true
 						break
 					}
