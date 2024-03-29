@@ -388,6 +388,7 @@ func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *me
 		}
 		// 拿到dataplane, 添加extensions, 设置revision
 		dataplane.Spec.Extensions[mesh_proto.Revision] = metadata.Spec.Revision
+		dataplane.Spec.Extensions[mesh_proto.Application] = metadata.Spec.App
 
 		// 更新dataplane
 		err = m.resourceManager.Update(m.ctx, dataplane)
