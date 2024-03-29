@@ -132,7 +132,33 @@ func (m *MetadataServer) MetadataSync(stream mesh_proto.MetadataService_Metadata
 		&client.Callbacks{
 			OnMetadataSyncRequestReceived: func(request *mesh_proto.MetadataSyncRequest) error {
 				// when received request, invoke callback
-				m.pusher.InvokeCallback(core_mesh.MetaDataType, clientID)
+				m.pusher.InvokeCallback(
+					core_mesh.MetaDataType,
+					clientID,
+					request,
+					func(rawRequest interface{}, resourceList core_model.ResourceList) core_model.ResourceList {
+						req := rawRequest.(*mesh_proto.MetadataSyncRequest)
+						metadataList := resourceList.(*core_mesh.MetaDataResourceList)
+
+						// only response the target MetaData Resource by application name or revision
+						respMetadataList := &core_mesh.MetaDataResourceList{}
+						for _, item := range metadataList.Items {
+							if item.Spec != nil && req.ApplicationName == item.Spec.App {
+								if req.Revision != "" {
+									// revision is not empty, response the Metadata with application name and target revision
+									if req.Revision == item.Spec.Revision {
+										_ = respMetadataList.AddItem(item)
+									}
+								} else {
+									// revision is empty, response the Metadata with target application name
+									_ = respMetadataList.AddItem(item)
+								}
+							}
+						}
+
+						return respMetadataList
+					},
+				)
 				return nil
 			},
 		})

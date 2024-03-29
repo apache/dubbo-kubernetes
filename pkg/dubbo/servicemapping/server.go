@@ -135,7 +135,25 @@ func (s *SnpServer) MappingSync(stream mesh_proto.ServiceNameMappingService_Mapp
 		&client.Callbacks{
 			OnMappingSyncRequestReceived: func(request *mesh_proto.MappingSyncRequest) error {
 				// when received request, invoke callback
-				s.pusher.InvokeCallback(core_mesh.MappingType, clientID)
+				s.pusher.InvokeCallback(
+					core_mesh.MappingType,
+					clientID,
+					request,
+					func(rawRequest interface{}, resourceList core_model.ResourceList) core_model.ResourceList {
+						req := rawRequest.(*mesh_proto.MappingSyncRequest)
+						mappingList := resourceList.(*core_mesh.MappingResourceList)
+
+						// only response the target Mapping Resource by interface name
+						respMappingList := &core_mesh.MappingResourceList{}
+						for _, item := range mappingList.Items {
+							if item.Spec != nil && req.InterfaceName == item.Spec.InterfaceName {
+								_ = respMappingList.AddItem(item)
+							}
+						}
+
+						return respMappingList
+					},
+				)
 				return nil
 			},
 		})

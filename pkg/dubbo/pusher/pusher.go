@@ -19,7 +19,6 @@ package pusher
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	"reflect"
 	"time"
 )
@@ -55,8 +54,10 @@ type pusher struct {
 	resourceChangedEventListeners map[core_model.ResourceType]events.Listener
 	eventsChannel                 chan *changedEvent
 	requestChannel                chan struct {
-		resourceType core_model.ResourceType
-		id           string
+		request       interface{}
+		requestFilter ResourceRequestFilter
+		resourceType  core_model.ResourceType
+		id            string
 	}
 
 	resourceChangedCallbacks *ResourceChangedCallbacks
@@ -73,13 +74,14 @@ func NewPusher(
 		eventBus:                      eventBus,
 		newFullResyncTicker:           newFullResyncTicker,
 		resourceTypes:                 make(map[core_model.ResourceType]struct{}),
-		resourceLastPushed:            make(map[core_model.ResourceType]core_model.ResourceList),
 		resourceRevisions:             make(map[core_model.ResourceType]revision),
 		resourceChangedEventListeners: make(map[core_model.ResourceType]events.Listener),
 		eventsChannel:                 make(chan *changedEvent, eventsChannelSize),
 		requestChannel: make(chan struct {
-			resourceType core_model.ResourceType
-			id           string
+			request       interface{}
+			requestFilter ResourceRequestFilter
+			resourceType  core_model.ResourceType
+			id            string
 		}, requestChannelSize),
 
 		resourceChangedCallbacks: NewResourceChangedCallbacks(),
@@ -154,12 +156,8 @@ func (p *pusher) Start(stop <-chan struct{}) error {
 			return nil
 		case ce := <-p.eventsChannel:
 			log.Info("event received", "ResourceType", ce.resourceType)
-			resourceList, err := registry.Global().NewList(ce.resourceType)
-			if err != nil {
-				log.Info("can not get resourceList")
-				continue
-			}
-			err = p.resourceManager.List(ctx, resourceList)
+			var resourceList core_model.ResourceList
+			err := p.resourceManager.List(ctx, resourceList)
 			if err != nil {
 				log.Error(err, "list resource failed", "ResourceType", ce.resourceType)
 				continue
@@ -196,8 +194,13 @@ func (p *pusher) Start(stop <-chan struct{}) error {
 				continue
 			}
 
+			resourceList := lastedPushed
+			if req.requestFilter != nil {
+				resourceList = req.requestFilter(req.request, lastedPushed)
+			}
+
 			cb.Invoke(PushedItems{
-				resourceList: lastedPushed,
+				resourceList: resourceList,
 				revision:     revision,
 			})
 		case <-fullResyncTicker.C:
@@ -232,9 +235,16 @@ func (p *pusher) RemoveCallback(resourceType core_model.ResourceType, id string)
 	p.resourceChangedCallbacks.RemoveCallBack(resourceType, id)
 }
 
-func (p *pusher) InvokeCallback(resourceType core_model.ResourceType, id string) {
+func (p *pusher) InvokeCallback(resourceType core_model.ResourceType, id string, request interface{}, requestFilter ResourceRequestFilter) {
 	p.requestChannel <- struct {
-		resourceType core_model.ResourceType
-		id           string
-	}{resourceType: resourceType, id: id}
+		request       interface{}
+		requestFilter ResourceRequestFilter
+		resourceType  core_model.ResourceType
+		id            string
+	}{
+		request:       request,
+		requestFilter: requestFilter,
+		resourceType:  resourceType,
+		id:            id,
+	}
 }
