@@ -20,6 +20,7 @@ package traditional
 import (
 	"context"
 	"fmt"
+	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 	"sync"
 )
 
@@ -219,8 +220,12 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 		}
 	}
 
+	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+	if err != nil {
+		return err
+	}
 	resource.SetMeta(&resourceMetaObject{
-		Name:             opts.Name,
+		Name:             name,
 		Mesh:             opts.Mesh,
 		CreationTime:     opts.CreationTime,
 		ModificationTime: opts.CreationTime,
@@ -420,8 +425,12 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	}
+	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+	if err != nil {
+		return err
+	}
 	resource.SetMeta(&resourceMetaObject{
-		Name:             opts.Name,
+		Name:             name,
 		Mesh:             opts.Mesh,
 		ModificationTime: opts.ModificationTime,
 		Labels:           maps.Clone(opts.Labels),
@@ -556,14 +565,17 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 
 	switch resource.Descriptor().Name {
 	case mesh.DataplaneType:
-		key := opts.Name
+		key, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+		if err != nil {
+			return err
+		}
 		value, ok := c.dCache.Load(key)
 		if !ok {
 			return nil
 		}
 		r := value.(core_model.Resource)
 		resource.SetMeta(r.GetMeta())
-		err := resource.SetSpec(r.GetSpec())
+		err = resource.SetSpec(r.GetSpec())
 		if err != nil {
 			return err
 		}
@@ -645,7 +657,10 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		})
 	case mesh.MappingType:
 		// Get通过Key获取, 不设置listener
-		key := opts.Name
+		key, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+		if err != nil {
+			return err
+		}
 		set, err := c.metadataReport.GetServiceAppMapping(key, mappingGroup, nil)
 		if err != nil {
 			if errors.Is(err, zk.ErrNoNode) {
@@ -668,11 +683,14 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		}
 		mapping.ApplicationNames = items
 		resource.SetMeta(&resourceMetaObject{
-			Name: opts.Name,
+			Name: key,
 			Mesh: opts.Mesh,
 		})
 	case mesh.MetaDataType:
-		name := opts.Name
+		name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+		if err != nil {
+			return err
+		}
 		// 拆分name得到revision和app
 		app, revision := splitAppAndRevision(name)
 		if revision == "" {
@@ -703,11 +721,15 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		}
 		metaData.Services = service
 		resource.SetMeta(&resourceMetaObject{
-			Name: opts.Name,
+			Name: name,
 			Mesh: opts.Mesh,
 		})
 	default:
-		path := GenerateCpGroupPath(string(resource.Descriptor().Name), opts.Name)
+		name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+		if err != nil {
+			return err
+		}
+		path := GenerateCpGroupPath(string(resource.Descriptor().Name), name)
 		value, err := c.regClient.GetContent(path)
 		if err != nil {
 			return err
@@ -716,7 +738,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return err
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: opts.Name,
+			Name: name,
 			Mesh: opts.Mesh,
 		})
 	}
