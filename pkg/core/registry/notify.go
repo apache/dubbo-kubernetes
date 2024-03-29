@@ -122,6 +122,10 @@ func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, url *commo
 	key := getDataplaneKey(app, revision)
 
 	dataplaneResource := mesh.NewDataplaneResource()
+	dataplaneResource.SetMeta(&resourceMetaObject{
+		Name: app + "-" + revision,
+		Mesh: core_model.DefaultMesh,
+	})
 	dataplaneResource.Spec.Networking = &mesh_proto.Dataplane_Networking{}
 	dataplaneResource.Spec.Extensions = map[string]string{}
 	dataplaneResource.Spec.Extensions[mesh_proto.ApplicationName] = app
