@@ -99,7 +99,10 @@ func (t *traditionalStore) SetEventWriter(writer events.Emitter) {
 func (t *traditionalStore) Create(_ context.Context, resource core_model.Resource, fs ...store.CreateOptionsFunc) error {
 	var err error
 	opts := store.NewCreateOptions(fs...)
-
+	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+	if err != nil {
+		return err
+	}
 	switch resource.Descriptor().Name {
 	case mesh.MappingType:
 		spec := resource.GetSpec()
@@ -212,7 +215,7 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 			return err
 		}
 
-		path := GenerateCpGroupPath(string(resource.Descriptor().Name), opts.Name)
+		path := GenerateCpGroupPath(string(resource.Descriptor().Name), name)
 		// 使用RegClient
 		err = t.regClient.SetContent(path, bytes)
 		if err != nil {
@@ -220,10 +223,6 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 		}
 	}
 
-	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
-	if err != nil {
-		return err
-	}
 	resource.SetMeta(&resourceMetaObject{
 		Name:             name,
 		Mesh:             opts.Mesh,
@@ -237,7 +236,10 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 			t.eventWriter.Send(events.ResourceChangedEvent{
 				Operation: events.Create,
 				Type:      resource.Descriptor().Name,
-				Key:       core_model.MetaToResourceKey(resource.GetMeta()),
+				Key: core_model.MetaToResourceKey(&resourceMetaObject{
+					Name: name,
+					Mesh: opts.Mesh,
+				}),
 			})
 		}()
 	}
@@ -441,7 +443,10 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			t.eventWriter.Send(events.ResourceChangedEvent{
 				Operation: events.Update,
 				Type:      resource.Descriptor().Name,
-				Key:       core_model.MetaToResourceKey(resource.GetMeta()),
+				Key: core_model.MetaToResourceKey(&resourceMetaObject{
+					Name: name,
+					Mesh: opts.Mesh,
+				}),
 			})
 		}()
 	}
@@ -450,7 +455,10 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 
 func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resource, fs ...store.DeleteOptionsFunc) error {
 	opts := store.NewDeleteOptions(fs...)
-
+	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+	if err != nil {
+		return err
+	}
 	switch resource.Descriptor().Name {
 	case mesh.DataplaneType:
 		// 不支持删除
@@ -538,8 +546,8 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 	case mesh.MetaDataType:
 		// 无法删除
 	default:
-		path := GenerateCpGroupPath(string(resource.Descriptor().Name), opts.Name)
-		err := t.regClient.DeleteContent(path)
+		path := GenerateCpGroupPath(string(resource.Descriptor().Name), name)
+		err = t.regClient.DeleteContent(path)
 		if err != nil {
 			return err
 		}
@@ -552,7 +560,7 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 				Type:      resource.Descriptor().Name,
 				Key: core_model.ResourceKey{
 					Mesh: opts.Mesh,
-					Name: opts.Name,
+					Name: name,
 				},
 			})
 		}()
@@ -563,13 +571,14 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, fs ...store.GetOptionsFunc) error {
 	opts := store.NewGetOptions(fs...)
 
+	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
+	if err != nil {
+		return err
+	}
+
 	switch resource.Descriptor().Name {
 	case mesh.DataplaneType:
-		key, _, err := util_k8s.CoreNameToK8sName(opts.Name)
-		if err != nil {
-			return err
-		}
-		value, ok := c.dCache.Load(key)
+		value, ok := c.dCache.Load(name)
 		if !ok {
 			return nil
 		}
@@ -580,7 +589,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return err
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: key,
+			Name: name,
 			Mesh: opts.Mesh,
 		})
 	case mesh.TagRouteType:
@@ -604,7 +613,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			}
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: opts.Name,
+			Name: name,
 			Mesh: opts.Mesh,
 		})
 	case mesh.ConditionRouteType:
@@ -628,7 +637,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			}
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: opts.Name,
+			Name: name,
 			Mesh: opts.Mesh,
 		})
 	case mesh.DynamicConfigType:
@@ -652,16 +661,12 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			}
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: opts.Name,
+			Name: name,
 			Mesh: opts.Mesh,
 		})
 	case mesh.MappingType:
 		// Get通过Key获取, 不设置listener
-		key, _, err := util_k8s.CoreNameToK8sName(opts.Name)
-		if err != nil {
-			return err
-		}
-		set, err := c.metadataReport.GetServiceAppMapping(key, mappingGroup, nil)
+		set, err := c.metadataReport.GetServiceAppMapping(name, mappingGroup, nil)
 		if err != nil {
 			if errors.Is(err, zk.ErrNoNode) {
 				return nil
@@ -670,27 +675,23 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		}
 
 		meta := &resourceMetaObject{
-			Name: opts.Name,
+			Name: name,
 			Mesh: opts.Mesh,
 		}
 		resource.SetMeta(meta)
 		mapping := resource.GetSpec().(*mesh_proto.Mapping)
 		mapping.Zone = "default"
-		mapping.InterfaceName = key
+		mapping.InterfaceName = name
 		var items []string
 		for k := range set.Items {
 			items = append(items, fmt.Sprintf("%v", k))
 		}
 		mapping.ApplicationNames = items
 		resource.SetMeta(&resourceMetaObject{
-			Name: key,
+			Name: name,
 			Mesh: opts.Mesh,
 		})
 	case mesh.MetaDataType:
-		name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
-		if err != nil {
-			return err
-		}
 		// 拆分name得到revision和app
 		app, revision := splitAppAndRevision(name)
 		if revision == "" {
@@ -725,10 +726,6 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			Mesh: opts.Mesh,
 		})
 	default:
-		name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
-		if err != nil {
-			return err
-		}
 		path := GenerateCpGroupPath(string(resource.Descriptor().Name), name)
 		value, err := c.regClient.GetContent(path)
 		if err != nil {
