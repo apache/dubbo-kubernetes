@@ -15,22 +15,14 @@
  * limitations under the License.
  */
 
-package admin
+package traditional
 
-import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/server"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-)
+import "testing"
 
-var adminServerLog = core.Log.WithName("admin")
-
-func Setup(rt core_runtime.Runtime) error {
-	adminServer := server.NewAdminServer(*rt.Config().Admin).
-		InitHTTPRouter()
-	if err := rt.Add(adminServer); err != nil {
-		adminServerLog.Error(err, "fail to start the admin server")
-		return err
+func TestSplitAppAndRevision(t *testing.T) {
+	name := "dubbo-springboot-demo-lixinyang-bdc0958191bba7a0f050a32709ee1111"
+	app, revision := splitAppAndRevision(name)
+	if app != "dubbo-springboot-demo-lixinyang" && revision != "bdc0958191bba7a0f050a32709ee1111" {
+		t.Error("解析错误")
 	}
-	return nil
 }
