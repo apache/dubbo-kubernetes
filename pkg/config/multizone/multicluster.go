@@ -53,8 +53,16 @@ func (g *GlobalConfig) Validate() error {
 func DefaultGlobalConfig() *GlobalConfig {
 	return &GlobalConfig{
 		DDS: &DdsServerConfig{
-			GrpcPort:        5685,
-			RefreshInterval: config_types.Duration{Duration: 1 * time.Second},
+			GrpcPort:                 5685,
+			RefreshInterval:          config_types.Duration{Duration: 1 * time.Second},
+			ZoneInsightFlushInterval: config_types.Duration{Duration: 10 * time.Second},
+			TlsEnabled:               false,
+			MaxMsgSize:               10 * 1024 * 1024,
+			MsgSendTimeout:           config_types.Duration{Duration: 60 * time.Second},
+			TlsMinVersion:            "TLSv1_2",
+			TlsCipherSuites:          []string{},
+			NackBackoff:              config_types.Duration{Duration: 5 * time.Second},
+			DisableSOTW:              false,
 		},
 	}
 }
@@ -89,6 +97,12 @@ func DefaultZoneConfig() *ZoneConfig {
 		GlobalAddress:                "",
 		Name:                         "default",
 		DisableOriginLabelValidation: false,
+		DDS: &DdsClientConfig{
+			RefreshInterval: config_types.Duration{Duration: 1 * time.Second},
+			MaxMsgSize:      10 * 1024 * 1024,
+			MsgSendTimeout:  config_types.Duration{Duration: 60 * time.Second},
+			NackBackoff:     config_types.Duration{Duration: 5 * time.Second},
+		},
 	}
 }
 

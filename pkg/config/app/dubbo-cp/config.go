@@ -123,6 +123,14 @@ type DDSEventBasedWatchdog struct {
 	DelayFullResync bool `json:"delayFullResync" envconfig:"DUBBO_EXPERIMENTAL_KDS_EVENT_BASED_WATCHDOG_DELAY_FULL_RESYNC"`
 }
 
+func DefaultEventBasedWatchdog() DDSEventBasedWatchdog {
+	return DDSEventBasedWatchdog{
+		FlushInterval:      config_types.Duration{Duration: 5 * time.Second},
+		FullResyncInterval: config_types.Duration{Duration: 1 * time.Minute},
+		DelayFullResync:    false,
+	}
+}
+
 func (c Config) IsFederatedZoneCP() bool {
 	return c.Mode == core.Zone && c.Multizone.Zone.GlobalAddress != "" && c.Multizone.Zone.Name != ""
 }
@@ -151,22 +159,23 @@ func (c *Config) PostProcess() error {
 
 var DefaultConfig = func() Config {
 	return Config{
-		BootstrapServer: bootstrap.DefaultBootstrapServerConfig(),
-		DeployMode:      core.UniversalMode,
-		Mode:            core.Zone,
-		XdsServer:       xds.DefaultXdsServerConfig(),
-		Store:           store.DefaultStoreConfig(),
-		Runtime:         runtime.DefaultRuntimeConfig(),
-		Bufman:          bufman.DefaultBufmanConfig(),
-		General:         DefaultGeneralConfig(),
-		Defaults:        DefaultDefaultsConfig(),
-		Multizone:       multizone.DefaultMultizoneConfig(),
-		Diagnostics:     diagnostics.DefaultDiagnosticsConfig(),
-		DpServer:        dp_server.DefaultDpServerConfig(),
-		Admin:           admin.DefaultAdminConfig(),
-		InterCp:         intercp.DefaultInterCpConfig(),
-		DubboConfig:     dubbo.DefaultServiceNameMappingConfig(),
-		EventBus:        eventbus.Default(),
+		BootstrapServer:       bootstrap.DefaultBootstrapServerConfig(),
+		DeployMode:            core.UniversalMode,
+		Mode:                  core.Zone,
+		XdsServer:             xds.DefaultXdsServerConfig(),
+		Store:                 store.DefaultStoreConfig(),
+		Runtime:               runtime.DefaultRuntimeConfig(),
+		Bufman:                bufman.DefaultBufmanConfig(),
+		General:               DefaultGeneralConfig(),
+		Defaults:              DefaultDefaultsConfig(),
+		Multizone:             multizone.DefaultMultizoneConfig(),
+		Diagnostics:           diagnostics.DefaultDiagnosticsConfig(),
+		DpServer:              dp_server.DefaultDpServerConfig(),
+		Admin:                 admin.DefaultAdminConfig(),
+		InterCp:               intercp.DefaultInterCpConfig(),
+		DubboConfig:           dubbo.DefaultServiceNameMappingConfig(),
+		EventBus:              eventbus.Default(),
+		DDSEventBasedWatchdog: DefaultEventBasedWatchdog(),
 	}
 }
 

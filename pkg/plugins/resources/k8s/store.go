@@ -19,6 +19,7 @@ package k8s
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"strings"
 	"time"
 )
@@ -99,7 +100,9 @@ func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs 
 
 	if err := s.Client.Create(ctx, obj); err != nil {
 		if kube_apierrs.IsAlreadyExists(err) {
-			return store.ErrorResourceAlreadyExists(r.Descriptor().Name, opts.Name, opts.Mesh)
+			// 如果资源已经存在了就直接返回空即可
+			logger.Sugar().Warn("资源已经存在了")
+			return nil
 		}
 		return errors.Wrap(err, "failed to create k8s resource")
 	}
