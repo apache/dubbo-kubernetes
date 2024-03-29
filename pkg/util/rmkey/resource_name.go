@@ -15,41 +15,44 @@
  * limitations under the License.
  */
 
-package metadata
+package rmkey
 
 import (
-	"fmt"
+	"strings"
 )
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 )
 
-type RegisterRequest struct {
-	ConfigsUpdated map[core_model.ResourceReq]*mesh_proto.MetaData
+const (
+	firstDelimiter  = "-"
+	secondDelimiter = "."
+	separator       = "/"
+)
+
+func GenerateMetadataResourceKey(app string, revision string, namespace string) string {
+	res := app
+	if revision != "" {
+		res += firstDelimiter + revision
+	}
+	if namespace != "" {
+		res += secondDelimiter + revision
+	}
+	return res
 }
 
-func (q *RegisterRequest) merge(req *RegisterRequest) *RegisterRequest {
-	if q == nil {
-		return req
+func GenerateNamespacedName(name string, namespace string) string {
+	if namespace == "" { // it's cluster scoped object
+		return name
 	}
-	for key, metaData := range req.ConfigsUpdated {
-		q.ConfigsUpdated[key] = metaData
-	}
-
-	return q
+	return util_k8s.K8sNamespacedNameToCoreName(name, namespace)
 }
 
-func configsUpdated(req *RegisterRequest) string {
-	configs := ""
-	for key := range req.ConfigsUpdated {
-		configs += key.Name + "." + key.Mesh
-		break
+func GenerateMappingResourceKey(interfaceName string, namespace string) string {
+	res := strings.ToLower(strings.ReplaceAll(interfaceName, ".", "-"))
+	if namespace == "" {
+		return res
 	}
-	if len(req.ConfigsUpdated) > 1 {
-		more := fmt.Sprintf(" and %d more configs", len(req.ConfigsUpdated)-1)
-		configs += more
-	}
-	return configs
+	return util_k8s.K8sNamespacedNameToCoreName(res, namespace)
 }

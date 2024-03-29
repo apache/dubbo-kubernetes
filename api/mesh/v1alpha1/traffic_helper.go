@@ -31,12 +31,12 @@ import (
 
 // Application 流量管控相关的基础label
 const (
-	Application    = "application"
-	Service        = "service"
-	ID             = "id"
-	ServiceVersion = "serviceVersion"
-	ServiceGroup   = "serviceGroup"
-	Revision       = "revision"
+	Application    = "dubbo.io/application"
+	Service        = "dubbo.io/service"
+	ID             = "dubbo.io/id"
+	ServiceVersion = "dubbo.io/serviceVersion"
+	ServiceGroup   = "dubbo.io/serviceGroup"
+	Revision       = "dubbo.io/revision"
 )
 
 type Base struct {

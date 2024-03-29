@@ -17,7 +17,9 @@
 
 package traditional
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestSplitAppAndRevision(t *testing.T) {
 	name := "dubbo-springboot-demo-lixinyang-bdc0958191bba7a0f050a32709ee1111"

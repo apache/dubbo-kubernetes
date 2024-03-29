@@ -19,7 +19,6 @@ package k8s
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"strings"
 	"time"
 )
@@ -39,6 +38,7 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"

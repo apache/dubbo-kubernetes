@@ -26,7 +26,7 @@ import (
 )
 
 type RegisterRequest struct {
-	ConfigsUpdated map[core_model.ResourceKey]map[string]struct{}
+	ConfigsUpdated map[core_model.ResourceReq]map[string]struct{}
 }
 
 func (q *RegisterRequest) merge(req *RegisterRequest) *RegisterRequest {

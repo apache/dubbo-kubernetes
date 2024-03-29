@@ -19,6 +19,7 @@ package servicemapping
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
 	"time"
 )
@@ -100,11 +101,12 @@ func (s *SnpServer) MappingRegister(ctx context.Context, req *mesh_proto.Mapping
 	interfaces := req.GetInterfaceNames()
 	applicationName := req.GetApplicationName()
 
-	registerReq := &RegisterRequest{ConfigsUpdated: map[core_model.ResourceKey]map[string]struct{}{}}
+	registerReq := &RegisterRequest{ConfigsUpdated: map[core_model.ResourceReq]map[string]struct{}{}}
 	for _, interfaceName := range interfaces {
-		key := core_model.ResourceKey{
-			Mesh: mesh,
-			Name: interfaceName,
+		key := core_model.ResourceReq{
+			Mesh:      mesh,
+			Name:      interfaceName,
+			Namespace: req.GetNamespace(),
 		}
 		if _, ok := registerReq.ConfigsUpdated[key]; !ok {
 			registerReq.ConfigsUpdated[key] = make(map[string]struct{})
@@ -314,7 +316,7 @@ func (s *SnpServer) register(req *RegisterRequest) {
 			appNames = append(appNames, app)
 		}
 		for i := 0; i < 3; i++ {
-			if err := s.tryRegister(key.Mesh, key.Name, appNames); err != nil {
+			if err := s.tryRegister(key.Mesh, key.Name, key.Namespace, appNames); err != nil {
 				log.Error(err, "register failed", "key", key)
 			} else {
 				break
@@ -323,11 +325,11 @@ func (s *SnpServer) register(req *RegisterRequest) {
 	}
 }
 
-func (s *SnpServer) tryRegister(mesh, interfaceName string, newApps []string) error {
+func (s *SnpServer) tryRegister(mesh, interfaceName string, ns string, newApps []string) error {
 	err := core_store.InTx(s.ctx, s.transactions, func(ctx context.Context) error {
 		key := core_model.ResourceKey{
 			Mesh: mesh,
-			Name: interfaceName,
+			Name: rmkey.GenerateMappingResourceKey(interfaceName, ns),
 		}
 
 		// get Mapping Resource first,

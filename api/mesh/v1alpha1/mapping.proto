@@ -24,8 +24,9 @@ service ServiceNameMappingService {
 }
 
 message MappingRegisterRequest {
-  string applicationName = 1;
-  repeated string interfaceNames = 2;
+  string namespace = 1;
+  string applicationName = 2;
+  repeated string interfaceNames = 3;
 }
 
 message MappingRegisterResponse {
@@ -34,8 +35,9 @@ message MappingRegisterResponse {
 }
 
 message MappingSyncRequest {
-  string nonce = 1;
-  string interfaceName = 2;
+  string namespace = 1;
+  string nonce = 2;
+  string interfaceName = 3;
 }
 
 message MappingSyncResponse {
