@@ -63,6 +63,7 @@ func Setup(rt core_runtime.Runtime) error {
 	// register MetadataService
 	metadata := dubbo_metadata.NewMetadataServe(
 		rt.AppContext(),
+		cfg,
 		dubboPusher,
 		rt.ResourceManager(),
 		rt.Transactions(),
