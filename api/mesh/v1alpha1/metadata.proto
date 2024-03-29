@@ -14,8 +14,9 @@ service MetadataService {
 }
 
 message MetaDataRegisterRequest {
-  string podName = 1; // dubbo的应用实例名, 由sdk通过环境变量获取
-  MetaData metadata = 2; // 上报的元数据
+  string namespace = 1;
+  string podName = 2; // dubbo的应用实例名, 由sdk通过环境变量获取
+  MetaData metadata = 3; // 上报的元数据
 }
 
 message MetaDataRegisterResponse {
@@ -25,9 +26,10 @@ message MetaDataRegisterResponse {
 
 // 可以根据应用名和版本号进行获取
 message MetadataSyncRequest {
-  string nonce = 1;
-  string applicationName = 2;
-  string revision = 3;
+  string namespace = 1;
+  string nonce = 2;
+  string applicationName = 3;
+  string revision = 4;
 }
 
 message MetadataSyncResponse {
