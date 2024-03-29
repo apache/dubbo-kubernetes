@@ -54,8 +54,10 @@ type pusher struct {
 	resourceChangedEventListeners map[core_model.ResourceType]events.Listener
 	eventsChannel                 chan *changedEvent
 	requestChannel                chan struct {
-		resourceType core_model.ResourceType
-		id           string
+		request       interface{}
+		requestFilter ResourceRequestFilter
+		resourceType  core_model.ResourceType
+		id            string
 	}
 
 	resourceChangedCallbacks *ResourceChangedCallbacks
@@ -76,8 +78,10 @@ func NewPusher(
 		resourceChangedEventListeners: make(map[core_model.ResourceType]events.Listener),
 		eventsChannel:                 make(chan *changedEvent, eventsChannelSize),
 		requestChannel: make(chan struct {
-			resourceType core_model.ResourceType
-			id           string
+			request       interface{}
+			requestFilter ResourceRequestFilter
+			resourceType  core_model.ResourceType
+			id            string
 		}, requestChannelSize),
 
 		resourceChangedCallbacks: NewResourceChangedCallbacks(),
@@ -190,8 +194,13 @@ func (p *pusher) Start(stop <-chan struct{}) error {
 				continue
 			}
 
+			resourceList := lastedPushed
+			if req.requestFilter != nil {
+				resourceList = req.requestFilter(req.request, lastedPushed)
+			}
+
 			cb.Invoke(PushedItems{
-				resourceList: lastedPushed,
+				resourceList: resourceList,
 				revision:     revision,
 			})
 		case <-fullResyncTicker.C:
@@ -226,9 +235,16 @@ func (p *pusher) RemoveCallback(resourceType core_model.ResourceType, id string)
 	p.resourceChangedCallbacks.RemoveCallBack(resourceType, id)
 }
 
-func (p *pusher) InvokeCallback(resourceType core_model.ResourceType, id string) {
+func (p *pusher) InvokeCallback(resourceType core_model.ResourceType, id string, request interface{}, requestFilter ResourceRequestFilter) {
 	p.requestChannel <- struct {
-		resourceType core_model.ResourceType
-		id           string
-	}{resourceType: resourceType, id: id}
+		request       interface{}
+		requestFilter ResourceRequestFilter
+		resourceType  core_model.ResourceType
+		id            string
+	}{
+		request:       request,
+		requestFilter: requestFilter,
+		resourceType:  resourceType,
+		id:            id,
+	}
 }

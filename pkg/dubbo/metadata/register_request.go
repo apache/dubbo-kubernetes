@@ -17,4 +17,37 @@
 
 package metadata
 
-type RegisterRequest struct{}
+import "fmt"
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+)
+
+type RegisterRequest struct {
+	ConfigsUpdated map[core_model.ResourceKey]*mesh_proto.MetaData
+}
+
+func (q *RegisterRequest) merge(req *RegisterRequest) *RegisterRequest {
+	if q == nil {
+		return req
+	}
+	for key, metaData := range req.ConfigsUpdated {
+		q.ConfigsUpdated[key] = metaData
+	}
+
+	return q
+}
+
+func configsUpdated(req *RegisterRequest) string {
+	configs := ""
+	for key := range req.ConfigsUpdated {
+		configs += key.Name + "." + key.Mesh
+		break
+	}
+	if len(req.ConfigsUpdated) > 1 {
+		more := fmt.Sprintf(" and %d more configs", len(req.ConfigsUpdated)-1)
+		configs += more
+	}
+	return configs
+}

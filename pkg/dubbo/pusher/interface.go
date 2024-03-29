@@ -32,5 +32,5 @@ type Pusher interface {
 	RemoveCallback(resourceType core_model.ResourceType, id string)
 	// InvokeCallback invoke a target callback
 	// for example, for a push request from client, invoke this function to push resource.
-	InvokeCallback(resourceType core_model.ResourceType, id string)
+	InvokeCallback(resourceType core_model.ResourceType, id string, request interface{}, requestFilter ResourceRequestFilter)
 }

@@ -15,7 +15,14 @@
 
 # 可选 k8s half universal
 deploy_mode: k8s
-mode: test
+# mode: test
+mode: zone
+multizone:
+  zone:
+    globalAddress: grpc://127.0.0.1:5685
+  global:
+    dds:
+      grpcPort: 5685
 runtime:
   kubernetes:
     admissionServer:
