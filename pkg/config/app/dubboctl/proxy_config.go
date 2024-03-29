@@ -18,6 +18,7 @@
 package dubboctl
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"time"
 )
 
@@ -176,4 +177,9 @@ type Dataplane struct {
 	ProxyType string `json:"proxyType,omitempty" envconfig:"dubbo_dataplane_proxy_type"`
 	// Drain time for listeners.
 	DrainTime config_types.Duration `json:"drainTime,omitempty" envconfig:"dubbo_dataplane_drain_time"`
+}
+
+func (d *Dataplane) IsZoneProxy() bool {
+	return d.ProxyType == string(mesh_proto.IngressProxyType) ||
+		d.ProxyType == string(mesh_proto.EgressProxyType)
 }

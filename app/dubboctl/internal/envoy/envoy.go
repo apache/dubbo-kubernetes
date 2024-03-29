@@ -183,6 +183,7 @@ func (e *Envoy) Start(stop <-chan struct{}) error {
 	err = command.Wait()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		runLog.Error(err, "Envoy terminated with an error")
+
 		return err
 	}
 	runLog.Info("Envoy terminated successfully")

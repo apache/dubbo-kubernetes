@@ -36,6 +36,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	_ "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	"github.com/sethvargo/go-retry"
 )
 
