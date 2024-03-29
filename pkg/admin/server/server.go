@@ -33,13 +33,15 @@ import (
 )
 
 type AdminServer struct {
-	Engine   *gin.Engine
-	adminCfg admin.Admin
+	Engine          *gin.Engine
+	adminCfg        admin.Admin
+	systemNamespace string
 }
 
-func NewAdminServer(adminCfg admin.Admin) *AdminServer {
+func NewAdminServer(adminCfg admin.Admin, ns string) *AdminServer {
 	return &AdminServer{
-		adminCfg: adminCfg,
+		adminCfg:        adminCfg,
+		systemNamespace: ns,
 	}
 }
 
