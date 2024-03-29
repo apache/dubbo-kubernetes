@@ -18,8 +18,11 @@
 package rmkey
 
 import (
-	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 	"strings"
+)
+
+import (
+	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 )
 
 const (

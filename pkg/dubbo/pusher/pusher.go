@@ -19,7 +19,6 @@ package pusher
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	"reflect"
 	"time"
 )
@@ -28,6 +27,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 )
 

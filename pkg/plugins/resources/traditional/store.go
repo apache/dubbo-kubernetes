@@ -20,7 +20,6 @@ package traditional
 import (
 	"context"
 	"fmt"
-	"github.com/dubbogo/go-zookeeper/zk"
 	"sync"
 )
 
@@ -30,6 +29,8 @@ import (
 	dubbo_identifier "dubbo.apache.org/dubbo-go/v3/metadata/identifier"
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+
+	"github.com/dubbogo/go-zookeeper/zk"
 
 	"github.com/dubbogo/gost/encoding/yaml"
 
