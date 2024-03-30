@@ -16,9 +16,12 @@
 package bufimage
 
 import (
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 var _ ImageFile = &imageFile{}

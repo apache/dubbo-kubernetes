@@ -21,13 +21,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+)
 
+import (
+	"go.uber.org/atomic"
+
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/filepathextended"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageutil"
-	"go.uber.org/atomic"
-	"go.uber.org/multierr"
 )
 
 // errNotDir is the error returned if a path is not a directory.

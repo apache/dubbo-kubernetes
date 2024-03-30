@@ -18,7 +18,9 @@ package bufimage
 import (
 	"errors"
 	"fmt"
+)
 
+import (
 	imagev1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/image/v1"
 )
 

@@ -17,7 +17,9 @@ package buflintcheck
 
 import (
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protosource"

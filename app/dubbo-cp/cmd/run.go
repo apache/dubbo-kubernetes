@@ -19,147 +19,155 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/admin"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman"
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient"
-	"github.com/apache/dubbo-kubernetes/pkg/dds"
-	"github.com/apache/dubbo-kubernetes/pkg/snp"
-	"github.com/apache/dubbo-kubernetes/pkg/webhook"
-
-	"github.com/apache/dubbo-kubernetes/pkg/authority"
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-kubernetes/pkg/core/bootstrap"
-	"github.com/apache/dubbo-kubernetes/pkg/core/cert"
-	"github.com/apache/dubbo-kubernetes/pkg/core/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"github.com/apache/dubbo-kubernetes/pkg/cp-server"
+import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	gracefullyShutdownDuration = 3 * time.Second
-	AdminRegistryAddress       = "ADMIN_REGISTRY_ADDRESS"
-	AdminPrometheusAddress     = "ADMIN_PROMETHEUS_ADDRESS"
-	AdminGrafanaAddress        = "ADMIN_GRAFANA_ADDRESS"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/bootstrap"
+	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	dds_global "github.com/apache/dubbo-kubernetes/pkg/dds/global"
+	dds_zone "github.com/apache/dubbo-kubernetes/pkg/dds/zone"
+	"github.com/apache/dubbo-kubernetes/pkg/defaults"
+	"github.com/apache/dubbo-kubernetes/pkg/diagnostics"
+	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
+	"github.com/apache/dubbo-kubernetes/pkg/hds"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp"
+	"github.com/apache/dubbo-kubernetes/pkg/test"
+	"github.com/apache/dubbo-kubernetes/pkg/util/os"
+	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
+	"github.com/apache/dubbo-kubernetes/pkg/xds"
 )
+
+var runLog = controlPlaneLog.WithName("run")
+
+const gracefullyShutdownDuration = 3 * time.Second
 
 // This is the open file limit below which the control plane may not
 // reasonably have enough descriptors to accept all its clients.
 const minOpenFileLimit = 4096
 
-func newRunCmdWithOpts(opts cmd.RunCmdOpts) *cobra.Command {
+func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 	args := struct {
 		configPath string
 	}{}
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Launch Dubbo Control plane",
-		Long:  `Launch Dubbo Control plane.`,
+		Short: "Launch Control Plane",
+		Long:  `Launch Control Plane.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg := dubbo_cp.DefaultConfig()
 			err := config.Load(args.configPath, &cfg)
-			readFromEnv(cfg)
 			if err != nil {
-				logger.Sugar().Error(err, "could not load the configuration")
+				runLog.Error(err, "could not load the configuration")
 				return err
 			}
-			gracefulCtx, ctx := opts.SetupSignalHandler()
 
-			rt, err := bootstrap.Bootstrap(gracefulCtx, &cfg)
+			gracefulCtx, ctx := opts.SetupSignalHandler()
+			rt, err := bootstrap.Bootstrap(gracefulCtx, cfg)
 			if err != nil {
-				logger.Sugar().Error(err, "unable to set up Control Plane runtime")
+				runLog.Error(err, "unable to set up Control Plane runtime")
 				return err
 			}
 			cfgForDisplay, err := config.ConfigForDisplay(&cfg)
 			if err != nil {
-				logger.Sugar().Error(err, "unable to prepare config for display")
+				runLog.Error(err, "unable to prepare config for display")
 				return err
 			}
 			cfgBytes, err := config.ToJson(cfgForDisplay)
 			if err != nil {
-				logger.Sugar().Error(err, "unable to convert config to json")
+				runLog.Error(err, "unable to convert config to json")
 				return err
 			}
-			logger.Sugar().Info(fmt.Sprintf("Current config %s", cfgBytes))
+			runLog.Info(fmt.Sprintf("Current config %s", cfgBytes))
+			runLog.Info(fmt.Sprintf("Running in mode `%s`", cfg.Mode))
+
+			if err := os.RaiseFileLimit(); err != nil {
+				runLog.Error(err, "unable to raise the open file limit")
+			}
+
+			if limit, _ := os.CurrentFileLimit(); limit < minOpenFileLimit {
+				runLog.Info("for better performance, raise the open file limit",
+					"minimim-open-files", minOpenFileLimit)
+			}
 
 			if err := admin.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up Metrics")
+				runLog.Error(err, "unable to set up admin")
+				return err
 			}
-
+			if err := dubbo.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up dubbo server")
+			}
+			if err := xds.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up xds server")
+				return err
+			}
 			if err := bufman.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up bufman")
+				runLog.Error(err, "unable to set up bufman server")
+				return err
 			}
-
-			if err := cert.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up certProvider")
+			if err := hds.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up HDS")
+				return err
 			}
-
-			if err := authority.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up authority")
+			if err := dp_server.SetupServer(rt); err != nil {
+				runLog.Error(err, "unable to set up DP Server")
+				return err
 			}
-
-			if err := webhook.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up webhook")
+			if err := defaults.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Defaults")
+				return err
 			}
-
-			if err := dds.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up dds")
+			if err := dds_zone.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Zone DDS")
+				return err
 			}
-
-			if err := snp.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up snp")
+			if err := dds_global.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Global DDS")
+				return err
 			}
-
-			if err := cp_server.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up grpc server")
+			if err := diagnostics.SetupServer(rt); err != nil {
+				runLog.Error(err, "unable to set up Diagnostics server")
+				return err
 			}
-
-			// This must be last, otherwise we will not know which informers to register
-			if err := kubeclient.Setup(rt); err != nil {
-				logger.Sugar().Error(err, "unable to set up kube client")
-			}
-
-			logger.Sugar().Info("starting Control Plane")
-			if err := rt.Start(gracefulCtx.Done()); err != nil {
-				logger.Sugar().Error(err, "problem running Control Plane")
+			if err := intercp.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Control Plane Intercommunication")
 				return err
 			}
 
-			logger.Sugar().Info("Stop signal received. Waiting 3 seconds for components to stop gracefully...")
+			if rt.GetMode() == core.Test {
+				if err := test.Setup(rt); err != nil {
+					runLog.Error(err, "unable to set up test")
+					return err
+				}
+			}
+
+			runLog.Info("starting Control Plane", "version", dubbo_version.Build.Version)
+			if err := rt.Start(gracefulCtx.Done()); err != nil {
+				runLog.Error(err, "problem running Control Plane")
+				return err
+			}
+
+			runLog.Info("stop signal received. Waiting 3 seconds for components to stop gracefully...")
 			select {
 			case <-ctx.Done():
+				runLog.Info("all components have stopped")
 			case <-time.After(gracefullyShutdownDuration):
+				runLog.Info("forcefully stopped")
 			}
-			logger.Sugar().Info("Stopping Control Plane")
 			return nil
 		},
 	}
-
 	// flags
 	cmd.PersistentFlags().StringVarP(&args.configPath, "config-file", "c", "", "configuration file")
-
 	return cmd
-}
-
-func readFromEnv(cfg dubbo_cp.Config) {
-	registryEnv := os.Getenv(AdminRegistryAddress)
-	if registryEnv != "" {
-		cfg.Admin.Registry.Address = registryEnv
-		cfg.Admin.MetadataReport.Address = registryEnv
-		cfg.Admin.ConfigCenter = registryEnv
-	}
-
-	promEnv := os.Getenv(AdminPrometheusAddress)
-	if promEnv != "" {
-		cfg.Admin.Prometheus.Address = promEnv
-	}
-
-	grafanaEnv := os.Getenv(AdminGrafanaAddress)
-	if grafanaEnv != "" {
-		cfg.Admin.Grafana.Address = grafanaEnv
-	}
 }

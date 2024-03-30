@@ -21,12 +21,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
+import (
 	"github.com/spf13/cobra"
+
 	"go.uber.org/zap/zapcore"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 type ManifestDiffArgs struct {

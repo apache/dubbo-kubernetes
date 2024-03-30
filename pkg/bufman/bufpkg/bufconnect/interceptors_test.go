@@ -22,13 +22,19 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+)
 
+import (
+	"github.com/bufbuild/connect-go"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/applog"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/netrc"
-	"github.com/bufbuild/connect-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type testMachine struct{}

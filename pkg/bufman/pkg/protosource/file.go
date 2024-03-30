@@ -18,9 +18,14 @@ package protosource
 import (
 	"fmt"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
+import (
 	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 )
 
 type file struct {
@@ -239,7 +244,7 @@ func newFile(inputFile InputFile) (*file, error) {
 			[]int32{8},
 			locationStore,
 		),
-		edition: inputFile.FileDescriptor().GetEdition(),
+		edition: string(inputFile.FileDescriptor().GetEdition()),
 	}
 	descriptor := newDescriptor(
 		f,

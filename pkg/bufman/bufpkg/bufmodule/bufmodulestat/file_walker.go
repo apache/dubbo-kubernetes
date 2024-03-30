@@ -18,9 +18,14 @@ package bufmodulestat
 import (
 	"context"
 	"io"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
+import (
 	"go.uber.org/multierr"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 )
 
 type fileWalker struct {

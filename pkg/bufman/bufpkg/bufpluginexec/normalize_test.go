@@ -18,11 +18,17 @@ package bufpluginexec
 import (
 	"fmt"
 	"testing"
+)
 
+import (
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/stretchr/testify/require"
+
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/testing/protocmp"
+
 	"google.golang.org/protobuf/types/pluginpb"
 )
 

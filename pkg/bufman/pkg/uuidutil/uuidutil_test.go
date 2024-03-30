@@ -17,7 +17,9 @@ package uuidutil
 
 import (
 	"testing"
+)
 
+import (
 	"github.com/stretchr/testify/require"
 )
 

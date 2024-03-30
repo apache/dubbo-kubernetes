@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "api/mesh/options.proto";
+
+message ConditionRoute {
+  option (dubbo.mesh.resource).name = "ConditionRouteResource";
+  option (dubbo.mesh.resource).type = "ConditionRoute";
+  option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
+  option (dubbo.mesh.resource).ws.name = "conditionroute";
+  option (dubbo.mesh.resource).ws.plural = "conditionroutes";
+  option (dubbo.mesh.resource).allow_to_inspect = true;
+
+  string configVersion = 1;
+  int32 priority = 2;
+  bool enabled = 3;
+  bool force = 4;
+  bool runtime = 5;
+  string key = 6;
+  string scope = 7;
+  repeated string conditions = 8;
+}

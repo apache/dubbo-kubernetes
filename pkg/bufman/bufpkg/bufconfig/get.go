@@ -19,13 +19,19 @@ import (
 	"context"
 	"fmt"
 	"io"
+)
 
+import (
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/encoding"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-	"go.uber.org/multierr"
 )
 
 func getConfigForBucket(ctx context.Context, readBucket storage.ReadBucket) (_ *Config, retErr error) {

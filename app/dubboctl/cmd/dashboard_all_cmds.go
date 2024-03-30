@@ -26,15 +26,22 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+import (
 	"github.com/spf13/cobra"
+
 	"go.uber.org/zap/zapcore"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/client-go/kubernetes"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 var (

@@ -24,7 +24,9 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/filepathextended"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"

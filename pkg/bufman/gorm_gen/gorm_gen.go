@@ -16,8 +16,11 @@
 package main
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 	"gorm.io/gen"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 )
 
 func main() {

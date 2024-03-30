@@ -22,10 +22,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+)
 
+import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/interrupt"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/uuidutil"
-	"go.uber.org/multierr"
 )
 
 // File is a temporary file

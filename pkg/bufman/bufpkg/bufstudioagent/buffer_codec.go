@@ -19,10 +19,16 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
+import (
 	connect "github.com/bufbuild/connect-go"
+
 	"google.golang.org/protobuf/proto"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
 )
 
 // bufferCodec is a connect.Codec for use with clients of type

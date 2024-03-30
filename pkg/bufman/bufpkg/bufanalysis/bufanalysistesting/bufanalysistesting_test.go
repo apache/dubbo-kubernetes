@@ -18,10 +18,15 @@ package bufanalysistesting
 import (
 	"strings"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
+import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 )
 
 func TestBasic(t *testing.T) {

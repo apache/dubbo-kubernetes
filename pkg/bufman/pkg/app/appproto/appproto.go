@@ -29,13 +29,19 @@ import (
 	"path/filepath"
 	"unicode"
 	"unicode/utf8"
+)
 
+import (
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 const (

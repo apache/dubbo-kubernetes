@@ -18,7 +18,9 @@ package render
 import (
 	"os"
 	"testing"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 )
 

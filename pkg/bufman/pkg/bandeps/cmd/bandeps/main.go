@@ -21,14 +21,20 @@ import (
 	"fmt"
 	"os"
 	"time"
+)
 
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/spf13/pflag"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appcmd"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appflag"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/bandeps"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/encoding"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 const (

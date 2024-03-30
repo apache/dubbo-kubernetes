@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "api/mesh/options.proto";
+import "api/mesh/v1alpha1/dataplane_insight.proto";
+
+// ZoneIngressInsight defines the observed state of a Zone Ingress.
+message ZoneIngressInsight {
+
+  option (dubbo.mesh.resource).name = "ZoneIngressInsightResource";
+  option (dubbo.mesh.resource).type = "ZoneIngressInsight";
+  option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).global = true;
+  option (dubbo.mesh.resource).dds.send_to_global = true;
+  option (dubbo.mesh.resource).ws.name = "zone-ingress-insight";
+  option (dubbo.mesh.resource).ws.read_only = true;
+  option (dubbo.mesh.resource).scope_namespace = true;
+
+  // List of ADS subscriptions created by a given Zone Dubbo CP.
+  repeated DiscoverySubscription subscriptions = 1;
+}

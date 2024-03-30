@@ -20,10 +20,15 @@ import (
 	"fmt"
 	"io"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/zaputil"
+import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/zaputil"
 )
 
 // Container is a container.

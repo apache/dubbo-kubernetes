@@ -17,7 +17,9 @@ package app
 
 import (
 	"io"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/ioextended"
 )
 

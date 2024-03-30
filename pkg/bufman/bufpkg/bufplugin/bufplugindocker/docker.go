@@ -25,14 +25,21 @@ import (
 	"strings"
 	"sync"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginconfig"
+import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stringid"
+
 	"go.uber.org/multierr"
+
 	"go.uber.org/zap"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginconfig"
 )
 
 const (
