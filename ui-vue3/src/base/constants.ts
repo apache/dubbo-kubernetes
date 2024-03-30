@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { ref } from 'vue'
+import { computed, h, reactive, ref } from 'vue'
 
 export const PRIMARY_COLOR_DEFAULT = '#17b392'
 
@@ -25,9 +25,22 @@ export const LOCAL_STORAGE_THEME = 'LOCAL_STORAGE_THEME'
 let item = localStorage.getItem(LOCAL_STORAGE_THEME)
 
 export const PRIMARY_COLOR = ref(item || PRIMARY_COLOR_DEFAULT)
+export const PRIMARY_COLOR_T = (percent: string) => computed(() => PRIMARY_COLOR.value + percent)
 
 export const INSTANCE_REGISTER_COLOR: { [key: string]: string } = {
   HEALTHY: 'green'
+}
+
+export const TAB_HEADER_TITLE_VNODE = reactive({
+  vnode: h('div', 'something')
+})
+export const TAB_HEADER_TITLE = {
+  functional: true,
+  render: () => {
+    return TAB_HEADER_TITLE_VNODE.vnode
+    // console.log(h)
+    // return h("div", "foo")
+  }
 }
 
 /**

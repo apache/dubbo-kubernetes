@@ -36,13 +36,7 @@
         <a-layout-content class="layout-content">
           <router-view v-slot="{ Component }">
             <transition name="slide-fade">
-              <component :is="Component">
-                <template v-slot:tabTitle>
-                  <h1>
-                    {{ route.params && Object.values(route.params)[0] }}
-                  </h1>
-                </template>
-              </component>
+              <component :is="Component"> </component>
             </transition>
           </router-view>
         </a-layout-content>
@@ -54,13 +48,13 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { provide, ref } from 'vue'
+import { h, provide, ref } from 'vue'
 import layoutMenu from './menu/layout_menu.vue'
 import logo from '@/assets/logo.png'
 import Layout_header from '@/layout/header/layout_header.vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import Layout_bread from '@/layout/breadcrumb/layout_bread.vue'
-import { PRIMARY_COLOR } from '@/base/constants'
+import { PRIMARY_COLOR, TAB_HEADER_TITLE_VNODE } from '@/base/constants'
 import { useRoute, useRouter } from 'vue-router'
 
 let __null = PRIMARY_COLOR
@@ -76,6 +70,7 @@ router.beforeEach((to, from, next) => {
     transitionFlag.value = true
   }, 500)
 })
+TAB_HEADER_TITLE_VNODE.vnode = h('div', route.params?.pathId)
 </script>
 <style lang="less" scoped>
 .__container_layout_index {
@@ -103,7 +98,7 @@ router.beforeEach((to, from, next) => {
   .layout-content {
     margin: 16px;
     padding: 16px 16px 24px;
-    background: #fff;
+    //background: #fff;
     overflow-y: auto;
     height: calc(100vh - 140px);
   }

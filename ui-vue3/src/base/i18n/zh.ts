@@ -309,6 +309,9 @@ const words: I18nType = {
   applications: '应用',
   instances: '实例',
   applicationDomain: {
+    operatorLog: '执行日志',
+    flowWeight: '流量权重',
+    gray: '灰度隔离',
     name: '应用名',
     detail: '详情',
     instance: '实例',
@@ -357,7 +360,9 @@ const words: I18nType = {
 
   provideService: '提供服务',
   dependentService: '依赖服务',
-  idx: '序号'
+  idx: '序号',
+  submit: '提交',
+  reset: '重置'
 }
 
 export default words
