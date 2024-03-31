@@ -14,17 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { RouteMeta } from 'vue-router'
-import type { RouteRecordType } from '@/router/defaultRoutes'
-import type { Component } from 'vue'
 
-export interface RouterMeta extends RouteMeta {
-  icon?: string
-  hidden?: boolean
-  skip?: boolean
-  tab_parent?: boolean
-  tab?: boolean
-  _router_key?: string
-  parent?: RouteRecordType
-  slots?: { [key: string]: Component }
+
+import request from "@/base/http/request";
+
+export const queryPromSql = (params: any): Promise<any> => {
+    return request({
+        url: 'http://123.56.255.156:9090/api/v1/query',
+        method: 'get',
+        params
+    })
 }

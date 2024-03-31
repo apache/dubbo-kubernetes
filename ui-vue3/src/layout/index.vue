@@ -70,10 +70,12 @@ router.beforeEach((to, from, next) => {
     transitionFlag.value = true
   }, 500)
 })
-TAB_HEADER_TITLE_VNODE.vnode = h('div', route.params?.pathId)
 </script>
 <style lang="less" scoped>
 .__container_layout_index {
+  :deep(.ant-layout-content) {
+    padding: 16px !important;
+  }
   .logo {
     height: 40px;
     width: auto;

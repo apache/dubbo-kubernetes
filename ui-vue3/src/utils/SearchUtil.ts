@@ -22,6 +22,7 @@ export type DICT_TYPE = 'SELECT' | 'BUTTON' | 'RADIO'
 
 export class SearchDomain {
   // form of search
+  noPaged?: boolean
   queryForm: any
   params: [
     {
@@ -43,7 +44,7 @@ export class SearchDomain {
   tableStyle: any
   table: {
     loading?: boolean
-    columns: TableColumnsType
+    columns: (TableColumnsType & { __hide: boolean }) | any
   } = { columns: [] }
   paged = {
     curPage: 1,
@@ -55,9 +56,11 @@ export class SearchDomain {
     query: any,
     searchApi: any,
     columns: TableColumnsType | any,
-    paged?: any | undefined
+    paged?: any | undefined,
+    noPaged?: boolean
   ) {
     this.params = query
+    this.noPaged = noPaged
     this.queryForm = reactive({})
     this.table.columns = columns
     query.forEach((c: any) => {

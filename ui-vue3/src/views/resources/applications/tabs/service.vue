@@ -67,6 +67,10 @@ let metricsMetadata = reactive({
 })
 
 onMounted(async () => {
+  searchDomain.tableStyle = {
+    scrollX: '100',
+    scrollY: 'calc(100vh - 600px)'
+  }
   let clusterData = (await getClusterInfo({})).data
   metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
   clusterInfo.info = <{ [key: string]: string }>clusterData
@@ -144,7 +148,8 @@ const searchDomain = reactive(
     ],
     searchService,
     columns,
-    { pageSize: 4 }
+    { pageSize: 4 },
+    true
   )
 )
 searchDomain.onSearch()

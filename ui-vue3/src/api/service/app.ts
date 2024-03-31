@@ -54,3 +54,10 @@ export const getApplicationMetricsInfo = (params: any): Promise<any> => {
     params
   })
 }
+export const listApplicationEvent = (params: any): Promise<any> => {
+  return request({
+    url: '/application/event',
+    method: 'get',
+    params
+  })
+}

@@ -22,7 +22,7 @@ Mock.mock('/mock/application/metrics', 'get', () => {
   return {
     code: 200,
     message: 'success',
-    data: 'http://101.201.225.179:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application?orgId=1&refresh=1m&from=1710644821536&to=1710731221536&theme=light'
+    data: 'http://8.147.104.101:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application?orgId=1&refresh=1m&from=1711855893859&to=1711877493859&theme=light'
   }
 })
 
@@ -133,6 +133,25 @@ Mock.mock('/mock/application/detail', 'get', () => {
       deployCluster: ['ali-shanghai-1', 'tx-shanghai-2'],
       registerCluster: ['nacos-cluster-1', 'nacos-cluster-2'],
       registerMode: ['应用级', '接口级']
+    }
+  }
+})
+
+Mock.mock('/mock/application/event', 'get', () => {
+  let list = Mock.mock({
+    'list|10': [
+      {
+        desc: `Scaled down replica set shop-detail-v1-5847b7cdfd to @integer(3,10) from @integer(3,10)`,
+        time: '@DATETIME("yyyy-MM-dd HH:mm:ss")',
+        type: 'deployment-controller'
+      }
+    ]
+  })
+  return {
+    code: 200,
+    message: 'success',
+    data: {
+      ...list
     }
   }
 })
