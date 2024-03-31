@@ -80,6 +80,7 @@ import { getClusterInfo } from '@/api/service/clusterInfo'
 import { getMetricsMetadata } from '@/api/service/serverInfo'
 import { useRoute } from 'vue-router'
 import { Chart } from '@antv/g2'
+import {queryPromSql} from "@/api/service/metricInfo";
 
 let __null = PRIMARY_COLOR
 
@@ -94,6 +95,9 @@ let metricsMetadata = reactive({
 })
 
 onMounted(async () => {
+  console.log(await queryPromSql({
+    query: "((node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / (node_memory_MemTotal_bytes)) * 100"
+  }));
   let clusterData = (await getClusterInfo({})).data
   metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
   clusterInfo.info = <{ [key: string]: string }>clusterData
