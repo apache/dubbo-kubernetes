@@ -281,19 +281,107 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/routingRule',
             name: 'routingRule',
-            component: () => import('../views/traffic/routingRule/index.vue')
+            redirect: 'index',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'routingRuleIndex',
+                component: () => import('../views/traffic/routingRule/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/formview/:ruleName',
+                name: 'routingRuleDomain.formView',
+                component: () => import('../views/traffic/routingRule/tabs/formView.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/yamlview/:ruleName',
+                name: 'routingRuleDomain.YAMLView',
+                component: () => import('../views/traffic/routingRule/tabs/YAMLView.vue'),
+                meta: {
+                  tab: true
+                }
+              }
+            ]
           },
           {
             path: '/tagRule',
             name: 'tagRule',
-            component: () => import('../views/traffic/tagRule/index.vue'),
-            meta: {}
+            redirect: 'index',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'tagRuleIndex',
+                component: () => import('../views/traffic/tagRule/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/formview/:ruleName',
+                name: 'tagRuleDomain.formView',
+                component: () => import('../views/traffic/tagRule/tabs/formView.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/yamlview/:ruleName',
+                name: 'tagRuleDomain.YAMLView',
+                component: () => import('../views/traffic/tagRule/tabs/YAMLView.vue'),
+                meta: {
+                  tab: true
+                }
+              }
+            ]
           },
           {
             path: '/dynamicConfig',
             name: 'dynamicConfig',
-            component: () => import('../views/traffic/dynamicConfig/index.vue'),
-            meta: {}
+            redirect: 'index',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'dynamicConfigIndex',
+                component: () => import('../views/traffic/dynamicConfig/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/formview/:ruleName',
+                name: 'dynamicConfigDomain.formView',
+                component: () => import('../views/traffic/dynamicConfig/tabs/formView.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/yamlview/:ruleName',
+                name: 'dynamicConfigDomain.YAMLView',
+                component: () => import('../views/traffic/dynamicConfig/tabs/YAMLView.vue'),
+                meta: {
+                  tab: true
+                }
+              }
+            ]
           },
           {
             path: '/meshRule',
@@ -302,12 +390,72 @@ export const routes: Readonly<RouteRecordType[]> = [
               {
                 path: '/virtualService',
                 name: 'virtualService',
-                component: () => import('../views/traffic/virtualService/index.vue')
+                redirect: 'index',
+                component: LayoutTab,
+                meta: {
+                  tab_parent: true
+                },
+                children: [
+                  {
+                    path: '/index',
+                    name: 'virtualServiceIndex',
+                    component: () => import('../views/traffic/virtualService/index.vue'),
+                    meta: {
+                      hidden: true
+                    }
+                  },
+                  {
+                    path: '/formview/:ruleName',
+                    name: 'virtualServiceDomain.formView',
+                    component: () => import('../views/traffic/virtualService/tabs/formView.vue'),
+                    meta: {
+                      tab: true
+                    }
+                  },
+                  {
+                    path: '/yamlview/:ruleName',
+                    name: 'virtualServiceDomain.YAMLView',
+                    component: () => import('../views/traffic/virtualService/tabs/YAMLView.vue'),
+                    meta: {
+                      tab: true
+                    }
+                  }
+                ]
               },
               {
                 path: '/destinationRule',
                 name: 'destinationRule',
-                component: () => import('../views/traffic/destinationRule/index.vue')
+                redirect: 'index',
+                component: LayoutTab,
+                meta: {
+                  tab_parent: true
+                },
+                children: [
+                  {
+                    path: '/index',
+                    name: 'destinationRuleIndex',
+                    component: () => import('../views/traffic/destinationRule/index.vue'),
+                    meta: {
+                      hidden: true
+                    }
+                  },
+                  {
+                    path: '/formview/:ruleName',
+                    name: 'destinationRuleDomain.formView',
+                    component: () => import('../views/traffic/destinationRule/tabs/formView.vue'),
+                    meta: {
+                      tab: true
+                    }
+                  },
+                  {
+                    path: '/yamlview/:ruleName',
+                    name: 'destinationRuleDomain.YAMLView',
+                    component: () => import('../views/traffic/destinationRule/tabs/YAMLView.vue'),
+                    meta: {
+                      tab: true
+                    }
+                  }
+                ]
               }
             ]
           }

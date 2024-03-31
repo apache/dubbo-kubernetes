@@ -20,9 +20,11 @@
       <template #customOperation>
         <a-button type="primary">新增标签路由规则</a-button>
       </template>
-      <template #bodyCell="{ text, column }">
+      <template #bodyCell="{ text, record, column }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <a-button type="link">{{ text }}</a-button>
+          <a-button type="link" @click="router.replace(`formview/${record[column.key]}`)">{{
+            text
+          }}</a-button>
         </template>
         <template v-if="column.dataIndex === 'enable'">
           {{ text ? '启用' : '禁用' }}
@@ -50,6 +52,7 @@ import { searchTagRule } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import router from '@/router'
 
 let columns = [
   {

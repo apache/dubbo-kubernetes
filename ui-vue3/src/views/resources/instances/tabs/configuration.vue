@@ -16,105 +16,71 @@
 -->
 
 <template>
-  <a-descriptions title="" layout="vertical" :column="2">
-    <!-- execution log -->
-    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-      <template v-slot:label>
-        {{ $t('instanceDomain.executionLog') }}
-        <a-tooltip placement="topLeft">
-          <template #title>
-            {{ $t('instanceDomain.enableAppInstanceLogs') }}(provider.accesslog)
-          </template>
-          <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
-        </a-tooltip>
+  <div class="__container_app_config">
+    <config-page :options="options">
+      <template v-slot:form_log="{ current }">
+        <a-form-item :label="$t('instanceDomain.operatorLog')" name="logFlag">
+          <a-switch v-model:checked="current.form.logFlag"></a-switch>
+        </a-form-item>
       </template>
 
-      <span :class="{ active: !state }" :style="{ color: 'black' }">
-        {{ $t('instanceDomain.close') }}
-      </span>
-      <a-switch v-model:checked="state" :loading="loading" />
-      <span :class="{ active: state }" :style="{ color: state ? PRIMARY_COLOR : 'black' }">
-        {{ $t('instanceDomain.enable') }}
-      </span>
-    </a-descriptions-item>
-
-    <!-- retry count -->
-    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-      <template v-slot:label>
-        {{ $t('instanceDomain.retryCount') }}
-        <a-tooltip placement="topLeft">
-          <template #title>{{ $t('instanceDomain.appServiceRetries') }}</template>
-          <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
-        </a-tooltip>
+      <template v-slot:form_flowDisabled="{ current }">
+        <a-form-item :label="$t('instanceDomain.flowDisabled')" name="flowDisabledFlag">
+          <a-switch v-model:checked="current.form.flowDisabledFlag"></a-switch>
+        </a-form-item>
       </template>
-      <a-typography-paragraph editable v-model:content="retryCount"> </a-typography-paragraph>
-    </a-descriptions-item>
-
-    <!-- Load Balance -->
-    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-      <template v-slot:label>
-        {{ $t('instanceDomain.loadBalance') }}
-        <a-tooltip placement="topLeft">
-          <template #title
-            >{{ $t('instanceDomain.appServiceLoadBalance') }}(provider.loadbalance)</template
-          >
-          <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
-        </a-tooltip>
-      </template>
-      <a-typography-paragraph editable v-model:content="loadBalance"> </a-typography-paragraph>
-    </a-descriptions-item>
-
-    <!-- timeout -->
-    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-      <template v-slot:label>
-        {{ $t('instanceDomain.timeout_ms') }}
-        <a-tooltip placement="topLeft">
-          <template #title>
-            {{ $t('instanceDomain.appServiceTimeout') }}(provider.timeout)
-          </template>
-          <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
-        </a-tooltip>
-      </template>
-
-      <a-typography-paragraph editable v-model:content="timeout"> </a-typography-paragraph>
-    </a-descriptions-item>
-
-    <!-- Cluster approach -->
-    <a-descriptions-item :labelStyle="{ fontWeight: 'bold' }">
-      <template v-slot:label>
-        {{ $t('instanceDomain.clusterApproach') }}
-        <a-tooltip placement="topLeft">
-          <template #title>{{ $t('instanceDomain.appServiceNegativeClusteringMethod') }}</template>
-          <Icon icon="bitcoin-icons:info-circle-outline" class="iconStyle" />
-        </a-tooltip>
-      </template>
-
-      <a-typography-paragraph editable v-model:content="clusterApproach"> </a-typography-paragraph>
-    </a-descriptions-item>
-  </a-descriptions>
+    </config-page>
+  </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
-import { Icon } from '@iconify/vue'
-import { PRIMARY_COLOR } from '@/base/constants'
-
-// 执行日志开关
-const state = ref('')
-const loading = ref(false)
-const loadBalance = ref('random')
-const clusterApproach = ref('failover')
-const retryCount = ref('2次')
-const timeout = ref('1000 ms')
+import { onMounted, reactive, ref } from 'vue'
+import ConfigPage from '@/components/ConfigPage.vue'
+let options: any = reactive({
+  list: [
+    {
+      title: 'instanceDomain.operatorLog',
+      key: 'log',
+      form: {
+        logFlag: false
+      },
+      submit: (form: {}) => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(1)
+          }, 1000)
+        })
+      },
+      reset(form: any) {
+        form.logFlag = false
+      }
+    },
+    {
+      title: 'instanceDomain.flowDisabled',
+      form: {
+        flowDisabledFlag: false
+      },
+      key: 'flowDisabled',
+      submit: (form: {}) => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(1)
+          }, 1000)
+        })
+      },
+      reset(form: any) {
+        form.logFlag = false
+      }
+    }
+  ],
+  current: [0]
+})
+onMounted(() => {
+  console.log(333)
+})
 </script>
 
 <style lang="less" scoped>
-.active {
-  font-size: 13px;
-  font-weight: bold;
-}
-
-.iconStyle {
-  font-size: 17px;
+.__container_app_config {
 }
 </style>
