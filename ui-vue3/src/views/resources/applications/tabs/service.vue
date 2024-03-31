@@ -149,7 +149,7 @@ const searchDomain = reactive(
     searchService,
     columns,
     { pageSize: 4 },
-      true,
+    true
   )
 )
 searchDomain.onSearch()

@@ -17,23 +17,21 @@
 <template>
   <div class="__container_app_event">
     <a-timeline mode="left">
-      <a-timeline-item
-          v-for="(item, i) in events.list"
-      >
-        <div class="box ">
-          <div class="label " :class="{yellow: i===0}">
-            <div class="type " ></div>
-            <div class="body ">
-                <b class="title">{{item.type}}</b>
-                <p>{{item.desc}}</p>
+      <a-timeline-item v-for="(item, i) in events.list">
+        <div class="box">
+          <div class="label" :class="{ yellow: i === 0 }">
+            <div class="type"></div>
+            <div class="body">
+              <b class="title">{{ item.type }}</b>
+              <p>{{ item.desc }}</p>
             </div>
           </div>
           <span class="time">
             {{ item.time }}
           </span>
         </div>
-        <template v-if="i===0" #dot>
-          <clock-circle-outlined  style="font-size: 16px; color: red" />
+        <template v-if="i === 0" #dot>
+          <clock-circle-outlined style="font-size: 16px; color: red" />
         </template>
 
         <!--        <a-card>-->
@@ -53,21 +51,20 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, reactive} from 'vue'
-import {listApplicationEvent} from "@/api/service/app";
-import {ClockCircleOutlined } from '@ant-design/icons-vue';
-import {PRIMARY_COLOR} from "@/base/constants";
+import { onMounted, reactive } from 'vue'
+import { listApplicationEvent } from '@/api/service/app'
+import { ClockCircleOutlined } from '@ant-design/icons-vue'
+import { PRIMARY_COLOR } from '@/base/constants'
 
-let __=PRIMARY_COLOR
-let events: any = reactive({list: []})
+let __ = PRIMARY_COLOR
+let events: any = reactive({ list: [] })
 onMounted(async () => {
-  let eventsRes = await listApplicationEvent({});
+  let eventsRes = await listApplicationEvent({})
   events.list = eventsRes.data.list
   console.log(events)
 })
 </script>
 <style lang="less" scoped>
-
 .__container_app_event {
   :deep(.ant-timeline-item-label) {
     width: 200px;
@@ -77,51 +74,47 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 80px 300px 20px;
 
-
   .box {
-    position: relative;;
+    position: relative;
     height: 100px;
     margin-bottom: 20px;
-  //top:-38px;
+    //top:-38px;
 
-
-
-    .label{
+    .label {
       position: absolute;
       height: 100px;
       top: -40px;
 
-
-      &.yellow{
+      &.yellow {
         .type {
-          border-right-color: #F8D347;
+          border-right-color: #f8d347;
         }
-        .body{
-            background: #F8D347;
+        .body {
+          background: #f8d347;
         }
       }
-      &.red{
+      &.red {
         .type {
-          border-right-color: #EB4325;
+          border-right-color: #eb4325;
         }
-        .body{
-            background: #EB4325;
+        .body {
+          background: #eb4325;
         }
       }
-      &.blue{
+      &.blue {
         .type {
-          border-right-color: #3D89F6;
+          border-right-color: #3d89f6;
         }
-        .body{
-            background: #3D89F6;
+        .body {
+          background: #3d89f6;
         }
       }
-      &.green{
+      &.green {
         .type {
-          border-right-color: #9CAC35;
+          border-right-color: #9cac35;
         }
-        .body{
-            background: #9CAC35;
+        .body {
+          background: #9cac35;
         }
       }
       .type {
@@ -134,7 +127,6 @@ onMounted(async () => {
         border-right-color: v-bind('PRIMARY_COLOR');
         display: inline;
         border-radius: 4px;
-
       }
       .body {
         position: absolute;
@@ -148,19 +140,17 @@ onMounted(async () => {
         background: v-bind('PRIMARY_COLOR');
         box-shadow: 8px 5px 10px #9f9c9c;
 
-        .title{
-         font-size: 30px;
-         line-height: 40px;
-       }
-
+        .title {
+          font-size: 30px;
+          line-height: 40px;
+        }
       }
     }
     .time {
       position: absolute;
       left: -200px;
-    //top: 38px;
+      //top: 38px;
     }
   }
-
 }
 </style>

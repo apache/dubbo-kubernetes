@@ -40,9 +40,8 @@
           <a-tag :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
         </template>
         <template v-if="column.dataIndex === 'registerStates'">
-          <a-tag :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]" v-for="t in text">{{
-              t.label
-            }}
+          <a-tag :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]" v-for="t in text"
+            >{{ t.label }}
           </a-tag>
         </template>
         <template v-if="column.dataIndex === 'registerClusters'">
@@ -57,14 +56,14 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, provide, reactive} from 'vue'
-import {INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR} from '@/base/constants'
-import {Icon} from '@iconify/vue'
+import { onMounted, provide, reactive } from 'vue'
+import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR } from '@/base/constants'
+import { Icon } from '@iconify/vue'
 import SearchTable from '@/components/SearchTable.vue'
-import {SearchDomain} from '@/utils/SearchUtil'
-import {PROVIDE_INJECT_KEY} from '@/base/enums/ProvideInject'
-import {useRoute, useRouter} from 'vue-router'
-import {getApplicationInstanceInfo, getApplicationInstanceStatistics} from '@/api/service/app'
+import { SearchDomain } from '@/utils/SearchUtil'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { useRoute, useRouter } from 'vue-router'
+import { getApplicationInstanceInfo, getApplicationInstanceStatistics } from '@/api/service/app'
 
 let __null = PRIMARY_COLOR
 let statisticsInfo = reactive({
@@ -178,34 +177,34 @@ const columns = [
 ]
 
 const searchDomain = reactive(
-    new SearchDomain(
-        [
-          {
-            label: '',
-            param: 'type',
-            defaultValue: 1,
-            dict: [
-              {label: 'ip', value: 1},
-              {label: 'name', value: 2},
-              {label: 'label', value: 3}
-            ],
-            style: {
-              width: '100px'
-            }
-          },
-          {
-            label: '',
-            param: 'search',
-            style: {
-              width: '300px'
-            }
-          }
+  new SearchDomain(
+    [
+      {
+        label: '',
+        param: 'type',
+        defaultValue: 1,
+        dict: [
+          { label: 'ip', value: 1 },
+          { label: 'name', value: 2 },
+          { label: 'label', value: 3 }
         ],
-        getApplicationInstanceInfo,
-        columns,
-        {pageSize: 4},
-        true
-    )
+        style: {
+          width: '100px'
+        }
+      },
+      {
+        label: '',
+        param: 'search',
+        style: {
+          width: '300px'
+        }
+      }
+    ],
+    getApplicationInstanceInfo,
+    columns,
+    { pageSize: 4 },
+    true
+  )
 )
 
 onMounted(() => {

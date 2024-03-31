@@ -25,20 +25,18 @@
       <template v-slot:form_flow="{ current }">
         <a-space>
           <a-card v-for="(item, i) in current.form.rules">
-
             <template #title>
               {{ $t('applicationDomain.flowWeight') }} {{ i + 1 }}
               <div style="float: right">
                 <a-space>
-                  <a-button  type="dashed" @click="">
+                  <a-button type="dashed" @click="">
                     <Icon
-                        style="font-size: 20px"
-                        icon="material-symbols-light:contract-edit"></Icon>
+                      style="font-size: 20px"
+                      icon="material-symbols-light:contract-edit"
+                    ></Icon>
                   </a-button>
                   <a-button danger type="dashed" @click="">
-                    <Icon
-                        style="font-size: 20px"
-                        icon="fluent:delete-12-filled"></Icon>
+                    <Icon style="font-size: 20px" icon="fluent:delete-12-filled"></Icon>
                   </a-button>
                 </a-space>
               </div>
@@ -49,18 +47,21 @@
             </a-form-item>
             <a-form-item label="作用范围">
               <a-table
-                  style="width: 40vw"
-                  :pagination="false"
-                  :columns="[
-                    {key: 'label', title:'label'},
-                    {key: 'condition', title:'condition'},
-                    {key: 'value', title:'value'},
+                style="width: 40vw"
+                :pagination="false"
+                :columns="[
+                  { key: 'label', title: 'label' },
+                  { key: 'condition', title: 'condition' },
+                  { key: 'value', title: 'value' }
                 ]"
-                  :data-source="[item.scope]">
-                <template #bodyCell="{column, record, index}">
+                :data-source="[item.scope]"
+              >
+                <template #bodyCell="{ column, record, index }">
                   <a-form-item
-                      v-if="column.key === 'condition'"
-                      :name="'rules[' + i + '].scope.condition'" label="">
+                    v-if="column.key === 'condition'"
+                    :name="'rules[' + i + '].scope.condition'"
+                    label=""
+                  >
                     <a-select v-model:value="item.scope.condition">
                       <a-select-option value="=">=</a-select-option>
                       <a-select-option value="!=">!=</a-select-option>
@@ -69,8 +70,10 @@
                     </a-select>
                   </a-form-item>
                   <a-form-item
-                      v-else
-                      :name="'rules[' + i + '].scope.condition.' + column.key" label="">
+                    v-else
+                    :name="'rules[' + i + '].scope.condition.' + column.key"
+                    label=""
+                  >
                     <a-input v-model:value="item.scope[column.key]"></a-input>
                   </a-form-item>
                 </template>
@@ -78,25 +81,22 @@
             </a-form-item>
           </a-card>
         </a-space>
-
       </template>
       <template v-slot:form_gray="{ current }">
         <a-space>
           <a-card v-for="(item, i) in current.form.rules">
-
             <template #title>
               {{ $t('applicationDomain.gray') }} {{ i + 1 }}
               <div style="float: right">
                 <a-space>
-                  <a-button  type="dashed" @click="">
+                  <a-button type="dashed" @click="">
                     <Icon
-                        style="font-size: 20px"
-                        icon="material-symbols-light:contract-edit"></Icon>
+                      style="font-size: 20px"
+                      icon="material-symbols-light:contract-edit"
+                    ></Icon>
                   </a-button>
                   <a-button danger type="dashed" @click="">
-                    <Icon
-                        style="font-size: 20px"
-                        icon="fluent:delete-12-filled"></Icon>
+                    <Icon style="font-size: 20px" icon="fluent:delete-12-filled"></Icon>
                   </a-button>
                 </a-space>
               </div>
@@ -107,18 +107,21 @@
             </a-form-item>
             <a-form-item label="作用范围">
               <a-table
-                  style="width: 40vw"
-                  :pagination="false"
-                  :columns="[
-                    {key: 'label', title:'label'},
-                    {key: 'condition', title:'condition'},
-                    {key: 'value', title:'value'},
+                style="width: 40vw"
+                :pagination="false"
+                :columns="[
+                  { key: 'label', title: 'label' },
+                  { key: 'condition', title: 'condition' },
+                  { key: 'value', title: 'value' }
                 ]"
-                  :data-source="[item.scope]">
-                <template #bodyCell="{column, record, index}">
+                :data-source="[item.scope]"
+              >
+                <template #bodyCell="{ column, record, index }">
                   <a-form-item
-                      v-if="column.key === 'condition'"
-                      :name="'rules[' + i + '].scope.condition'" label="">
+                    v-if="column.key === 'condition'"
+                    :name="'rules[' + i + '].scope.condition'"
+                    label=""
+                  >
                     <a-select v-model:value="item.scope.condition">
                       <a-select-option value="=">=</a-select-option>
                       <a-select-option value="!=">!=</a-select-option>
@@ -127,8 +130,10 @@
                     </a-select>
                   </a-form-item>
                   <a-form-item
-                      v-else
-                      :name="'rules[' + i + '].scope.condition.' + column.key" label="">
+                    v-else
+                    :name="'rules[' + i + '].scope.condition.' + column.key"
+                    label=""
+                  >
                     <a-input v-model:value="item.scope[column.key]"></a-input>
                   </a-form-item>
                 </template>
@@ -136,16 +141,15 @@
             </a-form-item>
           </a-card>
         </a-space>
-
       </template>
     </config-page>
   </div>
 </template>
 
 <script setup lang="ts">
-import {onMounted, reactive} from 'vue'
+import { onMounted, reactive } from 'vue'
 import ConfigPage from '@/components/ConfigPage.vue'
-import {Icon} from "@iconify/vue";
+import { Icon } from '@iconify/vue'
 
 let options: any = reactive({
   list: [
@@ -171,9 +175,7 @@ let options: any = reactive({
       key: 'flow',
       ext: {
         title: '添加权重配置',
-        fun() {
-
-        }
+        fun() {}
       },
       form: {
         rules: [
@@ -201,9 +203,7 @@ let options: any = reactive({
       key: 'gray',
       ext: {
         title: '添加灰度环境',
-        fun() {
-
-        }
+        fun() {}
       },
       form: {
         rules: [
@@ -224,8 +224,7 @@ let options: any = reactive({
           }, 1000)
         })
       }
-    },
-
+    }
   ],
   current: [0]
 })

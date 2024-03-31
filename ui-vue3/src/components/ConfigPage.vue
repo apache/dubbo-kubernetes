@@ -50,7 +50,9 @@
           <template #title>
             {{ $t(currentOption.title) }}
             <div v-if="currentOption?.ext" style="float: right">
-              <a-button type="primary" @click="currentOption?.ext?.fun">{{currentOption?.ext?.title}}</a-button>
+              <a-button type="primary" @click="currentOption?.ext?.fun">{{
+                currentOption?.ext?.title
+              }}</a-button>
             </div>
           </template>
           <a-spin :spinning="waitResponse">
@@ -63,7 +65,7 @@
               layout="horizontal"
             >
               <slot :name="'form_' + currentOption.key" :current="currentOption"></slot>
-              <a-form-item style="margin: 20px 0 0  100px">
+              <a-form-item style="margin: 20px 0 0 100px">
                 <a-button type="primary" @click="submit">{{ $t('submit') }}</a-button>
                 <a-button style="margin-left: 10px" @click="reset">{{ $t('reset') }}</a-button>
               </a-form-item>
@@ -111,7 +113,7 @@ async function submit() {
     waitResponse.value = false
   })
 
-  let cur = props.options.list[props.options.current[0]];
+  let cur = props.options.list[props.options.current[0]]
   await cur.submit(cur.form).catch((e: any) => {
     message.error('submit failed [server error]: ' + e)
   })
