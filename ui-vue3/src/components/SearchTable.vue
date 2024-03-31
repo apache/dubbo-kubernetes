@@ -16,53 +16,82 @@
 -->
 <template>
   <div class="__container_search_table">
-    <a-form>
-      <a-flex wrap="wrap" gap="large">
-        <template v-for="q in searchDomain.params">
-          <a-form-item :label="$t(q.label)">
-            <template v-if="q.dict && q.dict.length > 0">
-              <a-radio-group
-                button-style="solid"
-                v-model:value="searchDomain.queryForm[q.param]"
-                v-if="q.dictType === 'BUTTON'"
-              >
-                <a-radio-button v-for="item in q.dict" :value="item.value">
-                  {{ $t(item.label) }}
-                </a-radio-button>
-              </a-radio-group>
-              <a-select
-                v-else
-                class="select-type"
-                :style="q.style"
-                v-model:value="searchDomain.queryForm[q.param]"
-              >
-                <a-select-option
-                  :value="item.value"
-                  v-for="item in [...q.dict, { label: 'none', value: '' }]"
-                >
-                  {{ $t(item.label) }}
-                </a-select-option>
-              </a-select>
-            </template>
+    <div class="search-query-container">
+      <a-row>
+        <a-col :span="20">
+          <a-form>
+            <a-flex wrap="wrap" gap="large">
+              <template v-for="q in searchDomain.params">
+                <a-form-item :label="$t(q.label)">
+                  <template v-if="q.dict && q.dict.length > 0">
+                    <a-radio-group
+                      button-style="solid"
+                      v-model:value="searchDomain.queryForm[q.param]"
+                      v-if="q.dictType === 'BUTTON'"
+                    >
+                      <a-radio-button v-for="item in q.dict" :value="item.value">
+                        {{ $t(item.label) }}
+                      </a-radio-button>
+                    </a-radio-group>
+                    <a-select
+                      v-else
+                      class="select-type"
+                      :style="q.style"
+                      v-model:value="searchDomain.queryForm[q.param]"
+                    >
+                      <a-select-option
+                        :value="item.value"
+                        v-for="item in [...q.dict, { label: 'none', value: '' }]"
+                      >
+                        {{ $t(item.label) }}
+                      </a-select-option>
+                    </a-select>
+                  </template>
 
-            <a-input
-              v-else
-              :style="q.style"
-              :placeholder="$t('placeholder.' + (q.placeholder || `typeDefault`))"
-              v-model:value="searchDomain.queryForm[q.param]"
-            ></a-input>
-          </a-form-item>
-        </template>
-        <a-form-item :label="''">
-          <a-button type="primary" @click="searchDomain.onSearch()">
-            <Icon
-              style="margin-bottom: -2px; font-size: 1.3rem"
-              icon="ic:outline-manage-search"
-            ></Icon>
-          </a-button>
-        </a-form-item>
-      </a-flex>
-    </a-form>
+                  <a-input
+                    v-else
+                    :style="q.style"
+                    :placeholder="$t('placeholder.' + (q.placeholder || `typeDefault`))"
+                    v-model:value="searchDomain.queryForm[q.param]"
+                  ></a-input>
+                </a-form-item>
+              </template>
+              <a-form-item :label="''">
+                <a-button type="primary" @click="searchDomain.onSearch()">
+                  <Icon
+                    style="margin-bottom: -2px; font-size: 1.3rem"
+                    icon="ic:outline-manage-search"
+                  ></Icon>
+                </a-button>
+              </a-form-item>
+            </a-flex>
+          </a-form>
+        </a-col>
+        <a-col :span="4">
+          <div class="common-tool">
+            <a-dropdown placement="bottom" :trigger="['click']">
+              <div class="custom-column button">
+                <Icon icon="material-symbols-light:format-list-bulleted-rounded"></Icon>
+              </div>
+
+              <template #overlay>
+                <a-card title="Custom Column">
+                  <a-menu>
+                    <a-menu-item>
+                      <Icon
+                        style="margin-bottom: -3px; font-size: 1rem"
+                        icon="material-symbols-light:format-list-bulleted-rounded"
+                      ></Icon>
+                      3
+                    </a-menu-item>
+                  </a-menu>
+                </a-card>
+              </template>
+            </a-dropdown>
+          </div>
+        </a-col>
+      </a-row>
+    </div>
 
     <div class="search-table-container">
       <a-table
@@ -96,11 +125,17 @@
 
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
-import { computed, getCurrentInstance, inject } from 'vue'
+import { computed, getCurrentInstance, inject, reactive } from 'vue'
 
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import type { SearchDomain } from '@/utils/SearchUtil'
 import { Icon } from '@iconify/vue'
+import { PRIMARY_COLOR } from '@/base/constants'
+
+const commonTool = reactive({
+  customColumns: false
+})
+let __ = PRIMARY_COLOR
 
 const {
   appContext: {
@@ -142,8 +177,48 @@ const handleTableChange = (
 </script>
 <style lang="less" scoped>
 .__container_search_table {
+  .search-query-container {
+    border-radius: 10px 10px 0 0;
+    border-bottom: 1px solid rgba(220, 219, 219, 0.29);
+    background: #fafafa;
+    padding: 20px 20px 0 20px;
+    //margin-bottom: 20px;
+  }
+
   .select-type {
     width: 200px;
   }
+
+  :deep(.ant-pagination) {
+    padding: 0 10px 20px 0;
+  }
+
+  :deep(.ant-spin-container) {
+    background: #fafafa;
+  }
+
+  :deep(.ant-popover-arrow) {
+    display: none;
+  }
+
+  .common-tool {
+    margin-top: 5px;
+
+    .button {
+      vertical-align: center;
+      line-height: 24px;
+      font-size: 24px;
+      float: right;
+
+      &:hover {
+        color: v-bind('PRIMARY_COLOR');
+      }
+
+      svg {
+        margin-left: 10px;
+      }
+    }
+  }
 }
 </style>
+<style lang="less"></style>
