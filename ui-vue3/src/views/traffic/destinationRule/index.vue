@@ -18,23 +18,17 @@
   <div class="__container_resources_application_index">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
-        <a-button type="primary">新增条件路由规则</a-button>
+        <a-button type="primary">新增 Destination Rule</a-button>
       </template>
       <template #bodyCell="{ text, column }">
         <template v-if="column.dataIndex === 'ruleName'">
           <a-button type="link">{{ text }}</a-button>
         </template>
-        <template v-if="column.dataIndex === 'ruleGranularity'">
-          {{ text ? '服务' : '应用' }}
-        </template>
-        <template v-if="column.dataIndex === 'enable'">
-          {{ text ? '启用' : '禁用' }}
-        </template>
         <template v-if="column.dataIndex === 'operation'">
           <a-button type="link">查看</a-button>
           <a-button type="link">修改</a-button>
           <a-popconfirm
-            title="确认删除该条件路由规则？"
+            title="确认删除该动态配置？"
             ok-text="Yes"
             cancel-text="No"
             @confirm="confirm"
@@ -49,7 +43,7 @@
 
 <script setup lang="ts">
 import { onMounted, provide, reactive } from 'vue'
-import { searchRoutingRule } from '@/api/service/traffic'
+import { searchDestinationRule } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
@@ -63,25 +57,9 @@ let columns = [
     width: 140
   },
   {
-    title: 'ruleGranularity',
-    key: 'ruleGranularity',
-    dataIndex: 'ruleGranularity',
-    render: (text, record) => (record.isService ? '服务' : '应用'),
-    width: 100,
-    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
-  },
-  {
     title: 'createTime',
     key: 'createTime',
     dataIndex: 'createTime',
-    width: 120,
-    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
-  },
-  {
-    title: 'enable',
-    key: 'enable',
-    dataIndex: 'enable',
-    render: (text, record) => (record.enable ? '是' : '否'),
     width: 120,
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
@@ -104,7 +82,7 @@ const searchDomain = reactive(
         }
       }
     ],
-    searchRoutingRule,
+    searchDestinationRule,
     columns
   )
 )

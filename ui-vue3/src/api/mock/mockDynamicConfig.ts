@@ -17,7 +17,7 @@
 
 import Mock from 'mockjs'
 
-Mock.mock('/mock/routingRule/search', 'get', () => {
+Mock.mock('/mock/dynamicConfig/search', 'get', () => {
   const total = Mock.mock('@integer(8, 1000)')
   const list = []
   for (let i = 0; i < total; i++) {

@@ -290,6 +290,22 @@ export const routes: Readonly<RouteRecordType[]> = [
             name: 'dynamicConfig',
             component: () => import('../views/traffic/dynamicConfig/index.vue'),
             meta: {}
+          },
+          {
+            path: '/meshRule',
+            name: 'meshRule',
+            children: [
+              {
+                path: '/virtualService',
+                name: 'virtualService',
+                component: () => import('../views/traffic/virtualService/index.vue')
+              },
+              {
+                path: '/destinationRule',
+                name: 'destinationRule',
+                component: () => import('../views/traffic/destinationRule/index.vue')
+              }
+            ]
           }
         ]
       },
