@@ -41,8 +41,9 @@
         </template>
         <template v-if="column.dataIndex === 'registerStates'">
           <a-tag :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]" v-for="t in text">{{
-            t.label
-          }}</a-tag>
+              t.label
+            }}
+          </a-tag>
         </template>
         <template v-if="column.dataIndex === 'registerClusters'">
           <a-tag v-for="t in text">{{ t }}</a-tag>
@@ -56,18 +57,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
-import { getClusterInfo } from '@/api/service/clusterInfo'
-import { getMetricsMetadata } from '@/api/service/serverInfo'
-import { Chart } from '@antv/g2'
-import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR } from '@/base/constants'
-import { Icon } from '@iconify/vue'
+import {onMounted, provide, reactive} from 'vue'
+import {INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR} from '@/base/constants'
+import {Icon} from '@iconify/vue'
 import SearchTable from '@/components/SearchTable.vue'
-import { SearchDomain } from '@/utils/SearchUtil'
-import { searchService } from '@/api/service/service'
-import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
-import { useRoute, useRouter } from 'vue-router'
-import { getApplicationInstanceInfo, getApplicationInstanceStatistics } from '@/api/service/app'
+import {SearchDomain} from '@/utils/SearchUtil'
+import {PROVIDE_INJECT_KEY} from '@/base/enums/ProvideInject'
+import {useRoute, useRouter} from 'vue-router'
+import {getApplicationInstanceInfo, getApplicationInstanceStatistics} from '@/api/service/app'
 
 let __null = PRIMARY_COLOR
 let statisticsInfo = reactive({
@@ -181,38 +178,40 @@ const columns = [
 ]
 
 const searchDomain = reactive(
-  new SearchDomain(
-    [
-      {
-        label: '',
-        param: 'type',
-        defaultValue: 1,
-        dict: [
-          { label: 'ip', value: 1 },
-          { label: 'name', value: 2 },
-          { label: 'label', value: 3 }
+    new SearchDomain(
+        [
+          {
+            label: '',
+            param: 'type',
+            defaultValue: 1,
+            dict: [
+              {label: 'ip', value: 1},
+              {label: 'name', value: 2},
+              {label: 'label', value: 3}
+            ],
+            style: {
+              width: '100px'
+            }
+          },
+          {
+            label: '',
+            param: 'search',
+            style: {
+              width: '300px'
+            }
+          }
         ],
-        style: {
-          width: '100px'
-        }
-      },
-      {
-        label: '',
-        param: 'search',
-        style: {
-          width: '300px'
-        }
-      }
-    ],
-    getApplicationInstanceInfo,
-    columns,
-    { pageSize: 4 }
-  )
+        getApplicationInstanceInfo,
+        columns,
+        {pageSize: 4},
+        true
+    )
 )
 
 onMounted(() => {
   searchDomain.tableStyle = {
-    scrollX: '100'
+    scrollX: '100',
+    scrollY: '500px'
   }
   searchDomain.onSearch()
 })

@@ -21,11 +21,11 @@
         <a-row>
           <a-col :span="1">
             <span @click="router.push('../')" style="float: left">
-              <Icon icon="material-symbols:keyboard-backspace-rounded" class="back" />
+              <Icon icon="material-symbols:keyboard-backspace-rounded" class="back"/>
             </span>
           </a-col>
           <a-col :span="18">
-            <TAB_HEADER_TITLE :route="tabRoute" />
+            <TAB_HEADER_TITLE :route="tabRoute"/>
           </a-col>
         </a-row>
         <a-tabs @change="router.push({ name: activeKey || '' })" v-model:activeKey="activeKey">
@@ -41,18 +41,18 @@
       </div>
 
       <a-spin class="tab-spin" :spinning="transitionFlag">
-        <router-view v-show="!transitionFlag" />
+        <router-view v-show="!transitionFlag"/>
       </a-spin>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Icon } from '@iconify/vue'
-import { useRoute, useRouter } from 'vue-router'
+import {computed, ref} from 'vue'
+import {Icon} from '@iconify/vue'
+import {useRoute, useRouter} from 'vue-router'
 import _ from 'lodash'
-import { PRIMARY_COLOR, TAB_HEADER_TITLE } from '@/base/constants'
+import {PRIMARY_COLOR, TAB_HEADER_TITLE} from '@/base/constants'
 
 const router = useRouter()
 const tabRoute = useRoute()
@@ -79,6 +79,8 @@ router.beforeEach((to, from, next) => {
 </script>
 <style lang="less" scoped>
 .__container_router_tab_index {
+
+
   :deep(.tab-spin) {
     margin-top: 20vh;
   }
