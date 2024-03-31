@@ -15,8 +15,12 @@
  * limitations under the License.
  */
 
+import type { Component } from 'vue'
 import { computed, h, reactive, ref } from 'vue'
+import type { RouteRecordType } from '@/router/defaultRoutes'
+import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
+// 2aacb8
 export const PRIMARY_COLOR_DEFAULT = '#17b392'
 
 export const LOCAL_STORAGE_LOCALE = 'LOCAL_STORAGE_LOCALE'
@@ -31,13 +35,17 @@ export const INSTANCE_REGISTER_COLOR: { [key: string]: string } = {
   HEALTHY: 'green'
 }
 
-export const TAB_HEADER_TITLE_VNODE = reactive({
-  vnode: h('div', 'something')
-})
-export const TAB_HEADER_TITLE = {
+export const TAB_HEADER_TITLE: Component = {
   functional: true,
-  render: () => {
-    return TAB_HEADER_TITLE_VNODE.vnode
+  props: ['route'],
+  render: (
+    a: any,
+    b: any,
+    c: { [key: string]: RouteRecordType & RouteLocationNormalizedLoaded }
+  ) => {
+    let route = c.route
+    let header: any = route.meta?.slots?.header
+    return h(header) || h('div', route.params?.pathId)
     // console.log(h)
     // return h("div", "foo")
   }

@@ -19,7 +19,7 @@
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ text, record, index, column }">
         <template v-if="column.dataIndex === 'registerClusters'">
-          <a-tag v-for="t in text" color="grey">
+          <a-tag v-for="t in text">
             {{ t }}
           </a-tag>
         </template>

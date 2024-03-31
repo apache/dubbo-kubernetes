@@ -32,37 +32,43 @@
         </a-flex>
       </a-card>
     </a-flex>
-    <a-descriptions
-      title=" "
-      bordered
-      :column="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }"
-      layout="horizontal"
-    >
-      <a-descriptions-item label="versions">
-        <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.versions">{{ v }}</a-tag>
-      </a-descriptions-item>
-      <a-descriptions-item label="protocols">
-        <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.protocols">{{ v }}</a-tag>
-      </a-descriptions-item>
-      <a-descriptions-item label="configCenter">{{
-        metricsMetadata.info.configCenter
-      }}</a-descriptions-item>
-      <a-descriptions-item label="registry">{{
-        metricsMetadata.info.registry
-      }}</a-descriptions-item>
-      <a-descriptions-item label="metadataCenter">{{
-        metricsMetadata.info.metadataCenter
-      }}</a-descriptions-item>
-      <a-descriptions-item label="grafana">{{ metricsMetadata.info.grafana }}</a-descriptions-item>
-      <a-descriptions-item label="prometheus">{{
-        metricsMetadata.info.prometheus
-      }}</a-descriptions-item>
-      <a-descriptions-item label="Remark">empty</a-descriptions-item>
-      <a-descriptions-item label="rules">
-        <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.rules">{{ v }}</a-tag>
-      </a-descriptions-item>
-    </a-descriptions>
-    <div id="report_container"></div>
+    <a-card class="card">
+      <a-descriptions
+        title=" "
+        bordered
+        :column="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }"
+        layout="horizontal"
+      >
+        <a-descriptions-item label="versions">
+          <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.versions">{{ v }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="protocols">
+          <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.protocols">{{ v }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="configCenter">{{
+          metricsMetadata.info.configCenter
+        }}</a-descriptions-item>
+        <a-descriptions-item label="registry">{{
+          metricsMetadata.info.registry
+        }}</a-descriptions-item>
+        <a-descriptions-item label="metadataCenter">{{
+          metricsMetadata.info.metadataCenter
+        }}</a-descriptions-item>
+        <a-descriptions-item label="grafana">{{
+          metricsMetadata.info.grafana
+        }}</a-descriptions-item>
+        <a-descriptions-item label="prometheus">{{
+          metricsMetadata.info.prometheus
+        }}</a-descriptions-item>
+        <a-descriptions-item label="Remark">empty</a-descriptions-item>
+        <a-descriptions-item label="rules">
+          <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.rules">{{ v }}</a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-card>
+    <a-card class="card">
+      <div id="report_container"></div>
+    </a-card>
   </div>
 </template>
 
@@ -164,6 +170,9 @@ onMounted(async () => {
     border-radius: 5px;
     font-size: 20px;
     color: white;
+  }
+  .card {
+    margin-top: 10px;
   }
 }
 </style>

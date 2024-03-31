@@ -95,7 +95,7 @@ router.beforeEach((to, from, next) => {
   }
 
   .back {
-    font-size: 20px;
+    font-size: 24px;
     margin-bottom: -2px;
     color: v-bind('PRIMARY_COLOR');
   }

@@ -151,7 +151,6 @@ searchDomain.table.columns.forEach((column: any) => {
   }
 })
 const pagination = computed(() => {
-  console.log(pagination)
   return {
     pageSize: searchDomain.paged.pageSize,
     current: searchDomain.paged.curPage,
