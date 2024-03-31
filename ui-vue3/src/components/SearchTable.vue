@@ -18,7 +18,7 @@
   <div class="__container_search_table">
     <div class="search-query-container">
       <a-row>
-        <a-col :span="20">
+        <a-col :span="18">
           <a-form>
             <a-flex wrap="wrap" gap="large">
               <template v-for="q in searchDomain.params">
@@ -67,28 +67,31 @@
             </a-flex>
           </a-form>
         </a-col>
-        <a-col :span="4">
-          <div class="common-tool">
-            <a-dropdown placement="bottom" :trigger="['click']">
-              <div class="custom-column button">
-                <Icon icon="material-symbols-light:format-list-bulleted-rounded"></Icon>
-              </div>
+        <a-col :span="6">
+          <a-flex style="justify-content: flex-end;">
+            <slot name="customOperation"></slot>
+            <div class="common-tool">
+              <a-dropdown placement="bottom" :trigger="['click']">
+                <div class="custom-column button">
+                  <Icon icon="material-symbols-light:format-list-bulleted-rounded"></Icon>
+                </div>
 
-              <template #overlay>
-                <a-card title="Custom Column">
-                  <a-menu>
-                    <a-menu-item>
-                      <Icon
-                        style="margin-bottom: -3px; font-size: 1rem"
-                        icon="material-symbols-light:format-list-bulleted-rounded"
-                      ></Icon>
-                      3
-                    </a-menu-item>
-                  </a-menu>
-                </a-card>
-              </template>
-            </a-dropdown>
-          </div>
+                <template #overlay>
+                  <a-card title="Custom Column">
+                    <a-menu>
+                      <a-menu-item>
+                        <Icon
+                          style="margin-bottom: -3px; font-size: 1rem"
+                          icon="material-symbols-light:format-list-bulleted-rounded"
+                        ></Icon>
+                        3
+                      </a-menu-item>
+                    </a-menu>
+                  </a-card>
+                </template>
+              </a-dropdown>
+            </div>
+          </a-flex>
         </a-col>
       </a-row>
     </div>
@@ -125,12 +128,14 @@
 
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
-import { computed, getCurrentInstance, inject, reactive } from 'vue'
+import { computed, getCurrentInstance, inject, reactive, useSlots } from 'vue'
 
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import type { SearchDomain } from '@/utils/SearchUtil'
 import { Icon } from '@iconify/vue'
 import { PRIMARY_COLOR } from '@/base/constants'
+
+const customOperation = !!useSlots().customOperation;
 
 const commonTool = reactive({
   customColumns: false
@@ -215,7 +220,7 @@ const handleTableChange = (
       }
 
       svg {
-        margin-left: 10px;
+        margin-left: 20px;
       }
     }
   }
