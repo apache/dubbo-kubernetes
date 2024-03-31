@@ -17,15 +17,14 @@
 
 import Mock from 'mockjs'
 
-Mock.mock('/mock/routingRule/search', 'get', () => {
+Mock.mock('/mock/virtualService/search', 'get', () => {
   const total = Mock.mock('@integer(8, 1000)')
   const list = []
   for (let i = 0; i < total; i++) {
     list.push({
       ruleName: 'app_' + Mock.mock('@string(2,10)'),
-      ruleGranularity: Mock.mock('@boolean'),
-      enable: Mock.mock('@boolean'),
-      createTime: Mock.mock('@datetime')
+      createTime: Mock.mock('@datetime'),
+      lastModifiedTime: Mock.mock('@datetime')
     })
   }
   return {

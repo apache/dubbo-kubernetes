@@ -291,7 +291,8 @@ const words: I18nType = {
 
   ruleName: '规则名',
   ruleGranularity: '规则粒度',
-  effectiveTime: '生效时间',
+  createTime: '创建时间',
+  lastModifiedTime: '最后修改时间',
   enable: '是否启用',
   protection: '容错保护',
   trafficTimeout: '超时时间',
