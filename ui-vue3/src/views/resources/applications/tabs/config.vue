@@ -15,14 +15,65 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_app_config">config</div>
+  <div class="__container_app_config">
+    <config-page :options="options">
+      <template v-slot:form_log="{ current }">
+        <a-form-item :label="$t('applicationDomain.operatorLog')" name="logFlag">
+          <a-switch v-model:checked="current.form.logFlag"></a-switch>
+        </a-form-item>
+      </template>
+      <template v-slot:form_flow="{ current }"> 2 </template>
+      <template v-slot:form_gray="{ current }"> 3 </template>
+    </config-page>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-
+import { onMounted, reactive, ref } from 'vue'
+import ConfigPage from '@/components/ConfigPage.vue'
+let options: any = reactive({
+  list: [
+    {
+      title: 'applicationDomain.operatorLog',
+      key: 'log',
+      form: {
+        logFlag: false
+      },
+      submit: (form: {}) => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(1)
+          }, 1000)
+        })
+      },
+      reset(form: any) {
+        form.logFlag = false
+      }
+    },
+    {
+      title: 'applicationDomain.flowWeight',
+      form: {},
+      key: 'flow',
+      submit(form: {}) {
+        console.log(form)
+      }
+    },
+    {
+      title: 'applicationDomain.gray',
+      form: {},
+      key: 'gray',
+      submit(form: {}) {
+        console.log(form)
+      }
+    }
+  ],
+  current: [0]
+})
 onMounted(() => {
   console.log(333)
 })
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.__container_app_config {
+}
+</style>

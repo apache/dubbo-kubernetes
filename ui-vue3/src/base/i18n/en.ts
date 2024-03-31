@@ -347,6 +347,9 @@ const words: I18nType = {
   applications: 'Applications',
   instances: 'Instances',
   applicationDomain: {
+    operatorLog: 'OperatorLog',
+    flowWeight: 'FlowWeight',
+    gray: 'Gray',
     detail: 'Detail',
     instance: 'Instance',
     service: 'Service',
@@ -388,7 +391,9 @@ const words: I18nType = {
   tracing: 'Tracing',
 
   provideService: 'Provide Service',
-  dependentService: 'Dependent Service'
+  dependentService: 'Dependent Service',
+  submit: 'Submit',
+  reset: 'Reset'
 }
 
 export default words

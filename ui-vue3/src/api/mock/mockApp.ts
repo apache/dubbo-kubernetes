@@ -30,22 +30,30 @@ Mock.mock('/mock/application/search', 'get', () => {
   let total = Mock.mock('@integer(8, 1000)')
   let list = []
   for (let i = 0; i < total; i++) {
+    let tmp: any = {
+      registerClusters: []
+    }
+    let num = Mock.mock('@integer(1,3)')
+    for (let j = 0; j < num; j++) {
+      let r = Mock.mock('@string(5)')
+      tmp.registerClusters.push(`cluster_${r}`)
+    }
     list.push({
       appName: 'app_' + Mock.mock('@string(2,10)'),
       instanceNum: Mock.mock('@integer(80, 200)'),
       deployCluster: 'cluster_' + Mock.mock('@string(5)'),
-      'registerClusters|1-3': ['cluster_' + Mock.mock('@string(5)')]
+      ...tmp
     })
   }
   return {
     code: 200,
     message: 'success',
-    data: Mock.mock({
+    data: {
       total: total,
       curPage: 1,
       pageSize: 10,
       data: list
-    })
+    }
   }
 })
 Mock.mock('/mock/application/instance/statistics', 'get', () => {

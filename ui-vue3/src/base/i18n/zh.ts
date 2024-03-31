@@ -289,6 +289,11 @@ const words: I18nType = {
   editMockRule: '修改规则',
   deleteRuleTitle: '确定要删除此服务Mock规则吗？',
 
+  ruleName: '规则名',
+  ruleGranularity: '规则粒度',
+  effectiveTime: '生效时间',
+  enable: '是否启用',
+  protection: '容错保护',
   trafficTimeout: '超时时间',
   trafficRetry: '调用重试',
   trafficRegion: '同区域优先',
@@ -309,6 +314,9 @@ const words: I18nType = {
   applications: '应用',
   instances: '实例',
   applicationDomain: {
+    operatorLog: '执行日志',
+    flowWeight: '流量权重',
+    gray: '灰度隔离',
     name: '应用名',
     detail: '详情',
     instance: '实例',
@@ -345,7 +353,8 @@ const words: I18nType = {
 
   placeholder: {
     typeAppName: '请输入应用名，支持前缀搜索',
-    typeDefault: '请输入'
+    typeDefault: '请输入',
+    typeRoutingRules: '搜索路由规则，支持前缀过滤'
   },
   none: '无',
   details: '详情',
@@ -357,7 +366,9 @@ const words: I18nType = {
 
   provideService: '提供服务',
   dependentService: '依赖服务',
-  idx: '序号'
+  idx: '序号',
+  submit: '提交',
+  reset: '重置'
 }
 
 export default words

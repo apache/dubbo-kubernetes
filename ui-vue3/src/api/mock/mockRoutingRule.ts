@@ -14,23 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createApp } from 'vue'
-import Antd from 'ant-design-vue'
 
-import router from './router'
-import App from './App.vue'
-import 'ant-design-vue/dist/reset.css'
-import { i18n } from '@/base/i18n'
-import './api/mock/index'
-// import './api/mock/mockCluster'
-// import './api/mock/mockVersion'
+import Mock from 'mockjs'
 
-import Vue3ColorPicker from 'vue3-colorpicker'
-import 'vue3-colorpicker/style.css'
-import 'nprogress/nprogress.css'
-
-import { PRIMARY_COLOR } from '@/base/constants'
-
-const app = createApp(App)
-
-app.use(Antd).use(Vue3ColorPicker).use(i18n).use(router).mount('#app')
+Mock.mock('/mock/routingRule/search', 'get', () => {
+  const total = Mock.mock('@integer(8, 1000)')
+  const list = []
+  for (let i = 0; i < total; i++) {
+    list.push({
+      ruleName: 'app_' + Mock.mock('@string(2,10)'),
+      ruleGranularity: Mock.mock('@integer(80, 200)'),
+      enable: Mock.mock('@boolean'),
+      effectiveTime: Mock.mock('@datetime'),
+      protection: Mock.mock('@boolean')
+    })
+  }
+  return {
+    code: 200,
+    message: 'success',
+    data: Mock.mock({
+      total: total,
+      curPage: 1,
+      pageSize: 10,
+      data: list
+    })
+  }
+})
