@@ -65,19 +65,16 @@ const isDrawerOpened = ref(false)
 
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
-  'force: true\n' +
-  'enabled: true\n' +
-  'key: shop-detail\n' +
-  'tags:\n' +
-  '  - name: gray\n' +
-  '    match:\n' +
-  '      - key: env\n' +
-  '        value:\n' +
-  '          exact: gray'
+    'force: true\n' +
+    'enabled: true\n' +
+    'key: shop-detail\n' +
+    'tags:\n' +
+    '  - name: gray\n' +
+    '    match:\n' +
+    '      - key: env\n' +
+    '        value:\n' +
+    '          exact: gray'
 )
-
 </script>
 
-<style scoped lang="less">
-
-</style>
+<style scoped lang="less"></style>

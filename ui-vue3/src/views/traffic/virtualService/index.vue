@@ -20,9 +20,11 @@
       <template #customOperation>
         <a-button type="primary">新增路由规则</a-button>
       </template>
-      <template #bodyCell="{ text, column,record }">
+      <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <a-button type="link" @click="router.replace(`formview/${record[column.key]}`)">{{ text }}</a-button>
+          <a-button type="link" @click="router.replace(`formview/${record[column.key]}`)">{{
+            text
+          }}</a-button>
         </template>
         <template v-if="column.dataIndex === 'operation'">
           <a-button type="link">查看</a-button>
