@@ -300,7 +300,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'routingRuleDomain.formView',
                 component: () => import('../views/traffic/routingRule/tabs/formView.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'oui:apm-trace'
                 }
               },
               {
@@ -308,7 +309,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'routingRuleDomain.YAMLView',
                 component: () => import('../views/traffic/routingRule/tabs/YAMLView.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'oui:app-console'
                 }
               }
             ]
@@ -335,7 +337,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'tagRuleDomain.formView',
                 component: () => import('../views/traffic/tagRule/tabs/formView.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'oui:apm-trace'
                 }
               },
               {
@@ -343,7 +346,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'tagRuleDomain.YAMLView',
                 component: () => import('../views/traffic/tagRule/tabs/YAMLView.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'oui:app-console'
                 }
               }
             ]
@@ -370,7 +374,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'dynamicConfigDomain.formView',
                 component: () => import('../views/traffic/dynamicConfig/tabs/formView.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'oui:apm-trace'
                 }
               },
               {
@@ -378,7 +383,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'dynamicConfigDomain.YAMLView',
                 component: () => import('../views/traffic/dynamicConfig/tabs/YAMLView.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  icon: 'oui:app-console'
                 }
               }
             ]
@@ -409,7 +415,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                     name: 'virtualServiceDomain.formView',
                     component: () => import('../views/traffic/virtualService/tabs/formView.vue'),
                     meta: {
-                      tab: true
+                      tab: true,
+                      icon: 'oui:apm-trace'
                     }
                   },
                   {
@@ -417,7 +424,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                     name: 'virtualServiceDomain.YAMLView',
                     component: () => import('../views/traffic/virtualService/tabs/YAMLView.vue'),
                     meta: {
-                      tab: true
+                      tab: true,
+                      icon: 'oui:app-console'
                     }
                   }
                 ]
@@ -444,7 +452,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                     name: 'destinationRuleDomain.formView',
                     component: () => import('../views/traffic/destinationRule/tabs/formView.vue'),
                     meta: {
-                      tab: true
+                      tab: true,
+                      icon: 'oui:apm-trace'
                     }
                   },
                   {
@@ -452,7 +461,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                     name: 'destinationRuleDomain.YAMLView',
                     component: () => import('../views/traffic/destinationRule/tabs/YAMLView.vue'),
                     meta: {
-                      tab: true
+                      tab: true,
+                      icon: 'oui:app-console'
                     }
                   }
                 ]

@@ -16,10 +16,9 @@
 -->
 
 <template>
-  <!--  editor-->
   <a-card>
     <a-flex style="width: 100%">
-      <a-col :span="isDrawerOpened ? 16 : 24">
+      <a-col :span="isDrawerOpened ? 24 - sliderSpan : 24" class="left">
         <a-flex vertical align="end">
           <a-button type="text" style="color: #0a90d5" @click="isDrawerOpened = !isDrawerOpened">
             {{ $t('flowControlDomain.versionRecords') }}
@@ -27,19 +26,21 @@
             <DoubleRightOutlined v-else />
           </a-button>
 
-          <MonacoEditor
-            :modelValue="YAMLValue"
-            theme="vs-dark"
-            :height="280"
-            language="yaml"
-            :readonly="isReadonly"
-          />
+          <div class="editorBox">
+            <MonacoEditor
+              :modelValue="YAMLValue"
+              theme="vs-dark"
+              :height="500"
+              language="yaml"
+              :readonly="isReadonly"
+            />
+          </div>
         </a-flex>
       </a-col>
 
-      <a-col :span="isDrawerOpened ? 8 : 0">
-        <a-card v-show="isDrawerOpened">
-          <a-card>
+      <a-col :span="isDrawerOpened ? sliderSpan : 0" class="right">
+        <a-card v-if="isDrawerOpened" class="sliderBox">
+          <a-card v-for="i in 2" :key="i">
             <p>修改时间: 2024/3/20 15:20:31</p>
             <p>版本号: xo842xqpx834</p>
 
@@ -63,6 +64,8 @@ const isReadonly = ref(true)
 
 const isDrawerOpened = ref(false)
 
+const sliderSpan = ref(8)
+
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
     'force: true\n' +
@@ -77,4 +80,24 @@ const YAMLValue = ref(
 )
 </script>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+.editorBox {
+  border-radius: 0.3rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.sliderBox {
+  margin-left: 5px;
+  max-height: 530px;
+  overflow: auto;
+}
+
+&:deep(.left.ant-col) {
+  transition: all 0.5s ease;
+}
+
+&:deep(.right.ant-col) {
+  transition: all 0.5s ease;
+}
+</style>
