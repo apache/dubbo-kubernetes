@@ -332,6 +332,8 @@ const words: I18nType = {
   editMockRule: 'Edit Mock Rule',
   deleteRuleTitle: 'Are you sure to delete this mock rule?',
 
+  createTime: 'Create Time',
+  lastModifiedTime: 'Last Modified Time',
   trafficTimeout: 'Timeout',
   trafficRetry: 'Retry',
   trafficRegion: 'Region Aware',

@@ -19,6 +19,7 @@ import type { RouterMeta } from '@/router/RouterMeta'
 import type { RouteRecordRaw } from 'vue-router'
 import LayoutTab from '../layout/tab/layout_tab.vue'
 import _ from 'lodash'
+import AppTabHeaderSlot from '@/views/resources/applications/slots/AppTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -58,7 +59,10 @@ export const routes: Readonly<RouteRecordType[]> = [
             component: LayoutTab,
             redirect: 'index',
             meta: {
-              tab_parent: true
+              tab_parent: true,
+              slots: {
+                header: AppTabHeaderSlot
+              }
             },
             children: [
               {
@@ -290,6 +294,22 @@ export const routes: Readonly<RouteRecordType[]> = [
             name: 'dynamicConfig',
             component: () => import('../views/traffic/dynamicConfig/index.vue'),
             meta: {}
+          },
+          {
+            path: '/meshRule',
+            name: 'meshRule',
+            children: [
+              {
+                path: '/virtualService',
+                name: 'virtualService',
+                component: () => import('../views/traffic/virtualService/index.vue')
+              },
+              {
+                path: '/destinationRule',
+                name: 'destinationRule',
+                component: () => import('../views/traffic/destinationRule/index.vue')
+              }
+            ]
           }
         ]
       },

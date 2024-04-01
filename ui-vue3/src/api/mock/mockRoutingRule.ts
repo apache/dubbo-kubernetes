@@ -23,10 +23,9 @@ Mock.mock('/mock/routingRule/search', 'get', () => {
   for (let i = 0; i < total; i++) {
     list.push({
       ruleName: 'app_' + Mock.mock('@string(2,10)'),
-      ruleGranularity: Mock.mock('@integer(80, 200)'),
+      ruleGranularity: Mock.mock('@boolean'),
       enable: Mock.mock('@boolean'),
-      effectiveTime: Mock.mock('@datetime'),
-      protection: Mock.mock('@boolean')
+      createTime: Mock.mock('@datetime')
     })
   }
   return {

@@ -68,26 +68,27 @@
           </a-form>
         </a-col>
         <a-col :span="4">
-          <div class="common-tool">
-            <a-dropdown placement="bottom" :trigger="['click']">
-              <div class="custom-column button">
-                <Icon icon="material-symbols-light:format-list-bulleted-rounded"></Icon>
-              </div>
-
-              <template #overlay>
-                <a-card title="Custom Column">
-                  <a-menu>
-                    <a-menu-item>
-                      <Icon
-                        style="margin-bottom: -3px; font-size: 1rem"
-                        icon="material-symbols-light:format-list-bulleted-rounded"
-                      ></Icon>
-                      3
-                    </a-menu-item>
-                  </a-menu>
-                </a-card>
-              </template>
-            </a-dropdown>
+          <div class="common-tool" @click="commonTool.customColumns = !commonTool.customColumns">
+            <div class="custom-column button">
+              <Icon icon="material-symbols-light:format-list-bulleted-rounded"></Icon>
+            </div>
+            <div class="dropdown" v-show="commonTool.customColumns">
+              <a-card style="max-width: 300px" title="Custom Column">
+                <div class="body">
+                  <div
+                    class="item"
+                    @click.stop="hideColumn(item)"
+                    v-for="(item, i) in searchDomain?.table.columns"
+                  >
+                    <Icon
+                      style="margin-bottom: -4px; font-size: 1rem; margin-right: 2px"
+                      :icon="item.__hide ? 'zondicons:view-hide' : 'zondicons:view-show'"
+                    ></Icon>
+                    {{ item.title }}
+                  </div>
+                </div>
+              </a-card>
+            </div>
           </div>
         </a-col>
       </a-row>
@@ -102,7 +103,7 @@
           y: searchDomain.tableStyle?.scrollY || '',
           x: searchDomain.tableStyle?.scrollX || ''
         }"
-        :columns="searchDomain?.table.columns"
+        :columns="searchDomain?.table.columns.filter((x: any) => !x.__hide)"
         :data-source="searchDomain?.result"
         @change="handleTableChange"
       >
@@ -131,6 +132,7 @@ import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import type { SearchDomain } from '@/utils/SearchUtil'
 import { Icon } from '@iconify/vue'
 import { PRIMARY_COLOR } from '@/base/constants'
+import { message } from 'ant-design-vue'
 
 const commonTool = reactive({
   customColumns: false
@@ -150,8 +152,10 @@ searchDomain.table.columns.forEach((column: any) => {
     column.title = computed(() => globalProperties.$t(tmp))
   }
 })
-const pagination = computed(() => {
-  console.log(pagination)
+const pagination: any = computed(() => {
+  if (searchDomain.noPaged) {
+    return false
+  }
   return {
     pageSize: searchDomain.paged.pageSize,
     current: searchDomain.paged.curPage,
@@ -173,6 +177,14 @@ const handleTableChange = (
   searchDomain.paged.curPage = pag.current
   searchDomain.onSearch()
   return
+}
+function hideColumn(item: any) {
+  let filter = searchDomain?.table.columns.filter((x: any) => !x.__hide)
+  if (!item.__hide && filter.length <= 1) {
+    message.warn('must show at least one column')
+    return
+  }
+  item.__hide = !item.__hide
 }
 </script>
 <style lang="less" scoped>
@@ -197,13 +209,11 @@ const handleTableChange = (
     background: #fafafa;
   }
 
-  :deep(.ant-popover-arrow) {
-    display: none;
-  }
-
   .common-tool {
     margin-top: 5px;
-
+    width: 200px;
+    cursor: pointer;
+    position: relative;
     .button {
       vertical-align: center;
       line-height: 24px;
@@ -216,6 +226,24 @@ const handleTableChange = (
 
       svg {
         margin-left: 10px;
+      }
+    }
+    .dropdown {
+      top: 40px;
+      right: -40px;
+      position: absolute;
+      height: auto;
+      z-index: 1000;
+      .body {
+        max-height: 200px;
+        overflow: auto;
+      }
+
+      .item {
+        line-height: 30px;
+        &:hover {
+          color: v-bind('PRIMARY_COLOR');
+        }
       }
     }
   }

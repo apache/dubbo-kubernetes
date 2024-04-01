@@ -14,17 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { RouteMeta } from 'vue-router'
-import type { RouteRecordType } from '@/router/defaultRoutes'
-import type { Component } from 'vue'
 
-export interface RouterMeta extends RouteMeta {
-  icon?: string
-  hidden?: boolean
-  skip?: boolean
-  tab_parent?: boolean
-  tab?: boolean
-  _router_key?: string
-  parent?: RouteRecordType
-  slots?: { [key: string]: Component }
-}
+import Mock from 'mockjs'
+
+Mock.mock('/mock/virtualService/search', 'get', () => {
+  const total = Mock.mock('@integer(8, 1000)')
+  const list = []
+  for (let i = 0; i < total; i++) {
+    list.push({
+      ruleName: 'app_' + Mock.mock('@string(2,10)'),
+      createTime: Mock.mock('@datetime'),
+      lastModifiedTime: Mock.mock('@datetime')
+    })
+  }
+  return {
+    code: 200,
+    message: 'success',
+    data: Mock.mock({
+      total: total,
+      curPage: 1,
+      pageSize: 10,
+      data: list
+    })
+  }
+})
