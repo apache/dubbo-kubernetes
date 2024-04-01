@@ -17,45 +17,47 @@
 
 <template>
   <!--  editor-->
-  <a-flex style="width: 100%">
-    <a-col :span="isDrawerOpened ? 16 : 24">
-      <a-flex vertical align="end">
-        <a-button type="text" style="color: #0a90d5" @click="isDrawerOpened = !isDrawerOpened">
-          {{ $t('flowControlDomain.versionRecords') }}
-          <DoubleLeftOutlined v-if="!isDrawerOpened" />
-          <DoubleRightOutlined v-else />
-        </a-button>
+  <a-card>
+    <a-flex style="width: 100%">
+      <a-col :span="isDrawerOpened ? 16 : 24">
+        <a-flex vertical align="end">
+          <a-button type="text" style="color: #0a90d5" @click="isDrawerOpened = !isDrawerOpened">
+            {{ $t('flowControlDomain.versionRecords') }}
+            <DoubleLeftOutlined v-if="!isDrawerOpened" />
+            <DoubleRightOutlined v-else />
+          </a-button>
 
-        <MonacoEditor
-          :modelValue="YAMLValue"
-          theme="vs-dark"
-          :height="280"
-          language="yaml"
-          :readonly="isReadonly"
-        />
-      </a-flex>
-    </a-col>
+          <MonacoEditor
+            :modelValue="YAMLValue"
+            theme="vs-dark"
+            :height="280"
+            language="yaml"
+            :readonly="isReadonly"
+          />
+        </a-flex>
+      </a-col>
 
-    <a-col :span="isDrawerOpened ? 8 : 0">
-      <a-card v-show="isDrawerOpened">
-        <a-card>
-          <p>修改时间: 2024/3/20 15:20:31</p>
-          <p>版本号: xo842xqpx834</p>
+      <a-col :span="isDrawerOpened ? 8 : 0">
+        <a-card v-show="isDrawerOpened">
+          <a-card>
+            <p>修改时间: 2024/3/20 15:20:31</p>
+            <p>版本号: xo842xqpx834</p>
 
-          <a-flex justify="flex-end">
-            <a-button type="text" style="color: #0a90d5">查看</a-button>
-            <a-button type="text" style="color: #0a90d5">回滚</a-button>
-          </a-flex>
+            <a-flex justify="flex-end">
+              <a-button type="text" style="color: #0a90d5">查看</a-button>
+              <a-button type="text" style="color: #0a90d5">回滚</a-button>
+            </a-flex>
+          </a-card>
         </a-card>
-      </a-card>
-    </a-col>
-  </a-flex>
+      </a-col>
+    </a-flex>
+  </a-card>
 </template>
 
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const isReadonly = ref(true)
 
@@ -63,31 +65,19 @@ const isDrawerOpened = ref(false)
 
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
-    'force: true\n' +
-    'enabled: true\n' +
-    'key: shop-detail\n' +
-    'tags:\n' +
-    '  - name: gray\n' +
-    '    match:\n' +
-    '      - key: env\n' +
-    '        value:\n' +
-    '          exact: gray'
+  'force: true\n' +
+  'enabled: true\n' +
+  'key: shop-detail\n' +
+  'tags:\n' +
+  '  - name: gray\n' +
+  '    match:\n' +
+  '      - key: env\n' +
+  '        value:\n' +
+  '          exact: gray'
 )
+
 </script>
 
 <style scoped lang="less">
-.editor {
-  width: fit-content;
-}
 
-.drawer {
-  width: 0;
-  min-height: 300px;
-  max-height: 100%;
-  transition: all 0.3s ease-in-out;
-}
-
-.drawerOpened {
-  width: 250px;
-}
 </style>
