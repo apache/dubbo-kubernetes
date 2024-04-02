@@ -22,7 +22,13 @@
       <a-col :span="12">
         <a-descriptions title="" layout="vertical" :column="1">
           <a-descriptions-item label="规则名" :labelStyle="{ fontWeight: 'bold', width: '100px' }">
-            shop-user/StandardRouter
+            <p
+              @click="copyIt('shop-user/StandardRouter')"
+              class="description-item-content with-card"
+            >
+              shop-user/StandardRouter
+              <CopyOutlined />
+            </p>
           </a-descriptions-item>
           <a-descriptions-item
             label="作用对象"
@@ -120,11 +126,37 @@
   </a-card>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { CopyOutlined } from '@ant-design/icons-vue'
+import { type ComponentInternalInstance, getCurrentInstance } from 'vue'
+import { PRIMARY_COLOR, PRIMARY_COLOR_T } from '@/base/constants'
+import useClipboard from 'vue-clipboard3'
+import { message } from 'ant-design-vue'
+
+const {
+  appContext: {
+    config: { globalProperties }
+  }
+} = <ComponentInternalInstance>getCurrentInstance()
+
+let __ = PRIMARY_COLOR
+let PRIMARY_COLOR_20 = PRIMARY_COLOR_T('20')
+
+const toClipboard = useClipboard().toClipboard
+
+function copyIt(v: string) {
+  message.success(globalProperties.$t('messageDomain.success.copy'))
+  toClipboard(v)
+}
+</script>
 
 <style scoped lang="less">
 .description-item-content {
-  margin-left: 20px;
-  width: 90%;
+  &.no-card {
+    padding-left: 20px;
+  }
+  &.with-card:hover {
+    color: v-bind('PRIMARY_COLOR');
+  }
 }
 </style>
