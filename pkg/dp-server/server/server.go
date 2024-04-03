@@ -19,7 +19,6 @@ package server
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strings"
@@ -92,12 +91,10 @@ func NewDpServer(config dp_server.DpServerConfig, filter Filter) *DpServer {
 }
 
 func (d *DpServer) Start(stop <-chan struct{}) error {
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12} // To make gosec pass this is always set after
 	server := &http.Server{
-		Addr:      fmt.Sprintf(":%d", d.config.Port),
-		Handler:   http.HandlerFunc(d.handle),
-		TLSConfig: tlsConfig,
-		ErrorLog:  adapter.ToStd(log),
+		Addr:     fmt.Sprintf(":%d", d.config.Port),
+		Handler:  http.HandlerFunc(d.handle),
+		ErrorLog: adapter.ToStd(log),
 	}
 
 	errChan := make(chan error)

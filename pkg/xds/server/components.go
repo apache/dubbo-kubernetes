@@ -49,7 +49,7 @@ func RegisterXDS(rt core_runtime.Runtime) error {
 
 	envoyCpCtx := &xds_context.ControlPlaneContext{
 		CLACache: claCache,
-		Zone:     "",
+		Zone:     rt.Config().Multizone.Zone.Name,
 	}
 	if err := v3.RegisterXDS(nil, envoyCpCtx, rt); err != nil {
 		return errors.Wrap(err, "could not register V3 XDS")
