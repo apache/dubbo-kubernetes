@@ -126,8 +126,8 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	}))
 
 	resourceManager := builder.ResourceManager()
-	kdsContext := dds_context.DefaultContext(appCtx, resourceManager, cfg)
-	builder.WithDDSContext(kdsContext)
+	ddsContext := dds_context.DefaultContext(appCtx, resourceManager, cfg)
+	builder.WithDDSContext(ddsContext)
 
 	if cfg.Mode == config_core.Global {
 		kdsEnvoyAdminClient := admin2.NewDDSEnvoyAdminClient(
