@@ -19,7 +19,6 @@ package bootstrap
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -121,9 +120,7 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	leaderInfoComponent := &component.LeaderInfoComponent{}
 	builder.WithLeaderInfo(leaderInfoComponent)
 
-	builder.WithDpServer(server.NewDpServer(*cfg.DpServer, func(writer http.ResponseWriter, request *http.Request) bool {
-		return true
-	}))
+	builder.WithDpServer(server.NewDpServer(*cfg.DpServer))
 
 	resourceManager := builder.ResourceManager()
 	ddsContext := dds_context.DefaultContext(appCtx, resourceManager, cfg)
