@@ -189,7 +189,7 @@ type DDSSubscription struct {
 	// Generation is an integer number which is periodically increased by the
 	// status sink
 	Generation uint32 `protobuf:"varint,7,opt,name=generation,proto3" json:"generation,omitempty"`
-	// Config of Zone Kuma CP
+	// Config of Zone Dubbo CP
 	Config string `protobuf:"bytes,8,opt,name=config,proto3" json:"config,omitempty"`
 	// Indicates if subscription provided auth token
 	AuthTokenProvided bool `protobuf:"varint,9,opt,name=auth_token_provided,json=authTokenProvided,proto3" json:"auth_token_provided,omitempty"`

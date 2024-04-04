@@ -34,7 +34,7 @@ type ZoneEgress struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Zone field contains Zone name where egress is serving, field will be
-	// automatically set by Global Kuma CP
+	// automatically set by Global Dubbo CP
 	Zone string `protobuf:"bytes,1,opt,name=zone,proto3" json:"zone,omitempty"`
 	// Networking defines the address and port of the Egress to listen on.
 	Networking *ZoneEgress_Networking `protobuf:"bytes,2,opt,name=networking,proto3" json:"networking,omitempty"`

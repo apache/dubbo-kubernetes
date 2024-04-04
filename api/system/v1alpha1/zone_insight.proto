@@ -65,7 +65,7 @@ message DDSSubscription {
   // status sink
   uint32 generation = 7;
 
-  // Config of Zone Kuma CP
+  // Config of Zone Dubbo CP
   string config = 8;
 
   // Indicates if subscription provided auth token

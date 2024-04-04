@@ -173,7 +173,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 			envoyComponent, err := envoy.New(opts)
 			err = envoyComponent.Start(stopComponents)
 			if err != nil {
-				runLog.Error(err, "error while running Kuma DP")
+				runLog.Error(err, "error while running Dubbo DP")
 				return err
 			}
 			runLog.Info("stopping Dubbo proxy")

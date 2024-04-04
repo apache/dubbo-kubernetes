@@ -77,7 +77,7 @@ func inboundForService(zone string, pod *kube_core.Pod, service *kube_core.Servi
 			Port:   uint32(containerPort),
 			Tags:   tags,
 			State:  state,
-			Health: &health, // write health for backwards compatibility with Kuma 2.5 and older
+			Health: &health, // write health for backwards compatibility with Dubbo 2.5 and older
 		})
 	}
 
@@ -105,7 +105,7 @@ func inboundForServiceless(zone string, pod *kube_core.Pod, name string) *mesh_p
 		Port:   mesh_proto.TCPPortReserved,
 		Tags:   tags,
 		State:  state,
-		Health: &health, // write health for backwards compatibility with Kuma 2.5 and older
+		Health: &health, // write health for backwards compatibility with Dubbo 2.5 and older
 	}
 }
 
@@ -175,7 +175,7 @@ func InboundTagsForService(zone string, pod *kube_core.Pod, svc *kube_core.Servi
 // ProtocolTagFor infers service protocol from a `<port>.service.dubbo.io/protocol` annotation or `appProtocol`.
 func ProtocolTagFor(svc *kube_core.Service, svcPort *kube_core.ServicePort) string {
 	var protocolValue string
-	protocolAnnotation := fmt.Sprintf("%d.service.kuma.io/protocol", svcPort.Port)
+	protocolAnnotation := fmt.Sprintf("%d.service.dubbo.io/protocol", svcPort.Port)
 
 	if svcPort.AppProtocol != nil {
 		protocolValue = *svcPort.AppProtocol
@@ -186,8 +186,8 @@ func ProtocolTagFor(svc *kube_core.Service, svcPort *kube_core.ServicePort) stri
 		}
 	}
 
-	if explicitKumaProtocol, ok := svc.Annotations[protocolAnnotation]; ok && protocolValue == "" {
-		protocolValue = explicitKumaProtocol
+	if explicitDubboProtocol, ok := svc.Annotations[protocolAnnotation]; ok && protocolValue == "" {
+		protocolValue = explicitDubboProtocol
 	}
 
 	if protocolValue == "" {
