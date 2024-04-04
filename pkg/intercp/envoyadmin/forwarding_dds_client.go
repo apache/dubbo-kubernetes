@@ -44,7 +44,7 @@ var clientLog = core.Log.WithName("intercp").WithName("envoyadmin").WithName("cl
 
 type NewClientFn = func(url string) (mesh_proto.InterCPEnvoyAdminForwardServiceClient, error)
 
-type forwardingKdsEnvoyAdminClient struct {
+type forwardingDdsEnvoyAdminClient struct {
 	resManager     manager.ReadOnlyResourceManager
 	cat            catalog.Catalog
 	instanceID     string
@@ -67,7 +67,7 @@ func NewForwardingEnvoyAdminClient(
 	newClientFn NewClientFn,
 	fallbackClient admin.EnvoyAdminClient,
 ) admin.EnvoyAdminClient {
-	return &forwardingKdsEnvoyAdminClient{
+	return &forwardingDdsEnvoyAdminClient{
 		resManager:     resManager,
 		cat:            cat,
 		instanceID:     instanceID,
@@ -76,13 +76,13 @@ func NewForwardingEnvoyAdminClient(
 	}
 }
 
-var _ admin.EnvoyAdminClient = &forwardingKdsEnvoyAdminClient{}
+var _ admin.EnvoyAdminClient = &forwardingDdsEnvoyAdminClient{}
 
-func (f *forwardingKdsEnvoyAdminClient) PostQuit(context.Context, *core_mesh.DataplaneResource) error {
+func (f *forwardingDdsEnvoyAdminClient) PostQuit(context.Context, *core_mesh.DataplaneResource) error {
 	panic("not implemented")
 }
 
-func (f *forwardingKdsEnvoyAdminClient) ConfigDump(ctx context.Context, proxy core_model.ResourceWithAddress) ([]byte, error) {
+func (f *forwardingDdsEnvoyAdminClient) ConfigDump(ctx context.Context, proxy core_model.ResourceWithAddress) ([]byte, error) {
 	instanceID, err := f.globalInstanceID(ctx, core_model.ZoneOfResource(proxy), service.ConfigDumpRPC)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (f *forwardingKdsEnvoyAdminClient) ConfigDump(ctx context.Context, proxy co
 	return resp.GetConfig(), nil
 }
 
-func (f *forwardingKdsEnvoyAdminClient) Stats(ctx context.Context, proxy core_model.ResourceWithAddress) ([]byte, error) {
+func (f *forwardingDdsEnvoyAdminClient) Stats(ctx context.Context, proxy core_model.ResourceWithAddress) ([]byte, error) {
 	instanceID, err := f.globalInstanceID(ctx, core_model.ZoneOfResource(proxy), service.StatsRPC)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (f *forwardingKdsEnvoyAdminClient) Stats(ctx context.Context, proxy core_mo
 	return resp.GetStats(), nil
 }
 
-func (f *forwardingKdsEnvoyAdminClient) Clusters(ctx context.Context, proxy core_model.ResourceWithAddress) ([]byte, error) {
+func (f *forwardingDdsEnvoyAdminClient) Clusters(ctx context.Context, proxy core_model.ResourceWithAddress) ([]byte, error) {
 	instanceID, err := f.globalInstanceID(ctx, core_model.ZoneOfResource(proxy), service.ClustersRPC)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (f *forwardingKdsEnvoyAdminClient) Clusters(ctx context.Context, proxy core
 	return resp.GetClusters(), nil
 }
 
-func (f *forwardingKdsEnvoyAdminClient) logIntendedAction(proxy core_model.ResourceWithAddress, instanceID string) {
+func (f *forwardingDdsEnvoyAdminClient) logIntendedAction(proxy core_model.ResourceWithAddress, instanceID string) {
 	log := clientLog.WithValues(
 		"name", proxy.GetMeta().GetName(),
 		"mesh", proxy.GetMeta().GetMesh(),
@@ -171,7 +171,7 @@ func (f *forwardingKdsEnvoyAdminClient) logIntendedAction(proxy core_model.Resou
 	}
 }
 
-func (f *forwardingKdsEnvoyAdminClient) globalInstanceID(ctx context.Context, zone string, rpcName string) (string, error) {
+func (f *forwardingDdsEnvoyAdminClient) globalInstanceID(ctx context.Context, zone string, rpcName string) (string, error) {
 	zoneInsightRes := core_system.NewZoneInsightResource()
 	if err := f.resManager.Get(ctx, zoneInsightRes, core_store.GetByKey(zone, core_model.NoMesh)); err != nil {
 		return "", err
@@ -194,7 +194,7 @@ func (f *forwardingKdsEnvoyAdminClient) globalInstanceID(ctx context.Context, zo
 	return globalInstanceID, nil
 }
 
-func (f *forwardingKdsEnvoyAdminClient) clientForInstanceID(ctx context.Context, instanceID string) (mesh_proto.InterCPEnvoyAdminForwardServiceClient, error) {
+func (f *forwardingDdsEnvoyAdminClient) clientForInstanceID(ctx context.Context, instanceID string) (mesh_proto.InterCPEnvoyAdminForwardServiceClient, error) {
 	instance, err := catalog.InstanceOfID(ctx, f.cat, instanceID)
 	if err != nil {
 		return nil, err

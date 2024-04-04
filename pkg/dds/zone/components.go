@@ -128,5 +128,5 @@ func Setup(rt core_runtime.Runtime) error {
 			rt.EnvoyAdminClient().Clusters,
 		),
 	)
-	return rt.Add(component.NewResilientComponent(ddsDeltaZoneLog.WithName("kds-mux-client"), muxClient))
+	return rt.Add(component.NewResilientComponent(ddsDeltaZoneLog.WithName("dds-mux-client"), muxClient))
 }

@@ -174,7 +174,7 @@ func RemoveK8sSystemNamespaceSuffixMapper(k8sSystemNamespace string) reconcile.R
 	}
 }
 
-// HashSuffixMapper returns mapper that adds a hash suffix to the name during KDS sync
+// HashSuffixMapper returns mapper that adds a hash suffix to the name during DDS sync
 func HashSuffixMapper(checkDDSFeature bool, labelsToUse ...string) reconcile.ResourceMapper {
 	return func(features dds.Features, r core_model.Resource) (core_model.Resource, error) {
 		if checkDDSFeature && !features.HasFeature(dds.FeatureHashSuffix) {

@@ -141,10 +141,10 @@ func (c *client) Start(stop <-chan struct{}) (errs error) {
 }
 
 func (c *client) startGlobalToZoneSync(ctx context.Context, log logr.Logger, conn *grpc.ClientConn, errorCh chan error) {
-	kdsClient := mesh_proto.NewDDSSyncServiceClient(conn)
+	ddsClient := mesh_proto.NewDDSSyncServiceClient(conn)
 	log = log.WithValues("rpc", "global-to-zone")
 	log.Info("initializing Dubbo Discovery Service (DDS) stream for global to zone sync of resources with delta xDS")
-	stream, err := kdsClient.GlobalToZoneSync(ctx)
+	stream, err := ddsClient.GlobalToZoneSync(ctx)
 	if err != nil {
 		errorCh <- err
 		return
@@ -155,10 +155,10 @@ func (c *client) startGlobalToZoneSync(ctx context.Context, log logr.Logger, con
 }
 
 func (c *client) startZoneToGlobalSync(ctx context.Context, log logr.Logger, conn *grpc.ClientConn, errorCh chan error) {
-	kdsClient := mesh_proto.NewDDSSyncServiceClient(conn)
+	ddsClient := mesh_proto.NewDDSSyncServiceClient(conn)
 	log = log.WithValues("rpc", "zone-to-global")
 	log.Info("initializing Dubbo Discovery Service (DDS) stream for zone to global sync of resources with delta xDS")
-	stream, err := kdsClient.ZoneToGlobalSync(ctx)
+	stream, err := ddsClient.ZoneToGlobalSync(ctx)
 	if err != nil {
 		errorCh <- err
 		return
@@ -278,7 +278,7 @@ func (c *client) handleProcessingErrors(
 	err := <-processingErrorsCh
 	if status.Code(err) == codes.Unimplemented {
 		log.Error(err, "rpc stream failed, because global CP does not implement this rpc. Upgrade remote CP.")
-		// backwards compatibility. Do not rethrow error, so KDS multiplex can still operate.
+		// backwards compatibility. Do not rethrow error, so DDS multiplex can still operate.
 		return
 	}
 	if errors.Is(err, context.Canceled) {

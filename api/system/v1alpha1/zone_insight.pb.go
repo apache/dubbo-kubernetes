@@ -161,7 +161,7 @@ func (x *EnvoyAdminStreams) GetClustersGlobalInstanceId() string {
 	return ""
 }
 
-// KDSSubscription describes a single KDS subscription
+// DDSSubscription describes a single DDS subscription
 // created by a Zone to the Global.
 // Ideally, there should be only one such subscription per Zone lifecycle.
 // Presence of multiple subscriptions might indicate one of the following
@@ -184,7 +184,7 @@ type DDSSubscription struct {
 	ConnectTime *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=connect_time,json=connectTime,proto3" json:"connect_time,omitempty"`
 	// Time when a given Zone disconnected from the Global.
 	DisconnectTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=disconnect_time,json=disconnectTime,proto3" json:"disconnect_time,omitempty"`
-	// Status of the KDS subscription.
+	// Status of the DDS subscription.
 	Status *DDSSubscriptionStatus `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	// Generation is an integer number which is periodically increased by the
 	// status sink
@@ -299,9 +299,9 @@ type DDSSubscriptionStatus struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Time when status of a given KDS subscription was most recently updated.
+	// Time when status of a given D subscription was most recently updated.
 	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
-	// Total defines an aggregate over individual KDS stats.
+	// Total defines an aggregate over individual DDS stats.
 	Total *DDSServiceStats            `protobuf:"bytes,2,opt,name=total,proto3" json:"total,omitempty"`
 	Stat  map[string]*DDSServiceStats `protobuf:"bytes,3,rep,name=stat,proto3" json:"stat,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }

@@ -125,7 +125,7 @@ func (g *DDSSyncServiceServer) ZoneToGlobalSync(stream mesh_proto.DDSSyncService
 	logger := clientLog.WithValues("clientID", zone)
 	for _, filter := range g.filters {
 		if err := filter.InterceptServerStream(stream); err != nil {
-			return errors.Wrap(err, "closing KDS stream following a callback error")
+			return errors.Wrap(err, "closing DDS stream following a callback error")
 		}
 	}
 

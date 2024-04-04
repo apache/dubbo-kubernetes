@@ -104,19 +104,19 @@ func Setup(rt runtime.Runtime) error {
 		}
 		log := ddsDeltaGlobalLog.WithValues("peer-id", zoneID)
 		log = dubbo_log.AddFieldsFromCtx(log, stream.Context(), rt.Extensions())
-		kdsStream := dds_client.NewDeltaDDSStream(stream, zoneID, rt, "")
+		ddsStream := dds_client.NewDeltaDDSStream(stream, zoneID, rt, "")
 		sink := dds_client.NewDDSSyncClient(
 			log,
 			reg.ObjectTypes(model.HasDDSFlag(model.ZoneToGlobalFlag)),
-			kdsStream,
+			ddsStream,
 			dds_sync_store.GlobalSyncCallback(stream.Context(), resourceSyncer, rt.Config().Store.Type == store_config.KubernetesStore, kubeFactory, rt.Config().Store.Kubernetes.SystemNamespace),
 			rt.Config().Multizone.Global.DDS.ResponseBackoff.Duration,
 		)
 		go func() {
 			if err := sink.Receive(); err != nil {
-				errChan <- errors.Wrap(err, "KDSSyncClient finished with an error")
+				errChan <- errors.Wrap(err, "DDSSyncClient finished with an error")
 			} else {
-				log.V(1).Info("KDSSyncClient finished gracefully")
+				log.V(1).Info("DDSSyncClient finished gracefully")
 			}
 		}()
 	})

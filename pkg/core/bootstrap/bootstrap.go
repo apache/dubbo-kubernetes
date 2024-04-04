@@ -127,7 +127,7 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	builder.WithDDSContext(ddsContext)
 
 	if cfg.Mode == config_core.Global {
-		kdsEnvoyAdminClient := admin2.NewDDSEnvoyAdminClient(
+		ddsEnvoyAdminClient := admin2.NewDDSEnvoyAdminClient(
 			builder.DDSContext().EnvoyAdminRPCs,
 			cfg.Store.Type == store.KubernetesStore,
 		)
@@ -136,7 +136,7 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 			catalog.NewConfigCatalog(resourceManager),
 			builder.GetInstanceId(),
 			intercp.PooledEnvoyAdminClientFn(builder.InterCPClientPool()),
-			kdsEnvoyAdminClient,
+			ddsEnvoyAdminClient,
 		)
 		builder.WithEnvoyAdminClient(forwardingClient)
 	} else {
