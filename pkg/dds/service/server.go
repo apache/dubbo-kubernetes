@@ -75,7 +75,17 @@ type GlobalDDSServiceServer struct {
 	context context.Context
 }
 
-func NewGlobalDDSServiceServer(ctx context.Context, envoyAdminRPCs EnvoyAdminRPCs, resManager manager.ResourceManager, instanceID string, filters []StreamInterceptor, extensions context.Context, upsertCfg config_store.UpsertConfig, eventBus events.EventBus, zoneHealthCheckInterval time.Duration) *GlobalDDSServiceServer {
+func NewGlobalDDSServiceServer(
+	ctx context.Context,
+	envoyAdminRPCs EnvoyAdminRPCs,
+	resManager manager.ResourceManager,
+	instanceID string,
+	filters []StreamInterceptor,
+	extensions context.Context,
+	upsertCfg config_store.UpsertConfig,
+	eventBus events.EventBus,
+	zoneHealthCheckInterval time.Duration,
+) *GlobalDDSServiceServer {
 	return &GlobalDDSServiceServer{
 		context:                 ctx,
 		envoyAdminRPCs:          envoyAdminRPCs,
