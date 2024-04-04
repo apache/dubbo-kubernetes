@@ -19,7 +19,6 @@ package metadata
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
 	"strings"
 	"time"
@@ -45,6 +44,7 @@ import (
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
 
 var log = core.Log.WithName("dubbo").WithName("server").WithName("metadata")

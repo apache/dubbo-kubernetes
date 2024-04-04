@@ -18,7 +18,6 @@
 package server
 
 import (
-	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	"github.com/pkg/errors"
 )
 
@@ -27,6 +26,7 @@ import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/cla"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/server/v3"
