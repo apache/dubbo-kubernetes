@@ -19,7 +19,7 @@ metadata:
   name: dubbo-samples-apiserver-provider
   namespace: dubbo-system
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: dubbo-samples-apiserver-provider
