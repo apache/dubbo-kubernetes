@@ -57,7 +57,7 @@ type DdsServerConfig struct {
 	MsgSendTimeout config_types.Duration `json:"msgSendTimeout" envconfig:"dubbo_multizone_global_kds_msg_send_timeout"`
 	// Backoff that is executed when the global control plane is sending the response that was previously rejected by zone control plane.
 	NackBackoff config_types.Duration `json:"nackBackoff" envconfig:"dubbo_multizone_global_kds_nack_backoff"`
-	// DisableSOTW if true doesn't expose SOTW version of KDS. Default: false
+	// DisableSOTW if true doesn't expose SOTW version of DDS. Default: false
 	DisableSOTW bool `json:"disableSOTW" envconfig:"dubbo_multizone_global_kds_disable_sotw"`
 	// ResponseBackoff is a time Global CP waits before sending ACK/NACK.
 	// This is a way to slow down Zone CP from sending resources too often.
