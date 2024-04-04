@@ -53,7 +53,7 @@ func newRunCmd() *cobra.Command {
 		rampUpPeriod     time.Duration
 	}{
 		xdsServerAddress: "grpc://localhost:5678",
-		dps:              100,
+		dps:              10,
 		services:         50,
 		inbounds:         1,
 		outbounds:        3,

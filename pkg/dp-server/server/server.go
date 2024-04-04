@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"net/http"
 )
 
 var log = core.Log.WithName("dp-server")
@@ -33,13 +34,15 @@ var log = core.Log.WithName("dp-server")
 type DpServer struct {
 	config      dp_server.DpServerConfig
 	PlainServer *grpc.Server
+	httpMux     *http.ServeMux
 }
 
 var _ component.Component = &DpServer{}
 
 func NewDpServer(config dp_server.DpServerConfig) *DpServer {
 	srv := &DpServer{
-		config: config,
+		config:  config,
+		httpMux: http.NewServeMux(),
 	}
 	srv.PlainServer = grpc.NewServer()
 	reflection.Register(srv.PlainServer)
@@ -75,4 +78,12 @@ func (d *DpServer) Start(stop <-chan struct{}) error {
 
 func (d *DpServer) NeedLeaderElection() bool {
 	return false
+}
+
+func (d *DpServer) GrpcServer() *grpc.Server {
+	return d.PlainServer
+}
+
+func (d *DpServer) HTTPMux() *http.ServeMux {
+	return d.httpMux
 }
