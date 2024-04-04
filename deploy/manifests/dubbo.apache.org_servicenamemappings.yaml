@@ -45,4 +45,4 @@ spec:
     singular: servicenamemapping
     kind: ServiceNameMapping
     shortNames:
-      - snp
+      - dubbo

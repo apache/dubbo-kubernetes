@@ -15,7 +15,9 @@
 
 package appverbose
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/verbose"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/verbose"
+)
 
 type container struct {
 	verbosePrinter verbose.Printer

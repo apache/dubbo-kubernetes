@@ -22,7 +22,9 @@ import (
 	"os"
 	"path"
 	"sync"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/model"
 )

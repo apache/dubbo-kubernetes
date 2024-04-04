@@ -17,7 +17,9 @@
 
 package dataspdx
 
-import "strings"
+import (
+	"strings"
+)
 
 // LicenseInfo is SPDX license information.
 //

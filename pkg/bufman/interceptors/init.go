@@ -15,7 +15,9 @@
 
 package interceptors
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/mapper"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/mapper"
+)
 
 type interceptor struct {
 	tokenMapper mapper.TokenMapper

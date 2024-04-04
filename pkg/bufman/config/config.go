@@ -16,11 +16,15 @@
 package config
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
 	"gorm.io/gorm"
 )
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
+)
+
 var (
-	Properties *bufman.Bufman
+	Properties bufman.Bufman
+	AdminPort  int
 	DataBase   *gorm.DB
 )

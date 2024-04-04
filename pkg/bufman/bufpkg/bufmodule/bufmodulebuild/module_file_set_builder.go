@@ -19,10 +19,16 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
+import (
 	"go.uber.org/zap"
+
 	"golang.org/x/crypto/sha3"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 )
 
 type moduleFileSetBuilder struct {

@@ -19,7 +19,9 @@ import (
 	"context"
 	"os"
 	"regexp"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"

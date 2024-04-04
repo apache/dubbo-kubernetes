@@ -15,7 +15,9 @@
 
 package util
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	cstOffset = 60 * 60 * 8 // 8 hours offset for Chinese Standard Time

@@ -19,11 +19,16 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+)
 
+import (
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protosource"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 var (

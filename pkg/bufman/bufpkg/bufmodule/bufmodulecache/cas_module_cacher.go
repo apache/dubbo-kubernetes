@@ -21,14 +21,20 @@ import (
 	"fmt"
 	"io"
 	"strings"
+)
 
+import (
+	"go.uber.org/multierr"
+
+	"go.uber.org/zap"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
-	"go.uber.org/multierr"
-	"go.uber.org/zap"
 )
 
 // subdirectories under ~/.cache/buf/v2/{remote}/{owner}/{repo}

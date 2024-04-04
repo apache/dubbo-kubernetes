@@ -21,18 +21,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+)
+
+import (
+	"github.com/AlecAivazis/survey/v2"
+
+	"github.com/ory/viper"
+
+	"github.com/spf13/cobra"
 
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 
+	"k8s.io/client-go/tools/clientcmd"
+
+	"k8s.io/client-go/util/homedir"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/ory/viper"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -78,7 +86,7 @@ SYNOPSIS
 		"Path to kubeconfig")
 
 	cmd.Flags().StringArrayP("envs", "e", nil,
-		"Environment variable to set in the form NAME=VALUE. "+
+		"DeployMode variable to set in the form NAME=VALUE. "+
 			"This is for the environment variables passed in by the builderpack build method.")
 	cmd.Flags().StringP("builder-image", "b", "",
 		"Specify a custom builder image for use by the builder other than its default.")

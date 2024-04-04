@@ -23,7 +23,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufplugin/bufpluginref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/encoding"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"

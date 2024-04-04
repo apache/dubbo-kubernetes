@@ -18,8 +18,11 @@ package observabilityzap
 import (
 	"context"
 	"io"
+)
 
+import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
 	"go.opentelemetry.io/otel/trace"
 )
 

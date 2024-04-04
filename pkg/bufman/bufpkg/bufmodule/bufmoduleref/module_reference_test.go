@@ -17,9 +17,14 @@ package bufmoduleref
 
 import (
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/uuidutil"
+import (
 	"github.com/stretchr/testify/require"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/uuidutil"
 )
 
 func TestModuleReferenceForString(t *testing.T) {

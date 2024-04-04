@@ -19,6 +19,7 @@ import type { RouterMeta } from '@/router/RouterMeta'
 import type { RouteRecordRaw } from 'vue-router'
 import LayoutTab from '../layout/tab/layout_tab.vue'
 import _ from 'lodash'
+import AppTabHeaderSlot from '@/views/resources/applications/slots/AppTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -58,7 +59,10 @@ export const routes: Readonly<RouteRecordType[]> = [
             component: LayoutTab,
             redirect: 'index',
             meta: {
-              tab_parent: true
+              tab_parent: true,
+              slots: {
+                header: AppTabHeaderSlot
+              }
             },
             children: [
               {
@@ -152,7 +156,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/detail/:instance',
+                path: '/detail/:pathId',
                 name: 'instanceDomain.details',
                 component: () => import('../views/resources/instances/tabs/details.vue'),
                 meta: {
@@ -161,7 +165,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/monitor/:instance',
+                path: '/monitor/:pathId',
                 name: 'instanceDomain.monitor',
                 component: () => import('../views/resources/instances/tabs/monitor.vue'),
                 meta: {
@@ -170,7 +174,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/linktracking/:instance',
+                path: '/linktracking/:pathId',
                 name: 'instanceDomain.linkTracking',
                 component: () => import('../views/resources/instances/tabs/linkTracking.vue'),
                 meta: {
@@ -179,7 +183,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/configuration/:instance',
+                path: '/configuration/:pathId',
                 name: 'instanceDomain.configuration',
                 component: () => import('../views/resources/instances/tabs/configuration.vue'),
                 meta: {
@@ -188,7 +192,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/event/:instance',
+                path: '/event/:pathId',
                 name: 'instanceDomain.event',
                 component: () => import('../views/resources/instances/tabs/event.vue'),
                 meta: {
@@ -268,6 +272,48 @@ export const routes: Readonly<RouteRecordType[]> = [
         ]
       },
       {
+        path: '/traffic',
+        name: 'trafficManagement',
+        meta: {
+          icon: 'eos-icons:cluster-management'
+        },
+        children: [
+          {
+            path: '/routingRule',
+            name: 'routingRule',
+            component: () => import('../views/traffic/routingRule/index.vue')
+          },
+          {
+            path: '/tagRule',
+            name: 'tagRule',
+            component: () => import('../views/traffic/tagRule/index.vue'),
+            meta: {}
+          },
+          {
+            path: '/dynamicConfig',
+            name: 'dynamicConfig',
+            component: () => import('../views/traffic/dynamicConfig/index.vue'),
+            meta: {}
+          },
+          {
+            path: '/meshRule',
+            name: 'meshRule',
+            children: [
+              {
+                path: '/virtualService',
+                name: 'virtualService',
+                component: () => import('../views/traffic/virtualService/index.vue')
+              },
+              {
+                path: '/destinationRule',
+                name: 'destinationRule',
+                component: () => import('../views/traffic/destinationRule/index.vue')
+              }
+            ]
+          }
+        ]
+      },
+      {
         path: '/common',
         name: 'commonDemo',
         redirect: 'tab',
@@ -341,7 +387,7 @@ function handleRoutes(
   parent: RouteRecordType | undefined
 ) {
   if (!routes) return
-  for (let route of routes) {
+  for (const route of routes) {
     if (parent) {
       route.path = handlePath(parent?.path, route.path)
     }

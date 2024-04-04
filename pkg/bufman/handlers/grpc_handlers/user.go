@@ -19,7 +19,9 @@ package grpc_handlers
 
 import (
 	"context"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/controllers"
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 )

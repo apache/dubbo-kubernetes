@@ -19,9 +19,14 @@ package githubtesting
 import (
 	"context"
 	"net/http"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
+import (
 	"go.uber.org/zap"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storageos"
 )
 
 // ArchiveReader reads GitHub archives.

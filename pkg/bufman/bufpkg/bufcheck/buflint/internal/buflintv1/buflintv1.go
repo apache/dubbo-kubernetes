@@ -21,7 +21,9 @@
 // from OTHER to MINIMAL, and the OTHER category was deleted.
 package buflintv1
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/internal"
+)
 
 // VersionSpec is the version specification for v1.
 //

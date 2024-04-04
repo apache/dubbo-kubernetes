@@ -22,11 +22,15 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+)
 
+import (
+	"github.com/google/go-cmp/cmp"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 	. "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/testing"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 // TestTemplates_List ensures that all templates are listed taking into account

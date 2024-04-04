@@ -17,13 +17,20 @@ package bufimage
 
 import (
 	"strings"
+)
 
-	imagev1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/image/v1"
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
+import (
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
+
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/anypb"
+)
+
+import (
+	imagev1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/image/v1"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protoencoding"
 )
 
 var anyMessageName = (*anypb.Any)(nil).ProtoReflect().Descriptor().FullName()

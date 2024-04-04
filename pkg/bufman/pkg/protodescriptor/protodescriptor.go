@@ -19,11 +19,17 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
+import (
 	"google.golang.org/protobuf/proto"
+
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 )
 
 // FileDescriptor is an interface that matches the methods on a *descriptorpb.FileDescriptorProto.
@@ -43,7 +49,7 @@ type FileDescriptor interface {
 	GetOptions() *descriptorpb.FileOptions
 	GetSourceCodeInfo() *descriptorpb.SourceCodeInfo
 	GetSyntax() string
-	GetEdition() string
+	GetEdition() descriptorpb.Edition
 }
 
 // FileDescriptorsForFileDescriptorProtos is a convenience function since Go does not have generics.
@@ -94,8 +100,8 @@ func FileDescriptorProtoForFileDescriptor(fileDescriptor FileDescriptor) *descri
 	if syntax := fileDescriptor.GetSyntax(); syntax != "" {
 		fileDescriptorProto.Syntax = proto.String(syntax)
 	}
-	if edition := fileDescriptor.GetEdition(); edition != "" {
-		fileDescriptorProto.Edition = proto.String(edition)
+	if edition := fileDescriptor.GetEdition(); string(edition) != "" {
+		fileDescriptorProto.Edition = &edition
 	}
 	fileDescriptorProto.ProtoReflect().SetUnknown(fileDescriptor.ProtoReflect().GetUnknown())
 	return fileDescriptorProto

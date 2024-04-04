@@ -37,11 +37,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
+import (
 	"gopkg.in/yaml.v2"
+
 	yaml2 "sigs.k8s.io/yaml"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 
 // PathContext provides a means for traversing a tree towards the root.

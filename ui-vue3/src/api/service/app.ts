@@ -47,3 +47,17 @@ export const getApplicationInstanceInfo = (params: any): Promise<any> => {
     params
   })
 }
+export const getApplicationMetricsInfo = (params: any): Promise<any> => {
+  return request({
+    url: '/application/metrics',
+    method: 'get',
+    params
+  })
+}
+export const listApplicationEvent = (params: any): Promise<any> => {
+  return request({
+    url: '/application/event',
+    method: 'get',
+    params
+  })
+}

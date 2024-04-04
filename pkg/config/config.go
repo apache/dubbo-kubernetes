@@ -17,23 +17,18 @@
 
 package config
 
-import (
-	"path/filepath"
-	"runtime"
-)
-
-var (
-	_, b, _, _ = runtime.Caller(0)
-	Root       = filepath.Join(filepath.Dir(b), "../../")
-	Conf       = filepath.Join(Root, "/conf/admin.yml")
-)
-
-const (
-	SanitizedValue = "*****"
-	confPathKey    = "ADMIN_CONFIG_PATH"
-)
+const SanitizedValue = "*****"
 
 type Config interface {
 	Sanitize()
 	Validate() error
+	PostProcess() error
 }
+
+var _ Config = BaseConfig{}
+
+type BaseConfig struct{}
+
+func (c BaseConfig) Sanitize()          {}
+func (c BaseConfig) PostProcess() error { return nil }
+func (c BaseConfig) Validate() error    { return nil }

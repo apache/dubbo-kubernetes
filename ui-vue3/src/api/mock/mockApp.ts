@@ -18,26 +18,42 @@
 import Mock from 'mockjs'
 import devTool from '@/utils/DevToolUtil'
 
+Mock.mock('/mock/application/metrics', 'get', () => {
+  return {
+    code: 200,
+    message: 'success',
+    data: 'http://8.147.104.101:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application?orgId=1&refresh=1m&from=1711855893859&to=1711877493859&theme=light'
+  }
+})
+
 Mock.mock('/mock/application/search', 'get', () => {
   let total = Mock.mock('@integer(8, 1000)')
   let list = []
   for (let i = 0; i < total; i++) {
+    let tmp: any = {
+      registerClusters: []
+    }
+    let num = Mock.mock('@integer(1,3)')
+    for (let j = 0; j < num; j++) {
+      let r = Mock.mock('@string(5)')
+      tmp.registerClusters.push(`cluster_${r}`)
+    }
     list.push({
       appName: 'app_' + Mock.mock('@string(2,10)'),
       instanceNum: Mock.mock('@integer(80, 200)'),
       deployCluster: 'cluster_' + Mock.mock('@string(5)'),
-      'registerClusters|1-3': ['cluster_' + Mock.mock('@string(5)')]
+      ...tmp
     })
   }
   return {
     code: 200,
     message: 'success',
-    data: Mock.mock({
+    data: {
       total: total,
       curPage: 1,
       pageSize: 10,
       data: list
-    })
+    }
   }
 })
 Mock.mock('/mock/application/instance/statistics', 'get', () => {
@@ -117,6 +133,25 @@ Mock.mock('/mock/application/detail', 'get', () => {
       deployCluster: ['ali-shanghai-1', 'tx-shanghai-2'],
       registerCluster: ['nacos-cluster-1', 'nacos-cluster-2'],
       registerMode: ['应用级', '接口级']
+    }
+  }
+})
+
+Mock.mock('/mock/application/event', 'get', () => {
+  let list = Mock.mock({
+    'list|10': [
+      {
+        desc: `Scaled down replica set shop-detail-v1-5847b7cdfd to @integer(3,10) from @integer(3,10)`,
+        time: '@DATETIME("yyyy-MM-dd HH:mm:ss")',
+        type: 'deployment-controller'
+      }
+    ]
+  })
+  return {
+    code: 200,
+    message: 'success',
+    data: {
+      ...list
     }
   }
 })

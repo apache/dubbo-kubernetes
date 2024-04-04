@@ -17,7 +17,9 @@ package bufmodule
 
 import (
 	"io"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 )
 

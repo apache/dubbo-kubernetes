@@ -17,7 +17,9 @@ package protosource
 
 import (
 	"sync"
+)
 
+import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
