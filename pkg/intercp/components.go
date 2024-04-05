@@ -36,6 +36,7 @@ func Setup(rt runtime.Runtime) error {
 }
 
 func DefaultClientPool() *client.Pool {
+
 	return client.NewPool(client.New, 5*time.Minute, core.Now)
 }
 
