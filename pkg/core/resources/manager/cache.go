@@ -61,13 +61,13 @@ func (c *cachedManager) Get(ctx context.Context, res model.Resource, fs ...store
 	cacheKey := fmt.Sprintf("GET:%s:%s", res.Descriptor().Name, opts.HashCode())
 	obj, found := c.cache.Get(cacheKey)
 	if !found {
-		// There might be a situation when cache just expired and there are many concurrent goroutines here.
-		// We should only let one fill the cache and let the rest of them wait for it. Otherwise we will be repeating expensive work.
+		// 可能存在缓存刚刚过期, 而这里并发的goroutine较多的情况
+		// 我们应该只让其中一个填满缓存, 让其余的等待. 否则我们将重复昂贵的工作
 		mutex := c.mutexFor(cacheKey)
 		mutex.Lock()
 		obj, found = c.cache.Get(cacheKey)
 		if !found {
-			// After many goroutines are unlocked one by one, only one should execute this branch, the rest should retrieve object from the cache
+			// 当多个goroutine被一一解锁之后, 只有一个goroutine执行该分支, 其余当则从缓存中获取对象
 			if err := c.delegate.Get(ctx, res, fs...); err != nil {
 				mutex.Unlock()
 				return err
@@ -75,7 +75,8 @@ func (c *cachedManager) Get(ctx context.Context, res model.Resource, fs ...store
 			c.cache.SetDefault(cacheKey, res)
 		}
 		mutex.Unlock()
-		c.cleanMutexFor(cacheKey) // We need to cleanup mutexes from the map, otherwise we can see the memory leak.
+		// 我们需要从映射中清楚互斥体, 否则我们会看到内存泄漏
+		c.cleanMutexFor(cacheKey)
 	}
 
 	if found {

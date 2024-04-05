@@ -40,7 +40,7 @@ import (
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
-	admin2 "github.com/apache/dubbo-kubernetes/pkg/core/admin"
+	core_admin "github.com/apache/dubbo-kubernetes/pkg/core/admin"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
@@ -127,7 +127,7 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	builder.WithDDSContext(ddsContext)
 
 	if cfg.Mode == config_core.Global {
-		ddsEnvoyAdminClient := admin2.NewDDSEnvoyAdminClient(
+		ddsEnvoyAdminClient := core_admin.NewDDSEnvoyAdminClient(
 			builder.DDSContext().EnvoyAdminRPCs,
 			cfg.Store.Type == store.KubernetesStore,
 		)
@@ -140,7 +140,7 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 		)
 		builder.WithEnvoyAdminClient(forwardingClient)
 	} else {
-		builder.WithEnvoyAdminClient(admin2.NewEnvoyAdminClient(
+		builder.WithEnvoyAdminClient(core_admin.NewEnvoyAdminClient(
 			resourceManager,
 			builder.Config().GetEnvoyAdminPort(),
 		))
