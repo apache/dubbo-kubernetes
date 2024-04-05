@@ -299,7 +299,7 @@ type DDSSubscriptionStatus struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Time when status of a given D subscription was most recently updated.
+	// Time when status of a given DDS subscription was most recently updated.
 	LastUpdateTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=last_update_time,json=lastUpdateTime,proto3" json:"last_update_time,omitempty"`
 	// Total defines an aggregate over individual DDS stats.
 	Total *DDSServiceStats            `protobuf:"bytes,2,opt,name=total,proto3" json:"total,omitempty"`

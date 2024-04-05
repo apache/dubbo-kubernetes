@@ -17,6 +17,9 @@
 
 package mesh
 
-func (t *MetaDataResource) IsRemoteMetadata(localZone string) bool {
+func (t *MetaDataResource) IsRemotingMetadata(localZone string) bool {
+	if t.Spec.GetZone() == "" || t.Spec.GetZone() == localZone {
+		return false
+	}
 	return true
 }

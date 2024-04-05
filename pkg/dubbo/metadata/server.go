@@ -54,9 +54,10 @@ const queueSize = 100
 type MetadataServer struct {
 	mesh_proto.MetadataServiceServer
 
-	config dubbo.DubboConfig
-	queue  chan *RegisterRequest
-	pusher pusher.Pusher
+	localZone string
+	config    dubbo.DubboConfig
+	queue     chan *RegisterRequest
+	pusher    pusher.Pusher
 
 	ctx             context.Context
 	resourceManager manager.ResourceManager
@@ -80,8 +81,10 @@ func NewMetadataServe(
 	pusher pusher.Pusher,
 	resourceManager manager.ResourceManager,
 	transactions core_store.Transactions,
+	localZone string,
 ) *MetadataServer {
 	return &MetadataServer{
+		localZone:       localZone,
 		config:          config,
 		pusher:          pusher,
 		queue:           make(chan *RegisterRequest, queueSize),
@@ -350,6 +353,7 @@ func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *me
 		if core_store.IsResourceNotFound(err) {
 			// create if not found
 			metadata.Spec = newMetadata
+			metadata.Spec.Zone = m.localZone
 			err = m.resourceManager.Create(m.ctx, metadata, core_store.CreateBy(core_model.ResourceKey{
 				Mesh: key.Mesh,
 				Name: key.Name,
