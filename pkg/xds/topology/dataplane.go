@@ -65,6 +65,22 @@ func ResolveDataplaneAddress(lookupIPFunc lookup.LookupIPFunc, dataplane *core_m
 	return dataplane, nil
 }
 
+func ResolveZoneIngressPublicAddress(lookupIPFunc lookup.LookupIPFunc, zoneIngress *core_mesh.ZoneIngressResource) (*core_mesh.ZoneIngressResource, error) {
+	ip, err := lookupFirstIp(lookupIPFunc, zoneIngress.Spec.GetNetworking().GetAdvertisedAddress())
+	if err != nil {
+		return nil, err
+	}
+	if ip != "" { // only if we resolve any address, in most cases this is IP not a hostname
+		ziSpec := proto.Clone(zoneIngress.Spec).(*mesh_proto.ZoneIngress)
+		ziSpec.Networking.AdvertisedAddress = ip
+		return &core_mesh.ZoneIngressResource{
+			Meta: zoneIngress.Meta,
+			Spec: ziSpec,
+		}, nil
+	}
+	return zoneIngress, nil
+}
+
 func lookupFirstIp(lookupIPFunc lookup.LookupIPFunc, address string) (string, error) {
 	if address == "" || net.ParseIP(address) != nil { // There's either no address or it's already an ip so nothing to do
 		return "", nil
