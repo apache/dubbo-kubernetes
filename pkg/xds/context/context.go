@@ -55,6 +55,18 @@ func (g GlobalContext) Hash() string {
 	return base64.StdEncoding.EncodeToString(g.hash)
 }
 
+// BaseMeshContext holds for a Mesh a set of resources that are changing less often (policies, external services...)
+type BaseMeshContext struct {
+	Mesh        *core_mesh.MeshResource
+	ResourceMap ResourceMap
+	hash        []byte
+}
+
+// Hash base64 version of the hash mostly useed for testing
+func (g BaseMeshContext) Hash() string {
+	return base64.StdEncoding.EncodeToString(g.hash)
+}
+
 type MeshContext struct {
 	Hash                string
 	Resource            *core_mesh.MeshResource

@@ -287,7 +287,7 @@ func (r *PodReconciler) createOrUpdateDataplane(
 	if err != nil {
 		if !errors.Is(err, context.Canceled) {
 			log.Error(err, "unable to create/update Dataplane", "operationResult", operationResult)
-			r.EventRecorder.Eventf(pod, kube_core.EventTypeWarning, FailedToGenerateDubboDataplaneReason, "Failed to generate Kuma Dataplane: %s", err.Error())
+			r.EventRecorder.Eventf(pod, kube_core.EventTypeWarning, FailedToGenerateDubboDataplaneReason, "Failed to generate Dubbo Dataplane: %s", err.Error())
 		}
 
 		return err
@@ -295,10 +295,10 @@ func (r *PodReconciler) createOrUpdateDataplane(
 	switch operationResult {
 	case kube_controllerutil.OperationResultCreated:
 		log.Info("Dataplane created")
-		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, CreatedDubboDataplaneReason, "Created Kuma Dataplane: %s", pod.Name)
+		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, CreatedDubboDataplaneReason, "Created Dubbo Dataplane: %s", pod.Name)
 	case kube_controllerutil.OperationResultUpdated:
 		log.Info("Dataplane updated")
-		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, UpdatedDubboDataplaneReason, "Updated Kuma Dataplane: %s", pod.Name)
+		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, UpdatedDubboDataplaneReason, "Updated Dubbo Dataplane: %s", pod.Name)
 	}
 	return nil
 }
