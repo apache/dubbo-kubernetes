@@ -41,7 +41,6 @@ import (
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/hds"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp"
 	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"github.com/apache/dubbo-kubernetes/pkg/util/os"
 	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
@@ -137,10 +136,6 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 			}
 			if err := diagnostics.SetupServer(rt); err != nil {
 				runLog.Error(err, "unable to set up Diagnostics server")
-				return err
-			}
-			if err := intercp.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up Control Plane Intercommunication")
 				return err
 			}
 
