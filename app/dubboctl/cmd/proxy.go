@@ -119,7 +119,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 					return err
 				}
 
-				fmt.Printf("%s: logs will be stored in %q\n", "kuma-dp", output)
+				fmt.Printf("%s: logs will be stored in %q\n", "dubbo-dp", output)
 				core.SetLogger(core.NewLoggerWithRotation(level, output, arg.maxSize, arg.maxBackups, arg.maxAge))
 			} else {
 				core.SetLogger(core.NewLogger(level))
@@ -200,7 +200,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 			envoyComponent, err := envoy.New(opts)
 			err = envoyComponent.Start(stopComponents)
 			if err != nil {
-				runLog.Error(err, "error while running Kuma DP")
+				runLog.Error(err, "error while running Dubbo DP")
 				return err
 			}
 			runLog.Info("stopping Dubbo proxy")
@@ -210,7 +210,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 
 	// root flags
 	cmd.PersistentFlags().StringVar(&arg.logLevel, "log-level", dubbo_log.InfoLevel.String(), UsageOptions("log level", dubbo_log.OffLevel, dubbo_log.InfoLevel, dubbo_log.DebugLevel))
-	cmd.PersistentFlags().StringVar(&arg.outputPath, "log-output-path", arg.outputPath, "path to the file that will be filled with logs. Example: if we set it to /tmp/kuma.log then after the file is rotated we will have /tmp/kuma-2021-06-07T09-15-18.265.log")
+	cmd.PersistentFlags().StringVar(&arg.outputPath, "log-output-path", arg.outputPath, "path to the file that will be filled with logs. Example: if we set it to /tmp/dubbo.log then after the file is rotated we will have /tmp/dubbo-2021-06-07T09-15-18.265.log")
 	cmd.PersistentFlags().IntVar(&arg.maxBackups, "log-max-retained-files", 1000, "maximum number of the old log files to retain")
 	cmd.PersistentFlags().IntVar(&arg.maxSize, "log-max-size", 100, "maximum size in megabytes of a log file before it gets rotated")
 	cmd.PersistentFlags().IntVar(&arg.maxAge, "log-max-age", 30, "maximum number of days to retain old log files based on the timestamp encoded in their filename")

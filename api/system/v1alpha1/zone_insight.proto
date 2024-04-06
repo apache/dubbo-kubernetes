@@ -34,7 +34,7 @@ message EnvoyAdminStreams {
   string clusters_global_instance_id = 3;
 }
 
-// KDSSubscription describes a single KDS subscription
+// DDSSubscription describes a single DDS subscription
 // created by a Zone to the Global.
 // Ideally, there should be only one such subscription per Zone lifecycle.
 // Presence of multiple subscriptions might indicate one of the following
@@ -58,14 +58,14 @@ message DDSSubscription {
   // Time when a given Zone disconnected from the Global.
   google.protobuf.Timestamp disconnect_time = 4;
 
-  // Status of the KDS subscription.
+  // Status of the DDS subscription.
   DDSSubscriptionStatus status = 5;
 
   // Generation is an integer number which is periodically increased by the
   // status sink
   uint32 generation = 7;
 
-  // Config of Zone Kuma CP
+  // Config of Zone Dubbo CP
   string config = 8;
 
   // Indicates if subscription provided auth token
@@ -79,10 +79,10 @@ message DDSSubscription {
 // DDSSubscriptionStatus defines status of an DDS subscription.
 message DDSSubscriptionStatus {
 
-  // Time when status of a given KDS subscription was most recently updated.
+  // Time when status of a given DDS subscription was most recently updated.
   google.protobuf.Timestamp last_update_time = 1;
 
-  // Total defines an aggregate over individual KDS stats.
+  // Total defines an aggregate over individual DDS stats.
   DDSServiceStats total = 2;
 
   map<string, DDSServiceStats> stat = 3;

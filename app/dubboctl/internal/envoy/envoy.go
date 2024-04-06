@@ -67,9 +67,9 @@ type BootstrapParams struct {
 }
 
 type EnvoyVersion struct {
-	Build            string
-	Version          string
-	KumaDpCompatible bool
+	Build             string
+	Version           string
+	DubboDpCompatible bool
 }
 
 type Opts struct {

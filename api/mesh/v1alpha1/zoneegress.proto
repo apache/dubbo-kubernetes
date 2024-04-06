@@ -18,7 +18,7 @@ message ZoneEgress {
   option (dubbo.mesh.resource).scope_namespace = true;
 
   // Zone field contains Zone name where egress is serving, field will be
-  // automatically set by Global Kuma CP
+  // automatically set by Global Dubbo CP
   string zone = 1;
 
   message Networking {

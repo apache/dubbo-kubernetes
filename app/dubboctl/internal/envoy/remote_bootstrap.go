@@ -50,7 +50,7 @@ import (
 
 var (
 	log           = core.Log.WithName("dataplane")
-	DpNotFoundErr = errors.New("Dataplane entity not found. If you are running on Universal please create a Dataplane entity on kuma-cp before starting kuma-dp or pass it to kuma-dp run --dataplane-file=/file. If you are running on Kubernetes, please check the kuma-cp logs to determine why the Dataplane entity could not be created by the automatic sidecar injection.")
+	DpNotFoundErr = errors.New("Dataplane entity not found. If you are running on Universal please create a Dataplane entity on dubbo-cp before starting dubbo-dp or pass it to dubbo-dp run --dataplane-file=/file. If you are running on Kubernetes, please check the dubbo-cp logs to determine why the Dataplane entity could not be created by the automatic sidecar injection.")
 )
 
 type remoteBootstrap struct {
@@ -199,7 +199,7 @@ func (b *remoteBootstrap) requestForBootstrap(ctx context.Context, client *http.
 			Envoy: types.EnvoyVersion{
 				Version:           params.EnvoyVersion.Version,
 				Build:             params.EnvoyVersion.Build,
-				DubboDpCompatible: params.EnvoyVersion.KumaDpCompatible,
+				DubboDpCompatible: params.EnvoyVersion.DubboDpCompatible,
 			},
 		},
 		DynamicMetadata:     params.DynamicMetadata,

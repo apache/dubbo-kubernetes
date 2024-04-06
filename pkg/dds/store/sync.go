@@ -305,11 +305,6 @@ func ZoneSyncCallback(ctx context.Context, configToSync map[string]bool, syncer 
 
 			return syncer.Sync(ctx, upstream, PrefilterBy(func(r core_model.Resource) bool {
 				if zi, ok := r.(*core_mesh.ZoneIngressResource); ok {
-					// Old zones don't have a 'kuma.io/zone' label on ZoneIngress, when upgrading to the new 2.6 version
-					// we don't want Zone CP to sync ZoneIngresses without 'kuma.io/zone' label to Global pretending
-					// they're originating here. That's why upgrade from 2.5 to 2.6 (and 2.7) requires casting resource
-					// to *core_mesh.ZoneIngressResource and checking its 'spec.zone' field.
-					// todo: remove in 2 releases after 2.6.x
 					return zi.IsRemoteIngress(localZone)
 				}
 
@@ -372,6 +367,10 @@ func GlobalSyncCallback(
 				}
 			case core_mesh.MappingType:
 				for _, m := range upstream.AddedResources.(*core_mesh.MappingResourceList).Items {
+					m.Spec.Zone = upstream.ControlPlaneId
+				}
+			case core_mesh.MetaDataType:
+				for _, m := range upstream.AddedResources.(*core_mesh.MetaDataResourceList).Items {
 					m.Spec.Zone = upstream.ControlPlaneId
 				}
 			}

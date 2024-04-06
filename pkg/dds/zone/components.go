@@ -75,7 +75,7 @@ func Setup(rt core_runtime.Runtime) error {
 	}
 
 	onGlobalToZoneSyncStarted := mux.OnGlobalToZoneSyncStartedFunc(func(stream mesh_proto.DDSSyncService_GlobalToZoneSyncClient, errChan chan error) {
-		log := ddsDeltaZoneLog.WithValues("kds-version", "v2")
+		log := ddsDeltaZoneLog.WithValues("dds-version", "v2")
 		syncClient := dds_client.NewDDSSyncClient(
 			log,
 			reg.ObjectTypes(model.HasDDSFlag(model.GlobalToZoneSelector)),
@@ -101,7 +101,7 @@ func Setup(rt core_runtime.Runtime) error {
 	})
 
 	onZoneToGlobalSyncStarted := mux.OnZoneToGlobalSyncStartedFunc(func(stream mesh_proto.DDSSyncService_ZoneToGlobalSyncClient, errChan chan error) {
-		log := ddsDeltaZoneLog.WithValues("kds-version", "v2", "peer-id", "global")
+		log := ddsDeltaZoneLog.WithValues("dds-version", "v2", "peer-id", "global")
 		log.Info("ZoneToGlobalSync new session created")
 		session := dds_server.NewServerStream(stream)
 		go func() {
@@ -121,5 +121,5 @@ func Setup(rt core_runtime.Runtime) error {
 		onZoneToGlobalSyncStarted,
 		*rt.Config().Multizone.Zone.DDS,
 	)
-	return rt.Add(component.NewResilientComponent(ddsDeltaZoneLog.WithName("kds-mux-client"), muxClient))
+	return rt.Add(component.NewResilientComponent(ddsDeltaZoneLog.WithName("dds-mux-client"), muxClient))
 }
