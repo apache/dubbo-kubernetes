@@ -46,7 +46,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds/hash"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/mux"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/reconcile"
-	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/util"
 )
 
@@ -63,7 +62,6 @@ type Context struct {
 	GlobalResourceMapper reconcile.ResourceMapper
 	ZoneResourceMapper   reconcile.ResourceMapper
 
-	EnvoyAdminRPCs           service.EnvoyAdminRPCs
 	ServerStreamInterceptors []grpc.StreamServerInterceptor
 	ServerUnaryInterceptor   []grpc.UnaryServerInterceptor
 }
@@ -111,7 +109,6 @@ func DefaultContext(
 		Configs:              configs,
 		GlobalResourceMapper: CompositeResourceMapper(globalMappers...),
 		ZoneResourceMapper:   CompositeResourceMapper(zoneMappers...),
-		EnvoyAdminRPCs:       service.NewEnvoyAdminRPCs(),
 	}
 }
 

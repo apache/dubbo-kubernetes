@@ -33,7 +33,6 @@ import (
 	dds_client "github.com/apache/dubbo-kubernetes/pkg/dds/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/mux"
 	dds_server "github.com/apache/dubbo-kubernetes/pkg/dds/server"
-	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	dds_sync_store "github.com/apache/dubbo-kubernetes/pkg/dds/store"
 	resources_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s"
 )
@@ -121,12 +120,6 @@ func Setup(rt core_runtime.Runtime) error {
 		onGlobalToZoneSyncStarted,
 		onZoneToGlobalSyncStarted,
 		*rt.Config().Multizone.Zone.DDS,
-		service.NewEnvoyAdminProcessor(
-			rt.ReadOnlyResourceManager(),
-			rt.EnvoyAdminClient().ConfigDump,
-			rt.EnvoyAdminClient().Stats,
-			rt.EnvoyAdminClient().Clusters,
-		),
 	)
 	return rt.Add(component.NewResilientComponent(ddsDeltaZoneLog.WithName("kds-mux-client"), muxClient))
 }

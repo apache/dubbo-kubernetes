@@ -149,7 +149,6 @@ func Setup(rt runtime.Runtime) error {
 		*rt.Config().Multizone.Global.DDS,
 		service.NewGlobalDDSServiceServer(
 			rt.AppContext(),
-			rt.DDSContext().EnvoyAdminRPCs,
 			rt.ResourceManager(),
 			rt.GetInstanceId(),
 			streamInterceptors,

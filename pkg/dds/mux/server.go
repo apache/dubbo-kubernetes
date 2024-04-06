@@ -69,7 +69,6 @@ type server struct {
 	ddsSyncServiceServer *DDSSyncServiceServer
 	streamInterceptors   []grpc.StreamServerInterceptor
 	unaryInterceptors    []grpc.UnaryServerInterceptor
-	mesh_proto.UnimplementedMultiplexServiceServer
 }
 
 func NewServer(
@@ -130,10 +129,6 @@ func (s *server) Start(stop <-chan struct{}) error {
 	)
 	grpcServer := grpc.NewServer(grpcOptions...)
 
-	// register services
-	if !s.config.DisableSOTW {
-		mesh_proto.RegisterMultiplexServiceServer(grpcServer, s)
-	}
 	mesh_proto.RegisterGlobalDDSServiceServer(grpcServer, s.serviceServer)
 	mesh_proto.RegisterDDSSyncServiceServer(grpcServer, s.ddsSyncServiceServer)
 
