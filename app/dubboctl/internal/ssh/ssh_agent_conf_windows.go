@@ -18,7 +18,9 @@ package ssh
 import (
 	"net"
 	"strings"
+)
 
+import (
 	"github.com/Microsoft/go-winio"
 )
 

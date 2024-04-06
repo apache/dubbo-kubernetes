@@ -19,11 +19,15 @@ import (
 	"context"
 	"reflect"
 	"testing"
+)
 
+import (
+	pack "github.com/buildpacks/pack/pkg/client"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
-
-	pack "github.com/buildpacks/pack/pkg/client"
 )
 
 // TestBuild_BuilderImageUntrusted ensures that only known builder images

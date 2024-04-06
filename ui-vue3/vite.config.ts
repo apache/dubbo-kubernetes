@@ -33,7 +33,8 @@ export default defineConfig({
                 target: 'http://jsonplaceholder.typicode.com',
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api/, ''),
-            }
+            },
+
         },
     },
     plugins: [
@@ -42,7 +43,8 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': fileURLToPath(new URL('./src', import.meta.url))
+            '@': fileURLToPath(new URL('./src', import.meta.url)),
+            'monaco-editor': 'monaco-editor/esm/vs/editor/editor.api.js'
         },
         // ignore suffix
         extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue']

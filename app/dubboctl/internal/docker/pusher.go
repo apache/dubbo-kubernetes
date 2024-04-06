@@ -27,18 +27,24 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
-
+import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
 	"golang.org/x/term"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 )
 
 type Opt func(*Pusher)

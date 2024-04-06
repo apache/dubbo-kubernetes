@@ -17,7 +17,9 @@ package identifier
 
 import (
 	"net/url"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"github.com/apache/dubbo-kubernetes/deploy"
 )

@@ -20,7 +20,9 @@ package dubbo
 import (
 	"archive/zip"
 	"bytes"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"github.com/apache/dubbo-kubernetes/generate"
 )

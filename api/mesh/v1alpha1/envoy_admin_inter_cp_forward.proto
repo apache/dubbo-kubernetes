@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "api/mesh/v1alpha1/dds.proto";
+
+service InterCPEnvoyAdminForwardService {
+  rpc XDSConfig(XDSConfigRequest) returns (XDSConfigResponse);
+  rpc Stats(StatsRequest) returns (StatsResponse);
+  rpc Clusters(ClustersRequest) returns (ClustersResponse);
+}

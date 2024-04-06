@@ -37,13 +37,18 @@ import (
 	"strings"
 	"testing"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
-
+import (
 	"github.com/docker/docker/api/types"
 	api "github.com/docker/docker/api/types/image"
+
 	"github.com/google/go-containerregistry/pkg/registry"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 )
 
 func TestGetRegistry(t *testing.T) {

@@ -20,7 +20,9 @@ package dubbo
 import (
 	"context"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 

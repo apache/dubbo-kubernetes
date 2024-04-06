@@ -1,0 +1,34 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+// JSONSchemaService serves JSONSchemas describing protobuf types in buf
+// modules.
+service JSONSchemaService {
+  // GetJSONSchema allows users to get an (approximate) json schema for a
+  // protobuf type.
+  rpc GetJSONSchema(GetJSONSchemaRequest) returns (GetJSONSchemaResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetJSONSchemaRequest {
+  string owner = 1;
+  string repository = 2;
+  string reference = 3;
+
+  // A fully qualified name of the type to generate a JSONSchema for, e.g.
+  // "pkg.foo.Bar". The type needs to resolve in the referenced module or any of
+  // its dependencies. Currently only messages types are supported.
+  string type_name = 4;
+}
+
+message GetJSONSchemaResponse {
+  // A json schema representing what the json encoded payload for type_name
+  // should conform to. This schema is an approximation to be used by editors
+  // for validation and autocompletion, not a lossless representation of the
+  // type's descriptor.
+  bytes json_schema = 1;
+}

@@ -1,65 +1,63 @@
-⏳ Please wait for a few minutes until the deployment is completed.
+⏳ Please wait for all the activated components to be deployed.
 
-Application: Admin
+Core: Admin
 Version: {{ .Values.image.tag }}
 
-{{- if .Values.ingress.enabled }}
-
-Ingress Controller: ✅
-
-You have enabled the internal entrance controller.
-{{- else }}
-
-Ingress Controller: ❌
-
-You have disabled the internal entrance controller.
-{{- end }}
+🔄 Please wait a few minutes for other dependent components to finish deploying.
 
 {{- if .Values.zookeeper.enabled }}
-Register Center: ZooKeeper
+
+Dependency: ZooKeeper
 Version: {{ .Values.zookeeper.image.tag }}
 
-You have enabled the internal Register Center.
+🚨 If you are using the Nacos registry, Please disable Zookeeper and enable Nacos.
+   Otherwise, Zookeeper is used by default.
 
-************************************************************************************
-* If you are using the Nacos registry, Please disable Zookeeper and enable Nacos.  *
-* Otherwise, Zookeeper is used by default.                                         *
-************************************************************************************
-
+🎊 You have enabled the internal Register Center.
 {{- else if .Values.nacos.enabled }}
-Registry Center: Nacos
+
+Dependency: Nacos
 Version: {{ .Values.nacos.image.tag }}
 
-You have enabled the internal Register Center.
+🎊 You have enabled the internal Register Center.
 {{- end }}
 
 {{- if and (eq .Values.zookeeper.enabled false) (eq .Values.nacos.enabled false) }}
-Registry Center: ❌
+Dependency: ❎
 
-You have disabled the internal Register Center.
+🚫 You have disabled the internal Register Center.
 
-Please provide an external registry center to ensure proper service operation.
+Please provide an external Register center to ensure proper service operation.
 
 {{- end }}
 
 {{- if .Values.ingress.enabled }}
 
-You've enabled an internal Ingress controller,
-so you should be able to access the website at the following URL:
+Exposer: ✅️
 
-          Admin: {{ .Values.ingress.hosts.admin }}
+So you should be able to access the website at the following URL:
 
-      kubectl get ingress -n {{ template "ingress.namespace" . }}
+1. http://{{ .Values.ingress.hosts.admin }}
+2. http://{{ .Values.ingress.hosts.prometheus }}
+3. http://{{ .Values.ingress.hosts.grafana }}
+
+🎊 You have enabled the internal entrance controller.
+
+{{- else }}
+
+Exposer: ❎
+
+🚫 You have disabled the internal entrance controller.
 
 {{- end }}
 
 {{- if not .Values.persistence.enabled }}
 
-               #################################################
-               #   ⚠ Not enabled for persistent storage.       #
-               # If you have important data, please enable it. #
-               #################################################
+           #########################################################
+           #         ⚠ Not enabled for persistent storage.         #
+           #     If you have important data, please enable it.     #
+           #########################################################
 
 {{- end }}
 
-            🌹 For more details, please visit https://dubbo.apache.org.
+🌹 For more details, please visit https://dubbo.apache.org.

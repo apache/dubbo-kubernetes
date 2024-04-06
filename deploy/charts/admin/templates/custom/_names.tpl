@@ -1,8 +1,15 @@
 {{/*
-Return Dubbo Name to use.
+Return Job Name to use.
 */}}
-{{- define "dubbo.name" -}}
-{{- printf "dubbo" -}}
+{{- define "job.name" -}}
+{{- printf "jobs" -}}
+{{- end -}}
+
+{{/*
+Return Admin Control Plane Name to use.
+*/}}
+{{- define "cp.name" -}}
+{{- printf "admin-cp" -}}
 {{- end -}}
 
 {{/*
@@ -37,7 +44,7 @@ Return Traefik Name to use.
 Return Prometheus Name to use.
 */}}
 {{- define "prom.name" -}}
-{{- printf "prometheus" -}}
+{{- printf "prometheus-cp-server" -}}
 {{- end -}}
 
 {{/*

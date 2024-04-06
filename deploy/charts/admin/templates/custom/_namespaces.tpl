@@ -32,7 +32,18 @@ Return Nacos Namespace to use.
 {{- end -}}
 
 {{/*
-Return Nacos Namespace to use.
+Return Jobs Namespace to use.
+*/}}
+{{- define "job.namespace" -}}
+{{- if .Values.jobs.namespaceOverride -}}
+{{- .Values.jobs.namespaceOverride }}
+{{- else -}}
+{{- .Release.Namespace }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return ingress Namespace to use.
 */}}
 {{- define "ingress.namespace" -}}
 {{- if .Values.ingress.namespaceOverride -}}
@@ -41,3 +52,4 @@ Return Nacos Namespace to use.
 {{- .Release.Namespace }}
 {{- end -}}
 {{- end -}}
+

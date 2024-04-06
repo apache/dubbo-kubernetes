@@ -20,11 +20,16 @@ import (
 	"fmt"
 	"testing"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
-
+import (
 	"github.com/Microsoft/go-winio"
+
 	"github.com/docker/docker/client"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
 )
 
 func TestNewClientWinPipe(t *testing.T) {

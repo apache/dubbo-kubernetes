@@ -14,7 +14,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export default {
+
+import type { I18nType } from './type.ts'
+
+const words: I18nType = {
+  instanceDomain: {
+    enableAppInstanceLogs: 'Enable access logs for all instances of this application',
+    appServiceRetries: 'Adjust the number of retries for the service provided by this application',
+    appServiceLoadBalance:
+      'Adjusting the load balancing strategy for application service provision',
+    appServiceNegativeClusteringMethod:
+      'Adjusting the clustering approach for application service provision',
+    appServiceTimeout: 'Adjusting the timeout for application service provision',
+    close: 'Close',
+    enable: 'Enable',
+    executionLog: 'ExecutionLog',
+    loadBalance: 'LoadBalance',
+    instanceIP: 'InstanceIP',
+    clusterApproach: 'ClusterApproach',
+    details: 'Detail',
+    retryCount: 'RetryCount',
+    timeout_ms: 'Timeout(ms)',
+    monitor: 'Monitor',
+    linkTracking: 'LinkTracking',
+    configuration: 'Configuration',
+    event: 'Event',
+    instanceName: 'InstanceName',
+    ip: 'Ip',
+    name: 'Name',
+    deployState: 'DeployState',
+    deployCluster: 'DeployCluster',
+    registerStates: 'RegisterState',
+    registerCluster: 'RegisterCluster',
+    CPU: 'CPU',
+    node: 'Node',
+    memory: 'Memory',
+    owningWorkload_k8s: 'OwningWorkload(k8s)',
+    creationTime_k8s: 'CreationTime(k8s)',
+    startTime: 'StartTime',
+    dubboPort: 'DubboPort',
+    instanceImage_k8s: 'Image(k8s)',
+    instanceLabel: 'InstanceLabel',
+    whichApplication: 'OwningApplication',
+    healthExamination_k8s: 'HealthExamination(k8s)',
+    registerTime: 'RegisterTime',
+    labels: 'Labels',
+    startTime_k8s: 'StartTime(k8s)'
+  },
+  appServiceTimeout: 'Adjusting the timeout for application service provision',
+  enableAppInstanceLogs: 'Enable access logs for all instances of this application',
+  appServiceLoadBalance: 'Adjusting the load balancing strategy for application service provision',
+  appServiceRetries: 'Adjusting the number of retries for application provided services',
+  appServiceNegativeClusteringMethod:
+    'Adjusting the negative clustering method for application service provision',
+  executionLog: 'Execution Log',
+  clusterApproach: 'Cluster Approach',
+  retryCount: 'Retry Count',
+  event: 'Event',
+  configuration: 'Configuration',
+  linkTracking: 'Link Tracking',
+  monitor: 'Monitor',
+  details: 'Details',
+  creationTime_k8s: 'creationTime(k8s)',
+  dubboPort: 'Dubbo Port',
+  whichApplication: 'application',
+  registerTime: 'Register Time',
+  startTime_k8s: 'Start Time(k8s)',
+  registerStates: 'Register States',
+  deployState: 'Deployment Status',
+  owningWorkload_k8s: 'Owning Workload(k8s)',
+  creationTime: 'Creation Time',
+  nodeIP: 'Node IP',
+  healthExamination: 'Health Examination',
+  instanceImage_k8s: 'Image(k8s)',
+  instanceLabel: 'Instance Label',
+  instanceDetail: 'Instance Detail',
+  state: 'State',
+  memory: 'Memory',
+  CPU: 'CPU',
+  node: 'Node',
+  labels: 'Labels',
+  instanceIP: 'Instance IP',
+  instanceName: 'Instance Name',
+  instance: 'Instance',
+  resourceDetails: 'Resource Details',
   service: 'Service',
   serviceSearch: 'Search Service',
   serviceGovernance: 'Routing Rule',
@@ -36,6 +119,7 @@ export default {
   serviceInfo: 'Service Info',
   providers: 'Providers',
   consumers: 'Consumers',
+  common: 'Common',
   version: 'Version',
   app: 'Application',
   services: 'Services',
@@ -49,6 +133,9 @@ export default {
   timeout: 'timeout(ms)',
   serialization: 'serialization',
   appName: 'Application Name',
+  instanceNum: 'Instance Number',
+  deployCluster: 'Deploy Cluster',
+  registerCluster: 'Register Cluster',
   serviceName: 'Service Name',
   registrySource: 'Registry Source',
   instanceRegistry: 'Instance Registry',
@@ -245,6 +332,8 @@ export default {
   editMockRule: 'Edit Mock Rule',
   deleteRuleTitle: 'Are you sure to delete this mock rule?',
 
+  createTime: 'Create Time',
+  lastModifiedTime: 'Last Modified Time',
   trafficTimeout: 'Timeout',
   trafficRetry: 'Retry',
   trafficRegion: 'Region Aware',
@@ -255,5 +344,58 @@ export default {
   trafficAccesslog: 'Accesslog',
   trafficHost: 'Host',
   homePage: 'Cluster Overview',
-  serviceManagement: 'Dev & Test'
+  serviceManagement: 'Dev & Test',
+  resources: 'Resources',
+  applications: 'Applications',
+  instances: 'Instances',
+  applicationDomain: {
+    operatorLog: 'OperatorLog',
+    flowWeight: 'FlowWeight',
+    gray: 'Gray',
+    detail: 'Detail',
+    instance: 'Instance',
+    service: 'Service',
+    monitor: 'Monitor',
+    tracing: 'Tracing',
+    config: 'Config',
+    event: 'Event',
+    appName: 'Application Name',
+    rpcProtocols: 'Rpc Protocols',
+    dubboVersions: 'Dubbo Versions',
+    dubboPorts: 'Dubbo Ports',
+    serialProtocols: 'Serial Protocols',
+    appTypes: 'Application Types',
+    images: 'Images',
+    workloads: 'Workloads',
+    deployCluster: 'Deploy Cluster',
+    registerCluster: 'Register Cluster',
+    registerMode: 'Register Mode'
+  },
+  searchDomain: {
+    total: 'Total',
+    unit: 'items'
+  },
+  messageDomain: {
+    success: {
+      copy: 'You have successfully copied a piece of information'
+    }
+  },
+  backHome: 'Back Home',
+  noPageTip: 'Sorry, the page you visited does not exist.',
+  globalSearchTip: 'Search ip, application, instance, service',
+  placeholder: {
+    typeAppName: 'please type appName, support for prefix',
+    typeDefault: 'please type '
+  },
+  none: 'No Select',
+  debug: 'Debug',
+  distribution: 'Distribution',
+  tracing: 'Tracing',
+
+  provideService: 'Provide Service',
+  dependentService: 'Dependent Service',
+  submit: 'Submit',
+  reset: 'Reset'
 }
+
+export default words

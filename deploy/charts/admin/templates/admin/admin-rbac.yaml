@@ -1,0 +1,150 @@
+{{- $sa := .Values.serviceAccount -}}
+{{- $rbac := .Values.rbac -}}
+{{- $psp := .Values.podSecurityPolicy -}}
+{{- if $sa.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- if $sa.labels }}
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- end }}
+  {{- with $sa.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $sa.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+---
+{{- if $rbac.enabled }}
+apiVersion: {{ template "rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: {{ include "admin.name" . }}
+  namespace: {{ include "admin.namespace" . }}
+  labels:
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- with $rbac.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $rbac.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  verbs:
+  - get
+{{- if (semverCompare "<1.25.0-0" .Capabilities.KubeVersion.Version) }}
+{{- if $psp.enabled }}
+- apiGroups:
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+  resourceNames:
+  - {{ include "admin.name" . }}
+{{- end }}
+{{- end }}
+---
+apiVersion: {{ template "rbac.apiVersion" . }}
+kind: RoleBinding
+metadata:
+  name: {{ include "admin.name" . }}
+  namespace: {{ include "admin.namespace" . }}
+  labels:
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- with $rbac.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $rbac.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "admin.name" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "admin.name" . }}
+  namespace: {{ include "admin.namespace" . }}
+---
+apiVersion: {{ template "rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ include "admin.name" . }}-clusterrole
+  labels:
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- with $rbac.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $rbac.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+rules:
+- apiGroups:
+  - app
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+---
+apiVersion: {{ include "rbac.apiVersion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "admin.name" . }}-clusterrolebinding
+  labels:
+  {{- include "admin.labels" . | nindent 4 }}
+  {{- with $rbac.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $rbac.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "admin.name" . }}
+  namespace: {{ include "admin.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "admin.name" . }}-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}

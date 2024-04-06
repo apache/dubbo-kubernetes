@@ -81,8 +81,11 @@ header:
     - '**/testdata/**'
     - '**/deploy.tpl'
     - '**/docs/**'
+    - '**/.husky/pre-commit'
     - '**/.nvmrc'
     - 'app/dubboctl/internal/dubbo/dockerfiles/**'
+    - '**/**.txtar'
+    - '**/**gen.go'
   comment: on-failure
 
   license-location-threshold: 130

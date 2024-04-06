@@ -21,12 +21,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+)
 
+import (
 	"github.com/spf13/cobra"
 )
 
+import (
+	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
+)
+
 var (
-	gitVersion   = "dubbo-admin-%s"
+	gitVersion   = "dubbo-kube-%s"
 	gitCommit    = "$Format:%H$"
 	gitTreeState = "" // state of git tree, either "clean" or "dirty"
 	gitTag       = ""
@@ -73,9 +79,9 @@ func NewVersionCmd() *cobra.Command {
 		Long:  `Print version.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if args.detailed {
-				cmd.Println(GetVersionInfo())
+				cmd.Println(dubbo_version.Build.FormatDetailedProductInfo())
 			} else {
-				cmd.Println(gitVersion)
+				cmd.Printf("%s: %s\n", dubbo_version.Product, dubbo_version.Build.Version)
 			}
 
 			return nil

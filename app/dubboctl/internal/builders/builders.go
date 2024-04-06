@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 )
 

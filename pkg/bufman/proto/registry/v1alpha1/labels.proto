@@ -1,0 +1,70 @@
+
+
+syntax = "proto3";
+
+package bufman.dubbo.apache.org.registry.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+
+enum LabelNamespace {
+  LABEL_NAMESPACE_UNSPECIFIED = 0;
+  LABEL_NAMESPACE_TAG = 1;
+  LABEL_NAMESPACE_BRANCH = 2;
+  LABEL_NAMESPACE_GIT_COMMIT = 3;
+  LABEL_NAMESPACE_REVIEW = 4;
+  LABEL_NAMESPACE_BSR_HEAD = 5;
+}
+
+message Label {
+  LabelName label_name = 1;
+  LabelValue label_value = 2;
+}
+
+message LabelName {
+  LabelNamespace namespace = 1;
+  string name = 2;
+}
+
+message LabelValue {
+  string commit_id = 1;
+}
+
+service LabelService {
+  rpc CreateLabel(CreateLabelRequest) returns (CreateLabelResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+  rpc MoveLabel(MoveLabelRequest) returns (MoveLabelResponse);
+  rpc GetLabels(GetLabelsRequest) returns (GetLabelsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message CreateLabelRequest {
+  LabelName label_name = 1;
+  LabelValue label_value = 2;
+  optional string author = 3;
+  optional google.protobuf.Timestamp create_time = 4;
+}
+
+message CreateLabelResponse {
+  LabelValue commit_id = 1;
+}
+
+message MoveLabelRequest {
+  LabelName label_name = 1;
+  optional LabelValue from = 2;
+  LabelValue to = 3;
+}
+
+message MoveLabelResponse {}
+
+message GetLabelsRequest {
+  string repository_owner = 1;
+  string repository_name = 2;
+  optional LabelName label_name = 3;
+  optional LabelValue label_value = 4;
+}
+
+message GetLabelsResponse {
+  repeated Label labels = 1;
+}

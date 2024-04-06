@@ -23,7 +23,6 @@ import (
 )
 
 // By default, go embed does not embed files that starts with `_` that's why we need to use *
-
 // Data Run 'make build-ui' first to generate the distribution of the ui pages.
 //
 //go:embed dist/*

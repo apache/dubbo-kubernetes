@@ -26,13 +26,17 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
-
+import (
 	"github.com/spf13/cobra"
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 	"gopkg.in/yaml.v2"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/kube"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 
 const (

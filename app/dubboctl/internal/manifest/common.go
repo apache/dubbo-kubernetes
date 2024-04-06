@@ -19,12 +19,16 @@ import (
 	"fmt"
 	"path"
 	"strings"
+)
 
+import (
+	"sigs.k8s.io/yaml"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
-	"sigs.k8s.io/yaml"
 )
 
 func ReadOverlayProfileYaml(profilePath string, profile string) (string, error) {

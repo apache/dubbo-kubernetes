@@ -24,14 +24,13 @@
 </template>
 
 <script setup lang="ts">
-
-import {useRoute} from "vue-router";
-import {onMounted, reactive, ref} from "vue";
-import {getMetricsMetadata} from "@/api/service/serverInfo";
+import { useRoute } from 'vue-router'
+import { onMounted, reactive, ref } from 'vue'
+import { getMetricsMetadata } from '@/api/service/serverInfo'
 let metricsMetadata = reactive(<{ [key: string]: string }>{})
 let showIframe = ref(false)
 
-const  routeName = <string>useRoute().name
+const routeName = <string>useRoute().name
 
 onMounted(async () => {
   metricsMetadata = <{ [key: string]: string }>(await getMetricsMetadata({})).data

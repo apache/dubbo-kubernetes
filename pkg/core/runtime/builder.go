@@ -21,126 +21,402 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/client/cert"
-	"github.com/apache/dubbo-kubernetes/pkg/core/client/webhook"
+import (
+	"dubbo.apache.org/dubbo-go/v3/config_center"
+	"dubbo.apache.org/dubbo-go/v3/metadata/report"
+	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/kubeclient/client"
-
-	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/cert/provider"
-	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
-	"github.com/apache/dubbo-kubernetes/pkg/cp-server/server"
 	"github.com/pkg/errors"
 )
 
+import (
+	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/admin"
+	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
+	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
+	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
+	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
+	"github.com/apache/dubbo-kubernetes/pkg/core/reg_client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
+	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
+	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
+	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
+)
+
+// BuilderContext provides access to Builder's interim state.
 type BuilderContext interface {
 	ComponentManager() component.Manager
-	Config() *dubbo_cp.Config
-	CertStorage() *provider.CertStorage
-	KubeClient() *client.KubeClient
-	CertClient() cert.Client
+	ResourceStore() core_store.CustomizableResourceStore
+	Transactions() core_store.Transactions
+	ConfigStore() core_store.ResourceStore
+	ResourceManager() core_manager.CustomizableResourceManager
+	Config() dubbo_cp.Config
+	RegistryCenter() dubboRegistry.Registry
+	RegClient() reg_client.RegClient
+	MetadataReportCenter() report.MetadataReport
+	AdminRegistry() *registry.Registry
+	ServiceDiscovery() dubboRegistry.ServiceDiscovery
+	ConfigCenter() config_center.DynamicConfiguration
+	Governance() governance.GovernanceConfig
+	Extensions() context.Context
+	ConfigManager() config_manager.ConfigManager
+	LeaderInfo() component.LeaderInfo
+	EventBus() events.EventBus
+	DpServer() *dp_server.DpServer
+	DataplaneCache() *sync.Map
+	InterCPClientPool() *client.Pool
+	DDSContext() *dds_context.Context
+	ResourceValidators() ResourceValidators
 }
 
 var _ BuilderContext = &Builder{}
 
+// Builder represents a multi-step initialization process.
 type Builder struct {
-	cfg    *dubbo_cp.Config
-	cm     component.Manager
-	appCtx context.Context
-
-	kubeClient    *client.KubeClient
-	grpcServer    *server.GrpcServer
-	certStorage   *provider.CertStorage
-	certClient    cert.Client
-	webhookClient webhook.Client
+	cfg                  dubbo_cp.Config
+	cm                   component.Manager
+	rs                   core_store.CustomizableResourceStore
+	cs                   core_store.ResourceStore
+	txs                  core_store.Transactions
+	rm                   core_manager.CustomizableResourceManager
+	rom                  core_manager.ReadOnlyResourceManager
+	eac                  admin.EnvoyAdminClient
+	ext                  context.Context
+	meshCache            *mesh.Cache
+	lif                  lookup.LookupIPFunc
+	configm              config_manager.ConfigManager
+	leadInfo             component.LeaderInfo
+	erf                  events.EventBus
+	dsl                  datasource.Loader
+	interCpPool          *client.Pool
+	dps                  *dp_server.DpServer
+	registryCenter       dubboRegistry.Registry
+	metadataReportCenter report.MetadataReport
+	configCenter         config_center.DynamicConfiguration
+	adminRegistry        *registry.Registry
+	governance           governance.GovernanceConfig
+	rv                   ResourceValidators
+	ddsctx               *dds_context.Context
+	appCtx               context.Context
+	dCache               *sync.Map
+	regClient            reg_client.RegClient
+	serviceDiscover      dubboRegistry.ServiceDiscovery
 	*runtimeInfo
 }
 
-func (b *Builder) CertClient() cert.Client {
-	return b.certClient
-}
-
-func (b *Builder) KubeClient() *client.KubeClient {
-	return b.kubeClient
-}
-
-func (b *Builder) CertStorage() *provider.CertStorage {
-	return b.certStorage
-}
-
-func (b *Builder) Config() *dubbo_cp.Config {
-	return b.cfg
-}
-
-func (b *Builder) ComponentManager() component.Manager {
-	return b.cm
-}
-
-func BuilderFor(appCtx context.Context, cfg *dubbo_cp.Config) (*Builder, error) {
+func BuilderFor(appCtx context.Context, cfg dubbo_cp.Config) (*Builder, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get hostname")
 	}
 	suffix := core.NewUUID()[0:4]
 	return &Builder{
-		cfg:    cfg,
-		appCtx: appCtx,
+		cfg: cfg,
+		ext: context.Background(),
 		runtimeInfo: &runtimeInfo{
 			instanceId: fmt.Sprintf("%s-%s", hostname, suffix),
 			startTime:  time.Now(),
+			mode:       cfg.Mode,
+			deployMode: cfg.DeployMode,
 		},
+		appCtx: appCtx,
 	}, nil
-}
-
-func (b *Builder) Build() (Runtime, error) {
-	if b.grpcServer == nil {
-		return nil, errors.Errorf("grpcServer has not been configured")
-	}
-	if b.certStorage == nil {
-		return nil, errors.Errorf("certStorage has not been configured")
-	}
-	return &runtime{
-		RuntimeInfo: b.runtimeInfo,
-		RuntimeContext: &runtimeContext{
-			cfg:         b.cfg,
-			grpcServer:  b.grpcServer,
-			certStorage: b.certStorage,
-			kubeClient:  b.kubeClient,
-			certClient:  b.certClient,
-		},
-		Manager: b.cm,
-	}, nil
-}
-
-func (b *Builder) WithWebhookClient(webhookClient webhook.Client) *Builder {
-	b.webhookClient = webhookClient
-	return b
-}
-
-func (b *Builder) WithCertClient(certClient cert.Client) *Builder {
-	b.certClient = certClient
-	return b
-}
-
-func (b *Builder) WithKubeClient(kubeClient *client.KubeClient) *Builder {
-	b.kubeClient = kubeClient
-	return b
-}
-
-func (b *Builder) WithCertStorage(storage *provider.CertStorage) *Builder {
-	b.certStorage = storage
-	return b
-}
-
-func (b *Builder) WithGrpcServer(grpcServer server.GrpcServer) *Builder {
-	b.grpcServer = &grpcServer
-	return b
 }
 
 func (b *Builder) WithComponentManager(cm component.Manager) *Builder {
 	b.cm = cm
 	return b
+}
+
+func (b *Builder) WithResourceStore(rs core_store.CustomizableResourceStore) *Builder {
+	b.rs = rs
+	return b
+}
+
+func (b *Builder) WithTransactions(txs core_store.Transactions) *Builder {
+	b.txs = txs
+	return b
+}
+
+func (b *Builder) WithConfigStore(cs core_store.ResourceStore) *Builder {
+	b.cs = cs
+	return b
+}
+
+func (b *Builder) WithResourceManager(rm core_manager.CustomizableResourceManager) *Builder {
+	b.rm = rm
+	return b
+}
+
+func (b *Builder) WithReadOnlyResourceManager(rom core_manager.ReadOnlyResourceManager) *Builder {
+	b.rom = rom
+	return b
+}
+
+func (b *Builder) WithExtensions(ext context.Context) *Builder {
+	b.ext = ext
+	return b
+}
+
+func (b *Builder) WithExtension(key interface{}, value interface{}) *Builder {
+	b.ext = context.WithValue(b.ext, key, value)
+	return b
+}
+
+func (b *Builder) WithConfigManager(configm config_manager.ConfigManager) *Builder {
+	b.configm = configm
+	return b
+}
+
+func (b *Builder) WithLeaderInfo(leadInfo component.LeaderInfo) *Builder {
+	b.leadInfo = leadInfo
+	return b
+}
+
+func (b *Builder) WithDataplaneCache(cache *sync.Map) *Builder {
+	b.dCache = cache
+	return b
+}
+
+func (b *Builder) WithLookupIP(lif lookup.LookupIPFunc) *Builder {
+	b.lif = lif
+	return b
+}
+
+func (b *Builder) WithMeshCache(meshCache *mesh.Cache) *Builder {
+	b.meshCache = meshCache
+	return b
+}
+
+func (b *Builder) WithEventBus(erf events.EventBus) *Builder {
+	b.erf = erf
+	return b
+}
+
+func (b *Builder) WithDataSourceLoader(loader datasource.Loader) *Builder {
+	b.dsl = loader
+	return b
+}
+
+func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
+	b.dps = dps
+	return b
+}
+
+func (b *Builder) WithEnvoyAdminClient(eac admin.EnvoyAdminClient) *Builder {
+	b.eac = eac
+	return b
+}
+
+func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
+	b.ddsctx = ddsctx
+	return b
+}
+
+func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
+	b.rv = rv
+	return b
+}
+
+func (b *Builder) WithRegClient(regClient reg_client.RegClient) *Builder {
+	b.regClient = regClient
+	return b
+}
+
+func (b *Builder) WithRegistryCenter(rg dubboRegistry.Registry) *Builder {
+	b.registryCenter = rg
+	return b
+}
+
+func (b *Builder) WithGovernanceConfig(gc governance.GovernanceConfig) *Builder {
+	b.governance = gc
+	return b
+}
+
+func (b *Builder) WithMetadataReport(mr report.MetadataReport) *Builder {
+	b.metadataReportCenter = mr
+	return b
+}
+
+func (b *Builder) WithConfigCenter(cc config_center.DynamicConfiguration) *Builder {
+	b.configCenter = cc
+	return b
+}
+
+func (b *Builder) WithAdminRegistry(ag *registry.Registry) *Builder {
+	b.adminRegistry = ag
+	return b
+}
+
+func (b *Builder) WithServiceDiscovery(discovery dubboRegistry.ServiceDiscovery) *Builder {
+	b.serviceDiscover = discovery
+	return b
+}
+
+func (b *Builder) Build() (Runtime, error) {
+	if b.cm == nil {
+		return nil, errors.Errorf("ComponentManager has not been configured")
+	}
+	if b.rs == nil {
+		return nil, errors.Errorf("ResourceStore has not been configured")
+	}
+	if b.txs == nil {
+		return nil, errors.Errorf("Transactions has not been configured")
+	}
+	if b.rm == nil {
+		return nil, errors.Errorf("ResourceManager has not been configured")
+	}
+	if b.rom == nil {
+		return nil, errors.Errorf("ReadOnlyResourceManager has not been configured")
+	}
+	if b.ext == nil {
+		return nil, errors.Errorf("Extensions have been misconfigured")
+	}
+	if b.leadInfo == nil {
+		return nil, errors.Errorf("LeaderInfo has not been configured")
+	}
+	if b.erf == nil {
+		return nil, errors.Errorf("EventReaderFactory has not been configured")
+	}
+	if b.dps == nil {
+		return nil, errors.Errorf("DpServer has not been configured")
+	}
+
+	return &runtime{
+		RuntimeInfo: b.runtimeInfo,
+		RuntimeContext: &runtimeContext{
+			cfg:                  b.cfg,
+			rm:                   b.rm,
+			rom:                  b.rom,
+			txs:                  b.txs,
+			ddsctx:               b.ddsctx,
+			ext:                  b.ext,
+			configm:              b.configm,
+			registryCenter:       b.registryCenter,
+			metadataReportCenter: b.metadataReportCenter,
+			configCenter:         b.configCenter,
+			adminRegistry:        b.adminRegistry,
+			governance:           b.governance,
+			leadInfo:             b.leadInfo,
+			erf:                  b.erf,
+			dCache:               b.dCache,
+			dps:                  b.dps,
+			eac:                  b.eac,
+			serviceDiscovery:     b.serviceDiscover,
+			rv:                   b.rv,
+			appCtx:               b.appCtx,
+			regClient:            b.regClient,
+		},
+		Manager: b.cm,
+	}, nil
+}
+
+func (b *Builder) RegClient() reg_client.RegClient {
+	return b.regClient
+}
+
+func (b *Builder) DataplaneCache() *sync.Map {
+	return b.dCache
+}
+
+func (b *Builder) Governance() governance.GovernanceConfig {
+	return b.governance
+}
+
+func (b *Builder) AdminRegistry() *registry.Registry {
+	return b.adminRegistry
+}
+
+func (b *Builder) ConfigCenter() config_center.DynamicConfiguration {
+	return b.configCenter
+}
+
+func (b *Builder) ServiceDiscovery() dubboRegistry.ServiceDiscovery {
+	return b.serviceDiscover
+}
+
+func (b *Builder) RegistryCenter() dubboRegistry.Registry {
+	return b.registryCenter
+}
+
+func (b *Builder) MetadataReportCenter() report.MetadataReport {
+	return b.metadataReportCenter
+}
+
+func (b *Builder) ComponentManager() component.Manager {
+	return b.cm
+}
+
+func (b *Builder) ResourceStore() core_store.CustomizableResourceStore {
+	return b.rs
+}
+
+func (b *Builder) Transactions() core_store.Transactions {
+	return b.txs
+}
+
+func (b *Builder) ConfigStore() core_store.ResourceStore {
+	return b.cs
+}
+
+func (b *Builder) ResourceManager() core_manager.CustomizableResourceManager {
+	return b.rm
+}
+
+func (b *Builder) ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager {
+	return b.rom
+}
+
+func (b *Builder) InterCPClientPool() *client.Pool {
+	return b.interCpPool
+}
+
+func (b *Builder) LookupIP() lookup.LookupIPFunc {
+	return b.lif
+}
+
+func (b *Builder) Config() dubbo_cp.Config {
+	return b.cfg
+}
+
+func (b *Builder) DDSContext() *dds_context.Context {
+	return b.ddsctx
+}
+
+func (b *Builder) Extensions() context.Context {
+	return b.ext
+}
+
+func (b *Builder) ConfigManager() config_manager.ConfigManager {
+	return b.configm
+}
+
+func (b *Builder) LeaderInfo() component.LeaderInfo {
+	return b.leadInfo
+}
+
+func (b *Builder) EventBus() events.EventBus {
+	return b.erf
+}
+
+func (b *Builder) DpServer() *dp_server.DpServer {
+	return b.dps
+}
+
+func (b *Builder) ResourceValidators() ResourceValidators {
+	return b.rv
+}
+
+func (b *Builder) AppCtx() context.Context {
+	return b.appCtx
 }

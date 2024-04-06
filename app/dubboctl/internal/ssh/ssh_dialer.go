@@ -29,9 +29,13 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+)
 
+import (
 	"github.com/docker/cli/cli/connhelper"
+
 	"github.com/docker/docker/pkg/homedir"
+
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"

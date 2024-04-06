@@ -20,18 +20,25 @@ import (
 	"os"
 	"strconv"
 	"strings"
+)
 
+import (
+	jsonpatch "github.com/evanphx/json-patch/v5"
+
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	jsonpatch "github.com/evanphx/json-patch/v5"
-	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
+
 	"k8s.io/client-go/rest"
+
 	"k8s.io/client-go/tools/clientcmd"
+
 	"k8s.io/kubectl/pkg/scheme"
 )
 

@@ -29,7 +29,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+)
 
+import (
 	billy "github.com/go-git/go-billy/v5"
 )
 
@@ -39,7 +41,6 @@ import (
 // os:    standard for on-disk extensible template repositories.
 // zip:   embedded filesystem backed by the byte array representing zipfile.
 // billy: go-git library's filesystem used for remote git template repos.
-
 type Filesystem interface {
 	fs.ReadDirFS
 	fs.StatFS

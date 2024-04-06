@@ -21,13 +21,18 @@ import (
 	"io"
 	"os"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker/creds"
-
+import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
+
 	"golang.org/x/term"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker/creds"
 )
 
 func NewPromptForCredentials(in io.Reader, out, errOut io.Writer) func(registry string) (docker.Credentials, error) {

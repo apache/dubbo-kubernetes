@@ -19,18 +19,23 @@ import (
 	"path"
 	"strings"
 	"unicode/utf8"
+)
 
+import (
 	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"sigs.k8s.io/yaml"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/manifest/render"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
-	"sigs.k8s.io/yaml"
 )
 
 type ComponentName string

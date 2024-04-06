@@ -17,63 +17,20 @@
 
 package admin
 
-import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/pkg/errors"
-)
-
 type Admin struct {
-	AdminPort      int           `yaml:"Port"`
-	ConfigCenter   string        `yaml:"configCenter"`
-	MetadataReport AddressConfig `yaml:"metadataReport"`
-	Registry       AddressConfig `yaml:"registry"`
-	Prometheus     Prometheus    `yaml:"prometheus"`
-	Grafana        Grafana       `yaml:"grafana"`
-	MysqlDSN       string        `yaml:"mysqlDSN"`
+	Port int `json:"port"`
 }
 
-type Prometheus struct {
-	Address     string `yaml:"address"`
-	MonitorPort string `yaml:"monitorPort"`
+func (s *Admin) Sanitize() {
 }
 
-func (c *Prometheus) Sanitize() {}
-
-func (c *Prometheus) Validate() error {
-	// TODO Validate admin
+func (s *Admin) Validate() error {
+	// TODO Validate server
 	return nil
 }
 
-type Grafana struct {
-	Address string `yaml:"address"`
-}
-
-func (g *Grafana) Sanitize() {}
-
-func (g *Grafana) Validate() error {
-	// TODO Validate admin
-	return nil
-}
-
-func (c *Admin) Sanitize() {
-	c.Prometheus.Sanitize()
-	c.Registry.Sanitize()
-	c.MetadataReport.Sanitize()
-	c.MysqlDSN = config.SanitizedValue
-}
-
-func (c *Admin) Validate() error {
-	err := c.Prometheus.Validate()
-	if err != nil {
-		return errors.Wrap(err, "Prometheus validation failed")
+func DefaultAdminConfig() *Admin {
+	return &Admin{
+		Port: 8888,
 	}
-	err = c.Registry.Validate()
-	if err != nil {
-		return errors.Wrap(err, "Registry validation failed")
-	}
-	err = c.MetadataReport.Validate()
-	if err != nil {
-		return errors.Wrap(err, "MetadataReport validation failed")
-	}
-	return nil
 }

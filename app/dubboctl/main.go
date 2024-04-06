@@ -19,7 +19,9 @@ package main
 
 import (
 	"os"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/cmd"
 )
 

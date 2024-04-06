@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"os"
 	template2 "text/template"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 

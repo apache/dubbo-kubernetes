@@ -24,8 +24,11 @@ import (
 	"io"
 	"os"
 	"strings"
+)
 
+import (
 	"golang.org/x/crypto/ssh"
+
 	"golang.org/x/term"
 )
 

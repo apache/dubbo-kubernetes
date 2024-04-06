@@ -25,13 +25,20 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
+import (
 	"github.com/go-git/go-billy/v5/memfs"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+
 	"gopkg.in/yaml.v2"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
 )
 
 const (

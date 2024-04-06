@@ -13,15 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+annotations:
+  licenses: Apache-2.0
+name: admin
+home: https://github.com/apache/dubbo-kubernetes
+description: Admin is an application within the service governance control plane
+  responsible for functions such as service governance and visual representation of microservice clusters.
 apiVersion: v2
-name: Admin-Stack
-description: ""
-home: https://cn.dubbo.apache.org
-kubeVersion: '>=1.28.0-0'
+appVersion: 0.0.1
 maintainers:
-- name: dubbo
+- name: Dubbo
   email: dev@dubbo.apache.org
+kubeVersion: '>=1.28.0-0'
 sources:
 - https://github.com/apache/dubbo-kubernetes
-type: application
-version: 0.1.0
+- https://dubbo.apache.org
+version: 3.2.9

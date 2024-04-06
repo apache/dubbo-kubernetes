@@ -37,12 +37,15 @@ import (
 	"sync"
 	"testing"
 	"time"
+)
 
+import (
+	"github.com/docker/docker-credential-helpers/credentials"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/docker/creds"
-
-	"github.com/docker/docker-credential-helpers/credentials"
-
 	. "github.com/apache/dubbo-kubernetes/app/dubboctl/internal/testing"
 )
 

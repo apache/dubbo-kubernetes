@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "api/mesh/options.proto";
+import "api/mesh/v1alpha1/envoy_admin.proto";
+
+// ZoneIngress allows us to configure dataplane in the Ingress mode. In this
+// mode, dataplane has only inbound interfaces. Every inbound interface matches
+// with services that reside in that cluster.
+message ZoneIngress {
+  option (dubbo.mesh.resource).name = "ZoneIngressResource";
+  option (dubbo.mesh.resource).type = "ZoneIngress";
+  option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).dds.send_to_zone = true;
+  option (dubbo.mesh.resource).ws.name = "zoneingress";
+  option (dubbo.mesh.resource).ws.plural = "zoneingresses";
+  option (dubbo.mesh.resource).allow_to_inspect = true;
+  option (dubbo.mesh.resource).scope_namespace = true;
+
+  string zone = 1;
+
+  message Networking {
+    string address = 1;
+    string advertisedAddress = 2;
+    uint32 port = 3;
+    uint32 advertisedPort = 4;
+    // Admin contains configuration related to Envoy Admin API
+    EnvoyAdmin admin = 5;
+  }
+
+  Networking networking = 2;
+
+  message AvailableService {
+    map<string, string> tags = 1;
+    uint32 instances = 2;
+    string mesh = 3;
+  }
+
+  repeated AvailableService availableServices = 3;
+}

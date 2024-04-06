@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+import "api/mesh/options.proto";
+import "api/mesh/v1alpha1/zone_ingress.proto";
+import "api/mesh/v1alpha1/zone_ingress_insight.proto";
+
+// ZoneIngressOverview defines the projected state of a ZoneIngress.
+message ZoneIngressOverview {
+
+  option (dubbo.mesh.resource).name = "ZoneIngressOverviewResource";
+  option (dubbo.mesh.resource).type = "ZoneIngressOverview";
+  option (dubbo.mesh.resource).global = true;
+  option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).skip_registration = true;
+  option (dubbo.mesh.resource).skip_kubernetes_wrappers = true;
+
+  ZoneIngress zone_ingress = 1;
+
+  ZoneIngressInsight zone_ingress_insight = 2;
+}

@@ -1,0 +1,26 @@
+{{- $nacos := .Values.nacos -}}
+{{- if and $nacos.enabled (eq $nacos.storage.type "mysql") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "nacos.name" . }}-db-config
+  namespace: {{ template "nacos.namespace" . }}
+  labels:
+  {{- include "nacos.labels" . | nindent 4 }}
+  {{- with $nacos.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $nacos.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  {{- with $nacos.storage }}
+  mysql.db.host: {{ .db.host }}
+  mysql.db.name: {{ .db.name }}
+  mysql.port: "{{ .db.host | default 3306 }}"
+  mysql.user: {{ .db.username }}
+  mysql.password: {{ .db.password }}
+  mysql.param: {{ .db.param | default "characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false" }}
+{{- end -}}
+{{- end -}}
