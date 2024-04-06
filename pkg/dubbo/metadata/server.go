@@ -19,7 +19,6 @@ package metadata
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
 	"strings"
 	"time"
@@ -45,6 +44,7 @@ import (
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
 
 var log = core.Log.WithName("dubbo").WithName("server").WithName("metadata")
@@ -333,7 +333,6 @@ func (m *MetadataServer) register(req *RegisterRequest) {
 
 func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *mesh_proto.MetaData) error {
 	err := core_store.InTx(m.ctx, m.transactions, func(ctx context.Context) error {
-
 		// get Metadata Resource first,
 		// if Metadata is not found, create it,
 		// else update it.

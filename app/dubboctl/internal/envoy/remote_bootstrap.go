@@ -36,7 +36,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	_ "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	"github.com/sethvargo/go-retry"
 )
 
@@ -46,6 +45,7 @@ import (
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/bootstrap/types"
+	_ "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
 
 var (

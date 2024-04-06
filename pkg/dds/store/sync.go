@@ -313,6 +313,10 @@ func ZoneSyncCallback(ctx context.Context, configToSync map[string]bool, syncer 
 					return m.IsRemoteMapping(localZone)
 				}
 
+				if m, ok := r.(*core_mesh.MetaDataResource); ok {
+					return m.IsRemotingMetadata(localZone)
+				}
+
 				return !core_model.IsLocallyOriginated(config_core.Zone, r) || !isExpectedOnZoneCP(r.Descriptor())
 			}))
 		},

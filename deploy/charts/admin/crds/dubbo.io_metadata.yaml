@@ -14,7 +14,7 @@ spec:
     listKind: MetaDataList
     plural: metadata
     singular: metadata
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

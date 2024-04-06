@@ -6,10 +6,15 @@ package v1alpha1
 
 import (
 	"fmt"
+)
 
+import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/model"
@@ -406,7 +411,7 @@ func init() {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
 type Mapping struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -422,7 +427,7 @@ type Mapping struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Cluster
 type MappingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -476,7 +481,7 @@ func (cb *Mapping) SetSpec(spec core_model.ResourceSpec) {
 }
 
 func (cb *Mapping) Scope() model.Scope {
-	return model.ScopeCluster
+	return model.ScopeNamespace
 }
 
 func (l *MappingList) GetItems() []model.KubernetesObject {
@@ -697,7 +702,7 @@ func init() {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=dubbo,scope=Cluster
+// +kubebuilder:resource:categories=dubbo,scope=Namespaced
 type MetaData struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -713,7 +718,7 @@ type MetaData struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Cluster
 type MetaDataList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -767,7 +772,7 @@ func (cb *MetaData) SetSpec(spec core_model.ResourceSpec) {
 }
 
 func (cb *MetaData) Scope() model.Scope {
-	return model.ScopeCluster
+	return model.ScopeNamespace
 }
 
 func (l *MetaDataList) GetItems() []model.KubernetesObject {

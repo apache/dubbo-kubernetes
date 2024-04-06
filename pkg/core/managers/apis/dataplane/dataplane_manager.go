@@ -147,5 +147,4 @@ func (m *dataplaneManager) setExtensions(dp *core_mesh.DataplaneResource) {
 	if m.zone == "" || dp.Spec.Networking == nil {
 		return
 	}
-
 }

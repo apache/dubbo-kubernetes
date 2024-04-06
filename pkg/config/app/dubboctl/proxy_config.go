@@ -18,11 +18,11 @@
 package dubboctl
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"time"
 )
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
 )

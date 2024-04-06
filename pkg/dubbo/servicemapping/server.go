@@ -19,7 +19,6 @@ package servicemapping
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
 	"time"
 )
@@ -45,6 +44,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
 
 var log = core.Log.WithName("dubbo").WithName("server").WithName("service-name-mapping")

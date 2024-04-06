@@ -20,19 +20,25 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+import (
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 
+	"go.uber.org/zap/zapcore"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/envoy"
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
@@ -40,8 +46,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	"github.com/apache/dubbo-kubernetes/pkg/util/template"
-	"go.uber.org/zap/zapcore"
 )
 
 var runLog = controlPlaneLog.WithName("proxy")
@@ -221,6 +227,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 	proxyCmd.PersistentFlags().StringVar(&cfg.DataplaneRuntime.ResourcePath, "dataplane-file", "Path to Ingress and Egress template to apply (YAML or JSON)", "data-plane-file")
 	cmd.AddCommand(proxyCmd)
 }
+
 func UsageOptions(desc string, options ...interface{}) string {
 	values := make([]string, 0, len(options))
 	for _, option := range options {
