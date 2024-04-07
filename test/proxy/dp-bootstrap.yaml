@@ -1,0 +1,136 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dubbo-system
+  labels:
+    dubbo.apache/system-namespace: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dubbo-ingress
+  namespace: dubbo-system
+  labels:
+    app: dubbo-ingress
+    app.kubernetes.io/name: dubbo
+    app.kubernetes.io/instance: dubbo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dubbo-ingress
+  namespace: dubbo-system
+  labels:
+    app: dubbo-ingress
+    app.kubernetes.io/name: dubbo
+    app.kubernetes.io/instance: dubbo
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 10001
+      protocol: TCP
+      targetPort: 10001
+  selector:
+    app: dubbo-ingress
+    app.kubernetes.io/name: dubbo
+    app.kubernetes.io/instance: dubbo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dubbo-ingress
+  namespace: dubbo-system
+  labels:
+    app: dubbo-ingress
+    app.kubernetes.io/name: dubbo
+    app.kubernetes.io/instance: dubbo
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dubbo
+      app.kubernetes.io/instance: dubbo
+      app: dubbo-ingress
+  template:
+    metadata:
+      annotations:
+        dubbo.io/ingress: enabled
+      labels:
+        app: dubbo-ingress
+        app.kubernetes.io/name: dubbo
+        app.kubernetes.io/instance: dubbo
+    spec:
+      hostNetwork: true
+      serviceAccountName: dubbo-ingress
+      automountServiceAccountToken: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: ingress
+          image: "dubboctl/proxy:latest"
+          imagePullPolicy: IfNotPresent
+          args:
+            - --cp-address=http://127.0.0.1:5678
+          ports:
+            - containerPort: 10001
+          livenessProbe:
+            httpGet:
+              path: "/ready"
+              port: 9901
+            failureThreshold: 12
+            initialDelaySeconds: 60
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: "/ready"
+              port: 9901
+            failureThreshold: 12
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: ingress-config
+              mountPath: /config
+      volumes:
+        - name: tmp
+          emptyDir: { }
+        - name: ingress-config
+          configMap:
+            name: ingress-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-config
+  namespace: dubbo-system
+  labels:
+    app: dubbo-control-plane
+    app.kubernetes.io/name: dubbo
+    app.kubernetes.io/instance: dubbo
+data:
+  ingress.yaml: |
+    type: ZoneIngress
+    name: zoneingress-1
+    networking:
+      address: 192.168.0.1
+      port: 10001
+      advertisedAddress: 10.0.0.1
+      advertisedPort: 10000

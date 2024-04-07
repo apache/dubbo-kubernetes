@@ -221,16 +221,16 @@ func genConfig(parameters configParameters, proxyConfig xds.Proxy, enableReloada
 	for _, r := range res.StaticResources.Clusters {
 		if r.Name == adsClusterName {
 			transport := &envoy_tls.UpstreamTlsContext{
-				Sni: parameters.XdsHost,
+				Sni:              parameters.XdsHost,
 				CommonTlsContext: &envoy_tls.CommonTlsContext{
-					TlsParams: &envoy_tls.TlsParameters{
-						TlsMinimumProtocolVersion: envoy_tls.TlsParameters_TLSv1_2,
-					},
-					ValidationContextType: &envoy_tls.CommonTlsContext_ValidationContextSdsSecretConfig{
-						//ValidationContextSdsSecretConfig: &envoy_tls.SdsSecretConfig{
-						//	Name: tls.CpValidationCtx,
-						//},
-					},
+					//TlsParams: &envoy_tls.TlsParameters{
+					//	TlsMinimumProtocolVersion: envoy_tls.TlsParameters_TLSv1_2,
+					//},
+					//ValidationContextType: &envoy_tls.CommonTlsContext_ValidationContextSdsSecretConfig{
+					//ValidationContextSdsSecretConfig: &envoy_tls.SdsSecretConfig{
+					//	Name: tls.CpValidationCtx,
+					//},
+					//},
 				},
 			}
 			any, err := util_proto.MarshalAnyDeterministic(transport)

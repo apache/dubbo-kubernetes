@@ -21,8 +21,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 	"io"
 	"os"
 	"path/filepath"
@@ -34,14 +36,12 @@ import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/envoy"
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/util/template"
-	"go.uber.org/zap/zapcore"
 )
 
 var runLog = controlPlaneLog.WithName("proxy")
@@ -91,7 +91,6 @@ func writeFile(filename string, data []byte, perm os.FileMode) error {
 
 func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 	proxyArgs := DefaultProxyConfig()
-
 	cfg := proxyArgs.Config
 	var proxyResource model.Resource
 	arg := struct {
@@ -107,6 +106,11 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 		Short: "Commands related to proxy",
 		Long:  "Commands help user to generate Ingress and Egress",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			return nil
+		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			var err error
 			logger.InitCmdSugar(zapcore.AddSync(cmd.OutOrStdout()))
 			level, err := dubbo_log.ParseLogLevel(arg.logLevel)
 			if err != nil {
@@ -124,9 +128,6 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 			} else {
 				core.SetLogger(core.NewLogger(level))
 			}
-			return nil
-		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
 			proxyTypeMap := map[string]model.ResourceType{
 				string(mesh_proto.IngressProxyType): mesh.ZoneIngressType,
 				string(mesh_proto.EgressProxyType):  mesh.ZoneEgressType,
@@ -138,7 +139,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 				cfg.DataplaneRuntime.EnvoyLogLevel = proxyArgs.LogLevel.String()
 			}
 
-			proxyResource, err := readResource(cmd, &cfg.DataplaneRuntime)
+			proxyResource, err = readResource(cmd, &cfg.DataplaneRuntime)
 			if err != nil {
 				runLog.Error(err, "failed to read policy", "proxyType", cfg.Dataplane.ProxyType)
 				return err
@@ -214,7 +215,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&arg.maxBackups, "log-max-retained-files", 1000, "maximum number of the old log files to retain")
 	cmd.PersistentFlags().IntVar(&arg.maxSize, "log-max-size", 100, "maximum size in megabytes of a log file before it gets rotated")
 	cmd.PersistentFlags().IntVar(&arg.maxAge, "log-max-age", 30, "maximum number of days to retain old log files based on the timestamp encoded in their filename")
-
+	cmd.PersistentFlags().StringVar(&cfg.ControlPlane.URL, "cp-address", cfg.ControlPlane.URL, "URL of the Control Plane Dataplane Server. Example: https://localhost:5678")
 	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.Name, "name", cfg.Dataplane.Name, "Name of the Dataplane")
 	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.Mesh, "mesh", cfg.Dataplane.Mesh, "Mesh that Dataplane belongs to")
 	proxyCmd.PersistentFlags().StringVar(&cfg.Dataplane.ProxyType, "proxy-type", "dataplane", `type of the Dataplane ("dataplane", "ingress")`)
