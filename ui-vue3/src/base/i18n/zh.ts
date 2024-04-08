@@ -61,6 +61,9 @@ const words: I18nType = {
     creationTime_k8s: '创建时间(k8s)',
     startTime_k8s: '启动时间(k8s)'
   },
+  serviceDomain: {
+    name: '服务名'
+  },
   service: '服务',
   versionGroup: '版本&分组',
   avgQPS: '近1min QPS',

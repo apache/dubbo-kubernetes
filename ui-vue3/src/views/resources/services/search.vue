@@ -125,7 +125,7 @@ const searchDomain = reactive(
 searchDomain.onSearch(handleResult)
 
 const viewDetail = (serviceName: string) => {
-  router.push({ name: 'detail', params: { serviceName } })
+  router.push({ name: 'detail', params: { pathId: serviceName } })
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)

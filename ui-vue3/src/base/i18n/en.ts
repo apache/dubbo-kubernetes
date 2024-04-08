@@ -61,6 +61,9 @@ const words: I18nType = {
     labels: 'Labels',
     startTime_k8s: 'StartTime(k8s)'
   },
+  serviceDomain: {
+    name: 'Name'
+  },
   appServiceTimeout: 'Adjusting the timeout for application service provision',
   enableAppInstanceLogs: 'Enable access logs for all instances of this application',
   appServiceLoadBalance: 'Adjusting the load balancing strategy for application service provision',

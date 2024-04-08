@@ -16,45 +16,57 @@
 -->
 <template>
   <div class="__container_services_tabs_detail">
+    <a-card-grid>
+      <a-card title="生产者详情">
+        <a-flex>
+          <a-descriptions class="description-column" :column="1" layout="vertical">
+            <a-descriptions-item label="超时时间">
+              <p class="description-item-content">{{ serviceDetail.timeOut }}</p>
+            </a-descriptions-item>
+            <a-descriptions-item label="重试次数">
+              <p class="description-item-content">{{ serviceDetail.retry }}</p>
+            </a-descriptions-item>
+            <a-descriptions-item label="是否过时">
+              <p class="description-item-content">{{ serviceDetail.obsolete }}</p>
+            </a-descriptions-item>
+          </a-descriptions>
+          <a-descriptions class="description-column" :column="1" layout="vertical">
+            <a-descriptions-item label="RPC协议">
+              <p class="description-item-content">{{ serviceDetail.protocol }}</p>
+            </a-descriptions-item>
+            <a-descriptions-item label="延迟注册时间">
+              <p class="description-item-content">{{ serviceDetail.delay }}</p>
+            </a-descriptions-item>
+          </a-descriptions>
+        </a-flex>
+      </a-card>
+      <a-card title="消费者详情" style="margin-top: 10px">
+        <a-flex>
+          <a-descriptions class="description-column" :column="1" layout="vertical">
+            <a-descriptions-item label="超时时间">
+              <p class="description-item-content">{{ serviceDetail.timeOut }}</p>
+            </a-descriptions-item>
+            <a-descriptions-item label="重试次数">
+              <p class="description-item-content">{{ serviceDetail.retry }}</p>
+            </a-descriptions-item>
+            <a-descriptions-item label="是否过时">
+              <p class="description-item-content">{{ serviceDetail.obsolete }}</p>
+            </a-descriptions-item>
+          </a-descriptions>
+          <a-descriptions class="description-column" :column="1" layout="vertical">
+            <a-descriptions-item label="RPC协议">
+              <p class="description-item-content">{{ serviceDetail.protocol }}</p>
+            </a-descriptions-item>
+            <a-descriptions-item label="延迟注册时间">
+              <p class="description-item-content">{{ serviceDetail.delay }}</p>
+            </a-descriptions-item>
+          </a-descriptions>
+        </a-flex>
+      </a-card>
+    </a-card-grid>
     <a-flex>
-      <a-descriptions class="description-column" :column="1" layout="vertical">
-        <a-descriptions-item label="服务名">
-          <p class="description-item-content">{{ serviceDetail.serviceName }}</p>
-        </a-descriptions-item>
-        <a-descriptions-item label="服务版本&分组">
-          <div class="description-item-content">
-            <a-tag color="cyan" v-for="item in serviceDetail.versionGroup" :key="item">{{
-              item
-            }}</a-tag>
-          </div>
-        </a-descriptions-item>
-        <a-descriptions-item label="RPC协议">
-          <p class="description-item-content">{{ serviceDetail.protocol }}</p>
-        </a-descriptions-item>
-        <a-descriptions-item label="延迟注册时间">
-          <p class="description-item-content">{{ serviceDetail.delay }}</p>
-        </a-descriptions-item>
-        <a-descriptions-item label="超时时间">
-          <p class="description-item-content">{{ serviceDetail.timeOut }}</p>
-        </a-descriptions-item>
-        <a-descriptions-item label="重试次数">
-          <p class="description-item-content">{{ serviceDetail.retry }}</p>
-        </a-descriptions-item>
-      </a-descriptions>
-      <a-descriptions class="description-column" :column="1" layout="vertical">
-        <a-descriptions-item label="请求总量(1min)">
-          <p class="description-item-content">{{ serviceDetail.requestTotal }}</p>
-        </a-descriptions-item>
-        <a-descriptions-item label="平均RT(1min)">
-          <p class="description-item-content">{{ serviceDetail.avgRT }}</p>
-        </a-descriptions-item>
-        <a-descriptions-item label="平均qps(1min)">
-          <p class="description-item-content">{{ serviceDetail.avgQPS }}</p>
-        </a-descriptions-item>
-        <a-descriptions-item label="是否过时">
-          <p class="description-item-content">{{ serviceDetail.obsolete }}</p>
-        </a-descriptions-item>
-      </a-descriptions>
+      
+      
     </a-flex>
   </div>
 </template>

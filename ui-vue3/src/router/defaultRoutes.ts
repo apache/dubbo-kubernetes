@@ -20,6 +20,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import LayoutTab from '../layout/tab/layout_tab.vue'
 import _ from 'lodash'
 import AppTabHeaderSlot from '@/views/resources/applications/slots/AppTabHeaderSlot.vue'
+import ServiceTabHeaderSlot from '@/views/resources/services/slots/ServiceTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -208,7 +209,10 @@ export const routes: Readonly<RouteRecordType[]> = [
             redirect: 'search',
             component: LayoutTab,
             meta: {
-              tab_parent: true
+              tab_parent: true,
+              slots: {
+                header: ServiceTabHeaderSlot
+              }
             },
             children: [
               {
@@ -220,7 +224,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/detail/:serviceName',
+                path: '/detail/:pathId',
                 name: 'detail',
                 component: () => import('../views/resources/services/tabs/detail.vue'),
                 meta: {
@@ -228,7 +232,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/debug/:serviceName',
+                path: '/debug/:pathId',
                 name: 'debug',
                 component: () => import('../views/resources/services/tabs/debug.vue'),
                 meta: {
@@ -236,7 +240,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/distribution/:serviceName',
+                path: '/distribution/:pathId',
                 name: 'distribution',
                 component: () => import('../views/resources/services/tabs/distribution.vue'),
                 meta: {
@@ -244,7 +248,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/monitor/:serviceName',
+                path: '/monitor/:pathId',
                 name: 'monitor',
                 component: () => import('../views/resources/services/tabs/monitor.vue'),
                 meta: {
@@ -252,7 +256,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/tracing/:serviceName',
+                path: '/tracing/:pathId',
                 name: 'tracing',
                 component: () => import('../views/resources/services/tabs/tracing.vue'),
                 meta: {
@@ -260,7 +264,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/event/:serviceName',
+                path: '/event/:pathId',
                 name: 'event',
                 component: () => import('../views/resources/services/tabs/event.vue'),
                 meta: {
