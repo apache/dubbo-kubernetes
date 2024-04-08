@@ -398,6 +398,7 @@ const words: I18nType = {
   debug: 'Debug',
   distribution: 'Distribution',
   tracing: 'Tracing',
+  sceneConfig: 'Scene Config',
 
   provideService: 'Provide Service',
   dependentService: 'Dependent Service',

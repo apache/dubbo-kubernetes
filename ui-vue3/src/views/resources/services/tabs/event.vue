@@ -15,8 +15,52 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_services_tabs_event">事件todo</div>
+  <div class="__container_services_tabs_event">
+    <a-timeline class="timeline">
+      <a-timeline-item v-for="item, index in eventData" :key="index">
+        <a-tag class="time" :color="PRIMARY_COLOR">{{ item.time }}</a-tag>
+        <span class="description">{{ item.description }}</span>
+      </a-timeline-item>
+    </a-timeline>
+  </div>
 </template>
 
-<script setup lang="ts"></script>
-<style lang="less" scoped></style>
+<script setup lang="ts">
+import { PRIMARY_COLOR } from '@/base/constants'
+
+let __null = PRIMARY_COLOR
+const eventData = [
+  {
+    time: '2022-01-01',
+    description: 'description',
+  },
+  {
+    time: '2022-01-02',
+    description: 'description',
+  },
+  {
+    time: '2022-01-03',
+    description: 'description',
+  },
+  {
+    time: '2022-01-04',
+    description: 'description',
+  },
+  {
+    time: '2022-01-05',
+    description: 'description',
+  },
+]
+</script>
+
+<style lang="less" scoped>
+.__container_services_tabs_event {
+  display: flex;
+  justify-content: center;
+  .timeline {
+    .description {
+      font-size: 16px;
+    }
+  }
+}
+</style>

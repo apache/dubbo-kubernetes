@@ -370,6 +370,7 @@ const words: I18nType = {
   distribution: '分布',
   monitor: '监控',
   tracing: '链路追踪',
+  sceneConfig: '场景配置',
   event: '事件',
 
   provideService: '提供服务',

@@ -264,6 +264,14 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
+                path: '/sceneConfig/:pathId',
+                name: 'sceneConfig',
+                component: () => import('../views/resources/services/tabs/sceneConfig.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
                 path: '/event/:pathId',
                 name: 'event',
                 component: () => import('../views/resources/services/tabs/event.vue'),
