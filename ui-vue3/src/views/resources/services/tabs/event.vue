@@ -17,7 +17,7 @@
 <template>
   <div class="__container_services_tabs_event">
     <a-timeline class="timeline">
-      <a-timeline-item v-for="item, index in eventData" :key="index">
+      <a-timeline-item v-for="(item, index) in eventData" :key="index">
         <a-tag class="time" :color="PRIMARY_COLOR">{{ item.time }}</a-tag>
         <span class="description">{{ item.description }}</span>
       </a-timeline-item>
@@ -32,24 +32,24 @@ let __null = PRIMARY_COLOR
 const eventData = [
   {
     time: '2022-01-01',
-    description: 'description',
+    description: 'description'
   },
   {
     time: '2022-01-02',
-    description: 'description',
+    description: 'description'
   },
   {
     time: '2022-01-03',
-    description: 'description',
+    description: 'description'
   },
   {
     time: '2022-01-04',
-    description: 'description',
+    description: 'description'
   },
   {
     time: '2022-01-05',
-    description: 'description',
-  },
+    description: 'description'
+  }
 ]
 </script>
 

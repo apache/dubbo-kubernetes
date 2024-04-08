@@ -27,12 +27,12 @@
           </span>
         </template>
         <template v-else-if="column.dataIndex === 'versionGroupSelect'">
-          <a-select
-            v-model:value="text.versionGroupValue"
-            :bordered="false"
-            style="width: 80%"
-          >
-            <a-select-option v-for="(item, index) in text.versionGroupArr" :value="item" :key="index">
+          <a-select v-model:value="text.versionGroupValue" :bordered="false" style="width: 80%">
+            <a-select-option
+              v-for="(item, index) in text.versionGroupArr"
+              :value="item"
+              :key="index"
+            >
               {{ item }}
             </a-select-option>
           </a-select>
@@ -92,13 +92,15 @@ const columns = [
 ]
 
 const handleResult = (result: any) => {
-  return result.map(service => {
+  return result.map((service) => {
     service.versionGroupSelect = {}
     service.versionGroupSelect.versionGroupArr = service.versionGroup.map((item: any) => {
-      return item.versionGroup = (item.version ? 'version: ' + item.version + ', ' : '') + (item.group ? 'group: ' + item.group : '') || '无'
+      return (item.versionGroup =
+        (item.version ? 'version: ' + item.version + ', ' : '') +
+          (item.group ? 'group: ' + item.group : '') || '无')
     })
-    service.versionGroupSelect.versionGroupValue = service.versionGroupSelect.versionGroupArr[0];
-    return service;
+    service.versionGroupSelect.versionGroupValue = service.versionGroupSelect.versionGroupArr[0]
+    return service
   })
 }
 

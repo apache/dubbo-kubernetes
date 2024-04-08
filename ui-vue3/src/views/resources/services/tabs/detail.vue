@@ -64,10 +64,7 @@
         </a-flex>
       </a-card>
     </a-card-grid>
-    <a-flex>
-      
-      
-    </a-flex>
+    <a-flex> </a-flex>
   </div>
 </template>
 

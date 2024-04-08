@@ -40,7 +40,10 @@
           <template v-if="column.dataIndex === 'applicationName'">
             <span class="app-link" @click="viewDetail(text)">
               <b>
-                <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+                <Icon
+                  style="margin-bottom: -2px"
+                  icon="material-symbols:attach-file-rounded"
+                ></Icon>
                 {{ text }}
               </b>
             </span>
@@ -98,10 +101,9 @@ const tableColumns = [
     width: '20%',
     customCell: (_, index) => {
       if (index === 0) {
-        return { rowSpan: tableData.value.length };
-      }
-      else {
-        return { rowSpan: 0 };
+        return { rowSpan: tableData.value.length }
+      } else {
+        return { rowSpan: 0 }
       }
     }
   },
@@ -111,10 +113,9 @@ const tableColumns = [
     width: '15%',
     customCell: (_, index) => {
       if (index === 0) {
-        return { rowSpan: tableData.value.length };
-      }
-      else {
-        return { rowSpan: 0 };
+        return { rowSpan: tableData.value.length }
+      } else {
+        return { rowSpan: 0 }
       }
     }
   },
@@ -142,7 +143,7 @@ const tableColumns = [
     title: '标签',
     dataIndex: 'label',
     width: '15%'
-  },
+  }
 ]
 
 const tableData = ref([])

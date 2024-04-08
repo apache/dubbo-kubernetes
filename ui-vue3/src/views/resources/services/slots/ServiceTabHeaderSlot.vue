@@ -17,9 +17,7 @@
 <template>
   <!--      example like blow-->
   <div class="__container_ServiceTabHeaderSlot">
-    <span class="header-desc"
-      >{{ $t('serviceDomain.name') }}: {{ route.params?.pathId }}</span
-    >
+    <span class="header-desc">{{ $t('serviceDomain.name') }}: {{ route.params?.pathId }}</span>
     <!-- <a-select
       v-model:value="versionGroupSelect.versionGroupValue"
       :bordered="false"
