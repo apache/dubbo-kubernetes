@@ -28,56 +28,192 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
     data: [
       {
         serviceName: 'org.apache.dubbo.samples.UserService',
-        interfaceNum: 4,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 6,
         avgRT: '194ms',
         requestTotal: 200
       },
       {
         serviceName: 'org.apache.dubbo.samples.OrderService',
-        interfaceNum: 12,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 13,
         avgRT: '189ms',
         requestTotal: 164
       },
       {
         serviceName: 'org.apache.dubbo.samples.DetailService',
-        interfaceNum: 14,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 0.5,
         avgRT: '268ms',
         requestTotal: 1324
       },
       {
         serviceName: 'org.apache.dubbo.samples.PayService',
-        interfaceNum: 8,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 9,
         avgRT: '346ms',
         requestTotal: 189
       },
       {
         serviceName: 'org.apache.dubbo.samples.CommentService',
-        interfaceNum: 9,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 8,
         avgRT: '936ms',
         requestTotal: 200
       },
       {
         serviceName: 'org.apache.dubbo.samples.RepayService',
-        interfaceNum: 16,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 17,
         avgRT: '240ms',
         requestTotal: 146
       },
       {
         serviceName: 'org.apche.dubbo.samples.TransportService',
-        interfaceNum: 5,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 43,
         avgRT: '89ms',
         requestTotal: 367
       },
       {
         serviceName: 'org.apche.dubbo.samples.DistributionService',
-        interfaceNum: 5,
+        versionGroup: [
+          {
+            "version": "1.0.0",
+            "group": "group1"
+          },
+          {
+            "version": "1.0.0",
+            "group": null
+          },
+          {
+            "version": null,
+            "group": "group1"
+          },
+          {
+            "version": null,
+            "group": null
+          }
+        ],
         avgQPS: 4,
         avgRT: '78ms',
         requestTotal: 145

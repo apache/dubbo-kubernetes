@@ -62,6 +62,10 @@ const words: I18nType = {
     startTime_k8s: '启动时间(k8s)'
   },
   service: '服务',
+  versionGroup: '版本&分组',
+  avgQPS: '近1min QPS',
+  avgRT: '近1min RT',
+  requestTotal: '近1min 请求总量',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
   trafficManagement: '流量管控',

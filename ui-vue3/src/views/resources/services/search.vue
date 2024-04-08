@@ -19,7 +19,23 @@
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ column, text }">
         <template v-if="column.dataIndex === 'serviceName'">
-          <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
+          <span class="service-link" @click="viewDetail(text)">
+            <b>
+              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+              <span class="service-link-text">{{ text }}</span>
+            </b>
+          </span>
+        </template>
+        <template v-else-if="column.dataIndex === 'versionGroupSelect'">
+          <a-select
+            v-model:value="text.versionGroupValue"
+            :bordered="false"
+            style="width: 80%"
+          >
+            <a-select-option v-for="(item, index) in text.versionGroupArr" :value="item" :key="index">
+              {{ item }}
+            </a-select-option>
+          </a-select>
         </template>
       </template>
     </search-table>
@@ -33,64 +49,80 @@ import { searchService } from '@/api/service/service.ts'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { Icon } from '@iconify/vue'
 
+let __null = PRIMARY_COLOR
 const router = useRouter()
 const columns = [
   {
-    title: '服务',
+    title: 'service',
+    key: 'service',
     dataIndex: 'serviceName',
-    key: 'serviceName',
     sorter: true,
     width: '30%'
   },
   {
-    title: '接口数',
-    dataIndex: 'interfaceNum',
-    key: 'interfaceNum',
-    sorter: true,
-    width: '10%'
+    title: 'versionGroup',
+    key: 'versionGroup',
+    dataIndex: 'versionGroupSelect',
+    width: '25%'
   },
   {
-    title: '近 1min QPS',
-    dataIndex: 'avgQPS',
+    title: 'avgQPS',
     key: 'avgQPS',
+    dataIndex: 'avgQPS',
     sorter: true,
     width: '15%'
   },
   {
-    title: '近 1min RT',
-    dataIndex: 'avgRT',
+    title: 'avgRT',
     key: 'avgRT',
+    dataIndex: 'avgRT',
     sorter: true,
     width: '15%'
   },
   {
-    title: '近 1min 请求总量',
-    dataIndex: 'requestTotal',
+    title: 'requestTotal',
     key: 'requestTotal',
+    dataIndex: 'requestTotal',
     sorter: true,
     width: '15%'
   }
 ]
 
+const handleResult = (result: any) => {
+  return result.map(service => {
+    service.versionGroupSelect = {}
+    service.versionGroupSelect.versionGroupArr = service.versionGroup.map((item: any) => {
+      return item.versionGroup = (item.version ? 'version: ' + item.version + ', ' : '') + (item.group ? 'group: ' + item.group : '') || '无'
+    })
+    service.versionGroupSelect.versionGroupValue = service.versionGroupSelect.versionGroupArr[0];
+    return service;
+  })
+}
+
 const searchDomain = reactive(
   new SearchDomain(
     [
       {
-        label: '服务名',
+        label: 'serviceName',
         param: 'serviceName',
-        placeholder: '请输入',
+        placeholder: 'typeAppName',
         style: {
           width: '200px'
         }
       }
     ],
     searchService,
-    columns
+    columns,
+    undefined,
+    undefined,
+    handleResult
   )
 )
 
-searchDomain.onSearch()
+searchDomain.onSearch(handleResult)
 
 const viewDetail = (serviceName: string) => {
   router.push({ name: 'detail', params: { serviceName } })
@@ -98,4 +130,19 @@ const viewDetail = (serviceName: string) => {
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.__container_services_index {
+  .service-link {
+    padding: 4px 10px 4px 4px;
+    border-radius: 4px;
+    color: v-bind('PRIMARY_COLOR');
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    &:hover {
+      cursor: pointer;
+      background: rgba(133, 131, 131, 0.13);
+    }
+  }
+}
+</style>
