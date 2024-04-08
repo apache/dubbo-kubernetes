@@ -22,7 +22,7 @@
           <span class="service-link" @click="viewDetail(text)">
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
-              <span class="service-link-text">{{ text }}</span>
+              {{ text }}
             </b>
           </span>
         </template>
@@ -136,9 +136,6 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
     padding: 4px 10px 4px 4px;
     border-radius: 4px;
     color: v-bind('PRIMARY_COLOR');
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     &:hover {
       cursor: pointer;
       background: rgba(133, 131, 131, 0.13);
