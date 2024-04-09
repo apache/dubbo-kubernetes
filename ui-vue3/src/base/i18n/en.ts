@@ -61,6 +61,9 @@ const words: I18nType = {
     labels: 'Labels',
     startTime_k8s: 'StartTime(k8s)'
   },
+  serviceDomain: {
+    name: 'Name'
+  },
   appServiceTimeout: 'Adjusting the timeout for application service provision',
   enableAppInstanceLogs: 'Enable access logs for all instances of this application',
   appServiceLoadBalance: 'Adjusting the load balancing strategy for application service provision',
@@ -99,6 +102,10 @@ const words: I18nType = {
   instance: 'Instance',
   resourceDetails: 'Resource Details',
   service: 'Service',
+  versionGroup: 'Version & Group',
+  avgQPS: 'last 1min QPS',
+  avgRT: 'last 1min RT',
+  requestTotal: 'last 1min request total',
   serviceSearch: 'Search Service',
   serviceGovernance: 'Routing Rule',
   trafficManagement: 'Traffic Management',
@@ -391,6 +398,7 @@ const words: I18nType = {
   debug: 'Debug',
   distribution: 'Distribution',
   tracing: 'Tracing',
+  sceneConfig: 'Scene Config',
 
   provideService: 'Provide Service',
   dependentService: 'Dependent Service',

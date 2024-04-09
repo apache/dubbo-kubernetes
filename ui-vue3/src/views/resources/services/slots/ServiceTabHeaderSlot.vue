@@ -15,52 +15,32 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_services_tabs_event">
-    <a-timeline class="timeline">
-      <a-timeline-item v-for="(item, index) in eventData" :key="index">
-        <a-tag class="time" :color="PRIMARY_COLOR">{{ item.time }}</a-tag>
-        <span class="description">{{ item.description }}</span>
-      </a-timeline-item>
-    </a-timeline>
+  <!--      example like blow-->
+  <div class="__container_ServiceTabHeaderSlot">
+    <span class="header-desc">{{ $t('serviceDomain.name') }}: {{ route.params?.pathId }}</span>
+    <!-- <a-select
+      v-model:value="versionGroupSelect.versionGroupValue"
+      :bordered="false"
+      style="width: 80%"
+    >
+      <a-select-option v-for="(item, index) in versionGroupSelect.versionGroupArr" :value="item" :key="index">
+        {{ item }}
+      </a-select-option>
+    </a-select> -->
   </div>
 </template>
 
 <script setup lang="ts">
-import { PRIMARY_COLOR } from '@/base/constants'
-
-let __null = PRIMARY_COLOR
-const eventData = [
-  {
-    time: '2022-01-01',
-    description: 'description'
-  },
-  {
-    time: '2022-01-02',
-    description: 'description'
-  },
-  {
-    time: '2022-01-03',
-    description: 'description'
-  },
-  {
-    time: '2022-01-04',
-    description: 'description'
-  },
-  {
-    time: '2022-01-05',
-    description: 'description'
-  }
-]
+import { inject } from 'vue'
+import { useRoute } from 'vue-router'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+const route = useRoute()
 </script>
-
 <style lang="less" scoped>
-.__container_services_tabs_event {
-  display: flex;
-  justify-content: center;
-  .timeline {
-    .description {
-      font-size: 16px;
-    }
+.__container_ServiceTabHeaderSlot {
+  .header-desc {
+    line-height: 30px;
+    vertical-align: center;
   }
 }
 </style>

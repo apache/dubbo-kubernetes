@@ -61,7 +61,14 @@ const words: I18nType = {
     creationTime_k8s: '创建时间(k8s)',
     startTime_k8s: '启动时间(k8s)'
   },
+  serviceDomain: {
+    name: '服务名'
+  },
   service: '服务',
+  versionGroup: '版本&分组',
+  avgQPS: '近1min QPS',
+  avgRT: '近1min RT',
+  requestTotal: '近1min 请求总量',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
   trafficManagement: '流量管控',
@@ -363,6 +370,7 @@ const words: I18nType = {
   distribution: '分布',
   monitor: '监控',
   tracing: '链路追踪',
+  sceneConfig: '场景配置',
   event: '事件',
 
   provideService: '提供服务',
