@@ -21,6 +21,9 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+
+	"github.com/apache/dubbo-kubernetes/pkg/admin/handler"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 import (
@@ -45,11 +48,11 @@ func NewAdminServer(adminCfg admin.Admin, ns string) *AdminServer {
 	}
 }
 
-func (a *AdminServer) InitHTTPRouter() *AdminServer {
+func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 	r := gin.Default()
 
 	router := r.Group("/api/v1")
-	router.Group("/")
+	router.GET("/instances", handler.GetInstances(rt))
 
 	a.Engine = r
 	return a
