@@ -27,22 +27,19 @@
         </a-flex>
       </template>
       <a-form :labelCol="{ span: 3 }">
-        <a-form-item
-          label="选择方法"
-        >
-          <a-select
-            v-model:value="method.value"
-            style="width: 120px"
-          >
-            <a-select-option v-for="item, index in method.selectArr" :value="item" :key="index">
+        <a-form-item label="选择方法">
+          <a-select v-model:value="method.value" style="width: 120px">
+            <a-select-option v-for="(item, index) in method.selectArr" :value="item" :key="index">
               {{ item }}
             </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item
-          label="指定方法参数"
-        >
-          <a-table :columns="functionParamsColumn" :data-source="props.paramRouteForm.functionParams" :pagination="false">
+        <a-form-item label="指定方法参数">
+          <a-table
+            :columns="functionParamsColumn"
+            :data-source="props.paramRouteForm.functionParams"
+            :pagination="false"
+          >
             <template #bodyCell="{ column, index: idx }">
               <template v-if="column.dataIndex === 'param'">
                 <a-input v-model:value="functionParamsEdit[idx].param" />
@@ -55,17 +52,25 @@
               </template>
               <template v-if="column.dataIndex === 'handle'">
                 <a-flex justify="space-between">
-                  <PlusOutlined class="edit-icon" @click="emit('addRow', 'functionParams', props.index, idx)" />
-                  <MinusOutlined class="edit-icon" @click="emit('deleteRow', 'functionParams', props.index, idx)" />
+                  <PlusOutlined
+                    class="edit-icon"
+                    @click="emit('addRow', 'functionParams', props.index, idx)"
+                  />
+                  <MinusOutlined
+                    class="edit-icon"
+                    @click="emit('deleteRow', 'functionParams', props.index, idx)"
+                  />
                 </a-flex>
               </template>
             </template>
           </a-table>
         </a-form-item>
-        <a-form-item
-          label="路由目的地"
-        >
-          <a-table :columns="destinationColumn" :data-source="props.paramRouteForm.destination" :pagination="false">
+        <a-form-item label="路由目的地">
+          <a-table
+            :columns="destinationColumn"
+            :data-source="props.paramRouteForm.destination"
+            :pagination="false"
+          >
             <template #bodyCell="{ column, index: idx }">
               <template v-if="column.dataIndex === 'label'">
                 <a-input v-model:value="destinationEdit[idx].label" />
@@ -81,8 +86,14 @@
               </template>
               <template v-if="column.dataIndex === 'handle'">
                 <a-flex justify="space-between">
-                  <PlusOutlined class="edit-icon" @click="emit('addRow', 'destination', props.index, idx)" />
-                  <MinusOutlined class="edit-icon" @click="emit('deleteRow', 'destination', props.index, idx)" />
+                  <PlusOutlined
+                    class="edit-icon"
+                    @click="emit('addRow', 'destination', props.index, idx)"
+                  />
+                  <MinusOutlined
+                    class="edit-icon"
+                    @click="emit('deleteRow', 'destination', props.index, idx)"
+                  />
                 </a-flex>
               </template>
             </template>
@@ -94,22 +105,22 @@
 </template>
 
 <script setup lang="ts">
-import { EditOutlined, DeleteOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons-vue';
+import { EditOutlined, DeleteOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons-vue'
 import { ref } from 'vue'
 
 const props = defineProps<{
   paramRouteForm: {
-    type: Object,
+    type: Object
     default: {}
-  },
+  }
   index: {
     type: Number
   }
 }>()
 
-console.log('props', props.paramRouteForm);
+console.log('props', props.paramRouteForm)
 
-const method = ref(JSON.parse(JSON.stringify(props.paramRouteForm.method)));
+const method = ref(JSON.parse(JSON.stringify(props.paramRouteForm.method)))
 const functionParamsEdit = ref(JSON.parse(JSON.stringify(props.paramRouteForm.functionParams)))
 const destinationEdit = ref(JSON.parse(JSON.stringify(props.paramRouteForm.destination)))
 
@@ -137,11 +148,11 @@ const functionParamsColumn = [
     key: 'handle',
     dataIndex: 'handle',
     width: '10%'
-  },
+  }
 ]
 
 const destinationColumn = [
-{
+  {
     title: '标签',
     key: 'label',
     dataIndex: 'label',
@@ -170,7 +181,7 @@ const destinationColumn = [
     key: 'handle',
     dataIndex: 'handle',
     width: '10%'
-  },
+  }
 ]
 </script>
 

@@ -60,7 +60,14 @@
         </a-descriptions>
       </a-tab-pane>
       <a-tab-pane key="paramRoute" tab="参数路由">
-        <paramRoute v-for="item, index in paramRouteForms" :key="index" :paramRouteForm="item" :index="index" @addRow="()=>{}" @deleteRow="()=>{}" />
+        <paramRoute
+          v-for="(item, index) in paramRouteForms"
+          :key="index"
+          :paramRouteForm="item"
+          :index="index"
+          @addRow="() => {}"
+          @deleteRow="() => {}"
+        />
         <a-button type="primary" style="margin-top: 20px">增加路由</a-button>
       </a-tab-pane>
     </a-tabs>
@@ -68,57 +75,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons-vue';
+import { ref, reactive } from 'vue'
+import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 import paramRoute from './paramRoute.vue'
 
 const editForm = reactive({
   timeout: {
     isEdit: false,
-    value: '',
+    value: ''
   },
   retryNum: {
     isEdit: false,
-    value: '',
+    value: ''
   },
   sameArea: {
-    value: 'close',
+    value: 'close'
   },
   paramRoute: {
     isEdit: false,
-    value: {},
+    value: {}
   }
 })
 
-const activeKey = ref('timeout');
+const activeKey = ref('timeout')
 const showEdit = (param: string) => {
-  editForm[param].isEdit = true;
+  editForm[param].isEdit = true
 }
 const hideEdit = (param: string) => {
-  editForm[param].isEdit = false;
+  editForm[param].isEdit = false
 }
 
 const paramRouteForms = [
   {
     method: {
       value: 'getUserInfo',
-      selectArr: [
-        'getUserInfo',
-        'register',
-        'login'
-      ]
+      selectArr: ['getUserInfo', 'register', 'login']
     },
-    functionParams: [{
-      param: '',
-      relation: '',
-      value: '',
-    }],
-    destination: [{
-      label: '',
-      relation: '',
-      value: '',
-      weight: '',
-    }]
+    functionParams: [
+      {
+        param: '',
+        relation: '',
+        value: ''
+      }
+    ],
+    destination: [
+      {
+        label: '',
+        relation: '',
+        value: '',
+        weight: ''
+      }
+    ]
   }
 ]
 </script>
