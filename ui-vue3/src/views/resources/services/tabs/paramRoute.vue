@@ -16,73 +16,79 @@
 -->
 <template>
   <div class="__container_services_tabs_param_route">
-    <a-card :bordered="false" style="width: 800px">
+    <a-card :bordered="false" style="width: 1000px">
       <template #title>
         <a-flex justify="space-between">
           <span>路由</span>
           <a-flex class="handle-form">
-            <EditOutlined style="font-size: 18px" />
-            <DeleteOutlined style="font-size: 18px" />
+            <EditOutlined class="edit-icon" />
+            <DeleteOutlined class="edit-icon" />
           </a-flex>
         </a-flex>
       </template>
-      <a-form-item
-        label="选择方法"
-      >
-        <a-select
-          v-model:value="method.value"
-          style="width: 120px"
+      <a-form :labelCol="{ span: 3 }">
+        <a-form-item
+          label="选择方法"
         >
-          <a-select-option v-for="item, index in method.selectArr" :value="item" :key="index">
-            {{ item }}
-          </a-select-option>
-        </a-select>
-      </a-form-item>
-      <a-form-item
-        label="指定方法参数"
-      >
-        <a-table :columns="functionParamsColumn" :data-source="props.paramRouteForm.functionParams" :pagination="false">
-          <template #bodyCell="{ column, index }">
-            <template v-if="column.dataIndex === 'param'">
-              <a-input v-model:value="functionParamsEdit[index].param" />
+          <a-select
+            v-model:value="method.value"
+            style="width: 120px"
+          >
+            <a-select-option v-for="item, index in method.selectArr" :value="item" :key="index">
+              {{ item }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item
+          label="指定方法参数"
+        >
+          <a-table :columns="functionParamsColumn" :data-source="props.paramRouteForm.functionParams" :pagination="false">
+            <template #bodyCell="{ column, index: idx }">
+              <template v-if="column.dataIndex === 'param'">
+                <a-input v-model:value="functionParamsEdit[idx].param" />
+              </template>
+              <template v-if="column.dataIndex === 'relation'">
+                <a-input v-model:value="functionParamsEdit[idx].relation" />
+              </template>
+              <template v-if="column.dataIndex === 'value'">
+                <a-input v-model:value="functionParamsEdit[idx].value" />
+              </template>
+              <template v-if="column.dataIndex === 'handle'">
+                <a-flex justify="space-between">
+                  <PlusOutlined class="edit-icon" @click="emit('addRow', 'functionParams', props.index, idx)" />
+                  <MinusOutlined class="edit-icon" @click="emit('deleteRow', 'functionParams', props.index, idx)" />
+                </a-flex>
+              </template>
             </template>
-            <template v-if="column.dataIndex === 'relation'">
-              <a-input v-model:value="functionParamsEdit[index].relation" />
+          </a-table>
+        </a-form-item>
+        <a-form-item
+          label="路由目的地"
+        >
+          <a-table :columns="destinationColumn" :data-source="props.paramRouteForm.destination" :pagination="false">
+            <template #bodyCell="{ column, index: idx }">
+              <template v-if="column.dataIndex === 'label'">
+                <a-input v-model:value="destinationEdit[idx].label" />
+              </template>
+              <template v-if="column.dataIndex === 'relation'">
+                <a-input v-model:value="destinationEdit[idx].relation" />
+              </template>
+              <template v-if="column.dataIndex === 'value'">
+                <a-input v-model:value="destinationEdit[idx].value" />
+              </template>
+              <template v-if="column.dataIndex === 'weight'">
+                <a-input v-model:value="destinationEdit[idx].weight" />
+              </template>
+              <template v-if="column.dataIndex === 'handle'">
+                <a-flex justify="space-between">
+                  <PlusOutlined class="edit-icon" @click="emit('addRow', 'destination', props.index, idx)" />
+                  <MinusOutlined class="edit-icon" @click="emit('deleteRow', 'destination', props.index, idx)" />
+                </a-flex>
+              </template>
             </template>
-            <template v-if="column.dataIndex === 'value'">
-              <a-input v-model:value="functionParamsEdit[index].value" />
-            </template>
-            <template v-if="column.dataIndex === 'handle'">
-              <PlusOutlined style="font-size: 18px" />
-              <MinusOutlined style="font-size: 18px" />
-            </template>
-          </template>
-        </a-table>
-      </a-form-item>
-      <a-form-item
-        label="路由目的地"
-      >
-        <a-table :columns="destinationColumn" :data-source="props.paramRouteForm.destination" :pagination="false">
-          <template #bodyCell="{ column, index }">
-            <template v-if="column.dataIndex === 'label'">
-              <a-input v-model:value="destinationEdit[index].label" />
-            </template>
-            <template v-if="column.dataIndex === 'relation'">
-              <a-input v-model:value="destinationEdit[index].relation" />
-            </template>
-            <template v-if="column.dataIndex === 'value'">
-              <a-input v-model:value="destinationEdit[index].value" />
-            </template>
-            <template v-if="column.dataIndex === 'weight'">
-              <a-input v-model:value="destinationEdit[index].weight" />
-            </template>
-            <template v-if="column.dataIndex === 'handle'">
-              <PlusOutlined style="font-size: 18px" />
-              <MinusOutlined style="font-size: 18px" />
-            </template>
-          </template>
-        </a-table>
-      </a-form-item>
+          </a-table>
+        </a-form-item>
+      </a-form>
     </a-card>
   </div>
 </template>
@@ -96,7 +102,12 @@ const props = defineProps<{
     type: Object,
     default: {}
   },
+  index: {
+    type: Number
+  }
 }>()
+
+console.log('props', props.paramRouteForm);
 
 const method = ref(JSON.parse(JSON.stringify(props.paramRouteForm.method)));
 const functionParamsEdit = ref(JSON.parse(JSON.stringify(props.paramRouteForm.functionParams)))
@@ -165,6 +176,12 @@ const destinationColumn = [
 
 <style lang="less" scoped>
 .__container_services_tabs_param_route {
-
+  .handle-form {
+    width: 50px;
+    justify-content: space-between;
+  }
+  .edit-icon {
+    font-size: 18px;
+  }
 }
 </style>

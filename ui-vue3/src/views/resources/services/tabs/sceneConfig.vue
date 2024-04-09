@@ -22,13 +22,13 @@
           <a-descriptions-item label="超时时间">
             <a-flex v-if="!editForm.timeout.isEdit">
               <span class="item-content">1000ms</span>
-              <EditOutlined @click="showEdit('timeout')" style="font-size: 18px" />
+              <EditOutlined @click="showEdit('timeout')" class="item-icon" />
             </a-flex>
             <a-flex v-else align="center">
-              <a-input v-model:value="editForm.timeout.value" style="width: 200px" />
+              <a-input v-model:value="editForm.timeout.value" class="item-input" />
               <span style="margin-left: 5px">ms</span>
-              <CheckOutlined @click="hideEdit('timeout')" style="margin-left: 15px; font-size: 18px;" />
-              <CloseOutlined @click="hideEdit('timeout')" style="margin-left: 15px; font-size: 18px;" />
+              <CheckOutlined @click="hideEdit('timeout')" class="item-icon" />
+              <CloseOutlined @click="hideEdit('timeout')" class="item-icon" />
             </a-flex>
           </a-descriptions-item>
         </a-descriptions>
@@ -38,13 +38,13 @@
           <a-descriptions-item label="重试次数">
             <a-flex v-if="!editForm.retryNum.isEdit">
               <span class="item-content">1000次</span>
-              <EditOutlined @click="showEdit('retryNum')" style="font-size: 18px" />
+              <EditOutlined @click="showEdit('retryNum')" class="item-icon" />
             </a-flex>
             <a-flex v-else align="center">
-              <a-input v-model:value="editForm.retryNum.value" style="width: 200px" />
+              <a-input v-model:value="editForm.retryNum.value" class="item-input" />
               <span style="margin-left: 5px">次</span>
-              <CheckOutlined @click="hideEdit('retryNum')" style="margin-left: 15px; font-size: 18px;" />
-              <CloseOutlined @click="hideEdit('retryNum')" style="margin-left: 15px; font-size: 18px;" />
+              <CheckOutlined @click="hideEdit('retryNum')" class="item-icon" />
+              <CloseOutlined @click="hideEdit('retryNum')" class="item-icon" />
             </a-flex>
           </a-descriptions-item>
         </a-descriptions>
@@ -60,7 +60,7 @@
         </a-descriptions>
       </a-tab-pane>
       <a-tab-pane key="paramRoute" tab="参数路由">
-        <paramRoute v-for="item, index in paramRouteForms" :key="index" :paramRouteForm="item" />
+        <paramRoute v-for="item, index in paramRouteForms" :key="index" :paramRouteForm="item" :index="index" @addRow="()=>{}" @deleteRow="()=>{}" />
         <a-button type="primary" style="margin-top: 20px">增加路由</a-button>
       </a-tab-pane>
     </a-tabs>
@@ -126,12 +126,14 @@ const paramRouteForms = [
 <style lang="less" scoped>
 .__container_services_tabs_scene_config {
   .item-content {
-    margin-left: 20px;
     margin-right: 20px;
   }
-  .handle-form {
-    width: 50px;
-    justify-content: space-between;
+  .item-input {
+    width: 200px;
+  }
+  .item-icon {
+    margin-left: 15px;
+    font-size: 18px;
   }
 }
 </style>
