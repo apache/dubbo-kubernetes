@@ -18,7 +18,68 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
+  destinationRuleDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+  virtualServiceDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+  dynamicConfigDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+  routingRuleDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+  tagRuleDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+  flowControlDomain: {
+    actuatingRange: 'Actuating range',
+    notSet: 'Not set',
+    versionRecords: 'Version records',
+    YAMLView: 'YAML View',
+    addConfiguration: 'Add configuration',
+    addConfigurationItem: 'Add configurationItem',
+    addFilter: 'Add filter',
+    configurationItem: 'Configuration item',
+    scopeScreening: 'Scope screening',
+    endOfAction: 'End of action',
+    addLabel: 'Add label',
+    actions: 'Actions',
+    filterType: 'Filter type',
+    labelName: 'Label name',
+    formView: 'Form view',
+    addMatch: 'Add match',
+    addRouter: 'Add router',
+    addressSubsetMatching: 'Address subset matching',
+    value: 'Value',
+    relation: 'Relation',
+    parameter: 'Parameter',
+    matchingDimension: 'Matching dimension',
+    requestParameterMatching: 'Request parameter matching',
+    ruleName: 'Rule name',
+    actionObject: 'Action object',
+    faultTolerantProtection: 'Fault-tolerant protection',
+    runTimeEffective: 'Run time effective',
+    ruleGranularity: 'Rule granularity',
+    timeOfTakingEffect: 'Time of taking effect',
+    enabledStatus: 'Enabled status',
+    priority: 'Priority',
+    off: 'off',
+    on: 'on',
+    opened: 'Opened',
+    closed: 'Closed',
+    enabled: 'Enabled',
+    disabled: 'Disabled'
+  },
   instanceDomain: {
+    flowDisabled: 'Flow disabled',
+    operatorLog: 'Operator log',
     enableAppInstanceLogs: 'Enable access logs for all instances of this application',
     appServiceRetries: 'Adjust the number of retries for the service provided by this application',
     appServiceLoadBalance:
