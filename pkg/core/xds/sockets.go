@@ -7,12 +7,12 @@ import (
 
 // AccessLogSocketName generates a socket path that will fit the Unix socket path limitation of 104 chars
 func AccessLogSocketName(tmpDir, name, mesh string) string {
-	return socketName(filepath.Join(tmpDir, fmt.Sprintf("kuma-al-%s-%s", name, mesh)))
+	return socketName(filepath.Join(tmpDir, fmt.Sprintf("dubbo-al-%s-%s", name, mesh)))
 }
 
 // MetricsHijackerSocketName generates a socket path that will fit the Unix socket path limitation of 104 chars
 func MetricsHijackerSocketName(tmpDir, name, mesh string) string {
-	return socketName(filepath.Join(tmpDir, fmt.Sprintf("kuma-mh-%s-%s", name, mesh)))
+	return socketName(filepath.Join(tmpDir, fmt.Sprintf("dubbo-mh-%s-%s", name, mesh)))
 }
 
 func socketName(s string) string {

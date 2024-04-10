@@ -26,7 +26,7 @@ spec:
   template:
     metadata:
       annotations:
-        dubbo.io/xds-enable: enabled
+        dubbo.io/ingress: enabled
       labels:
         app: dubbo-samples-apiserver-provider
     spec:

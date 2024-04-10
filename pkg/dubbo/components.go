@@ -67,6 +67,7 @@ func Setup(rt core_runtime.Runtime) error {
 		dubboPusher,
 		rt.ResourceManager(),
 		rt.Transactions(),
+		rt.Config().Multizone.Zone.Name,
 	)
 	mesh_proto.RegisterMetadataServiceServer(rt.DpServer().GrpcServer(), metadata)
 	return rt.Add(dubboPusher, serviceMapping, metadata)

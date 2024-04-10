@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -38,6 +37,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	leader_memory "github.com/apache/dubbo-kubernetes/pkg/plugins/leader/memory"
 	util_files "github.com/apache/dubbo-kubernetes/pkg/util/files"
 )

@@ -24,3 +24,19 @@ export const searchInstances = (params: any): Promise<any> => {
     params
   })
 }
+
+export const getInstanceDetail = (params: any): Promise<any> => {
+  return request({
+    url: '/instance/detail',
+    method: 'get',
+    params
+  })
+}
+
+export const getInstanceMetricsInfo = (params: any): Promise<any> => {
+  return request({
+    url: '/instance/metrics',
+    method: 'get',
+    params
+  })
+}

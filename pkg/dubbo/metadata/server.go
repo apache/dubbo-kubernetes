@@ -19,7 +19,6 @@ package metadata
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
 	"strings"
 	"time"
@@ -45,6 +44,7 @@ import (
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
 
 var log = core.Log.WithName("dubbo").WithName("server").WithName("metadata")
@@ -54,9 +54,10 @@ const queueSize = 100
 type MetadataServer struct {
 	mesh_proto.MetadataServiceServer
 
-	config dubbo.DubboConfig
-	queue  chan *RegisterRequest
-	pusher pusher.Pusher
+	localZone string
+	config    dubbo.DubboConfig
+	queue     chan *RegisterRequest
+	pusher    pusher.Pusher
 
 	ctx             context.Context
 	resourceManager manager.ResourceManager
@@ -80,6 +81,7 @@ func NewMetadataServe(
 	pusher pusher.Pusher,
 	resourceManager manager.ResourceManager,
 	transactions core_store.Transactions,
+	localZone string,
 ) *MetadataServer {
 	return &MetadataServer{
 		config:          config,
@@ -88,6 +90,7 @@ func NewMetadataServe(
 		ctx:             ctx,
 		resourceManager: resourceManager,
 		transactions:    transactions,
+		localZone:       localZone,
 	}
 }
 
@@ -333,7 +336,6 @@ func (m *MetadataServer) register(req *RegisterRequest) {
 
 func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *mesh_proto.MetaData) error {
 	err := core_store.InTx(m.ctx, m.transactions, func(ctx context.Context) error {
-
 		// get Metadata Resource first,
 		// if Metadata is not found, create it,
 		// else update it.
@@ -350,6 +352,7 @@ func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *me
 		if core_store.IsResourceNotFound(err) {
 			// create if not found
 			metadata.Spec = newMetadata
+			metadata.Spec.Zone = m.localZone
 			err = m.resourceManager.Create(m.ctx, metadata, core_store.CreateBy(core_model.ResourceKey{
 				Mesh: key.Mesh,
 				Name: key.Name,

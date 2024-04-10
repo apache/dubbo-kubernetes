@@ -20,27 +20,40 @@ package cmd
 import (
 	"context"
 	"fmt"
+<<<<<<< HEAD
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
+=======
+>>>>>>> b165c47df48705310408955be94d62e3675c974b
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+import (
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 
+	"go.uber.org/zap/zapcore"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/envoy"
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	"github.com/apache/dubbo-kubernetes/pkg/util/template"
 )
 
@@ -123,7 +136,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 					return err
 				}
 
-				fmt.Printf("%s: logs will be stored in %q\n", "kuma-dp", output)
+				fmt.Printf("%s: logs will be stored in %q\n", "dubbo-dp", output)
 				core.SetLogger(core.NewLoggerWithRotation(level, output, arg.maxSize, arg.maxBackups, arg.maxAge))
 			} else {
 				core.SetLogger(core.NewLogger(level))
@@ -201,7 +214,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 			envoyComponent, err := envoy.New(opts)
 			err = envoyComponent.Start(stopComponents)
 			if err != nil {
-				runLog.Error(err, "error while running Kuma DP")
+				runLog.Error(err, "error while running Dubbo DP")
 				return err
 			}
 			runLog.Info("stopping Dubbo proxy")
@@ -211,7 +224,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 
 	// root flags
 	cmd.PersistentFlags().StringVar(&arg.logLevel, "log-level", dubbo_log.InfoLevel.String(), UsageOptions("log level", dubbo_log.OffLevel, dubbo_log.InfoLevel, dubbo_log.DebugLevel))
-	cmd.PersistentFlags().StringVar(&arg.outputPath, "log-output-path", arg.outputPath, "path to the file that will be filled with logs. Example: if we set it to /tmp/kuma.log then after the file is rotated we will have /tmp/kuma-2021-06-07T09-15-18.265.log")
+	cmd.PersistentFlags().StringVar(&arg.outputPath, "log-output-path", arg.outputPath, "path to the file that will be filled with logs. Example: if we set it to /tmp/dubbo.log then after the file is rotated we will have /tmp/dubbo-2021-06-07T09-15-18.265.log")
 	cmd.PersistentFlags().IntVar(&arg.maxBackups, "log-max-retained-files", 1000, "maximum number of the old log files to retain")
 	cmd.PersistentFlags().IntVar(&arg.maxSize, "log-max-size", 100, "maximum size in megabytes of a log file before it gets rotated")
 	cmd.PersistentFlags().IntVar(&arg.maxAge, "log-max-age", 30, "maximum number of days to retain old log files based on the timestamp encoded in their filename")
@@ -222,6 +235,7 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 	proxyCmd.PersistentFlags().StringVar(&cfg.DataplaneRuntime.ResourcePath, "dataplane-file", "Path to Ingress and Egress template to apply (YAML or JSON)", "data-plane-file")
 	cmd.AddCommand(proxyCmd)
 }
+
 func UsageOptions(desc string, options ...interface{}) string {
 	values := make([]string, 0, len(options))
 	for _, option := range options {
