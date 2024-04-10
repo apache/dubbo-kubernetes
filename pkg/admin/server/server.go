@@ -53,6 +53,7 @@ func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 
 	router := r.Group("/api/v1")
 	router.GET("/instances", handler.GetInstances(rt))
+	router.GET("/metas", handler.GetMetas(rt))
 
 	a.Engine = r
 	return a

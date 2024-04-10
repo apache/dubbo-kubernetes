@@ -41,3 +41,34 @@ func NewErrorResp(msg string) *CommonResp {
 		Data: nil,
 	}
 }
+
+type PageData struct {
+	Total    int `json:"total"`
+	CurPage  int `json:"curPage"`
+	PageSize int `json:"pageSize"`
+	Data     any `json:"data"`
+}
+
+func NewPageData() *PageData {
+	return &PageData{}
+}
+
+func (pd *PageData) WithTotal(total int) *PageData {
+	pd.Total = total
+	return pd
+}
+
+func (pd *PageData) WithCurPage(curPage int) *PageData {
+	pd.CurPage = curPage
+	return pd
+}
+
+func (pd *PageData) WithPageSize(pageSize int) *PageData {
+	pd.PageSize = pageSize
+	return pd
+}
+
+func (pd *PageData) WithData(data any) *PageData {
+	pd.Data = data
+	return pd
+}

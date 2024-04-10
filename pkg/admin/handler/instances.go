@@ -22,3 +22,17 @@ func GetInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 		c.JSON(http.StatusOK, model.NewSuccessResp(dataplaneList))
 	}
 }
+
+func GetMetas(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		manager := rt.ResourceManager()
+		metadataList := &mesh.MetaDataResourceList{}
+		if err := manager.List(rt.AppContext(), metadataList); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(metadataList))
+	}
+}
