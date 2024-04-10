@@ -48,8 +48,10 @@ type DpServerConfig struct {
 	// were failing to reconnect (we observed this in Projected Service Account
 	// Tokens e2e tests, which started flaking a lot after introducing explicit
 	// 1s timeout)
-	// TlsCertFile defines a path to a file with PEM-encoded TLS cert. If empty, autoconfigured from general.tlsCertFile
-	TlsCertFile       string                `json:"tlsCertFile" envconfig:"dubbo_dp_server_tls_cert_file"`
+	// TlsCertFile defines a path to a file with PEM-encoded TLS cert. If empty, start the plain HTTP/2 server (h2c).
+	TlsCertFile string `json:"tlsCertFile" envconfig:"dubbo_dp_server_tls_cert_file"`
+	// TlsKeyFile defines a path to a file with PEM-encoded TLS key. If empty, start the plain HTTP/2 server (h2c).
+	TlsKeyFile        string                `json:"tlsKeyFile" envconfig:"kuma_diagnostics_tls_key_file"`
 	ReadHeaderTimeout config_types.Duration `json:"readHeaderTimeout" envconfig:"dubbo_dp_server_read_header_timeout"`
 	// Port of the DP Server
 	Port int `json:"port" envconfig:"dubbo_dp_server_port"`
