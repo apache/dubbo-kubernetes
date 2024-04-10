@@ -116,11 +116,11 @@ type Config struct {
 
 type DDSEventBasedWatchdog struct {
 	// How often we flush changes when experimental event based watchdog is used.
-	FlushInterval config_types.Duration `json:"flushInterval" envconfig:"DUBBO_EXPERIMENTAL_KDS_EVENT_BASED_WATCHDOG_FLUSH_INTERVAL"`
-	// How often we schedule full KDS resync when experimental event based watchdog is used.
-	FullResyncInterval config_types.Duration `json:"fullResyncInterval" envconfig:"DUBBO_EXPERIMENTAL_KDS_EVENT_BASED_WATCHDOG_FULL_RESYNC_INTERVAL"`
+	FlushInterval config_types.Duration `json:"flushInterval" envconfig:"DUBBO_EXPERIMENTAL_DDS_EVENT_BASED_WATCHDOG_FLUSH_INTERVAL"`
+	// How often we schedule full DDS resync when experimental event based watchdog is used.
+	FullResyncInterval config_types.Duration `json:"fullResyncInterval" envconfig:"DUBBO_EXPERIMENTAL_DDS_EVENT_BASED_WATCHDOG_FULL_RESYNC_INTERVAL"`
 	// If true, then initial full resync is going to be delayed by 0 to FullResyncInterval.
-	DelayFullResync bool `json:"delayFullResync" envconfig:"DUBBO_EXPERIMENTAL_KDS_EVENT_BASED_WATCHDOG_DELAY_FULL_RESYNC"`
+	DelayFullResync bool `json:"delayFullResync" envconfig:"DUBBO_EXPERIMENTAL_DDS_EVENT_BASED_WATCHDOG_DELAY_FULL_RESYNC"`
 }
 
 func DefaultEventBasedWatchdog() DDSEventBasedWatchdog {

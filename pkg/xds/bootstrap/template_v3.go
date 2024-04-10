@@ -75,7 +75,7 @@ func genConfig(parameters configParameters, proxyConfig xds.Proxy, enableReloada
 	}
 
 	runtimeLayers := []*envoy_bootstrap_v3.RuntimeLayer{{
-		Name: "kuma",
+		Name: "dubbo",
 		LayerSpecifier: &envoy_bootstrap_v3.RuntimeLayer_StaticLayer{
 			StaticLayer: util_proto.MustStruct(map[string]interface{}{
 				"re2.max_program_size.error_level": 4294967295,

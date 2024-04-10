@@ -72,37 +72,37 @@ type DpServerAuthnConfig struct {
 	// Configuration for zone proxy authentication.
 	ZoneProxy ZoneProxyAuthnConfig `json:"zoneProxy"`
 	// If true then Envoy uses Google gRPC instead of Envoy gRPC which lets a proxy reload the auth data (service account token, dp token etc.) from path without proxy restart.
-	EnableReloadableTokens bool `json:"enableReloadableTokens" envconfig:"kuma_dp_server_authn_enable_reloadable_tokens"`
+	EnableReloadableTokens bool `json:"enableReloadableTokens" envconfig:"dubbo_dp_server_authn_enable_reloadable_tokens"`
 }
 type DpProxyAuthnConfig struct {
 	// Type of authentication. Available values: "serviceAccountToken", "dpToken", "none".
 	// If empty, autoconfigured based on the environment - "serviceAccountToken" on Kubernetes, "dpToken" on Universal.
-	Type string `json:"type" envconfig:"kuma_dp_server_authn_dp_proxy_type"`
+	Type string `json:"type" envconfig:"dubbo_dp_server_authn_dp_proxy_type"`
 	// Configuration of dpToken authentication method
 	DpToken DpTokenAuthnConfig `json:"dpToken"`
 }
 type ZoneProxyAuthnConfig struct {
 	// Type of authentication. Available values: "serviceAccountToken", "zoneToken", "none".
 	// If empty, autoconfigured based on the environment - "serviceAccountToken" on Kubernetes, "zoneToken" on Universal.
-	Type string `json:"type" envconfig:"kuma_dp_server_authn_zone_proxy_type"`
+	Type string `json:"type" envconfig:"dubbo_dp_server_authn_zone_proxy_type"`
 	// Configuration for zoneToken authentication method.
 	ZoneToken ZoneTokenAuthnConfig `json:"zoneToken"`
 }
 type DpTokenAuthnConfig struct {
 	// If true the control plane token issuer is enabled. It's recommended to set it to false when all the tokens are issued offline.
-	EnableIssuer bool `json:"enableIssuer" envconfig:"kuma_dp_server_authn_dp_proxy_dp_token_enable_issuer"`
+	EnableIssuer bool `json:"enableIssuer" envconfig:"dubbo_dp_server_authn_dp_proxy_dp_token_enable_issuer"`
 	// DP Token validator configuration
 	Validator DpTokenValidatorConfig `json:"validator"`
 }
 type ZoneTokenAuthnConfig struct {
 	// If true the control plane token issuer is enabled. It's recommended to set it to false when all the tokens are issued offline.
-	EnableIssuer bool `json:"enableIssuer" envconfig:"kuma_dp_server_authn_zone_proxy_zone_token_enable_issuer"`
+	EnableIssuer bool `json:"enableIssuer" envconfig:"dubbo_dp_server_authn_zone_proxy_zone_token_enable_issuer"`
 	// Zone Token validator configuration
 	Validator ZoneTokenValidatorConfig `json:"validator"`
 }
 type DpTokenValidatorConfig struct {
-	// If true then Kuma secrets with prefix "dataplane-token-signing-key-{mesh}" are considered as signing keys.
-	UseSecrets bool `json:"useSecrets" envconfig:"kuma_dp_server_authn_dp_proxy_dp_token_validator_use_secrets"`
+	// If true then Dubbo secrets with prefix "dataplane-token-signing-key-{mesh}" are considered as signing keys.
+	UseSecrets bool `json:"useSecrets" envconfig:"dubbo_dp_server_authn_dp_proxy_dp_token_validator_use_secrets"`
 	// List of public keys used to validate the token
 	PublicKeys []config_types.MeshedPublicKey `json:"publicKeys"`
 }
@@ -117,8 +117,8 @@ func (d DpTokenValidatorConfig) Validate() error {
 }
 
 type ZoneTokenValidatorConfig struct {
-	// If true then Kuma secrets with prefix "zone-token-signing-key" are considered as signing keys.
-	UseSecrets bool `json:"useSecrets" envconfig:"kuma_dp_server_authn_zone_proxy_zone_token_validator_use_secrets"`
+	// If true then Dubbo secrets with prefix "zone-token-signing-key" are considered as signing keys.
+	UseSecrets bool `json:"useSecrets" envconfig:"dubbo_dp_server_authn_zone_proxy_zone_token_validator_use_secrets"`
 	// List of public keys used to validate the token
 	PublicKeys []config_types.PublicKey `json:"publicKeys"`
 }
