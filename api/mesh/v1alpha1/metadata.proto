@@ -42,15 +42,18 @@ message MetaData {
   option (dubbo.mesh.resource).name = "MetaDataResource";
   option (dubbo.mesh.resource).type = "MetaData";
   option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).dds.send_to_global = true;
   option (dubbo.mesh.resource).dds.send_to_zone = true;
   option (dubbo.mesh.resource).ws.name = "metadata";
+  option (dubbo.mesh.resource).scope_namespace = true;
   option (dubbo.mesh.resource).ws.plural = "metadatas";
   option (dubbo.mesh.resource).allow_to_inspect = true;
 
-  string app = 1;
-  string revision = 2;
+  string zone = 1;
+  string app = 2;
+  string revision = 3;
   // key format is '{group}/{interface name}:{version}:{protocol}'
-  map<string, ServiceInfo> services = 3;
+  map<string, ServiceInfo> services = 4;
 }
 
 message ServiceInfo {

@@ -15,28 +15,11 @@
  * limitations under the License.
  */
 
-package service
+package mesh
 
-import (
-	util_grpc "github.com/apache/dubbo-kubernetes/pkg/util/grpc"
-)
-
-const (
-	ConfigDumpRPC = "XDS Config Dump"
-	StatsRPC      = "Stats"
-	ClustersRPC   = "Clusters"
-)
-
-type EnvoyAdminRPCs struct {
-	XDSConfigDump util_grpc.ReverseUnaryRPCs
-	Stats         util_grpc.ReverseUnaryRPCs
-	Clusters      util_grpc.ReverseUnaryRPCs
-}
-
-func NewEnvoyAdminRPCs() EnvoyAdminRPCs {
-	return EnvoyAdminRPCs{
-		XDSConfigDump: util_grpc.NewReverseUnaryRPCs(),
-		Stats:         util_grpc.NewReverseUnaryRPCs(),
-		Clusters:      util_grpc.NewReverseUnaryRPCs(),
+func (t *MetaDataResource) IsRemotingMetadata(localZone string) bool {
+	if t.Spec.GetZone() == "" || t.Spec.GetZone() == localZone {
+		return false
 	}
+	return true
 }

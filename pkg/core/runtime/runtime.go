@@ -32,7 +32,6 @@ import (
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/admin"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
 	managers_dataplane "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
@@ -72,7 +71,6 @@ type RuntimeContext interface {
 	ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager
 	ConfigStore() core_store.ResourceStore
 	Extensions() context.Context
-	EnvoyAdminClient() admin.EnvoyAdminClient
 	ConfigManager() config_manager.ConfigManager
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
@@ -157,7 +155,6 @@ type runtimeContext struct {
 	cs                   core_store.ResourceStore
 	rom                  core_manager.ReadOnlyResourceManager
 	ext                  context.Context
-	eac                  admin.EnvoyAdminClient
 	configm              config_manager.ConfigManager
 	xds                  xds_runtime.XDSRuntimeContext
 	leadInfo             component.LeaderInfo
@@ -207,10 +204,6 @@ func (b *runtimeContext) RegistryCenter() dubboRegistry.Registry {
 
 func (b *runtimeContext) MetadataReportCenter() report.MetadataReport {
 	return b.metadataReportCenter
-}
-
-func (b *runtimeContext) EnvoyAdminClient() admin.EnvoyAdminClient {
-	return b.eac
 }
 
 func (b *runtimeContext) MeshCache() *mesh.Cache {

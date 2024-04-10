@@ -323,16 +323,16 @@ func (r *PodReconciler) createOrUpdateIngress(ctx context.Context, pod *kube_cor
 	log := r.Log.WithValues("pod", kube_types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name})
 	if err != nil {
 		log.Error(err, "unable to create/update Ingress", "operationResult", operationResult)
-		r.EventRecorder.Eventf(pod, kube_core.EventTypeWarning, FailedToGenerateDubboDataplaneReason, "Failed to generate Kuma Ingress: %s", err.Error())
+		r.EventRecorder.Eventf(pod, kube_core.EventTypeWarning, FailedToGenerateDubboDataplaneReason, "Failed to generate Dubbo Ingress: %s", err.Error())
 		return err
 	}
 	switch operationResult {
 	case kube_controllerutil.OperationResultCreated:
 		log.Info("ZoneIngress created")
-		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, CreatedDubboDataplaneReason, "Created Kuma Ingress: %s", pod.Name)
+		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, CreatedDubboDataplaneReason, "Created Dubbo Ingress: %s", pod.Name)
 	case kube_controllerutil.OperationResultUpdated:
 		log.Info("ZoneIngress updated")
-		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, UpdatedDubboDataplaneReason, "Updated Kuma Ingress: %s", pod.Name)
+		r.EventRecorder.Eventf(pod, kube_core.EventTypeNormal, UpdatedDubboDataplaneReason, "Updated Dubbo Ingress: %s", pod.Name)
 	}
 	return nil
 }

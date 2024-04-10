@@ -46,7 +46,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dds/hash"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/mux"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/reconcile"
-	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	"github.com/apache/dubbo-kubernetes/pkg/dds/util"
 )
 
@@ -63,7 +62,6 @@ type Context struct {
 	GlobalResourceMapper reconcile.ResourceMapper
 	ZoneResourceMapper   reconcile.ResourceMapper
 
-	EnvoyAdminRPCs           service.EnvoyAdminRPCs
 	ServerStreamInterceptors []grpc.StreamServerInterceptor
 	ServerUnaryInterceptor   []grpc.UnaryServerInterceptor
 }
@@ -111,7 +109,6 @@ func DefaultContext(
 		Configs:              configs,
 		GlobalResourceMapper: CompositeResourceMapper(globalMappers...),
 		ZoneResourceMapper:   CompositeResourceMapper(zoneMappers...),
-		EnvoyAdminRPCs:       service.NewEnvoyAdminRPCs(),
 	}
 }
 
@@ -174,10 +171,10 @@ func RemoveK8sSystemNamespaceSuffixMapper(k8sSystemNamespace string) reconcile.R
 	}
 }
 
-// HashSuffixMapper returns mapper that adds a hash suffix to the name during KDS sync
-func HashSuffixMapper(checkKDSFeature bool, labelsToUse ...string) reconcile.ResourceMapper {
+// HashSuffixMapper returns mapper that adds a hash suffix to the name during DDS sync
+func HashSuffixMapper(checkDDSFeature bool, labelsToUse ...string) reconcile.ResourceMapper {
 	return func(features dds.Features, r core_model.Resource) (core_model.Resource, error) {
-		if checkKDSFeature && !features.HasFeature(dds.FeatureHashSuffix) {
+		if checkDDSFeature && !features.HasFeature(dds.FeatureHashSuffix) {
 			return r, nil
 		}
 

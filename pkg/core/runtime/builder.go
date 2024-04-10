@@ -36,7 +36,6 @@ import (
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/admin"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
@@ -49,7 +48,6 @@ import (
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 )
 
@@ -74,7 +72,6 @@ type BuilderContext interface {
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
 	DataplaneCache() *sync.Map
-	InterCPClientPool() *client.Pool
 	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
 }
@@ -90,7 +87,6 @@ type Builder struct {
 	txs                  core_store.Transactions
 	rm                   core_manager.CustomizableResourceManager
 	rom                  core_manager.ReadOnlyResourceManager
-	eac                  admin.EnvoyAdminClient
 	ext                  context.Context
 	meshCache            *mesh.Cache
 	lif                  lookup.LookupIPFunc
@@ -98,7 +94,6 @@ type Builder struct {
 	leadInfo             component.LeaderInfo
 	erf                  events.EventBus
 	dsl                  datasource.Loader
-	interCpPool          *client.Pool
 	dps                  *dp_server.DpServer
 	registryCenter       dubboRegistry.Registry
 	metadataReportCenter report.MetadataReport
@@ -213,11 +208,6 @@ func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
 	return b
 }
 
-func (b *Builder) WithEnvoyAdminClient(eac admin.EnvoyAdminClient) *Builder {
-	b.eac = eac
-	return b
-}
-
 func (b *Builder) MeshCache() *mesh.Cache {
 	return b.meshCache
 }
@@ -318,7 +308,6 @@ func (b *Builder) Build() (Runtime, error) {
 			erf:                  b.erf,
 			dCache:               b.dCache,
 			dps:                  b.dps,
-			eac:                  b.eac,
 			serviceDiscovery:     b.serviceDiscover,
 			rv:                   b.rv,
 			appCtx:               b.appCtx,
@@ -383,10 +372,6 @@ func (b *Builder) ResourceManager() core_manager.CustomizableResourceManager {
 
 func (b *Builder) ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager {
 	return b.rom
-}
-
-func (b *Builder) InterCPClientPool() *client.Pool {
-	return b.interCpPool
 }
 
 func (b *Builder) LookupIP() lookup.LookupIPFunc {

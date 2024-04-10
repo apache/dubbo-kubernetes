@@ -14,7 +14,7 @@ spec:
     listKind: MappingList
     plural: mappings
     singular: mapping
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

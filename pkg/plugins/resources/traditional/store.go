@@ -20,7 +20,6 @@ package traditional
 import (
 	"context"
 	"fmt"
-	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 	"sync"
 )
 
@@ -50,6 +49,7 @@ import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 )
 
 const (

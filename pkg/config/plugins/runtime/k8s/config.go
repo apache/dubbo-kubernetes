@@ -149,7 +149,7 @@ func (c *AdmissionServerConfig) Validate() error {
 	return errs
 }
 
-// DataplaneContainer defines the configuration of a Kuma dataplane proxy container.
+// DataplaneContainer defines the configuration of a Dubbo dataplane proxy container.
 type DataplaneContainer struct {
 	// Deprecated: Use DUBBO_BOOTSTRAP_SERVER_PARAMS_ADMIN_PORT instead.
 	AdminPort uint32 `json:"adminPort,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_admin_port"`
@@ -159,7 +159,7 @@ type DataplaneContainer struct {
 	ReadinessProbe SidecarReadinessProbe `json:"readinessProbe,omitempty"`
 	// Liveness probe.
 	LivenessProbe SidecarLivenessProbe `json:"livenessProbe,omitempty"`
-	// EnvVars are additional environment variables that can be placed on Kuma DP sidecar
+	// EnvVars are additional environment variables that can be placed on Dubbo DP sidecar
 	EnvVars map[string]string `json:"envVars" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_env_vars"`
 }
 
