@@ -44,6 +44,7 @@ import (
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	xds_runtime "github.com/apache/dubbo-kubernetes/pkg/xds/runtime"
 )
 
@@ -87,6 +88,7 @@ type RuntimeContext interface {
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
 	XDS() xds_runtime.XDSRuntimeContext
+	MeshCache() *mesh.Cache
 }
 
 type ResourceValidators struct {
@@ -167,6 +169,7 @@ type runtimeContext struct {
 	adminRegistry        *registry.Registry
 	governance           governance.GovernanceConfig
 	appCtx               context.Context
+	meshCache            *mesh.Cache
 	regClient            reg_client.RegClient
 	serviceDiscovery     dubboRegistry.ServiceDiscovery
 }
@@ -201,6 +204,10 @@ func (b *runtimeContext) RegistryCenter() dubboRegistry.Registry {
 
 func (b *runtimeContext) MetadataReportCenter() report.MetadataReport {
 	return b.metadataReportCenter
+}
+
+func (b *runtimeContext) MeshCache() *mesh.Cache {
+	return b.meshCache
 }
 
 func (rc *runtimeContext) DDSContext() *dds_context.Context {

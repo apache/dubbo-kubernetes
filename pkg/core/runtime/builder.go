@@ -208,6 +208,10 @@ func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
 	return b
 }
 
+func (b *Builder) MeshCache() *mesh.Cache {
+	return b.meshCache
+}
+
 func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
 	b.ddsctx = ddsctx
 	return b
@@ -281,6 +285,9 @@ func (b *Builder) Build() (Runtime, error) {
 	if b.dps == nil {
 		return nil, errors.Errorf("DpServer has not been configured")
 	}
+	if b.meshCache == nil {
+		return nil, errors.Errorf("MeshCache has not been configured")
+	}
 
 	return &runtime{
 		RuntimeInfo: b.runtimeInfo,
@@ -304,6 +311,7 @@ func (b *Builder) Build() (Runtime, error) {
 			serviceDiscovery:     b.serviceDiscover,
 			rv:                   b.rv,
 			appCtx:               b.appCtx,
+			meshCache:            b.meshCache,
 			regClient:            b.regClient,
 		},
 		Manager: b.cm,
