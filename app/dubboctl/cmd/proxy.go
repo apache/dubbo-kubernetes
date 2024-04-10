@@ -20,14 +20,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-<<<<<<< HEAD
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-=======
->>>>>>> b165c47df48705310408955be94d62e3675c974b
 	"io"
 	"os"
 	"path/filepath"
@@ -48,6 +40,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest"
