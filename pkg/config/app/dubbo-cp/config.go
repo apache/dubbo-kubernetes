@@ -37,7 +37,6 @@ import (
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/config/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/config/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/config/eventbus"
-	"github.com/apache/dubbo-kubernetes/pkg/config/intercp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
 	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
@@ -106,8 +105,6 @@ type Config struct {
 	DpServer *dp_server.DpServerConfig `json:"dpServer"`
 	// EventBus is a configuration of the event bus which is local to one instance of CP.
 	EventBus eventbus.Config `json:"eventBus"`
-	// Intercommunication CP configuration
-	InterCp intercp.InterCpConfig `json:"interCp"`
 	// SNP configuration
 	DubboConfig           dubbo.DubboConfig     `json:"dubbo_config"`
 	Bufman                bufman.Bufman         `json:"bufman"`
@@ -172,7 +169,6 @@ var DefaultConfig = func() Config {
 		Diagnostics:           diagnostics.DefaultDiagnosticsConfig(),
 		DpServer:              dp_server.DefaultDpServerConfig(),
 		Admin:                 admin.DefaultAdminConfig(),
-		InterCp:               intercp.DefaultInterCpConfig(),
 		DubboConfig:           dubbo.DefaultServiceNameMappingConfig(),
 		EventBus:              eventbus.Default(),
 		DDSEventBasedWatchdog: DefaultEventBasedWatchdog(),

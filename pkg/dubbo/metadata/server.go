@@ -32,6 +32,13 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"google.golang.org/grpc/status"
+
+	kube_core "k8s.io/api/core/v1"
+
+	kube_types "k8s.io/apimachinery/pkg/types"
+
+	kube_ctrl "sigs.k8s.io/controller-runtime"
+	kube_controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 import (
@@ -44,6 +51,7 @@ import (
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
+	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
 	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
 
@@ -54,12 +62,15 @@ const queueSize = 100
 type MetadataServer struct {
 	mesh_proto.MetadataServiceServer
 
-	localZone string
-	config    dubbo.DubboConfig
-	queue     chan *RegisterRequest
-	pusher    pusher.Pusher
+	localZone       string
+	config          dubbo.DubboConfig
+	queue           chan *RegisterRequest
+	pusher          pusher.Pusher
+	converter       k8s_common.Converter
+	SystemNamespace string
 
 	ctx             context.Context
+	manager         kube_ctrl.Manager
 	resourceManager manager.ResourceManager
 	transactions    core_store.Transactions
 }
@@ -79,18 +90,24 @@ func NewMetadataServe(
 	ctx context.Context,
 	config dubbo.DubboConfig,
 	pusher pusher.Pusher,
+	manager kube_ctrl.Manager,
+	converter k8s_common.Converter,
 	resourceManager manager.ResourceManager,
 	transactions core_store.Transactions,
 	localZone string,
+	systemNamespace string,
 ) *MetadataServer {
 	return &MetadataServer{
 		config:          config,
 		pusher:          pusher,
 		queue:           make(chan *RegisterRequest, queueSize),
 		ctx:             ctx,
-		resourceManager: resourceManager,
+		manager:         manager,
 		transactions:    transactions,
+		resourceManager: resourceManager,
+		converter:       converter,
 		localZone:       localZone,
+		SystemNamespace: systemNamespace,
 	}
 }
 
@@ -336,44 +353,42 @@ func (m *MetadataServer) register(req *RegisterRequest) {
 
 func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *mesh_proto.MetaData) error {
 	err := core_store.InTx(m.ctx, m.transactions, func(ctx context.Context) error {
-		// get Metadata Resource first,
-		// if Metadata is not found, create it,
-		// else update it.
-		metadata := core_mesh.NewMetaDataResource()
-		err := m.resourceManager.Get(m.ctx, metadata, core_store.GetBy(core_model.ResourceKey{
-			Mesh: key.Mesh,
-			Name: key.Name,
-		}))
-		if err != nil && !core_store.IsResourceNotFound(err) {
-			log.Error(err, "get Metadata Resource")
+		// 先获取到对应Name和Namespace的Pod
+		kubeClient := m.manager.GetClient()
+		pod := &kube_core.Pod{}
+		if err := kubeClient.Get(ctx, kube_types.NamespacedName{
+			Name:      key.PodName,
+			Namespace: key.Namespace,
+		}, pod); err != nil {
+			return errors.Wrap(err, "unable to get Namespace for Pod")
+		}
+		newMetadata.Zone = m.localZone
+		metaDataResource := core_mesh.NewMetaDataResource()
+		metaDataResource.SetMeta(&resourceMetaObject{
+			Name: rmkey.GenerateMetadataResourceKey(metaDataResource.Spec.App, metaDataResource.Spec.Revision, m.SystemNamespace),
+			Mesh: core_model.DefaultMesh,
+		})
+		err := metaDataResource.SetSpec(newMetadata)
+		if err != nil {
+			return err
+		}
+		medataObject, err := m.converter.ToKubernetesObject(metaDataResource)
+		if err != nil {
 			return err
 		}
 
-		if core_store.IsResourceNotFound(err) {
-			// create if not found
-			metadata.Spec = newMetadata
-			metadata.Spec.Zone = m.localZone
-			err = m.resourceManager.Create(m.ctx, metadata, core_store.CreateBy(core_model.ResourceKey{
-				Mesh: key.Mesh,
-				Name: key.Name,
-			}), core_store.CreatedAt(time.Now()))
-			if err != nil {
-				log.Error(err, "create Metadata Resource failed")
-				return err
+		operationResult, err := kube_controllerutil.CreateOrUpdate(ctx, kubeClient, medataObject, func() error {
+			if err := kube_controllerutil.SetControllerReference(pod, medataObject, m.manager.GetScheme()); err != nil {
+				return errors.Wrap(err, "unable to set Metadata's controller reference to Pod")
+			}
+			return nil
+		})
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				log.Error(err, "unable to create/update Metadata", "operationResult", operationResult)
 			}
 
-			log.Info("create Metadata Resource success", "key", key, "metadata", newMetadata)
-		} else {
-			// if found, update it
-			metadata.Spec = newMetadata
-
-			err = m.resourceManager.Update(m.ctx, metadata, core_store.ModifiedAt(time.Now()))
-			if err != nil {
-				log.Error(err, "update Metadata Resource failed")
-				return err
-			}
-
-			log.Info("update Metadata Resource success", "key", key, "metadata", newMetadata)
+			return err
 		}
 
 		// 更新dataplane资源
@@ -390,8 +405,8 @@ func (m *MetadataServer) tryRegister(key core_model.ResourceReq, newMetadata *me
 			dataplane.Spec.Extensions = make(map[string]string)
 		}
 		// 拿到dataplane, 添加extensions, 设置revision
-		dataplane.Spec.Extensions[mesh_proto.Revision] = metadata.Spec.Revision
-		dataplane.Spec.Extensions[mesh_proto.Application] = metadata.Spec.App
+		dataplane.Spec.Extensions[mesh_proto.Revision] = metaDataResource.Spec.Revision
+		dataplane.Spec.Extensions[mesh_proto.Application] = metaDataResource.Spec.App
 
 		// 更新dataplane
 		err = m.resourceManager.Update(m.ctx, dataplane)

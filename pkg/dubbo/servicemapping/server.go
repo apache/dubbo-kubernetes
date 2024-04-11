@@ -19,7 +19,9 @@ package servicemapping
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
+	kube_controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 )
 
@@ -31,6 +33,12 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"google.golang.org/grpc/status"
+
+	kube_core "k8s.io/api/core/v1"
+
+	kube_types "k8s.io/apimachinery/pkg/types"
+
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 import (
@@ -44,7 +52,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
-	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
+	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
 )
 
 var log = core.Log.WithName("dubbo").WithName("server").WithName("service-name-mapping")
@@ -56,14 +64,17 @@ var _ component.Component = &SnpServer{}
 type SnpServer struct {
 	mesh_proto.ServiceNameMappingServiceServer
 
-	localZone string
-	config    dubbo.DubboConfig
-	queue     chan *RegisterRequest
-	pusher    pusher.Pusher
+	localZone       string
+	config          dubbo.DubboConfig
+	queue           chan *RegisterRequest
+	pusher          pusher.Pusher
+	converter       k8s_common.Converter
+	resourceManager manager.ResourceManager
 
 	ctx             context.Context
-	resourceManager manager.ResourceManager
+	manager         kube_ctrl.Manager
 	transactions    core_store.Transactions
+	systemNamespace string
 }
 
 func (s *SnpServer) Start(stop <-chan struct{}) error {
@@ -81,9 +92,12 @@ func NewSnpServer(
 	ctx context.Context,
 	config dubbo.DubboConfig,
 	pusher pusher.Pusher,
+	manager kube_ctrl.Manager,
+	converter k8s_common.Converter,
 	resourceManager manager.ResourceManager,
 	transactions core_store.Transactions,
 	localZone string,
+	systemNamespace string,
 ) *SnpServer {
 	return &SnpServer{
 		localZone:       localZone,
@@ -92,7 +106,10 @@ func NewSnpServer(
 		queue:           make(chan *RegisterRequest, queueSize),
 		ctx:             ctx,
 		resourceManager: resourceManager,
+		manager:         manager,
+		converter:       converter,
 		transactions:    transactions,
+		systemNamespace: systemNamespace,
 	}
 }
 
@@ -316,7 +333,7 @@ func (s *SnpServer) register(req *RegisterRequest) {
 			appNames = append(appNames, app)
 		}
 		for i := 0; i < 3; i++ {
-			if err := s.tryRegister(key.Mesh, key.Name, key.Namespace, appNames); err != nil {
+			if err := s.tryRegister(key, appNames); err != nil {
 				log.Error(err, "register failed", "key", key)
 			} else {
 				break
@@ -325,11 +342,21 @@ func (s *SnpServer) register(req *RegisterRequest) {
 	}
 }
 
-func (s *SnpServer) tryRegister(mesh, interfaceName string, ns string, newApps []string) error {
+func (s *SnpServer) tryRegister(req core_model.ResourceReq, newApps []string) error {
 	err := core_store.InTx(s.ctx, s.transactions, func(ctx context.Context) error {
+		interfaceName := req.Name
+		// 先获取到对应Name和Namespace的Pod
+		kubeClient := s.manager.GetClient()
+		pod := &kube_core.Pod{}
+		if err := kubeClient.Get(ctx, kube_types.NamespacedName{
+			Name:      req.PodName,
+			Namespace: req.Namespace,
+		}, pod); err != nil {
+			return errors.Wrap(err, "unable to get Namespace for Pod")
+		}
 		key := core_model.ResourceKey{
-			Mesh: mesh,
-			Name: rmkey.GenerateMappingResourceKey(interfaceName, ns),
+			Mesh: req.Mesh,
+			Name: rmkey.GenerateMappingResourceKey(interfaceName, req.Namespace),
 		}
 
 		// get Mapping Resource first,
@@ -341,56 +368,60 @@ func (s *SnpServer) tryRegister(mesh, interfaceName string, ns string, newApps [
 			log.Error(err, "get Mapping Resource")
 			return err
 		}
-
+		var previousAppNames map[string]struct{}
+		previousLen := len(mapping.Spec.ApplicationNames)
+		// createOrUpdate
 		if core_store.IsResourceNotFound(err) {
-			// create if not found
-			mapping.Spec = &mesh_proto.Mapping{
-				Zone:             s.localZone,
-				InterfaceName:    interfaceName,
-				ApplicationNames: newApps,
-			}
-			err = s.resourceManager.Create(s.ctx, mapping, core_store.CreateBy(key), core_store.CreatedAt(time.Now()))
-			if err != nil {
-				log.Error(err, "create Mapping Resource failed")
-				return err
-			}
-
-			log.Info("create Mapping Resource success", "key", key, "applicationNames", newApps)
-			return nil
-		} else {
-			// if found, update it
-			previousLen := len(mapping.Spec.ApplicationNames)
-			previousAppNames := make(map[string]struct{}, previousLen)
 			for _, name := range mapping.Spec.ApplicationNames {
 				previousAppNames[name] = struct{}{}
 			}
-			for _, newApp := range newApps {
-				previousAppNames[newApp] = struct{}{}
-			}
-			if len(previousAppNames) == previousLen {
-				log.Info("Mapping not need to register", "interfaceName", interfaceName, "applicationNames", newApps)
-				return nil
-			}
-
-			mergedApps := make([]string, 0, len(previousAppNames))
-			for name := range previousAppNames {
-				mergedApps = append(mergedApps, name)
-			}
-			mapping.Spec = &mesh_proto.Mapping{
-				Zone:             s.localZone,
-				InterfaceName:    interfaceName,
-				ApplicationNames: mergedApps,
-			}
-
-			err = s.resourceManager.Update(s.ctx, mapping, core_store.ModifiedAt(time.Now()))
-			if err != nil {
-				log.Error(err, "update Mapping Resource failed")
-				return err
-			}
-
-			log.Info("update Mapping Resource success", "key", key, "applicationNames", newApps)
+		}
+		for _, newApp := range newApps {
+			previousAppNames[newApp] = struct{}{}
+		}
+		if len(previousAppNames) == previousLen {
+			log.Info("Mapping not need to register", "interfaceName", interfaceName, "applicationNames", newApps)
 			return nil
 		}
+
+		var mergeApps []string
+		for name := range previousAppNames {
+			mergeApps = append(mergeApps, name)
+		}
+
+		mappingResource := core_mesh.NewMappingResource()
+		mappingResource.SetMeta(&resourceMetaObject{
+			Name: rmkey.GenerateMappingResourceKey(interfaceName, s.systemNamespace),
+			Mesh: core_model.DefaultMesh,
+		})
+		err = mappingResource.SetSpec(mesh_proto.Mapping{
+			Zone:             s.localZone,
+			InterfaceName:    interfaceName,
+			ApplicationNames: mergeApps,
+		})
+		if err != nil {
+			return err
+		}
+		mappingObject, err := s.converter.ToKubernetesObject(mappingResource)
+		if err != nil {
+			return err
+		}
+
+		operationResult, err := kube_controllerutil.CreateOrUpdate(ctx, kubeClient, mappingObject, func() error {
+			if err := kube_controllerutil.SetControllerReference(pod, mappingObject, s.manager.GetScheme()); err != nil {
+				return errors.Wrap(err, "unable to set Metadata's controller reference to Pod")
+			}
+			return nil
+		})
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				log.Error(err, "unable to create/update Metadata", "operationResult", operationResult)
+			}
+
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		log.Error(err, "transactions failed")
