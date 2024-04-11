@@ -398,6 +398,15 @@ export const routes: Readonly<RouteRecordType[]> = [
                   tab: true,
                   icon: 'oui:app-console'
                 }
+              },
+              {
+                path: '/event/:ruleName',
+                name: 'dynamicConfigDomain.event',
+                component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:app-console'
+                }
               }
             ]
           },
