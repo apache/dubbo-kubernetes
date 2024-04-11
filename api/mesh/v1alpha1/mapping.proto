@@ -27,6 +27,7 @@ message MappingRegisterRequest {
   string namespace = 1;
   string applicationName = 2;
   repeated string interfaceNames = 3;
+  string podName = 4;
 }
 
 message MappingRegisterResponse {

@@ -123,7 +123,6 @@ var _ = Describe("proxy", func() {
 				// we expect Envoy process to get killed by now
 				return err != nil
 			}, "5s", "100ms").Should(BeTrue())
-
 		},
 		Entry("can be launched with env vars", func() testCase {
 			return testCase{
@@ -240,7 +239,6 @@ var _ = Describe("proxy", func() {
 			}
 		}),
 	)
-
 })
 
 func verifyComponentProcess(processDescription, pidfile string, cmdlinefile string, argsVerifier func(expectedArgs []string)) int64 {

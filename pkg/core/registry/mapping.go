@@ -18,6 +18,11 @@
 package registry
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/common"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"sync"
 )
 
@@ -32,15 +37,24 @@ type ServiceMappingChangedListenerImpl struct {
 	oldServiceNames *gxset.HashSet
 	listener        registry.NotifyListener
 	interfaceKey    string
+	systemNamespace string
 
 	mux           sync.Mutex
 	delSDRegistry registry.ServiceDiscovery
+	eventWriter   events.Emitter
 }
 
-func NewMappingListener(oldServiceNames *gxset.HashSet, listener registry.NotifyListener) *ServiceMappingChangedListenerImpl {
+func NewMappingListener(
+	oldServiceNames *gxset.HashSet,
+	listener registry.NotifyListener,
+	writer events.Emitter,
+	systemNamespace string,
+) *ServiceMappingChangedListenerImpl {
 	return &ServiceMappingChangedListenerImpl{
 		listener:        listener,
 		oldServiceNames: oldServiceNames,
+		eventWriter:     writer,
+		systemNamespace: systemNamespace,
 	}
 }
 
@@ -59,6 +73,18 @@ func (lstn *ServiceMappingChangedListenerImpl) OnEvent(e observer.Event) error {
 		return nil
 	}
 
+	interfaceName, _, _ := common.ParseServiceKey(sm.GetServiceKey())
+	if lstn.eventWriter != nil {
+		go func() {
+			lstn.eventWriter.Send(events.ResourceChangedEvent{
+				Operation: events.Delete,
+				Type:      mesh.DataplaneType,
+				Key: core_model.ResourceKey{
+					Name: rmkey.GenerateMappingResourceKey(interfaceName, ""),
+				},
+			})
+		}()
+	}
 	err := lstn.updateListener(lstn.interfaceKey, newServiceNames)
 	if err != nil {
 		return err

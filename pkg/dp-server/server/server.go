@@ -19,8 +19,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"google.golang.org/grpc/reflection"
 	"net"
 	"net/http"
 	"time"
@@ -29,11 +27,13 @@ import (
 import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/reflection"
 )
 
 import (
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/config/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 )
 

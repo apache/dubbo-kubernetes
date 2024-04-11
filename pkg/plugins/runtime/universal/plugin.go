@@ -45,6 +45,7 @@ func (p *plugin) Customize(rt core_runtime.Runtime) error {
 		rt.DataplaneCache(),
 		rt.ServiceDiscovery(),
 		rt.EventBus(),
+		rt.Config().Store.Kubernetes.SystemNamespace,
 	); err != nil {
 		logger.Errorf("Failed to subscribe to registry, error msg is %s.", err.Error())
 		return err
