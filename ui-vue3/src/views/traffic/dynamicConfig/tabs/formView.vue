@@ -16,97 +16,102 @@
 -->
 
 <template>
-  <div class="__container_app_detail">
-    <a-flex>
-      <a-card>
-        <a-descriptions :column="2" layout="vertical" title="">
-          <!-- ruleName -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.ruleName')"
-            :labelStyle="{ fontWeight: 'bold' }"
+  <div class="__container_traffic_config_form">
+    <a-card title="基础信息" class="dynamic-config-card">
+      <a-descriptions :column="2" layout="vertical">
+        <!-- ruleName -->
+        <a-descriptions-item
+          :label="$t('flowControlDomain.ruleName')"
+          :labelStyle="{ fontWeight: 'bold' }"
+        >
+          <p
+            @click="copyIt('org.apache.dubbo.samples.UserService::.condition-router')"
+            class="description-item-content with-card"
           >
-            <p
-              @click="copyIt('org.apache.dubbo.samples.UserService::.condition-router')"
-              class="description-item-content with-card"
-            >
-              org.apache.dubbo.samples.UserService::.condition-router
-              <CopyOutlined />
-            </p>
-          </a-descriptions-item>
+            org.apache.dubbo.samples.UserService::.condition-router
+            <CopyOutlined />
+          </p>
+        </a-descriptions-item>
 
-          <!-- ruleGranularity -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.ruleGranularity')"
-            :labelStyle="{ fontWeight: 'bold' }"
+        <!-- ruleGranularity -->
+        <a-descriptions-item
+          :label="$t('flowControlDomain.ruleGranularity')"
+          :labelStyle="{ fontWeight: 'bold' }"
+        >
+          <a-typography-paragraph>服务</a-typography-paragraph>
+        </a-descriptions-item>
+
+        <!-- actionObject -->
+        <a-descriptions-item
+          :label="$t('flowControlDomain.actionObject')"
+          :labelStyle="{ fontWeight: 'bold' }"
+        >
+          <p
+            @click="copyIt('org.apache.dubbo.samples.UserService')"
+            class="description-item-content with-card"
           >
-            <a-typography-paragraph> 服务 </a-typography-paragraph>
-          </a-descriptions-item>
+            org.apache.dubbo.samples.UserService
+            <CopyOutlined />
+          </p>
+        </a-descriptions-item>
 
-          <!-- actionObject -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.actionObject')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <p
-              @click="copyIt('org.apache.dubbo.samples.UserService')"
-              class="description-item-content with-card"
-            >
-              org.apache.dubbo.samples.UserService
-              <CopyOutlined />
-            </p>
-          </a-descriptions-item>
+        <!-- timeOfTakingEffect -->
+        <a-descriptions-item
+          :label="$t('flowControlDomain.timeOfTakingEffect')"
+          :labelStyle="{ fontWeight: 'bold' }"
+        >
+          <a-typography-paragraph> 20230/12/19 22:09:34</a-typography-paragraph>
+        </a-descriptions-item>
 
-          <!-- timeOfTakingEffect -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.timeOfTakingEffect')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-typography-paragraph> 20230/12/19 22:09:34</a-typography-paragraph>
-          </a-descriptions-item>
-
-          <!-- enabledStatus -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.enabledStatus')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-typography-paragraph>
-              {{ $t('flowControlDomain.enabled') }}
-            </a-typography-paragraph>
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-card>
-    </a-flex>
-
-    <a-card title="配置【1】">
-      <a-space align="center" size="large">
-        <!--        enabledStatus-->
-        <a-typography-title :level="5">
-          {{ $t('flowControlDomain.enabledStatus') }}:
-          <a-typography-text>
+        <!-- enabledStatus -->
+        <a-descriptions-item
+          :label="$t('flowControlDomain.enabledStatus')"
+          :labelStyle="{ fontWeight: 'bold' }"
+        >
+          <a-typography-paragraph>
             {{ $t('flowControlDomain.enabled') }}
-          </a-typography-text>
-        </a-typography-title>
-        <!--endOfAction-->
-        <a-typography-title :level="5">
-          {{ $t('flowControlDomain.endOfAction') }}:
-          <a-typography-text>
-            {{ 'provider' }}
-          </a-typography-text>
-        </a-typography-title>
-      </a-space>
-      <a-space align="start" style="width: 100%">
-        <a-typography-title :level="5"
-          >{{ $t('flowControlDomain.actuatingRange') }}:</a-typography-title
-        >
-        <a-tag color="#2db7f5">address=10.255.10.11</a-tag>
-      </a-space>
+          </a-typography-paragraph>
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-card>
 
-      <a-space align="start" style="width: 100%">
-        <a-typography-title :level="5"
-          >{{ $t('flowControlDomain.configurationItem') }}:</a-typography-title
+    <a-card title="配置【1】" class="dynamic-config-card">
+      <a-descriptions :column="2">
+        <a-descriptions-item
+          :label="$t('flowControlDomain.enabledStatus')"
+          :labelStyle="{ fontWeight: 'bold' }"
         >
-        <a-tag color="#87d068">retries=3</a-tag>
-      </a-space>
+          {{ $t('flowControlDomain.enabled') }}
+        </a-descriptions-item>
+        <a-descriptions-item
+          :label="$t('flowControlDomain.endOfAction')"
+          :labelStyle="{ fontWeight: 'bold' }"
+        >
+          {{ 'provider' }}
+        </a-descriptions-item>
+        <a-descriptions-item
+          :label="$t('flowControlDomain.actuatingRange')"
+          :labelStyle="{ fontWeight: 'bold' }"
+          :span="2"
+        >
+          <a-input-group compact>
+            <a-input disabled value="address" style="width: 200px" />
+            <a-input disabled value="=" style="width: 50px" />
+            <a-input disabled value="10.255.10.11" style="width: 200px" />
+          </a-input-group>
+        </a-descriptions-item>
+        <a-descriptions-item
+          :label="$t('flowControlDomain.configurationItem')"
+          :labelStyle="{ fontWeight: 'bold' }"
+          :span="2"
+        >
+          <a-input-group compact>
+            <a-input disabled value="retries" style="width: 200px" />
+            <a-input disabled value="=" style="width: 50px" />
+            <a-input disabled value="3" style="width: 200px" />
+          </a-input-group>
+        </a-descriptions-item>
+      </a-descriptions>
     </a-card>
   </div>
 </template>
@@ -134,13 +139,19 @@ function copyIt(v: string) {
 </script>
 
 <style lang="less" scoped>
-.description-item-content {
-  &.no-card {
-    padding-left: 20px;
-  }
+.__container_traffic_config_form {
+  .dynamic-config-card {
+    margin-bottom: 20px;
+    .description-item-content {
+      &.no-card {
+        padding-left: 20px;
+      }
 
-  &.with-card:hover {
-    color: v-bind('PRIMARY_COLOR');
+      &.with-card:hover {
+        color: v-bind('PRIMARY_COLOR');
+      }
+    }
   }
+  
 }
 </style>

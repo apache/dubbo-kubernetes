@@ -28,7 +28,8 @@ const words: I18nType = {
   },
   dynamicConfigDomain: {
     YAMLView: 'YAML view',
-    formView: 'Form view'
+    formView: 'Form view',
+    event: 'Event'
   },
   routingRuleDomain: {
     YAMLView: 'YAML view',
