@@ -36,7 +36,6 @@ import (
 )
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	hds_cache "github.com/apache/dubbo-kubernetes/pkg/hds/cache"
 	hds_callbacks "github.com/apache/dubbo-kubernetes/pkg/hds/callbacks"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
@@ -54,7 +53,6 @@ type server struct {
 	ctx         context.Context
 	callbacks   hds_callbacks.Callbacks
 	cache       envoy_cache.Cache
-	mesh_proto.UnimplementedMultiplexServiceServer
 }
 
 func New(ctx context.Context, config envoy_cache.Cache, callbacks hds_callbacks.Callbacks) envoy_service_health.HealthDiscoveryServiceServer {

@@ -66,7 +66,7 @@ type Proxy struct {
 }
 
 type Gateway struct {
-	GlobalDownstreamMaxConnections uint64 `json:"globalDownstreamMaxConnections" envconfig:"kuma_proxy_gateway_global_downstream_max_connections"`
+	GlobalDownstreamMaxConnections uint64 `json:"globalDownstreamMaxConnections" envconfig:"dubbo_proxy_gateway_global_downstream_max_connections"`
 }
 
 func DefaultXdsServerConfig() *XdsServerConfig {

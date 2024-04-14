@@ -33,6 +33,9 @@ import (
 	"github.com/slok/go-http-metrics/middleware"
 	"github.com/slok/go-http-metrics/middleware/std"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
@@ -104,7 +107,16 @@ func (d *DpServer) Start(stop <-chan struct{}) error {
 
 	go func() {
 		defer close(errChan)
-		if err := server.ListenAndServe(); err != nil {
+		var err error
+		if d.config.TlsCertFile == "" || d.config.TlsKeyFile == "" {
+			// h2c is used for HTTP/2 cleartext upgrade
+			// so that we can normally run xds server on gRPC
+			server.Handler = h2c.NewHandler(server.Handler, &http2.Server{})
+			err = server.ListenAndServe()
+		} else {
+			err = server.ListenAndServeTLS(d.config.TlsCertFile, d.config.TlsKeyFile)
+		}
+		if err != nil {
 			if err != http.ErrServerClosed {
 				log.Error(err, "terminated with an error")
 				errChan <- err

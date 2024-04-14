@@ -37,7 +37,7 @@ const (
 	// which is crucial for Multizone communication
 	DubboIngressAnnotation = "dubbo.io/ingress"
 
-	// DUBBOSidecarEnvVarsAnnotation is a ; separated list of env vars that will be applied on Kuma Sidecar
+	// DUBBOSidecarEnvVarsAnnotation is a ; separated list of env vars that will be applied on Dubbo Sidecar
 	// Example value: TEST1=1;TEST2=2
 	DUBBOSidecarEnvVarsAnnotation = "dubbo.io/sidecar-env-vars"
 
@@ -54,11 +54,11 @@ const (
 	DubboTagsAnnotation = "dubbo.io/tags"
 
 	// DubboIngressPublicAddressAnnotation allows to pick public address for Ingress
-	// If not defined, Kuma will try to pick this address from the Ingress Service
+	// If not defined, Dubbo will try to pick this address from the Ingress Service
 	DubboIngressPublicAddressAnnotation = "dubbo.io/ingress-public-address"
 
 	// DubboIngressPublicPortAnnotation allows to pick public port for Ingress
-	// If not defined, Kuma will try to pick this address from the Ingress Service
+	// If not defined, Dubbo will try to pick this address from the Ingress Service
 	DubboIngressPublicPortAnnotation = "dubbo.io/ingress-public-port"
 )
 
@@ -165,7 +165,7 @@ func (a Annotations) GetListWithDefault(def []string, keys ...string) ([]string,
 	return v.([]string), exists
 }
 
-// GetMap returns map from annotation. Example: "kuma.io/sidecar-env-vars: TEST1=1;TEST2=2"
+// GetMap returns map from annotation. Example: "dubbo.io/sidecar-env-vars: TEST1=1;TEST2=2"
 func (a Annotations) GetMap(keys ...string) (map[string]string, bool, error) {
 	return a.GetMapWithDefault(map[string]string{}, keys...)
 }

@@ -22,6 +22,10 @@ import (
 )
 
 import (
+	"github.com/pkg/errors"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_env "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
@@ -31,6 +35,7 @@ import (
 	dubbo_metadata "github.com/apache/dubbo-kubernetes/pkg/dubbo/metadata"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
 	dubbo_mapping "github.com/apache/dubbo-kubernetes/pkg/dubbo/servicemapping"
+	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 )
 
 var log = core.Log.WithName("dubbo")
@@ -40,6 +45,16 @@ func Setup(rt core_runtime.Runtime) error {
 		return nil
 	}
 	cfg := rt.Config().DubboConfig
+
+	mgr, ok := k8s_extensions.FromManagerContext(rt.Extensions())
+	if !ok {
+		return errors.Errorf("k8s controller runtime Manager hasn't been configured")
+	}
+
+	converter, ok := k8s_extensions.FromResourceConverterContext(rt.Extensions())
+	if !ok {
+		return errors.Errorf("k8s resource converter hasn't been configured")
+	}
 
 	dubboPusher := pusher.NewPusher(rt.ResourceManager(), rt.EventBus(), func() *time.Ticker {
 		// todo: should configured by config in the future
@@ -54,9 +69,12 @@ func Setup(rt core_runtime.Runtime) error {
 		rt.AppContext(),
 		cfg,
 		dubboPusher,
+		mgr,
+		converter,
 		rt.ResourceManager(),
 		rt.Transactions(),
 		rt.Config().Multizone.Zone.Name,
+		rt.Config().Store.Kubernetes.SystemNamespace,
 	)
 	mesh_proto.RegisterServiceNameMappingServiceServer(rt.DpServer().GrpcServer(), serviceMapping)
 
@@ -65,8 +83,12 @@ func Setup(rt core_runtime.Runtime) error {
 		rt.AppContext(),
 		cfg,
 		dubboPusher,
+		mgr,
+		converter,
 		rt.ResourceManager(),
 		rt.Transactions(),
+		rt.Config().Multizone.Zone.Name,
+		rt.Config().Store.Kubernetes.SystemNamespace,
 	)
 	mesh_proto.RegisterMetadataServiceServer(rt.DpServer().GrpcServer(), metadata)
 	return rt.Add(dubboPusher, serviceMapping, metadata)

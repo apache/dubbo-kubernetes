@@ -5,7 +5,6 @@
 package mesh
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -218,7 +217,7 @@ var DataplaneResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            false,
 	AdminOnly:           false,
 	Scope:               model.ScopeMesh,
-	DDSFlags:            model.GlobalToAllZonesFlag,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "dataplanes",
 	DubboctlArg:         "dataplane",
 	DubboctlListArg:     "dataplanes",
@@ -545,7 +544,7 @@ var MappingResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            false,
 	AdminOnly:           false,
 	Scope:               model.ScopeMesh,
-	DDSFlags:            model.GlobalToAllZonesFlag,
+	DDSFlags:            model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag,
 	WsPath:              "mappings",
 	DubboctlArg:         "mapping",
 	DubboctlListArg:     "mappings",
@@ -653,13 +652,13 @@ var MeshResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ResourceList:        &MeshResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               model.ScopeMesh,
+	Scope:               model.ScopeGlobal,
 	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "meshes",
 	DubboctlArg:         "mesh",
 	DubboctlListArg:     "meshes",
 	AllowToInspect:      true,
-	IsPolicy:            true,
+	IsPolicy:            false,
 	SingularDisplayName: "Mesh",
 	PluralDisplayName:   "Meshes",
 	IsExperimental:      false,
@@ -871,7 +870,7 @@ var MetaDataResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ReadOnly:            false,
 	AdminOnly:           false,
 	Scope:               model.ScopeMesh,
-	DDSFlags:            model.GlobalToAllZonesFlag,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "metadatas",
 	DubboctlArg:         "metadata",
 	DubboctlListArg:     "metadatas",
@@ -1088,13 +1087,13 @@ var ZoneEgressResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ResourceList:        &ZoneEgressResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               model.ScopeMesh,
-	DDSFlags:            model.GlobalToAllZonesFlag,
+	Scope:               model.ScopeGlobal,
+	DDSFlags:            model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag,
 	WsPath:              "zoneegresses",
 	DubboctlArg:         "zoneegress",
 	DubboctlListArg:     "zoneegresses",
 	AllowToInspect:      true,
-	IsPolicy:            true,
+	IsPolicy:            false,
 	SingularDisplayName: "Zone Egress",
 	PluralDisplayName:   "Zone Egresses",
 	IsExperimental:      false,
@@ -1214,125 +1213,6 @@ func init() {
 }
 
 const (
-	ZoneEgressOverviewType model.ResourceType = "ZoneEgressOverview"
-)
-
-var _ model.Resource = &ZoneEgressOverviewResource{}
-
-type ZoneEgressOverviewResource struct {
-	Meta model.ResourceMeta
-	Spec *mesh_proto.ZoneEgressOverview
-}
-
-func NewZoneEgressOverviewResource() *ZoneEgressOverviewResource {
-	return &ZoneEgressOverviewResource{
-		Spec: &mesh_proto.ZoneEgressOverview{},
-	}
-}
-
-func (t *ZoneEgressOverviewResource) GetMeta() model.ResourceMeta {
-	return t.Meta
-}
-
-func (t *ZoneEgressOverviewResource) SetMeta(m model.ResourceMeta) {
-	t.Meta = m
-}
-
-func (t *ZoneEgressOverviewResource) GetSpec() model.ResourceSpec {
-	return t.Spec
-}
-
-func (t *ZoneEgressOverviewResource) SetSpec(spec model.ResourceSpec) error {
-	protoType, ok := spec.(*mesh_proto.ZoneEgressOverview)
-	if !ok {
-		return fmt.Errorf("invalid type %T for Spec", spec)
-	} else {
-		if protoType == nil {
-			t.Spec = &mesh_proto.ZoneEgressOverview{}
-		} else {
-			t.Spec = protoType
-		}
-		return nil
-	}
-}
-
-func (t *ZoneEgressOverviewResource) Descriptor() model.ResourceTypeDescriptor {
-	return ZoneEgressOverviewResourceTypeDescriptor
-}
-
-func (t *ZoneEgressOverviewResource) SetOverviewSpec(resource model.Resource, insight model.Resource) error {
-	t.SetMeta(resource.GetMeta())
-	overview := &mesh_proto.ZoneEgressOverview{
-		ZoneEgress: resource.GetSpec().(*mesh_proto.ZoneEgress),
-	}
-	if insight != nil {
-		ins, ok := insight.GetSpec().(*mesh_proto.ZoneEgressInsight)
-		if !ok {
-			return errors.New("failed to convert to insight type 'ZoneEgressInsight'")
-		}
-		overview.ZoneEgressInsight = ins
-	}
-	return t.SetSpec(overview)
-}
-
-var _ model.ResourceList = &ZoneEgressOverviewResourceList{}
-
-type ZoneEgressOverviewResourceList struct {
-	Items      []*ZoneEgressOverviewResource
-	Pagination model.Pagination
-}
-
-func (l *ZoneEgressOverviewResourceList) GetItems() []model.Resource {
-	res := make([]model.Resource, len(l.Items))
-	for i, elem := range l.Items {
-		res[i] = elem
-	}
-	return res
-}
-
-func (l *ZoneEgressOverviewResourceList) GetItemType() model.ResourceType {
-	return ZoneEgressOverviewType
-}
-
-func (l *ZoneEgressOverviewResourceList) NewItem() model.Resource {
-	return NewZoneEgressOverviewResource()
-}
-
-func (l *ZoneEgressOverviewResourceList) AddItem(r model.Resource) error {
-	if trr, ok := r.(*ZoneEgressOverviewResource); ok {
-		l.Items = append(l.Items, trr)
-		return nil
-	} else {
-		return model.ErrorInvalidItemType((*ZoneEgressOverviewResource)(nil), r)
-	}
-}
-
-func (l *ZoneEgressOverviewResourceList) GetPagination() *model.Pagination {
-	return &l.Pagination
-}
-
-func (l *ZoneEgressOverviewResourceList) SetPagination(p model.Pagination) {
-	l.Pagination = p
-}
-
-var ZoneEgressOverviewResourceTypeDescriptor = model.ResourceTypeDescriptor{
-	Name:                ZoneEgressOverviewType,
-	Resource:            NewZoneEgressOverviewResource(),
-	ResourceList:        &ZoneEgressOverviewResourceList{},
-	ReadOnly:            false,
-	AdminOnly:           false,
-	Scope:               model.ScopeGlobal,
-	WsPath:              "",
-	DubboctlArg:         "",
-	DubboctlListArg:     "",
-	AllowToInspect:      false,
-	IsPolicy:            false,
-	SingularDisplayName: "Zone Egress Overview",
-	PluralDisplayName:   "Zone Egress Overviews",
-	IsExperimental:      false,
-}
-
-const (
 	ZoneIngressType model.ResourceType = "ZoneIngress"
 )
 
@@ -1425,13 +1305,13 @@ var ZoneIngressResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	ResourceList:        &ZoneIngressResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               model.ScopeMesh,
-	DDSFlags:            model.GlobalToAllZonesFlag,
+	Scope:               model.ScopeGlobal,
+	DDSFlags:            model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag,
 	WsPath:              "zoneingresses",
 	DubboctlArg:         "zoneingress",
 	DubboctlListArg:     "zoneingresses",
 	AllowToInspect:      true,
-	IsPolicy:            true,
+	IsPolicy:            false,
 	SingularDisplayName: "Zone Ingress",
 	PluralDisplayName:   "Zone Ingresses",
 	IsExperimental:      false,
@@ -1548,123 +1428,4 @@ var ZoneIngressInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 
 func init() {
 	registry.RegisterType(ZoneIngressInsightResourceTypeDescriptor)
-}
-
-const (
-	ZoneIngressOverviewType model.ResourceType = "ZoneIngressOverview"
-)
-
-var _ model.Resource = &ZoneIngressOverviewResource{}
-
-type ZoneIngressOverviewResource struct {
-	Meta model.ResourceMeta
-	Spec *mesh_proto.ZoneIngressOverview
-}
-
-func NewZoneIngressOverviewResource() *ZoneIngressOverviewResource {
-	return &ZoneIngressOverviewResource{
-		Spec: &mesh_proto.ZoneIngressOverview{},
-	}
-}
-
-func (t *ZoneIngressOverviewResource) GetMeta() model.ResourceMeta {
-	return t.Meta
-}
-
-func (t *ZoneIngressOverviewResource) SetMeta(m model.ResourceMeta) {
-	t.Meta = m
-}
-
-func (t *ZoneIngressOverviewResource) GetSpec() model.ResourceSpec {
-	return t.Spec
-}
-
-func (t *ZoneIngressOverviewResource) SetSpec(spec model.ResourceSpec) error {
-	protoType, ok := spec.(*mesh_proto.ZoneIngressOverview)
-	if !ok {
-		return fmt.Errorf("invalid type %T for Spec", spec)
-	} else {
-		if protoType == nil {
-			t.Spec = &mesh_proto.ZoneIngressOverview{}
-		} else {
-			t.Spec = protoType
-		}
-		return nil
-	}
-}
-
-func (t *ZoneIngressOverviewResource) Descriptor() model.ResourceTypeDescriptor {
-	return ZoneIngressOverviewResourceTypeDescriptor
-}
-
-func (t *ZoneIngressOverviewResource) SetOverviewSpec(resource model.Resource, insight model.Resource) error {
-	t.SetMeta(resource.GetMeta())
-	overview := &mesh_proto.ZoneIngressOverview{
-		ZoneIngress: resource.GetSpec().(*mesh_proto.ZoneIngress),
-	}
-	if insight != nil {
-		ins, ok := insight.GetSpec().(*mesh_proto.ZoneIngressInsight)
-		if !ok {
-			return errors.New("failed to convert to insight type 'ZoneIngressInsight'")
-		}
-		overview.ZoneIngressInsight = ins
-	}
-	return t.SetSpec(overview)
-}
-
-var _ model.ResourceList = &ZoneIngressOverviewResourceList{}
-
-type ZoneIngressOverviewResourceList struct {
-	Items      []*ZoneIngressOverviewResource
-	Pagination model.Pagination
-}
-
-func (l *ZoneIngressOverviewResourceList) GetItems() []model.Resource {
-	res := make([]model.Resource, len(l.Items))
-	for i, elem := range l.Items {
-		res[i] = elem
-	}
-	return res
-}
-
-func (l *ZoneIngressOverviewResourceList) GetItemType() model.ResourceType {
-	return ZoneIngressOverviewType
-}
-
-func (l *ZoneIngressOverviewResourceList) NewItem() model.Resource {
-	return NewZoneIngressOverviewResource()
-}
-
-func (l *ZoneIngressOverviewResourceList) AddItem(r model.Resource) error {
-	if trr, ok := r.(*ZoneIngressOverviewResource); ok {
-		l.Items = append(l.Items, trr)
-		return nil
-	} else {
-		return model.ErrorInvalidItemType((*ZoneIngressOverviewResource)(nil), r)
-	}
-}
-
-func (l *ZoneIngressOverviewResourceList) GetPagination() *model.Pagination {
-	return &l.Pagination
-}
-
-func (l *ZoneIngressOverviewResourceList) SetPagination(p model.Pagination) {
-	l.Pagination = p
-}
-
-var ZoneIngressOverviewResourceTypeDescriptor = model.ResourceTypeDescriptor{
-	Name:                ZoneIngressOverviewType,
-	Resource:            NewZoneIngressOverviewResource(),
-	ResourceList:        &ZoneIngressOverviewResourceList{},
-	ReadOnly:            false,
-	AdminOnly:           false,
-	Scope:               model.ScopeGlobal,
-	WsPath:              "",
-	DubboctlArg:         "",
-	DubboctlListArg:     "",
-	AllowToInspect:      false,
-	IsPolicy:            false,
-	SingularDisplayName: "Zone Ingress Overview",
-	PluralDisplayName:   "Zone Ingress Overviews",
-	IsExperimental:      false,
 }

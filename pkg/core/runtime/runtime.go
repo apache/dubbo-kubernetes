@@ -32,7 +32,6 @@ import (
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/admin"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
 	managers_dataplane "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
@@ -45,6 +44,7 @@ import (
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	xds_runtime "github.com/apache/dubbo-kubernetes/pkg/xds/runtime"
 )
 
@@ -71,7 +71,6 @@ type RuntimeContext interface {
 	ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager
 	ConfigStore() core_store.ResourceStore
 	Extensions() context.Context
-	EnvoyAdminClient() admin.EnvoyAdminClient
 	ConfigManager() config_manager.ConfigManager
 	LeaderInfo() component.LeaderInfo
 	EventBus() events.EventBus
@@ -89,6 +88,7 @@ type RuntimeContext interface {
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
 	XDS() xds_runtime.XDSRuntimeContext
+	MeshCache() *mesh.Cache
 }
 
 type ResourceValidators struct {
@@ -155,7 +155,6 @@ type runtimeContext struct {
 	cs                   core_store.ResourceStore
 	rom                  core_manager.ReadOnlyResourceManager
 	ext                  context.Context
-	eac                  admin.EnvoyAdminClient
 	configm              config_manager.ConfigManager
 	xds                  xds_runtime.XDSRuntimeContext
 	leadInfo             component.LeaderInfo
@@ -170,6 +169,7 @@ type runtimeContext struct {
 	adminRegistry        *registry.Registry
 	governance           governance.GovernanceConfig
 	appCtx               context.Context
+	meshCache            *mesh.Cache
 	regClient            reg_client.RegClient
 	serviceDiscovery     dubboRegistry.ServiceDiscovery
 }
@@ -206,8 +206,8 @@ func (b *runtimeContext) MetadataReportCenter() report.MetadataReport {
 	return b.metadataReportCenter
 }
 
-func (rc *runtimeContext) EnvoyAdminClient() admin.EnvoyAdminClient {
-	return rc.eac
+func (b *runtimeContext) MeshCache() *mesh.Cache {
+	return b.meshCache
 }
 
 func (rc *runtimeContext) DDSContext() *dds_context.Context {

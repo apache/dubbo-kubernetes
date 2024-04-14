@@ -63,6 +63,7 @@ func (r *Registry) Subscribe(
 	cache *sync.Map,
 	discovery dubboRegistry.ServiceDiscovery,
 	out events.Emitter,
+	systemNamespace string,
 ) error {
 	queryParams := url.Values{
 		consts.InterfaceKey:  {consts.AnyValue},
@@ -113,7 +114,7 @@ func (r *Registry) Subscribe(
 			logger.Error("Failed to get mapping")
 		}
 		for interfaceKey, oldApps := range mappings {
-			mappingListener := NewMappingListener(oldApps, listener)
+			mappingListener := NewMappingListener(oldApps, listener, out, systemNamespace)
 			apps, _ := metadataReport.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
 			delSDListener := NewDubboSDNotifyListener(apps)
 			for appTmp := range apps.Items {

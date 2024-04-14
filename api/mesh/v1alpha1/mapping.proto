@@ -27,6 +27,7 @@ message MappingRegisterRequest {
   string namespace = 1;
   string applicationName = 2;
   repeated string interfaceNames = 3;
+  string podName = 4;
 }
 
 message MappingRegisterResponse {
@@ -50,9 +51,11 @@ message Mapping {
   option (dubbo.mesh.resource).name = "MappingResource";
   option (dubbo.mesh.resource).type = "Mapping";
   option (dubbo.mesh.resource).package = "mesh";
+  option (dubbo.mesh.resource).dds.send_to_global = true;
   option (dubbo.mesh.resource).dds.send_to_zone = true;
   option (dubbo.mesh.resource).ws.name = "mapping";
   option (dubbo.mesh.resource).ws.plural = "mappings";
+  option (dubbo.mesh.resource).scope_namespace = true;
   option (dubbo.mesh.resource).allow_to_inspect = true;
 
   string zone = 1;

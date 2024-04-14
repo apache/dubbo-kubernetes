@@ -163,6 +163,7 @@ type SecretsTracker interface {
 type ExternalServiceDynamicPolicies map[ServiceName]PluginOriginatedPolicies
 
 type MeshIngressResources struct {
+	Mesh        *core_mesh.MeshResource
 	EndpointMap EndpointMap
 	Resources   map[core_model.ResourceType]core_model.ResourceList
 }

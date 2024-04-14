@@ -55,6 +55,18 @@ func (g GlobalContext) Hash() string {
 	return base64.StdEncoding.EncodeToString(g.hash)
 }
 
+// BaseMeshContext holds for a Mesh a set of resources that are changing less often (policies, external services...)
+type BaseMeshContext struct {
+	Mesh        *core_mesh.MeshResource
+	ResourceMap ResourceMap
+	hash        []byte
+}
+
+// Hash base64 version of the hash mostly useed for testing
+func (g BaseMeshContext) Hash() string {
+	return base64.StdEncoding.EncodeToString(g.hash)
+}
+
 type MeshContext struct {
 	Hash                string
 	Resource            *core_mesh.MeshResource
@@ -75,4 +87,37 @@ func (mc *MeshContext) GetServiceProtocol(serviceName string) core_mesh.Protocol
 		return info.Protocol
 	}
 	return core_mesh.ProtocolUnknown
+}
+
+// AggregatedMeshContexts is an aggregate of all MeshContext across all meshes
+type AggregatedMeshContexts struct {
+	Hash               string
+	Meshes             []*core_mesh.MeshResource
+	MeshContextsByName map[string]MeshContext
+}
+
+// MustGetMeshContext panics if there is no mesh context for given mesh. Call it when iterating over .Meshes
+// There is a guarantee that for every Mesh in .Meshes there is a MeshContext.
+func (m AggregatedMeshContexts) MustGetMeshContext(meshName string) MeshContext {
+	meshCtx, ok := m.MeshContextsByName[meshName]
+	if !ok {
+		panic("there should be a corresponding mesh context for every mesh in mesh contexts")
+	}
+	return meshCtx
+}
+
+func (m AggregatedMeshContexts) AllDataplanes() []*core_mesh.DataplaneResource {
+	var resources []*core_mesh.DataplaneResource
+	for _, mesh := range m.Meshes {
+		meshCtx := m.MustGetMeshContext(mesh.Meta.GetName())
+		resources = append(resources, meshCtx.Resources.Dataplanes().Items...)
+	}
+	return resources
+}
+
+func (m AggregatedMeshContexts) ZoneIngresses() []*core_mesh.ZoneIngressResource {
+	for _, meshCtx := range m.MeshContextsByName {
+		return meshCtx.Resources.ZoneIngresses().Items // all mesh contexts has the same list
+	}
+	return nil
 }

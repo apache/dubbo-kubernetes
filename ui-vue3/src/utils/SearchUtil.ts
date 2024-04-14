@@ -41,6 +41,7 @@ export class SearchDomain {
   ]
   searchApi: Function
   result: any
+  handleResult?: Function
   tableStyle: any
   table: {
     loading?: boolean
@@ -57,7 +58,8 @@ export class SearchDomain {
     searchApi: any,
     columns: TableColumnsType | any,
     paged?: any | undefined,
-    noPaged?: boolean
+    noPaged?: boolean,
+    handleResult?: Function
   ) {
     this.params = query
     this.noPaged = noPaged
@@ -72,16 +74,17 @@ export class SearchDomain {
       this.paged = { ...this.paged, ...paged }
     }
     this.searchApi = searchApi
-    this.onSearch()
+    handleResult && this.onSearch(handleResult)
   }
 
-  async onSearch() {
+  async onSearch(handleResult: Function) {
     this.table.loading = true
     setTimeout(() => {
       this.table.loading = false
     }, 5000)
-    let res = (await this.searchApi(this.queryForm || {})).data
-    this.result = res.data
+    const res = (await this.searchApi(this.queryForm || {})).data
+    this.result = handleResult ? handleResult(res.data) : res.data
+    console.log(this.result)
     this.paged.total = res.total
     this.table.loading = false
   }

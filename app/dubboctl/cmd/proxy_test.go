@@ -6,10 +6,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/test"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +13,17 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+)
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+
+	. "github.com/onsi/gomega"
+)
+
+import (
+	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/test"
 )
 
 func TestCmd(t *testing.T) {
@@ -116,7 +123,6 @@ var _ = Describe("proxy", func() {
 				// we expect Envoy process to get killed by now
 				return err != nil
 			}, "5s", "100ms").Should(BeTrue())
-
 		},
 		Entry("can be launched with env vars", func() testCase {
 			return testCase{
@@ -233,7 +239,6 @@ var _ = Describe("proxy", func() {
 			}
 		}),
 	)
-
 })
 
 func verifyComponentProcess(processDescription, pidfile string, cmdlinefile string, argsVerifier func(expectedArgs []string)) int64 {

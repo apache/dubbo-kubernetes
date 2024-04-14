@@ -241,7 +241,7 @@ func (b *bootstrapGenerator) xdsHost(request types.BootstrapRequest) string {
 var DpTokenRequired = errors.New("Dataplane Token is required. Generate token using 'dubboctl generate dataplane-token > /path/file' and provide it via --dataplane-token-file=/path/file argument to Dubbo DP")
 
 var NotCA = errors.New("A data plane proxy is trying to verify the control plane using the certificate which is not a certificate authority (basic constraint 'CA' is set to 'false').\n" +
-	"Provide CA that was used to sign a certificate used in the control plane by using 'dubbo-dp run --ca-cert-file=file' or via KUMA_CONTROL_PLANE_CA_CERT_FILE")
+	"Provide CA that was used to sign a certificate used in the control plane by using 'dubbo-dp run --ca-cert-file=file' or via DUBBO_CONTROL_PLANE_CA_CERT_FILE")
 
 func SANMismatchErr(host string, sans []string) error {
 	return errors.Errorf("A data plane proxy is trying to connect to the control plane using %q address, but the certificate in the control plane has the following SANs %q. "+

@@ -28,67 +28,101 @@ Mock.mock('/mock/service/distribution', 'get', {
       {
         applicationName: 'shop-order',
         instanceNum: 15,
-        instanceIP: [
-          '192.168.32.28:8697',
-          '192.168.32.26:20880',
-          '192.168.32.24:28080',
-          '192.168.32.22:20880'
-        ]
+        instanceName: 'shop-order0',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '1000ms',
+        retryNum: '2',
+        label: 'region=beijing'
       },
       {
         applicationName: 'shop-order',
         instanceNum: 15,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+        instanceName: 'shop-order1',
+        rpcPort: '172.168.45.24:20888',
+        timeout: '500ms',
+        retryNum: '1',
+        label: 'region=wuhan'
       },
       {
         applicationName: 'shop-user',
         instanceNum: 12,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+        instanceName: 'shop-order2',
+        rpcPort: '172.161.23.89:20888',
+        timeout: '200ms',
+        retryNum: '1',
+        label: 'region=shanghai'
       },
       {
         applicationName: 'shop-order',
         instanceNum: 15,
-        instanceIP: [
-          '192.168.32.28:8697',
-          '192.168.32.26:20880',
-          '192.168.32.24:28080',
-          '192.168.32.22:20880'
-        ]
+        instanceName: 'shop-order3',
+        rpcPort: '172.168.45.89:12423',
+        timeout: '2000ms',
+        retryNum: '2',
+        label: 'region=hangzhou'
       },
       {
         applicationName: 'shop-order',
         instanceNum: 15,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+        instanceName: 'shop-order4',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '100ms',
+        retryNum: '0',
+        label: 'region=wuxi'
       },
       {
         applicationName: 'shop-user',
         instanceNum: 12,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+        instanceName: 'shop-order5',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '1000ms',
+        retryNum: '2',
+        label: 'region=beijing'
       },
       {
         applicationName: 'shop-order',
         instanceNum: 15,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+        instanceName: 'shop-order6',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '1000ms',
+        retryNum: '2',
+        label: 'region=ningbo'
       },
       {
         applicationName: 'shop-user',
         instanceNum: 12,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+        instanceName: 'shop-order7',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '1000ms',
+        retryNum: '2',
+        label: 'region=shenzhen'
       },
       {
         applicationName: 'shop-user',
         instanceNum: 12,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+        instanceName: 'shop-order8',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '1000ms',
+        retryNum: '2',
+        label: 'region=guangzhou'
       },
       {
         applicationName: 'shop-order',
         instanceNum: 15,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.26:20880', '192.168.32.24:28080']
+        instanceName: 'shop-order9',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '1000ms',
+        retryNum: '2',
+        label: 'region=nanjing'
       },
       {
         applicationName: 'shop-user',
         instanceNum: 12,
-        instanceIP: ['192.168.32.28:8697', '192.168.32.24:28080']
+        instanceName: 'shop-order10',
+        rpcPort: '172.168.45.89:20888',
+        timeout: '1000ms',
+        retryNum: '2',
+        label: 'region=beijing'
       }
     ]
   }

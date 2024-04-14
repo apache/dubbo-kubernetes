@@ -135,7 +135,7 @@ func (m *dataplaneManager) setHealth(dp *core_mesh.DataplaneResource) {
 	for _, inbound := range dp.Spec.Networking.Inbound {
 		if inbound.ServiceProbe != nil {
 			inbound.State = mesh_proto.Dataplane_Networking_Inbound_NotReady
-			// write health for backwards compatibility with Kuma 2.5 and older
+			// write health for backwards compatibility with Dubbo
 			inbound.Health = &mesh_proto.Dataplane_Networking_Inbound_Health{
 				Ready: false,
 			}
@@ -147,5 +147,4 @@ func (m *dataplaneManager) setExtensions(dp *core_mesh.DataplaneResource) {
 	if m.zone == "" || dp.Spec.Networking == nil {
 		return
 	}
-
 }

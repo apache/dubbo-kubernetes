@@ -116,7 +116,43 @@ func (d *DataplaneWatchdog) Cleanup() error {
 }
 
 func (d *DataplaneWatchdog) syncIngress(ctx context.Context, metadata *core_xds.DataplaneMetadata) (SyncResult, error) {
-	return SyncResult{}, nil
+	envoyCtx := &xds_context.Context{
+		ControlPlane: d.EnvoyCpCtx,
+		Mesh:         xds_context.MeshContext{}, // ZoneIngress does not have a mesh!
+	}
+
+	aggregatedMeshCtxs, err := xds_context.AggregateMeshContexts(ctx, d.ResManager, d.MeshCache.GetMeshContext)
+	if err != nil {
+		return SyncResult{}, errors.Wrap(err, "could not aggregate mesh contexts")
+	}
+
+	result := SyncResult{
+		ProxyType: mesh_proto.IngressProxyType,
+	}
+	syncForConfig := aggregatedMeshCtxs.Hash != d.lastHash
+	if !syncForConfig {
+		result.Status = SkipStatus
+		return result, nil
+	}
+
+	d.log.V(1).Info("snapshot hash updated, reconcile", "prev", d.lastHash, "current", aggregatedMeshCtxs.Hash)
+	d.lastHash = aggregatedMeshCtxs.Hash
+
+	proxy, err := d.IngressProxyBuilder.Build(ctx, d.key, aggregatedMeshCtxs)
+	if err != nil {
+		return SyncResult{}, errors.Wrap(err, "could not build ingress proxy")
+	}
+	proxy.Metadata = metadata
+	changed, err := d.IngressReconciler.Reconcile(ctx, *envoyCtx, proxy)
+	if err != nil {
+		return SyncResult{}, errors.Wrap(err, "could not reconcile")
+	}
+	if changed {
+		result.Status = ChangedStatus
+	} else {
+		result.Status = GeneratedStatus
+	}
+	return result, nil
 }
 
 func (d *DataplaneWatchdog) syncEgress(ctx context.Context, metadata *core_xds.DataplaneMetadata) (SyncResult, error) {
