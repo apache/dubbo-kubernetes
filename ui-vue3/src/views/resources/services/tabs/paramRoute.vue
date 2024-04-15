@@ -20,16 +20,20 @@
       <template #title>
         <a-flex justify="space-between">
           <span>路由</span>
-          <a-flex class="handle-form">
-            <EditOutlined class="edit-icon" />
-            <DeleteOutlined class="edit-icon" />
+          <a-flex class="handle-form" v-if="!isEdit">
+            <EditOutlined @click="changeEditState" class="edit-icon" />
+            <DeleteOutlined @click="emit('deleteParamRoute', props.index)" class="edit-icon" />
+          </a-flex>
+          <a-flex class="handle-form" v-else>
+            <CheckOutlined @click="update"  class="edit-icon" />
+            <CloseOutlined @click="reset" class="edit-icon" />
           </a-flex>
         </a-flex>
       </template>
-      <a-form :labelCol="{ span: 3 }">
+      <a-form :labelCol="{ span: 3 }" :disabled="!isEdit">
         <a-form-item label="选择方法">
-          <a-select v-model:value="method.value" style="width: 120px">
-            <a-select-option v-for="(item, index) in method.selectArr" :value="item" :key="index">
+          <a-select v-model:value="editValue.method.value" style="width: 120px">
+            <a-select-option v-for="(item, index) in editValue.method.selectArr" :value="item" :key="index">
               {{ item }}
             </a-select-option>
           </a-select>
@@ -37,28 +41,30 @@
         <a-form-item label="指定方法参数">
           <a-table
             :columns="functionParamsColumn"
-            :data-source="props.paramRouteForm.functionParams"
+            :data-source="editValue.functionParams"
             :pagination="false"
           >
             <template #bodyCell="{ column, index: idx }">
               <template v-if="column.dataIndex === 'param'">
-                <a-input v-model:value="functionParamsEdit[idx].param" />
+                <a-input v-model:value="editValue.functionParams[idx].param" />
               </template>
               <template v-if="column.dataIndex === 'relation'">
-                <a-input v-model:value="functionParamsEdit[idx].relation" />
+                <a-input v-model:value="editValue.functionParams[idx].relation" />
               </template>
               <template v-if="column.dataIndex === 'value'">
-                <a-input v-model:value="functionParamsEdit[idx].value" />
+                <a-input v-model:value="editValue.functionParams[idx].value" />
               </template>
               <template v-if="column.dataIndex === 'handle'">
                 <a-flex justify="space-between">
                   <PlusOutlined
                     class="edit-icon"
-                    @click="emit('addRow', 'functionParams', props.index, idx)"
+                    :class="{'disabled-icon': !isEdit}"
+                    @click="isEdit && addFunctionParams(props.index, idx)"
                   />
                   <MinusOutlined
                     class="edit-icon"
-                    @click="emit('deleteRow', 'functionParams', props.index, idx)"
+                    :class="{'disabled-icon': !isEdit || editValue.functionParams.length === 1}"
+                    @click="isEdit && editValue.functionParams.length !== 1 && deleteFunctionParams(props.index, idx)"
                   />
                 </a-flex>
               </template>
@@ -68,31 +74,33 @@
         <a-form-item label="路由目的地">
           <a-table
             :columns="destinationColumn"
-            :data-source="props.paramRouteForm.destination"
+            :data-source="editValue.destination"
             :pagination="false"
           >
             <template #bodyCell="{ column, index: idx }">
               <template v-if="column.dataIndex === 'label'">
-                <a-input v-model:value="destinationEdit[idx].label" />
+                <a-input v-model:value="editValue.destination[idx].label" />
               </template>
               <template v-if="column.dataIndex === 'relation'">
-                <a-input v-model:value="destinationEdit[idx].relation" />
+                <a-input v-model:value="editValue.destination[idx].relation" />
               </template>
               <template v-if="column.dataIndex === 'value'">
-                <a-input v-model:value="destinationEdit[idx].value" />
+                <a-input v-model:value="editValue.destination[idx].value" />
               </template>
               <template v-if="column.dataIndex === 'weight'">
-                <a-input v-model:value="destinationEdit[idx].weight" />
+                <a-input v-model:value="editValue.destination[idx].weight" />
               </template>
               <template v-if="column.dataIndex === 'handle'">
                 <a-flex justify="space-between">
                   <PlusOutlined
                     class="edit-icon"
-                    @click="emit('addRow', 'destination', props.index, idx)"
+                    :class="{'disabled-icon': !isEdit}"
+                    @click="isEdit && addDestination(idx)"
                   />
                   <MinusOutlined
                     class="edit-icon"
-                    @click="emit('deleteRow', 'destination', props.index, idx)"
+                    :class="{'disabled-icon': !isEdit || editValue.functionParams.length === 1}"
+                    @click="isEdit && editValue.functionParams.length !== 1 && deleteDestination(idx)"
                   />
                 </a-flex>
               </template>
@@ -105,24 +113,48 @@
 </template>
 
 <script setup lang="ts">
-import { EditOutlined, DeleteOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons-vue'
+import { CheckOutlined, CloseOutlined, EditOutlined, DeleteOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons-vue'
 import { ref } from 'vue'
 
-const props = defineProps<{
+const isEdit = ref(false);
+
+const changeEditState = () => {
+  isEdit.value = true;
+}
+
+const emit = defineEmits(['deleteParamRoute', 'update'])
+const props = defineProps({
   paramRouteForm: {
-    type: Object
-    default: {}
-  }
+    type: Object,
+    default: () => ({})
+  },
   index: {
     type: Number
   }
-}>()
+})
 
-console.log('props', props.paramRouteForm)
+const editValue = ref(
+  {
+    method: {
+      value: undefined,
+      selectArr: []
+    },
+    functionParams: [],
+    destination: []
+  }
+)
 
-const method = ref(JSON.parse(JSON.stringify(props.paramRouteForm.method)))
-const functionParamsEdit = ref(JSON.parse(JSON.stringify(props.paramRouteForm.functionParams)))
-const destinationEdit = ref(JSON.parse(JSON.stringify(props.paramRouteForm.destination)))
+const reset = () => {
+  isEdit.value = false;
+  editValue.value = JSON.parse(JSON.stringify(props.paramRouteForm))
+}
+
+reset();
+
+const update = () => {
+  isEdit.value = false;
+  emit('update', props.index, editValue)
+}
 
 const functionParamsColumn = [
   {
@@ -183,6 +215,31 @@ const destinationColumn = [
     width: '10%'
   }
 ]
+
+const addFunctionParams = (idx: number) => {
+  editValue.value.functionParams.splice(idx + 1, 0, {
+    param: '',
+    relation: '',
+    value: ''
+  })
+}
+
+const deleteFunctionParams = (idx: number) => {
+  editValue.value.functionParams.splice(idx, 1)
+}
+
+const addDestination = (idx: number) => {
+  editValue.value.destination.splice(idx + 1, 0, {
+    label: '',
+    relation: '',
+    value: '',
+    weight: ''
+  })
+}
+
+const deleteDestination = (idx: number) => {
+  editValue.value.destination.splice(idx, 1)
+}
 </script>
 
 <style lang="less" scoped>
@@ -193,6 +250,9 @@ const destinationColumn = [
   }
   .edit-icon {
     font-size: 18px;
+  }
+  .disabled-icon {
+    color: #71777d;
   }
 }
 </style>

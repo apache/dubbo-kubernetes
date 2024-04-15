@@ -16,7 +16,7 @@
 -->
 <template>
   <div class="__container_services_tabs_scene_config">
-    <a-tabs v-model:activeKey="activeKey" :tab-position="'left'" animated>
+    <a-tabs v-model:activeKey="activeKey" tab-position="left" animated>
       <a-tab-pane key="timeout" tab="超时时间">
         <a-descriptions layout="vertical">
           <a-descriptions-item label="超时时间">
@@ -60,15 +60,16 @@
         </a-descriptions>
       </a-tab-pane>
       <a-tab-pane key="paramRoute" tab="参数路由">
-        <paramRoute
-          v-for="(item, index) in paramRouteForms"
+        <ParamRoute
+          v-for="item, index in paramRouteForms"
+          class="param-route"
           :key="index"
           :paramRouteForm="item"
           :index="index"
-          @addRow="() => {}"
-          @deleteRow="() => {}"
+          @update="() => {}"
+          @deleteParamRoute="deleteParamRoute"
         />
-        <a-button type="primary" style="margin-top: 20px">增加路由</a-button>
+        <a-button type="primary" style="margin-top: 20px" @click="addParamRoute">增加路由</a-button>
       </a-tab-pane>
     </a-tabs>
   </div>
@@ -77,7 +78,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
-import paramRoute from './paramRoute.vue'
+import ParamRoute from './paramRoute.vue'
 
 const editForm = reactive({
   timeout: {
@@ -91,10 +92,6 @@ const editForm = reactive({
   sameArea: {
     value: 'close'
   },
-  paramRoute: {
-    isEdit: false,
-    value: {}
-  }
 })
 
 const activeKey = ref('timeout')
@@ -105,8 +102,10 @@ const hideEdit = (param: string) => {
   editForm[param].isEdit = false
 }
 
-const paramRouteForms = [
-  {
+const paramRouteForms = ref([])
+
+const addParamRoute = () => {
+  paramRouteForms.value.push({
     method: {
       value: 'getUserInfo',
       selectArr: ['getUserInfo', 'register', 'login']
@@ -126,8 +125,14 @@ const paramRouteForms = [
         weight: ''
       }
     ]
-  }
-]
+  })
+}
+
+addParamRoute()
+
+const deleteParamRoute = (index: number) => {
+  paramRouteForms.value.splice(index, 1);
+}
 </script>
 
 <style lang="less" scoped>
@@ -141,6 +146,9 @@ const paramRouteForms = [
   .item-icon {
     margin-left: 15px;
     font-size: 18px;
+  }
+  .param-route {
+    margin-bottom: 20px;
   }
 }
 </style>
