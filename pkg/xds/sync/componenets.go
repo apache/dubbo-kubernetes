@@ -78,7 +78,7 @@ func DefaultDataplaneWatchdogFactory(
 		ResManager:            rt.ReadOnlyResourceManager(),
 	}
 	return NewDataplaneWatchdogFactory(
-		10,
+		config.XdsServer.DataplaneConfigurationRefreshInterval.Duration,
 		deps,
 	)
 }
