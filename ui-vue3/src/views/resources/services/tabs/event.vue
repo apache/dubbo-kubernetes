@@ -16,17 +16,27 @@
 -->
 <template>
   <div class="__container_services_tabs_event">
-    <a-timeline class="timeline">
-      <a-timeline-item v-for="(item, index) in eventData" :key="index">
-        <a-tag class="time" :color="PRIMARY_COLOR">{{ item.time }}</a-tag>
-        <span class="description">{{ item.description }}</span>
-      </a-timeline-item>
-    </a-timeline>
+    <a-card class="timeline-container">
+      <a-timeline class="timeline">
+        <a-timeline-item>
+          <template #dot><MinusCircleOutlined style="font-size: 18px" /></template>
+        </a-timeline-item>
+        <a-timeline-item v-for="(item, index) in eventData" :key="index">
+          <a-tag class="time" :color="PRIMARY_COLOR">{{ item.time }}</a-tag>
+          <span class="description">{{ item.description }}</span>
+        </a-timeline-item>
+        <a-timeline-item>
+          <template #dot></template>
+          <span>过期事件不会存储</span>
+        </a-timeline-item>
+      </a-timeline>
+    </a-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { PRIMARY_COLOR } from '@/base/constants'
+import { MinusCircleOutlined } from '@ant-design/icons-vue'
 
 let __null = PRIMARY_COLOR
 const eventData = [
@@ -56,10 +66,13 @@ const eventData = [
 <style lang="less" scoped>
 .__container_services_tabs_event {
   display: flex;
-  justify-content: center;
-  .timeline {
-    .description {
-      font-size: 16px;
+  .timeline-container {
+    width: 100%;
+    .timeline {
+      margin-left: 30px;
+      .description {
+        font-size: 18px;
+      }
     }
   }
 }
