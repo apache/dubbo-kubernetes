@@ -27,7 +27,7 @@ var adminServerLog = core.Log.WithName("admin")
 
 func Setup(rt core_runtime.Runtime) error {
 	adminServer := server.NewAdminServer(*rt.Config().Admin, rt.Config().Store.Kubernetes.SystemNamespace).
-		InitHTTPRouter()
+		InitHTTPRouter(rt)
 	if err := rt.Add(adminServer); err != nil {
 		adminServerLog.Error(err, "fail to start the admin server")
 		return err

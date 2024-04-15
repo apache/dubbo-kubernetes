@@ -19,6 +19,9 @@ package dataplane
 
 import (
 	"context"
+
+	kube_core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 import (
@@ -35,6 +38,13 @@ import (
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+)
+
+const (
+	ExtensionsImageKey                 = "image"
+	ExtensionsPodPhaseKey              = "podPhase"
+	ExtensionsPodStatusKey             = "podStatus"
+	ExtensionsContainerStatusReasonKey = "containerStatus"
 )
 
 type dataplaneManager struct {
@@ -75,7 +85,7 @@ func (m *dataplaneManager) Get(ctx context.Context, r core_model.Resource, opts 
 	m.setInboundsClusterTag(dataplane)
 	m.setHealth(dataplane)
 	if m.deployMode != config_core.UniversalMode {
-		m.setExtensions(dataplane)
+		m.setExtensions(ctx, dataplane)
 	}
 	return nil
 }
@@ -92,7 +102,7 @@ func (m *dataplaneManager) List(ctx context.Context, r core_model.ResourceList, 
 		m.setHealth(item)
 		m.setInboundsClusterTag(item)
 		if m.deployMode != config_core.UniversalMode {
-			m.setExtensions(item)
+			m.setExtensions(ctx, item)
 		}
 	}
 	return nil
@@ -143,8 +153,42 @@ func (m *dataplaneManager) setHealth(dp *core_mesh.DataplaneResource) {
 	}
 }
 
-func (m *dataplaneManager) setExtensions(dp *core_mesh.DataplaneResource) {
+func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.DataplaneResource) {
 	if m.zone == "" || dp.Spec.Networking == nil {
 		return
 	}
+
+	client := m.manager.GetClient()
+	namespacedName := types.NamespacedName{
+		Namespace: dp.GetMeta().GetNameExtensions()[core_model.K8sNamespaceComponent],
+		Name:      dp.GetMeta().GetNameExtensions()[core_model.K8sNameComponent],
+	}
+	pod := &kube_core.Pod{}
+	err := client.Get(ctx, namespacedName, pod)
+	if err != nil {
+		return
+	}
+
+	extensions := make(map[string]string)
+	extensions[ExtensionsImageKey] = pod.Spec.Containers[0].Image
+
+	podPhase := pod.Status.Phase
+	extensions[ExtensionsPodPhaseKey] = string(podPhase)
+
+	podStatusConditions := pod.Status.Conditions
+	for _, condition := range podStatusConditions {
+		if condition.Status != kube_core.ConditionTrue {
+			extensions[ExtensionsPodStatusKey] = condition.Reason
+			break
+		}
+	}
+
+	containerState := pod.Status.ContainerStatuses[0].State
+	if containerState.Waiting != nil {
+		extensions[ExtensionsContainerStatusReasonKey] = containerState.Waiting.Reason
+	} else if containerState.Terminated != nil {
+		extensions[ExtensionsContainerStatusReasonKey] = containerState.Terminated.Reason
+	}
+
+	dp.Spec.Extensions = extensions
 }

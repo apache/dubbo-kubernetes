@@ -72,3 +72,8 @@ func (pd *PageData) WithData(data any) *PageData {
 	pd.Data = data
 	return pd
 }
+
+type PageReq struct {
+	CurPage  int `form:"curPage" json:"curPage"`
+	PageSize int `form:"pageSize" json:"pageSize"`
+}
