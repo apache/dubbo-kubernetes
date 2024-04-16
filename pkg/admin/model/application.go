@@ -69,6 +69,7 @@ func NewApplicationDetail() *ApplicationDetail {
 }
 
 func (a *ApplicationDetail) Merge(dataplane *mesh.DataplaneResource) {
+	// TODO: support more fields
 	inbounds := dataplane.Spec.Networking.Inbound
 	for _, inbound := range inbounds {
 		a.mergeInbound(inbound)
@@ -86,4 +87,31 @@ func (a *ApplicationDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_
 func (a *ApplicationDetail) mergeExtensions(extensions map[string]string) {
 	image := extensions[dataplane.ExtensionsImageKey]
 	a.Images.Add(image)
+}
+
+type ApplicationTabInstanceInfoReq struct {
+	AppName string `form:"appName"`
+}
+
+type ApplicationTabInstanceInfoResp struct {
+	AppName         string            `json:"appName"`
+	CreateTime      string            `json:"createTime"`
+	DeployState     string            `json:"deployState"`
+	IP              string            `json:"ip"`
+	Labels          map[string]string `json:"labels"`
+	Name            string            `json:"name"`
+	RegisterCluster string            `json:"registerCluster"`
+	RegisterState   string            `json:"registerState"`
+	RegisterTime    string            `json:"registerTime"`
+	WorkloadName    string            `json:"workloadName"`
+}
+
+func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.DataplaneResource) *ApplicationTabInstanceInfoResp {
+	// TODO: support more fields
+	a.AppName = dataplane.GetMeta().GetLabels()[v1alpha1.AppTag]
+	a.CreateTime = dataplane.Meta.GetCreationTime().String()
+	a.IP = dataplane.Spec.Networking.Address
+	a.Labels = dataplane.GetMeta().GetLabels()
+	a.Name = dataplane.Meta.GetName()
+	return a
 }

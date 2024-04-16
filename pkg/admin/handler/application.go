@@ -23,6 +23,24 @@ func GetApplicationDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+func GetApplicationTabInstanceInfo(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.ApplicationTabInstanceInfoReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		resp, err := service.GetApplicationTabInstanceInfo(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }

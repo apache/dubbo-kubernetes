@@ -25,6 +25,7 @@ type SearchInstanceResp struct {
 }
 
 func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *SearchInstanceResp {
+	// TODO: support more fields
 	r.IP = dr.GetIP()
 
 	meta := dr.GetMeta()

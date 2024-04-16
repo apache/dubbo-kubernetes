@@ -39,3 +39,20 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 
 	return resp, nil
 }
+
+func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.ApplicationTabInstanceInfoReq) ([]*model.ApplicationTabInstanceInfoResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName)); err != nil {
+		return nil, err
+	}
+
+	res := make([]*model.ApplicationTabInstanceInfoResp, 0, len(dataplaneList.Items))
+	for _, dataplane := range dataplaneList.Items {
+		resItem := &model.ApplicationTabInstanceInfoResp{}
+		res = append(res, resItem.FromDataplaneResource(dataplane))
+	}
+
+	return res, nil
+}

@@ -16,6 +16,7 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	{
 		application := router.Group("/application")
 		application.GET("/detail", handler.GetApplicationDetail(rt))
+		application.GET("/instance/info", handler.GetApplicationTabInstanceInfo(rt))
 	}
 
 	{
