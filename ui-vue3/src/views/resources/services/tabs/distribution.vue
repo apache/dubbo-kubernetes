@@ -38,7 +38,18 @@
       >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'applicationName'">
-            <span class="app-link" @click="viewDetail(text)">
+            <span class="link" @click="router.push('/resources/applications/detail/' + text)">
+              <b>
+                <Icon
+                  style="margin-bottom: -2px"
+                  icon="material-symbols:attach-file-rounded"
+                ></Icon>
+                {{ text }}
+              </b>
+            </span>
+          </template>
+          <template v-if="column.dataIndex === 'instanceName'">
+            <span class="link" @click="router.push('/resources/instances/detail/' + text)">
               <b>
                 <Icon
                   style="margin-bottom: -2px"
@@ -60,12 +71,14 @@
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
 import { ref, reactive, getCurrentInstance } from 'vue'
+import { useRouter } from 'vue-router'
 import { getServiceDistribution } from '@/api/service/service'
 import { debounce } from 'lodash'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { Icon } from '@iconify/vue'
 
 let __null = PRIMARY_COLOR
+const router = useRouter();
 const {
   appContext: {
     config: { globalProperties }
@@ -179,7 +192,7 @@ const pagination = {
       width: 300px;
     }
   }
-  .app-link {
+  .link {
     padding: 4px 10px 4px 4px;
     border-radius: 4px;
     color: v-bind('PRIMARY_COLOR');
