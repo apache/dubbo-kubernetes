@@ -25,7 +25,7 @@
             <DeleteOutlined @click="emit('deleteParamRoute', props.index)" class="edit-icon" />
           </a-flex>
           <a-flex class="handle-form" v-else>
-            <CheckOutlined @click="update"  class="edit-icon" />
+            <CheckOutlined @click="update" class="edit-icon" />
             <CloseOutlined @click="reset" class="edit-icon" />
           </a-flex>
         </a-flex>
@@ -33,7 +33,11 @@
       <a-form :labelCol="{ span: 3 }" :disabled="!isEdit">
         <a-form-item label="选择方法">
           <a-select v-model:value="editValue.method.value" style="width: 120px">
-            <a-select-option v-for="(item, index) in editValue.method.selectArr" :value="item" :key="index">
+            <a-select-option
+              v-for="(item, index) in editValue.method.selectArr"
+              :value="item"
+              :key="index"
+            >
               {{ item }}
             </a-select-option>
           </a-select>
@@ -58,13 +62,17 @@
                 <a-flex justify="space-between">
                   <PlusOutlined
                     class="edit-icon"
-                    :class="{'disabled-icon': !isEdit}"
+                    :class="{ 'disabled-icon': !isEdit }"
                     @click="isEdit && addFunctionParams(props.index, idx)"
                   />
                   <MinusOutlined
                     class="edit-icon"
-                    :class="{'disabled-icon': !isEdit || editValue.functionParams.length === 1}"
-                    @click="isEdit && editValue.functionParams.length !== 1 && deleteFunctionParams(props.index, idx)"
+                    :class="{ 'disabled-icon': !isEdit || editValue.functionParams.length === 1 }"
+                    @click="
+                      isEdit &&
+                        editValue.functionParams.length !== 1 &&
+                        deleteFunctionParams(props.index, idx)
+                    "
                   />
                 </a-flex>
               </template>
@@ -94,13 +102,15 @@
                 <a-flex justify="space-between">
                   <PlusOutlined
                     class="edit-icon"
-                    :class="{'disabled-icon': !isEdit}"
+                    :class="{ 'disabled-icon': !isEdit }"
                     @click="isEdit && addDestination(idx)"
                   />
                   <MinusOutlined
                     class="edit-icon"
-                    :class="{'disabled-icon': !isEdit || editValue.functionParams.length === 1}"
-                    @click="isEdit && editValue.functionParams.length !== 1 && deleteDestination(idx)"
+                    :class="{ 'disabled-icon': !isEdit || editValue.functionParams.length === 1 }"
+                    @click="
+                      isEdit && editValue.functionParams.length !== 1 && deleteDestination(idx)
+                    "
                   />
                 </a-flex>
               </template>
@@ -113,13 +123,20 @@
 </template>
 
 <script setup lang="ts">
-import { CheckOutlined, CloseOutlined, EditOutlined, DeleteOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons-vue'
+import {
+  CheckOutlined,
+  CloseOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  MinusOutlined
+} from '@ant-design/icons-vue'
 import { ref } from 'vue'
 
-const isEdit = ref(false);
+const isEdit = ref(false)
 
 const changeEditState = () => {
-  isEdit.value = true;
+  isEdit.value = true
 }
 
 const emit = defineEmits(['deleteParamRoute', 'update'])
@@ -133,26 +150,24 @@ const props = defineProps({
   }
 })
 
-const editValue = ref(
-  {
-    method: {
-      value: undefined,
-      selectArr: []
-    },
-    functionParams: [],
-    destination: []
-  }
-)
+const editValue = ref({
+  method: {
+    value: undefined,
+    selectArr: []
+  },
+  functionParams: [],
+  destination: []
+})
 
 const reset = () => {
-  isEdit.value = false;
+  isEdit.value = false
   editValue.value = JSON.parse(JSON.stringify(props.paramRouteForm))
 }
 
-reset();
+reset()
 
 const update = () => {
-  isEdit.value = false;
+  isEdit.value = false
   emit('update', props.index, editValue)
 }
 
