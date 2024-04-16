@@ -53,12 +53,6 @@ const (
 	// InstanceTag is set only for Dataplanes that implements headless services
 	InstanceTag = "dubbo.io/instance"
 
-	// External service tag
-	ExternalServiceTag = "dubbo.io/external-service-name"
-
-	// Listener tag is used to select Gateway listeners
-	ListenerTag = "gateways.dubbo.io/listener-name"
-
 	// Used for Service-less dataplanes
 	TCPPortReserved = 49151 // IANA Reserved
 
