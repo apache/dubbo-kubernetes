@@ -32,7 +32,7 @@
               theme="vs-dark"
               :height="500"
               language="yaml"
-              :readonly="isReadonly"
+              :readonly="!isEdit"
             />
           </div>
         </a-flex>
@@ -53,15 +53,20 @@
       </a-col>
     </a-flex>
   </a-card>
+  <a-flex v-if="isEdit" style="margin-top: 30px;">
+    <a-button type="primary">确认</a-button>
+    <a-button style="margin-left: 30px;">取消</a-button>
+  </a-flex>
 </template>
 
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 
-const isReadonly = ref(true)
-
+const route = useRoute()
+const isEdit = ref(route.params.isEdit === '1')
 const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
