@@ -71,8 +71,14 @@
             :label="$t('flowControlDomain.ruleGranularity')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <a-select v-model:value="formViewEdit.basicInfo.ruleGranularity" style="min-width: 120px" disabled>
-              <a-select-option :value="formViewEdit.basicInfo.ruleGranularity">{{ formViewData.basicInfo.ruleGranularity }}</a-select-option>
+            <a-select
+              v-model:value="formViewEdit.basicInfo.ruleGranularity"
+              style="min-width: 120px"
+              disabled
+            >
+              <a-select-option :value="formViewEdit.basicInfo.ruleGranularity">{{
+                formViewData.basicInfo.ruleGranularity
+              }}</a-select-option>
             </a-select>
           </a-descriptions-item>
 
@@ -80,14 +86,22 @@
             :label="$t('flowControlDomain.actionObject')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <a-input v-model:value="formViewEdit.basicInfo.actionObject" style="min-width: 300px" disabled />
+            <a-input
+              v-model:value="formViewEdit.basicInfo.actionObject"
+              style="min-width: 300px"
+              disabled
+            />
           </a-descriptions-item>
 
           <a-descriptions-item
             :label="$t('flowControlDomain.enabledState')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <a-switch v-model:checked="formViewEdit.basicInfo.enabledState" checked-children="是" un-checked-children="否" />
+            <a-switch
+              v-model:checked="formViewEdit.basicInfo.enabledState"
+              checked-children="是"
+              un-checked-children="否"
+            />
           </a-descriptions-item>
         </a-descriptions>
       </div>
@@ -95,7 +109,7 @@
 
     <template v-if="!isEdit">
       <a-card
-        v-for="config, index in formViewData.config"
+        v-for="(config, index) in formViewData.config"
         :title="'配置【' + (index + 1) + '】'"
         class="dynamic-config-card"
       >
@@ -137,10 +151,10 @@
         </a-descriptions>
       </a-card>
     </template>
-    
+
     <template v-else>
       <a-card
-        v-for="config, index in formViewEdit.config"
+        v-for="(config, index) in formViewEdit.config"
         :title="'配置【' + (index + 1) + '】'"
         class="dynamic-config-card"
       >
@@ -149,7 +163,11 @@
             :label="$t('flowControlDomain.enabledState')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <a-switch v-model:checked="config.enabledState" checked-children="是" un-checked-children="否" />
+            <a-switch
+              v-model:checked="config.enabledState"
+              checked-children="是"
+              un-checked-children="否"
+            />
           </a-descriptions-item>
           <a-descriptions-item
             :label="$t('flowControlDomain.endOfAction')"
@@ -171,7 +189,7 @@
                 mode="multiple"
                 :options="actuatingRangeArr.map((item) => ({ value: item }))"
               />
-              <div v-for="item in config.actuatingRange" :key="item.key" style="margin-top: 20px;">
+              <div v-for="item in config.actuatingRange" :key="item.key" style="margin-top: 20px">
                 <a-input-group compact>
                   <a-input disabled :value="item.key" style="width: 200px" />
                   <a-input disabled :value="item.relation" style="width: 50px" />
@@ -194,7 +212,7 @@
                 mode="multiple"
                 :options="configItemArr.map((item) => ({ value: item }))"
               />
-              <div v-for="item in config.configItem" :key="item.key" style="margin-top: 20px;">
+              <div v-for="item in config.configItem" :key="item.key" style="margin-top: 20px">
                 <a-input-group compact>
                   <a-input disabled :value="item.key" style="width: 200px" />
                   <a-input disabled :value="item.relation" style="width: 50px" />
@@ -278,7 +296,7 @@ const formViewData = ref({
 const actuatingRangeArr = ['address', 'providerAddress', 'service', 'app', 'param']
 const configItemArr = ['retries', 'timeout', 'accesslog', 'weight', '其他']
 
-const formViewEdit = ref(formViewData.value);
+const formViewEdit = ref(formViewData.value)
 
 const endOfActionOptions = [
   {
@@ -293,25 +311,26 @@ const endOfActionOptions = [
 
 const addConfig = () => {
   formViewEdit.value.config.push({
-      enabledState: true,
-      endOfAction: 'provider',
-      actuatingRange: [],
-      configItem: []
-    }
-  )
+    enabledState: true,
+    endOfAction: 'provider',
+    actuatingRange: [],
+    configItem: []
+  })
 }
 
 const handleChange = (index: number, name: string) => {
-  const config = formViewData.value.config[index];
+  const config = formViewData.value.config[index]
   config[name] = config[name].filter((item) => {
     return config[name + 'Keys'].find((i) => {
       return i === item.key
     })
   })
   config[name + 'Keys'].forEach((item) => {
-    if(!config[name].find((i) => {
-      return i.key === item
-    })) {
+    if (
+      !config[name].find((i) => {
+        return i.key === item
+      })
+    ) {
       config[name].push({
         key: item,
         relation: '=',

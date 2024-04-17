@@ -143,7 +143,7 @@ const emit = defineEmits(['deleteParamRoute', 'update'])
 const props = defineProps({
   paramRouteForm: {
     type: Object,
-    default: () => ({})
+    default: () => {}
   },
   index: {
     type: Number
