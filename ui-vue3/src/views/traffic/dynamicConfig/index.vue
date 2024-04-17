@@ -22,7 +22,10 @@
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <span class="config-link" @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)">
+          <span
+            class="config-link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
+          >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
@@ -36,10 +39,15 @@
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
-          <a-button type="link" @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
+          <a-button
+            type="link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
             >查看</a-button
           >
-          <a-button type="link" @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/1`)">
+          <a-button
+            type="link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/1`)"
+          >
             修改
           </a-button>
           <a-popconfirm

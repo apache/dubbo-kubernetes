@@ -53,9 +53,9 @@
       </a-col>
     </a-flex>
   </a-card>
-  <a-flex v-if="isEdit" style="margin-top: 30px;">
+  <a-flex v-if="isEdit" style="margin-top: 30px">
     <a-button type="primary">确认</a-button>
-    <a-button style="margin-left: 30px;">取消</a-button>
+    <a-button style="margin-left: 30px">取消</a-button>
   </a-flex>
 </template>
 
