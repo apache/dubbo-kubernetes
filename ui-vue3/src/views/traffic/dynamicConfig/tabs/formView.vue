@@ -36,6 +36,7 @@
           >
             <span>{{ formViewData.basicInfo.ruleGranularity }}</span>
           </a-descriptions-item>
+
           <a-descriptions-item
             :label="$t('flowControlDomain.actionObject')"
             :labelStyle="{ fontWeight: 'bold' }"
@@ -60,7 +61,33 @@
             :label="$t('flowControlDomain.enabledState')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <span>{{ formViewData.basicInfo.enabledState }}</span>
+            <span>{{ formViewData.basicInfo.enabledState ? '启用' : '不启用' }}</span>
+          </a-descriptions-item>
+        </a-descriptions>
+      </div>
+      <div v-else>
+        <a-descriptions :column="2" layout="vertical">
+          <a-descriptions-item
+            :label="$t('flowControlDomain.ruleGranularity')"
+            :labelStyle="{ fontWeight: 'bold' }"
+          >
+            <a-select v-model:value="formViewData.basicInfo.ruleGranularity" style="min-width: 120px" disabled>
+              <a-select-option :value="formViewData.basicInfo.ruleGranularity">{{ formViewData.basicInfo.ruleGranularity }}</a-select-option>
+            </a-select>
+          </a-descriptions-item>
+
+          <a-descriptions-item
+            :label="$t('flowControlDomain.actionObject')"
+            :labelStyle="{ fontWeight: 'bold' }"
+          >
+            <a-input v-model:value="formViewData.basicInfo.actionObject" style="min-width: 300px" disabled />
+          </a-descriptions-item>
+
+          <a-descriptions-item
+            :label="$t('flowControlDomain.enabledState')"
+            :labelStyle="{ fontWeight: 'bold' }"
+          >
+            <a-switch v-model:checked="enabledState" checked-children="是" un-checked-children="否" />
           </a-descriptions-item>
         </a-descriptions>
       </div>
@@ -76,7 +103,7 @@
           :label="$t('flowControlDomain.enabledState')"
           :labelStyle="{ fontWeight: 'bold' }"
         >
-          {{ config.enabledState }}
+          {{ config.enabledState ? '启用' : '不启用' }}
         </a-descriptions-item>
         <a-descriptions-item
           :label="$t('flowControlDomain.endOfAction')"
@@ -119,7 +146,8 @@
 </template>
 
 <script lang="ts" setup>
-import { type ComponentInternalInstance, getCurrentInstance, ref } from 'vue'
+import type { ComponentInternalInstance } from 'vue'
+import { getCurrentInstance, ref } from 'vue'
 import { CopyOutlined } from '@ant-design/icons-vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import useClipboard from 'vue-clipboard3'
@@ -149,11 +177,11 @@ const formViewData = ref({
     ruleGranularity: '服务',
     actionObject: 'org.apache.dubbo.samples.UserService',
     effectTime: '20230/12/19 22:09:34',
-    enabledState: '启用'
+    enabledState: true
   },
   config: [
     {
-      enabledState: '启用',
+      enabledState: true,
       endOfAction: 'provider',
       actuatingRange: [
         {
@@ -172,6 +200,8 @@ const formViewData = ref({
     }
   ]
 })
+
+const enabledState = ref(formViewData.value.basicInfo.enabledState);
 </script>
 
 <style lang="less" scoped>
