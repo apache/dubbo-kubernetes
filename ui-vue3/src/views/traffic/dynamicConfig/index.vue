@@ -36,12 +36,7 @@
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
-          <a-button type="link" @click="router.push({
-            path: `/traffic/dynamicConfig/formview/${record.ruleName}`,
-            query: {
-              test: 0
-            }
-          })"
+          <a-button type="link" @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
             >查看</a-button
           >
           <a-button type="link" @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/1`)">

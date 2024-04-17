@@ -387,7 +387,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/traffic/dynamicConfig/tabs/formView.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:apm-trace'
+                  icon: 'oui:apm-trace',
+                  back: '../../'
                 }
               },
               {
@@ -396,7 +397,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/traffic/dynamicConfig/tabs/YAMLView.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:app-console'
+                  icon: 'oui:app-console',
+                  back: '../../'
                 }
               },
               {
@@ -405,7 +407,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:app-console'
+                  icon: 'oui:app-console',
+                  back: '../../'
                 }
               }
             ]
