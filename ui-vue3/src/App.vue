@@ -68,9 +68,7 @@ const localeGlobal = reactive(i18n.global.locale)
 </template>
 
 <style lang="less">
-.ant-descriptions-item-content {
-  padding-left: 20px !important;
-}
+
 
 .__global_float_button_question {
   right: 24px;
@@ -78,5 +76,58 @@ const localeGlobal = reactive(i18n.global.locale)
 
 #nprogress .bar {
   background: #000000 !important;
+}
+
+//If you want to show multiple cards, I think you maybe need this style to beautify
+._detail {
+  box-shadow: 8px 8px 4px rgba(162, 162, 162, 0.19);
+}
+
+//Display a sub-card in a card to display the data
+.description-item-card {
+  :deep(.ant-card-body) {
+    padding: 10px;
+  }
+  width: 80%;
+  margin-left: 20px;
+  border: 1px dashed rgba(162, 162, 162, 0.19);
+}
+
+//Display description fields or interactive text in a card
+.description-item-content {
+  &.no-card {
+    padding-left: 20px;
+  }
+  &.with-card:hover {
+    color: v-bind('PRIMARY_COLOR');
+  }
+}
+
+//The monitoring tab styles are highly uniform
+.__container_tabDemo3 {
+  .option {
+    padding-left: 16px;
+    .btn {
+      margin-right: 10px;
+    }
+  }
+  :deep(.spin) {
+    margin-top: 30px;
+  }
+  .__container_iframe_container {
+    z-index: 1;
+    position: relative;
+    width: calc(100vw - 332px);
+    height: calc(100vh - 200px);
+    clip-path: inset(20px 10px);
+
+    #grafanaIframe {
+      z-index: 0;
+      top: -112px;
+      position: absolute;
+      width: calc(100vw - 332px);
+      height: calc(100vh - 200px);
+    }
+  }
 }
 </style>

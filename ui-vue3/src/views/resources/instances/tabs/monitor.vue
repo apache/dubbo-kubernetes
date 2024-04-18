@@ -52,30 +52,5 @@ function newPageForGrafana() {
 }
 </script>
 <style lang="less" scoped>
-.__container_tabDemo3 {
-  .option {
-    padding-left: 16px;
-    .btn {
-      margin-right: 10px;
-    }
-  }
-  :deep(.spin) {
-    margin-top: 30px;
-  }
-  .__container_iframe_container {
-    z-index: 1;
-    position: relative;
-    width: calc(100vw - 332px);
-    height: calc(100vh - 200px);
-    clip-path: inset(20px 10px);
 
-    #grafanaIframe {
-      z-index: 0;
-      top: -112px;
-      position: absolute;
-      width: calc(100vw - 332px);
-      height: calc(100vh - 200px);
-    }
-  }
-}
 </style>

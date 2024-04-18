@@ -21,6 +21,8 @@ import LayoutTab from '../layout/tab/layout_tab.vue'
 import _ from 'lodash'
 import AppTabHeaderSlot from '@/views/resources/applications/slots/AppTabHeaderSlot.vue'
 import ServiceTabHeaderSlot from '@/views/resources/services/slots/ServiceTabHeaderSlot.vue'
+import InstanceTabHeaderSlot from '@/views/resources/instances/slots/InstanceTabHeaderSlot.vue'
+
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -145,7 +147,10 @@ export const routes: Readonly<RouteRecordType[]> = [
             component: LayoutTab,
             redirect: 'all',
             meta: {
-              tab_parent: true
+              tab_parent: true,
+              slots: {
+                header: InstanceTabHeaderSlot
+              }
             },
             children: [
               {
@@ -159,7 +164,7 @@ export const routes: Readonly<RouteRecordType[]> = [
               {
                 path: '/detail/:pathId',
                 name: 'instanceDomain.details',
-                component: () => import('../views/resources/instances/tabs/details.vue'),
+                component: () => import('../views/resources/instances/tabs/detail.vue'),
                 meta: {
                   tab: true,
                   icon: 'tabler:list-details'
