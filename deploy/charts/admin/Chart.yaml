@@ -33,4 +33,4 @@ kubeVersion: '>=1.28.0-0'
 sources:
 - https://github.com/apache/dubbo-kubernetes
 - https://dubbo.apache.org
-version: 3.2.10
+version: 3.2.11
