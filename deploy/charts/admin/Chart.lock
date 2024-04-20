@@ -15,22 +15,7 @@
 
 dependencies:
 - name: zookeeper
-  version: 12.5.1
   repository: https://charts.bitnami.com/bitnami
-  condition: zookeeper.enabled
-annotations:
-  licenses: Apache-2.0
-name: admin
-home: https://github.com/apache/dubbo-kubernetes
-description: Admin is an application within the service governance control plane
-  responsible for functions such as service governance and visual representation of microservice clusters.
-apiVersion: v2
-appVersion: 0.1.0
-maintainers:
-- name: Dubbo
-  email: dev@dubbo.apache.org
-kubeVersion: '>=1.28.0-0'
-sources:
-- https://github.com/apache/dubbo-kubernetes
-- https://dubbo.apache.org
-version: 3.2.11
+  version: 12.5.1
+digest: sha256:d75813cf29fb20f5459c3943ddd7938f244aca7fb6cca1fe76a66d4546d0bcaa
+generated: "2024-01-20T16:01:36.129586213Z"
