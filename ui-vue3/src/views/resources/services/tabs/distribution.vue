@@ -78,7 +78,7 @@ import { PRIMARY_COLOR } from '@/base/constants'
 import { Icon } from '@iconify/vue'
 
 let __null = PRIMARY_COLOR
-const router = useRouter();
+const router = useRouter()
 const {
   appContext: {
     config: { globalProperties }

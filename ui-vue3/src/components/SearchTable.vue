@@ -68,7 +68,7 @@
           </a-form>
         </a-col>
         <a-col :span="6">
-          <a-flex style="justify-content: flex-end;">
+          <a-flex style="justify-content: flex-end">
             <slot name="customOperation"></slot>
             <div class="common-tool" @click="commonTool.customColumns = !commonTool.customColumns">
               <div class="custom-column button">
