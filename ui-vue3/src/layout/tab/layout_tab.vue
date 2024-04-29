@@ -20,7 +20,7 @@
       <div v-if="tabRoute.meta.tab" class="header">
         <a-row>
           <a-col :span="1">
-            <span @click="router.push('../')" style="float: left">
+            <span @click="router.push(tabRoute.meta.back ?? '../')" style="float: left">
               <Icon icon="material-symbols:keyboard-backspace-rounded" class="back" />
             </span>
           </a-col>

@@ -32,6 +32,10 @@ import (
 )
 
 const (
+	AppTag = "app"
+)
+
+const (
 	KubeNamespaceTag = "k8s.dubbo.io/namespace"
 	KubeServiceTag   = "k8s.dubbo.io/service-name"
 	KubePortTag      = "k8s.dubbo.io/service-port"

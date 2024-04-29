@@ -22,7 +22,10 @@
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <span class="config-link" @click="router.replace(`formview/${record[column.key]}`)">
+          <span
+            class="config-link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
+          >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
@@ -36,8 +39,17 @@
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
-          <a-button type="link" @click="router.replace(`formview/${record[column.key]}`)">查看</a-button>
-          <a-button type="link">修改</a-button>
+          <a-button
+            type="link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
+            >查看</a-button
+          >
+          <a-button
+            type="link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/1`)"
+          >
+            修改
+          </a-button>
           <a-popconfirm
             title="确认删除该动态配置？"
             ok-text="Yes"
@@ -58,9 +70,11 @@ import { searchDynamicConfig } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
-import router from '@/router'
+import { useRouter } from 'vue-router'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { Icon } from '@iconify/vue'
+
+const router = useRouter()
 
 let __null = PRIMARY_COLOR
 let columns = [

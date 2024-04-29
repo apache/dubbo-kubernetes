@@ -25,7 +25,7 @@
 </template>
 
 <script lang="ts" setup>
-import { defineEmits, onMounted, watch } from 'vue'
+import { onMounted, watch } from 'vue'
 import useMonaco from './MonacoEditor'
 
 const emit = defineEmits(['update:modelValue', 'blur'])

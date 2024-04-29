@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- range .Values.extraDeploy }}
----
-{{ include "tplvalues.render" (dict "value" . "context" $) }}
-{{- end }}
+dependencies:
+- name: zookeeper
+  repository: https://charts.bitnami.com/bitnami
+  version: 12.5.1
+digest: sha256:d75813cf29fb20f5459c3943ddd7938f244aca7fb6cca1fe76a66d4546d0bcaa
+generated: "2024-01-20T16:01:36.129586213Z"
