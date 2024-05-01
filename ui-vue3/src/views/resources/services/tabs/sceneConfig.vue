@@ -61,7 +61,7 @@
       </a-tab-pane>
       <a-tab-pane key="paramRoute" tab="参数路由">
         <ParamRoute
-          v-for="item, index in paramRouteForms"
+          v-for="(item, index) in paramRouteForms"
           class="param-route"
           :key="index"
           :paramRouteForm="item"
@@ -91,7 +91,7 @@ const editForm = reactive({
   },
   sameArea: {
     value: 'close'
-  },
+  }
 })
 
 const activeKey = ref('timeout')
@@ -131,7 +131,7 @@ const addParamRoute = () => {
 addParamRoute()
 
 const deleteParamRoute = (index: number) => {
-  paramRouteForms.value.splice(index, 1);
+  paramRouteForms.value.splice(index, 1)
 }
 </script>
 

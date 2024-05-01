@@ -56,9 +56,9 @@
             </p>
           </a-descriptions-item>
 
-          <!-- timeOfTakingEffect -->
+          <!-- effectTime -->
           <a-descriptions-item
-            :label="$t('flowControlDomain.timeOfTakingEffect')"
+            :label="$t('flowControlDomain.effectTime')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <a-typography-paragraph> 20230/12/19 22:09:34</a-typography-paragraph>
@@ -74,9 +74,9 @@
             </a-typography-paragraph>
           </a-descriptions-item>
 
-          <!-- enabledStatus -->
+          <!-- enabledState -->
           <a-descriptions-item
-            :label="$t('flowControlDomain.enabledStatus')"
+            :label="$t('flowControlDomain.enabledState')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <a-typography-paragraph>

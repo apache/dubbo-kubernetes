@@ -387,30 +387,33 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/formview/:ruleName',
+                path: '/formview/:pathId/:isEdit',
                 name: 'dynamicConfigDomain.formView',
                 component: () => import('../views/traffic/dynamicConfig/tabs/formView.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:apm-trace'
+                  icon: 'oui:apm-trace',
+                  back: '../../'
                 }
               },
               {
-                path: '/yamlview/:ruleName',
+                path: '/yamlview/:pathId/:isEdit',
                 name: 'dynamicConfigDomain.YAMLView',
                 component: () => import('../views/traffic/dynamicConfig/tabs/YAMLView.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:app-console'
+                  icon: 'oui:app-console',
+                  back: '../../'
                 }
               },
               {
-                path: '/event/:ruleName',
+                path: '/event/:pathId/:isEdit',
                 name: 'dynamicConfigDomain.event',
                 component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:app-console'
+                  icon: 'oui:app-console',
+                  back: '../../'
                 }
               }
             ]

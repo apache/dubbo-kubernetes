@@ -15,22 +15,31 @@
  * limitations under the License.
  */
 
-package admin
+package model
 
-import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/server"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-)
+type Set map[string]struct{}
 
-var adminServerLog = core.Log.WithName("admin")
+func NewSet(values ...string) Set {
+	s := make(Set, len(values))
+	s.Add(values...)
+	return s
+}
 
-func Setup(rt core_runtime.Runtime) error {
-	adminServer := server.NewAdminServer(*rt.Config().Admin, rt.Config().Store.Kubernetes.SystemNamespace).
-		InitHTTPRouter(rt)
-	if err := rt.Add(adminServer); err != nil {
-		adminServerLog.Error(err, "fail to start the admin server")
-		return err
+func (s Set) Add(values ...string) {
+	for _, v := range values {
+		s[v] = struct{}{}
 	}
-	return nil
+}
+
+func (s Set) Contains(value string) bool {
+	_, ok := s[value]
+	return ok
+}
+
+func (s Set) Values() []string {
+	values := make([]string, 0, len(s))
+	for k := range s {
+		values = append(values, k)
+	}
+	return values
 }
