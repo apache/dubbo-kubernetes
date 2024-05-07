@@ -59,7 +59,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/heroku/color v0.0.6
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
-	github.com/jdxcode/netrc v1.0.0
+	github.com/jdx/go-netrc v1.0.0
 	github.com/klauspost/compress v1.17.1
 	github.com/kylelemons/godebug v1.1.0
 	github.com/moby/term v0.5.0
