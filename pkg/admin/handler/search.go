@@ -17,50 +17,31 @@
 
 package handler
 
-// API Definition: https://app.apifox.com/project/3732499
-// 资源详情-应用
-
 import (
-	"net/http"
-
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
-func GetApplicationDetail(rt core_runtime.Runtime) gin.HandlerFunc {
+// API Definition: https://app.apifox.com/project/3732499
+// 全局搜索
+
+func Search(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.ApplicationDetailReq{}
+		// 参考 API 定义 request 参数
+		req := &model.SearchInstanceReq{}
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 
-		resp, err := service.GetApplicationDetail(rt, req)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
-			return
-		}
+		// 根据 request 分流调用，如服务未实现继续实现
+		instances, _, _ := service.SearchInstances(rt, req)
+		//applications, _, err := service.SearchApplications(rt, req)
+		//services, _, err := service.SearchServices(rt, req)
 
-		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
-	}
-}
-
-func GetApplicationTabInstanceInfo(rt core_runtime.Runtime) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		req := &model.ApplicationTabInstanceInfoReq{}
-		if err := c.ShouldBindQuery(req); err != nil {
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
-			return
-		}
-
-		resp, err := service.GetApplicationTabInstanceInfo(rt, req)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
-			return
-		}
-
-		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+		c.JSON(http.StatusOK, model.NewSuccessResp(instances))
 	}
 }
