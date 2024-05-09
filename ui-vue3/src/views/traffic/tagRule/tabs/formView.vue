@@ -101,10 +101,10 @@
             </a-typography-paragraph>
           </a-descriptions-item>
         </a-descriptions>
-      </a-card >
+      </a-card>
     </a-flex>
 
-    <a-card  title="标签【1】" style="margin-top: 10px"  class="_detail">
+    <a-card title="标签【1】" style="margin-top: 10px" class="_detail">
       <a-space align="center">
         <a-typography-title :level="5">
           {{ $t('flowControlDomain.labelName') }}:
@@ -117,7 +117,7 @@
         >
         <a-tag color="#2db7f5">version=v1</a-tag>
       </a-space>
-    </a-card >
+    </a-card>
   </div>
 </template>
 

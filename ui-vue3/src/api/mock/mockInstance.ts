@@ -60,40 +60,37 @@ Mock.mock('/mock/instance/detail', 'get', () => {
   return {
     code: 200,
     message: 'success',
-    'data': {
-      'deployState': 'Running',
-      'registerStates': 'Unregisted',
-      'ip': '45.7.37.227',
-      'rpcPort': '20880',
-      'appName': 'shop-user',
-      'workloadName': 'shop-user-prod(deployment)',
-      'labels': {
-        'app': 'shop-user',
-        'version': 'v1',
-        'region': 'beijing'
+    data: {
+      deployState: 'Running',
+      registerStates: 'Unregisted',
+      ip: '45.7.37.227',
+      rpcPort: '20880',
+      appName: 'shop-user',
+      workloadName: 'shop-user-prod(deployment)',
+      labels: {
+        app: 'shop-user',
+        version: 'v1',
+        region: 'beijing'
       },
-      'createTime': '2023/12/19 22:09:34',
-      'readyTime': '2023/12/19  22:12:34',
-      'registerTime': '2023/12/19   22:16:56',
-      'registerClusters': [
-        'sz-ali-zk-f8otyo4r',
-        'hz-ali-zk-oqgiq9gq'
-      ],
-      'deployCluster': 'tx-shanghai-1',
-      'node': 'hz-ali-30.33.0.1',
-      'image': 'apache/org.apahce.dubbo.samples.shop-user:v1',
-      'probes': {
-        'startupProbe': {
-          'type': 'http',
-          'port': 22222
+      createTime: '2023/12/19 22:09:34',
+      readyTime: '2023/12/19  22:12:34',
+      registerTime: '2023/12/19   22:16:56',
+      registerClusters: ['sz-ali-zk-f8otyo4r', 'hz-ali-zk-oqgiq9gq'],
+      deployCluster: 'tx-shanghai-1',
+      node: 'hz-ali-30.33.0.1',
+      image: 'apache/org.apahce.dubbo.samples.shop-user:v1',
+      probes: {
+        startupProbe: {
+          type: 'http',
+          port: 22222
         },
-        'readinessProbe': {
-          'type': 'http',
-          'port': 22222
+        readinessProbe: {
+          type: 'http',
+          port: 22222
         },
-        'livenessPronbe': {
-          'type': 'http',
-          'port': 22222
+        livenessPronbe: {
+          type: 'http',
+          port: 22222
         }
       }
     }

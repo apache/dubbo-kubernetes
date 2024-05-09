@@ -107,13 +107,11 @@
       </a-card>
     </a-row>
 
-
     <a-card style="margin-top: 10px" class="_detail">
       <a-space align="start" style="width: 100%">
         <a-typography-title :level="5"
-        >{{ $t('flowControlDomain.requestParameterMatching') }}:
-        </a-typography-title
-        >
+          >{{ $t('flowControlDomain.requestParameterMatching') }}:
+        </a-typography-title>
 
         <a-space align="center" direction="horizontal" size="middle">
           <a-tag color="#2db7f5">method=login</a-tag>
@@ -123,13 +121,11 @@
 
       <a-space align="start" style="width: 100%">
         <a-typography-title :level="5"
-        >{{ $t('flowControlDomain.addressSubsetMatching') }}:
-        </a-typography-title
-        >
+          >{{ $t('flowControlDomain.addressSubsetMatching') }}:
+        </a-typography-title>
         <a-tag color="#87d068">version=v1</a-tag>
       </a-space>
     </a-card>
-
   </div>
 </template>
 
@@ -158,6 +154,5 @@ function copyIt(v: string) {
 
 <style lang="less" scoped>
 .__container_routingRule_detail {
-
 }
 </style>

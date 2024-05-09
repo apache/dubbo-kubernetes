@@ -146,6 +146,5 @@ function copyIt(v: string) {
 </script>
 <style lang="less" scoped>
 .__container_app_detail {
-
 }
 </style>

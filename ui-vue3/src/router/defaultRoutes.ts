@@ -23,7 +23,6 @@ import AppTabHeaderSlot from '@/views/resources/applications/slots/AppTabHeaderS
 import ServiceTabHeaderSlot from '@/views/resources/services/slots/ServiceTabHeaderSlot.vue'
 import InstanceTabHeaderSlot from '@/views/resources/instances/slots/InstanceTabHeaderSlot.vue'
 
-
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
   name: string

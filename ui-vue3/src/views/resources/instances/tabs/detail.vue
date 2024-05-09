@@ -28,7 +28,10 @@
                   :label="$t('instanceDomain.instanceName')"
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
-                  <p @click="copyIt(<string>route.params?.pathId)" class="description-item-content with-card">
+                  <p
+                    @click="copyIt(<string>route.params?.pathId)"
+                    class="description-item-content with-card"
+                  >
                     {{ route.params?.pathId }}
                     <CopyOutlined />
                   </p>
@@ -49,7 +52,11 @@
                   :label="$t('instanceDomain.deployState')"
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
-                  <a-typography-paragraph type="success" v-if="instanceDetail?.deployState === 'Running'"> Running
+                  <a-typography-paragraph
+                    type="success"
+                    v-if="instanceDetail?.deployState === 'Running'"
+                  >
+                    Running
                   </a-typography-paragraph>
                   <a-typography-paragraph type="danger" v-else> Stop</a-typography-paragraph>
                 </a-descriptions-item>
@@ -75,10 +82,15 @@
                   :label="$t('instanceDomain.registerStates')"
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
-                  <a-typography-paragraph type="success" v-if="instanceDetail?.registerStates ==='Registered'">
+                  <a-typography-paragraph
+                    type="success"
+                    v-if="instanceDetail?.registerStates === 'Registered'"
+                  >
                     Registered
                   </a-typography-paragraph>
-                  <a-typography-paragraph type="danger" v-else> UnRegistered</a-typography-paragraph>
+                  <a-typography-paragraph type="danger" v-else>
+                    UnRegistered</a-typography-paragraph
+                  >
                 </a-descriptions-item>
 
                 <!-- Register Time -->
@@ -123,7 +135,10 @@
               :label="$t('instanceDomain.dubboPort')"
               :labelStyle="{ fontWeight: 'bold' }"
             >
-              <p @click="copyIt(instanceDetail?.rpcPort)" class="description-item-content with-card">
+              <p
+                @click="copyIt(instanceDetail?.rpcPort)"
+                class="description-item-content with-card"
+              >
                 {{ instanceDetail?.rpcPort }}
                 <CopyOutlined />
               </p>
@@ -134,9 +149,8 @@
               :label="$t('instanceDomain.registerCluster')"
               :labelStyle="{ fontWeight: 'bold' }"
             >
-
               <a-space>
-                <a-typography-link v-for="(cluster) in instanceDetail?.registerClusters">
+                <a-typography-link v-for="cluster in instanceDetail?.registerClusters">
                   {{ cluster }}
                 </a-typography-link>
               </a-space>
@@ -208,14 +222,23 @@
             >
               <a-card class="description-item-card">
                 <p class="white_space">
-                  启动探针(StartupProbe):开启 类型: {{ instanceDetail?.probes?.startupProbe.type }}
-                  端口:{{ instanceDetail?.probes?.startupProbe.port }}</p>
+                  启动探针(StartupProbe):开启 类型:
+                  {{ instanceDetail?.probes?.startupProbe.type }} 端口:{{
+                    instanceDetail?.probes?.startupProbe.port
+                  }}
+                </p>
                 <p class="white_space">
-                  就绪探针(ReadinessProbe):开启 类型: {{ instanceDetail?.probes?.readinessProbe.type }}
-                  端口:{{ instanceDetail?.probes?.readinessProbe.port }}</p>
+                  就绪探针(ReadinessProbe):开启 类型:
+                  {{ instanceDetail?.probes?.readinessProbe.type }} 端口:{{
+                    instanceDetail?.probes?.readinessProbe.port
+                  }}
+                </p>
                 <p class="white_space">
-                  存活探针(LivenessProbe):开启 类型: {{ instanceDetail?.probes?.livenessPronbe.type }}
-                  端口:{{ instanceDetail?.probes?.livenessPronbe.port }}</p>
+                  存活探针(LivenessProbe):开启 类型:
+                  {{ instanceDetail?.probes?.livenessPronbe.type }} 端口:{{
+                    instanceDetail?.probes?.livenessPronbe.port
+                  }}
+                </p>
               </a-card>
             </a-descriptions-item>
           </a-descriptions>
@@ -256,13 +279,12 @@ onMounted(async () => {
   console.log('assign', instanceDetail)
 })
 
-
 // Click on the application name to view the application
 const checkApplication = () => {
   router.push({
-    path:'/resources/applications/detail',
-    params:{
-      pathId:route.params.pathId
+    path: '/resources/applications/detail',
+    params: {
+      pathId: route.params.pathId
     }
   })
 }
@@ -277,6 +299,5 @@ function copyIt(v: string) {
 
 <style lang="less" scoped>
 .__container_instance_detail {
-
 }
 </style>
