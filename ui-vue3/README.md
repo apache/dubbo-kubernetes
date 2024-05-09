@@ -5,6 +5,7 @@
 `Vue3` `Vite` `TypeScript` `Ant Design Vue` `AntV|echarts` `lodash` `i18n` `colorful theme`
 
 ## Introduction
+
 This project is the front-end of dubbo-kube.
 
 1. home
@@ -44,6 +45,7 @@ yarn add ant-design-vue@4.x
 ```
 
 ## Develop
+
 1. todo
 > if a function is not complete but show the entry in your page, 
 > please use notification.todo to mark it
@@ -245,8 +247,20 @@ function globalQuestion() {
    },
    ```
 
-   
+## Build and Deploy
 
-   
+1. Build
 
-   
+   ```shell
+   yarn build
+   ```
+
+2. Deploy
+
+   Copy the `dist` folder to the path `app/dubbo-ui/dist/`
+
+   ```shell
+   # run the following command in the root path of the project
+   rm -rf app/dubbo-ui/dist
+   cp -r dist/ app/dubbo-ui/
+   ```

@@ -19,6 +19,7 @@ package server
 
 import (
 	"context"
+	ui "github.com/apache/dubbo-kubernetes/app/dubbo-ui"
 	"net/http"
 	"strconv"
 
@@ -49,6 +50,8 @@ func NewAdminServer(adminCfg admin.Admin, ns string) *AdminServer {
 
 func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 	r := gin.Default()
+	// Admin UI
+	r.StaticFS("/admin", http.FS(ui.FS()))
 	initRouter(r, rt)
 	a.Engine = r
 	return a
