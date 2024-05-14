@@ -48,7 +48,7 @@ function cpOnlyProto() {
 
 rm -fr "${OUTPUT_PROTO_DIR}"/udpa "${OUTPUT_PROTO_DIR}"/xds
 mkdir -p "${OUTPUT_PROTO_DIR}"/{udpa,xds}
-go mod download github.com/cncf/udpa@master
+go mod download github.com/cncf/udpa@main
 VERSION=$(find "${ROOT}"/github.com/cncf/udpa@* -maxdepth 0 | sort -r | head -1)
 cpOnlyProto "${VERSION}"/udpa "${OUTPUT_PROTO_DIR}"/udpa
 cpOnlyProto "${VERSION}"/xds "${OUTPUT_PROTO_DIR}"/xds
