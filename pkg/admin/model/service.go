@@ -18,6 +18,7 @@
 package model
 
 import (
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 )
 
@@ -36,7 +37,7 @@ type ServiceSearchResp struct {
 
 func (s *ServiceSearchResp) FromServiceDataplaneResource(dataplane *mesh.DataplaneResource) *ServiceSearchResp {
 	// TODO: get real data
-	s.ServiceName = "servicedemo"
+	s.ServiceName = dataplane.Meta.GetName()
 	s.InterfaceNum = 12
 	s.AvgQPS = "0.5"
 	s.AvgRT = "345ms"
@@ -58,7 +59,7 @@ type ServiceTabDistributionResp struct {
 
 func (s *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *mesh.DataplaneResource) *ServiceTabDistributionResp {
 	// TODO: get real data
-	s.AppName = "servicedemo"
+	s.AppName = dataplane.GetMeta().GetLabels()[v1alpha1.AppTag]
 	s.InstanceName = "instancedemo"
 	s.Endpoint = "0.5"
 	s.TimeOut = "345ms"

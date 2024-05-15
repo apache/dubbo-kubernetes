@@ -47,6 +47,6 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		service.GET("/distribution", handler.GetServiceTabDistribution(rt))
 		service.GET("/search", handler.SearchServices(rt))
 		service.GET("/detail", handler.GetServiceDetail(rt))
-		service.GET("interfaces", handler.GetServiceInterfaces(rt))
+		service.GET("/interfaces", handler.GetServiceInterfaces(rt))
 	}
 }
