@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/bufman"
 	"time"
 )
 
@@ -109,6 +110,12 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 				runLog.Error(err, "unable to set up xds server")
 				return err
 			}
+
+			if err := bufman.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up bufman server")
+				return err
+			}
+
 			if err := hds.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up HDS")
 				return err
