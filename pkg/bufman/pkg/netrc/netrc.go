@@ -23,7 +23,7 @@ import (
 )
 
 import (
-	"github.com/jdxcode/netrc"
+	"github.com/jdx/go-netrc"
 )
 
 import (

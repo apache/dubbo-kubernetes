@@ -42,4 +42,5 @@ ui-vue3/pnpm-lock.yaml
 coverage.txt
 
 bin/
+build/
 vendor/
