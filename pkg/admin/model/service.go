@@ -55,7 +55,7 @@ func (s *ServiceSearchResp) FromServiceMappingResource(dataplane *mesh.MappingRe
 	return s
 }
 
-func (s *ServiceSearchResp) FromServiceMetadataResource(dataplane *mesh.MeshResource) *ServiceSearchResp {
+func (s *ServiceSearchResp) FromServiceMetadataResource(dataplane *mesh.MetaDataResource) *ServiceSearchResp {
 	// TODO: get real data
 	s.ServiceName = dataplane.Meta.GetName()
 	s.VersionGroups = make([]VersionGroup, 4)
