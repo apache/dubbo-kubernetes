@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package services
+package handler
 
 import (
 	"context"
