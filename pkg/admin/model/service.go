@@ -28,17 +28,17 @@ type ServiceSearchReq struct {
 }
 
 type ServiceSearchResp struct {
-	ServiceName  string `json:"serviceName"`
-	InterfaceNum int    `json:"interfaceNum"`
-	AvgQPS       string `json:"avgQPS"`
-	AvgRT        string `json:"avgRT"`
-	RequestTotal string `json:"RequestTotal"`
+	ServiceName   string         `json:"serviceName"`
+	AvgQPS        string         `json:"avgQPS"`
+	AvgRT         string         `json:"avgRT"`
+	RequestTotal  string         `json:"RequestTotal"`
+	VersionGroups []VersionGroup `json:"versionGroups"`
 }
 
 func (s *ServiceSearchResp) FromServiceDataplaneResource(dataplane *mesh.DataplaneResource) *ServiceSearchResp {
 	// TODO: get real data
 	s.ServiceName = dataplane.Meta.GetName()
-	s.InterfaceNum = 12
+	s.VersionGroups = make([]VersionGroup, 0)
 	s.AvgQPS = "0.5"
 	s.AvgRT = "345ms"
 	s.RequestTotal = "1850"
@@ -65,4 +65,9 @@ func (s *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *mes
 	s.TimeOut = "345ms"
 	s.Retries = "1850"
 	return s
+}
+
+type VersionGroup struct {
+	Version string `json:"version"`
+	Group   string `json:"group"`
 }

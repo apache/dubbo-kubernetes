@@ -20,10 +20,9 @@ package service
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	_ "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"strconv"
 )
 
 func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) ([]*model.ServiceTabDistributionResp, error) {
@@ -43,12 +42,15 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	return res, nil
 }
 
-func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) ([]*model.ServiceSearchResp, *core_model.Pagination, error) {
+func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) ([]*model.ServiceSearchResp, error) {
 	manager := rt.ResourceManager()
-	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName), store.ListByPage(req.PageSize, strconv.Itoa(req.CurPage))); err != nil {
-		return nil, nil, err
+	dataplaneList := &mesh.DataplaneResourceList{}
+	//metadataList := &mesh.MetaDataResourceList{}
+	//mappingList := &mesh.MappingResourceList{}
+
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName)); err != nil {
+		return nil, err
 	}
 
 	res := make([]*model.ServiceSearchResp, 0, len(dataplaneList.Items))
@@ -57,5 +59,5 @@ func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) ([]
 		res[i] = res[i].FromServiceDataplaneResource(dataplane)
 	}
 
-	return res, &dataplaneList.Pagination, nil
+	return res, nil
 }

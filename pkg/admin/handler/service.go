@@ -37,13 +37,13 @@ func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		resp, pageData, err := service.GetSearchServices(rt, req)
+		resp, err := service.GetSearchServices(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
 		}
-		pageRes := &model.PageData{}
-		c.JSON(http.StatusOK, model.NewSuccessResp(pageRes.WithData(resp).WithTotal(int(pageData.Total)).WithCurPage(req.CurPage).WithPageSize(req.PageSize)))
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
 
