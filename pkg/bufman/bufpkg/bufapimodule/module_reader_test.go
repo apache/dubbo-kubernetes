@@ -20,7 +20,16 @@ import (
 	"errors"
 	"testing"
 	"time"
+)
 
+import (
+	"github.com/bufbuild/connect-go"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmanifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmodule/bufmoduleref"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/connect/registry/v1alpha1/registryv1alpha1connect"
@@ -28,9 +37,6 @@ import (
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage/storagemem"
-	"github.com/bufbuild/connect-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDownload(t *testing.T) {

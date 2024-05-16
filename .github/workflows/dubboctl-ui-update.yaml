@@ -25,7 +25,6 @@ on:
     paths:
       - .github/workflows/dubboctl-ui-update.yaml
       - ui-vue3/**
-      - Makefile
   # Trigger the workflow when a pull request is opened or updated.
   # This is to make sure the build process would not be broken by the
   # changes in the pull request.
@@ -35,17 +34,55 @@ on:
     paths:
       - .github/workflows/dubboctl-ui-update.yaml
       - ui-vue3/**
-      - Makefile
 
 jobs:
-  update-ui:
+  lint:
     runs-on: ubuntu-latest
-    if: github.repository == 'apache/dubbo-kubernetes'
+    defaults:
+      run:
+        working-directory: ui-vue3
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "ui-vue3/.nvmrc"
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Lint
+        run: |
+          # disable eslint for now as the new ui is under heavy development
+          # when the new ui is ready, we can enable eslint again (please also update the .lintstagedrc.json file)
+          # yarn lint
+          yarn prettier-check
+
+  update-ui:
+    runs-on: ubuntu-latest
+    if: github.repository == 'apache/dubbo-kubernetes'
+    defaults:
+      run:
+        working-directory: ui-vue3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "ui-vue3/.nvmrc"
+
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+
       - name: Run Dubboctl UI build
-        run: make build-ui
+        run: yarn build
+
+      - name: Move build artifacts
+        run: |
+          rm -rf ../app/dubbo-ui/dist/
+          mv dist/ ../app/dubbo-ui/dist/
 
       - name: Create PR if the build is changed
         # This step will be skipped if the workflow is triggered by a pull request.

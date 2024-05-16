@@ -18,9 +18,14 @@ package bufimagemodify
 import (
 	"context"
 	"fmt"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
+import (
 	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 )
 
 // fileOptionPath is the path prefix used for FileOptions.

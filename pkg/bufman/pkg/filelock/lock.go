@@ -21,7 +21,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+)
 
+import (
 	"github.com/gofrs/flock"
 )
 

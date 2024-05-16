@@ -7,13 +7,21 @@
 package registryv1alpha1
 
 import (
-	v1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/image/v1"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	pluginpb "google.golang.org/protobuf/types/pluginpb"
 	reflect "reflect"
 	sync "sync"
+)
+
+import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	pluginpb "google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
+	v1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/image/v1"
 )
 
 const (

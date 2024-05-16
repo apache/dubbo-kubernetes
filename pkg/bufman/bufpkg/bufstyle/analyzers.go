@@ -20,7 +20,9 @@ import (
 	"go/token"
 	"path/filepath"
 	"strings"
+)
 
+import (
 	"golang.org/x/tools/go/analysis"
 )
 

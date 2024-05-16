@@ -18,7 +18,119 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
+  destinationRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  virtualServiceDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  dynamicConfigDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图',
+    event: '事件'
+  },
+  routingRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  tagRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  flowControlDomain: {
+    notSet: '未设置',
+    versionRecords: '版本记录',
+    YAMLView: 'YAML视图',
+    addConfiguration: '增加配置',
+    addConfigurationItem: '增加配置项',
+    addFilter: '增加筛选',
+    configurationItem: '配置项',
+    actuatingRange: '作用范围',
+    scopeScreening: '作用范围筛选',
+    endOfAction: '作用端',
+    actions: '操作',
+    filterType: '筛选类型',
+    labelName: '标签名',
+    formView: '表单视图',
+    addMatch: '增加匹配',
+    addRouter: '增加路由',
+    addLabel: '增加标签',
+    addressSubsetMatching: '地址子集匹配',
+    value: '值',
+    relation: '关系',
+    requestParameterMatching: '请求参数匹配',
+    matchingDimension: '匹配维度',
+    parameter: '参数',
+    ruleName: '规则名',
+    actionObject: '作用对象',
+    faultTolerantProtection: '容错保护',
+    runTimeEffective: '运行时生效',
+    ruleGranularity: '规则粒度',
+    effectTime: '生效时间',
+    enabledState: '启用状态',
+    priority: '优先级',
+    off: '关',
+    on: '开',
+    opened: '开启',
+    closed: '关闭',
+    enabled: '启用',
+    disabled: '禁用'
+  },
+  instanceDomain: {
+    flowDisabled: '流量禁用',
+    operatorLog: '执行日志',
+    CPU: 'CPU',
+    enableAppInstanceLogs: '开启该应用所有实例的访问日志',
+    appServiceLoadBalance: '调整应用提供服务的负载均衡策略',
+    appServiceNegativeClusteringMethod: '调整应用提供服务的的集群方式',
+    appServiceRetries: '调整该应用提供服务的重试次数',
+    appServiceTimeout: '调整应用提供服务的超时时间',
+    close: '关闭',
+    enable: '开启',
+    executionLog: '执行日志',
+    retryCount: '重试次数',
+    clusterApproach: '集群方式',
+    timeout_ms: '超时时间(ms)',
+    details: '详情',
+    loadBalance: '负载均衡',
+    monitor: '监控',
+    linkTracking: '链路追踪',
+    configuration: '场景配置',
+    event: '事件',
+    healthExamination_k8s: '健康检查(k8s)',
+    instanceLabel: '实例标签',
+    instanceImage_k8s: '镜像(k8s)',
+    owningWorkload_k8s: '所属工作负载(k8s)',
+    node: '节点',
+    whichApplication: '所属应用',
+    registerCluster: '注册集群',
+    dubboPort: 'Dubbo端口',
+    instanceIP: '实例IP',
+    ip: 'IP',
+    name: '实例名称',
+    deployState: '部署状态',
+    deployCluster: '部署集群',
+    registerStates: '注册状态',
+    registerClusters: '注册集群',
+    cpu: 'CPU',
+    memory: '内存',
+    startTime: '启动时间',
+    registerTime: '注册时间',
+    labels: '标签',
+    instanceName: '实例名称',
+    creationTime_k8s: '创建时间(k8s)',
+    startTime_k8s: '启动时间(k8s)'
+  },
+  serviceDomain: {
+    name: '服务名'
+  },
   service: '服务',
+  versionGroup: '版本&分组',
+  avgQPS: '近1min QPS',
+  avgRT: '近1min RT',
+  requestTotal: '近1min 请求总量',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
   trafficManagement: '流量管控',
@@ -37,6 +149,7 @@ const words: I18nType = {
   providers: '提供者',
   consumers: '消费者',
   application: '应用',
+  instance: '实例',
   all: '全部',
   common: '通用',
 
@@ -54,6 +167,9 @@ const words: I18nType = {
   timeout: '超时(毫秒)',
   serialization: '序列化',
   appName: '应用名',
+  instanceNum: '实例数量',
+  deployCluster: '部署集群',
+  registerClusters: '注册集群列表',
   serviceName: '服务名',
   registrySource: '注册来源',
   instanceRegistry: '应用级',
@@ -242,6 +358,12 @@ const words: I18nType = {
   editMockRule: '修改规则',
   deleteRuleTitle: '确定要删除此服务Mock规则吗？',
 
+  ruleName: '规则名',
+  ruleGranularity: '规则粒度',
+  createTime: '创建时间',
+  lastModifiedTime: '最后修改时间',
+  enable: '是否启用',
+  protection: '容错保护',
   trafficTimeout: '超时时间',
   trafficRetry: '调用重试',
   trafficRegion: '同区域优先',
@@ -260,7 +382,64 @@ const words: I18nType = {
   versionInputPrompt: '请输入服务version(可选)',
   resources: '资源详情',
   applications: '应用',
-  instances: '实例'
+  instances: '实例',
+  applicationDomain: {
+    operatorLog: '执行日志',
+    flowWeight: '流量权重',
+    gray: '灰度隔离',
+    name: '应用名',
+    detail: '详情',
+    instance: '实例',
+    service: '服务',
+    monitor: '监控',
+    tracing: '链路追踪',
+    config: '配置',
+    event: '事件',
+    appName: '应用名',
+    rpcProtocols: 'RPC 协议',
+    dubboVersions: 'Dubbo 版本',
+    dubboPorts: 'Dubbo 端口',
+    serialProtocols: '序列化协议',
+    appTypes: '应用类型',
+    images: '应用镜像',
+    workloads: '工作负载',
+    deployCluster: '部署集群',
+    registerCluster: '注册集群',
+    registerMode: '注册模式'
+  },
+
+  searchDomain: {
+    total: '共计',
+    unit: '条'
+  },
+  messageDomain: {
+    success: {
+      copy: '您已经成功复制一条信息'
+    }
+  },
+  backHome: '回到首页',
+  noPageTip: '抱歉，你访问的页面不存在',
+  globalSearchTip: '搜索ip，应用，实例，服务',
+
+  placeholder: {
+    typeAppName: '请输入应用名，支持前缀搜索',
+    typeDefault: '请输入',
+    typeRoutingRules: '搜索路由规则，支持前缀过滤'
+  },
+  none: '无',
+  details: '详情',
+  debug: '调试',
+  distribution: '分布',
+  monitor: '监控',
+  tracing: '链路追踪',
+  sceneConfig: '场景配置',
+  event: '事件',
+
+  provideService: '提供服务',
+  dependentService: '依赖服务',
+  idx: '序号',
+  submit: '提交',
+  reset: '重置'
 }
 
 export default words

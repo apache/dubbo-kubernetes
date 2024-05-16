@@ -20,7 +20,9 @@ import (
 	"errors"
 	"io"
 	"sort"
+)
 
+import (
 	"go.uber.org/multierr"
 )
 

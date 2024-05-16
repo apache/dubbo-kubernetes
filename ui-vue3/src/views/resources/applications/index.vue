@@ -16,15 +16,110 @@
 -->
 <template>
   <div class="__container_resources_application_index">
-    应用
-    <br />
-    <a-button @click="router.push('detail/app123')"> to tab</a-button>
+    <search-table :search-domain="searchDomain">
+      <template #bodyCell="{ text, record, index, column }">
+        <template v-if="column.dataIndex === 'registerClusters'">
+          <a-tag v-for="t in text">
+            {{ t }}
+          </a-tag>
+        </template>
+        <template v-else-if="column.dataIndex === 'deployCluster'">
+          {{ text }}
+        </template>
+        <template v-else-if="column.dataIndex === 'appName'">
+          <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
+            <b>
+              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+              {{ text }}
+            </b>
+          </span>
+        </template>
+      </template>
+    </search-table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { onMounted, provide, reactive } from 'vue'
+import { searchApplications } from '@/api/service/app'
+import SearchTable from '@/components/SearchTable.vue'
+import { SearchDomain, sortString } from '@/utils/SearchUtil'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { Icon } from '@iconify/vue'
+import router from '@/router'
+import { PRIMARY_COLOR } from '@/base/constants'
 
-const router = useRouter()
+let __null = PRIMARY_COLOR
+let columns = [
+  // {
+  //   title: 'idx',
+  //   key: 'idx',
+  //   dataIndex: 'idx',
+  //   width: 50
+  // },
+  {
+    title: 'appName',
+    key: 'appName',
+    dataIndex: 'appName',
+    sorter: (a: any, b: any) => sortString(a.appName, b.appName),
+    width: 140
+  },
+  {
+    title: 'instanceNum',
+    key: 'instanceNum',
+    dataIndex: 'instanceNum',
+    width: 100,
+    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+  },
+
+  {
+    title: 'deployCluster',
+    key: 'deployCluster',
+    dataIndex: 'deployCluster',
+    width: 120
+  },
+  {
+    title: 'registerClusters',
+    key: 'registerClusters',
+    dataIndex: 'registerClusters',
+    width: 200
+  }
+]
+const searchDomain = reactive(
+  new SearchDomain(
+    [
+      {
+        label: 'appName',
+        param: 'appName',
+        placeholder: 'typeAppName',
+        style: {
+          width: '200px'
+        }
+      }
+    ],
+    searchApplications,
+    columns
+  )
+)
+
+onMounted(() => {
+  searchDomain.onSearch()
+})
+
+provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.search-table-container {
+  min-height: 60vh;
+  //max-height: 70vh; //overflow: auto;
+  .app-link {
+    padding: 4px 10px 4px 4px;
+    border-radius: 4px;
+    color: v-bind('PRIMARY_COLOR');
+    &:hover {
+      cursor: pointer;
+      background: rgba(133, 131, 131, 0.13);
+    }
+  }
+}
+</style>

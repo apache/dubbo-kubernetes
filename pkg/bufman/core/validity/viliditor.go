@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/buflock"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufmanifest"

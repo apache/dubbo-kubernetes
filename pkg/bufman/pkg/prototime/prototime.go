@@ -17,7 +17,9 @@ package prototime
 
 import (
 	"time"
+)
 
+import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -15,15 +15,103 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_home_index">
-    <h1>{{ $t(routeName) }}</h1>
+  <div class="__container_resources_application_index">
+    <search-table :search-domain="searchDomain">
+      <template #customOperation>
+        <a-button type="primary">新增标签路由规则</a-button>
+      </template>
+      <template #bodyCell="{ text, column, record }">
+        <template v-if="column.dataIndex === 'ruleName'">
+          <a-button type="link" @click="router.replace(`formview/${record[column.key]}`)">{{
+            text
+          }}</a-button>
+        </template>
+        <template v-if="column.dataIndex === 'enable'">
+          {{ text ? '启用' : '禁用' }}
+        </template>
+        <template v-if="column.dataIndex === 'operation'">
+          <a-button type="link">查看</a-button>
+          <a-button type="link">修改</a-button>
+          <a-popconfirm
+            title="确认删除该标签路由规则？"
+            ok-text="Yes"
+            cancel-text="No"
+            @confirm="confirm"
+          >
+            <a-button type="link">删除</a-button>
+          </a-popconfirm>
+        </template>
+      </template>
+    </search-table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
+import { onMounted, provide, reactive } from 'vue'
+import { searchTagRule } from '@/api/service/traffic'
+import SearchTable from '@/components/SearchTable.vue'
+import { SearchDomain, sortString } from '@/utils/SearchUtil'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import router from '@/router'
 
-import { useRoute } from 'vue-router'
-const routeName = <string>useRoute().name
+let columns = [
+  {
+    title: 'ruleName',
+    key: 'ruleName',
+    dataIndex: 'ruleName',
+    sorter: (a: any, b: any) => sortString(a.appName, b.appName),
+    width: 140
+  },
+  {
+    title: 'createTime',
+    key: 'createTime',
+    dataIndex: 'createTime',
+    width: 120,
+    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+  },
+  {
+    title: 'enable',
+    key: 'enable',
+    dataIndex: 'enable',
+    render: (text, record) => (record.enable ? '是' : '否'),
+    width: 120,
+    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+  },
+  {
+    title: 'operation',
+    key: 'operation',
+    dataIndex: 'operation',
+    width: 200
+  }
+]
+const searchDomain = reactive(
+  new SearchDomain(
+    [
+      {
+        label: 'serviceGovernance',
+        param: 'serviceGovernance',
+        placeholder: 'typeRoutingRules',
+        style: {
+          width: '200px'
+        }
+      }
+    ],
+    searchTagRule,
+    columns
+  )
+)
+
+onMounted(() => {
+  searchDomain.onSearch()
+})
+
+const confirm = () => {}
+
+provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.search-table-container {
+  min-height: 60vh;
+  //max-height: 70vh; //overflow: auto;
+}
+</style>

@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"io"
 	"sync"
+)
 
+import (
 	"go.uber.org/multierr"
 )
 

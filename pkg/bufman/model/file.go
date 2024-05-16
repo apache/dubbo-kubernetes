@@ -21,7 +21,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+)
 
+import (
 	registryv1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/registry/v1alpha1"
 )
 

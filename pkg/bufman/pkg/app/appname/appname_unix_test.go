@@ -24,9 +24,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+import (
 	"github.com/stretchr/testify/require"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 
 func TestRoundTrip1(t *testing.T) {

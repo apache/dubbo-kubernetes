@@ -20,11 +20,15 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+)
 
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-
+import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
 )
 
 const (

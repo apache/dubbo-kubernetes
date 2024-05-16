@@ -18,7 +18,9 @@ package protostat
 import (
 	"context"
 	"io"
+)
 
+import (
 	"github.com/bufbuild/protocompile/ast"
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"

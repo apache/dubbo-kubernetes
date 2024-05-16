@@ -17,11 +17,14 @@ package observabilityzap
 
 import (
 	"io"
+)
 
+import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+
 	"go.uber.org/zap"
 )
 

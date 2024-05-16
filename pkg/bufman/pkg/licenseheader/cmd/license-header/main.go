@@ -21,15 +21,21 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+)
 
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/spf13/pflag"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app/appcmd"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/command"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/diff"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/git"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/licenseheader"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 const (

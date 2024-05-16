@@ -18,10 +18,15 @@ package main
 import (
 	"fmt"
 	"os"
+)
 
+import (
+	"golang.org/x/tools/go/analysis/multichecker"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufstyle"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/encoding"
-	"golang.org/x/tools/go/analysis/multichecker"
 )
 
 var externalConfigPath = ".bufstyle.yaml"

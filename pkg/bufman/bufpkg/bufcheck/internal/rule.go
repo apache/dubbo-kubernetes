@@ -18,7 +18,9 @@ package internal
 import (
 	"encoding/json"
 	"sort"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufanalysis"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protosource"
 )

@@ -17,13 +17,20 @@ package bufimagemodify
 
 import (
 	"context"
+)
 
+import (
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufimage"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/normalpath"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // JavaOuterClassNameID is the ID for the java_outer_classname modifier.

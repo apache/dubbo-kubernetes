@@ -15,7 +15,9 @@
 
 package protostatos
 
-import "github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protostat"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protostat"
+)
 
 // NewFileWalker returns a new FileWalker for the given filenames.
 //

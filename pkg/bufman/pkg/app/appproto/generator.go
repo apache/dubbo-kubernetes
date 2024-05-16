@@ -18,12 +18,18 @@ package appproto
 import (
 	"context"
 	"errors"
+)
 
+import (
+	"go.uber.org/zap"
+
+	"google.golang.org/protobuf/types/pluginpb"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/protodescriptor"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/thread"
-	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type generator struct {

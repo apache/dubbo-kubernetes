@@ -21,11 +21,16 @@ import (
 	"net"
 	"net/http"
 	"time"
+)
 
+import (
 	"github.com/go-chi/chi/v5"
+
 	"go.uber.org/zap"
+
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
 	"golang.org/x/sync/errgroup"
 )
 

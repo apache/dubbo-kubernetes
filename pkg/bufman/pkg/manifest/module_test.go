@@ -23,10 +23,15 @@ import (
 	"strings"
 	"testing"
 	"testing/iotest"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
+import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 )
 
 func TestNewMemoryBlob(t *testing.T) {

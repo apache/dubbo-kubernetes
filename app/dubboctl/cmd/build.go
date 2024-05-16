@@ -19,14 +19,21 @@ import (
 	"fmt"
 	"os"
 	"strings"
+)
 
+import (
 	"github.com/AlecAivazis/survey/v2"
+
+	"github.com/ory/viper"
+
+	"github.com/spf13/cobra"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/dockerfile"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/builders/pack"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/dubbo"
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/util"
-	"github.com/ory/viper"
-	"github.com/spf13/cobra"
 )
 
 func addBuild(baseCmd *cobra.Command, newClient ClientFactory) {
@@ -69,9 +76,6 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	}
 
 	cfg, err = cfg.Prompt(f)
-	if err != nil {
-		return err
-	}
 	if err != nil {
 		return err
 	}

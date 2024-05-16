@@ -16,8 +16,11 @@
 package http_handlers
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/e"
 	"google.golang.org/grpc/codes"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/e"
 )
 
 type HTTPResponse struct {

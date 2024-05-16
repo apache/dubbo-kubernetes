@@ -24,9 +24,14 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
+import (
 	"github.com/stretchr/testify/assert"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/stringutil"
 )
 
 func TestNormalizeAndValidate(t *testing.T) {

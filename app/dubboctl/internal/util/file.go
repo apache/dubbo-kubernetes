@@ -20,8 +20,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+)
 
+import (
 	"github.com/spf13/pflag"
+
 	"golang.org/x/term"
 )
 

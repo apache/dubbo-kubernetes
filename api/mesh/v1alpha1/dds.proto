@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "envoy/service/discovery/v3/discovery.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+
+service DubboDiscoveryService {
+  rpc StreamDubboResources(stream envoy.service.discovery.v3.DiscoveryRequest)
+      returns (stream envoy.service.discovery.v3.DiscoveryResponse);
+}
+
+message DubboResource {
+  message Meta {
+    string name = 1;
+    string mesh = 2;
+    string version = 5;
+    map<string, string> labels = 6;
+  }
+  Meta meta = 1;
+  google.protobuf.Any spec = 2;
+}
+
+message ZoneHealthCheckRequest {}
+
+message ZoneHealthCheckResponse {
+  // The the interval that the global control plane
+  // expects between health check pings
+  google.protobuf.Duration interval = 1;
+}
+
+service GlobalDDSService {
+  // HealthCheck allows us to implement a health check that works across
+  // proxies, unlike HTTP/2 PING frames.
+  rpc HealthCheck(ZoneHealthCheckRequest) returns (ZoneHealthCheckResponse);
+}
+
+// DDSSyncService is a service exposed by the control-plane for the
+// synchronization of the resources between zone and global control-plane.
+service DDSSyncService {
+  // GlobalToZoneSync is logically a service exposed by global control-plane
+  // that allows zone control plane to connect and synchronize resources from
+  // the global control-plane to the zone control-plane. It uses delta xDS from
+  // go-control-plane and responds only with the changes to the resources.
+  rpc GlobalToZoneSync(stream envoy.service.discovery.v3.DeltaDiscoveryRequest)
+      returns (stream envoy.service.discovery.v3.DeltaDiscoveryResponse);
+  // ZoneToGlobalSync is logically a service exposed by global control-plane
+  // that allows zone control plane to connect and synchronize resources to
+  // the global control-plane. It uses delta xDS from go-control-plane and
+  // responds only with the changes to the resources.
+  rpc ZoneToGlobalSync(stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
+      returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest);
+}

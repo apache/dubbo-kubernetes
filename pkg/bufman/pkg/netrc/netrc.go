@@ -20,9 +20,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+)
 
-	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
+import (
 	"github.com/jdxcode/netrc"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/app"
 )
 
 // Filename exposes the netrc filename based on the current operating system.

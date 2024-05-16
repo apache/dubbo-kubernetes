@@ -21,7 +21,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+)
 
+import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/bufbreaking/bufbreakingconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufcheck/buflint/buflintconfig"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/bufpkg/bufconfig"
@@ -31,7 +37,6 @@ import (
 	modulev1alpha1 "github.com/apache/dubbo-kubernetes/pkg/bufman/gen/proto/go/module/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/bufman/pkg/storage"
-	"go.uber.org/multierr"
 )
 
 const (
