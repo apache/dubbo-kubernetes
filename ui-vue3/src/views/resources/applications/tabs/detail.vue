@@ -146,24 +146,5 @@ function copyIt(v: string) {
 </script>
 <style lang="less" scoped>
 .__container_app_detail {
-  ._detail {
-    box-shadow: 8px 8px 4px rgba(162, 162, 162, 0.19);
-  }
-  .description-item-content {
-    &.no-card {
-      padding-left: 20px;
-    }
-    &.with-card:hover {
-      color: v-bind('PRIMARY_COLOR');
-    }
-  }
-  .description-item-card {
-    :deep(.ant-card-body) {
-      padding: 10px;
-    }
-    width: 80%;
-    margin-left: 20px;
-    border: 1px dashed rgba(162, 162, 162, 0.19);
-  }
 }
 </style>

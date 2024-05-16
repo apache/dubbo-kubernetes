@@ -16,9 +16,9 @@
 -->
 
 <template>
-  <div class="__container_app_detail">
-    <a-flex>
-      <a-card>
+  <div class="__container_routingRule_detail">
+    <a-row>
+      <a-card class="_detail">
         <a-descriptions :column="2" layout="vertical" title="">
           <!-- ruleName -->
           <a-descriptions-item
@@ -26,8 +26,8 @@
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <p
-              @click="copyIt('org.apache.dubbo.samples.UserService::.condition-router')"
               class="description-item-content with-card"
+              @click="copyIt('org.apache.dubbo.samples.UserService::.condition-router')"
             >
               org.apache.dubbo.samples.UserService::.condition-router
               <CopyOutlined />
@@ -39,7 +39,7 @@
             :label="$t('flowControlDomain.ruleGranularity')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <a-typography-paragraph> 服务 </a-typography-paragraph>
+            <a-typography-paragraph> 服务</a-typography-paragraph>
           </a-descriptions-item>
 
           <!-- actionObject -->
@@ -48,8 +48,8 @@
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <p
-              @click="copyIt('org.apache.dubbo.samples.UserService')"
               class="description-item-content with-card"
+              @click="copyIt('org.apache.dubbo.samples.UserService')"
             >
               org.apache.dubbo.samples.UserService
               <CopyOutlined />
@@ -105,13 +105,13 @@
           </a-descriptions-item>
         </a-descriptions>
       </a-card>
-    </a-flex>
+    </a-row>
 
-    <a-card title="路由【1】">
+    <a-card style="margin-top: 10px" class="_detail">
       <a-space align="start" style="width: 100%">
         <a-typography-title :level="5"
-          >{{ $t('flowControlDomain.requestParameterMatching') }}:</a-typography-title
-        >
+          >{{ $t('flowControlDomain.requestParameterMatching') }}:
+        </a-typography-title>
 
         <a-space align="center" direction="horizontal" size="middle">
           <a-tag color="#2db7f5">method=login</a-tag>
@@ -121,8 +121,8 @@
 
       <a-space align="start" style="width: 100%">
         <a-typography-title :level="5"
-          >{{ $t('flowControlDomain.addressSubsetMatching') }}:</a-typography-title
-        >
+          >{{ $t('flowControlDomain.addressSubsetMatching') }}:
+        </a-typography-title>
         <a-tag color="#87d068">version=v1</a-tag>
       </a-space>
     </a-card>
@@ -130,7 +130,7 @@
 </template>
 
 <script lang="ts" setup>
-import { type ComponentInternalInstance, getCurrentInstance, ref } from 'vue'
+import { type ComponentInternalInstance, getCurrentInstance } from 'vue'
 import { CopyOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
@@ -153,13 +153,6 @@ function copyIt(v: string) {
 </script>
 
 <style lang="less" scoped>
-.description-item-content {
-  &.no-card {
-    padding-left: 20px;
-  }
-
-  &.with-card:hover {
-    color: v-bind('PRIMARY_COLOR');
-  }
+.__container_routingRule_detail {
 }
 </style>
