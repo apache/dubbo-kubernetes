@@ -46,14 +46,25 @@ func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) ([]
 	manager := rt.ResourceManager()
 
 	dataplaneList := &mesh.DataplaneResourceList{}
-	//metadataList := &mesh.MetaDataResourceList{}
-	//mappingList := &mesh.MappingResourceList{}
+	metadataList := &mesh.MetaDataResourceList{}
+	mappingList := &mesh.MappingResourceList{}
 
 	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName)); err != nil {
 		return nil, err
 	}
 
 	res := make([]*model.ServiceSearchResp, 0, len(dataplaneList.Items))
+
+	for i, mapping := range mappingList.Items {
+		res[i] = &model.ServiceSearchResp{}
+		res[i] = res[i].FromServiceMappingResource(mapping)
+	}
+
+	for i, metadata := range metadataList.Items {
+		res[i] = &model.ServiceSearchResp{}
+		res[i] = res[i].FromServiceMetadataResource(metadata)
+	}
+
 	for i, dataplane := range dataplaneList.Items {
 		res[i] = &model.ServiceSearchResp{}
 		res[i] = res[i].FromServiceDataplaneResource(dataplane)

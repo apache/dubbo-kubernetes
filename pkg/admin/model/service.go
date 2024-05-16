@@ -45,6 +45,26 @@ func (s *ServiceSearchResp) FromServiceDataplaneResource(dataplane *mesh.Datapla
 	return s
 }
 
+func (s *ServiceSearchResp) FromServiceMappingResource(dataplane *mesh.MappingResource) *ServiceSearchResp {
+	// TODO: get real data
+	s.ServiceName = dataplane.Meta.GetName()
+	s.VersionGroups = make([]VersionGroup, 0)
+	s.AvgQPS = "0.5"
+	s.AvgRT = "345ms"
+	s.RequestTotal = "1850"
+	return s
+}
+
+func (s *ServiceSearchResp) FromServiceMetadataResource(dataplane *mesh.MeshResource) *ServiceSearchResp {
+	// TODO: get real data
+	s.ServiceName = dataplane.Meta.GetName()
+	s.VersionGroups = make([]VersionGroup, 4)
+	s.AvgQPS = "0.5"
+	s.AvgRT = "345ms"
+	s.RequestTotal = "1850"
+	return s
+}
+
 type ServiceTabDistributionReq struct {
 	AppName string `form:"appName"`
 }
