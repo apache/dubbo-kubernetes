@@ -55,14 +55,22 @@ func (s *ServiceSearchResp) FromServiceMappingResource(dataplane *mesh.MappingRe
 	return s
 }
 
-func (s *ServiceSearchResp) FromServiceMetadataResource(dataplane *mesh.MetaDataResource) *ServiceSearchResp {
+func (s *ServiceSearchResp) FromServiceMetadataResource(metadata *mesh.MetaDataResource) *ServiceSearchResp {
 	// TODO: get real data
-	s.ServiceName = dataplane.Meta.GetName()
-	s.VersionGroups = make([]VersionGroup, 4)
-	s.AvgQPS = "0.5"
-	s.AvgRT = "345ms"
-	s.RequestTotal = "1850"
-	return s
+	serviceMap := metadata.Spec.GetServices()
+	for _, serviceInfo := range serviceMap {
+		news := &ServiceSearchResp{}
+		news.ServiceName = serviceInfo.Name
+		news.VersionGroups = make([]VersionGroup, 0)
+		group := serviceInfo.Group
+		version := serviceInfo.Version
+		news.VersionGroups = append(s.VersionGroups, VersionGroup{Version: version, Group: group})
+		news.AvgQPS = "0.5"
+		news.AvgRT = "345ms"
+		news.RequestTotal = "1850"
+		return news
+	}
+	return nil
 }
 
 type ServiceTabDistributionReq struct {

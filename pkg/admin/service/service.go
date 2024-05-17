@@ -53,21 +53,28 @@ func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) ([]
 		return nil, err
 	}
 
-	res := make([]*model.ServiceSearchResp, 0, len(dataplaneList.Items))
-
-	for i, mapping := range mappingList.Items {
-		res[i] = &model.ServiceSearchResp{}
-		res[i] = res[i].FromServiceMappingResource(mapping)
+	if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(req.AppName)); err != nil {
+		return nil, err
 	}
+
+	if err := manager.List(rt.AppContext(), mappingList, store.ListByNameContains(req.AppName)); err != nil {
+		return nil, err
+	}
+
+	//创建一个二维数组，元素为ServiceSearchResp组成的列表，最后需要将这个数组压缩为一维的返回（res）
+	metaRes := make([][]*model.ServiceSearchResp, 0, len(metadataList.Items))
 
 	for i, metadata := range metadataList.Items {
-		res[i] = &model.ServiceSearchResp{}
-		res[i] = res[i].FromServiceMetadataResource(metadata)
+		metaRes[i] = make([]*model.ServiceSearchResp, 0)
+		metaRes[i] = append(metaRes[i], (&model.ServiceSearchResp{}).FromServiceMetadataResource(metadata))
 	}
 
-	for i, dataplane := range dataplaneList.Items {
-		res[i] = &model.ServiceSearchResp{}
-		res[i] = res[i].FromServiceDataplaneResource(dataplane)
+	res := make([]*model.ServiceSearchResp, 0, len(metadataList.Items)*len(metaRes[0]))
+
+	for _, subArray := range metaRes {
+		for _, item := range subArray {
+			res = append(res, item)
+		}
 	}
 
 	return res, nil
