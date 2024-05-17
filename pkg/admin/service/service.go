@@ -21,7 +21,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	_ "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
@@ -29,7 +28,7 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName)); err != nil {
+	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
 	}
 
@@ -42,22 +41,22 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	return res, nil
 }
 
-func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) ([]*model.ServiceSearchResp, error) {
+func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, error) {
 	manager := rt.ResourceManager()
 
 	dataplaneList := &mesh.DataplaneResourceList{}
 	metadataList := &mesh.MetaDataResourceList{}
 	mappingList := &mesh.MappingResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName)); err != nil {
+	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
 	}
 
-	if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(req.AppName)); err != nil {
+	if err := manager.List(rt.AppContext(), metadataList); err != nil {
 		return nil, err
 	}
 
-	if err := manager.List(rt.AppContext(), mappingList, store.ListByNameContains(req.AppName)); err != nil {
+	if err := manager.List(rt.AppContext(), mappingList); err != nil {
 		return nil, err
 	}
 

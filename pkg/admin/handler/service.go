@@ -38,7 +38,7 @@ func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		resp, err := service.GetSearchServices(rt, req)
+		resp, err := service.GetSearchServices(rt)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return

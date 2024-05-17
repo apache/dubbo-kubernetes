@@ -23,8 +23,6 @@ import (
 )
 
 type ServiceSearchReq struct {
-	AppName string `form:"appName"`
-	PageReq
 }
 
 type ServiceSearchResp struct {
@@ -74,7 +72,10 @@ func (s *ServiceSearchResp) FromServiceMetadataResource(metadata *mesh.MetaDataR
 }
 
 type ServiceTabDistributionReq struct {
-	AppName string `form:"appName"`
+	ServiceName string `json:"serviceName"`
+	Version     string `json:"version"`
+	Group       string `json:"group"`
+	Side        string `json:"side"`
 }
 
 type ServiceTabDistributionResp struct {
