@@ -615,6 +615,9 @@ func setNamespace(base string, namespace string) (string, error) {
 		return "", err
 	}
 	for _, seg := range segs {
+		if len(seg) == 0 {
+			continue
+		}
 		segMap := make(map[string]interface{})
 		if err := yaml.Unmarshal([]byte(seg), &segMap); err != nil {
 			return "", err
