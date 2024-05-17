@@ -69,7 +69,7 @@ func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) ([]
 		metaRes[i] = append(metaRes[i], (&model.ServiceSearchResp{}).FromServiceMetadataResource(metadata))
 	}
 
-	res := make([]*model.ServiceSearchResp, 0, len(metadataList.Items)*len(metaRes[0]))
+	res := make([]*model.ServiceSearchResp, 0, len(metadataList.Items))
 
 	for _, subArray := range metaRes {
 		for _, item := range subArray {
