@@ -19,7 +19,7 @@
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ column, text }">
         <template v-if="column.dataIndex === 'serviceName'">
-          <span class="service-link" @click="viewDetail(text)">
+          <span class="service-link" @click="viewDistribution(text)">
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
@@ -128,6 +128,10 @@ searchDomain.onSearch(handleResult)
 
 const viewDetail = (serviceName: string) => {
   router.push({ name: 'detail', params: { pathId: serviceName } })
+}
+
+const viewDistribution = (serviceName: string) => {
+  router.push({ name: 'distribution', params: { pathId: serviceName } })
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
