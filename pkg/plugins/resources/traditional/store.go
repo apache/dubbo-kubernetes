@@ -569,7 +569,9 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 
 func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, fs ...store.GetOptionsFunc) error {
 	opts := store.NewGetOptions(fs...)
-
+	if opts.Name == core_model.DefaultMesh {
+		opts.Name += ".universal"
+	}
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
 	if err != nil {
 		return err
