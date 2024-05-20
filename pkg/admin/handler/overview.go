@@ -18,6 +18,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
@@ -36,6 +37,8 @@ func GetInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 			})
 			return
 		}
+		// zookeeper://127.0.0.1:2181?config-center.group=dubbo&config-center.namespace=&metadata-report.group=dubbo&registry=zookeeper&remote-client-name=zookeeper-127.0.0.1%3A2181
+		log.Println(rt.RegistryCenter())
 		c.JSON(http.StatusOK, model.NewSuccessResp(dataplaneList))
 	}
 }
@@ -51,5 +54,19 @@ func GetMetas(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, model.NewSuccessResp(metadataList))
+	}
+}
+
+func GetMappings(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		manager := rt.ResourceManager()
+		mappingList := &mesh.MappingResourceList{}
+		if err := manager.List(rt.AppContext(), mappingList); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(mappingList))
 	}
 }
