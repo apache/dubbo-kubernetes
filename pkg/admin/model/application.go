@@ -58,27 +58,27 @@ func (r *ApplicationDetailResp) FromApplicationDetail(ad *ApplicationDetail) *Ap
 	r.RegisterClusters = ad.RegisterClusters.Values()
 	r.RegisterModes = ad.RegisterModes.Values()
 	r.RPCProtocols = ad.RPCProtocols.Values()
-	r.SerialProtocols = ad.SerialProtocols.Values() //
+	r.SerialProtocols = ad.SerialProtocols.Values()
 	r.Workloads = ad.Workloads.Values()
 	return r
 }
 
 type ApplicationDetail struct {
-	AppTypes         Set //
-	DeployClusters   Set //
-	DubboPorts       Set //
-	DubboVersions    Set //
-	Images           Set //
-	RegisterClusters Set //
-	RegisterModes    Set //
-	RPCProtocols     Set //
-	SerialProtocols  Set //
-	Workloads        Set //
+	AppTypes         Set
+	DeployClusters   Set
+	DubboPorts       Set
+	DubboVersions    Set
+	Images           Set
+	RegisterClusters Set
+	RegisterModes    Set
+	RPCProtocols     Set
+	SerialProtocols  Set
+	Workloads        Set
 }
 
 func NewApplicationDetail() *ApplicationDetail {
 	return &ApplicationDetail{
-		AppTypes:         NewSet(), //todo
+		AppTypes:         NewSet(),
 		DeployClusters:   NewSet(),
 		DubboPorts:       NewSet(),
 		DubboVersions:    NewSet(),
@@ -155,17 +155,17 @@ type ApplicationTabInstanceInfoReq struct {
 }
 
 type ApplicationTabInstanceInfoResp struct {
-	AppName         string            `json:"appName"`         //
-	CreateTime      string            `json:"createTime"`      //
-	DeployState     string            `json:"deployState"`     //
-	DeployClusters  string            `json:"deployClusters"`  //
-	IP              string            `json:"ip"`              //
-	Labels          map[string]string `json:"labels"`          //
-	Name            string            `json:"name"`            //
-	RegisterCluster string            `json:"registerCluster"` //
-	RegisterState   string            `json:"registerState"`   //
-	RegisterTime    string            `json:"registerTime"`    //
-	WorkloadName    string            `json:"workloadName"`    //
+	AppName         string            `json:"appName"`
+	CreateTime      string            `json:"createTime"`
+	DeployState     string            `json:"deployState"`
+	DeployClusters  string            `json:"deployClusters"`
+	IP              string            `json:"ip"`
+	Labels          map[string]string `json:"labels"`
+	Name            string            `json:"name"`
+	RegisterCluster string            `json:"registerCluster"`
+	RegisterState   string            `json:"registerState"`
+	RegisterTime    string            `json:"registerTime"`
+	WorkloadName    string            `json:"workloadName"`
 }
 
 func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.DataplaneResource, rt core_runtime.Runtime) *ApplicationTabInstanceInfoResp {
