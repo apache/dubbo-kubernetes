@@ -18,13 +18,19 @@
 package model
 
 import (
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"strconv"
 )
 
 type SearchInstanceReq struct {
 	AppName string `form:"appName"`
 	PageReq
+}
+
+type InstanceDetailReq struct {
+	InstanceName string `form:"instanceName"`
 }
 
 type SearchInstanceResp struct {
@@ -44,7 +50,6 @@ type SearchInstanceResp struct {
 func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *SearchInstanceResp {
 	// TODO: support more fields
 	r.IP = dr.GetIP()
-
 	meta := dr.GetMeta()
 	r.Name = meta.GetName()
 	r.StartTime = meta.GetCreationTime().String()
@@ -72,4 +77,106 @@ type State struct {
 	Level string `json:"level"`
 	Tip   string `json:"tip"`
 	Value string `json:"value"`
+}
+
+type InstanceDetailResp struct {
+	RpcPort         []string `json:"rpcPort"`
+	Ip              []string `json:"ip"`
+	AppName         []string `json:"appName"`
+	WorkloadName    []string `json:"workloadName"`
+	Labels          []string `json:"labels"`
+	CreateTime      []string `json:"createTime"`
+	ReadyTime       []string `json:"readyTime"`
+	RegisterTime    []string `json:"registerTime"`
+	RegisterCluster []string `json:"registerCluster"`
+	DeployCluster   []string `json:"deployCluster"`
+	Node            []string `json:"node"`
+	Image           []string `json:"image"`
+	Probes          struct {
+		StartupProbe struct {
+			Type string `json:"type"`
+			Port int    `json:"port"`
+			Open bool   `json:"open"`
+		} `json:"startupProbe"`
+		ReadinessProbe struct {
+			Type string `json:"type"`
+			Port int    `json:"port"`
+			Open bool   `json:"open"`
+		} `json:"readinessProbe"`
+		LivenessProbe struct {
+			Type string `json:"type"`
+			Port int    `json:"port"`
+			Open bool   `json:"open"`
+		} `json:"livenessProbe"`
+	} `json:"probes"`
+}
+
+func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDetailResp {
+	r.AppName = id.AppName.Values()
+	r.RpcPort = id.RpcPort.Values()
+	r.Ip = id.Ip.Values()
+	r.WorkloadName = id.WorkloadName.Values()
+	r.Labels = id.Labels.Values()
+	r.CreateTime = id.CreateTime.Values()
+	r.ReadyTime = id.ReadyTime.Values()
+	r.RegisterTime = id.RegisterTime.Values()
+	r.RegisterCluster = id.RegisterClusters.Values()
+	r.DeployCluster = id.DeployCluster.Values()
+	r.Node = id.Node.Values()
+	r.Image = id.Image.Values()
+	return r
+}
+
+type InstanceDetail struct {
+	RpcPort          Set
+	Ip               Set
+	AppName          Set
+	WorkloadName     Set
+	Labels           Set
+	CreateTime       Set
+	ReadyTime        Set
+	RegisterTime     Set
+	RegisterClusters Set
+	DeployCluster    Set
+	Node             Set
+	Image            Set
+}
+
+func NewInstanceDetail() *InstanceDetail {
+	return &InstanceDetail{
+		RpcPort:          NewSet(),
+		Ip:               NewSet(),
+		AppName:          NewSet(),
+		WorkloadName:     NewSet(),
+		Labels:           NewSet(),
+		CreateTime:       NewSet(),
+		ReadyTime:        NewSet(),
+		RegisterTime:     NewSet(),
+		RegisterClusters: NewSet(),
+		DeployCluster:    NewSet(),
+		Node:             NewSet(),
+		Image:            NewSet(),
+	}
+}
+
+func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
+	// TODO: support more fields
+	inbounds := dataplane.Spec.Networking.Inbound
+	for _, inbound := range inbounds {
+		a.mergeInbound(inbound)
+	}
+	extensions := dataplane.Spec.Extensions
+	a.mergeExtensions(extensions)
+	a.Ip.Add(dataplane.GetIP())
+}
+
+func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
+	a.RpcPort.Add(strconv.Itoa(int(inbound.Port)))
+	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
+}
+
+func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
+	image := extensions[dataplane.ExtensionsImageKey]
+	a.Image.Add(image)
+	a.AppName.Add(extensions[dataplane.ExtensionApplicationNameKey])
 }

@@ -18,6 +18,7 @@
 package service
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"strconv"
 
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
@@ -42,4 +43,34 @@ func SearchInstances(rt core_runtime.Runtime, req *model.SearchInstanceReq) ([]*
 	}
 
 	return res, &dataplaneList.Pagination, nil
+}
+
+func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([]*model.InstanceDetailResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.InstanceName)); err != nil {
+		return nil, err
+	}
+
+	instMap := make(map[string]*model.InstanceDetail)
+	for _, dataplane := range dataplaneList.Items {
+		instName := dataplane.Meta.GetLabels()[mesh_proto.InstanceTag]
+		var instanceDetail *model.InstanceDetail
+		if _, ok := instMap[instName]; ok {
+			instanceDetail = instMap[instName]
+		} else {
+			instanceDetail = model.NewInstanceDetail()
+		}
+		instanceDetail.Merge(dataplane) //convert dataplane info to instance detail
+		instMap[instName] = instanceDetail
+	}
+
+	resp := make([]*model.InstanceDetailResp, 0, len(instMap))
+	for _, instDetail := range instMap {
+		respItem := &model.InstanceDetailResp{}
+		resp = append(resp, respItem.FromInstanceDetail(instDetail))
+	}
+
+	return resp, nil
 }

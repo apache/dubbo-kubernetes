@@ -29,6 +29,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func GetInstanceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.InstanceDetailReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		resp, err := service.GetInstanceDetail(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
 func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		req := &model.SearchInstanceReq{}
@@ -37,13 +55,14 @@ func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		instances, pageData, err := service.SearchInstances(rt, req)
+		instances, _, err := service.SearchInstances(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
 		}
 
-		pageRes := &model.PageData{}
-		c.JSON(http.StatusOK, model.NewSuccessResp(pageRes.WithData(instances).WithTotal(int(pageData.Total)).WithCurPage(req.CurPage).WithPageSize(req.PageSize)))
+		//pageRes := &model.PageData{}
+		//c.JSON(http.StatusOK, model.NewSuccessResp(pageRes.WithData(instances).WithTotal(int(pageData.Total)).WithCurPage(req.CurPage).WithPageSize(req.PageSize)))
+		c.JSON(http.StatusOK, model.NewSuccessResp(instances))
 	}
 }

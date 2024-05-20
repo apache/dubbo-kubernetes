@@ -45,6 +45,7 @@ const (
 	ExtensionsPodPhaseKey              = "podPhase"
 	ExtensionsPodStatusKey             = "podStatus"
 	ExtensionsContainerStatusReasonKey = "containerStatus"
+	ExtensionApplicationNameKey        = "applicationName"
 )
 
 type dataplaneManager struct {
