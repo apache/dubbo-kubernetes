@@ -379,7 +379,6 @@ type ResourceType string
 //	"k8s.dubbo.io/name"      => "my-policy"
 //
 // Component identifier must be considered a part of user-facing dubbo API.
-// red a part of user-facing dubbo API.
 // In other words, it is supposed to be visible to users and should not be changed lightly.
 //
 // Component identifier might have any value, however, it's preferable
