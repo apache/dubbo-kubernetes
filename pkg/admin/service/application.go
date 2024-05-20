@@ -45,7 +45,8 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 			applicationDetail = model.NewApplicationDetail()
 		}
 
-		applicationDetail.MergeDatapalne(dataplane, rt)
+		applicationDetail.MergeDatapalne(dataplane)
+		applicationDetail.GetRegistry(rt)
 		appMap[appName] = applicationDetail
 	}
 
@@ -83,7 +84,9 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.Applicati
 	res := make([]*model.ApplicationTabInstanceInfoResp, 0, len(dataplaneList.Items))
 	for _, dataplane := range dataplaneList.Items {
 		resItem := &model.ApplicationTabInstanceInfoResp{}
-		res = append(res, resItem.FromDataplaneResource(dataplane, rt))
+		resItem.FromDataplaneResource(dataplane)
+		resItem.GetRegistry(rt)
+		res = append(res, resItem)
 	}
 
 	return res, nil
@@ -143,7 +146,8 @@ func GetApplicationSearchInfo(rt core_runtime.Runtime) ([]*model.ApplicationSear
 		if _, ok := appMap[appName]; !ok {
 			appMap[appName] = model.NewApplicationSearch(appName)
 		}
-		appMap[appName].MergeDataplane(dataplane, rt)
+		appMap[appName].MergeDataplane(dataplane)
+		appMap[appName].GetRegistry(rt)
 	}
 
 	for appName, search := range appMap {

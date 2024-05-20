@@ -102,7 +102,7 @@ func (a *ApplicationDetail) mergeServiceInfo(metadata *mesh.MetaDataResource) {
 	}
 }
 
-func (a *ApplicationDetail) MergeDatapalne(dataplane *mesh.DataplaneResource, rt core_runtime.Runtime) {
+func (a *ApplicationDetail) MergeDatapalne(dataplane *mesh.DataplaneResource) {
 	// TODO: support more fields
 	a.AppTypes.Add("无状态")
 	inbounds := dataplane.Spec.Networking.Inbound
@@ -111,7 +111,6 @@ func (a *ApplicationDetail) MergeDatapalne(dataplane *mesh.DataplaneResource, rt
 	}
 	extensions := dataplane.Spec.Extensions
 	a.mergeExtensions(extensions)
-	a.getRegistryClusters(rt)
 }
 
 func (a *ApplicationDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
@@ -125,7 +124,7 @@ func (a *ApplicationDetail) mergeExtensions(extensions map[string]string) {
 	a.Workloads.Add(extensions[dataplane.ExtensionsWorkLoadKey])
 }
 
-func (a *ApplicationDetail) getRegistryClusters(rt core_runtime.Runtime) {
+func (a *ApplicationDetail) GetRegistry(rt core_runtime.Runtime) {
 	runtimeMode := rt.GetDeployMode()
 	if runtimeMode == core.KubernetesMode {
 		//In Kubernetes mode, registry cluster is the Kubernetes cluster itself
@@ -168,12 +167,11 @@ type ApplicationTabInstanceInfoResp struct {
 	WorkloadName    string            `json:"workloadName"`
 }
 
-func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.DataplaneResource, rt core_runtime.Runtime) *ApplicationTabInstanceInfoResp {
+func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.DataplaneResource) *ApplicationTabInstanceInfoResp {
 	// TODO: support more fields
 	extensions := dataplane.Spec.Extensions
 	a.mergeExtension(extensions)
 	a.mergeMainDataplane(dataplane)
-	a.getRegistryClusters(rt)
 	return a
 }
 
@@ -197,7 +195,7 @@ func (a *ApplicationTabInstanceInfoResp) mergeExtension(extensions map[string]st
 	a.DeployState = extensions[dataplane.ExtensionsPodPhaseKey]
 }
 
-func (a *ApplicationTabInstanceInfoResp) getRegistryClusters(rt core_runtime.Runtime) {
+func (a *ApplicationTabInstanceInfoResp) GetRegistry(rt core_runtime.Runtime) {
 	runtimeMode := rt.GetDeployMode()
 	if runtimeMode == core.KubernetesMode {
 		//In Kubernetes mode, registry cluster is the Kubernetes cluster itself
@@ -303,7 +301,7 @@ func NewApplicationSearch(appName string) *ApplicationSearch {
 	}
 }
 
-func (a *ApplicationSearch) MergeDataplane(dataplane *mesh.DataplaneResource, rt core_runtime.Runtime) {
+func (a *ApplicationSearch) MergeDataplane(dataplane *mesh.DataplaneResource) {
 	a.InstanceCount++
 
 	//merge inbounds
@@ -311,10 +309,9 @@ func (a *ApplicationSearch) MergeDataplane(dataplane *mesh.DataplaneResource, rt
 	for _, inbound := range inbounds {
 		a.DeployClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
 	}
-	a.getRegistryClusters(rt)
 }
 
-func (a *ApplicationSearch) getRegistryClusters(rt core_runtime.Runtime) {
+func (a *ApplicationSearch) GetRegistry(rt core_runtime.Runtime) {
 	runtimeMode := rt.GetDeployMode()
 	if runtimeMode == core.KubernetesMode {
 		//In Kubernetes mode, registry cluster is the Kubernetes cluster itself
