@@ -80,82 +80,84 @@ type State struct {
 }
 
 type InstanceDetailResp struct {
-	RpcPort         []string `json:"rpcPort"`
-	Ip              []string `json:"ip"`
-	AppName         []string `json:"appName"`
-	WorkloadName    []string `json:"workloadName"`
-	Labels          []string `json:"labels"`
-	CreateTime      []string `json:"createTime"`
-	ReadyTime       []string `json:"readyTime"`
-	RegisterTime    []string `json:"registerTime"`
-	RegisterCluster []string `json:"registerCluster"`
-	DeployCluster   []string `json:"deployCluster"`
-	Node            []string `json:"node"`
-	Image           []string `json:"image"`
-	Probes          struct {
-		StartupProbe struct {
-			Type string `json:"type"`
-			Port int    `json:"port"`
-			Open bool   `json:"open"`
-		} `json:"startupProbe"`
-		ReadinessProbe struct {
-			Type string `json:"type"`
-			Port int    `json:"port"`
-			Open bool   `json:"open"`
-		} `json:"readinessProbe"`
-		LivenessProbe struct {
-			Type string `json:"type"`
-			Port int    `json:"port"`
-			Open bool   `json:"open"`
-		} `json:"livenessProbe"`
-	} `json:"probes"`
+	RpcPort          string      `json:"rpcPort"`
+	Ip               string      `json:"ip"`
+	AppName          string      `json:"appName"`
+	WorkloadName     string      `json:"workloadName"`
+	Labels           []string    `json:"labels"`
+	CreateTime       string      `json:"createTime"`
+	ReadyTime        string      `json:"readyTime"`
+	RegisterTime     string      `json:"registerTime"`
+	RegisterClusters []string    `json:"registerClusters"`
+	DeployCluster    string      `json:"deployCluster"`
+	Node             string      `json:"node"`
+	Image            string      `json:"image"`
+	Probes           ProbeStruct `json:"probes"`
+}
+
+type ProbeStruct struct {
+	StartupProbe struct {
+		Type string `json:"type"`
+		Port int    `json:"port"`
+		Open bool   `json:"open"`
+	} `json:"startupProbe"`
+	ReadinessProbe struct {
+		Type string `json:"type"`
+		Port int    `json:"port"`
+		Open bool   `json:"open"`
+	} `json:"readinessProbe"`
+	LivenessProbe struct {
+		Type string `json:"type"`
+		Port int    `json:"port"`
+		Open bool   `json:"open"`
+	} `json:"livenessProbe"`
 }
 
 func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDetailResp {
-	r.AppName = id.AppName.Values()
-	r.RpcPort = id.RpcPort.Values()
-	r.Ip = id.Ip.Values()
-	r.WorkloadName = id.WorkloadName.Values()
+	r.AppName = id.AppName
+	r.RpcPort = id.RpcPort
+	r.Ip = id.Ip
+	r.WorkloadName = id.WorkloadName
 	r.Labels = id.Labels.Values()
-	r.CreateTime = id.CreateTime.Values()
-	r.ReadyTime = id.ReadyTime.Values()
-	r.RegisterTime = id.RegisterTime.Values()
-	r.RegisterCluster = id.RegisterClusters.Values()
-	r.DeployCluster = id.DeployCluster.Values()
-	r.Node = id.Node.Values()
-	r.Image = id.Image.Values()
+	r.CreateTime = id.CreateTime
+	r.ReadyTime = id.ReadyTime
+	r.RegisterTime = id.RegisterTime
+	r.RegisterClusters = id.RegisterClusters.Values()
+	r.DeployCluster = id.DeployCluster
+	r.Node = id.Node
+	r.Image = id.Image
 	return r
 }
 
 type InstanceDetail struct {
-	RpcPort          Set
-	Ip               Set
-	AppName          Set
-	WorkloadName     Set
+	RpcPort          string
+	Ip               string
+	AppName          string
+	WorkloadName     string
 	Labels           Set
-	CreateTime       Set
-	ReadyTime        Set
-	RegisterTime     Set
+	CreateTime       string
+	ReadyTime        string
+	RegisterTime     string
 	RegisterClusters Set
-	DeployCluster    Set
-	Node             Set
-	Image            Set
+	DeployCluster    string
+	Node             string
+	Image            string
 }
 
 func NewInstanceDetail() *InstanceDetail {
 	return &InstanceDetail{
-		RpcPort:          NewSet(),
-		Ip:               NewSet(),
-		AppName:          NewSet(),
-		WorkloadName:     NewSet(),
+		RpcPort:          "",
+		Ip:               "",
+		AppName:          "",
+		WorkloadName:     "",
 		Labels:           NewSet(),
-		CreateTime:       NewSet(),
-		ReadyTime:        NewSet(),
-		RegisterTime:     NewSet(),
+		CreateTime:       "",
+		ReadyTime:        "",
+		RegisterTime:     "",
 		RegisterClusters: NewSet(),
-		DeployCluster:    NewSet(),
-		Node:             NewSet(),
-		Image:            NewSet(),
+		DeployCluster:    "",
+		Node:             "",
+		Image:            "",
 	}
 }
 
@@ -167,16 +169,16 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 	}
 	extensions := dataplane.Spec.Extensions
 	a.mergeExtensions(extensions)
-	a.Ip.Add(dataplane.GetIP())
+	a.Ip = dataplane.GetIP() //TODO: GetIP returns both ip and port
 }
 
 func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
-	a.RpcPort.Add(strconv.Itoa(int(inbound.Port)))
+	a.RpcPort = strconv.Itoa(int(inbound.Port))
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
 }
 
 func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 	image := extensions[dataplane.ExtensionsImageKey]
-	a.Image.Add(image)
-	a.AppName.Add(extensions[dataplane.ExtensionApplicationNameKey])
+	a.Image = image
+	a.AppName = extensions[dataplane.ExtensionApplicationNameKey]
 }
