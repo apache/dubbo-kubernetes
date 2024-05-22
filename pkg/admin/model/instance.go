@@ -21,6 +21,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"strconv"
 )
 
@@ -80,19 +81,20 @@ type State struct {
 }
 
 type InstanceDetailResp struct {
-	RpcPort          string      `json:"rpcPort"`
-	Ip               string      `json:"ip"`
-	AppName          string      `json:"appName"`
-	WorkloadName     string      `json:"workloadName"`
-	Labels           []string    `json:"labels"`
-	CreateTime       string      `json:"createTime"`
-	ReadyTime        string      `json:"readyTime"`
-	RegisterTime     string      `json:"registerTime"`
-	RegisterClusters []string    `json:"registerClusters"`
-	DeployCluster    string      `json:"deployCluster"`
-	Node             string      `json:"node"`
-	Image            string      `json:"image"`
-	Probes           ProbeStruct `json:"probes"`
+	RpcPort          string            `json:"rpcPort"`
+	Ip               string            `json:"ip"`
+	AppName          string            `json:"appName"`
+	WorkloadName     string            `json:"workloadName"`
+	Labels           []string          `json:"labels"`
+	CreateTime       string            `json:"createTime"`
+	ReadyTime        string            `json:"readyTime"`
+	RegisterTime     string            `json:"registerTime"`
+	RegisterClusters []string          `json:"registerClusters"`
+	DeployCluster    string            `json:"deployCluster"`
+	Node             string            `json:"node"`
+	Image            string            `json:"image"`
+	Probes           ProbeStruct       `json:"probes"`
+	Tags             map[string]string `json:"tags"`
 }
 
 type ProbeStruct struct {
@@ -126,6 +128,7 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 	r.DeployCluster = id.DeployCluster
 	r.Node = id.Node
 	r.Image = id.Image
+	r.Tags = id.Tags
 	return r
 }
 
@@ -142,6 +145,7 @@ type InstanceDetail struct {
 	DeployCluster    string
 	Node             string
 	Image            string
+	Tags             map[string]string
 }
 
 func NewInstanceDetail() *InstanceDetail {
@@ -167,18 +171,28 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 	for _, inbound := range inbounds {
 		a.mergeInbound(inbound)
 	}
+	meta := dataplane.Meta
+	a.mergeMeta(meta)
 	extensions := dataplane.Spec.Extensions
 	a.mergeExtensions(extensions)
 	a.Ip = dataplane.GetIP()
+
 }
 
 func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
 	a.RpcPort = strconv.Itoa(int(inbound.Port))
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
+	a.Tags = inbound.Tags
 }
 
 func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 	image := extensions[dataplane.ExtensionsImageKey]
 	a.Image = image
 	a.AppName = extensions[dataplane.ExtensionApplicationNameKey]
+}
+
+func (a *InstanceDetail) mergeMeta(meta model.ResourceMeta) {
+	a.CreateTime = meta.GetCreationTime().String()
+	a.RegisterTime = meta.GetModificationTime().String() //Not sure if it's the right field
+
 }
