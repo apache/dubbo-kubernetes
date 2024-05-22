@@ -122,7 +122,7 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 	r.WorkloadName = id.WorkloadName
 	r.Labels = id.Labels.Values()
 	r.CreateTime = id.CreateTime
-	r.ReadyTime = id.ReadyTime
+	r.ReadyTime = id.ReadyTime //TODO: Dataplane doesn't contain Ready/Register Time
 	r.RegisterTime = id.RegisterTime
 	r.RegisterClusters = id.RegisterClusters.Values()
 	r.DeployCluster = id.DeployCluster
