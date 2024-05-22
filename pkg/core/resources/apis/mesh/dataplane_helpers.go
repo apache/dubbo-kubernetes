@@ -136,9 +136,12 @@ func (d *DataplaneResource) GetIP() string {
 		return ""
 	}
 	if d.Spec.Networking.AdvertisedAddress != "" {
+		ip := strings.Split(d.Spec.Networking.Address, ":")
+		return ip[0]
 		return d.Spec.Networking.AdvertisedAddress
 	} else {
-		return d.Spec.Networking.Address
+		ip := strings.Split(d.Spec.Networking.Address, ":")
+		return ip[0]
 	}
 }
 
