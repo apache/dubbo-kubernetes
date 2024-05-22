@@ -169,7 +169,7 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 	}
 	extensions := dataplane.Spec.Extensions
 	a.mergeExtensions(extensions)
-	a.Ip = dataplane.GetIP() //TODO: GetIP returns both ip and port
+	a.Ip = dataplane.GetIP()
 }
 
 func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
