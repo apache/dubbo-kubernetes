@@ -18,7 +18,6 @@
 package service
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"strconv"
 
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
@@ -55,15 +54,17 @@ func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([
 
 	instMap := make(map[string]*model.InstanceDetail)
 	for _, dataplane := range dataplaneList.Items {
-		instName := dataplane.Meta.GetLabels()[mesh_proto.InstanceTag]
+
+		//instName := dataplane.Meta.GetLabels()[mesh_proto.InstanceTag]//This tag is "" in universal mode
+		instName := dataplane.Meta.GetName()
 		var instanceDetail *model.InstanceDetail
 		if _, ok := instMap[instName]; ok {
 			instanceDetail = instMap[instName]
 		} else {
 			instanceDetail = model.NewInstanceDetail()
+			instanceDetail.Merge(dataplane) //convert dataplane info to instance detail
+			instMap[instName] = instanceDetail
 		}
-		instanceDetail.Merge(dataplane) //convert dataplane info to instance detail
-		instMap[instName] = instanceDetail
 	}
 
 	resp := make([]*model.InstanceDetailResp, 0, len(instMap))
