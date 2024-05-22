@@ -59,12 +59,15 @@ func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([
 		instName := dataplane.Meta.GetName()
 		var instanceDetail *model.InstanceDetail
 		if _, ok := instMap[instName]; ok {
+			//found previously recorded instance detail in instMap
+			//the detail should be merged with the new instance detail
 			instanceDetail = instMap[instName]
 		} else {
+			//the instance information appears for the 1st time
 			instanceDetail = model.NewInstanceDetail()
-			instanceDetail.Merge(dataplane) //convert dataplane info to instance detail
-			instMap[instName] = instanceDetail
 		}
+		instanceDetail.Merge(dataplane) //convert dataplane info to instance detail
+		instMap[instName] = instanceDetail
 	}
 
 	resp := make([]*model.InstanceDetailResp, 0, len(instMap))
