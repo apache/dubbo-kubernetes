@@ -18,6 +18,7 @@
 package controllers
 
 import (
+	"fmt"
 	kube_core "k8s.io/api/core/v1"
 )
 
@@ -26,5 +27,25 @@ import (
 )
 
 func ProbesFor(pod *kube_core.Pod) (*mesh_proto.Dataplane_Probes, error) {
-	return &mesh_proto.Dataplane_Probes{}, nil
+
+	fmt.Println("HALT!")
+	return &mesh_proto.Dataplane_Probes{
+		Endpoints: []*mesh_proto.Dataplane_Probes_Endpoint{
+			{
+				InboundPort: uint32(pod.Spec.Containers[0].StartupProbe.HTTPGet.Port.IntValue()),
+				InboundPath: "",
+				Path:        pod.Spec.Containers[0].StartupProbe.HTTPGet.Path,
+			},
+			{
+				InboundPort: uint32(pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Port.IntValue()),
+				InboundPath: "",
+				Path:        pod.Spec.Containers[0].ReadinessProbe.HTTPGet.Path,
+			},
+			{
+				InboundPort: uint32(pod.Spec.Containers[0].LivenessProbe.HTTPGet.Port.IntValue()),
+				InboundPath: "",
+				Path:        pod.Spec.Containers[0].LivenessProbe.HTTPGet.Path,
+			},
+		},
+	}, nil
 }

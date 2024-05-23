@@ -19,6 +19,7 @@ package model
 
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
@@ -125,21 +126,25 @@ type LabelStruct struct {
 }
 
 type ProbeStruct struct {
-	StartupProbe struct {
-		Type string `json:"type"`
-		Port int    `json:"port"`
-		Open bool   `json:"open"`
-	} `json:"startupProbe"`
-	ReadinessProbe struct {
-		Type string `json:"type"`
-		Port int    `json:"port"`
-		Open bool   `json:"open"`
-	} `json:"readinessProbe"`
-	LivenessProbe struct {
-		Type string `json:"type"`
-		Port int    `json:"port"`
-		Open bool   `json:"open"`
-	} `json:"livenessProbe"`
+	StartupProbe   StartupProbe   `json:"startupProbe"`
+	ReadinessProbe ReadinessProbe `json:"readinessProbe"`
+	LivenessProbe  LivenessProbe  `json:"livenessProbe"`
+}
+
+type StartupProbe struct {
+	Type string `json:"type"`
+	Port int    `json:"port"`
+	Open bool   `json:"open"`
+}
+type ReadinessProbe struct {
+	Type string `json:"type"`
+	Port int    `json:"port"`
+	Open bool   `json:"open"`
+}
+type LivenessProbe struct {
+	Type string `json:"type"`
+	Port int    `json:"port"`
+	Open bool   `json:"open"`
 }
 
 func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDetailResp {
@@ -159,6 +164,7 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 	r.Image = id.Image
 	r.Tags = id.Tags
 	r.RegisterStates = id.RegisterState
+	r.Probes = id.Probes
 	return r
 }
 
@@ -178,6 +184,7 @@ type InstanceDetail struct {
 	Node             string
 	Image            string
 	Tags             map[string]string
+	Probes           ProbeStruct
 }
 
 func NewInstanceDetail() *InstanceDetail {
@@ -207,6 +214,9 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 	a.mergeMeta(meta)
 	extensions := dataplane.Spec.Extensions
 	a.mergeExtensions(extensions)
+	probes := dataplane.Spec.Probes
+	a.mergeProbes(probes)
+
 	a.Ip = dataplane.GetIP()
 	if a.RegisterTime != "" {
 		a.RegisterState = "Registed"
@@ -244,4 +254,28 @@ func (a *InstanceDetail) mergeMeta(meta model.ResourceMeta) {
 	a.RegisterTime = meta.GetModificationTime().String() //Not sure if it's the right field
 	a.ReadyTime = a.RegisterState
 	//TODO: seperate createTime , RegisterTime and ReadyTime
+}
+
+func (a *InstanceDetail) mergeProbes(probes *mesh_proto.Dataplane_Probes) {
+	portStartup := probes.Endpoints[0].InboundPort
+	portReadiness := probes.Endpoints[1].InboundPort
+	portLiveness := probes.Endpoints[2].InboundPort
+	a.Probes = ProbeStruct{
+		StartupProbe: StartupProbe{
+			Type: "HTTP", //TODO: support more scheme
+
+			Port: int(portStartup),
+			Open: true,
+		},
+		ReadinessProbe: ReadinessProbe{
+			Type: "HTTP", //TODO: support more scheme
+			Port: int(portReadiness),
+			Open: true,
+		},
+		LivenessProbe: LivenessProbe{
+			Type: "HTTP", //TODO: support more scheme
+			Port: int(portLiveness),
+			Open: true,
+		},
+	}
 }
