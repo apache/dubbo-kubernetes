@@ -35,8 +35,6 @@ const (
 
 const (
 	DubboVersionKey = "dubbo"
-	RegionKey       = "region" //TODO: is this key in the label field specified?
-	AppKey          = "app"    //TODO: is this key in the label field specified?
 )
 
 const (

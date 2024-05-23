@@ -20,7 +20,6 @@ package model
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
@@ -36,20 +35,17 @@ type InstanceDetailReq struct {
 }
 
 type SearchInstanceResp struct {
-	Ip              string `json:"ip"`
-	Name            string `json:"name"`
-	WorkloadName    string `json:"workloadName"`
-	AppName         string `json:"appName"`
-	DeployState     string `json:"deployState"`
-	DeployCluster   string `json:"deployCluster"`
-	RegisterState   string `json:"registerState"`
-	RegisterCluster string `json:"registerCluster"`
-	CreateTime      string `json:"createTime"`
-	RegisterTime    string `json:"registerTime"` //TODO: not converted
-	Labels          struct {
-		Region  string `json:"region"`
-		Version string `json:"version"`
-	} `json:"labels"`
+	Ip              string            `json:"ip"`
+	Name            string            `json:"name"`
+	WorkloadName    string            `json:"workloadName"`
+	AppName         string            `json:"appName"`
+	DeployState     string            `json:"deployState"`
+	DeployCluster   string            `json:"deployCluster"`
+	RegisterState   string            `json:"registerState"`
+	RegisterCluster string            `json:"registerCluster"`
+	CreateTime      string            `json:"createTime"`
+	RegisterTime    string            `json:"registerTime"` //TODO: not converted
+	Labels          map[string]string `json:"labels"`
 }
 
 func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *SearchInstanceResp {
@@ -67,9 +63,8 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 		r.RegisterState = "UnRegisted"
 	}
 	//label conversion
-	labels := meta.GetLabels() // FIXME: in k8s mode, additional labels are append in KubernetesMetaAdapter.GetLabels
-	r.Labels.Region = labels[constants.RegionKey]
-	r.Labels.Version = labels[constants.DubboVersionKey]
+
+	r.Labels = meta.GetLabels()
 	//spec conversion
 	spec := dr.Spec
 	{
@@ -105,7 +100,7 @@ type InstanceDetailResp struct {
 	Ip               string            `json:"ip"`
 	AppName          string            `json:"appName"`
 	WorkloadName     string            `json:"workloadName"`
-	Labels           LabelStruct       `json:"labels"`
+	Labels           map[string]string `json:"labels"`
 	CreateTime       string            `json:"createTime"`
 	ReadyTime        string            `json:"readyTime"`
 	RegisterTime     string            `json:"registerTime"`
@@ -117,12 +112,6 @@ type InstanceDetailResp struct {
 	Image            string            `json:"image"`
 	Probes           ProbeStruct       `json:"probes"`
 	Tags             map[string]string `json:"tags"`
-}
-
-type LabelStruct struct {
-	App     string `json:"app"`
-	Version string `json:"version"`
-	Region  string `json:"region"`
 }
 
 type ProbeStruct struct {
@@ -173,7 +162,7 @@ type InstanceDetail struct {
 	Ip               string
 	AppName          string
 	WorkloadName     string
-	Labels           LabelStruct
+	Labels           map[string]string
 	CreateTime       string
 	ReadyTime        string
 	RegisterTime     string
@@ -193,7 +182,7 @@ func NewInstanceDetail() *InstanceDetail {
 		Ip:               "",
 		AppName:          "",
 		WorkloadName:     "",
-		Labels:           LabelStruct{},
+		Labels:           nil,
 		CreateTime:       "",
 		ReadyTime:        "",
 		RegisterTime:     "",
@@ -252,11 +241,15 @@ func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 func (a *InstanceDetail) mergeMeta(meta model.ResourceMeta) {
 	a.CreateTime = meta.GetCreationTime().String()
 	a.RegisterTime = meta.GetModificationTime().String() //Not sure if it's the right field
-	a.ReadyTime = a.RegisterState
+	a.ReadyTime = a.RegisterTime
 	//TODO: seperate createTime , RegisterTime and ReadyTime
+	a.Labels = meta.GetLabels()
 }
 
 func (a *InstanceDetail) mergeProbes(probes *mesh_proto.Dataplane_Probes) {
+	if probes == nil {
+		return
+	}
 	portStartup := probes.Endpoints[0].InboundPort
 	portReadiness := probes.Endpoints[1].InboundPort
 	portLiveness := probes.Endpoints[2].InboundPort
