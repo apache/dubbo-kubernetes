@@ -18,7 +18,6 @@
 package controllers
 
 import (
-	"fmt"
 	kube_core "k8s.io/api/core/v1"
 )
 
@@ -27,8 +26,6 @@ import (
 )
 
 func ProbesFor(pod *kube_core.Pod) (*mesh_proto.Dataplane_Probes, error) {
-
-	fmt.Println("HALT!")
 	return &mesh_proto.Dataplane_Probes{
 		Endpoints: []*mesh_proto.Dataplane_Probes_Endpoint{
 			{
