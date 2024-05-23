@@ -19,6 +19,7 @@ package model
 
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
@@ -34,27 +35,34 @@ type InstanceDetailReq struct {
 }
 
 type SearchInstanceResp struct {
-	CPU              string            `json:"cpu"`
-	DeployCluster    string            `json:"deployCluster"`
-	DeployState      State             `json:"deployState"`
-	IP               string            `json:"ip"`
-	Labels           map[string]string `json:"labels"`
-	Memory           string            `json:"memory"`
-	Name             string            `json:"name"`
-	RegisterClusters []string          `json:"registerClusters"`
-	RegisterStates   []State           `json:"registerStates"`
-	RegisterTime     string            `json:"registerTime"`
-	StartTime        string            `json:"startTime"`
+	Ip              string `json:"ip"`
+	Name            string `json:"name"`
+	WorkloadName    string `json:"workloadName"`
+	AppName         string `json:"appName"`
+	DeployState     string `json:"deployState"`
+	DeployCluster   string `json:"deployCluster"`
+	RegisterState   string `json:"registerState"`
+	RegisterCluster string `json:"registerCluster"`
+	CreateTime      string `json:"createTime"`
+	RegisterTime    string `json:"registerTime"` //TODO: not converted
+	Labels          struct {
+		Region  string `json:"region"`
+		Version string `json:"version"`
+	} `json:"labels"`
 }
 
 func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *SearchInstanceResp {
 	// TODO: support more fields
-	r.IP = dr.GetIP()
+	r.Ip = dr.GetIP()
 	meta := dr.GetMeta()
 	r.Name = meta.GetName()
-	r.StartTime = meta.GetCreationTime().String()
-	r.Labels = meta.GetLabels() // FIXME: in k8s mode, additional labels are append in KubernetesMetaAdapter.GetLabels
+	r.CreateTime = meta.GetCreationTime().String()
 
+	//label conversion
+	labels := meta.GetLabels() // FIXME: in k8s mode, additional labels are append in KubernetesMetaAdapter.GetLabels
+	r.Labels.Region = labels[constants.RegionKey]
+	r.Labels.Version = labels[constants.DubboVersionKey]
+	//spec conversion
 	spec := dr.Spec
 	{
 		statusValue := spec.Extensions[dataplane.ExtensionsPodPhaseKey]
@@ -64,11 +72,8 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 		if v, ok := spec.Extensions[dataplane.ExtensionsContainerStatusReasonKey]; ok {
 			statusValue = v
 		}
-		r.DeployState = State{
-			Value: statusValue,
-		}
+		r.DeployState = statusValue
 	}
-
 	return r
 }
 
