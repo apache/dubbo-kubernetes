@@ -73,6 +73,15 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 			statusValue = v
 		}
 		r.DeployState = statusValue
+		r.WorkloadName = spec.Extensions[dataplane.ExtensionsWorkLoadKey]
+		//name field source is different between universal and k8s mode
+		r.AppName = spec.Extensions[dataplane.ExtensionApplicationNameKey]
+		if r.AppName == "" {
+			for _, inbound := range spec.Networking.Inbound {
+				r.AppName = inbound.Tags[dataplane.TagApplicationName]
+			}
+
+		}
 	}
 	return r
 }
@@ -138,6 +147,7 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 	r.RegisterTime = id.RegisterTime
 	r.RegisterClusters = id.RegisterClusters.Values()
 	r.DeployCluster = id.DeployCluster
+	r.DeployState = id.DeployState
 	r.Node = id.Node
 	r.Image = id.Image
 	r.Tags = id.Tags
@@ -155,6 +165,7 @@ type InstanceDetail struct {
 	RegisterTime     string
 	RegisterClusters Set
 	DeployCluster    string
+	DeployState      string
 	Node             string
 	Image            string
 	Tags             map[string]string
@@ -195,16 +206,23 @@ func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inb
 	a.RpcPort = int(inbound.Port)
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
 	a.Tags = inbound.Tags
+	if a.AppName == "" {
+		a.AppName = inbound.Tags[dataplane.TagApplicationName]
+	}
 }
 
 func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 	image := extensions[dataplane.ExtensionsImageKey]
 	a.Image = image
-	a.AppName = extensions[dataplane.ExtensionApplicationNameKey]
+	if a.AppName == "" {
+		a.AppName = extensions[dataplane.ExtensionApplicationNameKey]
+	}
+	a.WorkloadName = extensions[dataplane.ExtensionsWorkLoadKey]
+	a.DeployState = extensions[dataplane.ExtensionsPodPhaseKey]
+
 }
 
 func (a *InstanceDetail) mergeMeta(meta model.ResourceMeta) {
 	a.CreateTime = meta.GetCreationTime().String()
 	a.RegisterTime = meta.GetModificationTime().String() //Not sure if it's the right field
-
 }
