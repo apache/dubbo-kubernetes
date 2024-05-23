@@ -235,6 +235,7 @@ func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 	}
 	a.WorkloadName = extensions[dataplane.ExtensionsWorkLoadKey]
 	a.DeployState = extensions[dataplane.ExtensionsPodPhaseKey]
+	a.Node = extensions[dataplane.ExtensionsNodeNameKey]
 
 }
 
