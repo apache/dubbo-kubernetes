@@ -19,7 +19,7 @@ package dataplane
 
 import (
 	"context"
-
+	kube_apps "k8s.io/api/apps/v1"
 	kube_core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -46,6 +46,7 @@ const (
 	ExtensionsPodStatusKey             = "podStatus"
 	ExtensionsContainerStatusReasonKey = "containerStatus"
 	ExtensionApplicationNameKey        = "applicationName"
+	ExtensionsWorkLoadKey              = "workLoad"
 )
 
 type dataplaneManager struct {
@@ -164,6 +165,7 @@ func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.Data
 		Namespace: dp.GetMeta().GetNameExtensions()[core_model.K8sNamespaceComponent],
 		Name:      dp.GetMeta().GetNameExtensions()[core_model.K8sNameComponent],
 	}
+
 	pod := &kube_core.Pod{}
 	err := client.Get(ctx, namespacedName, pod)
 	if err != nil {
@@ -189,6 +191,18 @@ func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.Data
 		extensions[ExtensionsContainerStatusReasonKey] = containerState.Waiting.Reason
 	} else if containerState.Terminated != nil {
 		extensions[ExtensionsContainerStatusReasonKey] = containerState.Terminated.Reason
+	}
+
+	//get workload
+	replicaSet := &kube_apps.ReplicaSet{}
+	replicaSetNamespacedName := types.NamespacedName{Namespace: pod.Namespace, Name: pod.ObjectMeta.OwnerReferences[0].Name}
+	if err = client.Get(ctx, replicaSetNamespacedName, replicaSet); err != nil {
+		return
+	}
+	if replicaSet.ObjectMeta.OwnerReferences[0].Name != "" {
+		extensions[ExtensionsWorkLoadKey] = replicaSet.ObjectMeta.OwnerReferences[0].Name
+	} else if pod.ObjectMeta.OwnerReferences[0].Name != "" {
+		extensions[ExtensionsWorkLoadKey] = pod.ObjectMeta.OwnerReferences[0].Name
 	}
 
 	dp.Spec.Extensions = extensions

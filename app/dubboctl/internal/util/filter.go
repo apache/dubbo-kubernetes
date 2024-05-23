@@ -68,6 +68,15 @@ func SpaceFilter(input string) string {
 	return strings.TrimSpace(input)
 }
 
+func ReserveEoFSpaceFilter(input string) string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return ""
+	}
+	// reserve one space line at the end of file
+	return input + "\n"
+}
+
 // SpaceLineFilter removes all space lines.
 func SpaceLineFilter(input string) string {
 	var builder strings.Builder

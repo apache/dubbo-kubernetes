@@ -35,11 +35,14 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		application := router.Group("/application")
 		application.GET("/detail", handler.GetApplicationDetail(rt))
 		application.GET("/instance/info", handler.GetApplicationTabInstanceInfo(rt))
+		application.GET("/service/form", handler.GetApplicationServiceForm(rt))
+		application.GET("/search", handler.ApplicationSearch(rt))
 	}
 
 	{
 		dev := router.Group("/dev")
 		dev.GET("/instances", handler.GetInstances(rt))
 		dev.GET("/metas", handler.GetMetas(rt))
+		dev.GET("/mappings", handler.GetMappings(rt))
 	}
 }
