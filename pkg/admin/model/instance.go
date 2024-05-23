@@ -78,7 +78,7 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 		r.AppName = spec.Extensions[dataplane.ExtensionApplicationNameKey]
 		if r.AppName == "" {
 			for _, inbound := range spec.Networking.Inbound {
-				r.AppName = inbound.Tags[dataplane.TagApplicationName]
+				r.AppName = inbound.Tags[v1alpha1.AppTag]
 			}
 
 		}
@@ -207,7 +207,7 @@ func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inb
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
 	a.Tags = inbound.Tags
 	if a.AppName == "" {
-		a.AppName = inbound.Tags[dataplane.TagApplicationName]
+		a.AppName = inbound.Tags[v1alpha1.AppTag]
 	}
 }
 

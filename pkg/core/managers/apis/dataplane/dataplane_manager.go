@@ -49,10 +49,6 @@ const (
 	ExtensionsWorkLoadKey              = "workLoad"
 )
 
-const (
-	TagApplicationName = "app"
-)
-
 type dataplaneManager struct {
 	core_manager.ResourceManager
 	store      core_store.ResourceStore
