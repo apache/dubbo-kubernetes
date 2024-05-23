@@ -57,7 +57,14 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 	meta := dr.GetMeta()
 	r.Name = meta.GetName()
 	r.CreateTime = meta.GetCreationTime().String()
-
+	r.RegisterTime = r.CreateTime //TODO: seperate createTime and RegisterTime
+	r.RegisterCluster = dr.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]
+	r.DeployCluster = r.RegisterCluster
+	if r.RegisterTime != "" {
+		r.RegisterState = "Registed"
+	} else {
+		r.RegisterState = "UnRegisted"
+	}
 	//label conversion
 	labels := meta.GetLabels() // FIXME: in k8s mode, additional labels are append in KubernetesMetaAdapter.GetLabels
 	r.Labels.Region = labels[constants.RegionKey]
@@ -80,7 +87,6 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 			for _, inbound := range spec.Networking.Inbound {
 				r.AppName = inbound.Tags[v1alpha1.AppTag]
 			}
-
 		}
 	}
 	return r
@@ -143,14 +149,16 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 	r.WorkloadName = id.WorkloadName
 	r.Labels = id.Labels
 	r.CreateTime = id.CreateTime
-	r.ReadyTime = id.ReadyTime //TODO: Dataplane doesn't contain Ready/Register Time
+	r.ReadyTime = id.ReadyTime
 	r.RegisterTime = id.RegisterTime
 	r.RegisterClusters = id.RegisterClusters.Values()
+	r.DeployCluster = id.DeployCluster
 	r.DeployCluster = id.DeployCluster
 	r.DeployState = id.DeployState
 	r.Node = id.Node
 	r.Image = id.Image
 	r.Tags = id.Tags
+	r.RegisterStates = id.RegisterState
 	return r
 }
 
@@ -163,6 +171,7 @@ type InstanceDetail struct {
 	CreateTime       string
 	ReadyTime        string
 	RegisterTime     string
+	RegisterState    string
 	RegisterClusters Set
 	DeployCluster    string
 	DeployState      string
@@ -199,12 +208,19 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 	extensions := dataplane.Spec.Extensions
 	a.mergeExtensions(extensions)
 	a.Ip = dataplane.GetIP()
-
+	if a.RegisterTime != "" {
+		a.RegisterState = "Registed"
+	} else {
+		a.RegisterState = "UnRegisted"
+	}
 }
 
 func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
 	a.RpcPort = int(inbound.Port)
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
+	for _, deploycluster := range a.RegisterClusters.Values() {
+		a.DeployCluster = deploycluster //TODO: seperate deployCluster and registerCluster
+	}
 	a.Tags = inbound.Tags
 	if a.AppName == "" {
 		a.AppName = inbound.Tags[v1alpha1.AppTag]
@@ -225,4 +241,6 @@ func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 func (a *InstanceDetail) mergeMeta(meta model.ResourceMeta) {
 	a.CreateTime = meta.GetCreationTime().String()
 	a.RegisterTime = meta.GetModificationTime().String() //Not sure if it's the right field
+	a.ReadyTime = a.RegisterState
+	//TODO: seperate createTime , RegisterTime and ReadyTime
 }
