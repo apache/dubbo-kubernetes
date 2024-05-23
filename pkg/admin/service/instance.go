@@ -75,6 +75,5 @@ func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([
 		respItem := &model.InstanceDetailResp{}
 		resp = append(resp, respItem.FromInstanceDetail(instDetail))
 	}
-
 	return resp, nil
 }

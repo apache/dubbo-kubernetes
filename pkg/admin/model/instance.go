@@ -22,7 +22,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"strconv"
 )
 
 type SearchInstanceReq struct {
@@ -81,20 +80,28 @@ type State struct {
 }
 
 type InstanceDetailResp struct {
-	RpcPort          string            `json:"rpcPort"`
+	RpcPort          int               `json:"rpcPort"`
 	Ip               string            `json:"ip"`
 	AppName          string            `json:"appName"`
 	WorkloadName     string            `json:"workloadName"`
-	Labels           []string          `json:"labels"`
+	Labels           LabelStruct       `json:"labels"`
 	CreateTime       string            `json:"createTime"`
 	ReadyTime        string            `json:"readyTime"`
 	RegisterTime     string            `json:"registerTime"`
 	RegisterClusters []string          `json:"registerClusters"`
 	DeployCluster    string            `json:"deployCluster"`
+	DeployState      string            `json:"deployState"`
+	RegisterStates   string            `json:"registerStates"`
 	Node             string            `json:"node"`
 	Image            string            `json:"image"`
 	Probes           ProbeStruct       `json:"probes"`
 	Tags             map[string]string `json:"tags"`
+}
+
+type LabelStruct struct {
+	App     string `json:"app"`
+	Version string `json:"version"`
+	Region  string `json:"region"`
 }
 
 type ProbeStruct struct {
@@ -120,7 +127,7 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 	r.RpcPort = id.RpcPort
 	r.Ip = id.Ip
 	r.WorkloadName = id.WorkloadName
-	r.Labels = id.Labels.Values()
+	r.Labels = id.Labels
 	r.CreateTime = id.CreateTime
 	r.ReadyTime = id.ReadyTime //TODO: Dataplane doesn't contain Ready/Register Time
 	r.RegisterTime = id.RegisterTime
@@ -133,11 +140,11 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 }
 
 type InstanceDetail struct {
-	RpcPort          string
+	RpcPort          int
 	Ip               string
 	AppName          string
 	WorkloadName     string
-	Labels           Set
+	Labels           LabelStruct
 	CreateTime       string
 	ReadyTime        string
 	RegisterTime     string
@@ -150,11 +157,11 @@ type InstanceDetail struct {
 
 func NewInstanceDetail() *InstanceDetail {
 	return &InstanceDetail{
-		RpcPort:          "",
+		RpcPort:          -1,
 		Ip:               "",
 		AppName:          "",
 		WorkloadName:     "",
-		Labels:           NewSet(),
+		Labels:           LabelStruct{},
 		CreateTime:       "",
 		ReadyTime:        "",
 		RegisterTime:     "",
@@ -180,7 +187,7 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 }
 
 func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
-	a.RpcPort = strconv.Itoa(int(inbound.Port))
+	a.RpcPort = int(inbound.Port)
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
 	a.Tags = inbound.Tags
 }
