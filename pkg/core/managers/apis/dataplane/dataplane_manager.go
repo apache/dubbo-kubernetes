@@ -45,7 +45,7 @@ const (
 	ExtensionsPodPhaseKey              = "podPhase"
 	ExtensionsPodStatusKey             = "podStatus"
 	ExtensionsContainerStatusReasonKey = "containerStatus"
-	ExtensionApplicationNameKey        = "applicationName"
+	ExtensionApplicationNameKey        = "applicationName" //For universial mode
 	ExtensionsWorkLoadKey              = "workLoad"
 )
 
