@@ -45,7 +45,9 @@ const (
 	ExtensionsPodPhaseKey              = "podPhase"
 	ExtensionsPodStatusKey             = "podStatus"
 	ExtensionsContainerStatusReasonKey = "containerStatus"
+	ExtensionApplicationNameKey        = "applicationName" //For universial mode
 	ExtensionsWorkLoadKey              = "workLoad"
+	ExtensionsNodeNameKey              = "nodeName"
 )
 
 type dataplaneManager struct {
@@ -204,5 +206,7 @@ func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.Data
 		extensions[ExtensionsWorkLoadKey] = pod.ObjectMeta.OwnerReferences[0].Name
 	}
 
+	//get NodeName
+	extensions[ExtensionsNodeNameKey] = pod.Spec.NodeName
 	dp.Spec.Extensions = extensions
 }
