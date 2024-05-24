@@ -29,7 +29,7 @@ import (
 	"github.com/dubbogo/go-zookeeper/zk"
 )
 
-const group = "dubbo"
+var group = "dubbogo"
 
 type RuleExists struct {
 	cause error
@@ -50,6 +50,7 @@ func (notFound *RuleNotFound) Error() string {
 type GovernanceConfig interface {
 	SetConfig(key string, value string) error
 	GetConfig(key string) (string, error)
+	GetList() (map[string]string, error)
 	DeleteConfig(key string) error
 	SetConfigWithGroup(group string, key string, value string) error
 	GetConfigWithGroup(group string, key string) (string, error)
@@ -94,6 +95,23 @@ func NewGovernanceConfig(cc config_center.DynamicConfiguration, registry registr
 type GovernanceConfigImpl struct {
 	registryCenter registry.Registry
 	configCenter   config_center.DynamicConfiguration
+}
+
+func (g *GovernanceConfigImpl) GetList() (map[string]string, error) {
+	keys, err := g.configCenter.GetConfigKeysByGroup(group)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(map[string]string)
+	for name := range keys.Items {
+		rule, err := g.GetConfigWithGroup(group, name.(string))
+		if err != nil {
+			return nil, err
+		}
+		list[name.(string)] = rule
+	}
+	return list, nil
 }
 
 func (g *GovernanceConfigImpl) SetConfig(key string, value string) error {

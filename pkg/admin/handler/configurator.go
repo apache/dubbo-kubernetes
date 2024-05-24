@@ -15,38 +15,37 @@
  * limitations under the License.
  */
 
-package server
+package handler
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/handler"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
-func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
-	router := r.Group("/api/v1")
-	{
-		instance := router.Group("/instance")
-		instance.GET("/search", handler.SearchInstances(rt))
-	}
-
-	{
-		application := router.Group("/application")
-		application.GET("/detail", handler.GetApplicationDetail(rt))
-		application.GET("/instance/info", handler.GetApplicationTabInstanceInfo(rt))
-		application.GET("/service/form", handler.GetApplicationServiceForm(rt))
-		application.GET("/search", handler.ApplicationSearch(rt))
-	}
-
-	{
-		dev := router.Group("/dev")
-		dev.GET("/instances", handler.GetInstances(rt))
-		dev.GET("/metas", handler.GetMetas(rt))
-		dev.GET("/mappings", handler.GetMappings(rt))
-	}
-
-	{
-		configuration := router.Group("/configurator")
-		configuration.GET("/search", handler.ConfiguratorSearch(rt))
+func ConfiguratorSearch(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		res := &mesh.DynamicConfigResourceList{}
+		err := rt.ResourceManager().List(rt.AppContext(), res)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+		resp := model.ConfiguratorSearchResp{
+			Code:    200,
+			Message: "success",
+			Data:    make([]model.ConfiguratorSearchResp_Data, 0, len(res.Items)),
+		}
+		for _, item := range res.Items {
+			resp.Data = append(resp.Data, model.ConfiguratorSearchResp_Data{
+				RuleName:   item.Meta.GetName(),
+				Scope:      item.Spec.GetScope(),
+				CreateTime: item.Meta.GetCreationTime().String(),
+				Enabled:    item.Spec.GetEnabled(),
+			})
+		}
+		c.JSON(http.StatusOK, resp)
 	}
 }

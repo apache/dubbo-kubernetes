@@ -19,6 +19,8 @@ package traditional
 
 import (
 	"fmt"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"gopkg.in/yaml.v2"
 	"strings"
 )
 
@@ -73,4 +75,24 @@ func splitAppAndRevision(name string) (app string, revision string) {
 	n := len(split)
 	app = strings.Replace(name, "-"+split[n-1], "", -1)
 	return app, split[n-1]
+}
+
+func parseTagConfig(rawRouteData string) (*mesh_proto.TagRoute, error) {
+	routeDecoder := yaml.NewDecoder(strings.NewReader(rawRouteData))
+	tagRouterConfig := &mesh_proto.TagRoute{}
+	err := routeDecoder.Decode(tagRouterConfig)
+	if err != nil {
+		return nil, err
+	}
+	return tagRouterConfig, nil
+}
+
+func parseConfiguratorConfig(rawRouteData string) (*mesh_proto.DynamicConfig, error) {
+	routeDecoder := yaml.NewDecoder(strings.NewReader(rawRouteData))
+	routerConfig := &mesh_proto.DynamicConfig{}
+	err := routeDecoder.Decode(routerConfig)
+	if err != nil {
+		return nil, err
+	}
+	return routerConfig, nil
 }

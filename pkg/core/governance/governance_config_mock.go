@@ -37,6 +37,14 @@ type MockGovernanceConfig struct {
 	recorder *MockGovernanceConfigMockRecorder
 }
 
+func (m *MockGovernanceConfig) GetList() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetList")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
 // MockGovernanceConfigMockRecorder is the mock recorder for MockGovernanceConfig.
 type MockGovernanceConfigMockRecorder struct {
 	mock *MockGovernanceConfig

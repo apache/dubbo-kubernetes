@@ -847,7 +847,26 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		}
 
 	case mesh.DynamicConfigType:
-		// 不支持List
+		cfg, err := c.governance.GetList()
+		if err != nil {
+			return err
+		}
+		for name, rule := range cfg {
+			newIt := resources.NewItem()
+			ConfiguratorCfg, err := parseConfiguratorConfig(rule)
+			_ = newIt.SetSpec(ConfiguratorCfg)
+			meta := &resourceMetaObject{
+				Name:   name,
+				Mesh:   opts.Mesh,
+				Labels: maps.Clone(opts.Labels),
+			}
+			if err != nil {
+			} else {
+				meta.Version = ConfiguratorCfg.ConfigVersion
+			}
+			newIt.SetMeta(meta)
+			_ = resources.AddItem(newIt)
+		}
 	case mesh.TagRouteType:
 		// 不支持List
 	case mesh.ConditionRouteType:
