@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/defaults"
 	"time"
 )
 
@@ -122,10 +123,10 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 				runLog.Error(err, "unable to set up DP Server")
 				return err
 			}
-			//if err := defaults.Setup(rt); err != nil {
-			//	runLog.Error(err, "unable to set up Defaults")
-			//	return err
-			//}
+			if err := defaults.Setup(rt); err != nil {
+				runLog.Error(err, "unable to set up Defaults")
+				return err
+			}
 			if err := dds_zone.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up Zone DDS")
 				return err

@@ -18,24 +18,42 @@
 package service
 
 import (
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	_ "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	_ "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) ([]*model.ServiceTabDistributionResp, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
+	mappingList := &mesh.MappingResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
+	serviceName := req.ServiceName
+
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.ServiceName)); err != nil {
 		return nil, err
 	}
 
-	res := make([]*model.ServiceTabDistributionResp, 0, len(dataplaneList.Items))
-	for i, dataplane := range dataplaneList.Items {
-		res[i] = &model.ServiceTabDistributionResp{}
-		res[i] = res[i].FromServiceDataplaneResource(dataplane)
+	if err := manager.List(rt.AppContext(), mappingList); err != nil {
+		return nil, err
+	}
+
+	res := make([]*model.ServiceTabDistributionResp, 0)
+
+	for _, mapping := range mappingList.Items {
+		//找到对应serviceName的appNames
+		if mapping.Spec.InterfaceName == serviceName {
+			for _, appName := range mapping.Spec.ApplicationNames {
+				serviceDistributionResp := model.NewServiceDistributionResp()
+				serviceDistributionResp.FromServiceMappingResource(dataplaneList, appName)
+				res = append(res, serviceDistributionResp)
+			}
+
+		}
 	}
 
 	return res, nil
@@ -52,29 +70,72 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 		return nil, err
 	}
 
-	if err := manager.List(rt.AppContext(), metadataList); err != nil {
-		return nil, err
-	}
+	//通过dataplane的extension字段获取所有appName
+	appNames := make(map[string]struct{}, 0)
+	serviceNames := make([]string, 0)
 
-	if err := manager.List(rt.AppContext(), mappingList); err != nil {
-		return nil, err
-	}
-
-	//创建一个二维数组，元素为ServiceSearchResp组成的列表，最后需要将这个数组压缩为一维的返回（res）
-	metaRes := make([][]*model.ServiceSearchResp, 0, len(metadataList.Items))
-
-	for i, metadata := range metadataList.Items {
-		metaRes[i] = make([]*model.ServiceSearchResp, 0)
-		metaRes[i] = append(metaRes[i], (&model.ServiceSearchResp{}).FromServiceMetadataResource(metadata))
-	}
-
-	res := make([]*model.ServiceSearchResp, 0, len(metadataList.Items))
-
-	for _, subArray := range metaRes {
-		for _, item := range subArray {
-			res = append(res, item)
+	for _, dataplane := range dataplaneList.Items {
+		appName, ok := dataplane.Spec.GetExtensions()[v1alpha1.Application]
+		if ok {
+			appNames[appName] = struct{}{}
 		}
 	}
 
+	// 遍历 appName
+	for appName := range appNames {
+		//获取metadataList
+		err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(appName))
+		if err != nil {
+			return nil, err
+		}
+
+		//获取mappingList
+		err = manager.List(rt.AppContext(), mappingList, store.ListByNameContains(appName))
+		if err != nil {
+			return nil, err
+		}
+
+		//通过mapping与AppName查询InterfaceName（serviceName）
+		for _, mapping := range mappingList.Items {
+			for _, appNameItem := range mapping.Spec.ApplicationNames {
+				if appNameItem == appName {
+					serviceNames = append(serviceNames, mapping.Spec.InterfaceName)
+				}
+			}
+		}
+	}
+
+	res := make([]*model.ServiceSearchResp, 0)
+
+	serviceMap := make(map[string]*model.ServiceSearch)
+	for _, metadata := range metadataList.Items {
+		for _, serviceInfo := range metadata.Spec.Services {
+			if contains(serviceNames, serviceInfo.Name) {
+				serviceSearch := model.NewServiceSearch(serviceInfo.Name)
+				if _, ok := serviceMap[serviceInfo.Name]; ok {
+					serviceMap[serviceInfo.Name].FromServiceInfo(serviceInfo)
+				} else {
+					serviceSearch.FromServiceInfo(serviceInfo)
+					serviceMap[serviceInfo.Name] = serviceSearch
+				}
+			}
+		}
+	}
+
+	for _, serviceSearch := range serviceMap {
+		serviceSearchResp := model.NewServiceSearchResp()
+		serviceSearchResp.FromServiceSearch(serviceSearch)
+		res = append(res, serviceSearchResp)
+	}
+
 	return res, nil
+}
+
+func contains(names []string, name string) bool {
+	for _, item := range names {
+		if item == name {
+			return true
+		}
+	}
+	return false
 }

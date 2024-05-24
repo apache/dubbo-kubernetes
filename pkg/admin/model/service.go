@@ -20,62 +20,61 @@ package model
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"strings"
 )
-
-type ServiceSearchReq struct {
-}
 
 type ServiceSearchResp struct {
 	ServiceName   string         `json:"serviceName"`
-	AvgQPS        string         `json:"avgQPS"`
-	AvgRT         string         `json:"avgRT"`
-	RequestTotal  string         `json:"RequestTotal"`
 	VersionGroups []VersionGroup `json:"versionGroups"`
 }
 
-func (s *ServiceSearchResp) FromServiceDataplaneResource(dataplane *mesh.DataplaneResource) *ServiceSearchResp {
-	// TODO: get real data
-	s.ServiceName = dataplane.Meta.GetName()
-	s.VersionGroups = make([]VersionGroup, 0)
-	s.AvgQPS = "0.5"
-	s.AvgRT = "345ms"
-	s.RequestTotal = "1850"
-	return s
+type ServiceSearch struct {
+	ServiceName   string
+	VersionGroups Set
 }
 
-func (s *ServiceSearchResp) FromServiceMappingResource(dataplane *mesh.MappingResource) *ServiceSearchResp {
-	// TODO: get real data
-	s.ServiceName = dataplane.Meta.GetName()
-	s.VersionGroups = make([]VersionGroup, 0)
-	s.AvgQPS = "0.5"
-	s.AvgRT = "345ms"
-	s.RequestTotal = "1850"
-	return s
+func (s ServiceSearch) FromServiceInfo(info *v1alpha1.ServiceInfo) {
+	s.VersionGroups.Add(info.Group + " " + info.Version)
 }
 
-func (s *ServiceSearchResp) FromServiceMetadataResource(metadata *mesh.MetaDataResource) *ServiceSearchResp {
-	// TODO: get real data
-	serviceMap := metadata.Spec.GetServices()
-	for _, serviceInfo := range serviceMap {
-		news := &ServiceSearchResp{}
-		news.ServiceName = serviceInfo.Name
-		news.VersionGroups = make([]VersionGroup, 0)
-		group := serviceInfo.Group
-		version := serviceInfo.Version
-		news.VersionGroups = append(s.VersionGroups, VersionGroup{Version: version, Group: group})
-		news.AvgQPS = "0.5"
-		news.AvgRT = "345ms"
-		news.RequestTotal = "1850"
-		return news
+func NewServiceSearch(serviceName string) *ServiceSearch {
+	return &ServiceSearch{
+		ServiceName:   serviceName,
+		VersionGroups: NewSet(),
 	}
-	return nil
+}
+
+func NewServiceSearchResp() *ServiceSearchResp {
+	return &ServiceSearchResp{
+		ServiceName:   "",
+		VersionGroups: nil,
+	}
+}
+
+func NewServiceDistributionResp() *ServiceTabDistributionResp {
+	return &ServiceTabDistributionResp{
+		AppName:      "",
+		InstanceName: "",
+		Endpoint:     "",
+		TimeOut:      "",
+		Retries:      "",
+	}
+}
+
+func (s *ServiceSearchResp) FromServiceSearch(search *ServiceSearch) {
+	s.ServiceName = search.ServiceName
+	versionGroupList := make([]VersionGroup, 0)
+	for _, gv := range search.VersionGroups.Values() {
+		groupAndVersion := strings.Split(gv, " ")
+		versionGroupList = append(versionGroupList, VersionGroup{Version: groupAndVersion[0], Group: groupAndVersion[1]})
+	}
+	s.VersionGroups = versionGroupList
 }
 
 type ServiceTabDistributionReq struct {
 	ServiceName string `json:"serviceName"`
 	Version     string `json:"version"`
 	Group       string `json:"group"`
-	Side        string `json:"side"`
 }
 
 type ServiceTabDistributionResp struct {
@@ -86,13 +85,13 @@ type ServiceTabDistributionResp struct {
 	Retries      string `json:"retries"`
 }
 
-func (s *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *mesh.DataplaneResource) *ServiceTabDistributionResp {
+func (s *ServiceTabDistributionResp) FromServiceMappingResource(dataplaneList *mesh.DataplaneResourceList, appName string) *ServiceTabDistributionResp {
 	// TODO: get real data
-	s.AppName = dataplane.GetMeta().GetLabels()[v1alpha1.AppTag]
-	s.InstanceName = "instancedemo"
-	s.Endpoint = "0.5"
-	s.TimeOut = "345ms"
-	s.Retries = "1850"
+	s.AppName = appName
+	s.InstanceName = ""
+	s.Endpoint = ""
+	s.TimeOut = ""
+	s.Retries = ""
 	return s
 }
 
