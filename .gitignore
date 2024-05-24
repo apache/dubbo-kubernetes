@@ -41,4 +41,5 @@ ui/node-modules
 coverage.txt
 
 bin/
+build/
 vendor/

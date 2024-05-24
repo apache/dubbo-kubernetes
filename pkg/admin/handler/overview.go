@@ -53,3 +53,17 @@ func GetMetas(rt core_runtime.Runtime) gin.HandlerFunc {
 		c.JSON(http.StatusOK, model.NewSuccessResp(metadataList))
 	}
 }
+
+func GetMappings(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		manager := rt.ResourceManager()
+		mappingList := &mesh.MappingResourceList{}
+		if err := manager.List(rt.AppContext(), mappingList); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(mappingList))
+	}
+}

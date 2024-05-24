@@ -19,6 +19,7 @@ package service
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
@@ -36,14 +37,29 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 	appMap := make(map[string]*model.ApplicationDetail)
 	for _, dataplane := range dataplaneList.Items {
 		appName := dataplane.Meta.GetLabels()[mesh_proto.AppTag]
+		//appName := dataplane.Spec.Networking.Inbound[0].GetTags()[mesh_proto.AppTag]
 		var applicationDetail *model.ApplicationDetail
 		if _, ok := appMap[appName]; ok {
 			applicationDetail = appMap[appName]
 		} else {
 			applicationDetail = model.NewApplicationDetail()
 		}
-		applicationDetail.Merge(dataplane)
+
+		applicationDetail.MergeDatapalne(dataplane)
+		applicationDetail.GetRegistry(rt)
 		appMap[appName] = applicationDetail
+	}
+
+	metadataList := &mesh.MetaDataResourceList{}
+	if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(req.AppName)); err != nil {
+		return nil, err
+	}
+
+	//get data from metadata
+	for _, metadata := range metadataList.Items {
+		if appDetail, ok := appMap[metadata.Spec.App]; ok {
+			appDetail.MergeMetaData(metadata)
+		}
 	}
 
 	resp := make([]*model.ApplicationDetailResp, 0, len(appMap))
@@ -68,8 +84,77 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.Applicati
 	res := make([]*model.ApplicationTabInstanceInfoResp, 0, len(dataplaneList.Items))
 	for _, dataplane := range dataplaneList.Items {
 		resItem := &model.ApplicationTabInstanceInfoResp{}
-		res = append(res, resItem.FromDataplaneResource(dataplane))
+		resItem.FromDataplaneResource(dataplane)
+		resItem.GetRegistry(rt)
+		res = append(res, resItem)
 	}
 
+	return res, nil
+}
+
+func GetApplicationServiceFormInfo(rt core_runtime.Runtime, req *model.ApplicationServiceFormReq) ([]*model.ApplicationServiceFormResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName)); err != nil {
+		return nil, err
+	}
+
+	metadataList := &mesh.MetaDataResourceList{}
+	if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(req.AppName)); err != nil {
+		return nil, err
+	}
+
+	return getApplicationServiceFormInfoBySide(req.Side, metadataList)
+}
+
+func getApplicationServiceFormInfoBySide(side string, metadataList *mesh.MetaDataResourceList) ([]*model.ApplicationServiceFormResp, error) {
+	res := make([]*model.ApplicationServiceFormResp, 0)
+	serviceMap := make(map[string]*model.ApplicationServiceForm)
+	for _, metadata := range metadataList.Items {
+		for _, serviceInfo := range metadata.Spec.Services {
+			if serviceInfo.Params[constants.ServiceInfoSide] == side {
+				applicationServiceForm := model.NewApplicationServiceForm(serviceInfo.Name)
+				if _, ok := serviceMap[serviceInfo.Name]; ok {
+					serviceMap[serviceInfo.Name].FromServiceInfo(serviceInfo)
+				} else {
+					applicationServiceForm.FromServiceInfo(serviceInfo)
+					serviceMap[serviceInfo.Name] = applicationServiceForm
+				}
+			}
+		}
+	}
+
+	for _, applicationServiceForm := range serviceMap {
+		applicationServiceFormResp := model.NewApplicationServiceFormResp()
+		applicationServiceFormResp.FromApplicationServiceForm(applicationServiceForm)
+		res = append(res, applicationServiceFormResp)
+	}
+	return res, nil
+}
+
+func GetApplicationSearchInfo(rt core_runtime.Runtime) ([]*model.ApplicationSearchResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
+		return nil, err
+	}
+
+	res := make([]*model.ApplicationSearchResp, 0)
+	appMap := make(map[string]*model.ApplicationSearch)
+	for _, dataplane := range dataplaneList.Items {
+		appName := dataplane.Meta.GetLabels()[mesh_proto.AppTag]
+		if _, ok := appMap[appName]; !ok {
+			appMap[appName] = model.NewApplicationSearch(appName)
+		}
+		appMap[appName].MergeDataplane(dataplane)
+		appMap[appName].GetRegistry(rt)
+	}
+
+	for appName, search := range appMap {
+		applicationSearchResp := &model.ApplicationSearchResp{
+			AppName: appName,
+		}
+		res = append(res, applicationSearchResp.FromApplicationSearch(search))
+	}
 	return res, nil
 }

@@ -55,7 +55,7 @@ const (
 var DefaultFilters = []util.FilterFunc{
 	util.LicenseFilter,
 	util.FormatterFilter,
-	util.SpaceFilter,
+	util.ReserveEoFSpaceFilter,
 }
 
 // Renderer is responsible for rendering helm chart with new values.
@@ -325,8 +325,10 @@ func renderManifest(valsYaml string, cht *chart.Chart, builtIn bool, opts *Rende
 		if file == "" {
 			continue
 		}
+		// the formatted yaml file should terminate with a newline separator
 		if !strings.HasSuffix(file, YAMLSeparator) {
-			file += YAMLSeparator
+			// do not add the first newline separator
+			file += YAMLSeparator[1:]
 		}
 		builder.WriteString(file)
 	}

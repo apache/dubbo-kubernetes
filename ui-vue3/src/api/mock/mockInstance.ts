@@ -61,47 +61,36 @@ Mock.mock('/mock/instance/detail', 'get', () => {
     code: 200,
     message: 'success',
     data: {
-      deployState: {
-        label: 'pariatur do nulla',
-        value: 'ut',
-        level: 'ullamco veniam laboris ex',
-        tip: '246.179.217.170'
+      deployState: 'Running',
+      registerStates: 'Unregisted',
+      ip: '45.7.37.227',
+      rpcPort: '20880',
+      appName: 'shop-user',
+      workloadName: 'shop-user-prod(deployment)',
+      labels: {
+        app: 'shop-user',
+        version: 'v1',
+        region: 'beijing'
       },
-      registerStates: [
-        {
-          label: 'magna Duis non',
-          value: 'laboris',
-          level: 'et dolore pariatur ipsum adipisicing',
-          tip: '204.174.144.51'
-        }
-      ],
-      dubboPort: 35,
-      ip: '15.1.144.52',
-      appName: '式团划',
-      workload: 'in labore enim',
-      labels: [null],
-      createTime: '2000-11-12 05:59:48',
-      startTime: '1986-03-29 11:48:17',
-      registerTime: '2000-01-26 19:09:48',
-      registerCluster: 'qui commodo dolore',
-      deployCluster: 'dolore laborum',
-      node: 'aliquip',
-      image: 'http://dummyimage.com/400x400',
+      createTime: '2023/12/19 22:09:34',
+      readyTime: '2023/12/19  22:12:34',
+      registerTime: '2023/12/19   22:16:56',
+      registerClusters: ['sz-ali-zk-f8otyo4r', 'hz-ali-zk-oqgiq9gq'],
+      deployCluster: 'tx-shanghai-1',
+      node: 'hz-ali-30.33.0.1',
+      image: 'apache/org.apahce.dubbo.samples.shop-user:v1',
       probes: {
         startupProbe: {
-          type: 'pariatur in quis',
-          port: 92,
-          open: false
+          type: 'http',
+          port: 22222
         },
         readinessProbe: {
-          type: 'aute',
-          port: 52,
-          open: false
+          type: 'http',
+          port: 22222
         },
         livenessPronbe: {
-          type: 'reprehenderit aute nostrud',
-          port: 66,
-          open: false
+          type: 'http',
+          port: 22222
         }
       }
     }

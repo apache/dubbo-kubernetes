@@ -18,7 +18,7 @@
 <template>
   <div class="__container_app_detail">
     <a-flex>
-      <a-card>
+      <a-card class="_detail">
         <a-descriptions :column="2" layout="vertical" title="">
           <!-- ruleName -->
           <a-descriptions-item
@@ -104,7 +104,7 @@
       </a-card>
     </a-flex>
 
-    <a-card title="标签【1】">
+    <a-card title="标签【1】" style="margin-top: 10px" class="_detail">
       <a-space align="center">
         <a-typography-title :level="5">
           {{ $t('flowControlDomain.labelName') }}:
