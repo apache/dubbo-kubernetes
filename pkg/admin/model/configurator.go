@@ -17,6 +17,8 @@
 
 package model
 
+import mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+
 type ConfiguratorSearchResp struct {
 	Code    int                           `json:"code"`
 	Message string                        `json:"message"`
@@ -31,39 +33,7 @@ type ConfiguratorSearchResp_Data struct {
 }
 
 type ConfiguratorResp struct {
-	Code    int                   `json:"code"`
-	Message string                `json:"message"`
-	Data    ConfiguratorResp_Data `json:"data"`
-}
-
-type ConfiguratorResp_Data struct {
-	ConfigVersion string                     `json:"configVersion"`
-	Scope         string                     `json:"scope"`
-	Key           string                     `json:"key"`
-	Enabled       bool                       `json:"enabled"`
-	Configs       []ConfiguratorResp_Configs `json:"configs"`
-}
-
-type ConfiguratorResp_Configs struct {
-	Side       string                            `json:"side"`
-	Enabled    bool                              `json:"enabled"`
-	Match      ConfiguratorResp_Match            `json:"match"`
-	Parameters ConfiguratorResp_ConfigParameters `json:"parameters"`
-}
-
-type ConfiguratorResp_Match struct {
-	Param []ConfiguratorResp_Param `json:"param"`
-}
-
-type ConfiguratorResp_Param struct {
-	Key   string                      `json:"key"`
-	Value ConfiguratorResp_ParamValue `json:"value"`
-}
-
-type ConfiguratorResp_ParamValue struct {
-	Exact string `json:"exact"`
-}
-
-type ConfiguratorResp_ConfigParameters struct {
-	Timeout string `json:"timeout"`
+	Code    int                       `json:"code"`
+	Message string                    `json:"message"`
+	Data    *mesh_proto.DynamicConfig `json:"data"`
 }

@@ -642,24 +642,27 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			Mesh: opts.Mesh,
 		})
 	case mesh.DynamicConfigType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
-		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(id)
-		cfg, err := c.governance.GetConfig(path)
+		//labels := opts.Labels
+		//base := mesh_proto.Base{
+		//	Application:    labels[mesh_proto.Application],
+		//	Service:        labels[mesh_proto.Service],
+		//	ID:             labels[mesh_proto.ID],
+		//	ServiceVersion: labels[mesh_proto.ServiceVersion],
+		//	ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		//}
+		//id := mesh_proto.BuildServiceKey(base)
+		//path := mesh_proto.GetOverridePath(id)
+		cfg, err := c.governance.GetConfig(opts.Labels[store.PathLabel])
 		if err != nil {
 			return err
 		}
 		if cfg != "" {
-			if err := core_model.FromYAML([]byte(cfg), resource.GetSpec()); err != nil {
+			data := &mesh_proto.DynamicConfig{}
+			//_ = resource.SetSpec()
+			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
+			_ = resource.SetSpec(data)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,

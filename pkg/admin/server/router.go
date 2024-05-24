@@ -48,5 +48,9 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	{
 		configuration := router.Group("/configurator")
 		configuration.GET("/search", handler.ConfiguratorSearch(rt))
+		configuration.GET("/:ruleName", handler.GetConfiguratorWithRuleName(rt))
+		configuration.PUT("/:ruleName", handler.PutConfiguratorWithRuleName(rt))
+		configuration.POST("/:ruleName", handler.PostConfiguratorWithRuleName(rt))
+		configuration.DELETE("/:ruleName", handler.DeleteConfiguratorWithRuleName(rt))
 	}
 }

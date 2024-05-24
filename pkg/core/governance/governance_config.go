@@ -29,7 +29,7 @@ import (
 	"github.com/dubbogo/go-zookeeper/zk"
 )
 
-var group = "dubbogo"
+const group = "dubbo"
 
 type RuleExists struct {
 	cause error
