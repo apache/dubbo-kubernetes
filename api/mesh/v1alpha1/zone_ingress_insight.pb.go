@@ -12,13 +12,11 @@ import (
 )
 
 import (
+	_ "github.com/apache/dubbo-kubernetes/api/mesh"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-)
-
-import (
-	_ "github.com/apache/dubbo-kubernetes/api/mesh"
 )
 
 const (

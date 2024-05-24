@@ -12,6 +12,8 @@ import (
 )
 
 import (
+	_ "github.com/apache/dubbo-kubernetes/api/mesh"
+
 	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -19,10 +21,6 @@ import (
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-)
-
-import (
-	_ "github.com/apache/dubbo-kubernetes/api/mesh"
 )
 
 const (

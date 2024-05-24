@@ -23,12 +23,10 @@ import (
 )
 
 import (
-	"github.com/pkg/errors"
-)
-
-import (
 	"github.com/apache/dubbo-kubernetes/api/generic"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
+
+	"github.com/pkg/errors"
 )
 
 var _ generic.Insight = &DataplaneInsight{}

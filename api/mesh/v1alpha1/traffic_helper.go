@@ -22,11 +22,9 @@ import (
 )
 
 import (
-	"github.com/dubbogo/gost/encoding/yaml"
-)
-
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
+
+	"github.com/dubbogo/gost/encoding/yaml"
 )
 
 // Application 流量管控相关的基础label
