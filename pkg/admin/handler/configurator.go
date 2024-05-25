@@ -29,16 +29,8 @@ import (
 	"net/http"
 )
 
-// ConfiguratorOperator set in context as key to mark `PUT/POST`
-type ConfiguratorOperator struct{}
-
 // ConfiguratorSearchWithPath set in context as key to mark searchPath
 type ConfiguratorSearchWithPath struct{}
-
-const (
-	PUTConfiguratorOperator  = "PUT"
-	POSTConfiguratorOperator = "POST"
-)
 
 func ConfiguratorSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -94,7 +86,6 @@ func PutConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 		ctx := context.WithValue(rt.AppContext(), ConfiguratorSearchWithPath{}, ruleName)
-		ctx = context.WithValue(ctx, ConfiguratorOperator{}, PUTConfiguratorOperator)
 		if err = rt.ResourceManager().Update(ctx, res, store.UpdateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -122,8 +113,7 @@ func PostConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 		ctx := context.WithValue(rt.AppContext(), ConfiguratorSearchWithPath{}, ruleName)
-		ctx = context.WithValue(ctx, ConfiguratorOperator{}, POSTConfiguratorOperator)
-		if err = rt.ResourceManager().Update(ctx, res, store.UpdateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err = rt.ResourceManager().Create(ctx, res, store.CreateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {

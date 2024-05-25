@@ -100,6 +100,9 @@ func (t *traditionalStore) SetEventWriter(writer events.Emitter) {
 func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resource, fs ...store.CreateOptionsFunc) error {
 	var err error
 	opts := store.NewCreateOptions(fs...)
+	if opts.Name == core_model.DefaultMesh {
+		opts.Name += ".universal"
+	}
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
 	if err != nil {
 		return err
@@ -320,8 +323,8 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		}
 	case mesh.DynamicConfigType:
 		var override *mesh_proto.DynamicConfig
-		path, searchFromAdmin := ctx.Value(admin_handler.ConfiguratorSearchWithPath{}).(string)
-		if !searchFromAdmin {
+		path, ok := ctx.Value(admin_handler.ConfiguratorSearchWithPath{}).(string)
+		if !ok {
 			labels := opts.Labels
 			base := mesh_proto.Base{
 				Application:    labels[mesh_proto.Application],
@@ -337,7 +340,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		if err != nil {
 			return err
 		}
-		if !searchFromAdmin {
+		if !ok {
 			override = &mesh_proto.DynamicConfig{}
 			err = yaml.UnmarshalYML([]byte(existConfig), override)
 			if err != nil {
@@ -356,16 +359,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			override.Configs = configs
 			override.Enabled = update.Enabled
 		} else {
-			operate, ok := ctx.Value(admin_handler.ConfiguratorOperator{}).(string)
-			if ok {
-				return fmt.Errorf("Unknow operator in resoure updating , must be set in context ")
-			} else if operate == admin_handler.POSTConfiguratorOperator {
-				override = resource.GetSpec().(*mesh_proto.DynamicConfig)
-			} else if operate == admin_handler.PUTConfiguratorOperator {
-				override = resource.GetSpec().(*mesh_proto.DynamicConfig)
-			} else {
-				return fmt.Errorf("Unknow operator in resoure updating , must be [PUT/POST] ")
-			}
+			override = resource.GetSpec().(*mesh_proto.DynamicConfig)
 		}
 		if b, err := yaml.MarshalYML(override); err != nil {
 			return err
@@ -539,30 +533,32 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 			logger.Sugar().Error(err.Error())
 			return err
 		}
-		if err := core_model.FromYAML([]byte(conf), resource.GetSpec()); err != nil {
-			return err
-		}
-		override := resource.GetSpec().(*mesh_proto.DynamicConfig)
-		if len(override.Configs) > 0 {
-			newConfigs := make([]*mesh_proto.OverrideConfig, 0)
-			for _, c := range override.Configs {
-				if consts.Configs.Contains(c.Type) {
-					newConfigs = append(newConfigs, c)
-				}
+		if !ok {
+			if err := core_model.FromYAML([]byte(conf), resource.GetSpec()); err != nil {
+				return err
 			}
-			if len(newConfigs) == 0 {
-				err := t.governance.DeleteConfig(path)
-				if err != nil {
-					return err
+			override := resource.GetSpec().(*mesh_proto.DynamicConfig)
+			if len(override.Configs) > 0 {
+				newConfigs := make([]*mesh_proto.OverrideConfig, 0)
+				for _, c := range override.Configs {
+					if consts.Configs.Contains(c.Type) {
+						newConfigs = append(newConfigs, c)
+					}
 				}
-			} else {
-				override.Configs = newConfigs
-				if b, err := yaml.MarshalYML(override); err != nil {
-					return err
-				} else {
-					err := t.governance.SetConfig(path, string(b))
+				if len(newConfigs) == 0 {
+					err := t.governance.DeleteConfig(path)
 					if err != nil {
 						return err
+					}
+				} else {
+					override.Configs = newConfigs
+					if b, err := yaml.MarshalYML(override); err != nil {
+						return err
+					} else {
+						err := t.governance.SetConfig(path, string(b))
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -695,7 +691,6 @@ func (c *traditionalStore) Get(ctx context.Context, resource core_model.Resource
 		}
 		if cfg != "" {
 			data := &mesh_proto.DynamicConfig{}
-			//_ = resource.SetSpec()
 			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
