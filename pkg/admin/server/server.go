@@ -60,8 +60,7 @@ func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 func (a *AdminServer) Start(stop <-chan struct{}) error {
 	errChan := make(chan error)
 
-	var httpServer *http.Server
-	httpServer = a.startHttpServer(errChan)
+	httpServer := a.startHttpServer(errChan)
 	select {
 	case <-stop:
 		logger.Sugar().Info("stopping bufman")
