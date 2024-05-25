@@ -22,4 +22,5 @@ type RegClient interface {
 	SetContent(path string, value []byte) error // 包括创建或者更新的操作
 	GetContent(path string) ([]byte, error)
 	DeleteContent(path string) error // 删除指定路径的内容
+
 }

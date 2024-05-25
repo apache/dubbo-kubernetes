@@ -20,6 +20,7 @@ package traditional
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -752,11 +753,8 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		c.dCache.Range(func(key, value any) bool {
 			item := resources.NewItem()
 			r := value.(core_model.Resource)
-			item.SetMeta(&resourceMetaObject{
-				Name: key.(string),
-			})
-			err := item.SetSpec(r.GetSpec())
-			if err != nil {
+			match, err := c.copyResource(key, item, r, opts)
+			if err != nil || !match {
 				return false
 			}
 			if err := resources.AddItem(item); err != nil {
@@ -803,6 +801,9 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			return err
 		}
 		for _, app := range appNames {
+			if opts.NameContains != "" && !strings.Contains(app, opts.NameContains) {
+				return nil
+			}
 			// 2. 获取到该应用名下所有的revision
 			path := getMetadataPath(app)
 			revisions, err := c.regClient.GetChildren(path)
@@ -817,7 +818,8 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				id := dubbo_identifier.NewSubscriberMetadataIdentifier(app, revision)
 				appMetadata, err := c.metadataReport.GetAppMetadata(id)
 				if err != nil {
-					return err
+					log.Error(nil, "Err loading app metadata with id %s", id)
+					continue
 				}
 				item := resources.NewItem()
 				metaData := item.GetSpec().(*mesh_proto.MetaData)
@@ -879,4 +881,17 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		}
 	}
 	return nil
+}
+
+// copyResource, todo is copy necessary since they are of the same type?
+func (c *traditionalStore) copyResource(key any, dst core_model.Resource, src core_model.Resource, opts *store.ListOptions) (bool, error) {
+	name := opts.NameContains
+
+	if name != "" && !strings.Contains(key.(string), name) {
+		return false, nil
+	}
+
+	dst.SetMeta(src.GetMeta())
+	err := dst.SetSpec(src.GetSpec())
+	return true, err
 }
