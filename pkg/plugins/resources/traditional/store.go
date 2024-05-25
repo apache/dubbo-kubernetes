@@ -41,6 +41,7 @@ import (
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	admin_handler "github.com/apache/dubbo-kubernetes/pkg/admin/handler"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
@@ -96,7 +97,7 @@ func (t *traditionalStore) SetEventWriter(writer events.Emitter) {
 	t.eventWriter = writer
 }
 
-func (t *traditionalStore) Create(_ context.Context, resource core_model.Resource, fs ...store.CreateOptionsFunc) error {
+func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resource, fs ...store.CreateOptionsFunc) error {
 	var err error
 	opts := store.NewCreateOptions(fs...)
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
@@ -190,16 +191,20 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 			return err
 		}
 	case mesh.DynamicConfigType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.ConfiguratorSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			key := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetOverridePath(key)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(id)
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
 			return err
@@ -248,6 +253,9 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 
 func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resource, fs ...store.UpdateOptionsFunc) error {
 	opts := store.NewUpdateOptions(fs...)
+	if opts.Name == core_model.DefaultMesh {
+		opts.Name += ".universal"
+	}
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
 	if err != nil {
 		return err
@@ -311,37 +319,54 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	case mesh.DynamicConfigType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var override *mesh_proto.DynamicConfig
+		path, searchFromAdmin := ctx.Value(admin_handler.ConfiguratorSearchWithPath{}).(string)
+		if !searchFromAdmin {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			id := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetOverridePath(id)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(id)
 		existConfig, err := t.governance.GetConfig(path)
 		if err != nil {
 			return err
 		}
-		override := &mesh_proto.DynamicConfig{}
-		err = yaml.UnmarshalYML([]byte(existConfig), override)
-		if err != nil {
-			return err
-		}
-		configs := make([]*mesh_proto.OverrideConfig, 0)
-		if len(override.Configs) > 0 {
-			for _, c := range override.Configs {
-				if consts.Configs.Contains(c.Type) {
-					configs = append(configs, c)
+		if !searchFromAdmin {
+			override = &mesh_proto.DynamicConfig{}
+			err = yaml.UnmarshalYML([]byte(existConfig), override)
+			if err != nil {
+				return err
+			}
+			configs := make([]*mesh_proto.OverrideConfig, 0)
+			if len(override.Configs) > 0 {
+				for _, c := range override.Configs {
+					if consts.Configs.Contains(c.Type) {
+						configs = append(configs, c)
+					}
 				}
 			}
+			update := resource.GetSpec().(*mesh_proto.DynamicConfig)
+			configs = append(configs, update.Configs...)
+			override.Configs = configs
+			override.Enabled = update.Enabled
+		} else {
+			operate, ok := ctx.Value(admin_handler.ConfiguratorOperator{}).(string)
+			if ok {
+				return fmt.Errorf("Unknow operator in resoure updating , must be set in context ")
+			} else if operate == admin_handler.POSTConfiguratorOperator {
+				override = resource.GetSpec().(*mesh_proto.DynamicConfig)
+			} else if operate == admin_handler.PUTConfiguratorOperator {
+				override = resource.GetSpec().(*mesh_proto.DynamicConfig)
+			} else {
+				return fmt.Errorf("Unknow operator in resoure updating , must be [PUT/POST] ")
+			}
 		}
-		update := resource.GetSpec().(*mesh_proto.DynamicConfig)
-		configs = append(configs, update.Configs...)
-		override.Configs = configs
-		override.Enabled = update.Enabled
 		if b, err := yaml.MarshalYML(override); err != nil {
 			return err
 		} else {
@@ -454,6 +479,9 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 
 func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resource, fs ...store.DeleteOptionsFunc) error {
 	opts := store.NewDeleteOptions(fs...)
+	if opts.Name == core_model.DefaultMesh {
+		opts.Name += ".universal"
+	}
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
 	if err != nil {
 		return err
@@ -492,16 +520,20 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	case mesh.DynamicConfigType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.ConfiguratorSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			key := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetOverridePath(key)
 		}
-		key := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(key)
 		conf, err := t.governance.GetConfig(path)
 		if err != nil {
 			logger.Sugar().Error(err.Error())
@@ -567,7 +599,7 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 	return nil
 }
 
-func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, fs ...store.GetOptionsFunc) error {
+func (c *traditionalStore) Get(ctx context.Context, resource core_model.Resource, fs ...store.GetOptionsFunc) error {
 	opts := store.NewGetOptions(fs...)
 	if opts.Name == core_model.DefaultMesh {
 		opts.Name += ".universal"
@@ -642,17 +674,22 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			Mesh: opts.Mesh,
 		})
 	case mesh.DynamicConfigType:
-		//labels := opts.Labels
-		//base := mesh_proto.Base{
-		//	Application:    labels[mesh_proto.Application],
-		//	Service:        labels[mesh_proto.Service],
-		//	ID:             labels[mesh_proto.ID],
-		//	ServiceVersion: labels[mesh_proto.ServiceVersion],
-		//	ServiceGroup:   labels[mesh_proto.ServiceGroup],
-		//}
-		//id := mesh_proto.BuildServiceKey(base)
-		//path := mesh_proto.GetOverridePath(id)
-		cfg, err := c.governance.GetConfig(opts.Labels[store.PathLabel])
+		var path string
+		path, ok := ctx.Value(admin_handler.ConfiguratorSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			key := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetOverridePath(key)
+		}
+
+		cfg, err := c.governance.GetConfig(path)
 		if err != nil {
 			return err
 		}

@@ -18,9 +18,10 @@
 package handler
 
 import (
+	"context"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	res_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
@@ -28,11 +29,21 @@ import (
 	"net/http"
 )
 
+// ConfiguratorOperator set in context as key to mark `PUT/POST`
+type ConfiguratorOperator struct{}
+
+// ConfiguratorSearchWithPath set in context as key to mark searchPath
+type ConfiguratorSearchWithPath struct{}
+
+const (
+	PUTConfiguratorOperator  = "PUT"
+	POSTConfiguratorOperator = "POST"
+)
+
 func ConfiguratorSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		resList := &mesh.DynamicConfigResourceList{}
-		err := rt.ResourceManager().List(rt.AppContext(), resList)
-		if err != nil {
+		if err := rt.ResourceManager().List(rt.AppContext(), resList); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
@@ -57,15 +68,8 @@ func GetConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ruleName := c.Param("ruleName")
 		res := &mesh.DynamicConfigResource{}
-		err := rt.ResourceManager().Get(rt.AppContext(), res,
-			store.GetByPath(ruleName),
-			store.GetBy(core_model.ResourceKey{
-				// must set like this because of `Get()` function require
-				Mesh: res_model.DefaultMesh,
-				Name: res_model.DefaultMesh,
-			}),
-		)
-		if err != nil {
+		ctx := context.WithValue(rt.AppContext(), ConfiguratorSearchWithPath{}, ruleName)
+		if err := rt.ResourceManager().Get(ctx, res, store.GetByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
@@ -79,18 +83,72 @@ func GetConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func PutConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		ruleName := c.Param("ruleName")
+		res := &mesh.DynamicConfigResource{
+			Meta: nil,
+			Spec: &mesh_proto.DynamicConfig{},
+		}
+		err := c.Bind(res.Spec)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+		ctx := context.WithValue(rt.AppContext(), ConfiguratorSearchWithPath{}, ruleName)
+		ctx = context.WithValue(ctx, ConfiguratorOperator{}, PUTConfiguratorOperator)
+		if err = rt.ResourceManager().Update(ctx, res, store.UpdateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		} else {
+			c.JSON(http.StatusOK, model.ConfiguratorResp{
+				Code:    200,
+				Message: "success",
+				Data:    &mesh_proto.DynamicConfig{},
+			})
+		}
 	}
 }
 
 func PostConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ruleName := c.Param("ruleName")
+		res := &mesh.DynamicConfigResource{
+			Meta: nil,
+			Spec: &mesh_proto.DynamicConfig{},
+		}
 
+		err := c.Bind(res.Spec)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+		ctx := context.WithValue(rt.AppContext(), ConfiguratorSearchWithPath{}, ruleName)
+		ctx = context.WithValue(ctx, ConfiguratorOperator{}, POSTConfiguratorOperator)
+		if err = rt.ResourceManager().Update(ctx, res, store.UpdateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		} else {
+			c.JSON(http.StatusCreated, model.ConfiguratorResp{
+				Code:    200,
+				Message: "success",
+				Data:    &mesh_proto.DynamicConfig{},
+			})
+		}
 	}
 }
 
 func DeleteConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		ruleName := c.Param("ruleName")
+		res := &mesh.DynamicConfigResource{}
+		ctx := context.WithValue(rt.AppContext(), ConfiguratorSearchWithPath{}, ruleName)
+		if err := rt.ResourceManager().Delete(ctx, res, store.DeleteByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+		c.JSON(http.StatusNoContent, model.ConfiguratorResp{
+			Code:    1000,
+			Message: "success",
+			Data:    &mesh_proto.DynamicConfig{},
+		})
 	}
 }
