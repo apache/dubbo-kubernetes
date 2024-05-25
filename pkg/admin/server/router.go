@@ -28,6 +28,7 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	{
 		instance := router.Group("/instance")
 		instance.GET("/search", handler.SearchInstances(rt))
+		instance.GET("/detail", handler.GetInstanceDetail(rt))
 	}
 
 	{

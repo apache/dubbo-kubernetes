@@ -43,3 +43,37 @@ func SearchInstances(rt core_runtime.Runtime, req *model.SearchInstanceReq) ([]*
 
 	return res, &dataplaneList.Pagination, nil
 }
+
+func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([]*model.InstanceDetailResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.InstanceName)); err != nil {
+		return nil, err
+	}
+
+	instMap := make(map[string]*model.InstanceDetail)
+	for _, dataplane := range dataplaneList.Items {
+
+		//instName := dataplane.Meta.GetLabels()[mesh_proto.InstanceTag]//This tag is "" in universal mode
+		instName := dataplane.Meta.GetName()
+		var instanceDetail *model.InstanceDetail
+		if _, ok := instMap[instName]; ok {
+			//found previously recorded instance detail in instMap
+			//the detail should be merged with the new instance detail
+			instanceDetail = instMap[instName]
+		} else {
+			//the instance information appears for the 1st time
+			instanceDetail = model.NewInstanceDetail()
+		}
+		instanceDetail.Merge(dataplane) //convert dataplane info to instance detail
+		instMap[instName] = instanceDetail
+	}
+
+	resp := make([]*model.InstanceDetailResp, 0, len(instMap))
+	for _, instDetail := range instMap {
+		respItem := &model.InstanceDetailResp{}
+		resp = append(resp, respItem.FromInstanceDetail(instDetail))
+	}
+	return resp, nil
+}

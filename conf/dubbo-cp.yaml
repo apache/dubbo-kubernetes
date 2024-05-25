@@ -15,7 +15,7 @@
 
 # 可选 k8s half universal
 deploy_mode: universal
-# mode: test
+#mode: test
 mode: zone
 #multizone:
 #  zone:
