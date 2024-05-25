@@ -153,16 +153,20 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 	case mesh.DataplaneType:
 		// Dataplane无法Create, 只能Get和List
 	case mesh.TagRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.TagRuleSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			key := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetOverridePath(key)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.TagRoute)
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
 			return err
@@ -173,17 +177,20 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	case mesh.ConditionRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.ConditionRuleSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			key := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetOverridePath(key)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.ConditionRoute)
-
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
 			return err
@@ -267,22 +274,26 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 	case mesh.DataplaneType:
 		// Dataplane资源无法更新, 只能获取和删除
 	case mesh.TagRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.TagRuleSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			id := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetRoutePath(id, consts.TagRoute)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.TagRoute)
 		cfg, err := t.governance.GetConfig(path)
 		if err != nil {
 			return err
 		}
 		if cfg == "" {
-			return fmt.Errorf("tag route %s not found", id)
+			return fmt.Errorf("tag route %s not found", path)
 		}
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
@@ -293,24 +304,26 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	case mesh.ConditionRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.ConditionRuleSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			id := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetRoutePath(id, consts.ConditionRoute)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.ConditionRoute)
 		cfg, err := t.governance.GetConfig(path)
 		if err != nil {
 			return err
 		}
 		if cfg == "" {
-			if cfg == "" {
-				return fmt.Errorf("no existing condition route for path: %s", path)
-			}
+			return fmt.Errorf("no existing condition route for path: %s", path)
 		}
 
 		bytes, err := core_model.ToYAML(resource.GetSpec())
@@ -484,31 +497,40 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 	case mesh.DataplaneType:
 		// 不支持删除
 	case mesh.TagRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.TagRuleSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			key := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetOverridePath(key)
 		}
-		key := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(key)
 		err := t.governance.DeleteConfig(path)
 		if err != nil {
 			return err
 		}
 	case mesh.ConditionRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.ConditionRuleSearchWithPath{}).(string)
+		if !ok {
+
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			key := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetRoutePath(key, consts.ConditionRoute)
 		}
-		key := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(key, consts.ConditionRoute)
 		err := t.governance.DeleteConfig(path)
 		if err != nil {
 			return err
@@ -622,16 +644,20 @@ func (c *traditionalStore) Get(ctx context.Context, resource core_model.Resource
 			Mesh: opts.Mesh,
 		})
 	case mesh.TagRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.TagRuleSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			id := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetRoutePath(id, consts.TagRoute)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.TagRoute)
 		cfg, err := c.governance.GetConfig(path)
 		if err != nil {
 			return err
@@ -646,16 +672,20 @@ func (c *traditionalStore) Get(ctx context.Context, resource core_model.Resource
 			Mesh: opts.Mesh,
 		})
 	case mesh.ConditionRouteType:
-		labels := opts.Labels
-		base := mesh_proto.Base{
-			Application:    labels[mesh_proto.Application],
-			Service:        labels[mesh_proto.Service],
-			ID:             labels[mesh_proto.ID],
-			ServiceVersion: labels[mesh_proto.ServiceVersion],
-			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		var path string
+		path, ok := ctx.Value(admin_handler.ConditionRuleSearchWithPath{}).(string)
+		if !ok {
+			labels := opts.Labels
+			base := mesh_proto.Base{
+				Application:    labels[mesh_proto.Application],
+				Service:        labels[mesh_proto.Service],
+				ID:             labels[mesh_proto.ID],
+				ServiceVersion: labels[mesh_proto.ServiceVersion],
+				ServiceGroup:   labels[mesh_proto.ServiceGroup],
+			}
+			id := mesh_proto.BuildServiceKey(base)
+			path = mesh_proto.GetRoutePath(id, consts.ConditionRoute)
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.ConditionRoute)
 		cfg, err := c.governance.GetConfig(path)
 		if err != nil {
 			return err
@@ -882,7 +912,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		}
 
 	case mesh.DynamicConfigType:
-		cfg, err := c.governance.GetList()
+		cfg, err := c.governance.GetList(consts.ConfiguratorRuleSuffix)
 		if err != nil {
 			return err
 		}
@@ -903,9 +933,49 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			_ = resources.AddItem(newIt)
 		}
 	case mesh.TagRouteType:
-		// 不支持List
+		cfg, err := c.governance.GetList(consts.TagRuleSuffix)
+		if err != nil {
+			return err
+		}
+		for name, rule := range cfg {
+			newIt := resources.NewItem()
+			ConfiguratorCfg, err := parseTagConfig(rule)
+			_ = newIt.SetSpec(ConfiguratorCfg)
+			meta := &resourceMetaObject{
+				Name:   name,
+				Mesh:   opts.Mesh,
+				Labels: maps.Clone(opts.Labels),
+			}
+			if err != nil {
+				logger.Errorf("failed to parse tag rule: %s : %s, %s", name, rule, err.Error())
+			} else {
+				meta.Version = ConfiguratorCfg.ConfigVersion
+			}
+			newIt.SetMeta(meta)
+			_ = resources.AddItem(newIt)
+		}
 	case mesh.ConditionRouteType:
-		// 不支持List
+		cfg, err := c.governance.GetList(consts.ConditionRuleSuffix)
+		if err != nil {
+			return err
+		}
+		for name, rule := range cfg {
+			newIt := resources.NewItem()
+			ConfiguratorCfg, err := parseConditionConfig(rule)
+			_ = newIt.SetSpec(ConfiguratorCfg)
+			meta := &resourceMetaObject{
+				Name:   name,
+				Mesh:   opts.Mesh,
+				Labels: maps.Clone(opts.Labels),
+			}
+			if err != nil {
+				logger.Errorf("failed to parse condition rule: %s : %s, %s", name, rule, err.Error())
+			} else {
+				meta.Version = ConfiguratorCfg.ConfigVersion
+			}
+			newIt.SetMeta(meta)
+			_ = resources.AddItem(newIt)
+		}
 	default:
 		rootDir := getDubboCpPath(string(resources.GetItemType()))
 		names, err := c.regClient.GetChildren(rootDir)

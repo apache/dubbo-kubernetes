@@ -54,4 +54,22 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		configuration.POST("/:ruleName", handler.PostConfiguratorWithRuleName(rt))
 		configuration.DELETE("/:ruleName", handler.DeleteConfiguratorWithRuleName(rt))
 	}
+
+	{
+		conditionRule := router.Group("/condition-rule")
+		conditionRule.GET("/search", handler.ConditionRuleSearch(rt))
+		conditionRule.GET("/:ruleName", handler.GetConditionRuleWithRuleName(rt))
+		conditionRule.PUT("/:ruleName", handler.PutConditionRuleWithRuleName(rt))
+		conditionRule.POST("/:ruleName", handler.PostConditionRuleWithRuleName(rt))
+		conditionRule.DELETE("/:ruleName", handler.DeleteConditionRuleWithRuleName(rt))
+	}
+
+	{
+		tagRule := router.Group("/tag-rule")
+		tagRule.GET("/search", handler.TagRuleSearch(rt))
+		tagRule.GET("/:ruleName", handler.GetTagRuleWithRuleName(rt))
+		tagRule.PUT("/:ruleName", handler.PutTagRuleWithRuleName(rt))
+		tagRule.POST("/:ruleName", handler.PostTagRuleWithRuleName(rt))
+		tagRule.DELETE("/:ruleName", handler.DeleteTagRuleWithRuleName(rt))
+	}
 }

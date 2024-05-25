@@ -19,6 +19,7 @@ package governance
 
 import (
 	"errors"
+	"strings"
 )
 
 import (
@@ -50,7 +51,7 @@ func (notFound *RuleNotFound) Error() string {
 type GovernanceConfig interface {
 	SetConfig(key string, value string) error
 	GetConfig(key string) (string, error)
-	GetList() (map[string]string, error)
+	GetList(configSuffix string) (map[string]string, error)
 	DeleteConfig(key string) error
 	SetConfigWithGroup(group string, key string, value string) error
 	GetConfigWithGroup(group string, key string) (string, error)
@@ -97,7 +98,7 @@ type GovernanceConfigImpl struct {
 	configCenter   config_center.DynamicConfiguration
 }
 
-func (g *GovernanceConfigImpl) GetList() (map[string]string, error) {
+func (g *GovernanceConfigImpl) GetList(ConfigSuffix string) (map[string]string, error) {
 	keys, err := g.configCenter.GetConfigKeysByGroup(group)
 	if err != nil {
 		return nil, err
@@ -105,11 +106,13 @@ func (g *GovernanceConfigImpl) GetList() (map[string]string, error) {
 
 	list := make(map[string]string)
 	for name := range keys.Items {
-		rule, err := g.GetConfigWithGroup(group, name.(string))
-		if err != nil {
-			return nil, err
+		if strings.HasSuffix(name.(string), ConfigSuffix) {
+			rule, err := g.GetConfigWithGroup(group, name.(string))
+			if err != nil {
+				return nil, err
+			}
+			list[name.(string)] = rule
 		}
-		list[name.(string)] = rule
 	}
 	return list, nil
 }

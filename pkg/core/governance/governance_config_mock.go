@@ -37,9 +37,9 @@ type MockGovernanceConfig struct {
 	recorder *MockGovernanceConfigMockRecorder
 }
 
-func (m *MockGovernanceConfig) GetList() (map[string]string, error) {
+func (m *MockGovernanceConfig) GetList(arg0 string) (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetList")
+	ret := m.ctrl.Call(m, "GetList", arg0)
 	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1

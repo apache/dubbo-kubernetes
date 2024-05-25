@@ -96,3 +96,13 @@ func parseConfiguratorConfig(rawRouteData string) (*mesh_proto.DynamicConfig, er
 	}
 	return routerConfig, nil
 }
+
+func parseConditionConfig(rawRouteData string) (*mesh_proto.ConditionRoute, error) {
+	routeDecoder := yaml.NewDecoder(strings.NewReader(rawRouteData))
+	routerConfig := &mesh_proto.ConditionRoute{}
+	err := routeDecoder.Decode(routerConfig)
+	if err != nil {
+		return nil, err
+	}
+	return routerConfig, nil
+}
