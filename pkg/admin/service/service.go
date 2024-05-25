@@ -31,12 +31,9 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 	mappingList := &mesh.MappingResourceList{}
+	metadataList := &mesh.MetaDataResourceList{}
 
 	serviceName := req.ServiceName
-
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.ServiceName)); err != nil {
-		return nil, err
-	}
 
 	if err := manager.List(rt.AppContext(), mappingList); err != nil {
 		return nil, err
@@ -48,14 +45,21 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 		//找到对应serviceName的appNames
 		if mapping.Spec.InterfaceName == serviceName {
 			for _, appName := range mapping.Spec.ApplicationNames {
-				serviceDistributionResp := model.NewServiceDistributionResp()
-				serviceDistributionResp.FromServiceMappingResource(dataplaneList, appName)
-				res = append(res, serviceDistributionResp)
+				//每拿到一个appName，都将对应的实例数据填充进dataplaneList, 再通过dataplane拿到这个appName对应的所有实例
+				if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(appName)); err != nil {
+					return nil, err
+				}
+				if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(serviceName)); err != nil {
+					return nil, err
+				}
+				//拿到了appName，接下来从dataplane取实例信息
+				for _, dataplane := range dataplaneList.Items {
+					respItem := &model.ServiceTabDistributionResp{}
+					res = append(res, respItem.FromServiceDataplaneResource(dataplane, metadataList, appName, req))
+				}
 			}
-
 		}
 	}
-
 	return res, nil
 }
 
@@ -64,7 +68,6 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 
 	dataplaneList := &mesh.DataplaneResourceList{}
 	metadataList := &mesh.MetaDataResourceList{}
-	mappingList := &mesh.MappingResourceList{}
 
 	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
@@ -72,7 +75,6 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 
 	//通过dataplane的extension字段获取所有appName
 	appNames := make(map[string]struct{}, 0)
-	serviceNames := make([]string, 0)
 
 	for _, dataplane := range dataplaneList.Items {
 		appName, ok := dataplane.Spec.GetExtensions()[v1alpha1.Application]
@@ -89,20 +91,6 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 			return nil, err
 		}
 
-		//获取mappingList
-		err = manager.List(rt.AppContext(), mappingList, store.ListByNameContains(appName))
-		if err != nil {
-			return nil, err
-		}
-
-		//通过mapping与AppName查询InterfaceName（serviceName）
-		for _, mapping := range mappingList.Items {
-			for _, appNameItem := range mapping.Spec.ApplicationNames {
-				if appNameItem == appName {
-					serviceNames = append(serviceNames, mapping.Spec.InterfaceName)
-				}
-			}
-		}
 	}
 
 	res := make([]*model.ServiceSearchResp, 0)
@@ -110,14 +98,12 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 	serviceMap := make(map[string]*model.ServiceSearch)
 	for _, metadata := range metadataList.Items {
 		for _, serviceInfo := range metadata.Spec.Services {
-			if contains(serviceNames, serviceInfo.Name) {
-				serviceSearch := model.NewServiceSearch(serviceInfo.Name)
-				if _, ok := serviceMap[serviceInfo.Name]; ok {
-					serviceMap[serviceInfo.Name].FromServiceInfo(serviceInfo)
-				} else {
-					serviceSearch.FromServiceInfo(serviceInfo)
-					serviceMap[serviceInfo.Name] = serviceSearch
-				}
+			serviceSearch := model.NewServiceSearch(serviceInfo.Name)
+			if _, ok := serviceMap[serviceInfo.Name]; ok {
+				serviceMap[serviceInfo.Name].FromServiceInfo(serviceInfo)
+			} else {
+				serviceSearch.FromServiceInfo(serviceInfo)
+				serviceMap[serviceInfo.Name] = serviceSearch
 			}
 		}
 	}

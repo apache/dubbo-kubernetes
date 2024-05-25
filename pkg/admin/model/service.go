@@ -19,7 +19,7 @@ package model
 
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"strings"
 )
 
@@ -33,7 +33,7 @@ type ServiceSearch struct {
 	VersionGroups Set
 }
 
-func (s ServiceSearch) FromServiceInfo(info *v1alpha1.ServiceInfo) {
+func (s *ServiceSearch) FromServiceInfo(info *v1alpha1.ServiceInfo) {
 	s.VersionGroups.Add(info.Group + " " + info.Version)
 }
 
@@ -85,14 +85,70 @@ type ServiceTabDistributionResp struct {
 	Retries      string `json:"retries"`
 }
 
-func (s *ServiceTabDistributionResp) FromServiceMappingResource(dataplaneList *mesh.DataplaneResourceList, appName string) *ServiceTabDistributionResp {
-	// TODO: get real data
-	s.AppName = appName
-	s.InstanceName = ""
-	s.Endpoint = ""
-	s.TimeOut = ""
-	s.Retries = ""
-	return s
+type ServiceTabDistribution struct {
+	AppName      string
+	InstanceName string
+	Endpoint     string
+	TimeOut      string
+	Retries      string
+}
+
+func (d *ServiceTabDistribution) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound, ip string) {
+	d.Endpoint = ip + string(inbound.Port)
+}
+
+func NewServiceDistribution() *ServiceTabDistribution {
+	return &ServiceTabDistribution{
+		AppName:      "",
+		InstanceName: "",
+		Endpoint:     "",
+		TimeOut:      "",
+		Retries:      "",
+	}
+}
+
+func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *core_mesh.DataplaneResource, metadatalist *core_mesh.MetaDataResourceList, name string, req *ServiceTabDistributionReq) *ServiceTabDistributionResp {
+	r.AppName = name
+	inbounds := dataplane.Spec.Networking.Inbound
+	ip := dataplane.GetIP()
+	for _, inbound := range inbounds {
+		r.mergeInbound(inbound, ip)
+	}
+	meta := dataplane.GetMeta()
+	r.InstanceName = meta.GetName()
+	r.mergeMetaData(metadatalist, req)
+
+	return r
+
+}
+
+func (r ServiceTabDistributionResp) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound, ip string) {
+	r.Endpoint = ip + string(inbound.Port)
+}
+
+func (r *ServiceTabDistributionResp) FromServiceDistribution(distribution *ServiceTabDistribution) *ServiceTabDistributionResp {
+	r.AppName = distribution.AppName
+	r.InstanceName = distribution.InstanceName
+	r.Endpoint = distribution.Endpoint
+	r.TimeOut = distribution.TimeOut
+	r.Retries = distribution.Retries
+	return r
+}
+
+func (r *ServiceTabDistributionResp) mergeMetaData(metadatalist *core_mesh.MetaDataResourceList, req *ServiceTabDistributionReq) {
+	for _, metadata := range metadatalist.Items {
+		// key format is '{group}/{interface name}:{version}:{protocol}'
+		serviceinfos := metadata.Spec.Services
+		for _, serviceinfo := range serviceinfos {
+			if serviceinfo.Name == req.ServiceName &&
+				serviceinfo.Group == req.Group &&
+				serviceinfo.Version == req.Version {
+				r.Retries = serviceinfo.Params["retries"]
+				r.TimeOut = serviceinfo.Params["timeOut"]
+			}
+		}
+
+	}
 }
 
 type VersionGroup struct {
