@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/mds"
 	"time"
 )
 
@@ -39,6 +38,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/diagnostics"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/hds"
+	"github.com/apache/dubbo-kubernetes/pkg/mds"
 	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"github.com/apache/dubbo-kubernetes/pkg/util/os"
 	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"

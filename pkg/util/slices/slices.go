@@ -19,9 +19,12 @@ package slices
 
 import (
 	"cmp"
-	"golang.org/x/exp/constraints"
 	"slices"
 	"strings"
+)
+
+import (
+	"golang.org/x/exp/constraints"
 )
 
 // Equal reports whether two slices are equal: the same length and all

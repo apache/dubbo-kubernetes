@@ -18,9 +18,12 @@
 package concurrent
 
 import (
+	"time"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"time"
 )
 
 var log = core.Log.WithName("debouncer")

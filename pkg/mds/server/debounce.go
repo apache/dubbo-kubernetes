@@ -17,7 +17,9 @@
 
 package server
 
-import "time"
+import (
+	"time"
+)
 
 func (s *MdsServer) debounce(ch chan *RegisterRequest, stopCh <-chan struct{}, pushFn func(m *RegisterRequest)) {
 	var timeChan <-chan time.Time

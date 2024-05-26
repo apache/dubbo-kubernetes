@@ -19,9 +19,12 @@ package sets
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+)
+
+import (
+	"github.com/stretchr/testify/assert"
 
 	"k8s.io/apimachinery/pkg/util/rand"
 )

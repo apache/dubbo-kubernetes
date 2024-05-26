@@ -20,13 +20,16 @@ package slices
 import (
 	"cmp"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"reflect"
 	"strconv"
 	"testing"
+)
 
+import (
 	cmp2 "github.com/google/go-cmp/cmp"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type s struct {

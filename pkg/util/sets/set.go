@@ -19,8 +19,14 @@ package sets
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+)
+
+import (
 	"golang.org/x/exp/constraints"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 )
 
 type Set[T comparable] map[T]struct{}

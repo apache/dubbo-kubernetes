@@ -18,9 +18,13 @@
 package mds
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_env "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/mds/server"
+	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
+	"github.com/pkg/errors"
 )
 
 var log = core.Log.WithName("mds")
@@ -31,6 +35,29 @@ func Setup(rt core_runtime.Runtime) error {
 		// 非k8s模式以及global控制面不启动该组件
 		return nil
 	}
+	cfg := rt.Config().DubboConfig
 
-	return nil
+	mgr, ok := k8s_extensions.FromManagerContext(rt.Extensions())
+	if !ok {
+		return errors.Errorf("k8s controller runtime Manager hasn't been configured")
+	}
+
+	converter, ok := k8s_extensions.FromResourceConverterContext(rt.Extensions())
+	if !ok {
+		return errors.Errorf("k8s resource converter hasn't been configured")
+	}
+
+	mdsServer := server.NewMdsServer(
+		rt.AppContext(),
+		cfg,
+		mgr,
+		converter,
+		rt.ResourceManager(),
+		rt.Transactions(),
+		rt.Config().Multizone.Zone.Name,
+		rt.Config().Store.Kubernetes.SystemNamespace,
+	)
+	mesh_proto.RegisterMDSSyncServiceServer(rt.DpServer().GrpcServer(), mdsServer)
+
+	return rt.Add(mdsServer)
 }

@@ -19,6 +19,13 @@ package server
 
 import (
 	"context"
+)
+
+import (
+	kube_ctrl "sigs.k8s.io/controller-runtime"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
@@ -29,7 +36,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
 	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
-	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var log = core.Log.WithName("mds").WithName("server")
@@ -52,6 +58,30 @@ type MdsServer struct {
 	resourceManager manager.ResourceManager
 	transactions    core_store.Transactions
 	systemNamespace string
+}
+
+func NewMdsServer(
+	ctx context.Context,
+	config dubbo.DubboConfig,
+	manager kube_ctrl.Manager,
+	converter k8s_common.Converter,
+	resourceManager manager.ResourceManager,
+	transactions core_store.Transactions,
+	localZone string,
+	systemNamespace string,
+) *MdsServer {
+	return &MdsServer{
+		localZone:       localZone,
+		config:          config,
+		mappingQueue:    make(chan *RegisterRequest, queueSize),
+		metadataQueue:   make(chan *RegisterRequest, queueSize),
+		ctx:             ctx,
+		resourceManager: resourceManager,
+		manager:         manager,
+		converter:       converter,
+		transactions:    transactions,
+		systemNamespace: systemNamespace,
+	}
 }
 
 func (m *MdsServer) Start(stop <-chan struct{}) error {
