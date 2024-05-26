@@ -19,9 +19,7 @@ package servicemapping
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"io"
-	kube_controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 )
 
@@ -39,6 +37,7 @@ import (
 	kube_types "k8s.io/apimachinery/pkg/types"
 
 	kube_ctrl "sigs.k8s.io/controller-runtime"
+	kube_controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 import (
@@ -53,6 +52,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/client"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
 	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
 
 var log = core.Log.WithName("dubbo").WithName("server").WithName("service-name-mapping")

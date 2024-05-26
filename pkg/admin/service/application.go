@@ -37,7 +37,7 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 	appMap := make(map[string]*model.ApplicationDetail)
 	for _, dataplane := range dataplaneList.Items {
 		appName := dataplane.Meta.GetLabels()[mesh_proto.AppTag]
-		//appName := dataplane.Spec.Networking.Inbound[0].GetTags()[mesh_proto.AppTag]
+		// appName := dataplane.Spec.Networking.Inbound[0].GetTags()[mesh_proto.AppTag]
 		var applicationDetail *model.ApplicationDetail
 		if _, ok := appMap[appName]; ok {
 			applicationDetail = appMap[appName]
@@ -55,7 +55,7 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 		return nil, err
 	}
 
-	//get data from metadata
+	// get data from metadata
 	for _, metadata := range metadataList.Items {
 		if appDetail, ok := appMap[metadata.Spec.App]; ok {
 			appDetail.MergeMetaData(metadata)

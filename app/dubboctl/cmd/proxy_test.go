@@ -118,7 +118,7 @@ var _ = Describe("proxy", func() {
 
 			By("waiting for dataplane (Envoy) to get stopped")
 			Eventually(func() bool {
-				//send sig 0 to check whether Envoy process still exists
+				// send sig 0 to check whether Envoy process still exists
 				err := syscall.Kill(int(envoyPid), syscall.Signal(0))
 				// we expect Envoy process to get killed by now
 				return err != nil

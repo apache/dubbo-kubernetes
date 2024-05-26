@@ -18,16 +18,21 @@
 package handler
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-// API Definition: https://app.apifox.com/project/3732499
-// 全局搜索
+import (
+	"github.com/gin-gonic/gin"
+)
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+)
+
+// Search API Definition: https://app.apifox.com/project/3732499
+// 全局搜索
 func Search(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 参考 API 定义 request 参数
@@ -39,8 +44,8 @@ func Search(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		// 根据 request 分流调用，如服务未实现继续实现
 		instances, _, _ := service.SearchInstances(rt, req)
-		//applications, _, err := service.SearchApplications(rt, req)
-		//services, _, err := service.SearchServices(rt, req)
+		// applications, _, err := service.SearchApplications(rt, req)
+		// services, _, err := service.SearchServices(rt, req)
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(instances))
 	}
