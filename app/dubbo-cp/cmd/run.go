@@ -35,10 +35,8 @@ import (
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
 	dds_global "github.com/apache/dubbo-kubernetes/pkg/dds/global"
 	dds_zone "github.com/apache/dubbo-kubernetes/pkg/dds/zone"
-	"github.com/apache/dubbo-kubernetes/pkg/defaults"
 	"github.com/apache/dubbo-kubernetes/pkg/diagnostics"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server"
-	"github.com/apache/dubbo-kubernetes/pkg/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/hds"
 	"github.com/apache/dubbo-kubernetes/pkg/test"
 	"github.com/apache/dubbo-kubernetes/pkg/util/os"
@@ -101,19 +99,13 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 			if err := admin.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up admin")
 				return err
+
 			}
-			if err := dubbo.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up dubbo server")
-			}
+
 			if err := xds.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up xds server")
 				return err
 			}
-
-			//if err := bufman.Setup(rt); err != nil {
-			//	runLog.Error(err, "unable to set up bufman server")
-			//	return err
-			//}
 
 			if err := hds.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up HDS")
@@ -123,10 +115,12 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 				runLog.Error(err, "unable to set up DP Server")
 				return err
 			}
-			if err := defaults.Setup(rt); err != nil {
-				runLog.Error(err, "unable to set up Defaults")
-				return err
-			}
+
+			//if err := defaults.Setup(rt); err != nil {
+			//	runLog.Error(err, "unable to set up Defaults")
+			//	return err
+			//}
+
 			if err := dds_zone.Setup(rt); err != nil {
 				runLog.Error(err, "unable to set up Zone DDS")
 				return err

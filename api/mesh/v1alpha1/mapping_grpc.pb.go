@@ -24,14 +24,6 @@ type ServiceNameMappingServiceClient interface {
 	// MappingRegister from dp to cp, data plane register snp information to
 	// control plane.
 	MappingRegister(ctx context.Context, in *MappingRegisterRequest, opts ...grpc.CallOption) (*MappingRegisterResponse, error)
-	// MappingSync from cp to dp, control plane sync snp information to data
-	// plane. Only in Kubernetes environment without zk/nacos, this rpc works. In
-	// other case (exists zk/nacos), data plane search in zk/nacos.
-	//
-	// data plane and control plane keep a streaming link:
-	// when Mapping Resource updated, control plane sync Mapping Resource to
-	// data plane.
-	MappingSync(ctx context.Context, opts ...grpc.CallOption) (ServiceNameMappingService_MappingSyncClient, error)
 }
 
 type serviceNameMappingServiceClient struct {
@@ -51,37 +43,6 @@ func (c *serviceNameMappingServiceClient) MappingRegister(ctx context.Context, i
 	return out, nil
 }
 
-func (c *serviceNameMappingServiceClient) MappingSync(ctx context.Context, opts ...grpc.CallOption) (ServiceNameMappingService_MappingSyncClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ServiceNameMappingService_ServiceDesc.Streams[0], "/dubbo.mesh.v1alpha1.ServiceNameMappingService/MappingSync", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &serviceNameMappingServiceMappingSyncClient{stream}
-	return x, nil
-}
-
-type ServiceNameMappingService_MappingSyncClient interface {
-	Send(*MappingSyncRequest) error
-	Recv() (*MappingSyncResponse, error)
-	grpc.ClientStream
-}
-
-type serviceNameMappingServiceMappingSyncClient struct {
-	grpc.ClientStream
-}
-
-func (x *serviceNameMappingServiceMappingSyncClient) Send(m *MappingSyncRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *serviceNameMappingServiceMappingSyncClient) Recv() (*MappingSyncResponse, error) {
-	m := new(MappingSyncResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // ServiceNameMappingServiceServer is the server API for ServiceNameMappingService service.
 // All implementations must embed UnimplementedServiceNameMappingServiceServer
 // for forward compatibility
@@ -89,14 +50,6 @@ type ServiceNameMappingServiceServer interface {
 	// MappingRegister from dp to cp, data plane register snp information to
 	// control plane.
 	MappingRegister(context.Context, *MappingRegisterRequest) (*MappingRegisterResponse, error)
-	// MappingSync from cp to dp, control plane sync snp information to data
-	// plane. Only in Kubernetes environment without zk/nacos, this rpc works. In
-	// other case (exists zk/nacos), data plane search in zk/nacos.
-	//
-	// data plane and control plane keep a streaming link:
-	// when Mapping Resource updated, control plane sync Mapping Resource to
-	// data plane.
-	MappingSync(ServiceNameMappingService_MappingSyncServer) error
 	mustEmbedUnimplementedServiceNameMappingServiceServer()
 }
 
@@ -106,9 +59,6 @@ type UnimplementedServiceNameMappingServiceServer struct {
 
 func (UnimplementedServiceNameMappingServiceServer) MappingRegister(context.Context, *MappingRegisterRequest) (*MappingRegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MappingRegister not implemented")
-}
-func (UnimplementedServiceNameMappingServiceServer) MappingSync(ServiceNameMappingService_MappingSyncServer) error {
-	return status.Errorf(codes.Unimplemented, "method MappingSync not implemented")
 }
 func (UnimplementedServiceNameMappingServiceServer) mustEmbedUnimplementedServiceNameMappingServiceServer() {
 }
@@ -142,32 +92,6 @@ func _ServiceNameMappingService_MappingRegister_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServiceNameMappingService_MappingSync_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ServiceNameMappingServiceServer).MappingSync(&serviceNameMappingServiceMappingSyncServer{stream})
-}
-
-type ServiceNameMappingService_MappingSyncServer interface {
-	Send(*MappingSyncResponse) error
-	Recv() (*MappingSyncRequest, error)
-	grpc.ServerStream
-}
-
-type serviceNameMappingServiceMappingSyncServer struct {
-	grpc.ServerStream
-}
-
-func (x *serviceNameMappingServiceMappingSyncServer) Send(m *MappingSyncResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *serviceNameMappingServiceMappingSyncServer) Recv() (*MappingSyncRequest, error) {
-	m := new(MappingSyncRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // ServiceNameMappingService_ServiceDesc is the grpc.ServiceDesc for ServiceNameMappingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -180,13 +104,6 @@ var ServiceNameMappingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ServiceNameMappingService_MappingRegister_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "MappingSync",
-			Handler:       _ServiceNameMappingService_MappingSync_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/mesh/v1alpha1/mapping.proto",
 }
