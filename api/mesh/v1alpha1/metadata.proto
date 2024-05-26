@@ -6,22 +6,6 @@ option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
 
 import "api/mesh/options.proto";
 
-service MetadataService {
-  rpc MetadataRegister(MetaDataRegisterRequest)
-      returns (MetaDataRegisterResponse);
-}
-
-message MetaDataRegisterRequest {
-  string namespace = 1;
-  string podName = 2; // dubbo的应用实例名, 由sdk通过环境变量获取
-  MetaData metadata = 3; // 上报的元数据
-}
-
-message MetaDataRegisterResponse {
-  bool success = 1;
-  string message = 2;
-}
-
 message MetaData {
   option (dubbo.mesh.resource).name = "MetaDataResource";
   option (dubbo.mesh.resource).type = "MetaData";

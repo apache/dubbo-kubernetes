@@ -6,26 +6,6 @@ option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
 
 import "api/mesh/options.proto";
 
-// ServiceNameMappingService is a service that mapping application name and
-// interface names
-service ServiceNameMappingService {
-  // MappingRegister from dp to cp, data plane register snp information to
-  // control plane.
-  rpc MappingRegister(MappingRegisterRequest) returns (MappingRegisterResponse);
-}
-
-message MappingRegisterRequest {
-  string namespace = 1;
-  string applicationName = 2;
-  repeated string interfaceNames = 3;
-  string podName = 4;
-}
-
-message MappingRegisterResponse {
-  bool success = 1;
-  string message = 2;
-}
-
 message Mapping {
   option (dubbo.mesh.resource).name = "MappingResource";
   option (dubbo.mesh.resource).type = "Mapping";

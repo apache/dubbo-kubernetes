@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
+
+import "envoy/service/discovery/v3/discovery.proto";
+import "api/mesh/v1alpha1/metadata.proto";
+
+service MDSSyncService {
+  // MappingRegister from dp to cp, data plane register snp information to
+  // control plane.
+  rpc MappingRegister(MappingRegisterRequest) returns (MappingRegisterResponse);
+
+  rpc MetadataRegister(MetaDataRegisterRequest)
+      returns (MetaDataRegisterResponse);
+
+  // sync mapping and metadate resource
+  rpc ZoneToDubboInstance(
+      stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
+      returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest);
+}
+
+message MappingRegisterRequest {
+  string namespace = 1;
+  string applicationName = 2;
+  repeated string interfaceNames = 3;
+  string podName = 4;
+}
+
+message MappingRegisterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message MetaDataRegisterRequest {
+  string namespace = 1;
+  string podName = 2; // dubbo的应用实例名, 由sdk通过环境变量获取
+  MetaData metadata = 3; // 上报的元数据
+}
+
+message MetaDataRegisterResponse {
+  bool success = 1;
+  string message = 2;
+}

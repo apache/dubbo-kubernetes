@@ -123,8 +123,6 @@ type DDSSyncServiceClient interface {
 	// the global control-plane. It uses delta xDS from go-control-plane and
 	// responds only with the changes to the resources.
 	ZoneToGlobalSync(ctx context.Context, opts ...grpc.CallOption) (DDSSyncService_ZoneToGlobalSyncClient, error)
-	// Synchronize configuration to each dubbo instance.
-	ZoneToDubboInstance(ctx context.Context, opts ...grpc.CallOption) (DDSSyncService_ZoneToDubboInstanceClient, error)
 }
 
 type dDSSyncServiceClient struct {
@@ -197,37 +195,6 @@ func (x *dDSSyncServiceZoneToGlobalSyncClient) Recv() (*v3.DeltaDiscoveryRequest
 	return m, nil
 }
 
-func (c *dDSSyncServiceClient) ZoneToDubboInstance(ctx context.Context, opts ...grpc.CallOption) (DDSSyncService_ZoneToDubboInstanceClient, error) {
-	stream, err := c.cc.NewStream(ctx, &DDSSyncService_ServiceDesc.Streams[2], "/dubbo.mesh.v1alpha1.DDSSyncService/ZoneToDubboInstance", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &dDSSyncServiceZoneToDubboInstanceClient{stream}
-	return x, nil
-}
-
-type DDSSyncService_ZoneToDubboInstanceClient interface {
-	Send(*v3.DeltaDiscoveryResponse) error
-	Recv() (*v3.DeltaDiscoveryRequest, error)
-	grpc.ClientStream
-}
-
-type dDSSyncServiceZoneToDubboInstanceClient struct {
-	grpc.ClientStream
-}
-
-func (x *dDSSyncServiceZoneToDubboInstanceClient) Send(m *v3.DeltaDiscoveryResponse) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *dDSSyncServiceZoneToDubboInstanceClient) Recv() (*v3.DeltaDiscoveryRequest, error) {
-	m := new(v3.DeltaDiscoveryRequest)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // DDSSyncServiceServer is the server API for DDSSyncService service.
 // All implementations must embed UnimplementedDDSSyncServiceServer
 // for forward compatibility
@@ -242,8 +209,6 @@ type DDSSyncServiceServer interface {
 	// the global control-plane. It uses delta xDS from go-control-plane and
 	// responds only with the changes to the resources.
 	ZoneToGlobalSync(DDSSyncService_ZoneToGlobalSyncServer) error
-	// Synchronize configuration to each dubbo instance.
-	ZoneToDubboInstance(DDSSyncService_ZoneToDubboInstanceServer) error
 	mustEmbedUnimplementedDDSSyncServiceServer()
 }
 
@@ -256,9 +221,6 @@ func (UnimplementedDDSSyncServiceServer) GlobalToZoneSync(DDSSyncService_GlobalT
 }
 func (UnimplementedDDSSyncServiceServer) ZoneToGlobalSync(DDSSyncService_ZoneToGlobalSyncServer) error {
 	return status.Errorf(codes.Unimplemented, "method ZoneToGlobalSync not implemented")
-}
-func (UnimplementedDDSSyncServiceServer) ZoneToDubboInstance(DDSSyncService_ZoneToDubboInstanceServer) error {
-	return status.Errorf(codes.Unimplemented, "method ZoneToDubboInstance not implemented")
 }
 func (UnimplementedDDSSyncServiceServer) mustEmbedUnimplementedDDSSyncServiceServer() {}
 
@@ -325,32 +287,6 @@ func (x *dDSSyncServiceZoneToGlobalSyncServer) Recv() (*v3.DeltaDiscoveryRespons
 	return m, nil
 }
 
-func _DDSSyncService_ZoneToDubboInstance_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DDSSyncServiceServer).ZoneToDubboInstance(&dDSSyncServiceZoneToDubboInstanceServer{stream})
-}
-
-type DDSSyncService_ZoneToDubboInstanceServer interface {
-	Send(*v3.DeltaDiscoveryRequest) error
-	Recv() (*v3.DeltaDiscoveryResponse, error)
-	grpc.ServerStream
-}
-
-type dDSSyncServiceZoneToDubboInstanceServer struct {
-	grpc.ServerStream
-}
-
-func (x *dDSSyncServiceZoneToDubboInstanceServer) Send(m *v3.DeltaDiscoveryRequest) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *dDSSyncServiceZoneToDubboInstanceServer) Recv() (*v3.DeltaDiscoveryResponse, error) {
-	m := new(v3.DeltaDiscoveryResponse)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // DDSSyncService_ServiceDesc is the grpc.ServiceDesc for DDSSyncService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -368,12 +304,6 @@ var DDSSyncService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ZoneToGlobalSync",
 			Handler:       _DDSSyncService_ZoneToGlobalSync_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "ZoneToDubboInstance",
-			Handler:       _DDSSyncService_ZoneToDubboInstance_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

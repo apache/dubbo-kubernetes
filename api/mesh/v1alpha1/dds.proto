@@ -48,8 +48,4 @@ service DDSSyncService {
   // responds only with the changes to the resources.
   rpc ZoneToGlobalSync(stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
       returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest);
-  // Synchronize configuration to each dubbo instance.
-  rpc ZoneToDubboInstance(
-      stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
-      returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest);
 }
