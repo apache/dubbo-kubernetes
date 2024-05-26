@@ -65,11 +65,7 @@ func GetConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusOK, model.ConfiguratorResp{
-			Code:    200,
-			Message: "success",
-			Data:    res.Spec,
-		})
+		c.JSON(http.StatusOK, model.GenDynamicConfigToResp(http.StatusOK, "success", res.Spec))
 	}
 }
 
@@ -90,11 +86,7 @@ func PutConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusOK, model.ConfiguratorResp{
-				Code:    200,
-				Message: "success",
-				Data:    &mesh_proto.DynamicConfig{},
-			})
+			c.JSON(http.StatusOK, model.GenDynamicConfigToResp(http.StatusOK, "success", nil))
 		}
 	}
 }
@@ -117,11 +109,7 @@ func PostConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusCreated, model.ConfiguratorResp{
-				Code:    200,
-				Message: "success",
-				Data:    &mesh_proto.DynamicConfig{},
-			})
+			c.JSON(http.StatusCreated, model.GenDynamicConfigToResp(http.StatusCreated, "success", nil))
 		}
 	}
 }
@@ -135,10 +123,6 @@ func DeleteConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusNoContent, model.ConfiguratorResp{
-			Code:    1000,
-			Message: "success",
-			Data:    &mesh_proto.DynamicConfig{},
-		})
+		c.JSON(http.StatusNoContent, model.GenDynamicConfigToResp(http.StatusNoContent, "success", nil))
 	}
 }

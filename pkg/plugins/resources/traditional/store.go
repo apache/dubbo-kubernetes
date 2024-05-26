@@ -352,6 +352,8 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		existConfig, err := t.governance.GetConfig(path)
 		if err != nil {
 			return err
+		} else if existConfig == "" {
+			return fmt.Errorf("no existing dynamic configuration for path: %s", path)
 		}
 		if !ok {
 			override = &mesh_proto.DynamicConfig{}
@@ -663,9 +665,16 @@ func (c *traditionalStore) Get(ctx context.Context, resource core_model.Resource
 			return err
 		}
 		if cfg != "" {
-			if err := core_model.FromYAML([]byte(cfg), resource.GetSpec()); err != nil {
+			res := &mesh_proto.TagRoute{}
+			if err := core_model.FromYAML([]byte(cfg), res); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
+			err = resource.SetSpec(res)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return fmt.Errorf("Tag route %s resource not exist ", path)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -691,9 +700,16 @@ func (c *traditionalStore) Get(ctx context.Context, resource core_model.Resource
 			return err
 		}
 		if cfg != "" {
-			if err := core_model.FromYAML([]byte(cfg), resource.GetSpec()); err != nil {
+			res := &mesh_proto.ConditionRoute{}
+			if err := core_model.FromYAML([]byte(cfg), res); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
+			err = resource.SetSpec(res)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return fmt.Errorf("condition route %s resource not exist ", path)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -724,7 +740,12 @@ func (c *traditionalStore) Get(ctx context.Context, resource core_model.Resource
 			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
-			_ = resource.SetSpec(data)
+			err = resource.SetSpec(data)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return fmt.Errorf("%s resource not exist ", path)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,

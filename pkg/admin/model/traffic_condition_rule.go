@@ -33,7 +33,41 @@ type ConditionRuleSearchResp_Data struct {
 }
 
 type ConditionRuleResp struct {
-	Code    int64                      `json:"code"`
-	Message string                     `json:"message"`
-	Data    *mesh_proto.ConditionRoute `json:"data"`
+	Code    int                   `json:"code"`
+	Message string                `json:"message"`
+	Data    RespConditionRuleData `json:"data"`
+}
+
+type RespConditionRuleData struct {
+	Conditions    []string `json:"conditions"`
+	ConfigVersion string   `json:"configVersion"`
+	Enabled       bool     `json:"enabled"`
+	Key           string   `json:"key"`
+	Runtime       bool     `json:"runtime"`
+	Scope         string   `json:"scope"`
+}
+
+func GenConditionRuleToResp(code int, message string, pb *mesh_proto.ConditionRoute) *ConditionRuleResp {
+	if pb == nil {
+		return &ConditionRuleResp{
+			Code:    code,
+			Message: message,
+			Data: RespConditionRuleData{
+				Conditions: make([]string, 0),
+			},
+		}
+	} else {
+		return &ConditionRuleResp{
+			Code:    code,
+			Message: message,
+			Data: RespConditionRuleData{
+				Conditions:    pb.Conditions,
+				ConfigVersion: pb.ConfigVersion,
+				Enabled:       pb.Enabled,
+				Key:           pb.Key,
+				Runtime:       pb.Runtime,
+				Scope:         pb.Scope,
+			},
+		}
+	}
 }

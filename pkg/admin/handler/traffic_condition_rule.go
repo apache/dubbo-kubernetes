@@ -39,7 +39,7 @@ func ConditionRuleSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 		resp := model.ConditionRuleSearchResp{
-			Code:    200,
+			Code:    http.StatusOK,
 			Message: "success",
 			Data:    make([]model.ConditionRuleSearchResp_Data, 0, len(resList.Items)),
 		}
@@ -64,11 +64,7 @@ func GetConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusOK, model.ConditionRuleResp{
-			Code:    200,
-			Message: "success",
-			Data:    res.Spec,
-		})
+		c.JSON(http.StatusOK, model.GenConditionRuleToResp(http.StatusOK, "success", res.Spec))
 	}
 }
 
@@ -89,11 +85,7 @@ func PutConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusOK, model.ConditionRuleResp{
-				Code:    200,
-				Message: "success",
-				Data:    &mesh_proto.ConditionRoute{},
-			})
+			c.JSON(http.StatusOK, model.GenConditionRuleToResp(http.StatusOK, "success", nil))
 		}
 	}
 }
@@ -116,11 +108,7 @@ func PostConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusCreated, model.ConditionRuleResp{
-				Code:    200,
-				Message: "success",
-				Data:    &mesh_proto.ConditionRoute{},
-			})
+			c.JSON(http.StatusCreated, model.GenConditionRuleToResp(http.StatusCreated, "success", nil))
 		}
 	}
 }
@@ -134,10 +122,6 @@ func DeleteConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusNoContent, model.ConditionRuleResp{
-			Code:    1000,
-			Message: "success",
-			Data:    &mesh_proto.ConditionRoute{},
-		})
+		c.JSON(http.StatusNoContent, model.GenConditionRuleToResp(http.StatusNoContent, "success", nil))
 	}
 }

@@ -65,11 +65,7 @@ func GetTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusOK, model.TagRuleResp{
-			Code:    200,
-			Message: "success",
-			Data:    res.Spec,
-		})
+		c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", res.Spec))
 	}
 }
 
@@ -90,11 +86,7 @@ func PutTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusOK, model.TagRuleResp{
-				Code:    200,
-				Message: "success",
-				Data:    &mesh_proto.TagRoute{},
-			})
+			c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", nil))
 		}
 	}
 }
@@ -117,11 +109,7 @@ func PostTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusCreated, model.TagRuleResp{
-				Code:    200,
-				Message: "success",
-				Data:    &mesh_proto.TagRoute{},
-			})
+			c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", nil))
 		}
 	}
 }
@@ -135,10 +123,6 @@ func DeleteTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusNoContent, model.TagRuleResp{
-			Code:    1000,
-			Message: "success",
-			Data:    &mesh_proto.TagRoute{},
-		})
+		c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", nil))
 	}
 }

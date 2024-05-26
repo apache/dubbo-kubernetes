@@ -32,7 +32,57 @@ type TagRuleSearchResp_Datum struct {
 }
 
 type TagRuleResp struct {
-	Code    int64                `json:"code"`
-	Message string               `json:"message"`
-	Data    *mesh_proto.TagRoute `json:"data"`
+	Code    int          `json:"code"`
+	Message string       `json:"message"`
+	Data    *RespTagData `json:"data"`
+}
+
+type RespTagData struct {
+	ConfigVersion string           `json:"configVersion"`
+	Enabled       bool             `json:"enabled"`
+	Key           string           `json:"key"`
+	Runtime       bool             `json:"runtime"`
+	Scope         string           `json:"scope"`
+	Tags          []RespTagElement `json:"tags"`
+}
+
+type RespTagElement struct {
+	Addresses []string         `json:"addresses,omitempty"`
+	Match     []RespParamMatch `json:"match,omitempty"`
+	Name      string           `json:"name"`
+}
+
+func GenTagRouteResp(code int, message string, pb *mesh_proto.TagRoute) *TagRuleResp {
+	if pb == nil {
+		return &TagRuleResp{
+			Code:    code,
+			Message: message,
+			Data:    &RespTagData{},
+		}
+	} else {
+		return &TagRuleResp{
+			Code:    code,
+			Message: message,
+			Data: &RespTagData{
+				ConfigVersion: pb.ConfigVersion,
+				Enabled:       pb.Enabled,
+				Key:           pb.Key,
+				Runtime:       pb.Runtime,
+				Scope:         "application",
+				Tags:          tagToRespTagElement(pb.Tags),
+			},
+		}
+	}
+}
+
+func tagToRespTagElement(tags []*mesh_proto.Tag) []RespTagElement {
+	res := make([]RespTagElement, 0, len(tags))
+	for _, tag := range tags {
+		res = append(res, RespTagElement{
+			Addresses: tag.Addresses,
+			Match:     paramMatchToRespParamMatch(tag.Match),
+			Name:      tag.Name,
+		})
+	}
+	return res
 }
