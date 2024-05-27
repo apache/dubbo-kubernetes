@@ -7,16 +7,11 @@
 package v1alpha1
 
 import (
+	_ "github.com/apache/dubbo-kubernetes/api/mesh"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
-)
-
-import (
-	_ "github.com/apache/dubbo-kubernetes/api/mesh"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
