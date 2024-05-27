@@ -37,7 +37,9 @@ import (
 
 func ConfiguratorSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resList := &mesh.DynamicConfigResourceList{}
+		resList := &mesh.DynamicConfigResourceList{
+			Items: make([]*mesh.DynamicConfigResource, 0),
+		}
 		if err := rt.ResourceManager().List(rt.AppContext(), resList); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -69,8 +71,8 @@ func GetConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConfiguratorRuleSuffix)))
 			return
 		}
-		res := &mesh.DynamicConfigResource{}
-		if err := rt.ResourceManager().Get(rt.AppContext(), res, store.GetByApplication(appName), store.GetByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		res := &mesh.DynamicConfigResource{Spec: &mesh_proto.DynamicConfig{}}
+		if err := rt.ResourceManager().Get(rt.AppContext(), res, store.GetByApplication(appName), store.GetByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
@@ -97,7 +99,7 @@ func PutConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if err = rt.ResourceManager().Update(rt.AppContext(), res, store.UpdateByApplication(appName), store.UpdateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err = rt.ResourceManager().Update(rt.AppContext(), res, store.UpdateByApplication(appName), store.UpdateByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
@@ -125,7 +127,7 @@ func PostConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if err = rt.ResourceManager().Create(rt.AppContext(), res, store.CreateByApplication(appName), store.CreateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err = rt.ResourceManager().Create(rt.AppContext(), res, store.CreateByApplication(appName), store.CreateByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
@@ -138,14 +140,14 @@ func DeleteConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var appName string
 		ruleName := c.Param("ruleName")
-		res := &mesh.DynamicConfigResource{}
+		res := &mesh.DynamicConfigResource{Spec: &mesh_proto.DynamicConfig{}}
 		if strings.HasSuffix(ruleName, consts.ConfiguratorRuleSuffix) {
 			appName = ruleName[:len(ruleName)-len(consts.ConfiguratorRuleSuffix)]
 		} else {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConfiguratorRuleSuffix)))
 			return
 		}
-		if err := rt.ResourceManager().Delete(rt.AppContext(), res, store.DeleteByApplication(appName), store.DeleteByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err := rt.ResourceManager().Delete(rt.AppContext(), res, store.DeleteByApplication(appName), store.DeleteByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}

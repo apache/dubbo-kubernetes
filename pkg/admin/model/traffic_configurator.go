@@ -112,13 +112,19 @@ func GenDynamicConfigToResp(code int, message string, pb *mesh_proto.DynamicConf
 
 func overrideConfigToRespConfigutor(OverrideConfigs []*mesh_proto.OverrideConfig) []RespConfigItem {
 	res := make([]RespConfigItem, 0, len(OverrideConfigs))
-	for _, config := range OverrideConfigs {
-		res = append(res, RespConfigItem{
-			Enabled:    &config.Enabled,
-			Match:      conditionMatchToRespMatch(config.Match),
-			Parameters: config.Parameters,
-			Side:       config.Side,
-		})
+	if OverrideConfigs != nil {
+		for _, config := range OverrideConfigs {
+			resIt := RespConfigItem{
+				Enabled:    &config.Enabled,
+				Match:      conditionMatchToRespMatch(config.Match),
+				Parameters: config.Parameters,
+				Side:       config.Side,
+			}
+			if resIt.Parameters == nil {
+				resIt.Parameters = make(map[string]string)
+			}
+			res = append(res, resIt)
+		}
 	}
 	return res
 }
@@ -165,11 +171,13 @@ func addressMatchToRespAddressMatch(address *mesh_proto.AddressMatch) *RespAddre
 }
 func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []RespParamMatch {
 	res := make([]RespParamMatch, 0, len(param))
-	for _, match := range param {
-		res = append(res, RespParamMatch{
-			Key:   &match.Key,
-			Value: stringMatchToRespStringMatch(match.Value),
-		})
+	if param != nil {
+		for _, match := range param {
+			res = append(res, RespParamMatch{
+				Key:   &match.Key,
+				Value: stringMatchToRespStringMatch(match.Value),
+			})
+		}
 	}
 	return res
 }
@@ -199,8 +207,10 @@ func listStringMatchToRespListStringMatch(listStringMatch *mesh_proto.ListString
 		return nil
 	}
 	res := &RespListStringMatch{Oneof: make([]RespStringMatch, 0, len(listStringMatch.Oneof))}
-	for _, match := range listStringMatch.Oneof {
-		res.Oneof = append(res.Oneof, *stringMatchToRespStringMatch(match))
+	if listStringMatch.Oneof != nil {
+		for _, match := range listStringMatch.Oneof {
+			res.Oneof = append(res.Oneof, *stringMatchToRespStringMatch(match))
+		}
 	}
 	return res
 }

@@ -18,6 +18,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -36,7 +37,9 @@ import (
 
 func ConditionRuleSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resList := &mesh.ConditionRouteResourceList{}
+		resList := &mesh.ConditionRouteResourceList{
+			Items: make([]*mesh.ConditionRouteResource, 0),
+		}
 		if err := rt.ResourceManager().List(rt.AppContext(), resList); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -62,11 +65,14 @@ func GetConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var appName string
 		ruleName := c.Param("ruleName")
-		res := &mesh.ConditionRouteResource{}
+		res := &mesh.ConditionRouteResource{Spec: &mesh_proto.ConditionRoute{}}
 		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
 			appName = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
+		} else {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
+			return
 		}
-		if err := rt.ResourceManager().Get(rt.AppContext(), res, store.GetByApplication(appName), store.GetByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err := rt.ResourceManager().Get(rt.AppContext(), res, store.GetByApplication(appName), store.GetByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
@@ -78,6 +84,12 @@ func PutConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var appName string
 		ruleName := c.Param("ruleName")
+		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
+			appName = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
+		} else {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
+			return
+		}
 		res := &mesh.ConditionRouteResource{
 			Meta: nil,
 			Spec: &mesh_proto.ConditionRoute{},
@@ -87,10 +99,7 @@ func PutConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
-			appName = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
-		}
-		if err = rt.ResourceManager().Update(rt.AppContext(), res, store.UpdateByApplication(appName), store.UpdateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err = rt.ResourceManager().Update(rt.AppContext(), res, store.UpdateByApplication(appName), store.UpdateByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
@@ -103,20 +112,22 @@ func PostConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var appName string
 		ruleName := c.Param("ruleName")
+		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
+			appName = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
+		} else {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
+			return
+		}
 		res := &mesh.ConditionRouteResource{
 			Meta: nil,
 			Spec: &mesh_proto.ConditionRoute{},
 		}
-
 		err := c.Bind(res.Spec)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
-			appName = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
-		}
-		if err = rt.ResourceManager().Create(rt.AppContext(), res, store.CreateByApplication(appName), store.CreateByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err = rt.ResourceManager().Create(rt.AppContext(), res, store.CreateByApplication(appName), store.CreateByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
@@ -129,11 +140,14 @@ func DeleteConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var appName string
 		ruleName := c.Param("ruleName")
-		res := &mesh.ConditionRouteResource{}
+		res := &mesh.ConditionRouteResource{Spec: &mesh_proto.ConditionRoute{}}
 		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
 			appName = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
+		} else {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
+			return
 		}
-		if err := rt.ResourceManager().Delete(rt.AppContext(), res, store.DeleteByApplication(appName), store.DeleteByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		if err := rt.ResourceManager().Delete(rt.AppContext(), res, store.DeleteByApplication(appName), store.DeleteByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}

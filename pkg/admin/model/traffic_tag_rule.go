@@ -77,12 +77,14 @@ func GenTagRouteResp(code int, message string, pb *mesh_proto.TagRoute) *TagRule
 
 func tagToRespTagElement(tags []*mesh_proto.Tag) []RespTagElement {
 	res := make([]RespTagElement, 0, len(tags))
-	for _, tag := range tags {
-		res = append(res, RespTagElement{
-			Addresses: tag.Addresses,
-			Match:     paramMatchToRespParamMatch(tag.Match),
-			Name:      tag.Name,
-		})
+	if tags != nil {
+		for _, tag := range tags {
+			res = append(res, RespTagElement{
+				Addresses: tag.Addresses,
+				Match:     paramMatchToRespParamMatch(tag.Match),
+				Name:      tag.Name,
+			})
+		}
 	}
 	return res
 }

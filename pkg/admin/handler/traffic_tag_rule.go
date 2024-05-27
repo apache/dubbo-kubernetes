@@ -37,7 +37,9 @@ import (
 
 func TagRuleSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resList := &mesh.TagRouteResourceList{}
+		resList := &mesh.TagRouteResourceList{
+			Items: make([]*mesh.TagRouteResource, 0),
+		}
 		if err := rt.ResourceManager().List(rt.AppContext(), resList); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -64,14 +66,14 @@ func GetTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var appName string
 		ruleName := c.Param("ruleName")
-		res := &mesh.TagRouteResource{}
 		if strings.HasSuffix(ruleName, consts.TagRuleSuffix) {
 			appName = ruleName[:len(ruleName)-len(consts.TagRuleSuffix)]
 		} else {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.TagRuleSuffix)))
 			return
 		}
-		if err := rt.ResourceManager().Get(rt.AppContext(), res, store.GetByKey(res_model.DefaultMesh, res_model.DefaultMesh), store.GetByApplication(appName)); err != nil {
+		res := &mesh.TagRouteResource{Spec: &mesh_proto.TagRoute{}}
+		if err := rt.ResourceManager().Get(rt.AppContext(), res, store.GetByKey(ruleName, res_model.DefaultMesh), store.GetByApplication(appName)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
@@ -83,6 +85,12 @@ func PutTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var appName string
 		ruleName := c.Param("ruleName")
+		if strings.HasSuffix(ruleName, consts.TagRuleSuffix) {
+			appName = ruleName[:len(ruleName)-len(consts.TagRuleSuffix)]
+		} else {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.TagRuleSuffix)))
+			return
+		}
 		res := &mesh.TagRouteResource{
 			Meta: nil,
 			Spec: &mesh_proto.TagRoute{},
@@ -92,13 +100,7 @@ func PutTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if strings.HasSuffix(ruleName, consts.TagRuleSuffix) {
-			appName = ruleName[:len(ruleName)-len(consts.TagRuleSuffix)]
-		} else {
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.TagRuleSuffix)))
-			return
-		}
-		if err = rt.ResourceManager().Update(rt.AppContext(), res, store.UpdateByKey(res_model.DefaultMesh, res_model.DefaultMesh), store.UpdateByApplication(appName)); err != nil {
+		if err = rt.ResourceManager().Update(rt.AppContext(), res, store.UpdateByKey(ruleName, res_model.DefaultMesh), store.UpdateByApplication(appName)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
@@ -126,7 +128,7 @@ func PostTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if err = rt.ResourceManager().Create(rt.AppContext(), res, store.CreateByKey(res_model.DefaultMesh, res_model.DefaultMesh), store.CreateByApplication(appName)); err != nil {
+		if err = rt.ResourceManager().Create(rt.AppContext(), res, store.CreateByKey(ruleName, res_model.DefaultMesh), store.CreateByApplication(appName)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
@@ -145,8 +147,8 @@ func DeleteTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.TagRuleSuffix)))
 			return
 		}
-		res := &mesh.TagRouteResource{}
-		if err := rt.ResourceManager().Delete(rt.AppContext(), res, store.DeleteByApplication(appName), store.DeleteByKey(res_model.DefaultMesh, res_model.DefaultMesh)); err != nil {
+		res := &mesh.TagRouteResource{Spec: &mesh_proto.TagRoute{}}
+		if err := rt.ResourceManager().Delete(rt.AppContext(), res, store.DeleteByApplication(appName), store.DeleteByKey(ruleName, res_model.DefaultMesh)); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
