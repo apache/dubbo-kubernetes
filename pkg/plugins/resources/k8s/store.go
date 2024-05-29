@@ -116,17 +116,7 @@ func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs 
 func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs ...store.UpdateOptionsFunc) error {
 	opts := store.NewUpdateOptions(fs...)
 
-	// get object and validate mesh
-	tr := r.Descriptor().NewObject()
-	if err := s.Get(ctx, tr, store.GetByKey(opts.Name, opts.Mesh)); err != nil {
-		return err
-	}
-	err := tr.SetSpec(r.GetSpec())
-	if err != nil {
-		panic(err)
-	}
-
-	obj, err := s.Converter.ToKubernetesObject(tr)
+	obj, err := s.Converter.ToKubernetesObject(r)
 	if err != nil {
 		if typeIsUnregistered(err) {
 			return errors.Errorf("cannot update instance of unregistered type %q", r.Descriptor().Name)
@@ -134,8 +124,15 @@ func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs 
 		return errors.Wrapf(err, "failed to convert core model of type %s into k8s counterpart", r.Descriptor().Name)
 	}
 
+	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
+	if err != nil {
+		return err
+	}
+
 	obj.GetObjectMeta().SetLabels(opts.Labels)
-	obj.SetMesh(tr.GetMeta().GetMesh())
+	obj.SetMesh(opts.Mesh)
+	obj.GetObjectMeta().SetName(name)
+	obj.GetObjectMeta().SetNamespace(namespace)
 
 	if err := s.Client.Update(ctx, obj); err != nil {
 		if kube_apierrs.IsConflict(err) {
@@ -143,7 +140,7 @@ func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs 
 		}
 		return errors.Wrap(err, "failed to update k8s resource")
 	}
-	err = s.Converter.ToCoreResource(obj, tr)
+	err = s.Converter.ToCoreResource(obj, r)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert k8s model into core counterpart")
 	}
