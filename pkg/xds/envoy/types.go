@@ -90,7 +90,6 @@ func (f newClusterOptFunc) apply(cluster *ClusterImpl) {
 	f(cluster)
 }
 
-// Deprecated: for new policies use pkg/plugins/policies/xds/cluster.go
 func NewCluster(opts ...NewClusterOpt) *ClusterImpl {
 	c := &ClusterImpl{}
 	for _, opt := range opts {
