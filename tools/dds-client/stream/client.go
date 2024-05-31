@@ -3,13 +3,20 @@ package stream
 import (
 	"context"
 	"crypto/tls"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	url2 "net/url"
+)
+
+import (
 	"github.com/pkg/errors"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-	url2 "net/url"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 type Client struct {
@@ -57,12 +64,20 @@ func New(serverURL string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) MappingRegister() {
-
+func (c *Client) MappingRegister(ctx context.Context, req *mesh_proto.MappingRegisterRequest) error {
+	_, err := c.client.MappingRegister(ctx, req)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (c *Client) MetadataRegister() {
-
+func (c *Client) MetadataRegister(ctx context.Context, req *mesh_proto.MetaDataRegisterRequest) error {
+	_, err := c.client.MetadataRegister(ctx, req)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) StartMappingStream() (*mappingStream, error) {
@@ -95,8 +110,8 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-func (s *metadataStream) MetadataSyncRequest() {
-
+func (s *metadataStream) MetadataSyncRequest(req *mesh_proto.MetadataSyncRequest) error {
+	return nil
 }
 
 func (s *metadataStream) WaitForMetadataResource() (*mesh_proto.MetadataSyncResponse, error) {
@@ -108,8 +123,8 @@ func (s *metadataStream) WaitForMetadataResource() (*mesh_proto.MetadataSyncResp
 	return resp, err
 }
 
-func (s *mappingStream) MappingSyncRequest() {
-
+func (s *mappingStream) MappingSyncRequest(req *mesh_proto.MappingSyncRequest) error {
+	return nil
 }
 
 func (s *mappingStream) WaitForMappingResource() (*mesh_proto.MappingSyncResponse, error) {

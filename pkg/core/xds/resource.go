@@ -25,7 +25,6 @@ import (
 	envoy_sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	envoy_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 
-	// nolint
 	protov1 "github.com/golang/protobuf/proto"
 
 	"google.golang.org/protobuf/types/known/anypb"

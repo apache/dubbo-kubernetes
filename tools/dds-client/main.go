@@ -1,20 +1,24 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/tools/dds-client/stream"
-	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"os"
 )
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
+
+	"golang.org/x/sync/errgroup"
 )
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/tools/dds-client/stream"
 )
 
 var mdsLog = core.Log.WithName("md")
@@ -44,11 +48,6 @@ func newRunCmd() *cobra.Command {
 		Long:  `Start dDS client(s)`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			client, err := stream.New(args.ddsServerAddress)
-
-			// register mapping and metadata
-			client.MappingRegister()
-			client.MetadataRegister()
-
 			if err != nil {
 				return errors.Wrap(err, "failed to connect to xDS server")
 			}
@@ -58,6 +57,30 @@ func newRunCmd() *cobra.Command {
 					return
 				}
 			}()
+
+			ctx := context.Background()
+
+			// register mapping and metadata
+			err = client.MappingRegister(ctx, &mesh_proto.MappingRegisterRequest{
+				Namespace:       "dubbo-system",
+				ApplicationName: "test",
+				InterfaceNames:  []string{"a1", "a2"},
+				PodName:         os.Getenv("POD_NAME"),
+			})
+			if err != nil {
+				return err
+			}
+			err = client.MetadataRegister(ctx, &mesh_proto.MetaDataRegisterRequest{
+				Namespace: "dubbo-system",
+				PodName:   os.Getenv("POD_NAME"),
+				Metadata: &mesh_proto.MetaData{
+					App:      "test",
+					Revision: "11111",
+				},
+			})
+			if err != nil {
+				return err
+			}
 
 			mdsLog.Info("opening a dds stream ...")
 			mappingStream, err := client.StartMappingStream()
@@ -83,9 +106,15 @@ func newRunCmd() *cobra.Command {
 			}()
 
 			// mapping and metadata request
-			mappingStream.MappingSyncRequest()
+			err = mappingStream.MappingSyncRequest()
+			if err != nil {
+				return err
+			}
 
-			metadataStream.MetadataSyncRequest()
+			err = metadataStream.MetadataSyncRequest()
+			if err != nil {
+				return err
+			}
 
 			var eg errgroup.Group
 

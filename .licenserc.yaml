@@ -90,6 +90,7 @@ header:
     - '**/mk/**'
     - '**/test/**'
     - '**/tools/**'
+    - '**/apis/**'
   comment: on-failure
 
   license-location-threshold: 130
