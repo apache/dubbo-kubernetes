@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"os"
 )
 
@@ -16,12 +15,13 @@ import (
 )
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/tools/dds-client/stream"
 )
 
-var mdsLog = core.Log.WithName("md")
+var mdsLog = core.Log.WithName("mds")
 
 func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -106,12 +106,21 @@ func newRunCmd() *cobra.Command {
 			}()
 
 			// mapping and metadata request
-			err = mappingStream.MappingSyncRequest()
+			err = mappingStream.MappingSyncRequest(&mesh_proto.MappingSyncRequest{
+				Namespace:     "",
+				Nonce:         "",
+				InterfaceName: "",
+			})
 			if err != nil {
 				return err
 			}
 
-			err = metadataStream.MetadataSyncRequest()
+			err = metadataStream.MetadataSyncRequest(&mesh_proto.MetadataSyncRequest{
+				Namespace:       "",
+				Nonce:           "",
+				ApplicationName: "",
+				Revision:        "",
+			})
 			if err != nil {
 				return err
 			}

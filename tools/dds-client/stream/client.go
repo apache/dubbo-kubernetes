@@ -111,6 +111,10 @@ func (c *Client) Close() error {
 }
 
 func (s *metadataStream) MetadataSyncRequest(req *mesh_proto.MetadataSyncRequest) error {
+	err := s.metadataStream.Send(req)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -124,6 +128,10 @@ func (s *metadataStream) WaitForMetadataResource() (*mesh_proto.MetadataSyncResp
 }
 
 func (s *mappingStream) MappingSyncRequest(req *mesh_proto.MappingSyncRequest) error {
+	err := s.mappingStream.Send(req)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
