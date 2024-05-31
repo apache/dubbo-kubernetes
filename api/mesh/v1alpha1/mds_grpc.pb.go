@@ -7,8 +7,6 @@ import (
 )
 
 import (
-	v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -27,8 +25,15 @@ type MDSSyncServiceClient interface {
 	// control plane.
 	MappingRegister(ctx context.Context, in *MappingRegisterRequest, opts ...grpc.CallOption) (*MappingRegisterResponse, error)
 	MetadataRegister(ctx context.Context, in *MetaDataRegisterRequest, opts ...grpc.CallOption) (*MetaDataRegisterResponse, error)
-	// sync mapping and metadate resource
-	ZoneToDubboInstance(ctx context.Context, opts ...grpc.CallOption) (MDSSyncService_ZoneToDubboInstanceClient, error)
+	MetadataSync(ctx context.Context, opts ...grpc.CallOption) (MDSSyncService_MetadataSyncClient, error)
+	// MappingSync from cp to dp, control plane sync snp information to data
+	// plane. Only in Kubernetes environment without zk/nacos, this rpc works. In
+	// other case (exists zk/nacos), data plane search in zk/nacos.
+	//
+	// data plane and control plane keep a streaming link:
+	// when Mapping Resource updated, control plane sync Mapping Resource to
+	// data plane.
+	MappingSync(ctx context.Context, opts ...grpc.CallOption) (MDSSyncService_MappingSyncClient, error)
 }
 
 type mDSSyncServiceClient struct {
@@ -57,31 +62,62 @@ func (c *mDSSyncServiceClient) MetadataRegister(ctx context.Context, in *MetaDat
 	return out, nil
 }
 
-func (c *mDSSyncServiceClient) ZoneToDubboInstance(ctx context.Context, opts ...grpc.CallOption) (MDSSyncService_ZoneToDubboInstanceClient, error) {
-	stream, err := c.cc.NewStream(ctx, &MDSSyncService_ServiceDesc.Streams[0], "/dubbo.mesh.v1alpha1.MDSSyncService/ZoneToDubboInstance", opts...)
+func (c *mDSSyncServiceClient) MetadataSync(ctx context.Context, opts ...grpc.CallOption) (MDSSyncService_MetadataSyncClient, error) {
+	stream, err := c.cc.NewStream(ctx, &MDSSyncService_ServiceDesc.Streams[0], "/dubbo.mesh.v1alpha1.MDSSyncService/MetadataSync", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &mDSSyncServiceZoneToDubboInstanceClient{stream}
+	x := &mDSSyncServiceMetadataSyncClient{stream}
 	return x, nil
 }
 
-type MDSSyncService_ZoneToDubboInstanceClient interface {
-	Send(*v3.DeltaDiscoveryResponse) error
-	Recv() (*v3.DeltaDiscoveryRequest, error)
+type MDSSyncService_MetadataSyncClient interface {
+	Send(*MetadataSyncRequest) error
+	Recv() (*MetadataSyncResponse, error)
 	grpc.ClientStream
 }
 
-type mDSSyncServiceZoneToDubboInstanceClient struct {
+type mDSSyncServiceMetadataSyncClient struct {
 	grpc.ClientStream
 }
 
-func (x *mDSSyncServiceZoneToDubboInstanceClient) Send(m *v3.DeltaDiscoveryResponse) error {
+func (x *mDSSyncServiceMetadataSyncClient) Send(m *MetadataSyncRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *mDSSyncServiceZoneToDubboInstanceClient) Recv() (*v3.DeltaDiscoveryRequest, error) {
-	m := new(v3.DeltaDiscoveryRequest)
+func (x *mDSSyncServiceMetadataSyncClient) Recv() (*MetadataSyncResponse, error) {
+	m := new(MetadataSyncResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *mDSSyncServiceClient) MappingSync(ctx context.Context, opts ...grpc.CallOption) (MDSSyncService_MappingSyncClient, error) {
+	stream, err := c.cc.NewStream(ctx, &MDSSyncService_ServiceDesc.Streams[1], "/dubbo.mesh.v1alpha1.MDSSyncService/MappingSync", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &mDSSyncServiceMappingSyncClient{stream}
+	return x, nil
+}
+
+type MDSSyncService_MappingSyncClient interface {
+	Send(*MappingSyncRequest) error
+	Recv() (*MappingSyncResponse, error)
+	grpc.ClientStream
+}
+
+type mDSSyncServiceMappingSyncClient struct {
+	grpc.ClientStream
+}
+
+func (x *mDSSyncServiceMappingSyncClient) Send(m *MappingSyncRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *mDSSyncServiceMappingSyncClient) Recv() (*MappingSyncResponse, error) {
+	m := new(MappingSyncResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -96,8 +132,15 @@ type MDSSyncServiceServer interface {
 	// control plane.
 	MappingRegister(context.Context, *MappingRegisterRequest) (*MappingRegisterResponse, error)
 	MetadataRegister(context.Context, *MetaDataRegisterRequest) (*MetaDataRegisterResponse, error)
-	// sync mapping and metadate resource
-	ZoneToDubboInstance(MDSSyncService_ZoneToDubboInstanceServer) error
+	MetadataSync(MDSSyncService_MetadataSyncServer) error
+	// MappingSync from cp to dp, control plane sync snp information to data
+	// plane. Only in Kubernetes environment without zk/nacos, this rpc works. In
+	// other case (exists zk/nacos), data plane search in zk/nacos.
+	//
+	// data plane and control plane keep a streaming link:
+	// when Mapping Resource updated, control plane sync Mapping Resource to
+	// data plane.
+	MappingSync(MDSSyncService_MappingSyncServer) error
 	mustEmbedUnimplementedMDSSyncServiceServer()
 }
 
@@ -111,8 +154,11 @@ func (UnimplementedMDSSyncServiceServer) MappingRegister(context.Context, *Mappi
 func (UnimplementedMDSSyncServiceServer) MetadataRegister(context.Context, *MetaDataRegisterRequest) (*MetaDataRegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MetadataRegister not implemented")
 }
-func (UnimplementedMDSSyncServiceServer) ZoneToDubboInstance(MDSSyncService_ZoneToDubboInstanceServer) error {
-	return status.Errorf(codes.Unimplemented, "method ZoneToDubboInstance not implemented")
+func (UnimplementedMDSSyncServiceServer) MetadataSync(MDSSyncService_MetadataSyncServer) error {
+	return status.Errorf(codes.Unimplemented, "method MetadataSync not implemented")
+}
+func (UnimplementedMDSSyncServiceServer) MappingSync(MDSSyncService_MappingSyncServer) error {
+	return status.Errorf(codes.Unimplemented, "method MappingSync not implemented")
 }
 func (UnimplementedMDSSyncServiceServer) mustEmbedUnimplementedMDSSyncServiceServer() {}
 
@@ -163,26 +209,52 @@ func _MDSSyncService_MetadataRegister_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MDSSyncService_ZoneToDubboInstance_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(MDSSyncServiceServer).ZoneToDubboInstance(&mDSSyncServiceZoneToDubboInstanceServer{stream})
+func _MDSSyncService_MetadataSync_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MDSSyncServiceServer).MetadataSync(&mDSSyncServiceMetadataSyncServer{stream})
 }
 
-type MDSSyncService_ZoneToDubboInstanceServer interface {
-	Send(*v3.DeltaDiscoveryRequest) error
-	Recv() (*v3.DeltaDiscoveryResponse, error)
+type MDSSyncService_MetadataSyncServer interface {
+	Send(*MetadataSyncResponse) error
+	Recv() (*MetadataSyncRequest, error)
 	grpc.ServerStream
 }
 
-type mDSSyncServiceZoneToDubboInstanceServer struct {
+type mDSSyncServiceMetadataSyncServer struct {
 	grpc.ServerStream
 }
 
-func (x *mDSSyncServiceZoneToDubboInstanceServer) Send(m *v3.DeltaDiscoveryRequest) error {
+func (x *mDSSyncServiceMetadataSyncServer) Send(m *MetadataSyncResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *mDSSyncServiceZoneToDubboInstanceServer) Recv() (*v3.DeltaDiscoveryResponse, error) {
-	m := new(v3.DeltaDiscoveryResponse)
+func (x *mDSSyncServiceMetadataSyncServer) Recv() (*MetadataSyncRequest, error) {
+	m := new(MetadataSyncRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _MDSSyncService_MappingSync_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MDSSyncServiceServer).MappingSync(&mDSSyncServiceMappingSyncServer{stream})
+}
+
+type MDSSyncService_MappingSyncServer interface {
+	Send(*MappingSyncResponse) error
+	Recv() (*MappingSyncRequest, error)
+	grpc.ServerStream
+}
+
+type mDSSyncServiceMappingSyncServer struct {
+	grpc.ServerStream
+}
+
+func (x *mDSSyncServiceMappingSyncServer) Send(m *MappingSyncResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *mDSSyncServiceMappingSyncServer) Recv() (*MappingSyncRequest, error) {
+	m := new(MappingSyncRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -207,8 +279,14 @@ var MDSSyncService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ZoneToDubboInstance",
-			Handler:       _MDSSyncService_ZoneToDubboInstance_Handler,
+			StreamName:    "MetadataSync",
+			Handler:       _MDSSyncService_MetadataSync_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "MappingSync",
+			Handler:       _MDSSyncService_MappingSync_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

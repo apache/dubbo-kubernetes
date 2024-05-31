@@ -15,9 +15,21 @@
  * limitations under the License.
  */
 
-package mds
+package pusher
 
-const (
-	MappingType  = "type.googleapis.com/dubbo.mesh.v1alpha1/Mapping"
-	MetadataType = "type.googleapis.com/dubbo.mesh.v1alpha1/Metadata"
+import (
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
+
+type PushedItems struct {
+	resourceList core_model.ResourceList
+	revision     revision
+}
+
+func (items *PushedItems) ResourceList() core_model.ResourceList {
+	return items.resourceList
+}
+
+func (items *PushedItems) Revision() int64 {
+	return items.revision.toInt64()
+}

@@ -19,9 +19,19 @@ package server
 
 import (
 	"context"
+	"io"
+	"strings"
 )
 
 import (
+	"github.com/google/uuid"
+
+	"github.com/pkg/errors"
+
+	"google.golang.org/grpc/codes"
+
+	"google.golang.org/grpc/status"
+
 	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -34,6 +44,8 @@ import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/mds/client"
+	"github.com/apache/dubbo-kubernetes/pkg/mds/pusher"
 	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
 	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
@@ -51,6 +63,7 @@ type MdsServer struct {
 	config        dubbo.DubboConfig
 	mappingQueue  chan *RegisterRequest
 	metadataQueue chan *RegisterRequest
+	pusher        pusher.Pusher
 	converter     k8s_common.Converter
 
 	ctx             context.Context
@@ -63,6 +76,7 @@ type MdsServer struct {
 func NewMdsServer(
 	ctx context.Context,
 	config dubbo.DubboConfig,
+	pusher pusher.Pusher,
 	manager kube_ctrl.Manager,
 	converter k8s_common.Converter,
 	resourceManager manager.ResourceManager,
@@ -73,6 +87,7 @@ func NewMdsServer(
 	return &MdsServer{
 		localZone:       localZone,
 		config:          config,
+		pusher:          pusher,
 		mappingQueue:    make(chan *RegisterRequest, queueSize),
 		metadataQueue:   make(chan *RegisterRequest, queueSize),
 		ctx:             ctx,
@@ -92,10 +107,6 @@ func (m *MdsServer) Start(stop <-chan struct{}) error {
 
 func (m *MdsServer) NeedLeaderElection() bool {
 	return false
-}
-
-func (m *MdsServer) ZoneToDubboInstance(stream mesh_proto.MDSSyncService_ZoneToDubboInstanceServer) error {
-	return nil
 }
 
 func (m *MdsServer) MetadataRegister(ctx context.Context, req *mesh_proto.MetaDataRegisterRequest) (*mesh_proto.MetaDataRegisterResponse, error) {
@@ -174,4 +185,247 @@ func (m *MdsServer) MappingRegister(ctx context.Context, req *mesh_proto.Mapping
 		Success: true,
 		Message: "success",
 	}, nil
+}
+
+func (m *MdsServer) MetadataSync(stream mesh_proto.MDSSyncService_MetadataSyncServer) error {
+	mesh := core_model.DefaultMesh // todo: mesh
+	errChan := make(chan error)
+
+	clientID := uuid.NewString()
+	metadataSyncStream := client.NewDubboSyncStream(stream)
+	// DubboSyncClient is to handle MetaSyncRequest from data plane
+	metadataSyncClient := client.NewDubboSyncClient(
+		log.WithName("client"),
+		clientID,
+		metadataSyncStream,
+		&client.Callbacks{
+			OnMetadataSyncRequestReceived: func(request *mesh_proto.MetadataSyncRequest) error {
+				// when received request, invoke callback
+				m.pusher.InvokeCallback(
+					core_mesh.MetaDataType,
+					clientID,
+					request,
+					func(rawRequest interface{}, resourceList core_model.ResourceList) core_model.ResourceList {
+						req := rawRequest.(*mesh_proto.MetadataSyncRequest)
+						metadataList := resourceList.(*core_mesh.MetaDataResourceList)
+
+						// only response the target MetaData Resource by application name or revision
+						respMetadataList := &core_mesh.MetaDataResourceList{}
+						for _, item := range metadataList.Items {
+							// MetaData.Name = AppName.Revision, so we need to check MedaData.Name has prefix of AppName
+							if item.Spec != nil && strings.HasPrefix(item.Spec.App, req.ApplicationName) {
+								if req.Revision != "" {
+									// revision is not empty, response the Metadata with application name and target revision
+									if req.Revision == item.Spec.Revision {
+										_ = respMetadataList.AddItem(item)
+									}
+								} else {
+									// revision is empty, response the Metadata with target application name
+									_ = respMetadataList.AddItem(item)
+								}
+							}
+						}
+
+						return respMetadataList
+					},
+				)
+				return nil
+			},
+		})
+
+	m.pusher.AddCallback(
+		core_mesh.MetaDataType,
+		metadataSyncClient.ClientID(),
+		func(items pusher.PushedItems) {
+			resourceList := items.ResourceList()
+			revision := items.Revision()
+			metadataList, ok := resourceList.(*core_mesh.MetaDataResourceList)
+			if !ok {
+				return
+			}
+
+			err := metadataSyncClient.Send(metadataList, revision)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					log.Info("DubboSyncClient finished gracefully")
+					errChan <- nil
+					return
+				}
+
+				log.Error(err, "send metadata sync response failed", "metadataList", metadataList, "revision", revision)
+				errChan <- errors.Wrap(err, "DubboSyncClient send with an error")
+			}
+		},
+		func(resourceList core_model.ResourceList) core_model.ResourceList {
+			if resourceList.GetItemType() != core_mesh.MetaDataType {
+				return nil
+			}
+
+			// only send Metadata which client subscribed
+			newResourceList := &core_mesh.MeshResourceList{}
+			for _, resource := range resourceList.GetItems() {
+				expected := false
+				metaData := resource.(*core_mesh.MetaDataResource)
+				for _, applicationName := range metadataSyncStream.SubscribedApplicationNames() {
+					// MetaData.Name = AppName.Revision, so we need to check MedaData.Name has prefix of AppName
+					if strings.HasPrefix(metaData.Spec.GetApp(), applicationName) && mesh == resource.GetMeta().GetMesh() {
+						expected = true
+						break
+					}
+				}
+
+				if expected {
+					// find
+					_ = newResourceList.AddItem(resource)
+				}
+			}
+
+			return newResourceList
+		},
+	)
+
+	// in the end, remove callback of this client
+	defer m.pusher.RemoveCallback(core_mesh.MetaDataType, metadataSyncClient.ClientID())
+
+	go func() {
+		// Handle requests from client
+		err := metadataSyncClient.HandleReceive()
+		if errors.Is(err, io.EOF) {
+			log.Info("DubboSyncClient finished gracefully")
+			errChan <- nil
+			return
+		}
+
+		log.Error(err, "DubboSyncClient finished with an error")
+		errChan <- errors.Wrap(err, "DubboSyncClient finished with an error")
+	}()
+
+	for {
+		select {
+		case err := <-errChan:
+			if err == nil {
+				log.Info("MetadataSync finished gracefully")
+				return nil
+			}
+
+			log.Error(err, "MetadataSync finished with an error")
+			return status.Error(codes.Internal, err.Error())
+		}
+	}
+}
+
+func (m *MdsServer) MappingSync(stream mesh_proto.MDSSyncService_MappingSyncServer) error {
+	mesh := core_model.DefaultMesh // todo: mesh
+	errChan := make(chan error)
+
+	clientID := uuid.NewString()
+	mappingSyncStream := client.NewDubboSyncStream(stream)
+	// DubboSyncClient is to handle MappingSyncRequest from data plane
+	mappingSyncClient := client.NewDubboSyncClient(
+		log.WithName("client"),
+		clientID,
+		mappingSyncStream,
+		&client.Callbacks{
+			OnMappingSyncRequestReceived: func(request *mesh_proto.MappingSyncRequest) error {
+				// when received request, invoke callback
+				m.pusher.InvokeCallback(
+					core_mesh.MappingType,
+					clientID,
+					request,
+					func(rawRequest interface{}, resourceList core_model.ResourceList) core_model.ResourceList {
+						req := rawRequest.(*mesh_proto.MappingSyncRequest)
+						mappingList := resourceList.(*core_mesh.MappingResourceList)
+
+						// only response the target Mapping Resource by interface name
+						respMappingList := &core_mesh.MappingResourceList{}
+						for _, item := range mappingList.Items {
+							if item.Spec != nil && req.InterfaceName == item.Spec.InterfaceName {
+								_ = respMappingList.AddItem(item)
+							}
+						}
+
+						return respMappingList
+					},
+				)
+				return nil
+			},
+		})
+
+	m.pusher.AddCallback(
+		core_mesh.MappingType,
+		mappingSyncClient.ClientID(),
+		func(items pusher.PushedItems) {
+			resourceList := items.ResourceList()
+			revision := items.Revision()
+			mappingList, ok := resourceList.(*core_mesh.MappingResourceList)
+			if !ok {
+				return
+			}
+
+			err := mappingSyncClient.Send(mappingList, revision)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					log.Info("DubboSyncClient finished gracefully")
+					errChan <- nil
+					return
+				}
+
+				log.Error(err, "send mapping sync response failed", "mappingList", mappingList, "revision", revision)
+				errChan <- errors.Wrap(err, "DubboSyncClient send with an error")
+			}
+		},
+		func(resourceList core_model.ResourceList) core_model.ResourceList {
+			if resourceList.GetItemType() != core_mesh.MappingType {
+				return nil
+			}
+
+			// only send Mapping which client subscribed
+			newResourceList := &core_mesh.MeshResourceList{}
+			for _, resource := range resourceList.GetItems() {
+				expected := false
+				for _, interfaceName := range mappingSyncStream.SubscribedInterfaceNames() {
+					if interfaceName == resource.GetMeta().GetName() && mesh == resource.GetMeta().GetMesh() {
+						expected = true
+						break
+					}
+				}
+
+				if expected {
+					// find
+					_ = newResourceList.AddItem(resource)
+				}
+			}
+
+			return newResourceList
+		},
+	)
+
+	// in the end, remove callback of this client
+	defer m.pusher.RemoveCallback(core_mesh.MappingType, mappingSyncClient.ClientID())
+
+	go func() {
+		// Handle requests from client
+		err := mappingSyncClient.HandleReceive()
+		if errors.Is(err, io.EOF) {
+			log.Info("DubboSyncClient finished gracefully")
+			errChan <- nil
+			return
+		}
+
+		log.Error(err, "DubboSyncClient finished with an error")
+		errChan <- errors.Wrap(err, "DubboSyncClient finished with an error")
+	}()
+
+	for {
+		select {
+		case err := <-errChan:
+			if err == nil {
+				log.Info("MappingSync finished gracefully")
+				return nil
+			}
+
+			log.Error(err, "MappingSync finished with an error")
+			return status.Error(codes.Internal, err.Error())
+		}
+	}
 }

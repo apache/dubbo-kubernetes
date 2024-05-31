@@ -18,6 +18,10 @@
 package mds
 
 import (
+	"time"
+)
+
+import (
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +29,10 @@ import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_env "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/mds/pusher"
 	"github.com/apache/dubbo-kubernetes/pkg/mds/server"
 	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 )
@@ -50,9 +57,18 @@ func Setup(rt core_runtime.Runtime) error {
 		return errors.Errorf("k8s resource converter hasn't been configured")
 	}
 
+	dubboPusher := pusher.NewPusher(rt.ResourceManager(), rt.EventBus(), func() *time.Ticker {
+		// todo: should configured by config in the future
+		return time.NewTicker(time.Minute * 10)
+	}, []core_model.ResourceType{
+		core_mesh.MappingType,
+		core_mesh.MetaDataType,
+	})
+
 	mdsServer := server.NewMdsServer(
 		rt.AppContext(),
 		cfg,
+		dubboPusher,
 		mgr,
 		converter,
 		rt.ResourceManager(),
@@ -62,5 +78,5 @@ func Setup(rt core_runtime.Runtime) error {
 	)
 	mesh_proto.RegisterMDSSyncServiceServer(rt.DpServer().GrpcServer(), mdsServer)
 
-	return rt.Add(mdsServer)
+	return rt.Add(dubboPusher, mdsServer)
 }

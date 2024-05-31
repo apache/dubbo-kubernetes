@@ -4,8 +4,8 @@ package dubbo.mesh.v1alpha1;
 
 option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
 
-import "envoy/service/discovery/v3/discovery.proto";
 import "api/mesh/v1alpha1/metadata.proto";
+import "api/mesh/v1alpha1/mapping.proto";
 
 service MDSSyncService {
   // MappingRegister from dp to cp, data plane register snp information to
@@ -15,10 +15,17 @@ service MDSSyncService {
   rpc MetadataRegister(MetaDataRegisterRequest)
       returns (MetaDataRegisterResponse);
 
-  // sync mapping and metadate resource
-  rpc ZoneToDubboInstance(
-      stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
-      returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest);
+  rpc MetadataSync(stream MetadataSyncRequest)
+      returns (stream MetadataSyncResponse);
+  // MappingSync from cp to dp, control plane sync snp information to data
+  // plane. Only in Kubernetes environment without zk/nacos, this rpc works. In
+  // other case (exists zk/nacos), data plane search in zk/nacos.
+  //
+  // data plane and control plane keep a streaming link:
+  // when Mapping Resource updated, control plane sync Mapping Resource to
+  // data plane.
+  rpc MappingSync(stream MappingSyncRequest)
+      returns (stream MappingSyncResponse);
 }
 
 message MappingRegisterRequest {
@@ -42,4 +49,30 @@ message MetaDataRegisterRequest {
 message MetaDataRegisterResponse {
   bool success = 1;
   string message = 2;
+}
+
+message MappingSyncRequest {
+  string namespace = 1;
+  string nonce = 2;
+  string interfaceName = 3;
+}
+
+message MappingSyncResponse {
+  string nonce = 1;
+  int64 revision = 2;
+  repeated Mapping mappings = 3;
+}
+
+// 可以根据应用名和版本号进行获取
+message MetadataSyncRequest {
+  string namespace = 1;
+  string nonce = 2;
+  string applicationName = 3;
+  string revision = 4;
+}
+
+message MetadataSyncResponse {
+  string nonce = 1;
+  int64 revision = 2;
+  repeated MetaData metaDatum = 3;
 }
