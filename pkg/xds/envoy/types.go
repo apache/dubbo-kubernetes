@@ -52,7 +52,6 @@ type Split interface {
 	HasExternalService() bool
 }
 
-// Deprecated: for new policies use pkg/plugins/policies/xds/cluster.go
 type ClusterImpl struct {
 	service           string
 	name              string

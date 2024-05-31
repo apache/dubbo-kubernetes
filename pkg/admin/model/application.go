@@ -177,6 +177,7 @@ func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.D
 	return a
 }
 
+// nolint
 func (a *ApplicationTabInstanceInfoResp) mergeMainDataplane(dataplane *mesh.DataplaneResource) {
 	a.AppName = dataplane.GetMeta().GetLabels()[v1alpha1.AppTag]
 	a.CreateTime = dataplane.Meta.GetCreationTime().String()

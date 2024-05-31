@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/tools/dds-client/stream"
+	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 	"os"
-	"time"
 )
 
 import (
@@ -15,11 +17,13 @@ import (
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
+var mdsLog = core.Log.WithName("md")
+
 func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "dubbo-dds-client",
-		Short: "dubbo-dds-client",
-		Long:  `dubbo-dds-client`,
+		Use:   "dubbo-mds-client",
+		Short: "dubbo-mds-client",
+		Long:  `dubbo-mds-client`,
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			core.SetLogger(core.NewLogger(dubbo_log.DebugLevel))
 		},
@@ -29,22 +33,99 @@ func newRootCmd() *cobra.Command {
 }
 
 func newRunCmd() *cobra.Command {
-	log := core.Log.WithName("dubbo-dds-client").WithName("run")
 	args := struct {
 		ddsServerAddress string
-		dps              int
-		rampUpPeriod     time.Duration
 	}{
 		ddsServerAddress: "grpc://localhost:8888",
-		dps:              10,
-		rampUpPeriod:     30 * time.Second,
 	}
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Start dDD client(s)",
 		Long:  `Start dDS client(s)`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			log.Info("going to start dDS clients", "dps", args.dps)
+			client, err := stream.New(args.ddsServerAddress)
+
+			// register mapping and metadata
+			client.MappingRegister()
+			client.MetadataRegister()
+
+			if err != nil {
+				return errors.Wrap(err, "failed to connect to xDS server")
+			}
+			defer func() {
+				mdsLog.Info("closing a connection ...")
+				if err := client.Close(); err != nil {
+					return
+				}
+			}()
+
+			mdsLog.Info("opening a dds stream ...")
+			mappingStream, err := client.StartMappingStream()
+			if err != nil {
+				return errors.Wrap(err, "failed to start an mDS stream")
+			}
+			defer func() {
+				mdsLog.Info("closing a mds mapping steam ... ")
+				if err := mappingStream.Close(); err != nil {
+					return
+				}
+			}()
+
+			metadataStream, err := client.StartMetadataSteam()
+			if err != nil {
+				return errors.Wrap(err, "failed to start an mDS stream")
+			}
+			defer func() {
+				mdsLog.Info("closing a mds metadata stream ... ")
+				if err := metadataStream.Close(); err != nil {
+					return
+				}
+			}()
+
+			// mapping and metadata request
+			mappingStream.MappingSyncRequest()
+
+			metadataStream.MetadataSyncRequest()
+
+			var eg errgroup.Group
+
+			eg.Go(func() error {
+				for {
+					mdsLog.Info("waiting for a mapping response ...")
+					resp, err := mappingStream.WaitForMappingResource()
+					if err != nil {
+						return errors.Wrap(err, "failed to receive a mapping response")
+					}
+
+					mdsLog.Info("recv mapping", resp)
+
+					if err := mappingStream.MappingACK(); err != nil {
+						return errors.Wrap(err, "failed to ACK a mapping response")
+					}
+				}
+			})
+
+			eg.Go(func() error {
+				for {
+					mdsLog.Info("waiting for a metadata response ...")
+					resp, err := metadataStream.WaitForMetadataResource()
+					if err != nil {
+						return errors.Wrap(err, "failed to receive a metadata response")
+					}
+
+					mdsLog.Info("recv metadata", resp)
+
+					if err := metadataStream.MetadataACK(); err != nil {
+						return errors.Wrap(err, "failed to ACK a metadata response")
+					}
+				}
+			})
+
+			err = eg.Wait()
+			if err != nil {
+				return err
+			}
+
 			return nil
 		},
 	}

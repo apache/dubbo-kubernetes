@@ -54,7 +54,7 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 	meta := dr.GetMeta()
 	r.Name = meta.GetName()
 	r.CreateTime = meta.GetCreationTime().String()
-	r.RegisterTime = r.CreateTime // TODO: seperate createTime and RegisterTime
+	r.RegisterTime = r.CreateTime // TODO: separate createTime and RegisterTime
 	r.RegisterCluster = dr.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]
 	r.DeployCluster = r.RegisterCluster
 	if r.RegisterTime != "" {
@@ -216,8 +216,8 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
 	a.RpcPort = int(inbound.Port)
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
-	for _, deploycluster := range a.RegisterClusters.Values() {
-		a.DeployCluster = deploycluster // TODO: seperate deployCluster and registerCluster
+	for _, deployCluster := range a.RegisterClusters.Values() {
+		a.DeployCluster = deployCluster // TODO: separate deployCluster and registerCluster
 	}
 	a.Tags = inbound.Tags
 	if a.AppName == "" {
@@ -240,7 +240,7 @@ func (a *InstanceDetail) mergeMeta(meta model.ResourceMeta) {
 	a.CreateTime = meta.GetCreationTime().String()
 	a.RegisterTime = meta.GetModificationTime().String() // Not sure if it's the right field
 	a.ReadyTime = a.RegisterTime
-	// TODO: seperate createTime , RegisterTime and ReadyTime
+	// TODO: separate createTime , RegisterTime and ReadyTime
 	a.Labels = meta.GetLabels()
 }
 
