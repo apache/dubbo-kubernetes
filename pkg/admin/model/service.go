@@ -19,6 +19,7 @@ package model
 
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"strings"
 )
@@ -72,9 +73,10 @@ func (s *ServiceSearchResp) FromServiceSearch(search *ServiceSearch) {
 }
 
 type ServiceTabDistributionReq struct {
-	ServiceName string `json:"serviceName"`
-	Version     string `json:"version"`
-	Group       string `json:"group"`
+	ServiceName string `json:"serviceName" binding:"required"`
+	Version     string `json:"version" binding:"required"`
+	Group       string `json:"group" binding:"required"`
+	Side        string `json:"side" `
 }
 
 type ServiceTabDistributionResp struct {
@@ -139,12 +141,17 @@ func (r *ServiceTabDistributionResp) mergeMetaData(metadatalist *core_mesh.MetaD
 	for _, metadata := range metadatalist.Items {
 		// key format is '{group}/{interface name}:{version}:{protocol}'
 		serviceinfos := metadata.Spec.Services
+		if req.Side == constants.ConsumerSide {
+			r.Retries = ""
+			r.TimeOut = ""
+		}
 		for _, serviceinfo := range serviceinfos {
 			if serviceinfo.Name == req.ServiceName &&
 				serviceinfo.Group == req.Group &&
-				serviceinfo.Version == req.Version {
-				r.Retries = serviceinfo.Params["retries"]
-				r.TimeOut = serviceinfo.Params["timeOut"]
+				serviceinfo.Version == req.Version &&
+				req.Side == constants.ProviderSide {
+				r.Retries = serviceinfo.Params[constants.RetriesKey]
+				r.TimeOut = serviceinfo.Params[constants.TimeoutKey]
 			}
 		}
 

@@ -49,7 +49,7 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 				if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(appName)); err != nil {
 					return nil, err
 				}
-				if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(serviceName)); err != nil {
+				if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(appName)); err != nil {
 					return nil, err
 				}
 				//拿到了appName，接下来从dataplane取实例信息
@@ -115,13 +115,4 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 	}
 
 	return res, nil
-}
-
-func contains(names []string, name string) bool {
-	for _, item := range names {
-		if item == name {
-			return true
-		}
-	}
-	return false
 }
