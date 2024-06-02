@@ -18,9 +18,11 @@
 package model
 
 import (
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	"strconv"
 	"strings"
 )
 
@@ -35,7 +37,7 @@ type ServiceSearch struct {
 }
 
 func (s *ServiceSearch) FromServiceInfo(info *v1alpha1.ServiceInfo) {
-	s.VersionGroups.Add(info.Group + " " + info.Version)
+	s.VersionGroups.Add(info.Version + " " + info.Group)
 }
 
 func NewServiceSearch(serviceName string) *ServiceSearch {
@@ -73,10 +75,10 @@ func (s *ServiceSearchResp) FromServiceSearch(search *ServiceSearch) {
 }
 
 type ServiceTabDistributionReq struct {
-	ServiceName string `json:"serviceName" binding:"required"`
-	Version     string `json:"version" binding:"required"`
-	Group       string `json:"group" binding:"required"`
-	Side        string `json:"side" `
+	ServiceName string `json:"serviceName"  form:"serviceName" binding:"required"`
+	Version     string `json:"version"  form:"version" binding:"required"`
+	Group       string `json:"group"  form:"group" binding:"required"`
+	Side        string `json:"side" form:"side"`
 }
 
 type ServiceTabDistributionResp struct {
@@ -93,10 +95,6 @@ type ServiceTabDistribution struct {
 	Endpoint     string
 	TimeOut      string
 	Retries      string
-}
-
-func (d *ServiceTabDistribution) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound, ip string) {
-	d.Endpoint = ip + string(inbound.Port)
 }
 
 func NewServiceDistribution() *ServiceTabDistribution {
@@ -116,6 +114,7 @@ func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *cor
 	for _, inbound := range inbounds {
 		r.mergeInbound(inbound, ip)
 	}
+	fmt.Printf(r.Endpoint)
 	meta := dataplane.GetMeta()
 	r.InstanceName = meta.GetName()
 	r.mergeMetaData(metadatalist, req)
@@ -124,8 +123,8 @@ func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *cor
 
 }
 
-func (r ServiceTabDistributionResp) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound, ip string) {
-	r.Endpoint = ip + string(inbound.Port)
+func (r *ServiceTabDistributionResp) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound, ip string) {
+	r.Endpoint = ip + ":" + strconv.Itoa(int(inbound.Port))
 }
 
 func (r *ServiceTabDistributionResp) FromServiceDistribution(distribution *ServiceTabDistribution) *ServiceTabDistributionResp {

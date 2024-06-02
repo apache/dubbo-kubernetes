@@ -20,9 +20,10 @@ package service
 import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	_ "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	_ "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
@@ -32,6 +33,106 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	dataplaneList := &mesh.DataplaneResourceList{}
 	mappingList := &mesh.MappingResourceList{}
 	metadataList := &mesh.MetaDataResourceList{}
+
+	// 伪造 dataplaneList
+	dataplaneList = &mesh.DataplaneResourceList{
+		Items: []*mesh.DataplaneResource{
+			// 添加一些模拟的 dataplane
+			{
+				Spec: &mesh_proto.Dataplane{
+					Extensions: map[string]string{"app1": "appName1"},
+					Networking: &mesh_proto.Dataplane_Networking{
+						Inbound: []*mesh_proto.Dataplane_Networking_Inbound{
+							{
+								Port:        8080,
+								ServicePort: 8080,
+								Address:     "127.0.0.1",
+							},
+						},
+						AdvertisedAddress: "127.0.0.1",
+					},
+				},
+			},
+			{
+				Spec: &mesh_proto.Dataplane{
+					Extensions: map[string]string{"app2": "appName2"},
+					Networking: &mesh_proto.Dataplane_Networking{
+						Inbound: []*mesh_proto.Dataplane_Networking_Inbound{
+							{
+								Port:        8080,
+								ServicePort: 8080,
+								Address:     "127.0.0.1",
+							},
+						},
+						AdvertisedAddress: "127.0.0.1",
+					},
+				},
+			},
+			{
+				Spec: &mesh_proto.Dataplane{
+					Extensions: map[string]string{"app3": "appName3"},
+					Networking: &mesh_proto.Dataplane_Networking{
+						Inbound: []*mesh_proto.Dataplane_Networking_Inbound{
+							{
+								Port:        8080,
+								ServicePort: 8080,
+								Address:     "127.0.0.1",
+							},
+						},
+						AdvertisedAddress: "127.0.0.1",
+					},
+				},
+			},
+			{
+				Spec: &mesh_proto.Dataplane{
+					Extensions: map[string]string{"app4": "appName4"},
+					Networking: &mesh_proto.Dataplane_Networking{
+						Inbound: []*mesh_proto.Dataplane_Networking_Inbound{
+							{
+								Port:        8080,
+								ServicePort: 8080,
+								Address:     "127.0.0.1",
+							},
+						},
+						AdvertisedAddress: "127.0.0.1",
+					},
+				},
+			},
+		},
+	}
+
+	metadataList = &mesh.MetaDataResourceList{
+		Items: []*mesh.MetaDataResource{
+			// 添加一些模拟的 metadata
+			{Spec: &mesh_proto.MetaData{Services: map[string]*v1alpha1.ServiceInfo{
+				"service1": {Name: "service1", Group: "servicegroup1", Version: "v1", Params: map[string]string{constants.RetriesKey: "2", constants.TimeoutKey: "3000"}},
+			}}},
+			{Spec: &mesh_proto.MetaData{Services: map[string]*v1alpha1.ServiceInfo{
+				"service2": {Name: "service2", Group: "servicegroup1", Version: "v1", Params: map[string]string{constants.RetriesKey: "2", constants.TimeoutKey: "3000"}},
+			}}},
+		},
+	}
+
+	// 伪造 mappingList
+	mappingList = &mesh.MappingResourceList{
+		Items: []*mesh.MappingResource{
+			// 添加一些模拟的 mapping
+			{
+				Spec: &mesh_proto.Mapping{
+					Zone:             "zone1",
+					InterfaceName:    "service1",
+					ApplicationNames: []string{"appName1", "appName2"},
+				},
+			},
+			{
+				Spec: &mesh_proto.Mapping{
+					Zone:             "zone2",
+					InterfaceName:    "service2",
+					ApplicationNames: []string{"appName3", "appName4"},
+				},
+			},
+		},
+	}
 
 	serviceName := req.ServiceName
 
@@ -71,6 +172,26 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 
 	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
+	}
+
+	dataplaneList = &mesh.DataplaneResourceList{
+		Items: []*mesh.DataplaneResource{
+			// 添加一些模拟的 dataplane
+			{Spec: &mesh_proto.Dataplane{Extensions: map[string]string{"app1": "appName1"}}},
+			{Spec: &mesh_proto.Dataplane{Extensions: map[string]string{"app2": "appName2"}}},
+		},
+	}
+
+	metadataList = &mesh.MetaDataResourceList{
+		Items: []*mesh.MetaDataResource{
+			// 添加一些模拟的 metadata
+			{Spec: &mesh_proto.MetaData{Services: map[string]*v1alpha1.ServiceInfo{
+				"service1": {Name: "service1", Group: "servicegroup1", Version: "v1"},
+			}}},
+			{Spec: &mesh_proto.MetaData{Services: map[string]*v1alpha1.ServiceInfo{
+				"service2": {Name: "service2", Group: "servicegroup1", Version: "v1"},
+			}}},
+		},
 	}
 
 	//通过dataplane的extension字段获取所有appName
