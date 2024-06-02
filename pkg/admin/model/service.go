@@ -18,7 +18,6 @@
 package model
 
 import (
-	"fmt"
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
@@ -114,7 +113,6 @@ func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *cor
 	for _, inbound := range inbounds {
 		r.mergeInbound(inbound, ip)
 	}
-	fmt.Printf(r.Endpoint)
 	meta := dataplane.GetMeta()
 	r.InstanceName = meta.GetName()
 	r.mergeMetaData(metadatalist, req)
