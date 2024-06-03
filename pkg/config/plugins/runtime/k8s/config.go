@@ -30,12 +30,7 @@ import (
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
-
-const defaultServiceAccountName = "system:serviceaccount:dubbo-system:dubbo-control-plane"
-
-var logger = core.Log.WithName("kubernetes-config")
 
 func DefaultKubernetesRuntimeConfig() *KubernetesRuntimeConfig {
 	return &KubernetesRuntimeConfig{

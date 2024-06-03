@@ -18,18 +18,23 @@
 package handler
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-// API Definition: https://app.apifox.com/project/3732499
-// 资源详情-应用
+import (
+	"github.com/gin-gonic/gin"
+)
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+)
+
+// SearchServices API Definition: https://app.apifox.com/project/3732499
+// 资源详情-应用
 func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -37,7 +42,7 @@ func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -45,7 +50,7 @@ func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}

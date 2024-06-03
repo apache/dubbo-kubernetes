@@ -19,11 +19,8 @@ package server
 
 import (
 	"context"
-	ui "github.com/apache/dubbo-kubernetes/app/dubbo-ui"
 	"net/http"
 	"strconv"
-
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 import (
@@ -31,8 +28,10 @@ import (
 )
 
 import (
+	ui "github.com/apache/dubbo-kubernetes/app/dubbo-ui"
 	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 type AdminServer struct {
