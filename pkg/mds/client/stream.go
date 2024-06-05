@@ -70,7 +70,7 @@ type DubboSyncStream interface {
 
 func (s *stream) Recv() (proto.Message, error) {
 	switch s.streamClient.(type) {
-	case mesh_proto.ServiceNameMappingService_MappingSyncServer:
+	case mesh_proto.MDSSyncService_MappingSyncServer:
 		request := &mesh_proto.MappingSyncRequest{}
 		err := s.streamClient.RecvMsg(request)
 		if err != nil {
@@ -87,7 +87,7 @@ func (s *stream) Recv() (proto.Message, error) {
 		s.mu.Lock()
 
 		return request, nil
-	case mesh_proto.MetadataService_MetadataSyncServer:
+	case mesh_proto.MDSSyncService_MetadataSyncServer:
 		request := &mesh_proto.MetadataSyncRequest{}
 		err := s.streamClient.RecvMsg(request)
 		if err != nil {
