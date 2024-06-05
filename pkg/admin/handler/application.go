@@ -89,3 +89,57 @@ func ApplicationSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
+
+func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigFlowWeightPOST(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigFlowWeightDELETE(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigGrayGET(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigGrayPOST(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigGrayDELETE(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}

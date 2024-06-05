@@ -50,3 +50,45 @@ func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
 }
+
+func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ServiceConfigArgumentRouteGET(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ServiceConfigArgumentRouteDELETE(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func ServiceConfigArgumentRoutePOST(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}

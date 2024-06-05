@@ -37,6 +37,38 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		application.GET("/instance/info", handler.GetApplicationTabInstanceInfo(rt))
 		application.GET("/service/form", handler.GetApplicationServiceForm(rt))
 		application.GET("/search", handler.ApplicationSearch(rt))
+		{
+			applicationConfig := application.Group("/config/:applicationName")
+			applicationConfig.PUT("/operatorLog", handler.ApplicationConfigOperatorLogPut(rt))
+
+			applicationConfig.GET("/flowWeight", handler.ApplicationConfigFlowWeightGET(rt))
+			applicationConfig.POST("/flowWeight", handler.ApplicationConfigFlowWeightPOST(rt))
+			applicationConfig.DELETE("/flowWeight", handler.ApplicationConfigFlowWeightDELETE(rt))
+			applicationConfig.PUT("/flowWeight", handler.ApplicationConfigFlowWeightPUT(rt))
+
+			applicationConfig.GET("/gray", handler.ApplicationConfigGrayGET(rt))
+			applicationConfig.POST("/gray", handler.ApplicationConfigGrayPOST(rt))
+			applicationConfig.DELETE("/gray", handler.ApplicationConfigGrayDELETE(rt))
+			applicationConfig.PUT("/gray", handler.ApplicationConfigGrayPUT(rt))
+		}
+	}
+
+	{
+		service := router.Group("/service")
+		{
+			serviceConfig := service.Group("/config/:serviceName")
+			{
+				serviceConfig.PUT("/timeout", handler.ServiceConfigTimeoutPUT(rt))
+				serviceConfig.PUT("/retry", handler.ServiceConfigRetryPUT(rt))
+				serviceConfig.PUT("/regionPriority", handler.ServiceConfigRegionPriorityPUT(rt))
+
+				serviceConfig.PUT("/argumentRoute", handler.ServiceConfigArgumentRoutePUT(rt))
+				serviceConfig.GET("/argumentRoute", handler.ServiceConfigArgumentRouteGET(rt))
+				serviceConfig.DELETE("/argumentRoute", handler.ServiceConfigArgumentRouteDELETE(rt))
+				serviceConfig.POST("/argumentRoute", handler.ServiceConfigArgumentRoutePOST(rt))
+
+			}
+		}
 	}
 
 	{
