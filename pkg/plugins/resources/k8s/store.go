@@ -143,7 +143,7 @@ func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs 
 		}
 		return errors.Wrap(err, "failed to update k8s resource")
 	}
-	err = s.Converter.ToCoreResource(obj, tr)
+	err = s.Converter.ToCoreResource(obj, r)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert k8s model into core counterpart")
 	}
