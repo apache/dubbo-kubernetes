@@ -19,8 +19,11 @@ package registry
 
 import (
 	"strings"
+)
 
+import (
 	"dubbo.apache.org/dubbo-go/v3/registry"
+
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 )
 

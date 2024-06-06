@@ -22,11 +22,16 @@ package handler
 
 import (
 	"net/http"
+)
 
+import (
+	"github.com/gin-gonic/gin"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"github.com/gin-gonic/gin"
 )
 
 func GetApplicationDetail(rt core_runtime.Runtime) gin.HandlerFunc {

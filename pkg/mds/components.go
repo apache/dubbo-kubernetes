@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package dubbo
+package mds
 
 import (
 	"time"
@@ -32,16 +32,17 @@ import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	dubbo_metadata "github.com/apache/dubbo-kubernetes/pkg/dubbo/metadata"
-	"github.com/apache/dubbo-kubernetes/pkg/dubbo/pusher"
-	dubbo_mapping "github.com/apache/dubbo-kubernetes/pkg/dubbo/servicemapping"
+	"github.com/apache/dubbo-kubernetes/pkg/mds/pusher"
+	"github.com/apache/dubbo-kubernetes/pkg/mds/server"
 	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 )
 
-var log = core.Log.WithName("dubbo")
+var log = core.Log.WithName("mds")
 
 func Setup(rt core_runtime.Runtime) error {
-	if rt.Config().DeployMode != core_env.KubernetesMode {
+	if rt.Config().DeployMode != core_env.KubernetesMode ||
+		!rt.Config().IsFederatedZoneCP() {
+		// 非k8s模式以及global控制面不启动该组件
 		return nil
 	}
 	cfg := rt.Config().DubboConfig
@@ -64,8 +65,7 @@ func Setup(rt core_runtime.Runtime) error {
 		core_mesh.MetaDataType,
 	})
 
-	// register ServiceNameMappingService
-	serviceMapping := dubbo_mapping.NewSnpServer(
+	mdsServer := server.NewMdsServer(
 		rt.AppContext(),
 		cfg,
 		dubboPusher,
@@ -76,20 +76,7 @@ func Setup(rt core_runtime.Runtime) error {
 		rt.Config().Multizone.Zone.Name,
 		rt.Config().Store.Kubernetes.SystemNamespace,
 	)
-	mesh_proto.RegisterServiceNameMappingServiceServer(rt.DpServer().GrpcServer(), serviceMapping)
+	mesh_proto.RegisterMDSSyncServiceServer(rt.DpServer().GrpcServer(), mdsServer)
 
-	// register MetadataService
-	metadata := dubbo_metadata.NewMetadataServe(
-		rt.AppContext(),
-		cfg,
-		dubboPusher,
-		mgr,
-		converter,
-		rt.ResourceManager(),
-		rt.Transactions(),
-		rt.Config().Multizone.Zone.Name,
-		rt.Config().Store.Kubernetes.SystemNamespace,
-	)
-	mesh_proto.RegisterMetadataServiceServer(rt.DpServer().GrpcServer(), metadata)
-	return rt.Add(dubboPusher, serviceMapping, metadata)
+	return rt.Add(dubboPusher, mdsServer)
 }

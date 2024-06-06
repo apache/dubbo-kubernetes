@@ -15,41 +15,51 @@
  * limitations under the License.
  */
 
-package metadata
+package server
 
 import (
-	"fmt"
+	"time"
 )
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 )
 
-type RegisterRequest struct {
-	ConfigsUpdated map[core_model.ResourceReq]*mesh_proto.MetaData
+type resourceMetaObject struct {
+	Name             string
+	Version          string
+	Mesh             string
+	CreationTime     time.Time
+	ModificationTime time.Time
+	Labels           map[string]string
 }
 
-func (q *RegisterRequest) merge(req *RegisterRequest) *RegisterRequest {
-	if q == nil {
-		return req
-	}
-	for key, metaData := range req.ConfigsUpdated {
-		q.ConfigsUpdated[key] = metaData
-	}
+var _ core_model.ResourceMeta = &resourceMetaObject{}
 
-	return q
+func (r *resourceMetaObject) GetName() string {
+	return r.Name
 }
 
-func configsUpdated(req *RegisterRequest) string {
-	configs := ""
-	for key := range req.ConfigsUpdated {
-		configs += key.Name + "." + key.Mesh
-		break
-	}
-	if len(req.ConfigsUpdated) > 1 {
-		more := fmt.Sprintf(" and %d more configs", len(req.ConfigsUpdated)-1)
-		configs += more
-	}
-	return configs
+func (r *resourceMetaObject) GetNameExtensions() core_model.ResourceNameExtensions {
+	return core_model.ResourceNameExtensionsUnsupported
+}
+
+func (r *resourceMetaObject) GetVersion() string {
+	return r.Version
+}
+
+func (r *resourceMetaObject) GetMesh() string {
+	return r.Mesh
+}
+
+func (r *resourceMetaObject) GetCreationTime() time.Time {
+	return r.CreationTime
+}
+
+func (r *resourceMetaObject) GetModificationTime() time.Time {
+	return r.ModificationTime
+}
+
+func (r *resourceMetaObject) GetLabels() map[string]string {
+	return r.Labels
 }
