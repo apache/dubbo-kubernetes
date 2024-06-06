@@ -19,7 +19,9 @@ package service
 
 import (
 	"strconv"
+)
 
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
@@ -55,18 +57,18 @@ func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([
 	instMap := make(map[string]*model.InstanceDetail)
 	for _, dataplane := range dataplaneList.Items {
 
-		//instName := dataplane.Meta.GetLabels()[mesh_proto.InstanceTag]//This tag is "" in universal mode
+		// instName := dataplane.Meta.GetLabels()[mesh_proto.InstanceTag]//This tag is "" in universal mode
 		instName := dataplane.Meta.GetName()
 		var instanceDetail *model.InstanceDetail
 		if _, ok := instMap[instName]; ok {
-			//found previously recorded instance detail in instMap
-			//the detail should be merged with the new instance detail
+			// found previously recorded instance detail in instMap
+			// the detail should be merged with the new instance detail
 			instanceDetail = instMap[instName]
 		} else {
-			//the instance information appears for the 1st time
+			// the instance information appears for the 1st time
 			instanceDetail = model.NewInstanceDetail()
 		}
-		instanceDetail.Merge(dataplane) //convert dataplane info to instance detail
+		instanceDetail.Merge(dataplane) // convert dataplane info to instance detail
 		instMap[instName] = instanceDetail
 	}
 

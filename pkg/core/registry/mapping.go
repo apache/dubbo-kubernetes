@@ -18,19 +18,22 @@
 package registry
 
 import (
-	"dubbo.apache.org/dubbo-go/v3/common"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/events"
-	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 	"sync"
 )
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 
 	gxset "github.com/dubbogo/gost/container/set"
 	"github.com/dubbogo/gost/gof/observer"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
 )
 
 type ServiceMappingChangedListenerImpl struct {

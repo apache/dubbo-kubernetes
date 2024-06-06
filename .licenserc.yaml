@@ -85,6 +85,12 @@ header:
     - '**/.nvmrc'
     - '**/**.txtar'
     - '**/**gen.go'
+    - '**/api/**'
+    - '**/deploy/**'
+    - '**/mk/**'
+    - '**/test/**'
+    - '**/tools/**'
+    - '**/apis/**'
   comment: on-failure
 
   license-location-threshold: 130

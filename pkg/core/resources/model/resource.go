@@ -60,13 +60,6 @@ type ResourceKey struct {
 	Name string
 }
 
-type ResourceReq struct {
-	Mesh      string
-	Name      string
-	PodName   string
-	Namespace string
-}
-
 type ResourceScope string
 
 const (
