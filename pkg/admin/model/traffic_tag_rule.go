@@ -17,7 +17,9 @@
 
 package model
 
-import mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+)
 
 type TagRuleSearchResp struct {
 	Code    int64                     `json:"code"`

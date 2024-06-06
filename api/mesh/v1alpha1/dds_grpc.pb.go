@@ -4,7 +4,11 @@ package v1alpha1
 
 import (
 	context "context"
+)
+
+import (
 	v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
