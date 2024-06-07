@@ -320,7 +320,8 @@ func (s *KubernetesStore) List(ctx context.Context, rs core_model.ResourceList, 
 	return nil
 }
 
-var k8sNameCheck, _ = regexp.Compile(`[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*`)
+// Define the regex pattern for a valid RFC 1123 subdomain
+var k8sNameCheck = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 func k8sNameNamespace(coreName string, scope k8s_model.Scope) (string, string, error) {
 	if coreName == "" {

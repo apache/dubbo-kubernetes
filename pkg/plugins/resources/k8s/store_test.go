@@ -25,6 +25,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestK8sNameCheck(t *testing.T) {
+	assert.False(t, k8sNameCheck.MatchString("com.apache.ServiceName::.Suffix"))
+	assert.False(t, k8sNameCheck.MatchString("AAAAA.condition-router"))
+	assert.True(t, k8sNameCheck.MatchString("asdf.condition-router"))
+}
+
 func TestEncodeDecodeK8sName(t *testing.T) {
 	var name string
 	{
