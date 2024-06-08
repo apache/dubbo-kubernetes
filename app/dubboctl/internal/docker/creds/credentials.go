@@ -186,8 +186,12 @@ func NewCredentialsProvider(configPath string, opts ...Opt) docker.CredentialsPr
 	}
 
 	c.authFilePath = filepath.Join(configPath, "auth.json")
-	sys := &containersTypes.SystemContext{
+	dockerSys := &containersTypes.SystemContext{
 		AuthFilePath: c.authFilePath,
+	}
+
+	podmanSys := &containersTypes.SystemContext{
+		AuthFilePath: getPodmanAuthFilePath(),
 	}
 
 	home, err := os.UserHomeDir()
@@ -203,8 +207,24 @@ func NewCredentialsProvider(configPath string, opts ...Opt) docker.CredentialsPr
 		func(registry string) (docker.Credentials, error) {
 			return getCredentialsByCredentialHelper(dockerConfigPath, registry)
 		},
+		// docker auth config
 		func(registry string) (docker.Credentials, error) {
-			creds, err := dockerConfig.GetCredentials(sys, registry)
+			creds, err := dockerConfig.GetCredentials(dockerSys, registry)
+			if err != nil {
+				return docker.Credentials{}, err
+			}
+			return docker.Credentials{
+				Username: creds.Username,
+				Password: creds.Password,
+			}, nil
+		},
+		// podman auth config
+		func(registry string) (docker.Credentials, error) {
+			if podmanSys.AuthFilePath == "" {
+				// podman auth config is not available
+				return docker.Credentials{}, ErrCredentialsNotFound
+			}
+			creds, err := dockerConfig.GetCredentials(podmanSys, registry)
 			if err != nil {
 				return docker.Credentials{}, err
 			}
@@ -409,6 +429,24 @@ func setCredentialsByCredentialHelper(confFilePath, registry, username, secret s
 	p := client.NewShellProgramFunc(helperName)
 
 	return client.Store(p, &credentials.Credentials{ServerURL: registry, Username: username, Secret: secret})
+}
+
+// getPodmanAuthFilePath returns the path to the podman auth file.
+// documentation for the auth file can be found here:
+// https://github.com/containers/image/blob/main/docs/containers-auth.json.5.md
+func getPodmanAuthFilePath() string {
+	if runtime.GOOS == "windows" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		return filepath.Join(homeDir, ".config", "containers", "auth.json")
+	}
+	xdgRuntimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if xdgRuntimeDir == "" {
+		return ""
+	}
+	return filepath.Join(xdgRuntimeDir, "containers", "auth.json")
 }
 
 func listCredentialHelpers() []string {
