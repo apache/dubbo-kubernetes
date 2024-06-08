@@ -48,16 +48,20 @@ type ServiceMappingChangedListenerImpl struct {
 }
 
 func NewMappingListener(
+	interfaceKey string,
 	oldServiceNames *gxset.HashSet,
 	listener registry.NotifyListener,
 	writer events.Emitter,
 	systemNamespace string,
+	delSDRegistry registry.ServiceDiscovery,
 ) *ServiceMappingChangedListenerImpl {
 	return &ServiceMappingChangedListenerImpl{
+		interfaceKey:    interfaceKey,
 		listener:        listener,
 		oldServiceNames: oldServiceNames,
 		eventWriter:     writer,
 		systemNamespace: systemNamespace,
+		delSDRegistry:   delSDRegistry,
 	}
 }
 
