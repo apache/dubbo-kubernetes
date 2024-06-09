@@ -155,9 +155,9 @@ func addMutators(mgr kube_ctrl.Manager, rt core_runtime.Runtime, converter k8s_c
 	podEnvInjectMutator := k8s_webhooks.PodMutatingWebhook(
 		func(ctx context.Context, pod *kube_core.Pod) error {
 			RegistryCenterUrl := rt.RegistryCenter().GetURL()
-			if pod.Labels["app.kubernetes.io/name"] == "dubbo-admin" {
+			if pod.Labels["dubbo.io/name"] == "dubbo-admin" {
 				pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, kube_core.EnvVar{
-					Name:  "REGISTRY_CENTER_URL",
+					Name:  "DUBBO_REGISTRY_ADDRESS",
 					Value: RegistryCenterUrl.String(),
 				})
 				//TODO support more

@@ -73,7 +73,6 @@ webhooks:
         operations:
           - CREATE
         resources:
-          - conditionroutes
           - dynamicconfigs
           - tagroutes
     sideEffects: None
