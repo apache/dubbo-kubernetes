@@ -114,13 +114,13 @@ func (r *Registry) Subscribe(
 			logger.Error("Failed to get mapping")
 		}
 		for interfaceKey, oldApps := range mappings {
-			mappingListener := NewMappingListener(oldApps, listener, out, systemNamespace)
+			mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate)
 			apps, _ := metadataReport.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
 			delSDListener := NewDubboSDNotifyListener(apps)
 			for appTmp := range apps.Items {
 				app := appTmp.(string)
 				instances := r.sdDelegate.GetInstances(app)
-				logger.Infof("Synchronized instance notification on subscription, instance list size %s", len(instances))
+				logger.Infof("Synchronized instance notification on subscription, instance list size %d", len(instances))
 				if len(instances) > 0 {
 					err = delSDListener.OnEvent(&dubboRegistry.ServiceInstancesChangedEvent{
 						ServiceName: app,
