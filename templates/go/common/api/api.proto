@@ -2,7 +2,7 @@
 syntax = "proto3";
 package api;
 
-option go_package = "./;api";
+option go_package = "./api";
 
 // The greeting service definition.
 service Greeter {
