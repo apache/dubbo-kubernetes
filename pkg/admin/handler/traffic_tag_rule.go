@@ -140,7 +140,7 @@ func PostTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", nil))
+			c.JSON(http.StatusCreated, model.GenTagRouteResp(http.StatusCreated, "success", nil))
 		}
 	}
 }
@@ -162,6 +162,6 @@ func DeleteTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", nil))
+		c.JSON(http.StatusNoContent, model.GenTagRouteResp(http.StatusNoContent, "success", nil))
 	}
 }

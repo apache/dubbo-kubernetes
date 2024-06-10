@@ -74,12 +74,6 @@ func NewStore(client kube_client.Client, scheme *kube_runtime.Scheme, converter 
 func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs ...store.CreateOptionsFunc) error {
 	opts := store.NewCreateOptions(fs...)
 
-	if name, err := EncodeK8sResName(opts.Name); err != nil {
-		return err
-	} else {
-		opts.Name = name
-	}
-
 	obj, err := s.Converter.ToKubernetesObject(r)
 	if err != nil {
 		if typeIsUnregistered(err) {
@@ -89,6 +83,11 @@ func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs 
 	}
 	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
 	if err != nil {
+		return err
+	}
+
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
 		return err
 	}
 
@@ -132,24 +131,7 @@ func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs 
 func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs ...store.UpdateOptionsFunc) error {
 	opts := store.NewUpdateOptions(fs...)
 
-	if name, err := EncodeK8sResName(opts.Name); err != nil {
-		return err
-	} else {
-		opts.Name = name
-	}
-
-	// get object and validate mesh, metadata
-	tr := r.Descriptor().NewObject()
-	if err := s.Get(ctx, tr, store.GetByKey(opts.Name, opts.Mesh)); err != nil {
-		return err
-	}
-
-	err := tr.SetSpec(r.GetSpec())
-	if err != nil {
-		panic(err)
-	}
-
-	obj, err := s.Converter.ToKubernetesObject(tr)
+	obj, err := s.Converter.ToKubernetesObject(r)
 	if err != nil {
 		if typeIsUnregistered(err) {
 			return errors.Errorf("cannot update instance of unregistered type %q", r.Descriptor().Name)
@@ -158,16 +140,37 @@ func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs 
 	}
 
 	obj.GetObjectMeta().SetLabels(opts.Labels)
-	obj.SetMesh(tr.GetMeta().GetMesh())
 
-	if err := s.Client.Update(ctx, obj); err != nil {
+	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
+	if err != nil {
+		return err
+	}
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
+		return err
+	}
+
+	if r.GetMeta() == nil {
+		if err = s.Client.Get(ctx, kube_client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
+			if kube_apierrs.IsNotFound(err) {
+				return store.ErrorResourceNotFound(r.Descriptor().Name, opts.Name, opts.Mesh)
+			}
+			return errors.Wrap(err, "failed to get k8s resource")
+		}
+		obj.SetSpec(r.GetSpec())
+	} else {
+		obj.SetName(name)
+		obj.SetMesh(r.GetMeta().GetMesh())
+	}
+
+	if err = s.Client.Update(ctx, obj); err != nil {
 		if kube_apierrs.IsConflict(err) {
 			return store.ErrorResourceConflict(r.Descriptor().Name, r.GetMeta().GetName(), r.GetMeta().GetMesh())
 		}
 		return errors.Wrap(err, "failed to update k8s resource")
 	}
 
-	if name, err := DecodeK8sResName(obj.GetName()); err != nil {
+	if name, err = DecodeK8sResName(obj.GetName()); err != nil {
 		return err
 	} else {
 		obj.SetName(name)
@@ -182,12 +185,6 @@ func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs 
 
 func (s *KubernetesStore) Delete(ctx context.Context, r core_model.Resource, fs ...store.DeleteOptionsFunc) error {
 	opts := store.NewDeleteOptions(fs...)
-
-	if name, err := EncodeK8sResName(opts.Name); err != nil {
-		return err
-	} else {
-		opts.Name = name
-	}
 
 	// get object and validate mesh
 	if err := s.Get(ctx, r, store.GetByKey(opts.Name, opts.Mesh)); err != nil {
@@ -205,6 +202,11 @@ func (s *KubernetesStore) Delete(ctx context.Context, r core_model.Resource, fs 
 
 	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
 	if err != nil {
+		return err
+	}
+
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
 		return err
 	}
 
@@ -229,12 +231,6 @@ func (s *KubernetesStore) Delete(ctx context.Context, r core_model.Resource, fs 
 func (s *KubernetesStore) Get(ctx context.Context, r core_model.Resource, fs ...store.GetOptionsFunc) error {
 	opts := store.NewGetOptions(fs...)
 
-	if name, err := EncodeK8sResName(opts.Name); err != nil {
-		return err
-	} else {
-		opts.Name = name
-	}
-
 	obj, err := s.Converter.ToKubernetesObject(r)
 	if err != nil {
 		if typeIsUnregistered(err) {
@@ -245,6 +241,11 @@ func (s *KubernetesStore) Get(ctx context.Context, r core_model.Resource, fs ...
 
 	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
 	if err != nil {
+		return err
+	}
+
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
 		return err
 	}
 
@@ -319,9 +320,6 @@ func (s *KubernetesStore) List(ctx context.Context, rs core_model.ResourceList, 
 	rs.GetPagination().SetTotal(uint32(len(fullList.GetItems())))
 	return nil
 }
-
-// Define the regex pattern for a valid RFC 1123 subdomain
-var k8sNameCheck = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 func k8sNameNamespace(coreName string, scope k8s_model.Scope) (string, string, error) {
 	if coreName == "" {
@@ -408,10 +406,15 @@ func (f *SimpleKubeFactory) NewList(rl core_model.ResourceList) (k8s_model.Kuber
 	return f.KubeTypes.NewList(rl.NewItem().GetSpec())
 }
 
-var _Aa = []byte{0x4c: 0x6c, 0x53: 0x73, 0x57: 0x77, 0x5f: 0x31, 0x40: 0x32, 0x44: 0x64, 0x47: 0x67, 0x49: 0x69, 0x51: 0x71, 0x43: 0x63, 0x4a: 0x6a, 0x4f: 0x6f, 0x54: 0x74, 0x24: 0x33, 0x26: 0x35, 0x41: 0x61, 0x42: 0x62, 0x50: 0x70, 0x59: 0x79, 0x4b: 0x6b, 0x4e: 0x6e, 0x58: 0x78, 0x55: 0x75, 0x5a: 0x7a, 0x25: 0x34, 0x45: 0x65, 0x48: 0x68, 0x4d: 0x6d, 0x3a: 0x30, 0x46: 0x66, 0x52: 0x72, 0x56: 0x76}
-var _aA = []byte{0x6c: 0x4c, 0x73: 0x53, 0x77: 0x57, 0x31: 0x5f, 0x32: 0x40, 0x64: 0x44, 0x67: 0x47, 0x69: 0x49, 0x71: 0x51, 0x63: 0x43, 0x6a: 0x4a, 0x6f: 0x4f, 0x74: 0x54, 0x33: 0x24, 0x35: 0x26, 0x61: 0x41, 0x62: 0x42, 0x70: 0x50, 0x79: 0x59, 0x6b: 0x4b, 0x6e: 0x4e, 0x78: 0x58, 0x75: 0x55, 0x7a: 0x5a, 0x34: 0x25, 0x65: 0x45, 0x68: 0x48, 0x6d: 0x4d, 0x30: 0x3a, 0x66: 0x46, 0x72: 0x52, 0x76: 0x56}
+// Define the regex pattern for a valid RFC 1123 subdomain
+// for k8s [metadata.name] require.
+var k8sNameCheck = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
+
+var _Aa = []byte{'A': 'a', 'B': 'b', 'C': 'c', 'D': 'd', 'E': 'e', 'F': 'f', 'G': 'g', 'H': 'h', 'I': 'i', 'J': 'j', 'K': 'k', 'L': 'l', 'M': 'm', 'N': 'n', 'O': 'o', 'P': 'p', 'Q': 'q', 'R': 'r', 'S': 's', 'T': 't', 'U': 'u', 'V': 'v', 'W': 'w', 'X': 'x', 'Y': 'y', 'Z': 'z', ':': '0', '_': '1', '@': '2'}
+var _aA = []byte{'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F', 'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L', 'm': 'M', 'n': 'N', 'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S', 't': 'T', 'u': 'U', 'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z', '0': ':', '1': '_', '2': '@'}
 
 func EncodeK8sResName(name string) (string, error) {
+	// if match success, return
 	if k8sNameCheck.MatchString(name) {
 		return name, nil
 	}
@@ -423,10 +426,12 @@ func EncodeK8sResName(name string) (string, error) {
 			bs.Set(int32(index))
 		}
 	}
+	// return transString.base32toTransIndex.re
 	return string(bf) + "." + bs.Encode() + ".re", nil
 }
 
 func DecodeK8sResName(name string) (string, error) {
+	// check is encoded name
 	raw, ok := strings.CutSuffix(name, ".re")
 	if !ok {
 		return name, nil
@@ -442,7 +447,10 @@ func DecodeK8sResName(name string) (string, error) {
 	}
 	bt := []byte(raw[:i])
 	bs.Range(func(idx int, val bool) bool {
-		if val {
+		if idx >= len(bt) {
+			return false
+		}
+		if val && len(_aA) > int(bt[idx]) && _aA[bt[idx]] != 0 {
 			bt[idx] = _aA[bt[idx]]
 		}
 		return true
