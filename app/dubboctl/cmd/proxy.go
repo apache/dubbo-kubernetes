@@ -112,7 +112,6 @@ func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 		Short: "Commands related to proxy",
 		Long:  "Commands help user to generate Ingress and Egress",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			return nil
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {

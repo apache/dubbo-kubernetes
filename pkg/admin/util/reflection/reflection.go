@@ -25,11 +25,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+)
 
+import (
 	"github.com/fullstorydev/grpcurl"
+
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
+
 	"github.com/pkg/errors"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"

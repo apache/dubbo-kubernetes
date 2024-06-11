@@ -44,7 +44,7 @@ type SearchInstanceResp struct {
 	RegisterState   string            `json:"registerState"`
 	RegisterCluster string            `json:"registerCluster"`
 	CreateTime      string            `json:"createTime"`
-	RegisterTime    string            `json:"registerTime"` //TODO: not converted
+	RegisterTime    string            `json:"registerTime"` // TODO: not converted
 	Labels          map[string]string `json:"labels"`
 }
 
@@ -54,7 +54,7 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 	meta := dr.GetMeta()
 	r.Name = meta.GetName()
 	r.CreateTime = meta.GetCreationTime().String()
-	r.RegisterTime = r.CreateTime //TODO: seperate createTime and RegisterTime
+	r.RegisterTime = r.CreateTime // TODO: separate createTime and RegisterTime
 	r.RegisterCluster = dr.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]
 	r.DeployCluster = r.RegisterCluster
 	if r.RegisterTime != "" {
@@ -62,10 +62,9 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 	} else {
 		r.RegisterState = "UnRegisted"
 	}
-	//label conversion
-
+	// label conversion
 	r.Labels = meta.GetLabels()
-	//spec conversion
+	// spec conversion
 	spec := dr.Spec
 	{
 		statusValue := spec.Extensions[dataplane.ExtensionsPodPhaseKey]
@@ -77,7 +76,7 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 		}
 		r.DeployState = statusValue
 		r.WorkloadName = spec.Extensions[dataplane.ExtensionsWorkLoadKey]
-		//name field source is different between universal and k8s mode
+		// name field source is different between universal and k8s mode
 		r.AppName = spec.Extensions[dataplane.ExtensionApplicationNameKey]
 		if r.AppName == "" {
 			for _, inbound := range spec.Networking.Inbound {
@@ -217,8 +216,8 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
 	a.RpcPort = int(inbound.Port)
 	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
-	for _, deploycluster := range a.RegisterClusters.Values() {
-		a.DeployCluster = deploycluster //TODO: seperate deployCluster and registerCluster
+	for _, deployCluster := range a.RegisterClusters.Values() {
+		a.DeployCluster = deployCluster // TODO: separate deployCluster and registerCluster
 	}
 	a.Tags = inbound.Tags
 	if a.AppName == "" {
@@ -235,14 +234,13 @@ func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 	a.WorkloadName = extensions[dataplane.ExtensionsWorkLoadKey]
 	a.DeployState = extensions[dataplane.ExtensionsPodPhaseKey]
 	a.Node = extensions[dataplane.ExtensionsNodeNameKey]
-
 }
 
 func (a *InstanceDetail) mergeMeta(meta model.ResourceMeta) {
 	a.CreateTime = meta.GetCreationTime().String()
-	a.RegisterTime = meta.GetModificationTime().String() //Not sure if it's the right field
+	a.RegisterTime = meta.GetModificationTime().String() // Not sure if it's the right field
 	a.ReadyTime = a.RegisterTime
-	//TODO: seperate createTime , RegisterTime and ReadyTime
+	// TODO: separate createTime , RegisterTime and ReadyTime
 	a.Labels = meta.GetLabels()
 }
 
@@ -255,18 +253,18 @@ func (a *InstanceDetail) mergeProbes(probes *mesh_proto.Dataplane_Probes) {
 	portLiveness := probes.Endpoints[2].InboundPort
 	a.Probes = ProbeStruct{
 		StartupProbe: StartupProbe{
-			Type: "HTTP", //TODO: support more scheme
+			Type: "HTTP", // TODO: support more scheme
 
 			Port: int(portStartup),
 			Open: true,
 		},
 		ReadinessProbe: ReadinessProbe{
-			Type: "HTTP", //TODO: support more scheme
+			Type: "HTTP", // TODO: support more scheme
 			Port: int(portReadiness),
 			Open: true,
 		},
 		LivenessProbe: LivenessProbe{
-			Type: "HTTP", //TODO: support more scheme
+			Type: "HTTP", // TODO: support more scheme
 			Port: int(portLiveness),
 			Open: true,
 		},
