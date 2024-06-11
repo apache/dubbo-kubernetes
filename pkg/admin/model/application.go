@@ -18,9 +18,9 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 import (
@@ -244,17 +244,18 @@ func NewApplicationServiceFormResp() *ApplicationServiceFormResp {
 	}
 }
 
-func (a *ApplicationServiceFormResp) FromApplicationServiceForm(form *ApplicationServiceForm) {
+func (a *ApplicationServiceFormResp) FromApplicationServiceForm(form *ApplicationServiceForm) error {
 	a.ServiceName = form.ServiceName
 	versionGroupList := make([]versionGroup, 0)
 	for _, gv := range form.VersionGroups.Values() {
-		groupAndVersion := strings.Split(gv, " ")
-		versionGroupList = append(versionGroupList, versionGroup{
-			Group:   groupAndVersion[0],
-			Version: groupAndVersion[1],
-		})
+		var versionGroupInfo versionGroup
+		if err := json.Unmarshal([]byte(gv), &versionGroupInfo); err != nil {
+			return err
+		}
+		versionGroupList = append(versionGroupList, versionGroupInfo)
 	}
 	a.VersionGroups = versionGroupList
+	return nil
 }
 
 type ApplicationServiceForm struct {
@@ -269,8 +270,17 @@ func NewApplicationServiceForm(serviceName string) *ApplicationServiceForm {
 	}
 }
 
-func (a *ApplicationServiceForm) FromServiceInfo(serviceInfo *v1alpha1.ServiceInfo) {
-	a.VersionGroups.Add(serviceInfo.Group + " " + serviceInfo.Version)
+func (a *ApplicationServiceForm) FromServiceInfo(serviceInfo *v1alpha1.ServiceInfo) error {
+	versionGroupInfo := versionGroup{
+		Group:   serviceInfo.Group,
+		Version: serviceInfo.Version,
+	}
+	bytes, err := json.Marshal(versionGroupInfo)
+	if err != nil {
+		return err
+	}
+	a.VersionGroups.Add(string(bytes))
+	return nil
 }
 
 type ApplicationSearchResp struct {
