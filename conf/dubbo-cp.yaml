@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # 可选 k8s half universal
-deploy_mode: universal
+deploy_mode: k8s
 #mode: test
 mode: zone
 #multizone:

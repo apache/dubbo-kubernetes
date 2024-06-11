@@ -37,6 +37,7 @@ message OverrideConfig {
 
 message ConditionMatch {
   AddressMatch address = 1;
+  AddressMatch providerAddress = 5;
   ListStringMatch service = 2;
   ListStringMatch application = 3;
   repeated ParamMatch param = 4;
@@ -48,4 +49,4 @@ message AddressMatch {
   string exact = 3;
 }
 
-message ListStringMatch { repeated StringMatch oneof = 1; }
+message ListStringMatch {repeated StringMatch oneof = 1;}

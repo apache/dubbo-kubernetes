@@ -50,10 +50,29 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	}
 
 	{
-		service := router.Group("/service")
-		service.GET("/distribution", handler.GetServiceTabDistribution(rt))
-		service.GET("/search", handler.SearchServices(rt))
-		service.GET("/detail", handler.GetServiceDetail(rt))
-		service.GET("/interfaces", handler.GetServiceInterfaces(rt))
+		configuration := router.Group("/configurator")
+		configuration.GET("/search", handler.ConfiguratorSearch(rt))
+		configuration.GET("/:ruleName", handler.GetConfiguratorWithRuleName(rt))
+		configuration.PUT("/:ruleName", handler.PutConfiguratorWithRuleName(rt))
+		configuration.POST("/:ruleName", handler.PostConfiguratorWithRuleName(rt))
+		configuration.DELETE("/:ruleName", handler.DeleteConfiguratorWithRuleName(rt))
+	}
+
+	{
+		conditionRule := router.Group("/condition-rule")
+		conditionRule.GET("/search", handler.ConditionRuleSearch(rt))
+		conditionRule.GET("/:ruleName", handler.GetConditionRuleWithRuleName(rt))
+		conditionRule.PUT("/:ruleName", handler.PutConditionRuleWithRuleName(rt))
+		conditionRule.POST("/:ruleName", handler.PostConditionRuleWithRuleName(rt))
+		conditionRule.DELETE("/:ruleName", handler.DeleteConditionRuleWithRuleName(rt))
+	}
+
+	{
+		tagRule := router.Group("/tag-rule")
+		tagRule.GET("/search", handler.TagRuleSearch(rt))
+		tagRule.GET("/:ruleName", handler.GetTagRuleWithRuleName(rt))
+		tagRule.PUT("/:ruleName", handler.PutTagRuleWithRuleName(rt))
+		tagRule.POST("/:ruleName", handler.PostTagRuleWithRuleName(rt))
+		tagRule.DELETE("/:ruleName", handler.DeleteTagRuleWithRuleName(rt))
 	}
 }
