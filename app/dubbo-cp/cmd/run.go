@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/defaults"
 	"time"
 )
 
