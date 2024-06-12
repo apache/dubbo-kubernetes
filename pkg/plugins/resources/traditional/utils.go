@@ -19,9 +19,15 @@ package traditional
 
 import (
 	"fmt"
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"gopkg.in/yaml.v2"
 	"strings"
+)
+
+import (
+	"gopkg.in/yaml.v2"
+)
+
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 func GenerateCpGroupPath(resourceName string, name string) string {

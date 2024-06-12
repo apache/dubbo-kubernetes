@@ -37,7 +37,7 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 	appMap := make(map[string]*model.ApplicationDetail)
 	for _, dataplane := range dataplaneList.Items {
 		appName := dataplane.Meta.GetLabels()[mesh_proto.AppTag]
-		//appName := dataplane.Spec.Networking.Inbound[0].GetTags()[mesh_proto.AppTag]
+		// appName := dataplane.Spec.Networking.Inbound[0].GetTags()[mesh_proto.AppTag]
 		var applicationDetail *model.ApplicationDetail
 		if _, ok := appMap[appName]; ok {
 			applicationDetail = appMap[appName]
@@ -55,7 +55,7 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 		return nil, err
 	}
 
-	//get data from metadata
+	// get data from metadata
 	for _, metadata := range metadataList.Items {
 		if appDetail, ok := appMap[metadata.Spec.App]; ok {
 			appDetail.MergeMetaData(metadata)
@@ -94,11 +94,6 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.Applicati
 
 func GetApplicationServiceFormInfo(rt core_runtime.Runtime, req *model.ApplicationServiceFormReq) ([]*model.ApplicationServiceFormResp, error) {
 	manager := rt.ResourceManager()
-	dataplaneList := &mesh.DataplaneResourceList{}
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.AppName)); err != nil {
-		return nil, err
-	}
-
 	metadataList := &mesh.MetaDataResourceList{}
 	if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(req.AppName)); err != nil {
 		return nil, err
@@ -115,9 +110,13 @@ func getApplicationServiceFormInfoBySide(side string, metadataList *mesh.MetaDat
 			if serviceInfo.Params[constants.ServiceInfoSide] == side {
 				applicationServiceForm := model.NewApplicationServiceForm(serviceInfo.Name)
 				if _, ok := serviceMap[serviceInfo.Name]; ok {
-					serviceMap[serviceInfo.Name].FromServiceInfo(serviceInfo)
+					if err := serviceMap[serviceInfo.Name].FromServiceInfo(serviceInfo); err != nil {
+						return nil, err
+					}
 				} else {
-					applicationServiceForm.FromServiceInfo(serviceInfo)
+					if err := applicationServiceForm.FromServiceInfo(serviceInfo); err != nil {
+						return nil, err
+					}
 					serviceMap[serviceInfo.Name] = applicationServiceForm
 				}
 			}
@@ -126,7 +125,9 @@ func getApplicationServiceFormInfoBySide(side string, metadataList *mesh.MetaDat
 
 	for _, applicationServiceForm := range serviceMap {
 		applicationServiceFormResp := model.NewApplicationServiceFormResp()
-		applicationServiceFormResp.FromApplicationServiceForm(applicationServiceForm)
+		if err := applicationServiceFormResp.FromApplicationServiceForm(applicationServiceForm); err != nil {
+			return nil, err
+		}
 		res = append(res, applicationServiceFormResp)
 	}
 	return res, nil

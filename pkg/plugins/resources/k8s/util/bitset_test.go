@@ -15,41 +15,52 @@
  * limitations under the License.
  */
 
-package metadata
+package util
 
 import (
 	"fmt"
+	"testing"
 )
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/stretchr/testify/assert"
 )
 
-type RegisterRequest struct {
-	ConfigsUpdated map[core_model.ResourceReq]*mesh_proto.MetaData
-}
+func TestBitset(t *testing.T) {
+	bitset := NewBitset()
 
-func (q *RegisterRequest) merge(req *RegisterRequest) *RegisterRequest {
-	if q == nil {
-		return req
-	}
-	for key, metaData := range req.ConfigsUpdated {
-		q.ConfigsUpdated[key] = metaData
+	// Testing Set() and Range()
+	bitset.Set(0)
+	bitset.Set(5)
+	bitset.Set(10)
+
+	ans := map[int]bool{}
+	bitset.Range(func(idx int, val bool) bool {
+		if val {
+			ans[idx] = true
+		}
+		return true
+	})
+
+	// Testing Encode() and Decode()
+	encoded := bitset.Encode()
+	fmt.Println("Encoded:", encoded)
+
+	newBitset := NewBitset()
+	err := newBitset.Decode(encoded)
+	if err != nil {
+		t.Errorf("Decode error: %v", err)
 	}
 
-	return q
-}
-
-func configsUpdated(req *RegisterRequest) string {
-	configs := ""
-	for key := range req.ConfigsUpdated {
-		configs += key.Name + "." + key.Mesh
-		break
-	}
-	if len(req.ConfigsUpdated) > 1 {
-		more := fmt.Sprintf(" and %d more configs", len(req.ConfigsUpdated)-1)
-		configs += more
-	}
-	return configs
+	newBitset.Range(func(idx int, val bool) bool {
+		if val {
+			i := ans[idx]
+			if !i {
+				t.Errorf("bit %v should be present", idx)
+			}
+			delete(ans, idx)
+		}
+		return true
+	})
+	assert.Equal(t, 0, len(ans))
 }

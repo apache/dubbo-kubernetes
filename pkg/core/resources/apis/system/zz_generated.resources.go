@@ -6,7 +6,9 @@ package system
 
 import (
 	"fmt"
+)
 
+import (
 	system_proto "github.com/apache/dubbo-kubernetes/api/system/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"

@@ -19,6 +19,7 @@ package k8s
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -45,6 +46,7 @@ import (
 	k8s_common "github.com/apache/dubbo-kubernetes/pkg/plugins/common/k8s"
 	k8s_model "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/model"
 	k8s_registry "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/pkg/registry"
+	util_store "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/util"
 	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 )
 
@@ -71,6 +73,7 @@ func NewStore(client kube_client.Client, scheme *kube_runtime.Scheme, converter 
 
 func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs ...store.CreateOptionsFunc) error {
 	opts := store.NewCreateOptions(fs...)
+
 	obj, err := s.Converter.ToKubernetesObject(r)
 	if err != nil {
 		if typeIsUnregistered(err) {
@@ -80,6 +83,11 @@ func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs 
 	}
 	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
 	if err != nil {
+		return err
+	}
+
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
 		return err
 	}
 
@@ -106,6 +114,13 @@ func (s *KubernetesStore) Create(ctx context.Context, r core_model.Resource, fs 
 		}
 		return errors.Wrap(err, "failed to create k8s resource")
 	}
+
+	if name, err = DecodeK8sResName(obj.GetName()); err != nil {
+		return err
+	} else {
+		obj.SetName(name)
+	}
+
 	err = s.Converter.ToCoreResource(obj, r)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert k8s model into core counterpart")
@@ -124,22 +139,43 @@ func (s *KubernetesStore) Update(ctx context.Context, r core_model.Resource, fs 
 		return errors.Wrapf(err, "failed to convert core model of type %s into k8s counterpart", r.Descriptor().Name)
 	}
 
+	obj.GetObjectMeta().SetLabels(opts.Labels)
+
 	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
 	if err != nil {
 		return err
 	}
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
+		return err
+	}
 
-	obj.GetObjectMeta().SetLabels(opts.Labels)
-	obj.SetMesh(opts.Mesh)
-	obj.GetObjectMeta().SetName(name)
-	obj.GetObjectMeta().SetNamespace(namespace)
+	if r.GetMeta() == nil {
+		if err = s.Client.Get(ctx, kube_client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
+			if kube_apierrs.IsNotFound(err) {
+				return store.ErrorResourceNotFound(r.Descriptor().Name, opts.Name, opts.Mesh)
+			}
+			return errors.Wrap(err, "failed to get k8s resource")
+		}
+		obj.SetSpec(r.GetSpec())
+	} else {
+		obj.SetName(name)
+		obj.SetMesh(r.GetMeta().GetMesh())
+	}
 
-	if err := s.Client.Update(ctx, obj); err != nil {
+	if err = s.Client.Update(ctx, obj); err != nil {
 		if kube_apierrs.IsConflict(err) {
 			return store.ErrorResourceConflict(r.Descriptor().Name, r.GetMeta().GetName(), r.GetMeta().GetMesh())
 		}
 		return errors.Wrap(err, "failed to update k8s resource")
 	}
+
+	if name, err = DecodeK8sResName(obj.GetName()); err != nil {
+		return err
+	} else {
+		obj.SetName(name)
+	}
+
 	err = s.Converter.ToCoreResource(obj, r)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert k8s model into core counterpart")
@@ -168,8 +204,21 @@ func (s *KubernetesStore) Delete(ctx context.Context, r core_model.Resource, fs 
 	if err != nil {
 		return err
 	}
+
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
+		return err
+	}
+
 	obj.GetObjectMeta().SetName(name)
 	obj.GetObjectMeta().SetNamespace(namespace)
+
+	if name, err = DecodeK8sResName(obj.GetName()); err != nil {
+		return err
+	} else {
+		obj.SetName(name)
+	}
+
 	if err := s.Client.Delete(ctx, obj); err != nil {
 		if kube_apierrs.IsNotFound(err) {
 			return nil
@@ -181,6 +230,7 @@ func (s *KubernetesStore) Delete(ctx context.Context, r core_model.Resource, fs 
 
 func (s *KubernetesStore) Get(ctx context.Context, r core_model.Resource, fs ...store.GetOptionsFunc) error {
 	opts := store.NewGetOptions(fs...)
+
 	obj, err := s.Converter.ToKubernetesObject(r)
 	if err != nil {
 		if typeIsUnregistered(err) {
@@ -188,16 +238,30 @@ func (s *KubernetesStore) Get(ctx context.Context, r core_model.Resource, fs ...
 		}
 		return errors.Wrapf(err, "failed to convert core model of type %s into k8s counterpart", r.Descriptor().Name)
 	}
+
 	name, namespace, err := k8sNameNamespace(opts.Name, obj.Scope())
 	if err != nil {
 		return err
 	}
+
+	// for k8s metadata.name require
+	if name, err = EncodeK8sResName(name); err != nil {
+		return err
+	}
+
 	if err := s.Client.Get(ctx, kube_client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
 		if kube_apierrs.IsNotFound(err) {
 			return store.ErrorResourceNotFound(r.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		return errors.Wrap(err, "failed to get k8s resource")
 	}
+
+	if name, err = DecodeK8sResName(obj.GetName()); err != nil {
+		return err
+	} else {
+		obj.SetName(name)
+	}
+
 	if err := s.Converter.ToCoreResource(obj, r); err != nil {
 		return errors.Wrap(err, "failed to convert k8s model into core counterpart")
 	}
@@ -212,6 +276,7 @@ func (s *KubernetesStore) Get(ctx context.Context, r core_model.Resource, fs ...
 
 func (s *KubernetesStore) List(ctx context.Context, rs core_model.ResourceList, fs ...store.ListOptionsFunc) error {
 	opts := store.NewListOptions(fs...)
+
 	obj, err := s.Converter.ToKubernetesList(rs)
 	if err != nil {
 		if typeIsUnregistered(err) {
@@ -219,9 +284,11 @@ func (s *KubernetesStore) List(ctx context.Context, rs core_model.ResourceList, 
 		}
 		return errors.Wrapf(err, "failed to convert core list model of type %s into k8s counterpart", rs.GetItemType())
 	}
+
 	if err := s.Client.List(ctx, obj); err != nil {
 		return errors.Wrap(err, "failed to list k8s resources")
 	}
+
 	predicate := func(r core_model.Resource) bool {
 		if opts.Mesh != "" && r.GetMeta().GetMesh() != opts.Mesh {
 			return false
@@ -231,10 +298,17 @@ func (s *KubernetesStore) List(ctx context.Context, rs core_model.ResourceList, 
 		}
 		return true
 	}
+
 	fullList, err := registry.Global().NewList(rs.GetItemType())
 	if err != nil {
 		return err
 	}
+
+	for _, object := range obj.GetItems() {
+		name, _ := DecodeK8sResName(object.GetName())
+		object.SetName(name)
+	}
+
 	if err := s.Converter.ToCoreList(obj, fullList, predicate); err != nil {
 		return errors.Wrap(err, "failed to convert k8s model into core counterpart")
 	}
@@ -330,4 +404,56 @@ func (f *SimpleKubeFactory) NewObject(r core_model.Resource) (k8s_model.Kubernet
 
 func (f *SimpleKubeFactory) NewList(rl core_model.ResourceList) (k8s_model.KubernetesList, error) {
 	return f.KubeTypes.NewList(rl.NewItem().GetSpec())
+}
+
+// Define the regex pattern for a valid RFC 1123 subdomain
+// for k8s [metadata.name] require.
+var k8sNameCheck = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
+
+var _Aa = []byte{'A': 'a', 'B': 'b', 'C': 'c', 'D': 'd', 'E': 'e', 'F': 'f', 'G': 'g', 'H': 'h', 'I': 'i', 'J': 'j', 'K': 'k', 'L': 'l', 'M': 'm', 'N': 'n', 'O': 'o', 'P': 'p', 'Q': 'q', 'R': 'r', 'S': 's', 'T': 't', 'U': 'u', 'V': 'v', 'W': 'w', 'X': 'x', 'Y': 'y', 'Z': 'z', ':': '0', '_': '1', '@': '2'}
+var _aA = []byte{'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F', 'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L', 'm': 'M', 'n': 'N', 'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S', 't': 'T', 'u': 'U', 'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z', '0': ':', '1': '_', '2': '@'}
+
+func EncodeK8sResName(name string) (string, error) {
+	// if match success, return
+	if k8sNameCheck.MatchString(name) {
+		return name, nil
+	}
+	bs := util_store.NewBitset()
+	bf := []byte(name)
+	for index, char := range bf {
+		if char < uint8(len(_Aa)) && _Aa[char] != 0 {
+			bf[index] = _Aa[char]
+			bs.Set(int32(index))
+		}
+	}
+	// return transString.base32toTransIndex.re
+	return string(bf) + "." + bs.Encode() + ".re", nil
+}
+
+func DecodeK8sResName(name string) (string, error) {
+	// check is encoded name
+	raw, ok := strings.CutSuffix(name, ".re")
+	if !ok {
+		return name, nil
+	}
+	i := strings.LastIndex(raw, ".")
+	if i == -1 {
+		return "", store.PreconditionFormatError("DecodeK8sResName fail")
+	}
+	bs := util_store.NewBitset()
+	err := bs.Decode(raw[i+1:])
+	if err != nil {
+		return "", store.PreconditionFormatError(err.Error())
+	}
+	bt := []byte(raw[:i])
+	bs.Range(func(idx int, val bool) bool {
+		if idx >= len(bt) {
+			return false
+		}
+		if val && len(_aA) > int(bt[idx]) && _aA[bt[idx]] != 0 {
+			bt[idx] = _aA[bt[idx]]
+		}
+		return true
+	})
+	return string(bt), nil
 }

@@ -4,7 +4,11 @@ package v1alpha1
 
 import (
 	context "context"
+)
+
+import (
 	v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -14,124 +18,6 @@ import (
 // is compatible with the grpc package it is being compiled against.
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
-
-// DubboDiscoveryServiceClient is the client API for DubboDiscoveryService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type DubboDiscoveryServiceClient interface {
-	StreamDubboResources(ctx context.Context, opts ...grpc.CallOption) (DubboDiscoveryService_StreamDubboResourcesClient, error)
-}
-
-type dubboDiscoveryServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewDubboDiscoveryServiceClient(cc grpc.ClientConnInterface) DubboDiscoveryServiceClient {
-	return &dubboDiscoveryServiceClient{cc}
-}
-
-func (c *dubboDiscoveryServiceClient) StreamDubboResources(ctx context.Context, opts ...grpc.CallOption) (DubboDiscoveryService_StreamDubboResourcesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &DubboDiscoveryService_ServiceDesc.Streams[0], "/dubbo.mesh.v1alpha1.DubboDiscoveryService/StreamDubboResources", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &dubboDiscoveryServiceStreamDubboResourcesClient{stream}
-	return x, nil
-}
-
-type DubboDiscoveryService_StreamDubboResourcesClient interface {
-	Send(*v3.DiscoveryRequest) error
-	Recv() (*v3.DiscoveryResponse, error)
-	grpc.ClientStream
-}
-
-type dubboDiscoveryServiceStreamDubboResourcesClient struct {
-	grpc.ClientStream
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesClient) Send(m *v3.DiscoveryRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesClient) Recv() (*v3.DiscoveryResponse, error) {
-	m := new(v3.DiscoveryResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// DubboDiscoveryServiceServer is the server API for DubboDiscoveryService service.
-// All implementations must embed UnimplementedDubboDiscoveryServiceServer
-// for forward compatibility
-type DubboDiscoveryServiceServer interface {
-	StreamDubboResources(DubboDiscoveryService_StreamDubboResourcesServer) error
-	mustEmbedUnimplementedDubboDiscoveryServiceServer()
-}
-
-// UnimplementedDubboDiscoveryServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedDubboDiscoveryServiceServer struct {
-}
-
-func (UnimplementedDubboDiscoveryServiceServer) StreamDubboResources(DubboDiscoveryService_StreamDubboResourcesServer) error {
-	return status.Errorf(codes.Unimplemented, "method StreamDubboResources not implemented")
-}
-func (UnimplementedDubboDiscoveryServiceServer) mustEmbedUnimplementedDubboDiscoveryServiceServer() {}
-
-// UnsafeDubboDiscoveryServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to DubboDiscoveryServiceServer will
-// result in compilation errors.
-type UnsafeDubboDiscoveryServiceServer interface {
-	mustEmbedUnimplementedDubboDiscoveryServiceServer()
-}
-
-func RegisterDubboDiscoveryServiceServer(s grpc.ServiceRegistrar, srv DubboDiscoveryServiceServer) {
-	s.RegisterService(&DubboDiscoveryService_ServiceDesc, srv)
-}
-
-func _DubboDiscoveryService_StreamDubboResources_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DubboDiscoveryServiceServer).StreamDubboResources(&dubboDiscoveryServiceStreamDubboResourcesServer{stream})
-}
-
-type DubboDiscoveryService_StreamDubboResourcesServer interface {
-	Send(*v3.DiscoveryResponse) error
-	Recv() (*v3.DiscoveryRequest, error)
-	grpc.ServerStream
-}
-
-type dubboDiscoveryServiceStreamDubboResourcesServer struct {
-	grpc.ServerStream
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesServer) Send(m *v3.DiscoveryResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesServer) Recv() (*v3.DiscoveryRequest, error) {
-	m := new(v3.DiscoveryRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// DubboDiscoveryService_ServiceDesc is the grpc.ServiceDesc for DubboDiscoveryService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var DubboDiscoveryService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "dubbo.mesh.v1alpha1.DubboDiscoveryService",
-	HandlerType: (*DubboDiscoveryServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamDubboResources",
-			Handler:       _DubboDiscoveryService_StreamDubboResources_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
-	Metadata: "api/mesh/v1alpha1/dds.proto",
-}
 
 // GlobalDDSServiceClient is the client API for GlobalDDSService service.
 //

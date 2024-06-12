@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package metadata
+package server
 
 import (
 	"time"
