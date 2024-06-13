@@ -70,10 +70,10 @@ type RespAddress struct {
 }
 
 type RespListStringMatch struct {
-	Oneof []RespStringMatch `json:"oneof,omitempty"`
+	Oneof []StringMatch `json:"oneof,omitempty"`
 }
 
-type RespStringMatch struct {
+type StringMatch struct {
 	Empty    *string `json:"empty,omitempty"`
 	Exact    *string `json:"exact,omitempty"`
 	Noempty  *string `json:"noempty,omitempty"`
@@ -83,8 +83,8 @@ type RespStringMatch struct {
 }
 
 type RespParamMatch struct {
-	Key   *string          `json:"key,omitempty"`
-	Value *RespStringMatch `json:"value,omitempty"`
+	Key   *string      `json:"key,omitempty"`
+	Value *StringMatch `json:"value,omitempty"`
 }
 
 type RespAddressMatch struct {
@@ -175,30 +175,50 @@ func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []RespParamMatch
 		for _, match := range param {
 			res = append(res, RespParamMatch{
 				Key:   &match.Key,
-				Value: stringMatchToRespStringMatch(match.Value),
+				Value: StringMatchToModelStringMatch(match.Value),
 			})
 		}
 	}
 	return res
 }
 
-func stringMatchToRespStringMatch(stringMatch *mesh_proto.StringMatch) *RespStringMatch {
+func StringMatchToModelStringMatch(stringMatch *mesh_proto.StringMatch) *StringMatch {
 	if stringMatch == nil {
 		return nil
 	} else if stringMatch.Exact != "" {
-		return &RespStringMatch{Exact: &stringMatch.Exact}
+		return &StringMatch{Exact: &stringMatch.Exact}
 	} else if stringMatch.Prefix != "" {
-		return &RespStringMatch{Prefix: &stringMatch.Prefix}
+		return &StringMatch{Prefix: &stringMatch.Prefix}
 	} else if stringMatch.Regex != "" {
-		return &RespStringMatch{Regex: &stringMatch.Regex}
+		return &StringMatch{Regex: &stringMatch.Regex}
 	} else if stringMatch.Noempty != "" {
-		return &RespStringMatch{Noempty: &stringMatch.Noempty}
+		return &StringMatch{Noempty: &stringMatch.Noempty}
 	} else if stringMatch.Empty != "" {
-		return &RespStringMatch{Empty: &stringMatch.Empty}
+		return &StringMatch{Empty: &stringMatch.Empty}
 	} else if stringMatch.Wildcard != "" {
-		return &RespStringMatch{Wildcard: &stringMatch.Wildcard}
+		return &StringMatch{Wildcard: &stringMatch.Wildcard}
 	} else {
-		return &RespStringMatch{}
+		return &StringMatch{}
+	}
+}
+
+func ModelStringMatchToStringMatch(stringMatch *StringMatch) *mesh_proto.StringMatch {
+	if stringMatch == nil {
+		return nil
+	} else if stringMatch.Exact != nil {
+		return &mesh_proto.StringMatch{Exact: *stringMatch.Exact}
+	} else if stringMatch.Prefix != nil {
+		return &mesh_proto.StringMatch{Prefix: *stringMatch.Prefix}
+	} else if stringMatch.Regex != nil {
+		return &mesh_proto.StringMatch{Regex: *stringMatch.Regex}
+	} else if stringMatch.Noempty != nil {
+		return &mesh_proto.StringMatch{Noempty: *stringMatch.Noempty}
+	} else if stringMatch.Empty != nil {
+		return &mesh_proto.StringMatch{Empty: *stringMatch.Empty}
+	} else if stringMatch.Wildcard != nil {
+		return &mesh_proto.StringMatch{Wildcard: *stringMatch.Wildcard}
+	} else {
+		return &mesh_proto.StringMatch{}
 	}
 }
 
@@ -206,10 +226,10 @@ func listStringMatchToRespListStringMatch(listStringMatch *mesh_proto.ListString
 	if listStringMatch == nil {
 		return nil
 	}
-	res := &RespListStringMatch{Oneof: make([]RespStringMatch, 0, len(listStringMatch.Oneof))}
+	res := &RespListStringMatch{Oneof: make([]StringMatch, 0, len(listStringMatch.Oneof))}
 	if listStringMatch.Oneof != nil {
 		for _, match := range listStringMatch.Oneof {
-			res.Oneof = append(res.Oneof, *stringMatchToRespStringMatch(match))
+			res.Oneof = append(res.Oneof, *StringMatchToModelStringMatch(match))
 		}
 	}
 	return res

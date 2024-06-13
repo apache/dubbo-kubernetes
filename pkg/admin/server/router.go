@@ -41,7 +41,7 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		application.GET("/service/form", handler.GetApplicationServiceForm(rt))
 		application.GET("/search", handler.ApplicationSearch(rt))
 		{
-			applicationConfig := application.Group("/config/:applicationName")
+			applicationConfig := application.Group("/config")
 			applicationConfig.PUT("/operatorLog", handler.ApplicationConfigOperatorLogPut(rt))
 			applicationConfig.GET("/operatorLog", handler.ApplicationConfigOperatorLogGet(rt))
 

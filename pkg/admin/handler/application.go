@@ -21,7 +21,9 @@ package handler
 // 资源详情-应用
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"net/http"
+	"strconv"
 )
 
 import (
@@ -101,7 +103,6 @@ func ApplicationSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func isAppOperatorLogOpened(conf *mesh_proto.OverrideConfig, appName string) bool {
 	if conf.Side != "provider" ||
-		!conf.Enabled ||
 		conf.Parameters == nil ||
 		conf.Match == nil ||
 		conf.Match.Application == nil ||
@@ -131,27 +132,26 @@ func generatorDefaultConfigurator(name string, scope string, version string, ena
 func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var (
-			param = struct {
-				ApplicationName string `json:"applicationName"`
-				OperatorLog     bool   `json:"operatorLog"`
-			}{}
-			isNotExist = false
+			ApplicationName string
+			OperatorLog     bool
+			isNotExist      = false
 		)
-		err := c.BindQuery(&param)
+		ApplicationName = c.Query("appName")
+		OperatorLog, err := strconv.ParseBool(c.Query("operatorLog"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		res, err := getConfigurator(rt, param.ApplicationName)
+		res, err := getConfigurator(rt, ApplicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				// for check app exist
-				_, err = service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: param.ApplicationName})
-				if err != nil {
+				data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
+				if err != nil || len(data) == 0 {
 					c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 					return
 				}
-				res = generatorDefaultConfigurator(param.ApplicationName, "Application", consts.DefaultConfiguratorVersion, true)
+				res = generatorDefaultConfigurator(ApplicationName, "Application", consts.DefaultConfiguratorVersion, true)
 				isNotExist = true
 			} else {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -159,12 +159,22 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 			}
 		}
 		// append or remove
-		if param.OperatorLog {
+		if OperatorLog {
+			// check is already exist
+			alreadyExist := false
+			res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+				alreadyExist = isAppOperatorLogOpened(conf, ApplicationName)
+				return alreadyExist
+			})
+			if alreadyExist {
+				c.JSON(http.StatusOK, model.NewSuccessResp(nil))
+				return
+			}
 			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
 				Side:          "provider",
 				Parameters:    map[string]string{`accesslog`: `true`},
 				Enabled:       true,
-				Match:         &mesh_proto.ConditionMatch{Application: &mesh_proto.ListStringMatch{Oneof: []*mesh_proto.StringMatch{{Exact: param.ApplicationName}}}},
+				Match:         &mesh_proto.ConditionMatch{Application: &mesh_proto.ListStringMatch{Oneof: []*mesh_proto.StringMatch{{Exact: ApplicationName}}}},
 				XGenerateByCp: true,
 			})
 		} else {
@@ -172,18 +182,18 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 				if conf == nil {
 					return true
 				}
-				return isAppOperatorLogOpened(conf, param.ApplicationName)
+				return isAppOperatorLogOpened(conf, ApplicationName)
 			})
 		}
-		// rewrite
+		// restore
 		if isNotExist {
-			err = createConfigurator(rt, param.ApplicationName, res)
+			err = createConfigurator(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateConfigurator(rt, param.ApplicationName, res)
+			err = updateConfigurator(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
@@ -195,17 +205,12 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ApplicationConfigOperatorLogGet(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var (
-			param = struct {
-				ApplicationName string `json:"applicationName"`
-			}{}
-		)
-		err := c.BindQuery(&param)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+		ApplicationName := c.Query("appName")
+		if ApplicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("appName is required"))
 			return
 		}
-		res, err := getConfigurator(rt, param.ApplicationName)
+		res, err := getConfigurator(rt, ApplicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusOK, model.NewSuccessResp(map[string]interface{}{"operatorLog": false}))
@@ -216,7 +221,7 @@ func ApplicationConfigOperatorLogGet(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 		isExist := false
 		res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
-			if isExist = isAppOperatorLogOpened(conf, param.ApplicationName); isExist {
+			if isExist = isAppOperatorLogOpened(conf, ApplicationName); isExist {
 				return true
 			}
 			return false
@@ -227,13 +232,138 @@ func ApplicationConfigOperatorLogGet(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var (
+			ApplicationName string
+			resp            = struct {
+				FlowWeightSets []model.FlowWeightSet `json:"flowWeightSets"`
+			}{}
+		)
+		ApplicationName = c.Query("appName")
+		if ApplicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("appName is required"))
+			return
+		}
 
+		resp.FlowWeightSets = make([]model.FlowWeightSet, 0)
+
+		res, err := getConfigurator(rt, ApplicationName)
+		if err != nil {
+			if core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+				return
+			}
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		w := 0
+		res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+			if isFlowWeight(conf) {
+				w, err = strconv.Atoi(conf.Parameters[`weight`])
+				if err != nil {
+					logger.Error("parse weight failed", err)
+					return true
+				}
+				resp.FlowWeightSets = append(resp.FlowWeightSets, model.FlowWeightSet{
+					Weight: int32(w),
+					Scope: model.RespParamMatch{
+						Key:   &conf.Match.Param[0].Key,
+						Value: model.StringMatchToModelStringMatch(conf.Match.Param[0].Value),
+					},
+				})
+			}
+			return false
+		})
+		if err != nil {
+			c.JSON(http.StatusOK, model.NewErrorResp(err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
+}
+
+func isFlowWeight(conf *mesh_proto.OverrideConfig) bool {
+	if conf.Side != "provider" ||
+		conf.Parameters == nil ||
+		conf.Match == nil ||
+		conf.Match.Param == nil ||
+		len(conf.Match.Param) != 1 ||
+		conf.Match.Param[0].Value == nil {
+		return false
+	} else if _, ok := conf.Parameters[`weight`]; !ok {
+		return false
+	}
+	return true
 }
 
 func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var (
+			ApplicationName = ""
+			body            = struct {
+				FlowWeightSets []model.FlowWeightSet `json:"flowWeightSets"`
+			}{}
+		)
+		ApplicationName = c.Query("appName")
+		if ApplicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is required"))
+		}
+		if err := c.Bind(&body); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
 
+		isNotExist := false
+		res, err := getConfigurator(rt, ApplicationName)
+		if err != nil {
+			if core_store.IsResourceNotFound(err) {
+				// for check app exist
+				data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
+				if err != nil || len(data) == 0 {
+					c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+					return
+				}
+				res = generatorDefaultConfigurator(ApplicationName, "Application", consts.DefaultConfiguratorVersion, true)
+				isNotExist = true
+			} else {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			}
+		}
+
+		res.Spec.RangeConfigsToRemove(func(conf *mesh_proto.OverrideConfig) (IsRemove bool) {
+			return isFlowWeight(conf)
+		})
+
+		for _, set := range body.FlowWeightSets {
+			// append to res
+			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
+				Side:       "provider",
+				Parameters: map[string]string{`weight`: string(set.Weight)},
+				Match: &mesh_proto.ConditionMatch{
+					Param: []*mesh_proto.ParamMatch{{
+						Key:   *set.Scope.Key,
+						Value: model.ModelStringMatchToStringMatch(set.Scope.Value),
+					}},
+				},
+				XGenerateByCp: true,
+			})
+		}
+
+		if isNotExist {
+			err = createConfigurator(rt, ApplicationName, res)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
+		} else {
+			err = updateConfigurator(rt, ApplicationName, res)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 	}
 }
 
