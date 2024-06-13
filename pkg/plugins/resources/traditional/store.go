@@ -48,6 +48,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 )
@@ -285,7 +286,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 		if cfg == "" {
-			return fmt.Errorf("tag route %s not found", path)
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
@@ -312,7 +313,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 		if cfg == "" {
-			return fmt.Errorf("no existing condition route for path: %s", path)
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 
 		bytes, err := core_model.ToYAML(resource.GetSpec())
@@ -340,7 +341,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		if err != nil {
 			return err
 		} else if existConfig == "" {
-			return fmt.Errorf("no existing dynamic configuration for path: %s", path)
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 
 		override := resource.GetSpec().(*mesh_proto.DynamicConfig)
@@ -467,7 +468,6 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 	case mesh.DataplaneType:
 		// 不支持删除
 	case mesh.TagRouteType:
-
 		labels := opts.Labels
 		base := mesh_proto.Base{
 			Application:    labels[mesh_proto.Application],
@@ -595,7 +595,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 				panic(err)
 			}
 		} else {
-			return fmt.Errorf("Tag route %s resource not exist ", path)
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -626,7 +626,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 				panic(err)
 			}
 		} else {
-			return fmt.Errorf("condition route %s resource not exist ", path)
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -657,7 +657,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 				panic(err)
 			}
 		} else {
-			return fmt.Errorf("%s resource not exist ", path)
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -843,7 +843,6 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				}
 			}
 		}
-
 	case mesh.DynamicConfigType:
 		cfg, err := c.governance.GetList(consts.ConfiguratorRuleSuffix)
 		if err != nil {

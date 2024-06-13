@@ -43,15 +43,12 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		{
 			applicationConfig := application.Group("/config/:applicationName")
 			applicationConfig.PUT("/operatorLog", handler.ApplicationConfigOperatorLogPut(rt))
+			applicationConfig.GET("/operatorLog", handler.ApplicationConfigOperatorLogGet(rt))
 
 			applicationConfig.GET("/flowWeight", handler.ApplicationConfigFlowWeightGET(rt))
-			applicationConfig.POST("/flowWeight", handler.ApplicationConfigFlowWeightPOST(rt))
-			applicationConfig.DELETE("/flowWeight", handler.ApplicationConfigFlowWeightDELETE(rt))
 			applicationConfig.PUT("/flowWeight", handler.ApplicationConfigFlowWeightPUT(rt))
 
 			applicationConfig.GET("/gray", handler.ApplicationConfigGrayGET(rt))
-			applicationConfig.POST("/gray", handler.ApplicationConfigGrayPOST(rt))
-			applicationConfig.DELETE("/gray", handler.ApplicationConfigGrayDELETE(rt))
 			applicationConfig.PUT("/gray", handler.ApplicationConfigGrayPUT(rt))
 		}
 	}

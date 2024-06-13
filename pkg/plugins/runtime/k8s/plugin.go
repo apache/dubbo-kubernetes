@@ -19,7 +19,11 @@ package k8s
 
 import (
 	"context"
+)
+
+import (
 	"github.com/pkg/errors"
+
 	kube_core "k8s.io/api/core/v1"
 
 	kube_ctrl "sigs.k8s.io/controller-runtime"
