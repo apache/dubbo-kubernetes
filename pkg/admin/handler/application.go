@@ -21,7 +21,6 @@ package handler
 // 资源详情-应用
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"net/http"
 	"strconv"
 )
@@ -35,6 +34,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
@@ -116,7 +116,7 @@ func isAppOperatorLogOpened(conf *mesh_proto.OverrideConfig, appName string) boo
 	return true
 }
 
-func generatorDefaultConfigurator(name string, scope string, version string, enabled bool) *core_mesh.DynamicConfigResource {
+func generateDefaultConfigurator(name string, scope string, version string, enabled bool) *core_mesh.DynamicConfigResource {
 	return &core_mesh.DynamicConfigResource{
 		Meta: nil,
 		Spec: &mesh_proto.DynamicConfig{
@@ -151,7 +151,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 					c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 					return
 				}
-				res = generatorDefaultConfigurator(ApplicationName, "Application", consts.DefaultConfiguratorVersion, true)
+				res = generateDefaultConfigurator(ApplicationName, "application", consts.DefaultConfiguratorVersion, true)
 				isNotExist = true
 			} else {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -256,17 +256,17 @@ func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		w := 0
+		weight := 0
 		res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
 			if isFlowWeight(conf) {
-				w, err = strconv.Atoi(conf.Parameters[`weight`])
+				weight, err = strconv.Atoi(conf.Parameters[`weight`])
 				if err != nil {
 					logger.Error("parse weight failed", err)
 					return true
 				}
 				resp.FlowWeightSets = append(resp.FlowWeightSets, model.FlowWeightSet{
-					Weight: int32(w),
-					Scope: model.RespParamMatch{
+					Weight: int32(weight),
+					Scope: model.ParamMatch{
 						Key:   &conf.Match.Param[0].Key,
 						Value: model.StringMatchToModelStringMatch(conf.Match.Param[0].Value),
 					},
@@ -312,7 +312,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-
+		// get from store, or generate default resource
 		isNotExist := false
 		res, err := getConfigurator(rt, ApplicationName)
 		if err != nil {
@@ -323,7 +323,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 					c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 					return
 				}
-				res = generatorDefaultConfigurator(ApplicationName, "Application", consts.DefaultConfiguratorVersion, true)
+				res = generateDefaultConfigurator(ApplicationName, "application", consts.DefaultConfiguratorVersion, true)
 				isNotExist = true
 			} else {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -331,12 +331,12 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			}
 		}
 
+		// remove old
 		res.Spec.RangeConfigsToRemove(func(conf *mesh_proto.OverrideConfig) (IsRemove bool) {
 			return isFlowWeight(conf)
 		})
-
+		// append new
 		for _, set := range body.FlowWeightSets {
-			// append to res
 			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
 				Side:       "provider",
 				Parameters: map[string]string{`weight`: string(set.Weight)},
@@ -349,7 +349,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				XGenerateByCp: true,
 			})
 		}
-
+		// restore
 		if isNotExist {
 			err = createConfigurator(rt, ApplicationName, res)
 			if err != nil {
@@ -369,12 +369,125 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ApplicationConfigGrayGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var (
+			ApplicationName = ""
+			resp            = struct {
+				GraySets []model.GraySet `json:"graySets"`
+			}{}
+		)
+		ApplicationName = c.Query("appName")
+		if ApplicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("appName is required"))
+			return
+		}
+
+		res, err := getTagRule(rt, ApplicationName)
+		if err != nil {
+			if core_store.IsResourceNotFound(err) {
+				resp.GraySets = make([]model.GraySet, 0)
+				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+				return
+			}
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+		resp.GraySets = make([]model.GraySet, 0, len(res.Spec.Tags))
+
+		res.Spec.RangeTags(func(tag *mesh_proto.Tag) (isStop bool) {
+			if isGrayTag(tag) {
+				resp.GraySets = append(resp.GraySets, model.GraySet{
+					EnvName: tag.Name,
+					Scope: model.ParamMatch{
+						Key:   &tag.Match[0].Key,
+						Value: model.StringMatchToModelStringMatch(tag.Match[0].Value),
+					},
+				})
+			}
+			return false
+		})
 
 	}
 }
 
 func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var (
+			ApplicationName = ""
+			body            = struct {
+				FlowWeightSets []model.GraySet `json:"graySets"`
+			}{}
+		)
+		ApplicationName = c.Query("appName")
+		if ApplicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is required"))
+		}
+		if err := c.Bind(&body); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+		}
 
+		isNotExist := false
+		res, err := getTagRule(rt, ApplicationName)
+		if core_store.IsResourceNotFound(err) {
+			data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
+			if err != nil || len(data) == 0 {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
+			res = generateDefaultTagRule(ApplicationName, consts.DefaultConfiguratorVersion, true, false)
+			isNotExist = true
+		}
+
+		// remove old config, generate config from admin, append
+		res.Spec.RangeTagsToRemove(func(tag *mesh_proto.Tag) (IsRemove bool) {
+			return isGrayTag(tag)
+		})
+		newList := make([]*mesh_proto.Tag, 0)
+		for _, set := range body.FlowWeightSets {
+			newList = append(newList, &mesh_proto.Tag{
+				Name: set.EnvName,
+				Match: []*mesh_proto.ParamMatch{{
+					Key:   *set.Scope.Key,
+					Value: model.ModelStringMatchToStringMatch(set.Scope.Value),
+				}},
+				XGenerateByCp: true,
+			})
+		}
+		res.Spec.Tags = append(res.Spec.Tags, newList...)
+
+		// restore
+		if isNotExist {
+			err = createTagRule(rt, ApplicationName, res)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
+		} else {
+			err = updateTagRule(rt, ApplicationName, res)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
+	}
+}
+
+func isGrayTag(tag *mesh_proto.Tag) bool {
+	if tag.Name == "" || tag.Addresses != nil || len(tag.Addresses) != 0 || len(tag.Match) != 1 || tag.Match[0].Key == "" || tag.Match[0].Value == nil {
+		return false
+	}
+	return true
+}
+
+func generateDefaultTagRule(name string, version string, enable, force bool) *core_mesh.TagRouteResource {
+	return &core_mesh.TagRouteResource{
+		Meta: nil,
+		Spec: &mesh_proto.TagRoute{
+			Enabled:       enable,
+			Key:           name,
+			ConfigVersion: version,
+			Force:         force,
+			Tags:          make([]*mesh_proto.Tag, 0),
+		},
 	}
 }

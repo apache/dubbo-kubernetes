@@ -41,14 +41,14 @@ type ConfiguratorResp struct {
 }
 
 type RespConfigurator struct {
-	Configs       []RespConfigItem `json:"configs"`
-	ConfigVersion string           `json:"configVersion"`
-	Enabled       bool             `json:"enabled"`
-	Key           string           `json:"key"`
-	Scope         string           `json:"scope"`
+	Configs       []ConfigItem `json:"configs"`
+	ConfigVersion string       `json:"configVersion"`
+	Enabled       bool         `json:"enabled"`
+	Key           string       `json:"key"`
+	Scope         string       `json:"scope"`
 }
 
-type RespConfigItem struct {
+type ConfigItem struct {
 	Enabled    *bool             `json:"enabled,omitempty"`
 	Match      *RespMatch        `json:"match,omitempty"`
 	Parameters map[string]string `json:"parameters"`
@@ -58,7 +58,7 @@ type RespConfigItem struct {
 type RespMatch struct {
 	Address         *RespAddress         `json:"address,omitempty"`
 	App             *RespListStringMatch `json:"app,omitempty"`
-	Param           []RespParamMatch     `json:"param,omitempty"`
+	Param           []ParamMatch         `json:"param,omitempty"`
 	ProviderAddress *RespAddressMatch    `json:"providerAddress,omitempty"`
 	Service         *RespListStringMatch `json:"service,omitempty"`
 }
@@ -82,7 +82,7 @@ type StringMatch struct {
 	Wildcard *string `json:"wildcard,omitempty"`
 }
 
-type RespParamMatch struct {
+type ParamMatch struct {
 	Key   *string      `json:"key,omitempty"`
 	Value *StringMatch `json:"value,omitempty"`
 }
@@ -100,7 +100,7 @@ func GenDynamicConfigToResp(code int, message string, pb *mesh_proto.DynamicConf
 		cfg.Key = pb.Key
 		cfg.Scope = pb.Scope
 		cfg.Enabled = pb.Enabled
-		cfg.Configs = overrideConfigToRespConfigutor(pb.Configs)
+		cfg.Configs = overrideConfigToRespConfigItem(pb.Configs)
 	}
 	res = &ConfiguratorResp{
 		Code:    code,
@@ -110,11 +110,11 @@ func GenDynamicConfigToResp(code int, message string, pb *mesh_proto.DynamicConf
 	return
 }
 
-func overrideConfigToRespConfigutor(OverrideConfigs []*mesh_proto.OverrideConfig) []RespConfigItem {
-	res := make([]RespConfigItem, 0, len(OverrideConfigs))
+func overrideConfigToRespConfigItem(OverrideConfigs []*mesh_proto.OverrideConfig) []ConfigItem {
+	res := make([]ConfigItem, 0, len(OverrideConfigs))
 	if OverrideConfigs != nil {
 		for _, config := range OverrideConfigs {
-			resIt := RespConfigItem{
+			resIt := ConfigItem{
 				Enabled:    &config.Enabled,
 				Match:      conditionMatchToRespMatch(config.Match),
 				Parameters: config.Parameters,
@@ -169,11 +169,11 @@ func addressMatchToRespAddressMatch(address *mesh_proto.AddressMatch) *RespAddre
 		return &RespAddressMatch{}
 	}
 }
-func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []RespParamMatch {
-	res := make([]RespParamMatch, 0, len(param))
+func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []ParamMatch {
+	res := make([]ParamMatch, 0, len(param))
 	if param != nil {
 		for _, match := range param {
-			res = append(res, RespParamMatch{
+			res = append(res, ParamMatch{
 				Key:   &match.Key,
 				Value: StringMatchToModelStringMatch(match.Value),
 			})

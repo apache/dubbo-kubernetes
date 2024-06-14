@@ -51,6 +51,9 @@ func (d *DynamicConfig) ListGenConfigs() []*OverrideConfig {
 }
 
 func (d *DynamicConfig) RangeConfigsToRemove(matchFunc func(conf *OverrideConfig) (IsRemove bool)) {
+	if matchFunc == nil {
+		return
+	}
 	newConf := make([]*OverrideConfig, 0, len(d.Configs)/2+1)
 	for _, config := range d.Configs {
 		if !matchFunc(config) {
@@ -61,6 +64,9 @@ func (d *DynamicConfig) RangeConfigsToRemove(matchFunc func(conf *OverrideConfig
 }
 
 func (d *DynamicConfig) Range(f func(conf *OverrideConfig) (isStop bool)) {
+	if f == nil {
+		return
+	}
 	for _, config := range d.Configs {
 		if f(config) {
 			break

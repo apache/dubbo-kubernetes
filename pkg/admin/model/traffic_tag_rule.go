@@ -49,9 +49,9 @@ type RespTagData struct {
 }
 
 type RespTagElement struct {
-	Addresses []string         `json:"addresses,omitempty"`
-	Match     []RespParamMatch `json:"match,omitempty"`
-	Name      string           `json:"name"`
+	Addresses []string     `json:"addresses,omitempty"`
+	Match     []ParamMatch `json:"match,omitempty"`
+	Name      string       `json:"name"`
 }
 
 func GenTagRouteResp(code int, message string, pb *mesh_proto.TagRoute) *TagRuleResp {

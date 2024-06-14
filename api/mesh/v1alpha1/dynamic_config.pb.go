@@ -121,7 +121,7 @@ type OverrideConfig struct {
 	Type              string            `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
 	Enabled           bool              `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	Match             *ConditionMatch   `protobuf:"bytes,9,opt,name=match,proto3" json:"match,omitempty"`
-	// for cp use
+	// to mark which config generate by control plane
 	XGenerateByCp bool `protobuf:"varint,10,opt,name=__generate_by_cp,json=GenerateByCp,proto3" json:"__generate_by_cp,omitempty"`
 }
 
