@@ -148,7 +148,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 				// for check app exist
 				data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
 				if err != nil || len(data) == 0 {
-					c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
 				}
 				res = generateDefaultConfigurator(ApplicationName, "application", consts.DefaultConfiguratorVersion, true)
@@ -189,13 +189,13 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 		if isNotExist {
 			err = createConfigurator(rt, ApplicationName, res)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
 			err = updateConfigurator(rt, ApplicationName, res)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		}
@@ -216,7 +216,7 @@ func ApplicationConfigOperatorLogGet(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusOK, model.NewSuccessResp(map[string]interface{}{"operatorLog": false}))
 				return
 			}
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 			return
 		}
 		isExist := false
@@ -252,7 +252,7 @@ func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 				return
 			}
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 			return
 		}
 
@@ -275,7 +275,7 @@ func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			return false
 		})
 		if err != nil {
-			c.JSON(http.StatusOK, model.NewErrorResp(err.Error()))
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
 		}
 		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
@@ -320,7 +320,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				// for check app exist
 				data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
 				if err != nil || len(data) == 0 {
-					c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
 				}
 				res = generateDefaultConfigurator(ApplicationName, "application", consts.DefaultConfiguratorVersion, true)
@@ -353,13 +353,13 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		if isNotExist {
 			err = createConfigurator(rt, ApplicationName, res)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
 			err = updateConfigurator(rt, ApplicationName, res)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		}
@@ -388,7 +388,7 @@ func ApplicationConfigGrayGET(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 				return
 			}
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 			return
 		}
 		resp.GraySets = make([]model.GraySet, 0, len(res.Spec.Tags))
@@ -405,7 +405,6 @@ func ApplicationConfigGrayGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			}
 			return false
 		})
-
 	}
 }
 
@@ -430,7 +429,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		if core_store.IsResourceNotFound(err) {
 			data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
 			if err != nil || len(data) == 0 {
-				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 				return
 			}
 			res = generateDefaultTagRule(ApplicationName, consts.DefaultConfiguratorVersion, true, false)
@@ -458,13 +457,13 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		if isNotExist {
 			err = createTagRule(rt, ApplicationName, res)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
 			err = updateTagRule(rt, ApplicationName, res)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		}

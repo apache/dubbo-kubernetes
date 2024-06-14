@@ -21,7 +21,10 @@ package handler
 // 资源详情-实例
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	"net/http"
+	"strconv"
 )
 
 import (
@@ -31,6 +34,7 @@ import (
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
@@ -69,8 +73,132 @@ func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		// pageRes := &model.PageData{}
-		// c.JSON(http.StatusOK, model.NewSuccessResp(pageRes.WithData(instances).WithTotal(int(pageData.Total)).WithCurPage(req.CurPage).WithPageSize(req.PageSize)))
 		c.JSON(http.StatusOK, model.NewSuccessResp(instances))
+	}
+}
+
+func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func InstanceConfigOperatorLogGET(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var (
+			resp = struct {
+				OperatorLog bool `json:"operatorLog"`
+			}{false}
+		)
+		applicationName := c.Query(`appName`)
+		if applicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
+		}
+		instanceIP := c.Query(`instanceIP`)
+		if instanceIP == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
+		}
+
+		res, err := getConfigurator(rt, applicationName)
+		if err != nil {
+			if core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+				return
+			}
+			c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		if res.Spec.Enabled {
+			res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+				resp.OperatorLog = isInstanceOperatorLogOpen(conf, instanceIP)
+				return resp.OperatorLog
+			})
+		}
+
+		c.JSON(http.StatusOK, resp)
+	}
+}
+
+func isInstanceOperatorLogOpen(conf *mesh_proto.OverrideConfig, IP string) bool {
+	if conf != nil &&
+		conf.Match != nil &&
+		conf.Match.Address != nil &&
+		conf.Match.Address.Wildcard == `"`+IP+`:*"` &&
+		conf.Side == "provider" &&
+		conf.Parameters != nil &&
+		conf.Parameters[`accesslog`] == `true` {
+		return true
+	}
+	return false
+}
+
+func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		applicationName := c.Query(`appName`)
+		if applicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
+		}
+		instanceIP := c.Query(`instanceIP`)
+		if instanceIP == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
+		}
+		adminOperatorLog, err := strconv.ParseBool(c.Query(`OperatorLog`))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+		}
+
+		res, err := getConfigurator(rt, applicationName)
+		notExist := false
+		if err != nil {
+			if !core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
+				return
+			}
+			res = generateDefaultConfigurator(applicationName, `application`, consts.DefaultConfiguratorVersion, true)
+			notExist = true
+		}
+
+		if adminOperatorLog {
+			res.Spec.RangeConfigsToRemove(func(conf *mesh_proto.OverrideConfig) (IsRemove bool) {
+				return isInstanceOperatorLogOpen(conf, instanceIP)
+			})
+		} else {
+			var isExist bool
+			res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+				isExist = isInstanceOperatorLogOpen(conf, instanceIP)
+				return isExist
+			})
+			if !isExist {
+				res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
+					Side:          "provider",
+					Match:         &mesh_proto.ConditionMatch{Address: &mesh_proto.AddressMatch{Wildcard: `"` + instanceIP + `:*"`}},
+					Parameters:    map[string]string{`accesslog`: `true`},
+					XGenerateByCp: true,
+				})
+			}
+		}
+
+		if notExist {
+			err = createConfigurator(rt, applicationName, res)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			}
+		} else {
+			err = updateConfigurator(rt, applicationName, res)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			}
+		}
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 	}
 }
