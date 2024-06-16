@@ -35,9 +35,9 @@ type ConditionRuleSearchResp_Data struct {
 }
 
 type ConditionRuleResp struct {
-	Code    int                   `json:"code"`
-	Message string                `json:"message"`
-	Data    RespConditionRuleData `json:"data"`
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 type RespConditionRuleData struct {
@@ -49,16 +49,15 @@ type RespConditionRuleData struct {
 	Scope         string   `json:"scope"`
 }
 
-func GenConditionRuleToResp(code int, message string, pb *mesh_proto.ConditionRoute) *ConditionRuleResp {
-	if pb == nil {
+func GenConditionRuleToResp(code int, message string, data *mesh_proto.ConditionRoute) *ConditionRuleResp {
+	if data == nil {
 		return &ConditionRuleResp{
 			Code:    code,
 			Message: message,
-			Data: RespConditionRuleData{
-				Conditions: make([]string, 0),
-			},
+			Data:    map[string]string{},
 		}
-	} else {
+	}
+	if pb := data.ToConditionRouteV3(); pb != nil {
 		return &ConditionRuleResp{
 			Code:    code,
 			Message: message,
@@ -71,5 +70,71 @@ func GenConditionRuleToResp(code int, message string, pb *mesh_proto.ConditionRo
 				Scope:         pb.Scope,
 			},
 		}
+	} else if pb := data.ToConditionRouteV3x1(); pb != nil {
+		res := ConditionRuleV3X1{
+			Conditions:    make([]Condition, 0, len(pb.Conditions)),
+			ConfigVersion: "v3.1",
+			Enabled:       pb.Enabled,
+			Force:         pb.Force,
+			Key:           pb.Key,
+			Runtime:       pb.Runtime,
+			Scope:         pb.Scope,
+		}
+		for _, condition := range pb.Conditions {
+			ress := Condition{
+				Disable:  condition.TrafficDisable,
+				Force:    condition.Force,
+				From:     Condition_From{Match: condition.From.Match},
+				Priority: condition.Priority,
+				Ratio:    condition.Priority,
+				To:       make([]Condition_To, 0, len(condition.To)),
+			}
+			for _, to := range condition.To {
+				ress.To = append(ress.To, Condition_To{
+					Match:  to.Match,
+					Weight: to.Weight,
+				})
+			}
+			res.Conditions = append(res.Conditions, ress)
+		}
+		return &ConditionRuleResp{
+			Code:    code,
+			Message: message,
+			Data:    res,
+		}
+	} else {
+		return &ConditionRuleResp{
+			Code:    code,
+			Message: message,
+			Data:    data,
+		}
 	}
+}
+
+type ConditionRuleV3X1 struct {
+	Conditions    []Condition `json:"conditions"`
+	ConfigVersion string      `json:"configVersion"`
+	Enabled       bool        `json:"enabled"`
+	Force         bool        `json:"force"`
+	Key           string      `json:"key"`
+	Runtime       bool        `json:"runtime"`
+	Scope         string      `json:"scope"`
+}
+
+type Condition struct {
+	Disable  bool           `json:"disable"`
+	Force    bool           `json:"force"`
+	From     Condition_From `json:"from"`
+	Priority int32          `json:"priority"`
+	Ratio    int32          `json:"ratio"`
+	To       []Condition_To `json:"to"`
+}
+
+type Condition_From struct {
+	Match string `json:"match"`
+}
+
+type Condition_To struct {
+	Match  string `json:"match"`
+	Weight int32  `json:"weight"`
 }

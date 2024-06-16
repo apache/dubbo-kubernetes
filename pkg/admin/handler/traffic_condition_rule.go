@@ -53,12 +53,23 @@ func ConditionRuleSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 			Data:    make([]model.ConditionRuleSearchResp_Data, 0, len(resList.Items)),
 		}
 		for _, item := range resList.Items {
-			resp.Data = append(resp.Data, model.ConditionRuleSearchResp_Data{
-				RuleName:   item.Meta.GetName(),
-				Scope:      item.Spec.GetScope(),
-				CreateTime: item.Meta.GetCreationTime().String(),
-				Enabled:    item.Spec.GetEnabled(),
-			})
+			if v3 := item.Spec.ToConditionRouteV3(); v3 != nil {
+				resp.Data = append(resp.Data, model.ConditionRuleSearchResp_Data{
+					RuleName:   item.Meta.GetName(),
+					Scope:      v3.GetScope(),
+					CreateTime: item.Meta.GetCreationTime().String(),
+					Enabled:    v3.GetEnabled(),
+				})
+			} else if v3x1 := item.Spec.ToConditionRouteV3x1(); v3x1 != nil {
+				resp.Data = append(resp.Data, model.ConditionRuleSearchResp_Data{
+					RuleName:   item.Meta.GetName(),
+					Scope:      v3x1.GetScope(),
+					CreateTime: item.Meta.GetCreationTime().String(),
+					Enabled:    v3x1.GetEnabled(),
+				})
+			} else {
+				panic("invalid condition route item")
+			}
 		}
 		c.JSON(http.StatusOK, resp)
 	}
@@ -68,29 +79,30 @@ func GetConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var name string
 		ruleName := c.Param("ruleName")
-		res := &mesh.ConditionRouteResource{Spec: &mesh_proto.ConditionRoute{}}
 		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
 			name = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
 		} else {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
 			return
 		}
-		if err := getConditionRule(rt, name, res); err != nil {
+		if res, err := getConditionRule(rt, name); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
+		} else {
+			c.JSON(http.StatusOK, model.GenConditionRuleToResp(http.StatusOK, "success", res.Spec))
 		}
-		c.JSON(http.StatusOK, model.GenConditionRuleToResp(http.StatusOK, "success", res.Spec))
 	}
 }
 
-func getConditionRule(rt core_runtime.Runtime, name string, res *mesh.ConditionRouteResource) error {
+func getConditionRule(rt core_runtime.Runtime, name string) (*mesh.ConditionRouteResource, error) {
+	res := &mesh.ConditionRouteResource{Spec: &mesh_proto.ConditionRoute{}}
 	if err := rt.ResourceManager().Get(rt.AppContext(), res,
 		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
 		store.GetByApplication(name), store.GetByKey(name+consts.ConfiguratorRuleSuffix, res_model.DefaultMesh)); err != nil {
 		logger.Warnf("get %s condition failed with error: %s", name, err.Error())
-		return err
+		return nil, err
 	}
-	return nil
+	return res, nil
 }
 
 func PutConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -103,16 +115,18 @@ func PutConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
 			return
 		}
-		res := &mesh.ConditionRouteResource{
-			Meta: nil,
-			Spec: &mesh_proto.ConditionRoute{},
-		}
-		err := c.Bind(res.Spec)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+
+		res := &mesh.ConditionRouteResource{}
+		if v3 := new(mesh_proto.ConditionRouteV3); c.Bind(v3) != nil {
+			res.Spec = v3.ToConditionRoute()
+		} else if v3x1 := new(mesh_proto.ConditionRouteV3); c.Bind(v3x1) != nil {
+			res.Spec = v3x1.ToConditionRoute()
+		} else {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("invalid request body"))
 			return
 		}
-		if err = updateConditionRule(rt, name, res); err != nil {
+
+		if err := updateConditionRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
@@ -141,16 +155,17 @@ func PostConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
 			return
 		}
-		res := &mesh.ConditionRouteResource{
-			Meta: nil,
-			Spec: &mesh_proto.ConditionRoute{},
-		}
-		err := c.Bind(res.Spec)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+		res := &mesh.ConditionRouteResource{}
+		if v3 := new(mesh_proto.ConditionRouteV3); c.Bind(v3) != nil {
+			res.Spec = v3.ToConditionRoute()
+		} else if v3x1 := new(mesh_proto.ConditionRouteV3); c.Bind(v3x1) != nil {
+			res.Spec = v3x1.ToConditionRoute()
+		} else {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("invalid request body"))
 			return
 		}
-		if err = createConditionRule(rt, name, res); err != nil {
+
+		if err := createConditionRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {

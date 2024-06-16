@@ -186,7 +186,7 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 		}
 		key := mesh_proto.BuildServiceKey(base)
 		path := mesh_proto.GetRoutePath(key, consts.ConditionRoute)
-		bytes, err := core_model.ToYAML(resource.GetSpec())
+		bytes, err := resource.GetSpec().(*mesh_proto.ConditionRoute).ToYAML()
 		if err != nil {
 			return err
 		}
@@ -316,7 +316,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 
-		bytes, err := core_model.ToYAML(resource.GetSpec())
+		bytes, err := resource.GetSpec().(*mesh_proto.ConditionRoute).ToYAML()
 		if err != nil {
 			return err
 		}
@@ -617,9 +617,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return err
 		}
 		if cfg != "" {
-			res := &mesh_proto.ConditionRoute{}
-			if err := core_model.FromYAML([]byte(cfg), res); err != nil {
-				return errors.Wrap(err, "failed to convert json to spec")
+			res, err := mesh_proto.ConditionRouteDecodeFromYAML([]byte(cfg))
+			if err != nil {
+				return err
 			}
 			err = resource.SetSpec(res)
 			if err != nil {
@@ -894,19 +894,19 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		for name, rule := range cfg {
 			newIt := resources.NewItem()
 			ConfiguratorCfg, err := parseConditionConfig(rule)
-			_ = newIt.SetSpec(ConfiguratorCfg)
-			meta := &resourceMetaObject{
-				Name:   name,
-				Mesh:   opts.Mesh,
-				Labels: maps.Clone(opts.Labels),
-			}
 			if err != nil {
 				logger.Errorf("failed to parse condition rule: %s : %s, %s", name, rule, err.Error())
 			} else {
-				meta.Version = ConfiguratorCfg.ConfigVersion
+				_ = newIt.SetSpec(ConfiguratorCfg)
+				meta := &resourceMetaObject{
+					Name:   name,
+					Mesh:   opts.Mesh,
+					Labels: maps.Clone(opts.Labels),
+				}
+				meta.Labels[`version`] = ConfiguratorCfg.GetVersion()
+				newIt.SetMeta(meta)
+				_ = resources.AddItem(newIt)
 			}
-			newIt.SetMeta(meta)
-			_ = resources.AddItem(newIt)
 		}
 	default:
 		rootDir := getDubboCpPath(string(resources.GetItemType()))

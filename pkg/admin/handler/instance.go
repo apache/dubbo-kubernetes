@@ -21,19 +21,22 @@ package handler
 // 资源详情-实例
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 import (
 	"github.com/gin-gonic/gin"
+
+	"github.com/pkg/errors"
 )
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
+	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
@@ -79,13 +82,151 @@ func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var resp = struct {
+			TrafficDisable bool `json:"trafficDisable"`
+		}{false}
+		applicationName := c.Param("appName")
+		if applicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
+			return
+		}
+		instanceIP := strings.Trim(c.Param("instanceIP"), " ")
+		if instanceIP == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
+			return
+		}
 
+		res, err := getConditionRule(rt, applicationName)
+		if err != nil {
+			if core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+				return
+			}
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		if res.Spec.GetVersion() != consts.ConfiguratorVersionV3x1 {
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			return
+		}
+
+		cr := res.Spec.ToConditionRouteV3x1()
+		cr.RangeConditions(func(r *mesh_proto.ConditionRule) (isStop bool) {
+			resp.TrafficDisable = isTrafficDisabled(r, instanceIP)
+			return resp.TrafficDisable
+		})
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
+}
+
+func isTrafficDisabled(r *mesh_proto.ConditionRule, targetIP string) bool {
+	if !r.TrafficDisable {
+		return true
+	}
+	// rule must match `host=x1,x2,x3`
+	if r.From.Match != "" && !strings.Contains(r.From.Match, "&") && strings.Index(r.From.Match, "!=") == -1 {
+		idx := strings.Index(r.From.Match, "=")
+		if idx == -1 {
+			return false
+		}
+		then := r.From.Match[idx:]
+		Ips := strings.Split(then, ",")
+		for _, ip := range Ips {
+			if strings.Trim(ip, " ") == targetIP {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		applicationName := c.Query(`appName`)
+		if applicationName == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
+			return
+		}
+		instanceIP := strings.Trim(c.Query("instanceIP"), " ")
+		if instanceIP == "" {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
+			return
+		}
+		trafficDisabled, err := strconv.ParseBool(c.Query(`trafficDisable`))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(errors.Wrap(err, "parse trafficDisable fail").Error()))
+			return
+		}
 
+		// get
+		NotExist := false
+		rawRes, err := getConditionRule(rt, applicationName)
+		var res *mesh_proto.ConditionRouteV3X1
+		if err != nil {
+			if !core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			} else if !trafficDisabled { // not found && cancel traffic-disable
+				c.JSON(http.StatusOK, model.NewSuccessResp(nil))
+				return
+			}
+			NotExist = true
+			res = generateDefaultConditionV3x1(true, true, true, applicationName, `application`)
+		} else if res = rawRes.Spec.ToConditionRouteV3x1(); res == nil {
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			return
+		}
+
+		if res.XGenerateByCp == nil {
+			res.XGenerateByCp = &mesh_proto.XAdminOption{
+				DisabledIP:           make([]string, 0),
+				RegionPrioritize:     false,
+				RegionPrioritizeRete: 0,
+			}
+		} else if res.XGenerateByCp.DisabledIP == nil {
+			res.XGenerateByCp.DisabledIP = make([]string, 0)
+		}
+
+		res.XGenerateByCp.DisabledIP = append(res.XGenerateByCp.DisabledIP, instanceIP)
+		res.ReGenerateCondition()
+
+		err = rawRes.SetSpec(res.ToConditionRoute())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+		if NotExist {
+			err = createConditionRule(rt, applicationName, rawRes)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			}
+		} else {
+			err = updateConditionRule(rt, applicationName, rawRes)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			}
+		}
+	}
+}
+
+func generateDefaultConditionV3x1(Enabled, Force, Runtime bool, Key, Scope string) *mesh_proto.ConditionRouteV3X1 {
+	return &mesh_proto.ConditionRouteV3X1{
+		ConfigVersion: consts.ConfiguratorVersionV3x1,
+		Enabled:       Enabled,
+		Force:         Force,
+		Runtime:       Runtime,
+		Key:           Key,
+		Scope:         Scope,
+		Conditions:    make([]*mesh_proto.ConditionRule, 0),
+		XGenerateByCp: &mesh_proto.XAdminOption{
+			DisabledIP:           make([]string, 0),
+			RegionPrioritize:     false,
+			RegionPrioritizeRete: 0,
+		},
 	}
 }
 
@@ -161,7 +302,7 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 				return
 			}
-			res = generateDefaultConfigurator(applicationName, `application`, consts.DefaultConfiguratorVersion, true)
+			res = generateDefaultConfigurator(applicationName, `application`, consts.ConfiguratorVersionV3, true)
 			notExist = true
 		}
 

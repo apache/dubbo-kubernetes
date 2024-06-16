@@ -151,7 +151,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
 				}
-				res = generateDefaultConfigurator(ApplicationName, "application", consts.DefaultConfiguratorVersion, true)
+				res = generateDefaultConfigurator(ApplicationName, "application", consts.ConfiguratorVersionV3, true)
 				isNotExist = true
 			} else {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -323,7 +323,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
 				}
-				res = generateDefaultConfigurator(ApplicationName, "application", consts.DefaultConfiguratorVersion, true)
+				res = generateDefaultConfigurator(ApplicationName, "application", consts.ConfiguratorVersionV3, true)
 				isNotExist = true
 			} else {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -432,7 +432,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 				return
 			}
-			res = generateDefaultTagRule(ApplicationName, consts.DefaultConfiguratorVersion, true, false)
+			res = generateDefaultTagRule(ApplicationName, consts.ConfiguratorVersionV3, true, false)
 			isNotExist = true
 		}
 

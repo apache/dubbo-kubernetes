@@ -15,12 +15,58 @@ message ConditionRoute {
   option (dubbo.mesh.resource).ws.plural = "conditionroutes";
   option (dubbo.mesh.resource).allow_to_inspect = true;
 
-  string configVersion = 1;
-  int32 priority = 2;
-  bool enabled = 3;
-  bool force = 4;
-  bool runtime = 5;
-  string key = 6;
-  string scope = 7;
-  repeated string conditions = 8;
+  message v3 {
+    string configVersion = 1;
+    int32 priority = 2;
+    bool enabled = 3;
+    bool force = 4;
+    bool runtime = 5;
+    string key = 6;
+    string scope = 7;
+    repeated string conditions = 8;
+  }
+  message v3x1 {
+    string configVersion = 1;
+    bool enabled = 3;
+    bool force = 4;
+    bool runtime = 5;
+    string key = 6;
+    string scope = 7;
+    repeated ConditionRule conditions = 8;
+
+    // to mark how config generate by control plane
+    optional __admin_option __generate_by_cp = 10;
+  }
+
+  oneof conditions {
+    v3 conditionsV3 = 1;
+    v3x1 conditionsV3x1 = 2;
+  }
+}
+
+message __admin_option {
+  repeated string disabledIP = 1;
+  bool regionPrioritize = 2;
+  int32 regionPrioritizeRete = 3;
+}
+
+message ConditionRuleFrom {
+  string match = 1;
+}
+
+message ConditionRuleTo {
+  string match = 1;
+  int32 weight = 2;
+}
+
+message ConditionRule {
+  int32 priority = 1;
+  ConditionRuleFrom from = 2;
+  bool traffic_disable = 3;
+  repeated ConditionRuleTo to = 4;
+  int32 ratio = 5;
+  bool force = 6;
+
+  // to mark which config generate by control plane
+  bool __generate_by_cp = 7;
 }

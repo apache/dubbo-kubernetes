@@ -80,4 +80,7 @@ const (
 
 var Configs = set.NewSet(WeightKey, BalancingKey)
 
-const DefaultConfiguratorVersion = "v3.0"
+const (
+	ConfiguratorVersionV3   = "v3.0"
+	ConfiguratorVersionV3x1 = "v3.1"
+)

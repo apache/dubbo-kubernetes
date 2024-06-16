@@ -104,11 +104,11 @@ func parseConfiguratorConfig(rawRouteData string) (*mesh_proto.DynamicConfig, er
 }
 
 func parseConditionConfig(rawRouteData string) (*mesh_proto.ConditionRoute, error) {
-	routeDecoder := yaml.NewDecoder(strings.NewReader(rawRouteData))
-	routerConfig := &mesh_proto.ConditionRoute{}
-	err := routeDecoder.Decode(routerConfig)
-	if err != nil {
-		return nil, err
+	if v3 := new(mesh_proto.ConditionRouteV3); yaml.Unmarshal([]byte(rawRouteData), &v3) == nil {
+		return v3.ToConditionRoute(), nil
+	} else if v3x1 := new(mesh_proto.ConditionRouteV3X1); yaml.Unmarshal([]byte(rawRouteData), &v3x1) == nil {
+		return v3x1.ToConditionRoute(), nil
+	} else {
+		return nil, fmt.Errorf("failed to parse condition route")
 	}
-	return routerConfig, nil
 }
