@@ -47,7 +47,7 @@ message ConditionRoute {
 message __admin_option {
   repeated string disabledIP = 1;
   bool regionPrioritize = 2;
-  int32 regionPrioritizeRete = 3;
+  int32 regionPrioritizeRate = 3;
 }
 
 message ConditionRuleFrom {

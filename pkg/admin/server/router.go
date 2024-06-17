@@ -63,18 +63,18 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	{
 		service := router.Group("/service")
 		{
-			serviceConfig := service.Group("/config/:serviceName")
-			{
-				serviceConfig.PUT("/timeout", handler.ServiceConfigTimeoutPUT(rt))
-				serviceConfig.PUT("/retry", handler.ServiceConfigRetryPUT(rt))
-				serviceConfig.PUT("/regionPriority", handler.ServiceConfigRegionPriorityPUT(rt))
+			serviceConfig := service.Group("/config")
+			serviceConfig.GET("/timeout", handler.ServiceConfigTimeoutGET(rt))
+			serviceConfig.PUT("/timeout", handler.ServiceConfigTimeoutPUT(rt))
 
-				serviceConfig.PUT("/argumentRoute", handler.ServiceConfigArgumentRoutePUT(rt))
-				serviceConfig.GET("/argumentRoute", handler.ServiceConfigArgumentRouteGET(rt))
-				serviceConfig.DELETE("/argumentRoute", handler.ServiceConfigArgumentRouteDELETE(rt))
-				serviceConfig.POST("/argumentRoute", handler.ServiceConfigArgumentRoutePOST(rt))
+			serviceConfig.GET("/regionPriority", handler.ServiceConfigRegionPriorityGET(rt))
+			serviceConfig.PUT("/regionPriority", handler.ServiceConfigRegionPriorityPUT(rt))
 
-			}
+			serviceConfig.GET("/retry", handler.ServiceConfigRetryGET(rt))
+			serviceConfig.PUT("/retry", handler.ServiceConfigRetryPUT(rt))
+
+			serviceConfig.GET("/argumentRoute", handler.ServiceConfigArgumentRouteGET(rt))
+			serviceConfig.PUT("/argumentRoute", handler.ServiceConfigArgumentRoutePUT(rt))
 		}
 	}
 

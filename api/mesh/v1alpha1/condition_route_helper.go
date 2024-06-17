@@ -103,7 +103,7 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 				Priority:      rule.Priority + 1,
 				From:          rule.From,
 				To:            make([]*ConditionRuleTo, 0, len(rule.To)),
-				Ratio:         max(rule.Ratio, x.XGenerateByCp.RegionPrioritizeRete),
+				Ratio:         max(rule.Ratio, x.XGenerateByCp.RegionPrioritizeRate),
 				Force:         false,
 				XGenerateByCp: true,
 			}
@@ -127,7 +127,7 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 				From:           &ConditionRuleFrom{Match: "" /* match all */},
 				TrafficDisable: false,
 				To:             []*ConditionRuleTo{{Match: "region=$region"}},
-				Ratio:          x.XGenerateByCp.RegionPrioritizeRete,
+				Ratio:          x.XGenerateByCp.RegionPrioritizeRate,
 				Force:          false,
 				XGenerateByCp:  true,
 			})

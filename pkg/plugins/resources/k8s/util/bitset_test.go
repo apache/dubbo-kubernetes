@@ -29,7 +29,7 @@ import (
 func TestBitset(t *testing.T) {
 	bitset := NewBitset()
 
-	// Testing Set() and Range()
+	// Testing Set() and RangeConfig()
 	bitset.Set(0)
 	bitset.Set(5)
 	bitset.Set(10)

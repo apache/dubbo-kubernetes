@@ -162,7 +162,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 		if OperatorLog {
 			// check is already exist
 			alreadyExist := false
-			res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
 				alreadyExist = isAppOperatorLogOpened(conf, ApplicationName)
 				return alreadyExist
 			})
@@ -220,7 +220,7 @@ func ApplicationConfigOperatorLogGet(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 		isExist := false
-		res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+		res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
 			if isExist = isAppOperatorLogOpened(conf, ApplicationName); isExist {
 				return true
 			}
@@ -257,7 +257,7 @@ func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		weight := 0
-		res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+		res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
 			if isFlowWeight(conf) {
 				weight, err = strconv.Atoi(conf.Parameters[`weight`])
 				if err != nil {

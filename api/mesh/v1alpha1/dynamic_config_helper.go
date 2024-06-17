@@ -63,7 +63,7 @@ func (d *DynamicConfig) RangeConfigsToRemove(matchFunc func(conf *OverrideConfig
 	d.Configs = newConf
 }
 
-func (d *DynamicConfig) Range(f func(conf *OverrideConfig) (isStop bool)) {
+func (d *DynamicConfig) RangeConfig(f func(conf *OverrideConfig) (isStop bool)) {
 	if f == nil {
 		return
 	}

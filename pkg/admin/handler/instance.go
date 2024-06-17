@@ -183,7 +183,7 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			res.XGenerateByCp = &mesh_proto.XAdminOption{
 				DisabledIP:           make([]string, 0),
 				RegionPrioritize:     false,
-				RegionPrioritizeRete: 0,
+				RegionPrioritizeRate: 0,
 			}
 		} else if res.XGenerateByCp.DisabledIP == nil {
 			res.XGenerateByCp.DisabledIP = make([]string, 0)
@@ -225,7 +225,7 @@ func generateDefaultConditionV3x1(Enabled, Force, Runtime bool, Key, Scope strin
 		XGenerateByCp: &mesh_proto.XAdminOption{
 			DisabledIP:           make([]string, 0),
 			RegionPrioritize:     false,
-			RegionPrioritizeRete: 0,
+			RegionPrioritizeRate: 0,
 		},
 	}
 }
@@ -257,7 +257,7 @@ func InstanceConfigOperatorLogGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		if res.Spec.Enabled {
-			res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
 				resp.OperatorLog = isInstanceOperatorLogOpen(conf, instanceIP)
 				return resp.OperatorLog
 			})
@@ -312,7 +312,7 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			})
 		} else {
 			var isExist bool
-			res.Spec.Range(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
+			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
 				isExist = isInstanceOperatorLogOpen(conf, instanceIP)
 				return isExist
 			})
