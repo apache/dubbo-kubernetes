@@ -32,8 +32,6 @@ import (
 
 	"github.com/dubbogo/go-zookeeper/zk"
 
-	"github.com/dubbogo/gost/encoding/yaml"
-
 	"github.com/pkg/errors"
 
 	"golang.org/x/exp/maps"
@@ -344,8 +342,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 
-		override := resource.GetSpec().(*mesh_proto.DynamicConfig)
-		if b, err := yaml.MarshalYML(override); err != nil {
+		if b, err := core_model.ToYAML(resource.GetSpec()); err != nil {
 			return err
 		} else {
 			err := t.governance.SetConfig(path, string(b))

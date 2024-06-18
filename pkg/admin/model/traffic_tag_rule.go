@@ -19,6 +19,7 @@ package model
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 )
 
 type TagRuleSearchResp struct {
@@ -70,7 +71,7 @@ func GenTagRouteResp(code int, message string, pb *mesh_proto.TagRoute) *TagRule
 				Enabled:       pb.Enabled,
 				Key:           pb.Key,
 				Runtime:       pb.Runtime,
-				Scope:         "application",
+				Scope:         consts.ScopeApplication,
 				Tags:          tagToRespTagElement(pb.Tags),
 			},
 		}

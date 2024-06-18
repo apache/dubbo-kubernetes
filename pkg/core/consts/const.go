@@ -84,6 +84,10 @@ const (
 	ConfiguratorVersionV3   = `v3.0`
 	ConfiguratorVersionV3x1 = `v3.1`
 	ConfigVersionKey        = `configVersion`
+	ScopeApplication        = `application`
+	ScopeService            = `service`
+	SideProvider            = `provider`
+	SideConsumer            = `consumer`
 )
 
 const (

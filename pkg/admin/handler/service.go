@@ -97,7 +97,7 @@ func ServiceConfigTimeoutGET(rt core_runtime.Runtime) gin.HandlerFunc {
 }
 
 func getServiceTimeout(conf *mesh_proto.OverrideConfig) (int32, bool) {
-	if conf.Side == `provider` && conf.Parameters != nil && conf.Parameters[`timeout`] != "" {
+	if conf.Side == consts.SideProvider && conf.Parameters != nil && conf.Parameters[`timeout`] != "" {
 		timeout, err := strconv.Atoi(conf.Parameters[`timeout`])
 		if err == nil {
 			return int32(timeout), true
@@ -126,7 +126,7 @@ func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor): check service exist or not
 			}
-			res = generateDefaultConfigurator(param.toInterface(), `service`, consts.ConfiguratorVersionV3, true)
+			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
 		} else {
 			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
@@ -140,7 +140,7 @@ func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		if !isExist {
 			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
-				Side:          `provider`,
+				Side:          consts.SideProvider,
 				Parameters:    map[string]string{`timeout`: strconv.Itoa(int(param.Timeout))},
 				XGenerateByCp: true,
 			})
@@ -186,7 +186,7 @@ func ServiceConfigRetryGET(rt core_runtime.Runtime) gin.HandlerFunc {
 }
 
 func getServiceRetryTimes(conf *mesh_proto.OverrideConfig) (int32, bool) {
-	if conf.Side == `consumer` && conf.Parameters != nil && conf.Parameters[`retries`] != "" {
+	if conf.Side == consts.SideConsumer && conf.Parameters != nil && conf.Parameters[`retries`] != "" {
 		retries, err := strconv.Atoi(conf.Parameters[`retries`])
 		if err == nil {
 			return int32(retries), true
@@ -215,7 +215,7 @@ func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor): check service exist or not
 			}
-			res = generateDefaultConfigurator(param.toInterface(), `service`, consts.ConfiguratorVersionV3, true)
+			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
 		} else {
 			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
@@ -229,7 +229,7 @@ func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		if !isExist {
 			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
-				Side:          `consumer`,
+				Side:          consts.SideConsumer,
 				Parameters:    map[string]string{`retries`: strconv.Itoa(int(param.RetryTimes))},
 				XGenerateByCp: true,
 			})
@@ -307,7 +307,7 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				// TODO(YarBor): to check service exist or not
 			} else {
 				rawRes = new(mesh.ConditionRouteResource)
-				rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), `service`).ToConditionRoute()
+				rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
 				isExist = false
 			}
 			c.JSON(http.StatusOK, model.NewSuccessResp(nil))
@@ -405,7 +405,7 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				// TODO(check service is exist or not):
 			}
 			rawRes = new(mesh.ConditionRouteResource)
-			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), `service`).ToConditionRoute()
+			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
 			isExist = false
 		}
 

@@ -173,7 +173,7 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				return
 			}
 			NotExist = true
-			res = generateDefaultConditionV3x1(true, true, true, applicationName, `application`)
+			res = generateDefaultConditionV3x1(true, true, true, applicationName, consts.ScopeApplication)
 		} else if res = rawRes.Spec.ToConditionRouteV3x1(); res == nil {
 			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
 			return
@@ -272,7 +272,7 @@ func isInstanceOperatorLogOpen(conf *mesh_proto.OverrideConfig, IP string) bool 
 		conf.Match != nil &&
 		conf.Match.Address != nil &&
 		conf.Match.Address.Wildcard == `"`+IP+`:*"` &&
-		conf.Side == "provider" &&
+		conf.Side == consts.SideProvider &&
 		conf.Parameters != nil &&
 		conf.Parameters[`accesslog`] == `true` {
 		return true
@@ -302,7 +302,7 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 				return
 			}
-			res = generateDefaultConfigurator(applicationName, `application`, consts.ConfiguratorVersionV3, true)
+			res = generateDefaultConfigurator(applicationName, consts.ScopeApplication, consts.ConfiguratorVersionV3, true)
 			notExist = true
 		}
 
@@ -318,7 +318,7 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			})
 			if !isExist {
 				res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
-					Side:          "provider",
+					Side:          consts.SideProvider,
 					Match:         &mesh_proto.ConditionMatch{Address: &mesh_proto.AddressMatch{Wildcard: `"` + instanceIP + `:*"`}},
 					Parameters:    map[string]string{`accesslog`: `true`},
 					XGenerateByCp: true,

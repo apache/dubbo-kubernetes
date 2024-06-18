@@ -102,7 +102,7 @@ func ApplicationSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 }
 
 func isAppOperatorLogOpened(conf *mesh_proto.OverrideConfig, appName string) bool {
-	if conf.Side != "provider" ||
+	if conf.Side != consts.SideProvider ||
 		conf.Parameters == nil ||
 		conf.Match == nil ||
 		conf.Match.Application == nil ||
@@ -151,7 +151,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
 				}
-				res = generateDefaultConfigurator(ApplicationName, "application", consts.ConfiguratorVersionV3, true)
+				res = generateDefaultConfigurator(ApplicationName, consts.ScopeApplication, consts.ConfiguratorVersionV3, true)
 				isNotExist = true
 			} else {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -170,8 +170,11 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 				return
 			}
+			if res.Spec.Configs == nil {
+				res.Spec.Configs = make([]*mesh_proto.OverrideConfig, 0)
+			}
 			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
-				Side:          "provider",
+				Side:          consts.SideProvider,
 				Parameters:    map[string]string{`accesslog`: `true`},
 				Enabled:       true,
 				Match:         &mesh_proto.ConditionMatch{Application: &mesh_proto.ListStringMatch{Oneof: []*mesh_proto.StringMatch{{Exact: ApplicationName}}}},
@@ -283,7 +286,7 @@ func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 }
 
 func isFlowWeight(conf *mesh_proto.OverrideConfig) bool {
-	if conf.Side != "provider" ||
+	if conf.Side != consts.SideProvider ||
 		conf.Parameters == nil ||
 		conf.Match == nil ||
 		conf.Match.Param == nil ||
@@ -319,11 +322,14 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			if core_store.IsResourceNotFound(err) {
 				// for check app exist
 				data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
-				if err != nil || len(data) == 0 {
+				if err != nil {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
+				} else if len(data) == 0 {
+					c.JSON(http.StatusNotFound, model.NewErrorResp("application not found"))
+					return
 				}
-				res = generateDefaultConfigurator(ApplicationName, "application", consts.ConfiguratorVersionV3, true)
+				res = generateDefaultConfigurator(ApplicationName, consts.ScopeApplication, consts.ConfiguratorVersionV3, true)
 				isNotExist = true
 			} else {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -338,8 +344,8 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		// append new
 		for _, set := range body.FlowWeightSets {
 			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
-				Side:       "provider",
-				Parameters: map[string]string{`weight`: string(set.Weight)},
+				Side:       consts.SideProvider,
+				Parameters: map[string]string{`weight`: strconv.Itoa(int(set.Weight))},
 				Match: &mesh_proto.ConditionMatch{
 					Param: []*mesh_proto.ParamMatch{{
 						Key:   *set.Scope.Key,
@@ -405,6 +411,8 @@ func ApplicationConfigGrayGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			}
 			return false
 		})
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
 
@@ -419,6 +427,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		ApplicationName = c.Query("appName")
 		if ApplicationName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is required"))
+			return
 		}
 		if err := c.Bind(&body); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -428,8 +437,11 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		res, err := getTagRule(rt, ApplicationName)
 		if core_store.IsResourceNotFound(err) {
 			data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
-			if err != nil || len(data) == 0 {
+			if err != nil {
 				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
+				return
+			} else if len(data) == 0 {
+				c.JSON(http.StatusNotFound, model.NewErrorResp("application not found"))
 				return
 			}
 			res = generateDefaultTagRule(ApplicationName, consts.ConfiguratorVersionV3, true, false)
