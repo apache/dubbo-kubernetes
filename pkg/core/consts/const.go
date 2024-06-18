@@ -84,3 +84,8 @@ const (
 	ConfiguratorVersionV3   = "v3.0"
 	ConfiguratorVersionV3x1 = "v3.1"
 )
+
+const (
+	NotEqual = "!="
+	Equal    = "="
+)

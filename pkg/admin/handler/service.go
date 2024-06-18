@@ -349,12 +349,93 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ServiceConfigArgumentRouteGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		param := struct {
+			baseService
+		}{}
+		resp := model.ServiceArgumentRoute{Routes: make([]model.ServiceArgument, 0)}
+		if err := c.Bind(&param); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
 
+		rawRes, err := getConditionRule(rt, param.toInterface())
+		if err != nil {
+			if !core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
+			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+			return
+
+		} else if rawRes.Spec.ToConditionRouteV3() != nil {
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			return
+
+		} else {
+			res := rawRes.Spec.ToConditionRouteV3x1()
+			res.Conditions = res.ListUnGenConditions()                                      // 返回非生成的Condition
+			res.RangeConditionsToRemove(func(r *mesh_proto.ConditionRule) (isRemove bool) { // 去除非方法匹配项
+				_, ok := r.IsMatchMethod()
+				return !ok
+			})
+			c.JSON(http.StatusOK, model.NewSuccessResp(model.ConditionV3x1ToServiceArgumentRoute(res.Conditions)))
+			return
+		}
 	}
 }
 
 func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		param := struct {
+			baseService
+			model.ServiceArgumentRoute
+		}{}
+		if err := c.Bind(&param); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
 
+		isExist := true
+		rawRes, err := getConditionRule(rt, param.toInterface())
+		if err != nil {
+			if !core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			} else if false {
+				// TODO(check service is exist or not):
+			}
+			rawRes = new(mesh.ConditionRouteResource)
+			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), `service`).ToConditionRoute()
+			isExist = false
+		}
+
+		res := rawRes.Spec.ToConditionRouteV3x1()
+		if res == nil {
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			return
+		}
+
+		res.RangeConditionsToRemove(func(r *mesh_proto.ConditionRule) (isRemove bool) {
+			_, ok := r.IsMatchMethod()
+			return ok
+		})
+		res.Conditions = append(res.Conditions, param.ToConditionV3x1Condition()...)
+		res.ReGenerateCondition()
+		rawRes.Spec = res.ToConditionRoute()
+
+		if isExist {
+			err = updateConditionRule(rt, param.toInterface(), rawRes)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			}
+		} else {
+			err = createConditionRule(rt, param.toInterface(), rawRes)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+				return
+			}
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 	}
 }

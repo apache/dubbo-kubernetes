@@ -201,3 +201,16 @@ func (x *ConditionRouteV3X1) RangeConditionsToRemove(f func(r *ConditionRule) (i
 	}
 	x.Conditions = res
 }
+
+func (x *ConditionRule) IsMatchMethod() (string, bool) {
+	conditions := strings.Split(x.From.Match, "&")
+	for _, condition := range conditions {
+		if idx := strings.Index(condition, "method"); idx != -1 {
+			args := strings.Split(condition, consts.Equal)
+			if len(args) == 2 {
+				return strings.TrimSpace(args[1]), true
+			}
+		}
+	}
+	return "", false
+}
