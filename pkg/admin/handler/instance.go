@@ -37,6 +37,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
@@ -85,12 +86,12 @@ func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		var resp = struct {
 			TrafficDisable bool `json:"trafficDisable"`
 		}{false}
-		applicationName := c.Param("appName")
+		applicationName := c.Query("appName")
 		if applicationName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
 			return
 		}
-		instanceIP := strings.Trim(c.Param("instanceIP"), " ")
+		instanceIP := strings.Trim(c.Query("instanceIP"), " ")
 		if instanceIP == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
 			return
@@ -107,7 +108,7 @@ func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		if res.Spec.GetVersion() != consts.ConfiguratorVersionV3x1 {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
 			return
 		}
 
@@ -174,8 +175,9 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			}
 			NotExist = true
 			res = generateDefaultConditionV3x1(true, true, true, applicationName, consts.ScopeApplication)
+			rawRes = &mesh.ConditionRouteResource{Spec: res.ToConditionRoute()}
 		} else if res = rawRes.Spec.ToConditionRouteV3x1(); res == nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
 			return
 		}
 
@@ -189,14 +191,17 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			res.XGenerateByCp.DisabledIP = make([]string, 0)
 		}
 
+		for _, s := range res.XGenerateByCp.DisabledIP { // already disabled
+			if s == instanceIP {
+				c.JSON(http.StatusOK, model.NewSuccessResp(nil))
+				return
+			}
+		}
+
 		res.XGenerateByCp.DisabledIP = append(res.XGenerateByCp.DisabledIP, instanceIP)
 		res.ReGenerateCondition()
+		rawRes.Spec = res.ToConditionRoute()
 
-		err = rawRes.SetSpec(res.ToConditionRoute())
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
-			return
-		}
 		if NotExist {
 			err = createConditionRule(rt, applicationName, rawRes)
 			if err != nil {
@@ -210,6 +215,8 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				return
 			}
 		}
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 	}
 }
 
@@ -240,10 +247,12 @@ func InstanceConfigOperatorLogGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		applicationName := c.Query(`appName`)
 		if applicationName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
+			return
 		}
 		instanceIP := c.Query(`instanceIP`)
 		if instanceIP == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
+			return
 		}
 
 		res, err := getConfigurator(rt, applicationName)
@@ -263,7 +272,7 @@ func InstanceConfigOperatorLogGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			})
 		}
 
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
 
@@ -285,14 +294,17 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		applicationName := c.Query(`appName`)
 		if applicationName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
+			return
 		}
 		instanceIP := c.Query(`instanceIP`)
 		if instanceIP == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
+			return
 		}
-		adminOperatorLog, err := strconv.ParseBool(c.Query(`OperatorLog`))
+		adminOperatorLog, err := strconv.ParseBool(c.Query(`operatorLog`))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
 		}
 
 		res, err := getConfigurator(rt, applicationName)
@@ -306,7 +318,7 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			notExist = true
 		}
 
-		if adminOperatorLog {
+		if !adminOperatorLog {
 			res.Spec.RangeConfigsToRemove(func(conf *mesh_proto.OverrideConfig) (IsRemove bool) {
 				return isInstanceOperatorLogOpen(conf, instanceIP)
 			})
@@ -319,7 +331,7 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			if !isExist {
 				res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
 					Side:          consts.SideProvider,
-					Match:         &mesh_proto.ConditionMatch{Address: &mesh_proto.AddressMatch{Wildcard: `"` + instanceIP + `:*"`}},
+					Match:         &mesh_proto.ConditionMatch{Address: &mesh_proto.AddressMatch{Wildcard: instanceIP + `:*`}},
 					Parameters:    map[string]string{`accesslog`: `true`},
 					XGenerateByCp: true,
 				})

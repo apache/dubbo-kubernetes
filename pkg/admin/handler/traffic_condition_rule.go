@@ -20,7 +20,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
 	"io"
 	"net/http"
 	"strings"
@@ -28,6 +27,8 @@ import (
 
 import (
 	"github.com/gin-gonic/gin"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 import (
@@ -92,6 +93,10 @@ func GetConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
+			if v3x1 := res.Spec.ToConditionRouteV3x1(); v3x1 != nil {
+				v3x1.Conditions = v3x1.ListUnGenConditions()
+				res.Spec = v3x1.ToConditionRoute()
+			}
 			c.JSON(http.StatusOK, model.GenConditionRuleToResp(http.StatusOK, "success", res.Spec))
 		}
 	}
@@ -163,6 +168,17 @@ func PutConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
+			res, err = getConditionRule(rt, name)
+			if err != nil {
+				if !store.IsResourceNotFound(err) {
+					c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+					return
+				}
+			} else if _v3x1 := res.Spec.ToConditionRouteV3x1(); _v3x1 != nil {
+				v3x1.XGenerateByCp = _v3x1.XGenerateByCp
+				v3x1.ReGenerateCondition()
+			}
+
 			err = res.SetSpec(v3x1.ToConditionRoute())
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))

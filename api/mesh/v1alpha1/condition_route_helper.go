@@ -67,13 +67,13 @@ func ConditionRouteDecodeFromYAML(content []byte) (*ConditionRoute, error) {
 	version := _map[consts.ConfigVersionKey]
 	if version == consts.ConfiguratorVersionV3 {
 		v3 := new(ConditionRouteV3)
-		if err = json.Unmarshal(jsonContent, v3); err != nil {
+		if err = proto.FromJSON(jsonContent, v3); err != nil {
 			return nil, err
 		}
 		return v3.ToConditionRoute(), nil
 	} else if version == consts.ConfiguratorVersionV3x1 {
 		v3x1 := new(ConditionRouteV3X1)
-		if err = json.Unmarshal(jsonContent, v3x1); err != nil {
+		if err = proto.FromJSON(jsonContent, v3x1); err != nil {
 			return nil, err
 		}
 		return v3x1.ToConditionRoute(), nil
@@ -139,7 +139,7 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 		newCond = append(newCond, regionPrioritizeRules...)
 
 		if !x.Force { // add failBack logic, upper match all fail, try match this
-			newCond = append(newCond, &ConditionRule{
+			failBackCond := &ConditionRule{
 				Priority:       0, // Last Match
 				From:           &ConditionRuleFrom{Match: "" /* match all */},
 				TrafficDisable: false,
@@ -147,7 +147,17 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 				Ratio:          x.XGenerateByCp.RegionPrioritizeRate,
 				Force:          false,
 				XGenerateByCp:  true,
-			})
+			}
+			isExist := false
+			for _, rule := range newCond {
+				if rule.equal(failBackCond) {
+					isExist = true
+					break
+				}
+			}
+			if !isExist {
+				newCond = append(newCond)
+			}
 		}
 	}
 
@@ -155,7 +165,7 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 		disableRule := &ConditionRule{
 			Priority: math.MaxInt32,
 			From: &ConditionRuleFrom{
-				Match: "host != " + strings.Join(x.XGenerateByCp.DisabledIP, ","),
+				Match: "host = " + strings.Join(x.XGenerateByCp.DisabledIP, ","),
 			},
 			TrafficDisable: true,
 			XGenerateByCp:  true,
@@ -164,6 +174,41 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 	}
 	x.Conditions = newCond
 	x.SortConditions()
+}
+
+func (x *ConditionRule) equal(cond *ConditionRule) bool {
+	if x.Priority != cond.Priority ||
+		x.TrafficDisable != cond.TrafficDisable ||
+		x.Force != cond.Force ||
+		x.Ratio != cond.Ratio {
+		return false
+	}
+
+	if (x.From != nil && cond.From != nil) && (x.From.Match != cond.From.Match) {
+		return false
+	}
+
+	if (x.To == nil) != (cond.To == nil) || len(x.To) != len(cond.To) {
+		return false
+	}
+
+	createKey := func(s string, i int32) interface{} {
+		return struct {
+			S string
+			I int32
+		}{s, i}
+	}
+
+	set := make(map[interface{}]struct{}, len(cond.To))
+	for _, to := range cond.To {
+		set[createKey(to.Match, to.Weight)] = struct{}{}
+	}
+
+	for _, to := range x.To {
+		delete(set, createKey(to.Match, to.Weight))
+	}
+
+	return len(set) == 0
 }
 
 func (x *ConditionRouteV3X1) SortConditions() {

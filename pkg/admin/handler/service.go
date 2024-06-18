@@ -18,6 +18,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 )
@@ -62,13 +63,23 @@ func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 }
 
 type baseService struct {
-	Service string `json:"service"`
+	Service string `json:"serviceName"`
 	Group   string `json:"group"`
 	Version string `json:"version"`
 }
 
-func (b baseService) toInterface() string {
-	return b.Service + consts.Colon + b.Group + consts.Colon + b.Version
+func (s *baseService) query(c *gin.Context) error {
+	s.Service = c.Query("serviceName")
+	if s.Service == "" {
+		return errors.New("service name is empty")
+	}
+	s.Group = c.Query("group")
+	s.Version = c.Query("version")
+	return nil
+}
+
+func (s *baseService) toInterface() string {
+	return s.Service + consts.Colon + s.Group + consts.Colon + s.Version
 }
 
 func ServiceConfigTimeoutGET(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -77,13 +88,19 @@ func ServiceConfigTimeoutGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		resp := struct {
 			Timeout int32 `json:"timeout"`
 		}{-1}
-		if err := c.Bind(&param); err != nil {
+		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 		res, err := getConfigurator(rt, param.toInterface())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			if !core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			} else if false {
+				// TODO(YarBor) : to check service exist or not
+			}
+			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
 		}
 
@@ -124,7 +141,7 @@ func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
 			} else if false {
-				// TODO(YarBor): check service exist or not
+				// TODO(YarBor) : to check service exist or not
 			}
 			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
@@ -166,13 +183,19 @@ func ServiceConfigRetryGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		resp := struct {
 			RetryTimes int32 `json:"retryTimes"`
 		}{-1}
-		if err := c.Bind(&param); err != nil {
+		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 		res, err := getConfigurator(rt, param.toInterface())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			if !core_store.IsResourceNotFound(err) {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			} else if false {
+				// TODO(YarBor) : to check service exist or not
+			}
+			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
 		}
 
@@ -213,26 +236,24 @@ func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
 			} else if false {
-				// TODO(YarBor): check service exist or not
+				// TODO(YarBor) : to check service exist or not
 			}
 			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
-		} else {
-			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
-				_, ok := getServiceRetryTimes(conf)
-				if ok {
-					conf.Parameters[`retryTimes`] = strconv.Itoa(int(param.RetryTimes))
-				}
-				return ok
-			})
 		}
 
+		res.Spec.RangeConfigsToRemove(func(conf *mesh_proto.OverrideConfig) (isRemove bool) {
+			_, ok := getServiceRetryTimes(conf)
+			return ok
+		})
+
+		res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
+			Side:          consts.SideConsumer,
+			Parameters:    map[string]string{`retries`: strconv.Itoa(int(param.RetryTimes))},
+			XGenerateByCp: true,
+		})
+
 		if !isExist {
-			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
-				Side:          consts.SideConsumer,
-				Parameters:    map[string]string{`retries`: strconv.Itoa(int(param.RetryTimes))},
-				XGenerateByCp: true,
-			})
 			err = createConfigurator(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -256,7 +277,7 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			RegionPriority bool `json:"regionPriority"`
 			Ratio          int  `json:"ratio"`
 		}{false, 0}
-		if err := c.Bind(&param); err != nil {
+		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
@@ -266,12 +287,14 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
+			} else if false {
+				// TODO(YarBor) : to check service exist or not
 			}
 			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
 
 		} else if rawRes.Spec.ToConditionRouteV3() != nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
 			return
 
 		} else {
@@ -304,17 +327,14 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
 			} else if false {
-				// TODO(YarBor): to check service exist or not
+				// TODO(YarBor) : to check service exist or not
 			} else {
 				rawRes = new(mesh.ConditionRouteResource)
 				rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
 				isExist = false
 			}
-			c.JSON(http.StatusOK, model.NewSuccessResp(nil))
-			return
-
 		} else if rawRes.Spec.ToConditionRouteV3() != nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
 			return
 		}
 
@@ -353,7 +373,7 @@ func ServiceConfigArgumentRouteGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			baseService
 		}{}
 		resp := model.ServiceArgumentRoute{Routes: make([]model.ServiceArgument, 0)}
-		if err := c.Bind(&param); err != nil {
+		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
@@ -363,12 +383,14 @@ func ServiceConfigArgumentRouteGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
+			} else if false {
+				// TODO(YarBor) : to check service exist or not
 			}
 			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
 
 		} else if rawRes.Spec.ToConditionRouteV3() != nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
 			return
 
 		} else {
@@ -402,7 +424,7 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 				return
 			} else if false {
-				// TODO(check service is exist or not):
+				// TODO(YarBor) : to check service exist or not
 			}
 			rawRes = new(mesh.ConditionRouteResource)
 			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
@@ -411,7 +433,7 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		res := rawRes.Spec.ToConditionRouteV3x1()
 		if res == nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve version v3.1, got v3.0 config "))
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
 			return
 		}
 
