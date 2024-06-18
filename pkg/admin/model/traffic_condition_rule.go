@@ -18,9 +18,12 @@
 package model
 
 import (
+	"strings"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
-	"strings"
 )
 
 type ConditionRuleSearchResp struct {

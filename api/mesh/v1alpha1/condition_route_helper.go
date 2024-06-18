@@ -18,6 +18,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"math"
 	"sort"
 	"strings"
@@ -52,13 +53,29 @@ func (x *ConditionRoute) ToYAML() ([]byte, error) {
 }
 
 func ConditionRouteDecodeFromYAML(content []byte) (*ConditionRoute, error) {
-	json, err := yaml.YAMLToJSON(content)
+	jsonContent, err := yaml.YAMLToJSON(content)
 	if err != nil {
 		return nil, err
 	}
-	if v3 := new(ConditionRouteV3); proto.FromJSON(json, v3) == nil {
+
+	_map := map[string]interface{}{}
+	err = json.Unmarshal(jsonContent, &_map)
+	if err != nil {
+		return nil, err
+	}
+
+	version := _map[consts.ConfigVersionKey]
+	if version == consts.ConfiguratorVersionV3 {
+		v3 := new(ConditionRouteV3)
+		if err = json.Unmarshal(jsonContent, v3); err != nil {
+			return nil, err
+		}
 		return v3.ToConditionRoute(), nil
-	} else if v3x1 := new(ConditionRouteV3X1); proto.FromJSON(json, v3x1) == nil {
+	} else if version == consts.ConfiguratorVersionV3x1 {
+		v3x1 := new(ConditionRouteV3X1)
+		if err = json.Unmarshal(jsonContent, v3x1); err != nil {
+			return nil, err
+		}
 		return v3x1.ToConditionRoute(), nil
 	} else {
 		return nil, errors.New("invalid condition route format")
