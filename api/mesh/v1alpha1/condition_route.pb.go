@@ -115,8 +115,8 @@ type XAdminOption struct {
 	unknownFields protoimpl.UnknownFields
 
 	DisabledIP           []string `protobuf:"bytes,1,rep,name=disabledIP,proto3" json:"disabledIP,omitempty"`
-	RegionPrioritize     bool  `protobuf:"varint,2,opt,name=regionPrioritize,proto3" json:"regionPrioritize,omitempty"`
-	RegionPrioritizeRate int32 `protobuf:"varint,3,opt,name=regionPrioritizeRete,proto3" json:"regionPrioritizeRete,omitempty"`
+	RegionPrioritize     bool     `protobuf:"varint,2,opt,name=regionPrioritize,proto3" json:"regionPrioritize,omitempty"`
+	RegionPrioritizeRate int32    `protobuf:"varint,3,opt,name=regionPrioritizeRete,proto3" json:"regionPrioritizeRete,omitempty"`
 }
 
 func (x *XAdminOption) Reset() {
