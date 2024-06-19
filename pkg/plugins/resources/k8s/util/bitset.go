@@ -54,6 +54,7 @@ func (b *Bitset) Decode(encoded string) error {
 	b.bt = decoded
 	return nil
 }
+
 func NewBitset() *Bitset {
 	return &Bitset{
 		bt: []byte{},
