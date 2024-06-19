@@ -36,6 +36,7 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 			instanceConfig := instance.Group("/config")
 			instanceConfig.GET("/trafficDisable", handler.InstanceConfigTrafficDisableGET(rt))
 			instanceConfig.PUT("/trafficDisable", handler.InstanceConfigTrafficDisablePUT(rt))
+
 			instanceConfig.GET("/operatorLog", handler.InstanceConfigOperatorLogGET(rt))
 			instanceConfig.PUT("/operatorLog", handler.InstanceConfigOperatorLogPUT(rt))
 		}

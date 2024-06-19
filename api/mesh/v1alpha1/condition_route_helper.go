@@ -109,7 +109,6 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 		return
 	}
 	newCond := x.ListUnGenConditions()
-
 	if x.XGenerateByCp.RegionPrioritize { // add region prioritize logic to userDefinedRule
 		regionPrioritizeRules := make([]*ConditionRule, 0, len(newCond))
 		for _, rule := range newCond {
@@ -117,7 +116,7 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 				continue
 			}
 			regionPrioritizeRule := &ConditionRule{
-				Priority:      rule.Priority + 1,
+				Priority:      min(rule.Priority, math.MaxInt32-1) + 1, // handle int32 overflow
 				From:          rule.From,
 				To:            make([]*ConditionRuleTo, 0, len(rule.To)),
 				Ratio:         max(rule.Ratio, x.XGenerateByCp.RegionPrioritizeRate),
@@ -137,43 +136,49 @@ func (x *ConditionRouteV3X1) ReGenerateCondition() {
 			regionPrioritizeRules = append(regionPrioritizeRules, regionPrioritizeRule)
 		}
 		newCond = append(newCond, regionPrioritizeRules...)
-
-		if !x.Force { // add failBack logic, upper match all fail, try match this
-			failBackCond := &ConditionRule{
-				Priority:       0, // Last Match
-				From:           &ConditionRuleFrom{Match: "" /* match all */},
-				TrafficDisable: false,
-				To:             []*ConditionRuleTo{{Match: "region=$region"}},
-				Ratio:          x.XGenerateByCp.RegionPrioritizeRate,
-				Force:          false,
-				XGenerateByCp:  true,
-			}
-			isExist := false
-			for _, rule := range newCond {
-				if rule.equal(failBackCond) {
-					isExist = true
-					break
-				}
-			}
-			if !isExist {
-				newCond = append(newCond)
-			}
-		}
 	}
 
 	if x.XGenerateByCp.DisabledIP != nil && len(x.XGenerateByCp.DisabledIP) != 0 { // add traffic disable logic in condition rule
 		disableRule := &ConditionRule{
 			Priority: math.MaxInt32,
 			From: &ConditionRuleFrom{
-				Match: "host = " + strings.Join(x.XGenerateByCp.DisabledIP, ","),
+				Match: "host" + consts.Equal + strings.Join(x.XGenerateByCp.DisabledIP, ","),
 			},
 			TrafficDisable: true,
 			XGenerateByCp:  true,
 		}
 		newCond = append(newCond, disableRule)
 	}
+
 	x.Conditions = newCond
+
+	failBackCond := &ConditionRule{
+		Priority:       0, // Last Match
+		From:           &ConditionRuleFrom{Match: "" /* match all */},
+		TrafficDisable: false,
+		To:             []*ConditionRuleTo{{Match: "region=$region"}},
+		Ratio:          x.XGenerateByCp.RegionPrioritizeRate,
+		Force:          false,
+		XGenerateByCp:  true,
+	}
+
+	isFailBackExist := false
+	x.RangeConditionsToRemove(func(r *ConditionRule) (isRemove bool) {
+		if !x.Force && !isFailBackExist {
+			isFailBackExist = r.equal(failBackCond)
+		}
+		return !r.active()
+	})
+
+	if !x.Force && !isFailBackExist { // add failBack logic, upper match all fail, try match this
+		x.Conditions = append(x.Conditions, failBackCond)
+	}
+
 	x.SortConditions()
+}
+
+func (x *ConditionRule) active() bool {
+	return !(!x.TrafficDisable && len(x.To) == 0 && (x.From != nil || x.From.Match == ``))
 }
 
 func (x *ConditionRule) equal(cond *ConditionRule) bool {
@@ -205,6 +210,9 @@ func (x *ConditionRule) equal(cond *ConditionRule) bool {
 	}
 
 	for _, to := range x.To {
+		if _, ok := set[createKey(to.Match, to.Weight)]; !ok {
+			return false
+		}
 		delete(set, createKey(to.Match, to.Weight))
 	}
 
@@ -223,7 +231,7 @@ func (x *ConditionRouteV3X1) SortConditions() {
 func (x *ConditionRouteV3X1) ListUnGenConditions() []*ConditionRule {
 	res := make([]*ConditionRule, 0)
 	for _, condition := range x.Conditions {
-		if !condition.XGenerateByCp {
+		if condition != nil && !condition.XGenerateByCp {
 			res = append(res, condition)
 		}
 	}
@@ -233,7 +241,7 @@ func (x *ConditionRouteV3X1) ListUnGenConditions() []*ConditionRule {
 func (x *ConditionRouteV3X1) ListGenConditions() []*ConditionRule {
 	res := make([]*ConditionRule, 0)
 	for _, condition := range x.Conditions {
-		if condition.XGenerateByCp {
+		if condition != nil && condition.XGenerateByCp {
 			res = append(res, condition)
 		}
 	}
@@ -245,7 +253,7 @@ func (x *ConditionRouteV3X1) RangeConditions(f func(r *ConditionRule) (isStop bo
 		return
 	}
 	for _, condition := range x.Conditions {
-		if f(condition) {
+		if condition != nil && f(condition) {
 			break
 		}
 	}
@@ -255,9 +263,9 @@ func (x *ConditionRouteV3X1) RangeConditionsToRemove(f func(r *ConditionRule) (i
 	if f == nil {
 		return
 	}
-	res := make([]*ConditionRule, len(x.Conditions)/2+1)
+	res := make([]*ConditionRule, 0, len(x.Conditions)/2+1)
 	for _, condition := range x.Conditions {
-		if !f(condition) {
+		if condition != nil && !f(condition) {
 			res = append(res, condition)
 		}
 	}

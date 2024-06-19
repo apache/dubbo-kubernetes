@@ -437,6 +437,9 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
+		if res.Conditions == nil {
+			res.Conditions = make([]*mesh_proto.ConditionRule, 0)
+		}
 		res.RangeConditionsToRemove(func(r *mesh_proto.ConditionRule) (isRemove bool) {
 			_, ok := r.IsMatchMethod()
 			return ok

@@ -70,7 +70,7 @@ func (s *ServiceArgument) toFrom() *mesh_proto.ConditionRuleFrom {
 	res := "method=" + s.Method
 	if len(s.Conditions) != 0 {
 		for i := 0; len(s.Conditions) > i; i++ {
-			res += "&" + s.Conditions[i].string()
+			res += " & " + s.Conditions[i].string()
 		}
 	}
 	return &mesh_proto.ConditionRuleFrom{
@@ -86,7 +86,7 @@ func (s *ServiceArgument) toTo() []*mesh_proto.ConditionRuleTo {
 			if match == "" {
 				match += condition.string()
 			} else {
-				match += "&" + condition.string()
+				match += " & " + condition.string()
 			}
 		}
 		res = append(res, &mesh_proto.ConditionRuleTo{
@@ -140,7 +140,7 @@ func (s *ServiceArgumentRoute) ToConditionV3x1Condition() []*mesh_proto.Conditio
 			To:             route.toTo(),
 			Ratio:          route.Ratio,
 			Force:          false,
-			XGenerateByCp:  false,
+			XGenerateByCp:  false, // from admin set
 		})
 	}
 	return res
@@ -165,6 +165,7 @@ func ConditionV3x1ToServiceArgumentRoute(mesh []*mesh_proto.ConditionRule) *Serv
 				Weight:     to.Weight,
 			})
 		}
+		res.Routes = append(res.Routes, cond)
 	}
 	return res
 }
