@@ -34,21 +34,47 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/gin-gonic/gin"
 )
 
-// SearchServices API Definition: https://app.apifox.com/project/3732499
-// 资源详情-应用
+// API Definition: https://app.apifox.com/project/3732499
+// 资源详情-服务
+
+// service search
 func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// req := &model.SearchInstanceReq{}
+		resp, err := service.GetSearchServices(rt)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
 
-		c.JSON(http.StatusOK, model.NewSuccessResp(""))
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+// service distribution
+func GetServiceTabDistribution(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.ServiceTabDistributionReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		resp, err := service.GetServiceTabDistribution(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
 
 func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// req := &model.SearchInstanceReq{}
+		//req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -56,7 +82,15 @@ func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// req := &model.SearchInstanceReq{}
+		//req := &model.SearchInstanceReq{}
+
+		c.JSON(http.StatusOK, model.NewSuccessResp(""))
+	}
+}
+
+func GetServiceInterfaces(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		//req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}

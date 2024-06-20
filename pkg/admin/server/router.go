@@ -87,6 +87,14 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	}
 
 	{
+		service := router.Group("/service")
+		service.GET("/distribution", handler.GetServiceTabDistribution(rt))
+		service.GET("/search", handler.SearchServices(rt))
+		service.GET("/detail", handler.GetServiceDetail(rt))
+		service.GET("/interfaces", handler.GetServiceInterfaces(rt))
+	}
+
+	{
 		configuration := router.Group("/configurator")
 		configuration.GET("/search", handler.ConfiguratorSearch(rt))
 		configuration.GET("/:ruleName", handler.GetConfiguratorWithRuleName(rt))
