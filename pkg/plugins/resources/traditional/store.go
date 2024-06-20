@@ -33,8 +33,6 @@ import (
 
 	"github.com/dubbogo/go-zookeeper/zk"
 
-	"github.com/dubbogo/gost/encoding/yaml"
-
 	"github.com/pkg/errors"
 
 	"golang.org/x/exp/maps"
@@ -49,6 +47,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	util_k8s "github.com/apache/dubbo-kubernetes/pkg/util/k8s"
 )
@@ -97,9 +96,12 @@ func (t *traditionalStore) SetEventWriter(writer events.Emitter) {
 	t.eventWriter = writer
 }
 
-func (t *traditionalStore) Create(_ context.Context, resource core_model.Resource, fs ...store.CreateOptionsFunc) error {
+func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resource, fs ...store.CreateOptionsFunc) error {
 	var err error
 	opts := store.NewCreateOptions(fs...)
+	if opts.Name == core_model.DefaultMesh {
+		opts.Name += ".universal"
+	}
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
 	if err != nil {
 		return err
@@ -158,13 +160,16 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 			ServiceVersion: labels[mesh_proto.ServiceVersion],
 			ServiceGroup:   labels[mesh_proto.ServiceGroup],
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.TagRoute)
+		key := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetRoutePath(key, consts.TagRoute)
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
 			return err
 		}
-
+		cfg, _ := t.governance.GetConfig(path)
+		if cfg != "" {
+			return fmt.Errorf("%s Config is exsited ", path)
+		}
 		err = t.governance.SetConfig(path, string(bytes))
 		if err != nil {
 			return err
@@ -178,14 +183,16 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 			ServiceVersion: labels[mesh_proto.ServiceVersion],
 			ServiceGroup:   labels[mesh_proto.ServiceGroup],
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetRoutePath(id, consts.ConditionRoute)
-
-		bytes, err := core_model.ToYAML(resource.GetSpec())
+		key := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetRoutePath(key, consts.ConditionRoute)
+		bytes, err := resource.GetSpec().(*mesh_proto.ConditionRoute).ToYAML()
 		if err != nil {
 			return err
 		}
-
+		cfg, _ := t.governance.GetConfig(path)
+		if cfg != "" {
+			return fmt.Errorf("%s Config is exsited ", path)
+		}
 		err = t.governance.SetConfig(path, string(bytes))
 		if err != nil {
 			return err
@@ -199,13 +206,16 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 			ServiceVersion: labels[mesh_proto.ServiceVersion],
 			ServiceGroup:   labels[mesh_proto.ServiceGroup],
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(id)
+		key := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetOverridePath(key)
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
 			return err
 		}
-
+		cfg, _ := t.governance.GetConfig(path)
+		if cfg != "" {
+			return fmt.Errorf("%s Config is exsited ", path)
+		}
 		err = t.governance.SetConfig(path, string(bytes))
 		if err != nil {
 			return err
@@ -249,6 +259,9 @@ func (t *traditionalStore) Create(_ context.Context, resource core_model.Resourc
 
 func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resource, fs ...store.UpdateOptionsFunc) error {
 	opts := store.NewUpdateOptions(fs...)
+	if opts.Name == core_model.DefaultMesh {
+		opts.Name += ".universal"
+	}
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
 	if err != nil {
 		return err
@@ -272,7 +285,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 		if cfg == "" {
-			return fmt.Errorf("tag route %s not found", id)
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
@@ -293,17 +306,16 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		}
 		id := mesh_proto.BuildServiceKey(base)
 		path := mesh_proto.GetRoutePath(id, consts.ConditionRoute)
+
 		cfg, err := t.governance.GetConfig(path)
 		if err != nil {
 			return err
 		}
 		if cfg == "" {
-			if cfg == "" {
-				return fmt.Errorf("no existing condition route for path: %s", path)
-			}
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 
-		bytes, err := core_model.ToYAML(resource.GetSpec())
+		bytes, err := resource.GetSpec().(*mesh_proto.ConditionRoute).ToYAML()
 		if err != nil {
 			return err
 		}
@@ -312,6 +324,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	case mesh.DynamicConfigType:
+
 		labels := opts.Labels
 		base := mesh_proto.Base{
 			Application:    labels[mesh_proto.Application],
@@ -322,28 +335,15 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		}
 		id := mesh_proto.BuildServiceKey(base)
 		path := mesh_proto.GetOverridePath(id)
+
 		existConfig, err := t.governance.GetConfig(path)
 		if err != nil {
 			return err
+		} else if existConfig == "" {
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
-		override := &mesh_proto.DynamicConfig{}
-		err = yaml.UnmarshalYML([]byte(existConfig), override)
-		if err != nil {
-			return err
-		}
-		configs := make([]*mesh_proto.OverrideConfig, 0)
-		if len(override.Configs) > 0 {
-			for _, c := range override.Configs {
-				if consts.Configs.Contains(c.Type) {
-					configs = append(configs, c)
-				}
-			}
-		}
-		update := resource.GetSpec().(*mesh_proto.DynamicConfig)
-		configs = append(configs, update.Configs...)
-		override.Configs = configs
-		override.Enabled = update.Enabled
-		if b, err := yaml.MarshalYML(override); err != nil {
+
+		if b, err := core_model.ToYAML(resource.GetSpec()); err != nil {
 			return err
 		} else {
 			err := t.governance.SetConfig(path, string(b))
@@ -455,6 +455,9 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 
 func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resource, fs ...store.DeleteOptionsFunc) error {
 	opts := store.NewDeleteOptions(fs...)
+	if opts.Name == core_model.DefaultMesh {
+		opts.Name += ".universal"
+	}
 	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
 	if err != nil {
 		return err
@@ -472,7 +475,7 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 			ServiceGroup:   labels[mesh_proto.ServiceGroup],
 		}
 		key := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(key)
+		path := mesh_proto.GetRoutePath(key, consts.TagRoute)
 		err := t.governance.DeleteConfig(path)
 		if err != nil {
 			return err
@@ -503,43 +506,14 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 		}
 		key := mesh_proto.BuildServiceKey(base)
 		path := mesh_proto.GetOverridePath(key)
-		conf, err := t.governance.GetConfig(path)
+		_, err := t.governance.GetConfig(path)
 		if err != nil {
 			logger.Sugar().Error(err.Error())
 			return err
 		}
-		if err := core_model.FromYAML([]byte(conf), resource.GetSpec()); err != nil {
+		err = t.governance.DeleteConfig(path)
+		if err != nil {
 			return err
-		}
-		override := resource.GetSpec().(*mesh_proto.DynamicConfig)
-		if len(override.Configs) > 0 {
-			newConfigs := make([]*mesh_proto.OverrideConfig, 0)
-			for _, c := range override.Configs {
-				if consts.Configs.Contains(c.Type) {
-					newConfigs = append(newConfigs, c)
-				}
-			}
-			if len(newConfigs) == 0 {
-				err := t.governance.DeleteConfig(path)
-				if err != nil {
-					return err
-				}
-			} else {
-				override.Configs = newConfigs
-				if b, err := yaml.MarshalYML(override); err != nil {
-					return err
-				} else {
-					err := t.governance.SetConfig(path, string(b))
-					if err != nil {
-						return err
-					}
-				}
-			}
-		} else {
-			err := t.governance.DeleteConfig(path)
-			if err != nil {
-				return err
-			}
 		}
 	case mesh.MappingType:
 		// 无法删除
@@ -610,9 +584,16 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return err
 		}
 		if cfg != "" {
-			if err := core_model.FromYAML([]byte(cfg), resource.GetSpec()); err != nil {
+			res := &mesh_proto.TagRoute{}
+			if err := core_model.FromYAML([]byte(cfg), res); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
+			err = resource.SetSpec(res)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -634,9 +615,16 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return err
 		}
 		if cfg != "" {
-			if err := core_model.FromYAML([]byte(cfg), resource.GetSpec()); err != nil {
-				return errors.Wrap(err, "failed to convert json to spec")
+			res, err := mesh_proto.ConditionRouteDecodeFromYAML([]byte(cfg))
+			if err != nil {
+				return err
 			}
+			err = resource.SetSpec(res)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -651,16 +639,23 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			ServiceVersion: labels[mesh_proto.ServiceVersion],
 			ServiceGroup:   labels[mesh_proto.ServiceGroup],
 		}
-		id := mesh_proto.BuildServiceKey(base)
-		path := mesh_proto.GetOverridePath(id)
+		key := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetOverridePath(key)
 		cfg, err := c.governance.GetConfig(path)
 		if err != nil {
 			return err
 		}
 		if cfg != "" {
-			if err := core_model.FromYAML([]byte(cfg), resource.GetSpec()); err != nil {
+			data := &mesh_proto.DynamicConfig{}
+			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
+			err = resource.SetSpec(data)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
 			Name: name,
@@ -847,13 +842,71 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				}
 			}
 		}
-
 	case mesh.DynamicConfigType:
-		// 不支持List
+		cfg, err := c.governance.GetList(consts.ConfiguratorRuleSuffix)
+		if err != nil {
+			return err
+		}
+		for name, rule := range cfg {
+			newIt := resources.NewItem()
+			ConfiguratorCfg, err := parseConfiguratorConfig(rule)
+			_ = newIt.SetSpec(ConfiguratorCfg)
+			meta := &resourceMetaObject{
+				Name:   name,
+				Mesh:   opts.Mesh,
+				Labels: maps.Clone(opts.Labels),
+			}
+			if err != nil {
+			} else {
+				meta.Version = ConfiguratorCfg.ConfigVersion
+			}
+			newIt.SetMeta(meta)
+			_ = resources.AddItem(newIt)
+		}
 	case mesh.TagRouteType:
-		// 不支持List
+		cfg, err := c.governance.GetList(consts.TagRuleSuffix)
+		if err != nil {
+			return err
+		}
+		for name, rule := range cfg {
+			newIt := resources.NewItem()
+			ConfiguratorCfg, err := parseTagConfig(rule)
+			_ = newIt.SetSpec(ConfiguratorCfg)
+			meta := &resourceMetaObject{
+				Name:   name,
+				Mesh:   opts.Mesh,
+				Labels: maps.Clone(opts.Labels),
+			}
+			if err != nil {
+				logger.Errorf("failed to parse tag rule: %s : %s, %s", name, rule, err.Error())
+			} else {
+				meta.Version = ConfiguratorCfg.ConfigVersion
+			}
+			newIt.SetMeta(meta)
+			_ = resources.AddItem(newIt)
+		}
 	case mesh.ConditionRouteType:
-		// 不支持List
+		cfg, err := c.governance.GetList(consts.ConditionRuleSuffix)
+		if err != nil {
+			return err
+		}
+		for name, rule := range cfg {
+			newIt := resources.NewItem()
+			ConfiguratorCfg, err := parseConditionConfig(rule)
+			if err != nil {
+				logger.Errorf("failed to parse condition rule: %s : %s, %s", name, rule, err.Error())
+			} else {
+				_ = newIt.SetSpec(ConfiguratorCfg)
+				meta := &resourceMetaObject{
+					Name:   name,
+					Mesh:   opts.Mesh,
+					Labels: maps.Clone(opts.Labels),
+				}
+				meta.Labels[`version`] = ConfiguratorCfg.GetVersion()
+				newIt.SetMeta(meta)
+				_ = resources.AddItem(newIt)
+			}
+		}
 	default:
 		rootDir := getDubboCpPath(string(resources.GetItemType()))
 		names, err := c.regClient.GetChildren(rootDir)

@@ -22,6 +22,11 @@ import (
 	"strings"
 )
 
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
+)
+
 func GenerateCpGroupPath(resourceName string, name string) string {
 	return pathSeparator + cpGroup + pathSeparator + resourceName + pathSeparator + name
 }
@@ -73,4 +78,20 @@ func splitAppAndRevision(name string) (app string, revision string) {
 	n := len(split)
 	app = strings.Replace(name, "-"+split[n-1], "", -1)
 	return app, split[n-1]
+}
+
+func parseTagConfig(rawRouteData string) (*mesh_proto.TagRoute, error) {
+	tagRoute := &mesh_proto.TagRoute{}
+	err := proto.FromYAML([]byte(rawRouteData), tagRoute)
+	return tagRoute, err
+}
+
+func parseConfiguratorConfig(rawRouteData string) (*mesh_proto.DynamicConfig, error) {
+	routerConfig := &mesh_proto.DynamicConfig{}
+	err := proto.FromYAML([]byte(rawRouteData), routerConfig)
+	return routerConfig, err
+}
+
+func parseConditionConfig(rawRouteData string) (*mesh_proto.ConditionRoute, error) {
+	return mesh_proto.ConditionRouteDecodeFromYAML([]byte(rawRouteData))
 }

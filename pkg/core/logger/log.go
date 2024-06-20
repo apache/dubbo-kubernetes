@@ -62,6 +62,7 @@ func (log *CmdSugarLogger) Print(s string) {
 	_, _ = log.ws.Write([]byte(s))
 }
 
+// nolint
 func Init() {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -79,6 +80,7 @@ func Init() {
 	grpcZap.ReplaceGrpcLoggerV2(logger)
 }
 
+// nolint
 func InitCmdSugar(ws zapcore.WriteSyncer) {
 	mutex.Lock()
 	defer mutex.Unlock()

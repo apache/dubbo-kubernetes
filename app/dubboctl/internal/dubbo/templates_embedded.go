@@ -27,6 +27,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/generate"
 )
 
+//go:generate go run ../../../../generate/templates/main.go
 func newEmbeddedTemplatesFS() filesystem.Filesystem {
 	archive, err := zip.NewReader(bytes.NewReader(generate.TemplatesZip), int64(len(generate.TemplatesZip)))
 	if err != nil {

@@ -42,3 +42,8 @@ const (
 	ProviderSide    = "provider"
 	ConsumerSide    = "consumer"
 )
+
+const (
+	RetriesKey = "retries"
+	TimeoutKey = "timeout"
+)

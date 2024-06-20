@@ -113,7 +113,9 @@ var _ = Describe("Resource Manager", func() {
 			zoneIngress := &core_mesh.ZoneIngressResource{
 				Spec: &mesh_proto.ZoneIngress{
 					Networking: &mesh_proto.ZoneIngress_Networking{
-						AdvertisedPort: 8888,
+						AdvertisedAddress: "localhost",
+						AdvertisedPort:    8888,
+						Port:              8889,
 					},
 				},
 			}
