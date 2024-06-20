@@ -41,14 +41,14 @@ type ConfiguratorResp struct {
 }
 
 type RespConfigurator struct {
-	Configs       []RespConfigItem `json:"configs"`
-	ConfigVersion string           `json:"configVersion"`
-	Enabled       bool             `json:"enabled"`
-	Key           string           `json:"key"`
-	Scope         string           `json:"scope"`
+	Configs       []ConfigItem `json:"configs"`
+	ConfigVersion string       `json:"configVersion"`
+	Enabled       bool         `json:"enabled"`
+	Key           string       `json:"key"`
+	Scope         string       `json:"scope"`
 }
 
-type RespConfigItem struct {
+type ConfigItem struct {
 	Enabled    *bool             `json:"enabled,omitempty"`
 	Match      *RespMatch        `json:"match,omitempty"`
 	Parameters map[string]string `json:"parameters"`
@@ -58,7 +58,7 @@ type RespConfigItem struct {
 type RespMatch struct {
 	Address         *RespAddress         `json:"address,omitempty"`
 	App             *RespListStringMatch `json:"app,omitempty"`
-	Param           []RespParamMatch     `json:"param,omitempty"`
+	Param           []ParamMatch         `json:"param,omitempty"`
 	ProviderAddress *RespAddressMatch    `json:"providerAddress,omitempty"`
 	Service         *RespListStringMatch `json:"service,omitempty"`
 }
@@ -70,10 +70,10 @@ type RespAddress struct {
 }
 
 type RespListStringMatch struct {
-	Oneof []RespStringMatch `json:"oneof,omitempty"`
+	Oneof []StringMatch `json:"oneof,omitempty"`
 }
 
-type RespStringMatch struct {
+type StringMatch struct {
 	Empty    *string `json:"empty,omitempty"`
 	Exact    *string `json:"exact,omitempty"`
 	Noempty  *string `json:"noempty,omitempty"`
@@ -82,9 +82,9 @@ type RespStringMatch struct {
 	Wildcard *string `json:"wildcard,omitempty"`
 }
 
-type RespParamMatch struct {
-	Key   *string          `json:"key,omitempty"`
-	Value *RespStringMatch `json:"value,omitempty"`
+type ParamMatch struct {
+	Key   *string      `json:"key,omitempty"`
+	Value *StringMatch `json:"value,omitempty"`
 }
 
 type RespAddressMatch struct {
@@ -100,7 +100,7 @@ func GenDynamicConfigToResp(code int, message string, pb *mesh_proto.DynamicConf
 		cfg.Key = pb.Key
 		cfg.Scope = pb.Scope
 		cfg.Enabled = pb.Enabled
-		cfg.Configs = overrideConfigToRespConfigutor(pb.Configs)
+		cfg.Configs = overrideConfigToRespConfigItem(pb.Configs)
 	}
 	res = &ConfiguratorResp{
 		Code:    code,
@@ -110,11 +110,11 @@ func GenDynamicConfigToResp(code int, message string, pb *mesh_proto.DynamicConf
 	return
 }
 
-func overrideConfigToRespConfigutor(OverrideConfigs []*mesh_proto.OverrideConfig) []RespConfigItem {
-	res := make([]RespConfigItem, 0, len(OverrideConfigs))
+func overrideConfigToRespConfigItem(OverrideConfigs []*mesh_proto.OverrideConfig) []ConfigItem {
+	res := make([]ConfigItem, 0, len(OverrideConfigs))
 	if OverrideConfigs != nil {
 		for _, config := range OverrideConfigs {
-			resIt := RespConfigItem{
+			resIt := ConfigItem{
 				Enabled:    &config.Enabled,
 				Match:      conditionMatchToRespMatch(config.Match),
 				Parameters: config.Parameters,
@@ -169,36 +169,56 @@ func addressMatchToRespAddressMatch(address *mesh_proto.AddressMatch) *RespAddre
 		return &RespAddressMatch{}
 	}
 }
-func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []RespParamMatch {
-	res := make([]RespParamMatch, 0, len(param))
+func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []ParamMatch {
+	res := make([]ParamMatch, 0, len(param))
 	if param != nil {
 		for _, match := range param {
-			res = append(res, RespParamMatch{
+			res = append(res, ParamMatch{
 				Key:   &match.Key,
-				Value: stringMatchToRespStringMatch(match.Value),
+				Value: StringMatchToModelStringMatch(match.Value),
 			})
 		}
 	}
 	return res
 }
 
-func stringMatchToRespStringMatch(stringMatch *mesh_proto.StringMatch) *RespStringMatch {
+func StringMatchToModelStringMatch(stringMatch *mesh_proto.StringMatch) *StringMatch {
 	if stringMatch == nil {
 		return nil
 	} else if stringMatch.Exact != "" {
-		return &RespStringMatch{Exact: &stringMatch.Exact}
+		return &StringMatch{Exact: &stringMatch.Exact}
 	} else if stringMatch.Prefix != "" {
-		return &RespStringMatch{Prefix: &stringMatch.Prefix}
+		return &StringMatch{Prefix: &stringMatch.Prefix}
 	} else if stringMatch.Regex != "" {
-		return &RespStringMatch{Regex: &stringMatch.Regex}
+		return &StringMatch{Regex: &stringMatch.Regex}
 	} else if stringMatch.Noempty != "" {
-		return &RespStringMatch{Noempty: &stringMatch.Noempty}
+		return &StringMatch{Noempty: &stringMatch.Noempty}
 	} else if stringMatch.Empty != "" {
-		return &RespStringMatch{Empty: &stringMatch.Empty}
+		return &StringMatch{Empty: &stringMatch.Empty}
 	} else if stringMatch.Wildcard != "" {
-		return &RespStringMatch{Wildcard: &stringMatch.Wildcard}
+		return &StringMatch{Wildcard: &stringMatch.Wildcard}
 	} else {
-		return &RespStringMatch{}
+		return &StringMatch{}
+	}
+}
+
+func ModelStringMatchToStringMatch(stringMatch *StringMatch) *mesh_proto.StringMatch {
+	if stringMatch == nil {
+		return nil
+	} else if stringMatch.Exact != nil {
+		return &mesh_proto.StringMatch{Exact: *stringMatch.Exact}
+	} else if stringMatch.Prefix != nil {
+		return &mesh_proto.StringMatch{Prefix: *stringMatch.Prefix}
+	} else if stringMatch.Regex != nil {
+		return &mesh_proto.StringMatch{Regex: *stringMatch.Regex}
+	} else if stringMatch.Noempty != nil {
+		return &mesh_proto.StringMatch{Noempty: *stringMatch.Noempty}
+	} else if stringMatch.Empty != nil {
+		return &mesh_proto.StringMatch{Empty: *stringMatch.Empty}
+	} else if stringMatch.Wildcard != nil {
+		return &mesh_proto.StringMatch{Wildcard: *stringMatch.Wildcard}
+	} else {
+		return &mesh_proto.StringMatch{}
 	}
 }
 
@@ -206,10 +226,10 @@ func listStringMatchToRespListStringMatch(listStringMatch *mesh_proto.ListString
 	if listStringMatch == nil {
 		return nil
 	}
-	res := &RespListStringMatch{Oneof: make([]RespStringMatch, 0, len(listStringMatch.Oneof))}
+	res := &RespListStringMatch{Oneof: make([]StringMatch, 0, len(listStringMatch.Oneof))}
 	if listStringMatch.Oneof != nil {
 		for _, match := range listStringMatch.Oneof {
-			res.Oneof = append(res.Oneof, *stringMatchToRespStringMatch(match))
+			res.Oneof = append(res.Oneof, *StringMatchToModelStringMatch(match))
 		}
 	}
 	return res

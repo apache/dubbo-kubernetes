@@ -28,6 +28,9 @@ message Tag {
   string name = 1;
   repeated string addresses = 2;
   repeated ParamMatch match = 3;
+
+  // to mark which config generate by control plane
+  bool __generate_by_cp = 8;
 }
 
 message StringMatch {

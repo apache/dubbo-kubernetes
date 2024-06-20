@@ -18,7 +18,12 @@
 package model
 
 import (
+	"strings"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 )
 
 type ConditionRuleSearchResp struct {
@@ -35,9 +40,9 @@ type ConditionRuleSearchResp_Data struct {
 }
 
 type ConditionRuleResp struct {
-	Code    int                   `json:"code"`
-	Message string                `json:"message"`
-	Data    RespConditionRuleData `json:"data"`
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 type RespConditionRuleData struct {
@@ -49,16 +54,173 @@ type RespConditionRuleData struct {
 	Scope         string   `json:"scope"`
 }
 
-func GenConditionRuleToResp(code int, message string, pb *mesh_proto.ConditionRoute) *ConditionRuleResp {
-	if pb == nil {
+type ServiceArgumentRoute struct {
+	Routes []ServiceArgument `json:"routes"`
+}
+
+type ServiceArgument struct {
+	Conditions   []RouteCondition `json:"conditions"`
+	Destinations []Destination    `json:"destinations"`
+	Method       string           `json:"method"`
+	Ratio        int32            `json:"ratio"`
+	Priority     int32            `json:"priority"`
+}
+
+func (s *ServiceArgument) toFrom() *mesh_proto.ConditionRuleFrom {
+	res := "method=" + s.Method
+	if len(s.Conditions) != 0 {
+		for i := 0; len(s.Conditions) > i; i++ {
+			res += " & " + s.Conditions[i].string()
+		}
+	}
+	return &mesh_proto.ConditionRuleFrom{
+		Match: res,
+	}
+}
+
+func (s *ServiceArgument) toTo() []*mesh_proto.ConditionRuleTo {
+	res := make([]*mesh_proto.ConditionRuleTo, 0, len(s.Destinations))
+	for _, destination := range s.Destinations {
+		match := ""
+		for _, condition := range destination.Conditions {
+			if match == "" {
+				match += condition.string()
+			} else {
+				match += " & " + condition.string()
+			}
+		}
+		res = append(res, &mesh_proto.ConditionRuleTo{
+			Match:  match,
+			Weight: destination.Weight,
+		})
+	}
+	return res
+}
+
+type RouteCondition struct {
+	Index    string `json:"index"`
+	Relation string `json:"relation"`
+	Value    string `json:"value"`
+}
+
+func (r *RouteCondition) string() string {
+	if r.Relation == consts.Equal {
+		return "arguments[" + r.Index + "]" + consts.Equal + r.Value
+	} else {
+		return "arguments[" + r.Index + "]" + consts.NotEqual + r.Value
+	}
+}
+
+type Destination struct {
+	Conditions []DestinationCondition `json:"conditions"`
+	Weight     int32                  `json:"weight"`
+}
+
+type DestinationCondition struct {
+	Relation string `json:"relation"`
+	Tag      string `json:"tag"`
+	Value    string `json:"value"`
+}
+
+func (d *DestinationCondition) string() string {
+	if d.Relation == consts.Equal {
+		return d.Tag + consts.Equal + d.Value
+	} else {
+		return d.Tag + consts.NotEqual + d.Value
+	}
+}
+
+func (s *ServiceArgumentRoute) ToConditionV3x1Condition() []*mesh_proto.ConditionRule {
+	res := make([]*mesh_proto.ConditionRule, 0, len(s.Routes))
+	for _, route := range s.Routes {
+		res = append(res, &mesh_proto.ConditionRule{
+			Priority:       route.Priority,
+			From:           route.toFrom(),
+			TrafficDisable: false,
+			To:             route.toTo(),
+			Ratio:          route.Ratio,
+			Force:          false,
+			XGenerateByCp:  false, // from admin set
+		})
+	}
+	return res
+}
+
+func ConditionV3x1ToServiceArgumentRoute(mesh []*mesh_proto.ConditionRule) *ServiceArgumentRoute {
+	res := &ServiceArgumentRoute{
+		Routes: make([]ServiceArgument, 0, len(mesh)),
+	}
+	for i := range mesh {
+		method, _ := mesh[i].IsMatchMethod()
+		cond := ServiceArgument{
+			Conditions:   matchValueToRouteCondition(mesh[i].From.Match),
+			Destinations: make([]Destination, 0, len(mesh[i].To)),
+			Method:       method,
+			Ratio:        mesh[i].Ratio,
+			Priority:     mesh[i].Priority,
+		}
+		for _, to := range mesh[i].To {
+			cond.Destinations = append(cond.Destinations, Destination{
+				Conditions: matchValueToDestinationCondition(to.Match),
+				Weight:     to.Weight,
+			})
+		}
+		res.Routes = append(res.Routes, cond)
+	}
+	return res
+}
+
+func matchValueToRouteCondition(val string) []RouteCondition {
+	subsets := strings.Split(val, "&")
+	res := make([]RouteCondition, 0, len(subsets))
+	for _, subset := range subsets {
+		if index := strings.Index(subset, consts.NotEqual); index != -1 {
+			res = append(res, RouteCondition{
+				Index:    strings.Trim(subset[:index], " "),
+				Relation: consts.NotEqual,
+				Value:    strings.Trim(subset[index+len(consts.NotEqual):], " "),
+			})
+		} else if index := strings.Index(subset, consts.Equal); index != -1 {
+			res = append(res, RouteCondition{
+				Index:    strings.Trim(subset[:index], " "),
+				Relation: consts.Equal,
+				Value:    strings.Trim(subset[index+len(consts.Equal):], " "),
+			})
+		}
+	}
+	return res
+}
+
+func matchValueToDestinationCondition(val string) []DestinationCondition {
+	subsets := strings.Split(val, "&")
+	res := make([]DestinationCondition, 0, len(subsets))
+	for _, subset := range subsets {
+		if index := strings.Index(subset, consts.NotEqual); index != -1 {
+			res = append(res, DestinationCondition{
+				Tag:      strings.Trim(subset[:index], " "),
+				Relation: consts.NotEqual,
+				Value:    strings.Trim(subset[index+len(consts.NotEqual):], " "),
+			})
+		} else if index := strings.Index(subset, consts.Equal); index != -1 {
+			res = append(res, DestinationCondition{
+				Tag:      strings.Trim(subset[:index], " "),
+				Relation: consts.Equal,
+				Value:    strings.Trim(subset[index+len(consts.Equal):], " "),
+			})
+		}
+	}
+	return res
+}
+
+func GenConditionRuleToResp(code int, message string, data *mesh_proto.ConditionRoute) *ConditionRuleResp {
+	if data == nil {
 		return &ConditionRuleResp{
 			Code:    code,
 			Message: message,
-			Data: RespConditionRuleData{
-				Conditions: make([]string, 0),
-			},
+			Data:    map[string]string{},
 		}
-	} else {
+	}
+	if pb := data.ToConditionRouteV3(); pb != nil {
 		return &ConditionRuleResp{
 			Code:    code,
 			Message: message,
@@ -71,5 +233,71 @@ func GenConditionRuleToResp(code int, message string, pb *mesh_proto.ConditionRo
 				Scope:         pb.Scope,
 			},
 		}
+	} else if pb := data.ToConditionRouteV3x1(); pb != nil {
+		res := ConditionRuleV3X1{
+			Conditions:    make([]Condition, 0, len(pb.Conditions)),
+			ConfigVersion: "v3.1",
+			Enabled:       pb.Enabled,
+			Force:         pb.Force,
+			Key:           pb.Key,
+			Runtime:       pb.Runtime,
+			Scope:         pb.Scope,
+		}
+		for _, condition := range pb.Conditions {
+			ress := Condition{
+				Disable:  condition.TrafficDisable,
+				Force:    condition.Force,
+				From:     Condition_From{Match: condition.From.Match},
+				Priority: condition.Priority,
+				Ratio:    condition.Priority,
+				To:       make([]Condition_To, 0, len(condition.To)),
+			}
+			for _, to := range condition.To {
+				ress.To = append(ress.To, Condition_To{
+					Match:  to.Match,
+					Weight: to.Weight,
+				})
+			}
+			res.Conditions = append(res.Conditions, ress)
+		}
+		return &ConditionRuleResp{
+			Code:    code,
+			Message: message,
+			Data:    res,
+		}
+	} else {
+		return &ConditionRuleResp{
+			Code:    code,
+			Message: message,
+			Data:    data,
+		}
 	}
+}
+
+type ConditionRuleV3X1 struct {
+	Conditions    []Condition `json:"conditions"`
+	ConfigVersion string      `json:"configVersion"`
+	Enabled       bool        `json:"enabled"`
+	Force         bool        `json:"force"`
+	Key           string      `json:"key"`
+	Runtime       bool        `json:"runtime"`
+	Scope         string      `json:"scope"`
+}
+
+type Condition struct {
+	Disable  bool           `json:"disable"`
+	Force    bool           `json:"force"`
+	From     Condition_From `json:"from"`
+	Priority int32          `json:"priority"`
+	Ratio    int32          `json:"ratio"`
+	To       []Condition_To `json:"to"`
+}
+
+type Condition_From struct {
+	Match string `json:"match"`
+}
+
+type Condition_To struct {
+	Match  string `json:"match"`
+	Weight int32  `json:"weight"`
 }
