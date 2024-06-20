@@ -15,25 +15,48 @@
  * limitations under the License.
  */
 
-package dubbo
+package v1alpha1
 
-import (
-	"archive/zip"
-	"bytes"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/generate"
-)
-
-//go:generate go run ../../../../generate/templates/main.go
-func newEmbeddedTemplatesFS() filesystem.Filesystem {
-	archive, err := zip.NewReader(bytes.NewReader(generate.TemplatesZip), int64(len(generate.TemplatesZip)))
-	if err != nil {
-		panic(err)
+func (x *TagRoute) ListUnGenConfigs() []*Tag {
+	res := make([]*Tag, 0, len(x.Tags)/2+1)
+	for _, tag := range x.Tags {
+		if !tag.XGenerateByCp {
+			res = append(res, tag)
+		}
 	}
-	return filesystem.NewZipFS(archive)
+	return res
 }
 
-var EmbeddedTemplatesFS = newEmbeddedTemplatesFS()
+func (x *TagRoute) ListGenConfigs() []*Tag {
+	res := make([]*Tag, 0, len(x.Tags)/2+1)
+	for _, tag := range x.Tags {
+		if tag.XGenerateByCp {
+			res = append(res, tag)
+		}
+	}
+	return res
+}
+
+func (x *TagRoute) RangeTags(f func(*Tag) (isStop bool)) {
+	if f == nil {
+		return
+	}
+	for _, tag := range x.Tags {
+		if f(tag) {
+			break
+		}
+	}
+}
+
+func (x *TagRoute) RangeTagsToRemove(f func(*Tag) (IsRemove bool)) {
+	if f == nil {
+		return
+	}
+	i := make([]*Tag, 0, len(x.Tags)/2+1)
+	for _, tag := range x.Tags {
+		if !f(tag) {
+			i = append(i, tag)
+		}
+	}
+	x.Tags = i
+}

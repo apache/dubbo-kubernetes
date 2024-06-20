@@ -31,6 +31,7 @@ import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	res_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
@@ -73,15 +74,24 @@ func GetConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConfiguratorRuleSuffix)))
 			return
 		}
-		res := &mesh.DynamicConfigResource{Spec: &mesh_proto.DynamicConfig{}}
-		if err := rt.ResourceManager().Get(rt.AppContext(), res,
-			// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-			store.GetByApplication(name), store.GetByKey(ruleName, res_model.DefaultMesh)); err != nil {
+		res, err := getConfigurator(rt, name)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 		c.JSON(http.StatusOK, model.GenDynamicConfigToResp(http.StatusOK, "success", res.Spec))
 	}
+}
+
+func getConfigurator(rt core_runtime.Runtime, name string) (*mesh.DynamicConfigResource, error) {
+	res := &mesh.DynamicConfigResource{Spec: &mesh_proto.DynamicConfig{}}
+	if err := rt.ResourceManager().Get(rt.AppContext(), res,
+		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
+		store.GetByApplication(name), store.GetByKey(name+consts.ConfiguratorRuleSuffix, res_model.DefaultMesh)); err != nil {
+		logger.Warnf("get %s configurator failed with error: %s", name, err.Error())
+		return nil, err
+	}
+	return res, nil
 }
 
 func PutConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -103,15 +113,23 @@ func PutConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if err = rt.ResourceManager().Update(rt.AppContext(), res,
-			// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-			store.UpdateByApplication(name), store.UpdateByKey(ruleName, res_model.DefaultMesh)); err != nil {
+		if err = updateConfigurator(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
 			c.JSON(http.StatusOK, model.GenDynamicConfigToResp(http.StatusOK, "success", nil))
 		}
 	}
+}
+
+func updateConfigurator(rt core_runtime.Runtime, name string, res *mesh.DynamicConfigResource) error {
+	if err := rt.ResourceManager().Update(rt.AppContext(), res,
+		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
+		store.UpdateByApplication(name), store.UpdateByKey(name+consts.ConfiguratorRuleSuffix, res_model.DefaultMesh)); err != nil {
+		logger.Warnf("update %s configurator failed with error: %s", name, err.Error())
+		return err
+	}
+	return nil
 }
 
 func PostConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -133,15 +151,23 @@ func PostConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if err = rt.ResourceManager().Create(rt.AppContext(), res,
-			// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-			store.CreateByApplication(name), store.CreateByKey(ruleName, res_model.DefaultMesh)); err != nil {
+		if err = createConfigurator(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
 			c.JSON(http.StatusCreated, model.GenDynamicConfigToResp(http.StatusCreated, "success", nil))
 		}
 	}
+}
+
+func createConfigurator(rt core_runtime.Runtime, name string, res *mesh.DynamicConfigResource) error {
+	if err := rt.ResourceManager().Create(rt.AppContext(), res,
+		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
+		store.CreateByApplication(name), store.CreateByKey(name+consts.ConfiguratorRuleSuffix, res_model.DefaultMesh)); err != nil {
+		logger.Warnf("create %s configurator failed with error: %s", name, err.Error())
+		return err
+	}
+	return nil
 }
 
 func DeleteConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -155,12 +181,20 @@ func DeleteConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConfiguratorRuleSuffix)))
 			return
 		}
-		if err := rt.ResourceManager().Delete(rt.AppContext(), res,
-			// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-			store.DeleteByApplication(name), store.DeleteByKey(ruleName, res_model.DefaultMesh)); err != nil {
+		if err := deleteConfigurator(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 		c.JSON(http.StatusNoContent, model.GenDynamicConfigToResp(http.StatusNoContent, "success", nil))
 	}
+}
+
+func deleteConfigurator(rt core_runtime.Runtime, name string, res *mesh.DynamicConfigResource) error {
+	if err := rt.ResourceManager().Delete(rt.AppContext(), res,
+		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
+		store.DeleteByApplication(name), store.DeleteByKey(name+consts.ConfiguratorRuleSuffix, res_model.DefaultMesh)); err != nil {
+		logger.Warnf("delete %s configurator failed with error: %s", name, err.Error())
+		return err
+	}
+	return nil
 }

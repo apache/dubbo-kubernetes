@@ -29,3 +29,47 @@ func GetOverridePath(key string) string {
 	key = strings.Replace(key, "/", "*", -1)
 	return key + consts.ConfiguratorRuleSuffix
 }
+
+func (d *DynamicConfig) ListUnGenConfigs() []*OverrideConfig {
+	res := make([]*OverrideConfig, 0, len(d.Configs)/2+1)
+	for _, config := range d.Configs {
+		if !config.XGenerateByCp {
+			res = append(res, config)
+		}
+	}
+	return res
+}
+
+func (d *DynamicConfig) ListGenConfigs() []*OverrideConfig {
+	res := make([]*OverrideConfig, 0, len(d.Configs)/2+1)
+	for _, config := range d.Configs {
+		if config.XGenerateByCp {
+			res = append(res, config)
+		}
+	}
+	return res
+}
+
+func (d *DynamicConfig) RangeConfigsToRemove(matchFunc func(conf *OverrideConfig) (IsRemove bool)) {
+	if matchFunc == nil {
+		return
+	}
+	newConf := make([]*OverrideConfig, 0, len(d.Configs)/2+1)
+	for _, config := range d.Configs {
+		if !matchFunc(config) {
+			newConf = append(newConf, config)
+		}
+	}
+	d.Configs = newConf
+}
+
+func (d *DynamicConfig) RangeConfig(f func(conf *OverrideConfig) (isStop bool)) {
+	if f == nil {
+		return
+	}
+	for _, config := range d.Configs {
+		if f(config) {
+			break
+		}
+	}
+}

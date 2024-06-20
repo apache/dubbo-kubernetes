@@ -23,11 +23,8 @@ import (
 )
 
 import (
-	"gopkg.in/yaml.v2"
-)
-
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 func GenerateCpGroupPath(resourceName string, name string) string {
@@ -84,31 +81,17 @@ func splitAppAndRevision(name string) (app string, revision string) {
 }
 
 func parseTagConfig(rawRouteData string) (*mesh_proto.TagRoute, error) {
-	routeDecoder := yaml.NewDecoder(strings.NewReader(rawRouteData))
-	tagRouterConfig := &mesh_proto.TagRoute{}
-	err := routeDecoder.Decode(tagRouterConfig)
-	if err != nil {
-		return nil, err
-	}
-	return tagRouterConfig, nil
+	tagRoute := &mesh_proto.TagRoute{}
+	err := proto.FromYAML([]byte(rawRouteData), tagRoute)
+	return tagRoute, err
 }
 
 func parseConfiguratorConfig(rawRouteData string) (*mesh_proto.DynamicConfig, error) {
-	routeDecoder := yaml.NewDecoder(strings.NewReader(rawRouteData))
 	routerConfig := &mesh_proto.DynamicConfig{}
-	err := routeDecoder.Decode(routerConfig)
-	if err != nil {
-		return nil, err
-	}
-	return routerConfig, nil
+	err := proto.FromYAML([]byte(rawRouteData), routerConfig)
+	return routerConfig, err
 }
 
 func parseConditionConfig(rawRouteData string) (*mesh_proto.ConditionRoute, error) {
-	routeDecoder := yaml.NewDecoder(strings.NewReader(rawRouteData))
-	routerConfig := &mesh_proto.ConditionRoute{}
-	err := routeDecoder.Decode(routerConfig)
-	if err != nil {
-		return nil, err
-	}
-	return routerConfig, nil
+	return mesh_proto.ConditionRouteDecodeFromYAML([]byte(rawRouteData))
 }

@@ -33,6 +33,9 @@ message OverrideConfig {
   string type = 7;
   bool enabled = 8;
   ConditionMatch match = 9;
+
+  // to mark which config generate by control plane
+  bool __generate_by_cp = 10;
 }
 
 message ConditionMatch {
