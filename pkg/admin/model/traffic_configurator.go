@@ -169,6 +169,7 @@ func addressMatchToRespAddressMatch(address *mesh_proto.AddressMatch) *RespAddre
 		return &RespAddressMatch{}
 	}
 }
+
 func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []ParamMatch {
 	res := make([]ParamMatch, 0, len(param))
 	if param != nil {
