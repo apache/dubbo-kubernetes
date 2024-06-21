@@ -132,6 +132,7 @@ type DeploySpec struct {
 	TargetPort    int    `yaml:"targetPort,omitempty"`
 	NodePort      int    `yaml:"nodePort,omitempty"`
 	UseProm       bool   `yaml:"-"`
+	PortName      string `yaml:"portName,omitempty"`
 }
 
 func (f *Dubbo) Validate() error {
