@@ -28,7 +28,6 @@ import (
 )
 
 //go:generate go run ../../../../generate/templates/main.go
-
 func newEmbeddedTemplatesFS() filesystem.Filesystem {
 	archive, err := zip.NewReader(bytes.NewReader(generate.TemplatesZip), int64(len(generate.TemplatesZip)))
 	if err != nil {

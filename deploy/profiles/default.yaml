@@ -23,7 +23,3 @@ spec:
   componentsMeta:
     admin:
       enabled: true
-    zookeeper:
-      enabled: true
-      repoURL: https://charts.bitnami.com/bitnami
-      version: 11.1.6

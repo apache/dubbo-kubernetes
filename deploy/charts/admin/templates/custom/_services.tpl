@@ -6,10 +6,24 @@ Return Admin Port to use.
 {{- end -}}
 
 {{/*
+Return xds Container Port to use.
+*/}}
+{{- define "admin.xds.containerPort" -}}
+{{- print "5678" -}}
+{{- end -}}
+
+{{/*
 Return Admin Container Port to use.
 */}}
-{{- define "admin.containerPort" -}}
-{{- printf "8443" -}}
+{{- define "admin.web.containerPort" -}}
+{{- printf "8888" -}}
+{{- end -}}
+
+{{/*
+Return Admin admissionServer Container Port to use.
+*/}}
+{{- define "admin.admissionServer.containerPort" -}}
+{{- printf "5443" -}}
 {{- end -}}
 
 {{/*

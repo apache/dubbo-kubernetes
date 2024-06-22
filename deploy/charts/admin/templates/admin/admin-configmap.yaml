@@ -1,0 +1,33 @@
+{{ $adminCpLabels := include "admin.labels" . }}
+{{- $admin := .Values -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "admin.name" . }}-control-plane-config
+  namespace: {{ template "admin.namespace" . }}
+  labels: {{ $adminCpLabels | nindent 4 }}
+data:
+  config.yaml: |
+    # use this file to override default configuration of `dubbo-cp`
+    #
+    # see conf/dubbo-cp.conf.yml for available settings
+    {{ if $admin.controlPlane.config }}
+    {{ toYaml $admin.controlPlane.config | nindent 4 | trim }}
+    {{ end }}
+
+{{- range $extraConfigMap := $admin.controlPlane.extraConfigMaps }}
+{{- if $extraConfigMap.values }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $extraConfigMap.name }}
+  namespace: {{ template "admin.namespace" . }}
+  labels: {{ $adminCpLabels | nindent 4 }}
+data:
+  {{- range $fileName, $fileContents := $extraConfigMap.values }}
+  {{- $fileName | nindent 2 }}: |
+  {{- $fileContents | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

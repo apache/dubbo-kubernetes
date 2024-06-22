@@ -51,6 +51,12 @@ func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 	r := gin.Default()
 	// Admin UI
 	r.StaticFS("/admin", http.FS(ui.FS()))
+	// TODO: Implement the health check handler
+	r.Handle(http.MethodGet, "/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "UP",
+		})
+	})
 	initRouter(r, rt)
 	a.Engine = r
 	return a
