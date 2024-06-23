@@ -1,9 +1,0 @@
-dubbo:
-  application:
-    logger: slf4j
-    name: DemoApplication
-  registry:
-    address: zookeeper://${zookeeper.address:127.0.0.1}:2181
-  protocol:
-    name: tri
-    port: 50051
