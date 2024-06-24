@@ -2,6 +2,7 @@
 Return Admin Labels to use.
 */}}
 {{- define "admin.labels" -}}
+app: {{ template "admin.name" . }}
 app.kubernetes.io/name: {{ template "admin.name" . }}
 helm.sh/chart: {{ include "admin.name" . }}-{{ .Values.image.tag }}
 app.kubernetes.io/instance: {{ .Release.Name }}
@@ -12,6 +13,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Return ZooKeeper Labels to use.
 */}}
 {{- define "zoo.labels" -}}
+app: {{ template "zoo.name" . }}
 app.kubernetes.io/name: {{ template "zoo.name" . }}
 helm.sh/chart: {{ include "zoo.name" . }}-{{ .Values.zookeeper.image.tag }}
 app.kubernetes.io/instance: {{ template "zoo.name" . }}
@@ -23,6 +25,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Return Nacos Labels to use.
 */}}
 {{- define "nacos.labels" -}}
+app: {{ template "nacos.name" . }}
 app.kubernetes.io/name: {{ template "nacos.name" . }}
 helm.sh/chart: {{ include "nacos.name" . }}-{{ .Values.nacos.image.tag }}
 app.kubernetes.io/instance: {{ template "nacos.name" . }}

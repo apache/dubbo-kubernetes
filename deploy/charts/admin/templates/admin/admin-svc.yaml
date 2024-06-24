@@ -1,4 +1,4 @@
-{{- $svc := .Values.service }}
+{{- $svc := .Values.service -}}
 {{- if $svc.enabled }}
 apiVersion: v1
 kind: Service
@@ -34,11 +34,13 @@ spec:
   loadBalancerClass: {{ $svc.loadBalancerClass }}
   {{- end }}
   ports:
-  - name: http
-    port: {{ template "admin.port" . }}
-    protocol: {{ $svc.protocol }}
-    targetPort: http
-    appProtocol: http
+  - name: admin-http
+    port: {{ $svc.web.port }}
+    targetPort: admin-http
+    appProtocol: {{ $svc.web.protocol }}
+  - name: admin-xds-grpc
+    port: {{ $svc.xds.port }}
+    targetPort: admin-xds-grpc
   selector:
     app: {{ template "admin.selector" . }}
 {{- end }}
@@ -82,11 +84,13 @@ spec:
   publishNotReadyAddresses: {{ $svc.publishNotReadyAddresses }}
   {{- end }}
   ports:
-  - name: http
-    port: {{ template "admin.port" . }}
-    protocol: {{ $svc.protocol }}
-    targetPort: http
-    appProtocol: http
+  - name: admin-http
+    port: {{ $svc.web.port }}
+    targetPort: admin-http
+    appProtocol: {{ $svc.web.protocol }}
+  - name: admin-xds-grpc
+    port: {{ $svc.xds.port }}
+    targetPort: admin-xds-grpc
   selector:
     app: {{ template "admin.selector" . }}
-  {{- end -}}
+{{- end -}}

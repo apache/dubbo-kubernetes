@@ -18,6 +18,7 @@
 package store
 
 import (
+	"encoding/json"
 	"net/url"
 	"strings"
 	"time"
@@ -26,6 +27,8 @@ import (
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
+
+	"github.com/kelseyhightower/envconfig"
 
 	"github.com/pkg/errors"
 
@@ -54,21 +57,21 @@ const (
 // StoreConfig defines Resource Store configuration
 type StoreConfig struct {
 	// Type of Store used in the Control Plane. Can be either "kubernetes", "postgres" or "memory"
-	Type StoreType `json:"type" envconfig:"dubbo_store_type"`
+	Type StoreType `json:"type" envconfig:"DUBBO_STORE_TYPE"`
 	// Kubernetes Store configuration
 	Kubernetes *k8s.KubernetesStoreConfig `json:"kubernetes"`
 	// Zookeeper Store configuration
 	Zookeeper *zookeeper.ZookeeperStoreConfig `json:"zookeeper"`
 	// Mysql Store configuration
 	Mysql       *mysql.MysqlStoreConfig `json:"mysql"`
-	Traditional Registry                `json:"traditional"`
+	Traditional Registry                `json:"traditional" envconfig:"DUBBO_STORE_TRADITIONAL_REGISTRY"`
 	// Cache configuration
 	Cache CacheStoreConfig `json:"cache"`
 	// Upsert configuration
 	Upsert UpsertConfig `json:"upsert"`
 	// UnsafeDelete skips validation of resource delete.
 	// For example you don't have to delete all Dataplane objects before you delete a Mesh
-	UnsafeDelete bool `json:"unsafeDelete" envconfig:"dubbo_store_unsafe_delete"`
+	UnsafeDelete bool `json:"unsafeDelete" envconfig:"DUBBO_STORE_UNSAFE_DELETE"`
 }
 
 func DefaultStoreConfig() *StoreConfig {
@@ -118,8 +121,8 @@ var _ config.Config = &CacheStoreConfig{}
 type CacheStoreConfig struct {
 	config.BaseConfig
 
-	Enabled        bool                  `json:"enabled" envconfig:"dubbo_store_cache_enabled"`
-	ExpirationTime config_types.Duration `json:"expirationTime" envconfig:"dubbo_store_cache_expiration_time"`
+	Enabled        bool                  `json:"enabled" envconfig:"DUBBO_STORE_CACHE_ENABLED"`
+	ExpirationTime config_types.Duration `json:"expirationTime" envconfig:"DUBBO_STORE_CACHE_EXPIRATION_TIME"`
 }
 
 func DefaultCacheStoreConfig() CacheStoreConfig {
@@ -159,11 +162,11 @@ type UpsertConfig struct {
 	config.BaseConfig
 
 	// Base time for exponential backoff on upsert (get and update) operations when retry is enabled
-	ConflictRetryBaseBackoff config_types.Duration `json:"conflictRetryBaseBackoff" envconfig:"dubbo_store_upsert_conflict_retry_base_backoff"`
+	ConflictRetryBaseBackoff config_types.Duration `json:"conflictRetryBaseBackoff" envconfig:"DUBBO_STORE_UPSERT_CONFLICT_RETRY_BASE_BACKOFF"`
 	// Max retries on upsert (get and update) operation when retry is enabled
-	ConflictRetryMaxTimes uint `json:"conflictRetryMaxTimes" envconfig:"dubbo_store_upsert_conflict_retry_max_times"`
+	ConflictRetryMaxTimes uint `json:"conflictRetryMaxTimes" envconfig:"DUBBO_STORE_UPSERT_CONFLICT_RETRY_MAX_TIMES"`
 	// Percentage of jitter. For example: if backoff is 20s, and this value 10, the backoff will be between 18s and 22s.
-	ConflictRetryJitterPercent uint `json:"conflictRetryJitterPercent" envconfig:"dubbo_store_upsert_conflict_retry_jitter_percent"`
+	ConflictRetryJitterPercent uint `json:"conflictRetryJitterPercent" envconfig:"DUBBO_STORE_UPSERT_CONFLICT_RETRY_JITTER_PERCENT"`
 }
 
 func (u *UpsertConfig) Validate() error {
@@ -191,7 +194,22 @@ func (r *Registry) PostProcess() error {
 	return nil
 }
 
+func (r *Registry) Decode(val string) error {
+	val = strings.TrimSpace(val)
+	if strings.HasPrefix(val, "{") {
+		// try to unmarshal as json
+		return json.Unmarshal([]byte(val), r)
+	}
+	// else treat as a global address for all
+	r.ConfigCenter = val
+	r.MetadataReport.Address = val
+	r.Registry.Address = val
+	return nil
+}
+
 var _ config.Config = &Registry{}
+
+var _ envconfig.Decoder = &Registry{}
 
 type AddressConfig struct {
 	Address string   `json:"address,omitempty"`

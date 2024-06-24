@@ -27,5 +27,4 @@ spec:
   {{- with $pdb.unhealthyPodEvictionPolicy }}
   unhealthyPodEvictionPolicy: {{ . }}
   {{- end }}
-  {{- end -}}
-
+{{- end -}}

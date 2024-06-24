@@ -38,7 +38,7 @@ type KubernetesStoreConfig struct {
 	config.BaseConfig
 
 	// Namespace where Control Plane is installed to.
-	SystemNamespace string `json:"systemNamespace" envconfig:"dubbo_store_kubernetes_system_namespace"`
+	SystemNamespace string `json:"systemNamespace" envconfig:"DUBBO_STORE_KUBERNETES_SYSTEM_NAMESPACE"`
 }
 
 func (p *KubernetesStoreConfig) Validate() error {

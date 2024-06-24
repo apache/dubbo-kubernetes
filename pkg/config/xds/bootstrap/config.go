@@ -69,19 +69,19 @@ type BootstrapParamsConfig struct {
 	config.BaseConfig
 
 	// Address of Envoy Admin
-	AdminAddress string `json:"adminAddress" envconfig:"dubbo_bootstrap_server_params_admin_address"`
+	AdminAddress string `json:"adminAddress" envconfig:"DUBBO_BOOTSTRAP_SERVER_PARAMS_ADMIN_ADDRESS"`
 	// Port of Envoy Admin
-	AdminPort uint32 `json:"adminPort" envconfig:"dubbo_bootstrap_server_params_admin_port"`
+	AdminPort uint32 `json:"adminPort" envconfig:"DUBBO_BOOTSTRAP_SERVER_PARAMS_ADMIN_PORT"`
 	// Path to access log file of Envoy Admin
-	AdminAccessLogPath string `json:"adminAccessLogPath" envconfig:"dubbo_bootstrap_server_params_admin_access_log_path"`
+	AdminAccessLogPath string `json:"adminAccessLogPath" envconfig:"DUBBO_BOOTSTRAP_SERVER_PARAMS_ADMIN_ACCESS_LOG_PATH"`
 	// Host of XDS Server. By default it is the same host as the one used by dubbo-dp to connect to the control plane
-	XdsHost string `json:"xdsHost" envconfig:"dubbo_bootstrap_server_params_xds_host"`
+	XdsHost string `json:"xdsHost" envconfig:"DUBBO_BOOTSTRAP_SERVER_PARAMS_XDS_HOST"`
 	// Port of XDS Server. By default it is autoconfigured from DUBBo_XDS_SERVER_GRPC_PORT
-	XdsPort uint32 `json:"xdsPort" envconfig:"dubbo_bootstrap_server_params_xds_port"`
+	XdsPort uint32 `json:"xdsPort" envconfig:"DUBBO_BOOTSTRAP_SERVER_PARAMS_XDS_PORT"`
 	// Connection timeout to the XDS Server
-	XdsConnectTimeout config_types.Duration `json:"xdsConnectTimeout" envconfig:"dubbo_bootstrap_server_params_xds_connect_timeout"`
+	XdsConnectTimeout config_types.Duration `json:"xdsConnectTimeout" envconfig:"DUBBO_BOOTSTRAP_SERVER_PARAMS_XDS_CONNECT_TIMEOUT"`
 	// Path to the template of Corefile for data planes to use
-	CorefileTemplatePath string `json:"corefileTemplatePath" envconfig:"dubbo_bootstrap_server_params_corefile_template_path"`
+	CorefileTemplatePath string `json:"corefileTemplatePath" envconfig:"DUBBO_BOOTSTRAP_SERVER_PARAMS_COREFILE_TEMPLATE_PATH"`
 }
 
 func (b *BootstrapParamsConfig) Validate() error {
