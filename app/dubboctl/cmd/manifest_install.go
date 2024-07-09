@@ -46,6 +46,9 @@ func ConfigManifestInstallCmd(baseCmd *cobra.Command) {
 		Short: "install dubbo control plane",
 		Example: `  # Install a default Dubbo control plane
   dubboctl manifest install
+
+  # Install the demo environment
+  dubboctl manifest install --set profile=demo
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger.InitCmdSugar(zapcore.AddSync(cmd.OutOrStdout()))

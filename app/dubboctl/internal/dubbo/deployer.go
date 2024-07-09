@@ -59,6 +59,7 @@ type Deployment struct {
 	NodePort    int
 	UseNodePort bool
 	UseProm     bool
+	PortName    string
 }
 
 func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption) (DeploymentResult, error) {
@@ -104,6 +105,7 @@ func (d *DeployApp) Deploy(ctx context.Context, f *Dubbo, option ...DeployOption
 		NodePort:    f.Deploy.NodePort,
 		UseNodePort: nodePort > 0,
 		UseProm:     f.Deploy.UseProm,
+		PortName:    f.Deploy.PortName,
 	})
 	if err != nil {
 		return DeploymentResult{

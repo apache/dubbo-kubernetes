@@ -13,6 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+controlPlane:
+  config:
+    deployMode: universal
+    mode: zone
+
+  tls:
+    general:
+      secretName: ""
+      caSecretName: ""
+      caBundle: ""
+
 ## Specifies the type of Kubernetes resource, such as "Deployment" or "StatefulSet."
 deployType: Deployment
 
@@ -41,7 +52,7 @@ image:
   # Source of the container image.
   registry: docker.io/apache/dubbo-admin
   # Version tag of the container image.
-  tag: 0.5.0
+  tag: latest
   # Image pull policy, available options are: Always, IfNotPresent, Never.
   pullPolicy: IfNotPresent
 
@@ -73,23 +84,6 @@ volumes: ~
 #  - name: vol
 #    hostPath:
 #      path: /data
-
-## Define a ConfigMap for the application, You can create a ConfigMap and specify its name, items, and defaultMode.
-configMap: ~
-#  name: config-file
-#  items:
-#  - key: file
-#    path: file
-#  defaultMode: 420
-
-## Define a Secret for the application, You can create a Secret and specify its name, items, and their corresponding keys and paths.
-secret: ~
-#  secretName: secret-file
-#  items:
-#  - key: tls.crt
-#    path: certificate
-#  - key: tls.key
-#    path: private
 
 strategy:
   # Define the strategy for the application's deployment.
@@ -128,9 +122,9 @@ startupProbe:
   # Perform an HTTP GET request to check.
   httpGet:
     # The path to use for the HTTP GET request.
-    path: /
+    path: /health
     # The port on which the HTTP GET request will be made.
-    port: 8080
+    port: 8888
 
 readinessProbe:
   # Delay before the probe is initiated.
@@ -144,9 +138,9 @@ readinessProbe:
   # Perform an HTTP GET request to check.
   httpGet:
     # The path to use for the HTTP GET request.
-    path: /
+    path: /health
     # The port on which the HTTP GET request will be made.
-    port: 8080
+    port: 8888
 
 livenessProbe:
   # Delay before the probe is initiated.
@@ -160,9 +154,9 @@ livenessProbe:
   # Perform an HTTP GET request to check.
   httpGet:
     # The path to use for the HTTP GET request.
-    path: /
+    path: /health
     # The port on which the HTTP GET request will be made.
-    port: 8080
+    port: 8888
 
 ## Define lifecycle hooks for the application container.
 lifecycleHooks: ~
@@ -196,8 +190,14 @@ service:
   sessionAffinity: None
   # Set to 'true' to publish endpoints for not-ready pods.
   publishNotReadyAddresses: true
-  # Protocol used by the service.
-  protocol: TCP
+
+  # Define the ports for the service.
+  web:
+    protocol: http
+    port: 8888
+
+  xds:
+    port: 5678
 
 resources:
   # Maximum CPU and memory resources allowed for the container.
@@ -418,7 +418,7 @@ observable:
 
 zookeeper:
   ## Whether to enable the zookeeper.
-  enabled: false
+  enabled: true
 
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
@@ -439,7 +439,7 @@ zookeeper:
     # Source of the container image.
     registry: docker.io/bitnami/zookeeper
     # Version tag of the container image.
-    tag: 3.8.1-debian-11-r18
+    tag: 3.9-debian-12
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
     # Set to 'true' to enable debug mode for the image.
@@ -525,7 +525,7 @@ zookeeper:
     timeoutSeconds: 5
     exec:
       # Run the specified command to check.
-      command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
+      command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null' ]
 
   livenessProbe:
     # Number of consecutive failures before marking the container as unhealthy.
@@ -540,7 +540,7 @@ zookeeper:
     timeoutSeconds: 5
     exec:
       # Run the specified command to check.
-      command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
+      command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep ruok' ]
 
   # This allows a dedicated log device to be used, and helps avoid competition between logging and snapshots.
   dataLogDir: ""
@@ -605,7 +605,7 @@ zookeeper:
 
 nacos:
   ## Whether to enable the nacos.
-  enabled: true
+  enabled: false
 
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: standalone

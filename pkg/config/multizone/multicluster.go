@@ -72,13 +72,13 @@ var _ config.Config = &ZoneConfig{}
 // ZoneConfig defines zone configuration
 type ZoneConfig struct {
 	// Dubbo Zone name used to mark the zone dataplane resources
-	Name string `json:"name,omitempty" envconfig:"dubbo_multizone_zone_name"`
+	Name string `json:"name,omitempty" envconfig:"DUBBO_MULTIZONE_ZONE_NAME"`
 	// GlobalAddress URL of Global Dubbo CP
-	GlobalAddress string `json:"globalAddress,omitempty" envconfig:"dubbo_multizone_zone_global_address"`
+	GlobalAddress string `json:"globalAddress,omitempty" envconfig:"DUBBO_MULTIZONE_ZONE_GLOBAL_ADDRESS"`
 	// DDS Configuration
 	DDS *DdsClientConfig `json:"dds,omitempty"`
 	// DisableOriginLabelValidation disables validation of the origin label when applying resources on Zone CP
-	DisableOriginLabelValidation bool `json:"disableOriginLabelValidation,omitempty" envconfig:"dubbo_multizone_zone_disable_origin_label_validation"`
+	DisableOriginLabelValidation bool `json:"disableOriginLabelValidation,omitempty" envconfig:"DUBBO_MULTIZONE_ZONE_DISABLE_ORIGIN_LABEL_VALIDATION"`
 }
 
 func (r *ZoneConfig) Sanitize() {

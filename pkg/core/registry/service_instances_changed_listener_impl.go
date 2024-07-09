@@ -82,28 +82,29 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 
 	for _, instances := range lstn.allInstances {
 		for _, instance := range instances {
-			if instance.GetMetadata() == nil {
-				logger.Warnf("Instance metadata is nil: %s", instance.GetHost())
+			metadataInstance := ConvertToMetadataInstance(instance)
+			if metadataInstance.GetMetadata() == nil {
+				logger.Warnf("Instance metadata is nil: %s", metadataInstance.GetHost())
 				continue
 			}
-			revision := instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
+			revision := metadataInstance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
 			if "0" == revision {
-				logger.Infof("Find instance without valid service metadata: %s", instance.GetHost())
+				logger.Infof("Find instance without valid service metadata: %s", metadataInstance.GetHost())
 				continue
 			}
 			subInstances := revisionToInstances[revision]
 			if subInstances == nil {
 				subInstances = make([]registry.ServiceInstance, 8)
 			}
-			revisionToInstances[revision] = append(subInstances, instance)
+			revisionToInstances[revision] = append(subInstances, metadataInstance)
 			metadataInfo := lstn.revisionToMetadata[revision]
 			if metadataInfo == nil {
-				metadataInfo, err = GetMetadataInfo(instance, revision)
+				metadataInfo, err = GetMetadataInfo(metadataInstance, revision)
 				if err != nil {
 					return err
 				}
 			}
-			instance.SetServiceMetadata(metadataInfo)
+			metadataInstance.SetServiceMetadata(metadataInfo)
 			for _, service := range metadataInfo.Services {
 				if localServiceToRevisions[service] == nil {
 					localServiceToRevisions[service] = gxset.NewSet()

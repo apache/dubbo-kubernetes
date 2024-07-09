@@ -228,13 +228,22 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/detail/:pathId',
-                name: 'detail',
-                component: () => import('../views/resources/services/tabs/detail.vue'),
+                path: '/distribution/:pathId',
+                name: 'distribution',
+                component: () => import('../views/resources/services/tabs/distribution.vue'),
                 meta: {
                   tab: true
                 }
               },
+              // Temporarily hidden
+              // {
+              //   path: '/detail/:pathId',
+              //   name: 'detail',
+              //   component: () => import('../views/resources/services/tabs/detail.vue'),
+              //   meta: {
+              //     tab: true
+              //   }
+              // },
               {
                 path: '/debug/:pathId',
                 name: 'debug',
@@ -243,14 +252,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                   tab: true
                 }
               },
-              {
-                path: '/distribution/:pathId',
-                name: 'distribution',
-                component: () => import('../views/resources/services/tabs/distribution.vue'),
-                meta: {
-                  tab: true
-                }
-              },
+
               {
                 path: '/monitor/:pathId',
                 name: 'monitor',

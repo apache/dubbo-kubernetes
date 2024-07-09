@@ -111,7 +111,7 @@ func addManifestGenerateFlags(cmd *cobra.Command, args *ManifestGenerateArgs) {
 	cmd.PersistentFlags().StringVarP(&args.ChartsPath, "charts", "", "",
 		"Path to charts directory, this directory contains components charts")
 	cmd.PersistentFlags().StringVarP(&args.ProfilesPath, "profiles", "", "",
-		"Path to profiles directory, this directory contains preset profiles")
+		"Path to profiles directory, this directory contains preset profiles, default to built-in profiles")
 	cmd.PersistentFlags().StringVarP(&args.OutputPath, "output", "o", "",
 		"Path to output manifest, if not set, dubboctl would print the manifest")
 	cmd.PersistentFlags().StringArrayVarP(&args.SetFlags, "set", "s", nil,

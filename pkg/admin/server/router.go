@@ -18,9 +18,12 @@
 package server
 
 import (
+	"github.com/gin-gonic/gin"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/handler"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"github.com/gin-gonic/gin"
 )
 
 func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
@@ -28,17 +31,93 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	{
 		instance := router.Group("/instance")
 		instance.GET("/search", handler.SearchInstances(rt))
+		instance.GET("/detail", handler.GetInstanceDetail(rt))
+		{
+			instanceConfig := instance.Group("/config")
+			instanceConfig.GET("/trafficDisable", handler.InstanceConfigTrafficDisableGET(rt))
+			instanceConfig.PUT("/trafficDisable", handler.InstanceConfigTrafficDisablePUT(rt))
+
+			instanceConfig.GET("/operatorLog", handler.InstanceConfigOperatorLogGET(rt))
+			instanceConfig.PUT("/operatorLog", handler.InstanceConfigOperatorLogPUT(rt))
+		}
 	}
 
 	{
 		application := router.Group("/application")
 		application.GET("/detail", handler.GetApplicationDetail(rt))
 		application.GET("/instance/info", handler.GetApplicationTabInstanceInfo(rt))
+		application.GET("/service/form", handler.GetApplicationServiceForm(rt))
+		application.GET("/search", handler.ApplicationSearch(rt))
+		{
+			applicationConfig := application.Group("/config")
+			applicationConfig.PUT("/operatorLog", handler.ApplicationConfigOperatorLogPut(rt))
+			applicationConfig.GET("/operatorLog", handler.ApplicationConfigOperatorLogGet(rt))
+
+			applicationConfig.GET("/flowWeight", handler.ApplicationConfigFlowWeightGET(rt))
+			applicationConfig.PUT("/flowWeight", handler.ApplicationConfigFlowWeightPUT(rt))
+
+			applicationConfig.GET("/gray", handler.ApplicationConfigGrayGET(rt))
+			applicationConfig.PUT("/gray", handler.ApplicationConfigGrayPUT(rt))
+		}
+	}
+
+	{
+		service := router.Group("/service")
+		{
+			serviceConfig := service.Group("/config")
+			serviceConfig.GET("/timeout", handler.ServiceConfigTimeoutGET(rt))
+			serviceConfig.PUT("/timeout", handler.ServiceConfigTimeoutPUT(rt))
+
+			serviceConfig.GET("/regionPriority", handler.ServiceConfigRegionPriorityGET(rt))
+			serviceConfig.PUT("/regionPriority", handler.ServiceConfigRegionPriorityPUT(rt))
+
+			serviceConfig.GET("/retry", handler.ServiceConfigRetryGET(rt))
+			serviceConfig.PUT("/retry", handler.ServiceConfigRetryPUT(rt))
+
+			serviceConfig.GET("/argumentRoute", handler.ServiceConfigArgumentRouteGET(rt))
+			serviceConfig.PUT("/argumentRoute", handler.ServiceConfigArgumentRoutePUT(rt))
+		}
 	}
 
 	{
 		dev := router.Group("/dev")
 		dev.GET("/instances", handler.GetInstances(rt))
 		dev.GET("/metas", handler.GetMetas(rt))
+		dev.GET("/mappings", handler.GetMappings(rt))
+	}
+
+	{
+		service := router.Group("/service")
+		service.GET("/distribution", handler.GetServiceTabDistribution(rt))
+		service.GET("/search", handler.SearchServices(rt))
+		service.GET("/detail", handler.GetServiceDetail(rt))
+		service.GET("/interfaces", handler.GetServiceInterfaces(rt))
+	}
+
+	{
+		configuration := router.Group("/configurator")
+		configuration.GET("/search", handler.ConfiguratorSearch(rt))
+		configuration.GET("/:ruleName", handler.GetConfiguratorWithRuleName(rt))
+		configuration.PUT("/:ruleName", handler.PutConfiguratorWithRuleName(rt))
+		configuration.POST("/:ruleName", handler.PostConfiguratorWithRuleName(rt))
+		configuration.DELETE("/:ruleName", handler.DeleteConfiguratorWithRuleName(rt))
+	}
+
+	{
+		conditionRule := router.Group("/condition-rule")
+		conditionRule.GET("/search", handler.ConditionRuleSearch(rt))
+		conditionRule.GET("/:ruleName", handler.GetConditionRuleWithRuleName(rt))
+		conditionRule.PUT("/:ruleName", handler.PutConditionRuleWithRuleName(rt))
+		conditionRule.POST("/:ruleName", handler.PostConditionRuleWithRuleName(rt))
+		conditionRule.DELETE("/:ruleName", handler.DeleteConditionRuleWithRuleName(rt))
+	}
+
+	{
+		tagRule := router.Group("/tag-rule")
+		tagRule.GET("/search", handler.TagRuleSearch(rt))
+		tagRule.GET("/:ruleName", handler.GetTagRuleWithRuleName(rt))
+		tagRule.PUT("/:ruleName", handler.PutTagRuleWithRuleName(rt))
+		tagRule.POST("/:ruleName", handler.PostTagRuleWithRuleName(rt))
+		tagRule.DELETE("/:ruleName", handler.DeleteTagRuleWithRuleName(rt))
 	}
 }

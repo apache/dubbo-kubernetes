@@ -19,11 +19,8 @@ package server
 
 import (
 	"context"
-	ui "github.com/apache/dubbo-kubernetes/app/dubbo-ui"
 	"net/http"
 	"strconv"
-
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 import (
@@ -31,8 +28,10 @@ import (
 )
 
 import (
+	ui "github.com/apache/dubbo-kubernetes/app/dubbo-ui"
 	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 type AdminServer struct {
@@ -52,6 +51,12 @@ func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 	r := gin.Default()
 	// Admin UI
 	r.StaticFS("/admin", http.FS(ui.FS()))
+	// TODO: Implement the health check handler
+	r.Handle(http.MethodGet, "/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "UP",
+		})
+	})
 	initRouter(r, rt)
 	a.Engine = r
 	return a
@@ -60,8 +65,7 @@ func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 func (a *AdminServer) Start(stop <-chan struct{}) error {
 	errChan := make(chan error)
 
-	var httpServer *http.Server
-	httpServer = a.startHttpServer(errChan)
+	httpServer := a.startHttpServer(errChan)
 	select {
 	case <-stop:
 		logger.Sugar().Info("stopping bufman")

@@ -18,7 +18,13 @@
 package k8s
 
 import (
+	"context"
+)
+
+import (
 	"github.com/pkg/errors"
+
+	kube_core "k8s.io/api/core/v1"
 
 	kube_ctrl "sigs.k8s.io/controller-runtime"
 	kube_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -149,5 +155,20 @@ func addMutators(mgr kube_ctrl.Manager, rt core_runtime.Runtime, converter k8s_c
 
 	defaultMutator := k8s_webhooks.DefaultingWebhookFor(mgr.GetScheme(), converter)
 	mgr.GetWebhookServer().Register("/default-dubbo-io-v1alpha1-mesh", defaultMutator)
+
+	podEnvInjectMutator := k8s_webhooks.PodMutatingWebhook(
+		func(ctx context.Context, pod *kube_core.Pod) error {
+			RegistryCenterUrl := rt.RegistryCenter().GetURL()
+			if pod.Labels["dubbo.io/name"] != "" {
+				pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, kube_core.EnvVar{
+					Name:  "DUBBO_REGISTRY_ADDRESS",
+					Value: RegistryCenterUrl.String(),
+				})
+				//TODO support more
+			}
+			return nil
+		})
+	mgr.GetWebhookServer().Register("/pod-env-injection-dubbo-io-v1alpha1", podEnvInjectMutator)
+
 	return nil
 }

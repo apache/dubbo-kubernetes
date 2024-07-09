@@ -20,7 +20,7 @@ package eventbus
 type Config struct {
 	// BufferSize controls the buffer for every single event listener.
 	// If we go over buffer, additional delay may happen to various operation like insight recomputation or DDS.
-	BufferSize uint `json:"bufferSize" envconfig:"dubbo_event_bus_buffer_size"`
+	BufferSize uint `json:"bufferSize" envconfig:"DUBBO_EVENT_BUS_BUFFER_SIZE"`
 }
 
 func (c Config) Validate() error {

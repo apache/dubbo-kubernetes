@@ -18,7 +18,7 @@
 package admin
 
 type Admin struct {
-	Port int `json:"port"`
+	Port int `json:"port" envconfig:"DUBBO_ADMIN_PORT"`
 }
 
 func (s *Admin) Sanitize() {

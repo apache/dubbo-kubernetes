@@ -68,10 +68,12 @@ spec:
     port: {{.Port}}
     protocol: TCP
     targetPort: {{.TargetPort}}
-  type: NodePort{{else}}- port: {{.Port}}
-    targetPort: {{.TargetPort}}{{end}}{{if .UseProm}}
+    name: {{.PortName}}{{else}}- port: {{.Port}}
+    targetPort: {{.TargetPort}}
+    name: {{.PortName}}{{end}}{{if .UseProm}}
   - port: 18081
-    targetPort: 18081{{end}}
+    targetPort: 18081
+    name: metrics{{end}}
   selector:
     app: {{.Name}}
 
