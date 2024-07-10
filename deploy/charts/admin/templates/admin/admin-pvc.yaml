@@ -28,4 +28,4 @@ spec:
   selector:
     matchLabels:
     {{- toYaml . | nindent 6 }}
-  {{- end }}
+{{- end }}

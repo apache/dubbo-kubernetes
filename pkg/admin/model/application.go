@@ -337,3 +337,13 @@ func (a *ApplicationSearch) GetRegistry(rt core_runtime.Runtime) {
 		a.RegistryClusters.Add(registryCluster)
 	}
 }
+
+type FlowWeightSet struct {
+	Weight int32      `json:"weight,omitempty"`
+	Scope  ParamMatch `json:"scope,omitempty"`
+}
+
+type GraySet struct {
+	EnvName string     `json:"name,omitempty"`
+	Scope   ParamMatch `json:"scope,omitempty"`
+}

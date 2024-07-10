@@ -1,4 +1,5 @@
 {{- $admin := .Values -}}
+{{- $cp := .Values.controlPlane -}}
 {{- $zoo := .Values.zookeeper -}}
 {{- $nacos := .Values.nacos -}}
 {{- $observable := $admin.observable -}}
@@ -58,12 +59,16 @@ spec:
         {{- if $admin.lifecycleHooks }}
         {{- toYaml $admin.lifecycleHooks | nindent 10 }}
         {{- end }}
+        args:
+        - run
+        - --config-file=/etc/dubbo.io/cp-config/config.yaml
         ports:
-        - name: http
-          {{- if $admin.service.protocol }}
-          protocol: {{ $admin.service.protocol }}
-          {{- end }}
-          containerPort: {{ template "admin.containerPort" . }}
+        - name: admin-http
+          containerPort: {{ template "admin.web.containerPort" . }}
+        - name: admin-xds-grpc
+          containerPort: {{ template "admin.xds.containerPort" . }}
+        - name: admin-admission
+          containerPort: {{ template "admin.admissionServer.containerPort" . }}
         env:
         {{- $zooName := include "zoo.name" . -}}
         {{- $nacosName := include "nacos.name" . -}}
@@ -77,15 +82,17 @@ spec:
         {{- $zooPort := include "zoo.client" . -}}
         {{- $nacosPort := $nacos.serverPort -}}
         {{- if $zoo.enabled }}
-        - name: ADMIN_REGISTRY_ADDRESS
-          value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }} {{ end }}
+        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
+          value: zookeeper://{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }}
         {{- else if $nacos.enabled }}
-        - name: ADMIN_REGISTRY_ADDRESS
+        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
           value: nacos://{{ range $k, $v := until $nacosReplicas }}{{ $nacosName }}-{{ $v }}.{{ $nacosName }}.{{ $nacosNamespace }}.svc.{{ $clusterDomain }}:{{ $nacosPort }} {{ end }}
         {{- else }}
-        - name: ADMIN_REGISTRY_ADDRESS
+        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
           value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }} {{ end }}
         {{- end }}
+        - name: DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_CERT_DIR
+          value: /var/run/secrets/dubbo.io/tls-cert
         {{- $promName := include "prom.name" . -}}
         {{- $promPort := include "prom.port" . -}}
         {{- if $observable.enabled }}
@@ -102,6 +109,21 @@ spec:
         {{- if $admin.volumeMounts }}
         {{- toYaml $admin.volumeMounts | nindent 8 }}
         {{- end }}
+        - name: general-tls-cert
+          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.crt
+          subPath: tls.crt
+          readOnly: true
+        - name: general-tls-cert
+          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.key
+          subPath: tls.key
+          readOnly: true
+        - name: general-tls-cert{{- if $cp.tls.general.caSecretName }}-ca{{- end }}
+          mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
+          subPath: ca.crt
+          readOnly: true
+        - name: {{ include "admin.name" . }}-control-plane-config
+          mountPath: /etc/dubbo.io/cp-config
+          readOnly: true
         securityContext:
         {{- if $admin.securityContext }}
         {{- toYaml $admin.securityContext | nindent 10 }}
@@ -126,16 +148,23 @@ spec:
       {{- if $admin.volumes }}
       {{- toYaml $admin.volumes | nindent 6 }}
       {{- end }}
-      - name: config
+      - name: {{ include "admin.name" . }}-control-plane-config
         configMap:
-        {{- if $admin.configMap }}
-        {{- toYaml $admin.configMap | nindent 10 }}
-        {{- end }}
-      - name: secret
+          name: {{ include "admin.name" . }}-control-plane-config
+      {{- if $cp.tls.general.secretName }}
+      - name: general-tls-cert
         secret:
-        {{- if $admin.secret }}
-        {{- toYaml $admin.secret | nindent 10 }}
-        {{- end }}
+          secretName: {{ $cp.tls.general.secretName }}
+      {{- else }}
+      - name: general-tls-cert
+        secret:
+          secretName: {{ include "admin.name" . }}-tls-cert
+      {{- end }}
+      {{- if $cp.tls.general.caSecretName }}
+      - name: general-tls-cert-ca
+        secret:
+          secretName: {{ $cp.tls.general.caSecretName }}
+      {{- end }}
       - name: storage
         {{- if $admin.persistence.enabled }}
         persistentVolumeClaim:
@@ -144,7 +173,7 @@ spec:
           claimName: {{ .claimName }}
         {{- else }}
         emptyDir: {}
-{{- end -}}
-{{- end -}}
-{{- end -}}
+        {{- end -}}
+        {{- end -}}
+        {{- end -}}
 {{- end -}}

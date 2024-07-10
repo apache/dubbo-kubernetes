@@ -15,22 +15,48 @@
  * limitations under the License.
  */
 
-package admin
+package v1alpha1
 
-type Admin struct {
-	Port int `json:"port" envconfig:"DUBBO_ADMIN_PORT"`
-}
-
-func (s *Admin) Sanitize() {
-}
-
-func (s *Admin) Validate() error {
-	// TODO Validate server
-	return nil
-}
-
-func DefaultAdminConfig() *Admin {
-	return &Admin{
-		Port: 8888,
+func (x *TagRoute) ListUnGenConfigs() []*Tag {
+	res := make([]*Tag, 0, len(x.Tags)/2+1)
+	for _, tag := range x.Tags {
+		if !tag.XGenerateByCp {
+			res = append(res, tag)
+		}
 	}
+	return res
+}
+
+func (x *TagRoute) ListGenConfigs() []*Tag {
+	res := make([]*Tag, 0, len(x.Tags)/2+1)
+	for _, tag := range x.Tags {
+		if tag.XGenerateByCp {
+			res = append(res, tag)
+		}
+	}
+	return res
+}
+
+func (x *TagRoute) RangeTags(f func(*Tag) (isStop bool)) {
+	if f == nil {
+		return
+	}
+	for _, tag := range x.Tags {
+		if f(tag) {
+			break
+		}
+	}
+}
+
+func (x *TagRoute) RangeTagsToRemove(f func(*Tag) (IsRemove bool)) {
+	if f == nil {
+		return
+	}
+	i := make([]*Tag, 0, len(x.Tags)/2+1)
+	for _, tag := range x.Tags {
+		if !f(tag) {
+			i = append(i, tag)
+		}
+	}
+	x.Tags = i
 }

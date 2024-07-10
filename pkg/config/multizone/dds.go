@@ -32,36 +32,36 @@ type DdsServerConfig struct {
 	config.BaseConfig
 
 	// Port of a gRPC server that serves Dubbo Discovery Service (DDS).
-	GrpcPort uint32 `json:"grpcPort" envconfig:"dubbo_multizone_global_dds_grpc_port"`
+	GrpcPort uint32 `json:"grpcPort" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_GRPC_PORT"`
 	// Interval for refreshing state of the world
-	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"dubbo_multizone_global_dds_refresh_interval"`
+	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_REFRESH_INTERVAL"`
 	// Interval for flushing Zone Insights (stats of multi-zone communication)
-	ZoneInsightFlushInterval config_types.Duration `json:"zoneInsightFlushInterval" envconfig:"dubbo_multizone_global_dds_zone_insight_flush_interval"`
+	ZoneInsightFlushInterval config_types.Duration `json:"zoneInsightFlushInterval" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_ZONE_INSIGHT_FLUSH_INTERVAL"`
 	// TlsEnabled turns on TLS for DDS
-	TlsEnabled bool `json:"tlsEnabled" envconfig:"dubbo_multizone_global_dds_tls_enabled"`
+	TlsEnabled bool `json:"tlsEnabled" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_TLS_ENABLED"`
 	// TlsCertFile defines a path to a file with PEM-encoded TLS cert.
-	TlsCertFile string `json:"tlsCertFile" envconfig:"dubbo_multizone_global_dds_tls_cert_file"`
+	TlsCertFile string `json:"tlsCertFile" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_TLS_CERT_FILE"`
 	// TlsKeyFile defines a path to a file with PEM-encoded TLS key.
-	TlsKeyFile string `json:"tlsKeyFile" envconfig:"dubbo_multizone_global_dds_tls_key_file"`
+	TlsKeyFile string `json:"tlsKeyFile" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_TLS_KEY_FILE"`
 	// TlsMinVersion defines the minimum TLS version to be used
-	TlsMinVersion string `json:"tlsMinVersion" envconfig:"dubbo_multizone_global_dds_tls_min_version"`
+	TlsMinVersion string `json:"tlsMinVersion" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_TLS_MIN_VERSION"`
 	// TlsMaxVersion defines the maximum TLS version to be used
-	TlsMaxVersion string `json:"tlsMaxVersion" envconfig:"dubbo_multizone_global_dds_tls_max_version"`
+	TlsMaxVersion string `json:"tlsMaxVersion" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_TLS_MAX_VERSION"`
 	// TlsCipherSuites defines the list of ciphers to use
-	TlsCipherSuites []string `json:"tlsCipherSuites" envconfig:"dubbo_multizone_global_dds_tls_cipher_suites"`
+	TlsCipherSuites []string `json:"tlsCipherSuites" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_TLS_CIPHER_SUITES"`
 	// MaxMsgSize defines a maximum size of the message that is exchanged using DDS.
 	// In practice this means a limit on full list of one resource type.
-	MaxMsgSize uint32 `json:"maxMsgSize" envconfig:"dubbo_multizone_global_dds_max_msg_size"`
+	MaxMsgSize uint32 `json:"maxMsgSize" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_MAX_MSG_SIZE"`
 	// MsgSendTimeout defines a timeout on sending a single DDS message.
 	// DDS stream between control planes is terminated if the control plane hits this timeout.
-	MsgSendTimeout config_types.Duration `json:"msgSendTimeout" envconfig:"dubbo_multizone_global_dds_msg_send_timeout"`
+	MsgSendTimeout config_types.Duration `json:"msgSendTimeout" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_MSG_SEND_TIMEOUT"`
 	// Backoff that is executed when the global control plane is sending the response that was previously rejected by zone control plane.
-	NackBackoff config_types.Duration `json:"nackBackoff" envconfig:"dubbo_multizone_global_dds_nack_backoff"`
+	NackBackoff config_types.Duration `json:"nackBackoff" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_NACK_BACKOFF"`
 	// DisableSOTW if true doesn't expose SOTW version of DDS. Default: false
-	DisableSOTW bool `json:"disableSOTW" envconfig:"dubbo_multizone_global_dds_disable_sotw"`
+	DisableSOTW bool `json:"disableSOTW" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_DISABLE_SOTW"`
 	// ResponseBackoff is a time Global CP waits before sending ACK/NACK.
 	// This is a way to slow down Zone CP from sending resources too often.
-	ResponseBackoff config_types.Duration `json:"responseBackoff" envconfig:"dubbo_multizone_global_dds_response_backoff"`
+	ResponseBackoff config_types.Duration `json:"responseBackoff" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_RESPONSE_BACKOFF"`
 	// ZoneHealthCheck holds config for ensuring zones are online
 	ZoneHealthCheck ZoneHealthCheckConfig `json:"zoneHealthCheck"`
 }
@@ -108,22 +108,22 @@ type DdsClientConfig struct {
 	config.BaseConfig
 
 	// Interval for refreshing state of the world
-	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"dubbo_multizone_zone_dds_refresh_interval"`
+	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"DUBBO_MULTIZONE_ZONE_DDS_REFRESH_INTERVAL"`
 	// If true, TLS connection to the server won't be verified.
-	TlsSkipVerify bool `json:"tlsSkipVerify" envconfig:"dubbo_multizone_zone_dds_tls_skip_verify"`
+	TlsSkipVerify bool `json:"tlsSkipVerify" envconfig:"DUBBO_MULTIZONE_ZONE_DDS_TLS_SKIP_VERIFY"`
 	// RootCAFile defines a path to a file with PEM-encoded Root CA. Client will verify the server by using it.
-	RootCAFile string `json:"rootCaFile" envconfig:"dubbo_multizone_zone_dds_root_ca_file"`
+	RootCAFile string `json:"rootCaFile" envconfig:"DUBBO_MULTIZONE_ZONE_DDS_ROOT_CA_FILE"`
 	// MaxMsgSize defines a maximum size of the message that is exchanged using DDS.
 	// In practice this means a limit on full list of one resource type.
-	MaxMsgSize uint32 `json:"maxMsgSize" envconfig:"dubbo_multizone_zone_dds_max_msg_size"`
+	MaxMsgSize uint32 `json:"maxMsgSize" envconfig:"DUBBO_MULTIZONE_ZONE_DDS_MAX_MSG_SIZE"`
 	// MsgSendTimeout defines a timeout on sending a single DDS message.
 	// DDS stream between control planes is terminated if the control plane hits this timeout.
-	MsgSendTimeout config_types.Duration `json:"msgSendTimeout" envconfig:"dubbo_multizone_zone_dds_msg_send_timeout"`
+	MsgSendTimeout config_types.Duration `json:"msgSendTimeout" envconfig:"DUBBO_MULTIZONE_ZONE_DDS_MSG_SEND_TIMEOUT"`
 	// Backoff that is executed when the zone control plane is sending the response that was previously rejected by global control plane.
-	NackBackoff config_types.Duration `json:"nackBackoff" envconfig:"dubbo_multizone_zone_dds_nack_backoff"`
+	NackBackoff config_types.Duration `json:"nackBackoff" envconfig:"DUBBO_MULTIZONE_ZONE_DDS_NACK_BACKOFF"`
 	// ResponseBackoff is a time Zone CP waits before sending ACK/NACK.
 	// This is a way to slow down Global CP from sending resources too often.
-	ResponseBackoff config_types.Duration `json:"responseBackoff" envconfig:"dubbo_multizone_zone_dds_response_backoff"`
+	ResponseBackoff config_types.Duration `json:"responseBackoff" envconfig:"DUBBO_MULTIZONE_ZONE_DDS_RESPONSE_BACKOFF"`
 }
 
 var _ config.Config = &DdsClientConfig{}
@@ -135,10 +135,10 @@ type ZoneHealthCheckConfig struct {
 
 	// PollInterval is the interval between the global CP checking ZoneInsight for
 	// health check pings and interval between zone CP sending health check pings
-	PollInterval config_types.Duration `json:"pollInterval" envconfig:"dubbo_multizone_global_dds_zone_health_check_poll_interval"`
+	PollInterval config_types.Duration `json:"pollInterval" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_ZONE_HEALTH_CHECK_POLL_INTERVAL"`
 	// Timeout is the time after the last health check that a zone counts as
 	// no longer online
-	Timeout config_types.Duration `json:"timeout" envconfig:"dubbo_multizone_global_dds_zone_health_check_timeout"`
+	Timeout config_types.Duration `json:"timeout" envconfig:"DUBBO_MULTIZONE_GLOBAL_DDS_ZONE_HEALTH_CHECK_TIMEOUT"`
 }
 
 func (c ZoneHealthCheckConfig) Validate() error {

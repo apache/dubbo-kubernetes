@@ -17,6 +17,13 @@
 deploy_mode: k8s
 #mode: test
 mode: zone
+#store:
+#  traditional:
+#    config_center: nacos://localhost:8848
+#    registry:
+#      address: nacos://localhost:8848
+#    metadata_report:
+#      address: nacos://localhost:8848
 #multizone:
 #  zone:
 #    globalAddress: grpc://127.0.0.1:5685

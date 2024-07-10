@@ -35,8 +35,8 @@ func DefaultZookeeperStoreConfig() *ZookeeperStoreConfig {
 
 type ZookeeperStoreConfig struct {
 	config.BaseConfig
-	Servers        []string      `json:"servers" envconfig:"dubbo_store_zookeeper_servers"`
-	SessionTimeout time.Duration `json:"sessionTimeout" envconfig:"dubbo_store_zookeeper_session_timeout"`
+	Servers        []string      `json:"servers" envconfig:"DUBBO_STORE_ZOOKEEPER_SERVERS"`
+	SessionTimeout time.Duration `json:"sessionTimeout" envconfig:"DUBBO_STORE_ZOOKEEPER_SESSION_TIMEOUT"`
 }
 
 func (z *ZookeeperStoreConfig) Validate() error {

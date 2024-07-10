@@ -14,47 +14,43 @@
 # limitations under the License.
 
 # Build the image binary
-FROM golang:1.20.1-alpine3.17 as builder
+FROM golang:1.21-alpine as builder
 
 
 # Build argments
 ARG TARGETOS
 ARG TARGETARCH
 ARG LDFLAGS
-ARG BUILD
+ARG CN_MIRROR
 
 WORKDIR /go/src/github.com/apache/dubbo-kubernetes
 
-# Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
+# Copy the go source
+COPY . .
+
+# disable cgo
+ENV CGO_ENABLED=0
 
 #RUN if [[ "${PKGNAME}" == "authority" ]]; then apk --update add gcc libc-dev upx ca-certificates && update-ca-certificates; fi
 
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN if [[ "${BUILD}" != "CI" ]]; then go env -w GOPROXY=https://goproxy.cn,direct; fi
+RUN if [[ -n "${CN_MIRROR}" ]]; then go env -w GOPROXY=https://goproxy.cn,direct; fi
 RUN go env
 RUN go mod download
 
-# Copy the go source
-COPY pkg pkg/
-COPY app app/
-COPY api api/
-COPY conf conf/
+# Build
+RUN GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o dubbo-cp ./app/dubbo-cp/main.go
+
+# ==============
+# Final image
+# Using a minimal operating system image
+# instead of a scratch image to allow for debugging
+FROM ubuntu:jammy
 
 # Build
-RUN env
-RUN GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS}" -a -o dubbo-cp /go/src/github.com/apache/dubbo-kubernetes/app/dubbo-cp/main.go
-
-
-FROM scratch
-
-# Build
-WORKDIR /
+WORKDIR /app/
 ARG PKGNAME
 COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/dubbo-cp .
-COPY --from=builder /go/src/github.com/apache/dubbo-kubernetes/conf/admin.yml .
-ENV ADMIN_CONFIG_PATH=./admin.yml
 
 ENTRYPOINT ["./dubbo-cp", "run"]

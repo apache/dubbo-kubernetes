@@ -103,6 +103,8 @@ SYNOPSIS
 		"Whether to build the image")
 	cmd.Flags().BoolP("apply", "a", false,
 		"Whether to apply the application to the k8s cluster by the way")
+	cmd.Flags().StringP("portName", "", "http",
+		"Name of the port to be exposed")
 
 	addPathFlag(cmd)
 	cmd.Flags().SetInterspersed(false)
@@ -279,6 +281,9 @@ func (c DeployConfig) Configure(f *dubbo.Dubbo) {
 	if c.NodePort != 0 {
 		f.Deploy.NodePort = c.NodePort
 	}
+	if c.PortName != "" {
+		f.Deploy.PortName = c.PortName
+	}
 }
 
 type DeployConfig struct {
@@ -293,6 +298,7 @@ type DeployConfig struct {
 	Force         bool
 	TargetPort    int
 	NodePort      int
+	PortName      string
 }
 
 func newDeployConfig(cmd *cobra.Command) (c *DeployConfig) {
@@ -308,6 +314,7 @@ func newDeployConfig(cmd *cobra.Command) (c *DeployConfig) {
 		ContainerPort: viper.GetInt("containerPort"),
 		TargetPort:    viper.GetInt("targetPort"),
 		NodePort:      viper.GetInt("nodePort"),
+		PortName:      viper.GetString("portName"),
 	}
 	return
 }

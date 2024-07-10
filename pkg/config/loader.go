@@ -22,6 +22,8 @@ import (
 )
 
 import (
+	"github.com/kelseyhightower/envconfig"
+
 	"github.com/pkg/errors"
 
 	"sigs.k8s.io/yaml"
@@ -42,11 +44,11 @@ func LoadWithOption(file string, cfg Config, strict bool, includeEnv bool, valid
 		return err
 	}
 
-	//if includeEnv {
-	//	if err := envconfig.Process("", cfg); err != nil {
-	//		return err
-	//	}
-	//}
+	if includeEnv {
+		if err := envconfig.Process("", cfg); err != nil {
+			return err
+		}
+	}
 
 	if err := cfg.PostProcess(); err != nil {
 		return errors.Wrap(err, "configuration post processing failed")

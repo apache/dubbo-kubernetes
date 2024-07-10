@@ -56,6 +56,7 @@ require (
 	github.com/heroku/color v0.0.6
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/jhump/protoreflect v1.16.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kylelemons/godebug v1.1.0
 	github.com/moby/term v0.5.0
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.2

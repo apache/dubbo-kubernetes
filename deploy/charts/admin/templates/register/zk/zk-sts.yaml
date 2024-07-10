@@ -6,7 +6,7 @@ metadata:
   name: {{ template "zoo.name" . }}
   namespace: {{ template "zoo.namespace" . }}
   labels:
-  {{- include "admin.labels" . | nindent 4 }}
+  {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -78,7 +78,7 @@ spec:
         {{- $zooNamespace := include "zoo.namespace" . }}
         {{- $zooDomain := $zoo.clusterDomain }}
         - name: ZOO_SERVERS
-          value: {{ range $k, $v := until $zooReplicas }}.{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::1 {{ end }}
+          value: {{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::{{ add $v 1 }} {{ end }}
         - name: ZOO_ENABLE_AUTH
           value: {{ ternary "no" "yes" $zoo.auth.client.enabled | quote }}
         - name: ALLOW_ANONYMOUS_LOGIN

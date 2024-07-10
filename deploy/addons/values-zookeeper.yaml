@@ -23,5 +23,3 @@ persistence:
   enabled: false
 pdb:
   create: false
-
-

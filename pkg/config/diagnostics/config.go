@@ -25,7 +25,7 @@ type DiagnosticsConfig struct {
 	config.BaseConfig
 
 	// Port of Diagnostic Server for checking health and readiness of the Control Plane
-	ServerPort uint32 `json:"serverPort" envconfig:"dubbo_diagnostics_server_port"`
+	ServerPort uint32 `json:"serverPort" envconfig:"DUBBO_DIAGNOSTICS_SERVER_PORT"`
 }
 
 var _ config.Config = &DiagnosticsConfig{}
