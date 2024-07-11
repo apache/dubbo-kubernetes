@@ -62,8 +62,6 @@ type ServiceArgument struct {
 	Conditions   []RouteCondition `json:"conditions"`
 	Destinations []Destination    `json:"destinations"`
 	Method       string           `json:"method"`
-	Ratio        int32            `json:"ratio"`
-	Priority     int32            `json:"priority"`
 }
 
 func (s *ServiceArgument) toFrom() *mesh_proto.ConditionRuleFrom {
@@ -134,13 +132,8 @@ func (s *ServiceArgumentRoute) ToConditionV3x1Condition() []*mesh_proto.Conditio
 	res := make([]*mesh_proto.ConditionRule, 0, len(s.Routes))
 	for _, route := range s.Routes {
 		res = append(res, &mesh_proto.ConditionRule{
-			Priority:       route.Priority,
-			From:           route.toFrom(),
-			TrafficDisable: false,
-			To:             route.toTo(),
-			Ratio:          route.Ratio,
-			Force:          false,
-			XGenerateByCp:  false, // from admin set
+			From: route.toFrom(),
+			To:   route.toTo(),
 		})
 	}
 	return res
@@ -156,8 +149,6 @@ func ConditionV3x1ToServiceArgumentRoute(mesh []*mesh_proto.ConditionRule) *Serv
 			Conditions:   matchValueToRouteCondition(mesh[i].From.Match),
 			Destinations: make([]Destination, 0, len(mesh[i].To)),
 			Method:       method,
-			Ratio:        mesh[i].Ratio,
-			Priority:     mesh[i].Priority,
 		}
 		for _, to := range mesh[i].To {
 			cond.Destinations = append(cond.Destinations, Destination{
@@ -235,6 +226,7 @@ func GenConditionRuleToResp(code int, message string, data *mesh_proto.Condition
 		}
 	} else if pb := data.ToConditionRouteV3x1(); pb != nil {
 		res := ConditionRuleV3X1{
+			AffinityAware: AffinityAware{},
 			Conditions:    make([]Condition, 0, len(pb.Conditions)),
 			ConfigVersion: "v3.1",
 			Enabled:       pb.Enabled,
@@ -243,22 +235,21 @@ func GenConditionRuleToResp(code int, message string, data *mesh_proto.Condition
 			Runtime:       pb.Runtime,
 			Scope:         pb.Scope,
 		}
+		if pb.AffinityAware != nil {
+			res.AffinityAware.Enabled, res.AffinityAware.Key = pb.AffinityAware.Enabled, pb.AffinityAware.Key
+		}
 		for _, condition := range pb.Conditions {
-			ress := Condition{
-				Disable:  condition.TrafficDisable,
-				Force:    condition.Force,
-				From:     Condition_From{Match: condition.From.Match},
-				Priority: condition.Priority,
-				Ratio:    condition.Priority,
-				To:       make([]Condition_To, 0, len(condition.To)),
+			resCondition := Condition{
+				From: Condition_From{Match: condition.From.Match},
+				To:   make([]Condition_To, 0, len(condition.To)),
 			}
 			for _, to := range condition.To {
-				ress.To = append(ress.To, Condition_To{
+				resCondition.To = append(resCondition.To, Condition_To{
 					Match:  to.Match,
 					Weight: to.Weight,
 				})
 			}
-			res.Conditions = append(res.Conditions, ress)
+			res.Conditions = append(res.Conditions, resCondition)
 		}
 		return &ConditionRuleResp{
 			Code:    code,
@@ -275,22 +266,24 @@ func GenConditionRuleToResp(code int, message string, data *mesh_proto.Condition
 }
 
 type ConditionRuleV3X1 struct {
-	Conditions    []Condition `json:"conditions"`
-	ConfigVersion string      `json:"configVersion"`
-	Enabled       bool        `json:"enabled"`
-	Force         bool        `json:"force"`
-	Key           string      `json:"key"`
-	Runtime       bool        `json:"runtime"`
-	Scope         string      `json:"scope"`
+	AffinityAware AffinityAware `json:"affinityAware"`
+	Conditions    []Condition   `json:"conditions"`
+	ConfigVersion string        `json:"configVersion"`
+	Enabled       bool          `json:"enabled"`
+	Force         bool          `json:"force"`
+	Key           string        `json:"key"`
+	Runtime       bool          `json:"runtime"`
+	Scope         string        `json:"scope"`
+}
+
+type AffinityAware struct {
+	Enabled bool   `json:"enabled"`
+	Key     string `json:"key"`
 }
 
 type Condition struct {
-	Disable  bool           `json:"disable"`
-	Force    bool           `json:"force"`
-	From     Condition_From `json:"from"`
-	Priority int32          `json:"priority"`
-	Ratio    int32          `json:"ratio"`
-	To       []Condition_To `json:"to"`
+	From Condition_From `json:"from"`
+	To   []Condition_To `json:"to"`
 }
 
 type Condition_From struct {

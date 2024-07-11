@@ -307,9 +307,9 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		param := baseService{}
 		resp := struct {
-			RegionPriority bool `json:"regionPriority"`
-			Ratio          int  `json:"ratio"`
-		}{false, 0}
+			Enabled bool   `json:"enabled"`
+			Key     string `json:"key"`
+		}{}
 		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -332,8 +332,8 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		} else {
 			res := rawRes.Spec.ToConditionRouteV3x1()
-			if res.XGenerateByCp != nil {
-				resp.RegionPriority, resp.Ratio = res.XGenerateByCp.RegionPrioritize, int(res.XGenerateByCp.RegionPrioritizeRate)
+			if res.AffinityAware != nil {
+				resp.Enabled, resp.Key = res.AffinityAware.Enabled, res.AffinityAware.Key
 			}
 			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
@@ -345,8 +345,8 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		param := struct {
 			baseService
-			Ratio          int32 `json:"ratio"`
-			RegionPriority bool  `json:"regionPriority"`
+			Enabled bool   `json:"enabled"`
+			Key     string `json:"key"`
 		}{}
 		if err := c.Bind(&param); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -372,15 +372,11 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		res := rawRes.Spec.ToConditionRouteV3x1()
-		if res.XGenerateByCp == nil {
-			res.XGenerateByCp = &mesh_proto.XAdminOption{
-				DisabledIP:           make([]string, 0),
-				RegionPrioritize:     false,
-				RegionPrioritizeRate: 0,
-			}
+		if res.AffinityAware == nil {
+			res.AffinityAware = new(mesh_proto.AffinityAware)
 		}
-		res.XGenerateByCp.RegionPrioritize, res.XGenerateByCp.RegionPrioritizeRate = param.RegionPriority, param.Ratio
-		res.ReGenerateCondition()
+		res.AffinityAware.Key, res.AffinityAware.Enabled = param.Key, param.Enabled
+
 		rawRes.Spec = res.ToConditionRoute()
 		if isExist {
 			err = updateConditionRule(rt, param.toInterface(), rawRes)
@@ -428,7 +424,6 @@ func ServiceConfigArgumentRouteGET(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		} else {
 			res := rawRes.Spec.ToConditionRouteV3x1()
-			res.Conditions = res.ListUnGenConditions()                                      // 返回非生成的Condition
 			res.RangeConditionsToRemove(func(r *mesh_proto.ConditionRule) (isRemove bool) { // 去除非方法匹配项
 				_, ok := r.IsMatchMethod()
 				return !ok
@@ -478,7 +473,6 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			return ok
 		})
 		res.Conditions = append(res.Conditions, param.ToConditionV3x1Condition()...)
-		res.ReGenerateCondition()
 		rawRes.Spec = res.ToConditionRoute()
 
 		if isExist {
