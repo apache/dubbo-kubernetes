@@ -101,6 +101,10 @@ type baseService struct {
 	Version string `json:"version"`
 }
 
+func (s *baseService) serviceName() string {
+	return s.Service
+}
+
 func (s *baseService) query(c *gin.Context) error {
 	s.Service = c.Query("serviceName")
 	if s.Service == "" {
@@ -176,7 +180,7 @@ func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor) : to check service exist or not
 			}
-			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
+			res = generateDefaultConfigurator(param.serviceName(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
 		} else {
 			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
@@ -271,7 +275,7 @@ func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor) : to check service exist or not
 			}
-			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
+			res = generateDefaultConfigurator(param.serviceName(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
 		}
 
@@ -363,7 +367,7 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				// TODO(YarBor) : to check service exist or not
 			} else {
 				rawRes = new(mesh.ConditionRouteResource)
-				rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
+				rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.serviceName(), consts.ScopeService).ToConditionRoute()
 				isExist = false
 			}
 		} else if rawRes.Spec.ToConditionRouteV3() != nil {
@@ -455,7 +459,7 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				// TODO(YarBor) : to check service exist or not
 			}
 			rawRes = new(mesh.ConditionRouteResource)
-			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
+			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.serviceName(), consts.ScopeService).ToConditionRoute()
 			isExist = false
 		}
 
