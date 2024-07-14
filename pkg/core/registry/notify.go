@@ -123,7 +123,7 @@ func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, url *commo
 
 	dataplaneResource := mesh.NewDataplaneResource()
 	dataplaneResource.SetMeta(&resourceMetaObject{
-		Name: app + "-" + revision,
+		Name: app + "-" + revision + "-" + address,
 		Mesh: core_model.DefaultMesh,
 	})
 	dataplaneResource.Spec.Networking = &mesh_proto.Dataplane_Networking{}
