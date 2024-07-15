@@ -40,6 +40,8 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 			instanceConfig.GET("/operatorLog", handler.InstanceConfigOperatorLogGET(rt))
 			instanceConfig.PUT("/operatorLog", handler.InstanceConfigOperatorLogPUT(rt))
 		}
+		instance.GET("/metric-dashboard", handler.GetMetricDashBoard(rt, handler.InstanceDimension))
+		instance.GET("/instance-dashboard", handler.GetTraceDashBoard(rt, handler.InstanceDimension))
 	}
 
 	{
@@ -59,6 +61,8 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 			applicationConfig.GET("/gray", handler.ApplicationConfigGrayGET(rt))
 			applicationConfig.PUT("/gray", handler.ApplicationConfigGrayPUT(rt))
 		}
+		application.GET("/metric-dashboard", handler.GetMetricDashBoard(rt, handler.AppDimension))
+		application.GET("/trace-dashboard", handler.GetTraceDashBoard(rt, handler.AppDimension))
 	}
 
 	{
@@ -77,6 +81,8 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 			serviceConfig.GET("/argumentRoute", handler.ServiceConfigArgumentRouteGET(rt))
 			serviceConfig.PUT("/argumentRoute", handler.ServiceConfigArgumentRoutePUT(rt))
 		}
+		service.GET("/metric-dashboard", handler.GetMetricDashBoard(rt, handler.ServiceDimension))
+		service.GET("/trace-dashboard", handler.GetTraceDashBoard(rt, handler.ServiceDimension))
 	}
 
 	{
@@ -120,4 +126,6 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		tagRule.POST("/:ruleName", handler.PostTagRuleWithRuleName(rt))
 		tagRule.DELETE("/:ruleName", handler.DeleteTagRuleWithRuleName(rt))
 	}
+
+	router.GET("/prometheus", handler.GetPrometheus(rt))
 }
