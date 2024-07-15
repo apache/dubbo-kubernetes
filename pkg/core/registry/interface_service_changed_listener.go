@@ -1,46 +1,23 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package registry
 
 import (
 	"reflect"
 	"sync"
-)
 
-import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
-
+	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	gxset "github.com/dubbogo/gost/container/set"
 	"github.com/dubbogo/gost/gof/observer"
 )
 
-import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-)
-
-// DubboSDNotifyListener The Service Discovery Changed  Event Listener
-type DubboSDNotifyListener struct {
+// DubboISDNotifyListener The Service Discovery Changed  Event Listener
+type DubboISDNotifyListener struct {
 	serviceNames       *gxset.HashSet
 	listeners          map[string]registry.NotifyListener
 	serviceUrls        map[string][]*common.URL
@@ -50,8 +27,8 @@ type DubboSDNotifyListener struct {
 	mutex sync.Mutex
 }
 
-func NewDubboSDNotifyListener(services *gxset.HashSet) registry.ServiceInstancesChangedListener {
-	return &DubboSDNotifyListener{
+func NewDubboISDNotifyListener(services *gxset.HashSet) registry.ServiceInstancesChangedListener {
+	return &DubboISDNotifyListener{
 		serviceNames:       services,
 		listeners:          make(map[string]registry.NotifyListener),
 		serviceUrls:        make(map[string][]*common.URL),
@@ -61,7 +38,7 @@ func NewDubboSDNotifyListener(services *gxset.HashSet) registry.ServiceInstances
 }
 
 // OnEvent on ServiceInstancesChangedEvent the service instances change event
-func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
+func (lstn *DubboISDNotifyListener) OnEvent(e observer.Event) error {
 	ce, ok := e.(*registry.ServiceInstancesChangedEvent)
 	if !ok {
 		return nil
@@ -81,7 +58,6 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	logger.Infof("Received instance notification event of service %s, instance list size %s", ce.ServiceName, len(ce.Instances))
 
 	for _, instances := range lstn.allInstances {
-		// 获取实例对应revision元数据map，并从元数据中获取接口服务信息
 		for _, instance := range instances {
 			metadataInstance := ConvertToMetadataInstance(instance)
 			if metadataInstance.GetMetadata() == nil {
@@ -106,7 +82,6 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 				}
 			}
 			metadataInstance.SetServiceMetadata(metadataInfo)
-			// 从元数据中获取接口相关信息localServiceToRevisions
 			for _, service := range metadataInfo.Services {
 				if localServiceToRevisions[service] == nil {
 					localServiceToRevisions[service] = gxset.NewSet()
@@ -118,7 +93,6 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 		}
 		lstn.revisionToMetadata = newRevisionToMetadata
 
-		// 获取接口服务名和url对应的map
 		for serviceInfo, revisions := range localServiceToRevisions {
 			revisionsToUrls := protocolRevisionsToUrls[serviceInfo.Protocol]
 			if revisionsToUrls == nil {
@@ -144,7 +118,6 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 		}
 		lstn.serviceUrls = newServiceURLs
 
-		// 对接口服务
 		for key, notifyListener := range lstn.listeners {
 			urls := lstn.serviceUrls[key]
 			events := make([]*registry.ServiceEvent, 0, len(urls))
@@ -162,7 +135,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 }
 
 // AddListenerAndNotify add notify listener and notify to listen service event
-func (lstn *DubboSDNotifyListener) AddListenerAndNotify(serviceKey string, notify registry.NotifyListener) {
+func (lstn *DubboISDNotifyListener) AddListenerAndNotify(serviceKey string, notify registry.NotifyListener) {
 	lstn.listeners[serviceKey] = notify
 	urls := lstn.serviceUrls[serviceKey]
 	for _, url := range urls {
@@ -175,17 +148,17 @@ func (lstn *DubboSDNotifyListener) AddListenerAndNotify(serviceKey string, notif
 }
 
 // RemoveListener remove notify listener
-func (lstn *DubboSDNotifyListener) RemoveListener(serviceKey string) {
+func (lstn *DubboISDNotifyListener) RemoveListener(serviceKey string) {
 	delete(lstn.listeners, serviceKey)
 }
 
 // GetServiceNames return all listener service names
-func (lstn *DubboSDNotifyListener) GetServiceNames() *gxset.HashSet {
+func (lstn *DubboISDNotifyListener) GetServiceNames() *gxset.HashSet {
 	return lstn.serviceNames
 }
 
 // Accept return true if the name is the same
-func (lstn *DubboSDNotifyListener) Accept(e observer.Event) bool {
+func (lstn *DubboISDNotifyListener) Accept(e observer.Event) bool {
 	if ce, ok := e.(*registry.ServiceInstancesChangedEvent); ok {
 		return lstn.serviceNames.Contains(ce.ServiceName)
 	}
@@ -193,17 +166,17 @@ func (lstn *DubboSDNotifyListener) Accept(e observer.Event) bool {
 }
 
 // GetPriority returns -1, it will be the first invoked listener
-func (lstn *DubboSDNotifyListener) GetPriority() int {
+func (lstn *DubboISDNotifyListener) GetPriority() int {
 	return -1
 }
 
 // GetEventType returns ServiceInstancesChangedEvent
-func (lstn *DubboSDNotifyListener) GetEventType() reflect.Type {
+func (lstn *DubboISDNotifyListener) GetEventType() reflect.Type {
 	return reflect.TypeOf(&registry.ServiceInstancesChangedEvent{})
 }
 
 // GetMetadataInfo get metadata info when MetadataStorageTypePropertyName is null
-func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*common.MetadataInfo, error) {
+func GetInterfaceMetadataInfo(instance registry.ServiceInstance, revision string) (*common.MetadataInfo, error) {
 	var metadataStorageType string
 	var metadataInfo *common.MetadataInfo
 	if instance.GetMetadata() == nil {

@@ -20,7 +20,6 @@ package registry
 import (
 	"net/url"
 	"sync"
-	"time"
 )
 
 import (
@@ -83,23 +82,12 @@ func (r *Registry) Subscribe(
 		common.WithParams(queryParams))
 	listener := NewNotifyListener(resourceManager, cache, discovery, out)
 
-	//go func() {
-	//	err := r.delegate.Subscribe(subscribeUrl, listener)
-	//	if err != nil {
-	//		logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
-	//	}
-	//}()
-
-	scheduler := gocron.NewScheduler(time.UTC)
-	_, err := scheduler.Every(1).Second().Do(func() {
+	go func() {
 		err := r.delegate.Subscribe(subscribeUrl, listener)
 		if err != nil {
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}
-	})
-	if err != nil {
-		logger.Error("Failed to start registry interface services scheduler")
-	}
+	}()
 
 	getMappingList := func(group string) (map[string]*gxset.HashSet, error) {
 		keys, err := metadataReport.GetConfigKeysByGroup(group)
