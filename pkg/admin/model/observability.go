@@ -15,41 +15,37 @@
  * limitations under the License.
  */
 
-package constants
+package model
 
-// Registry Constants
-const (
-	RegistryKey            = "registry"
-	RegistryClusterKey     = "REGISTRY_CLUSTER"
-	RegisterModeKey        = "register-mode"
-	RegistryClusterTypeKey = "registry-cluster-type"
+type DashboardReq interface {
+	GetKeyVariable() string
+}
 
-	DefaultRegisterModeInterface = "interface"
-	DefaultRegisterModeInstance  = "instance"
-	DefaultRegisterModeAll       = "all"
-)
+type AppDashboardReq struct {
+	Application string `form:"application"`
+}
 
-const (
-	SerializationKey = "serialization"
-)
+func (req *AppDashboardReq) GetKeyVariable() string {
+	return req.Application
+}
 
-const (
-	DubboVersionKey = "dubbo"
-)
+type InstanceDashboardReq struct {
+	Instance string `form:"instance"`
+}
 
-const (
-	ServiceInfoSide = "side"
-	ProviderSide    = "provider"
-	ConsumerSide    = "consumer"
-)
+func (req *InstanceDashboardReq) GetKeyVariable() string {
+	return req.Instance
+}
 
-const (
-	RetriesKey = "retries"
-	TimeoutKey = "timeout"
-)
+type ServiceDashboardReq struct {
+	Service string `form:"service"`
+}
 
-const (
-	Application = "application"
-	Instance    = "instance"
-	Service     = "service"
-)
+func (req *ServiceDashboardReq) GetKeyVariable() string {
+	return req.Service
+}
+
+// DashboardResp TODO add dynamic variables
+type DashboardResp struct {
+	BaseURL string `json:"baseURL"`
+}

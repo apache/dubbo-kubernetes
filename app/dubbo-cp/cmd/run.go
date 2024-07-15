@@ -75,6 +75,7 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 				runLog.Error(err, "unable to set up Control Plane runtime")
 				return err
 			}
+			// FIXME config sanitize 需移到bootstrap前
 			cfgForDisplay, err := config.ConfigForDisplay(&cfg)
 			if err != nil {
 				runLog.Error(err, "unable to prepare config for display")
