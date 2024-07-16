@@ -20,6 +20,9 @@ package registry
 import (
 	"net/url"
 	"sync"
+	"time"
+
+	"github.com/go-co-op/gocron"
 )
 
 import (
@@ -82,13 +85,18 @@ func (r *Registry) Subscribe(
 		common.WithParams(queryParams))
 
 	listener := NewNotifyListener(resourceManager, cache, discovery, out)
+	interfaceServiceListener := NewInterfaceNotifyListener(*listener, r.delegate)
 
-	go func() {
-		err := r.delegate.Subscribe(subscribeUrl, listener)
+	scheduler := gocron.NewScheduler(time.UTC)
+	_, err := scheduler.Every(5).Second().Do(func() {
+		err := r.delegate.Subscribe(subscribeUrl, interfaceServiceListener)
 		if err != nil {
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}
-	}()
+	})
+	if err != nil {
+		logger.Error("Failed to start registry interface services scheduler")
+	}
 
 	getMappingList := func(group string) (map[string]*gxset.HashSet, error) {
 		keys, err := metadataReport.GetConfigKeysByGroup(group)
