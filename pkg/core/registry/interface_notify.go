@@ -1,34 +1,55 @@
 package registry
 
 import (
-	"context"
+	"sync"
 
-	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+	gxset "github.com/dubbogo/gost/container/set"
 )
 
 type InterfaceNotifyListener struct {
-	NotifyListener
+	allUrls        gxset.HashSet
+	appNames       gxset.HashSet
+	appToInstances *sync.Map
+
+	mutex sync.Mutex
 }
 
 func NewInterfaceNotifyListener(listener NotifyListener) *InterfaceNotifyListener {
 	return &InterfaceNotifyListener{
-		listener,
+		appNames:       *gxset.NewSet(),
+		appToInstances: &sync.Map{},
+		mutex:          sync.Mutex{},
 	}
 }
 
-func (l *InterfaceNotifyListener) Notify(event *dubboRegistry.ServiceEvent) {
-	l.NotifyListener.Notify(event)
+func (ilstn *InterfaceNotifyListener) Notify(event *dubboRegistry.ServiceEvent) {
+	url := event.Service
+	if ilstn.allUrls.Contains(url) {
+		return
+	}
+	appName := url.Service()
+	ilstn.mutex.Lock()
+	defer ilstn.mutex.Unlock()
+
+	_, ok := ilstn.appToInstances.Load(appName)
+	if !ok {
+		_ = dubboRegistry.DefaultServiceInstance{
+			ID:              url.Ip + ":" + url.Port,
+			ServiceName:     appName,
+			Host:            "",
+			Port:            0,
+			Enable:          false,
+			Healthy:         false,
+			Metadata:        nil,
+			ServiceMetadata: nil,
+			Address:         "",
+			GroupName:       "",
+			Tag:             "",
+		}
+
+	}
 }
 
-func (l *InterfaceNotifyListener) NotifyAll(events []*dubboRegistry.ServiceEvent, f func()) {
-	l.NotifyListener.NotifyAll(events, f)
-}
-
-func (l *InterfaceNotifyListener) deleteDataplane(ctx context.Context, url *common.URL) error {
-	return l.NotifyListener.deleteDataplane(ctx, url)
-}
-
-func (l *InterfaceNotifyListener) createOrUpdateDataplane(ctx context.Context, url *common.URL) error {
-	return l.NotifyListener.createOrUpdateDataplane(ctx, url)
+func (ilstn *InterfaceNotifyListener) NotifyAll(events []*dubboRegistry.ServiceEvent, f func()) {
 }

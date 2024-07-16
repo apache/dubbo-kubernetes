@@ -80,6 +80,7 @@ func (r *Registry) Subscribe(
 	subscribeUrl, _ := common.NewURL(common.GetLocalIp()+":0",
 		common.WithProtocol(consts.AdminProtocol),
 		common.WithParams(queryParams))
+
 	listener := NewNotifyListener(resourceManager, cache, discovery, out)
 
 	go func() {

@@ -144,7 +144,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 		}
 		lstn.serviceUrls = newServiceURLs
 
-		// 对接口服务
+		// 对接口服务操作，生成dataplane相关资源
 		for key, notifyListener := range lstn.listeners {
 			urls := lstn.serviceUrls[key]
 			events := make([]*registry.ServiceEvent, 0, len(urls))
