@@ -41,15 +41,16 @@ import (
 
 // DubboSDNotifyListener The Service Discovery Changed  Event Listener
 type DubboSDNotifyListener struct {
-	serviceNames    *gxset.HashSet
-	instanceContext *ServiceInstanceContext
-	mutex           sync.Mutex
+	serviceNames       *gxset.HashSet
+	applicationContext *ApplicationContext
+	mutex              sync.Mutex
+	listeners          map[string]registry.NotifyListener
 }
 
-func NewDubboSDNotifyListener(services *gxset.HashSet, instanceContext *ServiceInstanceContext) registry.ServiceInstancesChangedListener {
+func NewDubboSDNotifyListener(services *gxset.HashSet, instanceContext *ApplicationContext) registry.ServiceInstancesChangedListener {
 	return &DubboSDNotifyListener{
-		serviceNames:    services,
-		instanceContext: instanceContext,
+		serviceNames:       services,
+		applicationContext: instanceContext,
 	}
 }
 
@@ -63,7 +64,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	lstn.mutex.Lock()
 	defer lstn.mutex.Unlock()
 
-	ctx := lstn.instanceContext
+	ctx := lstn.applicationContext
 	ctx.allInstances.Store(ce.ServiceName, ce.Instances)
 	revisionToInstances := make(map[string][]registry.ServiceInstance)
 	newRevisionToMetadata := make(map[string]*common.MetadataInfo)
@@ -75,7 +76,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 
 	var serviceChangedError error = nil
 	ctx.allInstances.Range(func(k, v interface{}) bool {
-		serviceName := k.(string)
+		appName := k.(string)
 		var value any
 		var err error
 		for _, instance := range v.([]registry.ServiceInstance) {
@@ -96,12 +97,12 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 			revisionToInstances[revision] = append(subInstances, metadataInstance)
 
 			var revisionToMetadata map[string]*common.MetadataInfo
-			if value, ok = ctx.revisionToMetadata.Load(serviceName); !ok {
+			if value, ok = ctx.revisionToMetadata.Load(appName); !ok {
 				value = make(map[string]*common.MetadataInfo)
-				ctx.revisionToMetadata.Store(serviceName, value)
+				ctx.revisionToMetadata.Store(appName, value)
 			}
 			revisionToMetadata = value.(map[string]*common.MetadataInfo)
-			metadataInfo := revisionToMetadata[serviceName]
+			metadataInfo := revisionToMetadata[revision]
 			if metadataInfo == nil {
 				metadataInfo, err = GetMetadataInfo(metadataInstance, revision)
 				if err != nil {
@@ -120,7 +121,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 			newRevisionToMetadata[revision] = metadataInfo
 
 		}
-		ctx.revisionToMetadata.Store(serviceName, newRevisionToMetadata)
+		ctx.revisionToMetadata.Store(appName, newRevisionToMetadata)
 
 		for serviceInfo, revisions := range localServiceToRevisions {
 			revisionsToUrls := protocolRevisionsToUrls[serviceInfo.Protocol]
@@ -145,11 +146,8 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 				newServiceURLs[serviceInfo.Name] = urls
 			}
 		}
-		ctx.serviceUrls.Store(serviceName, newServiceURLs)
+		ctx.serviceUrls.Store(appName, newServiceURLs)
 
-		if value, ok := ctx.listeners.Load(serviceName); !ok {
-
-		}
 		for key, notifyListener := range lstn.listeners {
 			urls := newServiceURLs[key]
 			events := make([]*registry.ServiceEvent, 0, len(urls))

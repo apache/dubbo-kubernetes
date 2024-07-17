@@ -46,14 +46,14 @@ type NotifyListener struct {
 	manager.ResourceManager
 	dataplaneCache  *sync.Map
 	eventWriter     events.Emitter
-	instanceContext *ServiceInstanceContext
+	instanceContext *ApplicationContext
 }
 
 func NewNotifyListener(
 	manager manager.ResourceManager,
 	cache *sync.Map,
 	writer events.Emitter,
-	instanceContext *ServiceInstanceContext,
+	instanceContext *ApplicationContext,
 ) *NotifyListener {
 	return &NotifyListener{
 		manager,

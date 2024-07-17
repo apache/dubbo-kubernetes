@@ -42,7 +42,7 @@ type ServiceMappingChangedListenerImpl struct {
 	interfaceKey    string
 	systemNamespace string
 
-	ctx           *ServiceInstanceContext
+	ctx           *ApplicationContext
 	mux           sync.Mutex
 	delSDRegistry registry.ServiceDiscovery
 	eventWriter   events.Emitter
@@ -55,7 +55,7 @@ func NewMappingListener(
 	writer events.Emitter,
 	systemNamespace string,
 	delSDRegistry registry.ServiceDiscovery,
-	ctx *ServiceInstanceContext,
+	ctx *ApplicationContext,
 ) *ServiceMappingChangedListenerImpl {
 	return &ServiceMappingChangedListenerImpl{
 		interfaceKey:    interfaceKey,
