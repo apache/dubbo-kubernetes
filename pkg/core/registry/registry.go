@@ -43,12 +43,26 @@ import (
 type Registry struct {
 	delegate   dubboRegistry.Registry
 	sdDelegate dubboRegistry.ServiceDiscovery
+	ctx        *ServiceInstanceContext
+}
+
+type ServiceInstanceContext struct {
+	serviceUrls        *sync.Map
+	revisionToMetadata *sync.Map
+	allInstances       *sync.Map
+	listeners          *sync.Map
 }
 
 func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
+		ctx: &ServiceInstanceContext{
+			serviceUrls:        &sync.Map{},
+			revisionToMetadata: &sync.Map{},
+			allInstances:       &sync.Map{},
+			listeners:          &sync.Map{},
+		},
 	}
 }
 
@@ -64,7 +78,6 @@ func (r *Registry) Subscribe(
 	metadataReport report.MetadataReport,
 	resourceManager core_manager.ResourceManager,
 	cache *sync.Map,
-	discovery dubboRegistry.ServiceDiscovery,
 	out events.Emitter,
 	systemNamespace string,
 ) error {
@@ -84,12 +97,11 @@ func (r *Registry) Subscribe(
 		common.WithProtocol(consts.AdminProtocol),
 		common.WithParams(queryParams))
 
-	listener := NewNotifyListener(resourceManager, cache, discovery, out)
-	interfaceServiceListener := NewInterfaceNotifyListener(*listener, r.delegate)
+	listener := NewGeneralInterfaceNotifyListener(r.ctx)
 
 	scheduler := gocron.NewScheduler(time.UTC)
 	_, err := scheduler.Every(5).Second().Do(func() {
-		err := r.delegate.Subscribe(subscribeUrl, interfaceServiceListener)
+		err := r.delegate.Subscribe(subscribeUrl, listener)
 		if err != nil {
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}
@@ -123,10 +135,11 @@ func (r *Registry) Subscribe(
 		if err != nil {
 			logger.Error("Failed to get mapping")
 		}
+		listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
 		for interfaceKey, oldApps := range mappings {
-			mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate)
+			mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate, r.ctx)
 			apps, _ := metadataReport.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
-			delSDListener := NewDubboSDNotifyListener(apps)
+			delSDListener := NewDubboSDNotifyListener(apps, r.ctx)
 			for appTmp := range apps.Items {
 				app := appTmp.(string)
 				instances := r.sdDelegate.GetInstances(app)

@@ -41,22 +41,15 @@ import (
 
 // DubboSDNotifyListener The Service Discovery Changed  Event Listener
 type DubboSDNotifyListener struct {
-	serviceNames       *gxset.HashSet
-	listeners          map[string]registry.NotifyListener
-	serviceUrls        map[string][]*common.URL
-	revisionToMetadata map[string]*common.MetadataInfo
-	allInstances       map[string][]registry.ServiceInstance
-
-	mutex sync.Mutex
+	serviceNames    *gxset.HashSet
+	instanceContext *ServiceInstanceContext
+	mutex           sync.Mutex
 }
 
-func NewDubboSDNotifyListener(services *gxset.HashSet) registry.ServiceInstancesChangedListener {
+func NewDubboSDNotifyListener(services *gxset.HashSet, instanceContext *ServiceInstanceContext) registry.ServiceInstancesChangedListener {
 	return &DubboSDNotifyListener{
-		serviceNames:       services,
-		listeners:          make(map[string]registry.NotifyListener),
-		serviceUrls:        make(map[string][]*common.URL),
-		revisionToMetadata: make(map[string]*common.MetadataInfo),
-		allInstances:       make(map[string][]registry.ServiceInstance),
+		serviceNames:    services,
+		instanceContext: instanceContext,
 	}
 }
 
@@ -66,23 +59,26 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	if !ok {
 		return nil
 	}
-	var err error
 
 	lstn.mutex.Lock()
 	defer lstn.mutex.Unlock()
 
-	lstn.allInstances[ce.ServiceName] = ce.Instances
+	ctx := lstn.instanceContext
+	ctx.allInstances.Store(ce.ServiceName, ce.Instances)
 	revisionToInstances := make(map[string][]registry.ServiceInstance)
 	newRevisionToMetadata := make(map[string]*common.MetadataInfo)
 	localServiceToRevisions := make(map[*common.ServiceInfo]*gxset.HashSet)
 	protocolRevisionsToUrls := make(map[string]map[*gxset.HashSet][]*common.URL)
 	newServiceURLs := make(map[string][]*common.URL)
 
-	logger.Infof("Received instance notification event of service %s, instance list size %s", ce.ServiceName, len(ce.Instances))
+	logger.Infof("Received instance notification event of service %s, instance list size %d", ce.ServiceName, len(ce.Instances))
 
-	for _, instances := range lstn.allInstances {
-		// 获取实例对应revision元数据map，并从元数据中获取接口服务信息
-		for _, instance := range instances {
+	var serviceChangedError error = nil
+	ctx.allInstances.Range(func(k, v interface{}) bool {
+		serviceName := k.(string)
+		var value any
+		var err error
+		for _, instance := range v.([]registry.ServiceInstance) {
 			metadataInstance := ConvertToMetadataInstance(instance)
 			if metadataInstance.GetMetadata() == nil {
 				logger.Warnf("Instance metadata is nil: %s", metadataInstance.GetHost())
@@ -98,15 +94,22 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 				subInstances = make([]registry.ServiceInstance, 8)
 			}
 			revisionToInstances[revision] = append(subInstances, metadataInstance)
-			metadataInfo := lstn.revisionToMetadata[revision]
+
+			var revisionToMetadata map[string]*common.MetadataInfo
+			if value, ok = ctx.revisionToMetadata.Load(serviceName); !ok {
+				value = make(map[string]*common.MetadataInfo)
+				ctx.revisionToMetadata.Store(serviceName, value)
+			}
+			revisionToMetadata = value.(map[string]*common.MetadataInfo)
+			metadataInfo := revisionToMetadata[serviceName]
 			if metadataInfo == nil {
 				metadataInfo, err = GetMetadataInfo(metadataInstance, revision)
 				if err != nil {
-					return err
+					serviceChangedError = err
+					return false
 				}
 			}
 			metadataInstance.SetServiceMetadata(metadataInfo)
-			// 从元数据中获取接口相关信息localServiceToRevisions
 			for _, service := range metadataInfo.Services {
 				if localServiceToRevisions[service] == nil {
 					localServiceToRevisions[service] = gxset.NewSet()
@@ -115,10 +118,10 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 			}
 
 			newRevisionToMetadata[revision] = metadataInfo
-		}
-		lstn.revisionToMetadata = newRevisionToMetadata
 
-		// 获取接口服务名和url对应的map
+		}
+		ctx.revisionToMetadata.Store(serviceName, newRevisionToMetadata)
+
 		for serviceInfo, revisions := range localServiceToRevisions {
 			revisionsToUrls := protocolRevisionsToUrls[serviceInfo.Protocol]
 			if revisionsToUrls == nil {
@@ -142,11 +145,13 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 				newServiceURLs[serviceInfo.Name] = urls
 			}
 		}
-		lstn.serviceUrls = newServiceURLs
+		ctx.serviceUrls.Store(serviceName, newServiceURLs)
 
-		// 对接口服务操作，生成dataplane相关资源
+		if value, ok := ctx.listeners.Load(serviceName); !ok {
+
+		}
 		for key, notifyListener := range lstn.listeners {
-			urls := lstn.serviceUrls[key]
+			urls := newServiceURLs[key]
 			events := make([]*registry.ServiceEvent, 0, len(urls))
 			for _, url := range urls {
 				url.SetParam(consts.RegistryType, consts.RegistryInstance)
@@ -157,13 +162,15 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 			}
 			notifyListener.NotifyAll(events, func() {})
 		}
-	}
-	return nil
+		return true
+	})
+	return serviceChangedError
 }
 
 // AddListenerAndNotify add notify listener and notify to listen service event
 func (lstn *DubboSDNotifyListener) AddListenerAndNotify(serviceKey string, notify registry.NotifyListener) {
 	lstn.listeners[serviceKey] = notify
+
 	urls := lstn.serviceUrls[serviceKey]
 	for _, url := range urls {
 		url.SetParam(consts.RegistryType, consts.RegistryInstance)

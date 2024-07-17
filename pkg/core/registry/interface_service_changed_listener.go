@@ -1,207 +1,133 @@
 package registry
 
 import (
-	"reflect"
+	"encoding/json"
+	"strconv"
 	"sync"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
-	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
-	"dubbo.apache.org/dubbo-go/v3/common/extension"
-	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
+	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/registry"
-	"dubbo.apache.org/dubbo-go/v3/remoting"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	gxset "github.com/dubbogo/gost/container/set"
-	"github.com/dubbogo/gost/gof/observer"
 )
 
-// DubboISDNotifyListener The Service Discovery Changed  Event Listener
-type DubboISDNotifyListener struct {
-	serviceNames       *gxset.HashSet
-	listeners          map[string]registry.NotifyListener
-	serviceUrls        map[string][]*common.URL
-	revisionToMetadata map[string]*common.MetadataInfo
-	allInstances       map[string][]registry.ServiceInstance
-
-	mutex sync.Mutex
+type InterfaceServiceChangedNotifyListener struct {
+	mutex          sync.Mutex
+	appToInstances *sync.Map
+	registry       registry.Registry
 }
 
-func NewDubboISDNotifyListener(services *gxset.HashSet) registry.ServiceInstancesChangedListener {
-	return &DubboISDNotifyListener{
-		serviceNames:       services,
-		listeners:          make(map[string]registry.NotifyListener),
-		serviceUrls:        make(map[string][]*common.URL),
-		revisionToMetadata: make(map[string]*common.MetadataInfo),
-		allInstances:       make(map[string][]registry.ServiceInstance),
+func NewInterfaceServiceChangedNotifyListener(
+	listener *GeneralInterfaceNotifyListener,
+) *InterfaceServiceChangedNotifyListener {
+	return &InterfaceServiceChangedNotifyListener{
+		mutex: sync.Mutex{},
 	}
 }
 
-// OnEvent on ServiceInstancesChangedEvent the service instances change event
-func (lstn *DubboISDNotifyListener) OnEvent(e observer.Event) error {
-	ce, ok := e.(*registry.ServiceInstancesChangedEvent)
+// Notify OnEvent on ServiceInstancesChangedEvent the service instances change event
+func (iscnl *InterfaceServiceChangedNotifyListener) Notify(event *registry.ServiceEvent) {
+
+}
+
+// NotifyAll the events are complete Service Event List.
+// The argument of events []*ServiceEvent is equal to urls []*URL, The Action of serviceEvent should be EventTypeUpdate.
+// If your registry center can only get all urls but can't get individual event, you should use this one.
+// After notify the address, the callback func will be invoked.
+func (iscnl *InterfaceServiceChangedNotifyListener) NotifyAll(events []*registry.ServiceEvent, f func()) {
+	for _, event := range events {
+		iscnl.Notify(event)
+	}
+}
+
+func (iscnl *InterfaceServiceChangedNotifyListener) RegisterUrl(url *common.URL) {
+	serviceInfo := common.NewServiceInfoWithURL(url)
+
+	appName := url.Service()
+	instances, ok := iscnl.appToInstances.Load(appName)
 	if !ok {
-		return nil
+		instances = make(map[string]registry.ServiceInstance)
+		iscnl.appToInstances.Store(appName, instances)
 	}
-	var err error
+	instanceIDMap := instances.(map[string]registry.DefaultServiceInstance)
+	instance, exists := instanceIDMap[url.Address()]
 
-	lstn.mutex.Lock()
-	defer lstn.mutex.Unlock()
-
-	lstn.allInstances[ce.ServiceName] = ce.Instances
-	revisionToInstances := make(map[string][]registry.ServiceInstance)
-	newRevisionToMetadata := make(map[string]*common.MetadataInfo)
-	localServiceToRevisions := make(map[*common.ServiceInfo]*gxset.HashSet)
-	protocolRevisionsToUrls := make(map[string]map[*gxset.HashSet][]*common.URL)
-	newServiceURLs := make(map[string][]*common.URL)
-
-	logger.Infof("Received instance notification event of service %s, instance list size %s", ce.ServiceName, len(ce.Instances))
-
-	for _, instances := range lstn.allInstances {
-		for _, instance := range instances {
-			metadataInstance := ConvertToMetadataInstance(instance)
-			if metadataInstance.GetMetadata() == nil {
-				logger.Warnf("Instance metadata is nil: %s", metadataInstance.GetHost())
-				continue
-			}
-			revision := metadataInstance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
-			if "0" == revision {
-				logger.Infof("Find instance without valid service metadata: %s", metadataInstance.GetHost())
-				continue
-			}
-			subInstances := revisionToInstances[revision]
-			if subInstances == nil {
-				subInstances = make([]registry.ServiceInstance, 8)
-			}
-			revisionToInstances[revision] = append(subInstances, metadataInstance)
-			metadataInfo := lstn.revisionToMetadata[revision]
-			if metadataInfo == nil {
-				metadataInfo, err = GetMetadataInfo(metadataInstance, revision)
-				if err != nil {
-					return err
-				}
-			}
-			metadataInstance.SetServiceMetadata(metadataInfo)
-			for _, service := range metadataInfo.Services {
-				if localServiceToRevisions[service] == nil {
-					localServiceToRevisions[service] = gxset.NewSet()
-				}
-				localServiceToRevisions[service].Add(revision)
-			}
-
-			newRevisionToMetadata[revision] = metadataInfo
+	if !exists {
+		serviceMetadata := common.NewMetadataInfo(appName, "", make(map[string]*common.ServiceInfo))
+		serviceMetadata.AddService(serviceInfo)
+		port, _ := strconv.Atoi(url.Port)
+		metadata := map[string]string{
+			constant.ExportedServicesRevisionPropertyName: serviceMetadata.CalAndGetRevision(),
+			constant.MetadataStorageTypePropertyName:      constant.DefaultMetadataStorageType,
+			constant.TimestampKey:                         url.GetParam(constant.TimestampKey, ""),
+			constant.ServiceInstanceEndpoints:             getEndpointsStr(url.Protocol, port),
+			constant.MetadataServiceURLParamsPropertyName: getURLParams(serviceInfo),
 		}
-		lstn.revisionToMetadata = newRevisionToMetadata
-
-		for serviceInfo, revisions := range localServiceToRevisions {
-			revisionsToUrls := protocolRevisionsToUrls[serviceInfo.Protocol]
-			if revisionsToUrls == nil {
-				protocolRevisionsToUrls[serviceInfo.Protocol] = make(map[*gxset.HashSet][]*common.URL)
-				revisionsToUrls = protocolRevisionsToUrls[serviceInfo.Protocol]
-			}
-			urls := revisionsToUrls[revisions]
-			if urls != nil {
-				newServiceURLs[serviceInfo.Name] = urls
-			} else {
-				urls = make([]*common.URL, 0, 8)
-				for _, v := range revisions.Values() {
-					r := v.(string)
-					for _, i := range revisionToInstances[r] {
-						if i != nil {
-							urls = append(urls, i.ToURLs(serviceInfo)...)
-						}
-					}
-				}
-				revisionsToUrls[revisions] = urls
-				newServiceURLs[serviceInfo.Name] = urls
-			}
+		instance = registry.DefaultServiceInstance{
+			ID:              url.Address(),
+			ServiceName:     appName,
+			Host:            url.Ip,
+			Port:            port,
+			Enable:          true,
+			Healthy:         true,
+			Metadata:        metadata,
+			ServiceMetadata: serviceMetadata,
+			Address:         url.Address(),
+			GroupName:       serviceInfo.Group,
+			Tag:             "",
 		}
-		lstn.serviceUrls = newServiceURLs
-
-		for key, notifyListener := range lstn.listeners {
-			urls := lstn.serviceUrls[key]
-			events := make([]*registry.ServiceEvent, 0, len(urls))
-			for _, url := range urls {
-				url.SetParam(consts.RegistryType, consts.RegistryInstance)
-				events = append(events, &registry.ServiceEvent{
-					Action:  remoting.EventTypeAdd,
-					Service: url,
-				})
-			}
-			notifyListener.NotifyAll(events, func() {})
-		}
+		instanceIDMap[instance.ID] = instance
+	} else {
+		serviceMetadata := instance.ServiceMetadata
+		serviceMetadata.AddService(serviceInfo)
+		instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName] = serviceMetadata.CalAndGetRevision()
 	}
-	return nil
+
+	go func() {
+		err := iscnl.registry.Subscribe(buildServiceSubscribeUrl(serviceInfo), iscnl)
+		if err != nil {
+			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
+		}
+	}()
 }
 
-// AddListenerAndNotify add notify listener and notify to listen service event
-func (lstn *DubboISDNotifyListener) AddListenerAndNotify(serviceKey string, notify registry.NotifyListener) {
-	lstn.listeners[serviceKey] = notify
-	urls := lstn.serviceUrls[serviceKey]
-	for _, url := range urls {
-		url.SetParam(consts.RegistryType, consts.RegistryInstance)
-		notify.Notify(&registry.ServiceEvent{
-			Action:  remoting.EventTypeAdd,
-			Service: url,
+// endpointsStr convert the map to json like [{"protocol": "dubbo", "port": 123}]
+func getEndpointsStr(protocol string, port int) string {
+	protocolMap := make(map[string]int, 4)
+	protocolMap[protocol] = port
+	if len(protocolMap) == 0 {
+		return ""
+	}
+
+	endpoints := make([]Endpoint, 0, len(protocolMap))
+	for k, v := range protocolMap {
+		endpoints = append(endpoints, Endpoint{
+			Port:     v,
+			Protocol: k,
 		})
 	}
-}
 
-// RemoveListener remove notify listener
-func (lstn *DubboISDNotifyListener) RemoveListener(serviceKey string) {
-	delete(lstn.listeners, serviceKey)
-}
-
-// GetServiceNames return all listener service names
-func (lstn *DubboISDNotifyListener) GetServiceNames() *gxset.HashSet {
-	return lstn.serviceNames
-}
-
-// Accept return true if the name is the same
-func (lstn *DubboISDNotifyListener) Accept(e observer.Event) bool {
-	if ce, ok := e.(*registry.ServiceInstancesChangedEvent); ok {
-		return lstn.serviceNames.Contains(ce.ServiceName)
+	str, err := json.Marshal(endpoints)
+	if err != nil {
+		logger.Errorf("could not convert the endpoints to json")
+		return ""
 	}
-	return false
+	return string(str)
 }
 
-// GetPriority returns -1, it will be the first invoked listener
-func (lstn *DubboISDNotifyListener) GetPriority() int {
-	return -1
-}
-
-// GetEventType returns ServiceInstancesChangedEvent
-func (lstn *DubboISDNotifyListener) GetEventType() reflect.Type {
-	return reflect.TypeOf(&registry.ServiceInstancesChangedEvent{})
-}
-
-// GetMetadataInfo get metadata info when MetadataStorageTypePropertyName is null
-func GetInterfaceMetadataInfo(instance registry.ServiceInstance, revision string) (*common.MetadataInfo, error) {
-	var metadataStorageType string
-	var metadataInfo *common.MetadataInfo
-	if instance.GetMetadata() == nil {
-		metadataStorageType = dubboconstant.DefaultMetadataStorageType
-	} else {
-		metadataStorageType = instance.GetMetadata()[dubboconstant.MetadataStorageTypePropertyName]
+func getURLParams(serviceInfo *common.ServiceInfo) string {
+	urlParams, err := json.Marshal(serviceInfo.Params)
+	if err != nil {
+		logger.Error("could not convert the url params to json")
+		return ""
 	}
-	if metadataStorageType == dubboconstant.RemoteMetadataStorageType {
-		remoteMetadataServiceImpl, err := extension.GetRemoteMetadataService()
-		if err != nil {
-			return &common.MetadataInfo{}, err
-		}
-		metadataInfo, err = remoteMetadataServiceImpl.GetMetadata(instance)
-		if err != nil {
-			return &common.MetadataInfo{}, err
-		}
-	} else {
-		var err error
-		proxyFactory := extension.GetMetadataServiceProxyFactory(dubboconstant.DefaultKey)
-		metadataService := proxyFactory.GetProxy(instance)
-		defer metadataService.(*local.MetadataServiceProxy).Invoker.Destroy()
-		metadataInfo, err = metadataService.GetMetadataInfo(revision)
-		if err != nil {
-			return &common.MetadataInfo{}, err
-		}
-	}
-	return metadataInfo, nil
+	return string(urlParams)
+}
+
+func buildServiceSubscribeUrl(serviceInfo *common.ServiceInfo) *common.URL {
+	subscribeUrl, _ := common.NewURL(common.GetLocalIp()+":0",
+		common.WithProtocol(consts.AdminProtocol),
+		common.WithParams(serviceInfo.GetParams()))
+	return subscribeUrl
 }
