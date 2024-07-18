@@ -14,18 +14,18 @@ type Endpoint struct {
 }
 
 type GeneralInterfaceNotifyListener struct {
-	ctx     map[string]*ApplicationContext
+	ctx     *GlobalRegistryContext
 	allUrls gxset.HashSet
 	mutex   sync.Mutex
 }
 
 func NewGeneralInterfaceNotifyListener(
-	ctx,
+	ctx *GlobalRegistryContext,
 ) *GeneralInterfaceNotifyListener {
 	return &GeneralInterfaceNotifyListener{
-		ApplicationContext: ctx,
-		allUrls:            *gxset.NewSet(),
-		mutex:              sync.Mutex{},
+		ctx:     ctx,
+		allUrls: *gxset.NewSet(),
+		mutex:   sync.Mutex{},
 	}
 }
 

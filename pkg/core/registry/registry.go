@@ -43,20 +43,14 @@ import (
 type Registry struct {
 	delegate   dubboRegistry.Registry
 	sdDelegate dubboRegistry.ServiceDiscovery
-	ctx        *sync.Map
-}
-
-type ApplicationContext struct {
-	serviceUrls        *sync.Map
-	revisionToMetadata *sync.Map
-	allInstances       *sync.Map
+	ctx        *GlobalRegistryContext
 }
 
 func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
-		ctx:        &sync.Map{},
+		ctx:        NewGlobalRegistryContext(),
 	}
 }
 
