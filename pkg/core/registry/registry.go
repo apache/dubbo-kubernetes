@@ -43,14 +43,14 @@ import (
 type Registry struct {
 	delegate   dubboRegistry.Registry
 	sdDelegate dubboRegistry.ServiceDiscovery
-	ctx        *GlobalRegistryContext
+	ctx        *ApplicationContext
 }
 
 func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
-		ctx:        NewGlobalRegistryContext(),
+		ctx:        NewApplicationContext(),
 	}
 }
 
@@ -85,11 +85,12 @@ func (r *Registry) Subscribe(
 		common.WithProtocol(consts.AdminProtocol),
 		common.WithParams(queryParams))
 
-	listener := NewGeneralInterfaceNotifyListener(r.ctx)
+	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
 
+	generalInterfaceListener := NewGeneralInterfaceNotifyListener(r.ctx, listener)
 	scheduler := gocron.NewScheduler(time.UTC)
 	_, err := scheduler.Every(5).Second().Do(func() {
-		err := r.delegate.Subscribe(subscribeUrl, listener)
+		err := r.delegate.Subscribe(subscribeUrl, generalInterfaceListener)
 		if err != nil {
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}
@@ -123,7 +124,7 @@ func (r *Registry) Subscribe(
 		if err != nil {
 			logger.Error("Failed to get mapping")
 		}
-		listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
+
 		for interfaceKey, oldApps := range mappings {
 			mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate, r.ctx)
 			apps, _ := metadataReport.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)

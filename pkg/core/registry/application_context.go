@@ -7,40 +7,14 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/registry"
 )
 
-type GlobalRegistryContext struct {
-	context sync.Map
-}
-
-func (grc *GlobalRegistryContext) GetApplicationContext(appName string) *ApplicationContext {
-	value, _ := grc.context.LoadOrStore(appName, NewApplicationContext())
-	return value.(*ApplicationContext)
-}
-
-// NewGlobalRegistryContext initializes a new GlobalRegistryContext
-func NewGlobalRegistryContext() *GlobalRegistryContext {
-	return &GlobalRegistryContext{}
-}
-
-// DeleteApplicationContext deletes an ApplicationContext for the given appName
-func (grc *GlobalRegistryContext) DeleteApplicationContext(appName string) {
-	grc.context.Delete(appName)
-}
-
-// ListApplicationNames lists all application names in the registry context
-func (grc *GlobalRegistryContext) ListApplicationNames() []string {
-	var appNames []string
-	grc.context.Range(func(key, value interface{}) bool {
-		appNames = append(appNames, key.(string))
-		return true
-	})
-	return appNames
-}
-
 type ApplicationContext struct {
-	serviceUrls        map[string][]*common.URL
+	// InterfaceName Urls
+	serviceUrls map[string][]*common.URL
+	// Revision Metadata
 	revisionToMetadata map[string]*common.MetadataInfo
-	allInstances       map[string][]registry.ServiceInstance
-	mu                 sync.RWMutex
+	// AppName Instances
+	allInstances map[string][]registry.ServiceInstance
+	mu           sync.RWMutex
 }
 
 func NewApplicationContext() *ApplicationContext {
@@ -65,6 +39,12 @@ func (ac *ApplicationContext) SetServiceUrl(interfaceKey string, value []*common
 	ac.serviceUrls[interfaceKey] = value
 }
 
+func (ac *ApplicationContext) NewServiceUrls(newServiceUrls map[string][]*common.URL) {
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	ac.serviceUrls = newServiceUrls
+}
+
 // ModifyServiceUrls safely modifies the serviceUrls map
 func (ac *ApplicationContext) ModifyServiceUrls(modifyFunc func(map[string][]*common.URL)) {
 	ac.mu.Lock()
@@ -73,17 +53,24 @@ func (ac *ApplicationContext) ModifyServiceUrls(modifyFunc func(map[string][]*co
 }
 
 // GetRevisionToMetadata returns the reference to the revisionToMetadata map with read lock
-func (ac *ApplicationContext) GetRevisionToMetadata() map[string]*common.MetadataInfo {
+func (ac *ApplicationContext) GetRevisionToMetadata(revision string) *common.MetadataInfo {
 	ac.mu.RLock()
 	defer ac.mu.RUnlock()
-	return ac.revisionToMetadata
+	return ac.revisionToMetadata[revision]
 }
 
-// SetRevisionToMetadata sets a value in the revisionToMetadata map with write lock
-func (ac *ApplicationContext) SetRevisionToMetadata(key string, value *common.MetadataInfo) {
+// UpdateRevisionToMetadata sets a value in the revisionToMetadata map with write lock
+func (ac *ApplicationContext) UpdateRevisionToMetadata(key string, newKey string, value *common.MetadataInfo) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-	ac.revisionToMetadata[key] = value
+	delete(ac.revisionToMetadata, key)
+	ac.revisionToMetadata[newKey] = value
+}
+
+func (ac *ApplicationContext) NewRevisionToMetadata(newRevisionToMetadata map[string]*common.MetadataInfo) {
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	ac.revisionToMetadata = newRevisionToMetadata
 }
 
 // ModifyRevisionToMetadata safely modifies the revisionToMetadata map

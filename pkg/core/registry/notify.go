@@ -44,22 +44,22 @@ const (
 
 type NotifyListener struct {
 	manager.ResourceManager
-	dataplaneCache  *sync.Map
-	eventWriter     events.Emitter
-	instanceContext *ApplicationContext
+	dataplaneCache *sync.Map
+	eventWriter    events.Emitter
+	ctx            *ApplicationContext
 }
 
 func NewNotifyListener(
 	manager manager.ResourceManager,
 	cache *sync.Map,
 	writer events.Emitter,
-	instanceContext *ApplicationContext,
+	grc *ApplicationContext,
 ) *NotifyListener {
 	return &NotifyListener{
 		manager,
 		cache,
 		writer,
-		instanceContext,
+		grc,
 	}
 }
 
@@ -86,8 +86,8 @@ func (l *NotifyListener) deleteDataplane(ctx context.Context, url *common.URL) e
 	app := url.GetParam(constant.ApplicationKey, "")
 	address := url.Address()
 	var revision string
-	instances, _ := l.instanceContext.allInstances.Load(app)
-	for _, instance := range instances.([]dubboRegistry.ServiceInstance) {
+	instances := l.ctx.allInstances[app]
+	for _, instance := range instances {
 		if instance.GetAddress() == address {
 			revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
 		}
@@ -113,8 +113,8 @@ func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, url *commo
 	app := url.GetParam(constant.ApplicationKey, "")
 	address := url.Address()
 	var revision string
-	instances, _ := l.instanceContext.allInstances.Load(app)
-	for _, instance := range instances.([]dubboRegistry.ServiceInstance) {
+	instances := l.ctx.allInstances[app]
+	for _, instance := range instances {
 		if instance.GetAddress() == address {
 			revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
 		}

@@ -41,16 +41,16 @@ import (
 
 // DubboSDNotifyListener The Service Discovery Changed  Event Listener
 type DubboSDNotifyListener struct {
-	serviceNames       *gxset.HashSet
-	applicationContext *ApplicationContext
-	mutex              sync.Mutex
-	listeners          map[string]registry.NotifyListener
+	serviceNames *gxset.HashSet
+	ctx          *ApplicationContext
+	mutex        sync.Mutex
+	listeners    map[string]registry.NotifyListener
 }
 
-func NewDubboSDNotifyListener(services *gxset.HashSet, instanceContext *ApplicationContext) registry.ServiceInstancesChangedListener {
+func NewDubboSDNotifyListener(services *gxset.HashSet, ctx *ApplicationContext) registry.ServiceInstancesChangedListener {
 	return &DubboSDNotifyListener{
-		serviceNames:       services,
-		applicationContext: instanceContext,
+		serviceNames: services,
+		ctx:          ctx,
 	}
 }
 
@@ -60,12 +60,12 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	if !ok {
 		return nil
 	}
+	var err error
 
 	lstn.mutex.Lock()
 	defer lstn.mutex.Unlock()
 
-	ctx := lstn.applicationContext
-	ctx.allInstances.Store(ce.ServiceName, ce.Instances)
+	lstn.ctx.SetAllInstances(ce.ServiceName, ce.Instances)
 	revisionToInstances := make(map[string][]registry.ServiceInstance)
 	newRevisionToMetadata := make(map[string]*common.MetadataInfo)
 	localServiceToRevisions := make(map[*common.ServiceInfo]*gxset.HashSet)
@@ -74,12 +74,8 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 
 	logger.Infof("Received instance notification event of service %s, instance list size %d", ce.ServiceName, len(ce.Instances))
 
-	var serviceChangedError error = nil
-	ctx.allInstances.Range(func(k, v interface{}) bool {
-		appName := k.(string)
-		var value any
-		var err error
-		for _, instance := range v.([]registry.ServiceInstance) {
+	for _, instances := range lstn.ctx.GetAllInstances() {
+		for _, instance := range instances {
 			metadataInstance := ConvertToMetadataInstance(instance)
 			if metadataInstance.GetMetadata() == nil {
 				logger.Warnf("Instance metadata is nil: %s", metadataInstance.GetHost())
@@ -96,18 +92,11 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 			}
 			revisionToInstances[revision] = append(subInstances, metadataInstance)
 
-			var revisionToMetadata map[string]*common.MetadataInfo
-			if value, ok = ctx.revisionToMetadata.Load(appName); !ok {
-				value = make(map[string]*common.MetadataInfo)
-				ctx.revisionToMetadata.Store(appName, value)
-			}
-			revisionToMetadata = value.(map[string]*common.MetadataInfo)
-			metadataInfo := revisionToMetadata[revision]
+			metadataInfo := lstn.ctx.GetRevisionToMetadata(revision)
 			if metadataInfo == nil {
 				metadataInfo, err = GetMetadataInfo(metadataInstance, revision)
 				if err != nil {
-					serviceChangedError = err
-					return false
+					return err
 				}
 			}
 			metadataInstance.SetServiceMetadata(metadataInfo)
@@ -121,7 +110,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 			newRevisionToMetadata[revision] = metadataInfo
 
 		}
-		ctx.revisionToMetadata.Store(appName, newRevisionToMetadata)
+		lstn.ctx.NewRevisionToMetadata(newRevisionToMetadata)
 
 		for serviceInfo, revisions := range localServiceToRevisions {
 			revisionsToUrls := protocolRevisionsToUrls[serviceInfo.Protocol]
@@ -146,7 +135,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 				newServiceURLs[serviceInfo.Name] = urls
 			}
 		}
-		ctx.serviceUrls.Store(appName, newServiceURLs)
+		lstn.ctx.NewServiceUrls(newServiceURLs)
 
 		for key, notifyListener := range lstn.listeners {
 			urls := newServiceURLs[key]
@@ -160,16 +149,15 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 			}
 			notifyListener.NotifyAll(events, func() {})
 		}
-		return true
-	})
-	return serviceChangedError
+	}
+	return nil
 }
 
 // AddListenerAndNotify add notify listener and notify to listen service event
 func (lstn *DubboSDNotifyListener) AddListenerAndNotify(serviceKey string, notify registry.NotifyListener) {
 	lstn.listeners[serviceKey] = notify
 
-	urls := lstn.serviceUrls[serviceKey]
+	urls := lstn.ctx.GetServiceUrls()[serviceKey]
 	for _, url := range urls {
 		url.SetParam(consts.RegistryType, consts.RegistryInstance)
 		notify.Notify(&registry.ServiceEvent{

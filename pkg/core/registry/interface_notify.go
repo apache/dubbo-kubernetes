@@ -14,18 +14,21 @@ type Endpoint struct {
 }
 
 type GeneralInterfaceNotifyListener struct {
-	ctx     *GlobalRegistryContext
-	allUrls gxset.HashSet
-	mutex   sync.Mutex
+	ctx            *ApplicationContext
+	notifyListener *NotifyListener
+	allUrls        gxset.HashSet
+	mutex          sync.Mutex
 }
 
 func NewGeneralInterfaceNotifyListener(
-	ctx *GlobalRegistryContext,
+	ctx *ApplicationContext,
+	notifyListener *NotifyListener,
 ) *GeneralInterfaceNotifyListener {
 	return &GeneralInterfaceNotifyListener{
-		ctx:     ctx,
-		allUrls: *gxset.NewSet(),
-		mutex:   sync.Mutex{},
+		ctx:            ctx,
+		allUrls:        *gxset.NewSet(),
+		notifyListener: notifyListener,
+		mutex:          sync.Mutex{},
 	}
 }
 
@@ -40,7 +43,7 @@ func (gilstn *GeneralInterfaceNotifyListener) Notify(event *dubboRegistry.Servic
 		gilstn.allUrls.Add(urlStr)
 	}
 
-	listener := NewInterfaceServiceChangedNotifyListener(gilstn)
+	listener := NewInterfaceServiceChangedNotifyListener(gilstn.notifyListener)
 }
 
 func (gilstn *GeneralInterfaceNotifyListener) NotifyAll(events []*dubboRegistry.ServiceEvent, f func()) {
