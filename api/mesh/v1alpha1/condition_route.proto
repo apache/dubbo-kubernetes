@@ -33,7 +33,6 @@ message ConditionRoute {
     bool force = 4;
     bool runtime = 5;
     bool enabled = 6;
-    AffinityAware affinityAware = 7;
     repeated ConditionRule conditions = 8;
   }
 
@@ -42,7 +41,6 @@ message ConditionRoute {
     v3x1 conditionsV3x1 = 2;
   }
 }
-
 
 message ConditionRule {
   ConditionRuleFrom from = 1;
@@ -56,13 +54,4 @@ message ConditionRuleFrom {
 message ConditionRuleTo {
   string match = 1;
   int32 weight = 2; // default value will be handled by application logic
-}
-
-message ConditionRuleDisable {
-  string match = 1;
-}
-
-message AffinityAware {
-  string key = 1;
-  bool enabled = 2;
 }

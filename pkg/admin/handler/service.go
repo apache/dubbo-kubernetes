@@ -313,13 +313,14 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		resp := struct {
 			Enabled bool   `json:"enabled"`
 			Key     string `json:"key"`
-		}{}
+			Ratio   int    `json:"ratio"`
+		}{false, "", 0}
 		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 
-		rawRes, err := getConditionRule(rt, param.toInterface())
+		res, err := getAffinityRule(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -329,16 +330,10 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			}
 			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
-
-		} else if rawRes.Spec.ToConditionRouteV3() != nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
-			return
-
 		} else {
-			res := rawRes.Spec.ToConditionRouteV3x1()
-			if res.AffinityAware != nil {
-				resp.Enabled, resp.Key = res.AffinityAware.Enabled, res.AffinityAware.Key
-			}
+			resp.Enabled = res.Spec.GetEnabled()
+			resp.Key = res.Spec.GetAffinity().GetKey()
+			resp.Ratio = int(res.Spec.GetAffinity().GetRatio())
 			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
 		}
@@ -351,6 +346,7 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			baseService
 			Enabled bool   `json:"enabled"`
 			Key     string `json:"key"`
+			Ratio   int    `json:"ratio"`
 		}{}
 		if err := c.Bind(&param); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -358,7 +354,7 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		isExist := true
-		rawRes, err := getConditionRule(rt, param.toInterface())
+		res, err := getAffinityRule(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -366,30 +362,31 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor) : to check service exist or not
 			} else {
-				rawRes = new(mesh.ConditionRouteResource)
-				rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.serviceName(), consts.ScopeService).ToConditionRoute()
+				res = new(mesh.AffinityRouteResource)
+				res.Spec = generateDefaultAffinityRule(
+					"service",
+					param.serviceName(),
+					param.Key,
+					false,
+					true,
+					param.Ratio,
+				)
 				isExist = false
 			}
-		} else if rawRes.Spec.ToConditionRouteV3() != nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
-			return
+		} else {
+			res.Spec.Enabled = param.Enabled
+			res.Spec.Affinity.Key = param.Key
+			res.Spec.Affinity.Ratio = int32(param.Ratio)
 		}
 
-		res := rawRes.Spec.ToConditionRouteV3x1()
-		if res.AffinityAware == nil {
-			res.AffinityAware = new(mesh_proto.AffinityAware)
-		}
-		res.AffinityAware.Key, res.AffinityAware.Enabled = param.Key, param.Enabled
-
-		rawRes.Spec = res.ToConditionRoute()
-		if isExist {
-			err = updateConditionRule(rt, param.toInterface(), rawRes)
+		if !isExist {
+			err = createAffinityRule(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = createConditionRule(rt, param.toInterface(), rawRes)
+			err = updateAffinityRule(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
@@ -397,6 +394,20 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 		return
+	}
+}
+
+func generateDefaultAffinityRule(scope, key, focusKey string, runtime, enabled bool, ratio int) *mesh_proto.AffinityRoute {
+	return &mesh_proto.AffinityRoute{
+		ConfigVersion: "v3.1",
+		Scope:         scope,
+		Key:           key,
+		Runtime:       runtime,
+		Enabled:       enabled,
+		Affinity: &mesh_proto.AffinityAware{
+			Key:   focusKey,
+			Ratio: int32(ratio),
+		},
 	}
 }
 

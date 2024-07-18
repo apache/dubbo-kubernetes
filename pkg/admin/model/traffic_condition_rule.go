@@ -226,7 +226,6 @@ func GenConditionRuleToResp(code int, message string, data *mesh_proto.Condition
 		}
 	} else if pb := data.ToConditionRouteV3x1(); pb != nil {
 		res := ConditionRuleV3X1{
-			AffinityAware: AffinityAware{},
 			Conditions:    make([]Condition, 0, len(pb.Conditions)),
 			ConfigVersion: "v3.1",
 			Enabled:       pb.Enabled,
@@ -234,9 +233,6 @@ func GenConditionRuleToResp(code int, message string, data *mesh_proto.Condition
 			Key:           pb.Key,
 			Runtime:       pb.Runtime,
 			Scope:         pb.Scope,
-		}
-		if pb.AffinityAware != nil {
-			res.AffinityAware.Enabled, res.AffinityAware.Key = pb.AffinityAware.Enabled, pb.AffinityAware.Key
 		}
 		for _, condition := range pb.Conditions {
 			resCondition := Condition{
@@ -266,14 +262,13 @@ func GenConditionRuleToResp(code int, message string, data *mesh_proto.Condition
 }
 
 type ConditionRuleV3X1 struct {
-	AffinityAware AffinityAware `json:"affinityAware"`
-	Conditions    []Condition   `json:"conditions"`
-	ConfigVersion string        `json:"configVersion"`
-	Enabled       bool          `json:"enabled"`
-	Force         bool          `json:"force"`
-	Key           string        `json:"key"`
-	Runtime       bool          `json:"runtime"`
-	Scope         string        `json:"scope"`
+	Conditions    []Condition `json:"conditions"`
+	ConfigVersion string      `json:"configVersion"`
+	Enabled       bool        `json:"enabled"`
+	Force         bool        `json:"force"`
+	Key           string      `json:"key"`
+	Runtime       bool        `json:"runtime"`
+	Scope         string      `json:"scope"`
 }
 
 type AffinityAware struct {

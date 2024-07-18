@@ -95,3 +95,9 @@ func parseConfiguratorConfig(rawRouteData string) (*mesh_proto.DynamicConfig, er
 func parseConditionConfig(rawRouteData string) (*mesh_proto.ConditionRoute, error) {
 	return mesh_proto.ConditionRouteDecodeFromYAML([]byte(rawRouteData))
 }
+
+func parseAffinityConfig(rawRouteData string) (*mesh_proto.AffinityRoute, error) {
+	affinityRoute := &mesh_proto.AffinityRoute{}
+	err := proto.FromYAML([]byte(rawRouteData), affinityRoute)
+	return affinityRoute, err
+}
