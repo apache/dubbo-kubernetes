@@ -138,7 +138,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 		lstn.ctx.NewServiceUrls(newServiceURLs)
 
 		for key, notifyListener := range lstn.listeners {
-			urls := newServiceURLs[key]
+			urls := lstn.ctx.GetServiceUrls()[key]
 			events := make([]*registry.ServiceEvent, 0, len(urls))
 			for _, url := range urls {
 				url.SetParam(consts.RegistryType, consts.RegistryInstance)
