@@ -66,6 +66,7 @@ func (r *Registry) Subscribe(
 	metadataReport report.MetadataReport,
 	resourceManager core_manager.ResourceManager,
 	cache *sync.Map,
+	discovery dubboRegistry.ServiceDiscovery,
 	out events.Emitter,
 	systemNamespace string,
 ) error {
@@ -87,10 +88,10 @@ func (r *Registry) Subscribe(
 
 	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
 
-	allInterfaceUrls := gxset.HashSet{}
-	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx, &allInterfaceUrls)
+	allInterfaceUrls := gxset.NewSet()
+	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx, allInterfaceUrls)
 
-	generalInterfaceListener := NewGeneralInterfaceNotifyListener(r.ctx, interfaceListener, &allInterfaceUrls, r.delegate)
+	generalInterfaceListener := NewGeneralInterfaceNotifyListener(r.ctx, interfaceListener, allInterfaceUrls, r.delegate)
 	scheduler := gocron.NewScheduler(time.UTC)
 	_, err := scheduler.Every(5).Second().Do(func() {
 		err := r.delegate.Subscribe(subscribeUrl, generalInterfaceListener)
@@ -98,6 +99,7 @@ func (r *Registry) Subscribe(
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}
 	})
+	scheduler.StartAsync()
 	if err != nil {
 		logger.Error("Failed to start registry interface services scheduler")
 	}
