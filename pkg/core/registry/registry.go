@@ -87,7 +87,10 @@ func (r *Registry) Subscribe(
 
 	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
 
-	generalInterfaceListener := NewGeneralInterfaceNotifyListener(r.ctx, listener)
+	allInterfaceUrls := gxset.HashSet{}
+	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx, &allInterfaceUrls)
+
+	generalInterfaceListener := NewGeneralInterfaceNotifyListener(r.ctx, interfaceListener, &allInterfaceUrls, r.delegate)
 	scheduler := gocron.NewScheduler(time.UTC)
 	_, err := scheduler.Every(5).Second().Do(func() {
 		err := r.delegate.Subscribe(subscribeUrl, generalInterfaceListener)

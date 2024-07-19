@@ -1,95 +1,179 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package registry
 
 import (
 	"encoding/json"
 	"strconv"
-	"sync"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
+	"dubbo.apache.org/dubbo-go/v3/remoting"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	gxset "github.com/dubbogo/gost/container/set"
 )
 
 type InterfaceServiceChangedNotifyListener struct {
-	mutex          sync.Mutex
-	appToInstances *sync.Map
-	registry       registry.Registry
+	listener *NotifyListener
+	ctx      *ApplicationContext
+	allUrls  *gxset.HashSet
+}
+
+// Endpoint nolint
+type Endpoint struct {
+	Port     int    `json:"port,omitempty"`
+	Protocol string `json:"protocol,omitempty"`
 }
 
 func NewInterfaceServiceChangedNotifyListener(
-	listener *GeneralInterfaceNotifyListener,
+	listener *NotifyListener,
+	ctx *ApplicationContext,
+	allUrls *gxset.HashSet,
 ) *InterfaceServiceChangedNotifyListener {
 	return &InterfaceServiceChangedNotifyListener{
-		mutex: sync.Mutex{},
+		listener: listener,
+		ctx:      ctx,
+		allUrls:  allUrls,
 	}
 }
 
 // Notify OnEvent on ServiceInstancesChangedEvent the service instances change event
 func (iscnl *InterfaceServiceChangedNotifyListener) Notify(event *registry.ServiceEvent) {
+	iscnl.ctx.mu.Lock()
+	defer iscnl.ctx.mu.Unlock()
 
+	switch event.Action {
+	case remoting.EventTypeAdd, remoting.EventTypeUpdate:
+		iscnl.CreateOrUpdateServiceInfo(event.Service)
+	case remoting.EventTypeDel:
+		iscnl.deleteServiceInfo(event.Service)
+	}
 }
 
-// NotifyAll the events are complete Service Event List.
-// The argument of events []*ServiceEvent is equal to urls []*URL, The Action of serviceEvent should be EventTypeUpdate.
-// If your registry center can only get all urls but can't get individual event, you should use this one.
-// After notify the address, the callback func will be invoked.
 func (iscnl *InterfaceServiceChangedNotifyListener) NotifyAll(events []*registry.ServiceEvent, f func()) {
 	for _, event := range events {
 		iscnl.Notify(event)
 	}
 }
 
-func (iscnl *InterfaceServiceChangedNotifyListener) RegisterUrl(url *common.URL) {
+func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(url *common.URL) {
 	serviceInfo := common.NewServiceInfoWithURL(url)
 
-	appName := url.Service()
-	instances, ok := iscnl.appToInstances.Load(appName)
+	appName := url.GetParam(constant.ApplicationKey, "")
+	instances, ok := iscnl.ctx.GetAllInstances()[appName]
 	if !ok {
-		instances = make(map[string]registry.ServiceInstance)
-		iscnl.appToInstances.Store(appName, instances)
+		iscnl.ctx.SetAllInstances(appName, make([]registry.ServiceInstance, 4))
 	}
-	instanceIDMap := instances.(map[string]registry.DefaultServiceInstance)
-	instance, exists := instanceIDMap[url.Address()]
 
-	if !exists {
-		serviceMetadata := common.NewMetadataInfo(appName, "", make(map[string]*common.ServiceInfo))
-		serviceMetadata.AddService(serviceInfo)
+	var instance registry.ServiceInstance
+	var oldRevision string
+	for _, elem := range instances {
+		if elem.GetAddress() == url.Address() {
+			instance = elem
+			oldRevision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
+		}
+	}
+
+	metadataInfo := iscnl.ctx.GetRevisionToMetadata(oldRevision)
+	if metadataInfo == nil {
+		metadataInfo = common.NewMetadataInfo(appName, "", make(map[string]*common.ServiceInfo))
+	}
+	metadataInfo.AddService(serviceInfo)
+	revision := metadataInfo.CalAndGetRevision()
+	iscnl.ctx.UpdateRevisionToMetadata(oldRevision, revision, metadataInfo)
+
+	if instance == nil {
 		port, _ := strconv.Atoi(url.Port)
 		metadata := map[string]string{
-			constant.ExportedServicesRevisionPropertyName: serviceMetadata.CalAndGetRevision(),
 			constant.MetadataStorageTypePropertyName:      constant.DefaultMetadataStorageType,
 			constant.TimestampKey:                         url.GetParam(constant.TimestampKey, ""),
 			constant.ServiceInstanceEndpoints:             getEndpointsStr(url.Protocol, port),
 			constant.MetadataServiceURLParamsPropertyName: getURLParams(serviceInfo),
 		}
-		instance = registry.DefaultServiceInstance{
-			ID:              url.Address(),
-			ServiceName:     appName,
-			Host:            url.Ip,
-			Port:            port,
-			Enable:          true,
-			Healthy:         true,
-			Metadata:        metadata,
-			ServiceMetadata: serviceMetadata,
-			Address:         url.Address(),
-			GroupName:       serviceInfo.Group,
-			Tag:             "",
+		instance = &registry.DefaultServiceInstance{
+			ID:          url.Address(),
+			ServiceName: appName,
+			Host:        url.Ip,
+			Port:        port,
+			Enable:      true,
+			Healthy:     true,
+			Metadata:    metadata,
+			Address:     url.Address(),
+			GroupName:   serviceInfo.Group,
+			Tag:         "",
 		}
-		instanceIDMap[instance.ID] = instance
-	} else {
-		serviceMetadata := instance.ServiceMetadata
-		serviceMetadata.AddService(serviceInfo)
-		instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName] = serviceMetadata.CalAndGetRevision()
+	}
+	instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName] = revision
+	instance.SetServiceMetadata(metadataInfo)
+	iscnl.ctx.UpdateAllInstances(appName, instance)
+
+	serviceKey := serviceInfo.ServiceKey
+	iscnl.ctx.UpdateServiceUrls(serviceKey, url)
+	iscnl.listener.Notify(&registry.ServiceEvent{
+		Action:  remoting.EventTypeAdd,
+		Service: url,
+	})
+}
+
+func (iscnl *InterfaceServiceChangedNotifyListener) deleteServiceInfo(url *common.URL) {
+	serviceInfo := common.NewServiceInfoWithURL(url)
+
+	appName := url.GetParam(constant.ApplicationKey, "")
+	var instance registry.ServiceInstance
+	var oldRevision string
+	if instances, ok := iscnl.ctx.GetAllInstances()[appName]; !ok {
+		for _, elem := range instances {
+			if elem.GetAddress() == url.Address() {
+				instance = elem
+				oldRevision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
+			}
+		}
 	}
 
-	go func() {
-		err := iscnl.registry.Subscribe(buildServiceSubscribeUrl(serviceInfo), iscnl)
-		if err != nil {
-			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
+	if instance == nil {
+		return
+	}
+
+	var metadataInfo *common.MetadataInfo
+	if oldRevision != "" {
+		metadataInfo = iscnl.ctx.GetRevisionToMetadata(oldRevision)
+		if _, ok := metadataInfo.Services[serviceInfo.GetServiceKey()]; ok {
+			delete(metadataInfo.Services, serviceInfo.GetServiceKey())
+			iscnl.ctx.UpdateRevisionToMetadata(oldRevision, metadataInfo.CalAndGetRevision(), metadataInfo)
+			if len(metadataInfo.Services) == 0 {
+				iscnl.ctx.DeleteRevisionToMetadata(oldRevision)
+				iscnl.ctx.DeleteAllInstances(oldRevision, instance)
+			}
 		}
-	}()
+	}
+
+	if metadataInfo != nil {
+		instance.SetServiceMetadata(metadataInfo)
+		instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName] = metadataInfo.Revision
+		iscnl.ctx.UpdateAllInstances(appName, instance)
+	}
+
+	iscnl.ctx.DeleteServiceUrl(serviceInfo.GetServiceKey(), url)
+	iscnl.listener.Notify(&registry.ServiceEvent{
+		Action:  remoting.EventTypeDel,
+		Service: url,
+	})
 }
 
 // endpointsStr convert the map to json like [{"protocol": "dubbo", "port": 123}]
@@ -123,11 +207,4 @@ func getURLParams(serviceInfo *common.ServiceInfo) string {
 		return ""
 	}
 	return string(urlParams)
-}
-
-func buildServiceSubscribeUrl(serviceInfo *common.ServiceInfo) *common.URL {
-	subscribeUrl, _ := common.NewURL(common.GetLocalIp()+":0",
-		common.WithProtocol(consts.AdminProtocol),
-		common.WithParams(serviceInfo.GetParams()))
-	return subscribeUrl
 }

@@ -19,7 +19,6 @@ package registry
 
 import (
 	"reflect"
-	"sync"
 )
 
 import (
@@ -43,7 +42,6 @@ import (
 type DubboSDNotifyListener struct {
 	serviceNames *gxset.HashSet
 	ctx          *ApplicationContext
-	mutex        sync.Mutex
 	listeners    map[string]registry.NotifyListener
 }
 
@@ -62,8 +60,8 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	}
 	var err error
 
-	lstn.mutex.Lock()
-	defer lstn.mutex.Unlock()
+	lstn.ctx.mu.Lock()
+	defer lstn.ctx.mu.Unlock()
 
 	lstn.ctx.SetAllInstances(ce.ServiceName, ce.Instances)
 	revisionToInstances := make(map[string][]registry.ServiceInstance)
