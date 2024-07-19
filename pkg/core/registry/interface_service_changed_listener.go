@@ -18,8 +18,12 @@
 package registry
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
+	"sort"
 	"strconv"
+	"strings"
 
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
@@ -44,12 +48,11 @@ type Endpoint struct {
 func NewInterfaceServiceChangedNotifyListener(
 	listener *NotifyListener,
 	ctx *ApplicationContext,
-	allUrls *gxset.HashSet,
 ) *InterfaceServiceChangedNotifyListener {
 	return &InterfaceServiceChangedNotifyListener{
 		listener: listener,
 		ctx:      ctx,
-		allUrls:  allUrls,
+		allUrls:  gxset.NewSet(),
 	}
 }
 
@@ -59,7 +62,15 @@ func (iscnl *InterfaceServiceChangedNotifyListener) Notify(event *registry.Servi
 	defer iscnl.ctx.mu.Unlock()
 
 	switch event.Action {
-	case remoting.EventTypeAdd, remoting.EventTypeUpdate:
+	case remoting.EventTypeAdd:
+		url := event.Service
+		urlStr := url.String()
+		if iscnl.allUrls.Contains(urlStr) {
+			return
+		}
+		iscnl.allUrls.Add(urlStr)
+		iscnl.CreateOrUpdateServiceInfo(event.Service)
+	case remoting.EventTypeUpdate:
 		iscnl.CreateOrUpdateServiceInfo(event.Service)
 	case remoting.EventTypeDel:
 		iscnl.deleteServiceInfo(event.Service)
@@ -74,15 +85,15 @@ func (iscnl *InterfaceServiceChangedNotifyListener) NotifyAll(events []*registry
 
 func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(url *common.URL) {
 	serviceInfo := common.NewServiceInfoWithURL(url)
+	iscnl.ctx.UpdateServiceUrls(serviceInfo.Name, url)
 
 	appName := url.GetParam(constant.ApplicationKey, "")
-	instances, ok := iscnl.ctx.GetAllInstances()[appName]
-	if !ok {
-		iscnl.ctx.SetAllInstances(appName, make([]registry.ServiceInstance, 4))
-	}
-
 	var instance registry.ServiceInstance
 	var oldRevision string
+	instances, ok := iscnl.ctx.GetAllInstances()[appName]
+	if !ok {
+		iscnl.ctx.AddAllInstances(appName, make([]registry.ServiceInstance, 0))
+	}
 	for _, elem := range instances {
 		if elem.GetAddress() == url.Address() {
 			instance = elem
@@ -95,7 +106,8 @@ func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(ur
 		metadataInfo = common.NewMetadataInfo(appName, "", make(map[string]*common.ServiceInfo))
 	}
 	metadataInfo.AddService(serviceInfo)
-	revision := metadataInfo.CalAndGetRevision()
+	revision := resolveRevision(appName, metadataInfo.Services)
+	metadataInfo.Revision = revision
 	iscnl.ctx.UpdateRevisionToMetadata(oldRevision, revision, metadataInfo)
 
 	if instance == nil {
@@ -123,8 +135,6 @@ func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(ur
 	instance.SetServiceMetadata(metadataInfo)
 	iscnl.ctx.UpdateAllInstances(appName, instance)
 
-	serviceKey := serviceInfo.ServiceKey
-	iscnl.ctx.UpdateServiceUrls(serviceKey, url)
 	iscnl.listener.Notify(&registry.ServiceEvent{
 		Action:  remoting.EventTypeAdd,
 		Service: url,
@@ -137,30 +147,27 @@ func (iscnl *InterfaceServiceChangedNotifyListener) deleteServiceInfo(url *commo
 	appName := url.GetParam(constant.ApplicationKey, "")
 	var instance registry.ServiceInstance
 	var oldRevision string
-	if instances, ok := iscnl.ctx.GetAllInstances()[appName]; !ok {
-		for _, elem := range instances {
-			if elem.GetAddress() == url.Address() {
-				instance = elem
-				oldRevision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
-			}
+	for _, elem := range iscnl.ctx.GetAllInstances()[appName] {
+		if elem.GetAddress() == url.Address() {
+			instance = elem
+			oldRevision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
 		}
 	}
-
 	if instance == nil {
+		logger.Error("Can not delete ServiceInfo, instance not exist")
 		return
 	}
 
 	var metadataInfo *common.MetadataInfo
 	if oldRevision != "" {
 		metadataInfo = iscnl.ctx.GetRevisionToMetadata(oldRevision)
-		if _, ok := metadataInfo.Services[serviceInfo.GetServiceKey()]; ok {
-			delete(metadataInfo.Services, serviceInfo.GetServiceKey())
-			iscnl.ctx.UpdateRevisionToMetadata(oldRevision, metadataInfo.CalAndGetRevision(), metadataInfo)
-			if len(metadataInfo.Services) == 0 {
-				iscnl.ctx.DeleteRevisionToMetadata(oldRevision)
-				iscnl.ctx.DeleteAllInstances(oldRevision, instance)
-			}
+		delete(metadataInfo.Services, serviceInfo.GetMatchKey())
+		if len(metadataInfo.Services) == 0 {
+			iscnl.ctx.DeleteRevisionToMetadata(oldRevision)
+			iscnl.ctx.DeleteAllInstance(appName, instance)
+			return
 		}
+		iscnl.ctx.UpdateRevisionToMetadata(oldRevision, resolveRevision(appName, metadataInfo.Services), metadataInfo)
 	}
 
 	if metadataInfo != nil {
@@ -169,11 +176,11 @@ func (iscnl *InterfaceServiceChangedNotifyListener) deleteServiceInfo(url *commo
 		iscnl.ctx.UpdateAllInstances(appName, instance)
 	}
 
-	iscnl.ctx.DeleteServiceUrl(serviceInfo.GetServiceKey(), url)
 	iscnl.listener.Notify(&registry.ServiceEvent{
 		Action:  remoting.EventTypeDel,
 		Service: url,
 	})
+	iscnl.ctx.DeleteServiceUrl(serviceInfo.Name, url)
 }
 
 // endpointsStr convert the map to json like [{"protocol": "dubbo", "port": 123}]
@@ -207,4 +214,41 @@ func getURLParams(serviceInfo *common.ServiceInfo) string {
 		return ""
 	}
 	return string(urlParams)
+}
+
+func resolveRevision(appName string, servicesInfo map[string]*common.ServiceInfo) string {
+	var sb strings.Builder
+	sb.WriteString(appName)
+	for _, serviceInfo := range servicesInfo {
+		sb.WriteString(ToDescString(serviceInfo))
+	}
+	tempRevision := getMd5(sb.String())
+	return tempRevision
+}
+
+func ToDescString(s *common.ServiceInfo) string {
+	var sb strings.Builder
+	sb.WriteString(s.GetMatchKey())
+	sb.WriteString(s.URL.Port)
+	sb.WriteString(s.Path)
+
+	params := s.GetParams()
+	keys := make([]string, 0, len(params))
+	for key := range params {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		sb.WriteString(key)
+		sb.WriteString(params[key][0])
+	}
+
+	return sb.String()
+}
+
+func getMd5(data string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(data))
+	return hex.EncodeToString(hasher.Sum(nil))
 }

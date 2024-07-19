@@ -130,9 +130,6 @@ func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, url *commo
 	dataplaneResource.Spec.Extensions = map[string]string{}
 	dataplaneResource.Spec.Extensions[mesh_proto.ApplicationName] = app
 	dataplaneResource.Spec.Extensions[mesh_proto.Revision] = revision
-	dataplaneResource.SetMeta(&resourceMetaObject{
-		Name: key,
-	})
 	dataplaneResource.Spec.Networking.Address = url.Address()
 	ifaces, err := InboundInterfacesFor(ctx, url)
 	if err != nil {

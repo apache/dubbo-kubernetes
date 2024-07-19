@@ -88,13 +88,10 @@ func (r *Registry) Subscribe(
 
 	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
 
-	allInterfaceUrls := gxset.NewSet()
-	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx, allInterfaceUrls)
-
-	generalInterfaceListener := NewGeneralInterfaceNotifyListener(r.ctx, interfaceListener, allInterfaceUrls, r.delegate)
+	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx)
 	scheduler := gocron.NewScheduler(time.UTC)
 	_, err := scheduler.Every(5).Second().Do(func() {
-		err := r.delegate.Subscribe(subscribeUrl, generalInterfaceListener)
+		err := r.delegate.Subscribe(subscribeUrl, interfaceListener)
 		if err != nil {
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}

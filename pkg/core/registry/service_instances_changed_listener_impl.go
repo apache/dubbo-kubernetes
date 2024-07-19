@@ -40,15 +40,18 @@ import (
 
 // DubboSDNotifyListener The Service Discovery Changed  Event Listener
 type DubboSDNotifyListener struct {
-	serviceNames *gxset.HashSet
-	ctx          *ApplicationContext
-	listeners    map[string]registry.NotifyListener
+	serviceNames      *gxset.HashSet
+	ctx               *ApplicationContext
+	listeners         map[string]registry.NotifyListener
+	localAllInstances map[string][]registry.ServiceInstance
 }
 
 func NewDubboSDNotifyListener(services *gxset.HashSet, ctx *ApplicationContext) registry.ServiceInstancesChangedListener {
 	return &DubboSDNotifyListener{
-		serviceNames: services,
-		ctx:          ctx,
+		serviceNames:      services,
+		ctx:               ctx,
+		listeners:         make(map[string]registry.NotifyListener),
+		localAllInstances: make(map[string][]registry.ServiceInstance),
 	}
 }
 
@@ -63,91 +66,104 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	lstn.ctx.mu.Lock()
 	defer lstn.ctx.mu.Unlock()
 
-	lstn.ctx.SetAllInstances(ce.ServiceName, ce.Instances)
 	revisionToInstances := make(map[string][]registry.ServiceInstance)
-	newRevisionToMetadata := make(map[string]*common.MetadataInfo)
 	localServiceToRevisions := make(map[*common.ServiceInfo]*gxset.HashSet)
 	protocolRevisionsToUrls := make(map[string]map[*gxset.HashSet][]*common.URL)
 	newServiceURLs := make(map[string][]*common.URL)
 
 	logger.Infof("Received instance notification event of service %s, instance list size %d", ce.ServiceName, len(ce.Instances))
 
-	for _, instances := range lstn.ctx.GetAllInstances() {
-		for _, instance := range instances {
-			metadataInstance := ConvertToMetadataInstance(instance)
-			if metadataInstance.GetMetadata() == nil {
-				logger.Warnf("Instance metadata is nil: %s", metadataInstance.GetHost())
-				continue
-			}
-			revision := metadataInstance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
-			if "0" == revision {
-				logger.Infof("Find instance without valid service metadata: %s", metadataInstance.GetHost())
-				continue
-			}
-			subInstances := revisionToInstances[revision]
-			if subInstances == nil {
-				subInstances = make([]registry.ServiceInstance, 8)
-			}
-			revisionToInstances[revision] = append(subInstances, metadataInstance)
-
-			metadataInfo := lstn.ctx.GetRevisionToMetadata(revision)
-			if metadataInfo == nil {
-				metadataInfo, err = GetMetadataInfo(metadataInstance, revision)
-				if err != nil {
-					return err
-				}
-			}
-			metadataInstance.SetServiceMetadata(metadataInfo)
-			for _, service := range metadataInfo.Services {
-				if localServiceToRevisions[service] == nil {
-					localServiceToRevisions[service] = gxset.NewSet()
-				}
-				localServiceToRevisions[service].Add(revision)
-			}
-
-			newRevisionToMetadata[revision] = metadataInfo
-
+	for _, instance := range ce.Instances {
+		oldRevision := lstn.ctx.GetOldRevision(instance)
+		if instance.GetMetadata() == nil {
+			logger.Warnf("Instance metadata is nil: %s", instance.GetHost())
+			continue
 		}
-		lstn.ctx.NewRevisionToMetadata(newRevisionToMetadata)
+		revision := instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
+		if "0" == revision {
+			logger.Infof("Find instance without valid service metadata: %s", instance.GetHost())
+			continue
+		}
+		subInstances := revisionToInstances[revision]
+		if subInstances == nil {
+			subInstances = make([]registry.ServiceInstance, 8)
+		}
+		revisionToInstances[revision] = append(subInstances, instance)
 
-		for serviceInfo, revisions := range localServiceToRevisions {
-			revisionsToUrls := protocolRevisionsToUrls[serviceInfo.Protocol]
-			if revisionsToUrls == nil {
-				protocolRevisionsToUrls[serviceInfo.Protocol] = make(map[*gxset.HashSet][]*common.URL)
-				revisionsToUrls = protocolRevisionsToUrls[serviceInfo.Protocol]
+		metadataInfo := lstn.ctx.GetRevisionToMetadata(revision)
+		if metadataInfo == nil {
+			metadataInfo, err = GetMetadataInfo(instance, revision)
+			if err != nil {
+				return err
 			}
-			urls := revisionsToUrls[revisions]
-			if urls != nil {
-				newServiceURLs[serviceInfo.Name] = urls
-			} else {
-				urls = make([]*common.URL, 0, 8)
-				for _, v := range revisions.Values() {
-					r := v.(string)
-					for _, i := range revisionToInstances[r] {
-						if i != nil {
-							urls = append(urls, i.ToURLs(serviceInfo)...)
-						}
+		}
+		instance.SetServiceMetadata(metadataInfo)
+		for _, service := range metadataInfo.Services {
+			if localServiceToRevisions[service] == nil {
+				localServiceToRevisions[service] = gxset.NewSet()
+			}
+			localServiceToRevisions[service].Add(revision)
+		}
+		lstn.ctx.UpdateRevisionToMetadata(oldRevision, revision, metadataInfo)
+	}
+	lstn.ctx.AddAllInstances(ce.ServiceName, ce.Instances)
+
+	for serviceInfo, revisions := range localServiceToRevisions {
+		revisionsToUrls := protocolRevisionsToUrls[serviceInfo.Protocol]
+		if revisionsToUrls == nil {
+			protocolRevisionsToUrls[serviceInfo.Protocol] = make(map[*gxset.HashSet][]*common.URL)
+			revisionsToUrls = protocolRevisionsToUrls[serviceInfo.Protocol]
+		}
+		urls := revisionsToUrls[revisions]
+		if urls != nil {
+			newServiceURLs[serviceInfo.Name] = urls
+		} else {
+			urls = make([]*common.URL, 0, 8)
+			for _, v := range revisions.Values() {
+				r := v.(string)
+				for _, i := range revisionToInstances[r] {
+					if i != nil {
+						urls = append(urls, i.ToURLs(serviceInfo)...)
 					}
 				}
-				revisionsToUrls[revisions] = urls
-				newServiceURLs[serviceInfo.Name] = urls
 			}
+			revisionsToUrls[revisions] = urls
+			newServiceURLs[serviceInfo.Name] = urls
 		}
-		lstn.ctx.NewServiceUrls(newServiceURLs)
+		lstn.ctx.AddServiceUrls(newServiceURLs)
+	}
 
-		for key, notifyListener := range lstn.listeners {
-			urls := lstn.ctx.GetServiceUrls()[key]
-			events := make([]*registry.ServiceEvent, 0, len(urls))
-			for _, url := range urls {
-				url.SetParam(consts.RegistryType, consts.RegistryInstance)
-				events = append(events, &registry.ServiceEvent{
-					Action:  remoting.EventTypeAdd,
+	for key, notifyListener := range lstn.listeners {
+		urls := lstn.ctx.GetServiceUrls()[key]
+		events := make([]*registry.ServiceEvent, 0, len(urls))
+		for _, url := range urls {
+			url.SetParam(consts.RegistryType, consts.RegistryInstance)
+			events = append(events, &registry.ServiceEvent{
+				Action:  remoting.EventTypeAdd,
+				Service: url,
+			})
+		}
+		notifyListener.NotifyAll(events, func() {})
+	}
+
+	for _, instance := range findInstancesToDelete(lstn.localAllInstances[ce.ServiceName], ce.Instances) {
+		revision := instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
+		metadataInfo := lstn.ctx.revisionToMetadata[revision]
+		for _, v := range metadataInfo.Services {
+			notifyListener := lstn.listeners[v.Name]
+			for _, url := range instance.ToURLs(v) {
+				lstn.ctx.DeleteServiceUrl(v.Name, url)
+				notifyListener.Notify(&registry.ServiceEvent{
+					Action:  remoting.EventTypeDel,
 					Service: url,
 				})
 			}
-			notifyListener.NotifyAll(events, func() {})
 		}
+		lstn.ctx.DeleteRevisionToMetadata(revision)
+		lstn.ctx.DeleteAllInstance(ce.ServiceName, instance)
 	}
+
+	lstn.localAllInstances[ce.ServiceName] = ce.Instances
 	return nil
 }
 
@@ -222,4 +238,20 @@ func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*commo
 		}
 	}
 	return metadataInfo, nil
+}
+
+func findInstancesToDelete(localAllInstances, newAllInstances []registry.ServiceInstance) []registry.ServiceInstance {
+	newInstanceMap := make(map[string]registry.ServiceInstance)
+	for _, instance := range newAllInstances {
+		newInstanceMap[instance.GetID()] = instance
+	}
+
+	var instancesToDelete []registry.ServiceInstance
+	for _, instance := range localAllInstances {
+		if _, exists := newInstanceMap[instance.GetID()]; !exists {
+			instancesToDelete = append(instancesToDelete, instance)
+		}
+	}
+
+	return instancesToDelete
 }
