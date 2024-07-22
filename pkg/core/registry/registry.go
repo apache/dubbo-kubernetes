@@ -20,6 +20,9 @@ package registry
 import (
 	"net/url"
 	"sync"
+	"time"
+
+	"github.com/go-co-op/gocron"
 )
 
 import (
@@ -40,12 +43,14 @@ import (
 type Registry struct {
 	delegate   dubboRegistry.Registry
 	sdDelegate dubboRegistry.ServiceDiscovery
+	ctx        *ApplicationContext
 }
 
 func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
+		ctx:        NewApplicationContext(),
 	}
 }
 
@@ -80,13 +85,21 @@ func (r *Registry) Subscribe(
 	subscribeUrl, _ := common.NewURL(common.GetLocalIp()+":0",
 		common.WithProtocol(consts.AdminProtocol),
 		common.WithParams(queryParams))
-	listener := NewNotifyListener(resourceManager, cache, discovery, out)
-	go func() {
-		err := r.delegate.Subscribe(subscribeUrl, listener)
+
+	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
+
+	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx)
+	scheduler := gocron.NewScheduler(time.UTC)
+	_, err := scheduler.Every(5).Second().Do(func() {
+		err := r.delegate.Subscribe(subscribeUrl, interfaceListener)
 		if err != nil {
 			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
 		}
-	}()
+	})
+	scheduler.StartAsync()
+	if err != nil {
+		logger.Error("Failed to start registry interface services scheduler")
+	}
 
 	getMappingList := func(group string) (map[string]*gxset.HashSet, error) {
 		keys, err := metadataReport.GetConfigKeysByGroup(group)
@@ -113,10 +126,11 @@ func (r *Registry) Subscribe(
 		if err != nil {
 			logger.Error("Failed to get mapping")
 		}
+
 		for interfaceKey, oldApps := range mappings {
-			mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate)
+			mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate, r.ctx)
 			apps, _ := metadataReport.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
-			delSDListener := NewDubboSDNotifyListener(apps)
+			delSDListener := NewDubboSDNotifyListener(apps, r.ctx)
 			for appTmp := range apps.Items {
 				app := appTmp.(string)
 				instances := r.sdDelegate.GetInstances(app)
