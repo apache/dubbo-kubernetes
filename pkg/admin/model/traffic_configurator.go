@@ -145,11 +145,14 @@ func conditionMatchToRespMatch(match *mesh_proto.ConditionMatch) *RespMatch {
 func addressMatchToRespAddress(address *mesh_proto.AddressMatch) *RespAddress {
 	if address == nil {
 		return nil
-	} else if address.Exact != "" {
+	}
+	if address.Exact != "" {
 		return &RespAddress{Exact: &address.Exact}
-	} else if address.Wildcard != "" {
+	}
+	if address.Wildcard != "" {
 		return &RespAddress{Wildcard: &address.Wildcard}
-	} else if address.Cird != "" {
+	}
+	if address.Cird != "" {
 		return &RespAddress{Cird: &address.Cird}
 	} else {
 		return &RespAddress{}
@@ -159,11 +162,14 @@ func addressMatchToRespAddress(address *mesh_proto.AddressMatch) *RespAddress {
 func addressMatchToRespAddressMatch(address *mesh_proto.AddressMatch) *RespAddressMatch {
 	if address == nil {
 		return nil
-	} else if address.Exact != "" {
+	}
+	if address.Exact != "" {
 		return &RespAddressMatch{Exact: &address.Exact}
-	} else if address.Wildcard != "" {
+	}
+	if address.Wildcard != "" {
 		return &RespAddressMatch{Wildcard: &address.Wildcard}
-	} else if address.Cird != "" {
+	}
+	if address.Cird != "" {
 		return &RespAddressMatch{Cird: &address.Cird}
 	} else {
 		return &RespAddressMatch{}
@@ -186,17 +192,23 @@ func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []ParamMatch {
 func StringMatchToModelStringMatch(stringMatch *mesh_proto.StringMatch) *StringMatch {
 	if stringMatch == nil {
 		return nil
-	} else if stringMatch.Exact != "" {
+	}
+	if stringMatch.Exact != "" {
 		return &StringMatch{Exact: &stringMatch.Exact}
-	} else if stringMatch.Prefix != "" {
+	}
+	if stringMatch.Prefix != "" {
 		return &StringMatch{Prefix: &stringMatch.Prefix}
-	} else if stringMatch.Regex != "" {
+	}
+	if stringMatch.Regex != "" {
 		return &StringMatch{Regex: &stringMatch.Regex}
-	} else if stringMatch.Noempty != "" {
+	}
+	if stringMatch.Noempty != "" {
 		return &StringMatch{Noempty: &stringMatch.Noempty}
-	} else if stringMatch.Empty != "" {
+	}
+	if stringMatch.Empty != "" {
 		return &StringMatch{Empty: &stringMatch.Empty}
-	} else if stringMatch.Wildcard != "" {
+	}
+	if stringMatch.Wildcard != "" {
 		return &StringMatch{Wildcard: &stringMatch.Wildcard}
 	} else {
 		return &StringMatch{}
@@ -206,17 +218,23 @@ func StringMatchToModelStringMatch(stringMatch *mesh_proto.StringMatch) *StringM
 func ModelStringMatchToStringMatch(stringMatch *StringMatch) *mesh_proto.StringMatch {
 	if stringMatch == nil {
 		return nil
-	} else if stringMatch.Exact != nil {
+	}
+	if stringMatch.Exact != nil {
 		return &mesh_proto.StringMatch{Exact: *stringMatch.Exact}
-	} else if stringMatch.Prefix != nil {
+	}
+	if stringMatch.Prefix != nil {
 		return &mesh_proto.StringMatch{Prefix: *stringMatch.Prefix}
-	} else if stringMatch.Regex != nil {
+	}
+	if stringMatch.Regex != nil {
 		return &mesh_proto.StringMatch{Regex: *stringMatch.Regex}
-	} else if stringMatch.Noempty != nil {
+	}
+	if stringMatch.Noempty != nil {
 		return &mesh_proto.StringMatch{Noempty: *stringMatch.Noempty}
-	} else if stringMatch.Empty != nil {
+	}
+	if stringMatch.Empty != nil {
 		return &mesh_proto.StringMatch{Empty: *stringMatch.Empty}
-	} else if stringMatch.Wildcard != nil {
+	}
+	if stringMatch.Wildcard != nil {
 		return &mesh_proto.StringMatch{Wildcard: *stringMatch.Wildcard}
 	} else {
 		return &mesh_proto.StringMatch{}

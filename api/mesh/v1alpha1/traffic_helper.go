@@ -57,11 +57,15 @@ func BuildServiceKey(baseDto Base) string {
 
 func GetRoutePath(key string, routeType string) string {
 	key = strings.ReplaceAll(key, "/", "*")
-	if routeType == consts.ConditionRoute {
+	switch routeType {
+	case consts.ConditionRoute:
 		return key + consts.ConditionRuleSuffix
-	} else {
+	case consts.TagRoute:
 		return key + consts.TagRuleSuffix
+	case consts.AffinityRoute:
+		return key + consts.AffinityRuleSuffix
 	}
+	return key + "." + routeType + "-router"
 }
 
 func LoadObject(content string, obj interface{}) error {

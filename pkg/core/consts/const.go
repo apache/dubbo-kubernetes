@@ -68,8 +68,10 @@ const (
 	PunctuationPoint       = "."
 	ConditionRoute         = "condition_route"
 	TagRoute               = "tag_route"
+	AffinityRoute          = "affinity_route"
 	ConditionRuleSuffix    = ".condition-router"
 	TagRuleSuffix          = ".tag-router"
+	AffinityRuleSuffix     = ".affinity-router"
 	ConfigFileEnvKey       = "conf" // config file path
 	RegistryAll            = "ALL"
 	RegistryInterface      = "INTERFACE"
