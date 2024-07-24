@@ -474,7 +474,7 @@ func (f *Dubbo) EnsureDockerfile(cmd *cobra.Command) (err error) {
 		fmt.Fprintln(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.")
 		return
 	}
-	if err = os.WriteFile(dockerfilepath, []byte(dockerfilebytes), 0o644); err != nil {
+	if err = os.WriteFile(dockerfilepath, dockerfilebytes, 0o644); err != nil {
 		return
 	}
 	return
