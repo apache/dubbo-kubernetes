@@ -48,7 +48,8 @@ const (
 	Nacos       PluginName = "nacos"
 	MySQL       PluginName = "mysql"
 
-	CaBuiltin PluginName = "builtin"
+	CaBuiltin  PluginName = "builtin"
+	CaProvided PluginName = "provided"
 )
 
 type RegisteredPolicyPlugin struct {

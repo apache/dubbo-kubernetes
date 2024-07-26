@@ -57,6 +57,7 @@ type BuilderContext interface {
 	ResourceStore() core_store.CustomizableResourceStore
 	Transactions() core_store.Transactions
 	ConfigStore() core_store.ResourceStore
+	DataSourceLoader() datasource.Loader
 	ResourceManager() core_manager.CustomizableResourceManager
 	Config() dubbo_cp.Config
 	RegistryCenter() dubboRegistry.Registry
@@ -380,6 +381,10 @@ func (b *Builder) LookupIP() lookup.LookupIPFunc {
 
 func (b *Builder) Config() dubbo_cp.Config {
 	return b.cfg
+}
+
+func (b *Builder) DataSourceLoader() datasource.Loader {
+	return b.dsl
 }
 
 func (b *Builder) DDSContext() *dds_context.Context {

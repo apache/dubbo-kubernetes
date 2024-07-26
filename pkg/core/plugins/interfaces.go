@@ -18,6 +18,7 @@
 package plugins
 
 import (
+	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	"github.com/pkg/errors"
 )
 
@@ -96,5 +97,5 @@ type PolicyPlugin interface {
 
 type CaPlugin interface {
 	Plugin
-	NewCaManager(PluginContext, PluginConfig)
+	NewCaManager(PluginContext, PluginConfig) (core_ca.Manager, error)
 }
