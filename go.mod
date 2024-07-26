@@ -15,7 +15,7 @@
 
 module github.com/apache/dubbo-kubernetes
 
-go 1.20
+go 1.21
 
 require (
 	dubbo.apache.org/dubbo-go/v3 v3.1.1-0.20231129133927-778c1bd1b58a
