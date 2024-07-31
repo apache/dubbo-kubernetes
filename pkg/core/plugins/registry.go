@@ -63,6 +63,7 @@ type Registry interface {
 	ConfigStore(name PluginName) (ConfigStorePlugin, error)
 	RuntimePlugins() map[PluginName]RuntimePlugin
 	PolicyPlugins([]PluginName) []RegisteredPolicyPlugin
+	CaPlugins() map[PluginName]CaPlugin
 }
 
 type RegistryMutator interface {
@@ -81,6 +82,7 @@ func NewRegistry() MutableRegistry {
 		configStore:        make(map[PluginName]ConfigStorePlugin),
 		runtime:            make(map[PluginName]RuntimePlugin),
 		registeredPolicies: make(map[PluginName]PolicyPlugin),
+		ca:                 make(map[PluginName]CaPlugin),
 	}
 }
 
@@ -92,6 +94,7 @@ type registry struct {
 	configStore        map[PluginName]ConfigStorePlugin
 	runtime            map[PluginName]RuntimePlugin
 	registeredPolicies map[PluginName]PolicyPlugin
+	ca                 map[PluginName]CaPlugin
 }
 
 func (r *registry) ResourceStore(name PluginName) (ResourceStorePlugin, error) {
@@ -108,6 +111,10 @@ func (r *registry) ConfigStore(name PluginName) (ConfigStorePlugin, error) {
 	} else {
 		return nil, noSuchPluginError(configStorePlugin, name)
 	}
+}
+
+func (r *registry) CaPlugins() map[PluginName]CaPlugin {
+	return r.ca
 }
 
 func (r *registry) RuntimePlugins() map[PluginName]RuntimePlugin {
@@ -175,6 +182,12 @@ func (r *registry) Register(name PluginName, plugin Plugin) error {
 			return pluginAlreadyRegisteredError(policyPlugin, name, old, policy)
 		}
 		r.registeredPolicies[name] = policy
+	}
+	if cp, ok := plugin.(CaPlugin); ok {
+		if old, exists := r.ca[name]; exists {
+			return pluginAlreadyRegisteredError(caPlugin, name, old, cp)
+		}
+		r.ca[name] = cp
 	}
 	return nil
 }

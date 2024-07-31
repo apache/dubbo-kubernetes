@@ -36,6 +36,7 @@ import (
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
@@ -94,6 +95,7 @@ type Builder struct {
 	configm              config_manager.ConfigManager
 	leadInfo             component.LeaderInfo
 	erf                  events.EventBus
+	cam                  core_ca.Managers
 	dsl                  datasource.Loader
 	dps                  *dp_server.DpServer
 	registryCenter       dubboRegistry.Registry
@@ -225,6 +227,16 @@ func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
 
 func (b *Builder) WithRegClient(regClient reg_client.RegClient) *Builder {
 	b.regClient = regClient
+	return b
+}
+
+func (b *Builder) WithCaManagers(cam core_ca.Managers) *Builder {
+	b.cam = cam
+	return b
+}
+
+func (b *Builder) WithCaManager(name string, cam core_ca.Manager) *Builder {
+	b.cam[name] = cam
 	return b
 }
 
