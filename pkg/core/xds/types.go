@@ -94,6 +94,11 @@ type Endpoint struct {
 	ExternalService *ExternalService
 }
 
+type IdentitySecret struct {
+	PemCerts [][]byte
+	PemKey   []byte
+}
+
 func (e Endpoint) Address() string {
 	return fmt.Sprintf("%s:%d", e.Target, e.Port)
 }

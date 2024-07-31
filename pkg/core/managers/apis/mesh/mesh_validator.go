@@ -19,6 +19,10 @@ package mesh
 
 import (
 	"context"
+	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
+	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
+	"github.com/pkg/errors"
 )
 
 import (
@@ -29,4 +33,60 @@ type MeshValidator interface {
 	ValidateCreate(ctx context.Context, name string, resource *core_mesh.MeshResource) error
 	ValidateUpdate(ctx context.Context, previousMesh *core_mesh.MeshResource, newMesh *core_mesh.MeshResource) error
 	ValidateDelete(ctx context.Context, name string) error
+}
+
+type meshValidator struct {
+	CaManagers core_ca.Managers
+	Store      core_store.ResourceStore
+}
+
+func NewMeshValidator(caManagers core_ca.Managers, store core_store.ResourceStore) MeshValidator {
+	return &meshValidator{
+		CaManagers: caManagers,
+		Store:      store,
+	}
+}
+
+func (m *meshValidator) ValidateCreate(ctx context.Context, name string, resource *core_mesh.MeshResource) error {
+	var verr validators.ValidationError
+	if len(name) > 63 {
+		verr.AddViolation("name", "cannot be longer than 63 characters")
+	}
+	verr.Add(ValidateMTLSBackends(ctx, m.CaManagers, name, resource))
+	return verr.OrNil()
+}
+
+func (m *meshValidator) ValidateDelete(ctx context.Context, name string) error {
+	if err := ValidateNoActiveDP(ctx, name, m.Store); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *meshValidator) ValidateUpdate(ctx context.Context, previousMesh *core_mesh.MeshResource, newMesh *core_mesh.MeshResource) error {
+	var verr validators.ValidationError
+	verr.Add(m.validateMTLSBackendChange(previousMesh, newMesh))
+	verr.Add(ValidateMTLSBackends(ctx, m.CaManagers, newMesh.Meta.GetName(), newMesh))
+	return verr.OrNil()
+}
+
+func ValidateNoActiveDP(ctx context.Context, name string, store core_store.ResourceStore) error {
+	dps := core_mesh.DataplaneResourceList{}
+	validationErr := &validators.ValidationError{}
+	if err := store.List(ctx, &dps, core_store.ListByMesh(name)); err != nil {
+		return errors.Wrap(err, "unable to list Dataplanes")
+	}
+	if len(dps.Items) != 0 {
+		validationErr.AddViolation("mesh", "unable to delete mesh, there are still some dataplanes attached")
+		return validationErr
+	}
+	return nil
+}
+
+func (m *meshValidator) validateMTLSBackendChange(previousMesh *core_mesh.MeshResource, newMesh *core_mesh.MeshResource) validators.ValidationError {
+	verr := validators.ValidationError{}
+	if previousMesh.MTLSEnabled() && newMesh.MTLSEnabled() && previousMesh.Spec.GetMtls().GetEnabledBackend() != newMesh.Spec.GetMtls().GetEnabledBackend() {
+		verr.AddViolation("mtls.enabledBackend", "Changing CA when mTLS is enabled is forbidden. Disable mTLS first and then change the CA")
+	}
+	return verr
 }

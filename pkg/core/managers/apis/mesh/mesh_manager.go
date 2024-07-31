@@ -19,6 +19,8 @@ package mesh
 
 import (
 	"context"
+	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
+	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
 	"time"
 )
 
@@ -177,4 +179,27 @@ func (m *meshManager) meshes(list core_model.ResourceList) (*core_mesh.MeshResou
 		return nil, errors.Errorf("invalid resource type: expected=%T, got=%T", (*core_mesh.MeshResourceList)(nil), list)
 	}
 	return meshes, nil
+}
+
+func ValidateMTLSBackends(ctx context.Context, caManagers core_ca.Managers, name string, resource *core_mesh.MeshResource) validators.ValidationError {
+	verr := validators.ValidationError{}
+	path := validators.RootedAt("mtls").Field("backends")
+
+	for idx, backend := range resource.Spec.GetMtls().GetBackends() {
+		caManager, exist := caManagers[backend.Type]
+		if !exist {
+			verr.AddViolationAt(path.Index(idx).Field("type"), "could not find installed plugin for this type")
+			return verr
+		}
+		//TODO：要不要支持skipvalidation?
+		if err := caManager.ValidateBackend(ctx, name, backend); err != nil {
+			if configErr, ok := err.(*validators.ValidationError); ok {
+				verr.AddErrorAt(path.Index(idx).Field("conf"), *configErr)
+			} else {
+				verr.AddViolationAt(path, err.Error())
+			}
+		}
+
+	}
+	return verr
 }
