@@ -114,6 +114,11 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 
 	builder.WithDataSourceLoader(datasource.NewDataSourceLoader(builder.ReadOnlyResourceManager()))
 
+	//initializeCAManager
+	if err := initializeCaManagers(builder); err != nil {
+		return nil, err
+	}
+
 	leaderInfoComponent := &component.LeaderInfoComponent{}
 	builder.WithLeaderInfo(leaderInfoComponent)
 
@@ -476,5 +481,16 @@ func initializeMeshCache(builder *core_runtime.Builder) error {
 	}
 
 	builder.WithMeshCache(meshSnapshotCache)
+	return nil
+}
+
+func initializeCaManagers(builder *core_runtime.Builder) error {
+	for pluginName, caPlugin := range core_plugins.Plugins().CaPlugins() {
+		caManager, err := caPlugin.NewCaManager(builder, nil)
+		if err != nil {
+			return errors.Wrapf(err, "could not create CA manager for plugin %q", pluginName)
+		}
+		builder.WithCaManager(string(pluginName), caManager)
+	}
 	return nil
 }

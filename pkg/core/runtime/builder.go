@@ -36,6 +36,7 @@ import (
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
@@ -57,6 +58,7 @@ type BuilderContext interface {
 	ResourceStore() core_store.CustomizableResourceStore
 	Transactions() core_store.Transactions
 	ConfigStore() core_store.ResourceStore
+	DataSourceLoader() datasource.Loader
 	ResourceManager() core_manager.CustomizableResourceManager
 	Config() dubbo_cp.Config
 	RegistryCenter() dubboRegistry.Registry
@@ -93,6 +95,7 @@ type Builder struct {
 	configm              config_manager.ConfigManager
 	leadInfo             component.LeaderInfo
 	erf                  events.EventBus
+	cam                  core_ca.Managers
 	dsl                  datasource.Loader
 	dps                  *dp_server.DpServer
 	registryCenter       dubboRegistry.Registry
@@ -224,6 +227,16 @@ func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
 
 func (b *Builder) WithRegClient(regClient reg_client.RegClient) *Builder {
 	b.regClient = regClient
+	return b
+}
+
+func (b *Builder) WithCaManagers(cam core_ca.Managers) *Builder {
+	b.cam = cam
+	return b
+}
+
+func (b *Builder) WithCaManager(name string, cam core_ca.Manager) *Builder {
+	b.cam[name] = cam
 	return b
 }
 
@@ -380,6 +393,10 @@ func (b *Builder) LookupIP() lookup.LookupIPFunc {
 
 func (b *Builder) Config() dubbo_cp.Config {
 	return b.cfg
+}
+
+func (b *Builder) DataSourceLoader() datasource.Loader {
+	return b.dsl
 }
 
 func (b *Builder) DDSContext() *dds_context.Context {
