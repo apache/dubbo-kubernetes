@@ -19,6 +19,7 @@ package xds
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	"strings"
 )
 
@@ -84,11 +85,12 @@ type Locality struct {
 }
 
 // Endpoint holds routing-related information about a single endpoint.
+// It is abstracted from mesh_proto.DataplaneRecourse.Spec.Networking.Inbound
 type Endpoint struct {
 	Target          string
 	UnixDomainPath  string
 	Port            uint32
-	Tags            map[string]string
+	Tags            map[string]string // clone from inbound.GetTags
 	Weight          uint32
 	Locality        *Locality
 	ExternalService *ExternalService
@@ -173,8 +175,11 @@ type ZoneIngressProxy struct {
 	MeshResourceList    []*MeshIngressResources
 }
 
+type EndpointSelectorMap map[ServiceName][]envoy.EndpointSelector
+
 type Routing struct {
-	OutboundTargets EndpointMap
+	OutboundSelector EndpointSelectorMap
+	OutboundTargets  EndpointMap
 	// ExternalServiceOutboundTargets contains endpoint map for direct access of external services (without egress)
 	// Since we take into account TrafficPermission to exclude external services from the map,
 	// it is specific for each data plane proxy.

@@ -292,6 +292,7 @@ func (OutboundProxyGenerator) determineRoutes(
 			envoy_common.WithName(name),
 			envoy_common.WithTags(allTags.WithoutTags(mesh_proto.MeshTag)),
 			envoy_common.WithExternalService(isExternalService),
+			envoy_common.WithSelector(proxy.Routing.OutboundSelector[service]...),
 		)
 
 		if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {

@@ -205,6 +205,7 @@ func (m *MdsServer) MetadataSync(stream mesh_proto.MDSSyncService_MetadataSyncSe
 					core_mesh.MetaDataType,
 					clientID,
 					request,
+					// filter by req.ApplicationName (and req.Revision)
 					func(rawRequest interface{}, resourceList core_model.ResourceList) core_model.ResourceList {
 						req := rawRequest.(*mesh_proto.MetadataSyncRequest)
 						metadataList := resourceList.(*core_mesh.MetaDataResourceList)
@@ -233,6 +234,7 @@ func (m *MdsServer) MetadataSync(stream mesh_proto.MDSSyncService_MetadataSyncSe
 			},
 		})
 
+	// Add callback and call by following resourceType and metadataSyncClient.ClientID()
 	m.pusher.AddCallback(
 		core_mesh.MetaDataType,
 		metadataSyncClient.ClientID(),
@@ -256,6 +258,7 @@ func (m *MdsServer) MetadataSync(stream mesh_proto.MDSSyncService_MetadataSyncSe
 				errChan <- errors.Wrap(err, "DubboSyncClient send with an error")
 			}
 		},
+		// filtered which resources client focus on
 		func(resourceList core_model.ResourceList) core_model.ResourceList {
 			if resourceList.GetItemType() != core_mesh.MetaDataType {
 				return nil

@@ -33,6 +33,7 @@ message Tag {
   bool __generate_by_cp = 8;
 }
 
+// empty will match all
 message StringMatch {
   string exact = 1;
   string prefix = 2;

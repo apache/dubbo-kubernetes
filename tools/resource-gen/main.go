@@ -237,7 +237,7 @@ func (t *{{.ResourceName}}) GetSpec() model.ResourceSpec {
 }
 
 {{with $in := .}}
-{{range .Selectors}}
+{{range .Selector}}
 func (t *{{$in.ResourceName}}) {{.}}() []*{{$pkg}}.Selector {
 	return t.Spec.Get{{.}}()
 }

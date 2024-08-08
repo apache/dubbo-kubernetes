@@ -20,6 +20,7 @@ package xds
 import (
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
 
 import (
@@ -32,11 +33,13 @@ type Cluster struct {
 	tags              tags.Tags
 	mesh              string
 	isExternalService bool
+	selector          []envoy.EndpointSelector
 }
 
-func (c *Cluster) Service() string { return c.service }
-func (c *Cluster) Name() string    { return c.name }
-func (c *Cluster) Tags() tags.Tags { return c.tags }
+func (c *Cluster) Service() string                    { return c.service }
+func (c *Cluster) Name() string                       { return c.name }
+func (c *Cluster) Tags() tags.Tags                    { return c.tags }
+func (c *Cluster) Selector() []envoy.EndpointSelector { return c.selector }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
@@ -119,4 +122,14 @@ func (c *Cluster) validate() error {
 		return errors.New("either WithService() or WithName() should be called")
 	}
 	return nil
+}
+
+func (b *ClusterBuilder) WithSelectors(selector ...envoy.EndpointSelector) *ClusterBuilder {
+	b.opts = append(b.opts, newClusterOptFunc(func(cluster *Cluster) {
+		if cluster.selector == nil {
+			cluster.selector = make([]envoy.EndpointSelector, 0)
+		}
+		cluster.selector = append(cluster.selector, selector...)
+	}))
+	return b
 }

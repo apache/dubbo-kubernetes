@@ -41,8 +41,8 @@ var log = core.Log.WithName("mds")
 
 func Setup(rt core_runtime.Runtime) error {
 	if rt.Config().DeployMode != core_env.KubernetesMode ||
-		!rt.Config().IsFederatedZoneCP() {
-		// 非k8s模式以及global控制面不启动该组件
+		!rt.Config().IsNonFederatedZoneCP() {
+		// 非k8s模式以及zone控制面不启动该组件
 		return nil
 	}
 	cfg := rt.Config().DubboConfig

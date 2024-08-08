@@ -36,6 +36,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
+type EndpointSelector struct {
+	MatchInfo TrafficRouteHttpMatch
+	Select    func(endpoint core_xds.EndpointList) core_xds.EndpointList
+}
+
 type Cluster interface {
 	Service() string
 	Name() string
@@ -43,6 +48,7 @@ type Cluster interface {
 	Tags() tags.Tags
 	Hash() string
 	IsExternalService() bool
+	Selector() []EndpointSelector
 }
 
 type Split interface {
@@ -59,6 +65,7 @@ type ClusterImpl struct {
 	tags              tags.Tags
 	mesh              string
 	isExternalService bool
+	selector          []EndpointSelector
 }
 
 func (c *ClusterImpl) Service() string { return c.service }
@@ -68,9 +75,17 @@ func (c *ClusterImpl) Tags() tags.Tags { return c.tags }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
-func (c *ClusterImpl) Mesh() string            { return c.mesh }
-func (c *ClusterImpl) IsExternalService() bool { return c.isExternalService }
-func (c *ClusterImpl) Hash() string            { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
+func (c *ClusterImpl) Mesh() string                 { return c.mesh }
+func (c *ClusterImpl) IsExternalService() bool      { return c.isExternalService }
+func (c *ClusterImpl) Hash() string                 { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
+func (c *ClusterImpl) Selector() []EndpointSelector { return c.selector }
+
+func (c *ClusterImpl) AppendSelector(f ...EndpointSelector) {
+	if c.selector == nil {
+		c.selector = []EndpointSelector{}
+	}
+	c.selector = append(c.selector, f...)
+}
 
 func (c *ClusterImpl) SetName(name string) {
 	c.name = name
@@ -114,6 +129,12 @@ func WithService(service string) NewClusterOpt {
 		if len(cluster.name) == 0 {
 			cluster.name = service
 		}
+	})
+}
+
+func WithSelector(selector ...EndpointSelector) NewClusterOpt {
+	return newClusterOptFunc(func(cluster *ClusterImpl) {
+		cluster.AppendSelector(selector...)
 	})
 }
 

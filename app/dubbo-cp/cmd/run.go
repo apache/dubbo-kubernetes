@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"google.golang.org/grpc/reflection"
 	"time"
 )
 
@@ -145,6 +146,8 @@ func newRunCmdWithOpts(opts dubbo_cmd.RunCmdOpts) *cobra.Command {
 					return err
 				}
 			}
+
+			reflection.Register(rt.DpServer().GrpcServer())
 
 			runLog.Info("starting Control Plane", "version", dubbo_version.Build.Version)
 			if err := rt.Start(gracefulCtx.Done()); err != nil {

@@ -21,7 +21,11 @@ import (
 	"time"
 )
 
+// here ch = MdsServer.metadataQueue/ MdsServer.mappingQueue ,
+// and pushFn = MdsServer.mappingRegister(...) / MdsServer.metadataRegister(...),it will try to store proto.{mapping, metadata}
 func (s *MdsServer) debounce(ch chan *RegisterRequest, stopCh <-chan struct{}, pushFn func(m *RegisterRequest)) {
+	// If debouncing is disabled (s.config.Debounce.Enable is false), it immediately pushes the request.
+	// If debouncing is enabled, it updates lastConfigUpdateTime, merges the new request with the current one (req.Merge(r)) and run pushWorker().
 	var timeChan <-chan time.Time
 	var startDebounce time.Time
 	var lastConfigUpdateTime time.Time

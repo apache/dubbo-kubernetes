@@ -19,6 +19,9 @@ package sync
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
 
 import (
@@ -72,11 +75,101 @@ func (p *DataplaneProxyBuilder) resolveRouting(
 	endpointMap := core_xds.EndpointMap{}
 
 	routing := &core_xds.Routing{
+		OutboundSelector:               trafficPolicyToSelector(dataplane, meshContext),
 		OutboundTargets:                meshContext.EndpointMap,
 		ExternalServiceOutboundTargets: endpointMap,
 	}
 
 	return routing
+}
+
+func trafficPolicyToSelector(dataplane *core_mesh.DataplaneResource, meshContext xds_context.MeshContext) core_xds.EndpointSelectorMap {
+	res := core_xds.EndpointSelectorMap{}
+	// first step focus on outbound
+	tagRouteList := meshContext.Resources.ListOrEmpty(core_mesh.TagRouteType)
+	getTagRoutePolicy := func(dubboApplicationName string) *v1alpha1.TagRoute {
+		for _, resource := range tagRouteList.GetItems() {
+			resource, ok := resource.GetSpec().(*v1alpha1.TagRoute)
+			if !ok {
+				logger.Errorf("get wroug type in meshcontext.list() ,somewhere error")
+				continue
+			}
+			if resource.Key == dubboApplicationName {
+				return resource
+			}
+		}
+		return nil
+	}
+	dubboApplicationName := dataplane.Spec.GetApplication()
+	if p := getTagRoutePolicy(dubboApplicationName); p != nil {
+		for _, outbound := range dataplane.Spec.Networking.Outbound {
+			serviceName := outbound.GetService()
+			if serviceName == "" || res[serviceName] != nil {
+				continue
+			}
+			res[serviceName] = generateTagSelector(p, meshContext)
+		}
+	}
+	return res
+}
+
+func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshContext) []envoy_common.EndpointSelector {
+	list := meshContext.Resources.ListOrEmpty(core_mesh.MetaDataType)
+	// match from appName and port
+	getMetadata := func(endpoint core_xds.Endpoint) *v1alpha1.ServiceInfo {
+		if list == nil || len(list.GetItems()) == 0 {
+			return nil
+		}
+		for _, resource := range list.GetItems() {
+			resource, ok := resource.GetSpec().(*v1alpha1.MetaData)
+			if !ok || resource.App != endpoint.Tags[v1alpha1.AppTag] {
+				continue
+			}
+			for _, info := range resource.Services {
+				if info.Port == int64(endpoint.Port) {
+					return info
+				}
+			}
+		}
+		return nil
+	}
+	res := make([]envoy_common.EndpointSelector, 0, len(p.Tags))
+	for _, tag := range p.Tags {
+		res = append(res, envoy_common.EndpointSelector{
+			MatchInfo: envoy_common.TrafficRouteHttpMatch{
+				Name: tag.Name,
+				Params: map[string]envoy_common.TrafficRouteHttpMatchStringMatcher{
+					"dubbo.tag": envoy_common.NewTrafficRouteHttpMatchStringMatcherExact(tag.Name),
+				},
+			},
+			Select: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
+				res := core_xds.EndpointList{}
+				for _, e := range endpoint {
+					m := getMetadata(e)
+					if m == nil {
+						continue
+					}
+					matched := true
+					for _, match := range tag.Match {
+						if !match.Value.Match(m.Params[match.Key]) {
+							matched = false
+							break
+						}
+					}
+					if matched {
+						res = append(res, e)
+					}
+				}
+				return res
+			},
+		})
+	}
+	return append(res, envoy_common.EndpointSelector{
+		MatchInfo: envoy_common.TrafficRouteHttpMatch{},
+		Select: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
+			return endpoint
+		},
+	})
 }
 
 func (p *DataplaneProxyBuilder) matchPolicies(meshContext xds_context.MeshContext, dataplane *core_mesh.DataplaneResource, outboundSelectors core_xds.DestinationMap) (*core_xds.MatchedPolicies, error) {
