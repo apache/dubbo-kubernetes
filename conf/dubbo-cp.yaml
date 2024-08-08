@@ -19,11 +19,11 @@ deploy_mode: universal
 mode: zone
 store:
   traditional:
-    config_center: zookeeper://localhost:2181
+    config_center: nacos://localhost:8848
     registry:
-      address: nacos://localhost:2181
+      address: nacos://localhost:8848
     metadata_report:
-      address: nacos://localhost:2181
+      address: nacos://localhost:8848
 admin:
   metric_dashboards:
     application:
