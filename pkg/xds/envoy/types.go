@@ -37,8 +37,16 @@ import (
 )
 
 type EndpointSelector struct {
-	MatchInfo TrafficRouteHttpMatch
-	Select    func(endpoint core_xds.EndpointList) core_xds.EndpointList
+	MatchInfo  TrafficRouteHttpMatch
+	SelectFunc func(endpoint core_xds.EndpointList) core_xds.EndpointList
+}
+
+func (e *EndpointSelector) GetMatchInfo() *TrafficRouteHttpMatch {
+	return &e.MatchInfo
+}
+
+func (e *EndpointSelector) Select(endpoint core_xds.EndpointList) core_xds.EndpointList {
+	return e.Select(endpoint)
 }
 
 type Cluster interface {
@@ -48,7 +56,7 @@ type Cluster interface {
 	Tags() tags.Tags
 	Hash() string
 	IsExternalService() bool
-	Selector() []EndpointSelector
+	Selector() *EndpointSelector
 }
 
 type Split interface {
@@ -65,7 +73,7 @@ type ClusterImpl struct {
 	tags              tags.Tags
 	mesh              string
 	isExternalService bool
-	selector          []EndpointSelector
+	selector          EndpointSelector
 }
 
 func (c *ClusterImpl) Service() string { return c.service }
@@ -75,16 +83,13 @@ func (c *ClusterImpl) Tags() tags.Tags { return c.tags }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
-func (c *ClusterImpl) Mesh() string                 { return c.mesh }
-func (c *ClusterImpl) IsExternalService() bool      { return c.isExternalService }
-func (c *ClusterImpl) Hash() string                 { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
-func (c *ClusterImpl) Selector() []EndpointSelector { return c.selector }
+func (c *ClusterImpl) Mesh() string                { return c.mesh }
+func (c *ClusterImpl) IsExternalService() bool     { return c.isExternalService }
+func (c *ClusterImpl) Hash() string                { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
+func (c *ClusterImpl) Selector() *EndpointSelector { return &c.selector }
 
-func (c *ClusterImpl) AppendSelector(f ...EndpointSelector) {
-	if c.selector == nil {
-		c.selector = []EndpointSelector{}
-	}
-	c.selector = append(c.selector, f...)
+func (c *ClusterImpl) addSelector(f EndpointSelector) {
+	c.selector = f
 }
 
 func (c *ClusterImpl) SetName(name string) {
@@ -132,9 +137,9 @@ func WithService(service string) NewClusterOpt {
 	})
 }
 
-func WithSelector(selector ...EndpointSelector) NewClusterOpt {
+func WithSelector(selector EndpointSelector) NewClusterOpt {
 	return newClusterOptFunc(func(cluster *ClusterImpl) {
-		cluster.AppendSelector(selector...)
+		cluster.addSelector(selector)
 	})
 }
 

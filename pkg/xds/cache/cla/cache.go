@@ -74,9 +74,7 @@ func (c *Cache) GetCLA(ctx context.Context, meshName, meshHash string, cluster e
 			}
 		}
 		if cluster.Selector() != nil {
-			for _, selector := range cluster.Selector() {
-				endpoints = selector(endpoints)
-			}
+			endpoints = cluster.Selector().Select(endpoints)
 		}
 		return envoy_endpoints.CreateClusterLoadAssignment(cluster.Name(), endpoints, apiVersion)
 	}))

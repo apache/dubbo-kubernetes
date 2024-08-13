@@ -228,7 +228,14 @@ func (OutboundProxyGenerator) generateEDS(
 					endpoints = xdsCtx.Mesh.EndpointMap
 				}
 
-				loadAssignment, err := xdsCtx.ControlPlane.CLACache.GetCLA(user.Ctx(ctx, user.ControlPlane), xdsCtx.Mesh.Resource.Meta.GetName(), xdsCtx.Mesh.Hash, cluster, apiVersion, endpoints)
+				loadAssignment, err := xdsCtx.ControlPlane.CLACache.GetCLA(
+					user.Ctx(ctx, user.ControlPlane),
+					xdsCtx.Mesh.Resource.Meta.GetName(),
+					xdsCtx.Mesh.Hash,
+					cluster,
+					apiVersion,
+					endpoints,
+				)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not get ClusterLoadAssignment for %s", serviceName)
 				}
@@ -265,8 +272,8 @@ func (OutboundProxyGenerator) determineRoutes(
 ) envoy_common.Routes {
 	var routes envoy_common.Routes
 
-	retriveClusters := func() []envoy_common.Cluster {
-		var clusters []envoy_common.Cluster
+	retriveClusters := func() [][]envoy_common.Cluster {
+		var clustersList [][]envoy_common.Cluster
 		service := outboundTags[mesh_proto.ServiceTag]
 
 		name, _ := envoy_tags.Tags(outboundTags).DestinationClusterName(nil)
@@ -285,32 +292,55 @@ func (OutboundProxyGenerator) determineRoutes(
 		if endpoints := proxy.Routing.ExternalServiceOutboundTargets[service]; len(endpoints) > 0 {
 			isExternalService = true
 		}
-
 		allTags := envoy_tags.Tags(outboundTags)
-		cluster := envoy_common.NewCluster(
-			envoy_common.WithService(service),
-			envoy_common.WithName(name),
-			envoy_common.WithTags(allTags.WithoutTags(mesh_proto.MeshTag)),
-			envoy_common.WithExternalService(isExternalService),
-			envoy_common.WithSelector(proxy.Routing.OutboundSelector[service]...),
-		)
-
-		if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
-			cluster.SetMesh(mesh)
+		var clusters []envoy_common.Cluster
+		if _, ok := proxy.Routing.OutboundSelector[service]; ok {
+			for _, selector := range proxy.Routing.OutboundSelector[service] {
+				cluster := envoy_common.NewCluster(
+					envoy_common.WithService(service),
+					envoy_common.WithName(name),
+					envoy_common.WithTags(allTags.
+						WithoutTags(mesh_proto.MeshTag).
+						WithTags("tag-route", selector.GetMatchInfo().Name),
+					),
+					envoy_common.WithExternalService(isExternalService),
+					envoy_common.WithSelector(selector),
+				)
+				if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
+					cluster.SetMesh(mesh)
+				}
+				clusters = append(clusters, cluster)
+			}
+		} else {
+			cluster := envoy_common.NewCluster(
+				envoy_common.WithService(service),
+				envoy_common.WithName(name),
+				envoy_common.WithTags(allTags.WithoutTags(mesh_proto.MeshTag)),
+				envoy_common.WithExternalService(isExternalService),
+			)
+			if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
+				cluster.SetMesh(mesh)
+			}
+			clusters = append(clusters, cluster)
 		}
-
-		clusters = append(clusters, cluster)
-		return clusters
+		return append(clustersList, clusters)
 	}
 
-	appendRoute := func(routes envoy_common.Routes, clusters []envoy_common.Cluster) envoy_common.Routes {
-		if len(clusters) == 0 {
+	appendRoute := func(routes envoy_common.Routes, clustersList [][]envoy_common.Cluster) envoy_common.Routes {
+		if len(clustersList) == 0 {
 			return routes
 		}
 
-		return append(routes, envoy_common.Route{
-			Clusters: clusters,
-		})
+		for _, clusters := range clustersList {
+			r := envoy_common.Route{
+				Clusters: clusters,
+			}
+			if len(clusters) != 0 {
+				r.Match = clusters[0].Selector().GetMatchInfo()
+			}
+			routes = append(routes, r)
+		}
+		return routes
 	}
 
 	clusters := retriveClusters()

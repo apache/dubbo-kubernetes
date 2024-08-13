@@ -142,7 +142,7 @@ func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshConte
 					"dubbo.tag": envoy_common.NewTrafficRouteHttpMatchStringMatcherExact(tag.Name),
 				},
 			},
-			Select: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
+			SelectFunc: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
 				res := core_xds.EndpointList{}
 				for _, e := range endpoint {
 					m := getMetadata(e)
@@ -166,7 +166,7 @@ func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshConte
 	}
 	return append(res, envoy_common.EndpointSelector{
 		MatchInfo: envoy_common.TrafficRouteHttpMatch{},
-		Select: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
+		SelectFunc: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
 			return endpoint
 		},
 	})
