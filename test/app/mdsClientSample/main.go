@@ -4,11 +4,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	"google.golang.org/grpc"
 	"net/http"
 	"strconv"
+)
+
+import (
+	"google.golang.org/grpc"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 var port = flag.Int("port", 5678, "The port to use to connect to the mesh")

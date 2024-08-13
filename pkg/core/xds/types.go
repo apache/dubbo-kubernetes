@@ -19,7 +19,6 @@ package xds
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	"strings"
 )
 
@@ -175,7 +174,20 @@ type ZoneIngressProxy struct {
 	MeshResourceList    []*MeshIngressResources
 }
 
-type EndpointSelectorMap map[ServiceName][]envoy.EndpointSelector
+type EndpointSelectorMap map[ServiceName][]EndpointSelector
+
+type EndpointSelector struct {
+	MatchInfo  TrafficRouteHttpMatch
+	SelectFunc func(endpoint EndpointList) EndpointList
+}
+
+func (e *EndpointSelector) GetMatchInfo() *TrafficRouteHttpMatch {
+	return &e.MatchInfo
+}
+
+func (e *EndpointSelector) Select(endpoint EndpointList) EndpointList {
+	return e.Select(endpoint)
+}
 
 type Routing struct {
 	OutboundSelector EndpointSelectorMap

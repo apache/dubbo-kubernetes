@@ -18,13 +18,17 @@
 package virtualhosts
 
 import (
-	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
-	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"sort"
 )
 
 import (
+	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+)
+
+import (
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
 
@@ -50,7 +54,7 @@ func (c RoutesConfigurer) Configure(virtualHost *envoy_config_route_v3.VirtualHo
 	return nil
 }
 
-func (c RoutesConfigurer) routeMatch(match *envoy_common.TrafficRouteHttpMatch) *envoy_config_route_v3.RouteMatch {
+func (c RoutesConfigurer) routeMatch(match *core_xds.TrafficRouteHttpMatch) *envoy_config_route_v3.RouteMatch {
 	envoyMatch := &envoy_config_route_v3.RouteMatch{}
 
 	if match.GetPath() != nil {
@@ -91,16 +95,16 @@ func (c RoutesConfigurer) routeMatch(match *envoy_common.TrafficRouteHttpMatch) 
 	return envoyMatch
 }
 
-func (c RoutesConfigurer) headerMatcher(name string, matcher envoy_common.TrafficRouteHttpMatchStringMatcher) *envoy_config_route_v3.HeaderMatcher {
+func (c RoutesConfigurer) headerMatcher(name string, matcher core_xds.TrafficRouteHttpMatchStringMatcher) *envoy_config_route_v3.HeaderMatcher {
 	headerMatcher := &envoy_config_route_v3.HeaderMatcher{
 		Name: name,
 	}
 	switch matcher.(type) {
-	case *envoy_common.TrafficRouteHttpMatchStringMatcherPrefix:
+	case *core_xds.TrafficRouteHttpMatchStringMatcherPrefix:
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_PrefixMatch{
 			PrefixMatch: matcher.GetValue(),
 		}
-	case *envoy_common.TrafficRouteHttpMatchStringMatcherExact:
+	case *core_xds.TrafficRouteHttpMatchStringMatcherExact:
 		stringMatcher := envoy_type_matcher_v3.StringMatcher{
 			MatchPattern: &envoy_type_matcher_v3.StringMatcher_Exact{
 				Exact: matcher.GetValue(),
@@ -109,7 +113,7 @@ func (c RoutesConfigurer) headerMatcher(name string, matcher envoy_common.Traffi
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_StringMatch{
 			StringMatch: &stringMatcher,
 		}
-	case *envoy_common.TrafficRouteHttpMatchStringMatcherRegex:
+	case *core_xds.TrafficRouteHttpMatchStringMatcherRegex:
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_SafeRegexMatch{
 			SafeRegexMatch: &envoy_type_matcher_v3.RegexMatcher{
 				Regex: matcher.GetValue(),
@@ -120,19 +124,19 @@ func (c RoutesConfigurer) headerMatcher(name string, matcher envoy_common.Traffi
 }
 
 func (c RoutesConfigurer) setPathMatcher(
-	matcher envoy_common.TrafficRouteHttpMatchStringMatcher,
+	matcher core_xds.TrafficRouteHttpMatchStringMatcher,
 	routeMatch *envoy_config_route_v3.RouteMatch,
 ) {
 	switch matcher.(type) {
-	case *envoy_common.TrafficRouteHttpMatchStringMatcherPrefix:
+	case *core_xds.TrafficRouteHttpMatchStringMatcherPrefix:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_Prefix{
 			Prefix: matcher.GetValue(),
 		}
-	case *envoy_common.TrafficRouteHttpMatchStringMatcherExact:
+	case *core_xds.TrafficRouteHttpMatchStringMatcherExact:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_Path{
 			Path: matcher.GetValue(),
 		}
-	case *envoy_common.TrafficRouteHttpMatchStringMatcherRegex:
+	case *core_xds.TrafficRouteHttpMatchStringMatcherRegex:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_SafeRegex{
 			SafeRegex: &envoy_type_matcher_v3.RegexMatcher{
 				Regex: matcher.GetValue(),

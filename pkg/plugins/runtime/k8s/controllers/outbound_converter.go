@@ -19,7 +19,6 @@ package controllers
 
 import (
 	"context"
-	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
 	"strconv"
 	"strings"
 )
@@ -36,6 +35,7 @@ import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
+	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
 )
 
 func (p *PodConverter) OutboundInterfacesFor(

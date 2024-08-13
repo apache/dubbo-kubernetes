@@ -19,9 +19,6 @@ package sync
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
-	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
 
 import (
@@ -29,6 +26,8 @@ import (
 )
 
 import (
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
@@ -113,7 +112,7 @@ func trafficPolicyToSelector(dataplane *core_mesh.DataplaneResource, meshContext
 	return res
 }
 
-func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshContext) []envoy_common.EndpointSelector {
+func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshContext) []core_xds.EndpointSelector {
 	list := meshContext.Resources.ListOrEmpty(core_mesh.MetaDataType)
 	// match from appName and port
 	getMetadata := func(endpoint core_xds.Endpoint) *v1alpha1.ServiceInfo {
@@ -133,13 +132,13 @@ func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshConte
 		}
 		return nil
 	}
-	res := make([]envoy_common.EndpointSelector, 0, len(p.Tags))
+	res := make([]core_xds.EndpointSelector, 0, len(p.Tags))
 	for _, tag := range p.Tags {
-		res = append(res, envoy_common.EndpointSelector{
-			MatchInfo: envoy_common.TrafficRouteHttpMatch{
+		res = append(res, core_xds.EndpointSelector{
+			MatchInfo: core_xds.TrafficRouteHttpMatch{
 				Name: tag.Name,
-				Params: map[string]envoy_common.TrafficRouteHttpMatchStringMatcher{
-					"dubbo.tag": envoy_common.NewTrafficRouteHttpMatchStringMatcherExact(tag.Name),
+				Params: map[string]core_xds.TrafficRouteHttpMatchStringMatcher{
+					"dubbo.tag": core_xds.NewTrafficRouteHttpMatchStringMatcherExact(tag.Name),
 				},
 			},
 			SelectFunc: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
@@ -164,8 +163,8 @@ func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshConte
 			},
 		})
 	}
-	return append(res, envoy_common.EndpointSelector{
-		MatchInfo: envoy_common.TrafficRouteHttpMatch{},
+	return append(res, core_xds.EndpointSelector{
+		MatchInfo: core_xds.TrafficRouteHttpMatch{},
 		SelectFunc: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
 			return endpoint
 		},

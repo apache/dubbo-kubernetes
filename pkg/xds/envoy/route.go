@@ -17,124 +17,35 @@
 
 package envoy
 
-import envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-
-const (
-	EnvoyStringMatchTypePrefix = "prefix"
-	EnvoyStringMatchTypeRegex  = "regex"
-	EnvoyStringMatchTypeExact  = "exact"
+import (
+	envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 )
 
-type TrafficRouteHttpMatchStringMatcher interface {
-	GetValue() string
-	GetType() string
-}
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
+)
 
-func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x TrafficRouteHttpMatchStringMatcher) *envoy_type_matcher_v3.StringMatcher {
+func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x xds.TrafficRouteHttpMatchStringMatcher) *envoy_type_matcher_v3.StringMatcher {
 	if x == nil {
 		return &envoy_type_matcher_v3.StringMatcher{}
 	}
 	res := &envoy_type_matcher_v3.StringMatcher{}
 	switch x.GetType() {
-	case EnvoyStringMatchTypePrefix:
+	case xds.EnvoyStringMatchTypePrefix:
 		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Prefix{Prefix: x.GetValue()}
-	case EnvoyStringMatchTypeRegex:
+	case xds.EnvoyStringMatchTypeRegex:
 		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_SafeRegex{&envoy_type_matcher_v3.RegexMatcher{
 			EngineType: &envoy_type_matcher_v3.RegexMatcher_GoogleRe2{},
 			Regex:      x.GetValue(),
 		}}
-	case EnvoyStringMatchTypeExact:
+	case xds.EnvoyStringMatchTypeExact:
 		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Exact{Exact: x.GetValue()}
 	}
 	return res
 }
 
-type TrafficRouteHttpMatchStringMatcherPrefix struct {
-	Value string
-}
-
-type TrafficRouteHttpMatchStringMatcherExact struct {
-	Value string
-}
-
-type TrafficRouteHttpMatchStringMatcherRegex struct {
-	Value string
-}
-
-func NewTrafficRouteHttpMatchStringMatcherPrefix(val string) TrafficRouteHttpMatchStringMatcherPrefix {
-	return TrafficRouteHttpMatchStringMatcherPrefix{Value: val}
-}
-
-func (x TrafficRouteHttpMatchStringMatcherPrefix) ToTrafficRouteHttpMatchStringMatcher() TrafficRouteHttpMatchStringMatcher {
-	return x
-}
-
-func (x TrafficRouteHttpMatchStringMatcherPrefix) GetType() string {
-	return EnvoyStringMatchTypePrefix
-}
-
-func (x TrafficRouteHttpMatchStringMatcherPrefix) GetValue() string {
-	return x.Value
-}
-
-func NewTrafficRouteHttpMatchStringMatcherRegex(val string) TrafficRouteHttpMatchStringMatcherRegex {
-	return TrafficRouteHttpMatchStringMatcherRegex{Value: val}
-}
-
-func (x TrafficRouteHttpMatchStringMatcherRegex) ToTrafficRouteHttpMatchStringMatcher() TrafficRouteHttpMatchStringMatcher {
-	return x
-}
-
-func (x TrafficRouteHttpMatchStringMatcherRegex) GetType() string {
-	return EnvoyStringMatchTypeRegex
-}
-
-func (x TrafficRouteHttpMatchStringMatcherRegex) GetValue() string {
-	return x.Value
-}
-
-func NewTrafficRouteHttpMatchStringMatcherExact(val string) TrafficRouteHttpMatchStringMatcherExact {
-	return TrafficRouteHttpMatchStringMatcherExact{Value: val}
-}
-
-func (x TrafficRouteHttpMatchStringMatcherExact) ToTrafficRouteHttpMatchStringMatcher() TrafficRouteHttpMatchStringMatcher {
-	return x
-}
-
-func (x TrafficRouteHttpMatchStringMatcherExact) GetType() string {
-	return EnvoyStringMatchTypeExact
-}
-
-func (x TrafficRouteHttpMatchStringMatcherExact) GetValue() string {
-	return x.Value
-}
-
-type TrafficRouteHttpMatch struct {
-	Name    string
-	Method  TrafficRouteHttpMatchStringMatcher
-	Path    TrafficRouteHttpMatchStringMatcher
-	Headers map[string]TrafficRouteHttpMatchStringMatcher
-	Params  map[string]TrafficRouteHttpMatchStringMatcher
-}
-
-func (m TrafficRouteHttpMatch) GetPath() TrafficRouteHttpMatchStringMatcher {
-	return m.Path
-}
-
-func (m TrafficRouteHttpMatch) GetParam() map[string]TrafficRouteHttpMatchStringMatcher {
-	return m.Params
-}
-
-func (m TrafficRouteHttpMatch) GetHeaders() map[string]TrafficRouteHttpMatchStringMatcher {
-	return m.Headers
-}
-
-func (m TrafficRouteHttpMatch) GetMethod() TrafficRouteHttpMatchStringMatcher {
-	return m.Method
-}
-
 type Route struct {
-	Match *TrafficRouteHttpMatch
+	Match *xds.TrafficRouteHttpMatch
 	// modify
 	// rateLimit
 	Clusters []Cluster

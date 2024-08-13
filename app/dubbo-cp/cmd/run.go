@@ -19,12 +19,13 @@ package cmd
 
 import (
 	"fmt"
-	"google.golang.org/grpc/reflection"
 	"time"
 )
 
 import (
 	"github.com/spf13/cobra"
+
+	"google.golang.org/grpc/reflection"
 )
 
 import (
