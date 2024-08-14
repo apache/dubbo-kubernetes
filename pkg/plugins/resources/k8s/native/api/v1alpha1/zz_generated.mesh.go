@@ -24,6 +24,103 @@ import (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=dubbo,scope=Cluster
+type AffinityRoute struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Mesh is the name of the dubbo mesh this resource belongs to.
+	// It may be omitted for cluster-scoped resources.
+	//
+	// +kubebuilder:validation:Optional
+	Mesh string `json:"mesh,omitempty"`
+	// Spec is the specification of the Dubbo AffinityRoute resource.
+	// +kubebuilder:validation:Optional
+	Spec *apiextensionsv1.JSON `json:"spec,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Namespaced
+type AffinityRouteList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []AffinityRoute `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&AffinityRoute{}, &AffinityRouteList{})
+}
+
+func (cb *AffinityRoute) GetObjectMeta() *metav1.ObjectMeta {
+	return &cb.ObjectMeta
+}
+
+func (cb *AffinityRoute) SetObjectMeta(m *metav1.ObjectMeta) {
+	cb.ObjectMeta = *m
+}
+
+func (cb *AffinityRoute) GetMesh() string {
+	return cb.Mesh
+}
+
+func (cb *AffinityRoute) SetMesh(mesh string) {
+	cb.Mesh = mesh
+}
+
+func (cb *AffinityRoute) GetSpec() (core_model.ResourceSpec, error) {
+	spec := cb.Spec
+	m := mesh_proto.AffinityRoute{}
+
+	if spec == nil || len(spec.Raw) == 0 {
+		return &m, nil
+	}
+
+	err := util_proto.FromJSON(spec.Raw, &m)
+	return &m, err
+}
+
+func (cb *AffinityRoute) SetSpec(spec core_model.ResourceSpec) {
+	if spec == nil {
+		cb.Spec = nil
+		return
+	}
+
+	s, ok := spec.(*mesh_proto.AffinityRoute)
+	if !ok {
+		panic(fmt.Sprintf("unexpected protobuf message type %T", spec))
+	}
+
+	cb.Spec = &apiextensionsv1.JSON{Raw: util_proto.MustMarshalJSON(s)}
+}
+
+func (cb *AffinityRoute) Scope() model.Scope {
+	return model.ScopeCluster
+}
+
+func (l *AffinityRouteList) GetItems() []model.KubernetesObject {
+	result := make([]model.KubernetesObject, len(l.Items))
+	for i := range l.Items {
+		result[i] = &l.Items[i]
+	}
+	return result
+}
+
+func init() {
+	registry.RegisterObjectType(&mesh_proto.AffinityRoute{}, &AffinityRoute{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "AffinityRoute",
+		},
+	})
+	registry.RegisterListType(&mesh_proto.AffinityRoute{}, &AffinityRouteList{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "AffinityRouteList",
+		},
+	})
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=dubbo,scope=Cluster
 type ConditionRoute struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

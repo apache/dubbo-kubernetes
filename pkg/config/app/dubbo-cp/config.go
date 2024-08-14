@@ -138,11 +138,10 @@ func (c Config) IsNonFederatedZoneCP() bool {
 
 func (c *Config) Sanitize() {
 	c.Store.Sanitize()
-
 	c.Runtime.Sanitize()
 	c.Defaults.Sanitize()
-
 	c.Diagnostics.Sanitize()
+	c.Admin.Sanitize()
 }
 
 func (c *Config) PostProcess() error {
@@ -151,6 +150,7 @@ func (c *Config) PostProcess() error {
 		c.Runtime.PostProcess(),
 		c.Defaults.PostProcess(),
 		c.Diagnostics.PostProcess(),
+		c.Admin.PostProcess(),
 	)
 }
 
@@ -213,7 +213,9 @@ func (c *Config) Validate() error {
 	if err := c.Diagnostics.Validate(); err != nil {
 		return errors.Wrap(err, "Diagnostics validation failed")
 	}
-
+	if err := c.Admin.Validate(); err != nil {
+		return errors.Wrap(err, "Admin validation failed")
+	}
 	return nil
 }
 

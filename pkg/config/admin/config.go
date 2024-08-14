@@ -17,16 +17,31 @@
 
 package admin
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	. "github.com/apache/dubbo-kubernetes/pkg/config/observability"
+	"go.uber.org/multierr"
+)
+
 type Admin struct {
-	Port int `json:"port" envconfig:"DUBBO_ADMIN_PORT"`
+	config.BaseConfig
+	Port             int                    `json:"port" envconfig:"DUBBO_ADMIN_PORT"`
+	MetricDashboards *MetricDashboardConfig `json:"metric_dashboards"`
+	TraceDashboards  *TraceDashboardConfig  `json:"trace_dashboards"`
+	Prometheus       *PrometheusConfig      `json:"prometheus"`
 }
 
-func (s *Admin) Sanitize() {
+func (s *Admin) PostProcess() error {
+	return multierr.Combine(
+		s.MetricDashboards.PostProcess(),
+		s.TraceDashboards.PostProcess(),
+	)
 }
-
 func (s *Admin) Validate() error {
-	// TODO Validate server
-	return nil
+	return multierr.Combine(
+		s.MetricDashboards.Validate(),
+		s.TraceDashboards.Validate(),
+	)
 }
 
 func DefaultAdminConfig() *Admin {

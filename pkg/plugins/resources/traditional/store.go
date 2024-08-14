@@ -220,6 +220,29 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 		if err != nil {
 			return err
 		}
+	case mesh.AffinityRouteType:
+		labels := opts.Labels
+		base := mesh_proto.Base{
+			Application:    labels[mesh_proto.Application],
+			Service:        labels[mesh_proto.Service],
+			ID:             labels[mesh_proto.ID],
+			ServiceVersion: labels[mesh_proto.ServiceVersion],
+			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		}
+		key := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetRoutePath(key, consts.AffinityRoute)
+		bytes, err := core_model.ToYAML(resource.GetSpec())
+		if err != nil {
+			return err
+		}
+		cfg, _ := t.governance.GetConfig(path)
+		if cfg != "" {
+			return fmt.Errorf("%s Config is exsited ", path)
+		}
+		err = t.governance.SetConfig(path, string(bytes))
+		if err != nil {
+			return err
+		}
 	default:
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
@@ -324,7 +347,6 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	case mesh.DynamicConfigType:
-
 		labels := opts.Labels
 		base := mesh_proto.Base{
 			Application:    labels[mesh_proto.Application],
@@ -335,6 +357,33 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		}
 		id := mesh_proto.BuildServiceKey(base)
 		path := mesh_proto.GetOverridePath(id)
+
+		existConfig, err := t.governance.GetConfig(path)
+		if err != nil {
+			return err
+		} else if existConfig == "" {
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
+		}
+
+		if b, err := core_model.ToYAML(resource.GetSpec()); err != nil {
+			return err
+		} else {
+			err := t.governance.SetConfig(path, string(b))
+			if err != nil {
+				return err
+			}
+		}
+	case mesh.AffinityRouteType:
+		labels := opts.Labels
+		base := mesh_proto.Base{
+			Application:    labels[mesh_proto.Application],
+			Service:        labels[mesh_proto.Service],
+			ID:             labels[mesh_proto.ID],
+			ServiceVersion: labels[mesh_proto.ServiceVersion],
+			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		}
+		id := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetRoutePath(id, consts.AffinityRoute)
 
 		existConfig, err := t.governance.GetConfig(path)
 		if err != nil {
@@ -515,6 +564,26 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 		if err != nil {
 			return err
 		}
+	case mesh.AffinityRouteType:
+		labels := opts.Labels
+		base := mesh_proto.Base{
+			Application:    labels[mesh_proto.Application],
+			Service:        labels[mesh_proto.Service],
+			ID:             labels[mesh_proto.ID],
+			ServiceVersion: labels[mesh_proto.ServiceVersion],
+			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		}
+		key := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetRoutePath(key, consts.AffinityRoute)
+		_, err := t.governance.GetConfig(path)
+		if err != nil {
+			logger.Sugar().Error(err.Error())
+			return err
+		}
+		err = t.governance.DeleteConfig(path)
+		if err != nil {
+			return err
+		}
 	case mesh.MappingType:
 		// 无法删除
 	case mesh.MetaDataType:
@@ -647,6 +716,37 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		}
 		if cfg != "" {
 			data := &mesh_proto.DynamicConfig{}
+			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
+				return errors.Wrap(err, "failed to convert json to spec")
+			}
+			err = resource.SetSpec(data)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
+		}
+		resource.SetMeta(&resourceMetaObject{
+			Name: name,
+			Mesh: opts.Mesh,
+		})
+	case mesh.AffinityRouteType:
+		labels := opts.Labels
+		base := mesh_proto.Base{
+			Application:    labels[mesh_proto.Application],
+			Service:        labels[mesh_proto.Service],
+			ID:             labels[mesh_proto.ID],
+			ServiceVersion: labels[mesh_proto.ServiceVersion],
+			ServiceGroup:   labels[mesh_proto.ServiceGroup],
+		}
+		key := mesh_proto.BuildServiceKey(base)
+		path := mesh_proto.GetRoutePath(key, consts.AffinityRoute)
+		cfg, err := c.governance.GetConfig(path)
+		if err != nil {
+			return err
+		}
+		if cfg != "" {
+			data := &mesh_proto.AffinityRoute{}
 			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
 				return errors.Wrap(err, "failed to convert json to spec")
 			}
@@ -857,8 +957,8 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				Labels: maps.Clone(opts.Labels),
 			}
 			if err != nil {
-			} else {
-				meta.Version = ConfiguratorCfg.ConfigVersion
+				logger.Errorf("failed to parse dynamicConfig rule: %s : %s, %s", name, rule, err.Error())
+				continue
 			}
 			newIt.SetMeta(meta)
 			_ = resources.AddItem(newIt)
@@ -879,8 +979,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			}
 			if err != nil {
 				logger.Errorf("failed to parse tag rule: %s : %s, %s", name, rule, err.Error())
-			} else {
-				meta.Version = ConfiguratorCfg.ConfigVersion
+				continue
 			}
 			newIt.SetMeta(meta)
 			_ = resources.AddItem(newIt)
@@ -895,6 +994,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			ConfiguratorCfg, err := parseConditionConfig(rule)
 			if err != nil {
 				logger.Errorf("failed to parse condition rule: %s : %s, %s", name, rule, err.Error())
+				continue
 			} else {
 				_ = newIt.SetSpec(ConfiguratorCfg)
 				meta := &resourceMetaObject{
@@ -902,7 +1002,28 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 					Mesh:   opts.Mesh,
 					Labels: maps.Clone(opts.Labels),
 				}
-				meta.Labels[`version`] = ConfiguratorCfg.GetVersion()
+				newIt.SetMeta(meta)
+				_ = resources.AddItem(newIt)
+			}
+		}
+	case mesh.AffinityRouteType:
+		cfg, err := c.governance.GetList(consts.AffinityRuleSuffix)
+		if err != nil {
+			return err
+		}
+		for name, rule := range cfg {
+			newIt := resources.NewItem()
+			ConfiguratorCfg, err := parseAffinityConfig(rule)
+			if err != nil {
+				logger.Errorf("failed to parse condition rule: %s : %s, %s", name, rule, err.Error())
+				continue
+			} else {
+				_ = newIt.SetSpec(ConfiguratorCfg)
+				meta := &resourceMetaObject{
+					Name:   name,
+					Mesh:   opts.Mesh,
+					Labels: maps.Clone(opts.Labels),
+				}
 				newIt.SetMeta(meta)
 				_ = resources.AddItem(newIt)
 			}

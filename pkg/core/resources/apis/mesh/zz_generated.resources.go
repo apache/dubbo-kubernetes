@@ -15,6 +15,115 @@ import (
 )
 
 const (
+	AffinityRouteType model.ResourceType = "AffinityRoute"
+)
+
+var _ model.Resource = &AffinityRouteResource{}
+
+type AffinityRouteResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.AffinityRoute
+}
+
+func NewAffinityRouteResource() *AffinityRouteResource {
+	return &AffinityRouteResource{
+		Spec: &mesh_proto.AffinityRoute{},
+	}
+}
+
+func (t *AffinityRouteResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *AffinityRouteResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *AffinityRouteResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *AffinityRouteResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.AffinityRoute)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.AffinityRoute{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *AffinityRouteResource) Descriptor() model.ResourceTypeDescriptor {
+	return AffinityRouteResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &AffinityRouteResourceList{}
+
+type AffinityRouteResourceList struct {
+	Items      []*AffinityRouteResource
+	Pagination model.Pagination
+}
+
+func (l *AffinityRouteResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *AffinityRouteResourceList) GetItemType() model.ResourceType {
+	return AffinityRouteType
+}
+
+func (l *AffinityRouteResourceList) NewItem() model.Resource {
+	return NewAffinityRouteResource()
+}
+
+func (l *AffinityRouteResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*AffinityRouteResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*AffinityRouteResource)(nil), r)
+	}
+}
+
+func (l *AffinityRouteResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *AffinityRouteResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var AffinityRouteResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                AffinityRouteType,
+	Resource:            NewAffinityRouteResource(),
+	ResourceList:        &AffinityRouteResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "affinityroutes",
+	DubboctlArg:         "affinityroute",
+	DubboctlListArg:     "affinityroutes",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Affinity Route",
+	PluralDisplayName:   "Affinity Routes",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(AffinityRouteResourceTypeDescriptor)
+}
+
+const (
 	ConditionRouteType model.ResourceType = "ConditionRoute"
 )
 
