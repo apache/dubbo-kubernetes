@@ -19,6 +19,7 @@ package registry
 
 import (
 	"net/url"
+	"reflect"
 	"sync"
 	"time"
 
@@ -70,36 +71,10 @@ func (r *Registry) Subscribe(
 	out events.Emitter,
 	systemNamespace string,
 ) error {
-	queryParams := url.Values{
-		consts.InterfaceKey:  {consts.AnyValue},
-		consts.GroupKey:      {consts.AnyValue},
-		consts.VersionKey:    {consts.AnyValue},
-		consts.ClassifierKey: {consts.AnyValue},
-		consts.CategoryKey: {consts.ProvidersCategory +
-			"," + consts.ConsumersCategory +
-			"," + consts.RoutersCategory +
-			"," + consts.ConfiguratorsCategory},
-		consts.EnabledKey: {consts.AnyValue},
-		consts.CheckKey:   {"false"},
-	}
-	subscribeUrl, _ := common.NewURL(common.GetLocalIp()+":0",
-		common.WithProtocol(consts.AdminProtocol),
-		common.WithParams(queryParams))
-
 	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
-
 	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx)
-	scheduler := gocron.NewScheduler(time.UTC)
-	_, err := scheduler.Every(5).Second().Do(func() {
-		err := r.delegate.Subscribe(subscribeUrl, interfaceListener)
-		if err != nil {
-			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
-		}
-	})
-	scheduler.StartAsync()
-	if err != nil {
-		logger.Error("Failed to start registry interface services scheduler")
-	}
+
+	r.listenToAllServices(interfaceListener)
 
 	getMappingList := func(group string) (map[string]*gxset.HashSet, error) {
 		keys, err := metadataReport.GetConfigKeysByGroup(group)
@@ -154,4 +129,45 @@ func (r *Registry) Subscribe(
 	}()
 
 	return nil
+}
+
+func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNotifyListener) {
+	// 构建查询参数
+	queryParams := url.Values{
+		consts.InterfaceKey:  {consts.AnyValue},
+		consts.GroupKey:      {consts.AnyValue},
+		consts.VersionKey:    {consts.AnyValue},
+		consts.ClassifierKey: {consts.AnyValue},
+		consts.CategoryKey: {
+			consts.ProvidersCategory,
+			consts.ConsumersCategory,
+			consts.RoutersCategory,
+			consts.ConfiguratorsCategory,
+		},
+		consts.EnabledKey: {consts.AnyValue},
+		consts.CheckKey:   {"false"},
+	}
+
+	subscribeUrl, _ := common.NewURL(common.GetLocalIp()+":0",
+		common.WithProtocol(consts.AdminProtocol),
+		common.WithParams(queryParams))
+
+	executeSubscribe := func() {
+		err := r.delegate.Subscribe(subscribeUrl, notifyListener)
+		if err != nil {
+			logger.Error("Failed to subscribe to registry, might not be able to show services of the cluster!")
+		}
+	}
+
+	if reflect.TypeOf(r.delegate).String() == "*zookeeper.zkRegistry" {
+		executeSubscribe()
+	} else {
+		scheduler := gocron.NewScheduler(time.UTC)
+		_, err := scheduler.Every(5).Second().Do(executeSubscribe)
+		if err == nil {
+			scheduler.StartAsync()
+		} else {
+			logger.Error("Failed to start registry interface services scheduler")
+		}
+	}
 }
