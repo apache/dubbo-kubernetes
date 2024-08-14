@@ -45,21 +45,21 @@ const (
 type NotifyListener struct {
 	manager.ResourceManager
 	dataplaneCache *sync.Map
-	discovery      dubboRegistry.ServiceDiscovery
 	eventWriter    events.Emitter
+	ctx            *ApplicationContext
 }
 
 func NewNotifyListener(
 	manager manager.ResourceManager,
 	cache *sync.Map,
-	discovery dubboRegistry.ServiceDiscovery,
 	writer events.Emitter,
+	grc *ApplicationContext,
 ) *NotifyListener {
 	return &NotifyListener{
 		manager,
 		cache,
-		discovery,
 		writer,
+		grc,
 	}
 }
 
@@ -86,7 +86,7 @@ func (l *NotifyListener) deleteDataplane(ctx context.Context, url *common.URL) e
 	app := url.GetParam(constant.ApplicationKey, "")
 	address := url.Address()
 	var revision string
-	instances := l.discovery.GetInstances(app)
+	instances := l.ctx.allInstances[app]
 	for _, instance := range instances {
 		if instance.GetAddress() == address {
 			revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
@@ -113,7 +113,7 @@ func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, url *commo
 	app := url.GetParam(constant.ApplicationKey, "")
 	address := url.Address()
 	var revision string
-	instances := l.discovery.GetInstances(app)
+	instances := l.ctx.allInstances[app]
 	for _, instance := range instances {
 		if instance.GetAddress() == address {
 			revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
@@ -123,16 +123,13 @@ func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, url *commo
 
 	dataplaneResource := mesh.NewDataplaneResource()
 	dataplaneResource.SetMeta(&resourceMetaObject{
-		Name: app + "-" + revision,
+		Name: app + "-" + revision + "-" + address,
 		Mesh: core_model.DefaultMesh,
 	})
 	dataplaneResource.Spec.Networking = &mesh_proto.Dataplane_Networking{}
 	dataplaneResource.Spec.Extensions = map[string]string{}
 	dataplaneResource.Spec.Extensions[mesh_proto.ApplicationName] = app
 	dataplaneResource.Spec.Extensions[mesh_proto.Revision] = revision
-	dataplaneResource.SetMeta(&resourceMetaObject{
-		Name: key,
-	})
 	dataplaneResource.Spec.Networking.Address = url.Address()
 	ifaces, err := InboundInterfacesFor(ctx, url)
 	if err != nil {
