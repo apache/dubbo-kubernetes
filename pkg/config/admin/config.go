@@ -18,9 +18,12 @@
 package admin
 
 import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	. "github.com/apache/dubbo-kubernetes/pkg/config/observability"
-	"go.uber.org/multierr"
 )
 
 type Admin struct {

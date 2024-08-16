@@ -33,7 +33,7 @@ message Tag {
   bool __generate_by_cp = 8;
 }
 
-message StringMatch {
+message StringMatch_Dubbo {
   string exact = 1;
   string prefix = 2;
   string regex = 3;
@@ -44,5 +44,5 @@ message StringMatch {
 
 message ParamMatch {
   string key = 1;
-  StringMatch value = 2;
+  StringMatch_Dubbo value = 2;
 }

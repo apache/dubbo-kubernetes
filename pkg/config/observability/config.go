@@ -18,11 +18,18 @@
 package observability
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/pkg/errors"
-	"go.uber.org/multierr"
 	"net/url"
 	"strings"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"go.uber.org/multierr"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 )
 
 // MetricDashboardConfig are grafana dashboards for metrics display
