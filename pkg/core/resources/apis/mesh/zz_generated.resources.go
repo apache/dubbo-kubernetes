@@ -1104,6 +1104,115 @@ func init() {
 }
 
 const (
+	VirtualServiceType model.ResourceType = "VirtualService"
+)
+
+var _ model.Resource = &VirtualServiceResource{}
+
+type VirtualServiceResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.VirtualService
+}
+
+func NewVirtualServiceResource() *VirtualServiceResource {
+	return &VirtualServiceResource{
+		Spec: &mesh_proto.VirtualService{},
+	}
+}
+
+func (t *VirtualServiceResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *VirtualServiceResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *VirtualServiceResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *VirtualServiceResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.VirtualService)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.VirtualService{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *VirtualServiceResource) Descriptor() model.ResourceTypeDescriptor {
+	return VirtualServiceResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &VirtualServiceResourceList{}
+
+type VirtualServiceResourceList struct {
+	Items      []*VirtualServiceResource
+	Pagination model.Pagination
+}
+
+func (l *VirtualServiceResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *VirtualServiceResourceList) GetItemType() model.ResourceType {
+	return VirtualServiceType
+}
+
+func (l *VirtualServiceResourceList) NewItem() model.Resource {
+	return NewVirtualServiceResource()
+}
+
+func (l *VirtualServiceResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*VirtualServiceResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*VirtualServiceResource)(nil), r)
+	}
+}
+
+func (l *VirtualServiceResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *VirtualServiceResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var VirtualServiceResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                VirtualServiceType,
+	Resource:            NewVirtualServiceResource(),
+	ResourceList:        &VirtualServiceResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "virtualservices",
+	DubboctlArg:         "virtualservice",
+	DubboctlListArg:     "virtualservices",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Virtual Service",
+	PluralDisplayName:   "Virtual Services",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(VirtualServiceResourceTypeDescriptor)
+}
+
+const (
 	ZoneEgressType model.ResourceType = "ZoneEgress"
 )
 
