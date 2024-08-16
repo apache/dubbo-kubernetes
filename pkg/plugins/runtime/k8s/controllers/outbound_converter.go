@@ -35,7 +35,6 @@ import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	mesh_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/resources/k8s/native/api/v1alpha1"
-	util_k8s "github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/util"
 )
 
 func (p *PodConverter) OutboundInterfacesFor(
@@ -86,29 +85,29 @@ func (p *PodConverter) OutboundInterfacesFor(
 			)
 			continue
 		}
-		// kube-label to tags
-		tags := util_k8s.CopyStringMap(pod.Labels)
 		if isHeadlessService(service) {
 			// Generate outbound listeners for every endpoint of services.
 			for _, endpoint := range endpoints[serviceTag] {
 				if endpoint.Address == pod.Status.PodIP {
 					continue // ignore generating outbound for itself, otherwise we've got a conflict with inbound
 				}
-				tags[mesh_proto.ServiceTag] = serviceTag
-				tags[mesh_proto.InstanceTag] = endpoint.Instance
 				outbounds = append(outbounds, &mesh_proto.Dataplane_Networking_Outbound{
 					Address: endpoint.Address,
 					Port:    endpoint.Port,
-					Tags:    tags,
+					Tags: map[string]string{
+						mesh_proto.ServiceTag:  serviceTag,
+						mesh_proto.InstanceTag: endpoint.Instance,
+					},
 				})
 			}
 		} else {
 			// generate outbound based on ClusterIP
-			tags[mesh_proto.ServiceTag] = serviceTag
 			outbounds = append(outbounds, &mesh_proto.Dataplane_Networking_Outbound{
 				Address: service.Spec.ClusterIP,
 				Port:    port,
-				Tags:    tags,
+				Tags: map[string]string{
+					mesh_proto.ServiceTag: serviceTag,
+				},
 			})
 		}
 	}

@@ -19,6 +19,7 @@ package sync
 
 import (
 	"context"
+	"strings"
 )
 
 import (
@@ -82,10 +83,11 @@ func (p *DataplaneProxyBuilder) resolveRouting(
 	return routing
 }
 
-func trafficPolicyToSelector(dataplane *core_mesh.DataplaneResource, meshContext xds_context.MeshContext) core_xds.EndpointSelectorMap {
-	res := core_xds.EndpointSelectorMap{}
+func trafficPolicyToSelector(dataplane *core_mesh.DataplaneResource, meshContext xds_context.MeshContext) core_xds.ServiceSelectorMap {
+	res := core_xds.ServiceSelectorMap{}
 	// first step focus on outbound
 	tagRouteList := meshContext.Resources.ListOrEmpty(core_mesh.TagRouteType)
+	DynamicConfigList := meshContext.Resources.ListOrEmpty(core_mesh.DynamicConfigType)
 	getTagRoutePolicy := func(dubboApplicationName string) *v1alpha1.TagRoute {
 		for _, resource := range tagRouteList.GetItems() {
 			resource, ok := resource.GetSpec().(*v1alpha1.TagRoute)
@@ -99,23 +101,33 @@ func trafficPolicyToSelector(dataplane *core_mesh.DataplaneResource, meshContext
 		}
 		return nil
 	}
-	dubboApplicationName := dataplane.Spec.GetApplication()
-	if p := getTagRoutePolicy(dubboApplicationName); p != nil {
-		for _, outbound := range dataplane.Spec.Networking.Outbound {
-			serviceName := outbound.GetService()
-			if serviceName == "" || res[serviceName] != nil {
+
+	getDynamicConfigPolicy := func(dubboApplicationName, dubboServiceName string) (
+		dubboAppWideConfig *v1alpha1.DynamicConfig, dubboServiceWideConfig *v1alpha1.DynamicConfig,
+	) {
+		for _, resource := range DynamicConfigList.GetItems() {
+			resource, ok := resource.GetSpec().(*v1alpha1.DynamicConfig)
+			if !ok {
+				logger.Errorf("get wroug type in meshcontext.list() ,somewhere error")
 				continue
 			}
-			res[serviceName] = generateTagSelector(p, meshContext)
+			if dubboAppWideConfig == nil &&
+				resource.Key == dubboApplicationName &&
+				strings.ToLower(resource.Scope) == "application" {
+				dubboAppWideConfig = resource
+			}
+			if dubboServiceWideConfig == nil &&
+				resource.Key == dubboServiceName &&
+				strings.ToLower(resource.Scope) == "service" {
+				dubboServiceWideConfig = resource
+			}
 		}
+		return
 	}
-	return res
-}
 
-func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshContext) []core_xds.EndpointSelector {
-	list := meshContext.Resources.ListOrEmpty(core_mesh.MetaDataType)
 	// match from appName and port
-	getMetadata := func(endpoint core_xds.Endpoint) *v1alpha1.ServiceInfo {
+	list := meshContext.Resources.ListOrEmpty(core_mesh.MetaDataType)
+	getAppNameFromEndpoint := func(endpoint core_xds.Endpoint) *v1alpha1.ServiceInfo {
 		if list == nil || len(list.GetItems()) == 0 {
 			return nil
 		}
@@ -132,43 +144,122 @@ func generateTagSelector(p *v1alpha1.TagRoute, meshContext xds_context.MeshConte
 		}
 		return nil
 	}
-	res := make([]core_xds.EndpointSelector, 0, len(p.Tags))
-	for _, tag := range p.Tags {
-		res = append(res, core_xds.EndpointSelector{
-			MatchInfo: core_xds.TrafficRouteHttpMatch{
-				Name: tag.Name,
-				Params: map[string]core_xds.TrafficRouteHttpMatchStringMatcher{
-					"dubbo.tag": core_xds.NewTrafficRouteHttpMatchStringMatcherExact(tag.Name),
-				},
-			},
-			SelectFunc: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
-				res := core_xds.EndpointList{}
-				for _, e := range endpoint {
-					m := getMetadata(e)
-					if m == nil {
-						continue
-					}
-					matched := true
-					for _, match := range tag.Match {
-						if !match.Value.Match(m.Params[match.Key]) {
-							matched = false
-							break
-						}
-					}
-					if matched {
-						res = append(res, e)
-					}
+
+	ListServiceInfoFromServiceName := func(serviceName string) []struct {
+		App  string
+		Info *v1alpha1.ServiceInfo
+	} {
+		if list == nil || len(list.GetItems()) == 0 {
+			return nil
+		}
+		res := make([]struct {
+			App  string
+			Info *v1alpha1.ServiceInfo
+		}, 0)
+		for _, resource := range list.GetItems() {
+			resource, ok := resource.GetSpec().(*v1alpha1.MetaData)
+			if !ok {
+				continue
+			}
+			for _, info := range resource.Services {
+				if info.Name == serviceName {
+					res = append(res, struct {
+						App  string
+						Info *v1alpha1.ServiceInfo
+					}{App: resource.App, Info: info})
 				}
-				return res
-			},
-		})
+			}
+		}
+		return res
 	}
-	return append(res, core_xds.EndpointSelector{
-		MatchInfo: core_xds.TrafficRouteHttpMatch{},
-		SelectFunc: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
-			return endpoint
-		},
-	})
+
+	for _, outbound := range dataplane.Spec.Networking.Outbound {
+		if p := getTagRoutePolicy(outbound.Tags[v1alpha1.AppTag]); p != nil {
+			serviceName := outbound.GetService()
+			if serviceName == "" {
+				continue
+			}
+			generateTagSelector(serviceName, res, ListServiceInfoFromServiceName, getServiceInfoFromEndpoint, getTagRoutePolicy)
+		}
+	}
+
+	for _, outbound := range dataplane.Spec.Networking.Outbound {
+		dubboServiceName := outbound.GetService()
+		ap, sp := getDynamicConfigPolicy(outbound.Tags[v1alpha1.AppTag], dubboServiceName)
+		generateDynamicConfigToSelector(ap, sp, dubboServiceName, res, getServiceInfoFromEndpoint)
+	}
+	return res
+}
+
+func generateDynamicConfigToSelector(
+	dubboApplicationPolicy *v1alpha1.DynamicConfig,
+	dubboServicePolicy *v1alpha1.DynamicConfig,
+	serviceName string,
+	selectorMap core_xds.ServiceSelectorMap,
+	getMetadata func(endpoint core_xds.Endpoint) *v1alpha1.ServiceInfo,
+) {
+
+}
+
+func generateTagSelector(
+	serviceName string,
+	selectorMap core_xds.ServiceSelectorMap,
+	getServiceInfoFromName func(serviceName string) []struct {
+		App  string
+		Info *v1alpha1.ServiceInfo
+	},
+	getMetadataFromEndpoint func(endpoint core_xds.Endpoint) *v1alpha1.ServiceInfo,
+	GetPolicyFunc func(dubboApplicationName string) *v1alpha1.TagRoute,
+) {
+	infolist := getServiceInfoFromName(serviceName)
+	for _, s := range infolist {
+
+		cs := make([]core_xds.ClusterSelectorList, 0, len(p.Tags))
+		for _, tag := range p.Tags {
+			cs = append(cs, core_xds.ClusterSelectorList{
+				MatchInfo: core_xds.TrafficRouteHttpMatch{
+					Params: map[string]core_xds.TrafficRouteHttpStringMatcher{
+						"dubbo.tag": core_xds.NewTrafficRouteHttpMatcherExact(tag.Name),
+					},
+				},
+				EndSelectors: []core_xds.ClusterSelector{{
+					ConfigInfo: core_xds.TrafficRouteConfig{
+						ExternalTags: map[string]string{
+							"dubbo.tag": tag.Name,
+						},
+						Weight: 100,
+					},
+					SelectFunc: func(endpoint core_xds.EndpointList) core_xds.EndpointList {
+						res := core_xds.EndpointList{}
+						for _, e := range endpoint {
+							// get metadata belong to endpoint
+							m := getMetadataFromEndpoint(e)
+							if m == nil {
+								continue
+							}
+							matched := true
+							for _, match := range tag.Match {
+								if !match.Value.Match(m.Params[match.Key]) {
+									matched = false
+									break
+								}
+							}
+							if matched {
+								res = append(res, e)
+							}
+						}
+						return res
+					},
+				}},
+			})
+		}
+	}
+
+	if i, ok := selectorMap[serviceName]; ok {
+		selectorMap[serviceName] = core_xds.MergeClusterSelectorList(i, cs)
+	} else {
+		selectorMap[serviceName] = cs
+	}
 }
 
 func (p *DataplaneProxyBuilder) matchPolicies(meshContext xds_context.MeshContext, dataplane *core_mesh.DataplaneResource, outboundSelectors core_xds.DestinationMap) (*core_xds.MatchedPolicies, error) {

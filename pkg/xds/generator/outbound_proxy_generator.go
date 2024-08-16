@@ -272,8 +272,13 @@ func (OutboundProxyGenerator) determineRoutes(
 ) envoy_common.Routes {
 	var routes envoy_common.Routes
 
-	retriveClusters := func() [][]envoy_common.Cluster {
-		var clustersList [][]envoy_common.Cluster
+	type clustersInfo struct {
+		info     *model.TrafficRouteHttpMatch
+		clusters []envoy_common.Cluster
+	}
+
+	retriveClusters := func() []clustersInfo {
+		var clustersList []clustersInfo
 		service := outboundTags[mesh_proto.ServiceTag]
 
 		name, _ := envoy_tags.Tags(outboundTags).DestinationClusterName(nil)
@@ -293,23 +298,29 @@ func (OutboundProxyGenerator) determineRoutes(
 			isExternalService = true
 		}
 		allTags := envoy_tags.Tags(outboundTags)
-		var clusters []envoy_common.Cluster
 		if _, ok := proxy.Routing.OutboundSelector[service]; ok {
-			for _, selector := range proxy.Routing.OutboundSelector[service] {
-				cluster := envoy_common.NewCluster(
-					envoy_common.WithService(service),
-					envoy_common.WithName(name),
-					envoy_common.WithTags(allTags.
-						WithoutTags(mesh_proto.MeshTag).
-						WithTags("tag-route", selector.GetMatchInfo().Name),
-					),
-					envoy_common.WithExternalService(isExternalService),
-					envoy_common.WithSelector(selector),
-				)
-				if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
-					cluster.SetMesh(mesh)
+			for _, clusterSelectors := range proxy.Routing.OutboundSelector[service] {
+				var clusters = make([]envoy_common.Cluster, 0, len(clusterSelectors.EndSelectors))
+				for _, endSelector := range clusterSelectors.EndSelectors {
+					cluster := envoy_common.NewCluster(
+						envoy_common.WithService(service),
+						envoy_common.WithName(name),
+						envoy_common.WithTags(allTags.
+							WithoutTags(mesh_proto.MeshTag).
+							WithTags(endSelector.ConfigInfo.ExternalTags.KeyAndValues()...),
+						),
+						envoy_common.WithExternalService(isExternalService),
+						envoy_common.WithSelector(endSelector),
+					)
+					if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
+						cluster.SetMesh(mesh)
+					}
+					clusters = append(clusters, cluster)
 				}
-				clusters = append(clusters, cluster)
+				clustersList = append(clustersList, clustersInfo{
+					info:     clusterSelectors.GetMatchInfo(),
+					clusters: clusters,
+				})
 			}
 		} else {
 			cluster := envoy_common.NewCluster(
@@ -321,22 +332,23 @@ func (OutboundProxyGenerator) determineRoutes(
 			if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
 				cluster.SetMesh(mesh)
 			}
-			clusters = append(clusters, cluster)
+			clustersList = append(clustersList, clustersInfo{
+				info:     nil,
+				clusters: []envoy_common.Cluster{cluster},
+			})
 		}
-		return append(clustersList, clusters)
+		return clustersList
 	}
 
-	appendRoute := func(routes envoy_common.Routes, clustersList [][]envoy_common.Cluster) envoy_common.Routes {
-		if len(clustersList) == 0 {
+	appendRoute := func(routes envoy_common.Routes, clustersInfoList []clustersInfo) envoy_common.Routes {
+		if len(clustersInfoList) == 0 {
 			return routes
 		}
 
-		for _, clusters := range clustersList {
+		for _, c := range clustersInfoList {
 			r := envoy_common.Route{
-				Clusters: clusters,
-			}
-			if len(clusters) != 0 {
-				r.Match = clusters[0].Selector().GetMatchInfo()
+				Clusters: c.clusters,
+				Match:    c.info,
 			}
 			routes = append(routes, r)
 		}

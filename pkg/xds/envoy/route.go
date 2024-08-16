@@ -25,7 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
 )
 
-func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x xds.TrafficRouteHttpMatchStringMatcher) *envoy_type_matcher_v3.StringMatcher {
+func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x xds.TrafficRouteHttpStringMatcher) *envoy_type_matcher_v3.StringMatcher {
 	if x == nil {
 		return &envoy_type_matcher_v3.StringMatcher{}
 	}

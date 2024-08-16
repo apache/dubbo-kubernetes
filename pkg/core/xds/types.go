@@ -174,23 +174,28 @@ type ZoneIngressProxy struct {
 	MeshResourceList    []*MeshIngressResources
 }
 
-type EndpointSelectorMap map[ServiceName][]EndpointSelector
+type ClusterSelectorList struct {
+	MatchInfo    TrafficRouteHttpMatch
+	EndSelectors []ClusterSelector
+}
 
-type EndpointSelector struct {
-	MatchInfo  TrafficRouteHttpMatch
+type ServiceSelectorMap map[ServiceName][]ClusterSelectorList
+
+type ClusterSelector struct {
+	ConfigInfo TrafficRouteConfig
 	SelectFunc func(endpoint EndpointList) EndpointList
 }
 
-func (e *EndpointSelector) GetMatchInfo() *TrafficRouteHttpMatch {
+func (e *ClusterSelectorList) GetMatchInfo() *TrafficRouteHttpMatch {
 	return &e.MatchInfo
 }
 
-func (e *EndpointSelector) Select(endpoint EndpointList) EndpointList {
+func (e *ClusterSelector) Select(endpoint EndpointList) EndpointList {
 	return e.Select(endpoint)
 }
 
 type Routing struct {
-	OutboundSelector EndpointSelectorMap
+	OutboundSelector ServiceSelectorMap
 	OutboundTargets  EndpointMap
 	// ExternalServiceOutboundTargets contains endpoint map for direct access of external services (without egress)
 	// Since we take into account TrafficPermission to exclude external services from the map,

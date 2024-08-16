@@ -55,6 +55,13 @@ func (c RoutesConfigurer) Configure(virtualHost *envoy_config_route_v3.VirtualHo
 }
 
 func (c RoutesConfigurer) routeMatch(match *core_xds.TrafficRouteHttpMatch) *envoy_config_route_v3.RouteMatch {
+	if match == nil {
+		return &envoy_config_route_v3.RouteMatch{
+			PathSpecifier: &envoy_config_route_v3.RouteMatch_Prefix{
+				Prefix: "/",
+			},
+		}
+	}
 	envoyMatch := &envoy_config_route_v3.RouteMatch{}
 
 	if match.GetPath() != nil {
@@ -95,16 +102,16 @@ func (c RoutesConfigurer) routeMatch(match *core_xds.TrafficRouteHttpMatch) *env
 	return envoyMatch
 }
 
-func (c RoutesConfigurer) headerMatcher(name string, matcher core_xds.TrafficRouteHttpMatchStringMatcher) *envoy_config_route_v3.HeaderMatcher {
+func (c RoutesConfigurer) headerMatcher(name string, matcher core_xds.TrafficRouteHttpStringMatcher) *envoy_config_route_v3.HeaderMatcher {
 	headerMatcher := &envoy_config_route_v3.HeaderMatcher{
 		Name: name,
 	}
 	switch matcher.(type) {
-	case *core_xds.TrafficRouteHttpMatchStringMatcherPrefix:
+	case *core_xds.TrafficRouteHttpMatcherPrefix:
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_PrefixMatch{
 			PrefixMatch: matcher.GetValue(),
 		}
-	case *core_xds.TrafficRouteHttpMatchStringMatcherExact:
+	case *core_xds.TrafficRouteHttpMatcherExact:
 		stringMatcher := envoy_type_matcher_v3.StringMatcher{
 			MatchPattern: &envoy_type_matcher_v3.StringMatcher_Exact{
 				Exact: matcher.GetValue(),
@@ -113,7 +120,7 @@ func (c RoutesConfigurer) headerMatcher(name string, matcher core_xds.TrafficRou
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_StringMatch{
 			StringMatch: &stringMatcher,
 		}
-	case *core_xds.TrafficRouteHttpMatchStringMatcherRegex:
+	case *core_xds.TrafficRouteHttpMatcherRegex:
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_SafeRegexMatch{
 			SafeRegexMatch: &envoy_type_matcher_v3.RegexMatcher{
 				Regex: matcher.GetValue(),
@@ -124,19 +131,19 @@ func (c RoutesConfigurer) headerMatcher(name string, matcher core_xds.TrafficRou
 }
 
 func (c RoutesConfigurer) setPathMatcher(
-	matcher core_xds.TrafficRouteHttpMatchStringMatcher,
+	matcher core_xds.TrafficRouteHttpStringMatcher,
 	routeMatch *envoy_config_route_v3.RouteMatch,
 ) {
 	switch matcher.(type) {
-	case *core_xds.TrafficRouteHttpMatchStringMatcherPrefix:
+	case *core_xds.TrafficRouteHttpMatcherPrefix:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_Prefix{
 			Prefix: matcher.GetValue(),
 		}
-	case *core_xds.TrafficRouteHttpMatchStringMatcherExact:
+	case *core_xds.TrafficRouteHttpMatcherExact:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_Path{
 			Path: matcher.GetValue(),
 		}
-	case *core_xds.TrafficRouteHttpMatchStringMatcherRegex:
+	case *core_xds.TrafficRouteHttpMatcherRegex:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_SafeRegex{
 			SafeRegex: &envoy_type_matcher_v3.RegexMatcher{
 				Regex: matcher.GetValue(),

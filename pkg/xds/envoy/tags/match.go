@@ -121,12 +121,24 @@ func (t Tags) Keys() TagKeys {
 	return keys
 }
 
+func (t Tags) KeyAndValues() []string {
+	res := make([]string, 0, len(t)*2)
+	for _, key := range t.Keys() {
+		res = append(res, key, t[key])
+	}
+	return res
+}
+
 func (t Tags) String() string {
 	var pairs []string
 	for _, key := range t.Keys() {
 		pairs = append(pairs, fmt.Sprintf("%s=%s", key, t[key]))
 	}
 	return strings.Join(pairs, ",")
+}
+
+func (t Tags) Copy() Tags {
+	return Tags{}.WithTags(t.KeyAndValues()...)
 }
 
 type (
