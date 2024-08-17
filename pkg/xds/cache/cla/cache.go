@@ -67,10 +67,14 @@ func (c *Cache) GetCLA(ctx context.Context, meshName, meshHash string, cluster e
 		if len(matchTags) > 0 {
 			endpoints = []xds.Endpoint{}
 			for _, endpoint := range endpointMap[cluster.Service()] {
-				if endpoint.ContainsTags(matchTags) {
-					endpoints = append(endpoints, endpoint)
+				if !endpoint.ContainsTags(matchTags) {
+					continue
 				}
+				endpoints = append(endpoints, endpoint)
 			}
+		}
+		if cluster.Selector() != nil {
+			endpoints = cluster.Selector().Select(endpoints)
 		}
 		return envoy_endpoints.CreateClusterLoadAssignment(cluster.Name(), endpoints, apiVersion)
 	}))

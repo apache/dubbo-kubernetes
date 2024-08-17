@@ -84,11 +84,12 @@ type Locality struct {
 }
 
 // Endpoint holds routing-related information about a single endpoint.
+// It is abstracted from mesh_proto.DataplaneRecourse.Spec.Networking.Inbound
 type Endpoint struct {
 	Target          string
 	UnixDomainPath  string
 	Port            uint32
-	Tags            map[string]string
+	Tags            map[string]string // clone from inbound.GetTags
 	Weight          uint32
 	Locality        *Locality
 	ExternalService *ExternalService
@@ -173,8 +174,29 @@ type ZoneIngressProxy struct {
 	MeshResourceList    []*MeshIngressResources
 }
 
+type ClusterSelectorList struct {
+	MatchInfo    TrafficRouteHttpMatch
+	EndSelectors []ClusterSelector
+}
+
+type ServiceSelectorMap map[ServiceName][]ClusterSelectorList
+
+type ClusterSelector struct {
+	ConfigInfo TrafficRouteConfig
+	SelectFunc func(endpoint EndpointList) EndpointList
+}
+
+func (e *ClusterSelectorList) GetMatchInfo() *TrafficRouteHttpMatch {
+	return &e.MatchInfo
+}
+
+func (e *ClusterSelector) Select(endpoint EndpointList) EndpointList {
+	return e.Select(endpoint)
+}
+
 type Routing struct {
-	OutboundTargets EndpointMap
+	OutboundSelector ServiceSelectorMap
+	OutboundTargets  EndpointMap
 	// ExternalServiceOutboundTargets contains endpoint map for direct access of external services (without egress)
 	// Since we take into account TrafficPermission to exclude external services from the map,
 	// it is specific for each data plane proxy.

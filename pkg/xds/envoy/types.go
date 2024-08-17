@@ -43,6 +43,7 @@ type Cluster interface {
 	Tags() tags.Tags
 	Hash() string
 	IsExternalService() bool
+	Selector() *core_xds.ClusterSelector
 }
 
 type Split interface {
@@ -59,6 +60,7 @@ type ClusterImpl struct {
 	tags              tags.Tags
 	mesh              string
 	isExternalService bool
+	selector          core_xds.ClusterSelector
 }
 
 func (c *ClusterImpl) Service() string { return c.service }
@@ -68,9 +70,14 @@ func (c *ClusterImpl) Tags() tags.Tags { return c.tags }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
-func (c *ClusterImpl) Mesh() string            { return c.mesh }
-func (c *ClusterImpl) IsExternalService() bool { return c.isExternalService }
-func (c *ClusterImpl) Hash() string            { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
+func (c *ClusterImpl) Mesh() string                        { return c.mesh }
+func (c *ClusterImpl) IsExternalService() bool             { return c.isExternalService }
+func (c *ClusterImpl) Hash() string                        { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
+func (c *ClusterImpl) Selector() *core_xds.ClusterSelector { return &c.selector }
+
+func (c *ClusterImpl) addSelector(f core_xds.ClusterSelector) {
+	c.selector = f
+}
 
 func (c *ClusterImpl) SetName(name string) {
 	c.name = name
@@ -114,6 +121,12 @@ func WithService(service string) NewClusterOpt {
 		if len(cluster.name) == 0 {
 			cluster.name = service
 		}
+	})
+}
+
+func WithSelector(selector core_xds.ClusterSelector) NewClusterOpt {
+	return newClusterOptFunc(func(cluster *ClusterImpl) {
+		cluster.addSelector(selector)
 	})
 }
 

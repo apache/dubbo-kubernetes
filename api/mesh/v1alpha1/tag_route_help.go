@@ -17,6 +17,12 @@
 
 package v1alpha1
 
+import (
+	"path/filepath"
+	"regexp"
+	"strings"
+)
+
 func (x *TagRoute) ListUnGenConfigs() []*Tag {
 	res := make([]*Tag, 0, len(x.Tags)/2+1)
 	for _, tag := range x.Tags {
@@ -59,4 +65,28 @@ func (x *TagRoute) RangeTagsToRemove(f func(*Tag) (IsRemove bool)) {
 		}
 	}
 	x.Tags = i
+}
+
+func (x *StringMatch) Match(target string) bool {
+	if x.Exact != "" {
+		return x.Exact == target
+	}
+	if x.Prefix != "" {
+		return strings.HasPrefix(target, x.Prefix)
+	}
+	if x.Regex != "" {
+		ok, _ := regexp.Match(x.Regex, []byte(target))
+		return ok
+	}
+	if x.Noempty != "" {
+		return target != ""
+	}
+	if x.Empty != "" {
+		return target == ""
+	}
+	if x.Wildcard != "" {
+		ok, _ := filepath.Match(x.Wildcard, target)
+		return ok
+	}
+	return true
 }

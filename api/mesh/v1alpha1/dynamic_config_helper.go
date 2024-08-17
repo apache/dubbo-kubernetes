@@ -18,6 +18,7 @@
 package v1alpha1
 
 import (
+	"strconv"
 	"strings"
 )
 
@@ -72,4 +73,67 @@ func (d *DynamicConfig) RangeConfig(f func(conf *OverrideConfig) (isStop bool)) 
 			break
 		}
 	}
+}
+
+func (d *DynamicConfig) GetTimeout() (int64, bool) {
+	if d.Enabled == false {
+		return -1, false
+	}
+	for _, config := range d.Configs {
+		if strings.ToLower(config.Side) != "provider" {
+			continue
+		}
+		i, ok := config.Parameters["timeout"]
+		if !ok {
+			continue
+		}
+		res, err := strconv.Atoi(i)
+		if err != nil {
+			continue
+		}
+		return int64(res), true
+	}
+	return -1, false
+}
+
+func (d *DynamicConfig) GetRetry() (int64, bool) {
+	if d.Enabled == false {
+		return -1, false
+	}
+	for _, config := range d.Configs {
+		if strings.ToLower(config.Side) != "consumer" {
+			continue
+		}
+		i, ok := config.Parameters["retries"]
+		if !ok {
+			continue
+		}
+		res, err := strconv.Atoi(i)
+		if err != nil {
+			continue
+		}
+		return int64(res), true
+	}
+	return -1, false
+}
+
+func (d *DynamicConfig) GetAccessLog() (val bool, isSet bool) {
+	if d.Enabled == false {
+		return false, false
+	}
+	for _, config := range d.Configs {
+		if strings.ToLower(config.Side) != "provider" {
+			continue
+		}
+		i, ok := config.Parameters["accesslog"]
+		if !ok {
+			continue
+		}
+		if i == "true" {
+			return true, true
+		} else if i == "false" {
+			return false, true
+		}
+	}
+	return false, false
 }
