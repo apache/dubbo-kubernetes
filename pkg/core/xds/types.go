@@ -183,15 +183,21 @@ type ServiceSelectorMap map[ServiceName][]ClusterSelectorList
 
 type ClusterSelector struct {
 	ConfigInfo TrafficRouteConfig
-	SelectFunc func(endpoint EndpointList) EndpointList
+	TagSelect  TagSelectorSet
+}
+
+func (c *ClusterSelector) Select(l EndpointList) EndpointList {
+	res := EndpointList{}
+	for _, endpoint := range l {
+		if c.TagSelect.Matches(endpoint.Tags) {
+			res = append(res, endpoint)
+		}
+	}
+	return res
 }
 
 func (e *ClusterSelectorList) GetMatchInfo() *TrafficRouteHttpMatch {
 	return &e.MatchInfo
-}
-
-func (e *ClusterSelector) Select(endpoint EndpointList) EndpointList {
-	return e.Select(endpoint)
 }
 
 type Routing struct {

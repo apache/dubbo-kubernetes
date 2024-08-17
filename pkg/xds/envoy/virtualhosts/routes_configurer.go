@@ -22,12 +22,13 @@ import (
 )
 
 import (
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 )
 
 import (
-	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 )
@@ -43,18 +44,18 @@ func (c RoutesConfigurer) Configure(virtualHost *envoy_config_route_v3.VirtualHo
 			Match: c.routeMatch(route.Match),
 			Name:  envoy_common.AnonymousResource,
 			Action: &envoy_config_route_v3.Route_Route{
-				Route: c.routeAction(route.Clusters), // need add modify
+				Route: c.routeAction(route.Clusters, route.Modify), // need add modify
 			},
 		}
 
-		// need add (rateLimit in preFilter) (modify operator)
+		c.setHeadersModifications(envoyRoute, route.Modify)
 
 		virtualHost.Routes = append(virtualHost.Routes, envoyRoute)
 	}
 	return nil
 }
 
-func (c RoutesConfigurer) routeMatch(match *core_xds.TrafficRouteHttpMatch) *envoy_config_route_v3.RouteMatch {
+func (c RoutesConfigurer) routeMatch(match *mesh_proto.TrafficRouteHttpMatch) *envoy_config_route_v3.RouteMatch {
 	if match == nil {
 		return &envoy_config_route_v3.RouteMatch{
 			PathSpecifier: &envoy_config_route_v3.RouteMatch_Prefix{
@@ -94,7 +95,7 @@ func (c RoutesConfigurer) routeMatch(match *core_xds.TrafficRouteHttpMatch) *env
 		envoyMatch.QueryParameters = append(envoyMatch.QueryParameters, &envoy_config_route_v3.QueryParameterMatcher{
 			Name: matcher_k,
 			QueryParameterMatchSpecifier: &envoy_config_route_v3.QueryParameterMatcher_StringMatch{
-				StringMatch: envoy_common.TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(matcher_v),
+				StringMatch: TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(matcher_v),
 			},
 		})
 	}
@@ -102,28 +103,28 @@ func (c RoutesConfigurer) routeMatch(match *core_xds.TrafficRouteHttpMatch) *env
 	return envoyMatch
 }
 
-func (c RoutesConfigurer) headerMatcher(name string, matcher core_xds.TrafficRouteHttpStringMatcher) *envoy_config_route_v3.HeaderMatcher {
+func (c RoutesConfigurer) headerMatcher(name string, matcher *mesh_proto.StringMatch) *envoy_config_route_v3.HeaderMatcher {
 	headerMatcher := &envoy_config_route_v3.HeaderMatcher{
 		Name: name,
 	}
-	switch matcher.(type) {
-	case *core_xds.TrafficRouteHttpMatcherPrefix:
+	switch matcher.GetMatchType().(type) {
+	case *mesh_proto.StringMatch_Prefix:
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_PrefixMatch{
-			PrefixMatch: matcher.GetValue(),
+			PrefixMatch: matcher.GetPrefix(),
 		}
-	case *core_xds.TrafficRouteHttpMatcherExact:
+	case *mesh_proto.StringMatch_Exact:
 		stringMatcher := envoy_type_matcher_v3.StringMatcher{
 			MatchPattern: &envoy_type_matcher_v3.StringMatcher_Exact{
-				Exact: matcher.GetValue(),
+				Exact: matcher.GetExact(),
 			},
 		}
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_StringMatch{
 			StringMatch: &stringMatcher,
 		}
-	case *core_xds.TrafficRouteHttpMatcherRegex:
+	case *mesh_proto.StringMatch_Regex:
 		headerMatcher.HeaderMatchSpecifier = &envoy_config_route_v3.HeaderMatcher_SafeRegexMatch{
 			SafeRegexMatch: &envoy_type_matcher_v3.RegexMatcher{
-				Regex: matcher.GetValue(),
+				Regex: matcher.GetRegex(),
 			},
 		}
 	}
@@ -131,22 +132,22 @@ func (c RoutesConfigurer) headerMatcher(name string, matcher core_xds.TrafficRou
 }
 
 func (c RoutesConfigurer) setPathMatcher(
-	matcher core_xds.TrafficRouteHttpStringMatcher,
+	matcher *mesh_proto.StringMatch,
 	routeMatch *envoy_config_route_v3.RouteMatch,
 ) {
-	switch matcher.(type) {
-	case *core_xds.TrafficRouteHttpMatcherPrefix:
+	switch matcher.GetMatchType().(type) {
+	case *mesh_proto.StringMatch_Prefix:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_Prefix{
-			Prefix: matcher.GetValue(),
+			Prefix: matcher.GetPrefix(),
 		}
-	case *core_xds.TrafficRouteHttpMatcherExact:
+	case *mesh_proto.StringMatch_Exact:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_Path{
-			Path: matcher.GetValue(),
+			Path: matcher.GetExact(),
 		}
-	case *core_xds.TrafficRouteHttpMatcherRegex:
+	case *mesh_proto.StringMatch_Regex:
 		routeMatch.PathSpecifier = &envoy_config_route_v3.RouteMatch_SafeRegex{
 			SafeRegex: &envoy_type_matcher_v3.RegexMatcher{
-				Regex: matcher.GetValue(),
+				Regex: matcher.GetRegex(),
 			},
 		}
 	}
@@ -161,15 +162,14 @@ func (c RoutesConfigurer) hasExternal(clusters []envoy_common.Cluster) bool {
 	return false
 }
 
-func (c RoutesConfigurer) routeAction(clusters []envoy_common.Cluster) *envoy_config_route_v3.RouteAction {
+func (c RoutesConfigurer) routeAction(clusters []envoy_common.Cluster, modify *mesh_proto.TrafficRoute_Http_Modify) *envoy_config_route_v3.RouteAction {
 	routeAction := &envoy_config_route_v3.RouteAction{}
-	//if len(clusters) != 0 {
-	//	// Timeout can be configured only per outbound listener. So all clusters in the split
-	//	// must have the same timeout. That's why we can take the timeout from the first cluster.
-	//	cluster := clusters[0].(*envoy_common.ClusterImpl)
-	//	routeAction.Timeout = util_proto.Duration(cluster.Timeout().GetHttp().GetRequestTimeout().AsDuration())
-	//}
-	// here need to add timeout
+	if len(clusters) != 0 {
+		// Timeout can be configured only per outbound listener. So all clusters in the split
+		// must have the same timeout. That's why we can take the timeout from the first cluster.
+		cluster := clusters[0].(*envoy_common.ClusterImpl)
+		routeAction.Timeout = util_proto.Duration(cluster.Timeout())
+	}
 	if len(clusters) == 1 {
 		routeAction.ClusterSpecifier = &envoy_config_route_v3.RouteAction_Cluster{
 			Cluster: clusters[0].Name(),
@@ -194,7 +194,95 @@ func (c RoutesConfigurer) routeAction(clusters []envoy_common.Cluster) *envoy_co
 			AutoHostRewrite: util_proto.Bool(true),
 		}
 	}
-	//need to add modify
-	//c.setModifications(routeAction, modify)
+	c.setModifications(routeAction, modify)
 	return routeAction
+}
+
+func (c RoutesConfigurer) setModifications(action *envoy_config_route_v3.RouteAction, modify *mesh_proto.TrafficRoute_Http_Modify) {
+	if modify.GetPath() != nil {
+		switch modify.GetPath().Type.(type) {
+		case *mesh_proto.TrafficRoute_Http_Modify_Path_RewritePrefix:
+			action.PrefixRewrite = modify.GetPath().GetRewritePrefix()
+		case *mesh_proto.TrafficRoute_Http_Modify_Path_Regex:
+			action.RegexRewrite = &envoy_type_matcher_v3.RegexMatchAndSubstitute{
+				Pattern: &envoy_type_matcher_v3.RegexMatcher{
+					Regex: modify.GetPath().GetRegex().GetPattern(),
+				},
+				Substitution: modify.GetPath().GetRegex().GetSubstitution(),
+			}
+		}
+	}
+
+	if modify.GetHost() != nil {
+		switch modify.GetHost().Type.(type) {
+		case *mesh_proto.TrafficRoute_Http_Modify_Host_Value:
+			action.HostRewriteSpecifier = &envoy_config_route_v3.RouteAction_HostRewriteLiteral{
+				HostRewriteLiteral: modify.GetHost().GetValue(),
+			}
+		case *mesh_proto.TrafficRoute_Http_Modify_Host_FromPath:
+			action.HostRewriteSpecifier = &envoy_config_route_v3.RouteAction_HostRewritePathRegex{
+				HostRewritePathRegex: &envoy_type_matcher_v3.RegexMatchAndSubstitute{
+					Pattern: &envoy_type_matcher_v3.RegexMatcher{
+						Regex: modify.GetHost().GetFromPath().GetPattern(),
+					},
+					Substitution: modify.GetHost().GetFromPath().GetSubstitution(),
+				},
+			}
+		}
+	}
+}
+
+func (c RoutesConfigurer) setHeadersModifications(route *envoy_config_route_v3.Route, modify *mesh_proto.TrafficRoute_Http_Modify) {
+	for _, add := range modify.GetRequestHeaders().GetAdd() {
+		appendAction := envoy_config_core_v3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		if add.Append {
+			appendAction = envoy_config_core_v3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		}
+		route.RequestHeadersToAdd = append(route.RequestHeadersToAdd, &envoy_config_core_v3.HeaderValueOption{
+			Header: &envoy_config_core_v3.HeaderValue{
+				Key:   add.Name,
+				Value: add.Value,
+			},
+			AppendAction: appendAction,
+		})
+	}
+	for _, remove := range modify.GetRequestHeaders().GetRemove() {
+		route.RequestHeadersToRemove = append(route.RequestHeadersToRemove, remove.Name)
+	}
+
+	for _, add := range modify.GetResponseHeaders().GetAdd() {
+		appendAction := envoy_config_core_v3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+		if add.Append {
+			appendAction = envoy_config_core_v3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+		}
+		route.ResponseHeadersToAdd = append(route.ResponseHeadersToAdd, &envoy_config_core_v3.HeaderValueOption{
+			Header: &envoy_config_core_v3.HeaderValue{
+				Key:   add.Name,
+				Value: add.Value,
+			},
+			AppendAction: appendAction,
+		})
+	}
+	for _, remove := range modify.GetResponseHeaders().GetRemove() {
+		route.ResponseHeadersToRemove = append(route.ResponseHeadersToRemove, remove.Name)
+	}
+}
+
+func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x *mesh_proto.StringMatch) *envoy_type_matcher_v3.StringMatcher {
+	if x == nil {
+		return &envoy_type_matcher_v3.StringMatcher{}
+	}
+	res := &envoy_type_matcher_v3.StringMatcher{}
+	switch x.GetMatchType().(type) {
+	case *mesh_proto.StringMatch_Prefix:
+		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Prefix{Prefix: x.GetPrefix()}
+	case *mesh_proto.StringMatch_Regex:
+		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_SafeRegex{&envoy_type_matcher_v3.RegexMatcher{
+			EngineType: &envoy_type_matcher_v3.RegexMatcher_GoogleRe2{},
+			Regex:      x.GetRegex(),
+		}}
+	case *mesh_proto.StringMatch_Exact:
+		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Exact{Exact: x.GetExact()}
+	}
+	return res
 }

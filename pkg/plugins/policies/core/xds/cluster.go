@@ -20,10 +20,11 @@ package xds
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
+	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
@@ -32,14 +33,16 @@ type Cluster struct {
 	name              string
 	tags              tags.Tags
 	mesh              string
+	timeout           time.Duration
 	isExternalService bool
-	selector          envoy.EndpointSelector
+	selector          xds.ClusterSelector
 }
 
-func (c *Cluster) Service() string                   { return c.service }
-func (c *Cluster) Name() string                      { return c.name }
-func (c *Cluster) Tags() tags.Tags                   { return c.tags }
-func (c *Cluster) Selector() *envoy.EndpointSelector { return &c.selector }
+func (c *Cluster) Service() string                { return c.service }
+func (c *Cluster) Name() string                   { return c.name }
+func (c *Cluster) Tags() tags.Tags                { return c.tags }
+func (c *Cluster) Selector() *xds.ClusterSelector { return &c.selector }
+func (c *Cluster) Timeout() time.Duration         { return c.timeout }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
@@ -124,7 +127,7 @@ func (c *Cluster) validate() error {
 	return nil
 }
 
-func (b *ClusterBuilder) WithSelectors(selector envoy.EndpointSelector) *ClusterBuilder {
+func (b *ClusterBuilder) WithSelectors(selector xds.ClusterSelector) *ClusterBuilder {
 	b.opts = append(b.opts, newClusterOptFunc(func(cluster *Cluster) {
 		cluster.selector = selector
 	}))

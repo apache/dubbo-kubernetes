@@ -18,37 +18,15 @@
 package envoy
 
 import (
-	envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
-
-import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
-)
-
-func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x xds.TrafficRouteHttpStringMatcher) *envoy_type_matcher_v3.StringMatcher {
-	if x == nil {
-		return &envoy_type_matcher_v3.StringMatcher{}
-	}
-	res := &envoy_type_matcher_v3.StringMatcher{}
-	switch x.GetType() {
-	case xds.EnvoyStringMatchTypePrefix:
-		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Prefix{Prefix: x.GetValue()}
-	case xds.EnvoyStringMatchTypeRegex:
-		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_SafeRegex{&envoy_type_matcher_v3.RegexMatcher{
-			EngineType: &envoy_type_matcher_v3.RegexMatcher_GoogleRe2{},
-			Regex:      x.GetValue(),
-		}}
-	case xds.EnvoyStringMatchTypeExact:
-		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Exact{Exact: x.GetValue()}
-	}
-	return res
-}
 
 type Route struct {
-	Match *xds.TrafficRouteHttpMatch
+	Match *mesh_proto.TrafficRouteHttpMatch
 	// modify
 	// rateLimit
 	Clusters []Cluster
+	Modify   *mesh_proto.TrafficRoute_Http_Modify
 }
 
 func NewRouteFromCluster(cluster Cluster) Route {

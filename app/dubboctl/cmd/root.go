@@ -130,7 +130,7 @@ func addPathFlag(cmd *cobra.Command) {
 // Usage Example:
 //
 //	languages := []string{ "go", "node", "rust" },
-//	survey.SelectFunc{
+//	survey.Select{
 //	  Options: options,
 //	  Default: surveySelectDefaut(cfg.Language, languages),
 //	}

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 )
 
 import (
@@ -42,6 +43,7 @@ type Cluster interface {
 	Mesh() string
 	Tags() tags.Tags
 	Hash() string
+	Timeout() time.Duration
 	IsExternalService() bool
 	Selector() *core_xds.ClusterSelector
 }
@@ -58,15 +60,17 @@ type ClusterImpl struct {
 	name              string
 	weight            uint32
 	tags              tags.Tags
+	timeout           time.Duration
 	mesh              string
 	isExternalService bool
 	selector          core_xds.ClusterSelector
 }
 
-func (c *ClusterImpl) Service() string { return c.service }
-func (c *ClusterImpl) Name() string    { return c.name }
-func (c *ClusterImpl) Weight() uint32  { return c.weight }
-func (c *ClusterImpl) Tags() tags.Tags { return c.tags }
+func (c *ClusterImpl) Service() string        { return c.service }
+func (c *ClusterImpl) Name() string           { return c.name }
+func (c *ClusterImpl) Weight() uint32         { return c.weight }
+func (c *ClusterImpl) Tags() tags.Tags        { return c.tags }
+func (c *ClusterImpl) Timeout() time.Duration { return c.timeout }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
