@@ -103,6 +103,7 @@ func (e Endpoint) Address() string {
 type EndpointList []Endpoint
 
 // EndpointMap holds routing-related information about a set of endpoints grouped by service name.
+// here key is dubbo-serviceName
 type EndpointMap map[ServiceName][]Endpoint
 
 // SocketAddressProtocol is the L4 protocol the listener should bind to
@@ -175,7 +176,8 @@ type ZoneIngressProxy struct {
 }
 
 type ClusterSelectorList struct {
-	MatchInfo    TrafficRouteHttpMatch
+	MatchInfo    mesh_proto.TrafficRoute_Http_Match
+	ModifyInfo   mesh_proto.TrafficRoute_Http_Modify
 	EndSelectors []ClusterSelector
 }
 
@@ -183,7 +185,7 @@ type ServiceSelectorMap map[ServiceName][]ClusterSelectorList
 
 type ClusterSelector struct {
 	ConfigInfo TrafficRouteConfig
-	TagSelect  TagSelectorSet
+	TagSelect  mesh_proto.TagSelector
 }
 
 func (c *ClusterSelector) Select(l EndpointList) EndpointList {
@@ -196,7 +198,7 @@ func (c *ClusterSelector) Select(l EndpointList) EndpointList {
 	return res
 }
 
-func (e *ClusterSelectorList) GetMatchInfo() *TrafficRouteHttpMatch {
+func (e *ClusterSelectorList) GetMatchInfo() *mesh_proto.TrafficRoute_Http_Match {
 	return &e.MatchInfo
 }
 

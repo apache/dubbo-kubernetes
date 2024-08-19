@@ -18,10 +18,13 @@
 package xds
 
 import (
-	envoy_tags "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 type TrafficRouteConfig struct {
-	ExternalTags envoy_tags.Tags
-	Weight       int64
+	RequestHeaders    *mesh_proto.TrafficRoute_Http_Modify_Headers
+	ResponseHeaders   *mesh_proto.TrafficRoute_Http_Modify_Headers
+	DestinationSubSet *mesh_proto.Destination
+	Weight            int32
+	Policy            *mesh_proto.TrafficPolicy
 }

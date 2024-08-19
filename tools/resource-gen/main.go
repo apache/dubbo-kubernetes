@@ -236,14 +236,6 @@ func (t *{{.ResourceName}}) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-{{with $in := .}}
-{{range .Selector}}
-func (t *{{$in.ResourceName}}) {{.}}() []*{{$pkg}}.Selector {
-	return t.Spec.Get{{.}}()
-}
-{{end}}
-{{end}}
-
 func (t *{{.ResourceName}}) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*{{$pkg}}.{{.ProtoType}})
 	if !ok {

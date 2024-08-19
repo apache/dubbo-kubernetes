@@ -266,7 +266,7 @@ func (r *PodReconciler) createOrUpdateDataplane(
 	pod *kube_core.Pod,
 	ns *kube_core.Namespace,
 	services []*kube_core.Service,
-	others []*mesh_k8s.Dataplane,
+	others []*mesh_k8s.Dataplane, // other dps in same mesh
 ) error {
 	dataplane := &mesh_k8s.Dataplane{
 		ObjectMeta: kube_meta.ObjectMeta{

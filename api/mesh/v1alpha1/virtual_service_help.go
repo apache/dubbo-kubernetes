@@ -17,30 +17,35 @@
 
 package v1alpha1
 
-type TrafficRouteHttpMatch struct {
+import (
+	"google.golang.org/protobuf/types/known/durationpb"
+)
+
+type TrafficRoute_Http_Match struct {
 	Method  *StringMatch
 	Path    *StringMatch
 	Headers map[string]*StringMatch
 	Params  map[string]*StringMatch
 }
 
-func (m TrafficRouteHttpMatch) GetPath() *StringMatch {
+func (m TrafficRoute_Http_Match) GetPath() *StringMatch {
 	return m.Path
 }
 
-func (m TrafficRouteHttpMatch) GetHeaders() map[string]*StringMatch {
+func (m TrafficRoute_Http_Match) GetHeaders() map[string]*StringMatch {
 	return m.Headers
 }
 
-func (m TrafficRouteHttpMatch) GetMethod() *StringMatch {
+func (m TrafficRoute_Http_Match) GetMethod() *StringMatch {
 	return m.Method
 }
 
-func (m TrafficRouteHttpMatch) GetParam() map[string]*StringMatch {
+func (m TrafficRoute_Http_Match) GetParam() map[string]*StringMatch {
 	return m.Params
 }
 
 type TrafficRoute_Http_Modify struct {
+	TimeOut         *durationpb.Duration
 	Path            *TrafficRoute_Http_Modify_Path
 	Host            *TrafficRoute_Http_Modify_Host
 	RequestHeaders  *TrafficRoute_Http_Modify_Headers
@@ -259,6 +264,23 @@ func (x *TrafficRoute_Http_Modify_RegexReplace) GetSubstitution() string {
 
 type TrafficRoute_Http_Modify_Path_Regex struct {
 	Regex *TrafficRoute_Http_Modify_RegexReplace
+}
+
+func (*TrafficRoute_Http_Modify_Path_Rewrite) isTrafficRoute_Http_Modify_Path_Type() {}
+
+func (x *TrafficRoute_Http_Modify_Path_Rewrite) Reset() {
+	*x = TrafficRoute_Http_Modify_Path_Rewrite{}
+}
+
+func (x *TrafficRoute_Http_Modify_Path_Rewrite) GetRewrite() string {
+	if x != nil {
+		return x.Rewrite
+	}
+	return ""
+}
+
+type TrafficRoute_Http_Modify_Path_Rewrite struct {
+	Rewrite string
 }
 
 func (*TrafficRoute_Http_Modify_Path_Regex) isTrafficRoute_Http_Modify_Path_Type() {}

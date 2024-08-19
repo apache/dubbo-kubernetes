@@ -273,7 +273,8 @@ func (OutboundProxyGenerator) determineRoutes(
 	var routes envoy_common.Routes
 
 	type clustersInfo struct {
-		info     *model.TrafficRouteHttpMatch
+		info     *mesh_proto.TrafficRoute_Http_Match
+		modify   *mesh_proto.TrafficRoute_Http_Modify
 		clusters []envoy_common.Cluster
 	}
 
@@ -305,12 +306,11 @@ func (OutboundProxyGenerator) determineRoutes(
 					cluster := envoy_common.NewCluster(
 						envoy_common.WithService(service),
 						envoy_common.WithName(name),
-						envoy_common.WithTags(allTags.
-							WithoutTags(mesh_proto.MeshTag).
-							WithTags(endSelector.ConfigInfo.ExternalTags.KeyAndValues()...),
-						),
-						envoy_common.WithExternalService(isExternalService),
+						envoy_common.WithTags(allTags.WithoutTags(mesh_proto.MeshTag).
+							WithTags(envoy_tags.Tags(endSelector.TagSelect).KeyAndValues()...),
+						), envoy_common.WithExternalService(isExternalService),
 						envoy_common.WithSelector(endSelector),
+						envoy_common.WithTimeout(clusterSelectors.ModifyInfo.TimeOut),
 					)
 					if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
 						cluster.SetMesh(mesh)
@@ -318,6 +318,7 @@ func (OutboundProxyGenerator) determineRoutes(
 					clusters = append(clusters, cluster)
 				}
 				clustersList = append(clustersList, clustersInfo{
+					modify:   &clusterSelectors.ModifyInfo,
 					info:     clusterSelectors.GetMatchInfo(),
 					clusters: clusters,
 				})
@@ -347,6 +348,7 @@ func (OutboundProxyGenerator) determineRoutes(
 
 		for _, c := range clustersInfoList {
 			r := envoy_common.Route{
+				Modify:   c.modify,
 				Clusters: c.clusters,
 				Match:    c.info,
 			}

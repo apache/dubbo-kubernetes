@@ -451,6 +451,115 @@ func init() {
 }
 
 const (
+	DestinationRuleType model.ResourceType = "DestinationRule"
+)
+
+var _ model.Resource = &DestinationRuleResource{}
+
+type DestinationRuleResource struct {
+	Meta model.ResourceMeta
+	Spec *mesh_proto.DestinationRule
+}
+
+func NewDestinationRuleResource() *DestinationRuleResource {
+	return &DestinationRuleResource{
+		Spec: &mesh_proto.DestinationRule{},
+	}
+}
+
+func (t *DestinationRuleResource) GetMeta() model.ResourceMeta {
+	return t.Meta
+}
+
+func (t *DestinationRuleResource) SetMeta(m model.ResourceMeta) {
+	t.Meta = m
+}
+
+func (t *DestinationRuleResource) GetSpec() model.ResourceSpec {
+	return t.Spec
+}
+
+func (t *DestinationRuleResource) SetSpec(spec model.ResourceSpec) error {
+	protoType, ok := spec.(*mesh_proto.DestinationRule)
+	if !ok {
+		return fmt.Errorf("invalid type %T for Spec", spec)
+	} else {
+		if protoType == nil {
+			t.Spec = &mesh_proto.DestinationRule{}
+		} else {
+			t.Spec = protoType
+		}
+		return nil
+	}
+}
+
+func (t *DestinationRuleResource) Descriptor() model.ResourceTypeDescriptor {
+	return DestinationRuleResourceTypeDescriptor
+}
+
+var _ model.ResourceList = &DestinationRuleResourceList{}
+
+type DestinationRuleResourceList struct {
+	Items      []*DestinationRuleResource
+	Pagination model.Pagination
+}
+
+func (l *DestinationRuleResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
+	for i, elem := range l.Items {
+		res[i] = elem
+	}
+	return res
+}
+
+func (l *DestinationRuleResourceList) GetItemType() model.ResourceType {
+	return DestinationRuleType
+}
+
+func (l *DestinationRuleResourceList) NewItem() model.Resource {
+	return NewDestinationRuleResource()
+}
+
+func (l *DestinationRuleResourceList) AddItem(r model.Resource) error {
+	if trr, ok := r.(*DestinationRuleResource); ok {
+		l.Items = append(l.Items, trr)
+		return nil
+	} else {
+		return model.ErrorInvalidItemType((*DestinationRuleResource)(nil), r)
+	}
+}
+
+func (l *DestinationRuleResourceList) GetPagination() *model.Pagination {
+	return &l.Pagination
+}
+
+func (l *DestinationRuleResourceList) SetPagination(p model.Pagination) {
+	l.Pagination = p
+}
+
+var DestinationRuleResourceTypeDescriptor = model.ResourceTypeDescriptor{
+	Name:                DestinationRuleType,
+	Resource:            NewDestinationRuleResource(),
+	ResourceList:        &DestinationRuleResourceList{},
+	ReadOnly:            false,
+	AdminOnly:           false,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
+	WsPath:              "destinationrules",
+	DubboctlArg:         "destinationrule",
+	DubboctlListArg:     "destinationrules",
+	AllowToInspect:      true,
+	IsPolicy:            true,
+	SingularDisplayName: "Destination Rule",
+	PluralDisplayName:   "Destination Rules",
+	IsExperimental:      false,
+}
+
+func init() {
+	registry.RegisterType(DestinationRuleResourceTypeDescriptor)
+}
+
+const (
 	DynamicConfigType model.ResourceType = "DynamicConfig"
 )
 

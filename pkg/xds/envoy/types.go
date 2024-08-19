@@ -20,6 +20,7 @@ package envoy
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"sort"
 	"time"
 )
@@ -257,4 +258,10 @@ type StaticEndpointPath struct {
 	RewritePath      string
 	Header           string
 	HeaderExactMatch string
+}
+
+func WithTimeout(out *durationpb.Duration) NewClusterOpt {
+	return newClusterOptFunc(func(cluster *ClusterImpl) {
+		cluster.timeout = out.AsDuration()
+	})
 }

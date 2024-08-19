@@ -67,7 +67,7 @@ func (x *TagRoute) RangeTagsToRemove(f func(*Tag) (IsRemove bool)) {
 	x.Tags = i
 }
 
-func (x *StringMatch) Match(target string) bool {
+func (x *StringMatch_Dubbo) Match(target string) bool {
 	if x.Exact != "" {
 		return x.Exact == target
 	}

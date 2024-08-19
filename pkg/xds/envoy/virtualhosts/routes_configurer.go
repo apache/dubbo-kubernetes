@@ -41,8 +41,8 @@ func (c RoutesConfigurer) Configure(virtualHost *envoy_config_route_v3.VirtualHo
 	for i := range c.Routes {
 		route := c.Routes[i]
 		envoyRoute := &envoy_config_route_v3.Route{
-			Match: c.routeMatch(route.Match),
 			Name:  envoy_common.AnonymousResource,
+			Match: c.routeMatch(route.Match),
 			Action: &envoy_config_route_v3.Route_Route{
 				Route: c.routeAction(route.Clusters, route.Modify), // need add modify
 			},
@@ -55,7 +55,7 @@ func (c RoutesConfigurer) Configure(virtualHost *envoy_config_route_v3.VirtualHo
 	return nil
 }
 
-func (c RoutesConfigurer) routeMatch(match *mesh_proto.TrafficRouteHttpMatch) *envoy_config_route_v3.RouteMatch {
+func (c RoutesConfigurer) routeMatch(match *mesh_proto.TrafficRoute_Http_Match) *envoy_config_route_v3.RouteMatch {
 	if match == nil {
 		return &envoy_config_route_v3.RouteMatch{
 			PathSpecifier: &envoy_config_route_v3.RouteMatch_Prefix{
@@ -164,7 +164,9 @@ func (c RoutesConfigurer) hasExternal(clusters []envoy_common.Cluster) bool {
 
 func (c RoutesConfigurer) routeAction(clusters []envoy_common.Cluster, modify *mesh_proto.TrafficRoute_Http_Modify) *envoy_config_route_v3.RouteAction {
 	routeAction := &envoy_config_route_v3.RouteAction{}
-	if len(clusters) != 0 {
+	if modify.TimeOut != nil {
+		routeAction.Timeout = modify.TimeOut
+	} else if len(clusters) != 0 {
 		// Timeout can be configured only per outbound listener. So all clusters in the split
 		// must have the same timeout. That's why we can take the timeout from the first cluster.
 		cluster := clusters[0].(*envoy_common.ClusterImpl)
