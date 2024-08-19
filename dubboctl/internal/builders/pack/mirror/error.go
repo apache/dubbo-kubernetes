@@ -15,3 +15,9 @@ type ErrLatestTagNotSupported string
 func (e ErrLatestTagNotSupported) Error() string {
 	return fmt.Sprintf("pack mirror: image %q with latest tag is not supported, please specify a specific tag", string(e))
 }
+
+type ErrDigestNotSupported string
+
+func (e ErrDigestNotSupported) Error() string {
+	return fmt.Sprintf("pack mirror: image %q with digest is not supported, please specify a specific tag", string(e))
+}
