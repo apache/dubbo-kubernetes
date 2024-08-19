@@ -66,9 +66,7 @@ func tagIsLatest(image reference.Named) bool {
 	if t, ok := image.(reference.Tagged); ok {
 		return t.Tag() == "latest"
 	}
-	// or, the image has no tag
-	_, isDigest := image.(reference.Digested)
-	return !isDigest
+	return false
 }
 
 func (m *MirrorFetcher) queryMirror(ctx context.Context, image reference.Named) (*queryResult, error) {
@@ -76,6 +74,9 @@ func (m *MirrorFetcher) queryMirror(ctx context.Context, image reference.Named) 
 	imgStr := image.String()
 	if tagIsLatest(image) {
 		return nil, ErrLatestTagNotSupported(imgStr)
+	}
+	if _, isDigest := image.(reference.Digested); isDigest {
+		return nil, ErrDigestNotSupported(imgStr)
 	}
 	if result, ok := m.queryCache[imgStr]; ok {
 		if result == nil {
@@ -141,6 +142,9 @@ func (m *MirrorFetcher) replaceWithMirror(ctx context.Context, image string) (st
 		return image, nil
 	case ErrLatestTagNotSupported:
 		m.logger.Warnf("pack mirror: image with latest tag is not supported, skipping replacement: %w\n", image, err)
+		return image, nil
+	case ErrDigestNotSupported:
+		m.logger.Warnf("pack mirror: image with digest is not supported, skipping replacement: %w\n", image, err)
 		return image, nil
 	case nil:
 		m.logger.Infof("pack mirror: replaced %q with mirror %q\n", image, query.Mirror)
