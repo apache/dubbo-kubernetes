@@ -68,7 +68,7 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 		switch {
 		case err == nil:
 			dockerHost = defaultHost
-		case err != nil && !os.IsNotExist(err):
+		case !os.IsNotExist(err):
 			return
 		}
 	}
