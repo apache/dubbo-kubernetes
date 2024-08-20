@@ -35,14 +35,14 @@ type Cluster struct {
 	mesh              string
 	timeout           time.Duration
 	isExternalService bool
-	selector          xds.ClusterSelector
+	info              xds.ClusterSelector
 }
 
-func (c *Cluster) Service() string                { return c.service }
-func (c *Cluster) Name() string                   { return c.name }
-func (c *Cluster) Tags() tags.Tags                { return c.tags }
-func (c *Cluster) Selector() *xds.ClusterSelector { return &c.selector }
-func (c *Cluster) Timeout() time.Duration         { return c.timeout }
+func (c *Cluster) Service() string            { return c.service }
+func (c *Cluster) Name() string               { return c.name }
+func (c *Cluster) Tags() tags.Tags            { return c.tags }
+func (c *Cluster) Info() *xds.ClusterSelector { return &c.info }
+func (c *Cluster) Timeout() time.Duration     { return c.timeout }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
@@ -127,9 +127,9 @@ func (c *Cluster) validate() error {
 	return nil
 }
 
-func (b *ClusterBuilder) WithSelectors(selector xds.ClusterSelector) *ClusterBuilder {
+func (b *ClusterBuilder) WithSelectInfo(selector xds.ClusterSelector) *ClusterBuilder {
 	b.opts = append(b.opts, newClusterOptFunc(func(cluster *Cluster) {
-		cluster.selector = selector
+		cluster.info = selector
 	}))
 	return b
 }

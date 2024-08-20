@@ -73,8 +73,8 @@ func (c *Cache) GetCLA(ctx context.Context, meshName, meshHash string, cluster e
 				endpoints = append(endpoints, endpoint)
 			}
 		}
-		if cluster.Selector() != nil {
-			endpoints = cluster.Selector().Select(endpoints)
+		if cluster.Info() != nil {
+			endpoints = cluster.Info().Select(endpoints)
 		}
 		return envoy_endpoints.CreateClusterLoadAssignment(cluster.Name(), endpoints, apiVersion)
 	}))

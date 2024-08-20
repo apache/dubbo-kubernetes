@@ -88,6 +88,14 @@ func (c RoutesConfigurer) routeMatch(match *mesh_proto.TrafficRoute_Http_Match) 
 		envoyMatch.Headers = append(envoyMatch.Headers, c.headerMatcher(":method", match.GetMethod()))
 	}
 
+	for match_k, match_v := range match.GetHeaders() {
+		if envoyMatch.Headers == nil {
+			envoyMatch.Headers = make([]*envoy_config_route_v3.HeaderMatcher, 0, len(match.GetHeaders()))
+		}
+		hm := c.headerMatcher(match_k, match_v)
+		envoyMatch.Headers = append(envoyMatch.Headers, hm)
+	}
+
 	for matcher_k, matcher_v := range match.GetParam() {
 		if envoyMatch.QueryParameters == nil {
 			envoyMatch.QueryParameters = make([]*envoy_config_route_v3.QueryParameterMatcher, 0, len(match.GetParam()))

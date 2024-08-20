@@ -201,6 +201,9 @@ func (c *ClusterSelector) Select(l EndpointList) EndpointList {
 func (e *ClusterSelectorList) GetMatchInfo() *mesh_proto.TrafficRoute_Http_Match {
 	return &e.MatchInfo
 }
+func (e *ClusterSelectorList) GetModifyInfo() *mesh_proto.TrafficRoute_Http_Modify {
+	return &e.ModifyInfo
+}
 
 type Routing struct {
 	OutboundSelector ServiceSelectorMap
