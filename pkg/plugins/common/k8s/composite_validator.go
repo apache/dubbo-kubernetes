@@ -30,7 +30,7 @@ import (
 
 type AdmissionValidator interface {
 	webhook.AdmissionHandler
-	InjectDecoder(d *admission.Decoder)
+	InjectDecoder(d admission.Decoder)
 	Supports(admission.Request) bool
 }
 

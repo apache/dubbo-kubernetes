@@ -52,7 +52,7 @@ func DefaultingWebhookFor(scheme *runtime.Scheme, converter k8s_common.Converter
 
 type defaultingHandler struct {
 	converter k8s_common.Converter
-	decoder   *admission.Decoder
+	decoder   admission.Decoder
 }
 
 func (h *defaultingHandler) Handle(ctx context.Context, req admission.Request) admission.Response {

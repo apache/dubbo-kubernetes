@@ -69,13 +69,13 @@ type validatingHandler struct {
 	coreRegistry                 core_registry.TypeRegistry
 	k8sRegistry                  k8s_registry.TypeRegistry
 	converter                    k8s_common.Converter
-	decoder                      *admission.Decoder
+	decoder                      admission.Decoder
 	mode                         core.CpMode
 	federatedZone                bool
 	disableOriginLabelValidation bool
 }
 
-func (h *validatingHandler) InjectDecoder(d *admission.Decoder) {
+func (h *validatingHandler) InjectDecoder(d admission.Decoder) {
 	h.decoder = d
 }
 
