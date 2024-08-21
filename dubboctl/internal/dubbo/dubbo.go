@@ -134,8 +134,10 @@ type BooleanWithComment struct {
 	Value   bool
 }
 
-var _ yaml.Unmarshaler = (*BooleanWithComment)(nil)
-var _ yaml.Marshaler = BooleanWithComment{}
+var (
+	_ yaml.Unmarshaler = (*BooleanWithComment)(nil)
+	_ yaml.Marshaler   = BooleanWithComment{}
+)
 
 func (bwc *BooleanWithComment) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.ScalarNode {

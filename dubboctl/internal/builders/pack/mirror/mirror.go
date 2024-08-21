@@ -38,18 +38,16 @@ type MirrorFetcher struct {
 
 var _ buildpack.ImageFetcher = &MirrorFetcher{}
 
-var (
-	supportedRegistries = map[string]struct{}{
-		"gcr.io":                     {},
-		"ghcr.io":                    {},
-		"quay.io":                    {},
-		"k8s.gcr.io":                 {},
-		"docker.io":                  {},
-		"registry.k8s.io":            {},
-		"docker.elastic.co":          {},
-		"skywalking.docker.scarf.sh": {},
-	}
-)
+var supportedRegistries = map[string]struct{}{
+	"gcr.io":                     {},
+	"ghcr.io":                    {},
+	"quay.io":                    {},
+	"k8s.gcr.io":                 {},
+	"docker.io":                  {},
+	"registry.k8s.io":            {},
+	"docker.elastic.co":          {},
+	"skywalking.docker.scarf.sh": {},
+}
 
 const mirrorHost = "https://docker.aityp.com"
 
