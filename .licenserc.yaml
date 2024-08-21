@@ -83,6 +83,7 @@ header:
     - '**/docs/**'
     - '**/.husky/pre-commit'
     - '**/.nvmrc'
+    - 'app/dubboctl/internal/dubbo/dockerfiles/**'
     - '**/**.txtar'
     - '**/**gen.go'
     - '**/api/**'
