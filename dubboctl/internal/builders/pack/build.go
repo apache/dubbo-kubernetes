@@ -228,7 +228,7 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 		opts.DockerHost = dockerHost
 
 		var fetcher buildpack.ImageFetcher = nil
-		if f.Build.CnMirror {
+		if f.Build.CnMirror.Value {
 			fetcher = mirror.NewMirrorFetcher(b.logger, cli, defaultBuildPackImageReplace)
 		}
 
