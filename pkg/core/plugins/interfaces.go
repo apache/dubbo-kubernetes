@@ -18,18 +18,17 @@
 package plugins
 
 import (
+	"context"
 	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/pkg/errors"
-)
-
-import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	secret_store "github.com/apache/dubbo-kubernetes/pkg/core/secrets/store"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/pkg/errors"
 )
 
 type Plugin interface{}
@@ -102,7 +101,48 @@ type CaPlugin interface {
 }
 
 // AuthnAPIServerPlugin is responsible for providing authenticator for API Server.
+
+type SecretStorePlugin interface {
+	Plugin
+	NewSecretStore(PluginContext, PluginConfig) (secret_store.SecretStore, error)
+}
+
+// AuthnAPIServerPlugin is responsible for providing authenticator for API Server.
 type AuthnAPIServerPlugin interface {
 	Plugin
 	NewAuthenticator(PluginContext) (authn.Authenticator, error)
+}
+
+type MatchedPoliciesOption func(*MatchedPoliciesConfig)
+
+func IncludeShadow() MatchedPoliciesOption {
+	return func(cfg *MatchedPoliciesConfig) {
+		cfg.IncludeShadow = true
+	}
+}
+
+type MatchedPoliciesConfig struct {
+	IncludeShadow bool
+}
+
+func NewMatchedPoliciesConfig(opts ...MatchedPoliciesOption) *MatchedPoliciesConfig {
+	cfg := &MatchedPoliciesConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return cfg
+}
+
+type EgressPolicyPlugin interface {
+	PolicyPlugin
+	// EgressMatchedPolicies returns all the policies of the plugins' type matching the external service that
+	// should be applied on the zone egress.
+	EgressMatchedPolicies(tags map[string]string, resources xds_context.Resources, opts ...MatchedPoliciesOption) (core_xds.TypedMatchingPolicies, error)
+}
+
+// ProxyPlugin a plugin to modify the proxy. This happens before any `PolicyPlugin` or any envoy generation. and it is applied both for Dataplanes and ZoneProxies
+type ProxyPlugin interface {
+	Plugin
+	// Apply mutate the proxy as needed.
+	Apply(ctx context.Context, meshCtx xds_context.MeshContext, proxy *core_xds.Proxy) error
 }

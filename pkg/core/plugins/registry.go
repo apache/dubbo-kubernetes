@@ -35,6 +35,7 @@ const (
 	runtimePlugin       pluginType = "runtime"
 	policyPlugin        pluginType = "policy"
 	caPlugin            pluginType = "ca"
+	secretStorePlugin   pluginType = "secret-store"
 )
 
 type PluginName string
@@ -64,6 +65,7 @@ type Registry interface {
 	RuntimePlugins() map[PluginName]RuntimePlugin
 	PolicyPlugins([]PluginName) []RegisteredPolicyPlugin
 	CaPlugins() map[PluginName]CaPlugin
+	SecretStore(name PluginName) (SecretStorePlugin, error)
 }
 
 type RegistryMutator interface {
@@ -83,6 +85,7 @@ func NewRegistry() MutableRegistry {
 		runtime:            make(map[PluginName]RuntimePlugin),
 		registeredPolicies: make(map[PluginName]PolicyPlugin),
 		ca:                 make(map[PluginName]CaPlugin),
+		secretStore:        make(map[PluginName]SecretStorePlugin),
 	}
 }
 
@@ -95,6 +98,7 @@ type registry struct {
 	runtime            map[PluginName]RuntimePlugin
 	registeredPolicies map[PluginName]PolicyPlugin
 	ca                 map[PluginName]CaPlugin
+	secretStore        map[PluginName]SecretStorePlugin
 }
 
 func (r *registry) ResourceStore(name PluginName) (ResourceStorePlugin, error) {
@@ -199,4 +203,12 @@ func noSuchPluginError(typ pluginType, name PluginName) error {
 func pluginAlreadyRegisteredError(typ pluginType, name PluginName, old, new Plugin) error {
 	return errors.Errorf("plugin with type=%q and name=%s has already been registered: old=%#v new=%#v",
 		typ, name, old, new)
+}
+
+func (r *registry) SecretStore(name PluginName) (SecretStorePlugin, error) {
+	if p, ok := r.secretStore[name]; ok {
+		return p, nil
+	} else {
+		return nil, noSuchPluginError(secretStorePlugin, name)
+	}
 }
