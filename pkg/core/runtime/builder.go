@@ -20,6 +20,8 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/metrics"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"os"
 	"sync"
 	"time"
@@ -75,6 +77,7 @@ type BuilderContext interface {
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
 	DataplaneCache() *sync.Map
+	CAProvider() secrets.CaProvider
 	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
 }
@@ -109,9 +112,15 @@ type Builder struct {
 	ddsctx               *dds_context.Context
 	appCtx               context.Context
 	dCache               *sync.Map
+	cap                  secrets.CaProvider
+	metrics              metrics.Metrics
 	regClient            reg_client.RegClient
 	serviceDiscover      dubboRegistry.ServiceDiscovery
 	*runtimeInfo
+}
+
+func (b *Builder) CAProvider() secrets.CaProvider {
+	return b.cap
 }
 
 func BuilderFor(appCtx context.Context, cfg dubbo_cp.Config) (*Builder, error) {
@@ -215,6 +224,19 @@ func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
 
 func (b *Builder) MeshCache() *mesh.Cache {
 	return b.meshCache
+}
+
+func (b *Builder) WithCAProvider(cap secrets.CaProvider) *Builder {
+	b.cap = cap
+	return b
+}
+
+func (b *Builder) CaManagers() core_ca.Managers {
+	return b.cam
+}
+
+func (b *Builder) Metrics() metrics.Metrics {
+	return b.metrics
 }
 
 func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {

@@ -19,9 +19,10 @@ package runtime
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	"github.com/apache/dubbo-kubernetes/pkg/metrics"
 	"github.com/apache/dubbo-kubernetes/pkg/multitenant"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"sync"
 	"time"
 )
@@ -90,11 +91,12 @@ type RuntimeContext interface {
 	ResourceValidators() ResourceValidators
 	Metrics() metrics.Metrics
 	Tenants() multitenant.Tenants
-	InterCPClientPool() *client.Pool
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
 	XDS() xds_runtime.XDSRuntimeContext
 	MeshCache() *mesh.Cache
+	CAProvider() secrets.CaProvider
+	CaManagers() ca.Managers
 }
 
 type ResourceValidators struct {
@@ -179,12 +181,17 @@ type runtimeContext struct {
 	meshCache            *mesh.Cache
 	regClient            reg_client.RegClient
 	tenants              multitenant.Tenants
-	interCpPool          *client.Pool
 	serviceDiscovery     dubboRegistry.ServiceDiscovery
+	cap                  secrets.CaProvider
+	cam                  ca.Managers
 }
 
-func (b *runtimeContext) InterCPClientPool() *client.Pool {
-	return b.interCpPool
+func (rc *runtimeContext) CaManagers() ca.Managers {
+	return rc.cam
+}
+
+func (rc *runtimeContext) CAProvider() secrets.CaProvider {
+	return rc.cap
 }
 
 func (b *runtimeContext) Tenants() multitenant.Tenants {

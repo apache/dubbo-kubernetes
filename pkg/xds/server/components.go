@@ -18,6 +18,7 @@
 package server
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"github.com/pkg/errors"
 )
 
@@ -49,9 +50,21 @@ func RegisterXDS(rt core_runtime.Runtime) error {
 		return err
 	}
 
+	idProvider, err := secrets.NewIdentityProvider(rt.CaManagers(), rt.Metrics())
+	if err != nil {
+		return err
+	}
+
+	secrets, err := secrets.NewSecrets(
+		rt.CAProvider(),
+		idProvider,
+		rt.Metrics(),
+	)
+
 	envoyCpCtx := &xds_context.ControlPlaneContext{
 		CLACache: claCache,
 		Zone:     "",
+		Secrets:  secrets,
 	}
 	if err := v3.RegisterXDS(statsCallbacks, envoyCpCtx, rt); err != nil {
 		return errors.Wrap(err, "could not register V3 XDS")

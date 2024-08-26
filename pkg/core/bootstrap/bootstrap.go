@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"net/http"
 	"net/url"
 	"strings"
@@ -122,6 +123,8 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	leaderInfoComponent := &component.LeaderInfoComponent{}
 	builder.WithLeaderInfo(leaderInfoComponent)
 
+	caProvider, err := secrets.NewCaProvider(builder.CaManagers(), builder.Metrics())
+	builder.WithCAProvider(caProvider)
 	builder.WithDpServer(server.NewDpServer(*cfg.DpServer, func(writer http.ResponseWriter, request *http.Request) bool {
 		return true
 	}))

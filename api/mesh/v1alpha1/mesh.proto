@@ -6,6 +6,7 @@ option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
 
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/duration.proto";
 import "api/mesh/options.proto";
 
 // Mesh defines configuration of a single mesh.
@@ -66,6 +67,8 @@ message CertificateAuthorityBackend {
     }
     // Rotation settings
     Rotation rotation = 1;
+    // Timeout on request to CA for DP certificate generation and retrieval
+    google.protobuf.Duration requestTimeout = 2;
   }
 
   // Dataplane certificate settings
