@@ -235,6 +235,7 @@ func MeshSpiffeIDPrefixMatcher(mesh string) *envoy_tls.SubjectAltNameMatcher {
 	}
 }
 
+// TODO:RBAC Control
 func ServiceSpiffeIDMatcher(mesh string, service string) *envoy_type_matcher.StringMatcher {
 	return &envoy_type_matcher.StringMatcher{
 		MatchPattern: &envoy_type_matcher.StringMatcher_Exact{

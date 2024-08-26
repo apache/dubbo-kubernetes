@@ -18,6 +18,7 @@
 package clusters
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -33,6 +34,14 @@ func EdsCluster() ClusterBuilderOpt {
 	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
 		builder.AddConfigurer(&v3.EdsClusterConfigurer{})
 		builder.AddConfigurer(&v3.AltStatNameConfigurer{})
+	})
+}
+
+func DefaultTimeout() ClusterBuilderOpt {
+	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
+		builder.AddConfigurer(&v3.TimeoutConfigurer{
+			Protocol: core_mesh.ProtocolTCP,
+		})
 	})
 }
 
