@@ -26,6 +26,7 @@ import (
 	envoy_listeners "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners"
 	envoy_names "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/names"
 	envoy_tags "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tls"
 )
 
 func GenerateCDS(
@@ -109,6 +110,8 @@ func AddFilterChains(
 ) envoy_common.Services {
 	servicesAcc := envoy_common.NewServicesAccumulator(nil)
 
+	sniUsed := map[string]struct{}{}
+
 	for _, service := range availableServices {
 		serviceName := service.Tags[mesh_proto.ServiceTag]
 		destinations := destinationsPerService[serviceName]
@@ -117,6 +120,14 @@ func AddFilterChains(
 		serviceEndpoints := endpointMap[serviceName]
 
 		for _, destination := range destinations {
+			sni := tls.SNIFromTags(destination.
+				WithTags(mesh_proto.ServiceTag, serviceName).
+				WithTags("mesh", service.Mesh),
+			)
+			if _, ok := sniUsed[sni]; ok {
+				continue
+			}
+			sniUsed[sni] = struct{}{}
 
 			// relevantTags is a set of tags for which it actually makes sense to do LB split on.
 			// If the endpoint list is the same with or without the tag, we should just not do the split.
@@ -155,6 +166,8 @@ func AddFilterChains(
 
 			filterChain := envoy_listeners.FilterChain(
 				envoy_listeners.NewFilterChainBuilder(apiVersion, envoy_common.AnonymousResource).Configure(
+					envoy_listeners.MatchTransportProtocol("tls"),
+					envoy_listeners.MatchServerNames(sni),
 					envoy_listeners.TcpProxyDeprecatedWithMetadata(
 						clusterName,
 						cluster,

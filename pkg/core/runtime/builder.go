@@ -34,6 +34,7 @@ import (
 )
 
 import (
+	api_server "github.com/apache/dubbo-kubernetes/pkg/api-server/customization"
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
@@ -95,6 +96,7 @@ type Builder struct {
 	configm              config_manager.ConfigManager
 	leadInfo             component.LeaderInfo
 	erf                  events.EventBus
+	apim                 api_server.APIManager
 	cam                  core_ca.Managers
 	dsl                  datasource.Loader
 	dps                  *dp_server.DpServer
@@ -268,6 +270,10 @@ func (b *Builder) WithAdminRegistry(ag *registry.Registry) *Builder {
 func (b *Builder) WithServiceDiscovery(discovery dubboRegistry.ServiceDiscovery) *Builder {
 	b.serviceDiscover = discovery
 	return b
+}
+
+func (b *Builder) APIManager() api_server.APIManager {
+	return b.apim
 }
 
 func (b *Builder) Build() (Runtime, error) {

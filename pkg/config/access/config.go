@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package access
 
 import (
@@ -53,7 +70,7 @@ type AccessConfig struct {
 	config.BaseConfig
 
 	// Type of the access strategy (available values: "static")
-	Type string `json:"type" envconfig:"KUMA_ACCESS_TYPE"`
+	Type string `json:"type" envconfig:"DUBBO_ACCESS_TYPE"`
 	// Configuration of static access strategy
 	Static StaticAccessConfig `json:"static"`
 }
@@ -89,56 +106,56 @@ type StaticAccessConfig struct {
 
 type AdminResourcesStaticAccessConfig struct {
 	// List of users that are allowed to access admin resources
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_ADMIN_RESOURCES_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_ADMIN_RESOURCES_USERS"`
 	// List of groups that are allowed to access admin resources
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_ADMIN_RESOURCES_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_ADMIN_RESOURCES_GROUPS"`
 }
 
 type GenerateDPTokenStaticAccessConfig struct {
 	// List of users that are allowed to generate dataplane token
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_GENERATE_DP_TOKEN_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_GENERATE_DP_TOKEN_USERS"`
 	// List of groups that are allowed to generate dataplane token
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_GENERATE_DP_TOKEN_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_GENERATE_DP_TOKEN_GROUPS"`
 }
 
 type GenerateUserTokenStaticAccessConfig struct {
 	// List of users that are allowed to generate user token
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_GENERATE_USER_TOKEN_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_GENERATE_USER_TOKEN_USERS"`
 	// List of groups that are allowed to generate user token
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_GENERATE_USER_TOKEN_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_GENERATE_USER_TOKEN_GROUPS"`
 }
 
 type GenerateZoneTokenStaticAccessConfig struct {
 	// List of users that are allowed to generate zone token
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_GENERATE_ZONE_TOKEN_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_GENERATE_ZONE_TOKEN_USERS"`
 	// List of groups that are allowed to generate zone token
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_GENERATE_ZONE_TOKEN_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_GENERATE_ZONE_TOKEN_GROUPS"`
 }
 
 type ViewConfigDumpStaticAccessConfig struct {
 	// List of users that are allowed to get envoy config dump
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_GET_CONFIG_DUMP_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_GET_CONFIG_DUMP_USERS"`
 	// List of groups that are allowed to get envoy config dump
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_GET_CONFIG_DUMP_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_GET_CONFIG_DUMP_GROUPS"`
 }
 
 type ViewStatsStaticAccessConfig struct {
 	// List of users that are allowed to get envoy config stats
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_VIEW_STATS_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_VIEW_STATS_USERS"`
 	// List of groups that are allowed to get envoy config stats
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_VIEW_STATS_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_VIEW_STATS_GROUPS"`
 }
 
 type ViewClustersStaticAccessConfig struct {
 	// List of users that are allowed to get envoy config clusters
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_VIEW_CLUSTERS_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_VIEW_CLUSTERS_USERS"`
 	// List of groups that are allowed to get envoy config clusters
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_VIEW_CLUSTERS_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_VIEW_CLUSTERS_GROUPS"`
 }
 
 type ControlPlaneMetadataStaticAccessConfig struct {
 	// List of users that are allowed to access control-plane metadata
-	Users []string `json:"users" envconfig:"KUMA_ACCESS_STATIC_CONTROL_PLANE_METADATA_USERS"`
+	Users []string `json:"users" envconfig:"DUBBO_ACCESS_STATIC_CONTROL_PLANE_METADATA_USERS"`
 	// List of groups that are allowed to access control-plane metadata
-	Groups []string `json:"groups" envconfig:"KUMA_ACCESS_STATIC_CONTROL_PLANE_METADATA_GROUPS"`
+	Groups []string `json:"groups" envconfig:"DUBBO_ACCESS_STATIC_CONTROL_PLANE_METADATA_GROUPS"`
 }

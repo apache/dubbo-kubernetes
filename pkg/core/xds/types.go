@@ -53,6 +53,24 @@ func (id *ProxyId) ToResourceKey() core_model.ResourceKey {
 	}
 }
 
+type MatchType string
+
+type SAN struct {
+	MatchType MatchType
+	Value     string
+}
+
+const (
+	SANMatchExact  MatchType = "Exact"
+	SANMatchPrefix MatchType = "Prefix"
+)
+
+type TlsVersion int32
+
+type CaSecret struct {
+	PemCerts [][]byte
+}
+
 // ServiceName is a convenience type alias to clarify the meaning of string value.
 type ServiceName = string
 

@@ -19,6 +19,9 @@ package runtime
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
+	"github.com/apache/dubbo-kubernetes/pkg/metrics"
+	"github.com/apache/dubbo-kubernetes/pkg/multitenant"
 	"sync"
 	"time"
 )
@@ -85,6 +88,9 @@ type RuntimeContext interface {
 	AdminRegistry() *registry.Registry
 	RegClient() reg_client.RegClient
 	ResourceValidators() ResourceValidators
+	Metrics() metrics.Metrics
+	Tenants() multitenant.Tenants
+	InterCPClientPool() *client.Pool
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
 	XDS() xds_runtime.XDSRuntimeContext
@@ -158,6 +164,7 @@ type runtimeContext struct {
 	configm              config_manager.ConfigManager
 	xds                  xds_runtime.XDSRuntimeContext
 	leadInfo             component.LeaderInfo
+	metrics              metrics.Metrics
 	erf                  events.EventBus
 	dps                  *dp_server.DpServer
 	dCache               *sync.Map
@@ -171,7 +178,21 @@ type runtimeContext struct {
 	appCtx               context.Context
 	meshCache            *mesh.Cache
 	regClient            reg_client.RegClient
+	tenants              multitenant.Tenants
+	interCpPool          *client.Pool
 	serviceDiscovery     dubboRegistry.ServiceDiscovery
+}
+
+func (b *runtimeContext) InterCPClientPool() *client.Pool {
+	return b.interCpPool
+}
+
+func (b *runtimeContext) Tenants() multitenant.Tenants {
+	return b.tenants
+}
+
+func (b *runtimeContext) Metrics() metrics.Metrics {
+	return b.metrics
 }
 
 func (b *runtimeContext) RegClient() reg_client.RegClient {

@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/multitenant"
 	"time"
 )
 
@@ -50,6 +51,11 @@ var log = core.Log.WithName("dds-service")
 
 type StreamInterceptor interface {
 	InterceptServerStream(stream grpc.ServerStream) error
+}
+
+type TenantZoneClientID struct {
+	TenantID string
+	Zone     string
 }
 
 type GlobalDDSServiceServer struct {
@@ -131,4 +137,22 @@ func (id ZoneClientID) String() string {
 
 func ZoneClientIDFromCtx(ctx context.Context, zone string) ZoneClientID {
 	return ZoneClientID{Zone: zone}
+}
+
+func (id TenantZoneClientID) String() string {
+	if id.TenantID == "" {
+		return id.Zone
+	}
+	return fmt.Sprintf("%s:%s", id.Zone, id.TenantID)
+}
+
+func TenantZoneClientIDFromCtx(ctx context.Context, zone string) TenantZoneClientID {
+	id := TenantZoneClientID{
+		Zone: zone,
+	}
+	tenantID, ok := multitenant.TenantFromCtx(ctx)
+	if ok {
+		id.TenantID = tenantID
+	}
+	return id
 }

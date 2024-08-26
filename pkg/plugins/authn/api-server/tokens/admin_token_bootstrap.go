@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package tokens
 
 import (
@@ -46,7 +63,7 @@ func (a *adminTokenBootstrap) Start(stop <-chan struct{}) error {
 			log.Error(err, "could not generate Admin User Token")
 		} else {
 			msg := "bootstrap of Admin User Token is enabled. "
-			if a.cpCfg.Environment == config_core.KubernetesEnvironment {
+			if a.cpCfg.DeployMode == config_core.KubernetesMode {
 				msg += fmt.Sprintf("To extract credentials execute 'kubectl get secret %s -n %s --template={{.data.value}} | base64 -d'. ", AdminTokenKey.Name, a.cpCfg.Store.Kubernetes.SystemNamespace)
 			} else {
 				msg += fmt.Sprintf("To extract admin credentials execute 'curl http://localhost:%d/global-secrets/%s | jq -r .data | base64 -d'. ", a.cpCfg.ApiServer.HTTP.Port, AdminTokenKey.Name)

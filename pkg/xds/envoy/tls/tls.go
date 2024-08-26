@@ -25,10 +25,10 @@ const (
 	CpValidationCtx      = "cp_validation_ctx"
 )
 
-// KumaALPNProtocols are set for UpstreamTlsContext to show that mTLS is created by mesh.
-// On the inbound side we have to distinguish Kuma mTLS and application TLS to properly
+// DubbboALPNProtocols are set for UpstreamTlsContext to show that mTLS is created by mesh.
+// On the inbound side we have to distinguish Dubbo mTLS and application TLS to properly
 // support PERMISSIVE mode
-var KumaALPNProtocols = []string{"dubbo"}
+var DubboALPNProtocols = []string{"dubbo"}
 
 func MeshSpiffeIDPrefix(mesh string) string {
 	return fmt.Sprintf("spiffe://%s/", mesh)
@@ -38,6 +38,6 @@ func ServiceSpiffeID(mesh string, service string) string {
 	return fmt.Sprintf("spiffe://%s/%s", mesh, service)
 }
 
-func KumaID(tagName, tagValue string) string {
-	return fmt.Sprintf("kuma://%s/%s", tagName, tagValue)
+func DubboID(tagName, tagValue string) string {
+	return fmt.Sprintf("dubbo://%s/%s", tagName, tagValue)
 }

@@ -19,6 +19,7 @@ package context
 
 import (
 	"encoding/base64"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 )
 
 import (
@@ -42,6 +43,7 @@ type ConnectionInfo struct {
 type ControlPlaneContext struct {
 	CLACache envoy.CLACache
 	Zone     string
+	Secrets  secrets.Secrets
 }
 
 // GlobalContext holds resources that are Global
