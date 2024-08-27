@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/envoy/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"net/http"
 	"net/url"
@@ -132,6 +133,16 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	resourceManager := builder.ResourceManager()
 	ddsContext := dds_context.DefaultContext(appCtx, resourceManager, cfg)
 	builder.WithDDSContext(ddsContext)
+
+	if cfg.DeployMode == config_core.UniversalMode {
+		//TODO: universalMode EnvoyAdminClient
+	} else {
+		builder.WithEnvoyAdminClient(admin.NewEnvoyAdminClient(
+			resourceManager,
+			builder.CaManagers(),
+			builder.Config().GetEnvoyAdminPort(),
+		))
+	}
 
 	if err := initializeMeshCache(builder); err != nil {
 		return nil, err
