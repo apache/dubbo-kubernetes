@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	ClientCertSAN = "kuma-cp"
+	ClientCertSAN = "dubbo-cp"
 )
 
 var GlobalSecretKey = model.ResourceKey{
@@ -38,7 +38,7 @@ var GlobalSecretKey = model.ResourceKey{
 // Multizone: CA is generated for every zone. There is no need for it to be stable.
 func GenerateCA() (*util_tls.KeyPair, error) {
 	subject := pkix.Name{
-		Organization:       []string{"Kuma"},
+		Organization:       []string{"Dubbo"},
 		OrganizationalUnit: []string{"Mesh"},
 		CommonName:         "Envoy Admin CA",
 	}

@@ -19,6 +19,7 @@ package runtime
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/access"
 	"github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	"github.com/apache/dubbo-kubernetes/pkg/metrics"
 	"github.com/apache/dubbo-kubernetes/pkg/multitenant"
@@ -42,12 +43,16 @@ import (
 	managers_mesh "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/reg_client"
 	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
+	resources_access "github.com/apache/dubbo-kubernetes/pkg/core/resources/access"
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
+	envoyadmin_access "github.com/apache/dubbo-kubernetes/pkg/envoy/admin/access"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+	tokens_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/access"
+	zone_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/zone/access"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	xds_runtime "github.com/apache/dubbo-kubernetes/pkg/xds/runtime"
 )
@@ -97,6 +102,15 @@ type RuntimeContext interface {
 	MeshCache() *mesh.Cache
 	CAProvider() secrets.CaProvider
 	CaManagers() ca.Managers
+	Access() Access
+}
+
+type Access struct {
+	ResourceAccess             resources_access.ResourceAccess
+	DataplaneTokenAccess       tokens_access.DataplaneTokenAccess
+	ZoneTokenAccess            zone_access.ZoneTokenAccess
+	EnvoyAdminAccess           envoyadmin_access.EnvoyAdminAccess
+	ControlPlaneMetadataAccess access.ControlPlaneMetadataAccess
 }
 
 type ResourceValidators struct {
@@ -184,6 +198,11 @@ type runtimeContext struct {
 	serviceDiscovery     dubboRegistry.ServiceDiscovery
 	cap                  secrets.CaProvider
 	cam                  ca.Managers
+	acc                  Access
+}
+
+func (rc *runtimeContext) Access() Access {
+	return rc.acc
 }
 
 func (rc *runtimeContext) CaManagers() ca.Managers {

@@ -19,7 +19,12 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/core/access"
+	resources_access "github.com/apache/dubbo-kubernetes/pkg/core/resources/access"
 	"github.com/apache/dubbo-kubernetes/pkg/envoy/admin"
+	envoyadmin_access "github.com/apache/dubbo-kubernetes/pkg/envoy/admin/access"
+	tokens_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/access"
+	zone_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/zone/access"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"net/http"
 	"net/url"
@@ -143,6 +148,18 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 			builder.Config().GetEnvoyAdminPort(),
 		))
 	}
+
+	builder.WithAccess(core_runtime.Access{
+		ResourceAccess:       resources_access.NewAdminResourceAccess(builder.Config().Access.Static.AdminResources),
+		DataplaneTokenAccess: tokens_access.NewStaticGenerateDataplaneTokenAccess(builder.Config().Access.Static.GenerateDPToken),
+		ZoneTokenAccess:      zone_access.NewStaticZoneTokenAccess(builder.Config().Access.Static.GenerateZoneToken),
+		EnvoyAdminAccess: envoyadmin_access.NewStaticEnvoyAdminAccess(
+			builder.Config().Access.Static.ViewConfigDump,
+			builder.Config().Access.Static.ViewStats,
+			builder.Config().Access.Static.ViewClusters,
+		),
+		ControlPlaneMetadataAccess: access.NewStaticControlPlaneMetadataAccess(builder.Config().Access.Static.ControlPlaneMetadata),
+	})
 
 	if err := initializeMeshCache(builder); err != nil {
 		return nil, err

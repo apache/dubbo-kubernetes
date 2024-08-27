@@ -81,6 +81,7 @@ type BuilderContext interface {
 	CAProvider() secrets.CaProvider
 	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
+	Access() Access
 }
 
 var _ BuilderContext = &Builder{}
@@ -103,6 +104,7 @@ type Builder struct {
 	erf                  events.EventBus
 	apim                 api_server.APIManager
 	cam                  core_ca.Managers
+	acc                  Access
 	dsl                  datasource.Loader
 	dps                  *dp_server.DpServer
 	registryCenter       dubboRegistry.Registry
@@ -119,6 +121,10 @@ type Builder struct {
 	regClient            reg_client.RegClient
 	serviceDiscover      dubboRegistry.ServiceDiscovery
 	*runtimeInfo
+}
+
+func (b *Builder) Access() Access {
+	return b.acc
 }
 
 func (b *Builder) CAProvider() secrets.CaProvider {
@@ -161,6 +167,11 @@ func (b *Builder) WithTransactions(txs core_store.Transactions) *Builder {
 
 func (b *Builder) WithEnvoyAdminClient(eac admin.EnvoyAdminClient) *Builder {
 	b.eac = eac
+	return b
+}
+
+func (b *Builder) WithAccess(acc Access) *Builder {
+	b.acc = acc
 	return b
 }
 
@@ -335,6 +346,9 @@ func (b *Builder) Build() (Runtime, error) {
 	}
 	if b.meshCache == nil {
 		return nil, errors.Errorf("MeshCache has not been configured")
+	}
+	if b.acc == (Access{}) {
+		return nil, errors.Errorf("Access has not been configured")
 	}
 
 	return &runtime{
