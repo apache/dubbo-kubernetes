@@ -47,11 +47,11 @@ type Registry struct {
 	ctx        *ApplicationContext
 }
 
-func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery) *Registry {
+func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery, ctx *ApplicationContext) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
-		ctx:        NewApplicationContext(),
+		ctx:        ctx,
 	}
 }
 
@@ -130,6 +130,51 @@ func (r *Registry) Subscribe(
 
 	return nil
 }
+
+//
+//func (r *Registry) doSubscribe(resourceManager core_manager.ResourceManager, sdDelegate dubboRegistry.ServiceDiscovery, listener *NotifyListener) {
+//	applicationList :=
+//	_ = resourceManager.List(context.Background(), applicationList)
+//	apps := sdDelegate.GetServices()
+//
+//	newApps := make([]string, 0)
+//	for _, a := range apps.Values() {
+//		application := mesh.NewDubboApplicationResource()
+//		newApp, _ := a.(string)
+//		err := resourceManager.Get(context.Background(), application, store.GetByApplication(newApp))
+//		if err != nil {
+//			if !store.IsResourceNotFound(err) {
+//				logger.Errorf("Error searching for existing app %s from resource manager.", newApp)
+//			}
+//			newApps = append(newApps, newApp)
+//		}
+//	}
+//	// 生成应用列表
+//	for _, app := range newApps {
+//		instances := sdDelegate.GetInstances(app)
+//		delSDListener := NewDubboSDNotifyListener(gxset.NewSet(app))
+//		logger.Infof("Synchronized instance notification on subscription, instance list size %s", len(instances))
+//		if len(instances) > 0 {
+//			err := delSDListener.OnEvent(&dubboRegistry.ServiceInstancesChangedEvent{
+//				ServiceName: app,
+//				Instances:   instances,
+//			})
+//			if err != nil {
+//				logger.Warnf("[ServiceDiscoveryRegistry] ServiceInstancesChangedListenerImpl handle error:%v", err)
+//			}
+//		}
+//		delSDListener.AddListenerAndNotify("unifiedKey", listener)
+//		err := sdDelegate.AddListener(delSDListener)
+//		if err != nil {
+//			logger.Warnf("Failed to Add Listener")
+//		}
+//	}
+//
+//	// todo, remove listeners of apps not exist in registry
+//	//for _, a := range appsToRemove {
+//	//	sdDelegate.RemoveListener(delSDListener)
+//	//}
+//}
 
 func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNotifyListener) {
 	// 构建查询参数

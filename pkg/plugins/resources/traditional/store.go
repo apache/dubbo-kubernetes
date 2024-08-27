@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
 )
 
 import (
@@ -66,6 +68,7 @@ type traditionalStore struct {
 	metadataReport report.MetadataReport
 	registryCenter dubboRegistry.Registry
 	governance     governance.GovernanceConfig
+	appContext     *registry.ApplicationContext
 	dCache         *sync.Map
 	regClient      reg_client.RegClient
 	eventWriter    events.Emitter
@@ -79,6 +82,7 @@ func NewStore(
 	governance governance.GovernanceConfig,
 	dCache *sync.Map,
 	regClient reg_client.RegClient,
+	appContext *registry.ApplicationContext,
 ) store.ResourceStore {
 	return &traditionalStore{
 		configCenter:   configCenter,
@@ -87,6 +91,7 @@ func NewStore(
 		governance:     governance,
 		dCache:         dCache,
 		regClient:      regClient,
+		appContext:     appContext,
 	}
 }
 

@@ -96,11 +96,11 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	}
 	// 初始化cache
 	builder.WithDataplaneCache(&sync.Map{})
-	// 初始化传统微服务体系所需要的组件
-	if err := initializeTraditional(cfg, builder); err != nil {
+	if err := initializeResourceStore(cfg, builder); err != nil {
 		return nil, err
 	}
-	if err := initializeResourceStore(cfg, builder); err != nil {
+	// 初始化传统微服务体系所需要的组件
+	if err := initializeTraditional(cfg, builder); err != nil {
 		return nil, err
 	}
 
