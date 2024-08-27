@@ -42,6 +42,7 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		}
 		instance.GET("/metric-dashboard", handler.GetMetricDashBoard(rt, handler.InstanceDimension))
 		instance.GET("/instance-dashboard", handler.GetTraceDashBoard(rt, handler.InstanceDimension))
+		instance.GET("/metrics-list", handler.GetMetricsList(rt))
 	}
 
 	{
