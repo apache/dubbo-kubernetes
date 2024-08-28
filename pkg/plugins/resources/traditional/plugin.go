@@ -50,12 +50,10 @@ func (p *plugin) NewResourceStore(pc core_plugins.PluginContext, _ core_plugins.
 		pc.Governance(),
 		pc.DataplaneCache(),
 		pc.RegClient(),
-		registry.NewApplicationContext(),
+		pc.Extensions().Value(registry.AppCtx).(*registry.ApplicationContext),
 	)
 
-	extensions := pc.Extensions()
-
-	return , core_store.NoTransactions{}, nil
+	return resourceStore, core_store.NoTransactions{}, nil
 }
 
 func (p *plugin) Migrate(pc core_plugins.PluginContext, config core_plugins.PluginConfig) (core_plugins.DbVersion, error) {

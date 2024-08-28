@@ -23,7 +23,9 @@ import (
 	"strings"
 	"sync"
 
+	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
+	gxset "github.com/dubbogo/gost/container/set"
 )
 
 import (
@@ -32,8 +34,6 @@ import (
 	dubbo_identifier "dubbo.apache.org/dubbo-go/v3/metadata/identifier"
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-
-	"github.com/dubbogo/go-zookeeper/zk"
 
 	"github.com/pkg/errors"
 
@@ -768,12 +768,19 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		})
 	case mesh.MappingType:
 		// Get通过Key获取, 不设置listener
-		set, err := c.metadataReport.GetServiceAppMapping(name, mappingGroup, nil)
-		if err != nil {
-			if errors.Is(err, zk.ErrNoNode) {
-				return nil
+		mappings := make(map[string]*gxset.HashSet)
+		for app, instances := range c.appContext.GetAllInstances() {
+			for _, instance := range instances {
+				appMetadata := c.appContext.GetRevisionToMetadata(instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName])
+				for s := range appMetadata.Services {
+					if set, ok := mappings[s]; !ok {
+						set = gxset.NewSet()
+						mappings[s] = set
+					} else {
+						set.Add(app)
+					}
+				}
 			}
-			return err
 		}
 
 		meta := &resourceMetaObject{
@@ -785,7 +792,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		mapping.Zone = "default"
 		mapping.InterfaceName = name
 		var items []string
-		for k := range set.Items {
+		for k := range mappings[name].Items {
 			items = append(items, fmt.Sprintf("%v", k))
 		}
 		mapping.ApplicationNames = items
@@ -803,10 +810,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			}
 			revision = children[0]
 		}
-		id := dubbo_identifier.NewSubscriberMetadataIdentifier(app, revision)
-		appMetadata, err := c.metadataReport.GetAppMetadata(id)
-		if err != nil {
-			return err
+		appMetadata := c.appContext.GetRevisionToMetadata(revision)
+		if appMetadata == nil {
+			return nil
 		}
 		metaData := resource.GetSpec().(*mesh_proto.MetaData)
 		metaData.App = appMetadata.App
@@ -863,18 +869,21 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			return true
 		})
 	case mesh.MappingType:
-		// 1. 首先获取到所有到key
-		keys, err := c.metadataReport.GetConfigKeysByGroup(mappingGroup)
-		if err != nil {
-			return err
-		}
-		for _, key := range keys.Values() {
-			key := key.(string)
-			// 通过key得到所有的mapping映射关系
-			set, err := c.metadataReport.GetServiceAppMapping(key, mappingGroup, nil)
-			if err != nil {
-				return err
+		mappings := make(map[string]*gxset.HashSet)
+		for app, instances := range c.appContext.GetAllInstances() {
+			for _, instance := range instances {
+				appMetadata := c.appContext.GetRevisionToMetadata(instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName])
+				for s := range appMetadata.Services {
+					if set, ok := mappings[s]; !ok {
+						set = gxset.NewSet()
+						mappings[s] = set
+					} else {
+						set.Add(app)
+					}
+				}
 			}
+		}
+		for key, set := range mappings {
 			meta := &resourceMetaObject{
 				Name: key,
 			}
@@ -888,37 +897,26 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				items = append(items, fmt.Sprintf("%v", k))
 			}
 			mapping.ApplicationNames = items
-			err = resources.AddItem(item)
+			err := resources.AddItem(item)
 			if err != nil {
 				return err
 			}
 		}
 	case mesh.MetaDataType:
 		// 1. 获取到所有的key, key是application(应用名)
-		rootDir := getMetadataPath()
-		appNames, err := c.regClient.GetChildren(rootDir)
-		if err != nil {
-			return err
-		}
-		for _, app := range appNames {
+		for app, instances := range c.appContext.GetAllInstances() {
 			if opts.NameContains != "" && !strings.Contains(app, opts.NameContains) {
 				return nil
 			}
 			// 2. 获取到该应用名下所有的revision
-			path := getMetadataPath(app)
-			revisions, err := c.regClient.GetChildren(path)
-			if err != nil {
-				return err
+			revisions := make(map[string]struct{})
+			for _, instance := range instances {
+				revisions[instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]] = struct{}{}
 			}
-			if revisions[0] == "provider" ||
-				revisions[0] == "consumer" {
-				continue
-			}
-			for _, revision := range revisions {
-				id := dubbo_identifier.NewSubscriberMetadataIdentifier(app, revision)
-				appMetadata, err := c.metadataReport.GetAppMetadata(id)
-				if err != nil {
-					log.Error(nil, "Err loading app metadata with id %s", id)
+			for revision := range revisions {
+				appMetadata := c.appContext.GetRevisionToMetadata(revision)
+				if appMetadata == nil {
+					log.Error(nil, "Err loading app metadata with id %s", dubbo_identifier.NewSubscriberMetadataIdentifier(app, revision))
 					continue
 				}
 				item := resources.NewItem()
@@ -941,7 +939,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 					Name:    app,
 					Version: revision,
 				})
-				err = resources.AddItem(item)
+				err := resources.AddItem(item)
 				if err != nil {
 					return err
 				}

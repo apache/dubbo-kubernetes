@@ -26,6 +26,8 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/registry"
 )
 
+const AppCtx = "ApplicationContext"
+
 type ApplicationContext struct {
 	// InterfaceName Urls
 	serviceUrls map[string][]*common.URL
