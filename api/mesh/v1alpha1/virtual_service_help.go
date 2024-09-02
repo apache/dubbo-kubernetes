@@ -18,15 +18,20 @@
 package v1alpha1
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/golang/protobuf/proto"
-	"golang.org/x/exp/slices"
 	"regexp"
 	"strings"
 )
 
 import (
+	"github.com/golang/protobuf/proto"
+
+	"golang.org/x/exp/slices"
+
 	"google.golang.org/protobuf/types/known/durationpb"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
 type TrafficRoute_Http_Match struct {

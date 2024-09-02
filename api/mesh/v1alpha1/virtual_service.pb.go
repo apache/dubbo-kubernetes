@@ -863,7 +863,6 @@ func (x *HTTPRoute) GetHeaders() *Headers {
 	return nil
 }
 
-
 // Describes the delegate VirtualService.
 // The following routing rules forward the traffic to `/productpage` by a delegate VirtualService named `productpage`,
 // forward the traffic to `/reviews` by a delegate VirtualService named `reviews`.

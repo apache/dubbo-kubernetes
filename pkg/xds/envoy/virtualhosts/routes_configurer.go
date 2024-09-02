@@ -18,7 +18,6 @@
 package virtualhosts
 
 import (
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"sort"
 )
 
@@ -26,6 +25,8 @@ import (
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_type_matcher_v3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+
+	"github.com/golang/protobuf/ptypes/wrappers"
 )
 
 import (

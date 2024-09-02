@@ -18,8 +18,11 @@
 package consts
 
 import (
-	set "github.com/dubbogo/gost/container/set"
 	"time"
+)
+
+import (
+	set "github.com/dubbogo/gost/container/set"
 )
 
 const (
