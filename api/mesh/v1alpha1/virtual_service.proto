@@ -1141,7 +1141,7 @@ message HTTPBody {
     // response body as a string
     string string = 1;
 
-    // response body as base64 encoded bytes.
+    // response body as base64 encoded  bytes.
     bytes bytes = 2;
   }
 }

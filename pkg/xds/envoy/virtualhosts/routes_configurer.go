@@ -18,6 +18,7 @@
 package virtualhosts
 
 import (
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"sort"
 )
 
@@ -43,13 +44,17 @@ func (c RoutesConfigurer) Configure(virtualHost *envoy_config_route_v3.VirtualHo
 		envoyRoute := &envoy_config_route_v3.Route{
 			Name:  envoy_common.AnonymousResource,
 			Match: c.routeMatch(route.Match),
-			Action: &envoy_config_route_v3.Route_Route{
-				Route: c.routeAction(route.Clusters, route.Modify), // need add modify
-			},
 		}
-
-		c.setHeadersModifications(envoyRoute, route.Modify)
-
+		if route.DirectResponse != nil {
+			envoyRoute.Action = &envoy_config_route_v3.Route_DirectResponse{
+				DirectResponse: c.directResponeAction(route.DirectResponse),
+			}
+		} else {
+			envoyRoute.Action = &envoy_config_route_v3.Route_Route{
+				Route: c.routeAction(route.Clusters, route.Modify),
+			}
+			c.setHeadersModifications(envoyRoute, route.Modify)
+		}
 		virtualHost.Routes = append(virtualHost.Routes, envoyRoute)
 	}
 	return nil
@@ -86,6 +91,10 @@ func (c RoutesConfigurer) routeMatch(match *mesh_proto.TrafficRoute_Http_Match) 
 
 	if match.GetMethod() != nil {
 		envoyMatch.Headers = append(envoyMatch.Headers, c.headerMatcher(":method", match.GetMethod()))
+	}
+
+	if match.GetAuthority() != nil {
+		envoyMatch.Headers = append(envoyMatch.Headers, c.headerMatcher(":authority", match.GetAuthority()))
 	}
 
 	for match_k, match_v := range match.GetHeaders() {
@@ -172,6 +181,7 @@ func (c RoutesConfigurer) hasExternal(clusters []envoy_common.Cluster) bool {
 
 func (c RoutesConfigurer) routeAction(clusters []envoy_common.Cluster, modify *mesh_proto.TrafficRoute_Http_Modify) *envoy_config_route_v3.RouteAction {
 	routeAction := &envoy_config_route_v3.RouteAction{}
+	// timeout
 	if modify.TimeOut != nil {
 		routeAction.Timeout = modify.TimeOut
 	} else if len(clusters) != 0 {
@@ -180,6 +190,15 @@ func (c RoutesConfigurer) routeAction(clusters []envoy_common.Cluster, modify *m
 		cluster := clusters[0].(*envoy_common.ClusterImpl)
 		routeAction.Timeout = util_proto.Duration(cluster.Timeout())
 	}
+	// retry
+	if modify.Retries != nil {
+		routeAction.RetryPolicy = &envoy_config_route_v3.RetryPolicy{
+			RetryOn:       modify.Retries.RetryOn,
+			NumRetries:    &wrappers.UInt32Value{Value: uint32(modify.Retries.Attempts)},
+			PerTryTimeout: modify.Retries.PerTryTimeout,
+		}
+	}
+	// target clusters
 	if len(clusters) == 1 {
 		routeAction.ClusterSpecifier = &envoy_config_route_v3.RouteAction_Cluster{
 			Cluster: clusters[0].Name(),
@@ -199,11 +218,13 @@ func (c RoutesConfigurer) routeAction(clusters []envoy_common.Cluster, modify *m
 			},
 		}
 	}
+
 	if c.hasExternal(clusters) {
 		routeAction.HostRewriteSpecifier = &envoy_config_route_v3.RouteAction_AutoHostRewrite{
 			AutoHostRewrite: util_proto.Bool(true),
 		}
 	}
+
 	c.setModifications(routeAction, modify)
 	return routeAction
 }
@@ -278,6 +299,27 @@ func (c RoutesConfigurer) setHeadersModifications(route *envoy_config_route_v3.R
 	}
 }
 
+func (c RoutesConfigurer) directResponeAction(responseAction *mesh_proto.HTTPDirectResponse) *envoy_config_route_v3.DirectResponseAction {
+	directResponse := &envoy_config_route_v3.DirectResponseAction{
+		Status: responseAction.Status,
+	}
+	switch responseAction.Body.Specifier.(type) {
+	case *mesh_proto.HTTPBody_String_:
+		directResponse.Body = &envoy_config_core_v3.DataSource{
+			Specifier: &envoy_config_core_v3.DataSource_InlineString{
+				InlineString: responseAction.Body.Specifier.(*mesh_proto.HTTPBody_String_).String_,
+			},
+		}
+	case *mesh_proto.HTTPBody_Bytes:
+		directResponse.Body = &envoy_config_core_v3.DataSource{
+			Specifier: &envoy_config_core_v3.DataSource_InlineBytes{
+				InlineBytes: responseAction.Body.Specifier.(*mesh_proto.HTTPBody_Bytes).Bytes,
+			},
+		}
+	}
+	return directResponse
+}
+
 func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x *mesh_proto.StringMatch) *envoy_type_matcher_v3.StringMatcher {
 	if x == nil {
 		return &envoy_type_matcher_v3.StringMatcher{}
@@ -287,10 +329,12 @@ func TrafficRouteHttpMatchStringMatcherToEnvoyStringMatcher(x *mesh_proto.String
 	case *mesh_proto.StringMatch_Prefix:
 		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Prefix{Prefix: x.GetPrefix()}
 	case *mesh_proto.StringMatch_Regex:
-		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_SafeRegex{&envoy_type_matcher_v3.RegexMatcher{
-			EngineType: &envoy_type_matcher_v3.RegexMatcher_GoogleRe2{},
-			Regex:      x.GetRegex(),
-		}}
+		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_SafeRegex{
+			SafeRegex: &envoy_type_matcher_v3.RegexMatcher{
+				EngineType: &envoy_type_matcher_v3.RegexMatcher_GoogleRe2{},
+				Regex:      x.GetRegex(),
+			},
+		}
 	case *mesh_proto.StringMatch_Exact:
 		res.MatchPattern = &envoy_type_matcher_v3.StringMatcher_Exact{Exact: x.GetExact()}
 	}

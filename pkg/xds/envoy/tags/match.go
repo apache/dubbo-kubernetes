@@ -100,6 +100,9 @@ func (t Tags) WithoutTags(tags ...string) Tags {
 }
 
 func (t Tags) WithTags(keysAndValues ...string) Tags {
+	if len(keysAndValues) == 0 {
+		return t
+	}
 	result := Tags{}
 	for tagName, tagValue := range t {
 		result[tagName] = tagValue

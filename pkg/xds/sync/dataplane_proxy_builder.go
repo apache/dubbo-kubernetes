@@ -134,17 +134,10 @@ func trafficPolicyToSelector(dataplane *core_mesh.DataplaneResource, meshContext
 					}
 				}
 				return nil
-			}, func(host, subset string) *mesh_proto.Subset {
-				for _, item := range dnl.GetItems() {
-					if item, ok := item.GetSpec().(*mesh_proto.DestinationRule); !ok {
-						logger.Errorf("meshContext build error, item need to be *api.VirtualService,but got %T", item)
-						continue
-					} else if item.Host == host {
-						for _, s := range item.Subsets {
-							if s.Name == subset {
-								return s
-							}
-						}
+			}, func(host *mesh_proto.DestinationRule, subset string) *mesh_proto.Subset {
+				for _, item := range host.Subsets {
+					if item.Name == subset {
+						return item
 					}
 				}
 				return nil
@@ -157,15 +150,27 @@ func trafficPolicyToSelector(dataplane *core_mesh.DataplaneResource, meshContext
 	return res
 }
 
-func generateVirtualService(vs *mesh_proto.VirtualService, getDestinationRuleFunc func(host string) *mesh_proto.DestinationRule, getDestinationSubsetFunc func(host string, subset string) *mesh_proto.Subset, dataplane *core_mesh.DataplaneResource, meshContext xds_context.MeshContext) []core_xds.ClusterSelectorList {
+func generateVirtualService(
+	vs *mesh_proto.VirtualService,
+	getDestinationRuleFunc func(host string) *mesh_proto.DestinationRule,
+	getDestinationSubsetFunc func(host *mesh_proto.DestinationRule, subset string) *mesh_proto.Subset,
+	_ *core_mesh.DataplaneResource,
+	_ xds_context.MeshContext,
+) []core_xds.ClusterSelectorList {
 	res := make([]core_xds.ClusterSelectorList, 0, len(vs.Http))
 	for _, route := range vs.Http {
 		csl := core_xds.ClusterSelectorList{
-			ModifyInfo:   mesh_proto.TrafficRoute_Http_Modify{},
-			EndSelectors: make([]core_xds.ClusterSelector, 0, len(route.Route)),
+			ModifyInfo:       mesh_proto.TrafficRoute_Http_Modify{},
+			ClusterSelectors: make([]core_xds.ClusterSelector, 0, len(route.Route)),
 		}
-		// not support redirect, directResponse , mirror
+		// not support redirect, mirror
 		csl.ModifyInfo.RequestHeaders, csl.ModifyInfo.ResponseHeaders = handleResquestResponeHeaderOption(route.Headers)
+		if route.DirectResponse != nil {
+			csl.DirectResp = &mesh_proto.HTTPDirectResponse{
+				Status: route.DirectResponse.Status,
+				Body:   route.DirectResponse.Body,
+			}
+		}
 		if route.Timeout != nil {
 			csl.ModifyInfo.TimeOut = route.Timeout
 		}
@@ -187,6 +192,7 @@ func generateVirtualService(vs *mesh_proto.VirtualService, getDestinationRuleFun
 				}
 			}
 		}
+
 		for _, destination := range route.Route {
 			cs := core_xds.ClusterSelector{
 				ConfigInfo: core_xds.TrafficRouteConfig{
@@ -204,25 +210,30 @@ func generateVirtualService(vs *mesh_proto.VirtualService, getDestinationRuleFun
 			cs.ConfigInfo.Weight = destination.Weight
 			cs.ConfigInfo.DestinationSubSet = destination.Destination
 
-			ds := getDestinationSubsetFunc(destination.Destination.Host, destination.Destination.Subset)
-			if ds == nil {
-				continue
+			d := getDestinationRuleFunc(destination.Destination.Host)
+			if d != nil {
+				cs.ConfigInfo.Policy = d.TrafficPolicy
+				if p := getDestinationSubsetFunc(d, destination.Destination.Subset); p == nil {
+					// subset not exist
+					continue
+				} else {
+					if p.TrafficPolicy != nil {
+						cs.ConfigInfo.Policy = p.TrafficPolicy // cover
+					}
+					cs.TagSelect = maps.Clone(p.Labels)
+				}
 			}
-
-			if ds.TrafficPolicy != nil {
-				cs.ConfigInfo.Policy = ds.TrafficPolicy
-			} else {
-				cs.ConfigInfo.Policy = getDestinationRuleFunc(destination.Destination.Host).TrafficPolicy
-			}
-			cs.TagSelect = maps.Clone(ds.Labels)
-
-			csl.EndSelectors = append(csl.EndSelectors, cs)
+			csl.ClusterSelectors = append(csl.ClusterSelectors, cs)
 		}
+
 		for _, match := range route.Match {
 			csl := core_xds.ClusterSelectorList{
-				MatchInfo:    mesh_proto.TrafficRoute_Http_Match{},
-				ModifyInfo:   csl.ModifyInfo,
-				EndSelectors: csl.EndSelectors,
+				MatchInfo:        mesh_proto.TrafficRoute_Http_Match{},
+				ModifyInfo:       csl.ModifyInfo,
+				ClusterSelectors: csl.ClusterSelectors,
+			}
+			if match.Authority != nil {
+				csl.MatchInfo.Authority = match.Authority
 			}
 			if match.Uri != nil {
 				csl.MatchInfo.Path = match.Uri

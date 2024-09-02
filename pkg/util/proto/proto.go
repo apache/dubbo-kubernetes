@@ -122,3 +122,7 @@ func MustToStruct(message proto.Message) *structpb.Struct {
 	}
 	return str
 }
+
+func ProtoClone(from proto.Message) (to proto.Message) {
+	return proto.Clone(from)
+}

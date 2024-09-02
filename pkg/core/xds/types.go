@@ -176,9 +176,10 @@ type ZoneIngressProxy struct {
 }
 
 type ClusterSelectorList struct {
-	MatchInfo    mesh_proto.TrafficRoute_Http_Match
-	ModifyInfo   mesh_proto.TrafficRoute_Http_Modify
-	EndSelectors []ClusterSelector
+	MatchInfo        mesh_proto.TrafficRoute_Http_Match
+	ModifyInfo       mesh_proto.TrafficRoute_Http_Modify
+	DirectResp       *mesh_proto.HTTPDirectResponse
+	ClusterSelectors []ClusterSelector
 }
 
 type ServiceSelectorMap map[ServiceName][]ClusterSelectorList
@@ -189,6 +190,9 @@ type ClusterSelector struct {
 }
 
 func (c *ClusterSelector) Select(l EndpointList) EndpointList {
+	if c.TagSelect == nil || len(c.TagSelect) == 0 {
+		return l
+	}
 	res := EndpointList{}
 	for _, endpoint := range l {
 		if c.TagSelect.Matches(endpoint.Tags) {
@@ -201,8 +205,13 @@ func (c *ClusterSelector) Select(l EndpointList) EndpointList {
 func (e *ClusterSelectorList) GetMatchInfo() *mesh_proto.TrafficRoute_Http_Match {
 	return &e.MatchInfo
 }
+
 func (e *ClusterSelectorList) GetModifyInfo() *mesh_proto.TrafficRoute_Http_Modify {
 	return &e.ModifyInfo
+}
+
+func (e *ClusterSelectorList) GetDirectResp() *mesh_proto.HTTPDirectResponse {
+	return e.DirectResp
 }
 
 type Routing struct {

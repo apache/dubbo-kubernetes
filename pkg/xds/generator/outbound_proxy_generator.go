@@ -273,9 +273,10 @@ func (OutboundProxyGenerator) determineRoutes(
 	var routes envoy_common.Routes
 
 	type clustersInfo struct {
-		match    *mesh_proto.TrafficRoute_Http_Match
-		modify   *mesh_proto.TrafficRoute_Http_Modify
-		clusters []envoy_common.Cluster
+		match      *mesh_proto.TrafficRoute_Http_Match
+		modify     *mesh_proto.TrafficRoute_Http_Modify
+		clusters   []envoy_common.Cluster
+		directResp *mesh_proto.HTTPDirectResponse
 	}
 
 	retriveClusters := func() []clustersInfo {
@@ -301,8 +302,8 @@ func (OutboundProxyGenerator) determineRoutes(
 		allTags := envoy_tags.Tags(outboundTags)
 		if _, ok := proxy.Routing.OutboundSelector[service]; ok {
 			for _, clusterSelectors := range proxy.Routing.OutboundSelector[service] {
-				var clusters = make([]envoy_common.Cluster, 0, len(clusterSelectors.EndSelectors))
-				for _, endSelector := range clusterSelectors.EndSelectors {
+				var clusters = make([]envoy_common.Cluster, 0, len(clusterSelectors.ClusterSelectors))
+				for _, endSelector := range clusterSelectors.ClusterSelectors {
 					cluster := envoy_common.NewCluster(
 						envoy_common.WithService(service),
 						envoy_common.WithName(name),
@@ -318,9 +319,10 @@ func (OutboundProxyGenerator) determineRoutes(
 					clusters = append(clusters, cluster)
 				}
 				clustersList = append(clustersList, clustersInfo{
-					modify:   clusterSelectors.GetModifyInfo(),
-					match:    clusterSelectors.GetMatchInfo(),
-					clusters: clusters,
+					modify:     clusterSelectors.GetModifyInfo(),
+					match:      clusterSelectors.GetMatchInfo(),
+					directResp: clusterSelectors.GetDirectResp(),
+					clusters:   clusters,
 				})
 			}
 		} else {
@@ -348,9 +350,10 @@ func (OutboundProxyGenerator) determineRoutes(
 
 		for _, c := range clustersInfoList {
 			r := envoy_common.Route{
-				Modify:   c.modify,
-				Clusters: c.clusters,
-				Match:    c.match,
+				DirectResponse: c.directResp,
+				Modify:         c.modify,
+				Clusters:       c.clusters,
+				Match:          c.match,
 			}
 			routes = append(routes, r)
 		}

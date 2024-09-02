@@ -18,14 +18,23 @@
 package v1alpha1
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	"github.com/golang/protobuf/proto"
+	"golang.org/x/exp/slices"
+	"regexp"
+	"strings"
+)
+
+import (
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type TrafficRoute_Http_Match struct {
-	Method  *StringMatch
-	Path    *StringMatch
-	Headers map[string]*StringMatch
-	Params  map[string]*StringMatch
+	Authority *StringMatch
+	Method    *StringMatch
+	Path      *StringMatch
+	Headers   map[string]*StringMatch
+	Params    map[string]*StringMatch
 }
 
 func (m TrafficRoute_Http_Match) GetPath() *StringMatch {
@@ -40,12 +49,17 @@ func (m TrafficRoute_Http_Match) GetMethod() *StringMatch {
 	return m.Method
 }
 
+func (m TrafficRoute_Http_Match) GetAuthority() *StringMatch {
+	return m.Authority
+}
+
 func (m TrafficRoute_Http_Match) GetParam() map[string]*StringMatch {
 	return m.Params
 }
 
 type TrafficRoute_Http_Modify struct {
 	TimeOut         *durationpb.Duration
+	Retries         *HTTPRetry
 	Path            *TrafficRoute_Http_Modify_Path
 	Host            *TrafficRoute_Http_Modify_Host
 	RequestHeaders  *TrafficRoute_Http_Modify_Headers
@@ -284,3 +298,128 @@ type TrafficRoute_Http_Modify_Path_Rewrite struct {
 }
 
 func (*TrafficRoute_Http_Modify_Path_Regex) isTrafficRoute_Http_Modify_Path_Type() {}
+
+func (x *StringMatch) Match(target string) bool {
+	if x == nil {
+		return true
+	}
+	switch x.MatchType.(type) {
+	case *StringMatch_Exact:
+		return x.GetExact() == target
+	case *StringMatch_Prefix:
+		return strings.HasPrefix(target, x.GetPrefix())
+	case *StringMatch_Regex:
+		i, _ := regexp.Match(x.GetRegex(), []byte(target))
+		return i
+	}
+	return true
+}
+
+func (x *VirtualService) httpConfigDeduplicateAndMerge() {
+	uniqueMap := make(map[string]*HTTPRoute)
+	uniqueMatchMap := make(map[string]sets.String)
+	res := make([]*HTTPRoute, 0, len(x.Http))
+	getHash := func(msg proto.Message) string {
+		bt, _ := proto.Marshal(msg)
+		return string(bt)
+	}
+	for _, route := range x.Http {
+		m := route.Match
+		route.Match = nil
+		h := getHash(route)
+		if h == "" {
+			continue
+		}
+		if uniqueMap[h] == nil {
+			uniqueMap[h] = route
+		}
+		if uniqueMatchMap[h] == nil {
+			uniqueMatchMap[h] = sets.String{}
+		}
+		for _, m := range m {
+			if mh := getHash(m); mh != "" && !uniqueMatchMap[h].Contains(mh) {
+				uniqueMatchMap[h].Insert(mh)
+				uniqueMap[h].Match = append(uniqueMap[h].Match, m)
+			}
+		}
+	}
+	x.Http = res
+}
+
+// Split the match configuration into separate
+func (x *VirtualService) preDealHttpConfig() {
+	res := make([]*HTTPRoute, 0, len(x.Http))
+	for i := len(x.Http) - 1; i >= 0; i-- {
+		msg := x.Http[i]
+		m := msg.Match
+		msg.Match = nil
+		for _, match := range m {
+			n := proto.Clone(msg).(*HTTPRoute)
+			n.Match = []*HTTPMatchRequest{match}
+			res = append(res, n)
+		}
+	}
+	x.Http = res
+}
+
+// RangeHTTPReferenceUpdate it ensure one piece httpRoute only has one match field in range, and merge match field after range done
+func (x *VirtualService) RangeHTTPReferenceUpdate(
+	ref_range func(index int, ref *HTTPRoute) (insert *HTTPRoute, remove bool, stop bool),
+) {
+	if ref_range == nil {
+		return
+	}
+	var (
+		insert             *HTTPRoute
+		remove             bool
+		stop               bool
+		newhttpReverselist = make([]*HTTPRoute, 0, len(x.Http)*2)
+	)
+	x.preDealHttpConfig()
+	// reverse range for ensure config priority in appending
+	for i := len(x.Http) - 1; i >= 0; i-- {
+		if !stop {
+			insert, remove, stop = ref_range(i, x.Http[i])
+			if !remove {
+				newhttpReverselist = append(newhttpReverselist, x.Http[i])
+			}
+			if insert != nil {
+				newhttpReverselist = append(newhttpReverselist, insert)
+			}
+		} else {
+			newhttpReverselist = append(newhttpReverselist, x.Http[i])
+		}
+	}
+	slices.Reverse(newhttpReverselist)
+	x.Http = newhttpReverselist
+	x.httpConfigDeduplicateAndMerge()
+}
+
+func (x *HTTPMatchRequest) WithoutURIEmpty() bool {
+	if x.Scheme != nil {
+		return false
+	} else if x.Method != nil {
+		return false
+	} else if x.Authority != nil {
+		return false
+	} else if x.Headers != nil {
+		return false
+	} else if x.Port != 0 {
+		return false
+	} else if x.SourceLabels != nil {
+		return false
+	} else if x.Gateways != nil {
+		return false
+	} else if x.QueryParams != nil {
+		return false
+	} else if x.IgnoreUriCase != false {
+		return false
+	} else if x.WithoutHeaders != nil {
+		return false
+	} else if x.SourceNamespace != "" {
+		return false
+	} else if x.StatPrefix != "" {
+		return false
+	}
+	return true
+}

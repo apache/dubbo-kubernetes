@@ -22,8 +22,9 @@ import (
 )
 
 type Route struct {
-	Match  *mesh_proto.TrafficRoute_Http_Match
-	Modify *mesh_proto.TrafficRoute_Http_Modify
+	DirectResponse *mesh_proto.HTTPDirectResponse
+	Match          *mesh_proto.TrafficRoute_Http_Match
+	Modify         *mesh_proto.TrafficRoute_Http_Modify
 	// rateLimit
 	Clusters []Cluster
 }
