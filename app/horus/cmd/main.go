@@ -27,15 +27,15 @@ var (
 )
 
 func main() {
-	flag.StringVar(&configFile, "configFile", "./horus.yaml", "horus config file")
-	flag.StringVar(&httpAddr, "httpAddr", "0.0.0.0:9089", "horus http addr")
+	flag.StringVar(&configFile, "configFile", "../deploy/horus/horus.yaml", "horus config file")
+	flag.StringVar(&httpAddr, "httpAddr", "0.0.0.0:38089", "horus http addr")
 	flag.Parse()
 
 	c, err := config.LoadFile(configFile)
 	if err != nil {
 		klog.Infof("load config file success.")
 	} else {
-		klog.Errorf("load config file failed err: %v", c)
+		klog.Errorf("load config file failed err: %+v", c)
 		return
 	}
 }

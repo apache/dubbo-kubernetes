@@ -1,0 +1,6 @@
+HttpAddr: 0.0.0.0:38089
+
+Mysql:
+  Name: horus
+  Addr: "root:root@tcp(127.0.0.1:3306)/horus?charset=utf8&parseTime=True"
+  Debug: false
