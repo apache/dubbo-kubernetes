@@ -18,6 +18,7 @@ package main
 import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/db"
 	"k8s.io/klog/v2"
 )
 
@@ -27,15 +28,25 @@ var (
 )
 
 func main() {
-	flag.StringVar(&configFile, "configFile", "../deploy/horus/horus.yaml", "horus config file")
+	flag.StringVar(&configFile, "configFile", "deploy/horus/horus.yaml", "horus config file")
 	flag.StringVar(&httpAddr, "httpAddr", "0.0.0.0:38089", "horus http addr")
+	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
 
 	c, err := config.LoadFile(configFile)
 	if err != nil {
-		klog.Infof("load config file success.")
-	} else {
-		klog.Errorf("load config file failed err: %+v", c)
+		klog.Errorf("load config file failed err:%+v", c)
 		return
+	} else {
+		klog.Infof("load config file success.")
 	}
+
+	err = db.InitDataBase(c.Mysql)
+	if err != nil {
+		klog.Errorf("horus db initial failed err:%v", err)
+		return
+	} else {
+		klog.Infof("horus db initial success.")
+	}
+
 }
