@@ -23,13 +23,13 @@ import (
 )
 
 var (
-	httpAddr   string
+	address    string
 	configFile string
 )
 
 func main() {
 	flag.StringVar(&configFile, "configFile", "deploy/horus/horus.yaml", "horus config file")
-	flag.StringVar(&httpAddr, "httpAddr", "0.0.0.0:38089", "horus http addr")
+	flag.StringVar(&address, "address", "0.0.0.0:38089", "horus address")
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
 
