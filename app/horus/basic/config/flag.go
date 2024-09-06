@@ -37,7 +37,7 @@ func LoadFile(name string) (*Config, error) {
 	}
 	cfg, err := Load(string(bytes))
 	if err != nil {
-		fmt.Printf("parsing YAML file err:%v", err)
+		fmt.Printf("parsing yaml file err:%v", err)
 		return nil, err
 	}
 	return cfg, err
