@@ -16,12 +16,12 @@
 package config
 
 type Config struct {
-	HttpAddr string `yaml:"HttpAddr"`
-	Mysql    *Mysql `yaml:"Mysql"`
+	HttpAddr string              `yaml:"HttpAddr"`
+	Mysql    *MysqlConfiguration `yaml:"Mysql"`
 }
 
-type Mysql struct {
-	Name  string `yaml:"Name"`
-	Addr  string `yaml:"Addr"`
-	Debug bool   `yaml:"Debug"`
+type MysqlConfiguration struct {
+	Name  string `yaml:"name"`
+	Addr  string `yaml:"addr"`
+	Debug bool   `yaml:"debug"`
 }
