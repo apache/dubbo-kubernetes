@@ -21,10 +21,10 @@ mysql:
   debug: false
 
 dingTalk:
-  webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d8f81471e"
-  title: "工单通知处理"
+  webhookUrl: ~
+  title: ~
   atMobiles:
-    - 1500000000
+  - 1500000000
 
 slack:
   webhookUrl: ~
