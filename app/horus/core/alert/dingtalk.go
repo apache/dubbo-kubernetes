@@ -26,20 +26,6 @@ import (
 
 const Title = "钉钉机器人"
 
-type content struct {
-	Content string `json:"content"`
-}
-
-type at struct {
-	AtMobiles []string `json:"atMobiles"`
-}
-
-type Message struct {
-	MessageType string  `json:"messageType"`
-	Text        content `json:"text"`
-	At          at      `json:"at"`
-}
-
 type T struct {
 	At struct {
 		AtMobiles []string `json:"atMobiles"`
@@ -52,23 +38,37 @@ type T struct {
 	Msgtype string `json:"msgtype"`
 }
 
+type content struct {
+	Content string `json:"content"`
+}
+
+type at struct {
+	AtMobiles []string `json:"atMobiles"`
+}
+
+type Message struct {
+	MsgType string  `json:"msgtype"`
+	Text    content `json:"text"`
+	At      at      `json:"at"`
+}
+
 func DingTalkSend(dk *config.DingTalkConfiguration, msg string) {
-	dtm := Message{MessageType: "text"}
+	dtm := Message{MsgType: "text"}
 	dtm.Text.Content = fmt.Sprintf("%s\n"+
-		"【日志详细信息：%s】", Title, msg)
+		"【日志：%s】", Title, msg)
 	dtm.At.AtMobiles = dk.AtMobiles
 	bs, err := json.Marshal(dtm)
 	if err != nil {
-		klog.Errorf("dingTalk json marshal err:%v\n msg:%v\n", err, msg)
+		klog.Errorf("dingTalk json marshal err:%v\n dtm:%v\n", err, dtm)
 		return
 	}
 	res, err := http.Post(dk.WebhookUrl, "application/json", bytes.NewBuffer(bs))
 	if err != nil {
-		klog.Errorf("push dingTalk err:%v\n msg:%v\n", err, msg)
+		klog.Errorf("send dingTalk err:%v\n msg:%v\n", err, msg)
 	}
-	if res.StatusCode != 200 && res != nil {
-		klog.Errorf("push dingTalk status code err:%v\n code:%v\n msg:%v\n", err, res.StatusCode, msg)
+	if res != nil && res.StatusCode != 200 {
+		klog.Errorf("send dingTalk status code err:%v\n code:%v\n msg:%v\n", err, res.StatusCode, msg)
 		return
 	}
-	klog.Infof("push dingTalk success code:%v\n msg:%v\n", res.StatusCode, msg)
+	klog.Infof("send dingTalk success code:%v\n msg:%v\n", res.StatusCode, msg)
 }
