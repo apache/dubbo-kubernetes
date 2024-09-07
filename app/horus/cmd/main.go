@@ -16,10 +16,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/db"
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 )
 
 var (
@@ -48,5 +54,60 @@ func main() {
 	} else {
 		klog.Infof("horus db initial success.")
 	}
+	group, stopChan := setupStopChanWithContext()
+	ctx, cancel := context.WithCancel(context.Background())
+	group.Add(func() error {
+		for {
+			select {
+			case <-stopChan:
+				cancel()
+				return nil
+			case <-ctx.Done():
+				cancel()
+				return nil
+			}
+		}
+	})
+	group.Add(func() error {
+		http.Handle("/metrics", promhttp.Handler())
+		srv := http.Server{Addr: address}
+		err := srv.ListenAndServe()
+		if err != nil {
+			klog.Errorf("horus metrics err:%v", err)
+		}
+		return nil
+	})
+	group.Wait()
+}
 
+type WaitGroup struct {
+	wg sync.WaitGroup
+}
+
+func (g *WaitGroup) Add(f func() error) {
+	g.wg.Add(1)
+	go func() {
+		defer g.wg.Done()
+		err := f()
+		if err != nil {
+			return
+		}
+	}()
+}
+
+func (g *WaitGroup) Wait() {
+	g.wg.Wait()
+}
+
+func setupStopChanWithContext() (*WaitGroup, <-chan struct{}) {
+	stopChan := make(chan struct{})
+	SignalChan := make(chan os.Signal, 1)
+	signal.Notify(SignalChan, syscall.SIGTERM, syscall.SIGQUIT)
+	g := WaitGroup{}
+	g.Add(func() error {
+		<-stopChan
+		close(stopChan)
+		return nil
+	})
+	return &g, stopChan
 }
