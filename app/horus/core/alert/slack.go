@@ -13,27 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package alert
 
-type Config struct {
-	Address  string                 `yaml:"address"`
-	Mysql    *MysqlConfiguration    `yaml:"mysql"`
-	DingTalk *DingTalkConfiguration `yaml:"dingTalk"`
-	Slack    *SlackConfiguration    `yaml:"slack"`
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"net/http"
+)
+
+const SlackTitle = "项目组"
+
+type Text struct {
+	Text string `json:"text"`
 }
 
-type MysqlConfiguration struct {
-	Name  string `yaml:"name"`
-	Addr  string `yaml:"addr"`
-	Debug bool   `yaml:"debug"`
-}
-
-type DingTalkConfiguration struct {
-	WebhookUrl string   `yaml:"webhookUrl"`
-	Title      string   `yaml:"title"`
-	AtMobiles  []string `yaml:"atMobiles"`
-}
-
-type SlackConfiguration struct {
-	WebhookUrl string `yaml:"webhookUrl"`
+func SlackSend(sk *config.SlackConfiguration, channel string) {
+	skm := Text{Text: "text"}
+	skm.Text = fmt.Sprintf("%s"+
+		"%v", SlackTitle, channel)
+	bs, err := json.Marshal(skm)
+	if err != nil {
+		klog.Errorf("slack json marshal err:%v\n dtm:%v\n", err, skm)
+	}
+	res, err := http.Post(sk.WebhookUrl, "application/json", bytes.NewBuffer(bs))
+	if res.StatusCode != 200 {
+		klog.Errorf("send slack status code err:%v\n code:%v\n channel:%v\n", err, res.StatusCode, channel)
+		return
+	}
 }
