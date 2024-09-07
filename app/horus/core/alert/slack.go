@@ -13,27 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package alert
 
-type Config struct {
-	Address  string                 `yaml:"address"`
-	Mysql    *MysqlConfiguration    `yaml:"mysql"`
-	DingTalk *DingTalkConfiguration `yaml:"dingTalk"`
-	Slack    *SlackConfiguration    `yaml:"slack"`
-}
+import "github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 
-type MysqlConfiguration struct {
-	Name  string `yaml:"name"`
-	Addr  string `yaml:"addr"`
-	Debug bool   `yaml:"debug"`
-}
-
-type DingTalkConfiguration struct {
-	WebhookUrl string   `yaml:"webhookUrl"`
-	Title      string   `yaml:"title"`
-	AtMobiles  []string `yaml:"atMobiles"`
-}
-
-type SlackConfiguration struct {
-	WebhookUrl string `yaml:"webhookUrl"`
-}
+func SlackSend(sk *config.SlackConfiguration) {}
