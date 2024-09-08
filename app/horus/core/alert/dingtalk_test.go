@@ -22,7 +22,7 @@ import (
 
 func TestDingTalkSend(t *testing.T) {
 	im := &config.DingTalkConfiguration{
-		WebhookUrl: "",
+		WebhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d2f81471x",
 		Title:      "",
 		AtMobiles:  nil,
 	}
