@@ -20,6 +20,7 @@ package handler
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -89,6 +90,20 @@ func GetTraceDashBoard(rt core_runtime.Runtime, dim Dimension) gin.HandlerFunc {
 func GetPrometheus(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		resp := rt.Config().Admin.Prometheus
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+func GetMetricsList(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.MetricsReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+		}
+		resp, err := service.GetInstanceMetrics(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
 		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
