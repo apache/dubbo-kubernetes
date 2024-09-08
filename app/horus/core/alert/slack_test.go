@@ -16,31 +16,13 @@
 package alert
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"k8s.io/klog/v2"
-	"net/http"
+	"testing"
 )
 
-const SlackTitle = "项目组"
-
-type Text struct {
-	Text string `json:"text"`
-}
-
-func SlackSend(sk *config.SlackConfiguration, channel string) {
-	skm := Text{Text: "text"}
-	skm.Text = fmt.Sprintf("%s"+
-		"%v", SlackTitle, channel)
-	bs, err := json.Marshal(skm)
-	if err != nil {
-		klog.Errorf("slack json marshal err:%v\n dtm:%v\n", err, skm)
+func TestSlackSend(t *testing.T) {
+	im := &config.SlackConfiguration{
+		WebhookUrl: "",
 	}
-	res, err := http.Post(sk.WebhookUrl, "application/json", bytes.NewBuffer(bs))
-	if res.StatusCode != 200 {
-		klog.Errorf("send slack status code err:%v\n code:%v\n channel:%v\n", err, res.StatusCode, channel)
-		return
-	}
+	SlackSend(im, "接入成功")
 }

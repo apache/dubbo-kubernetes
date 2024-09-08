@@ -28,5 +28,3 @@ dingTalk:
 
 slack:
   webhookUrl: ~
-  proxy: ~
-  payload: ~

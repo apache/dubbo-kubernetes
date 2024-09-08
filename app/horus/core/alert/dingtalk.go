@@ -24,7 +24,7 @@ import (
 	"net/http"
 )
 
-const Title = "钉钉机器人"
+const DingTalkTitle = "项目组"
 
 type T struct {
 	At struct {
@@ -55,7 +55,7 @@ type Message struct {
 func DingTalkSend(dk *config.DingTalkConfiguration, msg string) {
 	dtm := Message{MsgType: "text"}
 	dtm.Text.Content = fmt.Sprintf("%s\n"+
-		"【日志：%s】", Title, msg)
+		"【日志：%s】", DingTalkTitle, msg)
 	dtm.At.AtMobiles = dk.AtMobiles
 	bs, err := json.Marshal(dtm)
 	if err != nil {
