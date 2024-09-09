@@ -47,11 +47,11 @@ type Registry struct {
 	ctx        *ApplicationContext
 }
 
-func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery) *Registry {
+func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery, ctx *ApplicationContext) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
-		ctx:        NewApplicationContext(),
+		ctx:        ctx,
 	}
 }
 
