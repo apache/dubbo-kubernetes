@@ -19,7 +19,7 @@ import (
 	"context"
 	"flag"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog"
 	"net/http"
