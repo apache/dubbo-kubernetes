@@ -20,6 +20,7 @@ import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/ticker"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog"
 	"net/http"
@@ -75,6 +76,14 @@ func main() {
 		err := srv.ListenAndServe()
 		if err != nil {
 			klog.Errorf("horus metrics err:%v", err)
+		}
+		return nil
+	})
+	group.Add(func() error {
+		klog.Info("horus ticker start success.")
+		err := ticker.Manager(ctx)
+		if err != nil {
+			klog.Errorf("horus ticker start failed error:%v", err)
 		}
 		return nil
 	})
