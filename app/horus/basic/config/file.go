@@ -16,10 +16,12 @@
 package config
 
 type Config struct {
-	Address  string                 `yaml:"address"`
-	Mysql    *MysqlConfiguration    `yaml:"mysql"`
-	DingTalk *DingTalkConfiguration `yaml:"dingTalk"`
-	Slack    *SlackConfiguration    `yaml:"slack"`
+	Address        string                 `yaml:"address"`
+	Mysql          *MysqlConfiguration    `yaml:"mysql"`
+	DingTalk       *DingTalkConfiguration `yaml:"dingTalk"`
+	Slack          *SlackConfiguration    `yaml:"slack"`
+	KubeMultiple   map[string]string      `yaml:"kubeMultiple"`
+	KubeTimeSecond int64
 }
 
 type MysqlConfiguration struct {
