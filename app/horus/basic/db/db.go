@@ -24,7 +24,7 @@ import (
 )
 
 type NodeDataInfo struct {
-	Id              uint32 `json:"id"`
+	Id              int64  `json:"id"`
 	NodeName        string `json:"nodeName"`
 	NodeIP          string `json:"nodeIP"`
 	Sn              string `json:"sn"`
@@ -71,4 +71,29 @@ func InitDataBase(mc *config.MysqlConfiguration) error {
 	data.ShowSQL(mc.Debug)
 	db = data
 	return nil
+}
+
+func (n *NodeDataInfo) Add() (int64, error) {
+	exist, _ := db.Exist(n)
+	if exist {
+		return n.Id, nil
+	}
+	absent, err := n.Add()
+	return absent, err
+}
+
+func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
+	exist, err := db.Get(n)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, nil
+	}
+	return n, nil
+}
+
+func (n *NodeDataInfo) Check() (bool, error) {
+	exist, err := db.Exist(n)
+	return exist, err
 }
