@@ -21,6 +21,7 @@ type Config struct {
 	DingTalk       *DingTalkConfiguration `yaml:"dingTalk"`
 	Slack          *SlackConfiguration    `yaml:"slack"`
 	KubeMultiple   map[string]string      `yaml:"kubeMultiple"`
+	PromMultiple   map[string]string      `yaml:"promMultiple"`
 	KubeTimeSecond int64
 }
 
