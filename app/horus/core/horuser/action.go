@@ -20,11 +20,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (h *Horuser) Cordon(nodeName, clusterName, modelName string) (err error) {
+func (h *Horuser) Cordon(nodeName, clusterName string) (err error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
 		klog.Errorf("node Cordon kubeClient by clusterName empty.")
-		klog.Infof("nodeName:%v,clusterName:%v,modelName:%v", nodeName, clusterName, modelName)
+		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
 		return err
 	}
 
@@ -32,7 +32,7 @@ func (h *Horuser) Cordon(nodeName, clusterName, modelName string) (err error) {
 	defer cancelFirst()
 	node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, v1.GetOptions{})
 	if err != nil {
-		klog.Errorf("node Cordon get err nodeName:%v clusterName:%v modelName:%v", nodeName, clusterName, modelName)
+		klog.Errorf("node Cordon get err nodeName:%v clusterName:%v", nodeName, clusterName)
 		return err
 	}
 
@@ -42,10 +42,10 @@ func (h *Horuser) Cordon(nodeName, clusterName, modelName string) (err error) {
 	defer cancelSecond()
 	node, err = kubeClient.CoreV1().Nodes().Update(ctxSecond, node, v1.UpdateOptions{})
 	if err != nil {
-		klog.Errorf("node Cordon update err nodeName:%v clusterName:%v modelName:%v", nodeName, clusterName, modelName)
+		klog.Errorf("node Cordon update err nodeName:%v clusterName:%v", nodeName, clusterName)
 		return err
 	}
-	klog.Infof("node Cordon success nodeName:%v clusterName:%v modelName:%v", nodeName, clusterName, modelName)
+	klog.Infof("node Cordon success nodeName:%v clusterName:%v", nodeName, clusterName)
 	return nil
 }
 
