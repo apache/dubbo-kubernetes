@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package alert
+package alert_test
 
 import (
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
 	"testing"
 )
 
@@ -26,5 +27,5 @@ func TestDingTalkSend(t *testing.T) {
 		Title:      "",
 		AtMobiles:  nil,
 	}
-	DingTalkSend(im, "工单通知处理")
+	alert.DingTalkSend(im, "test")
 }

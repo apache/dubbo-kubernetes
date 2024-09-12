@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package alert
+package alert_test
 
 import (
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
 	"testing"
 )
 
@@ -24,5 +25,5 @@ func TestSlackSend(t *testing.T) {
 	im := &config.SlackConfiguration{
 		WebhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d2f81471x",
 	}
-	SlackSend(im, "接入成功")
+	alert.SlackSend(im, "test")
 }
