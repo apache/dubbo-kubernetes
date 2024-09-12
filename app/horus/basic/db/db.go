@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 	_ "github.com/go-sql-driver/mysql"
+	"time"
 	"xorm.io/xorm"
 	xlog "xorm.io/xorm/log"
 )
@@ -74,12 +75,24 @@ func InitDataBase(mc *config.MysqlConfiguration) error {
 }
 
 func (n *NodeDataInfo) Add() (int64, error) {
-	exist, _ := db.Exist(n)
+	exist, err := db.Exist(n)
+	if err != nil {
+		return 0, err
+	}
 	if exist {
 		return n.Id, nil
 	}
-	absent, err := n.Add()
-	return absent, err
+
+	affected, err := db.Insert(n)
+	if err != nil {
+		return 0, err
+	}
+
+	if affected > 0 {
+		return n.Id, nil
+	}
+
+	return 0, fmt.Errorf("failed to insert record")
 }
 
 func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
@@ -91,6 +104,20 @@ func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
 		return nil, nil
 	}
 	return n, nil
+}
+
+func (n *NodeDataInfo) Update() (bool, error) {
+	firstDate := time.Now().Format("2006-01-02 15:04:05")
+	n.FirstDate = firstDate
+
+	row, err := db.Where(fmt.Sprintf("id=%d", n.Id)).Update(n)
+	if err != nil {
+		return false, err
+	}
+	if row > 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (n *NodeDataInfo) Check() (bool, error) {
