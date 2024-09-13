@@ -53,6 +53,28 @@ func (h *Horuser) Drain() error {
 	return nil
 }
 
-func (h *Horuser) Evict() error {
+func (h *Horuser) Evict(podName, podNamespace, clusterName string) (err error) {
+	kubeClient := h.kubeClientMap[clusterName]
+	if kubeClient == nil {
+		klog.Errorf("pod Evict kubeClient by clusterName empty.")
+		klog.Infof("podName:%v clusterName:%v", podName, clusterName)
+		return err
+	}
+
+	ctxFirst, cancelFirst := h.GetK8sContext()
+	defer cancelFirst()
+	_, err = kubeClient.CoreV1().Pods(podNamespace).Get(ctxFirst, podName, v1.GetOptions{})
+	if err != nil {
+		klog.Errorf("pod Evict get err clusterName:%v podName:%v", clusterName, podName)
+		return err
+	}
+
+	ctxSecond, cancelSecond := h.GetK8sContext()
+	defer cancelSecond()
+	err = kubeClient.CoreV1().Pods(podNamespace).Delete(ctxSecond, podName, v1.DeleteOptions{})
+	if err != nil {
+		klog.Errorf("pod Evict delete err clusterName:%v podName:%v", clusterName, podName)
+		return err
+	}
 	return nil
 }
