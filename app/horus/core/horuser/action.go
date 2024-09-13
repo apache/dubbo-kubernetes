@@ -50,6 +50,35 @@ func (h *Horuser) Cordon(nodeName, clusterName string) (err error) {
 	return nil
 }
 
+func (h *Horuser) UnCordon(nodeName, clusterName string) (err error) {
+	kubeClient := h.kubeClientMap[clusterName]
+	if kubeClient == nil {
+		klog.Errorf("node UnCordon kubeClient by clusterName empty.")
+		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
+		return err
+	}
+
+	ctxFirst, cancelFirst := h.GetK8sContext()
+	defer cancelFirst()
+	node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, v1.GetOptions{})
+	if err != nil {
+		klog.Errorf("node UnCordon get err nodeName:%v clusterName:%v modelName:%v", nodeName, clusterName)
+		return err
+	}
+
+	node.Spec.Unschedulable = false
+
+	ctxSecond, cancelSecond := h.GetK8sContext()
+	defer cancelSecond()
+	node, err = kubeClient.CoreV1().Nodes().Update(ctxSecond, node, v1.UpdateOptions{})
+	if err != nil {
+		klog.Errorf("node UnCordon update err nodeName:%v clusterName:%v", nodeName, clusterName)
+		return err
+	}
+	klog.Infof("node UnCordon success nodeName:%v clusterName:%v modelName:%v", nodeName, clusterName)
+	return nil
+}
+
 func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
