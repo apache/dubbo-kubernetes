@@ -39,6 +39,8 @@ type NodeDataInfo struct {
 	LastDate        string `json:"lastDate"`
 	CreateTime      string `json:"createTime" xorm:"createTime created"`
 	UpdateTime      string `json:"updateTime" xorm:"updateTime updated"`
+	RecoveryMark    int64  `json:"recoveryMark"`
+	RecoveryQL      string `json:"recoveryQL"`
 }
 
 type PodDataInfo struct {
