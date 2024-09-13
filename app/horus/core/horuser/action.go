@@ -80,13 +80,13 @@ func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 				break
 			}
 		}
-		klog.Errorf("node Drain evict pod result %d/%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+		klog.Errorf("node Drain evict pod result items:%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
 		if ds {
 			continue
 		}
 		err := h.Evict(pods.Name, pods.Namespace, clusterName)
 		if err != nil {
-			klog.Errorf("node Drain evict pod err:%v %d/%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+			klog.Errorf("node Drain evict pod err:%v items:%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
 			return err
 		}
 	}
