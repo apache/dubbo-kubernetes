@@ -16,6 +16,7 @@
 package horuser
 
 import (
+	"fmt"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
@@ -49,7 +50,46 @@ func (h *Horuser) Cordon(nodeName, clusterName string) (err error) {
 	return nil
 }
 
-func (h *Horuser) Drain() error {
+func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
+	kubeClient := h.kubeClientMap[clusterName]
+	if kubeClient == nil {
+		klog.Errorf("node Drain kubeClient by clusterName empty.")
+		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
+		return err
+	}
+
+	ctxFirst, cancelFirst := h.GetK8sContext()
+	defer cancelFirst()
+	listOpts := v1.ListOptions{FieldSelector: fmt.Sprintf("nodeName=%s", nodeName)}
+	var podNamespace string
+	pod, err := kubeClient.CoreV1().Pods(podNamespace).List(ctxFirst, listOpts)
+	if err != nil {
+		klog.Errorf("node Drain err:%v nodeName:%v clusterName:%v", err, nodeName, clusterName)
+		return err
+	}
+	if len(pod.Items) == 0 {
+		klog.Errorf("Cannot find pod on node.")
+		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
+	}
+	count := len(pod.Items)
+	for items, pods := range pod.Items {
+		ds := false
+		for _, owner := range pods.OwnerReferences {
+			if owner.Kind == "Daemonset" {
+				ds = true
+				break
+			}
+		}
+		klog.Errorf("node Drain evict pod result items:%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+		if ds {
+			continue
+		}
+		err := h.Evict(pods.Name, pods.Namespace, clusterName)
+		if err != nil {
+			klog.Errorf("node Drain evict pod err:%v items:%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+			return err
+		}
+	}
 	return nil
 }
 
