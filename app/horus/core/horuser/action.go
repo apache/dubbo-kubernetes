@@ -62,7 +62,7 @@ func (h *Horuser) UnCordon(nodeName, clusterName string) (err error) {
 	defer cancelFirst()
 	node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, v1.GetOptions{})
 	if err != nil {
-		klog.Errorf("node UnCordon get err nodeName:%v clusterName:%v modelName:%v", nodeName, clusterName)
+		klog.Errorf("node UnCordon get err nodeName:%v clusterName:%v", nodeName, clusterName)
 		return err
 	}
 
@@ -75,7 +75,7 @@ func (h *Horuser) UnCordon(nodeName, clusterName string) (err error) {
 		klog.Errorf("node UnCordon update err nodeName:%v clusterName:%v", nodeName, clusterName)
 		return err
 	}
-	klog.Infof("node UnCordon success nodeName:%v clusterName:%v modelName:%v", nodeName, clusterName)
+	klog.Infof("node UnCordon success nodeName:%v clusterName:%v", nodeName, clusterName)
 	return nil
 }
 
