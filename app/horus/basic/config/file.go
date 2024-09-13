@@ -17,12 +17,13 @@ package config
 
 type Config struct {
 	Address        string                 `yaml:"address"`
+	KubeTimeSecond int64                  `yaml:"kubeTimeSecond"`
 	Mysql          *MysqlConfiguration    `yaml:"mysql"`
 	DingTalk       *DingTalkConfiguration `yaml:"dingTalk"`
 	Slack          *SlackConfiguration    `yaml:"slack"`
 	KubeMultiple   map[string]string      `yaml:"kubeMultiple"`
 	PromMultiple   map[string]string      `yaml:"promMultiple"`
-	KubeTimeSecond int64
+	NodeRecovery   *RecoveryConfiguration `yaml:"nodeRecovery"`
 }
 
 type MysqlConfiguration struct {
@@ -39,4 +40,11 @@ type DingTalkConfiguration struct {
 
 type SlackConfiguration struct {
 	WebhookUrl string `yaml:"webhookUrl"`
+}
+
+type RecoveryConfiguration struct {
+	DayNumber           int                    `yaml:"dayNumber"`
+	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
+	PromQueryTimeSecond int                    `yaml:"promQueryTimeSecond"`
+	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 }

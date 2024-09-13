@@ -34,3 +34,12 @@ slack:
 
 kubeMultiple:
   cluster: config.1
+
+nodeRecovery:
+  dayNumber: 1
+  checkIntervalSecond: 60
+  promQueryTimeSecond: 5
+  dingTalk:
+    webhookUrl: ~
+    title: ~
+    atMobiles: ~
