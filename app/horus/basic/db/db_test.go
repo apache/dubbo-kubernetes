@@ -49,8 +49,4 @@ func TestDataBase(t *testing.T) {
 	data.NodeName = "002"
 	id, err := data.Add()
 	t.Logf("test.add id:%v err:%v", id, err)
-	query, err := data.Get()
-	t.Logf("test.get query:%v err:%v", query, err)
-	update, err := data.Update()
-	t.Logf("test.update %v err: %v", update, err)
 }

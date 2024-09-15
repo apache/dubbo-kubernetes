@@ -26,21 +26,20 @@ import (
 
 type NodeDataInfo struct {
 	Id              int64  `json:"id"`
-	NodeName        string `json:"nodeName"`
-	NodeIP          string `json:"nodeIP"`
+	NodeName        string `json:"node_name" xorm:"node_name"`
+	NodeIP          string `json:"node_ip" xorm:"node_ip"`
 	Sn              string `json:"sn"`
-	ClusterName     string `json:"clusterName"`
-	ModuleName      string `json:"moduleName"`
+	ClusterName     string `json:"cluster_name" xorm:"cluster_name"`
+	ModuleName      string `json:"module_name" xorm:"module_name"`
 	Reason          string `json:"reason"`
 	Restart         uint32 `json:"restart"`
 	Repair          uint32 `json:"repair"`
-	RepairTicketUrl string `json:"repairTicketUrl"`
-	FirstDate       string `json:"firstDate"`
-	LastDate        string `json:"lastDate"`
-	CreateTime      string `json:"createTime" xorm:"createTime created"`
-	UpdateTime      string `json:"updateTime" xorm:"updateTime updated"`
-	RecoveryMark    int64  `json:"recoveryMark"`
-	RecoveryQL      string `json:"recoveryQL"`
+	RepairTicketUrl string `json:"repair_ticket_url" xorm:"repair_ticket_url"`
+	FirstDate       string `json:"first_date" xorm:"first_date"`
+	CreateTime      string `json:"create_time" xorm:"create_time created"`
+	UpdateTime      string `json:"update_time" xorm:"update_time updated"`
+	RecoveryMark    int64  `json:"recovery_mark" xorm:"recovery_mark"`
+	RecoveryQL      string `json:"recovery_ql" xorm:"recovery_ql"`
 }
 
 type PodDataInfo struct {
@@ -77,24 +76,8 @@ func InitDataBase(mc *config.MysqlConfiguration) error {
 }
 
 func (n *NodeDataInfo) Add() (int64, error) {
-	exist, err := db.Exist(n)
-	if err != nil {
-		return 0, err
-	}
-	if exist {
-		return n.Id, nil
-	}
-
-	affected, err := db.Insert(n)
-	if err != nil {
-		return 0, err
-	}
-
-	if affected > 0 {
-		return n.Id, nil
-	}
-
-	return 0, fmt.Errorf("failed to insert record")
+	row, err := db.Insert(n)
+	return row, err
 }
 
 func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
@@ -125,4 +108,13 @@ func (n *NodeDataInfo) Update() (bool, error) {
 func (n *NodeDataInfo) Check() (bool, error) {
 	exist, err := db.Exist(n)
 	return exist, err
+}
+
+func (n *NodeDataInfo) AddOrGet() (int64, error) {
+	exist, _ := n.Check()
+	if exist {
+		return n.Id, nil
+	}
+	row, err := n.Add()
+	return row, err
 }

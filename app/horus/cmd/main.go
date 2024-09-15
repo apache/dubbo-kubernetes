@@ -36,7 +36,7 @@ var (
 )
 
 func main() {
-	flag.StringVar(&configFile, "configFile", "deploy/horus/horus.yaml", "horus config file")
+	flag.StringVar(&configFile, "configFile", "../../deploy/horus/horus.yaml", "horus config file")
 	flag.StringVar(&address, "address", "0.0.0.0:38089", "horus address")
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
