@@ -67,6 +67,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.3
+	github.com/prometheus/common v0.55.0
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/slok/go-http-metrics v0.11.0
 	github.com/spf13/cobra v1.8.0
@@ -306,7 +307,6 @@ require (
 	github.com/polarismesh/polaris-go v1.3.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect

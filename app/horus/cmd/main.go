@@ -20,6 +20,7 @@ import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/horuser"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/ticker"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog"
@@ -56,6 +57,7 @@ func main() {
 	} else {
 		klog.Infof("horus db initial success.")
 	}
+	horus := horuser.NewHoruser(c)
 	group, stopChan := setupStopChanWithContext()
 	ctx, cancel := context.WithCancel(context.Background())
 	group.Add(func() error {
@@ -84,6 +86,14 @@ func main() {
 		err := ticker.Manager(ctx)
 		if err != nil {
 			klog.Errorf("horus ticker start failed error:%v", err)
+		}
+		return nil
+	})
+	group.Add(func() error {
+		klog.Info("horus recovery manager start success.")
+		err := horus.RecoveryManager(ctx)
+		if err != nil {
+			klog.Errorf("horus recovery manager start failed error:%v", err)
 		}
 		return nil
 	})
