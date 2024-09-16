@@ -67,6 +67,7 @@ func (h *Horuser) recoveryNodes(n *db.NodeDataInfo) {
 		return
 	}
 	if len(vecs) != 2 {
+		klog.Errorf("%v", vecs)
 		return
 	}
 	klog.Infof("recoveryNodes check success.")

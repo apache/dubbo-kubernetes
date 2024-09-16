@@ -67,5 +67,4 @@ func k8sBuildConfig(kubeconfig string) (*rest.Config, error) {
 
 func (h *Horuser) GetK8sContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(h.cc.KubeTimeSecond)*time.Second)
-
 }
