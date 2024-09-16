@@ -45,6 +45,6 @@ type SlackConfiguration struct {
 type RecoveryConfiguration struct {
 	DayNumber           int                    `yaml:"dayNumber"`
 	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
-	PromQueryTimeSecond int                    `yaml:"promQueryTimeSecond"`
+	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 }

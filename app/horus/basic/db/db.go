@@ -121,7 +121,12 @@ func (n *NodeDataInfo) AddOrGet() (int64, error) {
 
 func GetRecoveryNodeDataInfoDate(day int) ([]*NodeDataInfo, error) {
 	var ndi []*NodeDataInfo
-	session := db.Where(fmt.Sprintf("first_date > DATE_SUB(CURDATE(),INTERVAL %d DAY)", day))
+	session := db.Where(fmt.Sprintf("recovery_mark = 0 AND first_date > DATE_SUB(CURDATE(), INTERVAL %d DAY)", day))
 	err := session.Find(&ndi)
 	return nil, err
+}
+
+func (n *NodeDataInfo) RecoveryMarker() (bool, error) {
+	n.RecoveryMark = 1
+	return n.Update()
 }
