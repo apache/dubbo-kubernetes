@@ -41,6 +41,30 @@ nodeRecovery:
   promQueryTimeSecond: 5
   dingTalk:
     webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d8f81471e"
-    title: "【项目处理通知】"
+    title: "【Horus 通知】"
+    atMobiles:
+      - 15000000
+
+customModular:
+  cordonDailyLimit:
+    node_filesystem_readonly: 1
+    node_arp_entries: 1
+  checkQL:
+    filesystem_readonly: |-
+      node_filesystem_readonly{mountpoint="/"} == 1
+    arp_entries: |-
+      node_arp_entries{device="ens160"} > 2
+  recoveryQL:
+    filesystem_readonly: |-
+      node_filesystem_readonly{mountpoint="/"} == 0
+    arp_entries: |-
+      node_arp_entries{device="ens160"} < 2
+  checkIntervalSecond: 60
+  promQueryTimeSecond: 5
+  kubeMultiple:
+    cluster: config.1
+  dingTalk:
+    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d8f81471e"
+    title: "【Horus 通知】"
     atMobiles:
       - 15000000
