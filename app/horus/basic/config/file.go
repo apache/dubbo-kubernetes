@@ -24,6 +24,7 @@ type Config struct {
 	KubeMultiple   map[string]string      `yaml:"kubeMultiple"`
 	PromMultiple   map[string]string      `yaml:"promMultiple"`
 	NodeRecovery   *RecoveryConfiguration `yaml:"nodeRecovery"`
+	CustomModular  *ModularConfiguration  `yaml:"customModular"`
 }
 
 type MysqlConfiguration struct {
@@ -46,5 +47,15 @@ type RecoveryConfiguration struct {
 	DayNumber           int                    `yaml:"dayNumber"`
 	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
+	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
+}
+
+type ModularConfiguration struct {
+	CordonDailyLimit    map[string]int         `yaml:"cordonDailyLimit"`
+	CheckQL             map[string]string      `yaml:"checkQL"`
+	RecoveryQL          map[string]string      `yaml:"recoveryQL"`
+	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
+	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
+	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 }
