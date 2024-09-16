@@ -199,6 +199,8 @@ require (
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
+	github.com/gammazero/deque v0.2.0 // indirect
+	github.com/gammazero/workerpool v1.1.3 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell/v2 v2.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect

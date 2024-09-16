@@ -40,6 +40,7 @@ nodeRecovery:
   checkIntervalSecond: 60
   promQueryTimeSecond: 5
   dingTalk:
-    webhookUrl: ~
-    title: ~
-    atMobiles: ~
+    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d8f81471e"
+    title: "【项目处理通知】"
+    atMobiles:
+      - 15000000
