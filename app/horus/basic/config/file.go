@@ -44,6 +44,7 @@ type SlackConfiguration struct {
 }
 
 type RecoveryConfiguration struct {
+	Enabled             bool                   `yaml:"enabled"`
 	DayNumber           int                    `yaml:"dayNumber"`
 	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
@@ -51,6 +52,7 @@ type RecoveryConfiguration struct {
 }
 
 type ModularConfiguration struct {
+	Enabled             bool                   `yaml:"enabled"`
 	CordonDailyLimit    map[string]int         `yaml:"cordonDailyLimit"`
 	CheckQL             map[string]string      `yaml:"checkQL"`
 	RecoveryQL          map[string]string      `yaml:"recoveryQL"`

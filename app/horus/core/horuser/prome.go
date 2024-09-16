@@ -34,6 +34,7 @@ func (h *Horuser) InstantQuery(address, ql, clusterName string, timeWindowsSecon
 	if promClient == "" && address == "" {
 		klog.Errorf("prometheus get PromMultiple empty")
 		klog.Infof("clusterName:%v ql:%v", clusterName, ql)
+		return nil, err
 	}
 
 	apiV1 := prometheusV1.NewAPI(client)

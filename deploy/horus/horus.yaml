@@ -20,7 +20,7 @@ kubeTimeSecond: 5
 mysql:
   name: horus
   addr: "root:root@tcp(127.0.0.1:3306)/horus?charset=utf8&parseTime=True"
-  debug: true
+  debug: false
 
 dingTalk:
   webhookUrl: ~
@@ -35,36 +35,41 @@ slack:
 kubeMultiple:
   cluster: config.1
 
+promMultiple:
+  cluster: http://192.168.15.128:32608
+
 nodeRecovery:
+  enabled: false
   dayNumber: 1
-  checkIntervalSecond: 60
-  promQueryTimeSecond: 5
+  checkIntervalSecond: 5
+  promQueryTimeSecond: 10
   dingTalk:
-    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d8f81471e"
-    title: "【Horus 通知】"
+    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
+    title: "horus 通知"
     atMobiles:
       - 15000000
 
 customModular:
+  enabled: true
   cordonDailyLimit:
-    node_filesystem_readonly: 1
-    node_arp_entries: 1
+    filesystem_readonly: 5
+    arp_entries: 5
   checkQL:
     filesystem_readonly: |-
-      node_filesystem_readonly{mountpoint="/"} == 1
+      node_filesystem_readonly{mountpoint="/",node="%s"} == 1
     arp_entries: |-
-      node_arp_entries{device="ens160"} > 2
+      node_arp_entries{device="ens160",node="master"} > 2
   recoveryQL:
     filesystem_readonly: |-
-      node_filesystem_readonly{mountpoint="/"} == 0
+      node_filesystem_readonly{mountpoint="/",node="%s"} == 0
     arp_entries: |-
-      node_arp_entries{device="ens160"} < 2
-  checkIntervalSecond: 60
-  promQueryTimeSecond: 5
+      node_arp_entries{device="ens160",node="%s"} < 2
+  checkIntervalSecond: 5
+  promQueryTimeSecond: 10
   kubeMultiple:
     cluster: config.1
   dingTalk:
-    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d8f81471e"
-    title: "【Horus 通知】"
+    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
+    title: "horus 通知"
     atMobiles:
       - 15000000

@@ -44,7 +44,7 @@ func main() {
 
 	c, err := config.LoadFile(configFile)
 	if err != nil {
-		klog.Errorf("load config file failed err:%+v", c)
+		klog.Errorf("load config file failed err:%+v", err)
 		return
 	} else {
 		klog.Infof("load config file success.")
@@ -67,6 +67,14 @@ func main() {
 				cancel()
 				return nil
 			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+	group.Add(func() error {
+		for {
+			select {
+			case <-stopChan:
 				cancel()
 				return nil
 			}
@@ -74,7 +82,7 @@ func main() {
 	})
 	group.Add(func() error {
 		http.Handle("/metrics", promhttp.Handler())
-		srv := http.Server{Addr: address}
+		srv := http.Server{Addr: c.Address}
 		err := srv.ListenAndServe()
 		if err != nil {
 			klog.Errorf("horus metrics err:%v", err)
@@ -90,18 +98,22 @@ func main() {
 		return nil
 	})
 	group.Add(func() error {
-		klog.Info("horus recovery manager start success.")
-		err := horus.RecoveryManager(ctx)
-		if err != nil {
-			klog.Errorf("horus recovery manager start failed error:%v", err)
+		if c.NodeRecovery.Enabled {
+			klog.Info("horus recovery manager start success.")
+			err := horus.RecoveryManager(ctx)
+			if err != nil {
+				klog.Errorf("horus recovery manager start failed error:%v", err)
+			}
 		}
 		return nil
 	})
 	group.Add(func() error {
-		klog.Info("horus customize modular manager start success.")
-		err := horus.CustomizeModularManager(ctx)
-		if err != nil {
-			klog.Errorf("horus customize modular manager start failed error:%v", err)
+		if c.CustomModular.Enabled {
+			klog.Info("horus customize modular manager start success.")
+			err := horus.CustomizeModularManager(ctx)
+			if err != nil {
+				klog.Errorf("horus customize modular manager start failed error:%v", err)
+			}
 		}
 		return nil
 	})
@@ -116,10 +128,7 @@ func (g *WaitGroup) Add(f func() error) {
 	g.wg.Add(1)
 	go func() {
 		defer g.wg.Done()
-		err := f()
-		if err != nil {
-			return
-		}
+		_ = f()
 	}()
 }
 
@@ -131,11 +140,13 @@ func setupStopChanWithContext() (*WaitGroup, <-chan struct{}) {
 	stopChan := make(chan struct{})
 	SignalChan := make(chan os.Signal, 1)
 	signal.Notify(SignalChan, syscall.SIGTERM, syscall.SIGQUIT)
-	g := WaitGroup{}
+	g := &WaitGroup{}
 	g.Add(func() error {
-		<-stopChan
-		close(stopChan)
+		select {
+		case <-SignalChan:
+			close(stopChan)
+		}
 		return nil
 	})
-	return &g, stopChan
+	return g, stopChan
 }

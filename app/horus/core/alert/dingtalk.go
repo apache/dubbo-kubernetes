@@ -24,7 +24,7 @@ import (
 	"net/http"
 )
 
-const DingTalkTitle = "项目组"
+const DingTalkTitle = "horus 通知"
 
 type T struct {
 	At struct {

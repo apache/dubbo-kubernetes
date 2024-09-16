@@ -42,6 +42,7 @@ func (h *Horuser) CustomizeModular(ctx context.Context) {
 		wg.Add(1)
 		go func(clusterName, addr string) {
 			defer wg.Done()
+			h.CustomizeModularOnCluster(clusterName, addr)
 		}(clusterName, addr)
 	}
 	wg.Wait()
@@ -53,11 +54,12 @@ func (h *Horuser) CustomizeModularOnCluster(clusterName, addr string) {
 		vecs, err := h.InstantQuery(addr, ql, clusterName, h.cc.CustomModular.PromQueryTimeSecond)
 		if err != nil {
 			klog.Errorf("CustomizeModularOnCluster InstantQuery err:%v", err)
-			klog.Infof("clusterName:%vec ql: %v", clusterName, ql)
+			klog.Infof("clusterName:%v ql: %v", clusterName, ql)
 			return
 		}
 		count := len(vecs)
 		for index, vec := range vecs {
+			vec := vec
 			labelMap := vec.Metric
 			nodeName := string(labelMap["node"])
 			if nodeName == "" {
@@ -67,7 +69,8 @@ func (h *Horuser) CustomizeModularOnCluster(clusterName, addr string) {
 			}
 			ip := string(labelMap["instance"])
 			value := vec.Value.String()
-			klog.Infof("RunCommonModuleOnCluster.QueryRes.print[clusterName:%v][moduleName:%v][%d][nodeName:%v][value:%v][count:%v]", clusterName, moduleName, index+1, nodeName, value, count)
+			klog.Infof("CustomizeModularOnCluster Query result clusterName:%v moduleName:%v %d nodeName:%v value:%v count:%v",
+				clusterName, moduleName, index+1, nodeName, value, count)
 			h.CustomizeModularNodes(clusterName, moduleName, nodeName, ip)
 		}
 	}
@@ -77,7 +80,6 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 	today := time.Now().Format("2006-01-02")
 
 	recoveryQL := h.cc.CustomModular.RecoveryQL[moduleName]
-	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
 
 	data, err := db.GetDailyLimitNodeDataInfoDate(today, moduleName, clusterName)
 	if err != nil {
@@ -85,13 +87,12 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		return
 	}
 	klog.Infof("%v", data)
+
+	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
 	if len(data) > dailyLimit {
 		msg := fmt.Sprintf("【日期:%v】 【集群:%v\n】 【模块今日 Cordon 节点数: %v】\n 【已达到今日上限: %v】\n [节点:%v]",
 			data, clusterName, moduleName, dailyLimit, nodeName)
-		klog.Infof(msg)
-		klog.Infof("Attempting to send DingTalk message (limit exceeded): %s", msg)
 		alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
-		klog.Infof("DingTalk message sent (limit exceeded)")
 		return
 	}
 
@@ -113,15 +114,11 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 	res := "success"
 	if err != nil {
 		res = fmt.Sprintf("failed:%v", err)
-		klog.Errorf("Cordon failed:%v", err)
-	}
-	if err != nil {
-		res = fmt.Sprintf("failed:%v", err)
+		klog.Errorf("Cordon failed:%v", res)
 	}
 
 	msg := fmt.Sprintf("【集群:%v】\n 【%s 插件 Cordon 节点:%v】\n 【结果: %v】\n 【今日操作次数:%v】",
-		clusterName, moduleName, nodeName, res, len(today)+1)
-	klog.Infof(msg)
+		clusterName, moduleName, nodeName, res, len(data)+1)
 
 	klog.Infof("Attempting to send DingTalk message: %s", msg)
 	alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
@@ -130,7 +127,7 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 	_, err = write.AddOrGet()
 	if err != nil {
 		klog.Errorf("CustomizeModularNodes AddOrGet err:%v", err)
-		klog.Infof("moduleName:%v nodeName:%v", moduleName, nodeName)
+		klog.Infof("moduleName:%v nodeName:%v", moduleName, write.NodeName)
 	}
-	klog.Infof("CustomizeModularNodes AddOrGet success moduleName:%v nodeName:%v", moduleName, nodeName)
+	klog.Infof("CustomizeModularNodes AddOrGet success moduleName:%v nodeName:%v", moduleName, write.NodeName)
 }
