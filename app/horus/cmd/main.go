@@ -97,6 +97,14 @@ func main() {
 		}
 		return nil
 	})
+	group.Add(func() error {
+		klog.Info("horus customize modular manager start success.")
+		err := horus.CustomizeModularManager(ctx)
+		if err != nil {
+			klog.Errorf("horus customize modular manager start failed error:%v", err)
+		}
+		return nil
+	})
 	group.Wait()
 }
 
