@@ -25,21 +25,22 @@ import (
 )
 
 type NodeDataInfo struct {
-	Id              int64  `json:"id"`
-	NodeName        string `json:"node_name" xorm:"node_name"`
-	NodeIP          string `json:"node_ip" xorm:"node_ip"`
-	Sn              string `json:"sn"`
-	ClusterName     string `json:"cluster_name" xorm:"cluster_name"`
-	ModuleName      string `json:"module_name" xorm:"module_name"`
-	Reason          string `json:"reason"`
-	Restart         uint32 `json:"restart"`
-	Repair          uint32 `json:"repair"`
-	RepairTicketUrl string `json:"repair_ticket_url" xorm:"repair_ticket_url"`
-	FirstDate       string `json:"first_date" xorm:"first_date"`
-	CreateTime      string `json:"create_time" xorm:"create_time created"`
-	UpdateTime      string `json:"update_time" xorm:"update_time updated"`
-	RecoveryMark    int64  `json:"recovery_mark" xorm:"recovery_mark"`
-	RecoveryQL      string `json:"recovery_ql" xorm:"recovery_ql"`
+	Id                       int64             `json:"id"`
+	NodeName                 string            `json:"node_name" xorm:"node_name"`
+	NodeIP                   string            `json:"node_ip" xorm:"node_ip"`
+	Sn                       string            `json:"sn"`
+	ClusterName              string            `json:"cluster_name" xorm:"cluster_name"`
+	ModuleName               string            `json:"module_name" xorm:"module_name"`
+	Reason                   string            `json:"reason"`
+	Restart                  uint32            `json:"restart"`
+	Repair                   uint32            `json:"repair"`
+	RepairTicketUrl          string            `json:"repair_ticket_url" xorm:"repair_ticket_url"`
+	FirstDate                string            `json:"first_date" xorm:"first_date"`
+	CreateTime               string            `json:"create_time" xorm:"create_time created"`
+	UpdateTime               string            `json:"update_time" xorm:"update_time updated"`
+	RecoveryMark             int64             `json:"recovery_mark" xorm:"recovery_mark"`
+	RecoveryQL               string            `json:"recovery_ql" xorm:"recovery_ql"`
+	CustomizeRecoveryModular map[string]string `xorm:"-"`
 }
 
 type PodDataInfo struct {
@@ -123,7 +124,14 @@ func GetRecoveryNodeDataInfoDate(day int) ([]*NodeDataInfo, error) {
 	var ndi []*NodeDataInfo
 	session := db.Where(fmt.Sprintf("recovery_mark = 0 AND first_date > DATE_SUB(CURDATE(), INTERVAL %d DAY)", day))
 	err := session.Find(&ndi)
-	return nil, err
+	return ndi, err
+}
+
+func GetDailyLimitNodeDataInfoDate(day, module, cluster string) ([]*NodeDataInfo, error) {
+	var ndi []*NodeDataInfo
+	session := db.Where(fmt.Sprintf("DATE(first_date)='%s' AND module_name='%s' AND cluster_name='%s", day, module, cluster))
+	err := session.Find(&ndi)
+	return ndi, err
 }
 
 func (n *NodeDataInfo) RecoveryMarker() (bool, error) {
