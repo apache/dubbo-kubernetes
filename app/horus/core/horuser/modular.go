@@ -50,7 +50,8 @@ func (h *Horuser) CustomizeModular(ctx context.Context) {
 
 func (h *Horuser) CustomizeModularOnCluster(clusterName, addr string) {
 	klog.Infof("CustomizeModularOnCluster Start clusterName:%v", clusterName)
-	for moduleName, ql := range h.cc.CustomModular.CheckQL {
+	for moduleName, checkql := range h.cc.CustomModular.CheckQL {
+		ql := checkql
 		vecs, err := h.InstantQuery(addr, ql, clusterName, h.cc.CustomModular.PromQueryTimeSecond)
 		if err != nil {
 			klog.Errorf("CustomizeModularOnCluster InstantQuery err:%v", err)
@@ -79,7 +80,7 @@ func (h *Horuser) CustomizeModularOnCluster(clusterName, addr string) {
 func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip string) {
 	today := time.Now().Format("2006-01-02")
 
-	recoveryQL := h.cc.CustomModular.RecoveryQL[moduleName]
+	recoveryQL := fmt.Sprintf(h.cc.CustomModular.RecoveryQL[moduleName], nodeName)
 
 	data, err := db.GetDailyLimitNodeDataInfoDate(today, moduleName, clusterName)
 	if err != nil {
@@ -90,7 +91,7 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 
 	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
 	if len(data) > dailyLimit {
-		msg := fmt.Sprintf("【日期:%v】 【集群:%v\n】 【模块今日 Cordon 节点数: %v】\n 【已达到今日上限: %v】\n [节点:%v]",
+		msg := fmt.Sprintf("【日期:%v】 【集群:%v\n】 【模块今日 Cordon 节点数: %v】\n 【已达到今日上限: %v】\n 【节点:%v】",
 			data, clusterName, moduleName, dailyLimit, nodeName)
 		alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
 		return

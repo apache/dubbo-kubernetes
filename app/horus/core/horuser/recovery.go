@@ -60,7 +60,6 @@ func (h *Horuser) recoveryNodes(n *db.NodeDataInfo) {
 		klog.Infof("clusterName:%v nodeName:%v", n.ClusterName, n.NodeName)
 		return
 	}
-
 	vecs, err := h.InstantQuery(addr, n.RecoveryQL, n.ClusterName, h.cc.NodeRecovery.PromQueryTimeSecond)
 	if err != nil {
 		klog.Errorf("recoveryNodes InstantQuery err:%v ql:%v", err, n.RecoveryQL)
