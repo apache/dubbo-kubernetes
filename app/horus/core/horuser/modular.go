@@ -111,13 +111,13 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		return
 	}
 	err = h.Cordon(nodeName, clusterName)
-	res := "success"
+	res := "Success"
 	if err != nil {
 		res = fmt.Sprintf("failed:%v", err)
 		klog.Errorf("Cordon failed:%v", res)
 	}
 
-	msg := fmt.Sprintf("【集群:%v】\n 【%s 插件 Cordon 节点:%v】\n 【结果: %v】\n 【今日操作次数:%v】",
+	msg := fmt.Sprintf("【集群:%v】\n 【%s 插件 Cordon 节点:%v】\n 【结果: %v】\n 【今日操作次数:%v",
 		clusterName, moduleName, nodeName, res, len(data)+1)
 
 	klog.Infof("Attempting to send DingTalk message: %s", msg)

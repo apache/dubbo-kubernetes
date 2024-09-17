@@ -60,25 +60,29 @@ func (h *Horuser) recoveryNodes(n *db.NodeDataInfo) {
 		klog.Infof("clusterName:%v nodeName:%v", n.ClusterName, n.NodeName)
 		return
 	}
-	ql := fmt.Sprintf(n.RecoveryQL, n.NodeName)
-	vecs, err := h.InstantQuery(addr, ql, n.ClusterName, h.cc.NodeRecovery.PromQueryTimeSecond)
+
+	vecs, err := h.InstantQuery(addr, n.RecoveryQL, n.ClusterName, h.cc.NodeRecovery.PromQueryTimeSecond)
 	if err != nil {
-		klog.Errorf("recoveryNodes instantQuery err:%v ql:%v", err, ql)
+		klog.Errorf("recoveryNodes InstantQuery err:%v ql:%v", err, n.RecoveryQL)
 		return
 	}
-	if len(vecs) != 2 {
-		klog.Errorf("%v", vecs)
+	if len(vecs) != 1 {
+		klog.Infof("Expected 1 result, but got: %d", len(vecs))
+		return
+	}
+	if err != nil {
+		klog.Errorf("recoveryNodes instantQuery err:%v ql:%v", err, n.RecoveryQL)
 		return
 	}
 	klog.Infof("recoveryNodes check success.")
 
 	err = h.UnCordon(n.NodeName, n.ClusterName)
-	res := "success"
+	res := "Success"
 	if err != nil {
 		res = fmt.Sprintf("failed:%v", err)
 	}
 	msg := fmt.Sprintf("【自愈检查 %v: 恢复节点调度】【集群: %v】\n【节点: %v】【日期: %v】\n"+
-		"【自愈检查 QL: %v】", res, n.ClusterName, n.NodeName, n.CreateTime, ql)
+		"【自愈检查 QL: %v", res, n.ClusterName, n.NodeName, n.CreateTime, n.RecoveryQL)
 	alert.DingTalkSend(h.cc.NodeRecovery.DingTalk, msg)
 
 	pass, err := n.RecoveryMarker()
