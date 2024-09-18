@@ -21,7 +21,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (h *Horuser) Cordon(nodeName, clusterName string) (err error) {
+func (h *Horuser) Cordon(nodeName, clusterName, moduleName string) (err error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
 		klog.Errorf("node Cordon kubeClient by clusterName empty.")
@@ -36,9 +36,13 @@ func (h *Horuser) Cordon(nodeName, clusterName string) (err error) {
 		klog.Errorf("node Cordon get err nodeName:%v clusterName:%v", nodeName, clusterName)
 		return err
 	}
+	annotations := node.Annotations
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations["dubbo.apache.org/disable-by"] = "horus"
 
 	node.Spec.Unschedulable = true
-
 	ctxSecond, cancelSecond := h.GetK8sContext()
 	defer cancelSecond()
 	node, err = kubeClient.CoreV1().Nodes().Update(ctxSecond, node, v1.UpdateOptions{})

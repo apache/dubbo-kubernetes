@@ -53,7 +53,7 @@ func (h *Horuser) recoveryCheck(ctx context.Context) {
 	wp.StopWait()
 }
 
-func (h *Horuser) recoveryNodes(n *db.NodeDataInfo) {
+func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 	addr := h.cc.PromMultiple[n.ClusterName]
 	if addr == "" {
 		klog.Errorf("recoveryNodes PromMultiple get addr empty.")

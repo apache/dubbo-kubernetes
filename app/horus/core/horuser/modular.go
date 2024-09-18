@@ -81,22 +81,13 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 	today := time.Now().Format("2006-01-02")
 
 	recoveryQL := fmt.Sprintf(h.cc.CustomModular.RecoveryQL[moduleName], nodeName)
-
 	data, err := db.GetDailyLimitNodeDataInfoDate(today, moduleName, clusterName)
 	if err != nil {
 		klog.Errorf("CustomizeModularNodes GetDailyLimitNodeDataInfoDate err:%v", err)
 		return
 	}
-	klog.Infof("%v", data)
-
-	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
-	if len(data) > dailyLimit {
-		msg := fmt.Sprintf("【日期:%v】 【集群:%v\n】 【今日 Cordon 节点数: %v】\n 【已达到今日上限: %v】\n 【节点:%v】",
-			data, clusterName, moduleName, dailyLimit, nodeName)
-		alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
-		return
-	}
-
+	err = h.Cordon(nodeName, clusterName, moduleName)
+	
 	write := db.NodeDataInfo{
 		NodeName:    nodeName,
 		NodeIP:      ip,
@@ -106,29 +97,35 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		FirstDate:   today,
 		RecoveryQL:  recoveryQL,
 	}
+
 	pass, _ := write.Check()
 	if pass {
 		klog.Infof("CustomizeModularNodes already existing clusterName:%v nodeName:%v moduleName:%v", clusterName, nodeName, moduleName)
 		return
 	}
-	err = h.Cordon(nodeName, clusterName)
-	res := "Success"
-	if err != nil {
-		res = fmt.Sprintf("failed:%v", err)
-		klog.Errorf("Cordon failed:%v", res)
-	}
-
-	msg := fmt.Sprintf("\n【集群:%v】\n【发现 %s 异常已禁止调度】\n【已禁止调度节点:%v】\n 【处理结果: %v】\n 【今日操作次数:%v】\n",
-		clusterName, moduleName, nodeName, res, len(data)+1)
-
-	klog.Infof("Attempting to send DingTalk message: %s", msg)
-	alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
-	klog.Infof("DingTalk message sent")
 
 	_, err = write.AddOrGet()
 	if err != nil {
 		klog.Errorf("CustomizeModularNodes AddOrGet err:%v", err)
 		klog.Infof("moduleName:%v nodeName:%v", moduleName, write.NodeName)
 	}
+
+	res := "Success"
+	if err != nil {
+		res = fmt.Sprintf("failed:%v", err)
+		klog.Errorf("Cordon failed:%v", res)
+	}
+	msg := fmt.Sprintf("\n【集群:%v】\n【发现 %s 异常已禁止调度】\n【已禁止调度节点:%v】\n 【处理结果: %v】\n 【今日操作次数:%v】\n",
+		clusterName, moduleName, nodeName, res, len(data)+1)
+	alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
+
+	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
+	if len(data) > dailyLimit {
+		msg := fmt.Sprintf("【日期:%v】 【集群:%v\n】 【今日 Cordon 节点数: %v】\n 【已达到今日上限: %v】\n 【节点:%v】",
+			data, clusterName, len(data), dailyLimit, nodeName)
+		alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
+		return
+	}
+
 	klog.Infof("CustomizeModularNodes AddOrGet success moduleName:%v nodeName:%v", moduleName, write.NodeName)
 }
