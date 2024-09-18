@@ -119,16 +119,16 @@ func (n *NodeDataInfo) AddOrGet() (int64, error) {
 	return row, err
 }
 
-func GetRecoveryNodeDataInfoDate(day int) ([]*NodeDataInfo, error) {
-	var ndi []*NodeDataInfo
+func GetRecoveryNodeDataInfoDate(day int) ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
 	session := db.Where(fmt.Sprintf("recovery_mark = 0 AND first_date > DATE_SUB(CURDATE(), INTERVAL %d DAY)", day))
 	err := session.Find(&ndi)
 	return ndi, err
 }
 
-func GetDailyLimitNodeDataInfoDate(day, module, cluster string) ([]*NodeDataInfo, error) {
-	var ndi []*NodeDataInfo
-	session := db.Where(fmt.Sprintf("DATE(first_date) = '%s' AND module_name = '%s' AND cluster_name = '%s'", day, module, cluster))
+func GetDailyLimitNodeDataInfoDate(day, module, cluster string) ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
+	session := db.Where("DATE(first_date) = ? AND module_name = ? AND cluster_name = ?", day, module, cluster)
 	err := session.Find(&ndi)
 	return ndi, err
 }

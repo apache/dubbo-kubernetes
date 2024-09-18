@@ -50,9 +50,9 @@ nodeRecovery:
       - 15000000
 
 customModular:
-  enabled: true
+  enabled: false
   cordonDailyLimit:
-    filesystem_readonly: 1
+    filesystem_readonly: 3
   checkQL:
     filesystem_readonly: |-
       node_filesystem_readonly{mountpoint="/"} != 1
