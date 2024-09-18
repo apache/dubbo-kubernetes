@@ -36,7 +36,7 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.128:30201
+  cluster: http://192.168.15.128:31160
 
 nodeRecovery:
   enabled: true
@@ -52,18 +52,13 @@ nodeRecovery:
 customModular:
   enabled: true
   cordonDailyLimit:
-    filesystem_readonly: 5
-    arp_entries: 5
+    filesystem_readonly: 1
   checkQL:
     filesystem_readonly: |-
       node_filesystem_readonly{mountpoint="/"} != 1
-    arp_entries: |-
-      node_arp_entries{device="ens160"} > 2
   recoveryQL:
     filesystem_readonly: |-
       node_filesystem_readonly{mountpoint="/",node="%s"} == 0
-    arp_entries: |-
-      node_arp_entries{device="ens160",node="%s"} > 2
   checkIntervalSecond: 5
   promQueryTimeSecond: 60
   kubeMultiple:

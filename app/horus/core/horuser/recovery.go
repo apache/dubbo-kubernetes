@@ -80,8 +80,7 @@ func (h *Horuser) recoveryNodes(n *db.NodeDataInfo) {
 	if err != nil {
 		res = fmt.Sprintf("failed:%v", err)
 	}
-	msg := fmt.Sprintf("【自愈检查 %v: 恢复节点调度】【集群: %v】\n【节点: %v】【日期: %v】\n"+
-		"【自愈检查 QL: %v", res, n.ClusterName, n.NodeName, n.CreateTime, n.RecoveryQL)
+	msg := fmt.Sprintf("\n【集群: %v】\n【异常节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
 	alert.DingTalkSend(h.cc.NodeRecovery.DingTalk, msg)
 
 	pass, err := n.RecoveryMarker()
