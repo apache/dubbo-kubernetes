@@ -31,4 +31,4 @@ maintainers:
 sources:
 - https://github.com/apache/dubbo-kubernetes
 - https://dubbo.apache.org
-version: 3.2.13
+version: 3.3.0
