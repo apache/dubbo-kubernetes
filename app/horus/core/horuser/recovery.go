@@ -82,6 +82,7 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 	}
 	msg := fmt.Sprintf("\n【集群: %v】\n【异常节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
 	alert.DingTalkSend(h.cc.NodeRecovery.DingTalk, msg)
+	alert.SlackSend(h.cc.CustomModular.Slack, msg)
 
 	pass, err := n.RecoveryMarker()
 	klog.Infof("RecoveryMarker result pass:%v err:%v", pass, err)

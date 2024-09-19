@@ -87,7 +87,7 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		return
 	}
 	err = h.Cordon(nodeName, clusterName, moduleName)
-	
+
 	write := db.NodeDataInfo{
 		NodeName:    nodeName,
 		NodeIP:      ip,
@@ -118,12 +118,14 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 	msg := fmt.Sprintf("\n【集群:%v】\n【发现 %s 异常已禁止调度】\n【已禁止调度节点:%v】\n 【处理结果: %v】\n 【今日操作次数:%v】\n",
 		clusterName, moduleName, nodeName, res, len(data)+1)
 	alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
+	alert.SlackSend(h.cc.CustomModular.Slack, msg)
 
 	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
 	if len(data) > dailyLimit {
 		msg := fmt.Sprintf("【日期:%v】 【集群:%v\n】 【今日 Cordon 节点数: %v】\n 【已达到今日上限: %v】\n 【节点:%v】",
 			data, clusterName, len(data), dailyLimit, nodeName)
 		alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
+		alert.SlackSend(h.cc.CustomModular.Slack, msg)
 		return
 	}
 

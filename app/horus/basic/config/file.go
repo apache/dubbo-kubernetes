@@ -49,6 +49,7 @@ type RecoveryConfiguration struct {
 	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
+	Slack               *SlackConfiguration    `yaml:"slack"`
 }
 
 type ModularConfiguration struct {
@@ -60,4 +61,5 @@ type ModularConfiguration struct {
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
+	Slack               *SlackConfiguration    `yaml:"slack"`
 }

@@ -48,11 +48,13 @@ nodeRecovery:
     title: "horus 通知"
     atMobiles:
       - 15000000
+  slack:
+    webhookUrl: "https://hooks.slack.com/services/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"
 
 customModular:
-  enabled: false
+  enabled: true
   cordonDailyLimit:
-    filesystem_readonly: 3
+    filesystem_readonly: 1
   checkQL:
     filesystem_readonly: |-
       node_filesystem_readonly{mountpoint="/"} != 1
@@ -68,3 +70,5 @@ customModular:
     title: "horus 通知"
     atMobiles:
       - 15000000
+  slack:
+    webhookUrl: "https://hooks.slack.com/services/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"
