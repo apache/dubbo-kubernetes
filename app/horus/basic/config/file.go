@@ -25,6 +25,7 @@ type Config struct {
 	PromMultiple   map[string]string      `yaml:"promMultiple"`
 	NodeRecovery   *RecoveryConfiguration `yaml:"nodeRecovery"`
 	CustomModular  *ModularConfiguration  `yaml:"customModular"`
+	NodeDownTime   *DowntimeConfiguration `yaml:"nodeDownTime"`
 }
 
 type MysqlConfiguration struct {
@@ -62,4 +63,12 @@ type ModularConfiguration struct {
 	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 	Slack               *SlackConfiguration    `yaml:"slack"`
+}
+
+type DowntimeConfiguration struct {
+	Enabled             bool                   `yaml:"enabled"`
+	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
+	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
+	CheckQL             []string               `yaml:"checkQL"`
+	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 }
