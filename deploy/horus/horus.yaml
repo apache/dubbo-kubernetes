@@ -72,3 +72,14 @@ customModular:
       - 15000000
   slack:
     webhookUrl: "https://hooks.slack.com/services/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"
+
+nodeDownTime:
+  enabled: false
+  checkIntervalSecond: 5
+  promQueryTimeSecond: 60
+  checkQL:
+  dingTalk:
+    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
+    title: "horus 通知"
+    atMobiles:
+      - 15000000
