@@ -71,5 +71,6 @@ type DowntimeConfiguration struct {
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	CheckQL             []string               `yaml:"checkQL"`
+	NodeNameToIPs       string                 `yaml:"nodeNameToIPs"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 }
