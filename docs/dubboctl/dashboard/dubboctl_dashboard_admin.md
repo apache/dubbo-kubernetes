@@ -27,4 +27,4 @@ dubboctl dashboard admin
 
 ### SEE ALSO
 
-* [dubboctl dashboard](dubboctl_dashboard.md) - Commands help user to open control plane components dashboards directly.
+* [dubboctl dashboard](../dubboctl_dashboard.md) - Commands help user to open control plane components dashboards directly.

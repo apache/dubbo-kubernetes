@@ -19,4 +19,4 @@ Build an application container locally without deploying
 
 ### SEE ALSO
 
-* [dubboctl](dubboctl.md) - Management tool for dubbo-kubernetes
+* [dubboctl](reference/dubboctl.md) - Management tool for dubbo-kubernetes
