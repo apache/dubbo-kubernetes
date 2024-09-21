@@ -39,4 +39,4 @@ Deploy an application
 
 ### SEE ALSO
 
-* [dubboctl](dubboctl.md) - Management tool for dubbo-kubernetes
+* [dubboctl](reference/dubboctl.md) - Management tool for dubbo-kubernetes

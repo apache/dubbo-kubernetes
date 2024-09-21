@@ -78,4 +78,4 @@ Then you can use dubboctl create -l java -t ruiyi/dubbo
 
 ### SEE ALSO
 
-* [dubboctl](dubboctl.md) - Management tool for dubbo-kubernetes
+* [dubboctl](reference/dubboctl.md) - Management tool for dubbo-kubernetes

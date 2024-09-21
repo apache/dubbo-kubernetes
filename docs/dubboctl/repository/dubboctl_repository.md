@@ -129,7 +129,7 @@ Flags:
 
 ### SEE ALSO
 
-* [dubboctl](dubboctl.md) - Management tool for dubbo-kubernetes
+* [dubboctl](../reference/dubboctl.md) - Management tool for dubbo-kubernetes
 * [dubboctl repository add](dubboctl_repository_add.md)
 * [dubboctl repository list](dubboctl_repository_add.md)
 * [dubboctl repository remove](dubboctl_repository_remove.md)

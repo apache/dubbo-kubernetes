@@ -12,7 +12,7 @@ Commands help user to generate manifest and install manifest
 
 ### SEE ALSO
 
-* [dubboctl](dubboctl.md) - Management tool for dubbo-kubernetes
+* [dubboctl](../reference/dubboctl.md) - Management tool for dubbo-kubernetes
 * [dubboctl manifest diff](dubboctl_manifest_diff.md) - show the difference between two files or dirs
 * [dubboctl manifest generate](dubboctl_manifest_generate.md) - Generate the manifest of the required components.
 * [dubboctl manifest install](dubboctl_manifest_install.md) - Install the required components directly to the k8s
