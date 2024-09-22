@@ -32,7 +32,7 @@ var (
 	}
 
 	chartsUri          = deployUri.JoinPath("charts")
-	profilesUri        = deployUri.JoinPath("../test/dubboctl/profiles")
+	profilesUri        = deployUri.JoinPath("profiles")
 	addonsUri          = deployUri.JoinPath("addons")
 	addonDashboardsUri = addonsUri.JoinPath("addons/dashboards")
 	Charts             = chartsUri.String()
