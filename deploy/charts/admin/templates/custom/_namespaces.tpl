@@ -4,8 +4,8 @@ Return Admin Namespace to use.
 {{- define "admin.namespace" -}}
 {{- if .Values.namespaceOverride }}
 {{- .Values.namespaceOverride }}
-{{- else -}}
-{{- .Release.Namespace }}
+{{- else if not (empty .Release.Namespace) -}}
+{{- "dubbo-system" | default }}
 {{- end }}
 {{- end }}
 
