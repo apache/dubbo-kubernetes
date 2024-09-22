@@ -15,25 +15,17 @@
  * limitations under the License.
  */
 
-package dubbo
+package com.example.demo.dubbo.service;
 
-import (
-	"archive/zip"
-	"bytes"
-)
+import com.example.demo.dubbo.api.DemoService;
 
-import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/generated"
-)
+import org.apache.dubbo.config.annotation.DubboService;
 
-//go:generate go run ../../../../generate/templates/main.go
-func newEmbeddedTemplatesFS() filesystem.Filesystem {
-	archive, err := zip.NewReader(bytes.NewReader(generated.TemplatesZip), int64(len(generated.TemplatesZip)))
-	if err != nil {
-		panic(err)
-	}
-	return filesystem.NewZipFS(archive)
+@DubboService
+public class DemoServiceImpl implements DemoService {
+
+    @Override
+    public String sayHello(String name) {
+        return "Hello " + name;
+    }
 }
-
-var EmbeddedTemplatesFS = newEmbeddedTemplatesFS()

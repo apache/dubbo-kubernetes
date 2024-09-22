@@ -15,25 +15,19 @@
  * limitations under the License.
  */
 
-package dubbo
+package main
 
 import (
-	"archive/zip"
-	"bytes"
+	_ "dubbo-go-app/pkg/service"
+
+	"dubbo.apache.org/dubbo-go/v3/config"
+	_ "dubbo.apache.org/dubbo-go/v3/imports"
 )
 
-import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/generated"
-)
-
-//go:generate go run ../../../../generate/templates/main.go
-func newEmbeddedTemplatesFS() filesystem.Filesystem {
-	archive, err := zip.NewReader(bytes.NewReader(generated.TemplatesZip), int64(len(generated.TemplatesZip)))
-	if err != nil {
+// export DUBBO_GO_CONFIG_PATH=$PATH_TO_APP/conf/dubbogo.yaml
+func main() {
+	if err := config.Load(); err != nil {
 		panic(err)
 	}
-	return filesystem.NewZipFS(archive)
+	select {}
 }
-
-var EmbeddedTemplatesFS = newEmbeddedTemplatesFS()
