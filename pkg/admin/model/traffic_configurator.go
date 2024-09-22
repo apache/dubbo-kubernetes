@@ -189,7 +189,7 @@ func paramMatchToRespParamMatch(param []*mesh_proto.ParamMatch) []ParamMatch {
 	return res
 }
 
-func StringMatchToModelStringMatch(stringMatch *mesh_proto.StringMatch) *StringMatch {
+func StringMatchToModelStringMatch(stringMatch *mesh_proto.StringMatch_Dubbo) *StringMatch {
 	if stringMatch == nil {
 		return nil
 	}
@@ -215,29 +215,29 @@ func StringMatchToModelStringMatch(stringMatch *mesh_proto.StringMatch) *StringM
 	}
 }
 
-func ModelStringMatchToStringMatch(stringMatch *StringMatch) *mesh_proto.StringMatch {
+func ModelStringMatchToStringMatch(stringMatch *StringMatch) *mesh_proto.StringMatch_Dubbo {
 	if stringMatch == nil {
 		return nil
 	}
 	if stringMatch.Exact != nil {
-		return &mesh_proto.StringMatch{Exact: *stringMatch.Exact}
+		return &mesh_proto.StringMatch_Dubbo{Exact: *stringMatch.Exact}
 	}
 	if stringMatch.Prefix != nil {
-		return &mesh_proto.StringMatch{Prefix: *stringMatch.Prefix}
+		return &mesh_proto.StringMatch_Dubbo{Prefix: *stringMatch.Prefix}
 	}
 	if stringMatch.Regex != nil {
-		return &mesh_proto.StringMatch{Regex: *stringMatch.Regex}
+		return &mesh_proto.StringMatch_Dubbo{Regex: *stringMatch.Regex}
 	}
 	if stringMatch.Noempty != nil {
-		return &mesh_proto.StringMatch{Noempty: *stringMatch.Noempty}
+		return &mesh_proto.StringMatch_Dubbo{Noempty: *stringMatch.Noempty}
 	}
 	if stringMatch.Empty != nil {
-		return &mesh_proto.StringMatch{Empty: *stringMatch.Empty}
+		return &mesh_proto.StringMatch_Dubbo{Empty: *stringMatch.Empty}
 	}
 	if stringMatch.Wildcard != nil {
-		return &mesh_proto.StringMatch{Wildcard: *stringMatch.Wildcard}
+		return &mesh_proto.StringMatch_Dubbo{Wildcard: *stringMatch.Wildcard}
 	} else {
-		return &mesh_proto.StringMatch{}
+		return &mesh_proto.StringMatch_Dubbo{}
 	}
 }
 

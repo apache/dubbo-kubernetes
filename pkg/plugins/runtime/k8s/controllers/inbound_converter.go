@@ -141,6 +141,7 @@ func InboundTagsForService(zone string, pod *kube_core.Pod, svc *kube_core.Servi
 	logger := converterLog.WithValues("pod", pod.Name, "namespace", pod.Namespace)
 	tags := map[string]string{}
 	var ignoredLabels []string
+	// label to tags
 	for key, value := range pod.Labels {
 		if value == "" {
 			continue

@@ -84,11 +84,12 @@ type Locality struct {
 }
 
 // Endpoint holds routing-related information about a single endpoint.
+// It is abstracted from mesh_proto.DataplaneRecourse.Spec.Networking.Inbound
 type Endpoint struct {
 	Target          string
 	UnixDomainPath  string
 	Port            uint32
-	Tags            map[string]string
+	Tags            map[string]string // clone from inbound.GetTags
 	Weight          uint32
 	Locality        *Locality
 	ExternalService *ExternalService
@@ -102,6 +103,7 @@ func (e Endpoint) Address() string {
 type EndpointList []Endpoint
 
 // EndpointMap holds routing-related information about a set of endpoints grouped by service name.
+// here key is dubbo-serviceName
 type EndpointMap map[ServiceName][]Endpoint
 
 // SocketAddressProtocol is the L4 protocol the listener should bind to
@@ -173,8 +175,48 @@ type ZoneIngressProxy struct {
 	MeshResourceList    []*MeshIngressResources
 }
 
+type ClusterSelectorList struct {
+	MatchInfo        mesh_proto.TrafficRoute_Http_Match
+	ModifyInfo       mesh_proto.TrafficRoute_Http_Modify
+	DirectResp       *mesh_proto.HTTPDirectResponse
+	ClusterSelectors []ClusterSelector
+}
+
+type ServiceSelectorMap map[ServiceName][]ClusterSelectorList
+
+type ClusterSelector struct {
+	ConfigInfo TrafficRouteConfig
+	TagSelect  mesh_proto.TagSelector
+}
+
+func (c *ClusterSelector) Select(l EndpointList) EndpointList {
+	if c.TagSelect == nil || len(c.TagSelect) == 0 {
+		return l
+	}
+	res := EndpointList{}
+	for _, endpoint := range l {
+		if c.TagSelect.Matches(endpoint.Tags) {
+			res = append(res, endpoint)
+		}
+	}
+	return res
+}
+
+func (e *ClusterSelectorList) GetMatchInfo() *mesh_proto.TrafficRoute_Http_Match {
+	return &e.MatchInfo
+}
+
+func (e *ClusterSelectorList) GetModifyInfo() *mesh_proto.TrafficRoute_Http_Modify {
+	return &e.ModifyInfo
+}
+
+func (e *ClusterSelectorList) GetDirectResp() *mesh_proto.HTTPDirectResponse {
+	return e.DirectResp
+}
+
 type Routing struct {
-	OutboundTargets EndpointMap
+	OutboundSelector ServiceSelectorMap
+	OutboundTargets  EndpointMap
 	// ExternalServiceOutboundTargets contains endpoint map for direct access of external services (without egress)
 	// Since we take into account TrafficPermission to exclude external services from the map,
 	// it is specific for each data plane proxy.

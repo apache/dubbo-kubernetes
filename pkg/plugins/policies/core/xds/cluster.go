@@ -20,9 +20,11 @@ package xds
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
@@ -31,12 +33,16 @@ type Cluster struct {
 	name              string
 	tags              tags.Tags
 	mesh              string
+	timeout           time.Duration
 	isExternalService bool
+	info              xds.ClusterSelector
 }
 
-func (c *Cluster) Service() string { return c.service }
-func (c *Cluster) Name() string    { return c.name }
-func (c *Cluster) Tags() tags.Tags { return c.tags }
+func (c *Cluster) Service() string            { return c.service }
+func (c *Cluster) Name() string               { return c.name }
+func (c *Cluster) Tags() tags.Tags            { return c.tags }
+func (c *Cluster) Info() *xds.ClusterSelector { return &c.info }
+func (c *Cluster) Timeout() time.Duration     { return c.timeout }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
@@ -119,4 +125,11 @@ func (c *Cluster) validate() error {
 		return errors.New("either WithService() or WithName() should be called")
 	}
 	return nil
+}
+
+func (b *ClusterBuilder) WithSelectInfo(selector xds.ClusterSelector) *ClusterBuilder {
+	b.opts = append(b.opts, newClusterOptFunc(func(cluster *Cluster) {
+		cluster.info = selector
+	}))
+	return b
 }

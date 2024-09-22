@@ -52,4 +52,4 @@ message AddressMatch {
   string exact = 3;
 }
 
-message ListStringMatch {repeated StringMatch oneof = 1;}
+message ListStringMatch {repeated StringMatch_Dubbo oneof = 1;}

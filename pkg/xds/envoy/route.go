@@ -17,12 +17,21 @@
 
 package envoy
 
+import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+)
+
 type Route struct {
+	DirectResponse *mesh_proto.HTTPDirectResponse
+	Match          *mesh_proto.TrafficRoute_Http_Match
+	Modify         *mesh_proto.TrafficRoute_Http_Modify
+	// rateLimit
 	Clusters []Cluster
 }
 
 func NewRouteFromCluster(cluster Cluster) Route {
 	return Route{
+		Match:    nil,
 		Clusters: []Cluster{cluster},
 	}
 }

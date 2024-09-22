@@ -20,6 +20,8 @@ package util
 import (
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 import (
@@ -197,4 +199,26 @@ func ServiceTag(name kube_types.NamespacedName, svcPort *int32) string {
 		port = fmt.Sprintf("_%d", *svcPort)
 	}
 	return fmt.Sprintf("%s_%s_svc%s", name.Name, name.Namespace, port)
+}
+
+func ParseServiceTag(tag string) (name kube_types.NamespacedName, port *int32, err error) {
+	// Split the tag by underscores
+	parts := strings.Split(tag, "_")
+	if len(parts) < 3 || parts[2] != "svc" {
+		return name, nil, fmt.Errorf("invalid service tag format")
+	}
+
+	name.Name = parts[0]
+	name.Namespace = parts[1]
+
+	if len(parts) == 4 {
+		parsedPort, err := strconv.Atoi(parts[3])
+		if err != nil {
+			return name, nil, fmt.Errorf("invalid port format: %v", err)
+		}
+		parsedPort32 := int32(parsedPort)
+		port = &parsedPort32
+	}
+
+	return name, port, nil
 }

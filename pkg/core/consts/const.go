@@ -18,6 +18,10 @@
 package consts
 
 import (
+	"time"
+)
+
+import (
 	set "github.com/dubbogo/gost/container/set"
 )
 
@@ -91,6 +95,10 @@ const (
 	SideProvider            = `provider`
 	SideConsumer            = `consumer`
 )
+
+var DefaultRetryPreTryTimeOut = 200 * time.Millisecond
+
+const DefaultRetriesOn = "connect-failure,refused-stream,5xx"
 
 const (
 	NotEqual = "!="

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 )
 
 import (
@@ -29,6 +30,8 @@ import (
 	"github.com/pkg/errors"
 
 	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 import (
@@ -42,7 +45,9 @@ type Cluster interface {
 	Mesh() string
 	Tags() tags.Tags
 	Hash() string
+	Timeout() time.Duration
 	IsExternalService() bool
+	Info() *core_xds.ClusterSelector
 }
 
 type Split interface {
@@ -57,20 +62,28 @@ type ClusterImpl struct {
 	name              string
 	weight            uint32
 	tags              tags.Tags
+	timeout           time.Duration
 	mesh              string
 	isExternalService bool
+	info              core_xds.ClusterSelector
 }
 
-func (c *ClusterImpl) Service() string { return c.service }
-func (c *ClusterImpl) Name() string    { return c.name }
-func (c *ClusterImpl) Weight() uint32  { return c.weight }
-func (c *ClusterImpl) Tags() tags.Tags { return c.tags }
+func (c *ClusterImpl) Service() string        { return c.service }
+func (c *ClusterImpl) Name() string           { return c.name }
+func (c *ClusterImpl) Weight() uint32         { return c.weight }
+func (c *ClusterImpl) Tags() tags.Tags        { return c.tags }
+func (c *ClusterImpl) Timeout() time.Duration { return c.timeout }
 
 // Mesh returns a non-empty string only if the cluster is in a different mesh
 // from the context.
-func (c *ClusterImpl) Mesh() string            { return c.mesh }
-func (c *ClusterImpl) IsExternalService() bool { return c.isExternalService }
-func (c *ClusterImpl) Hash() string            { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
+func (c *ClusterImpl) Mesh() string                    { return c.mesh }
+func (c *ClusterImpl) IsExternalService() bool         { return c.isExternalService }
+func (c *ClusterImpl) Hash() string                    { return fmt.Sprintf("%s-%s", c.name, c.tags.String()) }
+func (c *ClusterImpl) Info() *core_xds.ClusterSelector { return &c.info }
+
+func (c *ClusterImpl) addSelector(f core_xds.ClusterSelector) {
+	c.info = f
+}
 
 func (c *ClusterImpl) SetName(name string) {
 	c.name = name
@@ -114,6 +127,12 @@ func WithService(service string) NewClusterOpt {
 		if len(cluster.name) == 0 {
 			cluster.name = service
 		}
+	})
+}
+
+func WithSelectorInfo(selector core_xds.ClusterSelector) NewClusterOpt {
+	return newClusterOptFunc(func(cluster *ClusterImpl) {
+		cluster.addSelector(selector)
 	})
 }
 
@@ -240,4 +259,10 @@ type StaticEndpointPath struct {
 	RewritePath      string
 	Header           string
 	HeaderExactMatch string
+}
+
+func WithTimeout(out *durationpb.Duration) NewClusterOpt {
+	return newClusterOptFunc(func(cluster *ClusterImpl) {
+		cluster.timeout = out.AsDuration()
+	})
 }

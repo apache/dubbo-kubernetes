@@ -228,7 +228,14 @@ func (OutboundProxyGenerator) generateEDS(
 					endpoints = xdsCtx.Mesh.EndpointMap
 				}
 
-				loadAssignment, err := xdsCtx.ControlPlane.CLACache.GetCLA(user.Ctx(ctx, user.ControlPlane), xdsCtx.Mesh.Resource.Meta.GetName(), xdsCtx.Mesh.Hash, cluster, apiVersion, endpoints)
+				loadAssignment, err := xdsCtx.ControlPlane.CLACache.GetCLA(
+					user.Ctx(ctx, user.ControlPlane),
+					xdsCtx.Mesh.Resource.Meta.GetName(),
+					xdsCtx.Mesh.Hash,
+					cluster,
+					apiVersion,
+					endpoints,
+				)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not get ClusterLoadAssignment for %s", serviceName)
 				}
@@ -265,8 +272,15 @@ func (OutboundProxyGenerator) determineRoutes(
 ) envoy_common.Routes {
 	var routes envoy_common.Routes
 
-	retriveClusters := func() []envoy_common.Cluster {
-		var clusters []envoy_common.Cluster
+	type clustersInfo struct {
+		match      *mesh_proto.TrafficRoute_Http_Match
+		modify     *mesh_proto.TrafficRoute_Http_Modify
+		clusters   []envoy_common.Cluster
+		directResp *mesh_proto.HTTPDirectResponse
+	}
+
+	retriveClusters := func() []clustersInfo {
+		var clustersList []clustersInfo
 		service := outboundTags[mesh_proto.ServiceTag]
 
 		name, _ := envoy_tags.Tags(outboundTags).DestinationClusterName(nil)
@@ -285,31 +299,65 @@ func (OutboundProxyGenerator) determineRoutes(
 		if endpoints := proxy.Routing.ExternalServiceOutboundTargets[service]; len(endpoints) > 0 {
 			isExternalService = true
 		}
-
 		allTags := envoy_tags.Tags(outboundTags)
-		cluster := envoy_common.NewCluster(
-			envoy_common.WithService(service),
-			envoy_common.WithName(name),
-			envoy_common.WithTags(allTags.WithoutTags(mesh_proto.MeshTag)),
-			envoy_common.WithExternalService(isExternalService),
-		)
-
-		if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
-			cluster.SetMesh(mesh)
+		if _, ok := proxy.Routing.OutboundSelector[service]; ok {
+			for _, clusterSelectors := range proxy.Routing.OutboundSelector[service] {
+				var clusters = make([]envoy_common.Cluster, 0, len(clusterSelectors.ClusterSelectors))
+				for _, endSelector := range clusterSelectors.ClusterSelectors {
+					cluster := envoy_common.NewCluster(
+						envoy_common.WithService(service),
+						envoy_common.WithName(name),
+						envoy_common.WithTags(allTags.WithoutTags(mesh_proto.MeshTag).
+							WithTags(envoy_tags.Tags(endSelector.TagSelect).KeyAndValues()...),
+						), envoy_common.WithExternalService(isExternalService),
+						envoy_common.WithSelectorInfo(endSelector),
+						envoy_common.WithTimeout(clusterSelectors.ModifyInfo.TimeOut),
+					)
+					if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
+						cluster.SetMesh(mesh)
+					}
+					clusters = append(clusters, cluster)
+				}
+				clustersList = append(clustersList, clustersInfo{
+					modify:     clusterSelectors.GetModifyInfo(),
+					match:      clusterSelectors.GetMatchInfo(),
+					directResp: clusterSelectors.GetDirectResp(),
+					clusters:   clusters,
+				})
+			}
+		} else {
+			cluster := envoy_common.NewCluster(
+				envoy_common.WithService(service),
+				envoy_common.WithName(name),
+				envoy_common.WithTags(allTags.WithoutTags(mesh_proto.MeshTag)),
+				envoy_common.WithExternalService(isExternalService),
+			)
+			if mesh, ok := outboundTags[mesh_proto.MeshTag]; ok {
+				cluster.SetMesh(mesh)
+			}
+			clustersList = append(clustersList, clustersInfo{
+				match:    nil,
+				clusters: []envoy_common.Cluster{cluster},
+			})
 		}
-
-		clusters = append(clusters, cluster)
-		return clusters
+		return clustersList
 	}
 
-	appendRoute := func(routes envoy_common.Routes, clusters []envoy_common.Cluster) envoy_common.Routes {
-		if len(clusters) == 0 {
+	appendRoute := func(routes envoy_common.Routes, clustersInfoList []clustersInfo) envoy_common.Routes {
+		if len(clustersInfoList) == 0 {
 			return routes
 		}
 
-		return append(routes, envoy_common.Route{
-			Clusters: clusters,
-		})
+		for _, c := range clustersInfoList {
+			r := envoy_common.Route{
+				DirectResponse: c.directResp,
+				Modify:         c.modify,
+				Clusters:       c.clusters,
+				Match:          c.match,
+			}
+			routes = append(routes, r)
+		}
+		return routes
 	}
 
 	clusters := retriveClusters()

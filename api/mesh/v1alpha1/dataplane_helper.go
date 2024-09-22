@@ -32,6 +32,7 @@ import (
 )
 
 const (
+	//AppTag , key to match applicationName, set by kube label
 	AppTag = "app"
 )
 
@@ -519,4 +520,10 @@ func (r TagSelectorRank) CompareTo(other TagSelectorRank) int {
 		return r.ExactMatches - other.ExactMatches
 	}
 	return thisTotal - otherTotal
+}
+
+func (x *Dataplane) GetApplication() string {
+	// application field will be set in metadata register
+	// [pkg/mds/server/server.go:MdsServer.MetadataRegister]
+	return x.Extensions[Application]
 }

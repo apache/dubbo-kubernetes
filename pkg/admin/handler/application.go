@@ -177,7 +177,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 				Side:          consts.SideProvider,
 				Parameters:    map[string]string{`accesslog`: `true`},
 				Enabled:       true,
-				Match:         &mesh_proto.ConditionMatch{Application: &mesh_proto.ListStringMatch{Oneof: []*mesh_proto.StringMatch{{Exact: ApplicationName}}}},
+				Match:         &mesh_proto.ConditionMatch{Application: &mesh_proto.ListStringMatch{Oneof: []*mesh_proto.StringMatch_Dubbo{{Exact: ApplicationName}}}},
 				XGenerateByCp: true,
 			})
 		} else {

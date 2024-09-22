@@ -85,7 +85,6 @@ func (p *PodConverter) OutboundInterfacesFor(
 			)
 			continue
 		}
-
 		if isHeadlessService(service) {
 			// Generate outbound listeners for every endpoint of services.
 			for _, endpoint := range endpoints[serviceTag] {
