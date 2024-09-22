@@ -32,16 +32,13 @@ var (
 	}
 
 	chartsUri          = deployUri.JoinPath("charts")
-	profilesUri        = deployUri.JoinPath("profiles")
+	profilesUri        = deployUri.JoinPath("test/dubboctl/profiles")
 	addonsUri          = deployUri.JoinPath("addons")
-	addonDashboardsUri = addonsUri.JoinPath("dashboards")
-	addonManifestsUri  = addonsUri.JoinPath("manifests")
-
-	Charts          = chartsUri.String()
-	Profiles        = profilesUri.String()
-	Addons          = addonsUri.String()
-	AddonDashboards = addonDashboardsUri.String()
-	AddonManifests  = addonManifestsUri.String()
+	addonDashboardsUri = addonsUri.JoinPath("addons/dashboards")
+	Charts             = chartsUri.String()
+	Addons             = addonsUri.String()
+	AddonDashboards    = addonDashboardsUri.String()
+	Profiles           = profilesUri.String()
 )
 
 var UnionFS filesystem.UnionFS

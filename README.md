@@ -20,7 +20,7 @@ The Dubbo Kubernetes Integration
 
 1. Download `dubbo-control-plane` binary package.
     ```shell
-    curl -L https://raw.githubusercontent.com/apache/dubbo-kubernetes/master/release/downloadDubbo.sh | sh -
+    curl -L https://raw.githubusercontent.com/apache/dubbo-kubernetes/master/release/ | sh -
     
     cd dubbo-$version
     export PATH=$PWD/bin:$PATH
