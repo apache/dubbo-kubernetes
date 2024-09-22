@@ -1,5 +1,5 @@
 {{- $admin := .Values -}}
-{{- $cp := .Values.controlPlane -}}
+{{- $cp := .Values.cp -}}
 {{- $zoo := .Values.zookeeper -}}
 {{- $nacos := .Values.nacos -}}
 {{- $observable := $admin.observable -}}
@@ -117,7 +117,7 @@ spec:
           mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.key
           subPath: tls.key
           readOnly: true
-        - name: general-tls-cert{{- if $cp.tls.general.caSecretName }}-ca{{- end }}
+        - name: general-tls-cert{{- if $cp.tls.caSecretName }}-ca{{- end }}
           mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
           subPath: ca.crt
           readOnly: true
@@ -151,19 +151,19 @@ spec:
       - name: {{ include "admin.name" . }}-control-plane-config
         configMap:
           name: {{ include "admin.name" . }}-control-plane-config
-      {{- if $cp.tls.general.secretName }}
+      {{- if $cp.tls.secretName }}
       - name: general-tls-cert
         secret:
-          secretName: {{ $cp.tls.general.secretName }}
+          secretName: {{ $cp.tls.secretName }}
       {{- else }}
       - name: general-tls-cert
         secret:
           secretName: {{ include "admin.name" . }}-tls-cert
       {{- end }}
-      {{- if $cp.tls.general.caSecretName }}
+      {{- if $cp.tls.caSecretName }}
       - name: general-tls-cert-ca
         secret:
-          secretName: {{ $cp.tls.general.caSecretName }}
+          secretName: {{ $cp.tls.caSecretName }}
       {{- end }}
       - name: storage
         {{- if $admin.persistence.enabled }}
