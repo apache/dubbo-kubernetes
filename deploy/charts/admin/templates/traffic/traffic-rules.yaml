@@ -1,7 +1,5 @@
-{{- $tr := .Values.traffic.tagRoute -}}
-{{- $dc := .Values.traffic.dynamicConfig -}}
-{{- $cr := .Values.traffic.conditionRoute -}}
-apiVersion: dubbo.apache.org/v1alpha1
+{{- $traffic := .Values.traffic -}}{{- $tr := $traffic.tagRoute -}}{{- $dc := $traffic.dynamicConfig -}}{{- $cr := $traffic.conditionRoute -}}
+apiVersion: dubbo.io/v1alpha1
 kind: ConditionRoute
 metadata:
   name: {{ template "cp.name" . }}-conditionroute
@@ -17,7 +15,7 @@ spec:
   conditions:
   - {{ $cr.conditions }}
 ---
-apiVersion: dubbo.apache.org/v1alpha1
+apiVersion: dubbo.io/v1alpha1
 kind: DynamicConfig
 metadata:
   name: {{ template "cp.name" . }}-dynamicconfig
@@ -33,7 +31,7 @@ spec:
         oneof:
         - exact: {{ $dc.exact }}
 ---
-apiVersion: dubbo.apache.org/v1alpha1
+apiVersion: dubbo.io/v1alpha1
 kind: TagRoute
 metadata:
   name: {{ template "cp.name" . }}-tagroute

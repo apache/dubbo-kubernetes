@@ -9,7 +9,7 @@ We only autogenerate certs if the cert is not yet generated. This way we keep th
 */}}
 {{- $admin := .Values -}}
 {{- if not (eq (empty $admin.cp.tls.caBundle) (empty $admin.cp.tls.secretName)) }}
-  {{ print "You need to send both or neither of controlPlane.tls.general.caBundle and controlPlane.tls.general.secretName"}}
+  {{ fail "You need to send both or neither of controlPlane.tls.general.caBundle and controlPlane.tls.general.secretName"}}
 {{- end }}
 {{- $caBundle := $admin.cp.tls.caBundle }}
 {{- $namespace := include "admin.namespace" . -}}
@@ -23,12 +23,12 @@ We only autogenerate certs if the cert is not yet generated. This way we keep th
   {{- $key = index $secret.data "tls.key" -}}
   {{- $caBundle = index $secret.data "ca.crt" -}}
 {{- else -}}
-  {{- $commonName := (include "admin.name" .) -}}
-  {{- $altNames := list (printf "%s.%s" $commonName $namespace) (printf "%s.%s.svc" $commonName $namespace) -}}
+  {{- $name := (include "admin.name" .) -}}
+  {{- $altNames := list (printf "%s.%s" $name $namespace) (printf "%s.%s.svc" $name $namespace) -}}
   {{- $certTTL := 3650 -}}
   {{- $ca := genCA "dubbo-ca" $certTTL -}}
 
-  {{- $genCert := genSignedCert $commonName nil $altNames $certTTL $ca -}}
+  {{- $genCert := genSignedCert $name nil $altNames $certTTL $ca -}}
   {{- $cert = $genCert.Cert | b64enc -}}
   {{- $key = $genCert.Key | b64enc -}}
   {{ $caBundle = $ca.Cert | b64enc }}

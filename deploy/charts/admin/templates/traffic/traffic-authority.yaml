@@ -1,6 +1,4 @@
-{{- $auth := .Values.auth -}}
-{{- $authz := .Values.auth.authorization -}}
-{{- $authc := .Values.auth.authentication -}}
+{{- $auth := .Values.auth -}}{{- $authz := $auth.authorization -}}{{- $authc := $auth.authentication -}}
 {{- if $auth.enabled }}
 apiVersion: v1
 kind: ServiceAccount
@@ -33,7 +31,7 @@ subjects:
     name: {{ template "cp.name" . }}-sa
     namespace: {{ template "system.namespaces" . }}
 ---
-apiVersion: dubbo.apache.org/v1alpha1
+apiVersion: dubbo.io/v1alpha1
 kind: AuthenticationPolicy
 metadata:
   name: {{ template "cp.name" . }}-authentication
@@ -45,7 +43,7 @@ spec:
   selector:
     - namespaces: ["dubbo-system"]
 ---
-apiVersion: dubbo.apache.org/v1alpha1
+apiVersion: dubbo.io/v1alpha1
 kind: AuthorizationPolicy
 metadata:
   name: {{ template "cp.name" . }}-authorization
