@@ -15,25 +15,24 @@
  * limitations under the License.
  */
 
-package dubbo
+package com.example.demo.dubbo.consumer;
 
-import (
-	"archive/zip"
-	"bytes"
-)
+import com.example.demo.dubbo.api.DemoService;
 
-import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/generated"
-)
+import org.apache.dubbo.config.annotation.DubboReference;
 
-//go:generate go run ../../../../generate/templates/main.go
-func newEmbeddedTemplatesFS() filesystem.Filesystem {
-	archive, err := zip.NewReader(bytes.NewReader(generated.TemplatesZip), int64(len(generated.TemplatesZip)))
-	if err != nil {
-		panic(err)
-	}
-	return filesystem.NewZipFS(archive)
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Consumer implements CommandLineRunner {
+    @DubboReference
+    private DemoService demoService;
+
+    @Override
+    public void run(String... args) throws Exception {
+
+        String result = demoService.sayHello("world");
+        System.out.println("Receive result ======> " + result);
+    }
 }
-
-var EmbeddedTemplatesFS = newEmbeddedTemplatesFS()

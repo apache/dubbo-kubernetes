@@ -15,25 +15,30 @@
  * limitations under the License.
  */
 
-package dubbo
+package com.example.demo.demos.web;
 
-import (
-	"archive/zip"
-	"bytes"
-)
+/**
+ * @author <a href="mailto:chenxilzx1@gmail.com">theonefx</a>
+ */
+public class User {
 
-import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/generated"
-)
+    private String name;
 
-//go:generate go run ../../../../generate/templates/main.go
-func newEmbeddedTemplatesFS() filesystem.Filesystem {
-	archive, err := zip.NewReader(bytes.NewReader(generated.TemplatesZip), int64(len(generated.TemplatesZip)))
-	if err != nil {
-		panic(err)
-	}
-	return filesystem.NewZipFS(archive)
+    private Integer age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
 }
-
-var EmbeddedTemplatesFS = newEmbeddedTemplatesFS()

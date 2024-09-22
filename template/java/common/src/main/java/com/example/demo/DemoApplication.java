@@ -15,25 +15,18 @@
  * limitations under the License.
  */
 
-package dubbo
+package com.example.demo;
 
-import (
-	"archive/zip"
-	"bytes"
-)
+import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import (
-	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/generated"
-)
+@SpringBootApplication
+@EnableDubbo
+public class DemoApplication {
 
-//go:generate go run ../../../../generate/templates/main.go
-func newEmbeddedTemplatesFS() filesystem.Filesystem {
-	archive, err := zip.NewReader(bytes.NewReader(generated.TemplatesZip), int64(len(generated.TemplatesZip)))
-	if err != nil {
-		panic(err)
-	}
-	return filesystem.NewZipFS(archive)
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
 }
-
-var EmbeddedTemplatesFS = newEmbeddedTemplatesFS()
