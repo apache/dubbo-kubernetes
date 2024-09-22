@@ -11,7 +11,8 @@ metadata:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
-  config.yaml: |
-    {{ if $admin.cp }}
+  {{/* TODO */}}
+  config.yaml: |-
+    {{- if $admin.cp }}
     {{ toYaml $admin.cp | nindent 4 | trim }}
     {{ end }}
