@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package generated
+package templates
 
 import (
 	"archive/zip"
@@ -36,7 +36,7 @@ var templatesPath = filepath.Join(relativePathToRoot, "templates")
 // This program generates zz_filesystem_generated.go file containing byte array variable named TemplatesZip.
 // The variable contains zip of "/templates" directory.
 func main() {
-	f, err := os.OpenFile(filepath.Join(relativePathToRoot, "generate/zz_filesystem_generated.go"), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(filepath.Join(relativePathToRoot, "generated/zz_filesystem_generated.go"), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}
