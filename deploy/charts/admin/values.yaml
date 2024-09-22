@@ -13,17 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-controlPlane:
-  config:
-    deployMode: universal
-    mode: zone
-
-  tls:
-    general:
-      secretName: ""
-      caSecretName: ""
-      caBundle: ""
-
 ## Specifies the type of Kubernetes resource, such as "Deployment" or "StatefulSet."
 deployType: Deployment
 
@@ -191,14 +180,6 @@ service:
   # Set to 'true' to publish endpoints for not-ready pods.
   publishNotReadyAddresses: true
 
-  # Define the ports for the service.
-  web:
-    protocol: http
-    port: 8888
-
-  xds:
-    port: 5678
-
 resources:
   # Maximum CPU and memory resources allowed for the container.
   limits:
@@ -333,6 +314,14 @@ jobs:
     tag: 1.28.4
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
+
+cp:
+ mode: universal
+ topology: zone
+ tls:
+   secretName: ""
+   caSecretName: ""
+   caBundle: ""
 
 auth:
   ## Whether to enable the control-plane auth control.

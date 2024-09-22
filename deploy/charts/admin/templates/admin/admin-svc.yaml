@@ -35,11 +35,11 @@ spec:
   {{- end }}
   ports:
   - name: admin-http
-    port: {{ $svc.web.port }}
+    port:
     targetPort: admin-http
-    appProtocol: {{ $svc.web.protocol }}
+    appProtocol:
   - name: admin-xds-grpc
-    port: {{ $svc.xds.port }}
+    port:
     targetPort: admin-xds-grpc
   selector:
     app: {{ template "admin.selector" . }}
@@ -85,12 +85,13 @@ spec:
   {{- end }}
   ports:
   - name: admin-http
-    port: {{ $svc.web.port }}
+    port: {{ template "admin.web.port" . }}
     targetPort: admin-http
-    appProtocol: {{ $svc.web.protocol }}
+    appProtocol: tcp
   - name: admin-xds-grpc
-    port: {{ $svc.xds.port }}
+    port: {{ template "admin.xds.Port" . }}
     targetPort: admin-xds-grpc
+    appProtocol: tcp
   selector:
     app: {{ template "admin.selector" . }}
 {{- end -}}

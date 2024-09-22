@@ -1,8 +1,3 @@
-{{- $admin := .Values -}}
-{{- if not (eq (empty $admin.controlPlane.tls.general.caBundle) (empty $admin.controlPlane.tls.general.secretName)) }}
-  {{ fail "You need to send both or neither of controlPlane.tls.general.caBundle and controlPlane.tls.general.secretName"}}
-{{- end }}
-{{- $caBundle := $admin.controlPlane.tls.general.caBundle }}
 {{/*
 Generate certificates
 see: https://masterminds.github.io/sprig/crypto.html
@@ -12,13 +7,16 @@ see: https://github.com/networkservicemesh/networkservicemesh/blob/804ad5026bb5d
 We only autogenerate certs if user did not chose their own secret.
 We only autogenerate certs if the cert is not yet generated. This way we keep the secrets between HELM upgrades.
 */}}
-
+{{- $admin := .Values -}}
+{{- if not (eq (empty $admin.cp.tls.caBundle) (empty $admin.cp.tls.secretName)) }}
+  {{ print "You need to send both or neither of controlPlane.tls.general.caBundle and controlPlane.tls.general.secretName"}}
+{{- end }}
+{{- $caBundle := $admin.cp.tls.caBundle }}
 {{- $namespace := include "admin.namespace" . -}}
-{{- if eq $admin.controlPlane.tls.general.secretName "" -}}
+{{- if eq $admin.cp.tls.secretName "" -}}
 {{- $cert := "" }}
 {{- $key := "" }}
 {{- $secretName := print (include "admin.name" .) "-tls-cert" }}
-
 {{- $secret := (lookup "v1" "Secret" $namespace $secretName) -}}
 {{- if $secret -}}
   {{- $cert = index $secret.data "tls.crt" -}}
@@ -38,11 +36,11 @@ We only autogenerate certs if the cert is not yet generated. This way we keep th
 ---
 apiVersion: v1
 kind: Secret
-type: kubernetes.io/tls
 metadata:
   name: {{ $secretName }}
   namespace: {{ .Release.Namespace }}
   labels: {{ include "admin.labels" . | nindent 4 }}
+type: kubernetes.io/tls
 data:
   tls.crt: {{ $cert }}
   tls.key: {{ $key }}
