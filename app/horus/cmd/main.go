@@ -118,12 +118,18 @@ func main() {
 		return nil
 	})
 	group.Add(func() error {
-		if c.CustomModular.Enabled {
-			klog.Info("horus down time manager start success.")
-			err := horus.DownTimeManager(ctx)
-			if err != nil {
-				klog.Errorf("horus down time manager start failed error:%v", err)
-			}
+		klog.Info("horus down time manager start success.")
+		err := horus.DownTimeManager(ctx)
+		if err != nil {
+			klog.Errorf("horus down time manager start failed error:%v", err)
+		}
+		return nil
+	})
+	group.Add(func() error {
+		klog.Info("horus down time restart manager start success.")
+		err := horus.DowntimeRestartManager(ctx)
+		if err != nil {
+			klog.Errorf("horus down time restart manager start failed error:%v", err)
 		}
 		return nil
 	})
