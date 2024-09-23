@@ -28,7 +28,7 @@ import (
 
 const (
 	NODE_DOWN        = "node_down"
-	NODE_DOWN_REASON = "failed"
+	NODE_DOWN_REASON = "node_down"
 )
 
 func (h *Horuser) DownTimeManager(ctx context.Context) error {
@@ -59,7 +59,7 @@ func (h *Horuser) DownTimeCheck(ctx context.Context) {
 
 func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	klog.Infof("DownTimeNodes Query Start clusterName:%v", clusterName)
-	nodeDownTimeRes := map[string]int{}
+	nodeDownTimeRes := make(map[string]int)
 	cq := len(h.cc.NodeDownTime.CheckQL)
 	for _, ql := range h.cc.NodeDownTime.CheckQL {
 		ql := ql
@@ -74,43 +74,40 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			v := v
 			nodeName := string(v.Metric["node"])
 			if nodeName == "" {
-				klog.Errorf("downtimeNodes InstantQuery nodeName empty.")
+				klog.Errorf("downtimeNodes Instant Query nodeName empty.")
 				klog.Infof("clusterName:%v metrics:%v", clusterName, v.Metric)
 				continue
 			}
 			nodeDownTimeRes[nodeName]++
 		}
 	}
-	for node, count := range nodeDownTimeRes {
-		if count < cq {
-			klog.Errorf("downtimeNodes node not reach threshold.")
-			klog.Infof("clusterName:%v node:%v threshold:%v count:%v", clusterName, node, cq, count)
-			continue
-		}
-	}
+	WithDownNodeIPs := make(map[string]string)
 
-	WithDownNodeIPs := map[string]string{}
 	for node, count := range nodeDownTimeRes {
 		if count < cq {
 			klog.Errorf("downtimeNodes node not reach threshold")
 			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, node, cq, count)
 			continue
 		}
-		NodeNameToIps := fmt.Sprintf(h.cc.NodeDownTime.NodeNameToIPs, node)
-		res, err := h.InstantQuery(NodeNameToIps, addr, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+		nnti := fmt.Sprintf(h.cc.NodeDownTime.NodeNameToIPs, node)
+		res, err := h.InstantQuery(addr, nnti, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+		if len(res) == 0 {
+			klog.Errorf("No results returned for query: %s", nnti)
+			continue
+		}
 		if err != nil {
 			klog.Errorf("downtimeNodes InstantQuery NodeName To IPs empty err:%v", err)
-			klog.Infof("clusterName:%v toNodeNameips:%v err:%v", clusterName, NodeNameToIps, err)
+			klog.Infof("clusterName:%v nodeNameToIPs: %v, err:%v", clusterName, nnti, err)
 			continue
 		}
 		str := ""
 		for _, v := range res {
-			v := v
 			str = string(v.Metric["instance"])
 		}
 		WithDownNodeIPs[node] = str
 	}
-	WithDownNodeIPsMsg := fmt.Sprintf("【%s】\n【集群：%v】\n【宕机：%v】\n", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
+
+	WithDownNodeIPsMsg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【宕机：%v】\n", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
 	newfound := 0
 	for nodeName, nodeIP := range WithDownNodeIPs {
 		today := time.Now().Format("2006-01-02")
