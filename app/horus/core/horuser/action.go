@@ -112,7 +112,7 @@ func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 	for items, pods := range pod.Items {
 		ds := false
 		for _, owner := range pods.OwnerReferences {
-			if owner.Kind == "Daemonset" {
+			if owner.Kind == "DaemonSet" {
 				ds = true
 				break
 			}
