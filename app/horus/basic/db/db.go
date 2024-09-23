@@ -126,6 +126,13 @@ func GetRecoveryNodeDataInfoDate(day int) ([]NodeDataInfo, error) {
 	return ndi, err
 }
 
+func GetRestartNodeDataInfoDate() ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
+	session := db.Where("restart = 0 and repair = 0 and module_name= ? ", "node_down")
+	err := session.Find(&ndi)
+	return ndi, err
+}
+
 func GetDailyLimitNodeDataInfoDate(day, module, cluster string) ([]NodeDataInfo, error) {
 	var ndi []NodeDataInfo
 	session := db.Where("DATE(first_date) = ? AND module_name = ? AND cluster_name = ?", day, module, cluster)
@@ -135,5 +142,10 @@ func GetDailyLimitNodeDataInfoDate(day, module, cluster string) ([]NodeDataInfo,
 
 func (n *NodeDataInfo) RecoveryMarker() (bool, error) {
 	n.RecoveryMark = 1
+	return n.Update()
+}
+
+func (n *NodeDataInfo) RestartMarker() (bool, error) {
+	n.Restart = 1
 	return n.Update()
 }
