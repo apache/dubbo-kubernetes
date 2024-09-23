@@ -74,8 +74,8 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 		return
 	}
 	klog.Infof("recoveryNodes check success.")
-
 	err = h.UnCordon(n.NodeName, n.ClusterName)
+
 	res := "Success"
 	if err != nil {
 		res = fmt.Sprintf("failed:%v", err)

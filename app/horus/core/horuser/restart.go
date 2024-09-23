@@ -41,7 +41,7 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 		klog.Warningf("Needs to be rebooted or fixed to zero.")
 	}
 	klog.Infof("GetRestartNodeDataInfoDate count:%v", len(nodes))
-	wp := workerpool.New(30)
+	wp := workerpool.New(10)
 	for _, n := range nodes {
 		n := n
 		wp.Submit(func() {
@@ -51,7 +51,11 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 }
 
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
-	msg := fmt.Sprintf("node restart or force restart node:%v date:%v cluster:%v", node.NodeName, node.FirstDate, node.ClusterName)
+	msg := fmt.Sprintf("\n【节点强制重启】\n 节点:%v\n 日期:%v\n 集群:%v\n", node.NodeName, node.FirstDate, node.ClusterName)
+	err := h.UnCordon(node.NodeName, node.ClusterName)
+	if err != nil {
+		msg = fmt.Sprintf("\n【节点强制重启失败：%v】\n", err)
+	}
 	alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 	pass, err := node.RestartMarker()
 	klog.Infof("RestartMarker result pass:%v err:%v", pass, err)

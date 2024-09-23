@@ -87,6 +87,9 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		return
 	}
 	err = h.Cordon(nodeName, clusterName, moduleName)
+	if err != nil {
+		return
+	}
 
 	write := db.NodeDataInfo{
 		NodeName:    nodeName,
