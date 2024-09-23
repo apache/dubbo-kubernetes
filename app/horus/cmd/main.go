@@ -160,7 +160,7 @@ func setupStopChanWithContext() (*WaitGroup, <-chan struct{}) {
 	g.Add(func() error {
 		select {
 		case <-SignalChan:
-			close(stopChan)
+			close(SignalChan)
 		}
 		return nil
 	})

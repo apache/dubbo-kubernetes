@@ -35,13 +35,13 @@ func (h *Horuser) DowntimeRestartManager(ctx context.Context) error {
 func (h *Horuser) RestartOrRepair(ctx context.Context) {
 	nodes, err := db.GetRestartNodeDataInfoDate()
 	if err != nil {
-		klog.Errorf("RestartOrRepair err:%v", err)
+		klog.Errorf("Restart or repair err:%v", err)
 	}
 	if len(nodes) == 0 {
 		klog.Warningf("Needs to be rebooted or fixed to zero.")
 	}
-	klog.Infof("GetRestartNodeDataInfoDate.count:%v", len(nodes))
-	wp := workerpool.New(10)
+	klog.Infof("GetRestartNodeDataInfoDate count:%v", len(nodes))
+	wp := workerpool.New(30)
 	for _, n := range nodes {
 		n := n
 		wp.Submit(func() {
@@ -51,7 +51,8 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 }
 
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
-	msg := fmt.Sprintf("node restart or force restart.node:%v date:%v cluster:%v", node.NodeName, node.FirstDate, node.ClusterName)
-	alert.DingTalkSend(h.cc.DingTalk, msg)
-	node.RestartMarker()
+	msg := fmt.Sprintf("node restart or force restart node:%v date:%v cluster:%v", node.NodeName, node.FirstDate, node.ClusterName)
+	alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+	pass, err := node.RestartMarker()
+	klog.Infof("RestartMarker result pass:%v err:%v", pass, err)
 }

@@ -28,9 +28,7 @@ import (
 
 const (
 	NODE_DOWN        = "node_down"
-	NODE_DOWN_REASON = "node_down_aegis"
-	POWER_OFF        = "POWER_OFF"
-	POWER_ON         = "POWER_ON"
+	NODE_DOWN_REASON = "failed"
 )
 
 func (h *Horuser) DownTimeManager(ctx context.Context) error {
@@ -60,14 +58,14 @@ func (h *Horuser) DownTimeCheck(ctx context.Context) {
 }
 
 func (h *Horuser) DownTimeNodes(clusterName, addr string) {
-	klog.Infof("DownTimeNodes QueryStart clusterName:%v", clusterName)
-	resMap := map[string]int{}
-	checkQl := len(h.cc.NodeDownTime.CheckQL)
+	klog.Infof("DownTimeNodes Query Start clusterName:%v", clusterName)
+	nodeDownTimeRes := map[string]int{}
+	cq := len(h.cc.NodeDownTime.CheckQL)
 	for _, ql := range h.cc.NodeDownTime.CheckQL {
 		ql := ql
 		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if err != nil {
-			klog.Errorf("downtimeNodes InstantQuery err:%v", err)
+			klog.Errorf("downtimeNodes Instant Query err:%v", err)
 			klog.Infof("clusterName:%v", clusterName)
 			continue
 		}
@@ -76,33 +74,33 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			v := v
 			nodeName := string(v.Metric["node"])
 			if nodeName == "" {
-				klog.Errorf("downtimeNodes InstantQuery nodeName empty")
+				klog.Errorf("downtimeNodes InstantQuery nodeName empty.")
 				klog.Infof("clusterName:%v metrics:%v", clusterName, v.Metric)
 				continue
 			}
-			resMap[nodeName]++
+			nodeDownTimeRes[nodeName]++
 		}
 	}
-	for node, count := range resMap {
-		if count < checkQl {
-			klog.Errorf("downtimeNodes node not reach threshold")
-			klog.Infof("clusterName:%v node:%v threshold:%v count:%v", clusterName, node, checkQl, count)
+	for node, count := range nodeDownTimeRes {
+		if count < cq {
+			klog.Errorf("downtimeNodes node not reach threshold.")
+			klog.Infof("clusterName:%v node:%v threshold:%v count:%v", clusterName, node, cq, count)
 			continue
 		}
 	}
 
 	WithDownNodeIPs := map[string]string{}
-	for node, count := range resMap {
-		if count < checkQl {
+	for node, count := range nodeDownTimeRes {
+		if count < cq {
 			klog.Errorf("downtimeNodes node not reach threshold")
-			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, node, checkQl, count)
+			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, node, cq, count)
 			continue
 		}
-		toNodeNameips := fmt.Sprintf(h.cc.NodeDownTime.NodeNameToIPs, node)
-		res, err := h.InstantQuery(toNodeNameips, addr, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+		NodeNameToIps := fmt.Sprintf(h.cc.NodeDownTime.NodeNameToIPs, node)
+		res, err := h.InstantQuery(NodeNameToIps, addr, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if err != nil {
 			klog.Errorf("downtimeNodes InstantQuery NodeName To IPs empty err:%v", err)
-			klog.Infof("clusterName:%v toNodeNameips:%v err:%v", clusterName, toNodeNameips, err)
+			klog.Infof("clusterName:%v toNodeNameips:%v err:%v", clusterName, NodeNameToIps, err)
 			continue
 		}
 		str := ""
@@ -132,6 +130,10 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			continue
 		}
 		newfound++
+		if newfound > 0 {
+			klog.Infof("NodeDownTimeCheckOnCluster get toNodeNameips result msg:%v clusterName:%v count:%v detail:%v", WithDownNodeIPsMsg, clusterName, len(nodeIP), nodeName)
+			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, WithDownNodeIPsMsg)
+		}
 		WithDownNodeIPsMsg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
 		write.Reason = NODE_DOWN_REASON
 		write.FirstDate = today
@@ -141,9 +143,5 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			klog.Infof("cluster:%v node:%v", clusterName, nodeName)
 		}
 		klog.Infof("NodeDownTimeCheckOnCluster abnormal cordonNode AddOrGetOne cluster:%v node:%v", clusterName, nodeName)
-		if newfound > 0 {
-			klog.Infof("NodeDownTimeCheckOnCluster get toNodeNameips result msg:%v clusterName:%v count:%v detail:%v", WithDownNodeIPsMsg, clusterName, len(nodeIP), nodeName)
-			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, WithDownNodeIPsMsg)
-		}
 	}
 }
