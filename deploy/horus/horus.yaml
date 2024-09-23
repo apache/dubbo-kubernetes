@@ -36,7 +36,7 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.128:31160
+  cluster: http://192.168.15.128:32427
 
 nodeRecovery:
   enabled: true
@@ -74,10 +74,14 @@ customModular:
     webhookUrl: "https://hooks.slack.com/services/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"
 
 nodeDownTime:
-  enabled: false
+  enabled: true
   checkIntervalSecond: 5
   promQueryTimeSecond: 60
   checkQL:
+    - node_disk_info
+    - node_cpu_guest_seconds_total
+  nodeNameToIPs: |-
+    node_os_info{node="%s"}
   dingTalk:
     webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
     title: "horus 通知"
