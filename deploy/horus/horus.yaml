@@ -92,7 +92,7 @@ nodeDownTime:
 
 podAbnormal:
   enabled: false
-  checkIntervalSecond:5
+  checkIntervalSecond: 5
   checkDoubleSecond: 10
   labelSelector: "app.kubernetes.io/name=horus"
   fieldSelector: "status.phase != Running"

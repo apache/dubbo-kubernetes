@@ -107,7 +107,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		WithDownNodeIPs[node] = str
 	}
 
-	WithDownNodeIPsMsg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【宕机：%v", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
+	WithDownNodeIPsMsg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【宕机：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
 	newfound := 0
 	for nodeName, nodeIP := range WithDownNodeIPs {
 		today := time.Now().Format("2006-01-02")
@@ -129,7 +129,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		}
 		newfound++
 		if newfound > 0 {
-			klog.Infof("NodeDownTimeCheckOnCluster get toNodeNameips \n【结果:%v】\n 【集群:%v】\n 【总数:%v】\n 【细节:%v】\n", WithDownNodeIPsMsg, clusterName, len(nodeIP), nodeName)
+			klog.Infof("NodeDownTimeCheckOnCluster get toNodeNameips \n【集群:%v】\n 【总数:%v】\n 【细节:%v】\n", clusterName, len(nodeIP), nodeName)
 			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, WithDownNodeIPsMsg)
 		}
 		WithDownNodeIPsMsg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
