@@ -51,10 +51,16 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 }
 
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
-	msg := fmt.Sprintf("\n【节点强制重启】\n 节点:%v\n 日期:%v\n 集群:%v\n", node.NodeName, node.FirstDate, node.ClusterName)
 	err := h.UnCordon(node.NodeName, node.ClusterName)
+	if err == nil {
+		klog.Infof("Node %v is already uncordoned.", node.NodeName)
+		return
+	}
+	msg := fmt.Sprintf("\n【节点尝试重启】\n 节点:%v\n 日期:%v\n 集群:%v\n", node.NodeName, node.FirstDate, node.ClusterName)
 	if err != nil {
-		msg = fmt.Sprintf("\n【节点强制重启失败：%v】\n", err)
+		msg = fmt.Sprintf("\n【节点重启失败：%v】\n", err)
+	} else {
+		msg = fmt.Sprintf("\n【节点重启成功】\n 节点:%v\n 日期:%v\n 集群:%v\n", node.NodeName, node.FirstDate, node.ClusterName)
 	}
 	alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 	pass, err := node.RestartMarker()

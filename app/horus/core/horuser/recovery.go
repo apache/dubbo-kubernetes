@@ -75,7 +75,10 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 	}
 	klog.Infof("recoveryNodes check success.")
 	err = h.UnCordon(n.NodeName, n.ClusterName)
-
+	if err == nil {
+		klog.Infof("Node %v is already uncordoned.", n.NodeName)
+		return
+	}
 	res := "Success"
 	if err != nil {
 		res = fmt.Sprintf("failed:%v", err)
