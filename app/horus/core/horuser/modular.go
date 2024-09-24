@@ -50,7 +50,7 @@ func (h *Horuser) CustomizeModular(ctx context.Context) {
 
 func (h *Horuser) CustomizeModularOnCluster(clusterName, addr string) {
 	klog.Infof("CustomizeModularOnCluster Start clusterName:%v", clusterName)
-	for moduleName, checkql := range h.cc.CustomModular.CheckQL {
+	for moduleName, checkql := range h.cc.CustomModular.AbnormalityQL {
 		ql := checkql
 		vecs, err := h.InstantQuery(addr, ql, clusterName, h.cc.CustomModular.PromQueryTimeSecond)
 		if err != nil {
