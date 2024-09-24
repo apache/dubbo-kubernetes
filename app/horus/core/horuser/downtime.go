@@ -60,8 +60,8 @@ func (h *Horuser) DownTimeCheck(ctx context.Context) {
 func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	klog.Infof("DownTimeNodes Query Start clusterName:%v", clusterName)
 	nodeDownTimeRes := make(map[string]int)
-	cq := len(h.cc.NodeDownTime.CheckQL)
-	for _, ql := range h.cc.NodeDownTime.CheckQL {
+	cq := len(h.cc.NodeDownTime.AbnormalityQL)
+	for _, ql := range h.cc.NodeDownTime.AbnormalityQL {
 		ql := ql
 		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if err != nil {

@@ -57,7 +57,7 @@ type RecoveryConfiguration struct {
 type ModularConfiguration struct {
 	Enabled             bool                   `yaml:"enabled"`
 	CordonDailyLimit    map[string]int         `yaml:"cordonDailyLimit"`
-	CheckQL             map[string]string      `yaml:"checkQL"`
+	AbnormalityQL       map[string]string      `yaml:"abnormalityQL"`
 	RecoveryQL          map[string]string      `yaml:"recoveryQL"`
 	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
@@ -71,7 +71,7 @@ type DowntimeConfiguration struct {
 	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
-	CheckQL             []string               `yaml:"checkQL"`
+	AbnormalityQL       []string               `yaml:"abnormalityQL"`
 	NodeNameToIPs       string                 `yaml:"nodeNameToIPs"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 }

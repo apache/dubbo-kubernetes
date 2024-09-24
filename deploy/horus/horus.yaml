@@ -55,7 +55,7 @@ customModular:
   enabled: false
   cordonDailyLimit:
     filesystem_readonly: 1
-  checkQL:
+  abnormalityQL:
     filesystem_readonly: |-
       node_filesystem_readonly{mountpoint="/"} != 1
   recoveryQL:
@@ -77,7 +77,7 @@ nodeDownTime:
   enabled: true
   checkIntervalSecond: 5
   promQueryTimeSecond: 60
-  checkQL:
+  abnormalityQL:
     - node_disk_info
     - node_cpu_guest_seconds_total
   nodeNameToIPs:
