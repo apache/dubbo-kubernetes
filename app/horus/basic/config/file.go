@@ -26,6 +26,7 @@ type Config struct {
 	NodeRecovery   *RecoveryConfiguration `yaml:"nodeRecovery"`
 	CustomModular  *ModularConfiguration  `yaml:"customModular"`
 	NodeDownTime   *DowntimeConfiguration `yaml:"nodeDownTime"`
+	PodAbnormal    *AbnormalConfiguration `yaml:"podAbnormal"`
 }
 
 type MysqlConfiguration struct {
@@ -72,5 +73,15 @@ type DowntimeConfiguration struct {
 	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	CheckQL             []string               `yaml:"checkQL"`
 	NodeNameToIPs       string                 `yaml:"nodeNameToIPs"`
+	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
+}
+
+type AbnormalConfiguration struct {
+	Enabled             bool                   `yaml:"enabled"`
+	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
+	CheckDoubleSecond   int                    `yaml:"checkDoubleSecond"`
+	LabelSelector       string                 `yaml:"labelSelector"`
+	FieldSelector       string                 `yaml:"fieldSelector"`
+	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 }

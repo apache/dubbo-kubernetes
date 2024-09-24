@@ -89,3 +89,17 @@ nodeDownTime:
     title: "horus 通知"
     atMobiles:
       - 15000000
+
+podAbnormal:
+  enabled: false
+  checkIntervalSecond:5
+  checkDoubleSecond: 10
+  labelSelector: "app.kubernetes.io/name=horus"
+  fieldSelector: "status.phase != Running"
+  kubeMultiple:
+    cluster: config.1
+  dingTalk:
+    webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
+    title: "horus 通知"
+    atMobiles:
+      - 15000000
