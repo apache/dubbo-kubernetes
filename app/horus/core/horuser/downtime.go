@@ -32,7 +32,7 @@ const (
 )
 
 func (h *Horuser) DownTimeManager(ctx context.Context) error {
-	go wait.UntilWithContext(ctx, h.DownTimeCheck, time.Duration(h.cc.NodeDownTime.CheckIntervalSecond)*time.Second)
+	go wait.UntilWithContext(ctx, h.DownTimeCheck, time.Duration(h.cc.NodeDownTime.IntervalSecond)*time.Second)
 	<-ctx.Done()
 	return nil
 }
@@ -137,9 +137,9 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		write.FirstDate = today
 		_, err = write.Add()
 		if err != nil {
-			klog.Errorf("NodeDownTimeCheckOnCluster abnormal cordonNode AddOrGetOne err:%v", err)
+			klog.Errorf("DownTimeNodes abnormal cordonNode AddOrGetOne err:%v", err)
 			klog.Infof("cluster:%v node:%v", clusterName, nodeName)
 		}
-		klog.Infof("NodeDownTimeCheckOnCluster abnormal cordonNode AddOrGetOne cluster:%v node:%v", clusterName, nodeName)
+		klog.Infof("DownTimeNodes abnormal cordonNode AddOrGetOne cluster:%v node:%v", clusterName, nodeName)
 	}
 }

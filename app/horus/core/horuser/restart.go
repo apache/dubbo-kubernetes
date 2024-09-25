@@ -28,7 +28,7 @@ import (
 )
 
 func (h *Horuser) DowntimeRestartManager(ctx context.Context) error {
-	go wait.UntilWithContext(ctx, h.RestartOrRepair, time.Duration(h.cc.NodeDownTime.CheckIntervalSecond)*time.Second)
+	go wait.UntilWithContext(ctx, h.RestartOrRepair, time.Duration(h.cc.NodeDownTime.IntervalSecond)*time.Second)
 	<-ctx.Done()
 	return nil
 }

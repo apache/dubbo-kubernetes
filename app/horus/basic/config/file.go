@@ -48,7 +48,7 @@ type SlackConfiguration struct {
 type RecoveryConfiguration struct {
 	Enabled             bool                   `yaml:"enabled"`
 	DayNumber           int                    `yaml:"dayNumber"`
-	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
+	IntervalSecond      int                    `yaml:"intervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
 	Slack               *SlackConfiguration    `yaml:"slack"`
@@ -68,7 +68,7 @@ type ModularConfiguration struct {
 
 type DowntimeConfiguration struct {
 	Enabled             bool                   `yaml:"enabled"`
-	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
+	IntervalSecond      int                    `yaml:"intervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	AbnormalityQL       []string               `yaml:"abnormalityQL"`
@@ -77,11 +77,11 @@ type DowntimeConfiguration struct {
 }
 
 type AbnormalConfiguration struct {
-	Enabled             bool                   `yaml:"enabled"`
-	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
-	CheckDoubleSecond   int                    `yaml:"checkDoubleSecond"`
-	LabelSelector       string                 `yaml:"labelSelector"`
-	FieldSelector       string                 `yaml:"fieldSelector"`
-	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
-	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
+	Enabled        bool                   `yaml:"enabled"`
+	IntervalSecond int                    `yaml:"intervalSecond"`
+	DoubleSecond   int                    `yaml:"doubleSecond"`
+	LabelSelector  string                 `yaml:"labelSelector"`
+	FieldSelector  string                 `yaml:"fieldSelector"`
+	KubeMultiple   map[string]string      `yaml:"kubeMultiple"`
+	DingTalk       *DingTalkConfiguration `yaml:"dingTalk"`
 }

@@ -27,7 +27,7 @@ import (
 )
 
 func (h *Horuser) RecoveryManager(ctx context.Context) error {
-	go wait.UntilWithContext(ctx, h.recoveryCheck, time.Duration(h.cc.NodeRecovery.CheckIntervalSecond)*time.Second)
+	go wait.UntilWithContext(ctx, h.recoveryCheck, time.Duration(h.cc.NodeRecovery.IntervalSecond)*time.Second)
 	<-ctx.Done()
 	return nil
 }
