@@ -66,3 +66,21 @@ func (h *Horuser) Terminating(clusterName string, oldPod *corev1.Pod) bool {
 	}
 	return true
 }
+
+func (h *Horuser) Fetch(clusterName, podNamespace, fieldSelector string) ([]corev1.Pod, error) {
+	kubeClient := h.kubeClientMap[clusterName]
+	if kubeClient == nil {
+		klog.Errorf("Fetch kubeClient by clusterName empty.")
+		klog.Infof("clusterName:%v", clusterName)
+		return nil, nil
+	}
+	ctx, cancel := h.GetK8sContext()
+	defer cancel()
+	list := v1.ListOptions{FieldSelector: fieldSelector}
+	pods, err := kubeClient.CoreV1().Pods(podNamespace).List(ctx, list)
+	if err != nil {
+		klog.Errorf("Fetch list pod err:%v", err)
+		klog.Infof("clusterName:%v fieldSelector:%v", clusterName, fieldSelector)
+	}
+	return pods.Items, err
+}
