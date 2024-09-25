@@ -16,7 +16,9 @@
 package horuser
 
 import (
+	"context"
 	"encoding/json"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -45,4 +47,22 @@ func (h *Horuser) Finalizer(clusterName, podName, podNamespace string) error {
 	defer cancel()
 	_, err := kubeClient.CoreV1().Pods(podNamespace).Patch(ctx, podName, types.JSONPatchType, data, v1.PatchOptions{})
 	return err
+}
+
+func (h *Horuser) Terminating(clusterName string, oldPod *corev1.Pod) bool {
+	kubeClient := h.kubeClientMap[clusterName]
+	if kubeClient == nil {
+		return false
+	}
+	newPod, _ := kubeClient.CoreV1().Pods(oldPod.Namespace).Get(context.Background(), oldPod.Name, v1.GetOptions{})
+	if newPod == nil {
+		return false
+	}
+	if newPod.UID != oldPod.UID {
+		return false
+	}
+	if newPod.DeletionTimestamp.IsZero() {
+		return false
+	}
+	return true
 }
