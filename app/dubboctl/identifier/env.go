@@ -21,7 +21,7 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/deploy"
+	"github.com/apache/dubbo-kubernetes/manifests"
 )
 
 var (
@@ -44,5 +44,5 @@ var (
 var UnionFS filesystem.UnionFS
 
 func init() {
-	UnionFS = filesystem.NewUnionFS(deploy.EmbedRootFS)
+	UnionFS = filesystem.NewUnionFS(manifests.EmbedRootFS)
 }
