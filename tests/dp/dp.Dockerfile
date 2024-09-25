@@ -43,7 +43,7 @@ COPY pkg pkg/
 COPY app app/
 COPY api api/
 COPY conf conf/
-COPY deploy deploy/
+COPY manifests manifests/
 COPY generate generate/
 COPY test/proxy/dp test/proxy/dp
 
