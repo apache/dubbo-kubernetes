@@ -54,13 +54,13 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	err := h.Drain(node.NodeName, node.ClusterName)
 	if err != nil {
-		msg += fmt.Sprintf("\n【安全驱逐节点尝试重启就绪：%v】\n", err)
+		msg := fmt.Sprintf("\n【安全驱逐节点尝试重启就绪：%v】\n", err)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 		return
 	}
 	msg := fmt.Sprintf("\n【节点正在尝试重启】\n 节点:%v\n 日期:%v\n 集群:%v\n", node.NodeName, node.FirstDate, node.ClusterName)
 
-	err := h.UnCordon(node.NodeName, node.ClusterName)
+	err = h.UnCordon(node.NodeName, node.ClusterName)
 	if err != nil {
 		msg += fmt.Sprintf("\n【取消不可调度状态失败：%v】\n", err)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
