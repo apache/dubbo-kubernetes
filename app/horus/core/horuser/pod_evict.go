@@ -49,4 +49,5 @@ func (h *Horuser) Evict(podName, podNamespace, clusterName string) (err error) {
 	}
 	klog.Infof("pod Evict delete success clusterName:%v podName:%v podNamespace:%v", clusterName, podName, podNamespace)
 	return nil
+
 }

@@ -54,14 +54,20 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	msg := fmt.Sprintf("\n【节点尝试重启】\n 节点:%v\n 日期:%v\n 集群:%v\n", node.NodeName, node.FirstDate, node.ClusterName)
 
-	err := h.UnCordon(node.NodeName, node.ClusterName)
+	err := h.Drain(node.NodeName, node.ClusterName)
 	if err != nil {
-		msg += fmt.Sprintf("\n【取消不可调度状态失败：%v】\n", err)
+		msg += fmt.Sprintf("\n【驱逐节点】\n")
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
-		return
-	} else {
-		klog.Infof("Node %v is already uncordoned.", node.NodeName)
 	}
+
+	//err := h.UnCordon(node.NodeName, node.ClusterName)
+	//if err != nil {
+	//	msg += fmt.Sprintf("\n【取消不可调度状态失败：%v】\n", err)
+	//	alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+	//	return
+	//} else {
+	//	klog.Infof("Node %v is already uncordoned.", node.NodeName)
+	//}
 
 	err = syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
 	if err != nil {

@@ -36,7 +36,7 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.128:31505
+  cluster: http://192.168.15.128:30177
 
 nodeRecovery:
   enabled: false
@@ -74,7 +74,7 @@ customModular:
     webhookUrl: "https://hooks.slack.com/services/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"
 
 nodeDownTime:
-  enabled: true
+  enabled: false
   checkIntervalSecond: 5
   promQueryTimeSecond: 60
   abnormalityQL:
