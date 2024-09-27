@@ -28,7 +28,7 @@ import (
 
 const (
 	NODE_DOWN        = "node_down"
-	NODE_DOWN_REASON = "node_down"
+	NODE_DOWN_REASON = "unknown"
 )
 
 func (h *Horuser) DownTimeManager(ctx context.Context) error {
@@ -129,7 +129,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		}
 		newfound++
 		if newfound > 0 {
-			klog.Infof("NodeDownTimeCheckOnCluster get toNodeNameips \n【集群:%v】\n 【总数:%v】\n 【细节:%v】\n", clusterName, len(nodeIP), nodeName)
+			klog.Infof("DownTimeNodes get WithDownNodeIPs \n【集群:%v】\n 【节点:%v】\n【节点 IP 数:%v】\n", clusterName, nodeName, len(nodeIP))
 			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, WithDownNodeIPsMsg)
 		}
 		WithDownNodeIPsMsg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
