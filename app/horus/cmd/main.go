@@ -133,6 +133,14 @@ func main() {
 		}
 		return nil
 	})
+	group.Add(func() error {
+		klog.Info("horus pod abnormal clean manager start success.")
+		err := horus.PodAbnormalCleanManager(ctx)
+		if err != nil {
+			klog.Errorf("horus pod abnormal clean manager start failed error:%v", err)
+		}
+		return nil
+	})
 	group.Wait()
 }
 
