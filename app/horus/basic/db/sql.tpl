@@ -33,20 +33,19 @@ CREATE TABLE `node_data_info` (
 
 CREATE TABLE `pod_data_info` (
                                  `id` int unsigned NOT NULL AUTO_INCREMENT,
-                                 `podName` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL COMMENT 'Pod 名',
-                                 `podIP` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT 'ip地址',
+                                 `pod_name` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL COMMENT 'Pod 名',
+                                 `pod_ip` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT 'PodIP',
                                  `sn` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL COMMENT '序列号',
-                                 `nodeName` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL COMMENT '节点名',
-                                 `clusterName` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT '集群名',
-                                 `moduleName` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL COMMENT '模块名',
+                                 `node_name` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL COMMENT '节点名',
+                                 `cluster_name` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT '集群名',
+                                 `module_name` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL COMMENT '模块名',
                                  `reason` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT '维护原因',
-                                 `restart` int DEFAULT NULL COMMENT '重启标志位',
-                                 `repair` int DEFAULT NULL COMMENT '修复标志位',
-                                 `repairTicketUrl` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT '修复单跳转 URL',
-                                 `firstDate` datetime DEFAULT NULL COMMENT '第一次维护日期',
-                                 `lastDate` datetime DEFAULT NULL COMMENT '最后维护日期',
-                                 `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建日期',
-                                 `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新日期',
+                                 `restart` int DEFAULT NULL COMMENT '重启标志',
+                                 `repair` int DEFAULT NULL COMMENT '修复标志',
+                                 `repair_ticket_url` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT '修复单跳转 URL',
+                                 `firstDate` datetime DEFAULT NULL COMMENT '最早开始维护时间',
+                                 `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                 `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                  PRIMARY KEY (`id`) USING BTREE,
-                                 UNIQUE KEY `idxUniqueName` (`podName`, `moduleName`) USING BTREE
+                                 UNIQUE KEY `idxUniqueName` (`pod_name`, `module_name`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 ROW_FORMAT=DYNAMIC;
