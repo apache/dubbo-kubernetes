@@ -43,7 +43,7 @@ type NodeDataInfo struct {
 }
 
 type PodDataInfo struct {
-	Id              uint32 `json:"id"`
+	Id              int64  `json:"id"`
 	PodName         string `json:"podName"`
 	PodIP           string `json:"podIP"`
 	Sn              string `json:"sn"`
@@ -80,6 +80,11 @@ func (n *NodeDataInfo) Add() (int64, error) {
 	return row, err
 }
 
+func (p *PodDataInfo) Add() (int64, error) {
+	row, err := db.Insert(p)
+	return row, err
+}
+
 func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
 	exist, err := db.Get(n)
 	if err != nil {
@@ -89,6 +94,17 @@ func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
 		return nil, nil
 	}
 	return n, nil
+}
+
+func (p *PodDataInfo) Get() (*PodDataInfo, error) {
+	exist, err := db.Get(p)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, nil
+	}
+	return p, nil
 }
 
 func (n *NodeDataInfo) Update() (bool, error) {
@@ -105,8 +121,27 @@ func (n *NodeDataInfo) Update() (bool, error) {
 	return false, nil
 }
 
+func (p *PodDataInfo) Update() (bool, error) {
+	firstDate := time.Now().Format("2006-01-02 15:04:05")
+	p.FirstDate = firstDate
+
+	row, err := db.Where(fmt.Sprintf("id=%d", p.Id)).Update(p)
+	if err != nil {
+		return false, err
+	}
+	if row > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (n *NodeDataInfo) Check() (bool, error) {
 	exist, err := db.Exist(n)
+	return exist, err
+}
+
+func (p *PodDataInfo) Check() (bool, error) {
+	exist, err := db.Exist(p)
 	return exist, err
 }
 
@@ -116,6 +151,15 @@ func (n *NodeDataInfo) AddOrGet() (int64, error) {
 		return n.Id, nil
 	}
 	row, err := n.Add()
+	return row, err
+}
+
+func (p *PodDataInfo) AddOrGet() (int64, error) {
+	exist, _ := p.Check()
+	if exist {
+		return p.Id, nil
+	}
+	row, err := p.Add()
 	return row, err
 }
 
@@ -148,4 +192,28 @@ func (n *NodeDataInfo) RecoveryMarker() (bool, error) {
 func (n *NodeDataInfo) RestartMarker() (bool, error) {
 	n.Restart = 1
 	return n.Update()
+}
+
+func GetPod() ([]PodDataInfo, error) {
+	var pdi []PodDataInfo
+	session := db.Where(fmt.Sprintf("id>%d", 0))
+	err := session.Find(&pdi)
+	return pdi, err
+}
+
+func GetPodByName(podName, moduleName string) (*PodDataInfo, error) {
+	pdi := PodDataInfo{
+		PodName:    podName,
+		ModuleName: moduleName,
+	}
+	return pdi.Get()
+}
+
+func GetLimitPodDataInfo(limit, offset int, orderColumn, where string, args ...interface{}) ([]PodDataInfo, error) {
+	var pdi []PodDataInfo
+	err := db.Where(where, args...).Limit(limit, offset).Desc(orderColumn).Find(pdi)
+	if err != nil {
+		return nil, err
+	}
+	return pdi, nil
 }
