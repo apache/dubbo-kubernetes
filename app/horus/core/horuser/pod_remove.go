@@ -24,9 +24,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type SampleValue struct {
-	Operation string `json:"operation"`
-	Path      string `json:"path"`
+type RemoveJsonValue struct {
+	Op   string `json:"op"`
+	Path string `json:"path"`
 }
 
 func (h *Horuser) Finalizer(clusterName, podName, podNamespace string) error {
@@ -36,9 +36,9 @@ func (h *Horuser) Finalizer(clusterName, podName, podNamespace string) error {
 		klog.Infof("clusterName:%v podName:%v", clusterName, podName)
 		return nil
 	}
-	finalizer := SampleValue{
-		Operation: "remove",
-		Path:      "/metadata/finalizers",
+	finalizer := RemoveJsonValue{
+		Op:   "remove",
+		Path: "/metadata/finalizers",
 	}
 	var payload []interface{}
 	payload = append(payload, finalizer)
