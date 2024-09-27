@@ -17,7 +17,13 @@ package horuser
 
 import (
 	"context"
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
+	"github.com/gammazero/workerpool"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	"sync"
 	"time"
 )
@@ -37,4 +43,75 @@ func (h *Horuser) PodAbnormalClean(ctx context.Context) {
 		}(cn)
 	}
 	wg.Wait()
+}
+
+func (h *Horuser) PodsOnCluster(clusterName string) {
+	var podNamespace string
+	pods, err := h.Fetch(clusterName, podNamespace, h.cc.PodAbnormal.FieldSelector)
+	if err != nil {
+		klog.Errorf("Failed to fetch pods on cluster:%v", err)
+		klog.Infof("clusterName:%v podNamespace:%v", clusterName, podNamespace)
+		return
+	}
+	count := len(pods)
+	if count == 0 {
+		klog.Infof("PodsOnCluster no abnomal clusterName:%v", clusterName)
+		return
+	}
+	wp := workerpool.New(10)
+	for index, pod := range pods {
+		if pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		msg := fmt.Sprintf("【集群：%v】【%d/%d】【Namespace:%v】【PodName:%v】【Phase:%v】【节点名：%v】", clusterName, index+1, count, pod.Namespace, pod.Name, pod.Status.Phase, pod.Spec.NodeName)
+		klog.Infof(msg)
+
+		wp.Submit(func() {
+			h.PodSingle(pod, clusterName)
+		})
+	}
+	wp.StopWait()
+}
+
+func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
+	if !pod.DeletionTimestamp.IsZero() {
+		var err error
+		action := ""
+		switch len(pod.Finalizers) {
+		case 0:
+			if pod.Name != "" {
+				return
+			}
+			err = h.Evict(pod.Name, pod.Namespace, clusterName)
+			action = "try patch-finalizer"
+		default:
+			time.Sleep(time.Duration(h.cc.PodAbnormal.DoubleSecond) * time.Second)
+			pass := h.Terminating(clusterName, &pod)
+			if !pass {
+				return
+			}
+			err = h.Finalizer(clusterName, pod.Name, pod.Namespace)
+			action = "try patch-finalizer"
+			res := "Success"
+			if err != nil {
+				res = fmt.Sprintf("failed:%v", err)
+			}
+			today := time.Now().Format("2006-01-02")
+			msg := fmt.Sprintf("【集群：%v】【Pod：%v】【Namespace：%v】【无法删除 pod-patch-finalizer:%v】【处理结果：%v】", clusterName, pod.Name, pod.Namespace, action, res)
+			alert.DingTalkSend(h.cc.PodAbnormal.DingTalk, msg)
+			write := db.PodDataInfo{
+				PodName:     pod.Name,
+				PodIP:       pod.Status.PodIP,
+				NodeName:    pod.Spec.NodeName,
+				ClusterName: clusterName,
+				ModuleName:  "pod_abnormal_clean",
+				Reason:      action,
+				FirstDate:   today,
+			}
+			_, err = write.AddOrGet()
+			klog.Errorf("write AddOrGet err:%v", err)
+			klog.Infof("podName:%v", pod.Name)
+			return
+		}
+	}
 }
