@@ -28,6 +28,10 @@ import (
 	"time"
 )
 
+const (
+	ModuleName = "pod_abnormal_clean"
+)
+
 func (h *Horuser) PodAbnormalCleanManager(ctx context.Context) error {
 	go wait.UntilWithContext(ctx, h.PodAbnormalClean, time.Duration(h.cc.PodAbnormal.IntervalSecond)*time.Second)
 	<-ctx.Done()
@@ -65,7 +69,7 @@ func (h *Horuser) PodsOnCluster(clusterName string) {
 		if pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 			continue
 		}
-		msg := fmt.Sprintf("\n【集群：%v】\n【%d/%d】\n【Namespace:%v】\n【PodName:%v】\n【Phase:%v】\n【节点名：%v】\n", clusterName, index+1, count, pod.Namespace, pod.Name, pod.Status.Phase, pod.Spec.NodeName)
+		msg := fmt.Sprintf("\n【集群：%v】\n【存活：%d/%d】\n【PodName:%v】\n【Namespace:%v】\n【Phase:%v】\n【节点：%v】\n", clusterName, index+1, count, pod.Name, pod.Namespace, pod.Status.Phase, pod.Spec.NodeName)
 		klog.Infof(msg)
 
 		wp.Submit(func() {
@@ -99,14 +103,14 @@ func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
 				res = fmt.Sprintf("failed:%v", err)
 			}
 			today := time.Now().Format("2006-01-02")
-			msg := fmt.Sprintf("【集群：%v】【Pod：%v】【Namespace：%v】【无法删除 pod-patch-finalizer:%v】【处理结果：%v】", clusterName, pod.Name, pod.Namespace, action, res)
+			msg := fmt.Sprintf("\n【集群：%v】\n【Pod：%v】\n【Namespace：%v】\n【无法删除的 finalizer:%v】\n【处理结果：%v】\n", clusterName, pod.Name, pod.Namespace, err, res)
 			alert.DingTalkSend(h.cc.PodAbnormal.DingTalk, msg)
 			write := db.PodDataInfo{
 				PodName:     pod.Name,
 				PodIP:       pod.Status.PodIP,
 				NodeName:    pod.Spec.NodeName,
 				ClusterName: clusterName,
-				ModuleName:  "pod_abnormal_clean",
+				ModuleName:  ModuleName,
 				Reason:      action,
 				FirstDate:   today,
 			}
