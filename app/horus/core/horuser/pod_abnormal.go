@@ -37,10 +37,12 @@ func (h *Horuser) PodAbnormalCleanManager(ctx context.Context) error {
 func (h *Horuser) PodAbnormalClean(ctx context.Context) {
 	var wg sync.WaitGroup
 	for cn := range h.cc.PodAbnormal.KubeMultiple {
+		cn := cn
 		wg.Add(1)
-		go func(clusterName string) {
+		go func() {
 			defer wg.Done()
-		}(cn)
+			h.PodsOnCluster(cn)
+		}()
 	}
 	wg.Wait()
 }
@@ -63,7 +65,7 @@ func (h *Horuser) PodsOnCluster(clusterName string) {
 		if pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 			continue
 		}
-		msg := fmt.Sprintf("【集群：%v】【%d/%d】【Namespace:%v】【PodName:%v】【Phase:%v】【节点名：%v】", clusterName, index+1, count, pod.Namespace, pod.Name, pod.Status.Phase, pod.Spec.NodeName)
+		msg := fmt.Sprintf("\n【集群：%v】\n【%d/%d】\n【Namespace:%v】\n【PodName:%v】\n【Phase:%v】\n【节点名：%v】\n", clusterName, index+1, count, pod.Namespace, pod.Name, pod.Status.Phase, pod.Spec.NodeName)
 		klog.Infof(msg)
 
 		wp.Submit(func() {

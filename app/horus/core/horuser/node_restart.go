@@ -52,9 +52,9 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 }
 
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
-	err := h.Drain(node.NodeName, node.ClusterName)
+	err := h.Drain(node.ClusterName, node.NodeName)
 	if err != nil {
-		msg := fmt.Sprintf("\n【安全驱逐节点尝试重启就绪：%v】\n", err)
+		msg := fmt.Sprintf("\n【安全驱逐节点重启就绪：%v】\n", err)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 		return
 	}
@@ -69,7 +69,8 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 		klog.Infof("Node %v is already uncordoned.", node.NodeName)
 	}
 
-	err = syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+	syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+
 	if err != nil {
 		msg += fmt.Sprintf("\n【节点重启失败：%v】\n", err)
 	} else {

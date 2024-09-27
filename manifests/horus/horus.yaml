@@ -91,11 +91,11 @@ nodeDownTime:
       - 15000000
 
 podAbnormal:
-  enabled: false
+  enabled: true
   intervalSecond: 5
   doubleSecond: 10
   labelSelector: "app.kubernetes.io/name=horus"
-  fieldSelector: "status.phase != Running"
+  fieldSelector: "status.phase!=Running"
   kubeMultiple:
     cluster: config.1
   dingTalk:
