@@ -41,7 +41,7 @@ promMultiple:
 nodeRecovery:
   enabled: false
   dayNumber: 1
-  checkIntervalSecond: 5
+  intervalSecond: 5
   promQueryTimeSecond: 60
   dingTalk:
     webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
@@ -61,7 +61,7 @@ customModular:
   recoveryQL:
     filesystem_readonly: |-
       node_filesystem_readonly{mountpoint="/",node="%s"} == 0
-  checkIntervalSecond: 5
+  intervalSecond: 5
   promQueryTimeSecond: 60
   kubeMultiple:
     cluster: config.1
@@ -75,7 +75,7 @@ customModular:
 
 nodeDownTime:
   enabled: false
-  checkIntervalSecond: 5
+  intervalSecond: 5
   promQueryTimeSecond: 60
   abnormalityQL:
     - node_disk_info
@@ -92,8 +92,8 @@ nodeDownTime:
 
 podAbnormal:
   enabled: false
-  checkIntervalSecond: 5
-  checkDoubleSecond: 10
+  intervalSecond: 5
+  doubleSecond: 10
   labelSelector: "app.kubernetes.io/name=horus"
   fieldSelector: "status.phase != Running"
   kubeMultiple:
