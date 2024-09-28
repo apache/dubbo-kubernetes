@@ -43,9 +43,9 @@ CREATE TABLE `pod_data_info` (
                                  `restart` int DEFAULT NULL COMMENT '重启标志',
                                  `repair` int DEFAULT NULL COMMENT '修复标志',
                                  `repair_ticket_url` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL COMMENT '修复单跳转 URL',
-                                 `firstDate` datetime DEFAULT NULL COMMENT '最早开始维护时间',
-                                 `createTime` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                 `updateTime` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                 `first_date` datetime DEFAULT NULL COMMENT '最早开始维护时间',
+                                 `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                 `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                  PRIMARY KEY (`id`) USING BTREE,
                                  UNIQUE KEY `idxUniqueName` (`pod_name`, `module_name`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3 ROW_FORMAT=DYNAMIC;
