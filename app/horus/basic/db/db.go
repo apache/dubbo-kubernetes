@@ -44,20 +44,19 @@ type NodeDataInfo struct {
 
 type PodDataInfo struct {
 	Id              int64  `json:"id"`
-	PodName         string `json:"podName"`
-	PodIP           string `json:"podIP"`
+	PodName         string `json:"pod_name" xorm:"pod_name"`
+	PodIP           string `json:"pod_ip" xorm:"pod_ip"`
 	Sn              string `json:"sn"`
-	NodeName        string `json:"nodeName"`
-	ClusterName     string `json:"clusterName"`
-	ModuleName      string `json:"moduleName"`
+	NodeName        string `json:"node_name" xorm:"node_name"`
+	ClusterName     string `json:"cluster_name" xorm:"cluster_name"`
+	ModuleName      string `json:"module_name" xorm:"module_name"`
 	Reason          string `json:"reason"`
 	Restart         int32  `json:"restart"`
 	Repair          int32  `json:"repair"`
-	RepairTicketUrl string `json:"repairTicketUrl"`
-	FirstDate       string `json:"firstDate"`
-	LastDate        string `json:"lastDate"`
-	CreateTime      string `json:"createTime"`
-	UpdateTime      string `json:"updateTime"`
+	RepairTicketUrl string `json:"repair_ticket_url" xorm:"repair_ticket_url"`
+	FirstDate       string `json:"first_date" xorm:"first_date"`
+	CreateTime      string `json:"create_time" xorm:"create_time created"`
+	UpdateTime      string `json:"update_time" xorm:"update_time updated"`
 }
 
 var (
