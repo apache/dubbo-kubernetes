@@ -33,7 +33,7 @@ func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 
 	ctxFirst, cancelFirst := h.GetK8sContext()
 	defer cancelFirst()
-	listOpts := v1.ListOptions{FieldSelector: fmt.Sprintf("nodeName=%s", nodeName)}
+	listOpts := v1.ListOptions{FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName)}
 	var podNamespace string
 	pod, err := kubeClient.CoreV1().Pods(podNamespace).List(ctxFirst, listOpts)
 	if err != nil {
