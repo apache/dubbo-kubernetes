@@ -36,7 +36,7 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.128:30177
+  cluster: http://192.168.15.128:30484
 
 nodeRecovery:
   enabled: false
@@ -74,7 +74,7 @@ customModular:
     webhookUrl: "https://hooks.slack.com/services/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"
 
 nodeDownTime:
-  enabled: false
+  enabled: true
   intervalSecond: 5
   promQueryTimeSecond: 60
   abnormalityQL:
@@ -91,7 +91,7 @@ nodeDownTime:
       - 15000000
 
 podAbnormal:
-  enabled: true
+  enabled: false
   intervalSecond: 5
   doubleSecond: 10
   labelSelector: "app.kubernetes.io/name=horus"
