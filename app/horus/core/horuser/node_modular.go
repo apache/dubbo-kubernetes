@@ -27,7 +27,7 @@ import (
 )
 
 func (h *Horuser) CustomizeModularManager(ctx context.Context) error {
-	go wait.UntilWithContext(ctx, h.CustomizeModular, time.Duration(h.cc.CustomModular.CheckIntervalSecond)*time.Second)
+	go wait.UntilWithContext(ctx, h.CustomizeModular, time.Duration(h.cc.CustomModular.IntervalSecond)*time.Second)
 	<-ctx.Done()
 	return nil
 }
@@ -87,9 +87,6 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		return
 	}
 	err = h.Cordon(nodeName, clusterName, moduleName)
-	if err != nil {
-		return
-	}
 
 	write := db.NodeDataInfo{
 		NodeName:    nodeName,
@@ -118,7 +115,7 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		res = fmt.Sprintf("failed:%v", err)
 		klog.Errorf("Cordon failed:%v", res)
 	}
-	msg := fmt.Sprintf("\n【集群:%v】\n【发现 %s 异常已禁止调度】\n【已禁止调度节点:%v】\n 【处理结果: %v】\n 【今日操作次数:%v】\n",
+	msg := fmt.Sprintf("\n【集群:%v】\n【发现 %s 达到禁止调度条件】\n【禁止调度节点:%v】\n 【处理结果: %v】\n 【今日操作次数:%v】\n",
 		clusterName, moduleName, nodeName, res, len(data)+1)
 	alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
 	alert.SlackSend(h.cc.CustomModular.Slack, msg)

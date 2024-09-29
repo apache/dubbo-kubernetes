@@ -37,11 +37,10 @@ func (h *Horuser) UnCordon(nodeName, clusterName string) (err error) {
 	}
 
 	node.Spec.Unschedulable = false
-	if !node.Spec.Unschedulable {
-		klog.Infof("Node %v is already uncordoned.", nodeName)
-		return nil
-	}
-
+	//if node.Spec.Unschedulable != true {
+	//	klog.Infof("Node %v is already uncordoned.", nodeName)
+	//	return
+	//}
 	ctxSecond, cancelSecond := h.GetK8sContext()
 	defer cancelSecond()
 	node, err = kubeClient.CoreV1().Nodes().Update(ctxSecond, node, v1.UpdateOptions{})

@@ -42,10 +42,10 @@ func (h *Horuser) Cordon(nodeName, clusterName, moduleName string) (err error) {
 	annotations["dubbo.apache.org/disable-by"] = "horus"
 
 	node.Spec.Unschedulable = true
-	if node.Spec.Unschedulable {
-		klog.Infof("Node %v is already cordoned.", nodeName)
-		return nil
-	}
+	//if node.Spec.Unschedulable != false {
+	//	klog.Infof("Node %v is already cordoned.", nodeName)
+	//	return
+	//}
 	ctxSecond, cancelSecond := h.GetK8sContext()
 	defer cancelSecond()
 	node, err = kubeClient.CoreV1().Nodes().Update(ctxSecond, node, v1.UpdateOptions{})

@@ -59,7 +59,7 @@ type ModularConfiguration struct {
 	CordonDailyLimit    map[string]int         `yaml:"cordonDailyLimit"`
 	AbnormalityQL       map[string]string      `yaml:"abnormalityQL"`
 	RecoveryQL          map[string]string      `yaml:"recoveryQL"`
-	CheckIntervalSecond int                    `yaml:"checkIntervalSecond"`
+	IntervalSecond      int                    `yaml:"intervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
 	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
 	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
