@@ -30,7 +30,7 @@ import (
 
 const (
 	ModuleName = "pod_abnormal_clean"
-	Reason     = "clean up"
+	Reason     = "clean_up"
 )
 
 func (h *Horuser) PodAbnormalCleanManager(ctx context.Context) error {
