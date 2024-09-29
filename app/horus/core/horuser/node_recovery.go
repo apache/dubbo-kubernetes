@@ -75,15 +75,11 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 	}
 	klog.Infof("recoveryNodes check success.")
 	err = h.UnCordon(n.NodeName, n.ClusterName)
-	if err == nil {
-		klog.Infof("Node %v is already uncordoned.", n.NodeName)
-		return
-	}
 	res := "Success"
 	if err != nil {
 		res = fmt.Sprintf("failed:%v", err)
 	}
-	msg := fmt.Sprintf("\n【集群: %v】\n【异常节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
+	msg := fmt.Sprintf("\n【集群: %v】\n【封锁节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
 	alert.DingTalkSend(h.cc.NodeRecovery.DingTalk, msg)
 	alert.SlackSend(h.cc.CustomModular.Slack, msg)
 

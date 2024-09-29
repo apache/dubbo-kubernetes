@@ -52,9 +52,9 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 }
 
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
-	err := h.Drain(node.ClusterName, node.NodeName)
+	err := h.Drain(node.NodeName, node.ClusterName)
 	if err != nil {
-		msg := fmt.Sprintf("\n【安全驱逐节点重启就绪：%v】\n", err)
+		msg := fmt.Sprintf("\n【安全驱逐节点：%v】\n", err)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 		return
 	}
