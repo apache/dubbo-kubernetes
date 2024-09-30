@@ -13,4 +13,4 @@ run/xds-client:
 
 .PHONY: run/dubbo-cp
 run/dubbo-cp:
-	go run ./app/dubbo-cp/... run --log-level=debug -c conf/dubbo-cp.yaml
+	go run ./app/dubbo-cp/... run --log-level=debug -c app/dubbo-cp/dubbo-cp.yaml

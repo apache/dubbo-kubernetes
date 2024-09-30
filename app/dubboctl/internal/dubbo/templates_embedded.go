@@ -24,12 +24,12 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/app/dubboctl/internal/filesystem"
-	"github.com/apache/dubbo-kubernetes/generate"
+	"github.com/apache/dubbo-kubernetes/generated"
 )
 
 //go:generate go run ../../../../generate/templates/main.go
 func newEmbeddedTemplatesFS() filesystem.Filesystem {
-	archive, err := zip.NewReader(bytes.NewReader(generate.TemplatesZip), int64(len(generate.TemplatesZip)))
+	archive, err := zip.NewReader(bytes.NewReader(generated.TemplatesZip), int64(len(generated.TemplatesZip)))
 	if err != nil {
 		panic(err)
 	}
