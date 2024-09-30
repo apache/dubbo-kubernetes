@@ -78,7 +78,7 @@ nodeDownTime:
   promQueryTimeSecond: 60
   abnormalityQL:
     - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-    - (avg by (node) (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100) < 20
+    - (avg by (node) (node_memory_MemFree_bytes / node_memory_MemTotal_bytes )) * 100 < 10
     - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
   nodeNameToIPs:
     node_os_info{node="%s"}
