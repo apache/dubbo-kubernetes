@@ -77,8 +77,9 @@ nodeDownTime:
   intervalSecond: 15
   promQueryTimeSecond: 60
   abnormalityQL:
-    - node_disk_info
-    - node_cpu_guest_seconds_total
+    - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+    - (avg by (node) (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100) < 20
+    - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
   nodeNameToIPs:
     node_os_info{node="%s"}
   kubeMultiple:
