@@ -33,9 +33,9 @@ import (
 
 import (
 	"github.com/docker/cli/cli/connhelper"
-
+	dockerssh "github.com/docker/cli/cli/connhelper/ssh"
 	"github.com/docker/docker/pkg/homedir"
-
+	pkgerr "github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
