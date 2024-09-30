@@ -17,6 +17,7 @@ package horuser
 
 import (
 	"context"
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
 	"github.com/gammazero/workerpool"
@@ -51,19 +52,21 @@ func (h *Horuser) RestartOrRepair(ctx context.Context) {
 }
 
 func (h *Horuser) TryRestart(node db.NodeDataInfo) {
+	err := h.Drain(node.NodeName, node.ClusterName)
+	if err != nil {
+		klog.Errorf("Drain node err:%v", err)
+		klog.Infof("clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
+		return
+	} else {
+		klog.Infof("Drain node Success clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
+	}
 
-	go func() {
-		err := h.Drain(node.NodeName, node.ClusterName)
-		if err != nil {
-			klog.Errorf("Drain node err:%v", err)
-			klog.Infof("clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
-			return
-		}
-	}()
-
-	defer syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
-
-	alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 	pass, err := node.RestartMarker()
 	klog.Infof("RestartMarker result pass:%v err:%v", pass, err)
+
+	if pass {
+		msg := fmt.Sprintf("【等待腾空节点后重启就绪】【节点:%v】【日期:%v】【集群:%v】", node.NodeName, node.FirstDate, node.ClusterName)
+		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+		defer syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+	}
 }
