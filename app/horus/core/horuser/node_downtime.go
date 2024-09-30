@@ -28,7 +28,7 @@ import (
 
 const (
 	NODE_DOWN        = "node_down"
-	NODE_DOWN_REASON = "unknown"
+	NODE_DOWN_REASON = "down_time"
 )
 
 func (h *Horuser) DownTimeManager(ctx context.Context) error {
@@ -107,7 +107,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		WithDownNodeIPs[node] = str
 	}
 
-	WithDownNodeIPsMsg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【宕机：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
+	WithDownNodeIPsMsg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机标准：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
 	newfound := 0
 	for nodeName, nodeIP := range WithDownNodeIPs {
 		today := time.Now().Format("2006-01-02")
