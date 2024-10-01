@@ -128,9 +128,6 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			return
 		}
 		node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, metav1.GetOptions{})
-		if err != nil {
-			klog.Errorf("node Cordon get err nodeName:%v clusterName:%v", nodeName, clusterName)
-		}
 		nodeIP, err := func() (string, error) {
 			for _, address := range node.Status.Addresses {
 				if address.Type == "InternalIP" {
@@ -152,7 +149,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		}
 		newfound++
 		if newfound > 0 {
-			klog.Infof("DownTimeNodes get WithDownNodeIPs \n【集群:%v】\n 【节点:%v】\n【节点数:%v】\n", clusterName, nodeName, len(nodeIP))
+			klog.Infof("DownTimeNodes get WithDownNodeIPs【集群:%v】【节点:%v】【IP:%v】", clusterName, nodeName, nodeIP)
 			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 		}
 		msg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
