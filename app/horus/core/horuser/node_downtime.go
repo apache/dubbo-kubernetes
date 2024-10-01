@@ -98,15 +98,15 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, node, cq, count)
 			continue
 		}
-		nnti := fmt.Sprintf(h.cc.NodeDownTime.NodeNameToIPs, node)
-		res, err := h.InstantQuery(addr, nnti, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+		abnormalInfoSystemQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalInfoSystemQL, node)
+		res, err := h.InstantQuery(addr, abnormalInfoSystemQL, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if len(res) == 0 {
-			klog.Errorf("No results returned for query: %s", nnti)
+			klog.Errorf("No results returned for query: %s", abnormalInfoSystemQL)
 			continue
 		}
 		if err != nil {
 			klog.Errorf("downtimeNodes InstantQuery NodeName To IPs empty err:%v", err)
-			klog.Infof("clusterName:%v nodeNameToIPs: %v, err:%v", clusterName, nnti, err)
+			klog.Infof("clusterName:%v AbnormalInfoSystemQL: %v, err:%v", clusterName, abnormalInfoSystemQL, err)
 			continue
 		}
 		str := ""

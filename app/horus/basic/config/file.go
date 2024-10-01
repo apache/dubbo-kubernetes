@@ -67,13 +67,13 @@ type ModularConfiguration struct {
 }
 
 type DowntimeConfiguration struct {
-	Enabled             bool                   `yaml:"enabled"`
-	IntervalSecond      int                    `yaml:"intervalSecond"`
-	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`
-	KubeMultiple        map[string]string      `yaml:"kubeMultiple"`
-	AbnormalityQL       []string               `yaml:"abnormalityQL"`
-	NodeNameToIPs       string                 `yaml:"nodeNameToIPs"`
-	DingTalk            *DingTalkConfiguration `yaml:"dingTalk"`
+	Enabled              bool                   `yaml:"enabled"`
+	IntervalSecond       int                    `yaml:"intervalSecond"`
+	PromQueryTimeSecond  int64                  `yaml:"promQueryTimeSecond"`
+	KubeMultiple         map[string]string      `yaml:"kubeMultiple"`
+	AbnormalityQL        []string               `yaml:"abnormalityQL"`
+	AbnormalInfoSystemQL string                 `yaml:"abnormalInfoSystemQL"`
+	DingTalk             *DingTalkConfiguration `yaml:"dingTalk"`
 }
 
 type AbnormalConfiguration struct {
