@@ -65,7 +65,7 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	klog.Infof("RestartMarker result pass:%v err:%v", pass, err)
 
 	if pass {
-		msg := fmt.Sprintf("【等待宕机节点腾空后重启】【节点:%v】【日期:%v】【集群:%v】", node.NodeName, node.FirstDate, node.ClusterName)
+		msg := fmt.Sprintf("\n【等待宕机节点腾空后重启】\n【节点:%v】\n【日期:%v】\n【集群:%v】\n", node.NodeName, node.FirstDate, node.ClusterName)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 		// TODO user@password
 		cmd := exec.Command("/bin/bash", "./restart.sh", node.NodeIP)
