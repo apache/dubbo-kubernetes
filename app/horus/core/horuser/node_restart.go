@@ -77,5 +77,4 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 		}
 		klog.Infof("Successfully executed restart.sh for node %v. Output: %v", node.NodeName, string(output))
 	}
-	}
 }
