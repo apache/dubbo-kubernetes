@@ -19,7 +19,11 @@ host_computer=$1
 host_name=$2
 host_pass=$3
 
-if [ $# -lt 2 ]; then
-  echo "ERROR：The expected value is parameter 2, but there is only 1 input paramter."
+if [ $# -lt 3 ]; then
+  echo "ERROR: The expected value is parameter 3, but there are only $#: input parameters."
   exit 1
 fi
+
+for i in $host_computer; do
+    sshpass -p$host_pass ssh -o "StrictHostKeyChecking=no" $host_name@$i "echo $host_pass | sudo -S reboot"
+done
