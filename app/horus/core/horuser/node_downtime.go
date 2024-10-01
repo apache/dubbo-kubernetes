@@ -134,7 +134,6 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		nodeIP, err := func() (string, error) {
 			for _, address := range node.Status.Addresses {
 				if address.Type == "InternalIP" {
-
 					return address.Address, nil
 				}
 			}

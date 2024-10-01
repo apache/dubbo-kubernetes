@@ -23,6 +23,7 @@ import (
 	"github.com/gammazero/workerpool"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
+	"os/exec"
 	"time"
 )
 
@@ -64,8 +65,17 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	klog.Infof("RestartMarker result pass:%v err:%v", pass, err)
 
 	if pass {
-		msg := fmt.Sprintf("【等待腾空节点后重启就绪】【节点:%v】【日期:%v】【集群:%v】", node.NodeName, node.FirstDate, node.ClusterName)
+		msg := fmt.Sprintf("【等待宕机节点腾空后重启】【节点:%v】【日期:%v】【集群:%v】", node.NodeName, node.FirstDate, node.ClusterName)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
-		// TODO restart policy
+		// TODO user@password
+		cmd := exec.Command("/bin/bash", "./restart.sh", node.NodeIP)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			klog.Errorf("Failed to execute restart.sh script for node %v: %v", node.NodeName, err)
+			klog.Errorf("Output: %v", string(output))
+			return
+		}
+		klog.Infof("Successfully executed restart.sh for node %v. Output: %v", node.NodeName, string(output))
+	}
 	}
 }
