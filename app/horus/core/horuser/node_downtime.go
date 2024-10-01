@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
 	"sync"
@@ -28,7 +29,7 @@ import (
 
 const (
 	NODE_DOWN        = "node_down"
-	NODE_DOWN_REASON = "down_time"
+	NODE_DOWN_REASON = "downtime"
 )
 
 func (h *Horuser) DownTimeManager(ctx context.Context) error {
@@ -58,6 +59,14 @@ func (h *Horuser) DownTimeCheck(ctx context.Context) {
 }
 
 func (h *Horuser) DownTimeNodes(clusterName, addr string) {
+	kubeClient := h.kubeClientMap[clusterName]
+	if kubeClient == nil {
+		klog.Errorf("DownTimeNodes kubeClient by clusterName empty.")
+		return
+	}
+	ctxFirst, cancelFirst := h.GetK8sContext()
+	defer cancelFirst()
+
 	klog.Infof("DownTimeNodes Query Start clusterName:%v", clusterName)
 	nodeDownTimeRes := make(map[string]int)
 	cq := len(h.cc.NodeDownTime.AbnormalityQL)
@@ -107,9 +116,10 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		WithDownNodeIPs[node] = str
 	}
 
-	WithDownNodeIPsMsg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机标准：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
+	msg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机标准：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
 	newfound := 0
-	for nodeName, nodeIP := range WithDownNodeIPs {
+
+	for nodeName, _ := range WithDownNodeIPs {
 		today := time.Now().Format("2006-01-02")
 		err := h.Cordon(nodeName, clusterName, NODE_DOWN)
 		if err != nil {
@@ -117,6 +127,20 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			klog.Infof("clusterName:%v nodeName:%v", clusterName, nodeName)
 			return
 		}
+		node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, metav1.GetOptions{})
+		if err != nil {
+			klog.Errorf("node Cordon get err nodeName:%v clusterName:%v", nodeName, clusterName)
+		}
+		nodeIP, err := func() (string, error) {
+			for _, address := range node.Status.Addresses {
+				if address.Type == "InternalIP" {
+
+					return address.Address, nil
+				}
+			}
+			return "", nil
+		}()
+
 		write := db.NodeDataInfo{
 			NodeName:    nodeName,
 			NodeIP:      nodeIP,
@@ -129,10 +153,10 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		}
 		newfound++
 		if newfound > 0 {
-			klog.Infof("DownTimeNodes get WithDownNodeIPs \n【集群:%v】\n 【节点:%v】\n【节点 IP 数:%v】\n", clusterName, nodeName, len(nodeIP))
-			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, WithDownNodeIPsMsg)
+			klog.Infof("DownTimeNodes get WithDownNodeIPs \n【集群:%v】\n 【节点:%v】\n【节点数:%v】\n", clusterName, nodeName, len(nodeIP))
+			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 		}
-		WithDownNodeIPsMsg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
+		msg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
 		write.Reason = NODE_DOWN_REASON
 		write.FirstDate = today
 		_, err = write.Add()
