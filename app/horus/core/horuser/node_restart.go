@@ -23,7 +23,6 @@ import (
 	"github.com/gammazero/workerpool"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
-	"syscall"
 	"time"
 )
 
@@ -67,6 +66,6 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	if pass {
 		msg := fmt.Sprintf("【等待腾空节点后重启就绪】【节点:%v】【日期:%v】【集群:%v】", node.NodeName, node.FirstDate, node.ClusterName)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
-		defer syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+		// TODO restart policy
 	}
 }
