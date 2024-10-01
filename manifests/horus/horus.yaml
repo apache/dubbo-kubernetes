@@ -35,10 +35,10 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.128:30937
+  cluster: http://192.168.15.128:31019
 
 nodeRecovery:
-  enabled: true
+  enabled: false
   dayNumber: 1
   intervalSecond: 15
   promQueryTimeSecond: 60
@@ -51,7 +51,7 @@ nodeRecovery:
     webhookUrl: "https://hooks.slack.com/services/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"
 
 customModular:
-  enabled: true
+  enabled: false
   cordonDailyLimit:
     node_cpu: 1
   abnormalityQL:
@@ -73,13 +73,13 @@ customModular:
     webhookUrl: "https://hooks.slack.com/services/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"
 
 nodeDownTime:
-  enabled: false
+  enabled: true
   intervalSecond: 15
   promQueryTimeSecond: 60
   abnormalityQL:
-    - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-    - (avg by (node) (node_memory_MemFree_bytes / node_memory_MemTotal_bytes )) * 100 < 10
-    - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
+    - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 50
+#    - (avg by (node) (node_memory_MemFree_bytes / node_memory_MemTotal_bytes )) * 100 < 20
+#    - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
   nodeNameToIPs:
     node_os_info{node="%s"}
   kubeMultiple:
