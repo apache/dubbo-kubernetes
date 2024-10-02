@@ -73,6 +73,8 @@ type DowntimeConfiguration struct {
 	KubeMultiple         map[string]string      `yaml:"kubeMultiple"`
 	AbnormalityQL        []string               `yaml:"abnormalityQL"`
 	AbnormalInfoSystemQL string                 `yaml:"abnormalInfoSystemQL"`
+	AllSystemUser        string                 `yaml:"allSystemUser"`
+	AllSystemPassword    string                 `yaml:"allSystemPassword"`
 	DingTalk             *DingTalkConfiguration `yaml:"dingTalk"`
 }
 
