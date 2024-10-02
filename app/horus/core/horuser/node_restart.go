@@ -67,14 +67,12 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	if pass {
 		msg := fmt.Sprintf("\n【等待宕机节点腾空后重启】\n【节点:%v】\n【日期:%v】\n【集群:%v】\n", node.NodeName, node.FirstDate, node.ClusterName)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
-		// TODO user@password
-		cmd := exec.Command("/bin/bash", "./restart.sh", node.NodeIP)
+		cmd := exec.Command("/bin/bash", "./restart.sh", node.NodeIP, h.cc.NodeDownTime.AllSystemUser, h.cc.NodeDownTime.AllSystemPassword)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			klog.Errorf("Failed to execute restart.sh script for node %v: %v", node.NodeName, err)
-			klog.Errorf("Output: %v", string(output))
+			klog.Errorf("Failed restart for Output: %v node %v: %v", string(output), node.NodeName, err)
 			return
 		}
-		klog.Infof("Successfully executed restart.sh for node %v. Output: %v", node.NodeName, string(output))
+		klog.Infof("Successfully restart for node %v. Output: %v", node.NodeName, string(output))
 	}
 }
