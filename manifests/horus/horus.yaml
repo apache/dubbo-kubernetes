@@ -83,7 +83,7 @@ nodeDownTime:
   abnormalInfoSystemQL:
     node_os_info{node="%s"}
   allSystemUser: "zxj"
-  AllSystemPassword: "1"
+  allSystemPassword: "1"
   kubeMultiple:
     cluster: config.1
   dingTalk:

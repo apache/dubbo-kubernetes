@@ -16,8 +16,8 @@
 # limitations under the License.
 
 host_computer=$1
-host_name=$2
-host_pass=$3
+host_username=$2
+host_password=$3
 
 if [ $# -lt 3 ]; then
   echo "ERROR: The expected value is parameter 3, but there are only $#: input parameters."
@@ -25,5 +25,5 @@ if [ $# -lt 3 ]; then
 fi
 
 for i in $host_computer; do
-    sshpass -p "$host_pass" ssh "$host_name"@$i -o "StrictHostKeyChecking=no" "echo $host_pass | sudo -S reboot"
+    sshpass -p "$host_password" ssh "$host_username"@$i -o "StrictHostKeyChecking=no" "echo $host_password | sudo -S reboot"
 done
