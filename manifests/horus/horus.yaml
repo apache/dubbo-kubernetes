@@ -35,7 +35,7 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.128:31019
+  cluster: http://192.168.15.133:31173
 
 nodeRecovery:
   enabled: false
@@ -56,7 +56,7 @@ customModular:
     node_cpu: 1
   abnormalityQL:
     node_cpu: |-
-      100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 30
+      100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 15
   recoveryQL:
     node_cpu: |-
       100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle",node="%s"}[5m])) * 100) < 10
@@ -74,14 +74,16 @@ customModular:
 
 nodeDownTime:
   enabled: true
-  intervalSecond: 15
+  intervalSecond: 5
   promQueryTimeSecond: 60
   abnormalityQL:
-    - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 50
+    - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 13
 #    - (avg by (node) (node_memory_MemFree_bytes / node_memory_MemTotal_bytes )) * 100 < 20
 #    - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
-  nodeNameToIPs:
+  abnormalInfoSystemQL:
     node_os_info{node="%s"}
+  allSystemUser: "zxj"
+  AllSystemPassword: "1"
   kubeMultiple:
     cluster: config.1
   dingTalk:
