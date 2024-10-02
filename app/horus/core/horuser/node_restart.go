@@ -76,8 +76,13 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 			klog.Errorf("Failed restart for Output: %v node %v: %v", string(output), node.NodeName, err)
 			return
 		}
-		klog.Infof("Successfully restarted node %v. Output: %v", node.NodeName, string(output))
+		klog.Infof("Successfully restarted node %v.", node.NodeName)
 	} else {
 		klog.Infof("RestartMarker did not pass for node %v", node.NodeName)
+	}
+
+	if node.Restart < 2 {
+		klog.Info("It's been rebooted once.")
+		return
 	}
 }
