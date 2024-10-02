@@ -56,23 +56,28 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	if err != nil {
 		klog.Errorf("Drain node err:%v", err)
 		klog.Infof("clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
-		return
-	} else {
-		klog.Infof("Drain node Success clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
 	}
+	klog.Infof("Drain node Success clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
 
 	pass, err := node.RestartMarker()
-	klog.Infof("RestartMarker result pass:%v err:%v", pass, err)
+	if err != nil {
+		klog.Errorf("Error getting RestartMarker for node %v: %v", node.NodeName, err)
+		return
+	}
+	klog.Infof("RestartMarker result pass:%v", pass)
 
 	if pass {
 		msg := fmt.Sprintf("\n【等待宕机节点腾空后重启】\n【节点:%v】\n【日期:%v】\n【集群:%v】\n", node.NodeName, node.FirstDate, node.ClusterName)
 		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
-		cmd := exec.Command("/bin/bash", "./restart.sh", node.NodeIP, h.cc.NodeDownTime.AllSystemUser, h.cc.NodeDownTime.AllSystemPassword)
+
+		cmd := exec.Command("/bin/bash", "core/horuser/restart.sh", node.NodeIP, h.cc.NodeDownTime.AllSystemUser, h.cc.NodeDownTime.AllSystemPassword)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			klog.Errorf("Failed restart for Output: %v node %v: %v", string(output), node.NodeName, err)
 			return
 		}
-		klog.Infof("Successfully restart for node %v. Output: %v", node.NodeName, string(output))
+		klog.Infof("Successfully restarted node %v. Output: %v", node.NodeName, string(output))
+	} else {
+		klog.Infof("RestartMarker did not pass for node %v", node.NodeName)
 	}
 }

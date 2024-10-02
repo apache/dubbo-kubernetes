@@ -25,5 +25,5 @@ if [ $# -lt 3 ]; then
 fi
 
 for i in $host_computer; do
-    sshpass -p$host_pass ssh -o "StrictHostKeyChecking=no" "$host_name"@$i "echo $host_pass | sudo -S reboot"
+    sshpass -p "$host_pass" ssh "$host_name"@$i -o "StrictHostKeyChecking=no" "echo $host_pass | sudo -S reboot"
 done
