@@ -34,15 +34,16 @@ nodeRecovery:
   promQueryTimeSecond: 60
   dingTalk:
     webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
-    title: "horus 通知"
+    title: "自定义通知"
     atMobiles:
-      - 15000000
+      - 15000000000
   slack:
     webhookUrl: "https://hooks.slack.com/services/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"
+    title: "自定义通知"
 
 customModular:
   enabled: false
-  cordonDailyLimit:
+  dailyLimit:
     node_cpu: 1
   abnormalityQL:
     node_cpu: |-
@@ -56,11 +57,12 @@ customModular:
     cluster: config.1
   dingTalk:
     webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
-    title: "horus 通知"
+    title: "自定义通知"
     atMobiles:
-      - 15000000
+      - 15000000000
   slack:
     webhookUrl: "https://hooks.slack.com/services/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"
+    title: "自定义通知"
 
 nodeDownTime:
   enabled: true
@@ -78,9 +80,12 @@ nodeDownTime:
     cluster: config.1
   dingTalk:
     webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
-    title: "horus 通知"
+    title: "自定义通知"
     atMobiles:
-      - 15000000
+      - 15000000000
+  slack:
+    webhookUrl: "https://hooks.slack.com/services/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"
+    title: "自定义通知"
 
 podAbnormal:
   enabled: false
@@ -92,6 +97,9 @@ podAbnormal:
     cluster: config.1
   dingTalk:
     webhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=37f8891e60e524013275cc01efafdb5976b81ef7269ce271b769bcd025826c12"
-    title: "horus 通知"
+    title: "自定义通知"
     atMobiles:
-      - 15000000
+      - 15000000000
+  slack:
+    webhookUrl: "https://hooks.slack.com/services/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"
+    title: "自定义通知"
