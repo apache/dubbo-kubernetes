@@ -64,9 +64,9 @@ var (
 )
 
 func InitDataBase(mc *config.MysqlConfiguration) error {
-	data, err := xorm.NewEngine("mysql", mc.Addr)
+	data, err := xorm.NewEngine("mysql", mc.Address)
 	if err != nil {
-		fmt.Printf("Unable to connect to mysql server:\n  addr: %s\n  err: %v\n", mc.Addr, err)
+		fmt.Printf("Unable to connect to mysql server:\n  addr: %s\n  err: %v\n", mc.Address, err)
 	}
 	data.Logger().SetLevel(xlog.LOG_INFO)
 	data.ShowSQL(mc.Debug)
