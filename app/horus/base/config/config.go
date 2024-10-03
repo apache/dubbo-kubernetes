@@ -30,9 +30,9 @@ type Config struct {
 }
 
 type MysqlConfiguration struct {
-	Name  string `yaml:"name"`
-	Addr  string `yaml:"addr"`
-	Debug bool   `yaml:"debug"`
+	Name    string `yaml:"name"`
+	Address string `yaml:"address"`
+	Debug   bool   `yaml:"debug"`
 }
 
 type DingTalkConfiguration struct {
