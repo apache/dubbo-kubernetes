@@ -54,7 +54,7 @@ type Message struct {
 
 func DingTalkSend(dk *config.DingTalkConfiguration, msg string) {
 	dtm := Message{MsgType: "text"}
-	dtm.Text.Content = fmt.Sprint(DingTalkTitle, msg)
+	dtm.Text.Content = fmt.Sprint(dk.Title, msg)
 	dtm.At.AtMobiles = dk.AtMobiles
 	bs, err := json.Marshal(dtm)
 	if err != nil {

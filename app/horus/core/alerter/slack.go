@@ -33,7 +33,7 @@ type Text struct {
 func SlackSend(sk *config.SlackConfiguration, channel string) {
 	skm := Text{Text: "text"}
 	skm.Text = fmt.Sprintf("%s"+
-		"%v", SlackTitle, channel)
+		"%v", sk.Title, channel)
 	bs, err := json.Marshal(skm)
 	if err != nil {
 		klog.Errorf("slack json marshal err:%v\n dtm:%v\n", err, skm)

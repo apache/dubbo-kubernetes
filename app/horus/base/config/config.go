@@ -43,6 +43,7 @@ type DingTalkConfiguration struct {
 
 type SlackConfiguration struct {
 	WebhookUrl string `yaml:"webhookUrl"`
+	Title      string `yaml:"title"`
 }
 
 type RecoveryConfiguration struct {
@@ -56,7 +57,7 @@ type RecoveryConfiguration struct {
 
 type ModularConfiguration struct {
 	Enabled             bool                   `yaml:"enabled"`
-	CordonDailyLimit    map[string]int         `yaml:"cordonDailyLimit"`
+	dailyLimit          map[string]int         `yaml:"dailyLimit"`
 	AbnormalityQL       map[string]string      `yaml:"abnormalityQL"`
 	RecoveryQL          map[string]string      `yaml:"recoveryQL"`
 	IntervalSecond      int                    `yaml:"intervalSecond"`
