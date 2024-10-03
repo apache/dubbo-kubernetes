@@ -18,8 +18,8 @@ package horuser
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alerter"
 	"github.com/gammazero/workerpool"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -113,7 +113,7 @@ func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
 	}
 	today := time.Now().Format("2006-01-02")
 	msg := fmt.Sprintf("\n【集群：%v】\n【Pod：%v】\n【Namespace：%v】\n【清除 finalizer:%v】\n", clusterName, pod.Name, pod.Namespace, res)
-	alert.DingTalkSend(h.cc.PodAbnormal.DingTalk, msg)
+	alerter.DingTalkSend(h.cc.PodAbnormal.DingTalk, msg)
 	write := db.PodDataInfo{
 		PodName:     pod.Name,
 		PodIP:       pod.Status.PodIP,

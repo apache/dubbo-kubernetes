@@ -13,40 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package db_test
+package alerter_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alerter"
 	"testing"
-	"time"
 )
 
-func TestDataBase(t *testing.T) {
-	mc := &config.MysqlConfiguration{
-		Addr:  "root:root@tcp(127.0.0.1:3306)/horus?charset=utf8&parseTime=True",
-		Debug: true,
+func TestDingTalkSend(t *testing.T) {
+	im := &config.DingTalkConfiguration{
+		WebhookUrl: "https://oapi.dingtalk.com/robot/send?access_token=aa2f3f74d7a2504653ca89b7a673707ba1d04b6d9d320c3572e5464d2f81471x",
+		Title:      "",
+		AtMobiles:  nil,
 	}
-
-	err := db.InitDataBase(mc)
-	if err != nil {
-		t.Fatalf("Failed to initialize database: %v", err)
-		return
-	}
-
-	today := time.Now().Format("2006-01-02 15:04:05")
-	data := db.NodeDataInfo{
-		NodeName:    "db-test",
-		NodeIP:      "1.1.1.1",
-		Sn:          "123",
-		ClusterName: "beijing01",
-		ModuleName:  "model",
-		Reason:      "time wrong",
-		Restart:     0,
-		Repair:      0,
-		FirstDate:   today,
-	}
-	data.NodeName = "002"
-	id, err := data.Add()
-	t.Logf("test.add id:%v err:%v", id, err)
+	alerter.DingTalkSend(im, "test")
 }

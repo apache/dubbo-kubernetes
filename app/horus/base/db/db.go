@@ -17,7 +17,7 @@ package db
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/config"
 	_ "github.com/go-sql-driver/mysql"
 	"time"
 	"xorm.io/xorm"

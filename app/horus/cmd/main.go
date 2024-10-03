@@ -18,8 +18,8 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/horuser"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/ticker"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

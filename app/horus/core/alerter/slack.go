@@ -13,17 +13,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package alert_test
+package alerter
 
 import (
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
-	"testing"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/config"
+	"k8s.io/klog/v2"
+	"net/http"
 )
 
-func TestSlackSend(t *testing.T) {
-	im := &config.SlackConfiguration{
-		WebhookUrl: "https://hooks.slack.com/services/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",
+const SlackTitle = "项目组"
+
+type Text struct {
+	Text string `json:"text"`
+}
+
+func SlackSend(sk *config.SlackConfiguration, channel string) {
+	skm := Text{Text: "text"}
+	skm.Text = fmt.Sprintf("%s"+
+		"%v", SlackTitle, channel)
+	bs, err := json.Marshal(skm)
+	if err != nil {
+		klog.Errorf("slack json marshal err:%v\n dtm:%v\n", err, skm)
 	}
-	alert.SlackSend(im, "test")
+	res, err := http.Post(sk.WebhookUrl, "application/json", bytes.NewBuffer(bs))
+	if res.StatusCode != 200 {
+		klog.Errorf("send slack status code err:%v\n code:%v\n channel:%v\n", err, res.StatusCode, channel)
+		return
+	}
 }
