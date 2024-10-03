@@ -18,18 +18,8 @@ kubeTimeSecond: 5
 
 mysql:
   name: horus
-  addr: "root:root@tcp(127.0.0.1:3306)/horus?charset=utf8&parseTime=True"
+  address: "root:root@tcp(127.0.0.1:3306)/horus?charset=utf8&parseTime=True"
   debug: false
-
-dingTalk:
-  webhookUrl: ~
-  title: ~
-  atMobiles: ~
-
-slack:
-  webhookUrl: ~
-  proxy: ~
-  payload: ~
 
 kubeMultiple:
   cluster: config.1
