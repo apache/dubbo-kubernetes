@@ -120,7 +120,7 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 	alerter.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
 	alerter.SlackSend(h.cc.CustomModular.Slack, msg)
 
-	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
+	dailyLimit := h.cc.CustomModular.DailyLimit[moduleName]
 	if len(data) > dailyLimit {
 		msg := fmt.Sprintf("\n【日期:%v】\n【集群:%v\n】\n【今日 Cordon 节点数: %v】\n【已达到今日上限: %v】\n【节点:%v】",
 			data, clusterName, len(data), dailyLimit, nodeName)

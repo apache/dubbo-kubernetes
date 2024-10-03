@@ -57,7 +57,7 @@ type RecoveryConfiguration struct {
 
 type ModularConfiguration struct {
 	Enabled             bool                   `yaml:"enabled"`
-	dailyLimit          map[string]int         `yaml:"dailyLimit"`
+	DailyLimit          map[string]int         `yaml:"dailyLimit"`
 	AbnormalityQL       map[string]string      `yaml:"abnormalityQL"`
 	RecoveryQL          map[string]string      `yaml:"recoveryQL"`
 	IntervalSecond      int                    `yaml:"intervalSecond"`
