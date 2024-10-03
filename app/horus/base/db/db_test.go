@@ -24,8 +24,8 @@ import (
 
 func TestDataBase(t *testing.T) {
 	mc := &config.MysqlConfiguration{
-		Addr:  "root:root@tcp(127.0.0.1:3306)/horus?charset=utf8&parseTime=True",
-		Debug: true,
+		Address: "root:root@tcp(127.0.0.1:3306)/horus?charset=utf8&parseTime=True",
+		Debug:   true,
 	}
 
 	err := db.InitDataBase(mc)
