@@ -17,7 +17,7 @@ package horuser
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/config"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

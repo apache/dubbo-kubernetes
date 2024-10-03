@@ -18,8 +18,8 @@ package horuser
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alerter"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
@@ -150,7 +150,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		newfound++
 		if newfound > 0 {
 			klog.Infof("DownTimeNodes get WithDownNodeIPs【集群:%v】【节点:%v】【IP:%v】", clusterName, nodeName, nodeIP)
-			alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+			alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 		}
 		msg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
 		write.Reason = NODE_DOWN_REASON

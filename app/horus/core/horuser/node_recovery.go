@@ -18,8 +18,8 @@ package horuser
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alerter"
 	"github.com/gammazero/workerpool"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -80,8 +80,8 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 		res = fmt.Sprintf("failed:%v", err)
 	}
 	msg := fmt.Sprintf("\n【集群: %v】\n【封锁节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
-	alert.DingTalkSend(h.cc.NodeRecovery.DingTalk, msg)
-	alert.SlackSend(h.cc.CustomModular.Slack, msg)
+	alerter.DingTalkSend(h.cc.NodeRecovery.DingTalk, msg)
+	alerter.SlackSend(h.cc.CustomModular.Slack, msg)
 
 	pass, err := n.RecoveryMarker()
 	klog.Infof("RecoveryMarker result pass:%v err:%v", pass, err)

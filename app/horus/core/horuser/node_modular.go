@@ -18,8 +18,8 @@ package horuser
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alerter"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"sync"
@@ -117,15 +117,15 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 	}
 	msg := fmt.Sprintf("\n【集群:%v】\n【发现 %s 达到禁止调度条件】\n【禁止调度节点:%v】\n 【处理结果: %v】\n 【今日操作次数:%v】\n",
 		clusterName, moduleName, nodeName, res, len(data)+1)
-	alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
-	alert.SlackSend(h.cc.CustomModular.Slack, msg)
+	alerter.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
+	alerter.SlackSend(h.cc.CustomModular.Slack, msg)
 
 	dailyLimit := h.cc.CustomModular.CordonDailyLimit[moduleName]
 	if len(data) > dailyLimit {
 		msg := fmt.Sprintf("\n【日期:%v】\n【集群:%v\n】\n【今日 Cordon 节点数: %v】\n【已达到今日上限: %v】\n【节点:%v】",
 			data, clusterName, len(data), dailyLimit, nodeName)
-		alert.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
-		alert.SlackSend(h.cc.CustomModular.Slack, msg)
+		alerter.DingTalkSend(h.cc.CustomModular.DingTalk, msg)
+		alerter.SlackSend(h.cc.CustomModular.Slack, msg)
 		return
 	}
 

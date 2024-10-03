@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package alert
+package alerter
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/config"
 	"k8s.io/klog/v2"
 	"net/http"
 )

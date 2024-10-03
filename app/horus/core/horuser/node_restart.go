@@ -18,8 +18,8 @@ package horuser
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alerter"
 	"github.com/gammazero/workerpool"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -68,7 +68,7 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 
 	if pass {
 		msg := fmt.Sprintf("\n【等待宕机节点腾空后重启】\n【节点:%v】\n【日期:%v】\n【集群:%v】\n", node.NodeName, node.FirstDate, node.ClusterName)
-		alert.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+		alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 
 		cmd := exec.Command("/bin/bash", "core/horuser/restart.sh", node.NodeIP, h.cc.NodeDownTime.AllSystemUser, h.cc.NodeDownTime.AllSystemPassword)
 		output, err := cmd.CombinedOutput()
