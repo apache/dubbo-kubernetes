@@ -15,8 +15,25 @@
 
 package horuser
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"strings"
+)
 
-func (h *Horuser) Collect(ch chan<- prometheus.Metric) {}
+func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
+	kFunc := func(m map[string]string) string {
+		s := []string{}
+		for k := range m {
+			s = append(s, k)
+		}
+		return strings.Join(s, ",")
+	}
+	info := map[string]string{}
+	buttons := map[bool]string{}
+	modularKey := buttons[h.cc.CustomModular.Enabled]
+	info[modularKey] = kFunc(h.cc.CustomModular.KubeMultiple)
+}
 
-func (h *Horuser) Describe(ch chan<- *prometheus.Desc) {}
+func (h *Horuser) Describe(ch chan<- *prometheus.Desc) {
+
+}
