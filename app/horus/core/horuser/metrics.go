@@ -45,7 +45,7 @@ var (
 
 	NodeInfo = prometheus.NewDesc(
 		"horus_node_info",
-		"horus_node_info",
+		"Provides detailed information about the nodes within a cluster, including node identity, operational state, maintenance details, and recovery status.",
 		[]string{
 			"node_name",
 			"node_ip",
@@ -112,20 +112,6 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 				v.RecoveryQL,
 				fmt.Sprintf("%d", v.RecoveryMark),
 			)
-
-			fmt.Println("NodeName:", v.NodeName)
-			fmt.Println("NodeIP:", v.NodeIP)
-			fmt.Println("Sn:", v.Sn)
-			fmt.Println("ClusterName:", v.ClusterName)
-			fmt.Println("ModuleName:", v.ModuleName)
-			fmt.Println("Reason:", v.Reason)
-			fmt.Println("Restart:", v.Restart)
-			fmt.Println("Repair:", v.Repair)
-			fmt.Println("RepairTicketUrl:", v.RepairTicketUrl)
-			fmt.Println("FirstDate:", v.FirstDate)
-			fmt.Println("CreateTime:", ct)
-			fmt.Println("UpdateTime:", ut)
-
 			ch <- p
 		}
 	}
