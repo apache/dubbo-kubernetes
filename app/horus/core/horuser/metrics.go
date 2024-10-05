@@ -16,14 +16,25 @@
 package horuser
 
 import (
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 )
 
 var (
+	FeatureInfo = prometheus.NewDesc(
+		"horus_feature_info",
+		"Indicates the enabled status of specific features in different clusters, with each feature represented by its name, enabled state, and associated cluster name.",
+		[]string{
+			"feature",
+			"enabled",
+			"cluster_name",
+		},
+		nil)
+
 	MultipleInfo = prometheus.NewDesc(
 		"horus_multiple_info",
-		"horus_multiple_info",
+		"Tracks the Prometheus multiple addresses associated with different clusters, providing visibility into the Prometheus endpoints used by each cluster.",
 		[]string{
 			"cluster_name",
 			"prometheus_multiple_address",
@@ -40,10 +51,24 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 		return strings.Join(s, ",")
 	}
 	info := map[string]string{}
-	buttons := map[bool]string{}
-	modularKey := buttons[h.cc.CustomModular.Enabled]
-	info[modularKey] = kFunc(h.cc.CustomModular.KubeMultiple)
+	buttons := map[bool]string{true: "Open", false: "Close"}
 
+	modularKey := fmt.Sprintf("custom modular,%s", buttons[h.cc.CustomModular.Enabled])
+	info[modularKey] = kFunc(h.cc.CustomModular.KubeMultiple)
+	downtimeKey := fmt.Sprintf("node downtime,%s", buttons[h.cc.NodeDownTime.Enabled])
+	info[downtimeKey] = kFunc(h.cc.NodeDownTime.KubeMultiple)
+
+	for k, clusterName := range info {
+		s := strings.Split(k, ",")
+		feature, enabled := s[0], s[1]
+		p := prometheus.MustNewConstMetric(FeatureInfo,
+			prometheus.GaugeValue, 1,
+			feature,
+			enabled,
+			clusterName,
+		)
+		ch <- p
+	}
 	for clusterName, address := range h.cc.PromMultiple {
 		p := prometheus.MustNewConstMetric(MultipleInfo,
 			prometheus.GaugeValue, 1,
@@ -55,5 +80,6 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (h *Horuser) Describe(ch chan<- *prometheus.Desc) {
+	ch <- FeatureInfo
 	ch <- MultipleInfo
 }
