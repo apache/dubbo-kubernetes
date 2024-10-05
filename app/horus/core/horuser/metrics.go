@@ -17,7 +17,9 @@ package horuser
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
 	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/klog/v2"
 	"strings"
 )
 
@@ -79,6 +81,56 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 	downtimeKey := fmt.Sprintf("node downtime,%s", buttons[h.cc.NodeDownTime.Enabled])
 	info[downtimeKey] = kFunc(h.cc.NodeDownTime.KubeMultiple)
 
+	nodeFunc := func() {
+		nodes, err := db.GetNode()
+		if err != nil {
+			klog.Errorf("horus metrics collect db get node err:%v", err)
+			return
+		}
+		if len(nodes) == 0 {
+			klog.Infof("horus metrics collect db zero err:%v", err)
+			return
+		}
+		for _, v := range nodes {
+			v := v
+			ct := v.CreateTime.Local().Format("2006-01-02 15:04:05")
+			ut := v.UpdateTime.Local().Format("2006-01-02 15:04:05")
+			p := prometheus.MustNewConstMetric(NodeInfo,
+				prometheus.GaugeValue, 1,
+				v.NodeName,
+				v.NodeIP,
+				v.Sn,
+				v.ClusterName,
+				v.ModuleName,
+				v.Reason,
+				fmt.Sprintf("%d", v.Restart),
+				fmt.Sprintf("%d", v.Repair),
+				v.RepairTicketUrl,
+				v.FirstDate,
+				ct,
+				ut,
+				v.RecoveryQL,
+				fmt.Sprintf("%d", v.RecoveryMark),
+			)
+
+			fmt.Println("NodeName:", v.NodeName)
+			fmt.Println("NodeIP:", v.NodeIP)
+			fmt.Println("Sn:", v.Sn)
+			fmt.Println("ClusterName:", v.ClusterName)
+			fmt.Println("ModuleName:", v.ModuleName)
+			fmt.Println("Reason:", v.Reason)
+			fmt.Println("Restart:", v.Restart)
+			fmt.Println("Repair:", v.Repair)
+			fmt.Println("RepairTicketUrl:", v.RepairTicketUrl)
+			fmt.Println("FirstDate:", v.FirstDate)
+			fmt.Println("CreateTime:", ct)
+			fmt.Println("UpdateTime:", ut)
+
+			ch <- p
+		}
+	}
+	nodeFunc()
+
 	for k, clusterName := range info {
 		s := strings.Split(k, ",")
 		feature, enabled := s[0], s[1]
@@ -103,4 +155,5 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 func (h *Horuser) Describe(ch chan<- *prometheus.Desc) {
 	ch <- FeatureInfo
 	ch <- MultipleInfo
+	ch <- NodeInfo
 }
