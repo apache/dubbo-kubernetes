@@ -22,6 +22,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/app/horus/base/db"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/horuser"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/ticker"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog"
 	"net/http"
@@ -58,6 +59,7 @@ func main() {
 		klog.Infof("horus db initial success.")
 	}
 	horus := horuser.NewHoruser(c)
+	prometheus.MustRegister(horus)
 	group, stopChan := setupStopChanWithContext()
 	ctx, cancel := context.WithCancel(context.Background())
 	group.Add(func() error {

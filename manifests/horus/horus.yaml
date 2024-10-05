@@ -65,7 +65,7 @@ customModular:
     title: "自定义通知"
 
 nodeDownTime:
-  enabled: true
+  enabled: false
   intervalSecond: 5
   promQueryTimeSecond: 60
   abnormalityQL:
