@@ -20,6 +20,17 @@ import (
 	"strings"
 )
 
+var (
+	MultipleInfo = prometheus.NewDesc(
+		"horus_multiple_info",
+		"horus_multiple_info",
+		[]string{
+			"cluster_name",
+			"prometheus_address_apiserver",
+		},
+		nil)
+)
+
 func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 	kFunc := func(m map[string]string) string {
 		s := []string{}
@@ -32,6 +43,15 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 	buttons := map[bool]string{}
 	modularKey := buttons[h.cc.CustomModular.Enabled]
 	info[modularKey] = kFunc(h.cc.CustomModular.KubeMultiple)
+
+	for clusterName, address := range h.cc.PromMultiple {
+		p := prometheus.MustNewConstMetric(MultipleInfo,
+			prometheus.GaugeValue, 1,
+			clusterName,
+			address,
+		)
+		ch <- p
+	}
 }
 
 func (h *Horuser) Describe(ch chan<- *prometheus.Desc) {
