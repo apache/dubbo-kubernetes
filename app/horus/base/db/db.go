@@ -193,6 +193,21 @@ func (n *NodeDataInfo) RestartMarker() (bool, error) {
 	return n.Update()
 }
 
+func GetNode() ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
+	session := db.Where(fmt.Sprintf("id>%d", 0))
+	err := session.Find(&ndi)
+	return ndi, err
+}
+
+func GetNodeByName(nodeName, moduleName string) (*NodeDataInfo, error) {
+	ndi := NodeDataInfo{
+		NodeName:   nodeName,
+		ModuleName: moduleName,
+	}
+	return ndi.Get()
+}
+
 func GetPod() ([]PodDataInfo, error) {
 	var pdi []PodDataInfo
 	session := db.Where(fmt.Sprintf("id>%d", 0))
