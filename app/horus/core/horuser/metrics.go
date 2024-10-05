@@ -26,7 +26,7 @@ var (
 		"horus_multiple_info",
 		[]string{
 			"cluster_name",
-			"prometheus_address_apiserver",
+			"prometheus_multiple_address",
 		},
 		nil)
 )
@@ -55,5 +55,5 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (h *Horuser) Describe(ch chan<- *prometheus.Desc) {
-
+	ch <- MultipleInfo
 }
