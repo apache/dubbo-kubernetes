@@ -40,6 +40,27 @@ var (
 			"prometheus_multiple_address",
 		},
 		nil)
+
+	NodeInfo = prometheus.NewDesc(
+		"horus_node_info",
+		"horus_node_info",
+		[]string{
+			"node_name",
+			"node_ip",
+			"sn",
+			"cluster_name",
+			"module_name",
+			"reason",
+			"restart",
+			"repair",
+			"repair_ticket_url",
+			"first_date",
+			"create_time",
+			"update_time",
+			"recovery_ql",
+			"recovery_mark",
+		},
+		nil)
 )
 
 func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
