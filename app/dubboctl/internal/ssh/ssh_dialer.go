@@ -33,9 +33,9 @@ import (
 
 import (
 	"github.com/docker/cli/cli/connhelper"
-
+	dockerssh "github.com/docker/cli/cli/connhelper/ssh"
 	"github.com/docker/docker/pkg/homedir"
-
+	pkgerr "github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -239,15 +239,9 @@ func getNetworkAndAddress(remoteDockerHost string) (network string, addr string,
 }
 
 func stdioDialContext(url *urlPkg.URL, sshClient *ssh.Client, identity string) (DialContextFn, error) {
-	session, err := sshClient.NewSession()
+	cmd, err := checkStdioDialer(sshClient)
 	if err != nil {
 		return nil, err
-	}
-	defer session.Close()
-
-	out, err := session.CombinedOutput("docker system dial-stdio --help")
-	if err != nil {
-		return nil, fmt.Errorf("cannot use dial-stdio: %w (%q)", err, out)
 	}
 
 	var opts []string
@@ -255,12 +249,62 @@ func stdioDialContext(url *urlPkg.URL, sshClient *ssh.Client, identity string) (
 		opts = append(opts, "-i", identity)
 	}
 
-	connHelper, err := connhelper.GetConnectionHelperWithSSHOpts(url.String(), opts)
+	connHelper, err := getConnectionHelper(url.String(), cmd, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	return connHelper.Dialer, nil
+}
+
+// dockerClients is a list of docker clients that support dial-stdio
+var dockerClients = []string{"docker", "podman"}
+
+// checkStdioDialer checks which docker client can be used to dial-stdio
+func checkStdioDialer(sshClient *ssh.Client) (string, error) {
+	var generalError error
+	var session *ssh.Session
+	var err error
+	defer func() {
+		if session != nil {
+			session.Close()
+		}
+	}()
+
+	for _, cmd := range dockerClients {
+		session, err = sshClient.NewSession()
+		if err != nil {
+			return "", err
+		}
+		out, err := session.CombinedOutput(fmt.Sprintf("%s system dial-stdio --help", cmd))
+		session.Close()
+		session = nil
+		if err == nil {
+			return cmd, nil
+		}
+		errors.Join(generalError, fmt.Errorf("checking client %s failed: %w (%q)", cmd, err, string(out)))
+	}
+
+	return "", fmt.Errorf("cannot use dial-stdio with remote docker clients: %v, errors: %w", dockerClients, generalError)
+}
+
+// getConnectionHelper returns Docker-specific connection helper for the given URL and docker client.
+//
+// This is a modified version of the function from pkg "github.com/docker/cli/cli/connhelper"
+func getConnectionHelper(daemonURL string, cmd string, sshFlags []string) (*connhelper.ConnectionHelper, error) {
+	u, err := urlPkg.Parse(daemonURL)
+	if err != nil {
+		return nil, err
+	}
+	switch scheme := u.Scheme; scheme {
+	case "ssh":
+		sp, err := dockerssh.ParseURL(daemonURL)
+		if err != nil {
+			return nil, pkgerr.Wrap(err, "ssh host connection is not valid")
+		}
+		return connhelper.GetCommandConnectionHelper("ssh", append(sshFlags, sp.Args(cmd, "system", "dial-stdio")...)...)
+	}
+	return nil, err
 }
 
 // Default key names.
