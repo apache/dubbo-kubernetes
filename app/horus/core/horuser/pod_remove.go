@@ -77,7 +77,7 @@ func (h *Horuser) Fetch(clusterName, fieldSelector string) ([]corev1.Pod, error)
 	ctx, cancel := h.GetK8sContext()
 	defer cancel()
 	list := v1.ListOptions{FieldSelector: fieldSelector}
-	pods, err := kubeClient.CoreV1().Pods("default").List(ctx, list)
+	pods, err := kubeClient.CoreV1().Pods("").List(ctx, list)
 	if err != nil {
 		klog.Errorf("Fetch list pod err:%v", err)
 		klog.Infof("clusterName:%v fieldSelector:%v", clusterName, fieldSelector)

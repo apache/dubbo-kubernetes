@@ -16,17 +16,17 @@
 package config
 
 type Config struct {
-	Address        string                 `yaml:"address"`
-	KubeTimeSecond int64                  `yaml:"kubeTimeSecond"`
-	Mysql          *MysqlConfiguration    `yaml:"mysql"`
-	DingTalk       *DingTalkConfiguration `yaml:"dingTalk"`
-	Slack          *SlackConfiguration    `yaml:"slack"`
-	KubeMultiple   map[string]string      `yaml:"kubeMultiple"`
-	PromMultiple   map[string]string      `yaml:"promMultiple"`
-	NodeRecovery   *RecoveryConfiguration `yaml:"nodeRecovery"`
-	CustomModular  *ModularConfiguration  `yaml:"customModular"`
-	NodeDownTime   *DowntimeConfiguration `yaml:"nodeDownTime"`
-	PodAbnormal    *AbnormalConfiguration `yaml:"podAbnormal"`
+	Address              string                 `yaml:"address"`
+	KubeTimeSecond       int64                  `yaml:"kubeTimeSecond"`
+	Mysql                *MysqlConfiguration    `yaml:"mysql"`
+	DingTalk             *DingTalkConfiguration `yaml:"dingTalk"`
+	Slack                *SlackConfiguration    `yaml:"slack"`
+	KubeMultiple         map[string]string      `yaml:"kubeMultiple"`
+	PromMultiple         map[string]string      `yaml:"promMultiple"`
+	NodeRecovery         *RecoveryConfiguration `yaml:"nodeRecovery"`
+	CustomModular        *ModularConfiguration  `yaml:"customModular"`
+	NodeDownTime         *DowntimeConfiguration `yaml:"nodeDownTime"`
+	PodStagnationCleaner *CleanerConfiguration  `yaml:"podStagnationCleaner"`
 }
 
 type MysqlConfiguration struct {
@@ -79,7 +79,7 @@ type DowntimeConfiguration struct {
 	DingTalk             *DingTalkConfiguration `yaml:"dingTalk"`
 }
 
-type AbnormalConfiguration struct {
+type CleanerConfiguration struct {
 	Enabled        bool                   `yaml:"enabled"`
 	IntervalSecond int                    `yaml:"intervalSecond"`
 	DoubleSecond   int                    `yaml:"doubleSecond"`

@@ -29,19 +29,19 @@ import (
 )
 
 const (
-	ModuleName = "pod_abnormal_clean"
-	Reason     = "clean_up"
+	ModuleName = "podStagnationCleaner"
+	Reason     = "StagnationCleanup"
 )
 
-func (h *Horuser) PodAbnormalCleanManager(ctx context.Context) error {
-	go wait.UntilWithContext(ctx, h.PodAbnormalClean, time.Duration(h.cc.PodAbnormal.IntervalSecond)*time.Second)
+func (h *Horuser) PodStagnationCleanManager(ctx context.Context) error {
+	go wait.UntilWithContext(ctx, h.PodStagnationClean, time.Duration(h.cc.PodStagnationCleaner.IntervalSecond)*time.Second)
 	<-ctx.Done()
 	return nil
 }
 
-func (h *Horuser) PodAbnormalClean(ctx context.Context) {
+func (h *Horuser) PodStagnationClean(ctx context.Context) {
 	var wg sync.WaitGroup
-	for cn := range h.cc.PodAbnormal.KubeMultiple {
+	for cn := range h.cc.PodStagnationCleaner.KubeMultiple {
 		cn := cn
 		wg.Add(1)
 		go func() {
@@ -53,7 +53,7 @@ func (h *Horuser) PodAbnormalClean(ctx context.Context) {
 }
 
 func (h *Horuser) PodsOnCluster(clusterName string) {
-	pods, err := h.Fetch(clusterName, h.cc.PodAbnormal.FieldSelector)
+	pods, err := h.Fetch(clusterName, h.cc.PodStagnationCleaner.FieldSelector)
 	if err != nil {
 		klog.Errorf("Failed to fetch pods on cluster:%v", err)
 		klog.Infof("clusterName:%v", clusterName)
@@ -70,7 +70,7 @@ func (h *Horuser) PodsOnCluster(clusterName string) {
 		if pod.Status.Phase == corev1.PodRunning {
 			continue
 		}
-		msg := fmt.Sprintf("\n【集群：%v】\n【%d/%d】\n【PodName:%v】\n【Namespace:%v】\n【Phase:%v】\n【节点：%v】\n", clusterName, index+1, count, pod.Name, pod.Namespace, pod.Status.Phase, pod.Spec.NodeName)
+		msg := fmt.Sprintf("\n【集群：%v】\n【停滞：%d/%d】\n【PodName:%v】\n【Namespace:%v】\n【Phase:%v】\n【节点：%v】\n", clusterName, index+1, count, pod.Name, pod.Namespace, pod.Status.Phase, pod.Spec.NodeName)
 		klog.Infof(msg)
 
 		wp.Submit(func() {
@@ -84,7 +84,7 @@ func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
 	var err error
 	if !pod.DeletionTimestamp.IsZero() {
 		if len(pod.Finalizers) > 0 {
-			time.Sleep(time.Duration(h.cc.PodAbnormal.DoubleSecond) * time.Second)
+			time.Sleep(time.Duration(h.cc.PodStagnationCleaner.DoubleSecond) * time.Second)
 			if !h.Terminating(clusterName, &pod) {
 				klog.Infof("Pod %s is still terminating, skipping.", pod.Name)
 				return
@@ -113,7 +113,7 @@ func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
 	}
 	today := time.Now().Format("2006-01-02")
 	msg := fmt.Sprintf("\n【集群：%v】\n【Pod：%v】\n【Namespace：%v】\n【清除 finalizer:%v】\n", clusterName, pod.Name, pod.Namespace, res)
-	alerter.DingTalkSend(h.cc.PodAbnormal.DingTalk, msg)
+	alerter.DingTalkSend(h.cc.PodStagnationCleaner.DingTalk, msg)
 	write := db.PodDataInfo{
 		PodName:     pod.Name,
 		PodIP:       pod.Status.PodIP,
