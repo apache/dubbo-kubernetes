@@ -25,7 +25,7 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.133:31974
+  cluster: http://192.168.15.134:31974
 
 nodeRecovery:
   enabled: false
@@ -87,11 +87,10 @@ nodeDownTime:
     webhookUrl: "https://hooks.slack.com/services/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"
     title: "自定义通知"
 
-podAbnormal:
-  enabled: false
+podStagnationCleaner:
+  enabled: true
   intervalSecond: 15
   doubleSecond: 60
-  labelSelector: "app.kubernetes.io/name=horus"
   fieldSelector: "status.phase!=Running"
   kubeMultiple:
     cluster: config.1

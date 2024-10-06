@@ -101,7 +101,7 @@ func main() {
 	})
 	group.Add(func() error {
 		if c.NodeRecovery.Enabled {
-			klog.Info("horus recovery manager start success.")
+			klog.Info("horus node recovery manager start success.")
 			err := horus.RecoveryManager(ctx)
 			if err != nil {
 				klog.Errorf("horus recovery manager start failed error:%v", err)
@@ -111,7 +111,7 @@ func main() {
 	})
 	group.Add(func() error {
 		if c.CustomModular.Enabled {
-			klog.Info("horus customize modular manager start success.")
+			klog.Info("horus node customize modular manager start success.")
 			err := horus.CustomizeModularManager(ctx)
 			if err != nil {
 				klog.Errorf("horus customize modular manager start failed error:%v", err)
@@ -121,7 +121,7 @@ func main() {
 	})
 	group.Add(func() error {
 		if c.NodeDownTime.Enabled {
-			klog.Info("horus down time manager start success.")
+			klog.Info("horus node downtime manager start success.")
 			err := horus.DownTimeManager(ctx)
 			if err != nil {
 				klog.Errorf("horus down time manager start failed error:%v", err)
@@ -131,7 +131,7 @@ func main() {
 	})
 	group.Add(func() error {
 		if c.NodeDownTime.Enabled {
-			klog.Info("horus down time restart manager start success.")
+			klog.Info("horus node downtime restart manager start success.")
 			err := horus.DowntimeRestartManager(ctx)
 			if err != nil {
 				klog.Errorf("horus down time restart manager start failed error:%v", err)
@@ -141,11 +141,11 @@ func main() {
 
 	})
 	group.Add(func() error {
-		if c.PodAbnormal.Enabled {
-			klog.Info("horus pod abnormal clean manager start success.")
-			err := horus.PodAbnormalCleanManager(ctx)
+		if c.PodStagnationCleaner.Enabled {
+			klog.Info("horus pod stagnation clean manager start success.")
+			err := horus.PodStagnationCleanManager(ctx)
 			if err != nil {
-				klog.Errorf("horus pod abnormal clean manager start failed error:%v", err)
+				klog.Errorf("horus pod stagnation clean manager start failed error:%v", err)
 			}
 		}
 		return nil
