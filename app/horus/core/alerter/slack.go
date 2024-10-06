@@ -24,8 +24,6 @@ import (
 	"net/http"
 )
 
-const SlackTitle = "项目组"
-
 type Text struct {
 	Text string `json:"text"`
 }
