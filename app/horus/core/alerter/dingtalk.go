@@ -24,8 +24,6 @@ import (
 	"net/http"
 )
 
-const DingTalkTitle = "horus 通知"
-
 type T struct {
 	At struct {
 		AtMobiles []string `json:"atMobiles"`
