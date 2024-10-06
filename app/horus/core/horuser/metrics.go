@@ -63,6 +63,21 @@ var (
 			"recovery_mark",
 		},
 		nil)
+	PodStagnativeInfo = prometheus.NewDesc(
+		"pod_stagnative_info",
+		"pod_stagnative_info",
+		[]string{
+			"pod_name",
+			"pod_ip",
+			"node_name",
+			"cluster_name",
+			"module_name",
+			"reason",
+			"first_date",
+			"create_time",
+			"update_time",
+		},
+		nil)
 )
 
 func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
@@ -116,6 +131,38 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 	nodeFunc()
+
+	podFunc := func() {
+		pods, err := db.GetPod()
+		if err != nil {
+			klog.Errorf("horus metrics collect db get pod err:%v", err)
+			return
+		}
+		klog.Info("horus metrics collect db get pod success.")
+		if len(pods) == 0 {
+			klog.Infof("horus metrics collect db zero err:%v", err)
+			return
+		}
+		for _, v := range pods {
+			v := v
+			ct := v.CreateTime.Local().Format("2006-01-02 15:04:05")
+			ut := v.UpdateTime.Local().Format("2006-01-02 15:04:05")
+			p := prometheus.MustNewConstMetric(PodStagnativeInfo,
+				prometheus.GaugeValue, 1,
+				v.PodName,
+				v.PodIP,
+				v.NodeName,
+				v.ClusterName,
+				v.ModuleName,
+				v.Reason,
+				v.FirstDate,
+				ct,
+				ut,
+			)
+			ch <- p
+		}
+	}
+	podFunc()
 
 	for k, clusterName := range info {
 		s := strings.Split(k, ",")
