@@ -74,15 +74,6 @@ func main() {
 		}
 	})
 	group.Add(func() error {
-		for {
-			select {
-			case <-stopChan:
-				cancel()
-				return nil
-			}
-		}
-	})
-	group.Add(func() error {
 		http.Handle("/metrics", promhttp.Handler())
 		srv := http.Server{Addr: c.Address}
 		err := srv.ListenAndServe()
@@ -92,10 +83,10 @@ func main() {
 		return nil
 	})
 	group.Add(func() error {
-		klog.Info("horus ticker start success.")
+		klog.Info("horus ticker manager start success.")
 		err := ticker.Manager(ctx)
 		if err != nil {
-			klog.Errorf("horus ticker start failed error:%v", err)
+			klog.Errorf("horus ticker manager start failed err:%v", err)
 		}
 		return nil
 	})
@@ -104,7 +95,7 @@ func main() {
 			klog.Info("horus node recovery manager start success.")
 			err := horus.RecoveryManager(ctx)
 			if err != nil {
-				klog.Errorf("horus recovery manager start failed error:%v", err)
+				klog.Errorf("horus node recovery manager start failed err:%v", err)
 			}
 		}
 		return nil
@@ -114,7 +105,7 @@ func main() {
 			klog.Info("horus node customize modular manager start success.")
 			err := horus.CustomizeModularManager(ctx)
 			if err != nil {
-				klog.Errorf("horus customize modular manager start failed error:%v", err)
+				klog.Errorf("horus node customize modular manager start failed err:%v", err)
 			}
 		}
 		return nil
@@ -124,7 +115,7 @@ func main() {
 			klog.Info("horus node downtime manager start success.")
 			err := horus.DownTimeManager(ctx)
 			if err != nil {
-				klog.Errorf("horus down time manager start failed error:%v", err)
+				klog.Errorf("horus node downtime manager start failed err:%v", err)
 			}
 		}
 		return nil
@@ -134,18 +125,17 @@ func main() {
 			klog.Info("horus node downtime restart manager start success.")
 			err := horus.DowntimeRestartManager(ctx)
 			if err != nil {
-				klog.Errorf("horus down time restart manager start failed error:%v", err)
+				klog.Errorf("horus node downtime restart manager start failed err:%v", err)
 			}
 		}
 		return nil
-
 	})
 	group.Add(func() error {
 		if c.PodStagnationCleaner.Enabled {
 			klog.Info("horus pod stagnation clean manager start success.")
 			err := horus.PodStagnationCleanManager(ctx)
 			if err != nil {
-				klog.Errorf("horus pod stagnation clean manager start failed error:%v", err)
+				klog.Errorf("horus pod stagnation clean manager start failed err:%v", err)
 			}
 		}
 		return nil
