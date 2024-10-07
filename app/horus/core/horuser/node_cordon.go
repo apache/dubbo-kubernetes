@@ -23,8 +23,8 @@ import (
 func (h *Horuser) Cordon(nodeName, clusterName, moduleName string) (err error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
-		klog.Errorf("node Cordon kubeClient by clusterName empty.")
-		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
+		klog.Error("node Cordon kubeClient by clusterName empty.")
+		klog.Infof("nodeName:%v\n,clusterName:%v\n", nodeName, clusterName)
 		return err
 	}
 
@@ -32,27 +32,27 @@ func (h *Horuser) Cordon(nodeName, clusterName, moduleName string) (err error) {
 	defer cancelFirst()
 	node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, v1.GetOptions{})
 	if err != nil {
-		klog.Errorf("node Cordon get err nodeName:%v clusterName:%v", nodeName, clusterName)
+		klog.Errorf("node Cordon get err:%v", err)
+		klog.Infof("nodeName:%v\n clusterName:%v\n", nodeName, clusterName)
 		return err
 	}
 	annotations := node.Annotations
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
-	annotations["dubbo.apache.org/disable-by"] = "horus"
+	annotations["dubbo.io/disable-by"] = "horus"
 
 	node.Spec.Unschedulable = true
-	//if node.Spec.Unschedulable != false {
-	//	klog.Infof("Node %v is already cordoned.", nodeName)
-	//	return
-	//}
+
 	ctxSecond, cancelSecond := h.GetK8sContext()
 	defer cancelSecond()
 	node, err = kubeClient.CoreV1().Nodes().Update(ctxSecond, node, v1.UpdateOptions{})
 	if err != nil {
-		klog.Errorf("node Cordon update err nodeName:%v clusterName:%v", nodeName, clusterName)
+		klog.Errorf("node Cordon update err:%v", err)
+		klog.Infof("nodeName:%v\n clusterName:%v\n", nodeName, clusterName)
 	} else {
-		klog.Infof("node Cordon success nodeName:%v clusterName:%v", nodeName, clusterName)
+		klog.Info("node Cordon success.")
+		klog.Infof("nodeName:%v\n clusterName:%v\n", nodeName, clusterName)
 	}
 	return err
 }

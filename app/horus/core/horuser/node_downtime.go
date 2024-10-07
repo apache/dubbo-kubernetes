@@ -44,8 +44,8 @@ func (h *Horuser) DownTimeCheck(ctx context.Context) {
 	for clusterName, addr := range h.cc.PromMultiple {
 		clusterName := clusterName
 		if _, exist := h.cc.NodeDownTime.KubeMultiple[clusterName]; !exist {
-			klog.Infof("DownTimeCheck config disable")
-			klog.Infof("clusterName: %v", clusterName)
+			klog.Info("DownTimeCheck config disable.")
+			klog.Infof("clusterName:%v\n", clusterName)
 			continue
 		}
 		addr := addr
@@ -67,14 +67,16 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	ctxFirst, cancelFirst := h.GetK8sContext()
 	defer cancelFirst()
 
-	klog.Infof("DownTimeNodes Query Start clusterName:%v", clusterName)
+	klog.Info("DownTimeNodes Query Start.")
+	klog.Infof("clusterName:%v", clusterName)
+
 	nodeDownTimeRes := make(map[string]int)
 	cq := len(h.cc.NodeDownTime.AbnormalityQL)
 	for _, ql := range h.cc.NodeDownTime.AbnormalityQL {
 		ql := ql
 		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if err != nil {
-			klog.Errorf("downtimeNodes Instant Query err:%v", err)
+			klog.Errorf("downtimeNodes InstantQuery err:%v", err)
 			klog.Infof("clusterName:%v", clusterName)
 			continue
 		}
@@ -83,8 +85,8 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			v := v
 			nodeName := string(v.Metric["node"])
 			if nodeName == "" {
-				klog.Errorf("downtimeNodes Instant Query nodeName empty.")
-				klog.Infof("clusterName:%v metrics:%v", clusterName, v.Metric)
+				klog.Error("downtimeNodes InstantQuery nodeName empty.")
+				klog.Infof("clusterName:%v\n metric:%v\n", clusterName, v.Metric)
 				continue
 			}
 			nodeDownTimeRes[nodeName]++
@@ -94,19 +96,19 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 
 	for node, count := range nodeDownTimeRes {
 		if count < cq {
-			klog.Errorf("downtimeNodes node not reach threshold")
-			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, node, cq, count)
+			klog.Error("downtimeNodes node not reach threshold")
+			klog.Infof("clusterName:%v\n nodeName:%v\n threshold:%v count:%v", clusterName, node, cq, count)
 			continue
 		}
 		abnormalInfoSystemQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalInfoSystemQL, node)
 		res, err := h.InstantQuery(addr, abnormalInfoSystemQL, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if len(res) == 0 {
-			klog.Errorf("No results returned for query: %s", abnormalInfoSystemQL)
+			klog.Errorf("no results returned for query:%s", abnormalInfoSystemQL)
 			continue
 		}
 		if err != nil {
 			klog.Errorf("downtimeNodes InstantQuery NodeName To IPs empty err:%v", err)
-			klog.Infof("clusterName:%v AbnormalInfoSystemQL: %v, err:%v", clusterName, abnormalInfoSystemQL, err)
+			klog.Infof("clusterName:%v\n AbnormalInfoSystemQL:%v, err:%v", clusterName, abnormalInfoSystemQL, err)
 			continue
 		}
 		str := ""
@@ -120,13 +122,15 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	newfound := 0
 
 	for nodeName, _ := range WithDownNodeIPs {
-		today := time.Now().Format("2006-01-02")
+		firstDate := time.Now().Format("2006-01-02")
 		err := h.Cordon(nodeName, clusterName, NODE_DOWN)
 		if err != nil {
 			klog.Errorf("Cordon node err:%v", err)
-			klog.Infof("clusterName:%v nodeName:%v", clusterName, nodeName)
 			return
 		}
+		klog.Info("Cordon node success.")
+		klog.Infof("clusterName:%v\n nodeName:%v\n", clusterName, nodeName)
+
 		node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, metav1.GetOptions{})
 		nodeIP, err := func() (string, error) {
 			for _, address := range node.Status.Addresses {
@@ -154,12 +158,13 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		}
 		msg += fmt.Sprintf("node:%v ip:%v", nodeName, nodeIP)
 		write.Reason = NODE_DOWN_REASON
-		write.FirstDate = today
+		write.FirstDate = firstDate
 		_, err = write.Add()
 		if err != nil {
 			klog.Errorf("DownTimeNodes abnormal cordonNode AddOrGetOne err:%v", err)
-			klog.Infof("cluster:%v node:%v", clusterName, nodeName)
+			klog.Infof("clusterName:%v nodeName:%v", clusterName, nodeName)
 		}
-		klog.Infof("DownTimeNodes abnormal cordonNode AddOrGetOne cluster:%v node:%v", clusterName, nodeName)
+		klog.Info("DownTimeNodes abnormal cordonNode AddOrGetOne success.")
+		klog.Infof("clusterName:%v nodeName:%v", clusterName, nodeName)
 	}
 }

@@ -63,6 +63,7 @@ var (
 			"recovery_mark",
 		},
 		nil)
+
 	PodStagnativeInfo = prometheus.NewDesc(
 		"pod_stagnative_info",
 		"pod_stagnative_info",
@@ -167,7 +168,8 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 	for k, clusterName := range info {
 		s := strings.Split(k, ",")
 		feature, enabled := s[0], s[1]
-		p := prometheus.MustNewConstMetric(FeatureInfo,
+		p := prometheus.MustNewConstMetric(
+			FeatureInfo,
 			prometheus.GaugeValue, 1,
 			feature,
 			enabled,
@@ -175,8 +177,10 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 		)
 		ch <- p
 	}
+
 	for clusterName, address := range h.cc.PromMultiple {
-		p := prometheus.MustNewConstMetric(MultipleInfo,
+		p := prometheus.MustNewConstMetric(
+			MultipleInfo,
 			prometheus.GaugeValue, 1,
 			clusterName,
 			address,

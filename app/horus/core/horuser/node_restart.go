@@ -36,12 +36,13 @@ func (h *Horuser) DowntimeRestartManager(ctx context.Context) error {
 func (h *Horuser) RestartOrRepair(ctx context.Context) {
 	nodes, err := db.GetRestartNodeDataInfoDate()
 	if err != nil {
-		klog.Errorf("Restart or repair err:%v", err)
+		klog.Errorf("RestartOrRepair GetRestartNodeDataInfoDate err:%v", err)
+		return
 	}
 	if len(nodes) == 0 {
-		klog.Warningf("Needs to be rebooted or fixed to zero.")
+		klog.Info("RestartOrRepair to zero.")
 	}
-	klog.Infof("GetRestartNodeDataInfoDate count:%v", len(nodes))
+	klog.Infof("RestartOrRepair Count:%v", len(nodes))
 	wp := workerpool.New(10)
 	for _, n := range nodes {
 		n := n
@@ -55,30 +56,31 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 	err := h.Drain(node.NodeName, node.ClusterName)
 	if err != nil {
 		klog.Errorf("Drain node err:%v", err)
-		klog.Infof("clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
-	}
-	klog.Infof("Drain node Success clusterName:%v nodeName:%v", node.ClusterName, node.NodeName)
-
-	pass, err := node.RestartMarker()
-	if err != nil {
-		klog.Errorf("Error getting RestartMarker for node %v: %v", node.NodeName, err)
 		return
 	}
-	klog.Infof("RestartMarker result pass:%v", pass)
+	klog.Info("Drain node success.")
+	klog.Infof("clusterName:%v\n nodeName:%v\n", node.ClusterName, node.NodeName)
 
-	if pass {
+	success, err := node.RestartMarker()
+	if err != nil {
+		klog.Errorf("Error getting RestartMarker for nodeName:%v: err:%v", node.NodeName, err)
+		return
+	}
+	klog.Infof("RestartMarker result success:%v", success)
+
+	if success {
 		msg := fmt.Sprintf("\n【等待宕机节点腾空后重启】\n【节点:%v】\n【日期:%v】\n【集群:%v】\n", node.NodeName, node.FirstDate, node.ClusterName)
 		alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
 
 		cmd := exec.Command("/bin/bash", "core/horuser/restart.sh", node.NodeIP, h.cc.NodeDownTime.AllSystemUser, h.cc.NodeDownTime.AllSystemPassword)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			klog.Errorf("Failed restart for Output: %v node %v: %v", string(output), node.NodeName, err)
+			klog.Errorf("Failed restart for Output:%v node:%v: err:%v", string(output), node.NodeName, err)
 			return
 		}
 		klog.Infof("Successfully restarted node %v.", node.NodeName)
 	} else {
-		klog.Infof("RestartMarker did not pass for node %v", node.NodeName)
+		klog.Infof("RestartMarker did not success for node %v", node.NodeName)
 	}
 
 	if node.Restart < 2 {

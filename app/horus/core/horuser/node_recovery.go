@@ -39,10 +39,10 @@ func (h *Horuser) recoveryCheck(ctx context.Context) {
 		return
 	}
 	if len(data) == 0 {
-		klog.Errorf("recovery check GetRecoveryNodeDataInfoDate zero.")
+		klog.Info("recovery check GetRecoveryNodeDataInfoDate zero.")
 		return
 	}
-	wp := workerpool.New(5)
+	wp := workerpool.New(50)
 	for _, d := range data {
 		d := d
 		wp.Submit(func() {
@@ -54,35 +54,42 @@ func (h *Horuser) recoveryCheck(ctx context.Context) {
 }
 
 func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
-	addr := h.cc.PromMultiple[n.ClusterName]
-	if addr == "" {
-		klog.Errorf("recoveryNodes PromMultiple get addr empty.")
+	promAddr := h.cc.PromMultiple[n.ClusterName]
+	if promAddr == "" {
+		klog.Error("recoveryNodes promAddr by clusterName empty.")
 		klog.Infof("clusterName:%v nodeName:%v", n.ClusterName, n.NodeName)
 		return
 	}
-	vecs, err := h.InstantQuery(addr, n.RecoveryQL, n.ClusterName, h.cc.NodeRecovery.PromQueryTimeSecond)
+	vecs, err := h.InstantQuery(promAddr, n.RecoveryQL, n.ClusterName, h.cc.NodeRecovery.PromQueryTimeSecond)
 	if err != nil {
-		klog.Errorf("recoveryNodes InstantQuery err:%v ql:%v", err, n.RecoveryQL)
+		klog.Errorf("recoveryNodes InstantQuery err:%v", err)
+		klog.Infof("recoveryQL:%v", n.RecoveryQL)
 		return
 	}
 	if len(vecs) != 1 {
-		klog.Infof("Expected 1 result, but got: %d", len(vecs))
+		klog.Infof("Expected 1 result, but got:%d", len(vecs))
 		return
 	}
 	if err != nil {
-		klog.Errorf("recoveryNodes instantQuery err:%v ql:%v", err, n.RecoveryQL)
+		klog.Errorf("recoveryNodes InstantQuery err:%v", err)
+		klog.Infof("recoveryQL:%v", n.RecoveryQL)
 		return
 	}
-	klog.Infof("recoveryNodes check success.")
+	klog.Info("recoveryNodes InstantQuery success.")
+
 	err = h.UnCordon(n.NodeName, n.ClusterName)
 	res := "Success"
 	if err != nil {
-		res = fmt.Sprintf("failed:%v", err)
+		res = fmt.Sprintf("result failed:%v", err)
 	}
 	msg := fmt.Sprintf("\n【集群: %v】\n【封锁节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
 	alerter.DingTalkSend(h.cc.NodeRecovery.DingTalk, msg)
 	alerter.SlackSend(h.cc.CustomModular.Slack, msg)
 
-	pass, err := n.RecoveryMarker()
-	klog.Infof("RecoveryMarker result pass:%v err:%v", pass, err)
+	success, err := n.RecoveryMarker()
+	if err != nil {
+		klog.Errorf("RecoveryMarker result failed err:%v", err)
+		return
+	}
+	klog.Infof("RecoveryMarker result success:%v", success)
 }
