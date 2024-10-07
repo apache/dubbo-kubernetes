@@ -26,8 +26,8 @@ import (
 func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
-		klog.Errorf("node Drain kubeClient by clusterName empty.")
-		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
+		klog.Error("node Drain kubeClient by clusterName empty.")
+		klog.Infof("nodeName:%v\n,clusterName:%v\n", nodeName, clusterName)
 		return err
 	}
 
@@ -37,12 +37,13 @@ func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 	var podNamespace string
 	pod, err := kubeClient.CoreV1().Pods(podNamespace).List(ctxFirst, listOpts)
 	if err != nil {
-		klog.Errorf("node Drain err:%v nodeName:%v clusterName:%v", err, nodeName, clusterName)
+		klog.Errorf("node Drain err:%v", err)
+		klog.Infof("nodeName:%v\n clusterName:%v\n", nodeName, clusterName)
 		return err
 	}
 	if len(pod.Items) == 0 {
-		klog.Errorf("Cannot find pod on node.")
-		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
+		klog.Error("Unable to find pod on node..")
+		klog.Infof("nodeName:%v,clusterName:%v\n", nodeName, clusterName)
 	}
 	count := len(pod.Items)
 	for items, pods := range pod.Items {
@@ -53,18 +54,18 @@ func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 				break
 			}
 		}
-		klog.Errorf("node Drain evict pod result items:%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+		klog.Errorf("node Drain evict pod result items:%d count:%v nodeName:%v\n clusterName:%v\n podName:%v\n podNamespace:%v\n", items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
 		if ds {
 			continue
 		}
 		err = h.Evict(pods.Name, pods.Namespace, clusterName)
 		if err != nil {
-			klog.Errorf("node Drain evict pod err:%v items:%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+			klog.Errorf("node Drain evict pod err:%v items:%d count:%v nodeName:%v\n clusterName:%v\n podName:%v\n podNamespace:%v\n", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
 			return err
 		}
 		err = h.Finalizer(clusterName, pods.Name, pods.Namespace)
 		if err != nil {
-			klog.Errorf("node Drain finalizer pod err:%v items:%d count:%v nodeName:%v clusterName:%v podName:%v podNamespace:%v", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+			klog.Errorf("node Drain finalizer pod err:%v items:%d count:%v nodeName:%v\n clusterName:%v\n podName:%v\n podNamespace:%v\n", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
 			return err
 		}
 

@@ -68,7 +68,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	defer cancelFirst()
 
 	klog.Info("DownTimeNodes Query Start.")
-	klog.Infof("clusterName:%v", clusterName)
+	klog.Infof("clusterName:%v\n", clusterName)
 
 	nodeDownTimeRes := make(map[string]int)
 	cq := len(h.cc.NodeDownTime.AbnormalityQL)
@@ -77,7 +77,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if err != nil {
 			klog.Errorf("downtimeNodes InstantQuery err:%v", err)
-			klog.Infof("clusterName:%v", clusterName)
+			klog.Infof("clusterName:%v\n", clusterName)
 			continue
 		}
 
@@ -161,10 +161,10 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		write.FirstDate = firstDate
 		_, err = write.Add()
 		if err != nil {
-			klog.Errorf("DownTimeNodes abnormal cordonNode AddOrGetOne err:%v", err)
+			klog.Errorf("DownTimeNodes abnormal cordonNode AddOrGet err:%v", err)
 			klog.Infof("clusterName:%v nodeName:%v", clusterName, nodeName)
 		}
-		klog.Info("DownTimeNodes abnormal cordonNode AddOrGetOne success.")
+		klog.Info("DownTimeNodes abnormal cordonNode AddOrGet success.")
 		klog.Infof("clusterName:%v nodeName:%v", clusterName, nodeName)
 	}
 }

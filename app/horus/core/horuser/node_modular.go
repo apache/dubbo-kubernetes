@@ -36,7 +36,8 @@ func (h *Horuser) CustomizeModular(ctx context.Context) {
 	var wg sync.WaitGroup
 	for clusterName, addr := range h.cc.PromMultiple {
 		if _, exists := h.cc.CustomModular.KubeMultiple[clusterName]; !exists {
-			klog.Infof("CustomizeModular config disable clusterName: %v", clusterName)
+			klog.Info("CustomizeModular config disable.")
+			klog.Infof("clusterName: %v\n", clusterName)
 			continue
 		}
 		wg.Add(1)
@@ -50,12 +51,12 @@ func (h *Horuser) CustomizeModular(ctx context.Context) {
 
 func (h *Horuser) CustomizeModularOnCluster(clusterName, addr string) {
 	klog.Infof("CustomizeModularOnCluster Start clusterName:%v", clusterName)
-	for moduleName, checkql := range h.cc.CustomModular.AbnormalityQL {
-		ql := checkql
+	for moduleName, abnormalityQL := range h.cc.CustomModular.AbnormalityQL {
+		ql := abnormalityQL
 		vecs, err := h.InstantQuery(addr, ql, clusterName, h.cc.CustomModular.PromQueryTimeSecond)
 		if err != nil {
 			klog.Errorf("CustomizeModularOnCluster InstantQuery err:%v", err)
-			klog.Infof("clusterName:%v ql: %v", clusterName, ql)
+			klog.Infof("clusterName:%v abnormalityQL: %v", clusterName, ql)
 			return
 		}
 		count := len(vecs)
@@ -100,19 +101,19 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 
 	pass, _ := write.Check()
 	if pass {
-		klog.Infof("CustomizeModularNodes already existing clusterName:%v nodeName:%v moduleName:%v", clusterName, nodeName, moduleName)
+		klog.Infof("CustomizeModularNodes already existing clusterName:%v\n nodeName:%v\n moduleName:%v\n", clusterName, nodeName, moduleName)
 		return
 	}
 
 	_, err = write.AddOrGet()
 	if err != nil {
 		klog.Errorf("CustomizeModularNodes AddOrGet err:%v", err)
-		klog.Infof("moduleName:%v nodeName:%v", moduleName, write.NodeName)
+		klog.Infof("moduleName:%v nodeName:%v\n", moduleName, write.NodeName)
 	}
 
 	res := "Success"
 	if err != nil {
-		res = fmt.Sprintf("failed:%v", err)
+		res = fmt.Sprintf("result failed:%v", err)
 		klog.Errorf("Cordon failed:%v", res)
 	}
 	msg := fmt.Sprintf("\n【集群:%v】\n【发现 %s 达到禁止调度条件】\n【禁止调度节点:%v】\n 【处理结果: %v】\n 【今日操作次数:%v】\n",
@@ -129,5 +130,6 @@ func (h *Horuser) CustomizeModularNodes(clusterName, moduleName, nodeName, ip st
 		return
 	}
 
-	klog.Infof("CustomizeModularNodes AddOrGet success moduleName:%v nodeName:%v", moduleName, write.NodeName)
+	klog.Infof("CustomizeModularNodes AddOrGet success.")
+	klog.Infof("moduleName:%v nodeName:%v\n", moduleName, write.NodeName)
 }

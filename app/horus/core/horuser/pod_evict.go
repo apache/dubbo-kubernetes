@@ -23,8 +23,8 @@ import (
 func (h *Horuser) Evict(podName, podNamespace, clusterName string) (err error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
-		klog.Errorf("pod Evict kubeClient by clusterName empty.")
-		klog.Infof("podName:%v podNamespace:%v clusterName:%v", podName, podNamespace, clusterName)
+		klog.Error("pod Evict kubeClient by clusterName empty.")
+		klog.Infof("podName:%v\n podNamespace:%v\n clusterName:%v\n", podName, podNamespace, clusterName)
 		return err
 	}
 
@@ -32,7 +32,8 @@ func (h *Horuser) Evict(podName, podNamespace, clusterName string) (err error) {
 	defer cancelFirst()
 	_, err = kubeClient.CoreV1().Pods(podNamespace).Get(ctxFirst, podName, v1.GetOptions{})
 	if err != nil {
-		klog.Errorf("pod Evict get err clusterName:%v podName:%v podNamespace:%v", clusterName, podName, podNamespace)
+		klog.Errorf("pod Evict get err:%v", err)
+		klog.Infof("clusterName:%v\n podName:%v\n podNamespace:%v\n", clusterName, podName, podNamespace)
 		return err
 	}
 	ctxSecond, cancelSecond := h.GetK8sContext()
@@ -44,10 +45,12 @@ func (h *Horuser) Evict(podName, podNamespace, clusterName string) (err error) {
 		PropagationPolicy:  &propagationPolicy,
 	})
 	if err != nil {
-		klog.Errorf("pod Evict delete err clusterName:%v podName:%v podNamespace:%v", clusterName, podName, podNamespace)
+		klog.Error("pod Evict delete failed err:%v", err)
+		klog.Infof("clusterName:%v\n podName:%v\n podNamespace:%v\n", clusterName, podName, podNamespace)
 		return err
 	}
-	klog.Infof("pod Evict delete success clusterName:%v podName:%v podNamespace:%v", clusterName, podName, podNamespace)
+	klog.Info("pod Evict delete success.")
+	klog.Infof("clusterName:%v\n podName:%v\n podNamespace:%v\n", clusterName, podName, podNamespace)
 	return nil
 
 }
