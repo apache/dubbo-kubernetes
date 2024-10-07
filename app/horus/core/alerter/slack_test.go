@@ -24,6 +24,7 @@ import (
 func TestSlackSend(t *testing.T) {
 	im := &config.SlackConfiguration{
 		WebhookUrl: "https://hooks.slack.com/services/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",
+		Title:      "",
 	}
 	alerter.SlackSend(im, "test")
 }

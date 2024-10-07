@@ -30,11 +30,10 @@ type Text struct {
 
 func SlackSend(sk *config.SlackConfiguration, channel string) {
 	skm := Text{Text: "text"}
-	skm.Text = fmt.Sprintf("%s"+
-		"%v", sk.Title, channel)
+	skm.Text = fmt.Sprintf("%s"+"%v", sk.Title, channel)
 	bs, err := json.Marshal(skm)
 	if err != nil {
-		klog.Errorf("slack json marshal err:%v\n dtm:%v\n", err, skm)
+		klog.Errorf("slack json marshal err:%v\n skm:%v\n", err, skm)
 	}
 	res, err := http.Post(sk.WebhookUrl, "application/json", bytes.NewBuffer(bs))
 	if res.StatusCode != 200 {
