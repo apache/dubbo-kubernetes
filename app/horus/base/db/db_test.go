@@ -46,7 +46,6 @@ func TestDataBase(t *testing.T) {
 		Repair:      0,
 		FirstDate:   today,
 	}
-	data.NodeName = "002"
 	id, err := data.Add()
 	t.Logf("test.add id:%v err:%v", id, err)
 }

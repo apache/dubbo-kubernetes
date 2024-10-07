@@ -43,20 +43,17 @@ type NodeDataInfo struct {
 }
 
 type PodDataInfo struct {
-	Id              int64     `json:"id"`
-	PodName         string    `json:"pod_name" xorm:"pod_name"`
-	PodIP           string    `json:"pod_ip" xorm:"pod_ip"`
-	Sn              string    `json:"sn"`
-	NodeName        string    `json:"node_name" xorm:"node_name"`
-	ClusterName     string    `json:"cluster_name" xorm:"cluster_name"`
-	ModuleName      string    `json:"module_name" xorm:"module_name"`
-	Reason          string    `json:"reason"`
-	Restart         int       `json:"restart"`
-	Repair          int       `json:"repair"`
-	RepairTicketUrl string    `json:"repair_ticket_url" xorm:"repair_ticket_url"`
-	FirstDate       string    `json:"first_date" xorm:"first_date"`
-	CreateTime      time.Time `json:"create_time" xorm:"create_time created"`
-	UpdateTime      time.Time `json:"update_time" xorm:"update_time updated"`
+	Id          int64     `json:"id"`
+	PodName     string    `json:"pod_name" xorm:"pod_name"`
+	PodIP       string    `json:"pod_ip" xorm:"pod_ip"`
+	Sn          string    `json:"sn"`
+	NodeName    string    `json:"node_name" xorm:"node_name"`
+	ClusterName string    `json:"cluster_name" xorm:"cluster_name"`
+	ModuleName  string    `json:"module_name" xorm:"module_name"`
+	Reason      string    `json:"reason"`
+	FirstDate   string    `json:"first_date" xorm:"first_date"`
+	CreateTime  time.Time `json:"create_time" xorm:"create_time created"`
+	UpdateTime  time.Time `json:"update_time" xorm:"update_time updated"`
 }
 
 var (
@@ -66,7 +63,7 @@ var (
 func InitDataBase(mc *config.MysqlConfiguration) error {
 	data, err := xorm.NewEngine("mysql", mc.Address)
 	if err != nil {
-		fmt.Printf("Unable to connect to mysql server:\n  addr: %s\n  err: %v\n", mc.Address, err)
+		fmt.Printf("Unable to connect to mysql server:\n  addr:%s\n  err:%v\n", mc.Address, err)
 	}
 	data.Logger().SetLevel(xlog.LOG_INFO)
 	data.ShowSQL(mc.Debug)
@@ -79,11 +76,6 @@ func (n *NodeDataInfo) Add() (int64, error) {
 	return row, err
 }
 
-func (p *PodDataInfo) Add() (int64, error) {
-	row, err := db.Insert(p)
-	return row, err
-}
-
 func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
 	exist, err := db.Get(n)
 	if err != nil {
@@ -93,17 +85,6 @@ func (n *NodeDataInfo) Get() (*NodeDataInfo, error) {
 		return nil, nil
 	}
 	return n, nil
-}
-
-func (p *PodDataInfo) Get() (*PodDataInfo, error) {
-	exist, err := db.Get(p)
-	if err != nil {
-		return nil, err
-	}
-	if !exist {
-		return nil, nil
-	}
-	return p, nil
 }
 
 func (n *NodeDataInfo) Update() (bool, error) {
@@ -120,27 +101,8 @@ func (n *NodeDataInfo) Update() (bool, error) {
 	return false, nil
 }
 
-func (p *PodDataInfo) Update() (bool, error) {
-	firstDate := time.Now().Format("2006-01-02 15:04:05")
-	p.FirstDate = firstDate
-
-	row, err := db.Where(fmt.Sprintf("id=%d", p.Id)).Update(p)
-	if err != nil {
-		return false, err
-	}
-	if row > 0 {
-		return true, nil
-	}
-	return false, nil
-}
-
 func (n *NodeDataInfo) Check() (bool, error) {
 	exist, err := db.Exist(n)
-	return exist, err
-}
-
-func (p *PodDataInfo) Check() (bool, error) {
-	exist, err := db.Exist(p)
 	return exist, err
 }
 
@@ -151,36 +113,6 @@ func (n *NodeDataInfo) AddOrGet() (int64, error) {
 	}
 	row, err := n.Add()
 	return row, err
-}
-
-func (p *PodDataInfo) AddOrGet() (int64, error) {
-	exist, _ := p.Check()
-	if exist {
-		return p.Id, nil
-	}
-	row, err := p.Add()
-	return row, err
-}
-
-func GetRecoveryNodeDataInfoDate(day int) ([]NodeDataInfo, error) {
-	var ndi []NodeDataInfo
-	session := db.Where(fmt.Sprintf("recovery_mark = 0 AND first_date > DATE_SUB(CURDATE(), INTERVAL %d DAY)", day))
-	err := session.Find(&ndi)
-	return ndi, err
-}
-
-func GetRestartNodeDataInfoDate() ([]NodeDataInfo, error) {
-	var ndi []NodeDataInfo
-	session := db.Where("restart = 0 and repair = 0 and module_name = ?", "node_down")
-	err := session.Find(&ndi)
-	return ndi, err
-}
-
-func GetDailyLimitNodeDataInfoDate(day, module, cluster string) ([]NodeDataInfo, error) {
-	var ndi []NodeDataInfo
-	session := db.Where("DATE(first_date) = ? AND module_name = ? AND cluster_name = ?", day, module, cluster)
-	err := session.Find(&ndi)
-	return ndi, err
 }
 
 func (n *NodeDataInfo) RecoveryMarker() (bool, error) {
@@ -206,6 +138,71 @@ func GetNodeByName(nodeName, moduleName string) (*NodeDataInfo, error) {
 		ModuleName: moduleName,
 	}
 	return ndi.Get()
+}
+
+func GetRecoveryNodeDataInfoDate(day int) ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
+	session := db.Where(fmt.Sprintf("recovery_mark = 0 AND first_date > DATE_SUB(CURDATE(), INTERVAL %d DAY)", day))
+	err := session.Find(&ndi)
+	return ndi, err
+}
+
+func GetRestartNodeDataInfoDate() ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
+	session := db.Where("restart = 0 and repair = 0 and module_name = ?", "node_down")
+	err := session.Find(&ndi)
+	return ndi, err
+}
+
+func GetDailyLimitNodeDataInfoDate(day, module, cluster string) ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
+	session := db.Where("DATE(first_date) = ? AND module_name = ? AND cluster_name = ?", day, module, cluster)
+	err := session.Find(&ndi)
+	return ndi, err
+}
+
+func (p *PodDataInfo) Add() (int64, error) {
+	row, err := db.Insert(p)
+	return row, err
+}
+
+func (p *PodDataInfo) Get() (*PodDataInfo, error) {
+	exist, err := db.Get(p)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, nil
+	}
+	return p, nil
+}
+
+func (p *PodDataInfo) Update() (bool, error) {
+	firstDate := time.Now().Format("2006-01-02 15:04:05")
+	p.FirstDate = firstDate
+
+	row, err := db.Where(fmt.Sprintf("id=%d", p.Id)).Update(p)
+	if err != nil {
+		return false, err
+	}
+	if row > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (p *PodDataInfo) Check() (bool, error) {
+	exist, err := db.Exist(p)
+	return exist, err
+}
+
+func (p *PodDataInfo) AddOrGet() (int64, error) {
+	exist, _ := p.Check()
+	if exist {
+		return p.Id, nil
+	}
+	row, err := p.Add()
+	return row, err
 }
 
 func GetPod() ([]PodDataInfo, error) {
