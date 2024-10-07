@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 )
 
-// relative path from ./internal/dubbo/templates_embedded.go to the project root (/)
+// relative path from /dubboctl/internal/dubbo/templates_embedded.go to the `dubboctl` folder
 const relativePathToRoot = "../../"
 
 var templatesPath = filepath.Join(relativePathToRoot, "templates")
