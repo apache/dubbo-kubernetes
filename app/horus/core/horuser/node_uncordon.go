@@ -23,8 +23,8 @@ import (
 func (h *Horuser) UnCordon(nodeName, clusterName string) (err error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
-		klog.Errorf("node UnCordon kubeClient by clusterName empty.")
-		klog.Infof("nodeName:%v,clusterName:%v", nodeName, clusterName)
+		klog.Error("node UnCordon kubeClient by clusterName empty.")
+		klog.Infof("nodeName:%v\n,clusterName:%v\n", nodeName, clusterName)
 		return err
 	}
 
@@ -32,22 +32,22 @@ func (h *Horuser) UnCordon(nodeName, clusterName string) (err error) {
 	defer cancelFirst()
 	node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, v1.GetOptions{})
 	if err != nil {
-		klog.Errorf("node UnCordon get err nodeName:%v clusterName:%v", nodeName, clusterName)
+		klog.Errorf("node UnCordon get err:%v", err)
+		klog.Infof("nodeName:%v\n clusterName:%v\n", nodeName, clusterName)
 		return err
 	}
 
 	node.Spec.Unschedulable = false
-	//if node.Spec.Unschedulable != true {
-	//	klog.Infof("Node %v is already uncordoned.", nodeName)
-	//	return
-	//}
+
 	ctxSecond, cancelSecond := h.GetK8sContext()
 	defer cancelSecond()
 	node, err = kubeClient.CoreV1().Nodes().Update(ctxSecond, node, v1.UpdateOptions{})
 	if err != nil {
-		klog.Errorf("node UnCordon update err nodeName:%v clusterName:%v", nodeName, clusterName)
+		klog.Errorf("node UnCordon update err:%v", err)
+		klog.Infof("nodeName:%v\n clusterName:%v\n", nodeName, clusterName)
 		return err
 	}
-	klog.Infof("node UnCordon success nodeName:%v clusterName:%v", nodeName, clusterName)
+	klog.Info("node UnCordon success.")
+	klog.Infof("nodeName:%v\n clusterName:%v\n", nodeName, clusterName)
 	return nil
 }

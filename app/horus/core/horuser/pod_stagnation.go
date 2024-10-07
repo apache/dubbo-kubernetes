@@ -53,15 +53,15 @@ func (h *Horuser) PodStagnationClean(ctx context.Context) {
 }
 
 func (h *Horuser) PodsOnCluster(clusterName string) {
-	pods, err := h.Fetch(clusterName, h.cc.PodStagnationCleaner.FieldSelector)
+	pods, err := h.Retrieve(clusterName, h.cc.PodStagnationCleaner.FieldSelector)
 	if err != nil {
-		klog.Errorf("Failed to fetch pods on cluster:%v", err)
-		klog.Infof("clusterName:%v", clusterName)
+		klog.Errorf("Failed to retrieve pods on err:%v", err)
+		klog.Infof("clusterName:%v\n", clusterName)
 		return
 	}
 	count := len(pods)
 	if count == 0 {
-		klog.Infof("PodsOnCluster no abnomal clusterName:%v", clusterName)
+		klog.Infof("PodsOnCluster no abnomal clusterName:%v\n", clusterName)
 		return
 	}
 	wp := workerpool.New(10)
@@ -86,7 +86,7 @@ func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
 		if len(pod.Finalizers) > 0 {
 			time.Sleep(time.Duration(h.cc.PodStagnationCleaner.DoubleSecond) * time.Second)
 			if !h.Terminating(clusterName, &pod) {
-				klog.Infof("Pod %s is still terminating, skipping.", pod.Name)
+				klog.Infof("Pod %s is still terminating skipping.", pod.Name)
 				return
 			}
 			err := h.Finalizer(clusterName, pod.Name, pod.Namespace)
@@ -102,14 +102,14 @@ func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
 	if len(pod.Finalizers) == 0 && pod.Name != "" {
 		err := h.Evict(pod.Name, pod.Namespace, clusterName)
 		if err != nil {
-			klog.Errorf("Failed to evict pod %s: %v", pod.Name, err)
+			klog.Errorf("Failed to evict pod %s err:%v", pod.Name, err)
 			return
 		}
 		klog.Infof("Evicted pod %s successfully", pod.Name)
 	}
 	res := "Success"
 	if err != nil {
-		res = fmt.Sprintf("failed:%v", err)
+		res = fmt.Sprintf("result failed:%v", err)
 	}
 	today := time.Now().Format("2006-01-02")
 	msg := fmt.Sprintf("\n【集群：%v】\n【Pod：%v】\n【Namespace：%v】\n【清除 finalizer:%v】\n", clusterName, pod.Name, pod.Namespace, res)
@@ -125,6 +125,5 @@ func (h *Horuser) PodSingle(pod corev1.Pod, clusterName string) {
 	}
 	_, err = write.AddOrGet()
 	klog.Errorf("write AddOrGet err:%v", err)
-	klog.Infof("podName:%v", pod.Name)
 	return
 }

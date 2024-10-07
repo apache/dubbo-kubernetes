@@ -141,7 +141,7 @@ func (h *Horuser) Collect(ch chan<- prometheus.Metric) {
 		}
 		klog.Info("horus metrics collect db get pod success.")
 		if len(pods) == 0 {
-			klog.Infof("horus metrics collect db zero err:%v", err)
+			klog.Errorf("horus metrics collect db zero err:%v", err)
 			return
 		}
 		for _, v := range pods {

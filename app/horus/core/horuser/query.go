@@ -27,13 +27,13 @@ import (
 func (h *Horuser) InstantQuery(address, ql, clusterName string, timeWindowsSecond int64) (model.Vector, error) {
 	client, err := apiV1.NewClient(apiV1.Config{Address: address})
 	if err != nil {
-		klog.Errorf("prometheus InstantQuery creating NewClient error:%v", err)
+		klog.Errorf("InstantQuery creating NewClient err:%v", err)
 		return nil, err
 	}
 	promClient := h.cc.PromMultiple[clusterName]
 	if promClient == "" && address == "" {
-		klog.Errorf("prometheus get PromMultiple empty")
-		klog.Infof("clusterName:%v ql:%v", clusterName, ql)
+		klog.Error("PromMultiple empty.")
+		klog.Infof("clusterName:%v\n ql:%v", clusterName, ql)
 		return nil, err
 	}
 

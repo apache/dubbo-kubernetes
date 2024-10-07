@@ -32,8 +32,8 @@ type RemoveJsonValue struct {
 func (h *Horuser) Finalizer(clusterName, podName, podNamespace string) error {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
-		klog.Errorf("Finalizer kubeClient by clusterName empty.")
-		klog.Infof("clusterName:%v podName:%v", clusterName, podName)
+		klog.Error("Finalizer kubeClient by clusterName empty.")
+		klog.Infof("clusterName:%v\n podName:%v\n", clusterName, podName)
 		return nil
 	}
 	finalizer := RemoveJsonValue{
@@ -67,11 +67,11 @@ func (h *Horuser) Terminating(clusterName string, oldPod *corev1.Pod) bool {
 	return true
 }
 
-func (h *Horuser) Fetch(clusterName, fieldSelector string) ([]corev1.Pod, error) {
+func (h *Horuser) Retrieve(clusterName, fieldSelector string) ([]corev1.Pod, error) {
 	kubeClient := h.kubeClientMap[clusterName]
 	if kubeClient == nil {
-		klog.Errorf("Fetch kubeClient by clusterName empty.")
-		klog.Infof("clusterName:%v", clusterName)
+		klog.Error("Retrieve kubeClient by clusterName empty.")
+		klog.Infof("clusterName:%v\n", clusterName)
 		return nil, nil
 	}
 	ctx, cancel := h.GetK8sContext()
@@ -79,8 +79,8 @@ func (h *Horuser) Fetch(clusterName, fieldSelector string) ([]corev1.Pod, error)
 	list := v1.ListOptions{FieldSelector: fieldSelector}
 	pods, err := kubeClient.CoreV1().Pods("").List(ctx, list)
 	if err != nil {
-		klog.Errorf("Fetch list pod err:%v", err)
-		klog.Infof("clusterName:%v fieldSelector:%v", clusterName, fieldSelector)
+		klog.Errorf("Retrieve list pod err:%v", err)
+		klog.Infof("clusterName:%v\n fieldSelector:%v", clusterName, fieldSelector)
 	}
 	return pods.Items, err
 }
