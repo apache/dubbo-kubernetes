@@ -45,7 +45,7 @@ func (h *Horuser) Evict(podName, podNamespace, clusterName string) (err error) {
 		PropagationPolicy:  &propagationPolicy,
 	})
 	if err != nil {
-		klog.Error("pod Evict delete failed err:%v", err)
+		klog.Errorf("pod Evict delete failed err:%v", err)
 		klog.Infof("clusterName:%v\n podName:%v\n podNamespace:%v\n", clusterName, podName, podNamespace)
 		return err
 	}
