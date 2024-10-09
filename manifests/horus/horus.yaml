@@ -28,7 +28,6 @@ promMultiple:
   cluster: http://192.168.15.134:31974
 
 nodeRecovery:
-  enabled: false
   dayNumber: 1
   intervalSecond: 15
   promQueryTimeSecond: 60
@@ -65,12 +64,12 @@ customModular:
     title: "自定义通知"
 
 nodeDownTime:
-  enabled: false
-  intervalSecond: 5
+  enabled: true
+  intervalSecond: 15
   promQueryTimeSecond: 60
   abnormalityQL:
-    - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 13
-#    - (avg by (node) (node_memory_MemFree_bytes / node_memory_MemTotal_bytes )) * 100 < 20
+    - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 20
+    - (avg by (node) (node_memory_MemFree_bytes / node_memory_MemTotal_bytes )) * 100 > 25
 #    - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
   abnormalInfoSystemQL:
     node_os_info{node="%s"}
@@ -88,7 +87,7 @@ nodeDownTime:
     title: "自定义通知"
 
 podStagnationCleaner:
-  enabled: true
+  enabled: false
   intervalSecond: 15
   doubleSecond: 60
   fieldSelector: "status.phase!=Running"

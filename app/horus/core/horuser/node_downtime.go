@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	NODE_DOWN        = "node_down"
+	NODE_DOWN        = "nodeDown"
 	NODE_DOWN_REASON = "downtime"
 )
 
@@ -118,7 +118,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		WithDownNodeIPs[node] = str
 	}
 
-	msg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机标准：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
+	msg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机临界点：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
 	newfound := 0
 
 	for nodeName, _ := range WithDownNodeIPs {
