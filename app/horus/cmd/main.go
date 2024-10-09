@@ -126,11 +126,13 @@ func main() {
 		return nil
 	})
 	group.Add(func() error {
-		klog.Info("horus node downtime restart manager start success.")
-		err := horus.DowntimeRestartManager(ctx)
-		if err != nil {
-			klog.Errorf("horus node downtime restart manager start failed err:%v", err)
-			return err
+		if c.NodeDownTime.Enabled {
+			klog.Info("horus node downtime restart manager start success.")
+			err := horus.DowntimeRestartManager(ctx)
+			if err != nil {
+				klog.Errorf("horus node downtime restart manager start failed err:%v", err)
+				return err
+			}
 		}
 		return nil
 	})
