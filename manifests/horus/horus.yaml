@@ -25,7 +25,7 @@ kubeMultiple:
   cluster: config.1
 
 promMultiple:
-  cluster: http://192.168.15.134:31974
+  cluster: http://192.168.15.133:31974
 
 nodeRecovery:
   dayNumber: 1
@@ -64,7 +64,7 @@ customModular:
     title: "自定义通知"
 
 nodeDownTime:
-  enabled: true
+  enabled: false
   intervalSecond: 15
   promQueryTimeSecond: 60
   abnormalityQL:
