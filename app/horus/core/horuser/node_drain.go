@@ -16,9 +16,7 @@
 package horuser
 
 import (
-	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
@@ -54,31 +52,14 @@ func (h *Horuser) Drain(nodeName, clusterName string) (err error) {
 				break
 			}
 		}
-		klog.Errorf("node Drain evict pod result items:%d count:%v nodeName:%v\n clusterName:%v\n podName:%v\n podNamespace:%v\n", items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
 		if ds {
 			continue
 		}
+		klog.Errorf("node Drain evict pod result items:%d count:%v nodeName:%v\n clusterName:%v\n podName:%v\n podNamespace:%v\n", items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
+
 		err = h.Evict(pods.Name, pods.Namespace, clusterName)
 		if err != nil {
 			klog.Errorf("node Drain evict pod err:%v items:%d count:%v nodeName:%v\n clusterName:%v\n podName:%v\n podNamespace:%v\n", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
-			return err
-		}
-		err = h.Finalizer(clusterName, pods.Name, pods.Namespace)
-		if err != nil {
-			klog.Errorf("node Drain finalizer pod err:%v items:%d count:%v nodeName:%v\n clusterName:%v\n podName:%v\n podNamespace:%v\n", err, items+1, count, nodeName, clusterName, pods.Name, pods.Namespace)
-			return err
-		}
-
-		var oldPod *corev1.Pod
-		var _ = h.Terminating(clusterName, oldPod)
-		newPod, _ := kubeClient.CoreV1().Pods(oldPod.Namespace).Get(context.Background(), oldPod.Name, v1.GetOptions{})
-		if newPod == nil {
-			return err
-		}
-		if newPod.UID != oldPod.UID {
-			return err
-		}
-		if newPod.DeletionTimestamp.IsZero() {
 			return err
 		}
 	}

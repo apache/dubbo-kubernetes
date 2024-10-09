@@ -119,6 +119,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	}
 
 	msg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机临界点：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
+
 	newfound := 0
 
 	for nodeName, _ := range WithDownNodeIPs {

@@ -149,7 +149,7 @@ func GetRecoveryNodeDataInfoDate(day int) ([]NodeDataInfo, error) {
 
 func GetRestartNodeDataInfoDate() ([]NodeDataInfo, error) {
 	var ndi []NodeDataInfo
-	session := db.Where("restart = 0 and repair = 0 and module_name = ?", "node_down")
+	session := db.Where("restart = 0 and repair = 0 and module_name = ?", "nodeDown")
 	err := session.Find(&ndi)
 	return ndi, err
 }

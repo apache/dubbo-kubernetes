@@ -93,11 +93,13 @@ func main() {
 		return nil
 	})
 	group.Add(func() error {
-		klog.Info("horus node recovery manager start success.")
-		err := horus.RecoveryManager(ctx)
-		if err != nil {
-			klog.Errorf("horus node recovery manager start failed err:%v", err)
-			return err
+		if c.CustomModular.Enabled {
+			klog.Info("horus node recovery manager start success.")
+			err := horus.RecoveryManager(ctx)
+			if err != nil {
+				klog.Errorf("horus node recovery manager start failed err:%v", err)
+				return err
+			}
 		}
 		return nil
 	})
