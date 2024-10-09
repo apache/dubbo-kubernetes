@@ -47,7 +47,6 @@ type SlackConfiguration struct {
 }
 
 type RecoveryConfiguration struct {
-	Enabled             bool                   `yaml:"enabled"`
 	DayNumber           int                    `yaml:"dayNumber"`
 	IntervalSecond      int                    `yaml:"intervalSecond"`
 	PromQueryTimeSecond int64                  `yaml:"promQueryTimeSecond"`

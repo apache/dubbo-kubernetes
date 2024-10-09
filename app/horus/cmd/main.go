@@ -79,6 +79,7 @@ func main() {
 		err := srv.ListenAndServe()
 		if err != nil {
 			klog.Errorf("horus metrics err:%v", err)
+			return err
 		}
 		return nil
 	})
@@ -87,16 +88,16 @@ func main() {
 		err := ticker.Manager(ctx)
 		if err != nil {
 			klog.Errorf("horus ticker manager start failed err:%v", err)
+			return err
 		}
 		return nil
 	})
 	group.Add(func() error {
-		if c.NodeRecovery.Enabled {
-			klog.Info("horus node recovery manager start success.")
-			err := horus.RecoveryManager(ctx)
-			if err != nil {
-				klog.Errorf("horus node recovery manager start failed err:%v", err)
-			}
+		klog.Info("horus node recovery manager start success.")
+		err := horus.RecoveryManager(ctx)
+		if err != nil {
+			klog.Errorf("horus node recovery manager start failed err:%v", err)
+			return err
 		}
 		return nil
 	})
@@ -106,6 +107,7 @@ func main() {
 			err := horus.CustomizeModularManager(ctx)
 			if err != nil {
 				klog.Errorf("horus node customize modular manager start failed err:%v", err)
+				return err
 			}
 		}
 		return nil
@@ -116,17 +118,17 @@ func main() {
 			err := horus.DownTimeManager(ctx)
 			if err != nil {
 				klog.Errorf("horus node downtime manager start failed err:%v", err)
+				return err
 			}
 		}
 		return nil
 	})
 	group.Add(func() error {
-		if c.NodeDownTime.Enabled {
-			klog.Info("horus node downtime restart manager start success.")
-			err := horus.DowntimeRestartManager(ctx)
-			if err != nil {
-				klog.Errorf("horus node downtime restart manager start failed err:%v", err)
-			}
+		klog.Info("horus node downtime restart manager start success.")
+		err := horus.DowntimeRestartManager(ctx)
+		if err != nil {
+			klog.Errorf("horus node downtime restart manager start failed err:%v", err)
+			return err
 		}
 		return nil
 	})
@@ -136,6 +138,7 @@ func main() {
 			err := horus.PodStagnationCleanManager(ctx)
 			if err != nil {
 				klog.Errorf("horus pod stagnation clean manager start failed err:%v", err)
+				return err
 			}
 		}
 		return nil
