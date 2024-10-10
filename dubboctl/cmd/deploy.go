@@ -127,9 +127,6 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 	if err := cfg.Validate(cmd); err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
 
 	if !f.Initialized() {
 		return dubbo.NewErrNotInitialized(f.Root)

@@ -15,28 +15,26 @@
  * limitations under the License.
  */
 
-package config
+package mirror
 
 import (
-	"sigs.k8s.io/yaml"
+	"fmt"
 )
 
-func FromYAML(content []byte, cfg Config) error {
-	return yaml.Unmarshal(content, cfg)
+type ImageNotFoundError string
+
+func (e ImageNotFoundError) Error() string {
+	return fmt.Sprintf("pack mirror: image %q not found, please visit https://docker.aityp.com/manage/add to add it", string(e))
 }
 
-func ToYAML(cfg Config) ([]byte, error) {
-	return yaml.Marshal(cfg)
+type ErrLatestTagNotSupported string
+
+func (e ErrLatestTagNotSupported) Error() string {
+	return fmt.Sprintf("pack mirror: image %q with latest tag is not supported, please specify a specific tag", string(e))
 }
 
-// ToJson converts through YAML, because we only have `yaml` tags on Config.
-// This JSON cannot be parsed by json.Unmarshal because durations are marshaled by yaml to pretty form like "1s".
-// To change it to simple json.Marshal we need to add `json` tag everywhere.
-func ToJson(cfg Config) ([]byte, error) {
-	yamlBytes, err := ToYAML(cfg)
-	if err != nil {
-		return nil, err
-	}
-	// there is no easy way to convert yaml to json using gopkg.in/yaml.v3
-	return yaml.YAMLToJSON(yamlBytes)
+type ErrDigestNotSupported string
+
+func (e ErrDigestNotSupported) Error() string {
+	return fmt.Sprintf("pack mirror: image %q with digest is not supported, please specify a specific tag", string(e))
 }

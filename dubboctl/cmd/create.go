@@ -153,6 +153,11 @@ func runCreate(cmd *cobra.Command, args []string, newClient ClientFactory) (err 
 		Root:     cfg.Path,
 		Runtime:  cfg.Runtime,
 		Template: cfg.Template,
+		Build: dubbo.BuildSpec{
+			CnMirror: dubbo.BooleanWithComment{
+				Comment: "Specify `cnMirror: true` to use the mirror in mainland China",
+			},
+		},
 	}, cfg.Init, cmd)
 	if err != nil {
 		return err

@@ -68,7 +68,7 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 		switch {
 		case err == nil:
 			dockerHost = defaultHost
-		case err != nil && !os.IsNotExist(err):
+		case !os.IsNotExist(err):
 			return
 		}
 	}
@@ -131,8 +131,7 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 
 	dockerClient, err = client.NewClientWithOpts(
 		client.WithAPIVersionNegotiation(),
-		client.WithHTTPClient(httpClient),
-		client.WithHost("tcp://placeholder/"))
+		client.WithHTTPClient(httpClient))
 
 	if closer, ok := contextDialer.(io.Closer); ok {
 		dockerClient = clientWithAdditionalCleanup{

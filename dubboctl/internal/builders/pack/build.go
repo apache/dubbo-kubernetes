@@ -27,9 +27,12 @@ import (
 )
 
 import (
-	pack "github.com/buildpacks/pack/pkg/client"
+	"github.com/buildpacks/pack/pkg/buildpack"
+	packClient "github.com/buildpacks/pack/pkg/client"
 	"github.com/buildpacks/pack/pkg/logging"
 	"github.com/buildpacks/pack/pkg/project/types"
+
+	"github.com/distribution/reference"
 
 	"github.com/docker/docker/client"
 
@@ -38,6 +41,7 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/internal/builders"
+	"github.com/apache/dubbo-kubernetes/dubboctl/internal/builders/pack/mirror"
 	"github.com/apache/dubbo-kubernetes/dubboctl/internal/docker"
 	"github.com/apache/dubbo-kubernetes/dubboctl/internal/dubbo"
 )
@@ -46,8 +50,8 @@ import (
 const DefaultName = builders.Pack
 
 var (
-	DefaultBaseBuilder = "ghcr.io/knative/builder-jammy-base:latest"
-	DefaultTinyBuilder = "ghcr.io/knative/builder-jammy-tiny:latest"
+	DefaultBaseBuilder = "docker.io/paketobuildpacks/builder-jammy-tiny:latest"
+	DefaultTinyBuilder = "docker.io/paketobuildpacks/builder-jammy-tiny:latest"
 )
 
 var (
@@ -67,7 +71,17 @@ var (
 		"ghcr.io/knative/",
 	}
 
-	defaultBuildpacks = map[string][]string{}
+	defaultBuildpacks = map[string][]string{
+		"go":   {"paketo-buildpacks/go"},
+		"java": {"paketo-buildpacks/java"},
+	}
+
+	// work around for resolving the images with latest tag could not be mirrored
+	latestImageTagMapping = map[string]string{
+		"paketobuildpacks/builder-jammy-tiny": "0.0.271",
+		"paketobuildpacks/run-jammy-tiny":     "0.2.46",
+		"buildpacksio/lifecycle":              "0.17.7",
+	}
 )
 
 // Builder will build Function using Pack.
@@ -82,7 +96,7 @@ type Builder struct {
 
 // Impl allows for the underlying implementation to be mocked for tests.
 type Impl interface {
-	Build(context.Context, pack.BuildOptions) error
+	Build(context.Context, packClient.BuildOptions) error
 }
 
 // NewBuilder instantiates a Buildpack-based Builder
@@ -111,8 +125,6 @@ func WithImpl(i Impl) Option {
 	}
 }
 
-var DefaultLifecycleImage = "quay.io/boson/lifecycle@sha256:f53fea9ec9188b92cab0b8a298ff852d76a6c2aaf56f968a08637e13de0e0c59"
-
 func transportEnv(ee []dubbo.Env) (map[string]string, error) {
 	envs := make(map[string]string, len(ee))
 	for _, e := range ee {
@@ -130,6 +142,22 @@ func transportEnv(ee []dubbo.Env) (map[string]string, error) {
 	return envs, nil
 }
 
+// work around for resolving the images with latest tag could not be mirrored
+func defaultBuildPackImageReplace(image string) string {
+	ref, err := reference.ParseDockerRef(image)
+	if err != nil {
+		return image
+	}
+	if reference.Domain(ref) != "docker.io" {
+		return image
+	}
+	if tag, ok := ref.(reference.Tagged); ok && tag.Tag() == "latest" {
+		image = fmt.Sprintf("%s/%s:%s", reference.Domain(ref), reference.Path(ref), latestImageTagMapping[reference.Path(ref)])
+		return image
+	}
+	return image
+}
+
 // Build the Function at path.
 func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 	// Builder image from the function if defined, default otherwise.
@@ -140,25 +168,32 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 
 	buildpacks := f.Build.Buildpacks
 	if len(buildpacks) == 0 {
-		buildpacks = defaultBuildpacks[f.Runtime]
+		// check if the default builder image is used
+		ref, err := reference.ParseDockerRef(image)
+		if err == nil &&
+			reference.Domain(ref) == "docker.io" &&
+			reference.Path(ref) == "paketobuildpacks/builder-jammy-tiny" {
+			// use the default buildpacks for the runtime
+			buildpacks = defaultBuildpacks[f.Runtime]
+		}
 	}
 
 	// Pack build options
-	opts := pack.BuildOptions{
-		AppPath: f.Root,
-		Image:   f.Image,
-		Builder: image,
-		// LifecycleImage: DefaultLifecycleImage, // TODO add it or not?
+	opts := packClient.BuildOptions{
+		AppPath:    f.Root,
+		Image:      f.Image,
+		Builder:    image,
 		Buildpacks: buildpacks,
 		ProjectDescriptor: types.Descriptor{
 			Build: types.Build{
 				Exclude: []string{},
 			},
 		},
-		ContainerConfig: struct {
-			Network string
-			Volumes []string
-		}{Network: "", Volumes: nil},
+		ContainerConfig: packClient.ContainerConfig{Network: "", Volumes: nil},
+		// use the default user/group
+		// 0 means root (which may cause permission issues when running the builder with non-root user)
+		GroupID: -1,
+		UserID:  -1,
 	}
 	if b.withTimestamp {
 		now := time.Now()
@@ -192,8 +227,13 @@ func (b *Builder) Build(ctx context.Context, f *dubbo.Dubbo) (err error) {
 		defer cli.Close()
 		opts.DockerHost = dockerHost
 
+		var fetcher buildpack.ImageFetcher = nil
+		if f.Build.CnMirror.Value {
+			fetcher = mirror.NewMirrorFetcher(b.logger, cli, defaultBuildPackImageReplace)
+		}
+
 		// Client with a logger which is enabled if in Verbose mode and a dockerClient that supports SSH docker daemon connection.
-		if impl, err = pack.NewClient(pack.WithLogger(b.logger), pack.WithDockerClient(cli)); err != nil {
+		if impl, err = packClient.NewClient(packClient.WithLogger(b.logger), packClient.WithDockerClient(cli), packClient.WithFetcher(fetcher)); err != nil {
 			return fmt.Errorf("cannot create pack client: %w", err)
 		}
 	}
