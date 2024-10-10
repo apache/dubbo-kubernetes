@@ -40,8 +40,8 @@ type NodeDataInfo struct {
 	UpdateTime           time.Time `json:"update_time" xorm:"update_time updated"`
 	RecoveryMark         int64     `json:"recovery_mark" xorm:"recovery_mark"`
 	RecoveryQL           string    `json:"recovery_ql" xorm:"recovery_ql"`
-	DownTimeRecoveryQL   []string  `json:"downtime_recovery_ql xorm:downtime_recovery_ql"`
-	DownTimeRecoveryMark int64     `json:"downtime_recovery_mark xorm:downtime_recovery_mark"`
+	DownTimeRecoveryMark int64     `json:"downtime_recovery_mark" xorm:"downtime_recovery_mark"`
+	DownTimeRecoveryQL   string    `json:"downtime_recovery_ql" xorm:"downtime_recovery_ql"`
 }
 
 type PodDataInfo struct {
@@ -122,6 +122,11 @@ func (n *NodeDataInfo) RecoveryMarker() (bool, error) {
 	return n.Update()
 }
 
+func (n *NodeDataInfo) DownTimeRecoveryMarker() (bool, error) {
+	n.DownTimeRecoveryMark = 1
+	return n.Update()
+}
+
 func (n *NodeDataInfo) RestartMarker() (bool, error) {
 	n.Restart = 1
 	return n.Update()
@@ -145,6 +150,13 @@ func GetNodeByName(nodeName, moduleName string) (*NodeDataInfo, error) {
 func GetRecoveryNodeDataInfoDate(day int) ([]NodeDataInfo, error) {
 	var ndi []NodeDataInfo
 	session := db.Where(fmt.Sprintf("recovery_mark = 0 AND first_date > DATE_SUB(CURDATE(), INTERVAL %d DAY)", day))
+	err := session.Find(&ndi)
+	return ndi, err
+}
+
+func GetDownTimeRecoveryNodeDataInfoDate(day int) ([]NodeDataInfo, error) {
+	var ndi []NodeDataInfo
+	session := db.Where(fmt.Sprintf("downtime_recovery_mark = 0 AND first_date > DATE_SUB(CURDATE(), INTERVAL %d DAY)", day))
 	err := session.Find(&ndi)
 	return ndi, err
 }

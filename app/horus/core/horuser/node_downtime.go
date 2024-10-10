@@ -71,7 +71,8 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	klog.Infof("clusterName:%v\n", clusterName)
 
 	nodeDownTimeRes := make(map[string]int)
-	cq := len(h.cc.NodeDownTime.AbnormalityQL)
+	aq := len(h.cc.NodeDownTime.AbnormalityQL)
+	rq := len(h.cc.NodeDownTime.AbnormalRecoveryQL)
 	for _, ql := range h.cc.NodeDownTime.AbnormalityQL {
 		ql := ql
 		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
@@ -92,12 +93,34 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			nodeDownTimeRes[nodeName]++
 		}
 	}
+
+	for _, ql := range h.cc.NodeDownTime.AbnormalRecoveryQL {
+		ql := ql
+		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+		if err != nil {
+			klog.Errorf("downtimeNodes InstantQuery err:%v", err)
+			klog.Infof("clusterName:%v\n", clusterName)
+			continue
+		}
+
+		for _, v := range res {
+			v := v
+			nodeName := string(v.Metric["node"])
+			if nodeName == "" {
+				klog.Error("downtimeNodes InstantQuery nodeName empty.")
+				klog.Infof("clusterName:%v\n metric:%v\n", clusterName, v.Metric)
+				continue
+			}
+			nodeDownTimeRes[nodeName]++
+		}
+	}
+
 	WithDownNodeIPs := make(map[string]string)
 
 	for node, count := range nodeDownTimeRes {
-		if count < cq {
-			klog.Error("downtimeNodes node not reach threshold")
-			klog.Infof("clusterName:%v\n nodeName:%v\n threshold:%v count:%v", clusterName, node, cq, count)
+		if count < aq {
+			klog.Error("downtimeNodes not reach threshold")
+			klog.Infof("clusterName:%v\n nodeName:%v\n threshold:%v count:%v", clusterName, node, aq, count)
 			continue
 		}
 		abnormalInfoSystemQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalInfoSystemQL, node)
@@ -142,12 +165,19 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			return "", nil
 		}()
 
+		for node, count := range nodeDownTimeRes {
+			if count < rq {
+				klog.Error("downtimeNodes not reach recovery threshold")
+				klog.Infof("clusterName:%v\n nodeName:%v\n threshold:%v count:%v", clusterName, node, aq, count)
+				continue
+			}
+		}
+
 		write := db.NodeDataInfo{
 			NodeName:    nodeName,
 			NodeIP:      nodeIP,
 			ClusterName: clusterName,
 			ModuleName:  NODE_DOWN,
-			RecoveryQL: ,
 		}
 		exist, _ := write.Check()
 		if exist {
