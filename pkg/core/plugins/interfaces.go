@@ -19,6 +19,8 @@ package plugins
 
 import (
 	"context"
+
+	"github.com/apache/dubbo-kubernetes/pkg/api-server/authn"
 	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
@@ -27,7 +29,6 @@ import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/pkg/errors"
 )
 
