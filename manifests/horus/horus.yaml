@@ -64,7 +64,7 @@ customModular:
     title: "自定义通知"
 
 nodeDownTime:
-  enabled: false
+  enabled: true
   intervalSecond: 15
   promQueryTimeSecond: 60
   abnormalityQL:
@@ -91,7 +91,7 @@ nodeDownTime:
     title: "自定义通知"
 
 podStagnationCleaner:
-  enabled: true
+  enabled: false
   intervalSecond: 15
   doubleSecond: 60
   fieldSelector: "status.phase!=Running"

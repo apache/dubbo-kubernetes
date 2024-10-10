@@ -93,3 +93,44 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 	}
 	klog.Infof("RecoveryMarker result success:%v", success)
 }
+
+func (h *Horuser) DownTimeRecoveryNodes(n db.NodeDataInfo) {
+	promAddr := h.cc.PromMultiple[n.ClusterName]
+	if promAddr == "" {
+		klog.Error("recoveryNodes promAddr by clusterName empty.")
+		klog.Infof("clusterName:%v nodeName:%v", n.ClusterName, n.NodeName)
+		return
+	}
+	vecs, err := h.InstantQuery(promAddr, n.DownTimeRecoveryQL, n.ClusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+	if err != nil {
+		klog.Errorf("recoveryNodes InstantQuery err:%v", err)
+		klog.Infof("recoveryQL:%v", n.DownTimeRecoveryQL)
+		return
+	}
+	if len(vecs) != 1 {
+		klog.Infof("Expected 1 result, but got:%d", len(vecs))
+		return
+	}
+	if err != nil {
+		klog.Errorf("recoveryNodes InstantQuery err:%v", err)
+		klog.Infof("recoveryQL:%v", n.DownTimeRecoveryQL)
+		return
+	}
+	klog.Info("recoveryNodes InstantQuery success.")
+
+	err = h.UnCordon(n.NodeName, n.ClusterName)
+	res := "Success"
+	if err != nil {
+		res = fmt.Sprintf("result failed:%v", err)
+	}
+	msg := fmt.Sprintf("\n【集群: %v】\n【宕机节点已达到恢复临界点】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
+	alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+	alerter.SlackSend(h.cc.NodeDownTime.Slack, msg)
+
+	success, err := n.DownTimeRecoveryMarker()
+	if err != nil {
+		klog.Errorf("DownTimeRecoveryMarker result failed err:%v", err)
+		return
+	}
+	klog.Infof("DownTimeRecoveryMarker result success:%v", success)
+}

@@ -77,6 +77,7 @@ type DowntimeConfiguration struct {
 	AllSystemUser        string                 `yaml:"allSystemUser"`
 	AllSystemPassword    string                 `yaml:"allSystemPassword"`
 	DingTalk             *DingTalkConfiguration `yaml:"dingTalk"`
+	Slack                *SlackConfiguration    `yaml:"slack"`
 }
 
 type CleanerConfiguration struct {
