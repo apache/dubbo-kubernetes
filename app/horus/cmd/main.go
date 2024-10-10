@@ -137,6 +137,17 @@ func main() {
 		return nil
 	})
 	group.Add(func() error {
+		if c.NodeDownTime.Enabled {
+			klog.Info("horus node downtime recovery manager start success.")
+			err := horus.DownTimeRecoveryManager(ctx)
+			if err != nil {
+				klog.Errorf("horus node downtime recovery manager start failed err:%v", err)
+				return err
+			}
+		}
+		return nil
+	})
+	group.Add(func() error {
 		if c.PodStagnationCleaner.Enabled {
 			klog.Info("horus pod stagnation clean manager start success.")
 			err := horus.PodStagnationCleanManager(ctx)

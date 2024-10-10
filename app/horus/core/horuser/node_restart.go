@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -79,13 +80,38 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 			return
 		}
 		klog.Infof("Successfully restarted node %v.", node.NodeName)
+
+		rq := len(h.cc.NodeDownTime.AbnormalRecoveryQL)
+		query := strings.Join(h.cc.NodeDownTime.AbnormalRecoveryQL, " and ")
+		vecs, err := h.InstantQuery(h.cc.PromMultiple[node.ClusterName], query, node.ClusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+		if err != nil {
+			klog.Errorf("Failed to query Prometheus for recovery threshold after restart: %v", err)
+			return
+		}
+
+		if len(vecs) == rq {
+			klog.Infof("Node %v has reached recovery threshold after restart.", node.NodeName)
+
+			err = h.UnCordon(node.NodeName, node.ClusterName)
+			if err != nil {
+				klog.Errorf("Uncordon node failed after restart: %v", err)
+				return
+			}
+
+			msg = fmt.Sprintf("\n【集群: %v】\n【宕机节点已恢复】\n【恢复节点: %v】\n【处理结果：成功】\n【日期: %v】\n", node.ClusterName, node.NodeName, node.FirstDate)
+			alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+			alerter.SlackSend(h.cc.NodeDownTime.Slack, msg)
+
+		} else {
+			klog.Infof("Node %v has not reached recovery threshold after restart.", node.NodeName)
+		}
+
 	} else {
 		klog.Infof("RestartMarker did not success for node %v", node.NodeName)
 	}
 
 	if node.Restart > 2 {
-		klog.Error("It's been rebooted once.")
+		klog.Error("The node has already been rebooted more than twice.")
 		return
 	}
-
 }
