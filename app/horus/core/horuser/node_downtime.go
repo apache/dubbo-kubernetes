@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -171,13 +172,30 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 				klog.Infof("clusterName:%v\n nodeName:%v\n threshold:%v count:%v", clusterName, node, aq, count)
 				continue
 			}
+			abnormalRecoveryQL := fmt.Sprintf(strings.Join(h.cc.NodeDownTime.AbnormalRecoveryQL, " "), node)
+			res, err := h.InstantQuery(addr, abnormalRecoveryQL, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+			if len(res) == 0 {
+				klog.Errorf("no results returned for query:%s", abnormalRecoveryQL)
+				continue
+			}
+			if err != nil {
+				klog.Errorf("downtimeNodes InstantQuery NodeName To IPs empty err:%v", err)
+				klog.Infof("clusterName:%v\n AbnormalInfoSystemQL:%v, err:%v", clusterName, abnormalRecoveryQL, err)
+				continue
+			}
+			str := ""
+			for _, v := range res {
+				str = string(v.Metric["instance"])
+			}
+			WithDownNodeIPs[node] = str
 		}
-
+		msg = fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机恢复临界点：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
 		write := db.NodeDataInfo{
-			NodeName:    nodeName,
-			NodeIP:      nodeIP,
-			ClusterName: clusterName,
-			ModuleName:  NODE_DOWN,
+			NodeName:           nodeName,
+			NodeIP:             nodeIP,
+			ClusterName:        clusterName,
+			ModuleName:         NODE_DOWN,
+			DownTimeRecoveryQL: h.cc.NodeDownTime.AbnormalRecoveryQL,
 		}
 		exist, _ := write.Check()
 		if exist {
