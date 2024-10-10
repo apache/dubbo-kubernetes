@@ -25,21 +25,23 @@ import (
 )
 
 type NodeDataInfo struct {
-	Id              int64     `json:"id"`
-	NodeName        string    `json:"node_name" xorm:"node_name"`
-	NodeIP          string    `json:"node_ip" xorm:"node_ip"`
-	Sn              string    `json:"sn"`
-	ClusterName     string    `json:"cluster_name" xorm:"cluster_name"`
-	ModuleName      string    `json:"module_name" xorm:"module_name"`
-	Reason          string    `json:"reason"`
-	Restart         int       `json:"restart"`
-	Repair          int       `json:"repair"`
-	RepairTicketUrl string    `json:"repair_ticket_url" xorm:"repair_ticket_url"`
-	FirstDate       string    `json:"first_date" xorm:"first_date"`
-	CreateTime      time.Time `json:"create_time" xorm:"create_time created"`
-	UpdateTime      time.Time `json:"update_time" xorm:"update_time updated"`
-	RecoveryMark    int64     `json:"recovery_mark" xorm:"recovery_mark"`
-	RecoveryQL      string    `json:"recovery_ql" xorm:"recovery_ql"`
+	Id                   int64     `json:"id"`
+	NodeName             string    `json:"node_name" xorm:"node_name"`
+	NodeIP               string    `json:"node_ip" xorm:"node_ip"`
+	Sn                   string    `json:"sn"`
+	ClusterName          string    `json:"cluster_name" xorm:"cluster_name"`
+	ModuleName           string    `json:"module_name" xorm:"module_name"`
+	Reason               string    `json:"reason"`
+	Restart              int       `json:"restart"`
+	Repair               int       `json:"repair"`
+	RepairTicketUrl      string    `json:"repair_ticket_url" xorm:"repair_ticket_url"`
+	FirstDate            string    `json:"first_date" xorm:"first_date"`
+	CreateTime           time.Time `json:"create_time" xorm:"create_time created"`
+	UpdateTime           time.Time `json:"update_time" xorm:"update_time updated"`
+	RecoveryMark         int64     `json:"recovery_mark" xorm:"recovery_mark"`
+	RecoveryQL           string    `json:"recovery_ql" xorm:"recovery_ql"`
+	DownTimeRecoveryQL   []string  `json:"downtime_recovery_ql xorm:downtime_recovery_ql"`
+	DownTimeRecoveryMark int64     `json:"downtime_recovery_mark xorm:downtime_recovery_mark"`
 }
 
 type PodDataInfo struct {

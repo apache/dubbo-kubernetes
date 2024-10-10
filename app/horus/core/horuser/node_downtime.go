@@ -147,6 +147,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			NodeIP:      nodeIP,
 			ClusterName: clusterName,
 			ModuleName:  NODE_DOWN,
+			RecoveryQL: ,
 		}
 		exist, _ := write.Check()
 		if exist {
