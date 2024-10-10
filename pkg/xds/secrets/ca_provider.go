@@ -10,7 +10,6 @@ import (
 	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
-	core_metrics "github.com/apache/dubbo-kubernetes/pkg/metrics"
 )
 
 type CaProvider interface {
@@ -18,18 +17,9 @@ type CaProvider interface {
 	Get(context.Context, *core_mesh.MeshResource) (*core_xds.CaSecret, []string, error)
 }
 
-func NewCaProvider(caManagers core_ca.Managers, metrics core_metrics.Metrics) (CaProvider, error) {
-	latencyMetrics := prometheus.NewSummaryVec(prometheus.SummaryOpts{
-		Name:       "ca_manager_get_root_cert_chain",
-		Help:       "Summary of CA manager get CA root certificate chain latencies",
-		Objectives: core_metrics.DefaultObjectives,
-	}, []string{"backend_name"})
-	if err := metrics.Register(latencyMetrics); err != nil {
-		return nil, err
-	}
+func NewCaProvider(caManagers core_ca.Managers) (CaProvider, error) {
 	return &meshCaProvider{
-		caManagers:     caManagers,
-		latencyMetrics: latencyMetrics,
+		caManagers: caManagers,
 	}, nil
 }
 

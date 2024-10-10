@@ -67,19 +67,11 @@ func (c *Info) ExpiringSoon() bool {
 }
 
 func NewSecrets(caProvider CaProvider, identityProvider IdentityProvider, metrics metrics.Metrics) (Secrets, error) {
-	certGenerationsMetric := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Help: "Number of generated certificates",
-		Name: "cert_generation",
-	}, []string{"mesh"})
-	if err := metrics.Register(certGenerationsMetric); err != nil {
-		return nil, err
-	}
 
 	return &secrets{
-		caProvider:            caProvider,
-		identityProvider:      identityProvider,
-		cachedCerts:           map[certCacheKey]*certs{},
-		certGenerationsMetric: certGenerationsMetric,
+		caProvider:       caProvider,
+		identityProvider: identityProvider,
+		cachedCerts:      map[certCacheKey]*certs{},
 	}, nil
 }
 

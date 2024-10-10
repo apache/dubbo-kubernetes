@@ -2,10 +2,11 @@ package secrets
 
 import (
 	"context"
+	"time"
+
 	core_metrics "github.com/apache/dubbo-kubernetes/pkg/metrics"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"time"
 
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
@@ -30,17 +31,8 @@ type identityCertProvider struct {
 }
 
 func NewIdentityProvider(caManagers core_ca.Managers, metrics core_metrics.Metrics) (IdentityProvider, error) {
-	latencyMetrics := prometheus.NewSummaryVec(prometheus.SummaryOpts{
-		Name:       "ca_manager_get_cert",
-		Help:       "Summary of CA manager get certificate latencies",
-		Objectives: core_metrics.DefaultObjectives,
-	}, []string{"backend_name"})
-	if err := metrics.Register(latencyMetrics); err != nil {
-		return nil, err
-	}
 	return &identityCertProvider{
-		caManagers:     caManagers,
-		latencyMetrics: latencyMetrics,
+		caManagers: caManagers,
 	}, nil
 }
 
