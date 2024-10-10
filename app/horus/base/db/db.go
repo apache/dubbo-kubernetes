@@ -41,7 +41,7 @@ type NodeDataInfo struct {
 	RecoveryMark         int64     `json:"recovery_mark" xorm:"recovery_mark"`
 	RecoveryQL           string    `json:"recovery_ql" xorm:"recovery_ql"`
 	DownTimeRecoveryMark int64     `json:"downtime_recovery_mark" xorm:"downtime_recovery_mark"`
-	DownTimeRecoveryQL   []string  `json:"downtime_recovery_ql" xorm:"downtime_recovery_ql"`
+	DownTimeRecoveryQL   string    `json:"downtime_recovery_ql" xorm:"downtime_recovery_ql"`
 }
 
 type PodDataInfo struct {

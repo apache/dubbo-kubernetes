@@ -23,7 +23,6 @@ import (
 	"github.com/gammazero/workerpool"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
-	"strings"
 	"time"
 )
 
@@ -34,31 +33,9 @@ func (h *Horuser) RecoveryManager(ctx context.Context) error {
 }
 
 func (h *Horuser) DownTimeRecoveryManager(ctx context.Context) error {
-	go wait.UntilWithContext(ctx, h.recoveryCheck, time.Duration(h.cc.NodeRecovery.IntervalSecond)*time.Second)
+	go wait.UntilWithContext(ctx, h.downTimeRecoveryCheck, time.Duration(h.cc.NodeRecovery.IntervalSecond)*time.Second)
 	<-ctx.Done()
 	return nil
-}
-
-func (h *Horuser) downTimeRecoveryCheck(ctx context.Context) {
-	data, err := db.GetRecoveryNodeDataInfoDate(h.cc.NodeRecovery.DayNumber)
-	if err != nil {
-		klog.Errorf("recovery check GetRecoveryNodeDataInfoDate err:%v", err)
-		return
-	}
-	if len(data) == 0 {
-		klog.Info("recovery check GetRecoveryNodeDataInfoDate zero.")
-		return
-	}
-	wp := workerpool.New(50)
-	for _, d := range data {
-		d := d
-		wp.Submit(func() {
-			h.recoveryNodes(d)
-			h.downTimeRecoveryNodes(d)
-		})
-
-	}
-	wp.StopWait()
 }
 
 func (h *Horuser) recoveryCheck(ctx context.Context) {
@@ -75,9 +52,30 @@ func (h *Horuser) recoveryCheck(ctx context.Context) {
 	for _, d := range data {
 		d := d
 		wp.Submit(func() {
-			h.downTimeRecoveryNodes(d)
+			h.recoveryNodes(d)
+
 		})
 
+	}
+	wp.StopWait()
+}
+
+func (h *Horuser) downTimeRecoveryCheck(ctx context.Context) {
+	data, err := db.GetDownTimeRecoveryNodeDataInfoDate(h.cc.NodeRecovery.DayNumber)
+	if err != nil {
+		klog.Errorf("recovery check GetDownTimeRecoveryNodeDataInfoDate err:%v", err)
+		return
+	}
+	if len(data) == 0 {
+		klog.Info("recovery check GetDownTimeRecoveryNodeDataInfoDate zero.")
+		return
+	}
+	wp := workerpool.New(50)
+	for _, d := range data {
+		d := d
+		wp.Submit(func() {
+			h.downTimeRecoveryNodes(d)
+		})
 	}
 	wp.StopWait()
 }
@@ -126,40 +124,46 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 func (h *Horuser) downTimeRecoveryNodes(n db.NodeDataInfo) {
 	promAddr := h.cc.PromMultiple[n.ClusterName]
 	if promAddr == "" {
-		klog.Error("recoveryNodes promAddr by clusterName empty.")
+		klog.Error("downTimeRecoveryNodes promAddr by clusterName empty.")
 		klog.Infof("clusterName:%v nodeName:%v", n.ClusterName, n.NodeName)
 		return
 	}
-	vecs, err := h.InstantQuery(promAddr, strings.Join(n.DownTimeRecoveryQL, " "), n.ClusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+	rq := len(h.cc.NodeDownTime.AbnormalRecoveryQL)
+	vecs, err := h.InstantQuery(promAddr, n.DownTimeRecoveryQL, n.ClusterName, h.cc.NodeRecovery.PromQueryTimeSecond)
 	if err != nil {
-		klog.Errorf("recoveryNodes InstantQuery err:%v", err)
-		klog.Infof("downTimeRecoveryQL:%v", n.DownTimeRecoveryQL)
+		klog.Errorf("downTimeRecoveryNodes InstantQuery err:%v", err)
+		klog.Infof("DownTimeRecoveryQL:%v", n.DownTimeRecoveryQL)
 		return
 	}
 	if len(vecs) != 1 {
 		klog.Infof("Expected 1 result, but got:%d", len(vecs))
 		return
 	}
+	if len(vecs) > rq {
+		klog.Error("downTimeRecoveryNodes not reach threshold")
+	}
 	if err != nil {
-		klog.Errorf("recoveryNodes InstantQuery err:%v", err)
-		klog.Infof("recoveryQL:%v", n.DownTimeRecoveryQL)
+		klog.Errorf("downTimeRecoveryNodes InstantQuery err:%v", err)
+		klog.Infof("DownTimeRecoveryQL:%v", n.DownTimeRecoveryQL)
 		return
 	}
 	klog.Info("recoveryNodes InstantQuery success.")
 
-	err = h.UnCordon(n.NodeName, n.ClusterName)
-	res := "Success"
-	if err != nil {
-		res = fmt.Sprintf("result failed:%v", err)
-	}
-	msg := fmt.Sprintf("\n【集群: %v】\n【宕机节点已达到恢复临界点】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
-	alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
-	alerter.SlackSend(h.cc.NodeDownTime.Slack, msg)
+	if len(vecs) == rq {
+		err = h.UnCordon(n.NodeName, n.ClusterName)
+		res := "Success"
+		if err != nil {
+			res = fmt.Sprintf("result failed:%v", err)
+		}
+		msg := fmt.Sprintf("\n【集群: %v】\n【封锁节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n", n.ClusterName, n.NodeName, res, n.CreateTime)
+		alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+		alerter.SlackSend(h.cc.NodeDownTime.Slack, msg)
 
-	success, err := n.DownTimeRecoveryMarker()
-	if err != nil {
-		klog.Errorf("DownTimeRecoveryMarker result failed err:%v", err)
-		return
+		success, err := n.DownTimeRecoveryMarker()
+		if err != nil {
+			klog.Errorf("DownTimeRecoveryMarker result failed err:%v", err)
+			return
+		}
+		klog.Infof("DownTimeRecoveryMarker result success:%v", success)
 	}
-	klog.Infof("DownTimeRecoveryMarker result success:%v", success)
 }
