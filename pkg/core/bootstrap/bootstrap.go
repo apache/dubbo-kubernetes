@@ -103,11 +103,11 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	}
 	// 初始化cache
 	builder.WithDataplaneCache(&sync.Map{})
-	// 初始化传统微服务体系所需要的组件
-	if err := initializeTraditional(cfg, builder); err != nil {
+	if err := initializeResourceStore(cfg, builder); err != nil {
 		return nil, err
 	}
-	if err := initializeResourceStore(cfg, builder); err != nil {
+	// 初始化传统微服务体系所需要的组件
+	if err := initializeTraditional(cfg, builder); err != nil {
 		return nil, err
 	}
 
@@ -259,7 +259,7 @@ func initializeTraditional(cfg dubbo_cp.Config, builder *core_runtime.Builder) e
 			return err
 		}
 		builder.WithServiceDiscovery(sdDelegate)
-		adminRegistry := dubbo_registry.NewRegistry(delegate, sdDelegate)
+		adminRegistry := dubbo_registry.NewRegistry(delegate, sdDelegate, builder.Extensions().Value(dubbo_registry.AppCtx).(*dubbo_registry.ApplicationContext))
 		builder.WithAdminRegistry(adminRegistry)
 	}
 	if len(metadataReportAddress) > 0 {
@@ -336,6 +336,7 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		pluginName = core_plugins.Kubernetes
 		pluginConfig = nil
 	case store.Traditional:
+		builder.WithExtension(dubbo_registry.AppCtx, dubbo_registry.NewApplicationContext())
 		pluginName = core_plugins.Traditional
 		pluginConfig = nil
 	case store.MemoryStore:

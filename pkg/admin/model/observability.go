@@ -49,3 +49,32 @@ func (req *ServiceDashboardReq) GetKeyVariable() string {
 type DashboardResp struct {
 	BaseURL string `json:"baseURL"`
 }
+
+// Metric represents a single metric with its name, labels, and value.
+type Metric struct {
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
+	Value  float64           `json:"value"`
+}
+
+type MetricsReq struct {
+	InstanceName string `form:"instanceName"`
+}
+
+type MetricsResp struct {
+	InstanceName string
+	Metrics      []Metric
+}
+
+type MetricsCategory int
+
+const (
+	RT MetricsCategory = iota
+	QPS
+	REQUESTS
+	APPLICATION
+	CONFIGCENTER
+	REGISTRY
+	METADATA
+	THREAD_POOL
+)

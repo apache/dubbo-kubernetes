@@ -19,6 +19,8 @@ package traditional
 
 import (
 	"errors"
+
+	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
 )
 
 import (
@@ -41,15 +43,17 @@ func init() {
 
 func (p *plugin) NewResourceStore(pc core_plugins.PluginContext, _ core_plugins.PluginConfig) (core_store.ResourceStore, core_store.Transactions, error) {
 	log.Info("dubbo-cp runs with an traditional mode")
-
-	return NewStore(
+	resourceStore := NewStore(
 		pc.ConfigCenter(),
 		pc.MetadataReportCenter(),
 		pc.RegistryCenter(),
 		pc.Governance(),
 		pc.DataplaneCache(),
 		pc.RegClient(),
-	), core_store.NoTransactions{}, nil
+		pc.Extensions().Value(registry.AppCtx).(*registry.ApplicationContext),
+	)
+
+	return resourceStore, core_store.NoTransactions{}, nil
 }
 
 func (p *plugin) Migrate(pc core_plugins.PluginContext, config core_plugins.PluginConfig) (core_plugins.DbVersion, error) {

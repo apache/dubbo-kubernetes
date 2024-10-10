@@ -18,7 +18,11 @@
 package service
 
 import (
+	"fmt"
+	"io"
+	"net/http"
 	"strconv"
+	"strings"
 )
 
 import (
@@ -78,4 +82,106 @@ func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([
 		resp = append(resp, respItem.FromInstanceDetail(instDetail))
 	}
 	return resp, nil
+}
+
+func GetInstanceMetrics(rt core_runtime.Runtime, req *model.MetricsReq) ([]*model.MetricsResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.InstanceName)); err != nil {
+		return nil, err
+	}
+	instMap := make(map[string]*model.InstanceDetail)
+	resp := make([]*model.MetricsResp, 0)
+	for _, dataplane := range dataplaneList.Items {
+		instName := dataplane.Meta.GetName()
+		var instanceDetail *model.InstanceDetail
+		if detail, ok := instMap[instName]; ok {
+			instanceDetail = detail
+		} else {
+			instanceDetail = model.NewInstanceDetail()
+		}
+		instanceDetail.Merge(dataplane)
+		metrics, err := fetchMetricsData(dataplane.GetIP(), 22222)
+		if err != nil {
+			continue
+		}
+		metricsResp := &model.MetricsResp{
+			InstanceName: instName,
+			Metrics:      metrics,
+		}
+		resp = append(resp, metricsResp)
+	}
+	return resp, nil
+}
+
+func fetchMetricsData(ip string, port int) ([]model.Metric, error) {
+	url := fmt.Sprintf("http://%s:%d/metrics", ip, port)
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	metrics, err := parsePrometheusData(string(body))
+	if err != nil {
+		return nil, err
+	}
+	return metrics, nil
+}
+
+// parsePrometheusData parses Prometheus text format data and converts it to a slice of Metrics.
+func parsePrometheusData(data string) ([]model.Metric, error) {
+	var metrics []model.Metric
+	lines := strings.Split(data, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.Split(line, " ")
+		if len(parts) != 2 {
+			continue
+		}
+
+		metricPart := parts[0]
+		valuePart := parts[1]
+
+		// Extract the metric name and labels
+		nameAndLabels := strings.SplitN(metricPart, "{", 2)
+		if len(nameAndLabels) != 2 {
+			continue
+		}
+
+		name := nameAndLabels[0]
+		labelsPart := strings.TrimSuffix(nameAndLabels[1], "}")
+
+		labels := make(map[string]string)
+		for _, label := range strings.Split(labelsPart, ",") {
+			if label == "" {
+				continue
+			}
+			labelParts := strings.SplitN(label, "=", 2)
+			if len(labelParts) == 2 {
+				labels[labelParts[0]] = strings.Trim(labelParts[1], `"`)
+			}
+		}
+
+		// Parse the value
+		var value float64
+		fmt.Sscanf(valuePart, "%f", &value)
+
+		metrics = append(metrics, model.Metric{
+			Name:   name,
+			Labels: labels,
+			Value:  value,
+		})
+	}
+
+	return metrics, nil
 }
