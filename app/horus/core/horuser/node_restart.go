@@ -87,4 +87,5 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 		klog.Error("It's been rebooted once.")
 		return
 	}
+
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/gammazero/workerpool"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
+	"strings"
 	"time"
 )
 
@@ -30,6 +31,34 @@ func (h *Horuser) RecoveryManager(ctx context.Context) error {
 	go wait.UntilWithContext(ctx, h.recoveryCheck, time.Duration(h.cc.NodeRecovery.IntervalSecond)*time.Second)
 	<-ctx.Done()
 	return nil
+}
+
+func (h *Horuser) DownTimeRecoveryManager(ctx context.Context) error {
+	go wait.UntilWithContext(ctx, h.recoveryCheck, time.Duration(h.cc.NodeRecovery.IntervalSecond)*time.Second)
+	<-ctx.Done()
+	return nil
+}
+
+func (h *Horuser) downTimeRecoveryCheck(ctx context.Context) {
+	data, err := db.GetRecoveryNodeDataInfoDate(h.cc.NodeRecovery.DayNumber)
+	if err != nil {
+		klog.Errorf("recovery check GetRecoveryNodeDataInfoDate err:%v", err)
+		return
+	}
+	if len(data) == 0 {
+		klog.Info("recovery check GetRecoveryNodeDataInfoDate zero.")
+		return
+	}
+	wp := workerpool.New(50)
+	for _, d := range data {
+		d := d
+		wp.Submit(func() {
+			h.recoveryNodes(d)
+			h.downTimeRecoveryNodes(d)
+		})
+
+	}
+	wp.StopWait()
 }
 
 func (h *Horuser) recoveryCheck(ctx context.Context) {
@@ -46,7 +75,7 @@ func (h *Horuser) recoveryCheck(ctx context.Context) {
 	for _, d := range data {
 		d := d
 		wp.Submit(func() {
-			h.recoveryNodes(d)
+			h.downTimeRecoveryNodes(d)
 		})
 
 	}
@@ -94,17 +123,17 @@ func (h *Horuser) recoveryNodes(n db.NodeDataInfo) {
 	klog.Infof("RecoveryMarker result success:%v", success)
 }
 
-func (h *Horuser) DownTimeRecoveryNodes(n db.NodeDataInfo) {
+func (h *Horuser) downTimeRecoveryNodes(n db.NodeDataInfo) {
 	promAddr := h.cc.PromMultiple[n.ClusterName]
 	if promAddr == "" {
 		klog.Error("recoveryNodes promAddr by clusterName empty.")
 		klog.Infof("clusterName:%v nodeName:%v", n.ClusterName, n.NodeName)
 		return
 	}
-	vecs, err := h.InstantQuery(promAddr, n.DownTimeRecoveryQL, n.ClusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+	vecs, err := h.InstantQuery(promAddr, strings.Join(n.DownTimeRecoveryQL, " "), n.ClusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 	if err != nil {
 		klog.Errorf("recoveryNodes InstantQuery err:%v", err)
-		klog.Infof("recoveryQL:%v", n.DownTimeRecoveryQL)
+		klog.Infof("downTimeRecoveryQL:%v", n.DownTimeRecoveryQL)
 		return
 	}
 	if len(vecs) != 1 {
