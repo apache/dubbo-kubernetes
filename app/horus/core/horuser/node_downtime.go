@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
-	"strings"
 	"sync"
 	"time"
 )
@@ -73,29 +72,8 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 
 	nodeDownTimeRes := make(map[string]int)
 	aq := len(h.cc.NodeDownTime.AbnormalityQL)
-	rq := len(h.cc.NodeDownTime.AbnormalRecoveryQL)
+
 	for _, ql := range h.cc.NodeDownTime.AbnormalityQL {
-		ql := ql
-		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
-		if err != nil {
-			klog.Errorf("downtimeNodes InstantQuery err:%v", err)
-			klog.Infof("clusterName:%v\n", clusterName)
-			continue
-		}
-
-		for _, v := range res {
-			v := v
-			nodeName := string(v.Metric["node"])
-			if nodeName == "" {
-				klog.Error("downtimeNodes InstantQuery nodeName empty.")
-				klog.Infof("clusterName:%v\n metric:%v\n", clusterName, v.Metric)
-				continue
-			}
-			nodeDownTimeRes[nodeName]++
-		}
-	}
-
-	for _, ql := range h.cc.NodeDownTime.AbnormalRecoveryQL {
 		ql := ql
 		res, err := h.InstantQuery(addr, ql, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if err != nil {
@@ -118,13 +96,14 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 
 	WithDownNodeIPs := make(map[string]string)
 
-	for node, count := range nodeDownTimeRes {
+	for nodeName, count := range nodeDownTimeRes {
 		if count < aq {
-			klog.Error("downtimeNodes not reach threshold")
-			klog.Infof("clusterName:%v\n nodeName:%v\n threshold:%v count:%v", clusterName, node, aq, count)
+			klog.Error("downtimeNodes not reach threshold.")
+			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, nodeName, aq, count)
 			continue
 		}
-		abnormalInfoSystemQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalInfoSystemQL, node)
+		abnormalInfoSystemQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalInfoSystemQL, nodeName)
+
 		res, err := h.InstantQuery(addr, abnormalInfoSystemQL, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if len(res) == 0 {
 			klog.Errorf("no results returned for query:%s", abnormalInfoSystemQL)
@@ -139,7 +118,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		for _, v := range res {
 			str = string(v.Metric["instance"])
 		}
-		WithDownNodeIPs[node] = str
+		WithDownNodeIPs[nodeName] = str
 	}
 
 	msg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机临界点：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
@@ -154,6 +133,7 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			return
 		}
 		klog.Info("Cordon node success.")
+
 		klog.Infof("clusterName:%v\n nodeName:%v\n", clusterName, nodeName)
 
 		node, err := kubeClient.CoreV1().Nodes().Get(ctxFirst, nodeName, metav1.GetOptions{})
@@ -166,36 +146,14 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			return "", nil
 		}()
 
-		for node, count := range nodeDownTimeRes {
-			if count < rq {
-				klog.Error("downtimeNodes not reach recovery threshold")
-				klog.Infof("clusterName:%v\n nodeName:%v\n threshold:%v count:%v", clusterName, node, aq, count)
-				continue
-			}
-			abnormalRecoveryQL := fmt.Sprintf(strings.Join(h.cc.NodeDownTime.AbnormalRecoveryQL, " "), node)
-			res, err := h.InstantQuery(addr, abnormalRecoveryQL, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
-			if len(res) == 0 {
-				klog.Errorf("no results returned for query:%s", abnormalRecoveryQL)
-				continue
-			}
-			if err != nil {
-				klog.Errorf("downtimeNodes InstantQuery NodeName To IPs empty err:%v", err)
-				klog.Infof("clusterName:%v\n AbnormalInfoSystemQL:%v, err:%v", clusterName, abnormalRecoveryQL, err)
-				continue
-			}
-			str := ""
-			for _, v := range res {
-				str = string(v.Metric["instance"])
-			}
-			WithDownNodeIPs[node] = str
-		}
-		msg = fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机恢复临界点：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
+		moduleName := 0
+		abnormalRecoveryQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalRecoveryQL[moduleName], nodeName)
 		write := db.NodeDataInfo{
 			NodeName:           nodeName,
 			NodeIP:             nodeIP,
 			ClusterName:        clusterName,
 			ModuleName:         NODE_DOWN,
-			DownTimeRecoveryQL: h.cc.NodeDownTime.AbnormalRecoveryQL,
+			DownTimeRecoveryQL: abnormalRecoveryQL,
 		}
 		exist, _ := write.Check()
 		if exist {
