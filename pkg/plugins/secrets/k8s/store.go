@@ -195,18 +195,18 @@ func (s *KubernetesStore) List(ctx context.Context, rs core_model.ResourceList, 
 	opts := core_store.NewListOptions(fs...)
 	secrets := &kube_core.SecretList{}
 
-	fields := kube_client.MatchingFields{} // list only Kuma System secrets
+	fields := kube_client.MatchingFields{} // list only Dubbo System secrets
 	labels := kube_client.MatchingLabels{}
 	switch rs.GetItemType() {
 	case secret_model.SecretType:
-		fields = kube_client.MatchingFields{ // list only Kuma System secrets
+		fields = kube_client.MatchingFields{ // list only Dubbo System secrets
 			"type": common_k8s.MeshSecretType,
 		}
 		if opts.Mesh != "" {
 			labels[metadata.DubboMeshLabel] = opts.Mesh
 		}
 	case secret_model.GlobalSecretType:
-		fields = kube_client.MatchingFields{ // list only Kuma System secrets
+		fields = kube_client.MatchingFields{ // list only Dubbo System secrets
 			"type": common_k8s.GlobalSecretType,
 		}
 	}

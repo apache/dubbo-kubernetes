@@ -32,7 +32,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/plugins/runtime/k8s/metadata"
 )
 
-// Secret is a KubernetesObject for Kuma's Secret and GlobalSecret.
+// Secret is a KubernetesObject for Dubbo's Secret and GlobalSecret.
 // Note that it's not registered in TypeRegistry because we cannot multiply KubernetesObject
 // for a single Spec (both Secret and GlobalSecret has same Spec).
 type Secret struct {
