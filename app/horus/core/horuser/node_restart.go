@@ -82,8 +82,8 @@ func (h *Horuser) TryRestart(node db.NodeDataInfo) {
 		klog.Infof("Successfully restarted node %v.", node.NodeName)
 
 		rq := len(h.cc.NodeDownTime.AbnormalRecoveryQL)
-		query := strings.Join(h.cc.NodeDownTime.AbnormalRecoveryQL, " and ")
-		vecs, err := h.InstantQuery(h.cc.PromMultiple[node.ClusterName], query, node.ClusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
+		ql := strings.Join(h.cc.NodeDownTime.AbnormalRecoveryQL, " or ")
+		vecs, err := h.InstantQuery(h.cc.PromMultiple[node.ClusterName], ql, node.ClusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if err != nil {
 			klog.Errorf("Failed to query Prometheus for recovery threshold after restart: %v", err)
 			return

@@ -91,18 +91,20 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 				continue
 			}
 			nodeDownTimeRes[nodeName]++
+
 		}
 	}
 
 	WithDownNodeIPs := make(map[string]string)
 
-	for nodeName, count := range nodeDownTimeRes {
+	for node, count := range nodeDownTimeRes {
+		klog.Infof("Count:%v", count)
 		if count < aq {
 			klog.Error("downtimeNodes not reach threshold.")
-			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, nodeName, aq, count)
+			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, node, aq, count)
 			continue
 		}
-		abnormalInfoSystemQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalInfoSystemQL, nodeName)
+		abnormalInfoSystemQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalInfoSystemQL, node)
 
 		res, err := h.InstantQuery(addr, abnormalInfoSystemQL, clusterName, h.cc.NodeDownTime.PromQueryTimeSecond)
 		if len(res) == 0 {
@@ -114,11 +116,11 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			klog.Infof("clusterName:%v\n AbnormalInfoSystemQL:%v, err:%v", clusterName, abnormalInfoSystemQL, err)
 			continue
 		}
-		str := ""
+		instanceIP := ""
 		for _, v := range res {
-			str = string(v.Metric["instance"])
+			instanceIP += string(v.Metric["instance"])
 		}
-		WithDownNodeIPs[nodeName] = str
+		WithDownNodeIPs[node] = instanceIP
 	}
 
 	msg := fmt.Sprintf("\n【%s】\n【集群：%v】\n【已达到宕机临界点：%v】", h.cc.NodeDownTime.DingTalk.Title, clusterName, len(WithDownNodeIPs))
@@ -147,7 +149,11 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 		}()
 
 		moduleName := 0
-		abnormalRecoveryQL := fmt.Sprintf(h.cc.NodeDownTime.AbnormalRecoveryQL[moduleName], nodeName)
+
+		abnormalRecoveryQL := []string{
+			fmt.Sprintf(h.cc.NodeDownTime.AbnormalRecoveryQL[moduleName], nodeName),
+		}
+
 		write := db.NodeDataInfo{
 			NodeName:           nodeName,
 			NodeIP:             nodeIP,
