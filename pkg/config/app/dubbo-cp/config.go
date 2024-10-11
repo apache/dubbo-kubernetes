@@ -59,34 +59,34 @@ type Defaults struct {
 type DataplaneMetrics struct {
 	config.BaseConfig
 
-	SubscriptionLimit int                   `json:"subscriptionLimit" envconfig:"kuma_metrics_dataplane_subscription_limit"`
-	IdleTimeout       config_types.Duration `json:"idleTimeout" envconfig:"kuma_metrics_dataplane_idle_timeout"`
+	SubscriptionLimit int                   `json:"subscriptionLimit" envconfig:"Dubbo_metrics_dataplane_subscription_limit"`
+	IdleTimeout       config_types.Duration `json:"idleTimeout" envconfig:"Dubbo_metrics_dataplane_idle_timeout"`
 }
 
 type ZoneMetrics struct {
 	config.BaseConfig
 
-	SubscriptionLimit int                   `json:"subscriptionLimit" envconfig:"kuma_metrics_zone_subscription_limit"`
-	IdleTimeout       config_types.Duration `json:"idleTimeout" envconfig:"kuma_metrics_zone_idle_timeout"`
+	SubscriptionLimit int                   `json:"subscriptionLimit" envconfig:"Dubbo_metrics_zone_subscription_limit"`
+	IdleTimeout       config_types.Duration `json:"idleTimeout" envconfig:"Dubbo_metrics_zone_idle_timeout"`
 	// CompactFinishedSubscriptions compacts finished metrics (do not store config and details of KDS exchange).
-	CompactFinishedSubscriptions bool `json:"compactFinishedSubscriptions" envconfig:"kuma_metrics_zone_compact_finished_subscriptions"`
+	CompactFinishedSubscriptions bool `json:"compactFinishedSubscriptions" envconfig:"Dubbo_metrics_zone_compact_finished_subscriptions"`
 }
 
 type MeshMetrics struct {
 	config.BaseConfig
 
 	// Deprecated: use MinResyncInterval instead
-	MinResyncTimeout config_types.Duration `json:"minResyncTimeout" envconfig:"kuma_metrics_mesh_min_resync_timeout"`
+	MinResyncTimeout config_types.Duration `json:"minResyncTimeout" envconfig:"Dubbo_metrics_mesh_min_resync_timeout"`
 	// Deprecated: use FullResyncInterval instead
-	MaxResyncTimeout config_types.Duration `json:"maxResyncTimeout" envconfig:"kuma_metrics_mesh_max_resync_timeout"`
+	MaxResyncTimeout config_types.Duration `json:"maxResyncTimeout" envconfig:"Dubbo_metrics_mesh_max_resync_timeout"`
 	// BufferSize the size of the buffer between event creation and processing
-	BufferSize int `json:"bufferSize" envconfig:"kuma_metrics_mesh_buffer_size"`
+	BufferSize int `json:"bufferSize" envconfig:"Dubbo_metrics_mesh_buffer_size"`
 	// MinResyncInterval the minimum time between 2 refresh of insights.
-	MinResyncInterval config_types.Duration `json:"minResyncInterval" envconfig:"kuma_metrics_mesh_min_resync_interval"`
+	MinResyncInterval config_types.Duration `json:"minResyncInterval" envconfig:"Dubbo_metrics_mesh_min_resync_interval"`
 	// FullResyncInterval time between triggering a full refresh of all the insights
-	FullResyncInterval config_types.Duration `json:"fullResyncInterval" envconfig:"kuma_metrics_mesh_full_resync_interval"`
+	FullResyncInterval config_types.Duration `json:"fullResyncInterval" envconfig:"Dubbo_metrics_mesh_full_resync_interval"`
 	// EventProcessors is a number of workers that process metrics events.
-	EventProcessors int `json:"eventProcessors" envconfig:"kuma_metrics_mesh_event_processors"`
+	EventProcessors int `json:"eventProcessors" envconfig:"Dubbo_metrics_mesh_event_processors"`
 }
 
 type Metrics struct {
@@ -101,7 +101,7 @@ type Metrics struct {
 type ControlPlaneMetrics struct {
 	// ReportResourcesCount if true will report metrics with the count of resources.
 	// Default: true
-	ReportResourcesCount bool `json:"reportResourcesCount" envconfig:"kuma_metrics_control_plane_report_resources_count"`
+	ReportResourcesCount bool `json:"reportResourcesCount" envconfig:"Dubbo_metrics_control_plane_report_resources_count"`
 }
 
 type InterCpConfig struct {
@@ -124,11 +124,11 @@ func (i *InterCpConfig) Validate() error {
 type CatalogConfig struct {
 	// InstanceAddress indicates an address on which other control planes can communicate with this CP
 	// If empty then it's autoconfigured by taking the first IP of the nonloopback network interface.
-	InstanceAddress string `json:"instanceAddress" envconfig:"kuma_inter_cp_catalog_instance_address"`
+	InstanceAddress string `json:"instanceAddress" envconfig:"Dubbo_inter_cp_catalog_instance_address"`
 	// Interval on which CP will send heartbeat to a leader.
-	HeartbeatInterval config_types.Duration `json:"heartbeatInterval" envconfig:"kuma_inter_cp_catalog_heartbeat_interval"`
+	HeartbeatInterval config_types.Duration `json:"heartbeatInterval" envconfig:"Dubbo_inter_cp_catalog_heartbeat_interval"`
 	// Interval on which CP will write all instances to a catalog.
-	WriterInterval config_types.Duration `json:"writerInterval" envconfig:"kuma_inter_cp_catalog_writer_interval"`
+	WriterInterval config_types.Duration `json:"writerInterval" envconfig:"Dubbo_inter_cp_catalog_writer_interval"`
 }
 
 func (i *CatalogConfig) Validate() error {
@@ -140,13 +140,13 @@ func (i *CatalogConfig) Validate() error {
 
 type InterCpServerConfig struct {
 	// Port on which Intercommunication CP server will listen
-	Port uint16 `json:"port" envconfig:"kuma_inter_cp_server_port"`
+	Port uint16 `json:"port" envconfig:"Dubbo_inter_cp_server_port"`
 	// TlsMinVersion defines the minimum TLS version to be used
-	TlsMinVersion string `json:"tlsMinVersion" envconfig:"kuma_inter_cp_server_tls_min_version"`
+	TlsMinVersion string `json:"tlsMinVersion" envconfig:"Dubbo_inter_cp_server_tls_min_version"`
 	// TlsMaxVersion defines the maximum TLS version to be used
-	TlsMaxVersion string `json:"tlsMaxVersion" envconfig:"kuma_inter_cp_server_tls_max_version"`
+	TlsMaxVersion string `json:"tlsMaxVersion" envconfig:"Dubbo_inter_cp_server_tls_max_version"`
 	// TlsCipherSuites defines the list of ciphers to use
-	TlsCipherSuites []string `json:"tlsCipherSuites" envconfig:"kuma_inter_cp_server_tls_cipher_suites"`
+	TlsCipherSuites []string `json:"tlsCipherSuites" envconfig:"Dubbo_inter_cp_server_tls_cipher_suites"`
 }
 
 func (i *InterCpServerConfig) Validate() error {
