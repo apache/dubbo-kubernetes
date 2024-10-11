@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -98,7 +99,6 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 	WithDownNodeIPs := make(map[string]string)
 
 	for node, count := range nodeDownTimeRes {
-		klog.Infof("Count:%v", count)
 		if count < aq {
 			klog.Error("downtimeNodes not reach threshold.")
 			klog.Infof("clusterName:%v nodeName:%v threshold:%v count:%v", clusterName, node, aq, count)
@@ -148,10 +148,17 @@ func (h *Horuser) DownTimeNodes(clusterName, addr string) {
 			return "", nil
 		}()
 
-		moduleName := 0
+		abnormalRecoveryQL := []string{}
+		for _, ql := range h.cc.NodeDownTime.AbnormalRecoveryQL {
+			count := strings.Count(ql, "%s")
 
-		abnormalRecoveryQL := []string{
-			fmt.Sprintf(h.cc.NodeDownTime.AbnormalRecoveryQL[moduleName], nodeName),
+			p := make([]interface{}, count)
+			for i := 0; i < count; i++ {
+				p[i] = nodeName
+			}
+
+			query := fmt.Sprintf(ql, p...)
+			abnormalRecoveryQL = append(abnormalRecoveryQL, query)
 		}
 
 		write := db.NodeDataInfo{

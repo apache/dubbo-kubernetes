@@ -129,51 +129,55 @@ func (h *Horuser) downTimeRecoveryNodes(n db.NodeDataInfo) {
 		return
 	}
 	rq := len(h.cc.NodeDownTime.AbnormalRecoveryQL)
-	for _, ql := range n.DownTimeRecoveryQL { // 遍历每个 PromQL 查询
+	counter := 0
+	for _, ql := range n.DownTimeRecoveryQL {
 		vecs, err := h.InstantQuery(promAddr, ql, n.ClusterName, h.cc.NodeRecovery.PromQueryTimeSecond)
 		if err != nil {
 			klog.Errorf("downTimeRecoveryNodes InstantQuery err: %v", err)
-			klog.Infof("DownTimeRecoveryQL: %v", ql) // 记录出错的查询
-			continue                                 // 继续处理下一个查询
+			klog.Infof("DownTimeRecoveryQL: %v", ql)
+			continue
 		}
-
-		// 处理查询结果
 		if len(vecs) == 0 {
 			klog.Infof("No results for query: %v", ql)
 			continue
+		} else {
+			klog.Infof("Query successful for: %v", ql)
+			counter++
+			klog.Infof("Counter: %v", counter)
 		}
 
-		// 在这里处理查询成功的逻辑，比如检查结果并采取相应的操作
-		klog.Infof("Query successful for: %v", ql)
+		if counter != rq {
+			klog.Infof("Expected %d results, but got: %d", rq, counter)
+			continue
+		}
 
-		if len(vecs) != rq {
-			klog.Infof("Expected %d results, but got: %d", rq, len(vecs))
-			if len(vecs) > rq {
-				klog.Error("downTimeRecoveryNodes did not reach threshold")
+		if counter > rq {
+			klog.Error("downTimeRecoveryNodes did not reach threshold.")
+			continue
+		}
+
+		if counter == rq {
+			klog.Info("Reaching the downtime recovery threshold.")
+			err = h.UnCordon(n.NodeName, n.ClusterName)
+			res := "Success"
+			if err != nil {
+				res = fmt.Sprintf("result failed: %v", err)
 			}
-			return
+
+			msg := fmt.Sprintf("\n【集群: %v】\n【封锁宕机节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n",
+				n.ClusterName, n.NodeName, res, n.CreateTime)
+
+			alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
+			alerter.SlackSend(h.cc.NodeDownTime.Slack, msg)
+
+			success, err := n.DownTimeRecoveryMarker()
+			if err != nil {
+				klog.Errorf("DownTimeRecoveryMarker result failed: %v", err)
+				return
+			}
+			klog.Infof("DownTimeRecoveryMarker result success: %v", success)
+
+			klog.Info("recoveryNodes InstantQuery success.")
 		}
-
-		err = h.UnCordon(n.NodeName, n.ClusterName)
-		res := "Success"
-		if err != nil {
-			res = fmt.Sprintf("result failed: %v", err)
-		}
-
-		msg := fmt.Sprintf("\n【集群: %v】\n【封锁节点恢复调度】\n【已恢复调度节点: %v】\n【处理结果：%v】\n【日期: %v】\n",
-			n.ClusterName, n.NodeName, res, n.CreateTime)
-
-		alerter.DingTalkSend(h.cc.NodeDownTime.DingTalk, msg)
-		alerter.SlackSend(h.cc.NodeDownTime.Slack, msg)
-
-		success, err := n.DownTimeRecoveryMarker()
-		if err != nil {
-			klog.Errorf("DownTimeRecoveryMarker result failed: %v", err)
-			return
-		}
-		klog.Infof("DownTimeRecoveryMarker result success: %v", success)
-
-		// 查询操作成功日志
-		klog.Info("recoveryNodes InstantQuery success.")
 	}
 }

@@ -45,7 +45,7 @@ func NewHoruser(c *config.Config) *Horuser {
 		km := clientset.NewForConfigOrDie(kcfg)
 		hr.kubeClientMap[clusterName] = km
 		klog.Info("NewHoruser k8sBuildConfig success.")
-		klog.Infof("Count:[%d/%d] KubeMultipleCluster:%v", n, i, clusterName)
+		klog.Infof("[KubeMultipleCluster:%v\n] Count:[%d/%d]", clusterName, n, i)
 		i++
 	}
 	return hr
