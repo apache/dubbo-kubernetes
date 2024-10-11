@@ -22,13 +22,14 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"math/big"
+	"net/url"
+	"time"
+
 	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
 	util_tls "github.com/apache/dubbo-kubernetes/pkg/tls"
 	util_rsa "github.com/apache/dubbo-kubernetes/pkg/util/rsa"
 	"github.com/pkg/errors"
-	"math/big"
-	"net/url"
-	"time"
 
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 
@@ -66,7 +67,7 @@ func newRootCa(mesh string, rsaBits int, certOpts ...certOptsFn) (*core_ca.KeyPa
 
 func newCACert(signer crypto.Signer, trustDomain string, certOpts ...certOptsFn) ([]byte, error) {
 	subject := pkix.Name{
-		Organization:       []string{"Kuma"},
+		Organization:       []string{"Dubbo"},
 		OrganizationalUnit: []string{"Mesh"},
 		CommonName:         trustDomain,
 	}

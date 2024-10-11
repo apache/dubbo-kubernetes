@@ -55,6 +55,7 @@ func NewBuiltinCaManager(secretManager manager.ResourceManager) core_ca.Manager 
 
 var _ core_ca.Manager = &builtinCaManager{}
 
+// EnsureBackends ensures the CA secrets for the given mesh and backends.
 func (b *builtinCaManager) EnsureBackends(ctx context.Context, mesh core_model.Resource, backends []*mesh_proto.CertificateAuthorityBackend) error {
 	for _, backend := range backends {
 		meshName := mesh.GetMeta().GetName()
@@ -76,6 +77,7 @@ func (b *builtinCaManager) EnsureBackends(ctx context.Context, mesh core_model.R
 	return nil
 }
 
+// validate config,backend name
 func (b *builtinCaManager) ValidateBackend(ctx context.Context, mesh string, backend *mesh_proto.CertificateAuthorityBackend) error {
 	verr := core_validators.ValidationError{}
 	cfg := &config.BuiltinCertificateAuthorityConfig{}

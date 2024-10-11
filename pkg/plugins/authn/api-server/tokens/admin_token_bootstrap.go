@@ -68,8 +68,8 @@ func (a *adminTokenBootstrap) Start(stop <-chan struct{}) error {
 			} else {
 				msg += fmt.Sprintf("To extract admin credentials execute 'curl http://localhost:%d/global-secrets/%s | jq -r .data | base64 -d'. ", a.cpCfg.ApiServer.HTTP.Port, AdminTokenKey.Name)
 			}
-			msg += "You configure kumactl with them 'kumactl config control-planes add --auth-type=tokens --auth-conf token=YOUR_TOKEN'." +
-				" To disable bootstrap of Admin User Token set KUMA_API_SERVER_AUTHN_TOKENS_BOOTSTRAP_ADMIN_TOKEN to false."
+			msg += "You configure dubboctl with them 'dubboctl config control-planes add --auth-type=tokens --auth-conf token=YOUR_TOKEN'." +
+				" To disable bootstrap of Admin User Token set dubbo_API_SERVER_AUTHN_TOKENS_BOOTSTRAP_ADMIN_TOKEN to false."
 			log.Info(msg)
 		}
 	}()

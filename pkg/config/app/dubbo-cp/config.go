@@ -18,31 +18,28 @@
 package dubbo_cp
 
 import (
+	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/access"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
 	"github.com/apache/dubbo-kubernetes/pkg/config/intercp"
 	"github.com/asaskevich/govalidator"
-	"time"
-)
-
-import (
 	"github.com/pkg/errors"
-
 	"go.uber.org/multierr"
-)
 
-import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/admin"
 	api_server "github.com/apache/dubbo-kubernetes/pkg/config/api-server"
 	"github.com/apache/dubbo-kubernetes/pkg/config/bufman"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/config/diagnostics"
+
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/config/dp-server"
 	"github.com/apache/dubbo-kubernetes/pkg/config/dubbo"
 	"github.com/apache/dubbo-kubernetes/pkg/config/eventbus"
 	"github.com/apache/dubbo-kubernetes/pkg/config/multizone"
 	"github.com/apache/dubbo-kubernetes/pkg/config/plugins/runtime"
+
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
 	"github.com/apache/dubbo-kubernetes/pkg/config/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/config/xds/bootstrap"
@@ -294,6 +291,7 @@ var DefaultConfig = func() Config {
 		DubboConfig:           dubbo.DefaultServiceNameMappingConfig(),
 		EventBus:              eventbus.Default(),
 		DDSEventBasedWatchdog: DefaultEventBasedWatchdog(),
+		ApiServer:             api_server.DefaultApiServerConfig(),
 	}
 }
 
