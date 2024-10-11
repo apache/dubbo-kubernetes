@@ -27,7 +27,6 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
 	"github.com/apache/dubbo-kubernetes/pkg/envoy/admin"
-	"github.com/apache/dubbo-kubernetes/pkg/metrics"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
@@ -120,7 +119,6 @@ type Builder struct {
 	appCtx               context.Context
 	dCache               *sync.Map
 	cap                  secrets.CaProvider
-	metrics              metrics.Metrics
 	regClient            reg_client.RegClient
 	serviceDiscover      dubboRegistry.ServiceDiscovery
 	*runtimeInfo
@@ -254,10 +252,6 @@ func (b *Builder) WithCAProvider(cap secrets.CaProvider) *Builder {
 
 func (b *Builder) CaManagers() core_ca.Managers {
 	return b.cam
-}
-
-func (b *Builder) Metrics() metrics.Metrics {
-	return b.metrics
 }
 
 func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
