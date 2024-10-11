@@ -69,16 +69,16 @@ nodeDownTime:
   promQueryTimeSecond: 60
   abnormalityQL:
     - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 15
-#    - avg(node_memory_MemFree_bytes) by (node) < 20
     - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 16
+    #    - avg(node_memory_MemFree_bytes) by (node) < 20
   abnormalInfoSystemQL:
     node_os_info{node="%s"}
   allSystemUser: "zxj"
   allSystemPassword: "1"
   abnormalRecoveryQL:
     - 100 - (avg by (node) (rate(node_cpu_seconds_total{mode="idle",node="%s"}[5m])) * 100) < 15
-#    - (avg by (node) (node_memory_MemFree_bytes{node="%s"} / node_memory_MemTotal_bytes{node="%s"} )) * 100 > 50
     - node_filesystem_avail_bytes{mountpoint="/",node="%s"} / node_filesystem_size_bytes{mountpoint="/",node="%s"} * 100 > 15
+    #    - (avg by (node) (node_memory_MemFree_bytes{node="%s"} / node_memory_MemTotal_bytes{node="%s"} )) * 100 > 50
   kubeMultiple:
     cluster: config.1
   dingTalk:
