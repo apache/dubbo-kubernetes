@@ -21,6 +21,7 @@ import (
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 
+	common_tls "github.com/apache/dubbo-kubernetes/api/common/v1alpha1/tls"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
@@ -30,6 +31,8 @@ import (
 type ServerSideMTLSConfigurer struct {
 	Mesh           *core_mesh.MeshResource
 	SecretsTracker core_xds.SecretsTracker
+	TlsVersion     *common_tls.Version
+	TlsCiphers     common_tls.TlsCiphers
 }
 
 var _ FilterChainConfigurer = &ServerSideMTLSConfigurer{}

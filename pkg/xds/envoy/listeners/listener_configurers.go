@@ -21,11 +21,11 @@ import (
 	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 
 	"google.golang.org/protobuf/types/known/wrapperspb"
-)
 
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners/v3"
 )
 

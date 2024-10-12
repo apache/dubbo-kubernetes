@@ -20,11 +20,10 @@ package generator
 import (
 	"context"
 	"fmt"
-)
 
-import (
 	model "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/plugins/policies/core/generator"
+
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/generator/core"
 )
@@ -58,6 +57,7 @@ func (g *ProxyTemplateGenerator) Generate(ctx context.Context, xdsCtx xds_contex
 
 func NewDefaultProxyProfile() core.ResourceGenerator {
 	return core.CompositeResourceGenerator{
+		AdminProxyGenerator{},
 		InboundProxyGenerator{},
 		OutboundProxyGenerator{},
 		generator.NewGenerator(),

@@ -19,9 +19,7 @@ package context
 
 import (
 	"hash/fnv"
-)
 
-import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
@@ -74,5 +72,9 @@ func (r Resources) Dataplanes() *core_mesh.DataplaneResourceList {
 }
 
 func (r Resources) OtherMeshes() *core_mesh.MeshResourceList {
+	return r.ListOrEmpty(core_mesh.MeshType).(*core_mesh.MeshResourceList)
+}
+
+func (r Resources) Meshes() *core_mesh.MeshResourceList {
 	return r.ListOrEmpty(core_mesh.MeshType).(*core_mesh.MeshResourceList)
 }

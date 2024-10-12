@@ -19,10 +19,9 @@ package context
 
 import (
 	"encoding/base64"
-	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
-)
 
-import (
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
+
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
@@ -122,4 +121,16 @@ func (m AggregatedMeshContexts) ZoneIngresses() []*core_mesh.ZoneIngressResource
 		return meshCtx.Resources.ZoneIngresses().Items // all mesh contexts has the same list
 	}
 	return nil
+}
+
+func (mc *MeshContext) GetTlsReadiness() map[string]bool {
+	tlsReady := map[string]bool{}
+	for serviceName, info := range mc.ServicesInformation {
+		if info != nil {
+			tlsReady[serviceName] = info.TLSReadiness
+		} else {
+			tlsReady[serviceName] = false
+		}
+	}
+	return tlsReady
 }

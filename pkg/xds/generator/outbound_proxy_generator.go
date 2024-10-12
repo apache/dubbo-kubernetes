@@ -20,13 +20,9 @@ package generator
 import (
 	"context"
 	"fmt"
-)
 
-import (
 	"github.com/pkg/errors"
-)
 
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
@@ -57,7 +53,7 @@ func (g OutboundProxyGenerator) Generator(ctx context.Context, _ *model.Resource
 	}
 
 	// TODO: implement the logic of tlsReadiness
-	tlsReadiness := make(map[string]bool)
+	tlsReadiness := xdsCtx.Mesh.GetTlsReadiness()
 	servicesAcc := envoy_common.NewServicesAccumulator(tlsReadiness)
 
 	outboundsMultipleIPs := buildOutboundsWithMultipleIPs(proxy.Dataplane, outbounds)
@@ -156,6 +152,7 @@ func (g OutboundProxyGenerator) generateCDS(ctx xds_context.Context, services en
 	for _, serviceName := range services.Sorted() {
 		service := services[serviceName]
 		protocol := ctx.Mesh.GetServiceProtocol(serviceName)
+		tlsReady := service.TLSReady()
 
 		for _, c := range service.Clusters() {
 			cluster := c.(*envoy_common.ClusterImpl)
@@ -163,17 +160,20 @@ func (g OutboundProxyGenerator) generateCDS(ctx xds_context.Context, services en
 			edsClusterBuilder := envoy_clusters.NewClusterBuilder(proxy.APIVersion, clusterName)
 
 			// clusterTags := []envoy_tags.Tags{cluster.Tags()}
+			clusterTags := []envoy_tags.Tags{cluster.Tags()}
 
 			if service.HasExternalService() {
 				if ctx.Mesh.Resource.ZoneEgressEnabled() {
 					edsClusterBuilder.
-						Configure(envoy_clusters.EdsCluster())
+						Configure(envoy_clusters.EdsCluster()).
+						Configure(envoy_clusters.ClientSideMTLS(proxy.SecretsTracker, ctx.Mesh.Resource, mesh_proto.ZoneEgressServiceName, tlsReady, clusterTags))
 				} else {
 					endpoints := proxy.Routing.ExternalServiceOutboundTargets[serviceName]
 					isIPv6 := proxy.Dataplane.IsIPv6()
 
 					edsClusterBuilder.
-						Configure(envoy_clusters.ProvidedEndpointCluster(isIPv6, endpoints...))
+						Configure(envoy_clusters.ProvidedEndpointCluster(isIPv6, endpoints...)).
+						Configure(envoy_clusters.ClientSideTLS(endpoints))
 				}
 
 				switch protocol {
@@ -187,6 +187,22 @@ func (g OutboundProxyGenerator) generateCDS(ctx xds_context.Context, services en
 				edsClusterBuilder.
 					Configure(envoy_clusters.EdsCluster()).
 					Configure(envoy_clusters.Http2())
+				if upstreamMeshName := cluster.Mesh(); upstreamMeshName != "" {
+					for _, otherMesh := range ctx.Mesh.Resources.Meshes().Items {
+						if otherMesh.GetMeta().GetName() == upstreamMeshName {
+							edsClusterBuilder.Configure(envoy_clusters.CrossMeshClientSideMTLS(proxy.SecretsTracker, ctx.Mesh.Resource, otherMesh, serviceName, tlsReady, clusterTags))
+							break
+						}
+					}
+				} else {
+					edsClusterBuilder.Configure(envoy_clusters.ClientSideMTLS(
+						proxy.SecretsTracker,
+						ctx.Mesh.Resource,
+						serviceName,
+						tlsReady,
+						clusterTags,
+					))
+				}
 			}
 
 			edsCluster, err := edsClusterBuilder.Build()
