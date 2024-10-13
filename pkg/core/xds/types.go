@@ -19,6 +19,7 @@ package xds
 
 import (
 	"fmt"
+	util_tls "github.com/apache/dubbo-kubernetes/pkg/tls"
 	"strings"
 )
 
@@ -53,6 +54,24 @@ func (id *ProxyId) ToResourceKey() core_model.ResourceKey {
 	}
 }
 
+type MatchType string
+
+type SAN struct {
+	MatchType MatchType
+	Value     string
+}
+
+const (
+	SANMatchExact  MatchType = "Exact"
+	SANMatchPrefix MatchType = "Prefix"
+)
+
+type TlsVersion int32
+
+type CaSecret struct {
+	PemCerts [][]byte
+}
+
 // ServiceName is a convenience type alias to clarify the meaning of string value.
 type ServiceName = string
 
@@ -74,6 +93,10 @@ type ExternalService struct {
 	AllowRenegotiation       bool
 	SkipHostnameVerification bool
 	ServerName               string
+	FallbackToSystemCa       bool
+	SANs                     []SAN
+	MinTlsVersion            *TlsVersion
+	MaxTlsVersion            *TlsVersion
 }
 
 type Locality struct {
@@ -92,6 +115,11 @@ type Endpoint struct {
 	Weight          uint32
 	Locality        *Locality
 	ExternalService *ExternalService
+}
+
+type IdentitySecret struct {
+	PemCerts [][]byte
+	PemKey   []byte
 }
 
 func (e Endpoint) Address() string {
@@ -115,12 +143,13 @@ const (
 // Proxy contains required data for generating XDS config that is specific to a data plane proxy.
 // The data that is specific for the whole mesh should go into MeshContext.
 type Proxy struct {
-	Id         ProxyId
-	APIVersion APIVersion
-	Dataplane  *core_mesh.DataplaneResource
-	Metadata   *DataplaneMetadata
-	Routing    Routing
-	Policies   MatchedPolicies
+	Id                  ProxyId
+	APIVersion          APIVersion
+	Dataplane           *core_mesh.DataplaneResource
+	Metadata            *DataplaneMetadata
+	Routing             Routing
+	Policies            MatchedPolicies
+	EnvoyAdminMTLSCerts ServerSideMTLSCerts
 
 	// SecretsTracker allows us to track when a generator references a secret so
 	// we can be sure to include only those secrets later on.
@@ -132,6 +161,11 @@ type Proxy struct {
 	RuntimeExtensions map[string]interface{}
 	// Zone the zone the proxy is in
 	Zone string
+}
+
+type ServerSideMTLSCerts struct {
+	CaPEM      []byte
+	ServerPair util_tls.KeyPair
 }
 
 type ServerSideTLSCertPaths struct {

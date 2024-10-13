@@ -18,14 +18,15 @@
 package clusters
 
 import (
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 
 	"google.golang.org/protobuf/types/known/wrapperspb"
-)
 
-import (
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
+
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/clusters/v3"
+
 	envoy_tags "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
 )
 
@@ -33,6 +34,14 @@ func EdsCluster() ClusterBuilderOpt {
 	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
 		builder.AddConfigurer(&v3.EdsClusterConfigurer{})
 		builder.AddConfigurer(&v3.AltStatNameConfigurer{})
+	})
+}
+
+func DefaultTimeout() ClusterBuilderOpt {
+	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
+		builder.AddConfigurer(&v3.TimeoutConfigurer{
+			Protocol: core_mesh.ProtocolTCP,
+		})
 	})
 }
 
@@ -111,5 +120,39 @@ func Http2FromEdge() ClusterBuilderOpt {
 func Http() ClusterBuilderOpt {
 	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
 		builder.AddConfigurer(&v3.HttpConfigurer{})
+	})
+}
+
+func ClientSideMTLS(tracker core_xds.SecretsTracker, mesh *core_mesh.MeshResource, upstreamService string, upstreamTLSReady bool, tags []envoy_tags.Tags) ClusterBuilderOpt {
+	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
+		builder.AddConfigurer(&v3.ClientSideMTLSConfigurer{
+			SecretsTracker:   tracker,
+			UpstreamMesh:     mesh,
+			UpstreamService:  upstreamService,
+			LocalMesh:        mesh,
+			Tags:             tags,
+			UpstreamTLSReady: upstreamTLSReady,
+		})
+	})
+}
+
+func ClientSideTLS(endpoints []core_xds.Endpoint) ClusterBuilderOpt {
+	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
+		builder.AddConfigurer(&v3.ClientSideTLSConfigurer{
+			Endpoints: endpoints,
+		})
+	})
+}
+
+func CrossMeshClientSideMTLS(tracker core_xds.SecretsTracker, localMesh *core_mesh.MeshResource, upstreamMesh *core_mesh.MeshResource, upstreamService string, upstreamTLSReady bool, tags []envoy_tags.Tags) ClusterBuilderOpt {
+	return ClusterBuilderOptFunc(func(builder *ClusterBuilder) {
+		builder.AddConfigurer(&v3.ClientSideMTLSConfigurer{
+			SecretsTracker:   tracker,
+			UpstreamMesh:     upstreamMesh,
+			UpstreamService:  upstreamService,
+			LocalMesh:        localMesh,
+			Tags:             tags,
+			UpstreamTLSReady: upstreamTLSReady,
+		})
 	})
 }

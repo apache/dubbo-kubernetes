@@ -23,29 +23,36 @@ import (
 	"os"
 	"sync"
 	"time"
-)
 
-import (
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
+	"github.com/apache/dubbo-kubernetes/pkg/envoy/admin"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
+
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-
 	"github.com/pkg/errors"
-)
 
-import (
+	api_server "github.com/apache/dubbo-kubernetes/pkg/api-server/customization"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+
+	core_ca "github.com/apache/dubbo-kubernetes/pkg/core/ca"
+
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
 	"github.com/apache/dubbo-kubernetes/pkg/core/reg_client"
 	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
+
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
+
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
+
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
@@ -57,6 +64,7 @@ type BuilderContext interface {
 	ResourceStore() core_store.CustomizableResourceStore
 	Transactions() core_store.Transactions
 	ConfigStore() core_store.ResourceStore
+	DataSourceLoader() datasource.Loader
 	ResourceManager() core_manager.CustomizableResourceManager
 	Config() dubbo_cp.Config
 	RegistryCenter() dubboRegistry.Registry
@@ -72,8 +80,10 @@ type BuilderContext interface {
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
 	DataplaneCache() *sync.Map
+	CAProvider() secrets.CaProvider
 	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
+	Access() Access
 }
 
 var _ BuilderContext = &Builder{}
@@ -89,10 +99,14 @@ type Builder struct {
 	rom                  core_manager.ReadOnlyResourceManager
 	ext                  context.Context
 	meshCache            *mesh.Cache
+	eac                  admin.EnvoyAdminClient
 	lif                  lookup.LookupIPFunc
 	configm              config_manager.ConfigManager
 	leadInfo             component.LeaderInfo
 	erf                  events.EventBus
+	apim                 api_server.APIManager
+	cam                  core_ca.Managers
+	acc                  Access
 	dsl                  datasource.Loader
 	dps                  *dp_server.DpServer
 	registryCenter       dubboRegistry.Registry
@@ -104,9 +118,18 @@ type Builder struct {
 	ddsctx               *dds_context.Context
 	appCtx               context.Context
 	dCache               *sync.Map
+	cap                  secrets.CaProvider
 	regClient            reg_client.RegClient
 	serviceDiscover      dubboRegistry.ServiceDiscovery
 	*runtimeInfo
+}
+
+func (b *Builder) Access() Access {
+	return b.acc
+}
+
+func (b *Builder) CAProvider() secrets.CaProvider {
+	return b.cap
 }
 
 func BuilderFor(appCtx context.Context, cfg dubbo_cp.Config) (*Builder, error) {
@@ -140,6 +163,16 @@ func (b *Builder) WithResourceStore(rs core_store.CustomizableResourceStore) *Bu
 
 func (b *Builder) WithTransactions(txs core_store.Transactions) *Builder {
 	b.txs = txs
+	return b
+}
+
+func (b *Builder) WithEnvoyAdminClient(eac admin.EnvoyAdminClient) *Builder {
+	b.eac = eac
+	return b
+}
+
+func (b *Builder) WithAccess(acc Access) *Builder {
+	b.acc = acc
 	return b
 }
 
@@ -212,6 +245,15 @@ func (b *Builder) MeshCache() *mesh.Cache {
 	return b.meshCache
 }
 
+func (b *Builder) WithCAProvider(cap secrets.CaProvider) *Builder {
+	b.cap = cap
+	return b
+}
+
+func (b *Builder) CaManagers() core_ca.Managers {
+	return b.cam
+}
+
 func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
 	b.ddsctx = ddsctx
 	return b
@@ -224,6 +266,16 @@ func (b *Builder) WithResourceValidators(rv ResourceValidators) *Builder {
 
 func (b *Builder) WithRegClient(regClient reg_client.RegClient) *Builder {
 	b.regClient = regClient
+	return b
+}
+
+func (b *Builder) WithCaManagers(cam core_ca.Managers) *Builder {
+	b.cam = cam
+	return b
+}
+
+func (b *Builder) WithCaManager(name string, cam core_ca.Manager) *Builder {
+	b.cam[name] = cam
 	return b
 }
 
@@ -257,6 +309,10 @@ func (b *Builder) WithServiceDiscovery(discovery dubboRegistry.ServiceDiscovery)
 	return b
 }
 
+func (b *Builder) APIManager() api_server.APIManager {
+	return b.apim
+}
+
 func (b *Builder) Build() (Runtime, error) {
 	if b.cm == nil {
 		return nil, errors.Errorf("ComponentManager has not been configured")
@@ -288,6 +344,12 @@ func (b *Builder) Build() (Runtime, error) {
 	if b.meshCache == nil {
 		return nil, errors.Errorf("MeshCache has not been configured")
 	}
+	if b.acc == (Access{}) {
+		return nil, errors.Errorf("Access has not been configured")
+	}
+	if b.cap == nil {
+		return nil, errors.Errorf("CaProvider has not been configured")
+	}
 
 	return &runtime{
 		RuntimeInfo: b.runtimeInfo,
@@ -313,6 +375,7 @@ func (b *Builder) Build() (Runtime, error) {
 			appCtx:               b.appCtx,
 			meshCache:            b.meshCache,
 			regClient:            b.regClient,
+			cap:                  b.cap,
 		},
 		Manager: b.cm,
 	}, nil
@@ -380,6 +443,10 @@ func (b *Builder) LookupIP() lookup.LookupIPFunc {
 
 func (b *Builder) Config() dubbo_cp.Config {
 	return b.cfg
+}
+
+func (b *Builder) DataSourceLoader() datasource.Loader {
+	return b.dsl
 }
 
 func (b *Builder) DDSContext() *dds_context.Context {

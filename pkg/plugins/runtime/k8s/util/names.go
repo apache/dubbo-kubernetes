@@ -18,6 +18,6 @@
 package util
 
 const (
-	dubboSidecarContainerName = "dubbo-sidecar"
+	DubboSidecarContainerName = "dubbo-sidecar"
 	dubboGatewayContainerName = "dubbo-gateway"
 )
