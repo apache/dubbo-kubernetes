@@ -148,9 +148,9 @@ spec:
       {{- if $admin.volumes }}
       {{- toYaml $admin.volumes | nindent 6 }}
       {{- end }}
-      - name: {{ include "admin.name" . }}-control-plane-config
+      - name: {{ include "admin.name" . }}-server-config
         configMap:
-          name: {{ include "admin.name" . }}-control-plane-config
+          name: {{ include "admin.name" . }}-server-config
       {{- if $cp.tls.secretName }}
       - name: general-tls-cert
         secret:
