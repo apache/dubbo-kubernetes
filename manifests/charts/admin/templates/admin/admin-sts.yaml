@@ -1,4 +1,5 @@
 {{- $admin := .Values -}}
+{{- $cp := .Values.cp -}}
 {{- $zoo := .Values.zookeeper -}}
 {{- $nacos := .Values.nacos -}}
 {{- $observable := $admin.observable -}}
@@ -127,16 +128,23 @@ spec:
       {{- if $admin.volumes }}
       {{- toYaml $admin.volumes | nindent 6 }}
       {{- end }}
-      - name: config
+      - name: {{ include "admin.name" . }}-server-config
         configMap:
-        {{- if $admin.configMap }}
-        {{- toYaml $admin.configMap | nindent 10 }}
-        {{- end }}
-      - name: secret
+          name: {{ include "admin.name" . }}-server-config
+      {{- if $cp.tls.secretName }}
+      - name: general-tls-cert
         secret:
-        {{- if $admin.secret }}
-        {{- toYaml $admin.secret | nindent 10 }}
-        {{- end }}
+          secretName: {{ $cp.tls.secretName }}
+      {{- else }}
+      - name: general-tls-cert
+        secret:
+          secretName: {{ include "admin.name" . }}-tls-cert
+      {{- end }}
+      {{- if $cp.tls.caSecretName }}
+      - name: general-tls-cert-ca
+        secret:
+          secretName: {{ $cp.tls.caSecretName }}
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: storage
