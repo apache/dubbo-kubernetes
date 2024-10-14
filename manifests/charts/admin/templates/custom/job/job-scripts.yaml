@@ -28,19 +28,19 @@ spec:
           imagePullPolicy: {{ $jobs.image.pullPolicy }}
           volumeMounts:
             - name: scripts
-              mountPath: /scripts/install_crds.sh
-              subPath: install_crds.sh
+              mountPath: /scripts/application-dependent.sh
+              subPath: application-dependent.sh
       volumes:
         - name: scripts
           configMap:
-            name: {{ template "job.name" . }}-crds-scripts
+            name: {{ template "job.name" . }}-scripts
             defaultMode: 0755
 ---
 {{- $jobs := .Values.jobs }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "job.name" . }}-crds-scripts
+  name: {{ template "job.name" . }}-scripts
   namespace: {{ template "job.namespace" . }}
   labels:
   {{- include "job.labels" . | nindent 4 }}
@@ -55,13 +55,5 @@ metadata:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
-  install_crds.sh: |-
-    #!/usr/bin/bash
-    # Control plane custom resource definition creation.
-    $CRDS_FILE="/admin/crds"
-    if [ -s $CRDS_FILE ]; then
-      echo "$CRDS_FILE Detected this file, currently adding CRDs..."
-      kubectl apply -f $CRDS_FILE
-    else
-      echo "$CRDS_FILE The file was not found. Please check the directory path or other possible reasons."
-    fi
+  application-dependent.sh: |-
+
