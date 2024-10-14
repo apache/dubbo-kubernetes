@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ template "cp.name" . }}-sa
+  namespace: {{ template "system.namespaces" . }}
+---
+apiVersion: {{ include "rbac.apiVersion" . }}
+kind: ClusterRole
+metadata:
+  name: {{ include "cp.name" . }}-clusterrole
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+---
+apiVersion: {{ include "rbac.apiVersion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cp.name" . }}-clusterrolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cp.name" . }}-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "cp.name" . }}-sa
+    namespace: {{ template "system.namespaces" . }}
