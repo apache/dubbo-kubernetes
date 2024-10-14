@@ -1,15 +1,4 @@
 {{/*
-Return Admin Namespace to use.
-*/}}
-{{- define "admin.namespace" -}}
-{{- if .Values.namespaceOverride }}
-{{- .Values.namespaceOverride }}
-{{- else if not (empty .Release.Namespace) -}}
-{{- "dubbo-system" | default }}
-{{- end }}
-{{- end }}
-
-{{/*
 Return ZooKeeper Namespace to use.
 */}}
 {{- define "zoo.namespace" -}}
