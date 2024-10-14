@@ -28,6 +28,10 @@ import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 )
 
+type ServiceSearchReq struct {
+	ServiceName string `json:"serviceName"`
+}
+
 type ServiceSearchResp struct {
 	ServiceName   string         `json:"serviceName"`
 	VersionGroups []VersionGroup `json:"versionGroups"`
@@ -78,17 +82,18 @@ func (s *ServiceSearchResp) FromServiceSearch(search *ServiceSearch) {
 
 type ServiceTabDistributionReq struct {
 	ServiceName string `json:"serviceName"  form:"serviceName" binding:"required"`
-	Version     string `json:"version"  form:"version" binding:"required"`
-	Group       string `json:"group"  form:"group" binding:"required"`
-	Side        string `json:"side" form:"side"`
+	Version     string `json:"version"  form:"version"`
+	Group       string `json:"group"  form:"group"`
+	Side        string `json:"side" form:"side"  binding:"required"`
 }
 
 type ServiceTabDistributionResp struct {
-	AppName      string `json:"appName"`
-	InstanceName string `json:"instanceName"`
-	Endpoint     string `json:"endpoint"`
-	TimeOut      string `json:"timeOut"`
-	Retries      string `json:"retries"`
+	AppName      string            `json:"appName"`
+	InstanceName string            `json:"instanceName"`
+	Endpoint     string            `json:"endpoint"`
+	TimeOut      string            `json:"timeOut"`
+	Retries      string            `json:"retries"`
+	Params       map[string]string `json:"params"`
 }
 
 type ServiceTabDistribution struct {
@@ -109,7 +114,7 @@ func NewServiceDistribution() *ServiceTabDistribution {
 	}
 }
 
-func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *core_mesh.DataplaneResource, metadatalist *core_mesh.MetaDataResourceList, name string, req *ServiceTabDistributionReq) *ServiceTabDistributionResp {
+func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *core_mesh.DataplaneResource, metadata *core_mesh.MetaDataResource, name string, req *ServiceTabDistributionReq) *ServiceTabDistributionResp {
 	r.AppName = name
 	inbounds := dataplane.Spec.Networking.Inbound
 	ip := dataplane.GetIP()
@@ -118,7 +123,7 @@ func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *cor
 	}
 	meta := dataplane.GetMeta()
 	r.InstanceName = meta.GetName()
-	r.mergeMetaData(metadatalist, req)
+	r.mergeMetaData(metadata, req)
 
 	return r
 }
@@ -136,24 +141,22 @@ func (r *ServiceTabDistributionResp) FromServiceDistribution(distribution *Servi
 	return r
 }
 
-func (r *ServiceTabDistributionResp) mergeMetaData(metadatalist *core_mesh.MetaDataResourceList, req *ServiceTabDistributionReq) {
-	for _, metadata := range metadatalist.Items {
-		// key format is '{group}/{interface name}:{version}:{protocol}'
-		serviceinfos := metadata.Spec.Services
-		if req.Side == constants.ConsumerSide {
-			r.Retries = ""
-			r.TimeOut = ""
+func (r *ServiceTabDistributionResp) mergeMetaData(metadata *core_mesh.MetaDataResource, req *ServiceTabDistributionReq) {
+	// key format is '{group}/{interface name}:{version}:{protocol}'
+	serviceinfos := metadata.Spec.Services
+	if req.Side == constants.ConsumerSide {
+		r.Retries = ""
+		r.TimeOut = ""
+	}
+	for _, serviceinfo := range serviceinfos {
+		if serviceinfo.Name == req.ServiceName &&
+			serviceinfo.Group == req.Group &&
+			serviceinfo.Version == req.Version &&
+			req.Side == constants.ProviderSide {
+			r.Retries = serviceinfo.Params[constants.RetriesKey]
+			r.TimeOut = serviceinfo.Params[constants.TimeoutKey]
+			r.Params = serviceinfo.Params
 		}
-		for _, serviceinfo := range serviceinfos {
-			if serviceinfo.Name == req.ServiceName &&
-				serviceinfo.Group == req.Group &&
-				serviceinfo.Version == req.Version &&
-				req.Side == constants.ProviderSide {
-				r.Retries = serviceinfo.Params[constants.RetriesKey]
-				r.TimeOut = serviceinfo.Params[constants.TimeoutKey]
-			}
-		}
-
 	}
 }
 

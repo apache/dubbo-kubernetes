@@ -129,4 +129,5 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	}
 
 	router.GET("/prometheus", handler.GetPrometheus(rt))
+	router.GET("/search", handler.BannerGlobalSearch(rt))
 }
