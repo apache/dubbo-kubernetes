@@ -1,0 +1,28 @@
+{{- $auth := .Values.auth -}}{{- $authz := $auth.authorization -}}{{- $authc := $auth.authentication -}}
+{{- if $auth.enabled }}
+apiVersion: dubbo.io/v1alpha1
+kind: AuthenticationPolicy
+metadata:
+  name: {{ template "cp.name" . }}-authentication
+  namespace: {{ template "system.namespaces" . }}
+spec:
+  action: {{ $authc.action }}
+  PortLevel:
+    - port: {{ $authc.port }}
+  selector:
+    - namespaces: ["dubbo-system"]
+---
+apiVersion: dubbo.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ template "cp.name" . }}-authorization
+  namespace: {{ template "system.namespaces" . }}
+spec:
+  action: {{ $authz.action }}
+  matchType: {{ $authz.matchType }}
+  rules:
+  - from:
+      namespaces: ["dubbo-system"]
+  samples: {{ $authz.samples }}
+{{- end }}
+
