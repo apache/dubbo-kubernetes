@@ -18,13 +18,16 @@
 package registry
 
 import (
-	gxset "github.com/dubbogo/gost/container/set"
 	"strings"
 	"sync"
+)
 
+import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/registry"
+
+	gxset "github.com/dubbogo/gost/container/set"
 )
 
 const AppCtx = "ApplicationContext"

@@ -19,9 +19,6 @@ package registry
 
 import (
 	"context"
-	"dubbo.apache.org/dubbo-go/v3/metadata/service"
-	triple_api "dubbo.apache.org/dubbo-go/v3/metadata/triple_api/proto"
-	"github.com/pkg/errors"
 	"reflect"
 )
 
@@ -30,12 +27,16 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
+	"dubbo.apache.org/dubbo-go/v3/metadata/service"
 	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
+	triple_api "dubbo.apache.org/dubbo-go/v3/metadata/triple_api/proto"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
 
 	gxset "github.com/dubbogo/gost/container/set"
 	"github.com/dubbogo/gost/gof/observer"
+
+	"github.com/pkg/errors"
 )
 
 import (

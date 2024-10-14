@@ -22,8 +22,6 @@ import (
 	"reflect"
 	"sync"
 	"time"
-
-	"github.com/go-co-op/gocron"
 )
 
 import (
@@ -32,6 +30,8 @@ import (
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 
 	gxset "github.com/dubbogo/gost/container/set"
+
+	"github.com/go-co-op/gocron"
 )
 
 import (

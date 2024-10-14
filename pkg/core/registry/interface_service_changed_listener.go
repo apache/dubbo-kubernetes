@@ -24,13 +24,19 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+)
 
+import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
+
 	gxset "github.com/dubbogo/gost/container/set"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 
 type InterfaceServiceChangedNotifyListener struct {

@@ -19,12 +19,12 @@ package registry
 
 import (
 	"context"
-	"dubbo.apache.org/dubbo-go/v3/registry"
 	"sync"
 )
 
 import (
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
+	"dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
 )
 

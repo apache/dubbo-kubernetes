@@ -22,13 +22,11 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-
-	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
-	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
 )
 
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
+	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 	dubbo_identifier "dubbo.apache.org/dubbo-go/v3/metadata/identifier"
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
@@ -45,6 +43,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/reg_client"
+	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
