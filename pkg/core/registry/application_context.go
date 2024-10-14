@@ -20,7 +20,9 @@ package registry
 import (
 	"strings"
 	"sync"
+)
 
+import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/registry"
@@ -117,8 +119,8 @@ func (ac *ApplicationContext) DeleteRevisionToMetadata(key string) {
 	}
 }
 
-func (ac *ApplicationContext) NewRevisionToMetadata(newRevisionToMetadata map[string]*common.MetadataInfo) {
-	ac.revisionToMetadata = newRevisionToMetadata
+func (ac *ApplicationContext) NewRevisionToMetadata(revision string, metadata *common.MetadataInfo) {
+	ac.revisionToMetadata[revision] = metadata
 }
 
 func (ac *ApplicationContext) GetOldRevision(instance registry.ServiceInstance) string {

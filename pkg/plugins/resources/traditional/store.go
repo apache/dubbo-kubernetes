@@ -150,6 +150,8 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 			Revision: metadata.GetRevision(),
 			Services: services,
 		}
+
+		t.appContext.NewRevisionToMetadata(info.Revision, info)
 		err = t.metadataReport.PublishAppMetadata(identifier, info)
 		if err != nil {
 			return err
@@ -468,6 +470,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 			Revision: metadata.GetRevision(),
 			Services: services,
 		}
+		t.appContext.NewRevisionToMetadata(info.Revision, info)
 		err = t.metadataReport.PublishAppMetadata(identifier, info)
 		if err != nil {
 			return err

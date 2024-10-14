@@ -105,7 +105,7 @@ func (p *IngressProxyBuilder) getZoneIngress(
 		return nil, err
 	}
 	// Update Ingress' Available Services
-	// This was placed as an operation of DataplaneWatchdog out of the convenience.
+	// This was placed as an operation of Dataplane Watchdog out of the convenience.
 	// Consider moving to the outside of this component
 	if err := p.updateIngress(ctx, zoneIngress, aggregatedMeshCtxs); err != nil {
 		return nil, err
