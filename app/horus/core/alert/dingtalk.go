@@ -19,9 +19,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"k8s.io/klog/v2"
 	"net/http"
+)
+
+import (
+	"k8s.io/klog/v2"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 )
 
 const DingTalkTitle = "horus 通知"

@@ -17,11 +17,16 @@ package horuser
 
 import (
 	"context"
+	"time"
+)
+
+import (
 	apiV1 "github.com/prometheus/client_golang/api"
 	prometheusV1 "github.com/prometheus/client_golang/api/prometheus/v1"
+
 	"github.com/prometheus/common/model"
+
 	"k8s.io/klog/v2"
-	"time"
 )
 
 func (h *Horuser) InstantQuery(address, ql, clusterName string, timeWindowsSecond int64) (model.Vector, error) {

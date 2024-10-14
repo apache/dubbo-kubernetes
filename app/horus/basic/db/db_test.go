@@ -16,10 +16,13 @@
 package db_test
 
 import (
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
 	"testing"
 	"time"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
 )
 
 func TestDataBase(t *testing.T) {

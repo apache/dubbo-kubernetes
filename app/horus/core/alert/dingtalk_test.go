@@ -16,9 +16,12 @@
 package alert_test
 
 import (
+	"testing"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
-	"testing"
 )
 
 func TestDingTalkSend(t *testing.T) {

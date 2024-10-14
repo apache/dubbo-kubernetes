@@ -17,9 +17,13 @@ package ticker
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2"
 	"time"
+)
+
+import (
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	"k8s.io/klog/v2"
 )
 
 func Manager(ctx context.Context) error {

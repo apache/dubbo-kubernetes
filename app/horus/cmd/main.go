@@ -18,17 +18,24 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/horuser"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/ticker"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"k8s.io/klog"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+)
+
+import (
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"k8s.io/klog"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/horuser"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/ticker"
 )
 
 var (

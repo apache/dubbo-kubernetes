@@ -18,13 +18,21 @@ package horuser
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
-	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
-	"github.com/gammazero/workerpool"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog/v2"
 	"syscall"
 	"time"
+)
+
+import (
+	"github.com/gammazero/workerpool"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	"k8s.io/klog/v2"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/db"
+	"github.com/apache/dubbo-kubernetes/app/horus/core/alert"
 )
 
 func (h *Horuser) DowntimeRestartManager(ctx context.Context) error {

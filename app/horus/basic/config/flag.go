@@ -17,8 +17,11 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"os"
+)
+
+import (
+	"gopkg.in/yaml.v2"
 )
 
 func Load(in string) (*Config, error) {

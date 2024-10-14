@@ -17,11 +17,18 @@ package db
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
-	_ "github.com/go-sql-driver/mysql"
 	"time"
+)
+
+import (
+	_ "github.com/go-sql-driver/mysql"
+
 	"xorm.io/xorm"
 	xlog "xorm.io/xorm/log"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/app/horus/basic/config"
 )
 
 type NodeDataInfo struct {
