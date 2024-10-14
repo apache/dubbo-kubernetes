@@ -40,6 +40,7 @@ func (s *Admin) PostProcess() error {
 		s.TraceDashboards.PostProcess(),
 	)
 }
+
 func (s *Admin) Validate() error {
 	return multierr.Combine(
 		s.MetricDashboards.Validate(),

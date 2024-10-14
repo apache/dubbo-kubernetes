@@ -88,7 +88,8 @@ func (r *Registry) Subscribe(
 }
 
 func (r *Registry) subscribeApp(metadataReport report.MetadataReport, listener *NotifyListener, group string, out events.Emitter,
-	systemNamespace string) {
+	systemNamespace string,
+) {
 	_, err := r.scheduler.Every(30 * 60).Second().Do(func() {
 		err := doAppSubscribe(r, metadataReport, listener, group, out, systemNamespace)
 		if err != nil {
@@ -139,7 +140,8 @@ func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNo
 }
 
 func doAppSubscribe(r *Registry, metadataReport report.MetadataReport, listener *NotifyListener, group string, out events.Emitter,
-	systemNamespace string) error {
+	systemNamespace string,
+) error {
 	keys, err := metadataReport.GetConfigKeysByGroup(group)
 	if err != nil {
 		return err

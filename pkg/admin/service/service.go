@@ -39,16 +39,16 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	res := make([]*model.ServiceTabDistributionResp, 0)
 
 	for _, mapping := range mappingList.Items {
-		//找到对应serviceName的appNames
+		// 找到对应serviceName的appNames
 		if mapping.Spec.InterfaceName == serviceName {
 			for _, appName := range mapping.Spec.ApplicationNames {
 				dataplaneList := &mesh.DataplaneResourceList{}
-				//每拿到一个appName，都将对应的实例数据填充进dataplaneList, 再通过dataplane拿到这个appName对应的所有实例
+				// 每拿到一个appName，都将对应的实例数据填充进dataplaneList, 再通过dataplane拿到这个appName对应的所有实例
 				if err := manager.List(rt.AppContext(), dataplaneList, store.ListByApplication(appName)); err != nil {
 					return nil, err
 				}
 
-				//拿到了appName，接下来从dataplane取实例信息
+				// 拿到了appName，接下来从dataplane取实例信息
 				for _, dataplane := range dataplaneList.Items {
 					metadata := &mesh.MetaDataResource{
 						Spec: &v1alpha1.MetaData{},
@@ -77,7 +77,7 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
 	}
-	//通过dataplane extension字段获取所有revision
+	// 通过dataplane extension字段获取所有revision
 	revisions := make(map[string]struct{}, 0)
 	for _, dataplane := range dataplaneList.Items {
 		rev, ok := dataplane.Spec.GetExtensions()[v1alpha1.Revision]

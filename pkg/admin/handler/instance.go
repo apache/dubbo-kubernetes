@@ -83,7 +83,7 @@ func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var resp = struct {
+		resp := struct {
 			TrafficDisable bool `json:"trafficDisable"`
 		}{false}
 		applicationName := c.Query("appName")
@@ -181,7 +181,7 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		var ok = false
+		ok := false
 		res.RangeConditions(func(r *mesh_proto.ConditionRule) (isStop bool) {
 			ok = isTrafficDisabled(r, instanceIP)
 			return ok
@@ -230,11 +230,9 @@ func generateDefaultConditionV3x1(Enabled, Force, Runtime bool, Key, Scope strin
 
 func InstanceConfigOperatorLogGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var (
-			resp = struct {
-				OperatorLog bool `json:"operatorLog"`
-			}{false}
-		)
+		resp := struct {
+			OperatorLog bool `json:"operatorLog"`
+		}{false}
 		applicationName := c.Query(`appName`)
 		if applicationName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))

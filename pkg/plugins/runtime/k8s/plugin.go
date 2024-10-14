@@ -164,7 +164,7 @@ func addMutators(mgr kube_ctrl.Manager, rt core_runtime.Runtime, converter k8s_c
 					Name:  "DUBBO_REGISTRY_ADDRESS",
 					Value: RegistryCenterUrl.String(),
 				})
-				//TODO support more
+				// TODO support more
 			}
 			return nil
 		})

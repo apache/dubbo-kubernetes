@@ -157,7 +157,7 @@ func (iscnl *InterfaceServiceChangedNotifyListener) deleteServiceInfo(url *commo
 	metadataInfo := instance.ServiceMetadata
 	if metadataInfo != nil {
 		metadataInfo.RemoveService(serviceInfo)
-		//delete(metadataInfo.Services, serviceInfo.GetMatchKey())
+		// delete(metadataInfo.Services, serviceInfo.GetMatchKey())
 	}
 
 	if len(metadataInfo.Services) == 0 {
@@ -208,7 +208,7 @@ func resolveRevision(appName string, servicesInfo map[string]*common.ServiceInfo
 	var sb strings.Builder
 	sb.WriteString(appName)
 	keys := make([]string, 0, len(servicesInfo))
-	for key, _ := range servicesInfo {
+	for key := range servicesInfo {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
