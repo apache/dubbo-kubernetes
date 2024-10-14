@@ -16,4 +16,13 @@
 apiVersion: v2
 name: base
 description: Helm chart for deploying dubbo cluster resources and CRDs.
-version: 0.1.0
+appVersion: 0.1.0
+
+maintainers:
+  - name: mfordjody
+    email: zhongxjian@apache.org
+
+sources:
+  - https://github.com/apache/dubbo-kubernetes
+  - https://dubbo.apache.org
+version: 3.3.0

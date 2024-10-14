@@ -324,10 +324,6 @@ cp:
    caSecretName: ""
    caBundle: ""
 
-
-
-
-
 deploy_mode: universal
 #mode: test
 mode: zone
@@ -455,6 +451,7 @@ traffic:
 observable:
   ## Whether to enable the observability.
   enabled: true
+
 
 zookeeper:
   ## Whether to enable the zookeeper.
