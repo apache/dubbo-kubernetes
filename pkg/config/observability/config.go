@@ -49,8 +49,8 @@ func (c *MetricDashboardConfig) PostProcess() error {
 		c.Instance.PostProcess(),
 		c.Service.PostProcess(),
 	)
-
 }
+
 func (c *MetricDashboardConfig) Validate() error {
 	return multierr.Combine(
 		c.Application.Validate(),
@@ -77,6 +77,7 @@ func (c *TraceDashboardConfig) PostProcess() error {
 		c.Service.PostProcess(),
 	)
 }
+
 func (c *TraceDashboardConfig) Validate() error {
 	return multierr.Combine(
 		c.Application.Validate(),
@@ -96,6 +97,7 @@ func (c *DashboardConfig) PostProcess() error {
 	c.BaseURL = strings.TrimSuffix(c.BaseURL, "/")
 	return nil
 }
+
 func (c *DashboardConfig) Validate() error {
 	_, err := url.Parse(c.BaseURL)
 	if err != nil {
