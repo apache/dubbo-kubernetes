@@ -94,3 +94,14 @@ type PageReq struct {
 	CurPage  int `form:"curPage" json:"curPage"`
 	PageSize int `form:"pageSize" json:"pageSize"`
 }
+
+type SearchReq struct {
+	SearchType string `form:"searchType"`
+	Keywords   string `form:"keywords"`
+	PageReq
+}
+
+type SearchRes struct {
+	Find       bool     `json:"find"`
+	Candidates []string `json:"candidates"`
+}

@@ -24,7 +24,7 @@ generate/protos:
 # Generate the embedded templates
 .PHONY: generate/templates
 generate/templates:
-	go generate app/dubboctl/internal/dubbo/templates_embedded.go
+	go generate dubboctl/internal/dubbo/templates_embedded.go
 
 .PHONY: clean/tools
 clean/tools:

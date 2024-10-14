@@ -49,7 +49,7 @@ COPY test/proxy/dp test/proxy/dp
 
 # Build
 RUN env
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS:- -s -w}" -a -o dubboctl /go/src/github.com/apache/dubbo-kubernetes/app/dubboctl/main.go
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags="${LDFLAGS:- -s -w}" -a -o dubboctl /go/src/github.com/apache/dubbo-kubernetes/dubboctl/main.go
 
 FROM envoyproxy/envoy:v1.29.2
 

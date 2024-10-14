@@ -1,2 +1,2 @@
-# Admin Helm Charts
-Compatible with Helm 3+ for installation on Kubernetes by Admin.
+# Dubbo base Helm Charts
+This chart installs Dubbo CRD.

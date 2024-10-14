@@ -73,7 +73,7 @@ func GetServiceTabDistribution(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -81,7 +81,7 @@ func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -89,7 +89,7 @@ func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceInterfaces(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}

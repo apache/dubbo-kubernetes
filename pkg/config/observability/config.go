@@ -18,11 +18,18 @@
 package observability
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/pkg/errors"
-	"go.uber.org/multierr"
 	"net/url"
 	"strings"
+)
+
+import (
+	"github.com/pkg/errors"
+
+	"go.uber.org/multierr"
+)
+
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 )
 
 // MetricDashboardConfig are grafana dashboards for metrics display
@@ -42,8 +49,8 @@ func (c *MetricDashboardConfig) PostProcess() error {
 		c.Instance.PostProcess(),
 		c.Service.PostProcess(),
 	)
-
 }
+
 func (c *MetricDashboardConfig) Validate() error {
 	return multierr.Combine(
 		c.Application.Validate(),
@@ -70,6 +77,7 @@ func (c *TraceDashboardConfig) PostProcess() error {
 		c.Service.PostProcess(),
 	)
 }
+
 func (c *TraceDashboardConfig) Validate() error {
 	return multierr.Combine(
 		c.Application.Validate(),
@@ -89,6 +97,7 @@ func (c *DashboardConfig) PostProcess() error {
 	c.BaseURL = strings.TrimSuffix(c.BaseURL, "/")
 	return nil
 }
+
 func (c *DashboardConfig) Validate() error {
 	_, err := url.Parse(c.BaseURL)
 	if err != nil {

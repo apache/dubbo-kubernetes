@@ -1,0 +1,59 @@
+{{- $jobs := .Values.jobs }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "job.name" . }}-crds
+  namespace: {{ template "job.namespace" . }}
+  labels:
+  {{- include "job.labels" . | nindent 4 }}
+  {{- with $jobs.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+    "helm.sh/hook": "pre-upgrade,pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
+  {{- with $jobs.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  template:
+    metadata:
+      name: {{ template "job.name" . }}-crds
+      namespace: {{ template "job.namespace" . }}
+    spec:
+      restartPolicy: {{ $jobs.restartPolicy }}
+      containers:
+        - name: kubectl
+          image: {{ $jobs.image.registry }}:{{ $jobs.image.tag }}
+          imagePullPolicy: {{ $jobs.image.pullPolicy }}
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts/application-dependent.sh
+              subPath: application-dependent.sh
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ template "job.name" . }}-scripts
+            defaultMode: 0755
+---
+{{- $jobs := .Values.jobs }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "job.name" . }}-scripts
+  namespace: {{ template "job.namespace" . }}
+  labels:
+  {{- include "job.labels" . | nindent 4 }}
+  {{- with $jobs.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+  {{- with $jobs.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  application-dependent.sh: |-
+
