@@ -35,7 +35,7 @@ import (
 
 type InterfaceServiceChangedNotifyListener struct {
 	listener *NotifyListener
-	ctx      *ApplicationContext
+	ctx      *InterfaceContext
 	allUrls  *gxset.HashSet
 }
 
@@ -47,7 +47,7 @@ type Endpoint struct {
 
 func NewInterfaceServiceChangedNotifyListener(
 	listener *NotifyListener,
-	ctx *ApplicationContext,
+	ctx *InterfaceContext,
 ) *InterfaceServiceChangedNotifyListener {
 	return &InterfaceServiceChangedNotifyListener{
 		listener: listener,
@@ -85,38 +85,23 @@ func (iscnl *InterfaceServiceChangedNotifyListener) NotifyAll(events []*registry
 
 func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(url *common.URL) {
 	serviceInfo := common.NewServiceInfoWithURL(url)
-	iscnl.ctx.UpdateServiceUrls(serviceInfo.Name, url)
-
 	appName := url.GetParam(constant.ApplicationKey, "")
-	var instance registry.ServiceInstance
-	var oldRevision string
-	instances, ok := iscnl.ctx.GetAllInstances()[appName]
-	if !ok {
-		iscnl.ctx.AddAllInstances(appName, make([]registry.ServiceInstance, 0))
-	}
-	for _, elem := range instances {
-		if elem.GetAddress() == url.Address() {
-			instance = elem
-			oldRevision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
-		}
-	}
 
-	metadataInfo := iscnl.ctx.GetRevisionToMetadata(oldRevision)
-	if metadataInfo == nil {
-		metadataInfo = common.NewMetadataInfo(appName, "", make(map[string]*common.ServiceInfo))
-	}
-	metadataInfo.AddService(serviceInfo)
-	revision := resolveRevision(appName, metadataInfo.Services)
-	metadataInfo.Revision = revision
-	iscnl.ctx.UpdateRevisionToMetadata(oldRevision, revision, metadataInfo)
+	iscnl.ctx.UpdateMapping(url.Service(), appName)
 
-	if instance == nil {
+	var instance *registry.DefaultServiceInstance
+	ins, ok := iscnl.ctx.GetInstance(appName, url.Address())
+
+	if ok {
+		instance = ins.(*registry.DefaultServiceInstance)
+	} else {
 		port, _ := strconv.Atoi(url.Port)
 		metadata := map[string]string{
 			constant.MetadataStorageTypePropertyName:      constant.DefaultMetadataStorageType,
 			constant.TimestampKey:                         url.GetParam(constant.TimestampKey, ""),
 			constant.ServiceInstanceEndpoints:             getEndpointsStr(url.Protocol, port),
 			constant.MetadataServiceURLParamsPropertyName: getURLParams(serviceInfo),
+			constant.ExportedServicesRevisionPropertyName: url.Address(),
 		}
 		instance = &registry.DefaultServiceInstance{
 			ID:          url.Address(),
@@ -130,14 +115,23 @@ func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(ur
 			GroupName:   serviceInfo.Group,
 			Tag:         "",
 		}
-	}
-	instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName] = revision
-	instance.SetServiceMetadata(metadataInfo)
-	iscnl.ctx.UpdateAllInstances(appName, instance)
 
-	iscnl.listener.Notify(&registry.ServiceEvent{
-		Action:  remoting.EventTypeAdd,
-		Service: url,
+		iscnl.listener.NotifyInstance(&AdminInstanceEvent{
+			Action:   remoting.EventTypeAdd,
+			Instance: instance,
+			Key:      appName,
+		})
+		instance.SetServiceMetadata(common.NewMetadataInfo(appName, url.Address(), make(map[string]*common.ServiceInfo)))
+		iscnl.ctx.AddInstance(appName, instance)
+	}
+
+	metadataInfo := instance.ServiceMetadata
+	metadataInfo.AddService(serviceInfo)
+
+	iscnl.listener.NotifyInstance(&AdminInstanceEvent{
+		Action:   remoting.EventTypeUpdate,
+		Instance: instance,
+		Key:      appName,
 	})
 }
 
@@ -145,42 +139,30 @@ func (iscnl *InterfaceServiceChangedNotifyListener) deleteServiceInfo(url *commo
 	serviceInfo := common.NewServiceInfoWithURL(url)
 
 	appName := url.GetParam(constant.ApplicationKey, "")
-	var instance registry.ServiceInstance
-	var oldRevision string
-	for _, elem := range iscnl.ctx.GetAllInstances()[appName] {
-		if elem.GetAddress() == url.Address() {
-			instance = elem
-			oldRevision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
-		}
-	}
-	if instance == nil {
+	var instance *registry.DefaultServiceInstance
+	ins, ok := iscnl.ctx.GetInstance(appName, url.Address())
+	if !ok {
 		logger.Error("Can not delete ServiceInfo, instance not exist")
 		return
+	} else {
+		instance = ins.(*registry.DefaultServiceInstance)
 	}
 
-	var metadataInfo *common.MetadataInfo
-	if oldRevision != "" {
-		metadataInfo = iscnl.ctx.GetRevisionToMetadata(oldRevision)
-		delete(metadataInfo.Services, serviceInfo.GetMatchKey())
-		if len(metadataInfo.Services) == 0 {
-			iscnl.ctx.DeleteRevisionToMetadata(oldRevision)
-			iscnl.ctx.DeleteAllInstance(appName, instance)
-			return
-		}
-		iscnl.ctx.UpdateRevisionToMetadata(oldRevision, resolveRevision(appName, metadataInfo.Services), metadataInfo)
-	}
-
+	metadataInfo := instance.ServiceMetadata
 	if metadataInfo != nil {
-		instance.SetServiceMetadata(metadataInfo)
-		instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName] = metadataInfo.Revision
-		iscnl.ctx.UpdateAllInstances(appName, instance)
+		metadataInfo.RemoveService(serviceInfo)
+		//delete(metadataInfo.Services, serviceInfo.GetMatchKey())
 	}
 
-	iscnl.listener.Notify(&registry.ServiceEvent{
-		Action:  remoting.EventTypeDel,
-		Service: url,
+	if len(metadataInfo.Services) == 0 {
+		iscnl.ctx.RemoveInstance(appName, url.Address())
+	}
+
+	iscnl.listener.NotifyInstance(&AdminInstanceEvent{
+		Action:   remoting.EventTypeUpdate,
+		Instance: instance,
+		Key:      appName,
 	})
-	iscnl.ctx.DeleteServiceUrl(serviceInfo.Name, url)
 }
 
 // endpointsStr convert the map to json like [{"protocol": "dubbo", "port": 123}]
@@ -219,8 +201,13 @@ func getURLParams(serviceInfo *common.ServiceInfo) string {
 func resolveRevision(appName string, servicesInfo map[string]*common.ServiceInfo) string {
 	var sb strings.Builder
 	sb.WriteString(appName)
-	for _, serviceInfo := range servicesInfo {
-		sb.WriteString(ToDescString(serviceInfo))
+	keys := make([]string, 0, len(servicesInfo))
+	for key, _ := range servicesInfo {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		sb.WriteString(ToDescString(servicesInfo[key]))
 	}
 	tempRevision := getMd5(sb.String())
 	return tempRevision

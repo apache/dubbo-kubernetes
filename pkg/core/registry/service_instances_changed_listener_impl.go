@@ -18,11 +18,16 @@
 package registry
 
 import (
+	"context"
+	"dubbo.apache.org/dubbo-go/v3/metadata/service"
+	triple_api "dubbo.apache.org/dubbo-go/v3/metadata/triple_api/proto"
+	"github.com/pkg/errors"
 	"reflect"
 )
 
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
+	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
@@ -229,12 +234,29 @@ func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*commo
 		}
 	} else {
 		var err error
-		proxyFactory := extension.GetMetadataServiceProxyFactory(dubboconstant.DefaultKey)
-		metadataService := proxyFactory.GetProxy(instance)
-		defer metadataService.(*local.MetadataServiceProxy).Invoker.Destroy()
-		metadataInfo, err = metadataService.GetMetadataInfo(revision)
-		if err != nil {
-			return &common.MetadataInfo{}, err
+		if instance.GetMetadata()[constant.MetadataVersion] == constant.MetadataServiceV2Version {
+			proxyFactoryV2 := extension.GetMetadataServiceProxyFactoryV2(constant.MetadataServiceV2)
+			metadataServiceV2 := proxyFactoryV2.GetProxy(instance)
+			if metadataServiceV2 != nil {
+				defer destroyInvokerV2(metadataServiceV2)
+				var metadataInfoV2 *triple_api.MetadataInfoV2
+				metadataInfoV2, err = metadataServiceV2.GetMetadataInfo(context.Background(), &triple_api.MetadataRequest{Revision: revision})
+				if err != nil {
+					logger.Errorf("get metadata of %s failed, %v", instance.GetHost(), err)
+				}
+				metadataInfo = convertMetadataInfo(metadataInfoV2)
+			} else {
+				err = errors.New("get remote metadata error please check instance " + instance.GetHost() + " is alive")
+			}
+		} else {
+			proxyFactory := extension.GetMetadataServiceProxyFactory(constant.DefaultKey)
+			metadataService := proxyFactory.GetProxy(instance)
+			if metadataService != nil {
+				defer destroyInvoker(metadataService)
+				metadataInfo, err = metadataService.GetMetadataInfo(revision)
+			} else {
+				err = errors.New("get remote metadata error please check instance " + instance.GetHost() + " is alive")
+			}
 		}
 	}
 	return metadataInfo, nil
@@ -254,4 +276,53 @@ func findInstancesToDelete(localAllInstances, newAllInstances []registry.Service
 	}
 
 	return instancesToDelete
+}
+
+func convertMetadataInfo(v2 *triple_api.MetadataInfoV2) *common.MetadataInfo {
+	infos := make(map[string]*common.ServiceInfo, 0)
+	for k, v := range v2.Services {
+		info := &common.ServiceInfo{
+			Name:     v.Name,
+			Group:    v.Group,
+			Version:  v.Version,
+			Protocol: v.Protocol,
+			Path:     v.Path,
+			Params:   v.Params,
+		}
+		infos[k] = info
+	}
+
+	metadataInfo := &common.MetadataInfo{
+		Reported: false,
+		App:      v2.App,
+		Revision: v2.Version,
+		Services: infos,
+	}
+	return metadataInfo
+}
+
+func destroyInvoker(metadataService service.MetadataService) {
+	if metadataService == nil {
+		return
+	}
+
+	proxy := metadataService.(*local.MetadataServiceProxy)
+	if proxy.Invoker == nil {
+		return
+	}
+
+	proxy.Invoker.Destroy()
+}
+
+func destroyInvokerV2(metadataService service.MetadataServiceV2) {
+	if metadataService == nil {
+		return
+	}
+
+	proxy := metadataService.(*local.MetadataServiceProxyV2)
+	if proxy.Invoker == nil {
+		return
+	}
+
+	proxy.Invoker.Destroy()
 }

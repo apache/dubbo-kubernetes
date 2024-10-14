@@ -223,8 +223,8 @@ type ApplicationServiceResp struct {
 }
 
 type ApplicationServiceFormReq struct {
-	AppName string `json:"appName"`
-	Side    string `json:"side"`
+	AppName string `form:"appName"`
+	Side    string `form:"side"`
 }
 
 type ApplicationServiceFormResp struct {
@@ -283,6 +283,10 @@ func (a *ApplicationServiceForm) FromServiceInfo(serviceInfo *v1alpha1.ServiceIn
 	return nil
 }
 
+type ApplicationSearchReq struct {
+	AppName string `json:"appName"`
+}
+
 type ApplicationSearchResp struct {
 	AppName          string   `json:"appName"`
 	DeployClusters   []string `json:"deployClusters"`
@@ -333,7 +337,7 @@ func (a *ApplicationSearch) GetRegistry(rt core_runtime.Runtime) {
 	} else if runtimeMode == core.HalfHostMode || runtimeMode == core.UniversalMode {
 		// In half or universal mode, registry cluster is the zookeeper cluster or other registry center
 		registryURL := rt.RegistryCenter().GetURL()
-		registryCluster := registryURL.GetParam(constants.RegistryClusterKey, "")
+		registryCluster := registryURL.GetParam(constants.RegistryClusterKey, registryURL.Address())
 		a.RegistryClusters.Add(registryCluster)
 	}
 }

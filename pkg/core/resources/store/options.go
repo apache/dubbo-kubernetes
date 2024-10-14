@@ -19,6 +19,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -279,6 +280,7 @@ type GetOptions struct {
 	Name       string
 	Mesh       string
 	Version    string
+	Type       string
 	Consistent bool
 	Labels     map[string]string
 }
@@ -308,6 +310,12 @@ func GetByPath(path string) GetOptionsFunc {
 func GetByRevision(revision string) GetOptionsFunc {
 	return func(opts *GetOptions) {
 		opts.Labels[mesh_proto.Revision] = revision
+	}
+}
+
+func GetByType(t string) GetOptionsFunc {
+	return func(opts *GetOptions) {
+		opts.Type = t
 	}
 }
 
@@ -365,19 +373,41 @@ func GetConsistent() GetOptionsFunc {
 	}
 }
 
+func (l *GetOptions) Predicate(r core_model.Resource) bool {
+	if l.Mesh != "" && r.GetMeta().GetMesh() != l.Mesh {
+		return false
+	}
+
+	if l.Version != "" && r.GetMeta().GetVersion() != l.Version {
+		return false
+	}
+
+	if len(l.Labels) > 0 {
+		for k, v := range l.Labels {
+			if r.GetMeta().GetLabels()[k] != v {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 type (
 	ListFilterFunc func(rs core_model.Resource) bool
 )
 
 type ListOptions struct {
-	Mesh         string
-	Labels       map[string]string
-	PageSize     int
-	PageOffset   string
-	FilterFunc   ListFilterFunc
-	NameContains string
-	Ordered      bool
-	ResourceKeys map[core_model.ResourceKey]struct{}
+	Mesh                string
+	Labels              map[string]string
+	PageSize            int
+	PageOffset          string
+	FilterFunc          ListFilterFunc
+	NameContains        string
+	NameEquals          string
+	ApplicationContains string
+	Ordered             bool
+	ResourceKeys        map[core_model.ResourceKey]struct{}
 }
 
 type ListOptionsFunc func(*ListOptions)
@@ -408,9 +438,27 @@ func ListByPath(path string) ListOptionsFunc {
 	}
 }
 
+func ListByApplicationContains(app string) ListOptionsFunc {
+	return func(opts *ListOptions) {
+		opts.ApplicationContains = app
+	}
+}
+
+func ListByApplication(app string) ListOptionsFunc {
+	return func(opts *ListOptions) {
+		opts.Labels[mesh_proto.Application] = app
+	}
+}
+
 func ListByNameContains(name string) ListOptionsFunc {
 	return func(opts *ListOptions) {
 		opts.NameContains = name
+	}
+}
+
+func ListByNameEquals(name string) ListOptionsFunc {
+	return func(opts *ListOptions) {
+		opts.NameEquals = name
 	}
 }
 
@@ -455,4 +503,31 @@ func (l *ListOptions) IsCacheable() bool {
 
 func (l *ListOptions) HashCode() string {
 	return fmt.Sprintf("%s:%t:%s:%d:%s", l.Mesh, l.Ordered, l.NameContains, l.PageSize, l.PageOffset)
+}
+
+func (l *ListOptions) Predicate(r core_model.Resource) bool {
+	if l.Mesh != "" && r.GetMeta().GetMesh() != l.Mesh {
+		return false
+	}
+	if l.NameEquals != "" && r.GetMeta().GetName() != l.NameEquals {
+		return false
+	}
+
+	if l.NameContains != "" && !strings.Contains(r.GetMeta().GetName(), l.NameContains) {
+		return false
+	}
+
+	if l.ApplicationContains != "" && !strings.Contains(r.GetMeta().GetLabels()[mesh_proto.Application], l.ApplicationContains) {
+		return false
+	}
+
+	if len(l.Labels) > 0 {
+		for k, v := range l.Labels {
+			if r.GetMeta().GetLabels()[k] != v {
+				return false
+			}
+		}
+	}
+
+	return l.Filter(r)
 }

@@ -25,7 +25,6 @@ import (
 
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
-	gxset "github.com/dubbogo/gost/container/set"
 )
 
 import (
@@ -69,6 +68,7 @@ type traditionalStore struct {
 	registryCenter dubboRegistry.Registry
 	governance     governance.GovernanceConfig
 	appContext     *registry.ApplicationContext
+	infContext     *registry.InterfaceContext
 	dCache         *sync.Map
 	regClient      reg_client.RegClient
 	eventWriter    events.Emitter
@@ -83,6 +83,7 @@ func NewStore(
 	dCache *sync.Map,
 	regClient reg_client.RegClient,
 	appContext *registry.ApplicationContext,
+	infContext *registry.InterfaceContext,
 ) store.ResourceStore {
 	return &traditionalStore{
 		configCenter:   configCenter,
@@ -92,6 +93,7 @@ func NewStore(
 		dCache:         dCache,
 		regClient:      regClient,
 		appContext:     appContext,
+		infContext:     infContext,
 	}
 }
 
@@ -590,9 +592,10 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 			return err
 		}
 	case mesh.MappingType:
-		// 无法删除
+		// service.UpdateMapping()
+		// service.DeleteMapping()
 	case mesh.MetaDataType:
-		// 无法删除
+		// service.DeleteMeta()
 	default:
 		path := GenerateCpGroupPath(string(resource.Descriptor().Name), name)
 		err = t.regClient.DeleteContent(path)
@@ -618,30 +621,39 @@ func (t *traditionalStore) Delete(ctx context.Context, resource core_model.Resou
 
 func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, fs ...store.GetOptionsFunc) error {
 	opts := store.NewGetOptions(fs...)
-	if opts.Name == core_model.DefaultMesh {
-		opts.Name += ".universal"
-	}
-	name, _, err := util_k8s.CoreNameToK8sName(opts.Name)
-	if err != nil {
-		return err
-	}
+	name := opts.Name
 
 	switch resource.Descriptor().Name {
 	case mesh.DataplaneType:
-		value, ok := c.dCache.Load(name)
-		if !ok {
-			return nil
+		// 根据 address 匹配
+		instances := c.appContext.GetAllInstances()
+		for appName, i2 := range instances {
+			for _, ins := range i2 {
+				resourceMeta := &resourceMetaObject{
+					Name:   ins.GetAddress(),
+					Mesh:   opts.Mesh,
+					Labels: make(map[string]string),
+				}
+				resourceMeta.Labels[mesh_proto.Application] = appName
+				resourceMeta.Labels[mesh_proto.Revision] = ins.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
+				resource.SetMeta(resourceMeta)
+				dataplaneResource := resource.(*mesh.DataplaneResource)
+				dataplaneResource.Spec.Networking = &mesh_proto.Dataplane_Networking{}
+				dataplaneResource.Spec.Extensions = map[string]string{}
+				dataplaneResource.Spec.Extensions[mesh_proto.Application] = appName
+				dataplaneResource.Spec.Extensions[mesh_proto.Revision] = ins.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
+				dataplaneResource.Spec.Networking.Address = ins.GetAddress()
+				inbound := &mesh_proto.Dataplane_Networking_Inbound{
+					Port:    uint32(ins.GetPort()),
+					Address: ins.GetAddress(),
+					Tags:    ins.GetMetadata(),
+				}
+				dataplaneResource.Spec.Networking.Inbound = append(dataplaneResource.Spec.Networking.Inbound, inbound)
+				if opts.Predicate(resource) {
+					return nil
+				}
+			}
 		}
-		r := value.(core_model.Resource)
-		resource.SetMeta(r.GetMeta())
-		err = resource.SetSpec(r.GetSpec())
-		if err != nil {
-			return err
-		}
-		resource.SetMeta(&resourceMetaObject{
-			Name: name,
-			Mesh: opts.Mesh,
-		})
 	case mesh.TagRouteType:
 		labels := opts.Labels
 		base := mesh_proto.Base{
@@ -670,7 +682,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: name,
+			Name: path,
 			Mesh: opts.Mesh,
 		})
 	case mesh.ConditionRouteType:
@@ -701,7 +713,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: name,
+			Name: path,
 			Mesh: opts.Mesh,
 		})
 	case mesh.DynamicConfigType:
@@ -732,7 +744,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: name,
+			Name: path,
 			Mesh: opts.Mesh,
 		})
 	case mesh.AffinityRouteType:
@@ -763,26 +775,13 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
 		resource.SetMeta(&resourceMetaObject{
-			Name: name,
+			Name: path,
 			Mesh: opts.Mesh,
 		})
 	case mesh.MappingType:
 		// Get通过Key获取, 不设置listener
-		mappings := make(map[string]*gxset.HashSet)
-		for app, instances := range c.appContext.GetAllInstances() {
-			for _, instance := range instances {
-				appMetadata := c.appContext.GetRevisionToMetadata(instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName])
-				for s := range appMetadata.Services {
-					if set, ok := mappings[s]; !ok {
-						set = gxset.NewSet()
-						mappings[s] = set
-					} else {
-						set.Add(app)
-					}
-				}
-			}
-		}
 
+		mappings := c.appContext.GetMapping()
 		meta := &resourceMetaObject{
 			Name: name,
 			Mesh: opts.Mesh,
@@ -802,15 +801,16 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		})
 	case mesh.MetaDataType:
 		// 拆分name得到revision和app
-		app, revision := splitAppAndRevision(name)
-		if revision == "" {
-			children, err := c.regClient.GetChildren(getMetadataPath(app))
-			if err != nil {
-				return err
-			}
-			revision = children[0]
+		revision, err2 := extractRevision(name, opts, c)
+		if err2 != nil {
+			return err2
 		}
-		appMetadata := c.appContext.GetRevisionToMetadata(revision)
+		var appMetadata *common.MetadataInfo
+		if opts.Type == "interface" {
+			appMetadata = c.infContext.GetMetadata(revision)
+		} else {
+			appMetadata = c.appContext.GetRevisionToMetadata(revision)
+		}
 		if appMetadata == nil {
 			return nil
 		}
@@ -825,7 +825,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 				Version:  serviceInfo.Version,
 				Protocol: serviceInfo.Protocol,
 				Path:     serviceInfo.Path,
-				Params:   serviceInfo.Params,
+				Params:   serviceInfo.URL.ToMap(),
 			}
 		}
 		metaData.Services = service
@@ -850,39 +850,76 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 	return nil
 }
 
+func extractRevision(name string, opts *store.GetOptions, c *traditionalStore) (string, error) {
+	if opts.Labels[mesh_proto.Revision] != "" {
+		return opts.Labels[mesh_proto.Revision], nil
+	} else {
+		app, revision := splitAppAndRevision(name)
+		if revision == "" {
+			children, err := c.regClient.GetChildren(getMetadataPath(app))
+			if err != nil {
+				return "", err
+			}
+			revision = children[0]
+		}
+		return revision, nil
+	}
+}
+
 func (c *traditionalStore) List(_ context.Context, resources core_model.ResourceList, fs ...store.ListOptionsFunc) error {
 	opts := store.NewListOptions(fs...)
 
 	switch resources.GetItemType() {
 	case mesh.DataplaneType:
+		appInstances := c.appContext.GetAllInstances()
+		infInstances := c.infContext.GetAllInstances()
+
+		allInstances := registry.MergeInstances(appInstances, infInstances)
+
 		// iterator services key set
-		c.dCache.Range(func(key, value any) bool {
-			item := resources.NewItem()
-			r := value.(core_model.Resource)
-			match, err := c.copyResource(key, item, r, opts)
-			if err != nil || !match {
-				return false
-			}
-			if err := resources.AddItem(item); err != nil {
-				return false
-			}
-			return true
-		})
-	case mesh.MappingType:
-		mappings := make(map[string]*gxset.HashSet)
-		for app, instances := range c.appContext.GetAllInstances() {
-			for _, instance := range instances {
-				appMetadata := c.appContext.GetRevisionToMetadata(instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName])
-				for s := range appMetadata.Services {
-					if set, ok := mappings[s]; !ok {
-						set = gxset.NewSet()
-						mappings[s] = set
-					} else {
-						set.Add(app)
+		for _, instances := range allInstances {
+			for _, ins := range instances {
+				key := ins.GetServiceName()
+				item := resources.NewItem()
+				dataplaneResource := item.(*mesh.DataplaneResource)
+				resourceMeta := &resourceMetaObject{
+					Name:   ins.GetAddress(),
+					Mesh:   core_model.DefaultMesh,
+					Labels: make(map[string]string),
+				}
+				resourceMeta.Labels[mesh_proto.Application] = key
+				resourceMeta.Labels[mesh_proto.Revision] = ins.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
+				dataplaneResource.SetMeta(resourceMeta)
+				dataplaneResource.Spec.Networking = &mesh_proto.Dataplane_Networking{}
+				dataplaneResource.Spec.Extensions = map[string]string{}
+				dataplaneResource.Spec.Extensions[mesh_proto.Application] = key
+				dataplaneResource.Spec.Extensions[mesh_proto.Revision] = ins.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
+				for k, v := range ins.GetMetadata() {
+					dataplaneResource.Spec.Extensions[k] = v
+				}
+				inbound := &mesh_proto.Dataplane_Networking_Inbound{
+					Port:    uint32(ins.GetPort()),
+					Address: ins.GetAddress(),
+					Tags:    ins.GetMetadata(),
+				}
+				dataplaneResource.Spec.Networking.Inbound = append(dataplaneResource.Spec.Networking.Inbound, inbound)
+				dataplaneResource.Spec.Networking.Address = ins.GetAddress()
+
+				if opts.Predicate(item) {
+					err := resources.AddItem(item)
+					if err != nil {
+						return err
 					}
 				}
 			}
 		}
+
+	case mesh.MappingType:
+		appMappings := c.appContext.GetMapping()
+		infMappings := c.infContext.GetMapping()
+
+		mappings := registry.MergeMapping(appMappings, infMappings)
+
 		for key, set := range mappings {
 			meta := &resourceMetaObject{
 				Name: key,
@@ -897,17 +934,18 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				items = append(items, fmt.Sprintf("%v", k))
 			}
 			mapping.ApplicationNames = items
-			err := resources.AddItem(item)
-			if err != nil {
-				return err
+			if opts.Predicate(item) {
+				err := resources.AddItem(item)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	case mesh.MetaDataType:
+		// app metadata
+		// inf metadata
 		// 1. 获取到所有的key, key是application(应用名)
 		for app, instances := range c.appContext.GetAllInstances() {
-			if opts.NameContains != "" && !strings.Contains(app, opts.NameContains) {
-				return nil
-			}
 			// 2. 获取到该应用名下所有的revision
 			revisions := make(map[string]struct{})
 			for _, instance := range instances {
@@ -935,13 +973,18 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 					}
 				}
 				metaData.Services = service
-				item.SetMeta(&resourceMetaObject{
+				resourceMeta := &resourceMetaObject{
 					Name:    app,
 					Version: revision,
-				})
-				err := resources.AddItem(item)
-				if err != nil {
-					return err
+				}
+				resourceMeta.Labels[mesh_proto.Application] = app
+				resourceMeta.Labels[mesh_proto.Revision] = revision
+				item.SetMeta(resourceMeta)
+				if opts.Predicate(item) {
+					err := resources.AddItem(item)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -1062,10 +1105,13 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 
 // copyResource, todo is copy necessary since they are of the same type?
 func (c *traditionalStore) copyResource(key any, dst core_model.Resource, src core_model.Resource, opts *store.ListOptions) (bool, error) {
-	name := opts.NameContains
-
-	if name != "" && !strings.Contains(key.(string), name) {
+	if opts.NameEquals != key.(string) {
 		return false, nil
+	} else {
+		name := opts.NameContains
+		if name != "" && !strings.Contains(key.(string), name) {
+			return false, nil
+		}
 	}
 
 	dst.SetMeta(src.GetMeta())

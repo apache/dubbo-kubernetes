@@ -18,7 +18,7 @@ module github.com/apache/dubbo-kubernetes
 go 1.21
 
 require (
-	dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240808044912-f61d7c94bfd2
+	dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240926033233-f03922ab1bcb
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/Microsoft/go-winio v0.6.1

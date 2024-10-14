@@ -18,6 +18,7 @@
 package registry
 
 import (
+	gxset "github.com/dubbogo/gost/container/set"
 	"strings"
 	"sync"
 
@@ -35,7 +36,12 @@ type ApplicationContext struct {
 	revisionToMetadata map[string]*common.MetadataInfo
 	// AppName Instances
 	allInstances map[string][]registry.ServiceInstance
-	mu           sync.RWMutex
+
+	appToRevision sync.Map
+
+	mappings map[string]*gxset.HashSet
+
+	mu sync.RWMutex
 }
 
 func NewApplicationContext() *ApplicationContext {
@@ -180,6 +186,14 @@ func (ac *ApplicationContext) AddAllInstances(key string, value []registry.Servi
 	}
 
 	ac.allInstances[key] = instances
+}
+
+func (ac *ApplicationContext) UpdateMapping(mapping map[string]*gxset.HashSet) {
+	ac.mappings = mapping
+}
+
+func (ac *ApplicationContext) GetMapping() map[string]*gxset.HashSet {
+	return ac.mappings
 }
 
 func urlEqual(url *common.URL, c *common.URL) bool {

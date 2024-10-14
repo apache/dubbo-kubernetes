@@ -44,8 +44,8 @@ cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3f
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240808044912-f61d7c94bfd2 h1:RMYc9hRr9u+yu7x2bJbJ9cVQkZeYDhwVLSzLSVmXpe4=
-dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240808044912-f61d7c94bfd2/go.mod h1:ECpY0g32XJMG2irWj6wttH94zA5QU70Alc5hmOyXgu4=
+dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240926033233-f03922ab1bcb h1:pcd2OAuo5NZuglupBFpXEjvH6NlWyHy6pwlPDAwVUFw=
+dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240926033233-f03922ab1bcb/go.mod h1:ECpY0g32XJMG2irWj6wttH94zA5QU70Alc5hmOyXgu4=
 gitea.com/xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a h1:lSA0F4e9A2NcQSqGqTOXqu2aRi/XEQxDCBwM8yJtE6s=
 gitea.com/xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a/go.mod h1:EXuID2Zs0pAQhH8yz+DNjUbjppKQzKFAn28TMYPB6IU=
 github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 h1:EKPd1INOIyr5hWOWhvpmQpY6tKjeG0hT1s3AMC/9fic=

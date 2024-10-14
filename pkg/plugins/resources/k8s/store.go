@@ -314,6 +314,7 @@ func (s *KubernetesStore) List(ctx context.Context, rs core_model.ResourceList, 
 	}
 
 	for _, item := range fullList.GetItems() {
+
 		_ = rs.AddItem(item)
 	}
 

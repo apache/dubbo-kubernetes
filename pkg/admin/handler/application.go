@@ -147,7 +147,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 			if core_store.IsResourceNotFound(err) {
 				// for check app exist
 				data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
-				if err != nil || len(data) == 0 {
+				if err != nil || data == nil {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
 				}
@@ -325,7 +325,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				if err != nil {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
-				} else if len(data) == 0 {
+				} else if data == nil {
 					c.JSON(http.StatusNotFound, model.NewErrorResp("application not found"))
 					return
 				}
@@ -440,7 +440,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			if err != nil {
 				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 				return
-			} else if len(data) == 0 {
+			} else if data == nil {
 				c.JSON(http.StatusNotFound, model.NewErrorResp("application not found"))
 				return
 			}
