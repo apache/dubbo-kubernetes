@@ -14,11 +14,8 @@
 # limitations under the License.
 
 {{- $file := .Files }}
-{{- $crds := .Values.enableCRD }}
-{{- if $crds }}
 {{- range $path, $_ := .Files.Glob  "files/**.yaml" }}
 {{- $file.Get $path }}
-{{- end -}}
 {{- end -}}
 
 
