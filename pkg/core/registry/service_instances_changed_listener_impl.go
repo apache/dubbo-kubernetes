@@ -98,8 +98,10 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 
 		metadataInfo := lstn.ctx.GetRevisionToMetadata(revision)
 		if metadataInfo == nil {
+			logger.Infof("Start to fetch metadata from remote for app %s instance %s with revision %s ......", instance.GetServiceName(), instance.GetAddress(), revision)
 			metadataInfo, err = GetMetadataInfo(instance, revision)
 			if err != nil {
+				logger.Errorf("Fetch metadata from remote error for revision %s, error detail is %v", revision, err)
 				return err
 			}
 		}
@@ -244,6 +246,7 @@ func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*commo
 				metadataInfoV2, err = metadataServiceV2.GetMetadataInfo(context.Background(), &triple_api.MetadataRequest{Revision: revision})
 				if err != nil {
 					logger.Errorf("get metadata of %s failed, %v", instance.GetHost(), err)
+					return &common.MetadataInfo{}, err
 				}
 				metadataInfo = convertMetadataInfo(metadataInfoV2)
 			} else {
@@ -255,6 +258,10 @@ func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*commo
 			if metadataService != nil {
 				defer destroyInvoker(metadataService)
 				metadataInfo, err = metadataService.GetMetadataInfo(revision)
+				if err != nil {
+					logger.Errorf("get metadata of %s failed, %v", instance.GetHost(), err)
+					return &common.MetadataInfo{}, err
+				}
 			} else {
 				err = errors.New("get remote metadata error please check instance " + instance.GetHost() + " is alive")
 			}
