@@ -18,11 +18,13 @@
 import request from '@/base/http/request'
 
 export const searchInstances = (params: any): Promise<any> => {
-  return request({
+  let res = request({
     url: '/instance/search',
     method: 'get',
     params
   })
+  console.log('searchinstance', res)
+  return res
 }
 
 export const getInstanceDetail = (params: any): Promise<any> => {

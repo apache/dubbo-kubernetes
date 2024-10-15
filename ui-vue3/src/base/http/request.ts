@@ -28,7 +28,8 @@ import NProgress from 'nprogress'
 
 const service: AxiosInstance = axios.create({
   //  change this to decide where to go
-  baseURL: '/mock', //TODO  Modify baseURL for front-end and back-end integration debugging
+  // baseURL: '/mock', //TODO  Modify baseURL for front-end and back-end integration debugging
+  baseURL: '/api/v1',
   timeout: 30 * 1000
 })
 const request: AxiosInterceptorManager<InternalAxiosRequestConfig> = service.interceptors.request

@@ -83,7 +83,8 @@ export class SearchDomain {
       this.table.loading = false
     }, 5000)
     const res = (await this.searchApi(this.queryForm || {})).data
-    this.result = handleResult ? handleResult(res.data) : res.data
+    // console.log('onSearch res', res)
+    this.result = handleResult ? handleResult(res.data) : res
     console.log(this.result)
     this.paged.total = res.total
     this.table.loading = false

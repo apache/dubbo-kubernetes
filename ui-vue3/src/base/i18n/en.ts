@@ -106,7 +106,7 @@ const words: I18nType = {
     name: 'Name',
     deployState: 'DeployState',
     deployCluster: 'DeployCluster',
-    registerStates: 'RegisterState',
+    registerState: 'RegisterState',
     registerCluster: 'RegisterCluster',
     CPU: 'CPU',
     node: 'Node',
