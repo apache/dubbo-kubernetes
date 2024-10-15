@@ -20,6 +20,14 @@ Return Admin Name to use.
 {{- end -}}
 
 {{/*
+Return Dubbo Namespace to use.
+*/}}
+{{- define "admin.namespace" -}}
+{{- "dubbo-system" | default }}
+{{- end }}
+
+
+{{/*
 Return ZooKeeper Name to use.
 */}}
 {{- define "zoo.name" -}}

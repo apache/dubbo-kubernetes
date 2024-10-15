@@ -21,10 +21,3 @@ Return the ZooKeeper server-server authentication credentials secret.
     {{- printf "%s-quorum-auth" (include "zoo.name" .) -}}
 {{- end -}}
 {{- end -}}
-
-{{/*
-Return the Dubbo system namespace to use.
-*/}}
-{{- define "system.namespaces" -}}
-{{- printf "dubbo-system" -}}
-{{- end -}}
