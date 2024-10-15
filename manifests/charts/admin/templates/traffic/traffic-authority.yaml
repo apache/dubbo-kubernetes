@@ -4,7 +4,7 @@ apiVersion: dubbo.io/v1alpha1
 kind: AuthenticationPolicy
 metadata:
   name: {{ template "cp.name" . }}-authentication
-  namespace: {{ template "system.namespaces" . }}
+  namespace: {{ template "admin.namespace" . }}
 spec:
   action: {{ $authc.action }}
   PortLevel:
@@ -16,7 +16,7 @@ apiVersion: dubbo.io/v1alpha1
 kind: AuthorizationPolicy
 metadata:
   name: {{ template "cp.name" . }}-authorization
-  namespace: {{ template "system.namespaces" . }}
+  namespace: {{ template "admin.namespace" . }}
 spec:
   action: {{ $authz.action }}
   matchType: {{ $authz.matchType }}
