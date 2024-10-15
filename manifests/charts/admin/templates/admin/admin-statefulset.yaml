@@ -131,6 +131,9 @@ spec:
       - name: {{ include "admin.name" . }}-server-config
         configMap:
           name: {{ include "admin.name" . }}-server-config
+      - name: scripts
+        configMap:
+          name: {{ template "job.name" . }}-scripts
       {{- if $cp.tls.secretName }}
       - name: general-tls-cert
         secret:
