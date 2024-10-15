@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboards-config
+  namespace: default
+data:
+  {{- range $file := .Files.Glob "files/dashboards/**.yaml" }}
+    {{ $file.Name | basename }}: |-
+    {{ .Files.Get $file.Name | indent 4 }}
+    {{- end }}
