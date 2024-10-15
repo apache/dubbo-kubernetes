@@ -6,8 +6,4 @@ JAEGER="https://raw.githubusercontent.com/istio/istio/release-1.23/samples/addon
 
 kubectl apply -f $JAEGER
 
-kubectl create namespace istio-system
-if [ $? -eq 0 ]; then
-  # shellcheck disable=SC2105
-  continue
-fi
+kubectl get namespace istio-system >/dev/null 2>&1 || kubectl create namespace istio-system
