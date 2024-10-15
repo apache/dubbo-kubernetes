@@ -35,11 +35,11 @@ spec:
   {{- end }}
   ports:
   - name: admin-http
-    port:
+    port: {{ template "admin.web.port" . }}
     targetPort: admin-http
-    appProtocol:
+    appProtocol: TCP
   - name: admin-xds-grpc
-    port:
+    port: {{ template "admin.xds.Port" . }}
     targetPort: admin-xds-grpc
   selector:
     app: {{ template "admin.selector" . }}
