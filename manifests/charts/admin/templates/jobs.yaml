@@ -35,15 +35,24 @@ data:
     PROMETHEUS="https://prometheus-community.github.io/helm-charts"
     ISTIO="https://istio-release.storage.googleapis.com/charts"
 
-    helm pull kube-prometheus-stack --repo "$PROMETHEUS" --version 65.2.0 --untar && \
+    helm pull kube-prometheus-stack --repo "$PROMETHEUS" --version 65.2.0 --untar && rm -rf kube-prometheus-stack-65.2.0.tgz/ \
+    for i in {1..5}; do
+      if rm -rf kube-prometheus-stack-65.2.0.tgz/; then
+      break
+      else
+    echo "Attempt $i: Failed to remove directory, retrying in 2 seconds..."
+      sleep 2
+      fi
+      done
     cp -r "/files/dashboards/" kube-prometheus-stack/templates/grafana/dashboards-1.14 && \
     ls -la kube-prometheus-stack/templates/grafana/dashboards-1.14 && \
-    helm install kube-prometheus ./kube-prometheus-stack/ && \
-    helm upgrade --install kube-prometheus ./kube-prometheus-stack/ && \
-    if [ $? -eq 0 ]; then
-      continue
+
+    if helm ls --all | grep -q "kube-prometheus"; then
+    helm upgrade kube-prometheus ./kube-prometheus-stack/
+    else
+    helm install kube-prometheus ./kube-prometheus-stack/
     fi
-    helm upgrade --install kube-prometheus ./kube-prometheus-stack/
+
     helm repo add istio "$ISTIO" && \
     helm repo update && \
     helm install istio-base istio/base -n istio-system --set defaultRevision=default && \
