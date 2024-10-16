@@ -1,0 +1,181 @@
+{{- $jobs := .Values.jobs -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jobs-env
+  namespace: default
+  labels:
+    app.kubernetes.io/name: jobs
+    helm.sh/chart: jobs-1.28.4
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
+data:
+  kubectl.sh: |-
+    #!/bin/bash
+
+    set -eux
+
+    WORKDIR=$(dirname "$0")
+    WORKDIR=$(cd "$WORKDIR"; pwd)
+
+    JAEGER="https://raw.githubusercontent.com/istio/istio/release-1.23/samples/addons/jaeger.yaml"
+
+    kubectl apply -f $JAEGER
+
+    kubectl get namespace istio-system >/dev/null 2>&1 || kubectl create namespace istio-system
+
+  helm.sh: |-
+    #!/bin/bash
+
+    set -eux
+
+    PROMETHEUS="https://prometheus-community.github.io/helm-charts"
+    ISTIO="https://istio-release.storage.googleapis.com/charts"
+
+    helm pull kube-prometheus-stack --repo "$PROMETHEUS" --version 65.2.0 --untar && rm -rf kube-prometheus-stack-65.2.0.tgz/ \
+    for i in {1..5}; do
+      if rm -rf kube-prometheus-stack-65.2.0.tgz/; then
+      break
+      else
+    echo "Attempt $i: Failed to remove directory, retrying in 2 seconds..."
+      sleep 2
+      fi
+      done
+    cp -r "/files/dashboards/" kube-prometheus-stack/templates/grafana/dashboards-1.14 && \
+    ls -la kube-prometheus-stack/templates/grafana/dashboards-1.14 && \
+
+    if helm ls --all | grep -q "kube-prometheus"; then
+    helm upgrade kube-prometheus ./kube-prometheus-stack/
+    else
+    helm install kube-prometheus ./kube-prometheus-stack/
+    fi
+
+    helm repo add istio "$ISTIO" && \
+    helm repo update && \
+    helm install istio-base istio/base -n istio-system --set defaultRevision=default && \
+    helm install istiod istio/istiod -n istio-system
+
+  dubbo-resources-metrics.yaml: |-
+    {{- .Files.Get "files/dashboards/dubbo-resources-metrics.yaml" | nindent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jobs-1
+  namespace: default
+  labels:
+    app.kubernetes.io/name: jobs
+    helm.sh/chart: jobs-1.28.4
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": "hook-succeeded"
+spec:
+  template:
+    metadata:
+      name: jobs-1
+    spec:
+      serviceAccountName: helm-job-sa
+      restartPolicy: OnFailure
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+        - 8.8.8.8
+        searches:
+        - default.svc.cluster.local
+      containers:
+      - name: kubectl
+        image: "{{ $jobs.image.registry }}:{{ $jobs.image.tag }}"
+        imagePullPolicy: "{{ $jobs.image.pullPolicy }}"
+        command:
+          - "/bin/sh"
+          - "-c"
+          - "sh /files/kubectl.sh"
+        volumeMounts:
+        - name: scripts
+          mountPath: /files/kubectl.sh
+          subPath: kubectl.sh
+        - name: scripts
+          mountPath: /files/dashboards/dubbo-resources-metrics.yaml
+          subPath: dubbo-resources-metrics.yaml
+      volumes:
+      - name: scripts
+        configMap:
+          name: jobs-env
+          defaultMode: 0755
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jobs-2
+  namespace: default
+  labels:
+    app.kubernetes.io/name: jobs
+    helm.sh/chart: jobs-1.28.4
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "2"
+    "helm.sh/hook-delete-policy": "hook-succeeded"
+spec:
+  template:
+    metadata:
+      name: jobs-2
+    spec:
+      serviceAccountName: helm-job-sa
+      restartPolicy: OnFailure
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+          - 8.8.8.8
+        searches:
+          - default.svc.cluster.local
+      containers:
+        - name: helm
+          image: alpine/helm:3.16.2
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/sh"
+            - "-c"
+            - "sh /files/helm.sh"
+          volumeMounts:
+          - name: scripts
+            mountPath: /files/helm.sh
+            subPath: helm.sh
+          - name: scripts
+            mountPath: /files/dashboards/dubbo-resources-metrics.yaml
+            subPath: dubbo-resources-metrics.yaml
+      volumes:
+      - name: scripts
+        configMap:
+          name: jobs-env
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: helm-job-sa
+  namespace: default
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: helm-job-sa-binding
+  annotations:
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: helm-job-sa
+  namespace: default
