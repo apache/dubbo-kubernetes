@@ -32,7 +32,8 @@ export const PRIMARY_COLOR = ref(item || PRIMARY_COLOR_DEFAULT)
 export const PRIMARY_COLOR_T = (percent: string) => computed(() => PRIMARY_COLOR.value + percent)
 
 export const INSTANCE_REGISTER_COLOR: { [key: string]: string } = {
-  HEALTHY: 'green'
+  HEALTHY: 'green',
+  REGISTED: 'green'
 }
 
 export const TAB_HEADER_TITLE: Component = {

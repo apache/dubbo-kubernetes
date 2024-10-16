@@ -112,7 +112,7 @@ const words: I18nType = {
     name: '实例名称',
     deployState: '部署状态',
     deployCluster: '部署集群',
-    registerStates: '注册状态',
+    registerState: '注册状态',
     registerClusters: '注册集群',
     cpu: 'CPU',
     memory: '内存',
