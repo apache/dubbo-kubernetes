@@ -1,4 +1,11 @@
 {{/*
+Return Dubbo Namespace to use.
+*/}}
+{{- define "admin.namespace" -}}
+{{- "dubbo-system" | default }}
+{{- end }}
+
+{{/*
 Return ZooKeeper Namespace to use.
 */}}
 {{- define "zoo.namespace" -}}

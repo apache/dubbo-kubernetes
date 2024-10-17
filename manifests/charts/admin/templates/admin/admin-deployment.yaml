@@ -2,7 +2,7 @@
 {{- $cp := .Values.cp -}}
 {{- $zoo := .Values.zookeeper -}}
 {{- $nacos := .Values.nacos -}}
-{{- $observable := $admin.observable -}}
+{{- $prom := .Values.kubePrometheus }}
 {{- if eq $admin.deployType "Deployment" }}
 apiVersion: {{ template "apiVersion" . }}
 kind: Deployment
@@ -93,15 +93,13 @@ spec:
         {{- end }}
         - name: DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_CERT_DIR
           value: /var/run/secrets/dubbo.io/tls-cert
-        {{- $promName := include "prom.name" . -}}
-        {{- $promPort := include "prom.port" . -}}
-        {{- if $observable.enabled }}
+        {{- $promName := include "prom.name" . }}
+        {{- $promPort := include "prom.port" . }}
+        {{- if $prom.enabled }}
         - name: ADMIN_PROMETHEUS_ADDRESS
           value: {{ $promName }}:{{ $promPort }}
-        {{- end }}
-        {{- $grafanaName := include "grafana.name" . -}}
-        {{- $grafanaPort := include "grafana.port" . -}}
-        {{- if $observable.enabled }}
+        {{- $grafanaName := include "grafana.name" . }}
+        {{- $grafanaPort := include "grafana.port" . }}
         - name: ADMIN_GRAFANA_ADDRESS
           value: {{ $grafanaName }}:{{ $grafanaPort }}
         {{- end }}
