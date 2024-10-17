@@ -44,7 +44,7 @@ Return Kube-Prometheus Name to use.
 Return Grafana Name to use.
 */}}
 {{- define "grafana.name" -}}
-{{- printf "grafana" -}}
+{{- printf "kube-prometheus-grafana" -}}
 {{- end -}}
 
 {{/*
