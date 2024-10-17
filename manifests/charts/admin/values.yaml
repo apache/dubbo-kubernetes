@@ -315,6 +315,8 @@ jobs:
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
 
+
+
 ## TODO
 cp:
  mode: universal
@@ -391,6 +393,7 @@ auth:
     # Specify the action for authentication port number for applying the authentication policy
     port: 38080
 
+
 traffic:
   ## Whether to enable the traffic.
   enabled: false
@@ -448,10 +451,22 @@ traffic:
     # The identifier of the target application that this rule is about to control.
     key: details
 
-observable:
-  ## Whether to enable the observability.
+kubePrometheus:
+  ## Whether to enable the kube-prometheus.
   enabled: true
+  ## Override the namespace where the resource is deployed.
+  namespaceOverride: ~
 
+  ## container image.
+  image:
+    # Version tag of the container image.
+    tag: 65.2.0
+
+  dashboardsVersion: 1.14
+
+jaeger:
+  ## Whether to enable the jaeger.
+  enabled: false
 
 zookeeper:
   ## Whether to enable the zookeeper.

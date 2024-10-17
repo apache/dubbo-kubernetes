@@ -3,7 +3,7 @@
 apiVersion: dubbo.io/v1alpha1
 kind: AuthenticationPolicy
 metadata:
-  name: {{ template "cp.name" . }}-authentication
+  name: {{ template "dubbo.cp.nam" . }}-authentication
   namespace: {{ template "admin.namespace" . }}
 spec:
   action: {{ $authc.action }}
@@ -15,14 +15,14 @@ spec:
 apiVersion: dubbo.io/v1alpha1
 kind: AuthorizationPolicy
 metadata:
-  name: {{ template "cp.name" . }}-authorization
+  name: {{ template "dubbo.cp.name" . }}-authorization
   namespace: {{ template "admin.namespace" . }}
 spec:
   action: {{ $authz.action }}
   matchType: {{ $authz.matchType }}
   rules:
   - from:
-      namespaces: ["dubbo-system"]
+      namespaces: [{{ template "admin.namespace" . }}]
   samples: {{ $authz.samples }}
 {{- end }}
 
