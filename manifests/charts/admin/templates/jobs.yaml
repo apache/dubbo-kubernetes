@@ -20,9 +20,9 @@ data:
 
     JAEGER="https://raw.githubusercontent.com/istio/istio/release-1.23/samples/addons/jaeger.yaml"
 
-    kubectl apply -f $JAEGER
-
     kubectl get namespace istio-system >/dev/null 2>&1 || kubectl create namespace istio-system
+
+    kubectl apply -f $JAEGER
 
   helm.sh: |-
    #!/bin/bash
@@ -30,10 +30,10 @@ data:
     ISTIO="https://istio-release.storage.googleapis.com/charts"
     PROMETHEUS="https://prometheus-community.github.io/helm-charts"
 
-    helm pull "{{ include "prom.name" . }}" --repo "$PROMETHEUS" --version "{{ $prom.image.tag }}" --untar
+    helm pull "{{ include "prom.stack.name" . }}" --repo "$PROMETHEUS" --version "{{ $prom.image.tag }}" --untar
 
     for i in {1..5}; do
-    if rm -rf "{{ include "prom.name" . }}-{{ $prom.image.tag }}.tgz"; then
+    if rm -rf "{{ include "prom.stack.name" . }}-{{ $prom.image.tag }}.tgz"; then
     break
     else
     echo "Attempt $i: Failed to remove directory, retrying in 2 seconds..."
@@ -41,13 +41,13 @@ data:
     fi
     done
 
-    cp -r "/files/dashboards/" "{{ include "prom.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
-    ls -la "{{ include "prom.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
+    cp -r "/files/dashboards/" "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
+    ls -la "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
 
     if helm ls --all | grep -q "{{ include "prom.name" . }}"; then
-    helm upgrade kube-prometheus "./{{ include "prom.name" . }}/"
+    helm upgrade {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/"
     else
-    helm install kube-prometheus "./{{ include "prom.name" . }}/"
+    helm install {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/"
     fi
     helm repo add istio "$ISTIO" && \
     helm repo update && \

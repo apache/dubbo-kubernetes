@@ -34,18 +34,35 @@ Return Traefik Name to use.
 {{- end -}}
 
 {{/*
-Return Kube-Prometheus Name to use.
+Return Kube-Prometheus-Stack Name to use.
+*/}}
+{{- define "prom.stack.name" -}}
+{{- printf "kube-prometheus-stack" -}}
+{{- end -}}
+
+{{/*
+Return Kube-Prometheus-Stack Name to use.
 */}}
 {{- define "prom.name" -}}
-{{- printf "kube-prometheus-stack" -}}
+{{- printf "kube-prometheus" -}}
+{{- end -}}
+
+
+{{/*
+Return kube-prometheus-grafana to use.
+*/}}
+{{- define "grafana.stack.name" -}}
+{{- printf "kube-prometheus-grafana" -}}
 {{- end -}}
 
 {{/*
 Return Grafana Name to use.
 */}}
 {{- define "grafana.name" -}}
-{{- printf "kube-prometheus-grafana" -}}
+{{- printf "grafana" -}}
 {{- end -}}
+
+
 
 {{/*
 Return Job Name to use.

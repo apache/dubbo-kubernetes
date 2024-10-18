@@ -90,13 +90,14 @@ spec:
         {{- end }}
         {{- $promName := include "prom.name" . }}
         {{- $promPort := include "prom.port" . }}
+        {{- $promStationaryName := printf "-kube-prome-prometheus" }}
         {{- if $prom.enabled }}
         - name: ADMIN_PROMETHEUS_ADDRESS
-          value: {{ $promName }}:{{ $promPort }}
-        {{- $grafanaName := include "grafana.name" . }}
+          value: {{ $promName$promStationaryName }}:{{ $promPort }}
         {{- $grafanaPort := include "grafana.port" . }}
+        {{- $grafanaStationaryName := printf "-grafana" }}
         - name: ADMIN_GRAFANA_ADDRESS
-          value: {{ $grafanaName }}:{{ $grafanaPort }}
+          value: {{ $promName$grafanaStationaryName }}:{{ $grafanaPort }}
         {{- end }}
         volumeMounts:
         {{- if $admin.volumeMounts }}
