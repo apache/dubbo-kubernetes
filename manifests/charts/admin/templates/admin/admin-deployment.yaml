@@ -2,7 +2,7 @@
 {{- $cp := .Values.cp -}}
 {{- $zoo := .Values.zookeeper -}}
 {{- $nacos := .Values.nacos -}}
-{{- $observable := $admin.observable -}}
+{{- $prom := .Values.kubePrometheus }}
 {{- if eq $admin.deployType "Deployment" }}
 apiVersion: {{ template "apiVersion" . }}
 kind: Deployment
@@ -93,17 +93,18 @@ spec:
         {{- end }}
         - name: DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_CERT_DIR
           value: /var/run/secrets/dubbo.io/tls-cert
-        {{- $promName := include "prom.name" . -}}
-        {{- $promPort := include "prom.port" . -}}
-        {{- if $observable.enabled }}
+        {{- $promName := include "prom.name" . }}
+        {{- $promPort := include "prom.port" . }}
+        {{- $promStationaryName := printf "kube-prome-prometheus" }}
+        {{- $promFullName := printf "%s-%s" $promName $promStationaryName }}
+        {{- if $prom.enabled }}
         - name: ADMIN_PROMETHEUS_ADDRESS
-          value: {{ $promName }}:{{ $promPort }}
-        {{- end }}
-        {{- $grafanaName := include "grafana.name" . -}}
-        {{- $grafanaPort := include "grafana.port" . -}}
-        {{- if $observable.enabled }}
+          value: {{ $promFullName }}:{{ $promPort }}
+        {{- $grafanaName := include "grafana.name" . }}
+        {{- $grafanaPort := include "grafana.port" . }}
+        {{- $grafanaFullName := printf "%s-%s" $promName $grafanaName }}
         - name: ADMIN_GRAFANA_ADDRESS
-          value: {{ $grafanaName }}:{{ $grafanaPort }}
+          value: {{ $grafanaFullName }}:{{ $grafanaPort }}
         {{- end }}
         volumeMounts:
         {{- if $admin.volumeMounts }}
@@ -121,8 +122,9 @@ spec:
           mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
           subPath: ca.crt
           readOnly: true
-        - name: {{ include "admin.name" . }}-control-plane-config
-          mountPath: /etc/dubbo.io/cp-config
+        - name: cp-config
+          mountPath: /etc/dubbo.io/cp-config/config.yaml
+          subPath: config.yaml
           readOnly: true
         securityContext:
         {{- if $admin.securityContext }}
@@ -148,7 +150,9 @@ spec:
       {{- if $admin.volumes }}
       {{- toYaml $admin.volumes | nindent 6 }}
       {{- end }}
-      - name: {{ include "admin.name" . }}-control-plane-config
+      - name: cp-config
+        configMap:
+          name: {{ include "admin.name" . }}-control-plane-config
       {{- if $cp.tls.secretName }}
       - name: general-tls-cert
         secret:

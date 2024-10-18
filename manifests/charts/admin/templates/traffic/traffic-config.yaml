@@ -2,7 +2,7 @@
 apiVersion: dubbo.io/v1alpha1
 kind: ConditionRoute
 metadata:
-  name: {{ template "cp.name" . }}-conditionroute
+  name: {{ template "dubbo.cp.name" . }}-conditionroute
   namespace: {{ template "admin.namespace" . }}
 spec:
   enabled: {{ $cr.enabled }}
@@ -18,7 +18,7 @@ spec:
 apiVersion: dubbo.io/v1alpha1
 kind: DynamicConfig
 metadata:
-  name: {{ template "cp.name" . }}-dynamicconfig
+  name: {{ template "dubbo.cp.name" . }}-dynamicconfig
   namespace: {{ template "admin.namespace" . }}
 spec:
   configVersion: {{ $dc.configVersion }}
@@ -34,7 +34,7 @@ spec:
 apiVersion: dubbo.io/v1alpha1
 kind: TagRoute
 metadata:
-  name: {{ template "cp.name" . }}-tagroute
+  name: {{ template "dubbo.cp.name" . }}-tagroute
   namespace: {{ template "admin.namespace" . }}
 spec:
   configVersion: {{ $tr.configVersion }}

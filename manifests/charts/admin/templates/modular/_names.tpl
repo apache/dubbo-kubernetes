@@ -1,14 +1,7 @@
 {{/*
-Return Job Name to use.
+Return Dubbo Control Plane Name to use.
 */}}
-{{- define "job.name" -}}
-{{- printf "jobs" -}}
-{{- end -}}
-
-{{/*
-Return Admin Control Plane Name to use.
-*/}}
-{{- define "cp.name" -}}
+{{- define "dubbo.cp.name" -}}
 {{- printf "admin-cp" -}}
 {{- end -}}
 
@@ -18,14 +11,6 @@ Return Admin Name to use.
 {{- define "admin.name" -}}
 {{- printf "admin" -}}
 {{- end -}}
-
-{{/*
-Return Dubbo Namespace to use.
-*/}}
-{{- define "admin.namespace" -}}
-{{- "dubbo-system" | default }}
-{{- end }}
-
 
 {{/*
 Return ZooKeeper Name to use.
@@ -49,10 +34,25 @@ Return Traefik Name to use.
 {{- end -}}
 
 {{/*
-Return Prometheus Name to use.
+Return Kube-Prometheus-Stack Name to use.
+*/}}
+{{- define "prom.stack.name" -}}
+{{- printf "kube-prometheus-stack" -}}
+{{- end -}}
+
+{{/*
+Return Kube-Prometheus-Stack Name to use.
 */}}
 {{- define "prom.name" -}}
-{{- printf "prometheus-cp-server" -}}
+{{- printf "kube-prometheus" -}}
+{{- end -}}
+
+
+{{/*
+Return kube-prometheus-grafana to use.
+*/}}
+{{- define "grafana.stack.name" -}}
+{{- printf "kube-prometheus-grafana" -}}
 {{- end -}}
 
 {{/*
@@ -60,4 +60,13 @@ Return Grafana Name to use.
 */}}
 {{- define "grafana.name" -}}
 {{- printf "grafana" -}}
+{{- end -}}
+
+
+
+{{/*
+Return Job Name to use.
+*/}}
+{{- define "job.name" -}}
+{{- printf "jobs" -}}
 {{- end -}}

@@ -34,9 +34,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{/*
-Return Job Labels to use.
+Return Jobs Labels to use.
 */}}
-{{- define "job.labels" -}}
+{{- define "jobs.labels" -}}
 app.kubernetes.io/name: {{ template "job.name" . }}
 helm.sh/chart: {{ include "job.name" . }}-{{ .Values.jobs.image.tag }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
