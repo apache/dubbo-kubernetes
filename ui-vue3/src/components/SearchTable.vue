@@ -98,6 +98,7 @@
     </div>
 
     <div class="search-table-container">
+      {{ JSON.stringify(searchDomain) }}
       <a-table
         :loading="searchDomain.table.loading"
         :pagination="pagination"
@@ -149,6 +150,7 @@ const {
 } = <ComponentInternalInstance>getCurrentInstance()
 
 const searchDomain: SearchDomain | any = inject(PROVIDE_INJECT_KEY.SEARCH_DOMAIN)
+
 searchDomain.table.columns.forEach((column: any) => {
   if (column.title) {
     const tmp = column.title
