@@ -5,7 +5,7 @@
 
 ## Values
 
-### Admin
+### Dubbo
 
 | Key                                              | Description                                                                                | Default                                   |
 |--------------------------------------------------|--------------------------------------------------------------------------------------------|-------------------------------------------|
@@ -89,5 +89,3 @@
 | `nacos.storage.db.username`                               | Specify the database username for Nacos storing configuration data.                                         | `mysql`                                                                                         |
 | `nacos.storage.db.password`                               | Specify the database password for Nacos storing configuration data.                                         | `passw0rd`                                                                                      |
 | `nacos.storage.db.param`                                  | Specify the database url parameter for Nacos storing configuration data.                                    | `characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false` |
-
-

@@ -41,7 +41,7 @@ data:
     fi
     done
 
-    cp -r "/files/dashboards/" "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
+    cp -r "/files/dashboards/dubbo-resources-metrics.yaml" "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
     ls -la "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
 
     if helm ls --all | grep -q "{{ include "prom.name" . }}"; then
