@@ -60,12 +60,16 @@ spec:
         {{- if $admin.lifecycleHooks }}
         {{- toYaml $admin.lifecycleHooks | nindent 10 }}
         {{- end }}
+        args:
+        - run
+        - --config-file=/etc/dubbo.io/cp-config/config.yaml
         ports:
-        - name: http
-          {{- if $admin.service.protocol }}
-          protocol: {{ $admin.service.protocol }}
-          {{- end }}
-          containerPort: {{ template "admin.containerPort" . }}
+        - name: admin-http
+          containerPort: {{ template "admin.web.containerPort" . }}
+        - name: admin-xds-grpc
+          containerPort: {{ template "admin.xds.containerPort" . }}
+        - name: admin-admission
+          containerPort: {{ template "admin.admissionServer.containerPort" . }}
         env:
         {{- $zooName := include "zoo.name" . -}}
         {{- $nacosName := include "nacos.name" . -}}
@@ -90,19 +94,37 @@ spec:
         {{- end }}
         {{- $promName := include "prom.name" . }}
         {{- $promPort := include "prom.port" . }}
-        {{- $promStationaryName := printf "-kube-prome-prometheus" }}
+        {{- $promStationaryName := printf "kube-prome-prometheus" }}
+        {{- $promFullName := printf "%s-%s" $promName $promStationaryName }}
         {{- if $prom.enabled }}
         - name: ADMIN_PROMETHEUS_ADDRESS
-          value: {{ $promName$promStationaryName }}:{{ $promPort }}
+          value: {{ $promFullName }}:{{ $promPort }}
+        {{- $grafanaName := include "grafana.name" . }}
         {{- $grafanaPort := include "grafana.port" . }}
-        {{- $grafanaStationaryName := printf "-grafana" }}
+        {{- $grafanaFullName := printf "%s-%s" $promName $grafanaName }}
         - name: ADMIN_GRAFANA_ADDRESS
-          value: {{ $promName$grafanaStationaryName }}:{{ $grafanaPort }}
+          value: {{ $grafanaFullName }}:{{ $grafanaPort }}
         {{- end }}
         volumeMounts:
         {{- if $admin.volumeMounts }}
         {{- toYaml $admin.volumeMounts | nindent 8 }}
         {{- end }}
+        - name: general-tls-cert
+          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.crt
+          subPath: tls.crt
+          readOnly: true
+        - name: general-tls-cert
+          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.key
+          subPath: tls.key
+          readOnly: true
+        - name: general-tls-cert{{- if $cp.tls.caSecretName }}-ca{{- end }}
+          mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
+          subPath: ca.crt
+          readOnly: true
+        - name: cp-config
+          mountPath: /etc/dubbo.io/cp-config/config.yaml
+          subPath: config.yaml
+          readOnly: true
         securityContext:
         {{- if $admin.securityContext }}
         {{- toYaml $admin.securityContext | nindent 10 }}
@@ -127,12 +149,9 @@ spec:
       {{- if $admin.volumes }}
       {{- toYaml $admin.volumes | nindent 6 }}
       {{- end }}
-      - name: {{ include "admin.name" . }}-server-config
+      - name: cp-config
         configMap:
-          name: {{ include "admin.name" . }}-server-config
-      - name: scripts
-        configMap:
-          name: {{ template "job.name" . }}-scripts
+          name: {{ include "admin.name" . }}-control-plane-config
       {{- if $cp.tls.secretName }}
       - name: general-tls-cert
         secret:
