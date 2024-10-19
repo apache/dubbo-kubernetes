@@ -57,8 +57,14 @@ func SearchInstances(rt core_runtime.Runtime, req *model.SearchInstanceReq) (*mo
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
-		return nil, err
+	if req.Keywords == "" {
+		if err := manager.List(rt.AppContext(), dataplaneList, store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.Keywords), store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+			return nil, err
+		}
 	}
 
 	res := model.NewSearchPaginationResult()

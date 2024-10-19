@@ -30,7 +30,8 @@ import (
 )
 
 type SearchInstanceReq struct {
-	AppName string `form:"appName"`
+	AppName  string `form:"appName"`
+	Keywords string `form:"keywords"`
 	PageReq
 }
 

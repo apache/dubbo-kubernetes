@@ -27,7 +27,6 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
@@ -45,16 +44,16 @@ func BannerGlobalSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 		// 根据 request 分流调用，如服务未实现继续实现
 
 		var res *model.SearchRes
-		if req.SearchType == "instance" {
-			instances, _ := service.BannerSearchInstances(rt, req)
-			res = convertInstancesToSearchRes(instances)
-		} else if req.SearchType == "application" {
-			applications, _ := service.BannerSearchApplications(rt, req)
-			res = convertApplicationsToSearchRes(applications)
-		} else if req.SearchType == "service" {
-			services, _ := service.BannerSearchServices(rt, req)
-			res = convertServicesToSearchRes(services)
-		}
+		//if req.SearchType == "instance" {
+		//	instances, _ := service.BannerSearchInstances(rt, req)
+		//	res = convertInstancesToSearchRes(instances)
+		//} else if req.SearchType == "application" {
+		//	applications, _ := service.BannerSearchApplications(rt, req)
+		//	res = convertApplicationsToSearchRes(applications)
+		//} else if req.SearchType == "service" {
+		//	services, _ := service.BannerSearchServices(rt, req)
+		//	res = convertServicesToSearchRes(services)
+		//}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(model.NewPageData().WithData(res).WithTotal(len(res.Candidates)).WithPageSize(req.PageSize).WithCurPage(req.PageOffset)))
 	}
