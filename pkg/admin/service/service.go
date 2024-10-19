@@ -22,8 +22,11 @@ import (
 	_ "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"sort"
+	"strconv"
 )
 
 func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) ([]*model.ServiceTabDistributionResp, error) {
@@ -66,7 +69,7 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	return res, nil
 }
 
-func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, error) {
+func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) (*model.SearchPaginationResult, error) {
 	res := make([]*model.ServiceSearchResp, 0)
 
 	serviceMap := make(map[string]*model.ServiceSearch)
@@ -112,7 +115,37 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 		res = append(res, serviceSearchResp)
 	}
 
-	return res, nil
+	pagedRes := ToServiceSearchPaginationResult(res, req.PageReq)
+	return pagedRes, nil
+}
+
+func ToServiceSearchPaginationResult(services []*model.ServiceSearchResp, req model.PageReq) *model.SearchPaginationResult {
+	res := model.NewSearchPaginationResult()
+
+	list := make([]*model.ServiceSearchResp, 0)
+
+	sort.Sort(model.ByServiceName{})
+	lenFilteredItems := len(services)
+	pageSize := lenFilteredItems
+	pageSize = req.PageSize
+	offset := req.PageOffset
+
+	for i := offset; i < offset+pageSize && i < lenFilteredItems; i++ {
+		list = append(list, services[i])
+	}
+
+	nextOffset := ""
+	if offset+pageSize < lenFilteredItems { // set new offset only if we did not reach the end of the collection
+		nextOffset = strconv.Itoa(offset + req.PageSize)
+	}
+
+	res.List = list
+	res.PageInfo = &core_model.Pagination{
+		Total:      uint32(lenFilteredItems),
+		NextOffset: nextOffset,
+	}
+
+	return res
 }
 
 func BannerSearchServices(rt core_runtime.Runtime, req *model.SearchReq) ([]*model.ServiceSearchResp, error) {

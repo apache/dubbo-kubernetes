@@ -36,7 +36,7 @@ import (
 func BannerGlobalSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 参考 API 定义 request 参数
-		req := &model.SearchReq{}
+		req := model.NewSearchReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -46,7 +46,7 @@ func BannerGlobalSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		var res *model.SearchRes
 		if req.SearchType == "instance" {
-			instances, _, _ := service.BannerSearchInstances(rt, req)
+			instances, _ := service.BannerSearchInstances(rt, req)
 			res = convertInstancesToSearchRes(instances)
 		} else if req.SearchType == "application" {
 			applications, _ := service.BannerSearchApplications(rt, req)
@@ -56,11 +56,12 @@ func BannerGlobalSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 			res = convertServicesToSearchRes(services)
 		}
 
-		c.JSON(http.StatusOK, model.NewSuccessResp(model.NewPageData().WithData(res).WithTotal(len(res.Candidates)).WithPageSize(req.PageSize).WithCurPage(req.CurPage)))
+		c.JSON(http.StatusOK, model.NewSuccessResp(model.NewPageData().WithData(res).WithTotal(len(res.Candidates)).WithPageSize(req.PageSize).WithCurPage(req.PageOffset)))
 	}
 }
 
-func convertInstancesToSearchRes(instances []*model.SearchInstanceResp) *model.SearchRes {
+func convertInstancesToSearchRes(pagedInstances *model.SearchPaginationResult) *model.SearchRes {
+	instances := pagedInstances.List.([]*model.SearchInstanceResp)
 	res := &model.SearchRes{}
 	if len(instances) == 0 {
 		res.Find = false

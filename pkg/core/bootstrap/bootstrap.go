@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/events"
 	"net/http"
 	"net/url"
 	"strings"
@@ -66,7 +67,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	"github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
-	"github.com/apache/dubbo-kubernetes/pkg/events"
 	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
 	mesh_cache "github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
@@ -322,7 +322,7 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		return err
 	}
 	builder.WithResourceStore(core_store.NewCustomizableResourceStore(rs))
-	builder.WithTransactions(transactions)
+
 	eventBus, err := events.NewEventBus(cfg.EventBus.BufferSize)
 	if err != nil {
 		return err
@@ -331,6 +331,10 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		return err
 	}
 	builder.WithEventBus(eventBus)
+
+	paginationStore := core_store.NewPaginationStore(rs)
+	builder.WithResourceStore(core_store.NewCustomizableResourceStore(paginationStore))
+	builder.WithTransactions(transactions)
 	return nil
 }
 

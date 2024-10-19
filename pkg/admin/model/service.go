@@ -30,12 +30,31 @@ import (
 
 type ServiceSearchReq struct {
 	ServiceName string `json:"serviceName"`
+	PageReq
+}
+
+func NewServiceSearchReq() *ServiceSearchReq {
+	return &ServiceSearchReq{
+		PageReq: PageReq{
+			PageOffset: 0,
+			PageSize:   15,
+		}}
 }
 
 type ServiceSearchResp struct {
 	ServiceName   string         `json:"serviceName"`
 	VersionGroups []VersionGroup `json:"versionGroups"`
 }
+
+type ByServiceName []*ServiceSearchResp
+
+func (a ByServiceName) Len() int { return len(a) }
+
+func (a ByServiceName) Less(i, j int) bool {
+	return a[i].ServiceName < a[j].ServiceName
+}
+
+func (a ByServiceName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 type ServiceSearch struct {
 	ServiceName   string

@@ -83,6 +83,7 @@ func (ac *InterfaceContext) AddInstance(key string, instance *registry.DefaultSe
 		}
 		if !existing {
 			instances = append(instances, instance)
+			ac.instances[key] = instances
 			ac.revisionToMetadata[instance.GetID()] = instance.ServiceMetadata
 		}
 	}

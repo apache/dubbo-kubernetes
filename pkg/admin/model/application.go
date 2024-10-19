@@ -285,6 +285,15 @@ func (a *ApplicationServiceForm) FromServiceInfo(serviceInfo *v1alpha1.ServiceIn
 
 type ApplicationSearchReq struct {
 	AppName string `json:"appName"`
+	PageReq
+}
+
+func NewApplicationSearchReq() *ApplicationSearchReq {
+	return &ApplicationSearchReq{
+		PageReq: PageReq{
+			PageOffset: 0,
+			PageSize:   15,
+		}}
 }
 
 type ApplicationSearchResp struct {
@@ -300,6 +309,16 @@ func (a *ApplicationSearchResp) FromApplicationSearch(applicationSearch *Applica
 	a.DeployClusters = applicationSearch.DeployClusters.Values()
 	return a
 }
+
+type ByAppName []*ApplicationSearchResp
+
+func (a ByAppName) Len() int { return len(a) }
+
+func (a ByAppName) Less(i, j int) bool {
+	return a[i].AppName < a[j].AppName
+}
+
+func (a ByAppName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 // Todo Application Search
 

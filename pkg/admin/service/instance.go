@@ -28,43 +28,50 @@ import (
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
-func BannerSearchInstances(rt core_runtime.Runtime, req *model.SearchReq) ([]*model.SearchInstanceResp, *core_model.Pagination, error) {
+func BannerSearchInstances(rt core_runtime.Runtime, req *model.SearchReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.Keywords), store.ListByPage(req.PageSize, strconv.Itoa(req.CurPage))); err != nil {
-		return nil, nil, err
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.Keywords), store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+		return nil, err
 	}
 
-	res := make([]*model.SearchInstanceResp, len(dataplaneList.Items))
+	res := model.NewSearchPaginationResult()
+	list := make([]*model.SearchInstanceResp, len(dataplaneList.Items))
 	for i, item := range dataplaneList.Items {
-		res[i] = &model.SearchInstanceResp{}
-		res[i] = res[i].FromDataplaneResource(item)
+		list[i] = model.NewSearchInstanceResp()
+		list[i] = list[i].FromDataplaneResource(item)
 	}
 
-	return res, &dataplaneList.Pagination, nil
+	res.List = list
+	res.PageInfo = &dataplaneList.Pagination
+
+	return res, nil
 }
 
-func SearchInstances(rt core_runtime.Runtime, req *model.SearchInstanceReq) ([]*model.SearchInstanceResp, *core_model.Pagination, error) {
+func SearchInstances(rt core_runtime.Runtime, req *model.SearchInstanceReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByPage(req.PageSize, strconv.Itoa(req.CurPage))); err != nil {
-		return nil, nil, err
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+		return nil, err
 	}
 
-	res := make([]*model.SearchInstanceResp, len(dataplaneList.Items))
+	res := model.NewSearchPaginationResult()
+	list := make([]*model.SearchInstanceResp, len(dataplaneList.Items))
 	for i, item := range dataplaneList.Items {
-		res[i] = &model.SearchInstanceResp{}
-		res[i] = res[i].FromDataplaneResource(item)
+		list[i] = model.NewSearchInstanceResp()
+		list[i] = list[i].FromDataplaneResource(item)
 	}
 
-	return res, &dataplaneList.Pagination, nil
+	res.List = list
+	res.PageInfo = &dataplaneList.Pagination
+
+	return res, nil
 }
 
 func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([]*model.InstanceDetailResp, error) {

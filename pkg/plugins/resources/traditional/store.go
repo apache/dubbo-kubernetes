@@ -824,7 +824,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 				Version:  serviceInfo.Version,
 				Protocol: serviceInfo.Protocol,
 				Path:     serviceInfo.Path,
-				Params:   serviceInfo.URL.ToMap(),
+				Params:   serviceInfo.Params,
 			}
 		}
 		metaData.Services = service

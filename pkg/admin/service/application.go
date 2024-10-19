@@ -22,8 +22,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"sort"
+	"strconv"
 )
 
 func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailReq) (*model.ApplicationDetailResp, error) {
@@ -135,7 +138,7 @@ func GetApplicationServiceFormInfo(rt core_runtime.Runtime, req *model.Applicati
 	return res, nil
 }
 
-func GetApplicationSearchInfo(rt core_runtime.Runtime) ([]*model.ApplicationSearchResp, error) {
+func GetApplicationSearchInfo(rt core_runtime.Runtime, req *model.ApplicationSearchReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
@@ -160,7 +163,38 @@ func GetApplicationSearchInfo(rt core_runtime.Runtime) ([]*model.ApplicationSear
 		}
 		res = append(res, applicationSearchResp.FromApplicationSearch(search))
 	}
-	return res, nil
+
+	pagedRes := ToSearchPaginationResult(res, req.PageReq)
+	return pagedRes, nil
+}
+
+func ToSearchPaginationResult(apps []*model.ApplicationSearchResp, req model.PageReq) *model.SearchPaginationResult {
+	res := model.NewSearchPaginationResult()
+
+	list := make([]*model.ApplicationSearchResp, 0)
+
+	sort.Sort(model.ByAppName{})
+	lenFilteredItems := len(apps)
+	pageSize := lenFilteredItems
+	pageSize = req.PageSize
+	offset := req.PageOffset
+
+	for i := offset; i < offset+pageSize && i < lenFilteredItems; i++ {
+		list = append(list, apps[i])
+	}
+
+	nextOffset := ""
+	if offset+pageSize < lenFilteredItems { // set new offset only if we did not reach the end of the collection
+		nextOffset = strconv.Itoa(offset + req.PageSize)
+	}
+
+	res.List = list
+	res.PageInfo = &core_model.Pagination{
+		Total:      uint32(lenFilteredItems),
+		NextOffset: nextOffset,
+	}
+
+	return res
 }
 
 func BannerSearchApplications(rt core_runtime.Runtime, req *model.SearchReq) ([]*model.ApplicationSearchResp, error) {
