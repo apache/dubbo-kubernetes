@@ -322,7 +322,7 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		return err
 	}
 	builder.WithResourceStore(core_store.NewCustomizableResourceStore(rs))
-	builder.WithTransactions(transactions)
+
 	eventBus, err := events.NewEventBus(cfg.EventBus.BufferSize)
 	if err != nil {
 		return err
@@ -331,6 +331,10 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		return err
 	}
 	builder.WithEventBus(eventBus)
+
+	paginationStore := core_store.NewPaginationStore(rs)
+	builder.WithResourceStore(core_store.NewCustomizableResourceStore(paginationStore))
+	builder.WithTransactions(transactions)
 	return nil
 }
 

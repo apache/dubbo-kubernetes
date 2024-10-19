@@ -65,13 +65,13 @@ func GetInstanceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.SearchInstanceReq{}
+		req := model.NewSearchInstanceReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 
-		instances, _, err := service.SearchInstances(rt, req)
+		instances, err := service.SearchInstances(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return

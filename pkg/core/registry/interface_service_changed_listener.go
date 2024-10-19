@@ -108,6 +108,7 @@ func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(ur
 			constant.ServiceInstanceEndpoints:             getEndpointsStr(url.Protocol, port),
 			constant.MetadataServiceURLParamsPropertyName: getURLParams(serviceInfo),
 			constant.ExportedServicesRevisionPropertyName: url.Address(),
+			"registry-type":                               "interface",
 		}
 		instance = &registry.DefaultServiceInstance{
 			ID:          url.Address(),
