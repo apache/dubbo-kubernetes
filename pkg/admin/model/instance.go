@@ -18,12 +18,15 @@
 package model
 
 import (
+	gxset "github.com/dubbogo/gost/container/set"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	gxset "github.com/dubbogo/gost/container/set"
 )
 
 type SearchInstanceReq struct {

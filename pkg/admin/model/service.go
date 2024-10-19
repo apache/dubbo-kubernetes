@@ -38,7 +38,8 @@ func NewServiceSearchReq() *ServiceSearchReq {
 		PageReq: PageReq{
 			PageOffset: 0,
 			PageSize:   15,
-		}}
+		},
+	}
 }
 
 type ServiceSearchResp struct {

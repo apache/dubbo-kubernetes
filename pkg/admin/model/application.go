@@ -293,7 +293,8 @@ func NewApplicationSearchReq() *ApplicationSearchReq {
 		PageReq: PageReq{
 			PageOffset: 0,
 			PageSize:   15,
-		}}
+		},
+	}
 }
 
 type ApplicationSearchResp struct {
