@@ -27,7 +27,6 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
@@ -36,7 +35,7 @@ import (
 func BannerGlobalSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 参考 API 定义 request 参数
-		req := &model.SearchReq{}
+		req := model.NewSearchReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -45,22 +44,23 @@ func BannerGlobalSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 		// 根据 request 分流调用，如服务未实现继续实现
 
 		var res *model.SearchRes
-		if req.SearchType == "instance" {
-			instances, _, _ := service.BannerSearchInstances(rt, req)
-			res = convertInstancesToSearchRes(instances)
-		} else if req.SearchType == "application" {
-			applications, _ := service.BannerSearchApplications(rt, req)
-			res = convertApplicationsToSearchRes(applications)
-		} else if req.SearchType == "service" {
-			services, _ := service.BannerSearchServices(rt, req)
-			res = convertServicesToSearchRes(services)
-		}
+		//if req.SearchType == "instance" {
+		//	instances, _ := service.BannerSearchInstances(rt, req)
+		//	res = convertInstancesToSearchRes(instances)
+		//} else if req.SearchType == "application" {
+		//	applications, _ := service.BannerSearchApplications(rt, req)
+		//	res = convertApplicationsToSearchRes(applications)
+		//} else if req.SearchType == "service" {
+		//	services, _ := service.BannerSearchServices(rt, req)
+		//	res = convertServicesToSearchRes(services)
+		//}
 
-		c.JSON(http.StatusOK, model.NewSuccessResp(model.NewPageData().WithData(res).WithTotal(len(res.Candidates)).WithPageSize(req.PageSize).WithCurPage(req.CurPage)))
+		c.JSON(http.StatusOK, model.NewSuccessResp(model.NewPageData().WithData(res).WithTotal(len(res.Candidates)).WithPageSize(req.PageSize).WithCurPage(req.PageOffset)))
 	}
 }
 
-func convertInstancesToSearchRes(instances []*model.SearchInstanceResp) *model.SearchRes {
+func convertInstancesToSearchRes(pagedInstances *model.SearchPaginationResult) *model.SearchRes {
+	instances := pagedInstances.List.([]*model.SearchInstanceResp)
 	res := &model.SearchRes{}
 	if len(instances) == 0 {
 		res.Find = false

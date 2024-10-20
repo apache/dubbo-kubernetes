@@ -818,13 +818,19 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		metaData.Revision = appMetadata.Revision
 		service := map[string]*mesh_proto.ServiceInfo{}
 		for key, serviceInfo := range appMetadata.Services {
+			var params map[string]string
+			if serviceInfo.URL != nil {
+				params = serviceInfo.URL.ToMap()
+			} else {
+				params = serviceInfo.Params
+			}
 			service[key] = &mesh_proto.ServiceInfo{
 				Name:     serviceInfo.Name,
 				Group:    serviceInfo.Group,
 				Version:  serviceInfo.Version,
 				Protocol: serviceInfo.Protocol,
 				Path:     serviceInfo.Path,
-				Params:   serviceInfo.URL.ToMap(),
+				Params:   params,
 			}
 		}
 		metaData.Services = service

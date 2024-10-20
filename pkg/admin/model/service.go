@@ -29,13 +29,34 @@ import (
 )
 
 type ServiceSearchReq struct {
-	ServiceName string `json:"serviceName"`
+	ServiceName string `form:"serviceName" json:"serviceName"`
+	Keywords    string `form:"keywords" json:"keywords"`
+	PageReq
+}
+
+func NewServiceSearchReq() *ServiceSearchReq {
+	return &ServiceSearchReq{
+		PageReq: PageReq{
+			PageOffset: 0,
+			PageSize:   15,
+		},
+	}
 }
 
 type ServiceSearchResp struct {
 	ServiceName   string         `json:"serviceName"`
 	VersionGroups []VersionGroup `json:"versionGroups"`
 }
+
+type ByServiceName []*ServiceSearchResp
+
+func (a ByServiceName) Len() int { return len(a) }
+
+func (a ByServiceName) Less(i, j int) bool {
+	return a[i].ServiceName < a[j].ServiceName
+}
+
+func (a ByServiceName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 type ServiceSearch struct {
 	ServiceName   string
@@ -85,6 +106,7 @@ type ServiceTabDistributionReq struct {
 	Version     string `json:"version"  form:"version"`
 	Group       string `json:"group"  form:"group"`
 	Side        string `json:"side" form:"side"  binding:"required"`
+	PageReq
 }
 
 type ServiceTabDistributionResp struct {
@@ -95,6 +117,16 @@ type ServiceTabDistributionResp struct {
 	Retries      string            `json:"retries"`
 	Params       map[string]string `json:"params"`
 }
+
+type ByServiceInstanceName []*ServiceTabDistributionResp
+
+func (a ByServiceInstanceName) Len() int { return len(a) }
+
+func (a ByServiceInstanceName) Less(i, j int) bool {
+	return a[i].InstanceName < a[j].InstanceName
+}
+
+func (a ByServiceInstanceName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 type ServiceTabDistribution struct {
 	AppName      string

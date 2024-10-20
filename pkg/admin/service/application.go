@@ -18,6 +18,10 @@
 package service
 
 import (
+	"strconv"
+)
+
+import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
@@ -66,7 +70,7 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.Applicati
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByApplication(req.AppName)); err != nil {
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByApplication(req.AppName), store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
 		return nil, err
 	}
 
@@ -81,7 +85,7 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.Applicati
 	return res, nil
 }
 
-func GetApplicationServiceFormInfo(rt core_runtime.Runtime, req *model.ApplicationServiceFormReq) ([]*model.ApplicationServiceFormResp, error) {
+func GetApplicationServiceFormInfo(rt core_runtime.Runtime, req *model.ApplicationServiceFormReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
@@ -132,15 +136,23 @@ func GetApplicationServiceFormInfo(rt core_runtime.Runtime, req *model.Applicati
 		res = append(res, applicationServiceFormResp)
 	}
 
-	return res, nil
+	pagedRes := ToSearchPaginationResult(res, model.ByAppServiceFormName(res), req.PageReq)
+
+	return pagedRes, nil
 }
 
-func GetApplicationSearchInfo(rt core_runtime.Runtime) ([]*model.ApplicationSearchResp, error) {
+func GetApplicationSearchInfo(rt core_runtime.Runtime, req *model.ApplicationSearchReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
-		return nil, err
+	if req.Keywords != "" {
+		if err := manager.List(rt.AppContext(), dataplaneList, store.ListByApplicationContains(req.Keywords)); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
+			return nil, err
+		}
 	}
 
 	res := make([]*model.ApplicationSearchResp, 0)
@@ -160,7 +172,9 @@ func GetApplicationSearchInfo(rt core_runtime.Runtime) ([]*model.ApplicationSear
 		}
 		res = append(res, applicationSearchResp.FromApplicationSearch(search))
 	}
-	return res, nil
+
+	pagedRes := ToSearchPaginationResult(res, model.ByAppName(res), req.PageReq)
+	return pagedRes, nil
 }
 
 func BannerSearchApplications(rt core_runtime.Runtime, req *model.SearchReq) ([]*model.ApplicationSearchResp, error) {

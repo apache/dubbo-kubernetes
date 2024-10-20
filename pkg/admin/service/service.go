@@ -18,15 +18,21 @@
 package service
 
 import (
+	"sort"
+	"strconv"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	_ "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
-func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) ([]*model.ServiceTabDistributionResp, error) {
+func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	mappingList := &mesh.MappingResourceList{}
 
@@ -63,35 +69,40 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 			}
 		}
 	}
-	return res, nil
+
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceInstanceName(res), req.PageReq)
+
+	return pagedRes, nil
 }
 
-func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, error) {
+func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) (*model.SearchPaginationResult, error) {
+	if req.Keywords != "" {
+		return BannerSearchServices(rt, req)
+	}
+
 	res := make([]*model.ServiceSearchResp, 0)
-
 	serviceMap := make(map[string]*model.ServiceSearch)
-
 	manager := rt.ResourceManager()
-
 	dataplaneList := &mesh.DataplaneResourceList{}
+
 	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
 	}
 	// 通过dataplane extension字段获取所有revision
-	revisions := make(map[string]struct{}, 0)
+	revisions := make(map[string]string, 0)
 	for _, dataplane := range dataplaneList.Items {
 		rev, ok := dataplane.Spec.GetExtensions()[v1alpha1.Revision]
 		if ok {
-			revisions[rev] = struct{}{}
+			revisions[rev] = dataplane.Spec.GetExtensions()["registry-type"]
 		}
 	}
 
 	// 遍历 revisions
-	for rev := range revisions {
+	for rev, t := range revisions {
 		metadata := &mesh.MetaDataResource{
 			Spec: &v1alpha1.MetaData{},
 		}
-		err := manager.Get(rt.AppContext(), metadata, store.GetByRevision(rev))
+		err := manager.Get(rt.AppContext(), metadata, store.GetByRevision(rev), store.GetByType(t))
 		if err != nil {
 			return nil, err
 		}
@@ -112,10 +123,11 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 		res = append(res, serviceSearchResp)
 	}
 
-	return res, nil
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceName(res), req.PageReq)
+	return pagedRes, nil
 }
 
-func BannerSearchServices(rt core_runtime.Runtime, req *model.SearchReq) ([]*model.ServiceSearchResp, error) {
+func BannerSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) (*model.SearchPaginationResult, error) {
 	res := make([]*model.ServiceSearchResp, 0)
 
 	manager := rt.ResourceManager()
@@ -133,5 +145,42 @@ func BannerSearchServices(rt core_runtime.Runtime, req *model.SearchReq) ([]*mod
 		}
 	}
 
-	return res, nil
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceName(res), req.PageReq)
+
+	return pagedRes, nil
+}
+
+func ToSearchPaginationResult[T any](services []T, data sort.Interface, req model.PageReq) *model.SearchPaginationResult {
+	res := model.NewSearchPaginationResult()
+
+	list := make([]T, 0)
+
+	sort.Sort(data)
+	lenFilteredItems := len(services)
+	pageSize := lenFilteredItems
+	offset := 0
+	paginationEnabled := req.PageSize != 0
+	if paginationEnabled {
+		pageSize = req.PageSize
+		offset = req.PageOffset
+	}
+
+	for i := offset; i < offset+pageSize && i < lenFilteredItems; i++ {
+		list = append(list, services[i])
+	}
+
+	nextOffset := ""
+	if paginationEnabled {
+		if offset+pageSize < lenFilteredItems { // set new offset only if we did not reach the end of the collection
+			nextOffset = strconv.Itoa(offset + req.PageSize)
+		}
+	}
+
+	res.List = list
+	res.PageInfo = &core_model.Pagination{
+		Total:      uint32(lenFilteredItems),
+		NextOffset: nextOffset,
+	}
+
+	return res
 }
