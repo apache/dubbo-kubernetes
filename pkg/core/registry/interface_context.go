@@ -139,12 +139,16 @@ func MergeInstances(insMap1 map[string][]registry.ServiceInstance, insMap2 map[s
 		existingInstances := instances[app]
 		if existingInstances != nil {
 			for _, i2 := range newServiceInstances {
-				for _, i3 := range existingInstances {
+				find := false
+				for _, i3 := range insMap1[app] {
 					if i2.GetAddress() == i3.GetAddress() {
 						i3.GetMetadata()["registry-type"] = "all"
-					} else {
-						existingInstances = append(existingInstances, i2)
+						find = true
 					}
+				}
+
+				if !find {
+					existingInstances = append(existingInstances, i2)
 				}
 			}
 			instances[app] = existingInstances
