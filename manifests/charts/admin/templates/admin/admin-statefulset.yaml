@@ -77,8 +77,8 @@ spec:
         {{- $nacosReplicas := int $nacos.replicas -}}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 -}}
         {{- $nacosHeadless := printf "%s-%s" $nacosName "headless" | trunc 63 -}}
-        {{- $zooNamespace := include "zoo.namespace" . -}}
-        {{- $nacosNamespace := include "nacos.namespace" . -}}
+        {{- $zooNamespace := include "admin.namespace" . -}}
+        {{- $nacosNamespace := include "admin.namespace" . -}}
         {{- $clusterDomain := $admin.clusterDomain -}}
         {{- $zooPort := include "zoo.client" . -}}
         {{- $nacosPort := $nacos.serverPort -}}
