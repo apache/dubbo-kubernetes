@@ -87,13 +87,6 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	}
 
 	{
-		dev := router.Group("/dev")
-		dev.GET("/instances", handler.GetInstances(rt))
-		dev.GET("/metas", handler.GetMetas(rt))
-		dev.GET("/mappings", handler.GetMappings(rt))
-	}
-
-	{
 		service := router.Group("/service")
 		service.GET("/distribution", handler.GetServiceTabDistribution(rt))
 		service.GET("/search", handler.SearchServices(rt))
@@ -130,4 +123,6 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 
 	router.GET("/prometheus", handler.GetPrometheus(rt))
 	router.GET("/search", handler.BannerGlobalSearch(rt))
+	router.GET("/overview", handler.ClusterOverview(rt))
+	router.GET("/metadata", handler.AdminMetadata(rt))
 }

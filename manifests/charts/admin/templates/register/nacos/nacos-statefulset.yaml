@@ -4,7 +4,7 @@ apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet
 metadata:
   name: {{ template "nacos.name" . }}
-  namespace: {{ template "nacos.namespace" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}
