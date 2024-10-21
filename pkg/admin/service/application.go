@@ -66,7 +66,7 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 	return respItem, nil
 }
 
-func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.ApplicationTabInstanceInfoReq) ([]*model.ApplicationTabInstanceInfoResp, error) {
+func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.ApplicationTabInstanceInfoReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
@@ -74,13 +74,17 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.Applicati
 		return nil, err
 	}
 
-	res := make([]*model.ApplicationTabInstanceInfoResp, 0, len(dataplaneList.Items))
+	res := model.NewSearchPaginationResult()
+	list := make([]*model.ApplicationTabInstanceInfoResp, 0, len(dataplaneList.Items))
 	for _, dataplane := range dataplaneList.Items {
 		resItem := &model.ApplicationTabInstanceInfoResp{}
 		resItem.FromDataplaneResource(dataplane)
 		resItem.GetRegistry(rt)
-		res = append(res, resItem)
+		list = append(list, resItem)
 	}
+
+	res.List = list
+	res.PageInfo = &dataplaneList.Pagination
 
 	return res, nil
 }

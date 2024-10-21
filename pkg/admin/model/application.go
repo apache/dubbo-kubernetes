@@ -179,6 +179,16 @@ type ApplicationTabInstanceInfoResp struct {
 	WorkloadName    string            `json:"workloadName"`
 }
 
+type ByApplicationInstanceName []*ApplicationTabInstanceInfoResp
+
+func (a ByApplicationInstanceName) Len() int { return len(a) }
+
+func (a ByApplicationInstanceName) Less(i, j int) bool {
+	return a[i].Name < a[j].Name
+}
+
+func (a ByApplicationInstanceName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
 func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.DataplaneResource) *ApplicationTabInstanceInfoResp {
 	// TODO: support more fields
 	extensions := dataplane.Spec.Extensions
