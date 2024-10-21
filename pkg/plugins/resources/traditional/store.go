@@ -825,8 +825,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 				params = serviceInfo.Params
 			}
 			service[key] = &mesh_proto.ServiceInfo{
-				Name:     serviceInfo.Name,
-				Group:    serviceInfo.Group,
+				Name:  serviceInfo.Name,
+				Group: serviceInfo.Group,
+
 				Version:  serviceInfo.Version,
 				Protocol: serviceInfo.Protocol,
 				Path:     serviceInfo.Path,
