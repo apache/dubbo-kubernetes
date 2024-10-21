@@ -5,24 +5,24 @@ Version: {{ .Values.image.tag }}
 
 🔄 Please wait a few minutes for other dependent components to finish deploying.
 
-{{- if .Values.zookeeper.enabled }}
+{{- if .Values.registerCentre.zookeeper.enabled }}
 
 Dependency: ZooKeeper
-Version: {{ .Values.zookeeper.image.tag }}
+Version: {{ .Values.registerCentre.zookeeper.image.tag }}
 
 🚨 If you are using the Nacos registry, Please disable Zookeeper and enable Nacos.
    Otherwise, Zookeeper is used by default.
 
 🎊 You have enabled the internal Register Center.
-{{- else if .Values.nacos.enabled }}
+{{- else if .Values.registerCentre.nacos.enabled }}
 
 Dependency: Nacos
-Version: {{ .Values.nacos.image.tag }}
+Version: {{ .Values.registerCentre.nacos.image.tag }}
 
 🎊 You have enabled the internal Register Center.
 {{- end }}
 
-{{- if and (eq .Values.zookeeper.enabled false) (eq .Values.nacos.enabled false) }}
+{{- if and (eq .Values.registerCentre.zookeeper.enabled false) (eq .Values.registerCentre.nacos.enabled false) }}
 Dependency: ❎
 
 🚫 You have disabled the internal Register Center.

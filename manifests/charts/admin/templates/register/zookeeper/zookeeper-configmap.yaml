@@ -1,4 +1,4 @@
-{{- $zoo := .Values.zookeeper -}}
+{{- $zoo := .Values.registerCentre.zookeeper -}}
 {{- if $zoo.enabled }}
 apiVersion: v1
 kind: ConfigMap

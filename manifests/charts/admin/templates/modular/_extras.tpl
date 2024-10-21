@@ -2,7 +2,7 @@
 Return the ZooKeeper client-server authentication credentials secret.
 */}}
 {{- define "zoo.client.secretName" -}}
-{{- $zoo := .Values.zookeeper -}}
+{{- $zoo := .Values.registerCentre.zookeeper -}}
 {{- if $zoo.auth.client.existingSecret -}}
     {{- printf "%s" (tpl $zoo.auth.client.existingSecret $) -}}
 {{- else -}}
@@ -14,7 +14,7 @@ Return the ZooKeeper client-server authentication credentials secret.
 Return the ZooKeeper server-server authentication credentials secret.
 */}}
 {{- define "zoo.quorum.secretName" -}}
-{{- $zoo := .Values.zookeeper -}}
+{{- $zoo := .Values.registerCentre.zookeeper -}}
 {{- if $zoo.auth.quorum.existingSecret -}}
     {{- printf "%s" (tpl $zoo.auth.quorum.existingSecret $) -}}
 {{- else -}}
