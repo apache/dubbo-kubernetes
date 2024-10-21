@@ -4,7 +4,7 @@ apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet
 metadata:
   name: {{ template "zoo.name" . }}
-  namespace: {{ template "zoo.namespace" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
@@ -75,7 +75,7 @@ spec:
         {{- $zooName := include "zoo.name" . }}
         {{- $zooReplicas := int .Values.zookeeper.replicas  }}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 }}
-        {{- $zooNamespace := include "zoo.namespace" . }}
+        {{- $zooNamespace := include "admin.namespace" . }}
         {{- $zooDomain := $zoo.clusterDomain }}
         - name: ZOO_SERVERS
           value: {{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::{{ add $v 1 }} {{ end }}

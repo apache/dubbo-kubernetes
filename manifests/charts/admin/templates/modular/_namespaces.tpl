@@ -6,28 +6,6 @@ Return Dubbo Namespace to use.
 {{- end }}
 
 {{/*
-Return ZooKeeper Namespace to use.
-*/}}
-{{- define "zoo.namespace" -}}
-{{- if .Values.zookeeper.namespaceOverride -}}
-{{- .Values.zookeeper.namespaceOverride }}
-{{- else -}}
-{{- .Release.Namespace }}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Return Nacos Namespace to use.
-*/}}
-{{- define "nacos.namespace" -}}
-{{- if .Values.nacos.namespaceOverride -}}
-{{- .Values.nacos.namespaceOverride }}
-{{- else -}}
-{{- .Release.Namespace }}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Return Jobs Namespace to use.
 */}}
 {{- define "job.namespace" -}}
