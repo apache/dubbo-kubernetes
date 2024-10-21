@@ -1,4 +1,4 @@
-{{- $nacos := .Values.nacos -}}
+{{- $nacos := .Values.registerCentre.nacos -}}
 {{- if $nacos.enabled }}
 apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet

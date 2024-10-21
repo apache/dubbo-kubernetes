@@ -1,4 +1,4 @@
-{{- $zoo := .Values.zookeeper -}}
+{{- $zoo := .Values.registerCentre.zookeeper -}}
 {{- if $zoo.enabled }}
 apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet
@@ -15,7 +15,7 @@ metadata:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: {{ $zoo.replicas }}
   selector:
     matchLabels:
     {{- include "zoo.matchLabels" . | nindent 6 }}
@@ -73,7 +73,7 @@ spec:
         - name: ZOO_MAX_SESSION_TIMEOUT
           value: {{ $zoo.maxSessionTimeout | quote }}
         {{- $zooName := include "zoo.name" . }}
-        {{- $zooReplicas := int .Values.zookeeper.replicas  }}
+        {{- $zooReplicas := int $zoo.replicas  }}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 }}
         {{- $zooNamespace := include "admin.namespace" . }}
         {{- $zooDomain := $zoo.clusterDomain }}
