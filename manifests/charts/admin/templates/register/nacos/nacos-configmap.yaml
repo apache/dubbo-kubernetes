@@ -1,4 +1,4 @@
-{{- $nacos := .Values.registerCentre.nacos -}}
+{{- $nacos := .Values.nacos -}}
 {{- if and $nacos.enabled (eq $nacos.storage.type "mysql") }}
 apiVersion: v1
 kind: ConfigMap
