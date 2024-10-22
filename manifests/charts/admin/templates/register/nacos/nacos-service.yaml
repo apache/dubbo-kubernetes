@@ -1,4 +1,4 @@
-{{- $nacos := .Values.registerCentre.nacos -}}
+{{- $nacos := .Values.nacos -}}
 {{- $service := $nacos.service -}}
 {{- if $nacos.enabled }}
 apiVersion: v1
@@ -50,7 +50,7 @@ spec:
   selector:
     app: {{ template "nacos.selector" . }}
 ---
-{{- if and (eq .Values.nacos.mode "cluster") }}
+{{- if and (eq $nacos.mode "cluster") }}
 apiVersion: v1
 kind: Service
 metadata:
