@@ -1,4 +1,4 @@
-{{- $nacos := .Values.nacos -}}
+{{- $nacos := .Values.registerCentre.nacos -}}
 {{- $service := $nacos.service -}}
 {{- if $nacos.enabled }}
 apiVersion: v1
