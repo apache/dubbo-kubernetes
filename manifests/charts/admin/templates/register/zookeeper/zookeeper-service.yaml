@@ -1,6 +1,6 @@
-{{- $zoo := .Values.registerCentre.zookeeper -}}
+{{- $zoo := .Values.zookeeper -}}
 {{- $service := $zoo.service -}}
-{{- if .Values.registerCentre.zookeeper.enabled }}
+{{- if .Values.zookeeper.enabled }}
 apiVersion: v1
 kind: Service
 metadata:

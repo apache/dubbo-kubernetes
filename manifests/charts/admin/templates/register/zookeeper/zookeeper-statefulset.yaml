@@ -1,4 +1,4 @@
-{{- $zoo := .Values.registerCentre.zookeeper -}}
+{{- $zoo := .Values.zookeeper -}}
 {{- if $zoo.enabled }}
 apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet

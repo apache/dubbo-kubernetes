@@ -460,367 +460,368 @@ kubePrometheus:
   image:
     # Version tag of the container image.
     tag: 65.2.0
-
   dashboardsVersion: 1.14
 
+## Choose between Register and Mesh. If you select Register, then choose between Zookeeper and Nacos; if not specified, the default is Nacos.
+register: true
+## Choose between Register and Mesh. If you select Mesh, then install the Istiod control plane and the Jaeger component.
+mesh: false
+## The installation will only occur if the Mesh mode is enabled.
 jaeger:
-  ## Whether to enable the jaeger.
+  enabled: true
+
+zookeeper:
+  ## Whether to enable the zookeeper.
   enabled: false
 
-registerCentre:
-  enabled: false
-  zookeeper:
-    ## Whether to enable the zookeeper.
+  ## Override the namespace where the resource is deployed.
+  namespaceOverride: ~
+
+  ## Labels to attach to the resource.
+  labels: ~
+
+  ## Annotations to attach to the resource.
+  annotations: ~
+
+  ## Specifies the cluster's domain name for DNS resolution.
+  clusterDomain: cluster.local
+
+  ## Number of replicas for the Deployment.
+  replicas: 1
+
+  image:
+    # Source of the container image.
+    registry: docker.io/bitnami/zookeeper
+    # Version tag of the container image.
+    tag: 3.9-debian-12
+    # Image pull policy, available options are: Always, IfNotPresent, Never.
+    pullPolicy: IfNotPresent
+    # Set to 'true' to enable debug mode for the image.
+    debug: false
+
+  securityContext:
+    # Whether to enable the security context.
     enabled: true
+    # Defines the POSIX group ID that owns the pod's volumes.
+    fsGroup: 1001
 
-    ## Override the namespace where the resource is deployed.
-    namespaceOverride: ~
+  containerSecurityContext:
+    # Whether to enable the container security context.
+    enabled: true
+    # Specifies the user ID under which the container should run.
+    runAsUser: 1001
+    # Set to 'true' to run the container as a non-root user.
+    runAsNonRoot: true
+    # Set to 'false' to disallow privilege escalation for the container.
+    allowPrivilegeEscalation: false
 
-    ## Labels to attach to the resource.
+  service:
+    # Labels to be applied to the service.
     labels: ~
-
-    ## Annotations to attach to the resource.
+    # Annotations to be added to the service.
     annotations: ~
+    # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
+    type: ClusterIP
+    # Specifies the ClusterIP for the service, or use "~" to auto-assign.
+    clusterIP: ~
+    # List of external IPs to associate with the service.
+    externalIPs: ~
+    # Specifies the IP address for a LoadBalancer service.
+    loadBalancerIP: ~
+    # Restrict access to the LoadBalancer by IP ranges.
+    loadBalancerSourceRanges: ~
+    # Specifies the LoadBalancer class (if applicable).
+    loadBalancerClass: ~
+    # Specifies the session affinity mode (None, ClientIP)
+    sessionAffinity: None
+    # Set to 'true' to publish endpoints for not-ready pods.
+    publishNotReadyAddresses: true
 
-    ## Specifies the cluster's domain name for DNS resolution.
-    clusterDomain: cluster.local
+  resources:
+    # Maximum CPU and memory resources allowed for the container.
+    limits:
+      # CPU usage limit.
+      cpu: 250m
+      # Memory usage limit.
+      memory: 256Mi
+    # Initial CPU and memory resource requests for the container.
+    requests:
+      # CPU usage request.
+      cpu: 250m
+      # Memory usage request.
+      memory: 256Mi
 
-    ## Number of replicas for the Deployment.
-    replicas: 1
+  startupProbe:
+    # Number of consecutive failures before marking the container as unhealthy.
+    failureThreshold: 6
+    # Delay before the probe is initiated.
+    initialDelaySeconds: 5
+    # How often to perform the probe.
+    periodSeconds: 10
+    # Minimum consecutive successes for the probe to be considered successful.
+    successThreshold: 1
+    # Time to wait for the probe to complete.
+    timeoutSeconds: 5
+    exec:
+      # Run the specified command to check.
+      command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
 
+  readinessProbe:
+    # Number of consecutive failures before marking the container as unhealthy.
+    failureThreshold: 6
+    # Delay before the probe is initiated.
+    initialDelaySeconds: 5
+    # How often to perform the probe.
+    periodSeconds: 10
+    # Minimum consecutive successes for the probe to be considered successful.
+    successThreshold: 1
+    # Time to wait for the probe to complete.
+    timeoutSeconds: 5
+    exec:
+      # Run the specified command to check.
+      command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null' ]
+
+  livenessProbe:
+    # Number of consecutive failures before marking the container as unhealthy.
+    failureThreshold: 6
+    # Delay before the probe is initiated.
+    initialDelaySeconds: 30
+    # How often to perform the probe.
+    periodSeconds: 10
+    # Minimum consecutive successes for the probe to be considered successful.
+    successThreshold: 1
+    # Time to wait for the probe to complete.
+    timeoutSeconds: 5
+    exec:
+      # Run the specified command to check.
+      command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep ruok' ]
+
+  # This allows a dedicated log device to be used, and helps avoid competition between logging and snapshots.
+  dataLogDir: ""
+  # tickTime Basic time unit (in milliseconds) used by ZooKeeper for heartbeats.
+  tickTime: 2000
+  # initLimit ZooKeeper uses to limit the length of time the ZooKeeper servers in quorum have to connect to a leader.
+  initLimit: 10
+  # syncLimit How far out of date a server can be from a leader.
+  syncLimit: 5
+  # preAllocSize Block size for transaction log file.
+  preAllocSize: 65536
+  # snapCount The number of transactions recorded in the transaction log before a snapshot can be taken (and the transaction log rolled).
+  snapCount: 100000
+  # fourlwCommandsWhitelist A list of comma separated Four Letter Words commands that can be executed.
+  fourlwCommandsWhitelist: srvr, mntr, ruok
+  # listenOnAllIPs Allow ZooKeeper to listen for connections from its peers on all available IP addresses.
+  listenOnAllIPs: false
+  # Ongoing data directory cleanup configuration
+  autopurge:
+    # snapRetainCount The most recent snapshots amount (and corresponding transaction logs) to retain.
+    snapRetainCount: 3
+    # purgeInterval The time interval (in hours) for which the purge task has to be triggered.
+    purgeInterval: 0
+  # maxClientCnxns Limits the number of concurrent connections that a single client may make to a single member of the ZooKeeper ensemble.
+  maxClientCnxns: 60
+  # maxSessionTimeout Maximum session timeout (in milliseconds) that the server will allow the client to negotiate.
+  maxSessionTimeout: 40000
+  # heapSize Size (in MB) for the Java Heap options (Xmx and Xms).
+  heapSize: 1024
+  # logLevel Log level for the ZooKeeper server. ERROR by default.
+  logLevel: ERROR
+  # authentication parameters.
+  auth:
+    # authentication client settings.
+    client:
+      # auth.client.enabled Enable ZooKeeper client-server authentication. It uses SASL/Digest-MD5.
+      enabled: false
+      # auth.client.clientUser User that will use ZooKeeper clients to auth.
+      clientUser: ""
+      # auth.client.clientPassword Password that will use ZooKeeper clients to auth.
+      clientPassword: ""
+      # auth.client.serverUsers Comma, semicolon or whitespace separated list of user to be created.
+      serverUsers: ""
+      # auth.client.serverPasswords Comma, semicolon or whitespace separated list of passwords to assign to users when created.
+      serverPasswords: ""
+      # auth.client.existingSecret Use existing secret (ignores previous passwords).
+      existingSecret: ""
+    # authentication quorum settings.
+    quorum:
+      # auth.quorum.enabled Enable ZooKeeper server-server authentication. It uses SASL/Digest-MD5.
+      enabled: false
+      # auth.quorum.learnerUser User that the ZooKeeper quorumLearner will use to authenticate to quorumServers.
+      learnerUser: ""
+      # auth.quorum.learnerPassword Password that the ZooKeeper quorumLearner will use to authenticate to quorumServers.
+      learnerPassword: ""
+      # auth.quorum.serverUsers Comma, semicolon or whitespace separated list of users for the quorumServers.
+      serverUsers: ""
+      # auth.quorum.serverPasswords Comma, semicolon or whitespace separated list of passwords to assign to users when created.
+      serverPasswords: ""
+      # auth.quorum.existingSecret Use existing secret (ignores previous passwords).
+      existingSecret: ""
+
+nacos:
+  ## Whether to enable the nacos.
+  enabled: true
+
+  ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
+  mode: standalone
+
+  ## Override the namespace where the resource is deployed.
+  namespaceOverride: ~
+
+  ## Labels to attach to the resource.
+  labels: ~
+
+  ## Annotations to attach to the resource.
+  annotations: ~
+
+  ## Specifies the cluster's domain name for DNS resolution.
+  clusterDomain: cluster.local
+
+  ## Number of replicas for the Deployment.
+  replicas: 1
+
+  plugin:
+    # Whether to enable the plugin.
+    enabled: true
+    # Configure the container image for the plugin.
     image:
-      # Source of the container image.
-      registry: docker.io/bitnami/zookeeper
-      # Version tag of the container image.
-      tag: 3.9-debian-12
-      # Image pull policy, available options are: Always, IfNotPresent, Never.
-      pullPolicy: IfNotPresent
-      # Set to 'true' to enable debug mode for the image.
-      debug: false
-
-    securityContext:
-      # Whether to enable the security context.
-      enabled: true
-      # Defines the POSIX group ID that owns the pod's volumes.
-      fsGroup: 1001
-
-    containerSecurityContext:
-      # Whether to enable the container security context.
-      enabled: true
-      # Specifies the user ID under which the container should run.
-      runAsUser: 1001
-      # Set to 'true' to run the container as a non-root user.
-      runAsNonRoot: true
-      # Set to 'false' to disallow privilege escalation for the container.
-      allowPrivilegeEscalation: false
-
-    service:
-      # Labels to be applied to the service.
-      labels: ~
-      # Annotations to be added to the service.
-      annotations: ~
-      # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
-      type: ClusterIP
-      # Specifies the ClusterIP for the service, or use "~" to auto-assign.
-      clusterIP: ~
-      # List of external IPs to associate with the service.
-      externalIPs: ~
-      # Specifies the IP address for a LoadBalancer service.
-      loadBalancerIP: ~
-      # Restrict access to the LoadBalancer by IP ranges.
-      loadBalancerSourceRanges: ~
-      # Specifies the LoadBalancer class (if applicable).
-      loadBalancerClass: ~
-      # Specifies the session affinity mode (None, ClientIP)
-      sessionAffinity: None
-      # Set to 'true' to publish endpoints for not-ready pods.
-      publishNotReadyAddresses: true
-
-    resources:
-      # Maximum CPU and memory resources allowed for the container.
-      limits:
-        # CPU usage limit.
-        cpu: 250m
-        # Memory usage limit.
-        memory: 256Mi
-      # Initial CPU and memory resource requests for the container.
-      requests:
-        # CPU usage request.
-        cpu: 250m
-        # Memory usage request.
-        memory: 256Mi
-
-    startupProbe:
-      # Number of consecutive failures before marking the container as unhealthy.
-      failureThreshold: 6
-      # Delay before the probe is initiated.
-      initialDelaySeconds: 5
-      # How often to perform the probe.
-      periodSeconds: 10
-      # Minimum consecutive successes for the probe to be considered successful.
-      successThreshold: 1
-      # Time to wait for the probe to complete.
-      timeoutSeconds: 5
-      exec:
-        # Run the specified command to check.
-        command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
-
-    readinessProbe:
-      # Number of consecutive failures before marking the container as unhealthy.
-      failureThreshold: 6
-      # Delay before the probe is initiated.
-      initialDelaySeconds: 5
-      # How often to perform the probe.
-      periodSeconds: 10
-      # Minimum consecutive successes for the probe to be considered successful.
-      successThreshold: 1
-      # Time to wait for the probe to complete.
-      timeoutSeconds: 5
-      exec:
-        # Run the specified command to check.
-        command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null' ]
-
-    livenessProbe:
-      # Number of consecutive failures before marking the container as unhealthy.
-      failureThreshold: 6
-      # Delay before the probe is initiated.
-      initialDelaySeconds: 30
-      # How often to perform the probe.
-      periodSeconds: 10
-      # Minimum consecutive successes for the probe to be considered successful.
-      successThreshold: 1
-      # Time to wait for the probe to complete.
-      timeoutSeconds: 5
-      exec:
-        # Run the specified command to check.
-        command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep ruok' ]
-
-    # This allows a dedicated log device to be used, and helps avoid competition between logging and snapshots.
-    dataLogDir: ""
-    # tickTime Basic time unit (in milliseconds) used by ZooKeeper for heartbeats.
-    tickTime: 2000
-    # initLimit ZooKeeper uses to limit the length of time the ZooKeeper servers in quorum have to connect to a leader.
-    initLimit: 10
-    # syncLimit How far out of date a server can be from a leader.
-    syncLimit: 5
-    # preAllocSize Block size for transaction log file.
-    preAllocSize: 65536
-    # snapCount The number of transactions recorded in the transaction log before a snapshot can be taken (and the transaction log rolled).
-    snapCount: 100000
-    # fourlwCommandsWhitelist A list of comma separated Four Letter Words commands that can be executed.
-    fourlwCommandsWhitelist: srvr, mntr, ruok
-    # listenOnAllIPs Allow ZooKeeper to listen for connections from its peers on all available IP addresses.
-    listenOnAllIPs: false
-    # Ongoing data directory cleanup configuration
-    autopurge:
-      # snapRetainCount The most recent snapshots amount (and corresponding transaction logs) to retain.
-      snapRetainCount: 3
-      # purgeInterval The time interval (in hours) for which the purge task has to be triggered.
-      purgeInterval: 0
-    # maxClientCnxns Limits the number of concurrent connections that a single client may make to a single member of the ZooKeeper ensemble.
-    maxClientCnxns: 60
-    # maxSessionTimeout Maximum session timeout (in milliseconds) that the server will allow the client to negotiate.
-    maxSessionTimeout: 40000
-    # heapSize Size (in MB) for the Java Heap options (Xmx and Xms).
-    heapSize: 1024
-    # logLevel Log level for the ZooKeeper server. ERROR by default.
-    logLevel: ERROR
-    # authentication parameters.
-    auth:
-      # authentication client settings.
-      client:
-        # auth.client.enabled Enable ZooKeeper client-server authentication. It uses SASL/Digest-MD5.
-        enabled: false
-        # auth.client.clientUser User that will use ZooKeeper clients to auth.
-        clientUser: ""
-        # auth.client.clientPassword Password that will use ZooKeeper clients to auth.
-        clientPassword: ""
-        # auth.client.serverUsers Comma, semicolon or whitespace separated list of user to be created.
-        serverUsers: ""
-        # auth.client.serverPasswords Comma, semicolon or whitespace separated list of passwords to assign to users when created.
-        serverPasswords: ""
-        # auth.client.existingSecret Use existing secret (ignores previous passwords).
-        existingSecret: ""
-      # authentication quorum settings.
-      quorum:
-        # auth.quorum.enabled Enable ZooKeeper server-server authentication. It uses SASL/Digest-MD5.
-        enabled: false
-        # auth.quorum.learnerUser User that the ZooKeeper quorumLearner will use to authenticate to quorumServers.
-        learnerUser: ""
-        # auth.quorum.learnerPassword Password that the ZooKeeper quorumLearner will use to authenticate to quorumServers.
-        learnerPassword: ""
-        # auth.quorum.serverUsers Comma, semicolon or whitespace separated list of users for the quorumServers.
-        serverUsers: ""
-        # auth.quorum.serverPasswords Comma, semicolon or whitespace separated list of passwords to assign to users when created.
-        serverPasswords: ""
-        # auth.quorum.existingSecret Use existing secret (ignores previous passwords).
-        existingSecret: ""
-
-  nacos:
-    ## Whether to enable the nacos.
-    enabled: false
-
-    ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
-    mode: standalone
-
-    ## Override the namespace where the resource is deployed.
-    namespaceOverride: ~
-
-    ## Labels to attach to the resource.
-    labels: ~
-
-    ## Annotations to attach to the resource.
-    annotations: ~
-
-    ## Specifies the cluster's domain name for DNS resolution.
-    clusterDomain: cluster.local
-
-    ## Number of replicas for the Deployment.
-    replicas: 1
-
-    plugin:
-      # Whether to enable the plugin.
-      enabled: true
-      # Configure the container image for the plugin.
-      image:
-        # Docker registry where the plugin image is hosted.
-        registry: nacos/nacos-peer-finder-plugin
-        # Specifies the image tag to use.
-        tag: 1.1
-        # Image pull policy (IfNotPresent, Always, Never).
-        pullPolicy: IfNotPresent
-
-    image:
-      # Source of the container image.
-      registry: docker.io/nacos/nacos-server
-      # Version tag of the container image.
-      tag: v2.2.3
-      # Image pull policy, available options are: Always, IfNotPresent, Never.
+      # Docker registry where the plugin image is hosted.
+      registry: nacos/nacos-peer-finder-plugin
+      # Specifies the image tag to use.
+      tag: 1.1
+      # Image pull policy (IfNotPresent, Always, Never).
       pullPolicy: IfNotPresent
 
-    securityContext:
-      # Whether to enable the security context.
-      enabled: true
-      # Defines the POSIX group ID that owns the pod's volumes.
-      fsGroup: 1001
+  image:
+    # Source of the container image.
+    registry: docker.io/nacos/nacos-server
+    # Version tag of the container image.
+    tag: v2.2.3
+    # Image pull policy, available options are: Always, IfNotPresent, Never.
+    pullPolicy: IfNotPresent
 
-    containerSecurityContext:
-      # Whether to enable the container security context.
-      enabled: true
-      # Specifies the user ID under which the container should run.
-      runAsUser: 1001
-      # Set to 'true' to run the container as a non-root user.
-      runAsNonRoot: true
-      # Set to 'false' to disallow privilege escalation for the container.
-      allowPrivilegeEscalation: false
+  securityContext:
+    # Whether to enable the security context.
+    enabled: true
+    # Defines the POSIX group ID that owns the pod's volumes.
+    fsGroup: 1001
 
-    service:
-      # Labels to be applied to the service.
-      labels: ~
-      # Annotations to be added to the service.
-      annotations: ~
-      # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
-      type: NodePort
-      # Specifies the ClusterIP for the service, or use "~" to auto-assign.
-      clusterIP: ~
-      # List of external IPs to associate with the service.
-      externalIPs: ~
-      # Specifies the IP address for a LoadBalancer service.
-      loadBalancerIP: ~
-      # Restrict access to the LoadBalancer by IP ranges.
-      loadBalancerSourceRanges: ~
-      # Specifies the LoadBalancer class (if applicable).
-      loadBalancerClass: ~
-      # Specifies the session affinity mode (None, ClientIP)
-      sessionAffinity: None
-      # Set to 'true' to publish endpoints for not-ready pods.
-      publishNotReadyAddresses: true
+  containerSecurityContext:
+    # Whether to enable the container security context.
+    enabled: true
+    # Specifies the user ID under which the container should run.
+    runAsUser: 1001
+    # Set to 'true' to run the container as a non-root user.
+    runAsNonRoot: true
+    # Set to 'false' to disallow privilege escalation for the container.
+    allowPrivilegeEscalation: false
 
-    startupProbe:
-      # Delay before the probe is initiated.
-      initialDelaySeconds: 180
-      # How often to perform the probe.
-      periodSeconds: 5
-      # Time to wait for the probe to complete.
-      timeoutSeconds: 10
-      # Perform an HTTP GET request to check.
-      httpGet:
-        # The protocol used for the HTTP GET request (HTTP, HTTPS).
-        scheme: HTTP
-        # The port on which the HTTP GET request will be made.
-        port: 8848
-        # The path to use for the HTTP GET request.
-        path: /nacos/v1/console/health/readiness
+  service:
+    # Labels to be applied to the service.
+    labels: ~
+    # Annotations to be added to the service.
+    annotations: ~
+    # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
+    type: NodePort
+    # Specifies the ClusterIP for the service, or use "~" to auto-assign.
+    clusterIP: ~
+    # List of external IPs to associate with the service.
+    externalIPs: ~
+    # Specifies the IP address for a LoadBalancer service.
+    loadBalancerIP: ~
+    # Restrict access to the LoadBalancer by IP ranges.
+    loadBalancerSourceRanges: ~
+    # Specifies the LoadBalancer class (if applicable).
+    loadBalancerClass: ~
+    # Specifies the session affinity mode (None, ClientIP)
+    sessionAffinity: None
+    # Set to 'true' to publish endpoints for not-ready pods.
+    publishNotReadyAddresses: true
 
-    readinessProbe:
-      # Delay before the probe is initiated.
-      initialDelaySeconds: 10
-      # How often to perform the probe.
-      periodSeconds: 5
-      # Time to wait for the probe to complete.
-      timeoutSeconds: 10
-      # Perform an HTTP GET request to check.
-      httpGet:
-        # The protocol used for the HTTP GET request (HTTP, HTTPS).
-        scheme: HTTP
-        # The port on which the HTTP GET request will be made.
-        port: 8848
-        # The path to use for the HTTP GET request.
-        path: /nacos/v1/console/health/readiness
+  startupProbe:
+    # Delay before the probe is initiated.
+    initialDelaySeconds: 180
+    # How often to perform the probe.
+    periodSeconds: 5
+    # Time to wait for the probe to complete.
+    timeoutSeconds: 10
+    # Perform an HTTP GET request to check.
+    httpGet:
+      # The protocol used for the HTTP GET request (HTTP, HTTPS).
+      scheme: HTTP
+      # The port on which the HTTP GET request will be made.
+      port: 8848
+      # The path to use for the HTTP GET request.
+      path: /nacos/v1/console/health/readiness
 
-    livenessProbe:
-      # Delay before the probe is initiated.
-      initialDelaySeconds: 10
-      # How often to perform the probe.
-      periodSeconds: 5
-      # Time to wait for the probe to complete.
-      timeoutSeconds: 10
-      # Perform an HTTP GET request to check.
-      httpGet:
-        # The protocol used for the HTTP GET request (HTTP, HTTPS).
-        scheme: HTTP
-        # The port on which the HTTP GET request will be made.
-        port: 8848
-        # The path to use for the HTTP GET request.
-        path: /nacos/v1/console/health/liveness
+  readinessProbe:
+    # Delay before the probe is initiated.
+    initialDelaySeconds: 10
+    # How often to perform the probe.
+    periodSeconds: 5
+    # Time to wait for the probe to complete.
+    timeoutSeconds: 10
+    # Perform an HTTP GET request to check.
+    httpGet:
+      # The protocol used for the HTTP GET request (HTTP, HTTPS).
+      scheme: HTTP
+      # The port on which the HTTP GET request will be made.
+      port: 8848
+      # The path to use for the HTTP GET request.
+      path: /nacos/v1/console/health/readiness
 
-    resources:
-      # Maximum CPU and memory resources allowed for the container.
-      limits:
-        # CPU usage limit.
-        cpu: ~
-        # Memory usage limit.
-        memory: ~
-      # Initial CPU and memory resource requests for the container.
-      requests:
-        # CPU usage request.
-        cpu: ~
-        # Memory usage request.
-        memory: ~
+  livenessProbe:
+    # Delay before the probe is initiated.
+    initialDelaySeconds: 10
+    # How often to perform the probe.
+    periodSeconds: 5
+    # Time to wait for the probe to complete.
+    timeoutSeconds: 10
+    # Perform an HTTP GET request to check.
+    httpGet:
+      # The protocol used for the HTTP GET request (HTTP, HTTPS).
+      scheme: HTTP
+      # The port on which the HTTP GET request will be made.
+      port: 8848
+      # The path to use for the HTTP GET request.
+      path: /nacos/v1/console/health/liveness
 
-    # Specifies the port on which the server should run.
-    serverPort: 8848
+  resources:
+    # Maximum CPU and memory resources allowed for the container.
+    limits:
+      # CPU usage limit.
+      cpu: ~
+      # Memory usage limit.
+      memory: ~
+    # Initial CPU and memory resource requests for the container.
+    requests:
+      # CPU usage request.
+      cpu: ~
+      # Memory usage request.
+      memory: ~
 
-    # Specifies the preferred host mode (e.g., 'hostname').
-    preferhostmode: ~
+  # Specifies the port on which the server should run.
+  serverPort: 8848
 
-    storage:
-      # Specifies the storage type (embedded, mysql, etc.).
-      type: embedded
-      # For MySQL storage, you need to change the "embedded" to "mysql" before you can use the db configuration.
-      db:
-        # Specifies the database host.
-        host: localhost
-        # Specifies the database name.
-        name: nacos
-        # Specifies the database port.
-        port: 3306
-        # Specifies the database username.
-        username: mysql
-        # Specifies the database password.
-        password: passw0rd
-        # Additional database connection parameters (if needed).
-        param: ""
+  # Specifies the preferred host mode (e.g., 'hostname').
+  preferhostmode: ~
+
+  storage:
+    # Specifies the storage type (embedded, mysql, etc.).
+    type: embedded
+    # For MySQL storage, you need to change the "embedded" to "mysql" before you can use the db configuration.
+    db:
+      # Specifies the database host.
+      host: localhost
+      # Specifies the database name.
+      name: nacos
+      # Specifies the database port.
+      port: 3306
+      # Specifies the database username.
+      username: mysql
+      # Specifies the database password.
+      password: passw0rd
+      # Additional database connection parameters (if needed).
+      param: ""
 
 ingress:
   ## Whether to enable the ingress.
