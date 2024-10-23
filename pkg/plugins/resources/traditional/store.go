@@ -214,9 +214,10 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 		}
 		key := mesh_proto.BuildServiceKey(base)
 		path := mesh_proto.GetOverridePath(key)
-		bytes, err := core_model.ToYAML(resource.GetSpec())
+		dc, _ := resource.GetSpec().(mesh_proto.DynamicConfig)
+		bytes, err := dc.MarshalToYaml()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal dynamic config to yaml %s", err)
 		}
 		cfg, _ := t.governance.GetConfig(path)
 		if cfg != "" {
@@ -370,14 +371,11 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		} else if existConfig == "" {
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
-
-		if b, err := core_model.ToYAML(resource.GetSpec()); err != nil {
+		dc, _ := resource.GetSpec().(*mesh_proto.DynamicConfig)
+		bytes, _ := dc.MarshalToYaml()
+		err = t.governance.SetConfig(path, string(bytes))
+		if err != nil {
 			return err
-		} else {
-			err := t.governance.SetConfig(path, string(b))
-			if err != nil {
-				return err
-			}
 		}
 	case mesh.AffinityRouteType:
 		labels := opts.Labels
@@ -731,13 +729,14 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 			return err
 		}
 		if cfg != "" {
-			data := &mesh_proto.DynamicConfig{}
-			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
-				return errors.Wrap(err, "failed to convert json to spec")
-			}
-			err = resource.SetSpec(data)
+			dc := &mesh_proto.DynamicConfig{}
+			err := dc.UnmarshalFromYaml([]byte(cfg))
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("failed to umarshal dynamic config %s to yaml, %s", cfg, err.Error())
+			}
+			err = resource.SetSpec(dc)
+			if err != nil {
+				return err
 			}
 		} else {
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
@@ -1000,17 +999,19 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		}
 		for name, rule := range cfg {
 			newIt := resources.NewItem()
-			ConfiguratorCfg, err := parseConfiguratorConfig(rule)
-			_ = newIt.SetSpec(ConfiguratorCfg)
+			dc := &mesh_proto.DynamicConfig{}
+			err := dc.UnmarshalFromYaml([]byte(rule))
+			if err != nil {
+				logger.Errorf("failed to parse dynamic config: %s : %s, %s", name, rule, err.Error())
+				continue
+			}
+			_ = newIt.SetSpec(dc)
 			meta := &resourceMetaObject{
 				Name:   name,
 				Mesh:   opts.Mesh,
 				Labels: maps.Clone(opts.Labels),
 			}
-			if err != nil {
-				logger.Errorf("failed to parse dynamicConfig rule: %s : %s, %s", name, rule, err.Error())
-				continue
-			}
+
 			newIt.SetMeta(meta)
 			_ = resources.AddItem(newIt)
 		}
