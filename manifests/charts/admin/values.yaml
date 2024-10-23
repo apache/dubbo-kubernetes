@@ -460,13 +460,13 @@ kubePrometheus:
   image:
     # Version tag of the container image.
     tag: 65.2.0
-
   dashboardsVersion: 1.14
 
+## Choose between Register and Mesh. If you select Register, then choose between Zookeeper and Nacos; if not specified, the default is Nacos.
 register: true
-
+## Choose between Register and Mesh. If you select Mesh, then install the Istiod control plane and the Jaeger component.
 mesh: false
-
+## The installation will only occur if the Mesh mode is enabled.
 jaeger:
   enabled: true
 
