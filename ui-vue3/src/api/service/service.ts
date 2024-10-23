@@ -40,4 +40,3 @@ export const getServiceDistribution = (params: any): Promise<any> => {
     params
   })
 }
-

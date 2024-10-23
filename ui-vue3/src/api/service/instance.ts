@@ -23,7 +23,6 @@ export const searchInstances = (params: any): Promise<any> => {
     method: 'get',
     params
   })
-
 }
 
 export const getInstanceDetail = (params: any): Promise<any> => {
