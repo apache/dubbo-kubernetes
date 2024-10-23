@@ -14,17 +14,20 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
+
 <template>
   <div class="__container_resources_application_index">
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ text, record, index, column }">
-        <template v-if="column.dataIndex === 'registerClusters'">
+        <template v-if="column.dataIndex === 'registryClusters'">
           <a-tag v-for="t in text">
             {{ t }}
           </a-tag>
         </template>
-        <template v-else-if="column.dataIndex === 'deployCluster'">
-          {{ text }}
+        <template v-else-if="column.dataIndex === 'deployClusters'">
+          <a-tag v-for="t in text">
+            {{ t }}
+          </a-tag>
         </template>
         <template v-else-if="column.dataIndex === 'appName'">
           <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
@@ -65,23 +68,23 @@ let columns = [
     width: 140
   },
   {
-    title: 'instanceNum',
-    key: 'instanceNum',
-    dataIndex: 'instanceNum',
+    title: 'applicationDomain.instanceCount',
+    key: 'instanceCount',
+    dataIndex: 'instanceCount',
     width: 100,
-    sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
+    sorter: (a: any, b: any) => sortString(a.instanceCount, b.instanceCount)
   },
 
   {
-    title: 'deployCluster',
-    key: 'deployCluster',
-    dataIndex: 'deployCluster',
+    title: 'applicationDomain.deployClusters',
+    key: 'deployClusters',
+    dataIndex: 'deployClusters',
     width: 120
   },
   {
-    title: 'registerClusters',
-    key: 'registerClusters',
-    dataIndex: 'registerClusters',
+    title: 'applicationDomain.registryClusters',
+    key: 'registryClusters',
+    dataIndex: 'registryClusters',
     width: 200
   }
 ]
@@ -90,7 +93,7 @@ const searchDomain = reactive(
     [
       {
         label: 'appName',
-        param: 'appName',
+        param: 'keywords',
         placeholder: 'typeAppName',
         style: {
           width: '200px'

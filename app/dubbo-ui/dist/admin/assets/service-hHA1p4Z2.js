@@ -1,1 +1,0 @@
-import{r}from"./request-ovKoEMRQ.js";const s=e=>r({url:"/service/search",method:"get",params:e}),i=e=>r({url:"/service/detail",method:"get",params:e}),c=e=>r({url:"/service/distribution",method:"get",params:e});export{c as a,i as g,s};
