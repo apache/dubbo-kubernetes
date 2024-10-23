@@ -70,5 +70,3 @@ export const listApplicationEvent = (params: any): Promise<any> => {
     params
   })
 }
-
-// TODO Perform front-end and back-end joint debugging

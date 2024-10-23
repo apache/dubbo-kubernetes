@@ -18,13 +18,12 @@
 import request from '@/base/http/request'
 
 export const searchInstances = (params: any): Promise<any> => {
-  let res = request({
+  return request({
     url: '/instance/search',
     method: 'get',
     params
   })
-  console.log('searchinstance', res)
-  return res
+
 }
 
 export const getInstanceDetail = (params: any): Promise<any> => {
@@ -42,5 +41,3 @@ export const getInstanceMetricsInfo = (params: any): Promise<any> => {
     params
   })
 }
-
-// TODO Perform front-end and back-end joint debugging

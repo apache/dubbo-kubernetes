@@ -41,4 +41,3 @@ export const getServiceDistribution = (params: any): Promise<any> => {
   })
 }
 
-// TODO Perform front-end and back-end joint debugging
