@@ -82,11 +82,11 @@ spec:
         {{- $zooPort := include "zoo.client" . -}}
         {{- $nacosPort := $nacos.serverPort -}}
         {{- $register := .Values.register }}
-        {{- if (eq $register true) | default true }}
-        {{- if $zoo.enabled }}
+        {{- if (eq $register true) }}
+        {{- if and (eq $register $zoo.enabled true) }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
           value: zookeeper://{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }}
-          {{- else if $nacos.enabled }}
+          {{- else if and (eq $register $nacos.enabled true) }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
           value: nacos://{{ range $k, $v := until $nacosReplicas }}{{ $nacosName }}-{{ $v }}.{{ $nacosName }}.{{ $nacosNamespace }}.svc.{{ $clusterDomain }}:{{ $nacosPort }}{{ if ne (add $k 1) $nacosReplicas }},{{ end }}{{ end }}
           {{- else }}

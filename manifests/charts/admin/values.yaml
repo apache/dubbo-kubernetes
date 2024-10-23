@@ -463,9 +463,9 @@ kubePrometheus:
 
   dashboardsVersion: 1.14
 
-register: false
+register: true
 
-mesh: true
+mesh: false
 
 jaeger:
   enabled: true
