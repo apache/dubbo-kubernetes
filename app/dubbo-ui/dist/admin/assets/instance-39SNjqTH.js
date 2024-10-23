@@ -1,0 +1,1 @@
+import{r as t}from"./request-ouf_oWqW.js";const r=e=>{let s=t({url:"/instance/search",method:"get",params:e});return console.log("searchinstance",s),s},a=e=>t({url:"/instance/detail",method:"get",params:e}),c=e=>t({url:"/instance/metrics",method:"get",params:e});export{c as a,a as g,r as s};

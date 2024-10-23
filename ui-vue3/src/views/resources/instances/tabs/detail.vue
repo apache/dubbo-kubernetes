@@ -83,9 +83,9 @@
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
                   <a-typography-paragraph
-                    :type="instanceDetail?.registerStates === 'Registed' ? 'success' : 'danger'"
+                    :type="instanceDetail?.registerState === 'Registed' ? 'success' : 'danger'"
                   >
-                    {{ instanceDetail?.registerStates }}
+                    {{ instanceDetail?.registerState }}
                   </a-typography-paragraph>
                 </a-descriptions-item>
 
@@ -132,7 +132,7 @@
               :labelStyle="{ fontWeight: 'bold' }"
             >
               <p
-                v-if="instanceDetail?.rpcPort.length > 0"
+                v-if="instanceDetail?.rpcPort"
                 @click="copyIt(instanceDetail?.rpcPort)"
                 class="description-item-content with-card"
               >
@@ -282,7 +282,10 @@ let PRIMARY_COLOR_20 = PRIMARY_COLOR_T('20')
 const instanceDetail = <any>reactive({})
 
 onMounted(async () => {
-  apiData.detail = await getInstanceDetail({})
+  let params = {
+    instanceName: route.params.pathId
+  }
+  apiData.detail = await getInstanceDetail(params)
   Object.assign(instanceDetail, apiData.detail.data)
   // console.log('instance',apiData)
   console.log('assign', instanceDetail)

@@ -19,7 +19,7 @@ import request from '@/base/http/request'
 
 export const getMetricsMetadata = (params: any): Promise<any> => {
   return request({
-    url: '/metrics/metadata',
+    url: '/metadata',
     method: 'get',
     params
   })

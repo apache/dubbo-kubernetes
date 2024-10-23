@@ -33,22 +33,27 @@
     </a-flex>
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ column, text }">
-        <template v-if="column.dataIndex === 'serviceName'">
+        <template v-if="column.dataIndex === 'name'">
           <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
         </template>
         <template v-if="column.dataIndex === 'deployState'">
           <a-tag :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
         </template>
-        <template v-if="column.dataIndex === 'registerStates'">
-          <a-tag :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]" v-for="t in text"
-            >{{ t.label }}
-          </a-tag>
+        <template v-if="column.dataIndex === 'deployClusters'">
+          <a-tag>{{ text }}</a-tag>
         </template>
-        <template v-if="column.dataIndex === 'registerClusters'">
-          <a-tag v-for="t in text">{{ t }}</a-tag>
+        <template v-if="column.dataIndex === 'registerState'">
+          <a-tag :color="INSTANCE_REGISTER_COLOR[text.toUpperCase()]">{{ text }} </a-tag>
+        </template>
+        <template v-if="column.dataIndex === 'registerCluster'">
+          <a-tag>{{ text }}</a-tag>
         </template>
         <template v-if="column.dataIndex === 'labels'">
-          <a-tag :color="PRIMARY_COLOR" v-for="t in text">{{ t }}</a-tag>
+          <a-tag :color="PRIMARY_COLOR" v-for="(value, key) in text">{{ key }} : {{ value }}</a-tag>
+        </template>
+
+        <template v-if="column.dataIndex === 'registerTime'">
+          {{ formattedDate(text) }}
         </template>
       </template>
     </search-table>
@@ -64,6 +69,10 @@ import { SearchDomain } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { useRoute, useRouter } from 'vue-router'
 import { getApplicationInstanceInfo, getApplicationInstanceStatistics } from '@/api/service/app'
+import { formattedDate } from '@/utils/DateUtil'
+
+const route = useRoute()
+const router = useRouter()
 
 let __null = PRIMARY_COLOR
 let statisticsInfo = reactive({
@@ -119,22 +128,22 @@ const columns = [
   },
   {
     title: 'instanceDomain.deployCluster',
-    dataIndex: 'deployCluster',
-    key: 'deployCluster',
+    dataIndex: 'deployClusters',
+    key: 'deployClusters',
     sorter: true,
     width: 180
   },
   {
-    title: 'instanceDomain.registerStates',
-    dataIndex: 'registerStates',
-    key: 'registerStates',
+    title: 'instanceDomain.registerState',
+    dataIndex: 'registerState',
+    key: 'registerState',
     sorter: true,
     width: 150
   },
   {
     title: 'instanceDomain.registerClusters',
-    dataIndex: 'registerClusters',
-    key: 'registerClusters',
+    dataIndex: 'registerCluster',
+    key: 'registerCluster',
     sorter: true,
     width: 200
   },
@@ -176,6 +185,7 @@ const columns = [
   }
 ]
 
+let appNameParam: any = route.params?.pathId
 const searchDomain = reactive(
   new SearchDomain(
     [
@@ -198,6 +208,13 @@ const searchDomain = reactive(
         style: {
           width: '300px'
         }
+      },
+      {
+        label: '',
+        param: 'appName',
+        defaultValue: appNameParam,
+        dict: [],
+        dictType: 'APPLICATION_NAME'
       }
     ],
     getApplicationInstanceInfo,
@@ -214,8 +231,6 @@ onMounted(() => {
   }
   searchDomain.onSearch()
 })
-const route = useRoute()
-const router = useRouter()
 
 const viewDetail = (serviceName: string) => {
   router.push('/resources/services/detail/' + serviceName)

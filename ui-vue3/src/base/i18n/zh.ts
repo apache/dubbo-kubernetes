@@ -112,19 +112,23 @@ const words: I18nType = {
     name: '实例名称',
     deployState: '部署状态',
     deployCluster: '部署集群',
+    deployClusters: '部署集群',
     registerState: '注册状态',
     registerClusters: '注册集群',
+    registryClusters: '注册集群',
     cpu: 'CPU',
     memory: '内存',
     startTime: '启动时间',
     registerTime: '注册时间',
     labels: '标签',
+    instanceCount: '实例数量',
     instanceName: '实例名称',
     creationTime_k8s: '创建时间(k8s)',
     startTime_k8s: '启动时间(k8s)'
   },
   serviceDomain: {
-    name: '服务名'
+    name: '服务名',
+    notSpecified: '不指定'
   },
   service: '服务',
   versionGroup: '版本&分组',
@@ -384,6 +388,11 @@ const words: I18nType = {
   applications: '应用',
   instances: '实例',
   applicationDomain: {
+    instanceCount: '实例数量',
+    deployClusters: '部署集群',
+    registryClusters: '注册集群',
+    registerClusters: '注册集群',
+    registerModes: '注册模式',
     operatorLog: '执行日志',
     flowWeight: '流量权重',
     gray: '灰度隔离',

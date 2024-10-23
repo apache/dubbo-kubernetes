@@ -98,7 +98,6 @@
     </div>
 
     <div class="search-table-container">
-      {{ JSON.stringify(searchDomain) }}
       <a-table
         :loading="searchDomain.table.loading"
         :pagination="pagination"
@@ -164,6 +163,7 @@ const pagination: any = computed(() => {
   return {
     pageSize: searchDomain.paged.pageSize,
     current: searchDomain.paged.curPage,
+    total: searchDomain.paged.total,
     showTotal: (v: any) =>
       globalProperties.$t('searchDomain.total') +
       ': ' +
@@ -180,9 +180,11 @@ const handleTableChange = (
 ) => {
   searchDomain.paged.pageSize = pag.pageSize
   searchDomain.paged.curPage = pag.current
+
   searchDomain.onSearch()
   return
 }
+
 function hideColumn(item: any) {
   let filter = searchDomain?.table.columns.filter((x: any) => !x.__hide)
   if (!item.__hide && filter.length <= 1) {

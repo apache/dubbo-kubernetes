@@ -43,9 +43,9 @@
           </a-tag>
         </template>
 
-        <template v-if="column.dataIndex === 'registerCluster'">
-          <a-tag color="grey">
-            {{ text }}
+        <template v-if="column.dataIndex === 'registerClusters'">
+          <a-tag v-for="t in text" color="grey">
+            {{ t }}
           </a-tag>
         </template>
 
@@ -113,9 +113,9 @@ let columns = [
   },
   {
     title: 'instanceDomain.registerCluster',
-    key: 'registerCluster',
-    dataIndex: 'registerCluster',
-    sorter: (a: any, b: any) => sortString(a.registerCluster, b.registerCluster),
+    key: 'registerClusters',
+    dataIndex: 'registerClusters',
+    sorter: (a: any, b: any) => sortString(a.registerClusters, b.registerClusters),
     width: 140
   },
   {
@@ -160,7 +160,7 @@ const searchDomain = reactive(
     [
       {
         label: 'appName',
-        param: 'appName',
+        param: 'keywords',
         placeholder: 'typeAppName',
         style: {
           width: '200px'
