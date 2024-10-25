@@ -18,7 +18,6 @@
 package v1alpha1
 
 import (
-	"sigs.k8s.io/yaml"
 	"strings"
 )
 
@@ -73,13 +72,4 @@ func (d *DynamicConfig) RangeConfig(f func(conf *OverrideConfig) (isStop bool)) 
 			break
 		}
 	}
-}
-
-func (d *DynamicConfig) UnmarshalFromYaml(data []byte) error {
-	err := yaml.Unmarshal(data, d)
-	return err
-}
-
-func (d *DynamicConfig) MarshalToYaml() ([]byte, error) {
-	return yaml.Marshal(d)
 }

@@ -32,8 +32,6 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 
-	"github.com/pkg/errors"
-
 	"golang.org/x/exp/maps"
 )
 
@@ -170,7 +168,7 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 		path := mesh_proto.GetRoutePath(key, consts.TagRoute)
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal tag route to yaml %s", err.Error())
 		}
 		cfg, _ := t.governance.GetConfig(path)
 		if cfg != "" {
@@ -214,10 +212,10 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 		}
 		key := mesh_proto.BuildServiceKey(base)
 		path := mesh_proto.GetOverridePath(key)
-		dc, _ := resource.GetSpec().(mesh_proto.DynamicConfig)
-		bytes, err := dc.MarshalToYaml()
+		//bytes, err := core_model.RuleToYAML(resource.GetSpec())
+		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
-			return fmt.Errorf("failed to marshal dynamic config to yaml %s", err)
+			return fmt.Errorf("failed to marshal dynamic config to yaml %s", err.Error())
 		}
 		cfg, _ := t.governance.GetConfig(path)
 		if cfg != "" {
@@ -240,7 +238,7 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 		path := mesh_proto.GetRoutePath(key, consts.AffinityRoute)
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal affinity route to yaml %s", err.Error())
 		}
 		cfg, _ := t.governance.GetConfig(path)
 		if cfg != "" {
@@ -319,7 +317,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		}
 		bytes, err := core_model.ToYAML(resource.GetSpec())
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal tag route to yaml %s", err.Error())
 		}
 		err = t.governance.SetConfig(path, string(bytes))
 		if err != nil {
@@ -347,7 +345,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 
 		bytes, err := resource.GetSpec().(*mesh_proto.ConditionRoute).ToYAML()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal condition route to yaml %s", err.Error())
 		}
 		err = t.governance.SetConfig(path, string(bytes))
 		if err != nil {
@@ -371,8 +369,10 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		} else if existConfig == "" {
 			return core_store.ErrorResourceNotFound(resource.Descriptor().Name, opts.Name, opts.Mesh)
 		}
-		dc, _ := resource.GetSpec().(*mesh_proto.DynamicConfig)
-		bytes, _ := dc.MarshalToYaml()
+		bytes, err := core_model.ToYAML(resource.GetSpec())
+		if err != nil {
+			return fmt.Errorf("failed to marshal configurator to yaml %s", err.Error())
+		}
 		err = t.governance.SetConfig(path, string(bytes))
 		if err != nil {
 			return err
@@ -397,7 +397,7 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 		}
 
 		if b, err := core_model.ToYAML(resource.GetSpec()); err != nil {
-			return err
+			return fmt.Errorf("failed to marshal affinity route to yaml %s", err.Error())
 		} else {
 			err := t.governance.SetConfig(path, string(b))
 			if err != nil {
@@ -669,7 +669,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		if cfg != "" {
 			res := &mesh_proto.TagRoute{}
 			if err := core_model.FromYAML([]byte(cfg), res); err != nil {
-				return errors.Wrap(err, "failed to convert json to spec")
+				return fmt.Errorf("failed to unmarshal tag route from yaml %s, %s", cfg, err.Error())
 			}
 			err = resource.SetSpec(res)
 			if err != nil {
@@ -700,7 +700,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		if cfg != "" {
 			res, err := mesh_proto.ConditionRouteDecodeFromYAML([]byte(cfg))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to unmarshal condition route from yaml %s, %s", cfg, err.Error())
 			}
 			err = resource.SetSpec(res)
 			if err != nil {
@@ -730,9 +730,9 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		}
 		if cfg != "" {
 			dc := &mesh_proto.DynamicConfig{}
-			err := dc.UnmarshalFromYaml([]byte(cfg))
+			err := core_model.FromYAML([]byte(cfg), dc)
 			if err != nil {
-				return fmt.Errorf("failed to umarshal dynamic config %s to yaml, %s", cfg, err.Error())
+				return fmt.Errorf("failed to umarshal configurator from yaml %s, %s", cfg, err.Error())
 			}
 			err = resource.SetSpec(dc)
 			if err != nil {
@@ -763,7 +763,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		if cfg != "" {
 			data := &mesh_proto.AffinityRoute{}
 			if err := core_model.FromYAML([]byte(cfg), data); err != nil {
-				return errors.Wrap(err, "failed to convert json to spec")
+				return fmt.Errorf("failed to umarshal affinity route from yaml %s, %s", cfg, err.Error())
 			}
 			err = resource.SetSpec(data)
 			if err != nil {
@@ -1000,9 +1000,9 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 		for name, rule := range cfg {
 			newIt := resources.NewItem()
 			dc := &mesh_proto.DynamicConfig{}
-			err := dc.UnmarshalFromYaml([]byte(rule))
+			err := core_model.FromYAML([]byte(rule), dc)
 			if err != nil {
-				logger.Errorf("failed to parse dynamic config: %s : %s, %s", name, rule, err.Error())
+				logger.Errorf("failed to unmarshal dynamic config from yaml %s, %s", rule, err.Error())
 				continue
 			}
 			_ = newIt.SetSpec(dc)
@@ -1030,7 +1030,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 				Labels: maps.Clone(opts.Labels),
 			}
 			if err != nil {
-				logger.Errorf("failed to parse tag rule: %s : %s, %s", name, rule, err.Error())
+				logger.Errorf("failed to unmarshal tag rule from yaml %s, %s", rule, err.Error())
 				continue
 			}
 			newIt.SetMeta(meta)
@@ -1045,7 +1045,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			newIt := resources.NewItem()
 			ConfiguratorCfg, err := parseConditionConfig(rule)
 			if err != nil {
-				logger.Errorf("failed to parse condition rule: %s : %s, %s", name, rule, err.Error())
+				logger.Errorf("failed to unmarshal condition rule from yaml %s, %s", rule, err.Error())
 				continue
 			} else {
 				_ = newIt.SetSpec(ConfiguratorCfg)
@@ -1067,7 +1067,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			newIt := resources.NewItem()
 			ConfiguratorCfg, err := parseAffinityConfig(rule)
 			if err != nil {
-				logger.Errorf("failed to parse condition rule: %s : %s, %s", name, rule, err.Error())
+				logger.Errorf("failed to unmarshal condition rule from yaml %s, %s", rule, err.Error())
 				continue
 			} else {
 				_ = newIt.SetSpec(ConfiguratorCfg)
