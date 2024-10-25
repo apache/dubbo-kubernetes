@@ -98,7 +98,7 @@ func NewDubboOperator(spec *v1alpha1.DubboConfigSpec, cli *CtlClient) (*DubboOpe
 	}
 	ns := spec.Namespace
 	if ns == "" {
-		ns = identifier.DubboSystemNamespace
+		ns = identifier.DubboDefaultNamespace
 	}
 	// initialize components
 	components := make(map[ComponentName]Component)

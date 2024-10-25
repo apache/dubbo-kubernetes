@@ -84,7 +84,7 @@ func (dca *DashboardCommonArgs) setDefault() {
 		dca.host = "127.0.0.1"
 	}
 	if dca.namespace == "" {
-		dca.namespace = identifier.DubboSystemNamespace
+		dca.namespace = identifier.DubboDefaultNamespace
 	}
 }
 
