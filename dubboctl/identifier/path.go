@@ -25,20 +25,19 @@ import (
 )
 
 var (
-	// deploy dir is root in embed.FS
-	deployUri = &url.URL{
+	manifestsUri = &url.URL{
 		Scheme:   filesystem.EmbedSchema,
 		OmitHost: true,
 	}
-
-	chartsUri          = deployUri.JoinPath("charts")
-	profilesUri        = deployUri.JoinPath("profiles")
-	addonsUri          = deployUri.JoinPath("addons")
+	chartsUri          = manifestsUri.JoinPath("charts")
+	profilesUri        = manifestsUri.JoinPath("profiles")
+	addonsUri          = manifestsUri.JoinPath("addons")
 	addonDashboardsUri = addonsUri.JoinPath("addons/dashboards")
-	Charts             = chartsUri.String()
-	Addons             = addonsUri.String()
-	AddonDashboards    = addonDashboardsUri.String()
-	Profiles           = profilesUri.String()
+
+	Charts          = chartsUri.String()
+	Profiles        = profilesUri.String()
+	Addons          = addonsUri.String()
+	AddonDashboards = addonDashboardsUri.String()
 )
 
 var UnionFS filesystem.UnionFS
