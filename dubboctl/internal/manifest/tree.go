@@ -40,7 +40,7 @@ import (
 )
 
 import (
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	yaml2 "sigs.k8s.io/yaml"
 )
