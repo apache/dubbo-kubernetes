@@ -93,7 +93,7 @@ func TestNewLocalRenderer(t *testing.T) {
 func TestLocalRenderer_RenderManifest(t *testing.T) {
 	renderer, err := NewLocalRenderer(
 		WithName(TestName),
-		WithNamespace(identifier.DubboSystemNamespace),
+		WithNamespace(identifier.DubboDefaultNamespace),
 		WithFS(TestFS),
 		WithDir(TestDir))
 	if err != nil {

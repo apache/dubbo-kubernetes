@@ -5,7 +5,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "nacos.name" . }}
-  namespace: {{ template "nacos.namespace" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}
@@ -50,7 +50,7 @@ spec:
   selector:
     app: {{ template "nacos.selector" . }}
 ---
-{{- if and (eq .Values.nacos.mode "cluster") }}
+{{- if and (eq $nacos.mode "cluster") }}
 apiVersion: v1
 kind: Service
 metadata:

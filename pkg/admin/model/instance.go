@@ -18,6 +18,10 @@
 package model
 
 import (
+	gxset "github.com/dubbogo/gost/container/set"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
@@ -26,26 +30,50 @@ import (
 )
 
 type SearchInstanceReq struct {
-	AppName string `form:"appName"`
+	AppName  string `form:"appName"`
+	Keywords string `form:"keywords"`
 	PageReq
+}
+
+func NewSearchInstanceReq() *SearchInstanceReq {
+	return &SearchInstanceReq{
+		PageReq: PageReq{PageSize: 15},
+	}
 }
 
 type InstanceDetailReq struct {
 	InstanceName string `form:"instanceName"`
 }
 
+type SearchPaginationResult struct {
+	List     any               `json:"list"`
+	PageInfo *model.Pagination `json:"pageInfo"`
+}
+
+func NewSearchPaginationResult() *SearchPaginationResult {
+	return &SearchPaginationResult{}
+}
+
 type SearchInstanceResp struct {
-	Ip              string            `json:"ip"`
-	Name            string            `json:"name"`
-	WorkloadName    string            `json:"workloadName"`
-	AppName         string            `json:"appName"`
-	DeployState     string            `json:"deployState"`
-	DeployCluster   string            `json:"deployCluster"`
-	RegisterState   string            `json:"registerState"`
-	RegisterCluster string            `json:"registerCluster"`
-	CreateTime      string            `json:"createTime"`
-	RegisterTime    string            `json:"registerTime"` // TODO: not converted
-	Labels          map[string]string `json:"labels"`
+	Ip                  string            `json:"ip"`
+	Name                string            `json:"name"`
+	WorkloadName        string            `json:"workloadName"`
+	AppName             string            `json:"appName"`
+	DeployState         string            `json:"deployState"`
+	DeployCluster       string            `json:"deployCluster"`
+	RegisterState       string            `json:"registerState"`
+	RegisterClustersSet *gxset.HashSet    `json:"-"`
+	RegisterClusters    []string          `json:"registerClusters"`
+	CreateTime          string            `json:"createTime"`
+	RegisterTime        string            `json:"registerTime"` // TODO: not converted
+	Labels              map[string]string `json:"labels"`
+}
+
+func NewSearchInstanceResp() *SearchInstanceResp {
+	return &SearchInstanceResp{
+		RegisterClustersSet: gxset.NewSet(),
+		RegisterClusters:    make([]string, 0),
+	}
 }
 
 func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *SearchInstanceResp {
@@ -55,8 +83,12 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 	r.Name = meta.GetName()
 	r.CreateTime = meta.GetCreationTime().String()
 	r.RegisterTime = r.CreateTime // TODO: separate createTime and RegisterTime
-	r.RegisterCluster = dr.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]
-	r.DeployCluster = r.RegisterCluster
+	cluster := dr.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]
+	r.RegisterClustersSet.Add(cluster)
+	for _, c := range r.RegisterClustersSet.Values() {
+		r.RegisterClusters = append(r.RegisterClusters, c.(string))
+	}
+	r.DeployCluster = cluster
 	if r.RegisterTime != "" {
 		r.RegisterState = "Registed"
 	} else {
@@ -106,7 +138,7 @@ type InstanceDetailResp struct {
 	RegisterClusters []string          `json:"registerClusters"`
 	DeployCluster    string            `json:"deployCluster"`
 	DeployState      string            `json:"deployState"`
-	RegisterStates   string            `json:"registerStates"`
+	RegisterState    string            `json:"registerState"`
 	Node             string            `json:"node"`
 	Image            string            `json:"image"`
 	Probes           ProbeStruct       `json:"probes"`
@@ -151,7 +183,7 @@ func (r *InstanceDetailResp) FromInstanceDetail(id *InstanceDetail) *InstanceDet
 	r.Node = id.Node
 	r.Image = id.Image
 	r.Tags = id.Tags
-	r.RegisterStates = id.RegisterState
+	r.RegisterState = id.RegisterState
 	r.Probes = id.Probes
 	return r
 }

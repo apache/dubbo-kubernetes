@@ -198,19 +198,23 @@ func (c *buildConfig) Configure(f *dubbo.Dubbo) {
 		f.Image = c.Image
 	}
 
-	var envs []dubbo.Env
-	for _, pair := range c.Envs {
-		parts := strings.Split(pair, "=")
-
-		if len(parts) == 2 {
-			key := &parts[0]
-			value := &parts[1]
-			env := dubbo.Env{
-				Name:  key,
-				Value: value,
+	if len(c.Envs) > 0 {
+		envs := map[string]string{}
+		for _, env := range f.Build.BuildEnvs {
+			envs[*env.Name] = *env.Value
+		}
+		for _, pair := range c.Envs {
+			parts := strings.Split(pair, "=")
+			if len(parts) == 2 {
+				envs[parts[0]] = parts[1]
 			}
-			envs = append(envs, env)
+		}
+		f.Build.BuildEnvs = make([]dubbo.Env, 0, len(envs))
+		for k, v := range envs {
+			f.Build.BuildEnvs = append(f.Build.BuildEnvs, dubbo.Env{
+				Name:  &k,
+				Value: &v,
+			})
 		}
 	}
-	f.Build.BuildEnvs = envs
 }

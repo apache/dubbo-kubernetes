@@ -31,7 +31,7 @@ type Admin struct {
 	Port             int                    `json:"port" envconfig:"DUBBO_ADMIN_PORT"`
 	MetricDashboards *MetricDashboardConfig `json:"metric_dashboards"`
 	TraceDashboards  *TraceDashboardConfig  `json:"trace_dashboards"`
-	Prometheus       *PrometheusConfig      `json:"prometheus"`
+	Prometheus       string                 `json:"prometheus"`
 }
 
 func (s *Admin) PostProcess() error {

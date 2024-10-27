@@ -30,9 +30,9 @@
         <a-col :span="10" class="search-group">
           <a-input-group compact>
             <a-select v-model:value="searchType" class="select-type">
-              <a-select-option v-for="option in searchTypeOptions" :value="option.value">{{
-                option.label
-              }}</a-select-option>
+              <a-select-option v-for="option in searchTypeOptions" :value="option.value"
+                >{{ option.label }}
+              </a-select-option>
             </a-select>
             <a-auto-complete
               v-model:value="keywords"
@@ -97,6 +97,9 @@ import { SearchOutlined } from '@ant-design/icons-vue'
 import { globalSearch } from '@/api/service/globalSearch'
 import { debounce } from 'lodash'
 import type { SelectOption } from '@/types/common.ts'
+import { searchApplications } from '@/api/service/app'
+import { searchInstances } from '@/api/service/instance'
+import { searchService } from '@/api/service/service'
 
 const {
   appContext: {
@@ -124,10 +127,11 @@ watch(locale, (value) => {
 })
 
 const searchTypeOptions = reactive([
-  {
-    label: 'IP',
-    value: 'ip'
-  },
+  // Temporarily hidden, awaiting improvement
+  // {
+  //   label: 'IP',
+  //   value: 'ip'
+  // },
   {
     label: computed(() => globalProperties.$t('application')),
     value: 'appName'
@@ -146,21 +150,51 @@ const searchType = ref(searchTypeOptions[0].value)
 const keywords = ref('')
 
 const onSearch = async () => {
-  let { data } = await globalSearch({
-    searchType: searchType.value,
+  const params = {
     keywords: keywords.value
-  })
-  if (data.find) {
-    for (let i = 0; i < data.candidates.length; i++) {
-      candidates.value[i] = {
-        label: data.candidates[i],
-        value: data.candidates[i]
-      }
-    }
-  } else {
-    candidates.value = []
+  }
+
+  // Public search processing function
+  const globalSearch = async (searchFunc: Function, labelKey: string) => {
+    const {
+      data: { list }
+    } = await searchFunc(params)
+
+    // Using map instead of forEach is more concise.
+    candidates.value = list.map((item: any) => ({
+      label: item[labelKey],
+      value: item[labelKey]
+    }))
+    console.log('candidates', candidates.value)
+  }
+
+  // Various types of search functions
+  const globalSearchByIp = () => {
+    // The IP search logic is undefined and left blank.
+  }
+
+  switch (searchType.value) {
+    case 'ip':
+      globalSearchByIp()
+      break
+    case 'appName':
+      await globalSearch(searchApplications, 'appName')
+      break
+    case 'instanceName':
+      await globalSearch(searchInstances, 'name')
+      break
+    case 'serviceName':
+      await globalSearch(searchService, 'serviceName')
+      break
+    default:
+      break
   }
 }
+
+// Listen for changes in searchType and trigger a search.
+watch(searchType, async (newType) => {
+  await onSearch() // When a change is detected, re-call the search function.
+})
 
 const candidates = ref<Array<SelectOption>>([])
 

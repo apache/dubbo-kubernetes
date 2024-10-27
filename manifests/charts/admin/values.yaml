@@ -460,16 +460,19 @@ kubePrometheus:
   image:
     # Version tag of the container image.
     tag: 65.2.0
-
   dashboardsVersion: 1.14
 
+## Choose between Register and Mesh. If you select Register, then choose between Zookeeper and Nacos; if not specified, the default is Nacos.
+register: true
+## Choose between Register and Mesh. If you select Mesh, then install the Istiod control plane and the Jaeger component.
+mesh: false
+## The installation will only occur if the Mesh mode is enabled.
 jaeger:
-  ## Whether to enable the jaeger.
-  enabled: false
+  enabled: true
 
 zookeeper:
   ## Whether to enable the zookeeper.
-  enabled: true
+  enabled: false
 
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
@@ -656,7 +659,7 @@ zookeeper:
 
 nacos:
   ## Whether to enable the nacos.
-  enabled: false
+  enabled: true
 
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: standalone
@@ -878,25 +881,25 @@ ingress:
       # The protocol used for the HTTP GET request (HTTP, HTTPS).
       scheme: HTTP
 
-  livenessProbe:
-    # Number of consecutive failures before marking the container as unhealthy.
-    failureThreshold: 3
-    # Delay before the probe is initiated.
-    initialDelaySeconds: 2
-    # How often to perform the probe.
-    periodSeconds: 10
-    # Minimum consecutive successes for the probe to be considered successful.
-    successThreshold: 1
-    # Time to wait for the probe to complete.
-    timeoutSeconds: 2
-    # Perform an HTTP GET request to check.
-    httpGet:
-      # The path to use for the HTTP GET request.
-      path: /ping
-      # The port on which the HTTP GET request will be made.
-      port: 9000
-      # The protocol used for the HTTP GET request (HTTP, HTTPS).
-      scheme: HTTP
+    livenessProbe:
+      # Number of consecutive failures before marking the container as unhealthy.
+      failureThreshold: 3
+      # Delay before the probe is initiated.
+      initialDelaySeconds: 2
+      # How often to perform the probe.
+      periodSeconds: 10
+      # Minimum consecutive successes for the probe to be considered successful.
+      successThreshold: 1
+      # Time to wait for the probe to complete.
+      timeoutSeconds: 2
+      # Perform an HTTP GET request to check.
+      httpGet:
+        # The path to use for the HTTP GET request.
+        path: /ping
+        # The port on which the HTTP GET request will be made.
+        port: 9000
+        # The protocol used for the HTTP GET request (HTTP, HTTPS).
+        scheme: HTTP
 
   strategy:
     # Additional configuration for the RollingUpdate strategy can be specified here.

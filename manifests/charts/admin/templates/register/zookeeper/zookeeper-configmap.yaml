@@ -4,7 +4,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ template "zoo.name" . }}-scripts
-  namespace: {{ template "zoo.namespace" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}

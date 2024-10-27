@@ -58,7 +58,7 @@ func GetApplicationDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetApplicationTabInstanceInfo(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.ApplicationTabInstanceInfoReq{}
+		req := model.NewApplicationTabInstanceInfoReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -76,7 +76,7 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetApplicationServiceForm(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.ApplicationServiceFormReq{}
+		req := model.NewApplicationServiceFormReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -92,7 +92,13 @@ func GetApplicationServiceForm(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ApplicationSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resp, err := service.GetApplicationSearchInfo(rt)
+		req := model.NewApplicationSearchReq()
+		if err := c.ShouldBindQuery(req); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		resp, err := service.GetApplicationSearchInfo(rt, req)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return

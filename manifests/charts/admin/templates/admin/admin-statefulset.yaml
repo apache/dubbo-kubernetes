@@ -73,58 +73,61 @@ spec:
         env:
         {{- $zooName := include "zoo.name" . -}}
         {{- $nacosName := include "nacos.name" . -}}
-        {{- $zooReplicas := int $zoo.replicas -}}
+        {{- $zooReplicas := int .Values.zookeeper.replicas -}}
         {{- $nacosReplicas := int $nacos.replicas -}}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 -}}
         {{- $nacosHeadless := printf "%s-%s" $nacosName "headless" | trunc 63 -}}
-        {{- $zooNamespace := include "zoo.namespace" . -}}
-        {{- $nacosNamespace := include "nacos.namespace" . -}}
+        {{- $zooNamespace := include "admin.namespace" . -}}
+        {{- $nacosNamespace := include "admin.namespace" . -}}
         {{- $clusterDomain := $admin.clusterDomain -}}
         {{- $zooPort := include "zoo.client" . -}}
         {{- $nacosPort := $nacos.serverPort -}}
-        {{- if $zoo.enabled }}
-        - name: ADMIN_REGISTRY_ADDRESS
-          value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }} {{ end }}
-        {{- else if $nacos.enabled }}
-        - name: ADMIN_REGISTRY_ADDRESS
-          value: nacos://{{ range $k, $v := until $nacosReplicas }}{{ $nacosName }}-{{ $v }}.{{ $nacosName }}.{{ $nacosNamespace }}.svc.{{ $clusterDomain }}:{{ $nacosPort }} {{ end }}
-        {{- else }}
-        - name: ADMIN_REGISTRY_ADDRESS
-          value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }} {{ end }}
+        {{- $register := .Values.register }}
+        {{- if (eq $register true) }}
+        {{- if and (eq $register $zoo.enabled true) }}
+          - name: DUBBO_STORE_TRADITIONAL_REGISTRY
+            value: zookeeper://{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }}
+          {{- else if and (eq $register $nacos.enabled true) }}
+          - name: DUBBO_STORE_TRADITIONAL_REGISTRY
+            value: nacos://{{ range $k, $v := until $nacosReplicas }}{{ $nacosName }}-{{ $v }}.{{ $nacosName }}.{{ $nacosNamespace }}.svc.{{ $clusterDomain }}:{{ $nacosPort }}{{ if ne (add $k 1) $nacosReplicas }},{{ end }}{{ end }}
+          {{- else }}
+          - name: DUBBO_STORE_TRADITIONAL_REGISTRY
+            value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }}{{ if ne (add $k 1) $zooReplicas }},{{ end }}{{ end }}
+        {{- end }}
         {{- end }}
         {{- $promName := include "prom.name" . }}
         {{- $promPort := include "prom.port" . }}
         {{- $promStationaryName := printf "kube-prome-prometheus" }}
         {{- $promFullName := printf "%s-%s" $promName $promStationaryName }}
         {{- if $prom.enabled }}
-        - name: ADMIN_PROMETHEUS_ADDRESS
-          value: {{ $promFullName }}:{{ $promPort }}
+          - name: ADMIN_PROMETHEUS_ADDRESS
+            value: {{ $promFullName }}:{{ $promPort }}
         {{- $grafanaName := include "grafana.name" . }}
         {{- $grafanaPort := include "grafana.port" . }}
         {{- $grafanaFullName := printf "%s-%s" $promName $grafanaName }}
-        - name: ADMIN_GRAFANA_ADDRESS
-          value: {{ $grafanaFullName }}:{{ $grafanaPort }}
+          - name: ADMIN_GRAFANA_ADDRESS
+            value: {{ $grafanaFullName }}:{{ $grafanaPort }}
         {{- end }}
         volumeMounts:
         {{- if $admin.volumeMounts }}
         {{- toYaml $admin.volumeMounts | nindent 8 }}
         {{- end }}
-        - name: general-tls-cert
-          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.crt
-          subPath: tls.crt
-          readOnly: true
-        - name: general-tls-cert
-          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.key
-          subPath: tls.key
-          readOnly: true
-        - name: general-tls-cert{{- if $cp.tls.caSecretName }}-ca{{- end }}
-          mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
-          subPath: ca.crt
-          readOnly: true
-        - name: cp-config
-          mountPath: /etc/dubbo.io/cp-config/config.yaml
-          subPath: config.yaml
-          readOnly: true
+          - name: general-tls-cert
+            mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.crt
+            subPath: tls.crt
+            readOnly: true
+          - name: general-tls-cert
+            mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.key
+            subPath: tls.key
+            readOnly: true
+          - name: general-tls-cert{{- if $cp.tls.caSecretName }}-ca{{- end }}
+            mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
+            subPath: ca.crt
+            readOnly: true
+          - name: cp-config
+            mountPath: /etc/dubbo.io/cp-config/config.yaml
+            subPath: config.yaml
+            readOnly: true
         securityContext:
         {{- if $admin.securityContext }}
         {{- toYaml $admin.securityContext | nindent 10 }}

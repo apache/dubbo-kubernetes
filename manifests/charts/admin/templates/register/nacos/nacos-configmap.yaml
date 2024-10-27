@@ -4,7 +4,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ template "nacos.name" . }}-db-config
-  namespace: {{ template "nacos.namespace" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}

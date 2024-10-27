@@ -45,7 +45,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { reactive, provide } from 'vue'
-import { searchService } from '@/api/service/service.ts'
+import { searchService } from '@/api/service/service'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
@@ -92,9 +92,9 @@ const columns = [
 ]
 
 const handleResult = (result: any) => {
-  return result.map((service) => {
+  return result.map((service: any) => {
     service.versionGroupSelect = {}
-    service.versionGroupSelect.versionGroupArr = service.versionGroup.map((item: any) => {
+    service.versionGroupSelect.versionGroupArr = service.versionGroups.map((item: any) => {
       return (item.versionGroup =
         (item.version ? 'version: ' + item.version + ', ' : '') +
           (item.group ? 'group: ' + item.group : '') || '无')
@@ -109,7 +109,7 @@ const searchDomain = reactive(
     [
       {
         label: 'serviceName',
-        param: 'serviceName',
+        param: 'keywords',
         placeholder: 'typeAppName',
         style: {
           width: '200px'

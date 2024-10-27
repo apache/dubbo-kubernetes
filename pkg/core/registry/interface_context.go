@@ -45,6 +45,7 @@ func NewInterfaceContext() *InterfaceContext {
 		serviceUrls:        make(map[string][]*common.URL),
 		revisionToMetadata: make(map[string]*common.MetadataInfo),
 		instances:          make(map[string][]registry.ServiceInstance),
+		mappings:           make(map[string]*gxset.HashSet),
 	}
 }
 
@@ -60,9 +61,9 @@ func (ac *InterfaceContext) UpdateMapping(inf string, appName string) {
 	apps := ac.mappings[inf]
 	if apps == nil {
 		apps = gxset.NewSet(appName)
-	} else {
-		apps.Add(appName)
+		ac.mappings[inf] = apps
 	}
+	apps.Add(appName)
 }
 
 func (ac *InterfaceContext) AddInstance(key string, instance *registry.DefaultServiceInstance) {
@@ -83,6 +84,7 @@ func (ac *InterfaceContext) AddInstance(key string, instance *registry.DefaultSe
 		}
 		if !existing {
 			instances = append(instances, instance)
+			ac.instances[key] = instances
 			ac.revisionToMetadata[instance.GetID()] = instance.ServiceMetadata
 		}
 	}
@@ -137,14 +139,19 @@ func MergeInstances(insMap1 map[string][]registry.ServiceInstance, insMap2 map[s
 		existingInstances := instances[app]
 		if existingInstances != nil {
 			for _, i2 := range newServiceInstances {
-				for _, i3 := range existingInstances {
-					if i2.GetID() == i3.GetID() {
+				find := false
+				for _, i3 := range insMap1[app] {
+					if i2.GetAddress() == i3.GetAddress() {
 						i3.GetMetadata()["registry-type"] = "all"
-					} else {
-						existingInstances = append(existingInstances, i2)
+						find = true
 					}
 				}
+
+				if !find {
+					existingInstances = append(existingInstances, i2)
+				}
 			}
+			instances[app] = existingInstances
 		} else {
 			instances[app] = newServiceInstances
 		}
@@ -153,5 +160,23 @@ func MergeInstances(insMap1 map[string][]registry.ServiceInstance, insMap2 map[s
 }
 
 func MergeMapping(mapping1 map[string]*gxset.HashSet, mapping2 map[string]*gxset.HashSet) map[string]*gxset.HashSet {
-	return mapping1
+	if len(mapping1) == 0 {
+		return mapping2
+	}
+	if len(mapping2) == 0 {
+		return mapping1
+	}
+
+	mappings := make(map[string]*gxset.HashSet)
+	for k, set := range mapping1 {
+		mappings[k] = gxset.NewSet(set.Values()...)
+	}
+	for k, set := range mapping2 {
+		if mappings[k] != nil {
+			mappings[k].Add(set.Values()...)
+		} else {
+			mappings[k] = gxset.NewSet(set.Values()...)
+		}
+	}
+	return mappings
 }

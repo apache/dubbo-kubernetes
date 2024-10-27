@@ -4,7 +4,7 @@ apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet
 metadata:
   name: {{ template "zoo.name" . }}
-  namespace: {{ template "zoo.namespace" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
@@ -15,7 +15,7 @@ metadata:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: {{ $zoo.replicas }}
   selector:
     matchLabels:
     {{- include "zoo.matchLabels" . | nindent 6 }}
@@ -73,9 +73,9 @@ spec:
         - name: ZOO_MAX_SESSION_TIMEOUT
           value: {{ $zoo.maxSessionTimeout | quote }}
         {{- $zooName := include "zoo.name" . }}
-        {{- $zooReplicas := int .Values.zookeeper.replicas  }}
+        {{- $zooReplicas := int $zoo.replicas  }}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 }}
-        {{- $zooNamespace := include "zoo.namespace" . }}
+        {{- $zooNamespace := include "admin.namespace" . }}
         {{- $zooDomain := $zoo.clusterDomain }}
         - name: ZOO_SERVERS
           value: {{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::{{ add $v 1 }} {{ end }}
