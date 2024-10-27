@@ -113,3 +113,31 @@ func GetMetricsList(rt core_runtime.Runtime) gin.HandlerFunc {
 		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
+
+func GetServiceDependency(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.ServiceDependenciesReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+		}
+		resp, err := service.GetServiceDependencies(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+func GetServiceMetrics(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.ServiceMetricsReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+		}
+		resp, err := service.GetServiceMetrics(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}

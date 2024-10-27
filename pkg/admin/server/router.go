@@ -18,11 +18,11 @@
 package server
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/admin/handler"
 	"github.com/gin-gonic/gin"
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/admin/handler"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
@@ -84,6 +84,8 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		}
 		service.GET("/metric-dashboard", handler.GetMetricDashBoard(rt, handler.ServiceDimension))
 		service.GET("/trace-dashboard", handler.GetTraceDashBoard(rt, handler.ServiceDimension))
+		service.GET("/dependency", handler.GetServiceDependency(rt))
+		service.GET("/service-metrics", handler.GetServiceMetrics(rt))
 	}
 
 	{

@@ -20,6 +20,7 @@ package model
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
 import (
@@ -163,4 +164,28 @@ func (r *ServiceTabDistributionResp) mergeMetaData(metadata *core_mesh.MetaDataR
 type VersionGroup struct {
 	Version string `json:"version"`
 	Group   string `json:"group"`
+}
+
+type ServiceDependenciesReq struct {
+	ServiceName string `json:"serviceName,omitempty"`
+}
+
+type ServiceDependenciesResp struct {
+	SourceService     string   `json:"sourceService"`
+	DependentServices []string `json:"dependentServices"`
+}
+
+type ServiceMetricsReq struct {
+	ServiceName string `json:"serviceName,omitempty"`
+	Namespace   string `json:"namespace,omitempty"`
+	Page        int    `json:"page,omitempty"`
+	PageSize    int    `json:"pageSize,omitempty"`
+}
+
+type ServiceMetricsResp struct {
+	ServiceName string    `json:"serviceName"`
+	RequestRate float64   `json:"requestRate"`
+	ErrorRate   float64   `json:"errorRate"`
+	AvgLatency  float64   `json:"avgLatency"`
+	LastUpdated time.Time `json:"lastUpdated"`
 }
