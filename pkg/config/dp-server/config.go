@@ -48,9 +48,11 @@ type DpServerConfig struct {
 	// were failing to reconnect (we observed this in Projected Service Account
 	// Tokens e2e tests, which started flaking a lot after introducing explicit
 	// 1s timeout)
-	// TlsCertFile defines a path to a file with PEM-encoded TLS cert. If empty, autoconfigured from general.tlsCertFile
-	TlsCertFile       string                `json:"tlsCertFile" envconfig:"dubbo_dp_server_tls_cert_file"`
-	ReadHeaderTimeout config_types.Duration `json:"readHeaderTimeout" envconfig:"dubbo_dp_server_read_header_timeout"`
+	// TlsCertFile defines a path to a file with PEM-encoded TLS cert. If empty, start the plain HTTP/2 server (h2c).
+	TlsCertFile string `json:"tlsCertFile" envconfig:"DUBBO_DP_SERVER_TLS_CERT_FILE"`
+	// TlsKeyFile defines a path to a file with PEM-encoded TLS key. If empty, start the plain HTTP/2 server (h2c).
+	TlsKeyFile        string                `json:"tlsKeyFile" envconfig:"KUMA_DIAGNOSTICS_TLS_KEY_FILE"`
+	ReadHeaderTimeout config_types.Duration `json:"readHeaderTimeout" envconfig:"DUBBO_DP_SERVER_READ_HEADER_TIMEOUT"`
 	// Port of the DP Server
 	Port int `json:"port" envconfig:"dubbo_dp_server_port"`
 	// Authn defines authentication configuration for the DP Server.
@@ -72,37 +74,37 @@ type DpServerAuthnConfig struct {
 	// Configuration for zone proxy authentication.
 	ZoneProxy ZoneProxyAuthnConfig `json:"zoneProxy"`
 	// If true then Envoy uses Google gRPC instead of Envoy gRPC which lets a proxy reload the auth data (service account token, dp token etc.) from path without proxy restart.
-	EnableReloadableTokens bool `json:"enableReloadableTokens" envconfig:"kuma_dp_server_authn_enable_reloadable_tokens"`
+	EnableReloadableTokens bool `json:"enableReloadableTokens" envconfig:"DUBBO_DP_SERVER_AUTHN_ENABLE_RELOADABLE_TOKENS"`
 }
 type DpProxyAuthnConfig struct {
 	// Type of authentication. Available values: "serviceAccountToken", "dpToken", "none".
 	// If empty, autoconfigured based on the environment - "serviceAccountToken" on Kubernetes, "dpToken" on Universal.
-	Type string `json:"type" envconfig:"kuma_dp_server_authn_dp_proxy_type"`
+	Type string `json:"type" envconfig:"DUBBO_DP_SERVER_AUTHN_DP_PROXY_TYPE"`
 	// Configuration of dpToken authentication method
 	DpToken DpTokenAuthnConfig `json:"dpToken"`
 }
 type ZoneProxyAuthnConfig struct {
 	// Type of authentication. Available values: "serviceAccountToken", "zoneToken", "none".
 	// If empty, autoconfigured based on the environment - "serviceAccountToken" on Kubernetes, "zoneToken" on Universal.
-	Type string `json:"type" envconfig:"kuma_dp_server_authn_zone_proxy_type"`
+	Type string `json:"type" envconfig:"DUBBO_DP_SERVER_AUTHN_ZONE_PROXY_TYPE"`
 	// Configuration for zoneToken authentication method.
 	ZoneToken ZoneTokenAuthnConfig `json:"zoneToken"`
 }
 type DpTokenAuthnConfig struct {
 	// If true the control plane token issuer is enabled. It's recommended to set it to false when all the tokens are issued offline.
-	EnableIssuer bool `json:"enableIssuer" envconfig:"kuma_dp_server_authn_dp_proxy_dp_token_enable_issuer"`
+	EnableIssuer bool `json:"enableIssuer" envconfig:"DUBBO_DP_SERVER_AUTHN_DP_PROXY_DP_TOKEN_ENABLE_ISSUER"`
 	// DP Token validator configuration
 	Validator DpTokenValidatorConfig `json:"validator"`
 }
 type ZoneTokenAuthnConfig struct {
 	// If true the control plane token issuer is enabled. It's recommended to set it to false when all the tokens are issued offline.
-	EnableIssuer bool `json:"enableIssuer" envconfig:"kuma_dp_server_authn_zone_proxy_zone_token_enable_issuer"`
+	EnableIssuer bool `json:"enableIssuer" envconfig:"DUBBO_DP_SERVER_AUTHN_ZONE_PROXY_ZONE_TOKEN_ENABLE_ISSUER"`
 	// Zone Token validator configuration
 	Validator ZoneTokenValidatorConfig `json:"validator"`
 }
 type DpTokenValidatorConfig struct {
-	// If true then Kuma secrets with prefix "dataplane-token-signing-key-{mesh}" are considered as signing keys.
-	UseSecrets bool `json:"useSecrets" envconfig:"kuma_dp_server_authn_dp_proxy_dp_token_validator_use_secrets"`
+	// If true then Dubbo secrets with prefix "dataplane-token-signing-key-{mesh}" are considered as signing keys.
+	UseSecrets bool `json:"useSecrets" envconfig:"DUBBO_DP_SERVER_AUTHN_DP_PROXY_DP_TOKEN_VALIDATOR_USE_SECRETS"`
 	// List of public keys used to validate the token
 	PublicKeys []config_types.MeshedPublicKey `json:"publicKeys"`
 }
@@ -117,8 +119,8 @@ func (d DpTokenValidatorConfig) Validate() error {
 }
 
 type ZoneTokenValidatorConfig struct {
-	// If true then Kuma secrets with prefix "zone-token-signing-key" are considered as signing keys.
-	UseSecrets bool `json:"useSecrets" envconfig:"kuma_dp_server_authn_zone_proxy_zone_token_validator_use_secrets"`
+	// If true then Dubbo secrets with prefix "zone-token-signing-key" are considered as signing keys.
+	UseSecrets bool `json:"useSecrets" envconfig:"DUBBO_DP_SERVER_AUTHN_ZONE_PROXY_ZONE_TOKEN_VALIDATOR_USE_SECRETS"`
 	// List of public keys used to validate the token
 	PublicKeys []config_types.PublicKey `json:"publicKeys"`
 }
@@ -163,11 +165,11 @@ type HdsConfig struct {
 
 	// Enabled if true then Envoy will actively check application's ports, but only on Universal.
 	// On Kubernetes this feature disabled for now regardless the flag value
-	Enabled bool `json:"enabled" envconfig:"dubbo_dp_server_hds_enabled"`
+	Enabled bool `json:"enabled" envconfig:"DUBBO_DP_SERVER_HDS_ENABLED"`
 	// Interval for Envoy to send statuses for HealthChecks
-	Interval config_types.Duration `json:"interval" envconfig:"dubbo_dp_server_hds_interval"`
+	Interval config_types.Duration `json:"interval" envconfig:"DUBBO_DP_SERVER_HDS_INTERVAL"`
 	// RefreshInterval is an interval for re-genarting configuration for Dataplanes connected to the Control Plane
-	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"dubbo_dp_server_hds_refresh_interval"`
+	RefreshInterval config_types.Duration `json:"refreshInterval" envconfig:"DUBBO_DP_SERVER_HDS_REFRESH_INTERVAL"`
 	// CheckDefaults defines a HealthCheck configuration
 	CheckDefaults *HdsCheck `json:"checkDefaults"`
 }
@@ -191,18 +193,18 @@ type HdsCheck struct {
 
 	// Timeout is a time to wait for a health check response. If the timeout is reached the
 	// health check attempt will be considered a failure.
-	Timeout config_types.Duration `json:"timeout" envconfig:"dubbo_dp_server_hds_check_timeout"`
+	Timeout config_types.Duration `json:"timeout" envconfig:"DUBBO_DP_SERVER_HDS_CHECK_TIMEOUT"`
 	// Interval between health checks.
-	Interval config_types.Duration `json:"interval" envconfig:"dubbo_dp_server_hds_check_interval"`
+	Interval config_types.Duration `json:"interval" envconfig:"DUBBO_DP_SERVER_HDS_CHECK_INTERVAL"`
 	// NoTrafficInterval is a special health check interval that is used when a cluster has
 	// never had traffic routed to it.
-	NoTrafficInterval config_types.Duration `json:"noTrafficInterval" envconfig:"dubbo_dp_server_hds_check_no_traffic_interval"`
+	NoTrafficInterval config_types.Duration `json:"noTrafficInterval" envconfig:"DUBBO_DP_SERVER_HDS_CHECK_NO_TRAFFIC_INTERVAL"`
 	// HealthyThreshold is a number of healthy health checks required before a host is marked
 	// healthy.
-	HealthyThreshold uint32 `json:"healthyThreshold" envconfig:"dubbo_dp_server_hds_check_healthy_threshold"`
+	HealthyThreshold uint32 `json:"healthyThreshold" envconfig:"DUBBO_DP_SERVER_HDS_CHECK_HEALTHY_THRESHOLD"`
 	// UnhealthyThreshold is a number of unhealthy health checks required before a host is marked
 	// unhealthy.
-	UnhealthyThreshold uint32 `json:"unhealthyThreshold" envconfig:"dubbo_dp_server_hds_check_unhealthy_threshold"`
+	UnhealthyThreshold uint32 `json:"unhealthyThreshold" envconfig:"DUBBO_DP_SERVER_HDS_CHECK_UNHEALTHY_THRESHOLD"`
 }
 
 func (h *HdsCheck) Validate() error {

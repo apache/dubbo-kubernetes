@@ -1,0 +1,39 @@
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements. See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License. You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+-----BEGIN CERTIFICATE-----
+MIIDkDCCAnigAwIBAgIURE5tI2W9BDoq160jOjvGBJ72xvcwDQYJKoZIhvcNAQEL
+BQAwSTELMAkGA1UEBhMCemgxCzAJBgNVBAcTAmJqMQswCQYDVQQKEwJiajELMAkG
+A1UECxMCQ0ExEzARBgNVBAMTCkt1YmVybmV0ZXMwHhcNMjQwMzI1MTAxOTAwWhcN
+MjUwMzI1MTAxOTAwWjBIMQswCQYDVQQGEwJ6aDELMAkGA1UEBxMCYmoxCzAJBgNV
+BAoTAmJqMQswCQYDVQQLEwJiajESMBAGA1UEAxMJYWRtaXNzaW9uMIIBIjANBgkq
+hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtfa7oJmrKICO8z+xseSFAi73+xoT1QwY
+bxEXHghk8ztoKHqc3sMY7g5q/rFu1cduFQd1BkC0P5gaJ4fVZx1+Unn2Yt2aPXRI
+JCVdghldcBtYvvoTW8pk+q4HdAbTVICVSLPE3AzzOuvp+94sViKWYk/oLQE+dMv9
+WdB8g2x+mGDKVvulCye+RFoyEKRRP3d9KROWQj/1GjhpNnGj5u0NakVUazMzXf9i
+zhkJOPAnF/i38lE9IFMZ4bxyJj+ch1uoKZHg7fJ4LqVtSsDC+RxMsejuWPCRK7Oh
+7bIXR+0VE1TwbRlCtnSHV6KLs5qRtV+7yrED3f0HMNIp+LiY62v/WwIDAQABo3Ew
+bzAOBgNVHQ8BAf8EBAMCB4AwDAYDVR0TAQH/BAIwADAdBgNVHQ4EFgQUDes4x295
+kaZ6BZOubGFSQjAJhYMwHwYDVR0jBBgwFoAUVA6/QWohVYMPK44tnFNh+IvLzKww
+DwYDVR0RBAgwBocECheEMzANBgkqhkiG9w0BAQsFAAOCAQEACfKg/iBWOuLbYOVW
+nFW6SF8jrpHD6vZxmGJvA7FV62frwKd6rdL3sjtxhTAioWWO9LkgBhlCWVkpN3EK
+CbgBEqusRNeWOebakZq/kitdWDO/S4L0kLPdnCerNqHuGfGzAsdU/0r5YUy9v93G
+ZTzDVX0i1CIAPkGDslO86UAjaQHMhUaI4tGEamaYdym8KSV66JzJARFd5GCKRDpx
+bVVImXnI8eZ1ksQ0bV32fL1UeF4tW8n4WOPquXNvvsmFbKTNT7ZCYESFSUw90a0D
+4tUrwgutl7SNFAZXwAw3ZWvg3ioWOZueZYjKkl91drYTEZ6TNW53mPgh1oU+oGcz
+4EASdA==
+-----END CERTIFICATE-----

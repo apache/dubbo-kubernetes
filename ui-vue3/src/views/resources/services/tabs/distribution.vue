@@ -18,46 +18,55 @@
   <div class="__container_services_tabs_distribution">
     <a-flex vertical>
       <a-flex class="service-filter">
-        <a-flex>
-          <div>
-            <span>版本&分组:</span>
-            <a-select
-              v-model:value="versionAndGroup"
-              :options="versionAndGroupOptions"
-              class="service-filter-select"
-              @change="debounceSearch"
-            ></a-select>
-          </div>
-          <a-input-search
-            v-model:value="searchValue"
-            placeholder="搜索应用，ip，支持前缀搜索"
-            class="service-filter-input"
-            @search="debounceSearch"
-            enter-button
-          />
-        </a-flex>
-        <div>
-          <a-radio-group v-model:value="type" button-style="solid" @click="debounceSearch">
-            <a-radio-button value="producer">生产者</a-radio-button>
-            <a-radio-button value="consumer">消费者</a-radio-button>
-          </a-radio-group>
-        </div>
+        <a-radio-group v-model:value="type" button-style="solid" @click="debounceSearch">
+          <a-radio-button value="provider">生产者</a-radio-button>
+          <a-radio-button value="consumer">消费者</a-radio-button>
+        </a-radio-group>
+        <a-input-search
+          v-model:value="searchValue"
+          placeholder="搜索应用，ip，支持前缀搜索"
+          class="service-filter-input"
+          @search="debounceSearch"
+          enter-button
+        />
       </a-flex>
       <a-table
         :columns="tableColumns"
         :data-source="tableData"
         :scroll="{ y: '45vh' }"
         :pagination="pagination"
+        @change="onTablePageChange"
       >
         <template #bodyCell="{ column, text }">
-          <template v-if="column.dataIndex === 'applicationName'">
-            <a-button type="link">{{ text }}</a-button>
+          <template v-if="column.dataIndex === 'appName'">
+            <span class="link" @click="router.push('/resources/applications/detail/' + text)">
+              <b>
+                <Icon
+                  style="margin-bottom: -2px"
+                  icon="material-symbols:attach-file-rounded"
+                ></Icon>
+                {{ text }}
+              </b>
+            </span>
           </template>
-          <template v-if="column.dataIndex === 'instanceIP'">
-            <a-flex justify="">
-              <a-button v-for="ip in text.slice(0, 3)" :key="ip" type="link">{{ ip }}</a-button>
-              <a-button v-if="text.length > 3" type="link">更多</a-button>
-            </a-flex>
+
+          <template v-if="column.dataIndex === 'instanceName'">
+            <span class="link" @click="router.push('/resources/instances/detail/' + text)">
+              <b>
+                <Icon
+                  style="margin-bottom: -2px"
+                  icon="material-symbols:attach-file-rounded"
+                ></Icon>
+                {{ text }}
+              </b>
+            </span>
+          </template>
+
+          <template v-if="column.dataIndex === 'timeOut'">
+            {{ formattedDate(text) }}
+          </template>
+          <template v-if="column.dataIndex === 'label'">
+            <a-tag :color="PRIMARY_COLOR">{{ text }}</a-tag>
           </template>
         </template>
       </a-table>
@@ -68,9 +77,16 @@
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
 import { ref, reactive, getCurrentInstance } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getServiceDistribution } from '@/api/service/service'
 import { debounce } from 'lodash'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { Icon } from '@iconify/vue'
+import { formattedDate } from '@/utils/DateUtil'
 
+let __null = PRIMARY_COLOR
+const router = useRouter()
+const route = useRoute()
 const {
   appContext: {
     config: { globalProperties }
@@ -97,59 +113,124 @@ const versionAndGroupOptions = reactive([
   }
 ])
 const versionAndGroup = ref(versionAndGroupOptions[0].value)
-const type = ref('producer')
+const type = ref('provider')
 
 const tableColumns = [
   {
     title: '应用名',
-    dataIndex: 'applicationName',
-    width: '25%',
-    sorter: true
+    dataIndex: 'appName',
+    width: '20%',
+    customCell: (_, index) => {
+      if (index === 0) {
+        return { rowSpan: tableData.value.length }
+      } else {
+        return { rowSpan: 0 }
+      }
+    }
   },
   {
     title: '实例数',
     dataIndex: 'instanceNum',
-    width: '25%',
-    sorter: true
+    width: '15%',
+    customCell: (_, index) => {
+      if (index === 0) {
+        return { rowSpan: tableData.value.length }
+      } else {
+        return { rowSpan: 0 }
+      }
+    }
   },
   {
-    title: '实例ip',
-    dataIndex: 'instanceIP',
-    width: '50%'
+    title: '实例名',
+    dataIndex: 'instanceName',
+    width: '15%'
+  },
+  {
+    title: 'RPC端口',
+    dataIndex: 'rpcPort',
+    width: '15%'
+  },
+  {
+    title: '超时时间',
+    dataIndex: 'timeOut',
+    width: '10%'
+  },
+  {
+    title: '重试次数',
+    dataIndex: 'retryNum',
+    width: '10%'
+  },
+  {
+    title: '标签',
+    dataIndex: 'label',
+    width: '15%'
   }
 ]
 
 const tableData = ref([])
 
-const onSearch = async () => {
-  let { data } = await getServiceDistribution({})
-  tableData.value = data.data
-}
-onSearch()
-
-const debounceSearch = debounce(onSearch, 300)
-
-const pagination = {
+const pagination = reactive({
+  total: 0,
+  pageSize: 10,
+  current: 1,
+  pageOffset: 0,
   showTotal: (v: any) =>
     globalProperties.$t('searchDomain.total') +
     ': ' +
     v +
     ' ' +
     globalProperties.$t('searchDomain.unit')
+})
+
+const onSearch = async () => {
+  let params = {
+    serviceName: route.params?.pathId,
+    side: type.value,
+    pageOffset: pagination.pageOffset,
+    pageSize: pagination.pageSize
+  }
+  const {
+    data: { list, pageInfo }
+  } = await getServiceDistribution(params)
+  tableData.value = list
+  pagination.total = pageInfo.Total
+}
+onSearch()
+
+const debounceSearch = debounce(onSearch, 300)
+
+const onTablePageChange = (pageInfo: any) => {
+  pagination.pageSize = pageInfo.pageSize || 10
+  pagination.current = pageInfo.current || 1
+  pagination.pageOffset = (pagination.current - 1) * pagination.pageSize
+  debounceSearch()
 }
 </script>
+
 <style lang="less" scoped>
 .__container_services_tabs_distribution {
   .service-filter {
-    justify-content: space-between;
     margin-bottom: 20px;
+
     .service-filter-select {
       margin-left: 10px;
       width: 250px;
     }
+
     .service-filter-input {
       margin-left: 30px;
       width: 300px;
+    }
+  }
+
+  .link {
+    padding: 4px 10px 4px 4px;
+    border-radius: 4px;
+    color: v-bind('PRIMARY_COLOR');
+
+    &:hover {
+      cursor: pointer;
+      background: rgba(133, 131, 131, 0.13);
     }
   }
 }

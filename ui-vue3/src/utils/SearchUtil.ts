@@ -41,6 +41,7 @@ export class SearchDomain {
   ]
   searchApi: Function
   result: any
+  handleResult?: Function
   tableStyle: any
   table: {
     loading?: boolean
@@ -48,6 +49,7 @@ export class SearchDomain {
   } = { columns: [] }
   paged = {
     curPage: 1,
+    pageOffset: '0',
     total: 0,
     pageSize: 10
   }
@@ -57,7 +59,8 @@ export class SearchDomain {
     searchApi: any,
     columns: TableColumnsType | any,
     paged?: any | undefined,
-    noPaged?: boolean
+    noPaged?: boolean,
+    handleResult?: Function
   ) {
     this.params = query
     this.noPaged = noPaged
@@ -72,17 +75,36 @@ export class SearchDomain {
       this.paged = { ...this.paged, ...paged }
     }
     this.searchApi = searchApi
-    this.onSearch()
+    handleResult && this.onSearch(handleResult)
   }
 
-  async onSearch() {
+  async onSearch(handleResult: Function) {
     this.table.loading = true
     setTimeout(() => {
       this.table.loading = false
     }, 5000)
-    let res = (await this.searchApi(this.queryForm || {})).data
-    this.result = res.data
-    this.paged.total = res.total
+    const queryParams = {
+      ...this.queryForm,
+      ...(this.noPaged
+        ? {}
+        : {
+            pageSize: this.paged.pageSize,
+            pageOffset: (this.paged.curPage - 1) * this.paged.pageSize
+          })
+    }
+
+    try {
+      const {
+        data: { list, pageInfo }
+      } = await this.searchApi(queryParams)
+      this.result = handleResult ? handleResult(list) : list
+
+      if (!this.noPaged) {
+        this.paged.total = pageInfo?.Total || 0
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    }
     this.table.loading = false
   }
 }

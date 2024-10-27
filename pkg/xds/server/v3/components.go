@@ -117,7 +117,8 @@ func DefaultDataplaneStatusTracker(rt core_runtime.Runtime) xds_callbacks.Datapl
 					return time.NewTicker(rt.Config().XdsServer.DataplaneStatusFlushInterval.Duration)
 				},
 				func() *time.Ticker {
-					return nil
+					// Use default settings for now
+					return time.NewTicker(5 * time.Minute)
 				},
 				rt.Config().XdsServer.DataplaneStatusFlushInterval.Duration/10,
 				xds_callbacks.NewDataplaneInsightStore(rt.ResourceManager()),

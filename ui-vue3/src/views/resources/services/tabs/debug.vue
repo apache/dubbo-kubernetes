@@ -19,19 +19,11 @@
     <div class="tabs-title">方法列表</div>
     <a-tabs v-model:activeKey="activeKey" tab-position="left" :tabBarStyle="{ width: '200px' }">
       <a-tab-pane v-for="tabName in methodTabs" :key="tabName" :tab="`${tabName}`">
-        <a-descriptions :column="4" layout="vertical">
-          <a-descriptions-item label="接口" :span="2">
+        <a-descriptions :column="2" layout="vertical">
+          <a-descriptions-item label="接口">
             <p class="description-item-content">
               org.apache.dubbo.samples.UserService:getPermissions
             </p>
-          </a-descriptions-item>
-          <a-descriptions-item label="版本&分组">
-            <a-select
-              v-model:value="versionAndGroup"
-              size="large"
-              :options="versionAndGroupOptions"
-              class="description-item-content"
-            ></a-select>
           </a-descriptions-item>
           <a-descriptions-item label="指定生产者">
             <a-select
@@ -41,16 +33,16 @@
               class="description-item-content"
             ></a-select>
           </a-descriptions-item>
-          <a-descriptions-item label="入参类型" :span="2">
+          <a-descriptions-item label="入参类型">
             <a-tree block-node :tree-data="enterParamType" class="description-item-content" />
           </a-descriptions-item>
-          <a-descriptions-item label="出参类型" :span="2">
+          <a-descriptions-item label="出参类型">
             <a-tree block-node :tree-data="outputParamType" class="description-item-content" />
           </a-descriptions-item>
-          <a-descriptions-item label="请求" :span="2">
+          <a-descriptions-item label="请求">
             <monaco-editor editorId="requestEditor" width="90%" height="300px" />
           </a-descriptions-item>
-          <a-descriptions-item label="响应" :span="2">
+          <a-descriptions-item label="响应">
             <monaco-editor editorId="responseEditor" width="90%" height="300px" />
           </a-descriptions-item>
         </a-descriptions>
@@ -152,7 +144,7 @@ const outputParamType = [
   }
   .description-item-content {
     margin-left: 20px;
-    width: 90%;
+    width: 80%;
   }
 }
 </style>

@@ -18,11 +18,11 @@
 package dubboctl
 
 import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"time"
 )
 
 import (
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
 )
@@ -67,36 +67,36 @@ type DataplaneRuntime struct {
 	config.BaseConfig
 
 	// Path to Envoy binary.
-	BinaryPath string `json:"binaryPath,omitempty" envconfig:"dubbo_dataplane_runtime_binary_path"`
+	BinaryPath string `json:"binaryPath,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_BINARY_PATH"`
 	// Dir to store auto-generated Envoy bootstrap config in.
-	ConfigDir string `json:"configDir,omitempty" envconfig:"dubbo_dataplane_runtime_config_dir"`
+	ConfigDir string `json:"configDir,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_CONFIG_DIR"`
 	// Concurrency specifies how to generate the Envoy concurrency flag.
-	Concurrency uint32 `json:"concurrency,omitempty" envconfig:"dubbo_dataplane_runtime_concurrency"`
+	Concurrency uint32 `json:"concurrency,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_CONCURRENCY"`
 	// Path to a file with dataplane token (use 'dubboctl generate dataplane-token' to get one)
-	TokenPath string `json:"dataplaneTokenPath,omitempty" envconfig:"dubbo_dataplane_runtime_token_path"`
+	TokenPath string `json:"dataplaneTokenPath,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_TOKEN_PATH"`
 	// Token is dataplane token's value provided directly, will be stored to a temporary file before applying
-	Token string `json:"dataplaneToken,omitempty" envconfig:"dubbo_dataplane_runtime_token"`
+	Token string `json:"dataplaneToken,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_TOKEN"`
 	// Resource is a Dataplane resource that will be applied on Dubbo CP
-	Resource string `json:"resource,omitempty" envconfig:"dubbo_dataplane_runtime_resource"`
+	Resource string `json:"resource,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_RESOURCE"`
 	// ResourcePath is a path to Dataplane resource that will be applied on Dubbo CP
-	ResourcePath string `json:"resourcePath,omitempty" envconfig:"dubbo_dataplane_runtime_resource_path"`
+	ResourcePath string `json:"resourcePath,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_RESOURCE_PATH"`
 	// ResourceVars are the StringToString values that can fill the Resource template
 	ResourceVars map[string]string `json:"resourceVars,omitempty"`
 	// EnvoyLogLevel is a level on which Envoy will log.
 	// Available values are: [trace][debug][info][warning|warn][error][critical][off]
 	// By default it inherits Dubbo DP logging level.
-	EnvoyLogLevel string `json:"envoyLogLevel,omitempty" envconfig:"dubbo_dataplane_runtime_envoy_log_level"`
+	EnvoyLogLevel string `json:"envoyLogLevel,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_ENVOY_LOG_LEVEL"`
 	// EnvoyComponentLogLevel configures Envoy's --component-log-level and uses
 	// the exact same syntax: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-component-log-level
-	EnvoyComponentLogLevel string `json:"envoyComponentLogLevel,omitempty" envconfig:"dubbo_dataplane_runtime_envoy_component_log_level"`
+	EnvoyComponentLogLevel string `json:"envoyComponentLogLevel,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_ENVOY_COMPONENT_LOG_LEVEL"`
 	// Resources defines the resources for this proxy.
 	Resources DataplaneResources `json:"resources,omitempty"`
 	// SocketDir dir to store socket used between Envoy and the dp process
-	SocketDir string `json:"socketDir,omitempty" envconfig:"dubbo_dataplane_runtime_socket_dir"`
+	SocketDir string `json:"socketDir,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_SOCKET_DIR"`
 	// Metrics defines properties of metrics
 	Metrics Metrics `json:"metrics,omitempty"`
 	// DynamicConfiguration defines properties of dataplane dynamic configuration
-	DynamicConfiguration DynamicConfiguration `json:"dynamicConfiguration" envconfig:"dubbo_dataplane_runtime_dynamic_configuration"`
+	DynamicConfiguration DynamicConfiguration `json:"dynamicConfiguration" envconfig:"DUBBO_DATAPLANE_RUNTIME_DYNAMIC_CONFIGURATION"`
 }
 
 type Config struct {
@@ -110,73 +110,73 @@ type Config struct {
 }
 type ControlPlane struct {
 	// URL defines the address of Control Plane DP server.
-	URL string `json:"url,omitempty" envconfig:"dubbo_control_plane_url"`
+	URL string `json:"url,omitempty" envconfig:"DUBBO_CONTROL_PLANE_URL"`
 	// Retry settings for Control Plane communication
 	Retry CpRetry `json:"retry,omitempty"`
 	// CaCert defines Certificate Authority that will be used to verify connection to the Control Plane. It takes precedence over CaCertFile.
-	CaCert string `json:"caCert" envconfig:"dubbo_control_plane_ca_cert"`
+	CaCert string `json:"caCert" envconfig:"DUBBO_CONTROL_PLANE_CA_CERT"`
 	// CaCertFile defines a file for Certificate Authority that will be used to verify connection to the Control Plane.
-	CaCertFile string `json:"caCertFile" envconfig:"dubbo_control_plane_ca_cert_file"`
+	CaCertFile string `json:"caCertFile" envconfig:"DUBBO_CONTROL_PLANE_CA_CERT_FILE"`
 }
 type CpRetry struct {
 	config.BaseConfig
 
 	// Duration to wait between retries
-	Backoff config_types.Duration `json:"backoff,omitempty" envconfig:"dubbo_control_plane_retry_backoff"`
+	Backoff config_types.Duration `json:"backoff,omitempty" envconfig:"DUBBO_CONTROL_PLANE_RETRY_BACKOFF"`
 	// Max duration for retries (this is not exact time for execution, the check is done between retries)
-	MaxDuration config_types.Duration `json:"maxDuration,omitempty" envconfig:"dubbo_control_plane_retry_max_duration"`
+	MaxDuration config_types.Duration `json:"maxDuration,omitempty" envconfig:"DUBBO_CONTROL_PLANE_RETRY_MAX_DURATION"`
 }
 type DNS struct {
 	config.BaseConfig
 
 	// If true then builtin DNS functionality is enabled and CoreDNS server is started
-	Enabled bool `json:"enabled,omitempty" envconfig:"dubbo_dns_enabled"`
+	Enabled bool `json:"enabled,omitempty" envconfig:"DUBBO_DNS_ENABLED"`
 	// CoreDNSPort defines a port that handles DNS requests. When transparent proxy is enabled then iptables will redirect DNS traffic to this port.
-	CoreDNSPort uint32 `json:"coreDnsPort,omitempty" envconfig:"dubbo_dns_core_dns_port"`
+	CoreDNSPort uint32 `json:"coreDnsPort,omitempty" envconfig:"DUBBO_DNS_CORE_DNS_PORT"`
 	// CoreDNSEmptyPort defines a port that always responds with empty NXDOMAIN respond. It is required to implement a fallback to a real DNS
-	CoreDNSEmptyPort uint32 `json:"coreDnsEmptyPort,omitempty" envconfig:"dubbo_dns_core_dns_empty_port"`
+	CoreDNSEmptyPort uint32 `json:"coreDnsEmptyPort,omitempty" envconfig:"DUBBO_DNS_CORE_DNS_EMPTY_PORT"`
 	// EnvoyDNSPort defines a port that handles Virtual IP resolving by Envoy. CoreDNS should be configured that it first tries to use this DNS resolver and then the real one.
-	EnvoyDNSPort uint32 `json:"envoyDnsPort,omitempty" envconfig:"dubbo_dns_envoy_dns_port"`
+	EnvoyDNSPort uint32 `json:"envoyDnsPort,omitempty" envconfig:"DUBBO_DNS_ENVOY_DNS_PORT"`
 	// CoreDNSBinaryPath defines a path to CoreDNS binary.
-	CoreDNSBinaryPath string `json:"coreDnsBinaryPath,omitempty" envconfig:"dubbo_dns_core_dns_binary_path"`
+	CoreDNSBinaryPath string `json:"coreDnsBinaryPath,omitempty" envconfig:"DUBBO_DNS_CORE_DNS_BINARY_PATH"`
 	// CoreDNSConfigTemplatePath defines a path to a CoreDNS config template.
-	CoreDNSConfigTemplatePath string `json:"coreDnsConfigTemplatePath,omitempty" envconfig:"dubbo_dns_core_dns_config_template_path"`
+	CoreDNSConfigTemplatePath string `json:"coreDnsConfigTemplatePath,omitempty" envconfig:"DUBBO_DNS_CORE_DNS_CONFIG_TEMPLATE_PATH"`
 	// Dir to store auto-generated DNS Server config in.
-	ConfigDir string `json:"configDir,omitempty" envconfig:"dubbo_dns_config_dir"`
+	ConfigDir string `json:"configDir,omitempty" envconfig:"DUBBO_DNS_CONFIG_DIR"`
 	// PrometheusPort where Prometheus stats will be exposed for the DNS Server
-	PrometheusPort uint32 `json:"prometheusPort,omitempty" envconfig:"dubbo_dns_prometheus_port"`
+	PrometheusPort uint32 `json:"prometheusPort,omitempty" envconfig:"DUBBO_DNS_PROMETHEUS_PORT"`
 	// If true then CoreDNS logging is enabled
-	CoreDNSLogging bool `json:"coreDNSLogging,omitempty" envconfig:"dubbo_dns_enable_logging"`
+	CoreDNSLogging bool `json:"coreDNSLogging,omitempty" envconfig:"DUBBO_DNS_ENABLE_LOGGING"`
 }
 
 type Metrics struct {
 	// CertPath path to the certificate for metrics listener
-	CertPath string `json:"metricsCertPath,omitempty" envconfig:"dubbo_dataplane_runtime_metrics_cert_path"`
+	CertPath string `json:"metricsCertPath,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_METRICS_CERT_PATH"`
 	// KeyPath path to the key for metrics listener
-	KeyPath string `json:"metricsKeyPath,omitempty" envconfig:"dubbo_dataplane_runtime_metrics_key_path"`
+	KeyPath string `json:"metricsKeyPath,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_METRICS_KEY_PATH"`
 }
 
 type DynamicConfiguration struct {
 	// RefreshInterval defines how often DPP should refresh dynamic config. Default: 10s
-	RefreshInterval config_types.Duration `json:"refreshInterval,omitempty" envconfig:"dubbo_dataplane_runtime_dynamic_configuration_refresh_interval"`
+	RefreshInterval config_types.Duration `json:"refreshInterval,omitempty" envconfig:"DUBBO_DATAPLANE_RUNTIME_DYNAMIC_CONFIGURATION_REFRESH_INTERVAL"`
 }
 
 // DataplaneResources defines the resources available to a dataplane proxy.
 type DataplaneResources struct {
-	MaxMemoryBytes uint64 `json:"maxMemoryBytes,omitempty" envconfig:"dubbo_dataplane_resources_max_memory_bytes"`
+	MaxMemoryBytes uint64 `json:"maxMemoryBytes,omitempty" envconfig:"DUBBO_DATAPLANE_RESOURCES_MAX_MEMORY_BYTES"`
 }
 
 type Dataplane struct {
 	config.BaseConfig
 
 	// Mesh name.
-	Mesh string `json:"mesh,omitempty" envconfig:"dubbo_dataplane_mesh"`
+	Mesh string `json:"mesh,omitempty" envconfig:"DUBBO_DATAPLANE_MESH"`
 	// Dataplane name.
-	Name string `json:"name,omitempty" envconfig:"dubbo_dataplane_name"`
+	Name string `json:"name,omitempty" envconfig:"DUBBO_DATAPLANE_NAME"`
 	// ProxyType defines mode which should be used, supported values: 'dataplane', 'ingress'
-	ProxyType string `json:"proxyType,omitempty" envconfig:"dubbo_dataplane_proxy_type"`
+	ProxyType string `json:"proxyType,omitempty" envconfig:"DUBBO_DATAPLANE_PROXY_TYPE"`
 	// Drain time for listeners.
-	DrainTime config_types.Duration `json:"drainTime,omitempty" envconfig:"dubbo_dataplane_drain_time"`
+	DrainTime config_types.Duration `json:"drainTime,omitempty" envconfig:"DUBBO_DATAPLANE_DRAIN_TIME"`
 }
 
 func (d *Dataplane) IsZoneProxy() bool {

@@ -17,87 +17,90 @@
 
 import Mock from 'mockjs'
 
-Mock.mock('/mock/instance/search', 'get', {
-  code: 200,
-  message: 'laborum qui',
-  data: {
-    total: 66,
-    curPage: 82,
-    pageSize: 31,
-    data: [
-      {
-        ip: '205.216.185.96',
-        name: '用省中际解理',
-        deployState: {
-          label: 'dolor',
-          value: 'in amet',
-          level: 'amet nisi incididunt',
-          tip: '133.16.55.40'
-        },
-        deployCluster: 'veniam elit irure',
-        registerStates: [
-          {
-            label: 'in consequat est',
-            value: 'esse non Lorem',
-            level: 'sit',
-            tip: '122.249.164.252'
-          }
-        ],
-        registerClusters: ['cupidatat'],
-        cpu: 'officia cupidatat reprehenderit magna ex',
-        memory: 'mollit',
-        startTime: '2016-07-31 19:20:31',
-        registerTime: '2014-02-09 04:02:41',
-        labels: ['cupidat']
-      },
-      {
-        ip: '117.23.142.162',
-        name: '之受力即此',
-        deployState: {
-          label: 'sint culpa elit quis id',
-          value: 'amet',
-          level: 'adipisicing do',
-          tip: '112.176.231.68'
-        },
-        deployCluster: 'esse sit',
-        registerStates: [
-          {
-            label: 'ut',
-            value: 'eu sit',
-            level: 'in eiusmod ullamco',
-            tip: '220.153.108.236'
-          }
-        ],
-        registerClusters: ['ea consectetur'],
-        cpu: 'dolor sint deserunt',
-        memory: 'sint eu commodo proident',
-        startTime: '1994-12-22 18:24:57',
-        registerTime: '1986-07-24 03:18:24'
-      },
-      {
-        ip: '41.215.196.61',
-        name: '值青给值',
-        deployState: {
-          label: 'sunt',
-          value: 'consectetur in',
-          level: 'culpa dolore',
-          tip: '142.182.249.124'
-        },
-        deployCluster: 'cupidatat eu nostrud',
-        registerStates: [
-          {
-            label: 'ad quis',
-            value: 'Excepteur esse dolore Ut dolore',
-            level: 'ipsum ad quis',
-            tip: '220.55.203.4'
-          }
-        ],
-        registerClusters: ['Excepteur sit laboris'],
-        cpu: 'fugiat pariatur laborum ut',
-        memory: 'Lorem adipisicing sunt',
-        startTime: '1984-04-25 12:22:51',
-        registerTime: '1976-06-06 19:58:58'
+Mock.mock('/mock/instance/search', 'get', () => {
+  let total = Mock.mock('@integer(8, 1000)')
+  let list = []
+  for (let i = 0; i < total; i++) {
+    list.push({
+      ip: '121.90.211.162',
+      name: 'shop-user',
+      deployState: Mock.Random.pick(['Running', 'Pending', 'Terminating', 'Crashing']),
+      deployCluster: 'tx-shanghai-1',
+      registerStates: [
+        {
+          label: 'Registed',
+          value: 'Registed',
+          level: 'healthy'
+        }
+      ],
+      registerClusters: ['ali-hangzhou-1', 'ali-hangzhou-2'],
+      cpu: '1.2c',
+      memory: '2349MB',
+      startTime: '2023-06-09 03:47:10',
+      registerTime: '2023-06-09 03:48:20',
+      labels: {
+        region: 'beijing',
+        version: 'v1'
       }
-    ]
+    })
+  }
+  return {
+    code: 200,
+    message: 'success',
+    data: Mock.mock({
+      total: total,
+      curPage: 1,
+      pageSize: 10,
+      data: list
+    })
+  }
+})
+
+Mock.mock('/mock/instance/detail', 'get', () => {
+  return {
+    code: 200,
+    message: 'success',
+    data: {
+      deployState: 'Running',
+      registerStates: 'Unregisted',
+      ip: '45.7.37.227',
+      rpcPort: '20880',
+      appName: 'shop-user',
+      workloadName: 'shop-user-prod(deployment)',
+      labels: {
+        app: 'shop-user',
+        version: 'v1',
+        region: 'beijing'
+      },
+      createTime: '2023/12/19 22:09:34',
+      readyTime: '2023/12/19  22:12:34',
+      registerTime: '2023/12/19   22:16:56',
+      registerClusters: ['sz-ali-zk-f8otyo4r', 'hz-ali-zk-oqgiq9gq'],
+      deployCluster: 'tx-shanghai-1',
+      node: 'hz-ali-30.33.0.1',
+      image: 'apache/org.apahce.dubbo.samples.shop-user:v1',
+      probes: {
+        startupProbe: {
+          type: 'http',
+          port: 22222
+        },
+        readinessProbe: {
+          type: 'http',
+          port: 22222
+        },
+        livenessPronbe: {
+          type: 'http',
+          port: 22222
+        }
+      }
+    }
+  }
+})
+
+Mock.mock('/mock/instance/metrics', 'get', () => {
+  return {
+    code: 200,
+    message: 'success',
+    data: 'http://8.147.104.101:3000/d/dcf5defe-d198-4704-9edf-6520838880e9/instance?orgId=1&refresh=1m&from=1710644821536&to=1710731221536&theme=light'
   }
 })

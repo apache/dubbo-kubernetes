@@ -15,15 +15,22 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_resources_application_index">
+  <div class="__container_traffic_config_index">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
         <a-button type="primary">新增动态配置</a-button>
-        <a-button type="primary" style="margin-left: 10px">从模版创建</a-button>
       </template>
-      <template #bodyCell="{ text, column }">
+      <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <a-button type="link">{{ text }}</a-button>
+          <span
+            class="config-link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
+          >
+            <b>
+              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+              {{ text }}
+            </b>
+          </span>
         </template>
         <template v-if="column.dataIndex === 'ruleGranularity'">
           {{ text ? '服务' : '应用' }}
@@ -32,8 +39,17 @@
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
-          <a-button type="link">查看</a-button>
-          <a-button type="link">修改</a-button>
+          <a-button
+            type="link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/0`)"
+            >查看</a-button
+          >
+          <a-button
+            type="link"
+            @click="router.push(`/traffic/dynamicConfig/formview/${record.ruleName}/1`)"
+          >
+            修改
+          </a-button>
           <a-popconfirm
             title="确认删除该动态配置？"
             ok-text="Yes"
@@ -54,7 +70,13 @@ import { searchDynamicConfig } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { useRouter } from 'vue-router'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { Icon } from '@iconify/vue'
 
+const router = useRouter()
+
+let __null = PRIMARY_COLOR
 let columns = [
   {
     title: 'ruleName',
@@ -119,8 +141,16 @@ const confirm = () => {}
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
 <style lang="less" scoped>
-.search-table-container {
+.__container_traffic_config_index {
   min-height: 60vh;
-  //max-height: 70vh; //overflow: auto;
+  .config-link {
+    padding: 4px 10px 4px 4px;
+    border-radius: 4px;
+    color: v-bind('PRIMARY_COLOR');
+    &:hover {
+      cursor: pointer;
+      background: rgba(133, 131, 131, 0.13);
+    }
+  }
 }
 </style>

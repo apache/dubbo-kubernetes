@@ -30,12 +30,7 @@ import (
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	config_types "github.com/apache/dubbo-kubernetes/pkg/config/types"
-	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
-
-const defaultServiceAccountName = "system:serviceaccount:dubbo-system:dubbo-control-plane"
-
-var logger = core.Log.WithName("kubernetes-config")
 
 func DefaultKubernetesRuntimeConfig() *KubernetesRuntimeConfig {
 	return &KubernetesRuntimeConfig{
@@ -67,7 +62,7 @@ type KubernetesRuntimeConfig struct {
 	// MarshalingCacheExpirationTime defines a duration for how long
 	// marshaled objects will be stored in the cache. If equal to 0s then
 	// cache is turned off
-	MarshalingCacheExpirationTime config_types.Duration `json:"marshalingCacheExpirationTime" envconfig:"dubbo_runtime_kubernetes_marshaling_cache_expiration_time"`
+	MarshalingCacheExpirationTime config_types.Duration `json:"marshalingCacheExpirationTime" envconfig:"DUBBO_RUNTIME_KUBERNETES_MARSHALING_CACHE_EXPIRATION_TIME"`
 	// Kubernetes' resources reconciliation concurrency configuration
 	ControllersConcurrency ControllersConcurrency `json:"controllersConcurrency"`
 	// Kubernetes client configuration
@@ -79,27 +74,27 @@ type KubernetesRuntimeConfig struct {
 type ControllersConcurrency struct {
 	// PodController defines maximum concurrent reconciliations of Pod resources
 	// Default value 10. If set to 0 kube controller-runtime default value of 1 will be used.
-	PodController int `json:"podController" envconfig:"dubbo_runtime_kubernetes_controllers_concurrency_pod_controller"`
+	PodController int `json:"podController" envconfig:"DUBBO_RUNTIME_KUBERNETES_CONTROLLERS_CONCURRENCY_POD_CONTROLLER"`
 }
 
 type ClientConfig struct {
 	// Qps defines maximum requests kubernetes client is allowed to make per second.
 	// Default value 100. If set to 0 kube-client default value of 5 will be used.
-	Qps int `json:"qps" envconfig:"dubbo_runtime_kubernetes_client_config_qps"`
+	Qps int `json:"qps" envconfig:"DUBBO_RUNTIME_KUBERNETES_CLIENT_CONFIG_QPS"`
 	// BurstQps defines maximum burst requests kubernetes client is allowed to make per second
 	// Default value 100. If set to 0 kube-client default value of 10 will be used.
-	BurstQps       int    `json:"burstQps" envconfig:"dubbo_runtime_kubernetes_client_config_burst_qps"`
-	KubeFileConfig string `json:"kube_file_config" envconfig:"dubbo_runtime_kube_file_config"`
+	BurstQps       int    `json:"burstQps" envconfig:"DUBBO_RUNTIME_KUBERNETES_CLIENT_CONFIG_BURST_QPS"`
+	KubeFileConfig string `json:"kube_file_config" envconfig:"DUBBO_RUNTIME_KUBE_FILE_CONFIG"`
 }
 
 type LeaderElection struct {
 	// LeaseDuration is the duration that non-leader candidates will
 	// wait to force acquire leadership. This is measured against time of
 	// last observed ack. Default is 15 seconds.
-	LeaseDuration config_types.Duration `json:"leaseDuration" envconfig:"dubbo_runtime_kubernetes_leader_election_lease_duration"`
+	LeaseDuration config_types.Duration `json:"leaseDuration" envconfig:"DUBBO_RUNTIME_KUBERNETES_LEADER_ELECTION_LEASE_DURATION"`
 	// RenewDeadline is the duration that the acting controlplane will retry
 	// refreshing leadership before giving up. Default is 10 seconds.
-	RenewDeadline config_types.Duration `json:"renewDeadline" envconfig:"dubbo_runtime_kubernetes_leader_election_renew_deadline"`
+	RenewDeadline config_types.Duration `json:"renewDeadline" envconfig:"DUBBO_RUNTIME_KUBERNETES_LEADER_ELECTION_RENEW_DEADLINE"`
 }
 
 // AdmissionServerConfig defines configuration of the Admission WebHook Server implemented by
@@ -108,13 +103,13 @@ type AdmissionServerConfig struct {
 	config.BaseConfig
 
 	// Address the Admission WebHook Server should be listening on.
-	Address string `json:"address" envconfig:"dubbo_runtime_kubernetes_admission_server_address"`
+	Address string `json:"address" envconfig:"DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_ADDRESS"`
 	// Port the Admission WebHook Server should be listening on.
-	Port uint32 `json:"port" envconfig:"dubbo_runtime_kubernetes_admission_server_port"`
+	Port uint32 `json:"port" envconfig:"DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_PORT"`
 	// Directory with a TLS cert and private key for the Admission WebHook Server.
 	// TLS certificate file must be named `tls.crt`.
 	// TLS key file must be named `tls.key`.
-	CertDir string `json:"certDir" envconfig:"dubbo_runtime_kubernetes_admission_server_cert_dir"`
+	CertDir string `json:"certDir" envconfig:"DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_CERT_DIR"`
 }
 
 var _ config.Config = &KubernetesRuntimeConfig{}
@@ -149,18 +144,18 @@ func (c *AdmissionServerConfig) Validate() error {
 	return errs
 }
 
-// DataplaneContainer defines the configuration of a Kuma dataplane proxy container.
+// DataplaneContainer defines the configuration of a Dubbo dataplane proxy container.
 type DataplaneContainer struct {
 	// Deprecated: Use DUBBO_BOOTSTRAP_SERVER_PARAMS_ADMIN_PORT instead.
-	AdminPort uint32 `json:"adminPort,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_admin_port"`
+	AdminPort uint32 `json:"adminPort,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_ADMIN_PORT"`
 	// Drain time for listeners.
-	DrainTime config_types.Duration `json:"drainTime,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_drain_time"`
+	DrainTime config_types.Duration `json:"drainTime,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_DRAIN_TIME"`
 	// Readiness probe.
 	ReadinessProbe SidecarReadinessProbe `json:"readinessProbe,omitempty"`
 	// Liveness probe.
 	LivenessProbe SidecarLivenessProbe `json:"livenessProbe,omitempty"`
-	// EnvVars are additional environment variables that can be placed on Kuma DP sidecar
-	EnvVars map[string]string `json:"envVars" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_env_vars"`
+	// EnvVars are additional environment variables that can be placed on Dubbo DP sidecar
+	EnvVars map[string]string `json:"envVars" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_ENV_VARS"`
 }
 
 // SidecarReadinessProbe defines periodic probe of container service readiness.
@@ -168,15 +163,15 @@ type SidecarReadinessProbe struct {
 	config.BaseConfig
 
 	// Number of seconds after the container has started before readiness probes are initiated.
-	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_initial_delay_seconds"`
+	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_READINESS_PROBE_INITIAL_DELAY_SECONDS"`
 	// Number of seconds after which the probe times out.
-	TimeoutSeconds int32 `json:"timeoutSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_timeout_seconds"`
+	TimeoutSeconds int32 `json:"timeoutSeconds,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_READINESS_PROBE_TIMEOUT_SECONDS"`
 	// Number of seconds after which the probe times out.
-	PeriodSeconds int32 `json:"periodSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_period_seconds"`
+	PeriodSeconds int32 `json:"periodSeconds,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_READINESS_PROBE_PERIOD_SECONDS"`
 	// Minimum consecutive successes for the probe to be considered successful after having failed.
-	SuccessThreshold int32 `json:"successThreshold,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_success_threshold"`
+	SuccessThreshold int32 `json:"successThreshold,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_READINESS_PROBE_SUCCESS_THRESHOLD"`
 	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
-	FailureThreshold int32 `json:"failureThreshold,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_readiness_probe_failure_threshold"`
+	FailureThreshold int32 `json:"failureThreshold,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_READINESS_PROBE_FAILURE_THRESHOLD"`
 }
 
 // SidecarLivenessProbe defines periodic probe of container service liveness.
@@ -184,11 +179,11 @@ type SidecarLivenessProbe struct {
 	config.BaseConfig
 
 	// Number of seconds after the container has started before liveness probes are initiated.
-	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_initial_delay_seconds"`
+	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_LIVENESS_PROBE_INITIAL_DELAY_SECONDS"`
 	// Number of seconds after which the probe times out.
-	TimeoutSeconds int32 `json:"timeoutSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_timeout_seconds"`
+	TimeoutSeconds int32 `json:"timeoutSeconds,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_LIVENESS_PROBE_TIMEOUT_SECONDS"`
 	// How often (in seconds) to perform the probe.
-	PeriodSeconds int32 `json:"periodSeconds,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_period_seconds"`
+	PeriodSeconds int32 `json:"periodSeconds,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_LIVENESS_PROBE_PERIOD_SECONDS"`
 	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
-	FailureThreshold int32 `json:"failureThreshold,omitempty" envconfig:"dubbo_runtime_kubernetes_injector_sidecar_container_liveness_probe_failure_threshold"`
+	FailureThreshold int32 `json:"failureThreshold,omitempty" envconfig:"DUBBO_RUNTIME_KUBERNETES_INJECTOR_SIDECAR_CONTAINER_LIVENESS_PROBE_FAILURE_THRESHOLD"`
 }

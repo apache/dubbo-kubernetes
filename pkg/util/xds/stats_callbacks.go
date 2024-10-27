@@ -86,43 +86,6 @@ func NewStatsCallbacks(metrics prometheus.Registerer, dsType string) (StatsCallb
 		configsQueue: map[string]time.Time{},
 	}
 
-	stats.responsesSentMetric = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: dsType + "_responses_sent",
-		Help: "Number of responses sent by the server to a client",
-	}, []string{"type_url"})
-	if err := metrics.Register(stats.responsesSentMetric); err != nil {
-		return nil, err
-	}
-
-	stats.requestsReceivedMetric = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: dsType + "_requests_received",
-		Help: "Number of confirmations requests from a client",
-	}, []string{"type_url", "confirmation"})
-	if err := metrics.Register(stats.requestsReceivedMetric); err != nil {
-		return nil, err
-	}
-
-	streamsActive := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
-		Name: dsType + "_streams_active",
-		Help: "Number of active connections between a server and a client",
-	}, func() float64 {
-		stats.RLock()
-		defer stats.RUnlock()
-		return float64(stats.streamsActive)
-	})
-	if err := metrics.Register(streamsActive); err != nil {
-		return nil, err
-	}
-
-	stats.deliveryMetricName = dsType + "_delivery"
-	stats.deliveryMetric = prometheus.NewSummary(prometheus.SummaryOpts{
-		Name: stats.deliveryMetricName,
-		Help: "Summary of config delivery including a response (ACK/NACK) from the client",
-	})
-	if err := metrics.Register(stats.deliveryMetric); err != nil {
-		return nil, err
-	}
-
 	return stats, nil
 }
 

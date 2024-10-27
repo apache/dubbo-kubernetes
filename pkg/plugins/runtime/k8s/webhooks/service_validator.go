@@ -36,7 +36,7 @@ import (
 
 // ServiceValidator validates Dubbo-specific annotations on Services.
 type ServiceValidator struct {
-	Decoder *admission.Decoder
+	Decoder admission.Decoder
 }
 
 // Handle admits a Service only if Dubbo-specific annotations have proper values.
@@ -61,7 +61,7 @@ func (v *ServiceValidator) Handle(ctx context.Context, req admission.Request) ad
 func (v *ServiceValidator) validate(svc *kube_core.Service) error {
 	verr := &validators.ValidationError{}
 	for _, svcPort := range svc.Spec.Ports {
-		protocolAnnotation := fmt.Sprintf("%d.service.kuma.io/protocol", svcPort.Port)
+		protocolAnnotation := fmt.Sprintf("%d.service.dubbo.io/protocol", svcPort.Port)
 		protocolAnnotationValue, exists := svc.Annotations[protocolAnnotation]
 		if exists && core_mesh.ParseProtocol(protocolAnnotationValue) == core_mesh.ProtocolUnknown {
 			verr.AddViolationAt(validators.RootedAt("metadata").Field("annotations").Key(protocolAnnotation),

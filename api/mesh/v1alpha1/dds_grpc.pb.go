@@ -19,142 +19,10 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// DubboDiscoveryServiceClient is the client API for DubboDiscoveryService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type DubboDiscoveryServiceClient interface {
-	StreamDubboResources(ctx context.Context, opts ...grpc.CallOption) (DubboDiscoveryService_StreamDubboResourcesClient, error)
-}
-
-type dubboDiscoveryServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewDubboDiscoveryServiceClient(cc grpc.ClientConnInterface) DubboDiscoveryServiceClient {
-	return &dubboDiscoveryServiceClient{cc}
-}
-
-func (c *dubboDiscoveryServiceClient) StreamDubboResources(ctx context.Context, opts ...grpc.CallOption) (DubboDiscoveryService_StreamDubboResourcesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &DubboDiscoveryService_ServiceDesc.Streams[0], "/dubbo.mesh.v1alpha1.DubboDiscoveryService/StreamDubboResources", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &dubboDiscoveryServiceStreamDubboResourcesClient{stream}
-	return x, nil
-}
-
-type DubboDiscoveryService_StreamDubboResourcesClient interface {
-	Send(*v3.DiscoveryRequest) error
-	Recv() (*v3.DiscoveryResponse, error)
-	grpc.ClientStream
-}
-
-type dubboDiscoveryServiceStreamDubboResourcesClient struct {
-	grpc.ClientStream
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesClient) Send(m *v3.DiscoveryRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesClient) Recv() (*v3.DiscoveryResponse, error) {
-	m := new(v3.DiscoveryResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// DubboDiscoveryServiceServer is the server API for DubboDiscoveryService service.
-// All implementations must embed UnimplementedDubboDiscoveryServiceServer
-// for forward compatibility
-type DubboDiscoveryServiceServer interface {
-	StreamDubboResources(DubboDiscoveryService_StreamDubboResourcesServer) error
-	mustEmbedUnimplementedDubboDiscoveryServiceServer()
-}
-
-// UnimplementedDubboDiscoveryServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedDubboDiscoveryServiceServer struct {
-}
-
-func (UnimplementedDubboDiscoveryServiceServer) StreamDubboResources(DubboDiscoveryService_StreamDubboResourcesServer) error {
-	return status.Errorf(codes.Unimplemented, "method StreamDubboResources not implemented")
-}
-func (UnimplementedDubboDiscoveryServiceServer) mustEmbedUnimplementedDubboDiscoveryServiceServer() {}
-
-// UnsafeDubboDiscoveryServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to DubboDiscoveryServiceServer will
-// result in compilation errors.
-type UnsafeDubboDiscoveryServiceServer interface {
-	mustEmbedUnimplementedDubboDiscoveryServiceServer()
-}
-
-func RegisterDubboDiscoveryServiceServer(s grpc.ServiceRegistrar, srv DubboDiscoveryServiceServer) {
-	s.RegisterService(&DubboDiscoveryService_ServiceDesc, srv)
-}
-
-func _DubboDiscoveryService_StreamDubboResources_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DubboDiscoveryServiceServer).StreamDubboResources(&dubboDiscoveryServiceStreamDubboResourcesServer{stream})
-}
-
-type DubboDiscoveryService_StreamDubboResourcesServer interface {
-	Send(*v3.DiscoveryResponse) error
-	Recv() (*v3.DiscoveryRequest, error)
-	grpc.ServerStream
-}
-
-type dubboDiscoveryServiceStreamDubboResourcesServer struct {
-	grpc.ServerStream
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesServer) Send(m *v3.DiscoveryResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *dubboDiscoveryServiceStreamDubboResourcesServer) Recv() (*v3.DiscoveryRequest, error) {
-	m := new(v3.DiscoveryRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// DubboDiscoveryService_ServiceDesc is the grpc.ServiceDesc for DubboDiscoveryService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var DubboDiscoveryService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "dubbo.mesh.v1alpha1.DubboDiscoveryService",
-	HandlerType: (*DubboDiscoveryServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamDubboResources",
-			Handler:       _DubboDiscoveryService_StreamDubboResources_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
-	Metadata: "api/mesh/v1alpha1/dds.proto",
-}
-
 // GlobalDDSServiceClient is the client API for GlobalDDSService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GlobalDDSServiceClient interface {
-	// StreamXDSConfigs is logically a service exposed by Zone CP so Global CP can
-	// execute Config Dumps. It is however represented by bi-directional streaming
-	// to leverage existing connection from Zone CP to Global CP.
-	StreamXDSConfigs(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamXDSConfigsClient, error)
-	// StreamStats is logically a service exposed by Zone CP so Global CP can
-	// execute dubbo-dp stats requests. It is however represented by
-	// bi-directional streaming to leverage existing connection from Zone CP to
-	// Global CP.
-	StreamStats(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamStatsClient, error)
-	// StreamStats is logically a service exposed by Zone CP so Global CP can
-	// execute dubbo-dp clusters request. It is however represented by
-	// bi-directional streaming to leverage existing connection from Zone CP to
-	// Global CP.
-	StreamClusters(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamClustersClient, error)
 	// HealthCheck allows us to implement a health check that works across
 	// proxies, unlike HTTP/2 PING frames.
 	HealthCheck(ctx context.Context, in *ZoneHealthCheckRequest, opts ...grpc.CallOption) (*ZoneHealthCheckResponse, error)
@@ -166,99 +34,6 @@ type globalDDSServiceClient struct {
 
 func NewGlobalDDSServiceClient(cc grpc.ClientConnInterface) GlobalDDSServiceClient {
 	return &globalDDSServiceClient{cc}
-}
-
-func (c *globalDDSServiceClient) StreamXDSConfigs(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamXDSConfigsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &GlobalDDSService_ServiceDesc.Streams[0], "/dubbo.mesh.v1alpha1.GlobalDDSService/StreamXDSConfigs", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &globalDDSServiceStreamXDSConfigsClient{stream}
-	return x, nil
-}
-
-type GlobalDDSService_StreamXDSConfigsClient interface {
-	Send(*XDSConfigResponse) error
-	Recv() (*XDSConfigRequest, error)
-	grpc.ClientStream
-}
-
-type globalDDSServiceStreamXDSConfigsClient struct {
-	grpc.ClientStream
-}
-
-func (x *globalDDSServiceStreamXDSConfigsClient) Send(m *XDSConfigResponse) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *globalDDSServiceStreamXDSConfigsClient) Recv() (*XDSConfigRequest, error) {
-	m := new(XDSConfigRequest)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *globalDDSServiceClient) StreamStats(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamStatsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &GlobalDDSService_ServiceDesc.Streams[1], "/dubbo.mesh.v1alpha1.GlobalDDSService/StreamStats", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &globalDDSServiceStreamStatsClient{stream}
-	return x, nil
-}
-
-type GlobalDDSService_StreamStatsClient interface {
-	Send(*StatsResponse) error
-	Recv() (*StatsRequest, error)
-	grpc.ClientStream
-}
-
-type globalDDSServiceStreamStatsClient struct {
-	grpc.ClientStream
-}
-
-func (x *globalDDSServiceStreamStatsClient) Send(m *StatsResponse) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *globalDDSServiceStreamStatsClient) Recv() (*StatsRequest, error) {
-	m := new(StatsRequest)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *globalDDSServiceClient) StreamClusters(ctx context.Context, opts ...grpc.CallOption) (GlobalDDSService_StreamClustersClient, error) {
-	stream, err := c.cc.NewStream(ctx, &GlobalDDSService_ServiceDesc.Streams[2], "/dubbo.mesh.v1alpha1.GlobalDDSService/StreamClusters", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &globalDDSServiceStreamClustersClient{stream}
-	return x, nil
-}
-
-type GlobalDDSService_StreamClustersClient interface {
-	Send(*ClustersResponse) error
-	Recv() (*ClustersRequest, error)
-	grpc.ClientStream
-}
-
-type globalDDSServiceStreamClustersClient struct {
-	grpc.ClientStream
-}
-
-func (x *globalDDSServiceStreamClustersClient) Send(m *ClustersResponse) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *globalDDSServiceStreamClustersClient) Recv() (*ClustersRequest, error) {
-	m := new(ClustersRequest)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 func (c *globalDDSServiceClient) HealthCheck(ctx context.Context, in *ZoneHealthCheckRequest, opts ...grpc.CallOption) (*ZoneHealthCheckResponse, error) {
@@ -274,20 +49,6 @@ func (c *globalDDSServiceClient) HealthCheck(ctx context.Context, in *ZoneHealth
 // All implementations must embed UnimplementedGlobalDDSServiceServer
 // for forward compatibility
 type GlobalDDSServiceServer interface {
-	// StreamXDSConfigs is logically a service exposed by Zone CP so Global CP can
-	// execute Config Dumps. It is however represented by bi-directional streaming
-	// to leverage existing connection from Zone CP to Global CP.
-	StreamXDSConfigs(GlobalDDSService_StreamXDSConfigsServer) error
-	// StreamStats is logically a service exposed by Zone CP so Global CP can
-	// execute dubbo-dp stats requests. It is however represented by
-	// bi-directional streaming to leverage existing connection from Zone CP to
-	// Global CP.
-	StreamStats(GlobalDDSService_StreamStatsServer) error
-	// StreamStats is logically a service exposed by Zone CP so Global CP can
-	// execute dubbo-dp clusters request. It is however represented by
-	// bi-directional streaming to leverage existing connection from Zone CP to
-	// Global CP.
-	StreamClusters(GlobalDDSService_StreamClustersServer) error
 	// HealthCheck allows us to implement a health check that works across
 	// proxies, unlike HTTP/2 PING frames.
 	HealthCheck(context.Context, *ZoneHealthCheckRequest) (*ZoneHealthCheckResponse, error)
@@ -298,15 +59,6 @@ type GlobalDDSServiceServer interface {
 type UnimplementedGlobalDDSServiceServer struct {
 }
 
-func (UnimplementedGlobalDDSServiceServer) StreamXDSConfigs(GlobalDDSService_StreamXDSConfigsServer) error {
-	return status.Errorf(codes.Unimplemented, "method StreamXDSConfigs not implemented")
-}
-func (UnimplementedGlobalDDSServiceServer) StreamStats(GlobalDDSService_StreamStatsServer) error {
-	return status.Errorf(codes.Unimplemented, "method StreamStats not implemented")
-}
-func (UnimplementedGlobalDDSServiceServer) StreamClusters(GlobalDDSService_StreamClustersServer) error {
-	return status.Errorf(codes.Unimplemented, "method StreamClusters not implemented")
-}
 func (UnimplementedGlobalDDSServiceServer) HealthCheck(context.Context, *ZoneHealthCheckRequest) (*ZoneHealthCheckResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HealthCheck not implemented")
 }
@@ -321,84 +73,6 @@ type UnsafeGlobalDDSServiceServer interface {
 
 func RegisterGlobalDDSServiceServer(s grpc.ServiceRegistrar, srv GlobalDDSServiceServer) {
 	s.RegisterService(&GlobalDDSService_ServiceDesc, srv)
-}
-
-func _GlobalDDSService_StreamXDSConfigs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(GlobalDDSServiceServer).StreamXDSConfigs(&globalDDSServiceStreamXDSConfigsServer{stream})
-}
-
-type GlobalDDSService_StreamXDSConfigsServer interface {
-	Send(*XDSConfigRequest) error
-	Recv() (*XDSConfigResponse, error)
-	grpc.ServerStream
-}
-
-type globalDDSServiceStreamXDSConfigsServer struct {
-	grpc.ServerStream
-}
-
-func (x *globalDDSServiceStreamXDSConfigsServer) Send(m *XDSConfigRequest) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *globalDDSServiceStreamXDSConfigsServer) Recv() (*XDSConfigResponse, error) {
-	m := new(XDSConfigResponse)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func _GlobalDDSService_StreamStats_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(GlobalDDSServiceServer).StreamStats(&globalDDSServiceStreamStatsServer{stream})
-}
-
-type GlobalDDSService_StreamStatsServer interface {
-	Send(*StatsRequest) error
-	Recv() (*StatsResponse, error)
-	grpc.ServerStream
-}
-
-type globalDDSServiceStreamStatsServer struct {
-	grpc.ServerStream
-}
-
-func (x *globalDDSServiceStreamStatsServer) Send(m *StatsRequest) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *globalDDSServiceStreamStatsServer) Recv() (*StatsResponse, error) {
-	m := new(StatsResponse)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func _GlobalDDSService_StreamClusters_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(GlobalDDSServiceServer).StreamClusters(&globalDDSServiceStreamClustersServer{stream})
-}
-
-type GlobalDDSService_StreamClustersServer interface {
-	Send(*ClustersRequest) error
-	Recv() (*ClustersResponse, error)
-	grpc.ServerStream
-}
-
-type globalDDSServiceStreamClustersServer struct {
-	grpc.ServerStream
-}
-
-func (x *globalDDSServiceStreamClustersServer) Send(m *ClustersRequest) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *globalDDSServiceStreamClustersServer) Recv() (*ClustersResponse, error) {
-	m := new(ClustersResponse)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 func _GlobalDDSService_HealthCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -431,26 +105,7 @@ var GlobalDDSService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GlobalDDSService_HealthCheck_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamXDSConfigs",
-			Handler:       _GlobalDDSService_StreamXDSConfigs_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "StreamStats",
-			Handler:       _GlobalDDSService_StreamStats_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "StreamClusters",
-			Handler:       _GlobalDDSService_StreamClusters_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/mesh/v1alpha1/dds.proto",
 }
 

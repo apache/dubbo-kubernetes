@@ -21,7 +21,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"hash/fnv"
+	"slices"
 )
 
 import (
@@ -85,7 +87,7 @@ func (m *meshContextBuilder) BuildGlobalContextIfChanged(ctx context.Context, la
 			return nil, err
 		}
 		if desc.Scope == core_model.ScopeGlobal && desc.Name != system.ConfigType { // For config we ignore them atm and prefer to rely on more specific filters.
-			rmap[t], err = m.fetchResourceList(ctx, t, nil)
+			rmap[t], err = m.fetchResourceList(ctx, t, nil, nil)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to build global context")
 			}
@@ -101,22 +103,77 @@ func (m *meshContextBuilder) BuildGlobalContextIfChanged(ctx context.Context, la
 	}, nil
 }
 
+func (m *meshContextBuilder) BuildBaseMeshContextIfChanged(ctx context.Context, meshName string, latest *BaseMeshContext) (*BaseMeshContext, error) {
+	mesh := core_mesh.NewMeshResource()
+	if err := m.rm.Get(ctx, mesh, core_store.GetByKey(meshName, core_model.NoMesh)); err != nil {
+		return nil, err
+	}
+	rmap := ResourceMap{}
+	// Add the mesh to the resourceMap
+	rmap[core_mesh.MeshType] = mesh.Descriptor().NewList()
+	_ = rmap[core_mesh.MeshType].AddItem(mesh)
+	rmap[core_mesh.MeshType].GetPagination().SetTotal(1)
+	for t := range m.typeSet {
+		desc, err := registry.Global().DescriptorFor(t)
+		if err != nil {
+			return nil, err
+		}
+		// Only pick the policies, gateways, external services and the vip config map
+		switch {
+		case desc.IsPolicy:
+			rmap[t], err = m.fetchResourceList(ctx, t, mesh, nil)
+		// ignore system.ConfigType for now
+		default:
+			// DO nothing we're not interested in this type
+		}
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to build base mesh context")
+		}
+	}
+	newHash := rmap.Hash()
+	if latest != nil && bytes.Equal(newHash, latest.hash) {
+		return latest, nil
+	}
+	return &BaseMeshContext{
+		hash:        newHash,
+		Mesh:        mesh,
+		ResourceMap: rmap,
+	}, nil
+}
+
 func (m meshContextBuilder) BuildIfChanged(ctx context.Context, meshName string, latestMeshCtx *MeshContext) (*MeshContext, error) {
 	globalContext, err := m.BuildGlobalContextIfChanged(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
+	baseMeshContext, err := m.BuildBaseMeshContextIfChanged(ctx, meshName, nil)
+	if err != nil {
+		return nil, err
+	}
 
+	var managedTypes []core_model.ResourceType // The types not managed by global
 	resources := NewResources()
 	for resType := range m.typeSet {
 		rl, ok := globalContext.ResourceMap[resType]
 		if ok {
 			// Exists in global context take it from there
 			resources.MeshLocalResources[resType] = rl
+		} else {
+			rl, ok = baseMeshContext.ResourceMap[resType]
+			if ok { // Exist in the baseMeshContext take it from there
+				resources.MeshLocalResources[resType] = rl
+			} else { // absent from all parent contexts get it now
+				managedTypes = append(managedTypes, resType)
+				rl, err = m.fetchResourceList(ctx, resType, baseMeshContext.Mesh, nil)
+				if err != nil {
+					return nil, errors.Wrap(err, fmt.Sprintf("could not fetch resources of type:%s", resType))
+				}
+				resources.MeshLocalResources[resType] = rl
+			}
 		}
 	}
 
-	newHash := base64.StdEncoding.EncodeToString(m.hash(globalContext))
+	newHash := base64.StdEncoding.EncodeToString(m.hash(globalContext, managedTypes, resources))
 	if latestMeshCtx != nil && newHash == latestMeshCtx.Hash {
 		return latestMeshCtx, nil
 	}
@@ -127,10 +184,13 @@ func (m meshContextBuilder) BuildIfChanged(ctx context.Context, meshName string,
 		dataplanesByName[dp.Meta.GetName()] = dp
 	}
 
-	endpointMap := xds_topology.BuildEdsEndpoint(m.zone, dataplanes, nil)
+	mesh := baseMeshContext.Mesh
+	zoneIngresses := resources.ZoneIngresses().Items
+	endpointMap := xds_topology.BuildEdsEndpoint(m.zone, dataplanes, zoneIngresses)
 
 	return &MeshContext{
 		Hash:             newHash,
+		Resource:         mesh,
 		Resources:        resources,
 		DataplanesByName: dataplanesByName,
 		EndpointMap:      endpointMap,
@@ -139,14 +199,34 @@ func (m meshContextBuilder) BuildIfChanged(ctx context.Context, meshName string,
 
 type filterFn = func(rs core_model.Resource) bool
 
-func (m *meshContextBuilder) fetchResourceList(ctx context.Context, resType core_model.ResourceType, filterFn filterFn) (core_model.ResourceList, error) {
+func (m *meshContextBuilder) fetchResourceList(ctx context.Context, resType core_model.ResourceType, mesh *core_mesh.MeshResource, filterFn filterFn) (core_model.ResourceList, error) {
 	var listOptsFunc []core_store.ListOptionsFunc
 	desc, err := registry.Global().DescriptorFor(resType)
 	if err != nil {
 		return nil, err
 	}
+	switch desc.Scope {
+	case core_model.ScopeGlobal:
+	case core_model.ScopeMesh:
+		if mesh != nil {
+			listOptsFunc = append(listOptsFunc, core_store.ListByMesh(mesh.GetMeta().GetName()))
+		}
+	default:
+		return nil, fmt.Errorf("unknown resource scope:%s", desc.Scope)
+	}
 	listOptsFunc = append(listOptsFunc, core_store.ListOrdered())
 	list := desc.NewList()
+	// TODO: Currently, We only interested in Dataplane, Mapping, Mesh and MetaData
+	acceptedTypes := map[core_model.ResourceType]struct{}{
+		core_mesh.DataplaneType: {},
+		core_mesh.MappingType:   {},
+		core_mesh.MeshType:      {},
+		core_mesh.MetaDataType:  {},
+	}
+	if _, ok := acceptedTypes[resType]; !ok {
+		// ignore non-dataplane resources
+		return list, nil
+	}
 	if err := m.rm.List(ctx, list, listOptsFunc...); err != nil {
 		return nil, err
 	}
@@ -154,6 +234,7 @@ func (m *meshContextBuilder) fetchResourceList(ctx context.Context, resType core
 		// No post processing stuff so return the list as is
 		return list, nil
 	}
+
 	list, err = modifyAllEntries(list, func(resource core_model.Resource) (core_model.Resource, error) {
 		if filterFn != nil && !filterFn(resource) {
 			return nil, nil
@@ -200,8 +281,13 @@ func modifyAllEntries(list core_model.ResourceList, fn func(resource core_model.
 	return newList, nil
 }
 
-func (m *meshContextBuilder) hash(globalContext *GlobalContext) []byte {
+func (m *meshContextBuilder) hash(globalContext *GlobalContext, managedTypes []core_model.ResourceType, resources Resources) []byte {
+	slices.Sort(managedTypes)
 	hasher := fnv.New128a()
 	_, _ = hasher.Write(globalContext.hash)
+	for _, resType := range managedTypes {
+		_, _ = hasher.Write(core_model.ResourceListHash(resources.MeshLocalResources[resType]))
+	}
+
 	return hasher.Sum(nil)
 }

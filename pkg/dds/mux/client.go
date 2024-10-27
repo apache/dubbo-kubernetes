@@ -46,31 +46,40 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	"github.com/apache/dubbo-kubernetes/pkg/dds"
-	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	"github.com/apache/dubbo-kubernetes/pkg/version"
+)
+
+const (
+	DDSVersionHeaderKey = "dds-version"
+	DDSVersionV3        = "v3"
 )
 
 var muxClientLog = core.Log.WithName("dds-mux-client")
 
 type client struct {
-	globalToZoneCb      OnGlobalToZoneSyncStartedFunc
-	zoneToGlobalCb      OnZoneToGlobalSyncStartedFunc
-	globalURL           string
-	clientID            string
-	config              multizone.DdsClientConfig
-	ctx                 context.Context
-	envoyAdminProcessor service.EnvoyAdminProcessor
+	globalToZoneCb OnGlobalToZoneSyncStartedFunc
+	zoneToGlobalCb OnZoneToGlobalSyncStartedFunc
+	globalURL      string
+	clientID       string
+	config         multizone.DdsClientConfig
+	ctx            context.Context
 }
 
-func NewClient(ctx context.Context, globalURL string, clientID string, globalToZoneCb OnGlobalToZoneSyncStartedFunc, zoneToGlobalCb OnZoneToGlobalSyncStartedFunc, config multizone.DdsClientConfig, envoyAdminProcessor service.EnvoyAdminProcessor) component.Component {
+func NewClient(
+	ctx context.Context,
+	globalURL string,
+	clientID string,
+	globalToZoneCb OnGlobalToZoneSyncStartedFunc,
+	zoneToGlobalCb OnZoneToGlobalSyncStartedFunc,
+	config multizone.DdsClientConfig,
+) component.Component {
 	return &client{
-		ctx:                 ctx,
-		globalToZoneCb:      globalToZoneCb,
-		zoneToGlobalCb:      zoneToGlobalCb,
-		globalURL:           globalURL,
-		clientID:            clientID,
-		config:              config,
-		envoyAdminProcessor: envoyAdminProcessor,
+		ctx:            ctx,
+		globalToZoneCb: globalToZoneCb,
+		zoneToGlobalCb: zoneToGlobalCb,
+		globalURL:      globalURL,
+		clientID:       clientID,
+		config:         config,
 	}
 }
 
@@ -123,10 +132,6 @@ func (c *client) Start(stop <-chan struct{}) (errs error) {
 
 	go c.startHealthCheck(withDDSCtx, log, conn, errorCh)
 
-	go c.startXDSConfigs(withDDSCtx, log, conn, errorCh)
-	go c.startStats(withDDSCtx, log, conn, errorCh)
-	go c.startClusters(withDDSCtx, log, conn, errorCh)
-
 	go c.startGlobalToZoneSync(withDDSCtx, log, conn, errorCh)
 	go c.startZoneToGlobalSync(withDDSCtx, log, conn, errorCh)
 
@@ -141,10 +146,10 @@ func (c *client) Start(stop <-chan struct{}) (errs error) {
 }
 
 func (c *client) startGlobalToZoneSync(ctx context.Context, log logr.Logger, conn *grpc.ClientConn, errorCh chan error) {
-	kdsClient := mesh_proto.NewDDSSyncServiceClient(conn)
+	ddsClient := mesh_proto.NewDDSSyncServiceClient(conn)
 	log = log.WithValues("rpc", "global-to-zone")
 	log.Info("initializing Dubbo Discovery Service (DDS) stream for global to zone sync of resources with delta xDS")
-	stream, err := kdsClient.GlobalToZoneSync(ctx)
+	stream, err := ddsClient.GlobalToZoneSync(ctx)
 	if err != nil {
 		errorCh <- err
 		return
@@ -155,76 +160,16 @@ func (c *client) startGlobalToZoneSync(ctx context.Context, log logr.Logger, con
 }
 
 func (c *client) startZoneToGlobalSync(ctx context.Context, log logr.Logger, conn *grpc.ClientConn, errorCh chan error) {
-	kdsClient := mesh_proto.NewDDSSyncServiceClient(conn)
+	ddsClient := mesh_proto.NewDDSSyncServiceClient(conn)
 	log = log.WithValues("rpc", "zone-to-global")
 	log.Info("initializing Dubbo Discovery Service (DDS) stream for zone to global sync of resources with delta xDS")
-	stream, err := kdsClient.ZoneToGlobalSync(ctx)
+	stream, err := ddsClient.ZoneToGlobalSync(ctx)
 	if err != nil {
 		errorCh <- err
 		return
 	}
 	processingErrorsCh := make(chan error)
 	c.zoneToGlobalCb.OnZoneToGlobalSyncStarted(stream, processingErrorsCh)
-	c.handleProcessingErrors(stream, log, processingErrorsCh, errorCh)
-}
-
-func (c *client) startXDSConfigs(
-	ctx context.Context,
-	log logr.Logger,
-	conn *grpc.ClientConn,
-	errorCh chan error,
-) {
-	client := mesh_proto.NewGlobalDDSServiceClient(conn)
-	log = log.WithValues("rpc", "XDS Configs")
-	log.Info("initializing rpc stream for executing config dump on data plane proxies")
-	stream, err := client.StreamXDSConfigs(ctx)
-	if err != nil {
-		errorCh <- err
-		return
-	}
-
-	processingErrorsCh := make(chan error)
-	go c.envoyAdminProcessor.StartProcessingXDSConfigs(stream, processingErrorsCh)
-	c.handleProcessingErrors(stream, log, processingErrorsCh, errorCh)
-}
-
-func (c *client) startStats(
-	ctx context.Context,
-	log logr.Logger,
-	conn *grpc.ClientConn,
-	errorCh chan error,
-) {
-	client := mesh_proto.NewGlobalDDSServiceClient(conn)
-	log = log.WithValues("rpc", "stats")
-	log.Info("initializing rpc stream for executing stats on data plane proxies")
-	stream, err := client.StreamStats(ctx)
-	if err != nil {
-		errorCh <- err
-		return
-	}
-
-	processingErrorsCh := make(chan error)
-	go c.envoyAdminProcessor.StartProcessingStats(stream, processingErrorsCh)
-	c.handleProcessingErrors(stream, log, processingErrorsCh, errorCh)
-}
-
-func (c *client) startClusters(
-	ctx context.Context,
-	log logr.Logger,
-	conn *grpc.ClientConn,
-	errorCh chan error,
-) {
-	client := mesh_proto.NewGlobalDDSServiceClient(conn)
-	log = log.WithValues("rpc", "clusters")
-	log.Info("initializing rpc stream for executing clusters on data plane proxies")
-	stream, err := client.StreamClusters(ctx)
-	if err != nil {
-		errorCh <- err
-		return
-	}
-
-	processingErrorsCh := make(chan error)
-	go c.envoyAdminProcessor.StartProcessingClusters(stream, processingErrorsCh)
 	c.handleProcessingErrors(stream, log, processingErrorsCh, errorCh)
 }
 
@@ -278,7 +223,7 @@ func (c *client) handleProcessingErrors(
 	err := <-processingErrorsCh
 	if status.Code(err) == codes.Unimplemented {
 		log.Error(err, "rpc stream failed, because global CP does not implement this rpc. Upgrade remote CP.")
-		// backwards compatibility. Do not rethrow error, so KDS multiplex can still operate.
+		// backwards compatibility. Do not rethrow error, so DDS multiplex can still operate.
 		return
 	}
 	if errors.Is(err, context.Canceled) {

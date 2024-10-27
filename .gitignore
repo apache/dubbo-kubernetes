@@ -37,8 +37,10 @@ Thumbs.db
 ui/dist
 ui/node
 ui/node-modules
-
+ui-vue3/node_modules
+ui-vue3/pnpm-lock.yaml
 coverage.txt
 
 bin/
+build/
 vendor/

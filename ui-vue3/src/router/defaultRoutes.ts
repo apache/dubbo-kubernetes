@@ -20,6 +20,8 @@ import type { RouteRecordRaw } from 'vue-router'
 import LayoutTab from '../layout/tab/layout_tab.vue'
 import _ from 'lodash'
 import AppTabHeaderSlot from '@/views/resources/applications/slots/AppTabHeaderSlot.vue'
+import ServiceTabHeaderSlot from '@/views/resources/services/slots/ServiceTabHeaderSlot.vue'
+import InstanceTabHeaderSlot from '@/views/resources/instances/slots/InstanceTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -144,7 +146,10 @@ export const routes: Readonly<RouteRecordType[]> = [
             component: LayoutTab,
             redirect: 'all',
             meta: {
-              tab_parent: true
+              tab_parent: true,
+              slots: {
+                header: InstanceTabHeaderSlot
+              }
             },
             children: [
               {
@@ -158,7 +163,7 @@ export const routes: Readonly<RouteRecordType[]> = [
               {
                 path: '/detail/:pathId',
                 name: 'instanceDomain.details',
-                component: () => import('../views/resources/instances/tabs/details.vue'),
+                component: () => import('../views/resources/instances/tabs/detail.vue'),
                 meta: {
                   tab: true,
                   icon: 'tabler:list-details'
@@ -208,7 +213,10 @@ export const routes: Readonly<RouteRecordType[]> = [
             redirect: 'search',
             component: LayoutTab,
             meta: {
-              tab_parent: true
+              tab_parent: true,
+              slots: {
+                header: ServiceTabHeaderSlot
+              }
             },
             children: [
               {
@@ -220,31 +228,33 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/detail/:serviceName',
-                name: 'detail',
-                component: () => import('../views/resources/services/tabs/detail.vue'),
-                meta: {
-                  tab: true
-                }
-              },
-              {
-                path: '/debug/:serviceName',
-                name: 'debug',
-                component: () => import('../views/resources/services/tabs/debug.vue'),
-                meta: {
-                  tab: true
-                }
-              },
-              {
-                path: '/distribution/:serviceName',
+                path: '/distribution/:pathId',
                 name: 'distribution',
                 component: () => import('../views/resources/services/tabs/distribution.vue'),
                 meta: {
                   tab: true
                 }
               },
+              // Temporarily hidden
+              // {
+              //   path: '/detail/:pathId',
+              //   name: 'detail',
+              //   component: () => import('../views/resources/services/tabs/detail.vue'),
+              //   meta: {
+              //     tab: true
+              //   }
+              // },
               {
-                path: '/monitor/:serviceName',
+                path: '/debug/:pathId',
+                name: 'debug',
+                component: () => import('../views/resources/services/tabs/debug.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+
+              {
+                path: '/monitor/:pathId',
                 name: 'monitor',
                 component: () => import('../views/resources/services/tabs/monitor.vue'),
                 meta: {
@@ -252,7 +262,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/tracing/:serviceName',
+                path: '/tracing/:pathId',
                 name: 'tracing',
                 component: () => import('../views/resources/services/tabs/tracing.vue'),
                 meta: {
@@ -260,7 +270,15 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/event/:serviceName',
+                path: '/sceneConfig/:pathId',
+                name: 'sceneConfig',
+                component: () => import('../views/resources/services/tabs/sceneConfig.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/event/:pathId',
                 name: 'event',
                 component: () => import('../views/resources/services/tabs/event.vue'),
                 meta: {
@@ -281,19 +299,125 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/routingRule',
             name: 'routingRule',
-            component: () => import('../views/traffic/routingRule/index.vue')
+            redirect: 'index',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'routingRuleIndex',
+                component: () => import('../views/traffic/routingRule/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/formview/:ruleName',
+                name: 'routingRuleDomain.formView',
+                component: () => import('../views/traffic/routingRule/tabs/formView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:apm-trace'
+                }
+              },
+              {
+                path: '/yamlview/:ruleName',
+                name: 'routingRuleDomain.YAMLView',
+                component: () => import('../views/traffic/routingRule/tabs/YAMLView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:app-console'
+                }
+              }
+            ]
           },
           {
             path: '/tagRule',
             name: 'tagRule',
-            component: () => import('../views/traffic/tagRule/index.vue'),
-            meta: {}
+            redirect: 'index',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'tagRuleIndex',
+                component: () => import('../views/traffic/tagRule/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/formview/:ruleName',
+                name: 'tagRuleDomain.formView',
+                component: () => import('../views/traffic/tagRule/tabs/formView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:apm-trace'
+                }
+              },
+              {
+                path: '/yamlview/:ruleName',
+                name: 'tagRuleDomain.YAMLView',
+                component: () => import('../views/traffic/tagRule/tabs/YAMLView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:app-console'
+                }
+              }
+            ]
           },
           {
             path: '/dynamicConfig',
             name: 'dynamicConfig',
-            component: () => import('../views/traffic/dynamicConfig/index.vue'),
-            meta: {}
+            redirect: 'index',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true
+            },
+            children: [
+              {
+                path: '/index',
+                name: 'dynamicConfigIndex',
+                component: () => import('../views/traffic/dynamicConfig/index.vue'),
+                meta: {
+                  hidden: true
+                }
+              },
+              {
+                path: '/formview/:pathId/:isEdit',
+                name: 'dynamicConfigDomain.formView',
+                component: () => import('../views/traffic/dynamicConfig/tabs/formView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:apm-trace',
+                  back: '../../'
+                }
+              },
+              {
+                path: '/yamlview/:pathId/:isEdit',
+                name: 'dynamicConfigDomain.YAMLView',
+                component: () => import('../views/traffic/dynamicConfig/tabs/YAMLView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:app-console',
+                  back: '../../'
+                }
+              },
+              {
+                path: '/event/:pathId/:isEdit',
+                name: 'dynamicConfigDomain.event',
+                component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:app-console',
+                  back: '../../'
+                }
+              }
+            ]
           },
           {
             path: '/meshRule',
@@ -302,12 +426,76 @@ export const routes: Readonly<RouteRecordType[]> = [
               {
                 path: '/virtualService',
                 name: 'virtualService',
-                component: () => import('../views/traffic/virtualService/index.vue')
+                redirect: 'index',
+                component: LayoutTab,
+                meta: {
+                  tab_parent: true
+                },
+                children: [
+                  {
+                    path: '/index',
+                    name: 'virtualServiceIndex',
+                    component: () => import('../views/traffic/virtualService/index.vue'),
+                    meta: {
+                      hidden: true
+                    }
+                  },
+                  {
+                    path: '/formview/:ruleName',
+                    name: 'virtualServiceDomain.formView',
+                    component: () => import('../views/traffic/virtualService/tabs/formView.vue'),
+                    meta: {
+                      tab: true,
+                      icon: 'oui:apm-trace'
+                    }
+                  },
+                  {
+                    path: '/yamlview/:ruleName',
+                    name: 'virtualServiceDomain.YAMLView',
+                    component: () => import('../views/traffic/virtualService/tabs/YAMLView.vue'),
+                    meta: {
+                      tab: true,
+                      icon: 'oui:app-console'
+                    }
+                  }
+                ]
               },
               {
                 path: '/destinationRule',
                 name: 'destinationRule',
-                component: () => import('../views/traffic/destinationRule/index.vue')
+                redirect: 'index',
+                component: LayoutTab,
+                meta: {
+                  tab_parent: true
+                },
+                children: [
+                  {
+                    path: '/index',
+                    name: 'destinationRuleIndex',
+                    component: () => import('../views/traffic/destinationRule/index.vue'),
+                    meta: {
+                      hidden: true
+                    }
+                  },
+                  {
+                    path: '/formview/:ruleName',
+                    name: 'destinationRuleDomain.formView',
+                    component: () => import('../views/traffic/destinationRule/tabs/formView.vue'),
+                    meta: {
+                      tab: true,
+                      icon: 'oui:apm-trace'
+                    }
+                  },
+                  {
+                    path: '/yamlview/:ruleName',
+                    name: 'destinationRuleDomain.YAMLView',
+                    component: () => import('../views/traffic/destinationRule/tabs/YAMLView.vue'),
+                    meta: {
+                      tab: true,
+                      icon: 'oui:app-console'
+                    }
+                  }
+                ]
               }
             ]
           }

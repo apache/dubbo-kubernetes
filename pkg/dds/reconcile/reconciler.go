@@ -133,6 +133,7 @@ func (r *reconciler) Version(new, old envoy_cache.ResourceSnapshot) (envoy_cache
 			continue
 		}
 
+		// 如果旧版本不为空, 并且新版本和旧版本的资源是一样的, 那么以旧版本为主
 		if old != nil && r.equal(new.GetResources(typ), old.GetResources(typ)) {
 			version = old.GetVersion(typ)
 		}

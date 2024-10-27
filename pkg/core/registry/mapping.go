@@ -22,25 +22,49 @@ import (
 )
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 
 	gxset "github.com/dubbogo/gost/container/set"
 	"github.com/dubbogo/gost/gof/observer"
 )
 
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/events"
+	"github.com/apache/dubbo-kubernetes/pkg/util/rmkey"
+)
+
 type ServiceMappingChangedListenerImpl struct {
 	oldServiceNames *gxset.HashSet
 	listener        registry.NotifyListener
 	interfaceKey    string
+	systemNamespace string
 
+	ctx           *ApplicationContext
 	mux           sync.Mutex
 	delSDRegistry registry.ServiceDiscovery
+	eventWriter   events.Emitter
 }
 
-func NewMappingListener(oldServiceNames *gxset.HashSet, listener registry.NotifyListener) *ServiceMappingChangedListenerImpl {
+func NewMappingListener(
+	interfaceKey string,
+	oldServiceNames *gxset.HashSet,
+	listener registry.NotifyListener,
+	writer events.Emitter,
+	systemNamespace string,
+	delSDRegistry registry.ServiceDiscovery,
+	ctx *ApplicationContext,
+) *ServiceMappingChangedListenerImpl {
 	return &ServiceMappingChangedListenerImpl{
+		interfaceKey:    interfaceKey,
 		listener:        listener,
 		oldServiceNames: oldServiceNames,
+		eventWriter:     writer,
+		systemNamespace: systemNamespace,
+		delSDRegistry:   delSDRegistry,
+		ctx:             ctx,
 	}
 }
 
@@ -59,6 +83,18 @@ func (lstn *ServiceMappingChangedListenerImpl) OnEvent(e observer.Event) error {
 		return nil
 	}
 
+	interfaceName, _, _ := common.ParseServiceKey(sm.GetServiceKey())
+	if lstn.eventWriter != nil {
+		go func() {
+			lstn.eventWriter.Send(events.ResourceChangedEvent{
+				Operation: events.Delete,
+				Type:      mesh.DataplaneType,
+				Key: core_model.ResourceKey{
+					Name: rmkey.GenerateMappingResourceKey(interfaceName, ""),
+				},
+			})
+		}()
+	}
 	err := lstn.updateListener(lstn.interfaceKey, newServiceNames)
 	if err != nil {
 		return err
@@ -70,9 +106,11 @@ func (lstn *ServiceMappingChangedListenerImpl) OnEvent(e observer.Event) error {
 }
 
 func (lstn *ServiceMappingChangedListenerImpl) updateListener(interfaceKey string, apps *gxset.HashSet) error {
-	delSDListener := NewDubboSDNotifyListener(apps)
+	delSDListener := NewDubboSDNotifyListener(apps, lstn.ctx)
 	delSDListener.AddListenerAndNotify(interfaceKey, lstn.listener)
 	err := lstn.delSDRegistry.AddListener(delSDListener)
+
+	// lstn.delSDRegistry.RemoveListener(oldApps);
 	return err
 }
 

@@ -68,8 +68,10 @@ const (
 	PunctuationPoint       = "."
 	ConditionRoute         = "condition_route"
 	TagRoute               = "tag_route"
+	AffinityRoute          = "affinity_route"
 	ConditionRuleSuffix    = ".condition-router"
 	TagRuleSuffix          = ".tag-router"
+	AffinityRuleSuffix     = ".affinity-router"
 	ConfigFileEnvKey       = "conf" // config file path
 	RegistryAll            = "ALL"
 	RegistryInterface      = "INTERFACE"
@@ -79,3 +81,18 @@ const (
 )
 
 var Configs = set.NewSet(WeightKey, BalancingKey)
+
+const (
+	ConfiguratorVersionV3   = `v3.0`
+	ConfiguratorVersionV3x1 = `v3.1`
+	ConfigVersionKey        = `configVersion`
+	ScopeApplication        = `application`
+	ScopeService            = `service`
+	SideProvider            = `provider`
+	SideConsumer            = `consumer`
+)
+
+const (
+	NotEqual = "!="
+	Equal    = "="
+)

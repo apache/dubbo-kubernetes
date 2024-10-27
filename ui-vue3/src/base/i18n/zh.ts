@@ -18,7 +18,69 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
+  destinationRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  virtualServiceDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  dynamicConfigDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图',
+    event: '事件'
+  },
+  routingRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  tagRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  flowControlDomain: {
+    notSet: '未设置',
+    versionRecords: '版本记录',
+    YAMLView: 'YAML视图',
+    addConfiguration: '增加配置',
+    addConfigurationItem: '增加配置项',
+    addFilter: '增加筛选',
+    configurationItem: '配置项',
+    actuatingRange: '作用范围',
+    scopeScreening: '作用范围筛选',
+    endOfAction: '作用端',
+    actions: '操作',
+    filterType: '筛选类型',
+    labelName: '标签名',
+    formView: '表单视图',
+    addMatch: '增加匹配',
+    addRouter: '增加路由',
+    addLabel: '增加标签',
+    addressSubsetMatching: '地址子集匹配',
+    value: '值',
+    relation: '关系',
+    requestParameterMatching: '请求参数匹配',
+    matchingDimension: '匹配维度',
+    parameter: '参数',
+    ruleName: '规则名',
+    actionObject: '作用对象',
+    faultTolerantProtection: '容错保护',
+    runTimeEffective: '运行时生效',
+    ruleGranularity: '规则粒度',
+    effectTime: '生效时间',
+    enabledState: '启用状态',
+    priority: '优先级',
+    off: '关',
+    on: '开',
+    opened: '开启',
+    closed: '关闭',
+    enabled: '启用',
+    disabled: '禁用'
+  },
   instanceDomain: {
+    flowDisabled: '流量禁用',
+    operatorLog: '执行日志',
     CPU: 'CPU',
     enableAppInstanceLogs: '开启该应用所有实例的访问日志',
     appServiceLoadBalance: '调整应用提供服务的负载均衡策略',
@@ -35,7 +97,7 @@ const words: I18nType = {
     loadBalance: '负载均衡',
     monitor: '监控',
     linkTracking: '链路追踪',
-    configuration: '配置',
+    configuration: '场景配置',
     event: '事件',
     healthExamination_k8s: '健康检查(k8s)',
     instanceLabel: '实例标签',
@@ -50,18 +112,29 @@ const words: I18nType = {
     name: '实例名称',
     deployState: '部署状态',
     deployCluster: '部署集群',
-    registerStates: '注册状态',
+    deployClusters: '部署集群',
+    registerState: '注册状态',
     registerClusters: '注册集群',
+    registryClusters: '注册集群',
     cpu: 'CPU',
     memory: '内存',
     startTime: '启动时间',
     registerTime: '注册时间',
     labels: '标签',
+    instanceCount: '实例数量',
     instanceName: '实例名称',
     creationTime_k8s: '创建时间(k8s)',
     startTime_k8s: '启动时间(k8s)'
   },
+  serviceDomain: {
+    name: '服务名',
+    notSpecified: '不指定'
+  },
   service: '服务',
+  versionGroup: '版本&分组',
+  avgQPS: '近1min QPS',
+  avgRT: '近1min RT',
+  requestTotal: '近1min 请求总量',
   serviceSearch: '服务查询',
   serviceGovernance: '路由规则',
   trafficManagement: '流量管控',
@@ -315,6 +388,11 @@ const words: I18nType = {
   applications: '应用',
   instances: '实例',
   applicationDomain: {
+    instanceCount: '实例数量',
+    deployClusters: '部署集群',
+    registryClusters: '注册集群',
+    registerClusters: '注册集群',
+    registerModes: '注册模式',
     operatorLog: '执行日志',
     flowWeight: '流量权重',
     gray: '灰度隔离',
@@ -363,6 +441,7 @@ const words: I18nType = {
   distribution: '分布',
   monitor: '监控',
   tracing: '链路追踪',
+  sceneConfig: '场景配置',
   event: '事件',
 
   provideService: '提供服务',

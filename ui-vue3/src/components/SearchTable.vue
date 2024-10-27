@@ -18,7 +18,7 @@
   <div class="__container_search_table">
     <div class="search-query-container">
       <a-row>
-        <a-col :span="20">
+        <a-col :span="18">
           <a-form>
             <a-flex wrap="wrap" gap="large">
               <template v-for="q in searchDomain.params">
@@ -67,29 +67,32 @@
             </a-flex>
           </a-form>
         </a-col>
-        <a-col :span="4">
-          <div class="common-tool" @click="commonTool.customColumns = !commonTool.customColumns">
-            <div class="custom-column button">
-              <Icon icon="material-symbols-light:format-list-bulleted-rounded"></Icon>
-            </div>
-            <div class="dropdown" v-show="commonTool.customColumns">
-              <a-card style="max-width: 300px" title="Custom Column">
-                <div class="body">
-                  <div
-                    class="item"
-                    @click.stop="hideColumn(item)"
-                    v-for="(item, i) in searchDomain?.table.columns"
-                  >
-                    <Icon
-                      style="margin-bottom: -4px; font-size: 1rem; margin-right: 2px"
-                      :icon="item.__hide ? 'zondicons:view-hide' : 'zondicons:view-show'"
-                    ></Icon>
-                    {{ item.title }}
+        <a-col :span="6">
+          <a-flex style="justify-content: flex-end">
+            <slot name="customOperation"></slot>
+            <div class="common-tool" @click="commonTool.customColumns = !commonTool.customColumns">
+              <div class="custom-column button">
+                <Icon icon="material-symbols-light:format-list-bulleted-rounded"></Icon>
+              </div>
+              <div class="dropdown" v-show="commonTool.customColumns">
+                <a-card style="max-width: 300px" title="Custom Column">
+                  <div class="body">
+                    <div
+                      class="item"
+                      @click.stop="hideColumn(item)"
+                      v-for="(item, i) in searchDomain?.table.columns"
+                    >
+                      <Icon
+                        style="margin-bottom: -4px; font-size: 1rem; margin-right: 2px"
+                        :icon="item.__hide ? 'zondicons:view-hide' : 'zondicons:view-show'"
+                      ></Icon>
+                      {{ item.title }}
+                    </div>
                   </div>
-                </div>
-              </a-card>
+                </a-card>
+              </div>
             </div>
-          </div>
+          </a-flex>
         </a-col>
       </a-row>
     </div>
@@ -146,6 +149,7 @@ const {
 } = <ComponentInternalInstance>getCurrentInstance()
 
 const searchDomain: SearchDomain | any = inject(PROVIDE_INJECT_KEY.SEARCH_DOMAIN)
+
 searchDomain.table.columns.forEach((column: any) => {
   if (column.title) {
     const tmp = column.title
@@ -159,6 +163,7 @@ const pagination: any = computed(() => {
   return {
     pageSize: searchDomain.paged.pageSize,
     current: searchDomain.paged.curPage,
+    total: searchDomain.paged.total,
     showTotal: (v: any) =>
       globalProperties.$t('searchDomain.total') +
       ': ' +
@@ -175,9 +180,11 @@ const handleTableChange = (
 ) => {
   searchDomain.paged.pageSize = pag.pageSize
   searchDomain.paged.curPage = pag.current
+
   searchDomain.onSearch()
   return
 }
+
 function hideColumn(item: any) {
   let filter = searchDomain?.table.columns.filter((x: any) => !x.__hide)
   if (!item.__hide && filter.length <= 1) {
@@ -211,7 +218,7 @@ function hideColumn(item: any) {
 
   .common-tool {
     margin-top: 5px;
-    width: 200px;
+    width: 100px;
     cursor: pointer;
     position: relative;
     .button {

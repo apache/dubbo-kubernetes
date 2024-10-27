@@ -26,6 +26,7 @@ import (
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/cla"
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/server/v3"
@@ -42,6 +43,7 @@ var (
 )
 
 func RegisterXDS(rt core_runtime.Runtime) error {
+	statsCallbacks, err := util_xds.NewStatsCallbacks(nil, "xds")
 	claCache, err := cla.NewCache(rt.Config().Store.Cache.ExpirationTime.Duration)
 	if err != nil {
 		return err
@@ -51,7 +53,7 @@ func RegisterXDS(rt core_runtime.Runtime) error {
 		CLACache: claCache,
 		Zone:     "",
 	}
-	if err := v3.RegisterXDS(nil, envoyCpCtx, rt); err != nil {
+	if err := v3.RegisterXDS(statsCallbacks, envoyCpCtx, rt); err != nil {
 		return errors.Wrap(err, "could not register V3 XDS")
 	}
 	return nil

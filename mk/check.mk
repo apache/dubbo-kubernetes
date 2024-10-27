@@ -3,7 +3,10 @@ GO_INSTALL = $(GO) install
 GO_BIN = $(shell go env GOPATH)/bin
 
 .PHONY: fmt
-fmt: dubbogofmt golangci-lint-fmt fmt/proto ## Dev: Run various format tools
+fmt: gofmt dubbogofmt golangci-lint-fmt fmt/proto ## Dev: Run various format tools
+
+.PHONY: gofmt
+	go fmt ./...
 
 .PHONY: fmt/proto
 fmt/proto: ## Dev: Run clang-format on .proto files

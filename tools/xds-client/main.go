@@ -52,7 +52,7 @@ func newRunCmd() *cobra.Command {
 		outbounds        int
 		rampUpPeriod     time.Duration
 	}{
-		xdsServerAddress: "grpcs://localhost:5678",
+		xdsServerAddress: "grpc://localhost:5678",
 		dps:              100,
 		services:         50,
 		inbounds:         1,
@@ -100,7 +100,7 @@ func newRunCmd() *cobra.Command {
 					}
 
 					dp := &unversioned.Resource{
-						Meta: rest_v1alpha1.ResourceMeta{Mesh: "default", Name: fmt.Sprintf("dataplane-%d", i), Type: "Dataplane"},
+						Meta: rest_v1alpha1.ResourceMeta{Mesh: "default", Name: fmt.Sprintf("dataplane-%d.dubbo-system", i), Type: "Dataplane"},
 						Spec: dpSpec,
 					}
 

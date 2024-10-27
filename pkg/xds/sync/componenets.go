@@ -73,11 +73,12 @@ func DefaultDataplaneWatchdogFactory(
 		IngressProxyBuilder:   ingressProxyBuilder,
 		IngressReconciler:     ingressReconciler,
 		EnvoyCpCtx:            envoyCpCtx,
+		MeshCache:             rt.MeshCache(),
 		MetadataTracker:       metadataTracker,
 		ResManager:            rt.ReadOnlyResourceManager(),
 	}
 	return NewDataplaneWatchdogFactory(
-		10,
+		config.XdsServer.DataplaneConfigurationRefreshInterval.Duration,
 		deps,
 	)
 }

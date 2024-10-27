@@ -24,6 +24,12 @@ import (
 import (
 	"github.com/pkg/errors"
 
+	kube_apps "k8s.io/api/apps/v1"
+
+	kube_core "k8s.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/types"
+
 	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -35,6 +41,16 @@ import (
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+)
+
+const (
+	ExtensionsImageKey                 = "image"
+	ExtensionsPodPhaseKey              = "podPhase"
+	ExtensionsPodStatusKey             = "podStatus"
+	ExtensionsContainerStatusReasonKey = "containerStatus"
+	ExtensionApplicationNameKey        = "applicationName" // For universial mode
+	ExtensionsWorkLoadKey              = "workLoad"
+	ExtensionsNodeNameKey              = "nodeName"
 )
 
 type dataplaneManager struct {
@@ -75,7 +91,7 @@ func (m *dataplaneManager) Get(ctx context.Context, r core_model.Resource, opts 
 	m.setInboundsClusterTag(dataplane)
 	m.setHealth(dataplane)
 	if m.deployMode != config_core.UniversalMode {
-		m.setExtensions(dataplane)
+		m.setExtensions(ctx, dataplane)
 	}
 	return nil
 }
@@ -92,7 +108,7 @@ func (m *dataplaneManager) List(ctx context.Context, r core_model.ResourceList, 
 		m.setHealth(item)
 		m.setInboundsClusterTag(item)
 		if m.deployMode != config_core.UniversalMode {
-			m.setExtensions(item)
+			m.setExtensions(ctx, item)
 		}
 	}
 	return nil
@@ -135,7 +151,7 @@ func (m *dataplaneManager) setHealth(dp *core_mesh.DataplaneResource) {
 	for _, inbound := range dp.Spec.Networking.Inbound {
 		if inbound.ServiceProbe != nil {
 			inbound.State = mesh_proto.Dataplane_Networking_Inbound_NotReady
-			// write health for backwards compatibility with Kuma 2.5 and older
+			// write health for backwards compatibility with Dubbo
 			inbound.Health = &mesh_proto.Dataplane_Networking_Inbound_Health{
 				Ready: false,
 			}
@@ -143,9 +159,57 @@ func (m *dataplaneManager) setHealth(dp *core_mesh.DataplaneResource) {
 	}
 }
 
-func (m *dataplaneManager) setExtensions(dp *core_mesh.DataplaneResource) {
+func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.DataplaneResource) {
 	if m.zone == "" || dp.Spec.Networking == nil {
 		return
 	}
 
+	client := m.manager.GetClient()
+	namespacedName := types.NamespacedName{
+		Namespace: dp.GetMeta().GetNameExtensions()[core_model.K8sNamespaceComponent],
+		Name:      dp.GetMeta().GetNameExtensions()[core_model.K8sNameComponent],
+	}
+
+	pod := &kube_core.Pod{}
+	err := client.Get(ctx, namespacedName, pod)
+	if err != nil {
+		return
+	}
+
+	extensions := make(map[string]string)
+	extensions[ExtensionsImageKey] = pod.Spec.Containers[0].Image
+
+	podPhase := pod.Status.Phase
+	extensions[ExtensionsPodPhaseKey] = string(podPhase)
+
+	podStatusConditions := pod.Status.Conditions
+	for _, condition := range podStatusConditions {
+		if condition.Status != kube_core.ConditionTrue {
+			extensions[ExtensionsPodStatusKey] = condition.Reason
+			break
+		}
+	}
+
+	containerState := pod.Status.ContainerStatuses[0].State
+	if containerState.Waiting != nil {
+		extensions[ExtensionsContainerStatusReasonKey] = containerState.Waiting.Reason
+	} else if containerState.Terminated != nil {
+		extensions[ExtensionsContainerStatusReasonKey] = containerState.Terminated.Reason
+	}
+
+	// get workload
+	replicaSet := &kube_apps.ReplicaSet{}
+	replicaSetNamespacedName := types.NamespacedName{Namespace: pod.Namespace, Name: pod.ObjectMeta.OwnerReferences[0].Name}
+	if err = client.Get(ctx, replicaSetNamespacedName, replicaSet); err != nil {
+		return
+	}
+	if replicaSet.ObjectMeta.OwnerReferences[0].Name != "" {
+		extensions[ExtensionsWorkLoadKey] = replicaSet.ObjectMeta.OwnerReferences[0].Name
+	} else if pod.ObjectMeta.OwnerReferences[0].Name != "" {
+		extensions[ExtensionsWorkLoadKey] = pod.ObjectMeta.OwnerReferences[0].Name
+	}
+
+	// get NodeName
+	extensions[ExtensionsNodeNameKey] = pod.Spec.NodeName
+	dp.Spec.Extensions = extensions
 }

@@ -16,11 +16,39 @@
 -->
 
 <template>
-  <div>monitor todo</div>
+  <div class="__container_tabDemo3">
+    <div class="option">
+      <a-button class="btn" @click="refresh"> refresh </a-button>
+      <a-button class="btn" @click="newPageForGrafana"> grafana </a-button>
+    </div>
+    <a-spin class="spin" :spinning="!showIframe">
+      <div class="__container_iframe_container">
+        <iframe v-if="showIframe" id="grafanaIframe" :src="grafanaUrl" frameborder="0"></iframe>
+      </div>
+    </a-spin>
+  </div>
 </template>
 
-<script lang="ts" setup>
-import { ref } from 'vue'
-</script>
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { getInstanceMetricsInfo } from '@/api/service/instance'
 
+let grafanaUrl = ref('')
+let showIframe = ref(true)
+onMounted(async () => {
+  let res = await getInstanceMetricsInfo({})
+  grafanaUrl.value = res.data
+})
+
+function refresh() {
+  showIframe.value = false
+  setTimeout(() => {
+    showIframe.value = true
+  }, 200)
+}
+
+function newPageForGrafana() {
+  window.open(grafanaUrl.value, '_blank')
+}
+</script>
 <style lang="less" scoped></style>

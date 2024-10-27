@@ -69,13 +69,13 @@ type validatingHandler struct {
 	coreRegistry                 core_registry.TypeRegistry
 	k8sRegistry                  k8s_registry.TypeRegistry
 	converter                    k8s_common.Converter
-	decoder                      *admission.Decoder
+	decoder                      admission.Decoder
 	mode                         core.CpMode
 	federatedZone                bool
 	disableOriginLabelValidation bool
 }
 
-func (h *validatingHandler) InjectDecoder(d *admission.Decoder) {
+func (h *validatingHandler) InjectDecoder(d admission.Decoder) {
 	h.decoder = d
 }
 
@@ -196,7 +196,7 @@ func resourceIsNotAllowedResponse() admission.Response {
 						{
 							Type:    "FieldValueInvalid",
 							Message: "cannot be empty",
-							Field:   "metadata.labels[kuma.io/origin]",
+							Field:   "metadata.labels[dubbo.io/origin]",
 						},
 					},
 				},
@@ -226,7 +226,7 @@ func resourceTypeIsNotAllowedResponse(resType core_model.ResourceType, cpMode co
 						{
 							Type:    "FieldValueInvalid",
 							Message: "cannot be empty",
-							Field:   "metadata.annotations[kuma.io/synced]",
+							Field:   "metadata.annotations[dubbo.io/synced]",
 						},
 					},
 				},
@@ -239,7 +239,7 @@ func (h *validatingHandler) Supports(admission.Request) bool {
 	return true
 }
 
-func convertValidationErrorOf(kumaErr validators.ValidationError, obj kube_runtime.Object, objMeta metav1.Object) admission.Response {
+func convertValidationErrorOf(dubboErr validators.ValidationError, obj kube_runtime.Object, objMeta metav1.Object) admission.Response {
 	details := &metav1.StatusDetails{
 		Name: objMeta.GetName(),
 		Kind: obj.GetObjectKind().GroupVersionKind().Kind,
@@ -249,14 +249,14 @@ func convertValidationErrorOf(kumaErr validators.ValidationError, obj kube_runti
 			Allowed: false,
 			Result: &metav1.Status{
 				Status:  "Failure",
-				Message: kumaErr.Error(),
+				Message: dubboErr.Error(),
 				Reason:  "Invalid",
 				Code:    int32(422),
 				Details: details,
 			},
 		},
 	}
-	for _, violation := range kumaErr.Violations {
+	for _, violation := range dubboErr.Violations {
 		cause := metav1.StatusCause{
 			Type:    "FieldValueInvalid",
 			Message: violation.Message,

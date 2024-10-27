@@ -18,36 +18,43 @@
   <div class="__container_resources_application_index">
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ text, record, index, column }">
+        <template v-if="column.dataIndex === 'ip'">
+          <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
+            <b>
+              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+              {{ text }}
+            </b>
+          </span>
+        </template>
+
         <template v-if="column.dataIndex === 'deployState'">
-          <a-typography-text type="success">{{ text.label }}</a-typography-text>
+          <a-tag :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
         </template>
 
         <template v-if="column.dataIndex === 'deployCluster'">
-          <a-tag color="success">
+          <a-tag color="grey">
             {{ text }}
           </a-tag>
         </template>
 
-        <template v-if="column.dataIndex === 'registerStates'">
-          <a-typography-text type="success" v-for="t in text">{{ t.label }}</a-typography-text>
+        <template v-if="column.dataIndex === 'registerState'">
+          <a-tag :color="INSTANCE_REGISTER_COLOR[text.toUpperCase()]">
+            {{ text }}
+          </a-tag>
         </template>
 
         <template v-if="column.dataIndex === 'registerClusters'">
-          <a-tag v-for="t in text" color="warning">
+          <a-tag v-for="t in text" color="grey">
             {{ t }}
           </a-tag>
         </template>
 
+        <template v-if="column.dataIndex === 'registerTime'">
+          {{ formattedDate(text) }}
+        </template>
+
         <template v-if="column.dataIndex === 'labels'">
-          <a-tag v-for="t in text" color="warning">
-            {{ t }}
-          </a-tag>
-        </template>
-        <template v-if="column.dataIndex === 'name'">
-          <router-link :to="`detail/${record[column.key]}`">{{ text }}</router-link>
-        </template>
-        <template v-if="column.dataIndex === 'ip'">
-          <router-link :to="`detail/${record[column.key]}`">{{ text }}</router-link>
+          <a-tag v-for="(value, key) in text" :key="key"> {{ key }}:{{ value }} </a-tag>
         </template>
       </template>
     </search-table>
@@ -60,14 +67,20 @@ import { searchInstances } from '@/api/service/instance'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR } from '@/base/constants'
+import router from '@/router'
+import { Icon } from '@iconify/vue'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { formattedDate } from '../../../utils/DateUtil'
 
+let __null = PRIMARY_COLOR
 let columns = [
   {
     title: 'instanceDomain.instanceIP',
     key: 'ip',
     dataIndex: 'ip',
     sorter: (a: any, b: any) => sortString(a.ip, b.ip),
-    width: 140
+    width: 200
   },
   {
     title: 'instanceDomain.instanceName',
@@ -92,10 +105,10 @@ let columns = [
     width: 120
   },
   {
-    title: 'instanceDomain.registerStates',
-    key: 'registerStates',
-    dataIndex: 'registerStates',
-    sorter: (a: any, b: any) => sortString(a.registerStates, b.registerStates),
+    title: 'instanceDomain.registerState',
+    key: 'registerState',
+    dataIndex: 'registerState',
+    sorter: (a: any, b: any) => sortString(a.registerState, b.registerState),
     width: 120
   },
   {
@@ -147,7 +160,7 @@ const searchDomain = reactive(
     [
       {
         label: 'appName',
-        param: 'appName',
+        param: 'keywords',
         placeholder: 'typeAppName',
         style: {
           width: '200px'
@@ -169,5 +182,15 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 <style lang="less" scoped>
 .search-table-container {
   min-height: 60vh;
+
+  .app-link {
+    padding: 4px 10px 4px 4px;
+    border-radius: 4px;
+    color: v-bind('PRIMARY_COLOR');
+    &:hover {
+      cursor: pointer;
+      background: rgba(133, 131, 131, 0.13);
+    }
+  }
 }
 </style>

@@ -36,7 +36,6 @@ import (
 import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/admin"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/dns/lookup"
@@ -49,7 +48,6 @@ import (
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
-	"github.com/apache/dubbo-kubernetes/pkg/intercp/client"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
 )
 
@@ -74,9 +72,10 @@ type BuilderContext interface {
 	EventBus() events.EventBus
 	DpServer() *dp_server.DpServer
 	DataplaneCache() *sync.Map
-	InterCPClientPool() *client.Pool
 	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
+	AppRegCtx() *registry.ApplicationContext
+	InfRegCtx() *registry.InterfaceContext
 }
 
 var _ BuilderContext = &Builder{}
@@ -90,7 +89,6 @@ type Builder struct {
 	txs                  core_store.Transactions
 	rm                   core_manager.CustomizableResourceManager
 	rom                  core_manager.ReadOnlyResourceManager
-	eac                  admin.EnvoyAdminClient
 	ext                  context.Context
 	meshCache            *mesh.Cache
 	lif                  lookup.LookupIPFunc
@@ -98,7 +96,6 @@ type Builder struct {
 	leadInfo             component.LeaderInfo
 	erf                  events.EventBus
 	dsl                  datasource.Loader
-	interCpPool          *client.Pool
 	dps                  *dp_server.DpServer
 	registryCenter       dubboRegistry.Registry
 	metadataReportCenter report.MetadataReport
@@ -111,6 +108,8 @@ type Builder struct {
 	dCache               *sync.Map
 	regClient            reg_client.RegClient
 	serviceDiscover      dubboRegistry.ServiceDiscovery
+	appRegCtx            *registry.ApplicationContext
+	infRegCtx            *registry.InterfaceContext
 	*runtimeInfo
 }
 
@@ -131,6 +130,16 @@ func BuilderFor(appCtx context.Context, cfg dubbo_cp.Config) (*Builder, error) {
 		},
 		appCtx: appCtx,
 	}, nil
+}
+
+func (b *Builder) WithAppRegCtx(ctx *registry.ApplicationContext) *Builder {
+	b.appRegCtx = ctx
+	return b
+}
+
+func (b *Builder) WithInfRegCtx(ctx *registry.InterfaceContext) *Builder {
+	b.infRegCtx = ctx
+	return b
 }
 
 func (b *Builder) WithComponentManager(cm component.Manager) *Builder {
@@ -213,9 +222,8 @@ func (b *Builder) WithDpServer(dps *dp_server.DpServer) *Builder {
 	return b
 }
 
-func (b *Builder) WithEnvoyAdminClient(eac admin.EnvoyAdminClient) *Builder {
-	b.eac = eac
-	return b
+func (b *Builder) MeshCache() *mesh.Cache {
+	return b.meshCache
 }
 
 func (b *Builder) WithDDSContext(ddsctx *dds_context.Context) *Builder {
@@ -291,6 +299,9 @@ func (b *Builder) Build() (Runtime, error) {
 	if b.dps == nil {
 		return nil, errors.Errorf("DpServer has not been configured")
 	}
+	if b.meshCache == nil {
+		return nil, errors.Errorf("MeshCache has not been configured")
+	}
 
 	return &runtime{
 		RuntimeInfo: b.runtimeInfo,
@@ -311,10 +322,10 @@ func (b *Builder) Build() (Runtime, error) {
 			erf:                  b.erf,
 			dCache:               b.dCache,
 			dps:                  b.dps,
-			eac:                  b.eac,
 			serviceDiscovery:     b.serviceDiscover,
 			rv:                   b.rv,
 			appCtx:               b.appCtx,
+			meshCache:            b.meshCache,
 			regClient:            b.regClient,
 		},
 		Manager: b.cm,
@@ -377,10 +388,6 @@ func (b *Builder) ReadOnlyResourceManager() core_manager.ReadOnlyResourceManager
 	return b.rom
 }
 
-func (b *Builder) InterCPClientPool() *client.Pool {
-	return b.interCpPool
-}
-
 func (b *Builder) LookupIP() lookup.LookupIPFunc {
 	return b.lif
 }
@@ -419,4 +426,12 @@ func (b *Builder) ResourceValidators() ResourceValidators {
 
 func (b *Builder) AppCtx() context.Context {
 	return b.appCtx
+}
+
+func (b *Builder) AppRegCtx() *registry.ApplicationContext {
+	return b.appRegCtx
+}
+
+func (b *Builder) InfRegCtx() *registry.InterfaceContext {
+	return b.infRegCtx
 }

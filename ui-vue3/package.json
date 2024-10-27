@@ -13,7 +13,7 @@
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore",
     "lint:fix": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "prepare": "husky install",
+    "prepare": "husky || true",
     "prettier-format": "prettier --write src/",
     "prettier-check": "prettier --check src/"
   },
@@ -28,6 +28,7 @@
     "@types/lodash-es": "^4.17.12",
     "@types/nprogress": "^0.2.3",
     "ant-design-vue": "4.x",
+    "dayjs": "^1.11.13",
     "less": "^4.2.0",
     "lodash": "^4.17.21",
     "mockjs": "^1.1.0",

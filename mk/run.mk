@@ -1,7 +1,7 @@
 NUM_OF_DATAPLANES ?= 100
 NUM_OF_SERVICES ?= 80
 DISTRIBUTION_TARGET_NAME ?= $(PROJECT_NAME)
-DUBBO_CP_ADDRESS ?= grpcs://localhost:5678
+DUBBO_CP_ADDRESS ?= grpc://localhost:5678
 DISTRIBUTION_FOLDER=build/distributions/$(GOOS)-$(GOARCH)/$(DISTRIBUTION_TARGET_NAME)
 
 CP_STORE = memory
@@ -13,4 +13,4 @@ run/xds-client:
 
 .PHONY: run/dubbo-cp
 run/dubbo-cp:
-	go run ./app/dubbo-cp/... run --log-level=debug -c conf/dubbo-cp.yaml
+	go run ./app/dubbo-cp/... run --log-level=debug -c app/dubbo-cp/dubbo-cp.yaml

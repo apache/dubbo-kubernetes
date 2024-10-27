@@ -61,7 +61,7 @@ var _ = Describe("TrimSuffixFromName", func() {
 		},
 		Entry(nil, testCase{name: "foo", suffix: "bar"}),
 		Entry(nil, testCase{name: "bar", suffix: "baz"}),
-		Entry(nil, testCase{name: "baz", suffix: "kuma-system"}),
-		Entry(nil, testCase{name: "faz", suffix: "daz.kuma-system"}),
+		Entry(nil, testCase{name: "baz", suffix: "dubbo-system"}),
+		Entry(nil, testCase{name: "faz", suffix: "daz.dubbo-system"}),
 	)
 })
