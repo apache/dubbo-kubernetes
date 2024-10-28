@@ -28,10 +28,28 @@ import (
 //go:embed dist/*
 var Data embed.FS
 
+type tryOrDefault struct {
+	fileSystem   fs.FS
+	fallbackFile string
+}
+
+func (t tryOrDefault) Open(name string) (fs.File, error) {
+	f, err := t.fileSystem.Open(name)
+	if err == nil {
+		return f, nil
+	}
+	return t.fileSystem.Open(t.fallbackFile)
+}
+
 var FS = func() fs.FS {
 	fsys, err := fs.Sub(Data, "dist/admin")
 	if err != nil {
 		panic(err)
+	}
+	// Adapt Vue's HTML5 history mode
+	fsys = tryOrDefault{
+		fileSystem:   fsys,
+		fallbackFile: "index.html",
 	}
 	return fsys
 }
