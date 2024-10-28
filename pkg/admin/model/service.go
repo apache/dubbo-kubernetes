@@ -208,16 +208,53 @@ type ServiceDependenciesResp struct {
 }
 
 type ServiceMetricsReq struct {
-	ServiceName string `json:"serviceName,omitempty"`
-	Namespace   string `json:"namespace,omitempty"`
-	Page        int    `json:"page,omitempty"`
-	PageSize    int    `json:"pageSize,omitempty"`
+	ServiceName string    `json:"serviceName"`
+	MetricNames []string  `json:"metricNames"` // List of metric names specified by the user
+	StartTime   time.Time `json:"startTime,omitempty"`
+	EndTime     time.Time `json:"endTime,omitempty"`
+}
+
+type ServiceMetricsData struct {
+	MetricName string        `json:"metricName"`
+	Values     []MetricValue `json:"values"`
+}
+
+type FailedMetric struct {
+	MetricName string `json:"metricName"`
+	Error      string `json:"error"`
 }
 
 type ServiceMetricsResp struct {
-	ServiceName string    `json:"serviceName"`
-	RequestRate float64   `json:"requestRate"`
-	ErrorRate   float64   `json:"errorRate"`
-	AvgLatency  float64   `json:"avgLatency"`
-	LastUpdated time.Time `json:"lastUpdated"`
+	ServiceName string               `json:"serviceName"`
+	Metrics     []ServiceMetricsData `json:"metrics"`
+}
+
+type ServiceHealthStatusReq struct {
+	Namespace string `json:"namespace,omitempty"`
+}
+
+type ServiceHealthInfo struct {
+	ServiceName          string `json:"serviceName"`
+	HealthyInstanceNum   int    `json:"healthyInstanceNum"`
+	UnhealthyInstanceNum int    `json:"unhealthyInstanceNum"`
+	TotalInstanceNum     int    `json:"totalInstanceNum"`
+	HealthStatus         string `json:"healthStatus"` // "healthy" or "unhealthy"
+}
+
+type ServiceHealthStatusResp struct {
+	Services []ServiceHealthInfo `json:"services"`
+}
+
+type ServiceDependencyTopologyReq struct {
+	ServiceName string `json:"serviceName,omitempty"`
+}
+
+type ServiceDependencyTopologyResp struct {
+	ServiceName  string   `json:"serviceName"`
+	Dependencies []string `json:"dependencies"`
+}
+
+type ServiceNode struct {
+	ServiceName  string
+	Dependencies []string
 }

@@ -50,20 +50,19 @@ type DashboardResp struct {
 	BaseURL string `json:"baseURL"`
 }
 
-// Metric represents a single metric with its name, labels, and value.
-type Metric struct {
-	Name   string            `json:"name"`
-	Labels map[string]string `json:"labels"`
-	Value  float64           `json:"value"`
-}
-
+// MetricsReq 定义获取实例Metrics的请求参数
 type MetricsReq struct {
-	InstanceName string `form:"instanceName"`
+	ServiceName string   `json:"serviceName" validate:"required"`
+	InstanceID  string   `json:"instanceID,omitempty"`
+	Metrics     []string `json:"metrics,omitempty"`   // e.g., ["cpu_usage", "memory_usage"]
+	TimeRange   string   `json:"timeRange,omitempty"` // e.g., "5m", "1h"
 }
 
-type MetricsResp struct {
-	InstanceName string
-	Metrics      []Metric
+// ServiceMetrics 定义服务实例的Metrics数据
+type ServiceMetrics struct {
+	MetricName  string  `json:"metricName"`
+	MetricValue float64 `json:"metricValue"`
+	Timestamp   int64   `json:"timestamp"`
 }
 
 type MetricsCategory int

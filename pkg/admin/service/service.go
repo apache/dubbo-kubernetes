@@ -18,22 +18,29 @@
 package service
 
 import (
-	"context"
+	"errors"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	_ "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
-	"github.com/apache/dubbo-kubernetes/pkg/admin/util/prometheus/prometheusclient"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
-	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"sync"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/util/prometheusclient"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"sort"
+	"strconv"
 	"time"
 )
 
-func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) ([]*model.ServiceTabDistributionResp, error) {
+import (
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	_ "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+)
+
+func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
 	mappingList := &mesh.MappingResourceList{}
+
 	serviceName := req.ServiceName
 
 	if err := manager.List(rt.AppContext(), mappingList); err != nil {
@@ -52,6 +59,7 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 					return nil, err
 				}
 
+				// 拿到了appName，接下来从dataplane取实例信息
 				for _, dataplane := range dataplaneList.Items {
 					metadata := &mesh.MetaDataResource{
 						Spec: &v1alpha1.MetaData{},
@@ -66,31 +74,40 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 			}
 		}
 	}
-	return res, nil
+
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceInstanceName(res), req.PageReq)
+
+	return pagedRes, nil
 }
 
-func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, error) {
+func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) (*model.SearchPaginationResult, error) {
+	if req.Keywords != "" {
+		return BannerSearchServices(rt, req)
+	}
+
 	res := make([]*model.ServiceSearchResp, 0)
 	serviceMap := make(map[string]*model.ServiceSearch)
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
+
 	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
 	}
 	// 通过dataplane extension字段获取所有revision
-	revisions := make(map[string]struct{}, 0)
+	revisions := make(map[string]string, 0)
 	for _, dataplane := range dataplaneList.Items {
 		rev, ok := dataplane.Spec.GetExtensions()[v1alpha1.Revision]
 		if ok {
-			revisions[rev] = struct{}{}
+			revisions[rev] = dataplane.Spec.GetExtensions()["registry-type"]
 		}
 	}
+
 	// 遍历 revisions
-	for rev := range revisions {
+	for rev, t := range revisions {
 		metadata := &mesh.MetaDataResource{
 			Spec: &v1alpha1.MetaData{},
 		}
-		err := manager.Get(rt.AppContext(), metadata, store.GetByRevision(rev))
+		err := manager.Get(rt.AppContext(), metadata, store.GetByRevision(rev), store.GetByType(t))
 		if err != nil {
 			return nil, err
 		}
@@ -104,15 +121,18 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 			}
 		}
 	}
+
 	for _, serviceSearch := range serviceMap {
 		serviceSearchResp := model.NewServiceSearchResp()
 		serviceSearchResp.FromServiceSearch(serviceSearch)
 		res = append(res, serviceSearchResp)
 	}
-	return res, nil
+
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceName(res), req.PageReq)
+	return pagedRes, nil
 }
 
-func BannerSearchServices(rt core_runtime.Runtime, req *model.SearchReq) ([]*model.ServiceSearchResp, error) {
+func BannerSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) (*model.SearchPaginationResult, error) {
 	res := make([]*model.ServiceSearchResp, 0)
 
 	manager := rt.ResourceManager()
@@ -130,7 +150,44 @@ func BannerSearchServices(rt core_runtime.Runtime, req *model.SearchReq) ([]*mod
 		}
 	}
 
-	return res, nil
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceName(res), req.PageReq)
+
+	return pagedRes, nil
+}
+
+func ToSearchPaginationResult[T any](services []T, data sort.Interface, req model.PageReq) *model.SearchPaginationResult {
+	res := model.NewSearchPaginationResult()
+
+	list := make([]T, 0)
+
+	sort.Sort(data)
+	lenFilteredItems := len(services)
+	pageSize := lenFilteredItems
+	offset := 0
+	paginationEnabled := req.PageSize != 0
+	if paginationEnabled {
+		pageSize = req.PageSize
+		offset = req.PageOffset
+	}
+
+	for i := offset; i < offset+pageSize && i < lenFilteredItems; i++ {
+		list = append(list, services[i])
+	}
+
+	nextOffset := ""
+	if paginationEnabled {
+		if offset+pageSize < lenFilteredItems { // set new offset only if we did not reach the end of the collection
+			nextOffset = strconv.Itoa(offset + req.PageSize)
+		}
+	}
+
+	res.List = list
+	res.PageInfo = &core_model.Pagination{
+		Total:      uint32(lenFilteredItems),
+		NextOffset: nextOffset,
+	}
+
+	return res
 }
 
 func GetServiceDependencies(rt core_runtime.Runtime, req *model.ServiceDependenciesReq) ([]*model.ServiceDependenciesResp, error) {
@@ -140,7 +197,7 @@ func GetServiceDependencies(rt core_runtime.Runtime, req *model.ServiceDependenc
 	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.ServiceName)); err != nil {
 		return nil, err
 	}
-	// 键为调用方服务名称，值为被调用方服务名称列表
+	// Key is the caller service name, value is the list of callee service names
 	dependencyMap := make(map[string]map[string]struct{})
 	for _, dataplane := range dataplaneList.Items {
 		sourceService := dataplane.Spec.GetIdentifyingService()
@@ -175,138 +232,170 @@ func GetServiceDependencies(rt core_runtime.Runtime, req *model.ServiceDependenc
 	return dependencies, nil
 }
 
-// GetServiceMetrics 获取 Dubbo 微服务集群中各服务的关键指标
-func GetServiceMetrics(rt core_runtime.Runtime, req *model.ServiceMetricsReq) ([]*model.ServiceMetricsResp, error) {
-	var serviceMetricsList []*model.ServiceMetricsResp
-	pc := prometheusclient.NewPrometheusClient(string(*rt.Config().Admin.Prometheus))
-
-	services, err := getAllServices(rt, req)
+func GetServiceMetrics(rt core_runtime.Runtime, req *model.ServiceMetricsReq) (*model.ServiceMetricsResp, error) {
+	if req.ServiceName == "" {
+		return nil, errors.New("ServiceName is required")
+	}
+	if len(req.MetricNames) == 0 {
+		return nil, errors.New("MetricNames is required")
+	}
+	prometheusClient, err := prometheusclient.NewPrometheusClient(rt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get services: %v", err)
-	}
-
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var errs []error
-
-	for _, service := range services {
-		wg.Add(1)
-		go func(svc string) {
-			defer wg.Done()
-			metrics, err := fetchMetricsForService(pc, svc)
-			if err != nil {
-				// 记录错误并继续
-				fmt.Printf("Error fetching metrics for service %s: %v\n", svc, err)
-				mu.Lock()
-				errs = append(errs, fmt.Errorf("service %s: %v", svc, err))
-				mu.Unlock()
-				return
-			}
-			mu.Lock()
-			serviceMetricsList = append(serviceMetricsList, metrics)
-			mu.Unlock()
-		}(service)
-	}
-
-	wg.Wait()
-
-	if len(errs) > 0 {
-		return serviceMetricsList, fmt.Errorf("encountered errors: %v", errs)
-	}
-
-	if req.Page > 0 && req.PageSize > 0 {
-		start := (req.Page - 1) * req.PageSize
-		end := start + req.PageSize
-		if start >= len(serviceMetricsList) {
-			return []*model.ServiceMetricsResp{}, nil
-		}
-		if end > len(serviceMetricsList) {
-			end = len(serviceMetricsList)
-		}
-		serviceMetricsList = serviceMetricsList[start:end]
-	}
-
-	return serviceMetricsList, nil
-}
-
-func getAllServices(rt core_runtime.Runtime, req *model.ServiceMetricsReq) ([]string, error) {
-	manager := rt.ResourceManager()
-	dataplaneList := &mesh.DataplaneResourceList{}
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.Namespace)); err != nil {
 		return nil, err
 	}
-	serviceSet := make(map[string]struct{})
+	prometheusAPI := promv1.NewAPI(prometheusClient)
+
+	metricsData := make([]model.ServiceMetricsData, 0)
+
+	// Iterate over the metric names specified by the user and query the data
+	for _, metricName := range req.MetricNames {
+		// Construct the query statement
+		query := fmt.Sprintf(`%s{service_name="%s"}`, metricName, req.ServiceName)
+
+		// Specify the time range
+		startTime := req.StartTime
+		endTime := req.EndTime
+		if startTime.IsZero() {
+			startTime = time.Now().Add(-time.Hour) // Default to past hour data
+		}
+		if endTime.IsZero() {
+			endTime = time.Now()
+		}
+
+		values, err := prometheusclient.QueryPrometheusRange(prometheusAPI, query, startTime, endTime)
+		if err != nil {
+			continue
+		}
+		metricData := model.ServiceMetricsData{
+			MetricName: metricName,
+			Values:     values,
+		}
+		metricsData = append(metricsData, metricData)
+	}
+
+	response := &model.ServiceMetricsResp{
+		ServiceName: req.ServiceName,
+		Metrics:     metricsData,
+	}
+	return response, nil
+}
+
+func GetServiceHealthStatus(rt core_runtime.Runtime, req *model.ServiceHealthStatusReq) (*model.ServiceHealthStatusResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+
+	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
+		return nil, err
+	}
+	// Create a map to aggregate instance health status by service name
+	serviceInstanceHealth := make(map[string]*serviceHealthCounts)
 	for _, dataplane := range dataplaneList.Items {
-		for _, inbound := range dataplane.Spec.Networking.GetInbound() {
-			if inbound.Tags != nil {
-				if service, exists := inbound.Tags["dubbo.io/service"]; exists && service != "" {
-					serviceSet[service] = struct{}{}
-				}
+		inbounds := dataplane.Spec.Networking.GetInbound()
+		if len(inbounds) == 0 {
+			continue
+		}
+		for _, inbound := range inbounds {
+			serviceName, ok := inbound.Tags["dubbo.io/service"]
+			if !ok {
+				continue
+			}
+			// Initialize health statistics for the service
+			if _, exists := serviceInstanceHealth[serviceName]; !exists {
+				serviceInstanceHealth[serviceName] = &serviceHealthCounts{}
+			}
+
+			// Update service instance counts
+			counts := serviceInstanceHealth[serviceName]
+			counts.Total++
+
+			// Get instance health status
+			isHealthy := false
+			if inbound.Health != nil {
+				isHealthy = inbound.Health.Ready
+			}
+
+			if isHealthy {
+				counts.Healthy++
+			} else {
+				counts.Unhealthy++
 			}
 		}
 	}
-	var services []string
-	for service := range serviceSet {
-		if req.ServiceName != "" && req.ServiceName != service {
+	services := make([]model.ServiceHealthInfo, 0)
+	for serviceName, counts := range serviceInstanceHealth {
+		healthStatus := "healthy"
+		if counts.Unhealthy > 0 {
+			healthStatus = "unhealthy"
+		}
+		serviceInfo := model.ServiceHealthInfo{
+			ServiceName:          serviceName,
+			HealthyInstanceNum:   counts.Healthy,
+			UnhealthyInstanceNum: counts.Unhealthy,
+			TotalInstanceNum:     counts.Total,
+			HealthStatus:         healthStatus,
+		}
+		services = append(services, serviceInfo)
+	}
+	response := &model.ServiceHealthStatusResp{
+		Services: services,
+	}
+	return response, nil
+}
+
+// Helper struct for tracking the health status of service instances
+type serviceHealthCounts struct {
+	Healthy   int
+	Unhealthy int
+	Total     int
+}
+
+func GetServiceDependencyTopology(rt core_runtime.Runtime, req *model.ServiceDependencyTopologyReq) ([]*model.ServiceDependencyTopologyResp, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+	// Retrieve all Dataplane resources
+	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
+		return nil, err
+	}
+	//Create a map to store services and their dependencies
+	serviceDependencies := make(map[string]*model.ServiceNode)
+	for _, dataplane := range dataplaneList.Items {
+		// Get the list of inbound services
+		inbounds := dataplane.Spec.Networking.GetInbound()
+		if len(inbounds) == 0 {
 			continue
 		}
-		services = append(services, service)
-	}
-
-	return services, nil
-}
-
-func fetchMetricsForService(pc *prometheusclient.PrometheusClient, service string) (*model.ServiceMetricsResp, error) {
-	var metrics model.ServiceMetricsResp
-	metrics.ServiceName = service
-	metrics.LastUpdated = time.Now()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// 请求速率
-	reqRateQuery := fmt.Sprintf(`sum(rate(http_requests_total{service="%s"}[5m]))`, service)
-	requestRate, err := queryPrometheusMetric(ctx, pc, reqRateQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query request rate: %v", err)
-	}
-	metrics.RequestRate = requestRate
-
-	// 错误率
-	errRateQuery := fmt.Sprintf(`sum(rate(http_requests_errors_total{service="%s"}[5m]))`, service)
-	errorRate, err := queryPrometheusMetric(ctx, pc, errRateQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query error rate: %v", err)
-	}
-	metrics.ErrorRate = errorRate
-
-	// 平均延迟
-	latencyQuery := fmt.Sprintf(`
-        avg(rate(http_request_duration_seconds_sum{service="%s"}[5m]) / rate(http_request_duration_seconds_count{service="%s"}[5m]))`, service, service)
-	avgLatency, err := queryPrometheusMetric(ctx, pc, latencyQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query average latency: %v", err)
-	}
-	metrics.AvgLatency = avgLatency
-
-	return &metrics, nil
-}
-
-func queryPrometheusMetric(ctx context.Context, pc *prometheusclient.PrometheusClient, query string) (float64, error) {
-	results, err := pc.QueryWithContext(ctx, query)
-	if err != nil {
-		return 0, err
-	}
-	if len(results) == 0 {
-		return 0, fmt.Errorf("no results for query: %s", query)
-	}
-	if valueStr, ok := results[0].Value[1].(string); ok {
-		var value float64
-		_, err := fmt.Sscanf(valueStr, "%f", &value)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse float value: %v", err)
+		// Get the list of outbound services
+		outbounds := dataplane.Spec.Networking.GetOutbound()
+		for _, inbound := range inbounds {
+			sourceServiceName, ok := inbound.Tags["service"]
+			if !ok {
+				continue
+			}
+			// Initialize source service node
+			sourceNode, exists := serviceDependencies[sourceServiceName]
+			if !exists {
+				sourceNode = &model.ServiceNode{
+					ServiceName:  sourceServiceName,
+					Dependencies: []string{},
+				}
+				serviceDependencies[sourceServiceName] = sourceNode
+			}
+			for _, outbound := range outbounds {
+				targetServiceName, ok := outbound.Tags["service"]
+				if !ok {
+					continue
+				}
+				sourceNode.Dependencies = append(sourceNode.Dependencies, targetServiceName)
+			}
 		}
-		return value, nil
 	}
-	return 0, fmt.Errorf("unexpected result format")
+	res := make([]*model.ServiceDependencyTopologyResp, 0)
+	for _, node := range serviceDependencies {
+		respItem := &model.ServiceDependencyTopologyResp{
+			ServiceName:  node.ServiceName,
+			Dependencies: node.Dependencies,
+		}
+		res = append(res, respItem)
+	}
+	return res, nil
 }

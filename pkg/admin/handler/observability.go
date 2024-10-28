@@ -100,12 +100,26 @@ func GetPrometheus(rt core_runtime.Runtime) gin.HandlerFunc {
 	}
 }
 
-func GetMetricsList(rt core_runtime.Runtime) gin.HandlerFunc {
+func GetInstanceMetrics(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.MetricsReq{}
+		req := &model.InstanceMetricsReq{}
 		if err := c.ShouldBindQuery(req); err != nil {
 		}
 		resp, err := service.GetInstanceMetrics(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+func GetInstanceHealthStatus(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.InstanceHealthStatusReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+		}
+		resp, err := service.GetInstanceHealthStatus(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
@@ -134,6 +148,34 @@ func GetServiceMetrics(rt core_runtime.Runtime) gin.HandlerFunc {
 		if err := c.ShouldBindQuery(req); err != nil {
 		}
 		resp, err := service.GetServiceMetrics(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+func GetServiceHealthStatus(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.ServiceHealthStatusReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+		}
+		resp, err := service.GetServiceHealthStatus(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+func GetServiceTopology(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.ServiceDependencyTopologyReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+		}
+		resp, err := service.GetServiceDependencyTopology(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
