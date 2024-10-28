@@ -19,6 +19,7 @@ package model
 
 import (
 	gxset "github.com/dubbogo/gost/container/set"
+	"time"
 )
 
 import (
@@ -301,4 +302,43 @@ func (a *InstanceDetail) mergeProbes(probes *mesh_proto.Dataplane_Probes) {
 			Open: true,
 		},
 	}
+}
+
+type InstanceHealthStatusReq struct {
+	ServiceName string `json:"serviceName,omitempty"`
+}
+
+type InstanceHealthStatusResp struct {
+	Instances []InstanceHealthInfo `json:"instances"`
+}
+
+type InstanceHealthInfo struct {
+	InstanceID   string `json:"instanceId"`
+	ServiceName  string `json:"serviceName"`
+	Application  string `json:"application"`
+	IPAddress    string `json:"ipAddress"`
+	Port         uint32 `json:"port"`
+	HealthStatus string `json:"healthStatus"` // "ready" or "notReady"
+}
+
+type InstanceMetricsReq struct {
+	InstanceID  string    `json:"instanceId"`
+	MetricNames []string  `json:"metricNames"` // List of metric names specified by the user
+	StartTime   time.Time `json:"startTime,omitempty"`
+	EndTime     time.Time `json:"endTime,omitempty"`
+}
+
+type InstanceMetricsData struct {
+	MetricName string        `json:"metricName"`
+	Values     []MetricValue `json:"values"`
+}
+
+type MetricValue struct {
+	Timestamp int64   `json:"timestamp"`
+	Value     float64 `json:"value"`
+}
+
+type InstanceMetricsResp struct {
+	InstanceID string                `json:"instanceId"`
+	Metrics    []InstanceMetricsData `json:"metrics"`
 }

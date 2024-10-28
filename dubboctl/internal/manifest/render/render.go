@@ -245,7 +245,7 @@ func verifyRendererOptions(opts *RendererOptions) error {
 	}
 	if opts.Namespace == "" {
 		// logger.Log("using default namespace)
-		opts.Namespace = identifier.DubboSystemNamespace
+		opts.Namespace = identifier.DubboDefaultNamespace
 	}
 	if opts.FS == nil {
 		return errors.New("missing chart FS for Renderer")

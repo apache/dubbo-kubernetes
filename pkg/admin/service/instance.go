@@ -18,11 +18,12 @@
 package service
 
 import (
+	"errors"
 	"fmt"
-	"io"
-	"net/http"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/util/prometheusclient"
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"strconv"
-	"strings"
+	"time"
 )
 
 import (
@@ -114,104 +115,85 @@ func GetInstanceDetail(rt core_runtime.Runtime, req *model.InstanceDetailReq) ([
 	return resp, nil
 }
 
-func GetInstanceMetrics(rt core_runtime.Runtime, req *model.MetricsReq) ([]*model.MetricsResp, error) {
+func GetInstanceMetrics(rt core_runtime.Runtime, req *model.InstanceMetricsReq) (*model.InstanceMetricsResp, error) {
+	if req.InstanceID == "" {
+		return nil, errors.New("InstanceID is required")
+	}
+	if len(req.MetricNames) == 0 {
+		return nil, errors.New("MetricNames is required")
+	}
+	prometheusClient, err := prometheusclient.NewPrometheusClient(rt)
+	if err != nil {
+		return nil, err
+	}
+
+	prometheusAPI := promv1.NewAPI(prometheusClient)
+	metricsData := make([]model.InstanceMetricsData, 0)
+	for _, metricName := range req.MetricNames {
+		query := fmt.Sprintf(`%s{instance_id="%s"}`, metricName, req.InstanceID)
+		startTime := req.StartTime
+		endTime := req.EndTime
+		if startTime.IsZero() {
+			startTime = time.Now().Add(-time.Hour)
+		}
+		if endTime.IsZero() {
+			endTime = time.Now()
+		}
+
+		values, err := prometheusclient.QueryPrometheusRange(prometheusAPI, query, startTime, endTime)
+		if err != nil {
+			return nil, fmt.Errorf("error querying metric %s: %v", metricName, err)
+		}
+		metricData := model.InstanceMetricsData{
+			MetricName: metricName,
+			Values:     values,
+		}
+		metricsData = append(metricsData, metricData)
+	}
+	response := &model.InstanceMetricsResp{
+		InstanceID: req.InstanceID,
+		Metrics:    metricsData,
+	}
+
+	return response, nil
+}
+
+func GetInstanceHealthStatus(rt core_runtime.Runtime, req *model.InstanceHealthStatusReq) (*model.InstanceHealthStatusResp, error) {
 	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
-	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(req.InstanceName)); err != nil {
+	// Get all Dataplane resources
+	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
 	}
-	instMap := make(map[string]*model.InstanceDetail)
-	resp := make([]*model.MetricsResp, 0)
+	instances := make([]model.InstanceHealthInfo, 0)
 	for _, dataplane := range dataplaneList.Items {
-		instName := dataplane.Meta.GetName()
-		var instanceDetail *model.InstanceDetail
-		if detail, ok := instMap[instName]; ok {
-			instanceDetail = detail
-		} else {
-			instanceDetail = model.NewInstanceDetail()
-		}
-		instanceDetail.Merge(dataplane)
-		metrics, err := fetchMetricsData(dataplane.GetIP(), 22222)
-		if err != nil {
+		// Get the list of inbound services
+		inbounds := dataplane.Spec.Networking.GetInbound()
+		if len(inbounds) == 0 {
 			continue
 		}
-		metricsResp := &model.MetricsResp{
-			InstanceName: instName,
-			Metrics:      metrics,
-		}
-		resp = append(resp, metricsResp)
-	}
-	return resp, nil
-}
-
-func fetchMetricsData(ip string, port int) ([]model.Metric, error) {
-	url := fmt.Sprintf("http://%s:%d/metrics", ip, port)
-	response, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-	metrics, err := parsePrometheusData(string(body))
-	if err != nil {
-		return nil, err
-	}
-	return metrics, nil
-}
-
-// parsePrometheusData parses Prometheus text format data and converts it to a slice of Metrics.
-func parsePrometheusData(data string) ([]model.Metric, error) {
-	var metrics []model.Metric
-	lines := strings.Split(data, "\n")
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		parts := strings.Split(line, " ")
-		if len(parts) != 2 {
-			continue
-		}
-
-		metricPart := parts[0]
-		valuePart := parts[1]
-
-		// Extract the metric name and labels
-		nameAndLabels := strings.SplitN(metricPart, "{", 2)
-		if len(nameAndLabels) != 2 {
-			continue
-		}
-
-		name := nameAndLabels[0]
-		labelsPart := strings.TrimSuffix(nameAndLabels[1], "}")
-
-		labels := make(map[string]string)
-		for _, label := range strings.Split(labelsPart, ",") {
-			if label == "" {
-				continue
+		for _, inbound := range inbounds {
+			// Get health status
+			healthStatus := "unknown"
+			if inbound.Health != nil {
+				if inbound.Health.Ready {
+					healthStatus = "ready"
+				} else {
+					healthStatus = "notReady"
+				}
 			}
-			labelParts := strings.SplitN(label, "=", 2)
-			if len(labelParts) == 2 {
-				labels[labelParts[0]] = strings.Trim(labelParts[1], `"`)
+			instanceInfo := model.InstanceHealthInfo{
+				InstanceID:   dataplane.GetMeta().GetName(),
+				Application:  inbound.Tags["application"],
+				IPAddress:    inbound.GetAddress(),
+				Port:         inbound.GetPort(),
+				HealthStatus: healthStatus,
 			}
+			instances = append(instances, instanceInfo)
 		}
-
-		// Parse the value
-		var value float64
-		fmt.Sscanf(valuePart, "%f", &value)
-
-		metrics = append(metrics, model.Metric{
-			Name:   name,
-			Labels: labels,
-			Value:  value,
-		})
 	}
-
-	return metrics, nil
+	response := &model.InstanceHealthStatusResp{
+		Instances: instances,
+	}
+	return response, nil
 }
