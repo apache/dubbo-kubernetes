@@ -17,6 +17,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/build"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +37,7 @@ import (
 
 type RootCommandConfig struct {
 	Name      string
-	NewClient ClientFactory
+	NewClient build.ClientFactory
 }
 
 var controlPlaneLog = core.Log.WithName("dubboctl")
@@ -43,7 +45,7 @@ var controlPlaneLog = core.Log.WithName("dubboctl")
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute(args []string) {
-	rootCmd := getRootCmd(args)
+	rootCmd := GetRootCmd(args)
 	// when flag error occurs, print usage string.
 	// but if an error occurs when executing command, usage string will not be printed.
 	rootCmd.SetFlagErrorFunc(func(command *cobra.Command, err error) error {
@@ -55,7 +57,7 @@ func Execute(args []string) {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-func getRootCmd(args []string) *cobra.Command {
+func GetRootCmd(args []string) *cobra.Command {
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd := &cobra.Command{
 		Use:           "dubboctl",
@@ -76,7 +78,7 @@ func getRootCmd(args []string) *cobra.Command {
 	viper.SetEnvPrefix("dubbo") // ensure that all have the prefix
 	newClient := cfg.NewClient
 	if newClient == nil {
-		newClient = NewClient
+		newClient = build.NewClient
 	}
 
 	addSubCommands(rootCmd, newClient)
@@ -84,12 +86,12 @@ func getRootCmd(args []string) *cobra.Command {
 	return rootCmd
 }
 
-func addSubCommands(rootCmd *cobra.Command, newClient ClientFactory) {
-	addBuild(rootCmd, newClient)
+func addSubCommands(rootCmd *cobra.Command, newClient build.ClientFactory) {
+	build.AddBuild(rootCmd, newClient)
 	addCreate(rootCmd, newClient)
 	addRepository(rootCmd, newClient)
 	addDeploy(rootCmd, newClient)
-	addManifest(rootCmd)
+	manifest.AddManifest(rootCmd)
 	addGenerate(rootCmd)
 	addProfile(rootCmd)
 	addDashboard(rootCmd)
@@ -100,8 +102,8 @@ func addSubCommands(rootCmd *cobra.Command, newClient ClientFactory) {
 // bindFunc which conforms to the cobra PreRunE method signature
 type bindFunc func(*cobra.Command, []string) error
 
-// bindEnv returns a bindFunc that binds env vars to the named flags.
-func bindEnv(flags ...string) bindFunc {
+// BindEnv returns a bindFunc that binds env vars to the named flags.
+func BindEnv(flags ...string) bindFunc {
 	return func(cmd *cobra.Command, args []string) (err error) {
 		for _, flag := range flags {
 			if err = viper.BindPFlag(flag, cmd.Flags().Lookup(flag)); err != nil {
@@ -114,17 +116,17 @@ func bindEnv(flags ...string) bindFunc {
 	}
 }
 
-// addConfirmFlag ensures common text/wording when the --path flag is used
-func addConfirmFlag(cmd *cobra.Command, dflt bool) {
+// AddConfirmFlag ensures common text/wording when the --path flag is used
+func AddConfirmFlag(cmd *cobra.Command, dflt bool) {
 	cmd.Flags().BoolP("confirm", "c", dflt, "Prompt to confirm options interactively ($DUBBO_CONFIRM)")
 }
 
-// addPathFlag ensures common text/wording when the --path flag is used
-func addPathFlag(cmd *cobra.Command) {
+// AddPathFlag ensures common text/wording when the --path flag is used
+func AddPathFlag(cmd *cobra.Command) {
 	cmd.Flags().StringP("path", "p", "", "Path to the application.  Default is current directory ($DUBBO_PATH)")
 }
 
-// surveySelectDefault returns 'value' if defined and exists in 'options'.
+// SurveySelectDefault returns 'value' if defined and exists in 'options'.
 // Otherwise, options[0] is returned if it exists.  Empty string otherwise.
 //
 // Usage Example:
@@ -169,7 +171,7 @@ func addPathFlag(cmd *cobra.Command) {
 // be choose the first option displayed does not overwrite the invalid default.
 // It could perhaps be argued this is a shortcoming in the survey package, but
 // it is also clearly an error to provide invalid data for a default.
-func surveySelectDefault(value string, options []string) string {
+func SurveySelectDefault(value string, options []string) string {
 	for _, v := range options {
 		if value == v {
 			return v // The provided value is acceptable
@@ -192,10 +194,10 @@ func cwd() (cwd string) {
 	return cwd
 }
 
-// deriveNameAndAbsolutePathFromPath returns application name and absolute path
+// DeriveNameAndAbsolutePathFromPath returns application name and absolute path
 // to the application project root. The input parameter path could be one of:
 // 'relative/path/to/foo', '/absolute/path/to/foo', 'foo' or ”.
-func deriveNameAndAbsolutePathFromPath(path string) (string, string) {
+func DeriveNameAndAbsolutePathFromPath(path string) (string, string) {
 	var absPath string
 
 	// If path is not specified, we would like to use current working dir

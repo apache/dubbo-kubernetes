@@ -94,7 +94,7 @@ EXAMPLES
 	  $ {{.Name}} create -l go -t common mydubbo
 		`,
 		SuggestFor: []string{"vreate", "creaet", "craete", "new"},
-		PreRunE:    bindEnv("language", "template", "repository", "confirm", "init"),
+		PreRunE:    BindEnv("language", "template", "repository", "confirm", "init"),
 		Aliases:    []string{"init"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCreate(cmd, args, newClient)
@@ -108,7 +108,7 @@ EXAMPLES
 	cmd.Flags().BoolP("init", "i", false,
 		"Initialize the current project directly into a dubbo project without using a template")
 
-	addConfirmFlag(cmd, false)
+	AddConfirmFlag(cmd, false)
 
 	// Help Action
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) { runCreateHelp(cmd, args, newClient) })
@@ -199,7 +199,7 @@ func newCreateConfig(cmd *cobra.Command, args []string, newClient ClientFactory)
 		path = args[0]
 	}
 
-	dirName, absolutePath = deriveNameAndAbsolutePathFromPath(path)
+	dirName, absolutePath = DeriveNameAndAbsolutePathFromPath(path)
 
 	// Config is the final default values based off the execution context.
 	// When prompting, these become the defaults presented.
@@ -271,7 +271,7 @@ func singleCommand(cmd *cobra.Command, args []string, cfg createConfig) string {
 // pre-client validation should not be required, as the Client does its own
 // validation.
 func (c createConfig) Validate(client *dubbo.Client) (err error) {
-	dirName, _ := deriveNameAndAbsolutePathFromPath(c.Path)
+	dirName, _ := DeriveNameAndAbsolutePathFromPath(c.Path)
 	if err = util.ValidateApplicationName(dirName); err != nil {
 		return
 	}
@@ -403,11 +403,11 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 				Default: c.Path,
 			},
 			Validate: func(val interface{}) error {
-				derivedName, _ := deriveNameAndAbsolutePathFromPath(val.(string))
+				derivedName, _ := DeriveNameAndAbsolutePathFromPath(val.(string))
 				return util.ValidateApplicationName(derivedName)
 			},
 			Transform: func(ans interface{}) interface{} {
-				_, absolutePath := deriveNameAndAbsolutePathFromPath(ans.(string))
+				_, absolutePath := DeriveNameAndAbsolutePathFromPath(ans.(string))
 				return absolutePath
 			},
 		}, {
@@ -415,7 +415,7 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 			Prompt: &survey.Select{
 				Message: "Language Runtime:",
 				Options: runtimes,
-				Default: surveySelectDefault(c.Runtime, runtimes),
+				Default: SurveySelectDefault(c.Runtime, runtimes),
 			},
 		},
 	}

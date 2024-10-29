@@ -16,19 +16,16 @@
 package cmd
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/generate"
 	"github.com/spf13/cobra"
 )
 
-func addManifest(rootCmd *cobra.Command) {
-	manifestCmd := &cobra.Command{
-		Use:   "manifest",
-		Short: "Commands related to manifest",
-		Long:  "Commands help user to generate manifest and install manifest",
+func addGenerate(rootCmd *cobra.Command) {
+	generateCmd := &cobra.Command{
+		Use:   "generate",
+		Short: "Generate resources, tokens, etc",
+		Long:  `Generate resources, tokens, etc.`,
 	}
-	manifest.ConfigManifestGenerateCmd(manifestCmd)
-	manifest.ConfigManifestInstallCmd(manifestCmd)
-	manifest.ConfigManifestUninstallCmd(manifestCmd)
-	manifest.ConfigManifestDiffCmd(manifestCmd)
-	rootCmd.AddCommand(manifestCmd)
+	rootCmd.AddCommand(generateCmd)
+	generate.NewGenerateCertificateCmd(generateCmd)
 }

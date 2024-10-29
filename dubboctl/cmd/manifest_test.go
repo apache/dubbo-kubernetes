@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"bytes"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"os"
 	"strings"
 	"testing"
@@ -95,8 +96,8 @@ func TestManifestInstall(t *testing.T) {
 		},
 	}
 	// For now, we do not use envTest to do black box testing
-	TestInstallFlag = true
-	TestCli = fake.NewClientBuilder().Build()
+	manifest.TestInstallFlag = true
+	manifest.TestCli = fake.NewClientBuilder().Build()
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -120,8 +121,8 @@ func TestManifestUninstall(t *testing.T) {
 		},
 	}
 	// For now, we do not use envTest to do black box testing
-	TestInstallFlag = true
-	TestCli = fake.NewClientBuilder().Build()
+	manifest.TestInstallFlag = true
+	manifest.TestCli = fake.NewClientBuilder().Build()
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -171,7 +172,7 @@ func TestManifestDiff(t *testing.T) {
 func testExecute(t *testing.T, cmd string, wantErr bool) string {
 	var out bytes.Buffer
 	args := strings.Split(cmd, " ")
-	rootCmd := getRootCmd(args)
+	rootCmd := GetRootCmd(args)
 	rootCmd.SetOut(&out)
 	if err := rootCmd.Execute(); err != nil {
 		if wantErr {

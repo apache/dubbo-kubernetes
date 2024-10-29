@@ -13,18 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package generate
+package manifest
 
 import (
-	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func addGenerate(rootCmd *cobra.Command) {
-	generateCmd := &cobra.Command{
-		Use:   "generate",
-		Short: "Generate resources, tokens, etc",
-		Long:  `Generate resources, tokens, etc.`,
-	}
-	rootCmd.AddCommand(generateCmd)
-	NewGenerateCertificateCmd(generateCmd)
-}
+var (
+	// TestInstallFlag and TestCli are uses for black box testing
+	TestInstallFlag bool
+	TestCli         client.Client
+)

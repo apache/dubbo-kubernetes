@@ -60,7 +60,7 @@ SYNOPSIS
 	dubboctl deploy [flags]
 `,
 		SuggestFor: []string{"delpoy", "deplyo"},
-		PreRunE: bindEnv("path", "output", "namespace", "image", "envs", "name", "containerPort",
+		PreRunE: BindEnv("path", "output", "namespace", "image", "envs", "name", "containerPort",
 			"targetPort", "nodePort", "apply", "useDockerfile", "force", "builder-image", "build", "context",
 			"kubeConfig", "push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -106,7 +106,7 @@ SYNOPSIS
 	cmd.Flags().StringP("portName", "", "http",
 		"Name of the port to be exposed")
 
-	addPathFlag(cmd)
+	AddPathFlag(cmd)
 	cmd.Flags().SetInterspersed(false)
 	baseCmd.AddCommand(cmd)
 }
