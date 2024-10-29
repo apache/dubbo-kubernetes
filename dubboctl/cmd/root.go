@@ -17,8 +17,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/build"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/dashboard"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/generate"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
@@ -40,7 +40,7 @@ import (
 
 type RootCommandConfig struct {
 	Name      string
-	NewClient build.ClientFactory
+	NewClient deploy.ClientFactory
 }
 
 var controlPlaneLog = core.Log.WithName("dubboctl")
@@ -81,7 +81,7 @@ func GetRootCmd(args []string) *cobra.Command {
 	viper.SetEnvPrefix("dubbo") // ensure that all have the prefix
 	newClient := cfg.NewClient
 	if newClient == nil {
-		newClient = build.NewClient
+		newClient = deploy.NewClient
 	}
 
 	addSubCommands(rootCmd, newClient)
@@ -89,11 +89,11 @@ func GetRootCmd(args []string) *cobra.Command {
 	return rootCmd
 }
 
-func addSubCommands(rootCmd *cobra.Command, newClient build.ClientFactory) {
-	build.AddBuild(rootCmd, newClient)
-	build.AddCreate(rootCmd, newClient)
-	build.AddRepository(rootCmd, newClient)
-	build.AddDeploy(rootCmd, newClient)
+func addSubCommands(rootCmd *cobra.Command, newClient deploy.ClientFactory) {
+	deploy.AddBuild(rootCmd, newClient)
+	deploy.AddCreate(rootCmd, newClient)
+	deploy.AddRepository(rootCmd, newClient)
+	deploy.AddDeploy(rootCmd, newClient)
 	manifest.AddManifest(rootCmd)
 	generate.AddGenerate(rootCmd)
 	profile.AddProfile(rootCmd)

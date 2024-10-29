@@ -18,6 +18,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
 	"os"
 )
 
@@ -36,8 +37,8 @@ import (
 
 // command constructors
 // --------------------
-func addRepository(baseCmd *cobra.Command, newClient ClientFactory) {
-	cmd := &cobra.Command{
+func AddRepository(baseCmd *cobra.Command, newClient ClientFactory) {
+	cmds := &cobra.Command{
 		Short:   "Manage installed template repositories",
 		Use:     "repository",
 		Aliases: []string{"repo", "repositories"},
@@ -165,81 +166,81 @@ EXAMPLES
 	  default
 `,
 		SuggestFor: []string{"repositories", "repos", "template", "templates", "pack", "packs"},
-		PreRunE:    bindEnv("confirm"),
+		PreRunE:    cmd.BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepository(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
+	cmd.AddConfirmFlag(cmds, false)
 
-	cmd.AddCommand(NewRepositoryListCmd(newClient))
-	cmd.AddCommand(NewRepositoryAddCmd(newClient))
-	cmd.AddCommand(NewRepositoryRenameCmd(newClient))
-	cmd.AddCommand(NewRepositoryRemoveCmd(newClient))
+	cmds.AddCommand(NewRepositoryListCmd(newClient))
+	cmds.AddCommand(NewRepositoryAddCmd(newClient))
+	cmds.AddCommand(NewRepositoryRenameCmd(newClient))
+	cmds.AddCommand(NewRepositoryRemoveCmd(newClient))
 
-	baseCmd.AddCommand(cmd)
+	baseCmd.AddCommand(cmds)
 }
 
 func NewRepositoryListCmd(newClient ClientFactory) *cobra.Command {
-	cmd := &cobra.Command{
+	cmds := &cobra.Command{
 		Short:   "List repositories",
 		Use:     "list",
 		Aliases: []string{"ls"},
-		PreRunE: bindEnv("confirm"),
+		PreRunE: cmd.BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryList(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
-	return cmd
+	cmd.AddConfirmFlag(cmds, false)
+	return cmds
 }
 
 func NewRepositoryAddCmd(newClient ClientFactory) *cobra.Command {
-	cmd := &cobra.Command{
+	cmds := &cobra.Command{
 		Short:      "Add a repository",
 		Use:        "add <name> <url>",
 		SuggestFor: []string{"ad", "install"},
-		PreRunE:    bindEnv("confirm"),
+		PreRunE:    cmd.BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryAdd(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
-	return cmd
+	cmd.AddConfirmFlag(cmds, false)
+	return cmds
 }
 
 func NewRepositoryRenameCmd(newClient ClientFactory) *cobra.Command {
-	cmd := &cobra.Command{
+	cmds := &cobra.Command{
 		Short:   "Rename a repository",
 		Use:     "rename <old> <new>",
 		Aliases: []string{"mv"},
-		PreRunE: bindEnv("confirm"),
+		PreRunE: cmd.BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryRename(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
-	return cmd
+	cmd.AddConfirmFlag(cmds, false)
+	return cmds
 }
 
 func NewRepositoryRemoveCmd(newClient ClientFactory) *cobra.Command {
-	cmd := &cobra.Command{
+	cmds := &cobra.Command{
 		Short:      "Remove a repository",
 		Use:        "remove <name>",
 		Aliases:    []string{"rm"},
 		SuggestFor: []string{"delete", "del"},
-		PreRunE:    bindEnv("confirm"),
+		PreRunE:    cmd.BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryRemove(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
-	return cmd
+	cmd.AddConfirmFlag(cmds, false)
+	return cmds
 }
 
 // command implementations

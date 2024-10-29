@@ -18,6 +18,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,8 +49,8 @@ const (
 	portLimit = 32767
 )
 
-func addDeploy(baseCmd *cobra.Command, newClient ClientFactory) {
-	cmd := &cobra.Command{
+func AddDeploy(baseCmd *cobra.Command, newClient ClientFactory) {
+	cmds := &cobra.Command{
 		Use:   "deploy",
 		Short: "Generate the k8s yaml of the application. By the way, you can choose to build the image, push the image and apply to the k8s cluster.",
 		Long: `
@@ -60,55 +61,55 @@ SYNOPSIS
 	dubboctl deploy [flags]
 `,
 		SuggestFor: []string{"delpoy", "deplyo"},
-		PreRunE: bindEnv("path", "output", "namespace", "image", "envs", "name", "containerPort",
+		PreRunE: cmd.BindEnv("path", "output", "namespace", "image", "envs", "name", "containerPort",
 			"targetPort", "nodePort", "apply", "useDockerfile", "force", "builder-image", "build", "context",
 			"kubeConfig", "push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, newClient)
 		},
 	}
-	cmd.Flags().StringP("namespace", "n", "default",
+	cmds.Flags().StringP("namespace", "n", "default",
 		"Deploy into a specific namespace")
-	cmd.Flags().StringP("output", "o", "kube.yaml",
+	cmds.Flags().StringP("output", "o", "kube.yaml",
 		"output kubernetes manifest")
-	cmd.Flags().StringP("name", "", "",
+	cmds.Flags().StringP("name", "", "",
 		"The name of application")
-	cmd.Flags().IntP("containerPort", "", 0,
+	cmds.Flags().IntP("containerPort", "", 0,
 		"The port of the deployment to listen on pod (required)")
-	cmd.Flags().IntP("targetPort", "", 0,
+	cmds.Flags().IntP("targetPort", "", 0,
 		"The targetPort of the deployment, default to port")
-	cmd.Flags().IntP("nodePort", "", 0,
+	cmds.Flags().IntP("nodePort", "", 0,
 		"The nodePort of the deployment to expose")
 
-	cmd.Flags().StringP("context", "", "",
+	cmds.Flags().StringP("context", "", "",
 		"Context in kubeconfig to use")
-	cmd.Flags().StringP("kubeConfig", "k", "",
+	cmds.Flags().StringP("kubeConfig", "k", "",
 		"Path to kubeconfig")
 
-	cmd.Flags().StringArrayP("envs", "e", nil,
+	cmds.Flags().StringArrayP("envs", "e", nil,
 		"DeployMode variable to set in the form NAME=VALUE. "+
 			"This is for the environment variables passed in by the builderpack build method.")
-	cmd.Flags().StringP("builder-image", "b", "",
+	cmds.Flags().StringP("builder-image", "b", "",
 		"Specify a custom builder image for use by the builder other than its default.")
-	cmd.Flags().BoolP("useDockerfile", "d", false,
+	cmds.Flags().BoolP("useDockerfile", "d", false,
 		"Use the dockerfile with the specified path to build")
-	cmd.Flags().StringP("image", "i", "",
+	cmds.Flags().StringP("image", "i", "",
 		"Container image( [registry]/[namespace]/[name]:[tag] )")
-	cmd.Flags().BoolP("push", "", true,
+	cmds.Flags().BoolP("push", "", true,
 		"Whether to push the image to the registry center by the way")
-	cmd.Flags().BoolP("force", "f", false,
+	cmds.Flags().BoolP("force", "f", false,
 		"Whether to force build")
 
-	cmd.Flags().BoolP("build", "", true,
+	cmds.Flags().BoolP("build", "", true,
 		"Whether to build the image")
-	cmd.Flags().BoolP("apply", "a", false,
+	cmds.Flags().BoolP("apply", "a", false,
 		"Whether to apply the application to the k8s cluster by the way")
-	cmd.Flags().StringP("portName", "", "http",
+	cmds.Flags().StringP("portName", "", "http",
 		"Name of the port to be exposed")
 
-	addPathFlag(cmd)
-	cmd.Flags().SetInterspersed(false)
-	baseCmd.AddCommand(cmd)
+	cmd.AddPathFlag(cmds)
+	cmds.Flags().SetInterspersed(false)
+	baseCmd.AddCommand(cmds)
 }
 
 func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
