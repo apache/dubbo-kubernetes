@@ -1,0 +1,107 @@
+{{- $nacos := .Values.nacos -}}
+{{- $service := $nacos.service -}}
+{{- if $nacos.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "nacos.name" . }}
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- include "nacos.labels" . | nindent 4 }}
+  {{- with $nacos.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $nacos.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $service.type }}
+  type: {{ $service.type }}
+  {{- end }}
+  {{- if $service.clusterIP }}
+  clusterIP: {{ $service.clusterIP }}
+  {{- end }}
+  {{- if $service.externalIPs }}
+  externalIPs: {{ $service.externalIPs }}
+  {{- end }}
+  {{- if $service.loadBalancerIP }}
+  loadBalancerIP: {{ $service.loadBalancerIP }}
+  {{- end }}
+  {{- if $service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{ $service.loadBalancerSourceRanges }}
+  {{- end }}
+  {{- if $service.loadBalancerClass }}
+  loadBalancerClass: {{ $service.loadBalancerClass }}
+  {{- end }}
+  ports:
+  - name: http
+    port: {{ template "nacos.port" }}
+    targetPort: http
+    protocol: TCP
+  - name: clientgen-rpc
+    port: {{ add $nacos.serverPort 1000 }}
+    targetPort: clientgen-rpc
+    protocol: TCP
+  - name: raft-rpc
+    port: {{ add $nacos.serverPort 1001 }}
+    targetPort: raft-rpc
+    protocol: TCP
+  selector:
+    app: {{ template "nacos.selector" . }}
+---
+{{- if and (eq $nacos.mode "cluster") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "nacos.name" . }}-headless
+  namespace: {{ template "nacos.namespace" . }}
+  labels:
+  {{- include "nacos.labels" . | nindent 4 }}
+  {{- with .Values.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $nacos.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $service.type }}
+  type: {{ $service.type }}
+  {{- end }}
+  clusterIP: None
+  {{- if $service.externalIPs }}
+  externalIPs: {{ $service.externalIPs }}
+  {{- end }}
+  {{- if $service.loadBalancerIP }}
+  loadBalancerIP: {{ $service.loadBalancerIP }}
+  {{- end }}
+  {{- if $service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{ $service.loadBalancerSourceRanges }}
+  {{- end }}
+  {{- if $service.loadBalancerClass }}
+  loadBalancerClass: {{ $service.loadBalancerClass }}
+  {{- end }}
+  {{- if $service.sessionAffinity }}
+  sessionAffinity: {{ $service.sessionAffinity }}
+  {{- end }}
+  {{- if $service.publishNotReadyAddresses }}
+  publishNotReadyAddresses: {{ $service.publishNotReadyAddresses }}
+  {{- end }}
+  ports:
+  - name: http
+    port: {{ template "nacos.port" }}
+    targetPort: http
+    protocol: TCP
+  - name: clientgen-rpc
+    port: {{ add $nacos.serverPort 1000 }}
+    targetPort: clientgen-rpc
+    protocol: TCP
+  - name: raft-rpc
+    port: {{ add $nacos.serverPort 1001 }}
+    targetPort: raft-rpc
+    protocol: TCP
+  selector:
+    app: {{ template "nacos.selector" . }}
+{{- end -}}
+{{- end -}}

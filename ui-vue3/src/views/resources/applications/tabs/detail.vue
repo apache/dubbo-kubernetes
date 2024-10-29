@@ -28,7 +28,7 @@
                   :labelStyle="{ fontWeight: 'bold', width: '100px' }"
                   :label="$t('applicationDomain.' + key)"
                 >
-                  {{ v[0] }}
+                  {{ typeof v === 'object' ? v[0] : v }}
                 </a-descriptions-item>
               </a-descriptions>
             </a-card>
@@ -66,10 +66,11 @@
               <a-card class="description-item-card" v-else>
                 <p
                   v-for="item in v"
-                  @click="copyIt(item)"
+                  @click="copyIt(item.toString())"
                   class="description-item-content with-card"
                 >
-                  {{ item }} <CopyOutlined />
+                  {{ item }}
+                  <CopyOutlined />
                 </p>
               </a-card>
             </a-descriptions-item>
@@ -88,7 +89,12 @@ import { CopyOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
 import type { ComponentInternalInstance } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
 const apiData: any = reactive({})
+
 const {
   appContext: {
     config: { globalProperties }
@@ -97,6 +103,7 @@ const {
 
 let __ = PRIMARY_COLOR
 let PRIMARY_COLOR_20 = PRIMARY_COLOR_T('20')
+
 let detailMap = reactive({
   left: {},
   right: {},
@@ -104,7 +111,9 @@ let detailMap = reactive({
 })
 
 onMounted(async () => {
-  apiData.detail = await getApplicationDetail({})
+  let appNameParam: any = route.params?.pathId
+  apiData.detail = await getApplicationDetail({ appName: appNameParam })
+  console.log(apiData.detail)
   let {
     appName,
     rpcProtocols,
@@ -114,9 +123,9 @@ onMounted(async () => {
     appTypes,
     images,
     workloads,
-    deployCluster,
-    registerCluster,
-    registerMode
+    deployClusters,
+    registerClusters,
+    registerModes
   } = apiData.detail.data
   detailMap.left = {
     appName,
@@ -131,9 +140,9 @@ onMounted(async () => {
   detailMap.bottom = {
     images,
     workloads,
-    deployCluster,
-    registerCluster,
-    registerMode
+    deployClusters,
+    registerClusters,
+    registerModes
   }
   console.log(appName)
 })

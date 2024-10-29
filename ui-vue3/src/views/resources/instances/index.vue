@@ -18,8 +18,17 @@
   <div class="__container_resources_application_index">
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ text, record, index, column }">
+        <template v-if="column.dataIndex === 'ip'">
+          <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
+            <b>
+              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+              {{ text }}
+            </b>
+          </span>
+        </template>
+
         <template v-if="column.dataIndex === 'deployState'">
-          <a-typography-text type="success">{{ text.label }}</a-typography-text>
+          <a-tag :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
         </template>
 
         <template v-if="column.dataIndex === 'deployCluster'">
@@ -28,13 +37,9 @@
           </a-tag>
         </template>
 
-        <template v-if="column.dataIndex === 'deployState'">
-          <a-tag :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
-        </template>
-
-        <template v-if="column.dataIndex === 'registerStates'">
-          <a-tag :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]" v-for="t in text">
-            {{ t.label }}
+        <template v-if="column.dataIndex === 'registerState'">
+          <a-tag :color="INSTANCE_REGISTER_COLOR[text.toUpperCase()]">
+            {{ text }}
           </a-tag>
         </template>
 
@@ -44,19 +49,12 @@
           </a-tag>
         </template>
 
-        <template v-if="column.dataIndex === 'labels'">
-          <a-tag v-for="t in text" color="grey">
-            {{ t }}
-          </a-tag>
+        <template v-if="column.dataIndex === 'registerTime'">
+          {{ formattedDate(text) }}
         </template>
 
-        <template v-if="column.dataIndex === 'ip'">
-          <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
-            <b>
-              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
-              {{ text }}
-            </b>
-          </span>
+        <template v-if="column.dataIndex === 'labels'">
+          <a-tag v-for="(value, key) in text" :key="key"> {{ key }}:{{ value }} </a-tag>
         </template>
       </template>
     </search-table>
@@ -73,6 +71,7 @@ import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR } from '@/base/constants
 import router from '@/router'
 import { Icon } from '@iconify/vue'
 import { PRIMARY_COLOR } from '@/base/constants'
+import { formattedDate } from '../../../utils/DateUtil'
 
 let __null = PRIMARY_COLOR
 let columns = [
@@ -106,10 +105,10 @@ let columns = [
     width: 120
   },
   {
-    title: 'instanceDomain.registerStates',
-    key: 'registerStates',
-    dataIndex: 'registerStates',
-    sorter: (a: any, b: any) => sortString(a.registerStates, b.registerStates),
+    title: 'instanceDomain.registerState',
+    key: 'registerState',
+    dataIndex: 'registerState',
+    sorter: (a: any, b: any) => sortString(a.registerState, b.registerState),
     width: 120
   },
   {
@@ -161,7 +160,7 @@ const searchDomain = reactive(
     [
       {
         label: 'appName',
-        param: 'appName',
+        param: 'keywords',
         placeholder: 'typeAppName',
         style: {
           width: '200px'

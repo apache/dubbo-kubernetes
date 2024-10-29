@@ -42,7 +42,13 @@ import (
 // service search
 func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resp, err := service.GetSearchServices(rt)
+		req := model.NewServiceSearchReq()
+		if err := c.ShouldBindQuery(req); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		resp, err := service.GetSearchServices(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
@@ -73,7 +79,7 @@ func GetServiceTabDistribution(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -81,7 +87,7 @@ func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -89,7 +95,7 @@ func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceInterfaces(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}

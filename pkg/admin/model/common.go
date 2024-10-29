@@ -91,6 +91,23 @@ func (pd *PageData) WithData(data any) *PageData {
 }
 
 type PageReq struct {
-	CurPage  int `form:"curPage" json:"curPage"`
-	PageSize int `form:"pageSize" json:"pageSize"`
+	PageOffset int `form:"pageOffset" json:"pageOffset"`
+	PageSize   int `form:"pageSize" json:"pageSize"`
+}
+
+type SearchReq struct {
+	SearchType string `form:"searchType"`
+	Keywords   string `form:"keywords"`
+	PageReq
+}
+
+func NewSearchReq() *SearchReq {
+	return &SearchReq{
+		PageReq: PageReq{PageSize: 15},
+	}
+}
+
+type SearchRes struct {
+	Find       bool     `json:"find"`
+	Candidates []string `json:"candidates"`
 }

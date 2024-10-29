@@ -37,6 +37,6 @@ func ToJson(cfg Config) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// there is no easy way to convert yaml to json using gopkg.in/yaml.v2
+	// there is no easy way to convert yaml to json using gopkg.in/yaml.v3
 	return yaml.YAMLToJSON(yamlBytes)
 }

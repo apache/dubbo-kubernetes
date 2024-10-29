@@ -37,10 +37,10 @@ var (
 			TimeKey:        "time",
 			CallerKey:      "line",
 			NameKey:        "logger",
-			FunctionKey:    "func",
+			FunctionKey:    "",
 			StacktraceKey:  "stacktrace",
 			EncodeLevel:    zapcore.CapitalLevelEncoder,
-			EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.0000"),
+			EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05"),
 			EncodeCaller:   zapcore.ShortCallerEncoder,
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 		})
@@ -72,7 +72,7 @@ func Init() {
 	hasInit = true
 
 	core := zapcore.NewCore(encoder, os.Stdout, zap.DebugLevel)
-	logger = zap.New(core)
+	logger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(2))
 	defer logger.Sync() // flushes buffer, if any
 	sugar = logger.Sugar()
 

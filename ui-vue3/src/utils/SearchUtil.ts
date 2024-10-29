@@ -49,6 +49,7 @@ export class SearchDomain {
   } = { columns: [] }
   paged = {
     curPage: 1,
+    pageOffset: '0',
     total: 0,
     pageSize: 10
   }
@@ -82,10 +83,28 @@ export class SearchDomain {
     setTimeout(() => {
       this.table.loading = false
     }, 5000)
-    const res = (await this.searchApi(this.queryForm || {})).data
-    this.result = handleResult ? handleResult(res.data) : res.data
-    console.log(this.result)
-    this.paged.total = res.total
+    const queryParams = {
+      ...this.queryForm,
+      ...(this.noPaged
+        ? {}
+        : {
+            pageSize: this.paged.pageSize,
+            pageOffset: (this.paged.curPage - 1) * this.paged.pageSize
+          })
+    }
+
+    try {
+      const {
+        data: { list, pageInfo }
+      } = await this.searchApi(queryParams)
+      this.result = handleResult ? handleResult(list) : list
+
+      if (!this.noPaged) {
+        this.paged.total = pageInfo?.Total || 0
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    }
     this.table.loading = false
   }
 }

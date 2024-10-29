@@ -91,16 +91,20 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	// 定义store的状态
 	if cfg.DeployMode == config_core.UniversalMode || cfg.DeployMode == config_core.HalfHostMode {
 		cfg.Store.Type = store.Traditional
+		builder.WithAppRegCtx(dubbo_registry.NewApplicationContext())
+		builder.WithInfRegCtx(dubbo_registry.NewInterfaceContext())
 	} else {
 		cfg.Store.Type = store.KubernetesStore
 	}
 	// 初始化cache
 	builder.WithDataplaneCache(&sync.Map{})
-	if err := initializeResourceStore(cfg, builder); err != nil {
-		return nil, err
-	}
+
 	// 初始化传统微服务体系所需要的组件
 	if err := initializeTraditional(cfg, builder); err != nil {
+		return nil, err
+	}
+
+	if err := initializeResourceStore(cfg, builder); err != nil {
 		return nil, err
 	}
 
@@ -223,7 +227,7 @@ func initializeTraditional(cfg dubbo_cp.Config, builder *core_runtime.Builder) e
 			return err
 		}
 		builder.WithServiceDiscovery(sdDelegate)
-		adminRegistry := dubbo_registry.NewRegistry(delegate, sdDelegate, builder.Extensions().Value(dubbo_registry.AppCtx).(*dubbo_registry.ApplicationContext))
+		adminRegistry := dubbo_registry.NewRegistry(delegate, sdDelegate, builder.AppRegCtx(), builder.InfRegCtx())
 		builder.WithAdminRegistry(adminRegistry)
 	}
 	if len(metadataReportAddress) > 0 {
@@ -300,7 +304,6 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		pluginName = core_plugins.Kubernetes
 		pluginConfig = nil
 	case store.Traditional:
-		builder.WithExtension(dubbo_registry.AppCtx, dubbo_registry.NewApplicationContext())
 		pluginName = core_plugins.Traditional
 		pluginConfig = nil
 	case store.MemoryStore:
@@ -319,7 +322,7 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		return err
 	}
 	builder.WithResourceStore(core_store.NewCustomizableResourceStore(rs))
-	builder.WithTransactions(transactions)
+
 	eventBus, err := events.NewEventBus(cfg.EventBus.BufferSize)
 	if err != nil {
 		return err
@@ -328,6 +331,10 @@ func initializeResourceStore(cfg dubbo_cp.Config, builder *core_runtime.Builder)
 		return err
 	}
 	builder.WithEventBus(eventBus)
+
+	paginationStore := core_store.NewPaginationStore(rs)
+	builder.WithResourceStore(core_store.NewCustomizableResourceStore(paginationStore))
+	builder.WithTransactions(transactions)
 	return nil
 }
 

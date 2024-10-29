@@ -153,6 +153,16 @@ func (a *ApplicationDetail) GetRegistry(rt core_runtime.Runtime) {
 
 type ApplicationTabInstanceInfoReq struct {
 	AppName string `form:"appName"`
+	PageReq
+}
+
+func NewApplicationTabInstanceInfoReq() *ApplicationTabInstanceInfoReq {
+	return &ApplicationTabInstanceInfoReq{
+		PageReq: PageReq{
+			PageOffset: 0,
+			PageSize:   15,
+		},
+	}
 }
 
 type ApplicationTabInstanceInfoResp struct {
@@ -168,6 +178,16 @@ type ApplicationTabInstanceInfoResp struct {
 	RegisterTime    string            `json:"registerTime"`
 	WorkloadName    string            `json:"workloadName"`
 }
+
+type ByApplicationInstanceName []*ApplicationTabInstanceInfoResp
+
+func (a ByApplicationInstanceName) Len() int { return len(a) }
+
+func (a ByApplicationInstanceName) Less(i, j int) bool {
+	return a[i].Name < a[j].Name
+}
+
+func (a ByApplicationInstanceName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.DataplaneResource) *ApplicationTabInstanceInfoResp {
 	// TODO: support more fields
@@ -223,14 +243,34 @@ type ApplicationServiceResp struct {
 }
 
 type ApplicationServiceFormReq struct {
-	AppName string `json:"appName"`
-	Side    string `json:"side"`
+	AppName string `form:"appName"`
+	Side    string `form:"side"`
+	PageReq
+}
+
+func NewApplicationServiceFormReq() *ApplicationServiceFormReq {
+	return &ApplicationServiceFormReq{
+		PageReq: PageReq{
+			PageOffset: 0,
+			PageSize:   15,
+		},
+	}
 }
 
 type ApplicationServiceFormResp struct {
 	ServiceName   string         `json:"serviceName"`
 	VersionGroups []versionGroup `json:"versionGroups"`
 }
+
+type ByAppServiceFormName []*ApplicationServiceFormResp
+
+func (a ByAppServiceFormName) Len() int { return len(a) }
+
+func (a ByAppServiceFormName) Less(i, j int) bool {
+	return a[i].ServiceName < a[j].ServiceName
+}
+
+func (a ByAppServiceFormName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 type versionGroup struct {
 	Group   string `json:"group"`
@@ -283,6 +323,21 @@ func (a *ApplicationServiceForm) FromServiceInfo(serviceInfo *v1alpha1.ServiceIn
 	return nil
 }
 
+type ApplicationSearchReq struct {
+	AppName  string `form:"appName" json:"appName"`
+	Keywords string `form:"keywords" json:"keywords"`
+	PageReq
+}
+
+func NewApplicationSearchReq() *ApplicationSearchReq {
+	return &ApplicationSearchReq{
+		PageReq: PageReq{
+			PageOffset: 0,
+			PageSize:   15,
+		},
+	}
+}
+
 type ApplicationSearchResp struct {
 	AppName          string   `json:"appName"`
 	DeployClusters   []string `json:"deployClusters"`
@@ -296,6 +351,16 @@ func (a *ApplicationSearchResp) FromApplicationSearch(applicationSearch *Applica
 	a.DeployClusters = applicationSearch.DeployClusters.Values()
 	return a
 }
+
+type ByAppName []*ApplicationSearchResp
+
+func (a ByAppName) Len() int { return len(a) }
+
+func (a ByAppName) Less(i, j int) bool {
+	return a[i].AppName < a[j].AppName
+}
+
+func (a ByAppName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 // Todo Application Search
 
@@ -333,7 +398,7 @@ func (a *ApplicationSearch) GetRegistry(rt core_runtime.Runtime) {
 	} else if runtimeMode == core.HalfHostMode || runtimeMode == core.UniversalMode {
 		// In half or universal mode, registry cluster is the zookeeper cluster or other registry center
 		registryURL := rt.RegistryCenter().GetURL()
-		registryCluster := registryURL.GetParam(constants.RegistryClusterKey, "")
+		registryCluster := registryURL.GetParam(constants.RegistryClusterKey, registryURL.Address())
 		a.RegistryClusters.Add(registryCluster)
 	}
 }

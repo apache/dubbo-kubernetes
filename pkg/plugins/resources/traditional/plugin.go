@@ -19,8 +19,6 @@ package traditional
 
 import (
 	"errors"
-
-	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
 )
 
 import (
@@ -50,7 +48,8 @@ func (p *plugin) NewResourceStore(pc core_plugins.PluginContext, _ core_plugins.
 		pc.Governance(),
 		pc.DataplaneCache(),
 		pc.RegClient(),
-		pc.Extensions().Value(registry.AppCtx).(*registry.ApplicationContext),
+		pc.AppRegCtx(),
+		pc.InfRegCtx(),
 	)
 
 	return resourceStore, core_store.NoTransactions{}, nil

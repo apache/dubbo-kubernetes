@@ -185,7 +185,7 @@ func DeleteConfiguratorWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusNoContent, model.GenDynamicConfigToResp(http.StatusNoContent, "success", nil))
+		c.JSON(http.StatusOK, model.GenDynamicConfigToResp(http.StatusOK, "success", nil))
 	}
 }
 

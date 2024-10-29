@@ -19,7 +19,7 @@
     <a-flex vertical>
       <a-flex class="service-filter">
         <a-radio-group v-model:value="type" button-style="solid" @click="debounceSearch">
-          <a-radio-button value="producer">生产者</a-radio-button>
+          <a-radio-button value="provider">生产者</a-radio-button>
           <a-radio-button value="consumer">消费者</a-radio-button>
         </a-radio-group>
         <a-input-search
@@ -35,9 +35,10 @@
         :data-source="tableData"
         :scroll="{ y: '45vh' }"
         :pagination="pagination"
+        @change="onTablePageChange"
       >
         <template #bodyCell="{ column, text }">
-          <template v-if="column.dataIndex === 'applicationName'">
+          <template v-if="column.dataIndex === 'appName'">
             <span class="link" @click="router.push('/resources/applications/detail/' + text)">
               <b>
                 <Icon
@@ -48,6 +49,7 @@
               </b>
             </span>
           </template>
+
           <template v-if="column.dataIndex === 'instanceName'">
             <span class="link" @click="router.push('/resources/instances/detail/' + text)">
               <b>
@@ -58,6 +60,10 @@
                 {{ text }}
               </b>
             </span>
+          </template>
+
+          <template v-if="column.dataIndex === 'timeOut'">
+            {{ formattedDate(text) }}
           </template>
           <template v-if="column.dataIndex === 'label'">
             <a-tag :color="PRIMARY_COLOR">{{ text }}</a-tag>
@@ -71,14 +77,16 @@
 <script setup lang="ts">
 import type { ComponentInternalInstance } from 'vue'
 import { ref, reactive, getCurrentInstance } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { getServiceDistribution } from '@/api/service/service'
 import { debounce } from 'lodash'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { Icon } from '@iconify/vue'
+import { formattedDate } from '@/utils/DateUtil'
 
 let __null = PRIMARY_COLOR
 const router = useRouter()
+const route = useRoute()
 const {
   appContext: {
     config: { globalProperties }
@@ -105,12 +113,12 @@ const versionAndGroupOptions = reactive([
   }
 ])
 const versionAndGroup = ref(versionAndGroupOptions[0].value)
-const type = ref('producer')
+const type = ref('provider')
 
 const tableColumns = [
   {
     title: '应用名',
-    dataIndex: 'applicationName',
+    dataIndex: 'appName',
     width: '20%',
     customCell: (_, index) => {
       if (index === 0) {
@@ -144,7 +152,7 @@ const tableColumns = [
   },
   {
     title: '超时时间',
-    dataIndex: 'timeout',
+    dataIndex: 'timeOut',
     width: '10%'
   },
   {
@@ -161,21 +169,41 @@ const tableColumns = [
 
 const tableData = ref([])
 
-const onSearch = async () => {
-  let { data } = await getServiceDistribution({})
-  tableData.value = data.data
-}
-onSearch()
-
-const debounceSearch = debounce(onSearch, 300)
-
-const pagination = {
+const pagination = reactive({
+  total: 0,
+  pageSize: 10,
+  current: 1,
+  pageOffset: 0,
   showTotal: (v: any) =>
     globalProperties.$t('searchDomain.total') +
     ': ' +
     v +
     ' ' +
     globalProperties.$t('searchDomain.unit')
+})
+
+const onSearch = async () => {
+  let params = {
+    serviceName: route.params?.pathId,
+    side: type.value,
+    pageOffset: pagination.pageOffset,
+    pageSize: pagination.pageSize
+  }
+  const {
+    data: { list, pageInfo }
+  } = await getServiceDistribution(params)
+  tableData.value = list
+  pagination.total = pageInfo.Total
+}
+onSearch()
+
+const debounceSearch = debounce(onSearch, 300)
+
+const onTablePageChange = (pageInfo: any) => {
+  pagination.pageSize = pageInfo.pageSize || 10
+  pagination.current = pageInfo.current || 1
+  pagination.pageOffset = (pagination.current - 1) * pagination.pageSize
+  debounceSearch()
 }
 </script>
 
@@ -183,19 +211,23 @@ const pagination = {
 .__container_services_tabs_distribution {
   .service-filter {
     margin-bottom: 20px;
+
     .service-filter-select {
       margin-left: 10px;
       width: 250px;
     }
+
     .service-filter-input {
       margin-left: 30px;
       width: 300px;
     }
   }
+
   .link {
     padding: 4px 10px 4px 4px;
     border-radius: 4px;
     color: v-bind('PRIMARY_COLOR');
+
     &:hover {
       cursor: pointer;
       background: rgba(133, 131, 131, 0.13);

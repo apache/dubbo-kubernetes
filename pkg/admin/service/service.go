@@ -18,19 +18,23 @@
 package service
 
 import (
+	"sort"
+	"strconv"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	_ "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
-func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) ([]*model.ServiceTabDistributionResp, error) {
+func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDistributionReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
-	dataplaneList := &mesh.DataplaneResourceList{}
 	mappingList := &mesh.MappingResourceList{}
-	metadataList := &mesh.MetaDataResourceList{}
 
 	serviceName := req.ServiceName
 
@@ -39,73 +43,74 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 	}
 
 	res := make([]*model.ServiceTabDistributionResp, 0)
-	appNameSet := make(map[string]struct{})
 
 	for _, mapping := range mappingList.Items {
-		//找到对应serviceName的appNames
+		// 找到对应serviceName的appNames
 		if mapping.Spec.InterfaceName == serviceName {
 			for _, appName := range mapping.Spec.ApplicationNames {
-				//每拿到一个appName，都将对应的实例数据填充进dataplaneList, 再通过dataplane拿到这个appName对应的所有实例
-				if err := manager.List(rt.AppContext(), dataplaneList, store.ListByNameContains(appName)); err != nil {
+				dataplaneList := &mesh.DataplaneResourceList{}
+				// 每拿到一个appName，都将对应的实例数据填充进dataplaneList, 再通过dataplane拿到这个appName对应的所有实例
+				if err := manager.List(rt.AppContext(), dataplaneList, store.ListByApplication(appName)); err != nil {
 					return nil, err
 				}
-				if err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(appName)); err != nil {
-					return nil, err
-				}
-				//拿到了appName，接下来从dataplane取实例信息
+
+				// 拿到了appName，接下来从dataplane取实例信息
 				for _, dataplane := range dataplaneList.Items {
-					if _, ok := appNameSet[appName]; !ok {
-						appNameSet[appName] = struct{}{}
-						respItem := &model.ServiceTabDistributionResp{}
-						res = append(res, respItem.FromServiceDataplaneResource(dataplane, metadataList, appName, req))
+					metadata := &mesh.MetaDataResource{
+						Spec: &v1alpha1.MetaData{},
 					}
+					if err := manager.Get(rt.AppContext(), metadata, store.GetByRevision(dataplane.Spec.GetExtensions()[v1alpha1.Revision]), store.GetByType(dataplane.Spec.GetExtensions()["registry-type"])); err != nil {
+						return nil, err
+					}
+					respItem := &model.ServiceTabDistributionResp{}
+					res = append(res, respItem.FromServiceDataplaneResource(dataplane, metadata, appName, req))
 				}
 
 			}
 		}
 	}
-	return res, nil
+
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceInstanceName(res), req.PageReq)
+
+	return pagedRes, nil
 }
 
-func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, error) {
-	manager := rt.ResourceManager()
+func GetSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) (*model.SearchPaginationResult, error) {
+	if req.Keywords != "" {
+		return BannerSearchServices(rt, req)
+	}
 
+	res := make([]*model.ServiceSearchResp, 0)
+	serviceMap := make(map[string]*model.ServiceSearch)
+	manager := rt.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
-	metadataList := &mesh.MetaDataResourceList{}
 
 	if err := manager.List(rt.AppContext(), dataplaneList); err != nil {
 		return nil, err
 	}
-
-	//通过dataplane的extension字段获取所有appName
-	appNames := make(map[string]struct{}, 0)
-
+	// 通过dataplane extension字段获取所有revision
+	revisions := make(map[string]string, 0)
 	for _, dataplane := range dataplaneList.Items {
-		appName, ok := dataplane.Spec.GetExtensions()[v1alpha1.Application]
+		rev, ok := dataplane.Spec.GetExtensions()[v1alpha1.Revision]
 		if ok {
-			appNames[appName] = struct{}{}
+			revisions[rev] = dataplane.Spec.GetExtensions()["registry-type"]
 		}
 	}
 
-	// 遍历 appName
-	for appName := range appNames {
-		//获取metadataList
-		err := manager.List(rt.AppContext(), metadataList, store.ListByNameContains(appName))
+	// 遍历 revisions
+	for rev, t := range revisions {
+		metadata := &mesh.MetaDataResource{
+			Spec: &v1alpha1.MetaData{},
+		}
+		err := manager.Get(rt.AppContext(), metadata, store.GetByRevision(rev), store.GetByType(t))
 		if err != nil {
 			return nil, err
 		}
-
-	}
-
-	res := make([]*model.ServiceSearchResp, 0)
-
-	serviceMap := make(map[string]*model.ServiceSearch)
-	for _, metadata := range metadataList.Items {
 		for _, serviceInfo := range metadata.Spec.Services {
-			serviceSearch := model.NewServiceSearch(serviceInfo.Name)
 			if _, ok := serviceMap[serviceInfo.Name]; ok {
 				serviceMap[serviceInfo.Name].FromServiceInfo(serviceInfo)
 			} else {
+				serviceSearch := model.NewServiceSearch(serviceInfo.Name)
 				serviceSearch.FromServiceInfo(serviceInfo)
 				serviceMap[serviceInfo.Name] = serviceSearch
 			}
@@ -118,5 +123,64 @@ func GetSearchServices(rt core_runtime.Runtime) ([]*model.ServiceSearchResp, err
 		res = append(res, serviceSearchResp)
 	}
 
-	return res, nil
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceName(res), req.PageReq)
+	return pagedRes, nil
+}
+
+func BannerSearchServices(rt core_runtime.Runtime, req *model.ServiceSearchReq) (*model.SearchPaginationResult, error) {
+	res := make([]*model.ServiceSearchResp, 0)
+
+	manager := rt.ResourceManager()
+	mappingList := &mesh.MappingResourceList{}
+
+	if req.Keywords != "" {
+		if err := manager.List(rt.AppContext(), mappingList, store.ListByNameContains(req.Keywords)); err != nil {
+			return nil, err
+		}
+
+		for _, mapping := range mappingList.Items {
+			serviceSearchResp := model.NewServiceSearchResp()
+			serviceSearchResp.ServiceName = mapping.GetMeta().GetName()
+			res = append(res, serviceSearchResp)
+		}
+	}
+
+	pagedRes := ToSearchPaginationResult(res, model.ByServiceName(res), req.PageReq)
+
+	return pagedRes, nil
+}
+
+func ToSearchPaginationResult[T any](services []T, data sort.Interface, req model.PageReq) *model.SearchPaginationResult {
+	res := model.NewSearchPaginationResult()
+
+	list := make([]T, 0)
+
+	sort.Sort(data)
+	lenFilteredItems := len(services)
+	pageSize := lenFilteredItems
+	offset := 0
+	paginationEnabled := req.PageSize != 0
+	if paginationEnabled {
+		pageSize = req.PageSize
+		offset = req.PageOffset
+	}
+
+	for i := offset; i < offset+pageSize && i < lenFilteredItems; i++ {
+		list = append(list, services[i])
+	}
+
+	nextOffset := ""
+	if paginationEnabled {
+		if offset+pageSize < lenFilteredItems { // set new offset only if we did not reach the end of the collection
+			nextOffset = strconv.Itoa(offset + req.PageSize)
+		}
+	}
+
+	res.List = list
+	res.PageInfo = &core_model.Pagination{
+		Total:      uint32(lenFilteredItems),
+		NextOffset: nextOffset,
+	}
+
+	return res
 }

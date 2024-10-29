@@ -43,18 +43,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive } from 'vue'
-import ServiceList from '@/views/resources/services/search.vue'
 import { getClusterInfo } from '@/api/service/clusterInfo'
 import { getMetricsMetadata } from '@/api/service/serverInfo'
-import { Chart } from '@antv/g2'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { Icon } from '@iconify/vue'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain } from '@/utils/SearchUtil'
-import { searchService } from '@/api/service/service'
 import { provide } from 'vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { useRoute, useRouter } from 'vue-router'
+import { getApplicationServiceForm } from '@/api/service/app'
+
+const route = useRoute()
+const router = useRouter()
 
 let __null = PRIMARY_COLOR
 let clusterInfo = reactive({
@@ -128,33 +129,40 @@ const columns = [
   }
 ]
 
+const appName = computed(() => {
+  return route.params?.pathId
+})
+
 const searchDomain = reactive(
   new SearchDomain(
     [
       {
         label: '',
-        param: 'type',
-        defaultValue: 1,
+        param: 'side',
+        defaultValue: 'provider',
         dict: [
-          { label: 'providers', value: 1 },
-          { label: 'consumers', value: 2 }
+          { label: 'providers', value: 'provider' },
+          { label: 'consumers', value: 'consumer' }
         ],
         dictType: 'BUTTON'
       },
       {
         label: 'serviceName',
         param: 'serviceName'
+      },
+      {
+        label: '',
+        param: 'appName',
+        defaultValue: appName
       }
     ],
-    searchService,
+    getApplicationServiceForm,
     columns,
     { pageSize: 4 },
     true
   )
 )
 searchDomain.onSearch()
-const route = useRoute()
-const router = useRouter()
 
 const viewDetail = (serviceName: string) => {
   router.push('/resources/services/detail/' + serviceName)
