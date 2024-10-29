@@ -13,19 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package generate
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/generate"
 	"github.com/spf13/cobra"
 )
 
-func addGenerate(rootCmd *cobra.Command) {
+func AddGenerate(rootCmd *cobra.Command) {
 	generateCmd := &cobra.Command{
 		Use:   "generate",
 		Short: "Generate resources, tokens, etc",
 		Long:  `Generate resources, tokens, etc.`,
 	}
 	rootCmd.AddCommand(generateCmd)
-	generate.NewGenerateCertificateCmd(generateCmd)
+	NewGenerateCertificateCmd(generateCmd)
 }
