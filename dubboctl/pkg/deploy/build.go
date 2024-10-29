@@ -17,7 +17,7 @@ package deploy
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
 	"os"
 	"strings"
 )
@@ -38,32 +38,32 @@ import (
 )
 
 func AddBuild(baseCmd *cobra.Command, newClient ClientFactory) {
-	cmds := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:        "build",
 		Short:      "Build the image for the application",
 		Long:       ``,
 		SuggestFor: []string{"biuld", "buidl", "built"},
-		PreRunE: cmd.BindEnv("useDockerfile", "image", "path", "push", "force", "envs",
+		PreRunE: common.BindEnv("useDockerfile", "image", "path", "push", "force", "envs",
 			"builder-image"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runBuildCmd(cmd, newClient)
 		},
 	}
 
-	cmds.Flags().StringP("builder-image", "b", "",
+	cmd.Flags().StringP("builder-image", "b", "",
 		"Specify a custom builder image for use by the builder other than its default.")
-	cmds.Flags().BoolP("useDockerfile", "d", false,
+	cmd.Flags().BoolP("useDockerfile", "d", false,
 		"Use the dockerfile with the specified path to build")
-	cmds.Flags().StringP("image", "i", "",
+	cmd.Flags().StringP("image", "i", "",
 		"Container image( [registry]/[namespace]/[name]:[tag] )")
-	cmds.Flags().BoolP("push", "", true,
+	cmd.Flags().BoolP("push", "", true,
 		"Whether to push the image to the registry center by the way")
-	cmds.Flags().BoolP("force", "f", false,
+	cmd.Flags().BoolP("force", "f", false,
 		"Whether to force build")
-	cmds.Flags().StringArrayP("envs", "e", []string{},
+	cmd.Flags().StringArrayP("envs", "e", []string{},
 		"environment variable for an application, KEY=VALUE format")
-	cmd.AddPathFlag(cmds)
-	baseCmd.AddCommand(cmds)
+	common.AddPathFlag(cmd)
+	baseCmd.AddCommand(cmd)
 }
 
 func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {

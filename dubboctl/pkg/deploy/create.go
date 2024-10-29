@@ -18,7 +18,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -49,7 +49,7 @@ type ErrInvalidTemplate error
 
 // NewCreateCmd creates a create command using the given client creator.
 func AddCreate(baseCmd *cobra.Command, newClient ClientFactory) {
-	cmds := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create an application",
 		Long: `
@@ -95,7 +95,7 @@ EXAMPLES
 	  $ {{.Name}} create -l go -t common mydubbo
 		`,
 		SuggestFor: []string{"vreate", "creaet", "craete", "new"},
-		PreRunE:    cmd.BindEnv("language", "template", "repository", "confirm", "init"),
+		PreRunE:    common.BindEnv("language", "template", "repository", "confirm", "init"),
 		Aliases:    []string{"init"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCreate(cmd, args, newClient)
@@ -103,26 +103,26 @@ EXAMPLES
 	}
 
 	// Flags
-	cmds.Flags().StringP("language", "l", "", "Language Runtime (see help text for list) ($DUBBO_LANGUAGE)")
-	cmds.Flags().StringP("template", "t", "", "Application template. (see help text for list) ($DUBBO_TEMPLATE)")
-	cmds.Flags().StringP("repository", "r", "", "URI to a Git repository containing the specified template ($DUBBO_REPOSITORY)")
-	cmds.Flags().BoolP("init", "i", false,
+	cmd.Flags().StringP("language", "l", "", "Language Runtime (see help text for list) ($DUBBO_LANGUAGE)")
+	cmd.Flags().StringP("template", "t", "", "Application template. (see help text for list) ($DUBBO_TEMPLATE)")
+	cmd.Flags().StringP("repository", "r", "", "URI to a Git repository containing the specified template ($DUBBO_REPOSITORY)")
+	cmd.Flags().BoolP("init", "i", false,
 		"Initialize the current project directly into a dubbo project without using a template")
 
-	cmd.AddConfirmFlag(cmds, false)
+	common.AddConfirmFlag(cmd, false)
 
 	// Help Action
-	cmds.SetHelpFunc(func(cmd *cobra.Command, args []string) { runCreateHelp(cmd, args, newClient) })
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) { runCreateHelp(cmd, args, newClient) })
 
 	// Tab completion
-	if err := cmds.RegisterFlagCompletionFunc("language", newRuntimeCompletionFunc(newClient)); err != nil {
+	if err := cmd.RegisterFlagCompletionFunc("language", newRuntimeCompletionFunc(newClient)); err != nil {
 		fmt.Fprintf(os.Stderr, "unable to provide language runtime suggestions: %v\n", err)
 	}
-	if err := cmds.RegisterFlagCompletionFunc("template", newTemplateCompletionFunc(newClient)); err != nil {
+	if err := cmd.RegisterFlagCompletionFunc("template", newTemplateCompletionFunc(newClient)); err != nil {
 		fmt.Fprintf(os.Stderr, "unable to provide template suggestions: %v\n", err)
 	}
 
-	baseCmd.AddCommand(cmds)
+	baseCmd.AddCommand(cmd)
 }
 
 // Run Create
@@ -189,7 +189,7 @@ type createConfig struct {
 // The client constructor function is used to create a transient client for
 // accessing things like the current valid templates list, and uses the
 // current value of the config at time of prompting.
-func newCreateConfig(cmds *cobra.Command, args []string, newClient ClientFactory) (cfg createConfig, err error) {
+func newCreateConfig(cmd *cobra.Command, args []string, newClient ClientFactory) (cfg createConfig, err error) {
 	var (
 		path         string
 		dirName      string
@@ -200,7 +200,7 @@ func newCreateConfig(cmds *cobra.Command, args []string, newClient ClientFactory
 		path = args[0]
 	}
 
-	dirName, absolutePath = cmd.DeriveNameAndAbsolutePathFromPath(path)
+	dirName, absolutePath = common.DeriveNameAndAbsolutePathFromPath(path)
 
 	// Config is the final default values based off the execution context.
 	// When prompting, these become the defaults presented.
@@ -230,7 +230,7 @@ func newCreateConfig(cmds *cobra.Command, args []string, newClient ClientFactory
 			return createdCfg, err
 		}
 		fmt.Println("Command:")
-		fmt.Println(singleCommand(cmds, args, createdCfg))
+		fmt.Println(singleCommand(cmd, args, createdCfg))
 		return createdCfg, nil
 	}
 
@@ -272,7 +272,7 @@ func singleCommand(cmd *cobra.Command, args []string, cfg createConfig) string {
 // pre-client validation should not be required, as the Client does its own
 // validation.
 func (c createConfig) Validate(client *dubbo.Client) (err error) {
-	dirName, _ := cmd.DeriveNameAndAbsolutePathFromPath(c.Path)
+	dirName, _ := common.DeriveNameAndAbsolutePathFromPath(c.Path)
 	if err = util.ValidateApplicationName(dirName); err != nil {
 		return
 	}
@@ -404,11 +404,11 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 				Default: c.Path,
 			},
 			Validate: func(val interface{}) error {
-				derivedName, _ := cmd.DeriveNameAndAbsolutePathFromPath(val.(string))
+				derivedName, _ := common.DeriveNameAndAbsolutePathFromPath(val.(string))
 				return util.ValidateApplicationName(derivedName)
 			},
 			Transform: func(ans interface{}) interface{} {
-				_, absolutePath := cmd.DeriveNameAndAbsolutePathFromPath(ans.(string))
+				_, absolutePath := common.DeriveNameAndAbsolutePathFromPath(ans.(string))
 				return absolutePath
 			},
 		}, {
@@ -416,7 +416,7 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 			Prompt: &survey.Select{
 				Message: "Language Runtime:",
 				Options: runtimes,
-				Default: cmd.SurveySelectDefault(c.Runtime, runtimes),
+				Default: common.SurveySelectDefault(c.Runtime, runtimes),
 			},
 		},
 	}
