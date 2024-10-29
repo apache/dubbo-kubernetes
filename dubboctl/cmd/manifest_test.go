@@ -17,14 +17,20 @@ package cmd
 
 import (
 	"bytes"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"testing"
 )
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
+
+var (
+	// TestInstallFlag and TestCli are uses for black box testing
+	TestInstallFlag bool
+	TestCli         client.Client
 )
 
 func TestManifestGenerate(t *testing.T) {
@@ -96,8 +102,8 @@ func TestManifestInstall(t *testing.T) {
 		},
 	}
 	// For now, we do not use envTest to do black box testing
-	manifest.TestInstallFlag = true
-	manifest.TestCli = fake.NewClientBuilder().Build()
+	TestInstallFlag = true
+	TestCli = fake.NewClientBuilder().Build()
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -121,8 +127,8 @@ func TestManifestUninstall(t *testing.T) {
 		},
 	}
 	// For now, we do not use envTest to do black box testing
-	manifest.TestInstallFlag = true
-	manifest.TestCli = fake.NewClientBuilder().Build()
+	TestInstallFlag = true
+	TestCli = fake.NewClientBuilder().Build()
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
