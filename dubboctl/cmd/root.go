@@ -18,7 +18,10 @@ package cmd
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/build"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/dashboard"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/generate"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,13 +91,13 @@ func GetRootCmd(args []string) *cobra.Command {
 
 func addSubCommands(rootCmd *cobra.Command, newClient build.ClientFactory) {
 	build.AddBuild(rootCmd, newClient)
-	addCreate(rootCmd, newClient)
-	addRepository(rootCmd, newClient)
-	addDeploy(rootCmd, newClient)
+	build.AddCreate(rootCmd, newClient)
+	build.AddRepository(rootCmd, newClient)
+	build.AddDeploy(rootCmd, newClient)
 	manifest.AddManifest(rootCmd)
-	addGenerate(rootCmd)
-	addProfile(rootCmd)
-	addDashboard(rootCmd)
+	generate.AddGenerate(rootCmd)
+	profile.AddProfile(rootCmd)
+	dashboard.AddDashboard(rootCmd)
 	addRegistryCmd(rootCmd)
 	addProxy(cmd2.DefaultRunCmdOpts, rootCmd)
 }
