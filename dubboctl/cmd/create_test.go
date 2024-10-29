@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"errors"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
 	"testing"
 )
 
@@ -44,7 +45,7 @@ func TestCreate_NoRuntime(t *testing.T) {
 	cmd := GetRootCmd([]string{"create", "myfunc"})
 
 	err := cmd.Execute()
-	var e ErrNoRuntime
+	var e deploy.ErrNoRuntime
 	if !errors.As(err, &e) {
 		t.Fatalf("Did not receive ErrNoRuntime. Got %v", err)
 	}
@@ -58,7 +59,7 @@ func TestCreate_WithInvalidRuntime(t *testing.T) {
 	cmd := GetRootCmd([]string{"create", "--language", "invalid", "myfunc"})
 
 	err := cmd.Execute()
-	var e ErrInvalidRuntime
+	var e deploy.ErrInvalidRuntime
 	if !errors.As(err, &e) {
 		t.Fatalf("Did not receive ErrInvalidRuntime. Got %v", err)
 	}
@@ -72,7 +73,7 @@ func TestCreate_InvalidTemplate(t *testing.T) {
 	cmd := GetRootCmd([]string{"create", "--language", "go", "--template", "invalid", "myfunc"})
 
 	err := cmd.Execute()
-	var e ErrInvalidTemplate
+	var e deploy.ErrInvalidTemplate
 	if !errors.As(err, &e) {
 		t.Fatalf("Did not receive ErrInvalidTemplate. Got %v", err)
 	}

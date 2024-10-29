@@ -16,6 +16,7 @@
 package cmd
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
 	"testing"
 )
 
@@ -25,7 +26,7 @@ import (
 func TestRepository_List(t *testing.T) {
 	_ = fromTempDirectory(t)
 
-	cmd := NewRepositoryListCmd(NewClient)
+	cmd := deploy.NewRepositoryListCmd(deploy.NewClient)
 	cmd.SetArgs([]string{}) // Do not use test command args
 
 	// Execute the command, capturing the output sent to stdout
