@@ -29,7 +29,7 @@ import (
 func TestCreate_Execute(t *testing.T) {
 	_ = fromTempDirectory(t)
 
-	cmd := getRootCmd([]string{"create", "--language", "go", "myfunc"})
+	cmd := GetRootCmd([]string{"create", "--language", "go", "myfunc"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestCreate_Execute(t *testing.T) {
 func TestCreate_NoRuntime(t *testing.T) {
 	_ = fromTempDirectory(t)
 
-	cmd := getRootCmd([]string{"create", "myfunc"})
+	cmd := GetRootCmd([]string{"create", "myfunc"})
 
 	err := cmd.Execute()
 	var e ErrNoRuntime
@@ -55,7 +55,7 @@ func TestCreate_NoRuntime(t *testing.T) {
 func TestCreate_WithInvalidRuntime(t *testing.T) {
 	_ = fromTempDirectory(t)
 
-	cmd := getRootCmd([]string{"create", "--language", "invalid", "myfunc"})
+	cmd := GetRootCmd([]string{"create", "--language", "invalid", "myfunc"})
 
 	err := cmd.Execute()
 	var e ErrInvalidRuntime
@@ -69,7 +69,7 @@ func TestCreate_WithInvalidRuntime(t *testing.T) {
 func TestCreate_InvalidTemplate(t *testing.T) {
 	_ = fromTempDirectory(t)
 
-	cmd := getRootCmd([]string{"create", "--language", "go", "--template", "invalid", "myfunc"})
+	cmd := GetRootCmd([]string{"create", "--language", "go", "--template", "invalid", "myfunc"})
 
 	err := cmd.Execute()
 	var e ErrInvalidTemplate
@@ -85,7 +85,7 @@ func TestCreate_ValidatesName(t *testing.T) {
 
 	// Execute the command with a function name containing invalid characters and
 	// confirm the expected error is returned
-	cmd := getRootCmd([]string{"create", "invalid!"})
+	cmd := GetRootCmd([]string{"create", "invalid!"})
 	err := cmd.Execute()
 	var e util.ErrInvalidApplicationName
 	if !errors.As(err, &e) {
@@ -100,7 +100,7 @@ func TestCreate_ConfigOptional(t *testing.T) {
 
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	cmd := getRootCmd([]string{"create", "--language=go", "myfunc"})
+	cmd := GetRootCmd([]string{"create", "--language=go", "myfunc"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}

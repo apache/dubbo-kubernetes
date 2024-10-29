@@ -13,14 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package manifest
 
 import (
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/spf13/cobra"
 )
 
-var (
-	// TestInstallFlag and TestCli are uses for black box testing
-	TestInstallFlag bool
-	TestCli         client.Client
-)
+func AddManifest(rootCmd *cobra.Command) {
+	manifestCmd := &cobra.Command{
+		Use:   "manifest",
+		Short: "Commands related to manifest",
+		Long:  "Commands help user to generate manifest and install manifest",
+	}
+	ConfigManifestGenerateCmd(manifestCmd)
+	ConfigManifestInstallCmd(manifestCmd)
+	ConfigManifestUninstallCmd(manifestCmd)
+	ConfigManifestDiffCmd(manifestCmd)
+	rootCmd.AddCommand(manifestCmd)
+}

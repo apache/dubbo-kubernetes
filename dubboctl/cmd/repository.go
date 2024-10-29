@@ -165,13 +165,13 @@ EXAMPLES
 	  default
 `,
 		SuggestFor: []string{"repositories", "repos", "template", "templates", "pack", "packs"},
-		PreRunE:    bindEnv("confirm"),
+		PreRunE:    BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepository(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
+	AddConfirmFlag(cmd, false)
 
 	cmd.AddCommand(NewRepositoryListCmd(newClient))
 	cmd.AddCommand(NewRepositoryAddCmd(newClient))
@@ -186,13 +186,13 @@ func NewRepositoryListCmd(newClient ClientFactory) *cobra.Command {
 		Short:   "List repositories",
 		Use:     "list",
 		Aliases: []string{"ls"},
-		PreRunE: bindEnv("confirm"),
+		PreRunE: BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryList(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
+	AddConfirmFlag(cmd, false)
 	return cmd
 }
 
@@ -201,13 +201,13 @@ func NewRepositoryAddCmd(newClient ClientFactory) *cobra.Command {
 		Short:      "Add a repository",
 		Use:        "add <name> <url>",
 		SuggestFor: []string{"ad", "install"},
-		PreRunE:    bindEnv("confirm"),
+		PreRunE:    BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryAdd(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
+	AddConfirmFlag(cmd, false)
 	return cmd
 }
 
@@ -216,13 +216,13 @@ func NewRepositoryRenameCmd(newClient ClientFactory) *cobra.Command {
 		Short:   "Rename a repository",
 		Use:     "rename <old> <new>",
 		Aliases: []string{"mv"},
-		PreRunE: bindEnv("confirm"),
+		PreRunE: BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryRename(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
+	AddConfirmFlag(cmd, false)
 	return cmd
 }
 
@@ -232,13 +232,13 @@ func NewRepositoryRemoveCmd(newClient ClientFactory) *cobra.Command {
 		Use:        "remove <name>",
 		Aliases:    []string{"rm"},
 		SuggestFor: []string{"delete", "del"},
-		PreRunE:    bindEnv("confirm"),
+		PreRunE:    BindEnv("confirm"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRepositoryRemove(cmd, args, newClient)
 		},
 	}
 
-	addConfirmFlag(cmd, false)
+	AddConfirmFlag(cmd, false)
 	return cmd
 }
 
