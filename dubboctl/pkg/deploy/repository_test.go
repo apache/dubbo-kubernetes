@@ -87,7 +87,7 @@ func piped(t *testing.T) func() string {
 	}
 }
 
-// FromTempDirectory is a test helper which endeavors to create
+// fromTempDirectory is a test helper which endeavors to create
 // an environment clean of developer's settings for use during CLI testing.
 func FromTempDirectory(t *testing.T) string {
 	t.Helper()
