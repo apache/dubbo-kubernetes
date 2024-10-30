@@ -13,20 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package profile
+package cmd
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
 	"github.com/spf13/cobra"
 )
 
-func AddProfile(rootCmd *cobra.Command) {
+func addProfile(rootCmd *cobra.Command) {
 	profileCmd := &cobra.Command{
 		Use:   "profile",
 		Short: "Commands related to profiles",
 		Long:  "Commands help user to list and describe profiles",
 	}
-	ConfigProfileListCmd(profileCmd)
-	ConfigProfileDiffCmd(profileCmd)
+	profile.ConfigProfileListCmd(profileCmd)
+	profile.ConfigProfileDiffCmd(profileCmd)
 
 	rootCmd.AddCommand(profileCmd)
 }
