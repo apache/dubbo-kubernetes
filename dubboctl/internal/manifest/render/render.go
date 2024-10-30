@@ -18,6 +18,7 @@ package render
 import (
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubboctl/internal/identifier"
 	"io/fs"
 	"net/url"
 	"os"
@@ -42,7 +43,6 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/dubboctl/internal/manifest"
 	"github.com/apache/dubbo-kubernetes/dubboctl/internal/util"
 )

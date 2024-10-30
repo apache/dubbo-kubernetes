@@ -16,12 +16,9 @@
 package render
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubboctl/internal/identifier"
 	"os"
 	"testing"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/identifier"
 )
 
 const (

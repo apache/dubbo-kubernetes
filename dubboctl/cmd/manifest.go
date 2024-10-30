@@ -13,9 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manifest
+package cmd
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"github.com/spf13/cobra"
 )
 
@@ -25,9 +26,9 @@ func AddManifest(rootCmd *cobra.Command) {
 		Short: "Commands related to manifest",
 		Long:  "Commands help user to generate manifest and install manifest",
 	}
-	ConfigManifestGenerateCmd(manifestCmd)
-	ConfigManifestInstallCmd(manifestCmd)
-	ConfigManifestUninstallCmd(manifestCmd)
-	ConfigManifestDiffCmd(manifestCmd)
+	manifest.ConfigManifestGenerateCmd(manifestCmd)
+	manifest.ConfigManifestInstallCmd(manifestCmd)
+	manifest.ConfigManifestUninstallCmd(manifestCmd)
+	manifest.ConfigManifestDiffCmd(manifestCmd)
 	rootCmd.AddCommand(manifestCmd)
 }

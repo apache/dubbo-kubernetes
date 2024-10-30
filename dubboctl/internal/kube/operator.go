@@ -18,10 +18,10 @@ package kube
 import (
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubboctl/internal/identifier"
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/identifier"
 	"github.com/apache/dubbo-kubernetes/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )

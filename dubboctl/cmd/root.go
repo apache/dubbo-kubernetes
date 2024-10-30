@@ -19,7 +19,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/dashboard"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/generate"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/proxy"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/registry"
 )
@@ -88,7 +87,7 @@ func addSubCommands(rootCmd *cobra.Command, newClient deploy.ClientFactory) {
 	deploy.AddCreate(rootCmd, newClient)
 	deploy.AddRepository(rootCmd, newClient)
 	deploy.AddDeploy(rootCmd, newClient)
-	manifest.AddManifest(rootCmd)
+	AddManifest(rootCmd)
 	generate.AddGenerate(rootCmd)
 	addProfile(rootCmd)
 	dashboard.AddDashboard(rootCmd)
