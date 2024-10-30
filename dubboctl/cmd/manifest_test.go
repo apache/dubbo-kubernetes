@@ -13,10 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manifest
+package cmd
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -74,7 +76,7 @@ func TestManifestGenerate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			testExecute(t, test.cmd, test.wantErr)
+			testManifestExecute(t, test.cmd, test.wantErr)
 			// remove temporary dir
 			if test.temp != "" {
 				os.RemoveAll(test.temp)
@@ -100,7 +102,7 @@ func TestManifestInstall(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			testExecute(t, test.cmd, test.wantErr)
+			testManifestExecute(t, test.cmd, test.wantErr)
 		})
 	}
 }
@@ -126,8 +128,8 @@ func TestManifestUninstall(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			// prepare existing resources
-			testExecute(t, test.before, false)
-			testExecute(t, test.cmd, test.wantErr)
+			testManifestExecute(t, test.before, false)
+			testManifestExecute(t, test.cmd, test.wantErr)
 		})
 	}
 }
@@ -153,36 +155,36 @@ func TestManifestDiff(t *testing.T) {
 			},
 		},
 	}
-	//for _, test := range tests {
-	//	t.Run(test.desc, func(t *testing.T) {
-	//		for _, before := range test.befores {
-	//			testExecute(t, before, false)
-	//		}
-	//		testExecute(t, test.cmd, test.wantErr)
-	//		for _, temp := range test.temps {
-	//			if temp != "" {
-	//				os.RemoveAll(temp)
-	//			}
-	//		}
-	//	})
-	//}
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			for _, before := range test.befores {
+				testManifestExecute(t, before, false)
+			}
+			testManifestExecute(t, test.cmd, test.wantErr)
+			for _, temp := range test.temps {
+				if temp != "" {
+					os.RemoveAll(temp)
+				}
+			}
+		})
+	}
 }
 
-//func testExecute(t *testing.T, cmds string, wantErr bool) string {
-//	var out bytes.Buffer
-//	args := strings.Split(cmds, " ")
-//	rootCmd := cmd.GetRootCmd(args)
-//	rootCmd.SetOut(&out)
-//	if err := rootCmd.Execute(); err != nil {
-//		if wantErr {
-//			return ""
-//		}
-//		t.Errorf("execute %s failed, err: %s", cmds, err)
-//		return ""
-//	}
-//	if wantErr {
-//		t.Errorf("want err but got no err")
-//		return ""
-//	}
-//	return out.String()
-//}
+func testManifestExecute(t *testing.T, cmds string, wantErr bool) string {
+	var out bytes.Buffer
+	args := strings.Split(cmds, " ")
+	rootCmd := GetRootCmd(args)
+	rootCmd.SetOut(&out)
+	if err := rootCmd.Execute(); err != nil {
+		if wantErr {
+			return ""
+		}
+		t.Errorf("execute %s failed, err: %s", cmds, err)
+		return ""
+	}
+	if wantErr {
+		t.Errorf("want err but got no err")
+		return ""
+	}
+	return out.String()
+}
