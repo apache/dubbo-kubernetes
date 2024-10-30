@@ -34,8 +34,8 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 // ErrNoRuntime indicates that the language runtime flag was not passed.

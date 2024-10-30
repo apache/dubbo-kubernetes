@@ -17,7 +17,7 @@ package manifest
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/identifier"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/identifier"
 	"os"
 	"path"
 	"sort"
@@ -33,11 +33,11 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/kube"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/manifest"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/manifest/render"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/manifest"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/manifest/render"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

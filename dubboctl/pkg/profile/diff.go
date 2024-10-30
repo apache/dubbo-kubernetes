@@ -18,7 +18,7 @@ package profile
 import (
 	"errors"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/identifier"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/identifier"
 )
 
 import (
@@ -28,8 +28,8 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/kube"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/manifest"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/manifest"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

@@ -39,9 +39,9 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/kube"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 const (

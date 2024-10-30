@@ -37,7 +37,7 @@ import (
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/envoy"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/envoy"
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"

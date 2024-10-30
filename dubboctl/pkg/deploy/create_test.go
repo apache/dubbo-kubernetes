@@ -27,11 +27,11 @@ import (
 )
 
 import (
-	. "github.com/apache/dubbo-kubernetes/dubboctl/internal/testing"
+	. "github.com/apache/dubbo-kubernetes/dubboctl/operator/testing"
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 // TestCreate_Execute ensures that an invocation of create with minimal settings

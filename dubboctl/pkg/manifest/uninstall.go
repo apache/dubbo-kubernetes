@@ -22,8 +22,8 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/apis/dubbo.apache.org/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/kube"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

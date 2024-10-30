@@ -31,8 +31,8 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/docker"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/docker/creds"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker/creds"
 )
 
 func NewPromptForCredentials(in io.Reader, out, errOut io.Writer) func(registry string) (docker.Credentials, error) {

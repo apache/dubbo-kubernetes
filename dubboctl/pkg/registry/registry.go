@@ -20,7 +20,7 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/registry/zk"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/registry/zk"
 )
 
 func AddRegistryCmd(rootCmd *cobra.Command) {

@@ -25,7 +25,7 @@ import (
 )
 
 import (
-	. "github.com/apache/dubbo-kubernetes/dubboctl/internal/testing"
+	. "github.com/apache/dubbo-kubernetes/dubboctl/operator/testing"
 )
 
 // TestRepository_List ensures that the 'list' subcommand shows the client's

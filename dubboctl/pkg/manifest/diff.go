@@ -30,7 +30,7 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/kube"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

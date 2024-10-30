@@ -31,10 +31,10 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/builders/dockerfile"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/builders/pack"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/builders/dockerfile"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/builders/pack"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 func AddBuild(baseCmd *cobra.Command, newClient ClientFactory) {

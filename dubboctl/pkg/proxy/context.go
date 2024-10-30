@@ -33,7 +33,7 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/envoy"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/envoy"
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"

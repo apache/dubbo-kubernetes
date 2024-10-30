@@ -18,7 +18,7 @@ package dashboard
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/identifier"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/identifier"
 	"io"
 	"net"
 	"os"
@@ -40,7 +40,7 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/kube"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

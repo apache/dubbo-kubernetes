@@ -22,12 +22,12 @@ import (
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/cmd/prompt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/builders/pack"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/docker"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/docker/creds"
-	"github.com/apache/dubbo-kubernetes/dubboctl/internal/dubbo"
-	dubbohttp "github.com/apache/dubbo-kubernetes/dubboctl/internal/http"
-	config "github.com/apache/dubbo-kubernetes/dubboctl/internal/util"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/builders/pack"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker/creds"
+	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
+	dubbohttp "github.com/apache/dubbo-kubernetes/dubboctl/operator/http"
+	config "github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 // ClientFactory defines a constructor which assists in the creation of a Client
