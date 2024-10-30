@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-package cmd
+package proxy
 
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
 	"io"
 	"os"
 	"path/filepath"
@@ -50,7 +51,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/template"
 )
 
-var runLog = controlPlaneLog.WithName("proxy")
+var runLog = common.ControlPlaneLog.WithName("proxy")
 
 type ResourceType string
 
@@ -95,7 +96,7 @@ func writeFile(filename string, data []byte, perm os.FileMode) error {
 	return os.WriteFile(filename, data, perm)
 }
 
-func addProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
+func AddProxy(opts dubbo_cmd.RunCmdOpts, cmd *cobra.Command) {
 	proxyArgs := DefaultProxyConfig()
 	cfg := proxyArgs.Config
 	var proxyResource model.Resource

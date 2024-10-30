@@ -21,6 +21,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/generate"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/proxy"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/registry"
 )
 
 import (
@@ -30,7 +32,6 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core"
 	cmd2 "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
 )
 
@@ -38,8 +39,6 @@ type RootCommandConfig struct {
 	Name      string
 	NewClient deploy.ClientFactory
 }
-
-var controlPlaneLog = core.Log.WithName("dubboctl")
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -94,6 +93,6 @@ func addSubCommands(rootCmd *cobra.Command, newClient deploy.ClientFactory) {
 	generate.AddGenerate(rootCmd)
 	profile.AddProfile(rootCmd)
 	dashboard.AddDashboard(rootCmd)
-	addRegistryCmd(rootCmd)
-	addProxy(cmd2.DefaultRunCmdOpts, rootCmd)
+	registry.AddRegistryCmd(rootCmd)
+	proxy.AddProxy(cmd2.DefaultRunCmdOpts, rootCmd)
 }

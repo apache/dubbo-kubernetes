@@ -17,12 +17,15 @@ package common
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/ory/viper"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+var ControlPlaneLog = core.Log.WithName("dubboctl")
 
 // bindFunc which conforms to the cobra PreRunE method signature
 type bindFunc func(*cobra.Command, []string) error

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package registry
 
 import (
 	"github.com/spf13/cobra"
@@ -23,7 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/internal/registry/zk"
 )
 
-func addRegistryCmd(rootCmd *cobra.Command) {
+func AddRegistryCmd(rootCmd *cobra.Command) {
 	addZkRegistryCmd(rootCmd)
 }
 
