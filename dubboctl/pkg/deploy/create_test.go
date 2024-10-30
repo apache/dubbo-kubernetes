@@ -13,12 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package deploy
 
 import (
 	"errors"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
+	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
 	"testing"
+)
+
+import (
+	"github.com/ory/viper"
+)
+
+import (
+	. "github.com/apache/dubbo-kubernetes/dubboctl/internal/testing"
 )
 
 import (
@@ -28,11 +36,11 @@ import (
 // TestCreate_Execute ensures that an invocation of create with minimal settings
 // and valid input completes without error; degenerate case.
 func TestCreate_Execute(t *testing.T) {
-	_ = fromTempDirectory(t)
+	_ = FromTempDirectory(t)
 
-	cmd := GetRootCmd([]string{"create", "--language", "go", "myfunc"})
+	cmds := cmd.GetRootCmd([]string{"create", "--language", "go", "myfunc"})
 
-	if err := cmd.Execute(); err != nil {
+	if err := cmds.Execute(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -40,12 +48,12 @@ func TestCreate_Execute(t *testing.T) {
 // TestCreate_NoRuntime ensures that an invocation of create must be
 // done with a runtime.
 func TestCreate_NoRuntime(t *testing.T) {
-	_ = fromTempDirectory(t)
+	_ = FromTempDirectory(t)
 
-	cmd := GetRootCmd([]string{"create", "myfunc"})
+	cmds := cmd.GetRootCmd([]string{"create", "myfunc"})
 
-	err := cmd.Execute()
-	var e deploy.ErrNoRuntime
+	err := cmds.Execute()
+	var e ErrNoRuntime
 	if !errors.As(err, &e) {
 		t.Fatalf("Did not receive ErrNoRuntime. Got %v", err)
 	}
@@ -54,12 +62,12 @@ func TestCreate_NoRuntime(t *testing.T) {
 // TestCreate_WithNoRuntime ensures that an invocation of create must be
 // done with one of the valid runtimes only.
 func TestCreate_WithInvalidRuntime(t *testing.T) {
-	_ = fromTempDirectory(t)
+	_ = FromTempDirectory(t)
 
-	cmd := GetRootCmd([]string{"create", "--language", "invalid", "myfunc"})
+	cmds := cmd.GetRootCmd([]string{"create", "--language", "invalid", "myfunc"})
 
-	err := cmd.Execute()
-	var e deploy.ErrInvalidRuntime
+	err := cmds.Execute()
+	var e ErrInvalidRuntime
 	if !errors.As(err, &e) {
 		t.Fatalf("Did not receive ErrInvalidRuntime. Got %v", err)
 	}
@@ -68,12 +76,12 @@ func TestCreate_WithInvalidRuntime(t *testing.T) {
 // TestCreate_InvalidTemplate ensures that an invocation of create must be
 // done with one of the valid templates only.
 func TestCreate_InvalidTemplate(t *testing.T) {
-	_ = fromTempDirectory(t)
+	_ = FromTempDirectory(t)
 
-	cmd := GetRootCmd([]string{"create", "--language", "go", "--template", "invalid", "myfunc"})
+	cmds := cmd.GetRootCmd([]string{"create", "--language", "go", "--template", "invalid", "myfunc"})
 
-	err := cmd.Execute()
-	var e deploy.ErrInvalidTemplate
+	err := cmds.Execute()
+	var e ErrInvalidTemplate
 	if !errors.As(err, &e) {
 		t.Fatalf("Did not receive ErrInvalidTemplate. Got %v", err)
 	}
@@ -82,12 +90,12 @@ func TestCreate_InvalidTemplate(t *testing.T) {
 // TestCreate_ValidatesName ensures that the create command only accepts
 // DNS-1123 labels for function name.
 func TestCreate_ValidatesName(t *testing.T) {
-	_ = fromTempDirectory(t)
+	_ = FromTempDirectory(t)
 
 	// Execute the command with a function name containing invalid characters and
 	// confirm the expected error is returned
-	cmd := GetRootCmd([]string{"create", "invalid!"})
-	err := cmd.Execute()
+	cmds := cmd.GetRootCmd([]string{"create", "invalid!"})
+	err := cmds.Execute()
 	var e util.ErrInvalidApplicationName
 	if !errors.As(err, &e) {
 		t.Fatalf("Did not receive ErrInvalidApplicationName. Got %v", err)
@@ -97,15 +105,32 @@ func TestCreate_ValidatesName(t *testing.T) {
 // TestCreate_ConfigOptional ensures that the system can be used without
 // any additional configuration being required.
 func TestCreate_ConfigOptional(t *testing.T) {
-	_ = fromTempDirectory(t)
+	_ = FromTempDirectory(t)
 
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	cmd := GetRootCmd([]string{"create", "--language=go", "myfunc"})
-	if err := cmd.Execute(); err != nil {
+	cmds := cmd.GetRootCmd([]string{"create", "--language=go", "myfunc"})
+	if err := cmds.Execute(); err != nil {
 		t.Fatal(err)
 	}
 
 	// Not failing is success.  Config files or settings beyond what are
 	// automatically written to to the given config home are currently optional.
+}
+
+// FromTempDirectory is a test helper which endeavors to create
+// an environment clean of developer's settings for use during CLI testing.
+func FromTempDirectory(t *testing.T) string {
+	t.Helper()
+	ClearEnvs(t)
+
+	// By default unit tests presume no config exists unless provided in testdata.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	// creates and CDs to a temp directory
+	d, done := Mktemp(t)
+
+	// Return to original directory and resets viper.
+	t.Cleanup(func() { done(); viper.Reset() })
+	return d
 }

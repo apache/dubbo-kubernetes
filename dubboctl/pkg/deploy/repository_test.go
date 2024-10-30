@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package deploy_test
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
+	"github.com/ory/viper"
 	"io"
 	"os"
 	"strings"
@@ -23,28 +25,30 @@ import (
 )
 
 import (
-	"github.com/ory/viper"
-)
-
-import (
 	. "github.com/apache/dubbo-kubernetes/dubboctl/internal/testing"
 )
 
-// fromTempDirectory is a test helper which endeavors to create
-// an environment clean of developer's settings for use during CLI testing.
-func fromTempDirectory(t *testing.T) string {
-	t.Helper()
-	ClearEnvs(t)
+// TestRepository_List ensures that the 'list' subcommand shows the client's
+// set of repositories by name for builtin repositories, by explicitly
+// setting the repositories' path to a new path which includes no others.
+func TestRepository_List(t *testing.T) {
+	_ = FromTempDirectory(t)
 
-	// By default unit tests presume no config exists unless provided in testdata.
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cmd := deploy.NewRepositoryListCmd(deploy.NewClient)
+	cmd.SetArgs([]string{}) // Do not use test command args
 
-	// creates and CDs to a temp directory
-	d, done := Mktemp(t)
+	// Execute the command, capturing the output sent to stdout
+	stdout := piped(t)
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
 
-	// Return to original directory and resets viper.
-	t.Cleanup(func() { done(); viper.Reset() })
-	return d
+	// Assert the output matches expect (whitespace trimmed)
+	expect := "default"
+	output := stdout()
+	if output != expect {
+		t.Fatalf("expected:\n'%v'\ngot:\n'%v'\n", expect, output)
+	}
 }
 
 // pipe the output of stdout to a buffer whose value is returned
@@ -81,4 +85,21 @@ func piped(t *testing.T) func() string {
 		}
 		return strings.TrimSpace(b.String())
 	}
+}
+
+// FromTempDirectory is a test helper which endeavors to create
+// an environment clean of developer's settings for use during CLI testing.
+func FromTempDirectory(t *testing.T) string {
+	t.Helper()
+	ClearEnvs(t)
+
+	// By default unit tests presume no config exists unless provided in testdata.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	// creates and CDs to a temp directory
+	d, done := Mktemp(t)
+
+	// Return to original directory and resets viper.
+	t.Cleanup(func() { done(); viper.Reset() })
+	return d
 }

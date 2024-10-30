@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package manifest
 
 import (
 	"bytes"
+	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
 	"os"
 	"strings"
 	"testing"
@@ -170,16 +171,16 @@ func TestManifestDiff(t *testing.T) {
 	}
 }
 
-func testExecute(t *testing.T, cmd string, wantErr bool) string {
+func testExecute(t *testing.T, cmds string, wantErr bool) string {
 	var out bytes.Buffer
-	args := strings.Split(cmd, " ")
-	rootCmd := GetRootCmd(args)
+	args := strings.Split(cmds, " ")
+	rootCmd := cmd.GetRootCmd(args)
 	rootCmd.SetOut(&out)
 	if err := rootCmd.Execute(); err != nil {
 		if wantErr {
 			return ""
 		}
-		t.Errorf("execute %s failed, err: %s", cmd, err)
+		t.Errorf("execute %s failed, err: %s", cmds, err)
 		return ""
 	}
 	if wantErr {
