@@ -18,6 +18,7 @@ package cmd
 import (
 	"bytes"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"strings"
 	"testing"
 )
@@ -97,8 +98,8 @@ func TestManifestInstall(t *testing.T) {
 		},
 	}
 	// For now, we do not use envTest to do black box testing
-	//TestInstallFlag = true
-	//TestCli = fake.NewClientBuilder().Build()
+	TestInstallFlag = true
+	TestCli = fake.NewClientBuilder().Build()
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -122,8 +123,8 @@ func TestManifestUninstall(t *testing.T) {
 		},
 	}
 	// For now, we do not use envTest to do black box testing
-	//TestInstallFlag = true
-	//TestCli = fake.NewClientBuilder().Build()
+	TestInstallFlag = true
+	TestCli = fake.NewClientBuilder().Build()
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
