@@ -21,13 +21,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/builders/pack"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/docker"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/docker/creds"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/docker/prompt"
 	config "github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"net/http"
 	"os"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/cmd/prompt"
 )
 
 // ClientFactory defines a constructor which assists in the creation of a Client
