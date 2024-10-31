@@ -19,8 +19,8 @@ package dubbo_test
 
 import (
 	"errors"
+	client2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
 	dubbo2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
-	client2 "github.com/apache/dubbo-kubernetes/operator/dubbo/client"
 	. "github.com/apache/dubbo-kubernetes/operator/pkg/testing"
 	"os"
 	"path/filepath"
