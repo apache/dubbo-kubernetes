@@ -16,11 +16,8 @@
 package registry
 
 import (
+	"github.com/apache/dubbo-kubernetes/operator/registry/zk"
 	"github.com/spf13/cobra"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/registry/zk"
 )
 
 func AddRegistryCmd(rootCmd *cobra.Command) {

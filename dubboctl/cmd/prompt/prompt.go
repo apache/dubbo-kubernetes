@@ -18,6 +18,8 @@ package prompt
 import (
 	"bufio"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/docker"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/docker/creds"
 	"io"
 	"os"
 	"strings"
@@ -28,11 +30,6 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 
 	"golang.org/x/term"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker/creds"
 )
 
 func NewPromptForCredentials(in io.Reader, out, errOut io.Writer) func(registry string) (docker.Credentials, error) {

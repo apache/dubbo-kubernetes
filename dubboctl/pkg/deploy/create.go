@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
+	dubbo2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
+	util2 "github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -31,11 +33,6 @@ import (
 	"github.com/ory/viper"
 
 	"github.com/spf13/cobra"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 // ErrNoRuntime indicates that the language runtime flag was not passed.
@@ -139,7 +136,7 @@ func runCreate(cmd *cobra.Command, args []string, newClient ClientFactory) (err 
 	// From environment variables, flags, arguments, and user prompts if --confirm
 	// (in increasing levels of precedence)
 	client, done := newClient(
-		dubbo.WithRepository(cfg.Repository))
+		dubbo2.WithRepository(cfg.Repository))
 	defer done()
 
 	// Validate - a deeper validation than that which is performed when
@@ -149,13 +146,13 @@ func runCreate(cmd *cobra.Command, args []string, newClient ClientFactory) (err 
 	}
 
 	// Create
-	_, err = client.Init(&dubbo.Dubbo{
+	_, err = client.Init(&dubbo2.Dubbo{
 		Name:     cfg.Name,
 		Root:     cfg.Path,
 		Runtime:  cfg.Runtime,
 		Template: cfg.Template,
-		Build: dubbo.BuildSpec{
-			CnMirror: dubbo.BooleanWithComment{
+		Build: dubbo2.BuildSpec{
+			CnMirror: dubbo2.BooleanWithComment{
 				Comment: "Specify `cnMirror: true` to use the mirror in mainland China",
 			},
 		},
@@ -224,7 +221,7 @@ func newCreateConfig(cmd *cobra.Command, args []string, newClient ClientFactory)
 	defer done()
 
 	// IN confirm mode.  If also in an interactive terminal, run prompts.
-	if util.InteractiveTerminal() {
+	if util2.InteractiveTerminal() {
 		createdCfg, err := cfg.prompt(client)
 		if err != nil {
 			return createdCfg, err
@@ -271,9 +268,9 @@ func singleCommand(cmd *cobra.Command, args []string, cfg createConfig) string {
 // can be used to determine possible values for runtime, templates, etc.  a
 // pre-client validation should not be required, as the Client does its own
 // validation.
-func (c createConfig) Validate(client *dubbo.Client) (err error) {
+func (c createConfig) Validate(client *dubbo2.Client) (err error) {
 	dirName, _ := common.DeriveNameAndAbsolutePathFromPath(c.Path)
-	if err = util.ValidateApplicationName(dirName); err != nil {
+	if err = util2.ValidateApplicationName(dirName); err != nil {
 		return
 	}
 
@@ -294,7 +291,7 @@ func (c createConfig) Validate(client *dubbo.Client) (err error) {
 }
 
 // isValidRuntime determines if the given language runtime is a valid choice.
-func isValidRuntime(client *dubbo.Client, runtime string) bool {
+func isValidRuntime(client *dubbo2.Client, runtime string) bool {
 	runtimes, err := client.Runtimes()
 	if err != nil {
 		return false
@@ -309,7 +306,7 @@ func isValidRuntime(client *dubbo.Client, runtime string) bool {
 
 // isValidTemplate determines if the given template is valid for the given
 // runtime.
-func isValidTemplate(client *dubbo.Client, runtime, template string) bool {
+func isValidTemplate(client *dubbo2.Client, runtime, template string) bool {
 	if !isValidRuntime(client, runtime) {
 		return false
 	}
@@ -325,7 +322,7 @@ func isValidTemplate(client *dubbo.Client, runtime, template string) bool {
 	return false
 }
 
-func noRuntimeError(client *dubbo.Client) error {
+func noRuntimeError(client *dubbo2.Client) error {
 	b := strings.Builder{}
 	fmt.Fprintln(&b, "Required flag \"language\" not set.")
 	fmt.Fprintln(&b, "Available language runtimes are:")
@@ -339,7 +336,7 @@ func noRuntimeError(client *dubbo.Client) error {
 	return ErrNoRuntime(errors.New(b.String()))
 }
 
-func newInvalidRuntimeError(client *dubbo.Client, runtime string) error {
+func newInvalidRuntimeError(client *dubbo2.Client, runtime string) error {
 	b := strings.Builder{}
 	fmt.Fprintf(&b, "The language runtime '%v' is not recognized.\n", runtime)
 	fmt.Fprintln(&b, "Available language runtimes are:")
@@ -353,7 +350,7 @@ func newInvalidRuntimeError(client *dubbo.Client, runtime string) error {
 	return ErrInvalidRuntime(errors.New(b.String()))
 }
 
-func newInvalidTemplateError(client *dubbo.Client, runtime, template string) error {
+func newInvalidTemplateError(client *dubbo2.Client, runtime, template string) error {
 	b := strings.Builder{}
 	fmt.Fprintf(&b, "The template '%v' was not found for language runtime '%v'.\n", template, runtime)
 	fmt.Fprintln(&b, "Available templates for this language runtime are:")
@@ -371,7 +368,7 @@ func newInvalidTemplateError(client *dubbo.Client, runtime, template string) err
 // mutating the values. The provided clientFn is used to construct a transient
 // client for use during prompt autocompletion/suggestions (such as suggesting
 // valid templates)
-func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
+func (c createConfig) prompt(client *dubbo2.Client) (createConfig, error) {
 	var qs []*survey.Question
 
 	runtimes, err := client.Runtimes()
@@ -405,7 +402,7 @@ func (c createConfig) prompt(client *dubbo.Client) (createConfig, error) {
 			},
 			Validate: func(val interface{}) error {
 				derivedName, _ := common.DeriveNameAndAbsolutePathFromPath(val.(string))
-				return util.ValidateApplicationName(derivedName)
+				return util2.ValidateApplicationName(derivedName)
 			},
 			Transform: func(ans interface{}) interface{} {
 				_, absolutePath := common.DeriveNameAndAbsolutePathFromPath(ans.(string))
@@ -480,7 +477,7 @@ func newTemplateCompletionFunc(newClient ClientFactory) flagCompletionFunc {
 
 // return templates for language runtime whose full name (including repository)
 // have the given prefix.
-func templatesWithPrefix(prefix, runtime string, client *dubbo.Client) ([]string, error) {
+func templatesWithPrefix(prefix, runtime string, client *dubbo2.Client) ([]string, error) {
 	var (
 		suggestions    []string
 		templates, err = client.Templates().List(runtime)
@@ -511,7 +508,7 @@ func runCreateHelp(cmd *cobra.Command, args []string, newClient ClientFactory) {
 	failSoft(err)
 
 	client, done := newClient(
-		dubbo.WithRepository(cfg.Repository))
+		dubbo2.WithRepository(cfg.Repository))
 	defer done()
 
 	options, err := RuntimeTemplateOptions(client) // human-friendly
@@ -547,7 +544,7 @@ func newHelpTemplate(cmd *cobra.Command) *template.Template {
 // RuntimeTemplateOptions is a human-friendly table of valid Language Runtime
 // to Template combinations.
 // Exported for use in docs.
-func RuntimeTemplateOptions(client *dubbo.Client) (string, error) {
+func RuntimeTemplateOptions(client *dubbo2.Client) (string, error) {
 	runtimes, err := client.Runtimes()
 	if err != nil {
 		return "", err
@@ -561,7 +558,7 @@ func RuntimeTemplateOptions(client *dubbo.Client) (string, error) {
 		templates, err := client.Templates().List(r)
 		// Not all language packs will have templates for
 		// all available runtimes. Without this check
-		if err != nil && !errors.Is(err, dubbo.ErrTemplateNotFound) {
+		if err != nil && !errors.Is(err, dubbo2.ErrTemplateNotFound) {
 			return "", err
 		}
 		for _, t := range templates {

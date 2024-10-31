@@ -19,19 +19,13 @@ import (
 	"errors"
 	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
+	. "github.com/apache/dubbo-kubernetes/operator/pkg/testing"
+	"github.com/apache/dubbo-kubernetes/operator/util"
 	"testing"
 )
 
 import (
 	"github.com/ory/viper"
-)
-
-import (
-	. "github.com/apache/dubbo-kubernetes/dubboctl/operator/testing"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 // TestCreate_Execute ensures that an invocation of create with minimal settings

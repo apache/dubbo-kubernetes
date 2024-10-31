@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
+	"github.com/apache/dubbo-kubernetes/operator/dubbo"
+	util2 "github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"os"
 )
 
@@ -28,11 +30,6 @@ import (
 	"github.com/ory/viper"
 
 	"github.com/spf13/cobra"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 // command constructors
@@ -325,7 +322,7 @@ func runRepositoryAdd(_ *cobra.Command, args []string, newClient ClientFactory) 
 	}
 
 	// Adding a repository requires there be a config path structure on disk
-	if err = util.CreatePaths(); err != nil {
+	if err = util2.CreatePaths(); err != nil {
 		return
 	}
 
@@ -369,7 +366,7 @@ func runRepositoryAdd(_ *cobra.Command, args []string, newClient ClientFactory) 
 	// This is an expected case.  The empty value will be echoed to stdout, the
 	// API will be invoked, and a helpful error message will indicate that the
 	// request is missing required parameters.
-	if cfg.Confirm && util.InteractiveTerminal() {
+	if cfg.Confirm && util2.InteractiveTerminal() {
 		questions := []*survey.Question{
 			{
 				Name:     "Name",
@@ -440,7 +437,7 @@ func runRepositoryRename(_ *cobra.Command, args []string, newClient ClientFactor
 	}
 
 	// Confirm (interactive prompt mode)
-	if cfg.Confirm && util.InteractiveTerminal() {
+	if cfg.Confirm && util2.InteractiveTerminal() {
 		questions := []*survey.Question{
 			{
 				Name:     "Old",
@@ -516,7 +513,7 @@ func runRepositoryRemove(_ *cobra.Command, args []string, newClient ClientFactor
 	}
 
 	// Confirm (interactive prompt mode)
-	if cfg.Confirm && util.InteractiveTerminal() {
+	if cfg.Confirm && util2.InteractiveTerminal() {
 		questions := []*survey.Question{
 			{
 				Name:     "Name",

@@ -18,6 +18,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/kube"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +31,6 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

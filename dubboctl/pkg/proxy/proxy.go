@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/envoy"
 	"io"
 	"os"
 	"path/filepath"
@@ -37,7 +38,6 @@ import (
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/envoy"
 	"github.com/apache/dubbo-kubernetes/pkg/config/app/dubboctl"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_cmd "github.com/apache/dubbo-kubernetes/pkg/core/cmd"

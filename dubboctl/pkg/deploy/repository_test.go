@@ -17,15 +17,12 @@ package deploy_test
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
+	. "github.com/apache/dubbo-kubernetes/operator/pkg/testing"
 	"github.com/ory/viper"
 	"io"
 	"os"
 	"strings"
 	"testing"
-)
-
-import (
-	. "github.com/apache/dubbo-kubernetes/dubboctl/operator/testing"
 )
 
 // TestRepository_List ensures that the 'list' subcommand shows the client's

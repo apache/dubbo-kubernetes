@@ -16,14 +16,14 @@
 package manifest
 
 import (
+	"github.com/apache/dubbo-kubernetes/operator/pkg/apis/dubbo.apache.org/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/kube"
 	"github.com/spf13/cobra"
 
 	"go.uber.org/zap/zapcore"
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/apis/dubbo.apache.org/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

@@ -18,6 +18,10 @@ package deploy
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
+	dubbo2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/builders/dockerfile"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/builders/pack"
+	util2 "github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"os"
 	"strings"
 )
@@ -28,13 +32,6 @@ import (
 	"github.com/ory/viper"
 
 	"github.com/spf13/cobra"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/builders/dockerfile"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/builders/pack"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 func AddBuild(baseCmd *cobra.Command, newClient ClientFactory) {
@@ -67,11 +64,11 @@ func AddBuild(baseCmd *cobra.Command, newClient ClientFactory) {
 }
 
 func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
-	if err := util.CreatePaths(); err != nil {
+	if err := util2.CreatePaths(); err != nil {
 		return err
 	}
 	cfg := newBuildConfig(cmd)
-	f, err := dubbo.NewDubbo(cfg.Path)
+	f, err := dubbo2.NewDubbo(cfg.Path)
 	if err != nil {
 		return err
 	}
@@ -81,7 +78,7 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 		return err
 	}
 	if !f.Initialized() {
-		return dubbo.NewErrNotInitialized(f.Root)
+		return dubbo2.NewErrNotInitialized(f.Root)
 	}
 	cfg.Configure(f)
 
@@ -111,9 +108,9 @@ func runBuildCmd(cmd *cobra.Command, newClient ClientFactory) error {
 	return nil
 }
 
-func (c *buildConfig) Prompt(d *dubbo.Dubbo) (*buildConfig, error) {
+func (c *buildConfig) Prompt(d *dubbo2.Dubbo) (*buildConfig, error) {
 	var err error
-	if !util.InteractiveTerminal() {
+	if !util2.InteractiveTerminal() {
 		return c, nil
 	}
 
@@ -136,13 +133,13 @@ func (c *buildConfig) Prompt(d *dubbo.Dubbo) (*buildConfig, error) {
 	return c, err
 }
 
-func (c buildConfig) buildclientOptions() ([]dubbo.Option, error) {
-	var o []dubbo.Option
+func (c buildConfig) buildclientOptions() ([]dubbo2.Option, error) {
+	var o []dubbo2.Option
 
 	if c.UseDockerfile {
-		o = append(o, dubbo.WithBuilder(dockerfile.NewBuilder()))
+		o = append(o, dubbo2.WithBuilder(dockerfile.NewBuilder()))
 	} else {
-		o = append(o, dubbo.WithBuilder(pack.NewBuilder()))
+		o = append(o, dubbo2.WithBuilder(pack.NewBuilder()))
 	}
 
 	return o, nil
@@ -182,7 +179,7 @@ func newBuildConfig(cmd *cobra.Command) *buildConfig {
 	return c
 }
 
-func (c *buildConfig) Configure(f *dubbo.Dubbo) {
+func (c *buildConfig) Configure(f *dubbo2.Dubbo) {
 	if c.Path == "" {
 		root, err := os.Getwd()
 		if err != nil {
@@ -210,9 +207,9 @@ func (c *buildConfig) Configure(f *dubbo.Dubbo) {
 				envs[parts[0]] = parts[1]
 			}
 		}
-		f.Build.BuildEnvs = make([]dubbo.Env, 0, len(envs))
+		f.Build.BuildEnvs = make([]dubbo2.Env, 0, len(envs))
 		for k, v := range envs {
-			f.Build.BuildEnvs = append(f.Build.BuildEnvs, dubbo.Env{
+			f.Build.BuildEnvs = append(f.Build.BuildEnvs, dubbo2.Env{
 				Name:  &k,
 				Value: &v,
 			})

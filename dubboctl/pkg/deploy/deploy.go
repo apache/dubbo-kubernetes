@@ -19,6 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/common"
+	dubbo2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/kube"
+	util2 "github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,12 +39,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"k8s.io/client-go/util/homedir"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/kube"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 const (
@@ -113,11 +110,11 @@ SYNOPSIS
 }
 
 func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
-	if err := util.CreatePaths(); err != nil {
+	if err := util2.CreatePaths(); err != nil {
 		return err
 	}
 	cfg := newDeployConfig(cmd)
-	f, err := dubbo.NewDubbo(cfg.Path)
+	f, err := dubbo2.NewDubbo(cfg.Path)
 	if err != nil {
 		return err
 	}
@@ -130,7 +127,7 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 	}
 
 	if !f.Initialized() {
-		return dubbo.NewErrNotInitialized(f.Root)
+		return dubbo2.NewErrNotInitialized(f.Root)
 	}
 
 	cfg.Configure(f)
@@ -199,7 +196,7 @@ func runDeploy(cmd *cobra.Command, newClient ClientFactory) error {
 	return nil
 }
 
-func (d DeployConfig) deployclientOptions() ([]dubbo.Option, error) {
+func (d DeployConfig) deployclientOptions() ([]dubbo2.Option, error) {
 	o, err := d.buildclientOptions()
 	if err != nil {
 		return o, err
@@ -213,11 +210,11 @@ func (d DeployConfig) deployclientOptions() ([]dubbo.Option, error) {
 	if err != nil {
 		return o, err
 	}
-	o = append(o, dubbo.WithKubeClient(cli))
+	o = append(o, dubbo2.WithKubeClient(cli))
 	return o, nil
 }
 
-func applyTok8s(cmd *cobra.Command, d *dubbo.Dubbo) error {
+func applyTok8s(cmd *cobra.Command, d *dubbo2.Dubbo) error {
 	file := filepath.Join(d.Root, d.Deploy.Output)
 	c := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
 	c.Stdout = os.Stdout
@@ -234,9 +231,9 @@ func (c DeployConfig) Validate(cmd *cobra.Command) (err error) {
 	return nil
 }
 
-func (c *DeployConfig) Prompt(d *dubbo.Dubbo) (*DeployConfig, error) {
+func (c *DeployConfig) Prompt(d *dubbo2.Dubbo) (*DeployConfig, error) {
 	var err error
-	if !util.InteractiveTerminal() {
+	if !util2.InteractiveTerminal() {
 		return c, nil
 	}
 	buildconfig, err := c.buildConfig.Prompt(d)
@@ -262,7 +259,7 @@ func (c *DeployConfig) Prompt(d *dubbo.Dubbo) (*DeployConfig, error) {
 	return c, err
 }
 
-func (c DeployConfig) Configure(f *dubbo.Dubbo) {
+func (c DeployConfig) Configure(f *dubbo2.Dubbo) {
 	c.buildConfig.Configure(f)
 	if c.Namespace != "" {
 		f.Deploy.Namespace = c.Namespace

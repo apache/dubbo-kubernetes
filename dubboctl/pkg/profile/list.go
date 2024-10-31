@@ -17,7 +17,9 @@ package profile
 
 import (
 	"errors"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/identifier"
+	"github.com/apache/dubbo-kubernetes/operator/manifest"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/identifier"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"strings"
 )
 
@@ -28,8 +30,6 @@ import (
 )
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/manifest"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 )
 

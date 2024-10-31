@@ -16,18 +16,18 @@
 package deploy
 
 import (
+	dubbo2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
+	dubbohttp "github.com/apache/dubbo-kubernetes/operator/http"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/builders/pack"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/docker"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/docker/creds"
+	config "github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"net/http"
 	"os"
 )
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/cmd/prompt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/builders/pack"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/docker/creds"
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
-	dubbohttp "github.com/apache/dubbo-kubernetes/dubboctl/operator/http"
-	config "github.com/apache/dubbo-kubernetes/dubboctl/operator/util"
 )
 
 // ClientFactory defines a constructor which assists in the creation of a Client
@@ -36,34 +36,34 @@ import (
 // by commands by default.
 // See NewClientFactory which constructs a minimal ClientFactory for use
 // during testing.
-type ClientFactory func(...dubbo.Option) (*dubbo.Client, func())
+type ClientFactory func(...dubbo2.Option) (*dubbo2.Client, func())
 
-func NewClient(options ...dubbo.Option) (*dubbo.Client, func()) {
+func NewClient(options ...dubbo2.Option) (*dubbo2.Client, func()) {
 	var (
 		t = newTransport(false)
 		c = newCredentialsProvider(config.Dir(), t)
 		d = newDubboDeployer()
-		o = []dubbo.Option{
-			dubbo.WithRepositoriesPath(config.RepositoriesPath()),
-			dubbo.WithBuilder(pack.NewBuilder()),
-			dubbo.WithPusher(docker.NewPusher(
+		o = []dubbo2.Option{
+			dubbo2.WithRepositoriesPath(config.RepositoriesPath()),
+			dubbo2.WithBuilder(pack.NewBuilder()),
+			dubbo2.WithPusher(docker.NewPusher(
 				docker.WithCredentialsProvider(c),
 				docker.WithTransport(t))),
-			dubbo.WithDeployer(d),
+			dubbo2.WithDeployer(d),
 		}
 	)
 	// Client is constructed with standard options plus any additional options
 	// which either augment or override the defaults.
-	client := dubbo.New(append(o, options...)...)
+	client := dubbo2.New(append(o, options...)...)
 
 	cleanup := func() {}
 	return client, cleanup
 }
 
-func newDubboDeployer() dubbo.Deployer {
-	var options []dubbo.DeployerOpt
+func newDubboDeployer() dubbo2.Deployer {
+	var options []dubbo2.DeployerOpt
 
-	return dubbo.NewDeployer(options...)
+	return dubbo2.NewDeployer(options...)
 }
 
 // newTransport returns a transport with cluster-flavor-specific variations

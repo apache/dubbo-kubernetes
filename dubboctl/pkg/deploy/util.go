@@ -17,16 +17,13 @@ package deploy
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/operator/dubbo"
 	"os"
 	"strings"
 )
 
 import (
 	"github.com/spf13/cobra"
-)
-
-import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/operator/dubbo"
 )
 
 func CompleteRuntimeList(cmd *cobra.Command, args []string, toComplete string, client *dubbo.Client) (matches []string, directive cobra.ShellCompDirective) {
