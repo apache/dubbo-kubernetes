@@ -20,7 +20,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/cmd"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
 	. "github.com/apache/dubbo-kubernetes/operator/pkg/testing"
-	"github.com/apache/dubbo-kubernetes/operator/util"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"testing"
 )
 
