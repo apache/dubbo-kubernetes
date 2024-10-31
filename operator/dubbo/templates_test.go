@@ -19,9 +19,6 @@ package dubbo_test
 
 import (
 	"errors"
-	client2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
-	dubbo2 "github.com/apache/dubbo-kubernetes/operator/dubbo"
-	. "github.com/apache/dubbo-kubernetes/operator/pkg/testing"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,12 +28,17 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+import (
+	"github.com/apache/dubbo-kubernetes/operator/dubbo"
+	. "github.com/apache/dubbo-kubernetes/operator/pkg/testing"
+)
+
 // TestTemplates_List ensures that all templates are listed taking into account
 // both internal and extensible (prefixed) repositories.
 func TestTemplates_List(t *testing.T) {
 	// A client which specifies a location of extensible repositories on disk
 	// will list all builtin plus extensible
-	client := dubbo2.New(dubbo2.WithRepositoriesPath("testdata/repositories"))
+	client := dubbo.New(dubbo.WithRepositoriesPath("testdata/repositories"))
 
 	// list templates for the "go" runtime
 	templates, err := client.Templates().List("go")
@@ -62,7 +64,7 @@ func TestTemplates_List(t *testing.T) {
 // when retrieving the list of templates for a runtime that does not exist
 // in an extended repository, but does in the default.
 func TestTemplates_List_ExtendedNotFound(t *testing.T) {
-	client := dubbo2.New(dubbo2.WithRepositoriesPath("testdata/repositories"))
+	client := dubbo.New(dubbo.WithRepositoriesPath("testdata/repositories"))
 
 	// list templates for the "python" runtime -
 	// not supplied by the extended repos
@@ -83,7 +85,7 @@ func TestTemplates_List_ExtendedNotFound(t *testing.T) {
 // TestTemplates_Get ensures that a template's metadata object can
 // be retrieved by full name (full name prefix optional for embedded).
 func TestTemplates_Get(t *testing.T) {
-	client := dubbo2.New(dubbo2.WithRepositoriesPath("testdata/repositories"))
+	client := dubbo.New(dubbo.WithRepositoriesPath("testdata/repositories"))
 
 	// Check embedded
 	embedded, err := client.Templates().Get("go", "common")
@@ -115,12 +117,12 @@ func TestTemplates_Embedded(t *testing.T) {
 	defer Using(t, root)()
 
 	// Client whose internal (builtin default) templates will be used.
-	client := dubbo2.New()
+	client := dubbo.New()
 
 	// write out a template
-	_, err := client.Init(&dubbo2.Dubbo{
+	_, err := client.Init(&dubbo.Dubbo{
 		Root:     root,
-		Runtime:  client2.TestRuntime,
+		Runtime:  TestRuntime,
 		Template: "common",
 	}, false, nil)
 	if err != nil {
@@ -147,12 +149,12 @@ func TestTemplates_Remote(t *testing.T) {
 
 	// Create a client which explicitly specifies the Git repo at URL
 	// rather than relying on the default internally builtin template repo
-	client := dubbo2.New(
-		dubbo2.WithRepository(url))
+	client := dubbo.New(
+		dubbo.WithRepository(url))
 
 	// Create a default function, which should override builtin and use
 	// that from the specified url (git repo)
-	_, err = client.Init(&dubbo2.Dubbo{
+	_, err = client.Init(&dubbo.Dubbo{
 		Root:     root,
 		Runtime:  "go",
 		Template: "remote",
@@ -175,11 +177,11 @@ func TestTemplates_Default(t *testing.T) {
 	root := "testdata/testTemplates_Default"
 	defer Using(t, root)()
 
-	client := dubbo2.New()
+	client := dubbo.New()
 
 	// The runtime is specified, and explicitly includes a
 	// file for the default template of fn.DefaultTemplate
-	_, err := client.Init(&dubbo2.Dubbo{Root: root, Runtime: client2.TestRuntime}, false, nil)
+	_, err := client.Init(&dubbo.Dubbo{Root: root, Runtime: TestRuntime}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,28 +200,28 @@ func TestTemplates_InvalidErrors(t *testing.T) {
 	root := "testdata/testTemplates_InvalidErrors"
 	defer Using(t, root)()
 
-	client := dubbo2.New()
+	client := dubbo.New()
 
 	// Error will be type-checked.
 	var err error
 
 	// Test for error writing an invalid runtime
-	_, err = client.Init(&dubbo2.Dubbo{
+	_, err = client.Init(&dubbo.Dubbo{
 		Root:    root,
 		Runtime: "invalid",
 	}, false, nil)
-	if !errors.Is(err, dubbo2.ErrRuntimeNotFound) {
+	if !errors.Is(err, dubbo.ErrRuntimeNotFound) {
 		t.Fatalf("Expected ErrRuntimeNotFound, got %v", err)
 	}
 	os.Remove(filepath.Join(root, ".gitignore"))
 
 	// Test for error writing an invalid template
-	_, err = client.Init(&dubbo2.Dubbo{
+	_, err = client.Init(&dubbo.Dubbo{
 		Root:     root,
-		Runtime:  client2.TestRuntime,
+		Runtime:  TestRuntime,
 		Template: "invalid",
 	}, false, nil)
-	if !errors.Is(err, dubbo2.ErrTemplateNotFound) {
+	if !errors.Is(err, dubbo.ErrTemplateNotFound) {
 		t.Fatalf("Expected ErrTemplateNotFound, got %v", err)
 	}
 }
