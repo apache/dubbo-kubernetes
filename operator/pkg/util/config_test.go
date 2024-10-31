@@ -19,7 +19,7 @@ package util_test
 
 import (
 	. "github.com/apache/dubbo-kubernetes/operator/pkg/testing"
-	config "github.com/apache/dubbo-kubernetes/operator/util"
+	config "github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"os"
 	"path/filepath"
 	"testing"
