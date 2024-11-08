@@ -83,7 +83,8 @@ type BuilderContext interface {
 	CAProvider() secrets.CaProvider
 	DDSContext() *dds_context.Context
 	ResourceValidators() ResourceValidators
-	Access() Access
+	AppRegCtx() *registry.ApplicationContext
+	InfRegCtx() *registry.InterfaceContext
 }
 
 var _ BuilderContext = &Builder{}
@@ -121,6 +122,8 @@ type Builder struct {
 	cap                  secrets.CaProvider
 	regClient            reg_client.RegClient
 	serviceDiscover      dubboRegistry.ServiceDiscovery
+	appRegCtx            *registry.ApplicationContext
+	infRegCtx            *registry.InterfaceContext
 	*runtimeInfo
 }
 
@@ -149,6 +152,16 @@ func BuilderFor(appCtx context.Context, cfg dubbo_cp.Config) (*Builder, error) {
 		},
 		appCtx: appCtx,
 	}, nil
+}
+
+func (b *Builder) WithAppRegCtx(ctx *registry.ApplicationContext) *Builder {
+	b.appRegCtx = ctx
+	return b
+}
+
+func (b *Builder) WithInfRegCtx(ctx *registry.InterfaceContext) *Builder {
+	b.infRegCtx = ctx
+	return b
 }
 
 func (b *Builder) WithComponentManager(cm component.Manager) *Builder {
@@ -479,4 +492,12 @@ func (b *Builder) ResourceValidators() ResourceValidators {
 
 func (b *Builder) AppCtx() context.Context {
 	return b.appCtx
+}
+
+func (b *Builder) AppRegCtx() *registry.ApplicationContext {
+	return b.appRegCtx
+}
+
+func (b *Builder) InfRegCtx() *registry.InterfaceContext {
+	return b.infRegCtx
 }

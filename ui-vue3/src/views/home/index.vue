@@ -32,6 +32,20 @@
         </a-flex>
       </a-card>
     </a-flex>
+    <a-flex wrap="wrap" gap="middle" :vertical="false" justify="space-between" align="center">
+      <a-card class="card chart">
+        <div id="releases_container"></div>
+      </a-card>
+
+      <a-card class="card chart">
+        <div id="protocols_container"></div>
+      </a-card>
+
+      <a-card class="card chart">
+        <div id="discoveries_container"></div>
+      </a-card>
+    </a-flex>
+
     <a-card class="card">
       <a-descriptions
         title=" "
@@ -39,35 +53,10 @@
         :column="{ xxl: 2, xl: 2, lg: 2, md: 2, sm: 1, xs: 1 }"
         layout="horizontal"
       >
-        <a-descriptions-item label="versions">
-          <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.versions">{{ v }}</a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="protocols">
-          <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.protocols">{{ v }}</a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="configCenter">{{
-          metricsMetadata.info.configCenter
+        <a-descriptions-item v-for="(value, key) in metricsMetadata.info" :label="key">{{
+          value
         }}</a-descriptions-item>
-        <a-descriptions-item label="registry">{{
-          metricsMetadata.info.registry
-        }}</a-descriptions-item>
-        <a-descriptions-item label="metadataCenter">{{
-          metricsMetadata.info.metadataCenter
-        }}</a-descriptions-item>
-        <a-descriptions-item label="grafana">{{
-          metricsMetadata.info.grafana
-        }}</a-descriptions-item>
-        <a-descriptions-item label="prometheus">{{
-          metricsMetadata.info.prometheus
-        }}</a-descriptions-item>
-        <a-descriptions-item label="Remark">empty</a-descriptions-item>
-        <a-descriptions-item label="rules">
-          <a-tag :color="PRIMARY_COLOR" v-for="v in metricsMetadata.info.rules">{{ v }}</a-tag>
-        </a-descriptions-item>
       </a-descriptions>
-    </a-card>
-    <a-card class="card">
-      <div id="report_container"></div>
     </a-card>
   </div>
 </template>
@@ -103,59 +92,195 @@ onMounted(async () => {
   )
   let clusterData = (await getClusterInfo({})).data
   metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
-  clusterInfo.info = <{ [key: string]: string }>clusterData
+  clusterInfo.info = <{ [key: string]: any }>clusterData
   clusterInfo.report = {
-    all: {
-      icon: 'ic:outline-all-inclusive',
-      value: clusterInfo.info.all
-    },
     application: {
       icon: 'cil:applications-settings',
-      value: clusterInfo.info.application
+      value: clusterInfo.info.appCount
     },
     services: {
       icon: 'carbon:microservices-1',
-      value: clusterInfo.info.services
+      value: clusterInfo.info.serviceCount
     },
-    providers: {
-      icon: 'arcticons:newsprovider',
-      value: clusterInfo.info.providers
-    },
-    consumers: {
-      icon: 'iconoir:consumable',
-      value: clusterInfo.info.consumers
+    instances: {
+      icon: 'ri:instance-line',
+      value: clusterInfo.info.insCount
     }
   }
 
-  const chart = new Chart({
-    container: 'report_container',
-    autoFit: true
+  // releasesChart
+  const releasesData: any = []
+  const totalReleases = Object.values(clusterInfo.info.releases).reduce(
+    (acc: number, count: number) => acc + count,
+    0
+  )
+
+  if (typeof clusterInfo.info.releases === 'object') {
+    Object.keys(clusterInfo.info.releases).forEach((key) => {
+      const count = clusterInfo.info.releases[key]
+      releasesData.push({
+        item: key,
+        count: count,
+        percent: count / totalReleases
+      })
+    })
+  }
+
+  const releasesChart = new Chart({
+    container: 'releases_container',
+    width: 200,
+    height: 200,
+    autoFit: false
   })
 
-  chart
+  releasesChart.coordinate({ type: 'theta', outerRadius: 0.8, innerRadius: 0.5 })
+
+  releasesChart
     .interval()
-    .data([
-      { name: 'all', value: clusterInfo.info.all },
-      { name: 'application', value: clusterInfo.info.application },
-      { name: 'services', value: clusterInfo.info.services },
-      { name: 'providers', value: clusterInfo.info.providers },
-      { name: 'consumers', value: clusterInfo.info.consumers }
-    ])
-    .encode('x', 'name')
-    .encode('y', 'value')
-    .encode('color', 'name')
-    .encode('size', 40)
-    .style('radiusTopLeft', 5)
-    .style('radiusTopRight', 10)
-    .style('radiusBottomRight', 15)
-    .style('radiusBottomLeft', 20)
-  chart.render()
+    .data(releasesData)
+    .transform({ type: 'stackY' })
+    .encode('y', 'percent')
+    .encode('color', 'item')
+    .legend('color', { position: 'bottom', layout: { justifyContent: 'center' } })
+    .label({
+      position: 'outside',
+      text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
+    })
+    .tooltip((data) => ({
+      name: data.item,
+      value: `${(data.percent * 100).toFixed(2)}%`
+    }))
+
+  releasesChart
+    .text()
+    .style('text', '版本分布')
+    // Relative position
+    .style('x', '50%')
+    .style('y', '50%')
+    .style('fontSize', 10)
+    .style('fill', '#8c8c8c')
+    .style('textAlign', 'center')
+    .style('textBaseline', 'middle') // 垂直对齐
+
+  await releasesChart.render()
+
+  // protocolsChart
+  const protocolsData: any = []
+  const totalProtocols = Object.values(clusterInfo.info.protocols).reduce(
+    (acc: number, count: number) => acc + count,
+    0
+  )
+
+  if (typeof clusterInfo.info.protocols === 'object') {
+    Object.keys(clusterInfo.info.protocols).forEach((key) => {
+      const count = clusterInfo.info.protocols[key]
+      protocolsData.push({
+        item: key,
+        count: count,
+        percent: count / totalProtocols
+      })
+    })
+  }
+
+  const protocolsChart = new Chart({
+    container: 'protocols_container',
+    width: 200,
+    height: 200,
+    autoFit: false
+  })
+
+  protocolsChart.coordinate({ type: 'theta', outerRadius: 0.8, innerRadius: 0.5 })
+
+  protocolsChart
+    .interval()
+    .data(protocolsData)
+    .transform({ type: 'stackY' })
+    .encode('y', 'percent')
+    .encode('color', 'item')
+    .legend('color', { position: 'bottom', layout: { justifyContent: 'center' } })
+    .label({
+      position: 'outside',
+      text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
+    })
+    .tooltip((data) => ({
+      name: data.item,
+      value: `${(data.percent * 100).toFixed(2)}%`
+    }))
+
+  protocolsChart
+    .text()
+    .style('text', '协议分布')
+    // Relative position
+    .style('x', '50%')
+    .style('y', '50%')
+    .style('fontSize', 10)
+    .style('fill', '#8c8c8c')
+    .style('textAlign', 'center')
+    .style('textBaseline', 'middle') // 垂直对齐
+
+  await protocolsChart.render()
+
+  // discoveriesChart
+  const discoveriesData: any = []
+  const totalDiscoveries = Object.values(clusterInfo.info.discoveries).reduce(
+    (acc: number, count: number) => acc + count,
+    0
+  )
+
+  if (typeof clusterInfo.info.discoveries === 'object') {
+    Object.keys(clusterInfo.info.discoveries).forEach((key) => {
+      const count = clusterInfo.info.discoveries[key]
+      discoveriesData.push({
+        item: key,
+        count: count,
+        percent: count / totalDiscoveries
+      })
+    })
+  }
+
+  const discoveriesChart = new Chart({
+    container: 'discoveries_container',
+    width: 200,
+    height: 200,
+    autoFit: false
+  })
+
+  discoveriesChart.coordinate({ type: 'theta', outerRadius: 0.8, innerRadius: 0.5 })
+
+  discoveriesChart
+    .interval()
+    .data(discoveriesData)
+    .transform({ type: 'stackY' })
+    .encode('y', 'percent')
+    .encode('color', 'item')
+    .legend('color', { position: 'bottom', layout: { justifyContent: 'center' } })
+    .label({
+      position: 'outside',
+      text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
+    })
+    .tooltip((data) => ({
+      name: data.item,
+      value: `${(data.percent * 100).toFixed(2)}%`
+    }))
+
+  discoveriesChart
+    .text()
+    .style('text', '服务发现类型分布')
+    // Relative position
+    .style('x', '50%')
+    .style('y', '50%')
+    .style('fontSize', 10)
+    .style('fill', '#8c8c8c')
+    .style('textAlign', 'center')
+    .style('textBaseline', 'middle') // 垂直对齐
+
+  await discoveriesChart.render()
 })
 </script>
 <style lang="less" scoped>
 .__container_home_index {
   .statistic {
-    width: 8vw;
+    width: 16vw;
   }
 
   .statistic-card {
@@ -175,11 +300,16 @@ onMounted(async () => {
     vertical-align: middle;
     text-align: center;
     border-radius: 5px;
-    font-size: 20px;
+    font-size: 56px;
     color: white;
   }
   .card {
     margin-top: 10px;
+  }
+
+  .chart {
+    //height: 250px;
+    //aspect-ratio: 1/1;
   }
 }
 </style>

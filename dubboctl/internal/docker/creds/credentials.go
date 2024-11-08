@@ -257,7 +257,6 @@ func (c *credentialsProvider) getCredentials(ctx context.Context, image string) 
 	for _, load := range c.credentialLoaders {
 
 		result, err = load(registry)
-
 		if err != nil {
 			if errors.Is(err, ErrCredentialsNotFound) {
 				continue

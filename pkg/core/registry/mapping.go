@@ -109,6 +109,8 @@ func (lstn *ServiceMappingChangedListenerImpl) updateListener(interfaceKey strin
 	delSDListener := NewDubboSDNotifyListener(apps, lstn.ctx)
 	delSDListener.AddListenerAndNotify(interfaceKey, lstn.listener)
 	err := lstn.delSDRegistry.AddListener(delSDListener)
+
+	// lstn.delSDRegistry.RemoveListener(oldApps);
 	return err
 }
 

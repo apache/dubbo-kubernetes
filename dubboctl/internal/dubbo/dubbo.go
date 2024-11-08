@@ -33,7 +33,7 @@ import (
 import (
 	"github.com/spf13/cobra"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -122,7 +122,37 @@ type BuildSpec struct {
 	// Optional list of build-packs to use when building the application
 	Buildpacks []string `yaml:"buildpacks,omitempty"`
 
-	BuildEnvs []Env `json:"buildEnvs,omitempty"`
+	BuildEnvs []Env `yaml:"buildEnvs,omitempty"`
+
+	// whether to use the CN mirror
+	CnMirror BooleanWithComment `yaml:"cnMirror,omitempty"`
+}
+
+// BooleanWithComment is a boolean with an inline comment
+type BooleanWithComment struct {
+	Comment string
+	Value   bool
+}
+
+var (
+	_ yaml.Unmarshaler = (*BooleanWithComment)(nil)
+	_ yaml.Marshaler   = BooleanWithComment{}
+)
+
+func (bwc *BooleanWithComment) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.ScalarNode {
+		return fmt.Errorf("expected scalar node, got %v", node.Kind)
+	}
+	bwc.Comment = node.LineComment
+	return node.Decode(&bwc.Value)
+}
+
+func (bwc BooleanWithComment) MarshalYAML() (interface{}, error) {
+	return yaml.Node{
+		Kind:        yaml.ScalarNode,
+		Value:       fmt.Sprintf("%v", bwc.Value),
+		LineComment: bwc.Comment,
+	}, nil
 }
 
 type DeploySpec struct {
@@ -408,6 +438,7 @@ func (f *Dubbo) Write() (err error) {
 	if dubbobytes, err = yaml.Marshal(f); err != nil {
 		return
 	}
+
 	if err = os.WriteFile(dubboyamlpath, dubbobytes, 0o644); err != nil {
 		return
 	}

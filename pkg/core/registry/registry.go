@@ -22,8 +22,6 @@ import (
 	"reflect"
 	"sync"
 	"time"
-
-	"github.com/go-co-op/gocron"
 )
 
 import (
@@ -32,6 +30,8 @@ import (
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 
 	gxset "github.com/dubbogo/gost/container/set"
+
+	"github.com/go-co-op/gocron"
 )
 
 import (
@@ -45,13 +45,17 @@ type Registry struct {
 	delegate   dubboRegistry.Registry
 	sdDelegate dubboRegistry.ServiceDiscovery
 	ctx        *ApplicationContext
+	infCtx     *InterfaceContext
+	scheduler  *gocron.Scheduler
 }
 
-func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery, ctx *ApplicationContext) *Registry {
+func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery, ctx *ApplicationContext, infCtx *InterfaceContext) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
 		ctx:        ctx,
+		infCtx:     infCtx,
+		scheduler:  gocron.NewScheduler(time.UTC),
 	}
 }
 
@@ -72,63 +76,29 @@ func (r *Registry) Subscribe(
 	systemNamespace string,
 ) error {
 	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
-	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.ctx)
 
+	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.infCtx)
 	r.listenToAllServices(interfaceListener)
 
-	getMappingList := func(group string) (map[string]*gxset.HashSet, error) {
-		keys, err := metadataReport.GetConfigKeysByGroup(group)
-		if err != nil {
-			return nil, err
-		}
+	r.subscribeApp(metadataReport, listener, "mapping", out, systemNamespace)
 
-		list := make(map[string]*gxset.HashSet)
-		for k := range keys.Items {
-			interfaceKey, _ := k.(string)
-			if !(interfaceKey == "org.apache.dubbo.mock.api.MockService") {
-				rule, err := metadataReport.GetServiceAppMapping(interfaceKey, group, nil)
-				if err != nil {
-					return nil, err
-				}
-				list[interfaceKey] = rule
-			}
-		}
-		return list, nil
-	}
-
-	go func() {
-		mappings, err := getMappingList("mapping")
-		if err != nil {
-			logger.Error("Failed to get mapping")
-		}
-
-		for interfaceKey, oldApps := range mappings {
-			mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate, r.ctx)
-			apps, _ := metadataReport.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
-			delSDListener := NewDubboSDNotifyListener(apps, r.ctx)
-			for appTmp := range apps.Items {
-				app := appTmp.(string)
-				instances := r.sdDelegate.GetInstances(app)
-				logger.Infof("Synchronized instance notification on subscription, instance list size %d", len(instances))
-				if len(instances) > 0 {
-					err = delSDListener.OnEvent(&dubboRegistry.ServiceInstancesChangedEvent{
-						ServiceName: app,
-						Instances:   instances,
-					})
-					if err != nil {
-						logger.Warnf("[ServiceDiscoveryRegistry] ServiceInstancesChangedListenerImpl handle error:%v", err)
-					}
-				}
-			}
-			delSDListener.AddListenerAndNotify(interfaceKey, listener)
-			err = r.sdDelegate.AddListener(delSDListener)
-			if err != nil {
-				logger.Warnf("Failed to Add Listener")
-			}
-		}
-	}()
+	r.scheduler.StartAsync()
 
 	return nil
+}
+
+func (r *Registry) subscribeApp(metadataReport report.MetadataReport, listener *NotifyListener, group string, out events.Emitter,
+	systemNamespace string,
+) {
+	_, err := r.scheduler.Every(30 * 60).Second().Do(func() {
+		err := doAppSubscribe(r, metadataReport, listener, group, out, systemNamespace)
+		if err != nil {
+			logger.Error("Run app subscription scheduling task failed")
+		}
+	})
+	if err != nil {
+		logger.Error("Failed to start registry interface services scheduler")
+	}
 }
 
 func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNotifyListener) {
@@ -162,12 +132,63 @@ func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNo
 	if reflect.TypeOf(r.delegate).String() == "*zookeeper.zkRegistry" {
 		executeSubscribe()
 	} else {
-		scheduler := gocron.NewScheduler(time.UTC)
-		_, err := scheduler.Every(5).Second().Do(executeSubscribe)
-		if err == nil {
-			scheduler.StartAsync()
-		} else {
+		_, err := r.scheduler.Every(30 * 60).Second().Do(executeSubscribe)
+		if err != nil {
 			logger.Error("Failed to start registry interface services scheduler")
 		}
 	}
+}
+
+func doAppSubscribe(r *Registry, metadataReport report.MetadataReport, listener *NotifyListener, group string, out events.Emitter,
+	systemNamespace string,
+) error {
+	keys, err := metadataReport.GetConfigKeysByGroup(group)
+	if err != nil {
+		return err
+	}
+
+	mappings := make(map[string]*gxset.HashSet)
+	for k := range keys.Items {
+		interfaceKey, _ := k.(string)
+		if !(interfaceKey == "org.apache.dubbo.mock.api.MockService") {
+			rule, err := metadataReport.GetServiceAppMapping(interfaceKey, group, nil)
+			if err != nil {
+				return err
+			}
+			mappings[interfaceKey] = rule
+		}
+	}
+
+	if err != nil {
+		logger.Error("Failed to get mapping")
+	}
+
+	r.ctx.UpdateMapping(mappings)
+
+	for interfaceKey, oldApps := range mappings {
+		mappingListener := NewMappingListener(interfaceKey, oldApps, listener, out, systemNamespace, r.sdDelegate, r.ctx)
+		apps, _ := metadataReport.GetServiceAppMapping(interfaceKey, "mapping", mappingListener)
+		delSDListener := NewDubboSDNotifyListener(apps, r.ctx)
+		for appTmp := range apps.Items {
+			app := appTmp.(string)
+			instances := r.sdDelegate.GetInstances(app)
+			logger.Infof("Synchronized instance notification for %s on subscription, instance list size %d", app, len(instances))
+			if len(instances) > 0 {
+				err = delSDListener.OnEvent(&dubboRegistry.ServiceInstancesChangedEvent{
+					ServiceName: app,
+					Instances:   instances,
+				})
+				if err != nil {
+					logger.Warnf("[ServiceDiscoveryRegistry] ServiceInstancesChangedListenerImpl handle error:%v", err)
+				}
+			}
+		}
+		delSDListener.AddListenerAndNotify(interfaceKey, listener)
+		err = r.sdDelegate.AddListener(delSDListener)
+		if err != nil {
+			logger.Warnf("Failed to Add Listener")
+		}
+	}
+
+	return nil
 }

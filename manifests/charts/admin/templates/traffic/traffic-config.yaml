@@ -1,0 +1,46 @@
+{{- $traffic := .Values.traffic -}}{{- $tr := $traffic.tagRoute -}}{{- $dc := $traffic.dynamicConfig -}}{{- $cr := $traffic.conditionRoute -}}
+apiVersion: dubbo.io/v1alpha1
+kind: ConditionRoute
+metadata:
+  name: {{ template "dubbo.cp.name" . }}-conditionroute
+  namespace: {{ template "admin.namespace" . }}
+spec:
+  enabled: {{ $cr.enabled }}
+  force: {{ $cr.force }}
+  scope: {{ $cr.scope }}
+  runtime: {{ $cr.runtime }}
+  priority: {{ $cr.priority }}
+  key: {{ $cr.key }}
+  configVersion: {{ $cr.configVersion }}
+  conditions:
+  - {{ $cr.conditions }}
+---
+apiVersion: dubbo.io/v1alpha1
+kind: DynamicConfig
+metadata:
+  name: {{ template "dubbo.cp.name" . }}-dynamicconfig
+  namespace: {{ template "admin.namespace" . }}
+spec:
+  configVersion: {{ $dc.configVersion }}
+  scope: {{ $dc.scope }}
+  key: {{ $dc.key }}
+  configs:
+  - side: {{ $dc.side }}
+    match:
+      application:
+        oneof:
+        - exact: {{ $dc.exact }}
+---
+apiVersion: dubbo.io/v1alpha1
+kind: TagRoute
+metadata:
+  name: {{ template "dubbo.cp.name" . }}-tagroute
+  namespace: {{ template "admin.namespace" . }}
+spec:
+  configVersion: {{ $tr.configVersion }}
+  force: {{ $tr.force }}
+  enabled: {{ $tr.enabled }}
+  priority: {{ $tr.priority }}
+  key: {{ $tr.key }}
+  tags:
+  - name: {{ $tr.name }}

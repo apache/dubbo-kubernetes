@@ -20,6 +20,7 @@ package model
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
 import (
@@ -28,10 +29,35 @@ import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 )
 
+type ServiceSearchReq struct {
+	ServiceName string `form:"serviceName" json:"serviceName"`
+	Keywords    string `form:"keywords" json:"keywords"`
+	PageReq
+}
+
+func NewServiceSearchReq() *ServiceSearchReq {
+	return &ServiceSearchReq{
+		PageReq: PageReq{
+			PageOffset: 0,
+			PageSize:   15,
+		},
+	}
+}
+
 type ServiceSearchResp struct {
 	ServiceName   string         `json:"serviceName"`
 	VersionGroups []VersionGroup `json:"versionGroups"`
 }
+
+type ByServiceName []*ServiceSearchResp
+
+func (a ByServiceName) Len() int { return len(a) }
+
+func (a ByServiceName) Less(i, j int) bool {
+	return a[i].ServiceName < a[j].ServiceName
+}
+
+func (a ByServiceName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 type ServiceSearch struct {
 	ServiceName   string
@@ -78,18 +104,30 @@ func (s *ServiceSearchResp) FromServiceSearch(search *ServiceSearch) {
 
 type ServiceTabDistributionReq struct {
 	ServiceName string `json:"serviceName"  form:"serviceName" binding:"required"`
-	Version     string `json:"version"  form:"version" binding:"required"`
-	Group       string `json:"group"  form:"group" binding:"required"`
-	Side        string `json:"side" form:"side"`
+	Version     string `json:"version"  form:"version"`
+	Group       string `json:"group"  form:"group"`
+	Side        string `json:"side" form:"side"  binding:"required"`
+	PageReq
 }
 
 type ServiceTabDistributionResp struct {
-	AppName      string `json:"appName"`
-	InstanceName string `json:"instanceName"`
-	Endpoint     string `json:"endpoint"`
-	TimeOut      string `json:"timeOut"`
-	Retries      string `json:"retries"`
+	AppName      string            `json:"appName"`
+	InstanceName string            `json:"instanceName"`
+	Endpoint     string            `json:"endpoint"`
+	TimeOut      string            `json:"timeOut"`
+	Retries      string            `json:"retries"`
+	Params       map[string]string `json:"params"`
 }
+
+type ByServiceInstanceName []*ServiceTabDistributionResp
+
+func (a ByServiceInstanceName) Len() int { return len(a) }
+
+func (a ByServiceInstanceName) Less(i, j int) bool {
+	return a[i].InstanceName < a[j].InstanceName
+}
+
+func (a ByServiceInstanceName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 type ServiceTabDistribution struct {
 	AppName      string
@@ -109,7 +147,7 @@ func NewServiceDistribution() *ServiceTabDistribution {
 	}
 }
 
-func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *core_mesh.DataplaneResource, metadatalist *core_mesh.MetaDataResourceList, name string, req *ServiceTabDistributionReq) *ServiceTabDistributionResp {
+func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *core_mesh.DataplaneResource, metadata *core_mesh.MetaDataResource, name string, req *ServiceTabDistributionReq) *ServiceTabDistributionResp {
 	r.AppName = name
 	inbounds := dataplane.Spec.Networking.Inbound
 	ip := dataplane.GetIP()
@@ -118,7 +156,7 @@ func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *cor
 	}
 	meta := dataplane.GetMeta()
 	r.InstanceName = meta.GetName()
-	r.mergeMetaData(metadatalist, req)
+	r.mergeMetaData(metadata, req)
 
 	return r
 }
@@ -136,28 +174,87 @@ func (r *ServiceTabDistributionResp) FromServiceDistribution(distribution *Servi
 	return r
 }
 
-func (r *ServiceTabDistributionResp) mergeMetaData(metadatalist *core_mesh.MetaDataResourceList, req *ServiceTabDistributionReq) {
-	for _, metadata := range metadatalist.Items {
-		// key format is '{group}/{interface name}:{version}:{protocol}'
-		serviceinfos := metadata.Spec.Services
-		if req.Side == constants.ConsumerSide {
-			r.Retries = ""
-			r.TimeOut = ""
+func (r *ServiceTabDistributionResp) mergeMetaData(metadata *core_mesh.MetaDataResource, req *ServiceTabDistributionReq) {
+	// key format is '{group}/{interface name}:{version}:{protocol}'
+	serviceinfos := metadata.Spec.Services
+	if req.Side == constants.ConsumerSide {
+		r.Retries = ""
+		r.TimeOut = ""
+	}
+	for _, serviceinfo := range serviceinfos {
+		if serviceinfo.Name == req.ServiceName &&
+			serviceinfo.Group == req.Group &&
+			serviceinfo.Version == req.Version &&
+			req.Side == constants.ProviderSide {
+			r.Retries = serviceinfo.Params[constants.RetriesKey]
+			r.TimeOut = serviceinfo.Params[constants.TimeoutKey]
+			r.Params = serviceinfo.Params
 		}
-		for _, serviceinfo := range serviceinfos {
-			if serviceinfo.Name == req.ServiceName &&
-				serviceinfo.Group == req.Group &&
-				serviceinfo.Version == req.Version &&
-				req.Side == constants.ProviderSide {
-				r.Retries = serviceinfo.Params[constants.RetriesKey]
-				r.TimeOut = serviceinfo.Params[constants.TimeoutKey]
-			}
-		}
-
 	}
 }
 
 type VersionGroup struct {
 	Version string `json:"version"`
 	Group   string `json:"group"`
+}
+
+type ServiceDependenciesReq struct {
+	ServiceName string `json:"serviceName,omitempty"`
+}
+
+type ServiceDependenciesResp struct {
+	SourceService     string   `json:"sourceService"`
+	DependentServices []string `json:"dependentServices"`
+}
+
+type ServiceMetricsReq struct {
+	ServiceName string    `json:"serviceName"`
+	MetricNames []string  `json:"metricNames"` // List of metric names specified by the user
+	StartTime   time.Time `json:"startTime,omitempty"`
+	EndTime     time.Time `json:"endTime,omitempty"`
+}
+
+type ServiceMetricsData struct {
+	MetricName string        `json:"metricName"`
+	Values     []MetricValue `json:"values"`
+}
+
+type FailedMetric struct {
+	MetricName string `json:"metricName"`
+	Error      string `json:"error"`
+}
+
+type ServiceMetricsResp struct {
+	ServiceName string               `json:"serviceName"`
+	Metrics     []ServiceMetricsData `json:"metrics"`
+}
+
+type ServiceHealthStatusReq struct {
+	Namespace string `json:"namespace,omitempty"`
+}
+
+type ServiceHealthInfo struct {
+	ServiceName          string `json:"serviceName"`
+	HealthyInstanceNum   int    `json:"healthyInstanceNum"`
+	UnhealthyInstanceNum int    `json:"unhealthyInstanceNum"`
+	TotalInstanceNum     int    `json:"totalInstanceNum"`
+	HealthStatus         string `json:"healthStatus"` // "healthy" or "unhealthy"
+}
+
+type ServiceHealthStatusResp struct {
+	Services []ServiceHealthInfo `json:"services"`
+}
+
+type ServiceDependencyTopologyReq struct {
+	ServiceName string `json:"serviceName,omitempty"`
+}
+
+type ServiceDependencyTopologyResp struct {
+	ServiceName  string   `json:"serviceName"`
+	Dependencies []string `json:"dependencies"`
+}
+
+type ServiceNode struct {
+	ServiceName  string
+	Dependencies []string
 }

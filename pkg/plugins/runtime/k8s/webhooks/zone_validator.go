@@ -46,7 +46,7 @@ type ZoneValidator struct {
 	unsafeDelete bool
 }
 
-func (z *ZoneValidator) InjectDecoder(_ *admission.Decoder) {
+func (z *ZoneValidator) InjectDecoder(_ admission.Decoder) {
 }
 
 func (z *ZoneValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
