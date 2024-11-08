@@ -18,19 +18,19 @@
 package listeners
 
 import (
-	envoy_config_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_extensions_compression_gzip_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
-	envoy_extensions_filters_http_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
-	envoy_hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-)
-
-import (
+	common_tls "github.com/apache/dubbo-kubernetes/api/common/v1alpha1/tls"
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	util_proto "github.com/apache/dubbo-kubernetes/pkg/util/proto"
 	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners/v3"
 	envoy_routes "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/routes"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/envoy/tags"
+	envoy_config_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_extensions_compression_gzip_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
+	envoy_extensions_filters_http_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
+	envoy_hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 )
 
 func GrpcStats() FilterChainBuilderOpt {
@@ -54,6 +54,28 @@ func DirectResponse(virtualHostName string, endpoints []v3.DirectResponseEndpoin
 	return AddFilterChainConfigurer(&v3.DirectResponseConfigurer{
 		VirtualHostName: virtualHostName,
 		Endpoints:       endpoints,
+	})
+}
+
+func ServerSideMTLS(mesh *core_mesh.MeshResource, secrets core_xds.SecretsTracker, tlsVersion *common_tls.Version, tlsCiphers common_tls.TlsCiphers) FilterChainBuilderOpt {
+	return AddFilterChainConfigurer(&v3.ServerSideMTLSConfigurer{
+		Mesh:           mesh,
+		SecretsTracker: secrets,
+		TlsVersion:     tlsVersion,
+		TlsCiphers:     tlsCiphers,
+	})
+}
+
+func ServerSideStaticMTLS(mtlsCerts core_xds.ServerSideMTLSCerts) FilterChainBuilderOpt {
+	return AddFilterChainConfigurer(&v3.ServerSideStaticMTLSConfigurer{
+		MTLSCerts: mtlsCerts,
+	})
+}
+
+func ServerSideStaticTLS(tlsCerts core_xds.ServerSideTLSCertPaths) FilterChainBuilderOpt {
+	return AddFilterChainConfigurer(&v3.ServerSideStaticTLSConfigurer{
+		CertPath: tlsCerts.CertPath,
+		KeyPath:  tlsCerts.KeyPath,
 	})
 }
 

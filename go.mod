@@ -58,6 +58,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/yamlfmt v0.9.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/heroku/color v0.0.6
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/jhump/protoreflect v1.16.0

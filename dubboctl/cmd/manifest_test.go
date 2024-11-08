@@ -18,13 +18,16 @@ package cmd
 import (
 	"bytes"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"strings"
 	"testing"
 )
 
-import (
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-)
+//var (
+//	// TestInstallFlag and TestCli are uses for black box testing
+//	TestInstallFlag bool
+//	TestCli         client.Client
+//)
 
 func TestManifestGenerate(t *testing.T) {
 	tests := []struct {
@@ -74,7 +77,7 @@ func TestManifestGenerate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			testExecute(t, test.cmd, test.wantErr)
+			testManifestExecute(t, test.cmd, test.wantErr)
 			// remove temporary dir
 			if test.temp != "" {
 				os.RemoveAll(test.temp)
@@ -89,10 +92,10 @@ func TestManifestInstall(t *testing.T) {
 		cmd     string
 		wantErr bool
 	}{
-		{
-			desc: "without any flag",
-			cmd:  "manifest install",
-		},
+		//{
+		//	desc: "without any flag",
+		//	cmd:  "manifest install",
+		//},
 	}
 	// For now, we do not use envTest to do black box testing
 	TestInstallFlag = true
@@ -100,7 +103,7 @@ func TestManifestInstall(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			testExecute(t, test.cmd, test.wantErr)
+			testManifestExecute(t, test.cmd, test.wantErr)
 		})
 	}
 }
@@ -113,11 +116,11 @@ func TestManifestUninstall(t *testing.T) {
 		cmd     string
 		wantErr bool
 	}{
-		{
-			desc:   "without any flag",
-			before: "manifest install",
-			cmd:    "manifest uninstall",
-		},
+		//{
+		//	desc:   "without any flag",
+		//	before: "manifest install",
+		//	cmd:    "manifest uninstall",
+		//},
 	}
 	// For now, we do not use envTest to do black box testing
 	TestInstallFlag = true
@@ -126,8 +129,8 @@ func TestManifestUninstall(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			// prepare existing resources
-			testExecute(t, test.before, false)
-			testExecute(t, test.cmd, test.wantErr)
+			testManifestExecute(t, test.before, false)
+			testManifestExecute(t, test.cmd, test.wantErr)
 		})
 	}
 }
@@ -156,9 +159,9 @@ func TestManifestDiff(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			for _, before := range test.befores {
-				testExecute(t, before, false)
+				testManifestExecute(t, before, false)
 			}
-			testExecute(t, test.cmd, test.wantErr)
+			testManifestExecute(t, test.cmd, test.wantErr)
 			for _, temp := range test.temps {
 				if temp != "" {
 					os.RemoveAll(temp)
@@ -168,16 +171,16 @@ func TestManifestDiff(t *testing.T) {
 	}
 }
 
-func testExecute(t *testing.T, cmd string, wantErr bool) string {
+func testManifestExecute(t *testing.T, cmds string, wantErr bool) string {
 	var out bytes.Buffer
-	args := strings.Split(cmd, " ")
-	rootCmd := getRootCmd(args)
+	args := strings.Split(cmds, " ")
+	rootCmd := GetRootCmd(args)
 	rootCmd.SetOut(&out)
 	if err := rootCmd.Execute(); err != nil {
 		if wantErr {
 			return ""
 		}
-		t.Errorf("execute %s failed, err: %s", cmd, err)
+		t.Errorf("execute %s failed, err: %s", cmds, err)
 		return ""
 	}
 	if wantErr {

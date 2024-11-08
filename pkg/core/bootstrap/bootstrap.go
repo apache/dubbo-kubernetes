@@ -23,24 +23,28 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-)
 
-import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
 	"dubbo.apache.org/dubbo-go/v3/config/instance"
 	"dubbo.apache.org/dubbo-go/v3/config_center"
-
+	"github.com/apache/dubbo-kubernetes/pkg/core/access"
+	resources_access "github.com/apache/dubbo-kubernetes/pkg/core/resources/access"
+	"github.com/apache/dubbo-kubernetes/pkg/envoy/admin"
+	envoyadmin_access "github.com/apache/dubbo-kubernetes/pkg/envoy/admin/access"
+	tokens_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/access"
+	zone_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/zone/access"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"github.com/pkg/errors"
 
 	kube_ctrl "sigs.k8s.io/controller-runtime"
-)
 
-import (
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
+
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
+
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
@@ -48,28 +52,42 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
 	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/condition_route"
+
 	dataplane_managers "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dynamic_config"
+
 	mapping_managers "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/mapping"
+
 	mesh_managers "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/mesh"
+
 	metadata_managers "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/metadata"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/tag_route"
 	"github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/zone"
+
 	core_plugins "github.com/apache/dubbo-kubernetes/pkg/core/plugins"
+
 	dubbo_registry "github.com/apache/dubbo-kubernetes/pkg/core/registry"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/system"
+
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
+
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
 	"github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+
 	k8s_extensions "github.com/apache/dubbo-kubernetes/pkg/plugins/extensions/k8s"
+
 	mesh_cache "github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
+
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
+
 	xds_server "github.com/apache/dubbo-kubernetes/pkg/xds/server"
 )
 
@@ -118,9 +136,16 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 
 	builder.WithDataSourceLoader(datasource.NewDataSourceLoader(builder.ReadOnlyResourceManager()))
 
+	//initializeCAManager
+	if err := initializeCaManagers(builder); err != nil {
+		return nil, err
+	}
+
 	leaderInfoComponent := &component.LeaderInfoComponent{}
 	builder.WithLeaderInfo(leaderInfoComponent)
 
+	caProvider, _ := secrets.NewCaProvider(builder.CaManagers())
+	builder.WithCAProvider(caProvider)
 	builder.WithDpServer(server.NewDpServer(*cfg.DpServer, func(writer http.ResponseWriter, request *http.Request) bool {
 		return true
 	}))
@@ -128,6 +153,28 @@ func buildRuntime(appCtx context.Context, cfg dubbo_cp.Config) (core_runtime.Run
 	resourceManager := builder.ResourceManager()
 	ddsContext := dds_context.DefaultContext(appCtx, resourceManager, cfg)
 	builder.WithDDSContext(ddsContext)
+
+	if cfg.DeployMode == config_core.UniversalMode {
+		//TODO: universalMode EnvoyAdminClient
+	} else {
+		builder.WithEnvoyAdminClient(admin.NewEnvoyAdminClient(
+			resourceManager,
+			builder.CaManagers(),
+			builder.Config().GetEnvoyAdminPort(),
+		))
+	}
+
+	builder.WithAccess(core_runtime.Access{
+		ResourceAccess:       resources_access.NewAdminResourceAccess(builder.Config().Access.Static.AdminResources),
+		DataplaneTokenAccess: tokens_access.NewStaticGenerateDataplaneTokenAccess(builder.Config().Access.Static.GenerateDPToken),
+		ZoneTokenAccess:      zone_access.NewStaticZoneTokenAccess(builder.Config().Access.Static.GenerateZoneToken),
+		EnvoyAdminAccess: envoyadmin_access.NewStaticEnvoyAdminAccess(
+			builder.Config().Access.Static.ViewConfigDump,
+			builder.Config().Access.Static.ViewStats,
+			builder.Config().Access.Static.ViewClusters,
+		),
+		ControlPlaneMetadataAccess: access.NewStaticControlPlaneMetadataAccess(builder.Config().Access.Static.ControlPlaneMetadata),
+	})
 
 	if err := initializeMeshCache(builder); err != nil {
 		return nil, err
@@ -484,5 +531,16 @@ func initializeMeshCache(builder *core_runtime.Builder) error {
 	}
 
 	builder.WithMeshCache(meshSnapshotCache)
+	return nil
+}
+
+func initializeCaManagers(builder *core_runtime.Builder) error {
+	for pluginName, caPlugin := range core_plugins.Plugins().CaPlugins() {
+		caManager, err := caPlugin.NewCaManager(builder, nil)
+		if err != nil {
+			return errors.Wrapf(err, "could not create CA manager for plugin %q", pluginName)
+		}
+		builder.WithCaManager(string(pluginName), caManager)
+	}
 	return nil
 }

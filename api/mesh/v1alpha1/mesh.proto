@@ -6,6 +6,7 @@ option go_package = "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1";
 
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/duration.proto";
 import "api/mesh/options.proto";
 
 // Mesh defines configuration of a single mesh.
@@ -66,6 +67,8 @@ message CertificateAuthorityBackend {
     }
     // Rotation settings
     Rotation rotation = 1;
+    // Timeout on request to CA for DP certificate generation and retrieval
+    google.protobuf.Duration requestTimeout = 2;
   }
 
   // Dataplane certificate settings
@@ -73,6 +76,21 @@ message CertificateAuthorityBackend {
 
   // Configuration of the backend
   google.protobuf.Struct conf = 4;
+
+  enum Mode {
+    // A STRICT mode implies that the server validates the connection and
+    // accepts only encrypted TLS traffic
+    STRICT = 0;
+    // A PERMISSIVE mode implies that the outbounds encrypt traffic the same way
+    // it happens in strict mode, but inbounds accept both TLS and plaintext
+    // traffic. This allows applications residing in the mesh to accept requests
+    // from outside of the mesh.
+    PERMISSIVE = 1;
+  }
+
+  // Mode defines the behaviour of inbound listeners with regard to traffic
+  // encryption
+  Mode mode = 5;
 }
 
 // Networking defines the networking configuration of the mesh

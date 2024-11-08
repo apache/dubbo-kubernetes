@@ -19,6 +19,7 @@ package clusters
 
 import (
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	envoy_listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 )
 
 // ClusterConfigurer is responsible for configuring a single aspect of the entire Envoy cluster,
@@ -26,6 +27,11 @@ import (
 type ClusterConfigurer interface {
 	// Configure configures a single aspect on a given Envoy cluster.
 	Configure(cluster *envoy_cluster.Cluster) error
+}
+
+type FilterChainConfigurer interface {
+	// Configure configures a single aspect on a given Envoy filter chain.
+	Configure(filterChain *envoy_listener.FilterChain) error
 }
 
 // ClusterMustConfigureFunc adapts a configuration function that never

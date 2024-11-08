@@ -19,9 +19,7 @@ package clusters
 
 import (
 	envoy_cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-)
 
-import (
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 )
 
