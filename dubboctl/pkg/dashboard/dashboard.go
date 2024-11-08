@@ -13,21 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package dashboard
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
 	"github.com/spf13/cobra"
 )
 
-func addProfile(rootCmd *cobra.Command) {
-	profileCmd := &cobra.Command{
-		Use:   "profile",
-		Short: "Commands related to profiles",
-		Long:  "Commands help user to list and describe profiles",
+func AddDashboard(rootCmd *cobra.Command) {
+	dashboardCmd := &cobra.Command{
+		Use:   "dashboard",
+		Short: "Commands related to control plane components dashboards",
+		Long:  "Commands help user to open control plane components dashboards directly. Now support Admin, Grafana, Nacos, Prometheus, Skywalking and Zipkin",
 	}
-	profile.ConfigProfileListCmd(profileCmd)
-	profile.ConfigProfileDiffCmd(profileCmd)
+	ConfigDashboardAdminCmd(dashboardCmd)
+	ConfigDashboardGrafanaCmd(dashboardCmd)
+	ConfigDashboardNacosCmd(dashboardCmd)
+	ConfigDashboardPrometheusCmd(dashboardCmd)
+	ConfigDashboardSkywalkingCmd(dashboardCmd)
+	ConfigDashboardZipkinCmd(dashboardCmd)
 
-	rootCmd.AddCommand(profileCmd)
+	rootCmd.AddCommand(dashboardCmd)
 }

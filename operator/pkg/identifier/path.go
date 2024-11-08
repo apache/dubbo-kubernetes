@@ -13,21 +13,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package identifier
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
-	"github.com/spf13/cobra"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/filesystem"
+	"net/url"
 )
 
-func addProfile(rootCmd *cobra.Command) {
-	profileCmd := &cobra.Command{
-		Use:   "profile",
-		Short: "Commands related to profiles",
-		Long:  "Commands help user to list and describe profiles",
-	}
-	profile.ConfigProfileListCmd(profileCmd)
-	profile.ConfigProfileDiffCmd(profileCmd)
+import (
+	"github.com/apache/dubbo-kubernetes/manifests"
+)
 
-	rootCmd.AddCommand(profileCmd)
+var (
+	manifestsUri = &url.URL{
+		Scheme:   filesystem.EmbedSchema,
+		OmitHost: true,
+	}
+	chartsUri          = manifestsUri.JoinPath("charts")
+	profilesUri        = manifestsUri.JoinPath("profiles")
+	addonsUri          = manifestsUri.JoinPath("addons")
+	addonDashboardsUri = addonsUri.JoinPath("addons/dashboards")
+
+	Charts          = chartsUri.String()
+	Profiles        = profilesUri.String()
+	Addons          = addonsUri.String()
+	AddonDashboards = addonDashboardsUri.String()
+)
+
+var UnionFS filesystem.UnionFS
+
+func init() {
+	UnionFS = filesystem.NewUnionFS(manifests.EmbedRootFS)
 }

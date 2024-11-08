@@ -13,21 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package manifest
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
-	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func addProfile(rootCmd *cobra.Command) {
-	profileCmd := &cobra.Command{
-		Use:   "profile",
-		Short: "Commands related to profiles",
-		Long:  "Commands help user to list and describe profiles",
-	}
-	profile.ConfigProfileListCmd(profileCmd)
-	profile.ConfigProfileDiffCmd(profileCmd)
-
-	rootCmd.AddCommand(profileCmd)
-}
+var (
+	// TestInstallFlag and TestCli are uses for black box testing
+	TestInstallFlag bool
+	TestCli         client.Client
+)

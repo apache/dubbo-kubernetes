@@ -15,41 +15,22 @@
  * limitations under the License.
  */
 
-package ui
+package dubbo
 
 import (
-	"embed"
-	"io/fs"
+	"archive/zip"
+	"bytes"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/filesystem"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/generated"
 )
 
-// By default, go embed does not embed files that starts with `_` that's why we need to use *
-// Data Run 'make build-ui' first to generate the distribution of the ui pages.
-//
-//go:embed dist/*
-var Data embed.FS
-
-type tryOrDefault struct {
-	fileSystem   fs.FS
-	fallbackFile string
-}
-
-func (t tryOrDefault) Open(name string) (fs.File, error) {
-	f, err := t.fileSystem.Open(name)
-	if err == nil {
-		return f, nil
-	}
-	return t.fileSystem.Open(t.fallbackFile)
-}
-
-var FS = func() fs.FS {
-	fsys, err := fs.Sub(Data, "dist/admin")
+//go:generate go run ../../generated/templates/generate.go
+func newEmbeddedTemplatesFS() filesystem.Filesystem {
+	archive, err := zip.NewReader(bytes.NewReader(generated.TemplatesZip), int64(len(generated.TemplatesZip)))
 	if err != nil {
 		panic(err)
 	}
-	// Adapt Vue's HTML5 history mode
-	fsys = tryOrDefault{
-		fileSystem:   fsys,
-		fallbackFile: "index.html",
-	}
-	return fsys
+	return filesystem.NewZipFS(archive)
 }
+
+var EmbeddedTemplatesFS = newEmbeddedTemplatesFS()

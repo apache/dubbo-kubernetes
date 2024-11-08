@@ -13,21 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package generate
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
 	"github.com/spf13/cobra"
 )
 
-func addProfile(rootCmd *cobra.Command) {
-	profileCmd := &cobra.Command{
-		Use:   "profile",
-		Short: "Commands related to profiles",
-		Long:  "Commands help user to list and describe profiles",
+func AddGenerate(rootCmd *cobra.Command) {
+	generateCmd := &cobra.Command{
+		Use:   "generate",
+		Short: "Generate resources, tokens, etc",
+		Long:  `Generate resources, tokens, etc.`,
 	}
-	profile.ConfigProfileListCmd(profileCmd)
-	profile.ConfigProfileDiffCmd(profileCmd)
-
-	rootCmd.AddCommand(profileCmd)
+	rootCmd.AddCommand(generateCmd)
+	NewGenerateCertificateCmd(generateCmd)
 }

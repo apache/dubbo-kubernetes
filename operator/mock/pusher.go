@@ -13,21 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package mock
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/profile"
-	"github.com/spf13/cobra"
+	"context"
+	"github.com/apache/dubbo-kubernetes/operator/dubbo"
 )
 
-func addProfile(rootCmd *cobra.Command) {
-	profileCmd := &cobra.Command{
-		Use:   "profile",
-		Short: "Commands related to profiles",
-		Long:  "Commands help user to list and describe profiles",
-	}
-	profile.ConfigProfileListCmd(profileCmd)
-	profile.ConfigProfileDiffCmd(profileCmd)
+type Pusher struct {
+	PushInvoked bool
+	PushFn      func(*dubbo.Dubbo) (string, error)
+}
 
-	rootCmd.AddCommand(profileCmd)
+func NewPusher() *Pusher {
+	return &Pusher{
+		PushFn: func(*dubbo.Dubbo) (string, error) { return "", nil },
+	}
+}
+
+func (i *Pusher) Push(ctx context.Context, f *dubbo.Dubbo) (string, error) {
+	i.PushInvoked = true
+	return i.PushFn(f)
 }
