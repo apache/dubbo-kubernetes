@@ -31,7 +31,13 @@ Mock.mock(devTool.mockUrl('/mock/application/search'), 'get', () => {
   const list = []
   for (let i = 0; i < total; i++) {
     list.push({
-      appName: Mock.Random.pick(['QuickStartApplication', 'shop-comment', 'shop-detail', 'shop-order', 'shop-user']),
+      appName: Mock.Random.pick([
+        'QuickStartApplication',
+        'shop-comment',
+        'shop-detail',
+        'shop-order',
+        'shop-user'
+      ]),
       deployClusters: [Mock.Random.pick(['default', 'prod', 'test'])],
       instanceCount: Mock.mock('@integer(1, 5)'),
       registryClusters: [`${Mock.mock('@ip')}:8848`]
