@@ -49,7 +49,9 @@
           <a-tag>{{ text }}</a-tag>
         </template>
         <template v-if="column.dataIndex === 'labels'">
-          <a-tag :color="PRIMARY_COLOR" v-for="(value, key) in text">{{ key }} : {{ value }}</a-tag>
+          <a-tag :color="PRIMARY_COLOR" v-for="(value, key) in text"
+            >{{ key }} : {{ value }}</a-tag
+          >
         </template>
 
         <template v-if="column.dataIndex === 'registerTime'">
@@ -61,182 +63,189 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
-import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR } from '@/base/constants'
-import { Icon } from '@iconify/vue'
-import SearchTable from '@/components/SearchTable.vue'
-import { SearchDomain } from '@/utils/SearchUtil'
-import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
-import { useRoute, useRouter } from 'vue-router'
-import { getApplicationInstanceInfo, getApplicationInstanceStatistics } from '@/api/service/app'
-import { formattedDate } from '@/utils/DateUtil'
+import { onMounted, provide, reactive } from "vue";
+import {
+  INSTANCE_DEPLOY_COLOR,
+  INSTANCE_REGISTER_COLOR,
+  PRIMARY_COLOR,
+} from "@/base/constants";
+import { Icon } from "@iconify/vue";
+import SearchTable from "@/components/SearchTable.vue";
+import { SearchDomain } from "@/utils/SearchUtil";
+import { PROVIDE_INJECT_KEY } from "@/base/enums/ProvideInject";
+import { useRoute, useRouter } from "vue-router";
+import {
+  getApplicationInstanceInfo,
+  getApplicationInstanceStatistics,
+} from "@/api/service/app";
+import { formattedDate } from "@/utils/DateUtil";
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-let __null = PRIMARY_COLOR
+let __null = PRIMARY_COLOR;
 let statisticsInfo = reactive({
   info: <{ [key: string]: string }>{},
-  report: <{ [key: string]: { value: string; icon: string } }>{}
-})
+  report: <{ [key: string]: { value: string; icon: string } }>{},
+});
 
 onMounted(async () => {
-  let statistics = (await getApplicationInstanceStatistics({})).data
-  statisticsInfo.info = <{ [key: string]: string }>statistics
+  let statistics = (await getApplicationInstanceStatistics({})).data;
+  statisticsInfo.info = <{ [key: string]: string }>statistics;
   statisticsInfo.report = {
     providers: {
-      icon: 'carbon:branch',
-      value: statisticsInfo.info.instanceTotal
+      icon: "carbon:branch",
+      value: statisticsInfo.info.instanceTotal,
     },
     consumers: {
-      icon: 'mdi:merge',
-      value: statisticsInfo.info.versionTotal
+      icon: "mdi:merge",
+      value: statisticsInfo.info.versionTotal,
     },
     cpu: {
-      icon: 'carbon:branch',
-      value: statisticsInfo.info.cpuTotal
+      icon: "carbon:branch",
+      value: statisticsInfo.info.cpuTotal,
     },
     memory: {
-      icon: 'mdi:merge',
-      value: statisticsInfo.info.memoryTotal
-    }
-  }
-})
+      icon: "mdi:merge",
+      value: statisticsInfo.info.memoryTotal,
+    },
+  };
+});
 
 const columns = [
   {
-    title: 'instanceDomain.ip',
-    dataIndex: 'ip',
-    key: 'ip',
+    title: "instanceDomain.ip",
+    dataIndex: "ip",
+    key: "ip",
     sorter: true,
     width: 150,
-    fixed: 'left'
+    fixed: "left",
   },
   {
-    title: 'instanceDomain.name',
-    dataIndex: 'name',
-    key: 'name',
+    title: "instanceDomain.name",
+    dataIndex: "name",
+    key: "name",
     sorter: true,
-    width: 180
+    width: 180,
   },
   {
-    title: 'instanceDomain.deployState',
-    dataIndex: 'deployState',
-    key: 'deployState',
+    title: "instanceDomain.deployState",
+    dataIndex: "deployState",
+    key: "deployState",
     sorter: true,
-    width: 150
+    width: 150,
   },
   {
-    title: 'instanceDomain.deployCluster',
-    dataIndex: 'deployClusters',
-    key: 'deployClusters',
+    title: "instanceDomain.deployCluster",
+    dataIndex: "deployClusters",
+    key: "deployClusters",
     sorter: true,
-    width: 180
+    width: 180,
   },
   {
-    title: 'instanceDomain.registerState',
-    dataIndex: 'registerState',
-    key: 'registerState',
+    title: "instanceDomain.registerState",
+    dataIndex: "registerState",
+    key: "registerState",
     sorter: true,
-    width: 150
+    width: 150,
   },
   {
-    title: 'instanceDomain.registerClusters',
-    dataIndex: 'registerCluster',
-    key: 'registerCluster',
+    title: "instanceDomain.registerClusters",
+    dataIndex: "registerCluster",
+    key: "registerCluster",
     sorter: true,
-    width: 200
+    width: 200,
   },
   {
-    title: 'instanceDomain.cpu',
-    dataIndex: 'cpu',
-    key: 'cpu',
+    title: "instanceDomain.cpu",
+    dataIndex: "cpu",
+    key: "cpu",
     sorter: true,
-    width: 120
+    width: 120,
   },
   {
-    title: 'instanceDomain.memory',
-    dataIndex: 'memory',
-    key: 'memory',
+    title: "instanceDomain.memory",
+    dataIndex: "memory",
+    key: "memory",
     sorter: true,
-    width: 120
+    width: 120,
   },
   {
-    title: 'instanceDomain.startTime',
-    dataIndex: 'startTime',
-    key: 'startTime',
+    title: "instanceDomain.startTime",
+    dataIndex: "startTime",
+    key: "startTime",
     sorter: true,
-    width: 150
+    width: 150,
   },
   {
-    title: 'instanceDomain.registerTime',
-    dataIndex: 'registerTime',
-    key: 'registerTime',
+    title: "instanceDomain.registerTime",
+    dataIndex: "registerTime",
+    key: "registerTime",
     sorter: true,
-    width: 150
+    width: 150,
   },
   {
-    title: 'instanceDomain.labels',
-    dataIndex: 'labels',
-    key: 'labels',
+    title: "instanceDomain.labels",
+    dataIndex: "labels",
+    key: "labels",
     sorter: true,
-    fixed: 'right',
-    width: 200
-  }
-]
+    fixed: "right",
+    width: 200,
+  },
+];
 
-let appNameParam: any = route.params?.pathId
+let appNameParam: any = route.params?.pathId;
 const searchDomain = reactive(
   new SearchDomain(
     [
       {
-        label: '',
-        param: 'type',
+        label: "",
+        param: "type",
         defaultValue: 1,
         dict: [
-          { label: 'ip', value: 1 },
-          { label: 'name', value: 2 },
-          { label: 'label', value: 3 }
+          { label: "ip", value: 1 },
+          { label: "name", value: 2 },
+          { label: "label", value: 3 },
         ],
         style: {
-          width: '100px'
-        }
+          width: "100px",
+        },
       },
       {
-        label: '',
-        param: 'search',
+        label: "",
+        param: "search",
         style: {
-          width: '300px'
-        }
+          width: "300px",
+        },
       },
       {
-        label: '',
-        param: 'appName',
+        label: "",
+        param: "appName",
         defaultValue: appNameParam,
         dict: [],
-        dictType: 'APPLICATION_NAME'
-      }
+        dictType: "APPLICATION_NAME",
+      },
     ],
     getApplicationInstanceInfo,
     columns,
-    { pageSize: 4 },
+    { pageSize: 10 },
     true
   )
-)
+);
 
 onMounted(() => {
   searchDomain.tableStyle = {
-    scrollX: '100',
-    scrollY: '500px'
-  }
-  searchDomain.onSearch()
-})
+    scrollX: "100",
+    scrollY: "500px",
+  };
+  searchDomain.onSearch();
+});
 
 const viewDetail = (serviceName: string) => {
-  router.push('/resources/services/detail/' + serviceName)
-}
+  router.push("/resources/services/detail/" + serviceName);
+};
 
-provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
+provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain);
 </script>
 <style lang="less" scoped>
 .__container_app_instance {
@@ -262,7 +271,7 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
   .statistic-icon-big {
     width: 38px;
     height: 38px;
-    background: v-bind('PRIMARY_COLOR');
+    background: v-bind("PRIMARY_COLOR");
     line-height: 38px;
     vertical-align: middle;
     text-align: center;

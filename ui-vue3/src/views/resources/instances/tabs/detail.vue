@@ -169,7 +169,7 @@
               :labelStyle="{ fontWeight: 'bold' }"
             >
               <p
-                v-if="instanceDetail?.node.length > 0"
+                v-if="instanceDetail?.node"
                 @click="copyIt(instanceDetail?.node)"
                 class="description-item-content with-card"
               >
@@ -195,7 +195,7 @@
             >
               <a-card class="description-item-card">
                 <p
-                  v-if="instanceDetail?.image.length > 0"
+                  v-if="instanceDetail?.image"
                   @click="copyIt(instanceDetail?.image)"
                   class="description-item-content with-card"
                 >

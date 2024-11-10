@@ -16,8 +16,9 @@
  */
 
 import Mock from 'mockjs'
+import devTool from '@/utils/DevToolUtil'
 
-Mock.mock('/mock/instance/search', 'get', () => {
+Mock.mock(devTool.mockUrl('/mock/instance/search'), 'get', () => {
   let total = Mock.mock('@integer(8, 1000)')
   let list = []
   for (let i = 0; i < total; i++) {
@@ -26,17 +27,11 @@ Mock.mock('/mock/instance/search', 'get', () => {
       name: 'shop-user',
       deployState: Mock.Random.pick(['Running', 'Pending', 'Terminating', 'Crashing']),
       deployCluster: 'tx-shanghai-1',
-      registerStates: [
-        {
-          label: 'Registed',
-          value: 'Registed',
-          level: 'healthy'
-        }
-      ],
+      registerState: 'Registed',
       registerClusters: ['ali-hangzhou-1', 'ali-hangzhou-2'],
       cpu: '1.2c',
       memory: '2349MB',
-      startTime: '2023-06-09 03:47:10',
+      startTime_k8s: '2023-06-09 03:47:10',
       registerTime: '2023-06-09 03:48:20',
       labels: {
         region: 'beijing',
@@ -46,20 +41,21 @@ Mock.mock('/mock/instance/search', 'get', () => {
   }
   return {
     code: 200,
-    message: 'success',
+    msg: 'success',
     data: Mock.mock({
-      total: total,
-      curPage: 1,
-      pageSize: 10,
-      data: list
+      pageInfo: {
+        Total: total,
+        NextOffset: '0'
+      },
+      list: list
     })
   }
 })
 
-Mock.mock('/mock/instance/detail', 'get', () => {
+Mock.mock(devTool.mockUrl('/mock/instance/detail'), 'get', () => {
   return {
     code: 200,
-    message: 'success',
+    msg: 'success',
     data: {
       deployState: 'Running',
       registerStates: 'Unregisted',
@@ -82,15 +78,15 @@ Mock.mock('/mock/instance/detail', 'get', () => {
       probes: {
         startupProbe: {
           type: 'http',
-          port: 22222
+          open: true
         },
         readinessProbe: {
           type: 'http',
-          port: 22222
+          open: true
         },
-        livenessPronbe: {
+        livenessProbe: {
           type: 'http',
-          port: 22222
+          open: true
         }
       }
     }
