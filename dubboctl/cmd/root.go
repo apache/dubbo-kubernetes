@@ -16,73 +16,38 @@
 package cmd
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
-)
-
-import (
-	"github.com/ory/viper"
-
+	"flag"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
 	"github.com/spf13/cobra"
 )
 
-type RootCommandConfig struct {
-	Name      string
-	NewClient deploy.ClientFactory
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(args []string) {
-	rootCmd := GetRootCmd(args)
-	// when flag error occurs, print usage string.
-	// but if an error occurs when executing command, usage string will not be printed.
-	rootCmd.SetFlagErrorFunc(func(command *cobra.Command, err error) error {
-		command.Println(command.UsageString())
-
-		return err
-	})
-
-	cobra.CheckErr(rootCmd.Execute())
+func AddFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 }
 
 func GetRootCmd(args []string) *cobra.Command {
-	// rootCmd represents the base command when called without any subcommands
+
 	rootCmd := &cobra.Command{
-		Use:           "dubboctl",
-		Short:         "dubbo control interface",
-		Long:          ``,
-		SilenceErrors: true,
-		SilenceUsage:  true,
+		Use:   "dubboctl",
+		Short: "Dubbo command line utilities",
+		Long:  `Dubbo configuration command line utility for debug and use dubbo applications.`,
 	}
-
-	cfg := RootCommandConfig{
-		Name: "dubboctl",
-	}
-
-	// DeployMode Variables
-	// Evaluated first after static defaults, set all flags to be associated with
-	// a version prefixed by "DUBBO_"
-	viper.AutomaticEnv()        // read in environment variables for DUBBO_<flag>
-	viper.SetEnvPrefix("dubbo") // ensure that all have the prefix
-	newClient := cfg.NewClient
-	if newClient == nil {
-		newClient = deploy.NewClient
-	}
-
-	//addSubCommands(rootCmd, newClient)
 	rootCmd.SetArgs(args)
+
+	installCmd := cluster.InstallCmd(nil)
+	rootCmd.AddCommand(installCmd)
+	AddFlags(installCmd)
+	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 	return rootCmd
 }
 
-//func addSubCommands(rootCmd *cobra.Command, newClient deploy.ClientFactory) {
-//	deploy.AddBuild(rootCmd, newClient)
-//	deploy.AddCreate(rootCmd, newClient)
-//	deploy.AddRepository(rootCmd, newClient)
-//	deploy.AddDeploy(rootCmd, newClient)
-//	AddManifest(rootCmd)
-//	generate.AddGenerate(rootCmd)
-//	addProfile(rootCmd)
-//	dashboard.AddDashboard(rootCmd)
-//	registry.AddRegistryCmd(rootCmd)
-//	proxy.AddProxy(cmd2.DefaultRunCmdOpts, rootCmd)
-//}
+func hideFlags(origin *cobra.Command, hide ...string) {
+	origin.SetHelpFunc(func(command *cobra.Command, strings []string) {
+		for _, hf := range hide {
+			_ = command.Flags().MarkHidden(hf)
+		}
+		origin.SetHelpFunc(nil)
+		origin.HelpFunc()(command, strings)
+	})
+}
