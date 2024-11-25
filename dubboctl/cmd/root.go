@@ -16,21 +16,13 @@
 package cmd
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/dashboard"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/deploy"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/generate"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/proxy"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/registry"
 )
 
 import (
 	"github.com/ory/viper"
 
 	"github.com/spf13/cobra"
-)
-
-import (
-	cmd2 "github.com/apache/dubbo-kubernetes/pkg/core/cmd"
 )
 
 type RootCommandConfig struct {
@@ -77,20 +69,20 @@ func GetRootCmd(args []string) *cobra.Command {
 		newClient = deploy.NewClient
 	}
 
-	addSubCommands(rootCmd, newClient)
+	//addSubCommands(rootCmd, newClient)
 	rootCmd.SetArgs(args)
 	return rootCmd
 }
 
-func addSubCommands(rootCmd *cobra.Command, newClient deploy.ClientFactory) {
-	deploy.AddBuild(rootCmd, newClient)
-	deploy.AddCreate(rootCmd, newClient)
-	deploy.AddRepository(rootCmd, newClient)
-	deploy.AddDeploy(rootCmd, newClient)
-	AddManifest(rootCmd)
-	generate.AddGenerate(rootCmd)
-	addProfile(rootCmd)
-	dashboard.AddDashboard(rootCmd)
-	registry.AddRegistryCmd(rootCmd)
-	proxy.AddProxy(cmd2.DefaultRunCmdOpts, rootCmd)
-}
+//func addSubCommands(rootCmd *cobra.Command, newClient deploy.ClientFactory) {
+//	deploy.AddBuild(rootCmd, newClient)
+//	deploy.AddCreate(rootCmd, newClient)
+//	deploy.AddRepository(rootCmd, newClient)
+//	deploy.AddDeploy(rootCmd, newClient)
+//	AddManifest(rootCmd)
+//	generate.AddGenerate(rootCmd)
+//	addProfile(rootCmd)
+//	dashboard.AddDashboard(rootCmd)
+//	registry.AddRegistryCmd(rootCmd)
+//	proxy.AddProxy(cmd2.DefaultRunCmdOpts, rootCmd)
+//}
