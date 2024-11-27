@@ -31,7 +31,7 @@ func InstallCmd(ctx cli.Context) *cobra.Command {
 	return nil
 }
 
-func WithInstallCmdArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *InstallArgs) *cobra.Command {
+func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *InstallArgs) *cobra.Command {
 	ic := &cobra.Command{
 		Use:   "install",
 		Short: "Applies an Dubbo manifest, installing or reconfiguring Dubbo on a cluster.",
