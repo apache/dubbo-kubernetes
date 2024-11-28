@@ -26,36 +26,37 @@ Mock.mock('/mock/application/metrics', 'get', () => {
   }
 })
 
-Mock.mock('/mock/application/search', 'get', () => {
-  let total = Mock.mock('@integer(8, 1000)')
-  let list = []
+Mock.mock(devTool.mockUrl('/mock/application/search'), 'get', () => {
+  const total = Mock.mock('@integer(3, 20)')
+  const list = []
   for (let i = 0; i < total; i++) {
-    let tmp: any = {
-      registerClusters: []
-    }
-    let num = Mock.mock('@integer(1,3)')
-    for (let j = 0; j < num; j++) {
-      let r = Mock.mock('@string(5)')
-      tmp.registerClusters.push(`cluster_${r}`)
-    }
     list.push({
-      appName: 'app_' + Mock.mock('@string(2,10)'),
-      instanceNum: Mock.mock('@integer(80, 200)'),
-      deployCluster: 'cluster_' + Mock.mock('@string(5)'),
-      ...tmp
+      appName: Mock.Random.pick([
+        'QuickStartApplication',
+        'shop-comment',
+        'shop-detail',
+        'shop-order',
+        'shop-user'
+      ]),
+      deployClusters: [Mock.Random.pick(['default', 'prod', 'test'])],
+      instanceCount: Mock.mock('@integer(1, 5)'),
+      registryClusters: [`${Mock.mock('@ip')}:8848`]
     })
   }
+
   return {
     code: 200,
-    message: 'success',
+    msg: 'success',
     data: {
-      total: total,
-      curPage: 1,
-      pageSize: 10,
-      data: list
+      list: list,
+      pageInfo: {
+        Total: total,
+        NextOffset: ''
+      }
     }
   }
 })
+
 Mock.mock('/mock/application/instance/statistics', 'get', () => {
   return {
     code: 1000,
@@ -70,7 +71,7 @@ Mock.mock('/mock/application/instance/statistics', 'get', () => {
 })
 
 Mock.mock(devTool.mockUrl('/mock/application/instance/info'), 'get', () => {
-  let total = Mock.mock('@integer(8, 1000)')
+  let total = Mock.mock('@integer(8, 100)')
   let list = []
   for (let i = 0; i < total; i++) {
     list.push({
@@ -78,13 +79,7 @@ Mock.mock(devTool.mockUrl('/mock/application/instance/info'), 'get', () => {
       name: 'shop-user',
       deployState: Mock.Random.pick(['Running', 'Pending', 'Terminating', 'Crashing']),
       deployCluster: 'tx-shanghai-1',
-      registerStates: [
-        {
-          label: 'Registed',
-          value: 'Registed',
-          level: 'healthy'
-        }
-      ],
+      registerState: 'Registed',
       registerClusters: ['ali-hangzhou-1', 'ali-hangzhou-2'],
       cpu: '1.2c',
       memory: '2349MB',
@@ -98,41 +93,53 @@ Mock.mock(devTool.mockUrl('/mock/application/instance/info'), 'get', () => {
   }
   return {
     code: 200,
-    message: 'success',
+    msg: 'success',
     data: Mock.mock({
-      total: total,
-      curPage: 1,
-      pageSize: 10,
-      data: list
+      pageInfo: {
+        Total: list.length,
+        NextOffset: 0
+      },
+      list: list
     })
   }
 })
 
-Mock.mock('/mock/application/detail', 'get', () => {
+Mock.mock(devTool.mockUrl('/mock/application/detail'), 'get', () => {
   return {
     code: 200,
-    message: 'success',
+    msg: 'success',
     data: {
-      appName: ['shop-user'],
-      rpcProtocols: ['dubbo 2.0.2'],
-      dubboVersions: ['Dubbo 3.2.10', 'Dubbo 2.7.4.1'],
-      dubboPorts: ['20880'],
-      serialProtocols: ['fastjson2'],
-      appTypes: ['无状态'],
-      images: [
-        'harbor.apche.org/dubbo-samples-shop-user:v1.0',
-        'harbor.apche.org/dubbo-samples-shop-user:v1.1',
-        'harbor.apche.org/dubbo-samples-shop-user:v1.2'
-      ],
-      workloads: [
-        'dubbo-samples-shop-user-base',
-        'dubbo-samples-shop-user-gray',
-        'dubbo-samples-shop-user-gray',
-        'dubbo-samples-shop-user-gray'
-      ],
-      deployCluster: ['ali-shanghai-1', 'tx-shanghai-2'],
-      registerCluster: ['nacos-cluster-1', 'nacos-cluster-2'],
-      registerMode: ['应用级', '接口级']
+      appName: Mock.mock('@word(10,20)'),
+      appTypes: Mock.mock({
+        'array|2-5': ['@word(5,10)']
+      }).array,
+      deployClusters: Mock.mock({
+        'array|3-6': ['@word(8,15)']
+      }).array,
+      dubboPorts: Mock.mock({
+        'array|1-3': ['@integer(10000,65535)']
+      }).array,
+      dubboVersions: Mock.mock({
+        'array|2-4': ['@word(3,8)']
+      }).array,
+      images: Mock.mock({
+        'array|2-5': ['@word(10,20)']
+      }).array,
+      registerClusters: Mock.mock({
+        'array|2-4': ['@word(8,15)']
+      }).array,
+      registerModes: Mock.mock({
+        'array|1-3': ['@word(5,10)']
+      }).array,
+      rpcProtocols: Mock.mock({
+        'array|2-4': ['@word(3,8)']
+      }).array,
+      serialProtocols: Mock.mock({
+        'array|2-4': ['@word(4,8)']
+      }).array,
+      workloads: Mock.mock({
+        'array|3-6': ['@word(6,12)']
+      }).array
     }
   }
 })
@@ -152,6 +159,20 @@ Mock.mock('/mock/application/event', 'get', () => {
     message: 'success',
     data: {
       ...list
+    }
+  }
+})
+
+Mock.mock(devTool.mockUrl('/mock/application/service/form'), 'get', () => {
+  return {
+    code: 200,
+    message: 'success',
+    data: {
+      list: [],
+      pageInfo: {
+        Total: 0,
+        NextOffset: ''
+      }
     }
   }
 })

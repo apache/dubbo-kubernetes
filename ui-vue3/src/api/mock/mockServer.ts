@@ -16,19 +16,29 @@
  */
 
 import Mock from 'mockjs'
-
-Mock.mock('/mock/metrics/metadata', 'get', {
+import devTool from '../../utils/DevToolUtil'
+Mock.mock(devTool.mockUrl('/mock/metadata'), 'get', {
   code: 200,
-  message: '成功',
+  msg: 'success',
   data: {
-    versions: ['dubbo-golang-3.0.4'],
-    protocols: ['tri'],
-    rules: ['DemoService:1.0.0:test.configurators', 'DemoService4:bb:aa.configurators'],
-    configCenter: '127.0.0.1:2181',
-    registry: '127.0.0.1:2181',
-    metadataCenter: '127.0.0.1:2181',
-    // make sure the X-Frame-Options is forbidden
-    grafana: `http://${window.location.host}/admin/home`,
-    prometheus: '127.0.0.1:9090'
+    registry: 'nacos://47.101.215.139:8848?username=nacos&password=nacos',
+    metadata: 'nacos://47.101.215.139:8848?username=nacos&password=nacos',
+    config: 'nacos://47.101.215.139:8848?username=nacos&password=nacos',
+    prometheus: 'http://prometheus.observability.svc.cluster.local:9090/',
+    grafana: 'http://47.251.100.138:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application',
+    tracing: 'http://47.251.100.138:3000/d/e968a89b-f03d-42e3-8ad3-930ae815cb0f/application'
+  }
+})
+
+Mock.mock(devTool.mockUrl('/mock/overview'), 'get', {
+  code: 200,
+  msg: 'success',
+  data: {
+    appCount: 0,
+    serviceCount: 0,
+    insCount: 0,
+    protocols: {},
+    releases: {},
+    discoveries: {}
   }
 })

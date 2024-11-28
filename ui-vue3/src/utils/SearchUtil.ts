@@ -78,7 +78,7 @@ export class SearchDomain {
     handleResult && this.onSearch(handleResult)
   }
 
-  async onSearch(handleResult: Function) {
+  async onSearch(handleResult?: Function) {
     this.table.loading = true
     setTimeout(() => {
       this.table.loading = false

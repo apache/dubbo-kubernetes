@@ -219,7 +219,7 @@ const searchDomain = reactive(
     ],
     getApplicationInstanceInfo,
     columns,
-    { pageSize: 4 },
+    { pageSize: 10 },
     true
   )
 )

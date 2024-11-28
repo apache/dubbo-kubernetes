@@ -20,15 +20,16 @@ import devTool from '@/utils/DevToolUtil'
 
 Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
   code: 200,
-  message: 'success',
+  msg: 'success',
   data: {
-    total: 8,
-    curPage: 1,
-    pageSize: 5,
-    data: [
+    pageInfo: {
+      Total: 8,
+      NextOffset: '0'
+    },
+    list: [
       {
         serviceName: 'org.apache.dubbo.samples.UserService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -52,7 +53,7 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
       },
       {
         serviceName: 'org.apache.dubbo.samples.OrderService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -76,7 +77,7 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
       },
       {
         serviceName: 'org.apache.dubbo.samples.DetailService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -100,7 +101,7 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
       },
       {
         serviceName: 'org.apache.dubbo.samples.PayService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -124,7 +125,7 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
       },
       {
         serviceName: 'org.apache.dubbo.samples.CommentService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -148,7 +149,7 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
       },
       {
         serviceName: 'org.apache.dubbo.samples.RepayService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -172,7 +173,7 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
       },
       {
         serviceName: 'org.apche.dubbo.samples.TransportService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -196,7 +197,7 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
       },
       {
         serviceName: 'org.apche.dubbo.samples.DistributionService',
-        versionGroup: [
+        versionGroups: [
           {
             version: '1.0.0',
             group: 'group1'
@@ -219,5 +220,19 @@ Mock.mock(devTool.mockUrl('/mock/service/search'), 'get', {
         requestTotal: 145
       }
     ]
+  }
+})
+
+Mock.mock(devTool.mockUrl('/mock/service/distribution'), 'get', () => {
+  return {
+    code: 200,
+    msg: 'success',
+    data: {
+      pageInfo: {
+        Total: 8,
+        NextOffset: '0'
+      },
+      list: []
+    }
   }
 })
