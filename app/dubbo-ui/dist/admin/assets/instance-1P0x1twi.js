@@ -1,0 +1,1 @@
+import{r as e}from"./request-j2Zm8xBq.js";const n=t=>e({url:"/instance/search",method:"get",params:t}),r=t=>e({url:"/instance/detail",method:"get",params:t}),a=t=>e({url:"/instance/metrics",method:"get",params:t});export{a,r as g,n as s};
