@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/pointer"
+	"path/filepath"
 	"sigs.k8s.io/yaml"
 	"strings"
 )
@@ -89,4 +90,46 @@ func (m Map) GetPathMap(s string) (Map, bool) {
 		current = subkey
 	}
 	return current, true
+}
+
+func splitEscaped(s string, r rune) []string {
+	var prev rune
+	if len(s) == 0 {
+		return []string{}
+	}
+	prevIndex := 0
+	var out []string
+	for i, c := range s {
+		if c == r && (i == 0 || i > 0 && prev != '\\') {
+			out = append(out, s[prevIndex:i])
+			prevIndex = i + 1
+		}
+		prev = c
+	}
+	out = append(out, s[prevIndex:])
+	return out
+}
+
+func splitPath(path string) []string {
+	path = filepath.Clean(path)
+	path = strings.TrimPrefix(path, ".")
+	path = strings.TrimSuffix(path, ".")
+	pv := splitEscaped(path, '.')
+	var r []string
+	for _, str := range pv {
+		if str != "" {
+			str = strings.ReplaceAll(str, "\\.", ".")
+			nBracket := strings.IndexRune(str, '[')
+			if nBracket > 0 {
+				r = append(r, str[:nBracket], str[nBracket:])
+			} else {
+				r = append(r, str)
+			}
+		}
+	}
+	return r
+}
+
+func GetPathHelper[T any](m Map, name string) T {
+	return nil
 }
