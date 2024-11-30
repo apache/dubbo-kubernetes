@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubetype-gen
 // +kubetype-gen:groupVersion=install.dubbo.io/v1alpha1
@@ -37,13 +36,12 @@ type DubboOperator struct {
 type DubboOperatorSpec struct {
 	Profile string `json:"profile,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
-	Revision string `json:"revision,omitempty"`
-	Components *DubboComponentSpec `json:"components,omitempty"`
-	Values json.RawMessage `json:"values,omitempty"`
-	UnvalidatedValues any `json:"unvalidatedValues,omitempty"`
+	Revision string           `json:"revision,omitempty"`
+	Components *DubboCompSpec `json:"components,omitempty"`
+	Values json.RawMessage    `json:"values,omitempty"`
 }
 
-type DubboComponentSpec struct {
+type DubboCompSpec struct {
 	Base    *BaseComponentSpec `json:"base,omitempty"`
 }
 
@@ -56,6 +54,11 @@ type ComponentSpec struct {
 	Raw map[string]any `json:"-"`
 }
 
+type MetadataCompSpec struct {
+	ComponentSpec
+	Name string `json:"name,omitempty"`
+	Label map[string]string `json:"label,omitempty"`
+}
 
 type BoolValue struct {
 	bool
