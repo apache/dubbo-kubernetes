@@ -6,10 +6,10 @@ type client struct {
 type Client interface {
 }
 
-type CliClient interface {
+type CLIClient interface {
 }
 
 var (
 	_ Client    = &client{}
-	_ CliClient = &client{}
+	_ CLIClient = &client{}
 )

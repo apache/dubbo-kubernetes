@@ -52,6 +52,6 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *InstallArgs)
 	return ic
 }
 
-func install(kubeClient kube.CliClient, rootArgs *RootArgs, iArgs *InstallArgs) error {
+func install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *InstallArgs) error {
 	return nil
 }
