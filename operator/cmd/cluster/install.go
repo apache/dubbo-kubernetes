@@ -42,7 +42,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *InstallArgs)
 		dubboctl install --profile=default`,
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := ctx.CliClient()
+			_, err := ctx.CLIClient()
 			if err != nil {
 				return err
 			}

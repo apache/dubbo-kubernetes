@@ -1,10 +1,10 @@
 package helm
 
 import (
+	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
-	"io/fs"
 	"sort"
 	"strings"
 )
@@ -14,18 +14,6 @@ const (
 	// see https://helm.sh/docs/chart_template_guide/notes_files/
 	NotesFileNameSuffix = ".txt"
 )
-
-func getFilesRecursive() {
-
-}
-
-func stripPrefix() {
-
-}
-
-func loaderChart(f fs.FS, root string) (*chart.Chart, error) {
-	return nil, nil
-}
 
 func readerChart(namespace string, chrt *chart.Chart) ([]string, error) {
 	var s []string
@@ -55,6 +43,9 @@ func readerChart(namespace string, chrt *chart.Chart) ([]string, error) {
 	return s, nil
 }
 
-func Reader() {
-
+func Reader(namespace string, dir string, dop values.Map) {
+	_, ok := dop.GetPathMap("spec.values")
+	if !ok {
+		return
+	}
 }
