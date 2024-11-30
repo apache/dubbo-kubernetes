@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/pointer"
 	"sigs.k8s.io/yaml"
+	"strings"
 )
 
 type Map map[string]any
@@ -59,4 +60,33 @@ func fromYAML[T any](overlay []byte) (T, error) {
 		return pointer.Empty[T](), err
 	}
 	return *v, nil
+}
+
+func parsePath(key string) []string { return strings.Split(key, ".") }
+
+func tableLookup(m Map, simple string) (Map, bool) {
+	v, ok := m[simple]
+	if !ok {
+		return nil, false
+	}
+	if vv, ok := v.(map[string]interface{}); ok {
+		return vv, true
+	}
+	if vv, ok := v.(Map); ok {
+		return vv, true
+	}
+	return nil, false
+}
+
+// GetPathMap key.subkey
+func (m Map) GetPathMap(s string) (Map, bool) {
+	current := m
+	for _, n := range parsePath(s) {
+		subkey, ok := tableLookup(current, n)
+		if !ok {
+			return nil, false
+		}
+		current = subkey
+	}
+	return current, true
 }
