@@ -5,6 +5,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/cheggaaa/pb/v3"
 	"io"
+	"sort"
+	"strings"
 	"sync"
 )
 
@@ -18,14 +20,6 @@ const (
 )
 
 const inProgress = `{{ yellow (cycle . "-" "-" " ") }}`
-
-type ManifestInfo struct {
-	report   func()
-	err      string
-	waiting  []string
-	finished bool
-	mu       sync.Mutex
-}
 
 type Info struct {
 	components map[string]*ManifestInfo
@@ -67,6 +61,7 @@ func (info *Info) reportProgress(componentName string) func() {
 			info.bar = createBar()
 			return
 		}
+		info.SetMessage(info.createStatus(info.bar.Width()), false)
 	}
 }
 
@@ -82,6 +77,30 @@ func (info *Info) SetMessage(status string, finish bool) {
 	info.bar.Write()
 }
 
+func (info *Info) createStatus(maxWidth int) string {
+	comps := make([]string, 0, len(info.components))
+	wait := make([]string, 0, len(info.components))
+	for c, mi := range info.components {
+		comps = append(comps, component.UserFacingCompName(c))
+		wait = append(wait, mi.waitingResources()...)
+	}
+	sort.Strings(comps)
+	sort.Strings(wait)
+	msg := fmt.Sprintf(`Processing resources for %s.`, strings.Join(comps, ", "))
+	if len(wait) > 0 {
+		msg += fmt.Sprintf(` Waiting for %s`, strings.Join(wait, ", "))
+	}
+	progressPrefix := inProgress
+	if !info.bar.GetBool(pb.Terminal) {
+		progressPrefix = `{{ yellow "-" }}`
+	}
+	maxWidth -= 2
+	if maxWidth > 0 && len(msg) > maxWidth {
+		return progressPrefix + msg[:maxWidth-3] + "..."
+	}
+	return progressPrefix + msg
+}
+
 func createBar() *pb.ProgressBar {
 	var testWriter *io.Writer
 	bar := pb.New(0)
@@ -94,4 +113,18 @@ func createBar() *pb.ProgressBar {
 		bar.Set(pb.ReturnSymbol, "\n")
 	}
 	return bar
+}
+
+type ManifestInfo struct {
+	report   func()
+	err      string
+	waiting  []string
+	finished bool
+	mu       sync.Mutex
+}
+
+func (mi *ManifestInfo) waitingResources() []string {
+	mi.mu.Lock()
+	defer mi.mu.Unlock()
+	return mi.waiting
 }
