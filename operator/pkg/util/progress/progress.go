@@ -19,14 +19,6 @@ const (
 
 const inProgress = `{{ yellow (cycle . "-" "-" " ") }}`
 
-type ManifestInfo struct {
-	report   func()
-	err      string
-	waiting  []string
-	finished bool
-	mu       sync.Mutex
-}
-
 type Info struct {
 	components map[string]*ManifestInfo
 	state      InstallState
@@ -42,13 +34,13 @@ func NewInfo() *Info {
 	}
 }
 
-func (info *Info) reportProgress(componentName string) func() {
+func (i *Info) reportProgress(componentName string) func() {
 	return func() {
 		compName := component.Name(componentName)
 		cliName := component.UserFacingCompName(compName)
-		info.mu.Lock()
-		defer info.mu.Unlock()
-		comp := info.components[componentName]
+		i.mu.Lock()
+		defer i.mu.Unlock()
+		comp := i.components[componentName]
 		comp.mu.Lock()
 		finished := comp.finished
 		compErr := comp.err
@@ -59,27 +51,43 @@ func (info *Info) reportProgress(componentName string) func() {
 		}
 		if finished || compErr != "" {
 			if finished {
-				info.SetMessage(fmt.Sprintf(`{{ green "✔" }} %s install Completed %s`, cliName, successIcon), true)
+				i.SetMessage(fmt.Sprintf(`{{ green "✔" }} %s install Completed %s`, cliName, successIcon), true)
 			} else {
-				info.SetMessage(fmt.Sprintf(`{{ read "✘" }} %s encountered an error: %s`, cliName, compErr), true)
+				i.SetMessage(fmt.Sprintf(`{{ read "✘" }} %s encountered an error: %s`, cliName, compErr), true)
 			}
-			delete(info.components, componentName)
-			info.bar = createBar()
+			delete(i.components, componentName)
+			i.bar = createBar()
 			return
 		}
 	}
 }
 
-func (info *Info) SetMessage(status string, finish bool) {
-	if !info.bar.GetBool(pb.Terminal) && status == info.template {
+func (i *Info) SetMessage(status string, finish bool) {
+	if !i.bar.GetBool(pb.Terminal) && status == i.template {
 		return
 	}
-	info.template = status
-	info.bar.SetTemplateString(info.template)
+	i.template = status
+	i.bar.SetTemplateString(i.template)
 	if finish {
-		info.bar.Finish()
+		i.bar.Finish()
 	}
-	info.bar.Write()
+	i.bar.Write()
+}
+
+func (i *Info) SetState(state InstallState) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.state = state
+	switch i.state {
+	case StatePruning:
+		i.SetMessage(inProgress+`Pruning removed resources`, false)
+	case StateComplete:
+		// TODO Install provides the command for copying and running.
+		i.SetMessage(`{{ green "✔" }} Installation complete`, true)
+	case StateUninstallComplete:
+		// TODO Uninstall provides a one-click command to delete CRDs.
+		i.SetMessage(`{{ green "✔" }} Uninstallation complete`, true)
+	}
 }
 
 func createBar() *pb.ProgressBar {
@@ -94,4 +102,38 @@ func createBar() *pb.ProgressBar {
 		bar.Set(pb.ReturnSymbol, "\n")
 	}
 	return bar
+}
+
+type ManifestInfo struct {
+	report   func()
+	err      string
+	waiting  []string
+	finished bool
+	mu       sync.Mutex
+}
+
+func (mi *ManifestInfo) reportProgress() {
+	if mi == nil {
+		return
+	}
+}
+
+func (mi *ManifestInfo) reportFinished() {
+	if mi == nil {
+		return
+	}
+	mi.mu.Lock()
+	mi.finished = true
+	mi.mu.Unlock()
+	mi.report()
+}
+
+func (mi *ManifestInfo) reportError(err string) {
+	if mi == nil {
+		return
+	}
+	mi.mu.Lock()
+	mi.err = err
+	mi.mu.Unlock()
+	mi.report()
 }
