@@ -1,4 +1,4 @@
-package comp
+package component
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ const (
 	BaseComponentName Name = "Base"
 )
 
-type Comp struct {
+type Component struct {
 	UserFacingName Name
 	SpecName       string
 	Default        bool
@@ -20,7 +20,7 @@ type Comp struct {
 	HelmTreeRoot   string
 }
 
-var AllComps = []Comp{
+var AllComponents = []Component{
 	{
 		UserFacingName: BaseComponentName,
 		SpecName:       "base",
@@ -47,7 +47,7 @@ func UserFacingCompName(name Name) string {
 	return s
 }
 
-func (c Comp) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
+func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 	defaultNamespace := merged.GetPathString("metadata.namespace")
 	var defaultResp []apis.MetadataCompSpec
 	def := c.Default

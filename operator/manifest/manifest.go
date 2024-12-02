@@ -1,7 +1,7 @@
 package manifest
 
 import (
-	"github.com/apache/dubbo-kubernetes/operator/pkg/comp"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -11,6 +11,6 @@ type Manifest struct {
 }
 
 type ManifestSet struct {
-	Components comp.Name
+	Components component.Name
 	Manifests  []Manifest
 }
