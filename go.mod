@@ -28,6 +28,7 @@ require (
 	github.com/bakito/go-log-logr-adapter v0.0.2
 	github.com/buildpacks/imgutil v0.0.0-20240605145725-186f89b2d168
 	github.com/buildpacks/pack v0.34.2
+	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/containers/image/v5 v5.27.0
 	github.com/containers/storage v1.48.0
 	github.com/distribution/reference v0.6.0
@@ -41,6 +42,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.12.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/evanphx/json-patch/v5 v5.9.0
+	github.com/fatih/color v1.16.0
 	github.com/fullstorydev/grpcurl v1.9.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-co-op/gocron v1.9.0
@@ -58,6 +60,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/yamlfmt v0.9.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heroku/color v0.0.6
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/jhump/protoreflect v1.16.0
@@ -100,6 +103,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.30.3
 	k8s.io/apimachinery v0.30.3
 	k8s.io/client-go v0.30.3
+	k8s.io/klog/v2 v2.120.1
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 	k8s.io/kubectl v0.29.2
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
@@ -132,6 +136,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/RageCage64/multilinediff v0.2.0 // indirect
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
+	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/Workiva/go-datastructures v1.0.52 // indirect
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
@@ -196,7 +201,6 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
-	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
@@ -234,7 +238,6 @@ require (
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/vault/sdk v0.7.0 // indirect
@@ -375,7 +378,6 @@ require (
 	k8s.io/apiserver v0.30.3 // indirect
 	k8s.io/cli-runtime v0.30.3 // indirect
 	k8s.io/component-base v0.30.3 // indirect
-	k8s.io/klog/v2 v2.120.1 // indirect
 	oras.land/oras-go v1.2.5 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.13.5-0.20230601165947-6ce0bf390ce3 // indirect
