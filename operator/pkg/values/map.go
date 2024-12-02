@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/pointer"
 	"path/filepath"
+	"reflect"
 	"sigs.k8s.io/yaml"
+	"strconv"
 	"strings"
 )
 
@@ -130,6 +132,99 @@ func splitPath(path string) []string {
 	return r
 }
 
+func (m Map) GetPathString(s string) string {
+	return ""
+}
+
 func GetPathHelper[T any](m Map, name string) T {
 	return nil
+}
+
+func (m Map) GetPath(name string) (any, bool) {
+	current := any(m)
+	paths := splitPath(name)
+	for _, n := range paths {
+		if idx, ok := extractIndex(n); ok {
+			a, ok := current.([]any)
+			if !ok {
+				return nil, false
+			}
+			if idx >= 0 && idx < len(a) {
+				current = a[idx]
+			} else {
+				return nil, false
+			}
+		} else if k, v, ok := extractKeyValue(n); ok {
+			a, ok := current.([]any)
+			if !ok {
+				return nil, false
+			}
+			index := -1
+			for idx, cm := range a {
+				if MustCastAsMap(cm)[k] == v {
+					index = idx
+					break
+				}
+			}
+			if index == -1 {
+				return nil, false
+			}
+			current = a[idx]
+		} else {
+			cm, ok := CastAsMap(current)
+			if !ok {
+				return nil, false
+			}
+			subKey, ok := cm[n]
+			if !ok {
+				return nil, false
+			}
+			current = subKey
+		}
+	}
+	if p, ok := current.(*any); ok {
+		return *p, true
+	}
+	return current, true
+}
+
+func MustCastAsMap(current any) Map {
+	m, ok := CastAsMap(current)
+	if !ok {
+		if !reflect.ValueOf(current).IsValid() {
+			return Map{}
+		}
+		panic(fmt.Sprintf("not a map, got %T: %v %v", current, current, reflect.ValueOf(current).Kind()))
+	}
+	return m
+}
+
+func CastAsMap(current any) (Map, bool) {
+	if m, ok := current.(Map); ok {
+		return m, true
+	}
+	if m, ok := current.(map[string]any); ok {
+		return m, true
+	}
+	return nil, false
+}
+
+func extractIndex(seg string) (int, bool) {
+	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
+		return 0, false
+	}
+	sanitized := seg[1 : len(seg)-1]
+	v, err := strconv.Atoi(sanitized)
+	if err != nil {
+		return 0, false
+	}
+	return v, true
+}
+
+func extractKeyValue(seg string) (string, string, bool) {
+	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
+		return "", "", false
+	}
+	sanitized := seg[1 : len(seg)-1]
+	return strings.Cut(sanitized, ":")
 }

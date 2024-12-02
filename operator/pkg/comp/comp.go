@@ -47,5 +47,6 @@ func UserFacingCompName(name Name) string {
 }
 
 func (c Comp) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
+	defaultNamespace := merged
 	return nil, nil
 }
