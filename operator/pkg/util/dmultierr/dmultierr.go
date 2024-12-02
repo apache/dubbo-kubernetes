@@ -20,7 +20,7 @@ func MultiErrorFormat() multierror.ErrorFormatFunc {
 	}
 }
 
-func NewDMultiErr() *multierror.Error {
+func New() *multierror.Error {
 	return &multierror.Error{
 		ErrorFormat: MultiErrorFormat(),
 	}
