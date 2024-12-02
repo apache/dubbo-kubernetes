@@ -133,11 +133,16 @@ func splitPath(path string) []string {
 }
 
 func (m Map) GetPathString(s string) string {
-	return ""
+	return GetPathHelper[string](m, s)
 }
 
 func GetPathHelper[T any](m Map, name string) T {
-	return nil
+	v, ok := m.GetPath(name)
+	if !ok {
+		return pointer.Empty[T]()
+	}
+	t, _ := v.(T)
+	return t
 }
 
 func (m Map) GetPath(name string) (any, bool) {
@@ -207,6 +212,10 @@ func CastAsMap(current any) (Map, bool) {
 		return m, true
 	}
 	return nil, false
+}
+
+func ConvertMap[T any](m Map) (T, error) {
+	return fromJSON[T]([]byte(m.JSON()))
 }
 
 func extractIndex(seg string) (int, bool) {
