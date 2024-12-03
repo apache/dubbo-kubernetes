@@ -34,6 +34,15 @@ func NewInfo() *Info {
 	}
 }
 
+func (i *Info) NewComponent(comp string) *ManifestInfo {
+	mi := &ManifestInfo{
+		report: i.reportProgress(comp),
+	}
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.components[component] = mi
+	return mi
+}
 func (i *Info) reportProgress(componentName string) func() {
 	return func() {
 		compName := component.Name(componentName)
@@ -112,13 +121,13 @@ type ManifestInfo struct {
 	mu       sync.Mutex
 }
 
-func (mi *ManifestInfo) reportProgress() {
+func (mi *ManifestInfo) ReportProgress() {
 	if mi == nil {
 		return
 	}
 }
 
-func (mi *ManifestInfo) reportFinished() {
+func (mi *ManifestInfo) ReportFinished() {
 	if mi == nil {
 		return
 	}
@@ -128,7 +137,7 @@ func (mi *ManifestInfo) reportFinished() {
 	mi.report()
 }
 
-func (mi *ManifestInfo) reportError(err string) {
+func (mi *ManifestInfo) ReportError(err string) {
 	if mi == nil {
 		return
 	}

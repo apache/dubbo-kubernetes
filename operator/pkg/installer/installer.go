@@ -4,6 +4,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/dmultierr"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -13,10 +14,11 @@ import (
 )
 
 type Installer struct {
-	DryRun   bool
-	SkipWait bool
-	Kube     kube.CLIClient
-	Values   values.Map
+	DryRun       bool
+	SkipWait     bool
+	Kube         kube.CLIClient
+	Values       values.Map
+	ProgressInfo *progress.Info
 }
 
 func (i Installer) install(manifests []manifest.ManifestSet) error {
@@ -79,11 +81,15 @@ func (i Installer) InstallManifests(manifests []manifest.ManifestSet) error {
 func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 	componentNames := string(manifestSet.Components)
 	manifests := manifestSet.Manifests
+	pi := i.ProgressInfo.NewComponent(componentNames)
 	for _, obj := range manifests {
 		if err := i.serverSideApply(obj); err != nil {
+			pi.ReportError(err.Error())
 			return err
 		}
+		pi.ReportProgress()
 	}
+	pi.ReportFinished()
 	return nil
 }
 
