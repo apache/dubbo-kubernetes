@@ -39,3 +39,4 @@ message GlobalConfig {
   ArchConfig arch = 1 [deprecated = true];
 
   string DubboNamespace = 14;
+}
