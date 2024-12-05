@@ -41,6 +41,13 @@ func GetRootCmd(args []string) *cobra.Command {
 
 	installCmd := cluster.InstallCmd(ctx)
 	rootCmd.AddCommand(installCmd)
+
+	uninstallCmd := cluster.UninstallCmd(ctx)
+	rootCmd.AddCommand(uninstallCmd)
+
+	upgradeCmd := cluster.UpgradeCmd(ctx)
+	rootCmd.AddCommand(upgradeCmd)
+	
 	AddFlags(installCmd)
 	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 	return rootCmd
