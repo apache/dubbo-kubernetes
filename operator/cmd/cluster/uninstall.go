@@ -17,7 +17,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	uiArgs := &uninstallArgs{}
 	uicmd := &cobra.Command{
 		Use:     "uninstall",
-		Short:   "Applies an Dubbo manifest, installing or reconfiguring Dubbo on a cluster",
+		Short:   "Uninstall Dubbo-related resources",
 		Long:    "",
 		Example: ``,
 		RunE: func(cmd *cobra.Command, args []string) error {
