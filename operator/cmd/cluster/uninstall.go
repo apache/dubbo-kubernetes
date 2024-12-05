@@ -13,5 +13,26 @@ func addUninstallFlags() {
 }
 
 func UninstallCmd(ctx cli.Context) *cobra.Command {
+	rootArgs := &RootArgs{}
+	uiArgs := &uninstallArgs{}
+	uicmd := &cobra.Command{
+		Use:     "uninstall",
+		Short:   "Applies an Dubbo manifest, installing or reconfiguring Dubbo on a cluster",
+		Long:    "",
+		Example: ``,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return uninstall(cmd, ctx, rootArgs, uiArgs)
+		},
+	}
+	AddFlags(uicmd, rootArgs)
+	addUninstallFlags()
+	return uicmd
+}
+
+func uninstall(
+	cmd *cobra.Command,
+	ctx cli.Context,
+	rootArgs *RootArgs,
+	uiArgs *uninstallArgs) error {
 	return nil
 }
