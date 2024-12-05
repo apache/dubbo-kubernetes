@@ -34,8 +34,12 @@ func GetRootCmd(args []string) *cobra.Command {
 		Long:  `Dubbo configuration command line utility for debug and use dubbo applications.`,
 	}
 	rootCmd.SetArgs(args)
+	flags := rootCmd.PersistentFlags()
 
-	installCmd := cluster.InstallCmd(nil)
+	rootOptions := cli.AddRootFlags(flags)
+	ctx := cli.NewCLIContext(rootOptions)
+
+	installCmd := cluster.InstallCmd(ctx)
 	rootCmd.AddCommand(installCmd)
 	AddFlags(installCmd)
 	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)

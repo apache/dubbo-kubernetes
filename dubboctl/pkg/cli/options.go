@@ -11,13 +11,13 @@ const (
 	KubeConfigFlag     = "kubeconfig"
 	ContextFlag        = "context"
 	NamespaceFlag      = "namespace"
-	DubboNamespaceFlag = "dubboNamespace"
+	DubboNamespaceFlag = "dubbo-namespace"
 	ChartFlag          = "charts"
 )
 
 type RootFlags struct {
 	kubeconfig     *string
-	cfgContext     *string
+	Context        *string
 	namespace      *string
 	dubboNamespace *string
 }
@@ -25,12 +25,12 @@ type RootFlags struct {
 func AddRootFlags(flags *pflag.FlagSet) *RootFlags {
 	rootFlags := &RootFlags{
 		kubeconfig:     pointer.Of[string](""),
-		cfgContext:     pointer.Of[string](""),
+		Context:        pointer.Of[string](""),
 		namespace:      pointer.Of[string](""),
 		dubboNamespace: pointer.Of[string](""),
 	}
 	flags.StringVarP(rootFlags.kubeconfig, KubeConfigFlag, "c", "", "Kubernetes configuration file")
-	flags.StringVar(rootFlags.cfgContext, ContextFlag, "", "Kubernetes configuration context")
+	flags.StringVar(rootFlags.Context, ContextFlag, "", "Kubernetes configuration context")
 	flags.StringVarP(rootFlags.namespace, NamespaceFlag, "n", v1.NamespaceAll, "Kubernetes namespace")
 	flags.StringVarP(rootFlags.dubboNamespace, DubboNamespaceFlag, "i", viper.GetString(DubboNamespaceFlag), "Dubbo system namespace")
 	return rootFlags
