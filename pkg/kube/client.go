@@ -55,7 +55,3 @@ func dubboScheme() *runtime.Scheme {
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	return scheme
 }
-
-func SlowConvertToRuntimeObject() {
-	return
-}

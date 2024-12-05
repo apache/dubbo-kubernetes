@@ -5,6 +5,7 @@ import "io"
 type ConsoleLogger struct {
 	stdOut io.Writer
 	stdErr io.Writer
+	scope  *log.Scope
 }
 
 type Logger interface {
@@ -21,5 +22,5 @@ func NewDefaultLogger() *ConsoleLogger {
 }
 
 func (l *ConsoleLogger) LogAndPrint(v ...any) {
-
+	return
 }
