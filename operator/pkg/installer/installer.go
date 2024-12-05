@@ -1,8 +1,8 @@
 package installer
 
 import (
-	"github.com/apache/dubbo-kubernetes/operator/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/dmultierr"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
