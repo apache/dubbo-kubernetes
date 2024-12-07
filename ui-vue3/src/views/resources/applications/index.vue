@@ -107,6 +107,10 @@ const searchDomain = reactive(
 
 onMounted(() => {
   searchDomain.onSearch()
+  searchDomain.tableStyle = {
+    scrollX: '100',
+    scrollY: 'calc(100vh - 200px)'
+  }
 })
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)

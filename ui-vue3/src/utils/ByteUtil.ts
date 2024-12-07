@@ -15,28 +15,12 @@
  * limitations under the License.
  */
 
-import request from '@/base/http/request'
-
-import { getMetricsMetadata } from '@/api/service/serverInfo'
-
-let promUrl: string = ''
-async function initPromUrl() {
-  let config = (await getMetricsMetadata({})).data
-  if (!config) {
-    throw "can't get prometheus url"
+export function bytesToHuman(bytes = 0) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let i = 0
+  while (bytes >= 1024 && i < units.length - 1) {
+    bytes /= 1024
+    i++
   }
-  promUrl = config.prometheus + '/api/v1/query'
+  return `${Math.round(bytes)} ${units[i]}`
 }
-/**
- *
- * @param params
- */
-export const queryPromSql = async (params: any): Promise<any> => {
-  return request({
-    url: 'promQL/query',
-    method: 'get',
-    params
-  })
-}
-
-// TODO Perform front-end and back-end joint debugging

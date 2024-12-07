@@ -182,6 +182,7 @@ const handleTableChange = (
   searchDomain.paged.curPage = pag.current
 
   searchDomain.onSearch()
+
   return
 }
 

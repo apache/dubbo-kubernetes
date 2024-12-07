@@ -15,28 +15,35 @@
  * limitations under the License.
  */
 
-import request from '@/base/http/request'
+package handler
 
-import { getMetricsMetadata } from '@/api/service/serverInfo'
+// reverse proxy for grafana
+import (
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+)
 
-let promUrl: string = ''
-async function initPromUrl() {
-  let config = (await getMetricsMetadata({})).data
-  if (!config) {
-    throw "can't get prometheus url"
-  }
-  promUrl = config.prometheus + '/api/v1/query'
+import (
+	"github.com/gin-gonic/gin"
+)
+
+import (
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+)
+
+func Grafana(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		baseUrl := rt.Config().Admin.Grafana
+		grafanaURL := baseUrl + "grafana" + c.Param("any")
+		proxyUrl, _ := url.Parse(grafanaURL)
+		director := func(req *http.Request) {
+			req.URL.Scheme = proxyUrl.Scheme
+			req.URL.Host = proxyUrl.Host
+			req.Host = proxyUrl.Host
+			req.URL.Path = proxyUrl.Path
+		}
+		proxy := &httputil.ReverseProxy{Director: director}
+		proxy.ServeHTTP(c.Writer, c.Request)
+	}
 }
-/**
- *
- * @param params
- */
-export const queryPromSql = async (params: any): Promise<any> => {
-  return request({
-    url: 'promQL/query',
-    method: 'get',
-    params
-  })
-}
-
-// TODO Perform front-end and back-end joint debugging

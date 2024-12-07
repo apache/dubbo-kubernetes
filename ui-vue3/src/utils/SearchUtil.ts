@@ -75,14 +75,17 @@ export class SearchDomain {
       this.paged = { ...this.paged, ...paged }
     }
     this.searchApi = searchApi
-    handleResult && this.onSearch(handleResult)
+    this.handleResult = handleResult
   }
 
-  async onSearch(handleResult: Function) {
+  async onSearch(handleResult?: Function) {
+    if (handleResult) {
+      this.handleResult = handleResult
+    }
     this.table.loading = true
     setTimeout(() => {
       this.table.loading = false
-    }, 5000)
+    }, 10000)
     const queryParams = {
       ...this.queryForm,
       ...(this.noPaged
@@ -104,8 +107,9 @@ export class SearchDomain {
       }
     } catch (error) {
       console.error('Error fetching data:', error)
+    } finally {
+      this.table.loading = false
     }
-    this.table.loading = false
   }
 }
 

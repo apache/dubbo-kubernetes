@@ -27,7 +27,17 @@ import (
 )
 
 func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
+	grafanaRouter := r.Group("/grafana")
+	{
+		grafanaRouter.Any("/*any", handler.Grafana(rt))
+	}
+
 	router := r.Group("/api/v1")
+	{
+		prometheus := router.Group("/promQL")
+		prometheus.GET("/query", handler.PromQL(rt))
+	}
+
 	{
 		instance := router.Group("/instance")
 		instance.GET("/search", handler.SearchInstances(rt))

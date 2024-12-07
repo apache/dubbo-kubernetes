@@ -84,12 +84,6 @@ let metricsMetadata = reactive({
 })
 
 onMounted(async () => {
-  console.log(
-    await queryPromSql({
-      query:
-        '((node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / (node_memory_MemTotal_bytes)) * 100'
-    })
-  )
   let clusterData = (await getClusterInfo({})).data
   metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
   clusterInfo.info = <{ [key: string]: any }>clusterData
@@ -279,6 +273,8 @@ onMounted(async () => {
 </script>
 <style lang="less" scoped>
 .__container_home_index {
+  max-height: calc(100vh - 60px);
+  overflow: auto;
   .statistic {
     width: 16vw;
   }

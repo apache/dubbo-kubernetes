@@ -58,7 +58,7 @@ export const getApplicationServiceForm = (params: any): Promise<any> => {
 
 export const getApplicationMetricsInfo = (params: any): Promise<any> => {
   return request({
-    url: '/application/metrics',
+    url: '/application/metric-dashboard',
     method: 'get',
     params
   })

@@ -47,13 +47,13 @@ func GetMetricDashBoard(rt core_runtime.Runtime, dim Dimension) gin.HandlerFunc 
 		switch dim {
 		case AppDimension:
 			req = &model.AppDashboardReq{}
-			url = rt.Config().Admin.MetricDashboards.Application.BaseURL + "?var-application="
+			url = rt.Config().Admin.MetricDashboards.Application.BaseURL
 		case InstanceDimension:
 			req = &model.InstanceDashboardReq{}
-			url = rt.Config().Admin.MetricDashboards.Instance.BaseURL + "?var-instance="
+			url = rt.Config().Admin.MetricDashboards.Instance.BaseURL
 		case ServiceDimension:
 			req = &model.ServiceDashboardReq{}
-			url = rt.Config().Admin.MetricDashboards.Service.BaseURL + "?var-service="
+			url = rt.Config().Admin.MetricDashboards.Service.BaseURL
 		}
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))

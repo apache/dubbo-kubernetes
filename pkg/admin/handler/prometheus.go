@@ -15,28 +15,38 @@
  * limitations under the License.
  */
 
-import request from '@/base/http/request'
+package handler
 
-import { getMetricsMetadata } from '@/api/service/serverInfo'
+// proxy for prometheus
 
-let promUrl: string = ''
-async function initPromUrl() {
-  let config = (await getMetricsMetadata({})).data
-  if (!config) {
-    throw "can't get prometheus url"
-  }
-  promUrl = config.prometheus + '/api/v1/query'
+import (
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+)
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+import (
+	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+)
+
+func PromQL(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		query := c.Request.URL.Query().Get("query")
+		values := url.Values{}
+		values.Add("query", query)
+		promUrl := rt.Config().Admin.Prometheus + "/api/v1/query?" + values.Encode()
+		proxyUrl, _ := url.Parse(promUrl)
+		director := func(req *http.Request) {
+			req.URL.Scheme = proxyUrl.Scheme
+			req.URL.Host = proxyUrl.Host
+			req.Host = proxyUrl.Host
+			req.URL.Path = proxyUrl.Path
+		}
+		proxy := &httputil.ReverseProxy{Director: director}
+		proxy.ServeHTTP(c.Writer, c.Request)
+	}
 }
-/**
- *
- * @param params
- */
-export const queryPromSql = async (params: any): Promise<any> => {
-  return request({
-    url: 'promQL/query',
-    method: 'get',
-    params
-  })
-}
-
-// TODO Perform front-end and back-end joint debugging

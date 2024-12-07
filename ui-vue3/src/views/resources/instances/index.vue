@@ -54,7 +54,7 @@
         </template>
 
         <template v-if="column.dataIndex === 'labels'">
-          <a-tag v-for="(value, key) in text" :key="key"> {{ key }}:{{ value }} </a-tag>
+          <a-tag v-for="(value, key) in text" :key="key"> {{ key }}:{{ value }}</a-tag>
         </template>
       </template>
     </search-table>
@@ -67,11 +67,13 @@ import { searchInstances } from '@/api/service/instance'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
-import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR } from '@/base/constants'
+import { INSTANCE_DEPLOY_COLOR, INSTANCE_REGISTER_COLOR, PRIMARY_COLOR } from '@/base/constants'
 import router from '@/router'
 import { Icon } from '@iconify/vue'
-import { PRIMARY_COLOR } from '@/base/constants'
 import { formattedDate } from '../../../utils/DateUtil'
+import { queryMetrics } from '@/base/http/promQuery'
+import { isNumber } from 'lodash'
+import { bytesToHuman } from '@/utils/ByteUtil'
 
 let __null = PRIMARY_COLOR
 let columns = [
@@ -150,9 +152,32 @@ let columns = [
     title: 'instanceDomain.labels',
     key: 'labels',
     dataIndex: 'labels',
-    width: 140
+    width: 800
   }
 ]
+
+function instanceInfo(params: any) {
+  return searchInstances(params).then(async (res) => {
+    let instances = res?.data?.list
+    try {
+      for (let instance of instances) {
+        let ip = instance.ip.split(':')[0]
+        let cpu =
+          await queryMetrics(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!=""}) by (pod) * on (pod) group_left(pod_ip)
+        kube_pod_info{pod_ip="${ip}"}`)
+        let mem =
+          await queryMetrics(`sum(container_memory_working_set_bytes{container!=""}) by (pod)
+* on (pod) group_left(pod_ip)
+kube_pod_info{pod_ip="${ip}"}`)
+        instance.cpu = isNumber(cpu) ? cpu.toFixed(3) + 'u' : cpu
+        instance.memory = isNumber(mem) ? bytesToHuman(mem) : mem
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    return res
+  })
+}
 
 // search
 const searchDomain = reactive(
@@ -167,14 +192,17 @@ const searchDomain = reactive(
         }
       }
     ],
-    searchInstances,
+    instanceInfo,
     columns
   )
 )
 
 onMounted(() => {
+  searchDomain.tableStyle = {
+    // scrollX: '100',
+    scrollY: 'calc(100vh - 200px)'
+  }
   searchDomain.onSearch()
-  console.log(searchDomain.result)
 })
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
@@ -187,6 +215,7 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
     padding: 4px 10px 4px 4px;
     border-radius: 4px;
     color: v-bind('PRIMARY_COLOR');
+
     &:hover {
       cursor: pointer;
       background: rgba(133, 131, 131, 0.13);
