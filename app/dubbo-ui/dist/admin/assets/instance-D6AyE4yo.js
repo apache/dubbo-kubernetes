@@ -1,1 +1,0 @@
-import{r as e}from"./request-SYZV5A5R.js";const n=t=>e({url:"/instance/search",method:"get",params:t}),r=t=>e({url:"/instance/detail",method:"get",params:t}),a=t=>e({url:"/instance/metrics",method:"get",params:t});export{a,r as g,n as s};
