@@ -2,6 +2,7 @@ package kube
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -9,6 +10,14 @@ import (
 )
 
 func DefaultRestConfig(kubeconfig, context string, fns ...func(config *rest.Config)) (*rest.Config, error) {
+	bcc, err := BuildClientConfig(kubeconfig, context)
+	if err != nil {
+		return nil, err
+	}
+	for _, fn := range fns {
+		fn(bcc)
+	}
+	return bcc, nil
 }
 
 func BuildClientConfig(kubeconfig, context string) (*rest.Config, error) {
@@ -16,10 +25,10 @@ func BuildClientConfig(kubeconfig, context string) (*rest.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return
+	return c, nil
 }
 
-func SetRestDefaults(config *rest.Config) (*rest.Config) {
+func SetRestDefaults(config *rest.Config) *rest.Config {
 	if config.GroupVersion == nil || config.GroupVersion.Empty() {
 		config.GroupVersion = &corev1.SchemeGroupVersion
 	}
@@ -31,6 +40,7 @@ func SetRestDefaults(config *rest.Config) (*rest.Config) {
 		}
 	}
 	if config.NegotiatedSerializer == nil {
+		config.NegotiatedSerializer = serializer.NewCodecFactory(dubboScheme()).WithoutConversion()
 	}
 	return config
 }
