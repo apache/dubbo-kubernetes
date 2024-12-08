@@ -101,7 +101,7 @@ router.beforeEach((to, from, next) => {
     margin: 16px;
     padding: 16px 16px 24px;
     //background: #fff;
-    overflow-y: auto;
+    overflow: hidden;
     height: calc(100vh - 140px);
   }
 

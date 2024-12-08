@@ -21,6 +21,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 import (
@@ -51,6 +52,13 @@ func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 	r := gin.Default()
 	// Admin UI
 	r.StaticFS("/admin", http.FS(ui.FS()))
+	r.NoRoute(func(c *gin.Context) {
+		if c.Request.URL.Path == "/admin" || strings.HasPrefix(c.Request.URL.Path, "/admin/") {
+			c.FileFromFS("/", http.FS(ui.FS())) // Serve the index.html for SPA
+		} else {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		}
+	})
 	// TODO: Implement the health check handler
 	r.Handle(http.MethodGet, "/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

@@ -131,3 +131,8 @@ Dubbo Control Plane supports a **`global`** deployment mode that can connect dif
 - Console UI Design
 - Dubbo java xDS implementation
 - Dubbo go xDS implementation
+
+## 竞赛文档：面向云原生的下一代微服务集群监测机制，涵盖Kubernetes、Nacos等
+
+1. [设计文档](./docs/面向云原生的下一代微服务集群监测机制，涵盖Kubernetes、Nacos等/设计文档/设计文档：面向云原生的下一代微服务集群监测机制，涵盖Kubernetes、Nacos等+0faa9693-5211-4bcc-aa14-35bba205443c.md)
+2. [用户手册](./docs/面向云原生的下一代微服务集群监测机制，涵盖Kubernetes、Nacos等/用户手册/用户手册：面向云原生的下一代微服务集群监测机制，涵盖Kubernetes、Nacos等+2590d6d1-bf4f-49c4-88bb-2f3fdf5671da.md)

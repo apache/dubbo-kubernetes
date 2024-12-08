@@ -1,0 +1,1 @@
+import{r}from"./request-SYZV5A5R.js";const a=e=>r({url:"/routingRule/search",method:"get",params:e}),s=e=>r({url:"/tagRule/search",method:"get",params:e}),u=e=>r({url:"/dynamicConfig/search",method:"get",params:e}),c=e=>r({url:"/virtualService/search",method:"get",params:e}),n=e=>r({url:"/destinationRule/search",method:"get",params:e});export{s as a,u as b,c,n as d,a as s};

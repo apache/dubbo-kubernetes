@@ -32,6 +32,7 @@ type Admin struct {
 	MetricDashboards *MetricDashboardConfig `json:"metric_dashboards"`
 	TraceDashboards  *TraceDashboardConfig  `json:"trace_dashboards"`
 	Prometheus       string                 `json:"prometheus"`
+	Grafana          string                 `json:"grafana"`
 }
 
 func (s *Admin) PostProcess() error {
