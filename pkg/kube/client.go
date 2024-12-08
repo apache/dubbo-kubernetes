@@ -26,7 +26,8 @@ type CLIClient interface {
 
 type ClientOption func(cliClient CLIClient) CLIClient
 
-func NewClientClient(clientCfg clientcmd.ClientConfig) (CLIClient, error) {
+func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLIClient, error) {
+	
 	return nil, nil
 }
 

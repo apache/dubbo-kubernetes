@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/pointer"
+	"k8s.io/client-go/rest"
 )
 
 type instance struct {
@@ -41,5 +42,12 @@ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
 }
 
 func newKubeClientWithRevision(kubeconfig, context, revision string) (kube.CLIClient, error) {
+	drc, err := kube.DefaultRestConfig(kubeconfig, context, func(config *rest.Config) {
+		config.QPS = 50
+		config.Burst = 100
+	})
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
