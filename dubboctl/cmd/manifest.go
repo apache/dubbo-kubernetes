@@ -16,18 +16,19 @@
 package cmd
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/manifest"
 	"github.com/spf13/cobra"
 )
 
-func addManifest(rootCmd *cobra.Command) {
+func AddManifest(rootCmd *cobra.Command) {
 	manifestCmd := &cobra.Command{
 		Use:   "manifest",
 		Short: "Commands related to manifest",
 		Long:  "Commands help user to generate manifest and install manifest",
 	}
-	ConfigManifestGenerateCmd(manifestCmd)
-	ConfigManifestInstallCmd(manifestCmd)
-	ConfigManifestUninstallCmd(manifestCmd)
-	ConfigManifestDiffCmd(manifestCmd)
+	manifest.ConfigManifestGenerateCmd(manifestCmd)
+	manifest.ConfigManifestInstallCmd(manifestCmd)
+	manifest.ConfigManifestUninstallCmd(manifestCmd)
+	manifest.ConfigManifestDiffCmd(manifestCmd)
 	rootCmd.AddCommand(manifestCmd)
 }

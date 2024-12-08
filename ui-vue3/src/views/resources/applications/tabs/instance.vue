@@ -245,7 +245,7 @@ const searchDomain = reactive(
     ],
     instanceInfo,
     columns,
-    { pageSize: 4 },
+    { pageSize: 10 },
     true
   )
 )
