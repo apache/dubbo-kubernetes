@@ -12,6 +12,7 @@ type instance struct {
 
 type Context interface {
 	CLIClient() (kube.CLIClient, error)
+	CLIClientWithRevision(rev string) (kube.CLIClient, error)
 }
 
 func NewCLIContext(rootFlags *RootFlags) Context {
@@ -29,5 +30,16 @@ func NewCLIContext(rootFlags *RootFlags) Context {
 }
 
 func (i *instance) CLIClient() (kube.CLIClient, error) {
+	return nil, nil
+}
+
+func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
+	if i.client == nil {
+		i.client = make(map[string]kube.CLIClient)
+	}
+
+}
+
+func newKubeClientWithRevision(kubeconfig, context, revision string) (kube.CLIClient, error) {
 	return nil, nil
 }
