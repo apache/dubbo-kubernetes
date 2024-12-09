@@ -13,7 +13,9 @@ import (
 )
 
 type client struct {
-	dynamic dynamic.Interface
+	dynamic  dynamic.Interface
+	revision string
+	factory  *clientFactory
 }
 
 type Client interface {
@@ -27,8 +29,13 @@ type CLIClient interface {
 type ClientOption func(cliClient CLIClient) CLIClient
 
 func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLIClient, error) {
-	
 	return nil, nil
+}
+
+func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient, error) {
+	var c client
+	var err error
+	c.factory = factory
 }
 
 var (
@@ -43,6 +50,14 @@ func (c *client) Dynamic() dynamic.Interface {
 func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error) {
 	var dr dynamic.ResourceInterface
 	return dr, nil
+}
+
+func WithRevision(revision string) ClientOption {
+	return func(cliClient CLIClient) CLIClient {
+		client := cliClient.(*client)
+		client.revision = revision
+		return client
+	}
 }
 
 var (

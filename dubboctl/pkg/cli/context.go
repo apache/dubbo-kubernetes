@@ -31,7 +31,7 @@ func NewCLIContext(rootFlags *RootFlags) Context {
 }
 
 func (i *instance) CLIClient() (kube.CLIClient, error) {
-	return nil, nil
+	return i.CLIClientWithRevision("")
 }
 
 func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
@@ -56,5 +56,5 @@ func newKubeClientWithRevision(kubeconfig, context, revision string, impersonati
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return kube.NewCLIClient(kube.NewClientConfigForRestConfig(drc), kube.WithRevision(revision))
 }
