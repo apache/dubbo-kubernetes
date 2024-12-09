@@ -7,7 +7,7 @@ import (
 )
 
 type instance struct {
-	client map[string]kube.CLIClient
+	clients map[string]kube.CLIClient
 	RootFlags
 }
 
@@ -35,16 +35,23 @@ func (i *instance) CLIClient() (kube.CLIClient, error) {
 }
 
 func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
-	if i.client == nil {
-		i.client = make(map[string]kube.CLIClient)
+	if i.clients == nil {
+		i.clients = make(map[string]kube.CLIClient)
 	}
-
+	impersonationConfig := rest.ImpersonationConfig{}
+	client, err := newKubeClientWithRevision(*i.kubeconfig, *i.Context, impersonationConfig)
+	if err != nil {
+		return nil, err
+	}
+	i.clients[rev] = client
+	return i.clients[rev], nil
 }
 
-func newKubeClientWithRevision(kubeconfig, context, revision string) (kube.CLIClient, error) {
+func newKubeClientWithRevision(kubeconfig, context, revision string, impersonationConfig rest.ImpersonationConfig) (kube.CLIClient, error) {
 	drc, err := kube.DefaultRestConfig(kubeconfig, context, func(config *rest.Config) {
 		config.QPS = 50
 		config.Burst = 100
+		config.Impersonate = impersonationConfig
 	})
 	if err != nil {
 		return nil, err
