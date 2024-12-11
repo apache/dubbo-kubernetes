@@ -9,13 +9,16 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/dynamic"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type client struct {
-	dynamic  dynamic.Interface
-	revision string
-	factory  *clientFactory
+	dynamic    dynamic.Interface
+	config     *rest.Config
+	revision   string
+	factory    *clientFactory
+	restClient *rest.RESTClient
 }
 
 type Client interface {
@@ -36,6 +39,14 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 	var c client
 	var err error
 	c.factory = factory
+	c.config, err = factory.ToRestConfig()
+	if err != nil {
+		return nil, err
+	}
+	for _, opt := range opts {
+		opt(&c)
+	}
+	return nil, err
 }
 
 var (

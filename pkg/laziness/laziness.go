@@ -35,8 +35,9 @@ func NewWithRetry[T any](f func() (T, error)) Laziness[T] {
 
 func (l *lazinessImpl[T]) Get() (T, error) {
 	if atomic.LoadUint32(&l.done) == 0 {
+		return l.doSlow()
 	}
-	return nil, nil
+	return l.res, l.err
 }
 
 func (l *lazinessImpl[T]) doSlow() (T, error) {
