@@ -33,22 +33,27 @@
     </a-flex>
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ column, text }">
-        <template v-if="column.dataIndex === 'serviceName'">
+        <template v-if="column.dataIndex === 'name'">
           <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
         </template>
         <template v-if="column.dataIndex === 'deployState'">
           <a-tag :color="INSTANCE_DEPLOY_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
         </template>
-        <template v-if="column.dataIndex === 'registerStates'">
-          <a-tag :color="INSTANCE_REGISTER_COLOR[t.level.toUpperCase()]" v-for="t in text"
-            >{{ t.label }}
-          </a-tag>
+        <template v-if="column.dataIndex === 'deployClusters'">
+          <a-tag>{{ text }}</a-tag>
         </template>
-        <template v-if="column.dataIndex === 'registerClusters'">
-          <a-tag v-for="t in text">{{ t }}</a-tag>
+        <template v-if="column.dataIndex === 'registerState'">
+          <a-tag :color="INSTANCE_REGISTER_COLOR[text.toUpperCase()]">{{ text }}</a-tag>
+        </template>
+        <template v-if="column.dataIndex === 'registerCluster'">
+          <a-tag>{{ text }}</a-tag>
         </template>
         <template v-if="column.dataIndex === 'labels'">
-          <a-tag :color="PRIMARY_COLOR" v-for="t in text">{{ t }}</a-tag>
+          <a-tag :color="PRIMARY_COLOR" v-for="(value, key) in text">{{ key }} : {{ value }}</a-tag>
+        </template>
+
+        <template v-if="column.dataIndex === 'registerTime'">
+          {{ formattedDate(text) }}
         </template>
       </template>
     </search-table>
@@ -63,35 +68,43 @@ import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { useRoute, useRouter } from 'vue-router'
-import { getApplicationInstanceInfo, getApplicationInstanceStatistics } from '@/api/service/app'
+import { getApplicationInstanceInfo } from '@/api/service/app'
+import { formattedDate } from '@/utils/DateUtil'
+import { queryMetrics } from '@/base/http/promQuery'
+import { isNumber } from 'lodash'
+import { bytesToHuman } from '@/utils/ByteUtil'
+
+const route = useRoute()
+const router = useRouter()
 
 let __null = PRIMARY_COLOR
 let statisticsInfo = reactive({
   info: <{ [key: string]: string }>{},
   report: <{ [key: string]: { value: string; icon: string } }>{}
 })
+let appNameParam: any = route.params?.pathId
 
 onMounted(async () => {
-  let statistics = (await getApplicationInstanceStatistics({})).data
-  statisticsInfo.info = <{ [key: string]: string }>statistics
-  statisticsInfo.report = {
-    providers: {
-      icon: 'carbon:branch',
-      value: statisticsInfo.info.instanceTotal
-    },
-    consumers: {
-      icon: 'mdi:merge',
-      value: statisticsInfo.info.versionTotal
-    },
-    cpu: {
-      icon: 'carbon:branch',
-      value: statisticsInfo.info.cpuTotal
-    },
-    memory: {
-      icon: 'mdi:merge',
-      value: statisticsInfo.info.memoryTotal
-    }
-  }
+  // let statistics = (await getApplicationInstanceStatistics({})).data
+  // statisticsInfo.info = <{ [key: string]: string }>statistics
+  // statisticsInfo.report = {
+  //   providers: {
+  //     icon: 'carbon:branch',
+  //     value: statisticsInfo.info.instanceTotal
+  //   },
+  //   consumers: {
+  //     icon: 'mdi:merge',
+  //     value: statisticsInfo.info.versionTotal
+  //   },
+  //   cpu: {
+  //     icon: 'carbon:branch',
+  //     value: statisticsInfo.info.cpuTotal
+  //   },
+  //   memory: {
+  //     icon: 'mdi:merge',
+  //     value: statisticsInfo.info.memoryTotal
+  //   }
+  // }
 })
 
 const columns = [
@@ -119,22 +132,22 @@ const columns = [
   },
   {
     title: 'instanceDomain.deployCluster',
-    dataIndex: 'deployCluster',
-    key: 'deployCluster',
+    dataIndex: 'deployClusters',
+    key: 'deployClusters',
     sorter: true,
     width: 180
   },
   {
-    title: 'instanceDomain.registerStates',
-    dataIndex: 'registerStates',
-    key: 'registerStates',
+    title: 'instanceDomain.registerState',
+    dataIndex: 'registerState',
+    key: 'registerState',
     sorter: true,
     width: 150
   },
   {
     title: 'instanceDomain.registerClusters',
-    dataIndex: 'registerClusters',
-    key: 'registerClusters',
+    dataIndex: 'registerCluster',
+    key: 'registerCluster',
     sorter: true,
     width: 200
   },
@@ -171,10 +184,33 @@ const columns = [
     dataIndex: 'labels',
     key: 'labels',
     sorter: true,
-    fixed: 'right',
-    width: 200
+    fixed: 'left',
+    width: 800
   }
 ]
+
+function instanceInfo(params: any) {
+  return getApplicationInstanceInfo(params).then(async (res) => {
+    let instances = res?.data?.list
+    try {
+      for (let instance of instances) {
+        let ip = instance.ip.split(':')[0]
+        let cpu =
+          await queryMetrics(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!=""}) by (pod) * on (pod) group_left(pod_ip)
+        kube_pod_info{pod_ip="${ip}"}`)
+        let mem =
+          await queryMetrics(`sum(container_memory_working_set_bytes{container!=""}) by (pod)
+* on (pod) group_left(pod_ip)
+kube_pod_info{pod_ip="${ip}"}`)
+        instance.cpu = isNumber(cpu) ? cpu.toFixed(3) + 'u' : cpu
+        instance.memory = bytesToHuman(mem)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    return res
+  })
+}
 
 const searchDomain = reactive(
   new SearchDomain(
@@ -198,11 +234,18 @@ const searchDomain = reactive(
         style: {
           width: '300px'
         }
+      },
+      {
+        label: '',
+        param: 'appName',
+        defaultValue: appNameParam,
+        dict: [],
+        dictType: 'APPLICATION_NAME'
       }
     ],
-    getApplicationInstanceInfo,
+    instanceInfo,
     columns,
-    { pageSize: 4 },
+    { pageSize: 10 },
     true
   )
 )
@@ -210,12 +253,10 @@ const searchDomain = reactive(
 onMounted(() => {
   searchDomain.tableStyle = {
     scrollX: '100',
-    scrollY: '500px'
+    scrollY: 'calc(100vh - 400px)'
   }
   searchDomain.onSearch()
 })
-const route = useRoute()
-const router = useRouter()
 
 const viewDetail = (serviceName: string) => {
   router.push('/resources/services/detail/' + serviceName)

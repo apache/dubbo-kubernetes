@@ -27,7 +27,17 @@ import (
 )
 
 func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
+	grafanaRouter := r.Group("/grafana")
+	{
+		grafanaRouter.Any("/*any", handler.Grafana(rt))
+	}
+
 	router := r.Group("/api/v1")
+	{
+		prometheus := router.Group("/promQL")
+		prometheus.GET("/query", handler.PromQL(rt))
+	}
+
 	{
 		instance := router.Group("/instance")
 		instance.GET("/search", handler.SearchInstances(rt))
@@ -42,6 +52,7 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 		}
 		instance.GET("/metric-dashboard", handler.GetMetricDashBoard(rt, handler.InstanceDimension))
 		instance.GET("/instance-dashboard", handler.GetTraceDashBoard(rt, handler.InstanceDimension))
+		instance.GET("/metrics-list", handler.GetMetricsList(rt))
 	}
 
 	{
@@ -86,13 +97,6 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	}
 
 	{
-		dev := router.Group("/dev")
-		dev.GET("/instances", handler.GetInstances(rt))
-		dev.GET("/metas", handler.GetMetas(rt))
-		dev.GET("/mappings", handler.GetMappings(rt))
-	}
-
-	{
 		service := router.Group("/service")
 		service.GET("/distribution", handler.GetServiceTabDistribution(rt))
 		service.GET("/search", handler.SearchServices(rt))
@@ -128,4 +132,7 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	}
 
 	router.GET("/prometheus", handler.GetPrometheus(rt))
+	router.GET("/search", handler.BannerGlobalSearch(rt))
+	router.GET("/overview", handler.ClusterOverview(rt))
+	router.GET("/metadata", handler.AdminMetadata(rt))
 }

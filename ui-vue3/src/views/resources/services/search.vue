@@ -27,7 +27,7 @@
           </span>
         </template>
         <template v-else-if="column.dataIndex === 'versionGroupSelect'">
-          <a-select v-model:value="text.versionGroupValue" :bordered="false" style="width: 80%">
+          <a-select :value="text.versionGroupValue" :bordered="false" style="width: 80%">
             <a-select-option
               v-for="(item, index) in text.versionGroupArr"
               :value="item"
@@ -44,13 +44,16 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { reactive, provide } from 'vue'
-import { searchService } from '@/api/service/service.ts'
+import { provide, reactive } from 'vue'
+import { searchService } from '@/api/service/service'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { Icon } from '@iconify/vue'
+import { queryMetrics } from '@/base/http/promQuery'
+import { isNumber } from 'lodash'
+import { bytesToHuman } from '@/utils/ByteUtil'
 
 let __null = PRIMARY_COLOR
 const router = useRouter()
@@ -92,9 +95,9 @@ const columns = [
 ]
 
 const handleResult = (result: any) => {
-  return result.map((service) => {
+  return result.map((service: any) => {
     service.versionGroupSelect = {}
-    service.versionGroupSelect.versionGroupArr = service.versionGroup.map((item: any) => {
+    service.versionGroupSelect.versionGroupArr = service.versionGroups.map((item: any) => {
       return (item.versionGroup =
         (item.version ? 'version: ' + item.version + ', ' : '') +
           (item.group ? 'group: ' + item.group : '') || '无')
@@ -104,19 +107,45 @@ const handleResult = (result: any) => {
   })
 }
 
+function serviceInfo(params: any) {
+  return searchService(params).then(async (res) => {
+    let services = res?.data?.list
+    try {
+      for (let service of services) {
+        let qps = await queryMetrics(
+          `sum (dubbo_provider_qps_total{interface='${service.serviceName}'}) by (interface)`
+        )
+        let rt = await queryMetrics(
+          `avg(dubbo_consumer_rt_avg_milliseconds_aggregate{interface="${service.serviceName}",method=~"$method"}>0)`
+        )
+        let request = await queryMetrics(
+          `sum (increase(dubbo_provider_requests_total{interface="${service.serviceName}"}[1m]))`
+        )
+
+        service.avgQPS = qps
+        service.avgRT = rt
+        service.requestTotal = request
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    return res
+  })
+}
+
 const searchDomain = reactive(
   new SearchDomain(
     [
       {
         label: 'serviceName',
-        param: 'serviceName',
+        param: 'keywords',
         placeholder: 'typeAppName',
         style: {
           width: '200px'
         }
       }
     ],
-    searchService,
+    serviceInfo,
     columns,
     undefined,
     undefined,
@@ -142,6 +171,7 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
     padding: 4px 10px 4px 4px;
     border-radius: 4px;
     color: v-bind('PRIMARY_COLOR');
+
     &:hover {
       cursor: pointer;
       background: rgba(133, 131, 131, 0.13);

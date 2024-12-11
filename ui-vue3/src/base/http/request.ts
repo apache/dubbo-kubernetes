@@ -28,7 +28,8 @@ import NProgress from 'nprogress'
 
 const service: AxiosInstance = axios.create({
   //  change this to decide where to go
-  baseURL: '/mock',
+  // baseURL: '/mock',
+  baseURL: '/api/v1',
   timeout: 30 * 1000
 })
 const request: AxiosInterceptorManager<InternalAxiosRequestConfig> = service.interceptors.request
@@ -41,6 +42,7 @@ request.use(
       'Content-Type': 'application/json' //配置请求头
     }
     NProgress.start()
+    // console.log(config)
     return config
   },
   (error) => {

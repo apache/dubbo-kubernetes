@@ -36,6 +36,17 @@
         <template v-if="column.dataIndex === 'serviceName'">
           <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
         </template>
+        <template v-else-if="column.dataIndex === 'versionGroupSelect'">
+          <a-select :value="text.versionGroupValue" :bordered="false" style="width: 80%">
+            <a-select-option
+              v-for="(item, index) in text.versionGroupArr"
+              :value="item"
+              :key="index"
+            >
+              {{ item }}
+            </a-select-option>
+          </a-select>
+        </template>
       </template>
     </search-table>
   </div>
@@ -43,18 +54,21 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive } from 'vue'
-import ServiceList from '@/views/resources/services/search.vue'
 import { getClusterInfo } from '@/api/service/clusterInfo'
 import { getMetricsMetadata } from '@/api/service/serverInfo'
-import { Chart } from '@antv/g2'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { Icon } from '@iconify/vue'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain } from '@/utils/SearchUtil'
-import { searchService } from '@/api/service/service'
 import { provide } from 'vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { useRoute, useRouter } from 'vue-router'
+import { getApplicationServiceForm } from '@/api/service/app'
+import { searchService } from '@/api/service/service'
+import { queryMetrics } from '@/base/http/promQuery'
+
+const route = useRoute()
+const router = useRouter()
 
 let __null = PRIMARY_COLOR
 let clusterInfo = reactive({
@@ -88,73 +102,107 @@ onMounted(async () => {
 
 const columns = [
   {
-    title: 'idx',
-    key: 'idx'
-  },
-  {
-    title: '服务',
+    title: 'service',
+    key: 'service',
     dataIndex: 'serviceName',
-    key: 'serviceName',
     sorter: true,
     width: '30%'
   },
   {
-    title: '接口数',
-    dataIndex: 'interfaceNum',
-    key: 'interfaceNum',
-    sorter: true,
-    width: '10%'
+    title: 'versionGroup',
+    key: 'versionGroup',
+    dataIndex: 'versionGroupSelect',
+    width: '25%'
   },
   {
-    title: '近 1min QPS',
-    dataIndex: 'avgQPS',
+    title: 'avgQPS',
     key: 'avgQPS',
+    dataIndex: 'avgQPS',
     sorter: true,
     width: '15%'
   },
   {
-    title: '近 1min RT',
-    dataIndex: 'avgRT',
+    title: 'avgRT',
     key: 'avgRT',
+    dataIndex: 'avgRT',
     sorter: true,
     width: '15%'
   },
   {
-    title: '近 1min 请求总量',
-    dataIndex: 'requestTotal',
+    title: 'requestTotal',
     key: 'requestTotal',
+    dataIndex: 'requestTotal',
     sorter: true,
     width: '15%'
   }
 ]
 
+const appName = computed(() => {
+  return route.params?.pathId
+})
+
+function serviceInfo(params: any) {
+  return getApplicationServiceForm(params).then(async (res) => {
+    let services = res?.data?.list
+    try {
+      for (let service of services) {
+        let qps = await queryMetrics(
+          `sum (dubbo_provider_qps_total{interface='${service.serviceName}'}) by (interface)`
+        )
+        let rt = await queryMetrics(
+          `avg(dubbo_consumer_rt_avg_milliseconds_aggregate{interface="${service.serviceName}",method=~"$method"}>0)`
+        )
+        let request = await queryMetrics(
+          `sum (increase(dubbo_provider_requests_total{interface="${service.serviceName}"}[1m]))`
+        )
+
+        service.avgQPS = qps
+        service.avgRT = rt
+        service.requestTotal = request
+        service.versionGroupSelect = {}
+        service.versionGroupSelect.versionGroupArr = service.versionGroups.map((item: any) => {
+          return (item.versionGroup =
+            (item.version ? 'version: ' + item.version + ', ' : '') +
+              (item.group ? 'group: ' + item.group : '') || '无')
+        })
+        service.versionGroupSelect.versionGroupValue = service.versionGroupSelect.versionGroupArr[0]
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    return res
+  })
+}
 const searchDomain = reactive(
   new SearchDomain(
     [
       {
         label: '',
-        param: 'type',
-        defaultValue: 1,
+        param: 'side',
+        defaultValue: 'provider',
         dict: [
-          { label: 'providers', value: 1 },
-          { label: 'consumers', value: 2 }
+          { label: 'providers', value: 'provider' },
+          { label: 'consumers', value: 'consumer' }
         ],
         dictType: 'BUTTON'
       },
       {
         label: 'serviceName',
         param: 'serviceName'
+      },
+      {
+        label: '',
+        param: 'appName',
+        defaultValue: appName
       }
     ],
-    searchService,
+    serviceInfo,
     columns,
     { pageSize: 4 },
     true
   )
 )
 searchDomain.onSearch()
-const route = useRoute()
-const router = useRouter()
 
 const viewDetail = (serviceName: string) => {
   router.push('/resources/services/detail/' + serviceName)

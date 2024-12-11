@@ -58,7 +58,7 @@ func GetApplicationDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetApplicationTabInstanceInfo(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.ApplicationTabInstanceInfoReq{}
+		req := model.NewApplicationTabInstanceInfoReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -76,7 +76,7 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetApplicationServiceForm(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.ApplicationServiceFormReq{}
+		req := model.NewApplicationServiceFormReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -92,7 +92,13 @@ func GetApplicationServiceForm(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ApplicationSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resp, err := service.GetApplicationSearchInfo(rt)
+		req := model.NewApplicationSearchReq()
+		if err := c.ShouldBindQuery(req); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		resp, err := service.GetApplicationSearchInfo(rt, req)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -147,7 +153,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 			if core_store.IsResourceNotFound(err) {
 				// for check app exist
 				data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
-				if err != nil || len(data) == 0 {
+				if err != nil || data == nil {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
 				}
@@ -325,7 +331,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				if err != nil {
 					c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 					return
-				} else if len(data) == 0 {
+				} else if data == nil {
 					c.JSON(http.StatusNotFound, model.NewErrorResp("application not found"))
 					return
 				}
@@ -440,7 +446,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			if err != nil {
 				c.JSON(http.StatusNotFound, model.NewErrorResp(err.Error()))
 				return
-			} else if len(data) == 0 {
+			} else if data == nil {
 				c.JSON(http.StatusNotFound, model.NewErrorResp("application not found"))
 				return
 			}

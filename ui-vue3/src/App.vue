@@ -117,7 +117,7 @@ const localeGlobal = reactive(i18n.global.locale)
     position: relative;
     width: calc(100vw - 332px);
     height: calc(100vh - 200px);
-    clip-path: inset(20px 10px);
+    clip-path: inset(0px 0px);
 
     #grafanaIframe {
       z-index: 0;

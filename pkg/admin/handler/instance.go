@@ -65,13 +65,13 @@ func GetInstanceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		req := &model.SearchInstanceReq{}
+		req := model.NewSearchInstanceReq()
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 
-		instances, _, err := service.SearchInstances(rt, req)
+		instances, err := service.SearchInstances(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
@@ -83,7 +83,7 @@ func SearchInstances(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var resp = struct {
+		resp := struct {
 			TrafficDisable bool `json:"trafficDisable"`
 		}{false}
 		applicationName := c.Query("appName")
@@ -91,7 +91,7 @@ func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
 			return
 		}
-		instanceIP := strings.Trim(c.Query("instanceIP"), " ")
+		instanceIP := strings.TrimSpace(c.Query("instanceIP"))
 		if instanceIP == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
 			return
@@ -123,19 +123,19 @@ func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 }
 
 func isTrafficDisabled(r *mesh_proto.ConditionRule, targetIP string) bool {
-	if !r.TrafficDisable {
-		return true
+	if len(r.To) != 0 {
+		return false
 	}
-	// rule must match `host=x1,x2,x3`
+	// rule must match `host=x1{,x2,x3}`
 	if r.From.Match != "" && !strings.Contains(r.From.Match, "&") && strings.Index(r.From.Match, "!=") == -1 {
 		idx := strings.Index(r.From.Match, "=")
 		if idx == -1 {
 			return false
 		}
-		then := r.From.Match[idx:]
+		then := r.From.Match[idx+1:]
 		Ips := strings.Split(then, ",")
 		for _, ip := range Ips {
-			if strings.Trim(ip, " ") == targetIP {
+			if strings.TrimSpace(ip) == targetIP {
 				return true
 			}
 		}
@@ -145,12 +145,12 @@ func isTrafficDisabled(r *mesh_proto.ConditionRule, targetIP string) bool {
 
 func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		applicationName := c.Query(`appName`)
+		applicationName := strings.TrimSpace(c.Query("appName"))
 		if applicationName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
 			return
 		}
-		instanceIP := strings.Trim(c.Query("instanceIP"), " ")
+		instanceIP := strings.TrimSpace(c.Query("instanceIP"))
 		if instanceIP == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
 			return
@@ -181,25 +181,14 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		if res.XGenerateByCp == nil {
-			res.XGenerateByCp = &mesh_proto.XAdminOption{
-				DisabledIP:           make([]string, 0),
-				RegionPrioritize:     false,
-				RegionPrioritizeRate: 0,
-			}
-		} else if res.XGenerateByCp.DisabledIP == nil {
-			res.XGenerateByCp.DisabledIP = make([]string, 0)
+		ok := false
+		res.RangeConditions(func(r *mesh_proto.ConditionRule) (isStop bool) {
+			ok = isTrafficDisabled(r, instanceIP)
+			return ok
+		})
+		if !ok {
+			res.Conditions = append(res.Conditions, newDisableCondition(instanceIP))
 		}
-
-		for _, s := range res.XGenerateByCp.DisabledIP { // already disabled
-			if s == instanceIP {
-				c.JSON(http.StatusOK, model.NewSuccessResp(nil))
-				return
-			}
-		}
-
-		res.XGenerateByCp.DisabledIP = append(res.XGenerateByCp.DisabledIP, instanceIP)
-		res.ReGenerateCondition()
 		rawRes.Spec = res.ToConditionRoute()
 
 		if NotExist {
@@ -220,6 +209,13 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	}
 }
 
+func newDisableCondition(ip string) *mesh_proto.ConditionRule {
+	return &mesh_proto.ConditionRule{
+		From: &mesh_proto.ConditionRuleFrom{Match: "host=" + ip},
+		To:   nil,
+	}
+}
+
 func generateDefaultConditionV3x1(Enabled, Force, Runtime bool, Key, Scope string) *mesh_proto.ConditionRouteV3X1 {
 	return &mesh_proto.ConditionRouteV3X1{
 		ConfigVersion: consts.ConfiguratorVersionV3x1,
@@ -229,21 +225,14 @@ func generateDefaultConditionV3x1(Enabled, Force, Runtime bool, Key, Scope strin
 		Key:           Key,
 		Scope:         Scope,
 		Conditions:    make([]*mesh_proto.ConditionRule, 0),
-		XGenerateByCp: &mesh_proto.XAdminOption{
-			DisabledIP:           make([]string, 0),
-			RegionPrioritize:     false,
-			RegionPrioritizeRate: 0,
-		},
 	}
 }
 
 func InstanceConfigOperatorLogGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var (
-			resp = struct {
-				OperatorLog bool `json:"operatorLog"`
-			}{false}
-		)
+		resp := struct {
+			OperatorLog bool `json:"operatorLog"`
+		}{false}
 		applicationName := c.Query(`appName`)
 		if applicationName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))

@@ -42,6 +42,7 @@ type ServiceMappingChangedListenerImpl struct {
 	interfaceKey    string
 	systemNamespace string
 
+	ctx           *ApplicationContext
 	mux           sync.Mutex
 	delSDRegistry registry.ServiceDiscovery
 	eventWriter   events.Emitter
@@ -54,6 +55,7 @@ func NewMappingListener(
 	writer events.Emitter,
 	systemNamespace string,
 	delSDRegistry registry.ServiceDiscovery,
+	ctx *ApplicationContext,
 ) *ServiceMappingChangedListenerImpl {
 	return &ServiceMappingChangedListenerImpl{
 		interfaceKey:    interfaceKey,
@@ -62,6 +64,7 @@ func NewMappingListener(
 		eventWriter:     writer,
 		systemNamespace: systemNamespace,
 		delSDRegistry:   delSDRegistry,
+		ctx:             ctx,
 	}
 }
 
@@ -103,9 +106,11 @@ func (lstn *ServiceMappingChangedListenerImpl) OnEvent(e observer.Event) error {
 }
 
 func (lstn *ServiceMappingChangedListenerImpl) updateListener(interfaceKey string, apps *gxset.HashSet) error {
-	delSDListener := NewDubboSDNotifyListener(apps)
+	delSDListener := NewDubboSDNotifyListener(apps, lstn.ctx)
 	delSDListener.AddListenerAndNotify(interfaceKey, lstn.listener)
 	err := lstn.delSDRegistry.AddListener(delSDListener)
+
+	// lstn.delSDRegistry.RemoveListener(oldApps);
 	return err
 }
 

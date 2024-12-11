@@ -19,12 +19,12 @@ package traditional
 
 import (
 	"fmt"
+	"sigs.k8s.io/yaml"
 	"strings"
 )
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 func GenerateCpGroupPath(resourceName string, name string) string {
@@ -82,16 +82,22 @@ func splitAppAndRevision(name string) (app string, revision string) {
 
 func parseTagConfig(rawRouteData string) (*mesh_proto.TagRoute, error) {
 	tagRoute := &mesh_proto.TagRoute{}
-	err := proto.FromYAML([]byte(rawRouteData), tagRoute)
+	err := yaml.Unmarshal([]byte(rawRouteData), tagRoute)
 	return tagRoute, err
 }
 
 func parseConfiguratorConfig(rawRouteData string) (*mesh_proto.DynamicConfig, error) {
 	routerConfig := &mesh_proto.DynamicConfig{}
-	err := proto.FromYAML([]byte(rawRouteData), routerConfig)
+	err := yaml.Unmarshal([]byte(rawRouteData), routerConfig)
 	return routerConfig, err
 }
 
 func parseConditionConfig(rawRouteData string) (*mesh_proto.ConditionRoute, error) {
 	return mesh_proto.ConditionRouteDecodeFromYAML([]byte(rawRouteData))
+}
+
+func parseAffinityConfig(rawRouteData string) (*mesh_proto.AffinityRoute, error) {
+	affinityRoute := &mesh_proto.AffinityRoute{}
+	err := yaml.Unmarshal([]byte(rawRouteData), affinityRoute)
+	return affinityRoute, err
 }

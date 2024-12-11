@@ -43,7 +43,7 @@
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
                   <a-typography-paragraph>
-                    {{ instanceDetail?.createTime }}
+                    {{ formattedDate(instanceDetail?.createTime) }}
                   </a-typography-paragraph>
                 </a-descriptions-item>
 
@@ -73,24 +73,20 @@
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
                   <a-typography-paragraph>
-                    {{ instanceDetail?.readyTime }}
+                    {{ formattedDate(instanceDetail?.readyTime) }}
                   </a-typography-paragraph>
                 </a-descriptions-item>
 
                 <!-- registerStates -->
                 <a-descriptions-item
-                  :label="$t('instanceDomain.registerStates')"
+                  :label="$t('instanceDomain.registerState')"
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
                   <a-typography-paragraph
-                    type="success"
-                    v-if="instanceDetail?.registerStates === 'Registered'"
+                    :type="instanceDetail?.registerState === 'Registed' ? 'success' : 'danger'"
                   >
-                    Registered
+                    {{ instanceDetail?.registerState }}
                   </a-typography-paragraph>
-                  <a-typography-paragraph type="danger" v-else>
-                    UnRegistered</a-typography-paragraph
-                  >
                 </a-descriptions-item>
 
                 <!-- Register Time -->
@@ -99,7 +95,7 @@
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
                   <a-typography-paragraph>
-                    {{ instanceDetail?.registerTime }}
+                    {{ formattedDate(instanceDetail?.registerTime) }}
                   </a-typography-paragraph>
                 </a-descriptions-item>
               </a-descriptions>
@@ -136,6 +132,7 @@
               :labelStyle="{ fontWeight: 'bold' }"
             >
               <p
+                v-if="instanceDetail?.rpcPort"
                 @click="copyIt(instanceDetail?.rpcPort)"
                 class="description-item-content with-card"
               >
@@ -171,7 +168,11 @@
               :label="$t('instanceDomain.node')"
               :labelStyle="{ fontWeight: 'bold' }"
             >
-              <p @click="copyIt(instanceDetail?.node)" class="description-item-content with-card">
+              <p
+                v-if="instanceDetail?.node"
+                @click="copyIt(instanceDetail?.node)"
+                class="description-item-content with-card"
+              >
                 {{ instanceDetail?.node }}
                 <CopyOutlined />
               </p>
@@ -194,6 +195,7 @@
             >
               <a-card class="description-item-card">
                 <p
+                  v-if="instanceDetail?.image"
                   @click="copyIt(instanceDetail?.image)"
                   class="description-item-content with-card"
                 >
@@ -209,8 +211,8 @@
               :labelStyle="{ fontWeight: 'bold' }"
             >
               <a-card class="description-item-card">
-                <a-tag v-for="label in instanceDetail?.labels">
-                  {{ label }}
+                <a-tag v-for="(value, key) in instanceDetail?.labels">
+                  {{ key }} : {{ value }}
                 </a-tag>
               </a-card>
             </a-descriptions-item>
@@ -222,21 +224,27 @@
             >
               <a-card class="description-item-card">
                 <p class="white_space">
-                  启动探针(StartupProbe):开启 类型:
-                  {{ instanceDetail?.probes?.startupProbe.type }} 端口:{{
+                  启动探针(StartupProbe):{{
+                    isProbeOpen(instanceDetail?.probes?.startupProbe.open)
+                  }}
+                  类型: {{ instanceDetail?.probes?.startupProbe.type }} 端口:{{
                     instanceDetail?.probes?.startupProbe.port
                   }}
                 </p>
                 <p class="white_space">
-                  就绪探针(ReadinessProbe):开启 类型:
-                  {{ instanceDetail?.probes?.readinessProbe.type }} 端口:{{
+                  就绪探针(ReadinessProbe):{{
+                    isProbeOpen(instanceDetail?.probes?.readinessProbe.open)
+                  }}
+                  类型: {{ instanceDetail?.probes?.readinessProbe.type }} 端口:{{
                     instanceDetail?.probes?.readinessProbe.port
                   }}
                 </p>
                 <p class="white_space">
-                  存活探针(LivenessProbe):开启 类型:
-                  {{ instanceDetail?.probes?.livenessPronbe.type }} 端口:{{
-                    instanceDetail?.probes?.livenessPronbe.port
+                  存活探针(LivenessProbe):{{
+                    isProbeOpen(instanceDetail?.probes?.livenessProbe.open)
+                  }}
+                  类型: {{ instanceDetail?.probes?.livenessProbe.type }} 端口:{{
+                    instanceDetail?.probes?.livenessProbe.port
                   }}
                 </p>
               </a-card>
@@ -256,6 +264,7 @@ import { message } from 'ant-design-vue'
 import { PRIMARY_COLOR, PRIMARY_COLOR_T } from '@/base/constants'
 import { getInstanceDetail } from '@/api/service/instance'
 import { useRoute, useRouter } from 'vue-router'
+import { formattedDate } from '@/utils/DateUtil'
 
 const route = useRoute()
 const router = useRouter()
@@ -270,10 +279,13 @@ let __ = PRIMARY_COLOR
 let PRIMARY_COLOR_20 = PRIMARY_COLOR_T('20')
 
 // instance detail information
-const instanceDetail = reactive({})
+const instanceDetail = <any>reactive({})
 
 onMounted(async () => {
-  apiData.detail = await getInstanceDetail({})
+  let params = {
+    instanceName: route.params.pathId
+  }
+  apiData.detail = await getInstanceDetail(params)
   Object.assign(instanceDetail, apiData.detail.data)
   // console.log('instance',apiData)
   console.log('assign', instanceDetail)
@@ -294,6 +306,10 @@ const toClipboard = useClipboard().toClipboard
 function copyIt(v: string) {
   message.success(globalProperties.$t('messageDomain.success.copy'))
   toClipboard(v)
+}
+
+const isProbeOpen = (status: boolean) => {
+  return status ? '开启' : '关闭'
 }
 </script>
 

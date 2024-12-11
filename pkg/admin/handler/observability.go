@@ -18,11 +18,18 @@
 package handler
 
 import (
+	"net/http"
+)
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
-	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 type Dimension string
@@ -40,13 +47,13 @@ func GetMetricDashBoard(rt core_runtime.Runtime, dim Dimension) gin.HandlerFunc 
 		switch dim {
 		case AppDimension:
 			req = &model.AppDashboardReq{}
-			url = rt.Config().Admin.MetricDashboards.Application.BaseURL + "?var-application="
+			url = rt.Config().Admin.MetricDashboards.Application.BaseURL
 		case InstanceDimension:
 			req = &model.InstanceDashboardReq{}
-			url = rt.Config().Admin.MetricDashboards.Instance.BaseURL + "?var-instance="
+			url = rt.Config().Admin.MetricDashboards.Instance.BaseURL
 		case ServiceDimension:
 			req = &model.ServiceDashboardReq{}
-			url = rt.Config().Admin.MetricDashboards.Service.BaseURL + "?var-service="
+			url = rt.Config().Admin.MetricDashboards.Service.BaseURL
 		}
 		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -89,6 +96,20 @@ func GetTraceDashBoard(rt core_runtime.Runtime, dim Dimension) gin.HandlerFunc {
 func GetPrometheus(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		resp := rt.Config().Admin.Prometheus
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
+	}
+}
+
+func GetMetricsList(rt core_runtime.Runtime) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req := &model.MetricsReq{}
+		if err := c.ShouldBindQuery(req); err != nil {
+		}
+		resp, err := service.GetInstanceMetrics(rt, req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			return
+		}
 		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }

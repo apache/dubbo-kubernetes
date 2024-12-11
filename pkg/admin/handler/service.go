@@ -42,7 +42,13 @@ import (
 // service search
 func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resp, err := service.GetSearchServices(rt)
+		req := model.NewServiceSearchReq()
+		if err := c.ShouldBindQuery(req); err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
+		}
+
+		resp, err := service.GetSearchServices(rt, req)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 			return
@@ -73,7 +79,7 @@ func GetServiceTabDistribution(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -81,7 +87,7 @@ func ListServices(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -89,7 +95,7 @@ func GetServiceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 func GetServiceInterfaces(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//req := &model.SearchInstanceReq{}
+		// req := &model.SearchInstanceReq{}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
@@ -99,6 +105,10 @@ type baseService struct {
 	Service string `json:"serviceName"`
 	Group   string `json:"group"`
 	Version string `json:"version"`
+}
+
+func (s *baseService) serviceName() string {
+	return s.Service
 }
 
 func (s *baseService) query(c *gin.Context) error {
@@ -176,7 +186,7 @@ func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor) : to check service exist or not
 			}
-			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
+			res = generateDefaultConfigurator(param.serviceName(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
 		} else {
 			res.Spec.RangeConfig(func(conf *mesh_proto.OverrideConfig) (isStop bool) {
@@ -271,7 +281,7 @@ func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor) : to check service exist or not
 			}
-			res = generateDefaultConfigurator(param.toInterface(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
+			res = generateDefaultConfigurator(param.serviceName(), consts.ScopeService, consts.ConfiguratorVersionV3, true)
 			isExist = false
 		}
 
@@ -307,15 +317,16 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		param := baseService{}
 		resp := struct {
-			RegionPriority bool `json:"regionPriority"`
-			Ratio          int  `json:"ratio"`
-		}{false, 0}
+			Enabled bool   `json:"enabled"`
+			Key     string `json:"key"`
+			Ratio   int    `json:"ratio"`
+		}{false, "", 0}
 		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
 
-		rawRes, err := getConditionRule(rt, param.toInterface())
+		res, err := getAffinityRule(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -325,16 +336,10 @@ func ServiceConfigRegionPriorityGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			}
 			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
-
-		} else if rawRes.Spec.ToConditionRouteV3() != nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
-			return
-
 		} else {
-			res := rawRes.Spec.ToConditionRouteV3x1()
-			if res.XGenerateByCp != nil {
-				resp.RegionPriority, resp.Ratio = res.XGenerateByCp.RegionPrioritize, int(res.XGenerateByCp.RegionPrioritizeRate)
-			}
+			resp.Enabled = res.Spec.GetEnabled()
+			resp.Key = res.Spec.GetAffinity().GetKey()
+			resp.Ratio = int(res.Spec.GetAffinity().GetRatio())
 			c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 			return
 		}
@@ -345,8 +350,9 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		param := struct {
 			baseService
-			Ratio          int32 `json:"ratio"`
-			RegionPriority bool  `json:"regionPriority"`
+			Enabled bool   `json:"enabled"`
+			Key     string `json:"key"`
+			Ratio   int    `json:"ratio"`
 		}{}
 		if err := c.Bind(&param); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -354,7 +360,7 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		isExist := true
-		rawRes, err := getConditionRule(rt, param.toInterface())
+		res, err := getAffinityRule(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -362,34 +368,31 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			} else if false {
 				// TODO(YarBor) : to check service exist or not
 			} else {
-				rawRes = new(mesh.ConditionRouteResource)
-				rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
+				res = new(mesh.AffinityRouteResource)
+				res.Spec = generateDefaultAffinityRule(
+					"service",
+					param.serviceName(),
+					param.Key,
+					false,
+					true,
+					param.Ratio,
+				)
 				isExist = false
 			}
-		} else if rawRes.Spec.ToConditionRouteV3() != nil {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
-			return
+		} else {
+			res.Spec.Enabled = param.Enabled
+			res.Spec.Affinity.Key = param.Key
+			res.Spec.Affinity.Ratio = int32(param.Ratio)
 		}
 
-		res := rawRes.Spec.ToConditionRouteV3x1()
-		if res.XGenerateByCp == nil {
-			res.XGenerateByCp = &mesh_proto.XAdminOption{
-				DisabledIP:           make([]string, 0),
-				RegionPrioritize:     false,
-				RegionPrioritizeRate: 0,
-			}
-		}
-		res.XGenerateByCp.RegionPrioritize, res.XGenerateByCp.RegionPrioritizeRate = param.RegionPriority, param.Ratio
-		res.ReGenerateCondition()
-		rawRes.Spec = res.ToConditionRoute()
-		if isExist {
-			err = updateConditionRule(rt, param.toInterface(), rawRes)
+		if !isExist {
+			err = createAffinityRule(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = createConditionRule(rt, param.toInterface(), rawRes)
+			err = updateAffinityRule(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
@@ -397,6 +400,20 @@ func ServiceConfigRegionPriorityPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 		return
+	}
+}
+
+func generateDefaultAffinityRule(scope, key, focusKey string, runtime, enabled bool, ratio int) *mesh_proto.AffinityRoute {
+	return &mesh_proto.AffinityRoute{
+		ConfigVersion: "v3.1",
+		Scope:         scope,
+		Key:           key,
+		Runtime:       runtime,
+		Enabled:       enabled,
+		Affinity: &mesh_proto.AffinityAware{
+			Key:   focusKey,
+			Ratio: int32(ratio),
+		},
 	}
 }
 
@@ -428,7 +445,6 @@ func ServiceConfigArgumentRouteGET(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		} else {
 			res := rawRes.Spec.ToConditionRouteV3x1()
-			res.Conditions = res.ListUnGenConditions()                                      // 返回非生成的Condition
 			res.RangeConditionsToRemove(func(r *mesh_proto.ConditionRule) (isRemove bool) { // 去除非方法匹配项
 				_, ok := r.IsMatchMethod()
 				return !ok
@@ -460,7 +476,7 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				// TODO(YarBor) : to check service exist or not
 			}
 			rawRes = new(mesh.ConditionRouteResource)
-			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.toInterface(), consts.ScopeService).ToConditionRoute()
+			rawRes.Spec = generateDefaultConditionV3x1(true, false, true, param.serviceName(), consts.ScopeService).ToConditionRoute()
 			isExist = false
 		}
 
@@ -478,7 +494,6 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			return ok
 		})
 		res.Conditions = append(res.Conditions, param.ToConditionV3x1Condition()...)
-		res.ReGenerateCondition()
 		rawRes.Spec = res.ToConditionRoute()
 
 		if isExist {

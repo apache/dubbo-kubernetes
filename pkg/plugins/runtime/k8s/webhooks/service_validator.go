@@ -36,7 +36,7 @@ import (
 
 // ServiceValidator validates Dubbo-specific annotations on Services.
 type ServiceValidator struct {
-	Decoder *admission.Decoder
+	Decoder admission.Decoder
 }
 
 // Handle admits a Service only if Dubbo-specific annotations have proper values.

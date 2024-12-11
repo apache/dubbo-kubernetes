@@ -17,10 +17,26 @@
 
 import request from '@/base/http/request'
 
-export const queryPromSql = (params: any): Promise<any> => {
+import { getMetricsMetadata } from '@/api/service/serverInfo'
+
+let promUrl: string = ''
+async function initPromUrl() {
+  let config = (await getMetricsMetadata({})).data
+  if (!config) {
+    throw "can't get prometheus url"
+  }
+  promUrl = config.prometheus + '/api/v1/query'
+}
+/**
+ *
+ * @param params
+ */
+export const queryPromSql = async (params: any): Promise<any> => {
   return request({
-    url: 'http://123.56.255.156:9090/api/v1/query',
+    url: 'promQL/query',
     method: 'get',
     params
   })
 }
+
+// TODO Perform front-end and back-end joint debugging

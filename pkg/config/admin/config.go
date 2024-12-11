@@ -18,9 +18,12 @@
 package admin
 
 import (
+	"go.uber.org/multierr"
+)
+
+import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	. "github.com/apache/dubbo-kubernetes/pkg/config/observability"
-	"go.uber.org/multierr"
 )
 
 type Admin struct {
@@ -28,7 +31,8 @@ type Admin struct {
 	Port             int                    `json:"port" envconfig:"DUBBO_ADMIN_PORT"`
 	MetricDashboards *MetricDashboardConfig `json:"metric_dashboards"`
 	TraceDashboards  *TraceDashboardConfig  `json:"trace_dashboards"`
-	Prometheus       *PrometheusConfig      `json:"prometheus"`
+	Prometheus       string                 `json:"prometheus"`
+	Grafana          string                 `json:"grafana"`
 }
 
 func (s *Admin) PostProcess() error {
@@ -37,6 +41,7 @@ func (s *Admin) PostProcess() error {
 		s.TraceDashboards.PostProcess(),
 	)
 }
+
 func (s *Admin) Validate() error {
 	return multierr.Combine(
 		s.MetricDashboards.Validate(),
