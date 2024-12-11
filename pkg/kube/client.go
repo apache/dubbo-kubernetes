@@ -32,7 +32,7 @@ type CLIClient interface {
 type ClientOption func(cliClient CLIClient) CLIClient
 
 func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLIClient, error) {
-	return nil, nil
+	return newInternalClient(newClientFactory(clientCfg, true), opts...)
 }
 
 func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient, error) {
@@ -46,6 +46,7 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 	for _, opt := range opts {
 		opt(&c)
 	}
+
 	return nil, err
 }
 

@@ -11,6 +11,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -32,7 +34,8 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 		if diskCache {
 			cacheDir := filepath.Join(homedir.HomeDir(), ".kube", "cache")
 			httpCacheDir := filepath.Join(cacheDir, "http")
-			return diskcached.NewCachedDiscoveryClientForConfig(restConfig, nil, httpCacheDir, 6*time.Hour)
+			discoveryCacheDir := computeDiscoverCacheDir(filepath.Join(cacheDir, "discovery"), restConfig.Host)
+			return diskcached.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, 6*time.Hour)
 		}
 		d, err := discovery.NewDiscoveryClientForConfig(restConfig)
 		if err != nil {
@@ -60,4 +63,12 @@ func (c *clientFactory) ToRestConfig() (*rest.Config, error) {
 		return nil, err
 	}
 	return SetRestDefaults(restConfig), nil
+}
+
+var overlyCautiousIllegalFileCharacters = regexp.MustCompile(`[^(\w/.)]`)
+
+func computeDiscoverCacheDir(dir, host string) string {
+	schemelesshost := strings.Replace(strings.Replace(host, "https://", "", 1), "http://", "", 1)
+	safehost := overlyCautiousIllegalFileCharacters.ReplaceAllString(schemelesshost, "_")
+	return filepath.Join(dir, safehost)
 }
