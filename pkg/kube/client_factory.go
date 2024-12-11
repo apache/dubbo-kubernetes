@@ -18,7 +18,8 @@ import (
 
 type clientFactory struct {
 	clientConfig    clientcmd.ClientConfig
-	mapper          laziness.Laziness[meta.RESTMapper]
+	expander        laziness.Laziness[meta.RESTMapper]
+	mapper          laziness.Laziness[meta.ResettableRESTMapper]
 	discoveryClient laziness.Laziness[discovery.CachedDiscoveryInterface]
 }
 
@@ -49,6 +50,17 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 			return nil, err
 		}
 		return restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient), nil
+	})
+	cf.expander = laziness.NewWithRetry(func() (meta.RESTMapper, error) {
+		discoveryClient, err := cf.discoveryClient.Get()
+		if err != nil {
+			return nil, err
+		}
+		mapper, err := cf.mapper.Get()
+		if err != nil {
+			return nil, err
+		}
+		return restmapper.NewShortcutExpander(mapper, discoveryClient, func(string) {}), nil
 	})
 	return cf
 }

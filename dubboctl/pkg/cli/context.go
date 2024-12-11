@@ -39,7 +39,7 @@ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
 		i.clients = make(map[string]kube.CLIClient)
 	}
 	impersonationConfig := rest.ImpersonationConfig{}
-	client, err := newKubeClientWithRevision(*i.kubeconfig, *i.Context, impersonationConfig)
+	client, err := newKubeClientWithRevision(*i.kubeconfig, *i.Context, rev, impersonationConfig)
 	if err != nil {
 		return nil, err
 	}
