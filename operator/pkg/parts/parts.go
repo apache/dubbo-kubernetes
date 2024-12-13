@@ -1,4 +1,4 @@
-package yml
+package parts
 
 import (
 	"bufio"

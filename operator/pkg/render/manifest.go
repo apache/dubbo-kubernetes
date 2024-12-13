@@ -35,6 +35,16 @@ func MergeInputs(filenames []string, flags []string) ([]values.Map, error) {
 		} else {
 			b, err = os.ReadFile(strings.TrimSpace(fn))
 		}
+		if err := checkDops(string(b)); err != nil {
+			return nil, fmt.Errorf("checkDops err:%v", err)
+		}
+		m, err := values.MapFromYAML(b)
+		if err != nil {
+			return nil, fmt.Errorf("yaml Unmarshal err:%v", err)
+		}
+		if m["spec"] == nil {
+			delete(m, "spec")
+		}
 	}
 	return nil, nil
 }
@@ -64,6 +74,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger) ([]
 			return nil, nil, fmt.Errorf("get component %v: %v", comp.UserFacingName, err)
 		}
 		for _, spec := range specs {
+			compVals := applyComponentValuesToHelmValues(comp, spec, merged)
 		}
 	}
 	return nil, nil, nil
@@ -71,7 +82,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger) ([]
 
 func validateDubboOperator(dop values.Map, logger clog.Logger) error {
 	warnings, errs := validation.ParseAndValidateDubboOperator(dop)
-	if err := errs.ToError(); err != nil {
+	if err := errs.ToErrors(); err != nil {
 		return err
 	}
 	if logger != nil {

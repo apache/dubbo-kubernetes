@@ -237,3 +237,21 @@ func extractKeyValue(seg string) (string, string, bool) {
 	sanitized := seg[1 : len(seg)-1]
 	return strings.Cut(sanitized, ":")
 }
+
+func (m Map) MergeFrom(other Map) {
+	for k, v := range other {
+		if vm, ok := v.(Map); ok {
+			v = map[string]any(vm)
+		}
+		if v, ok := v.(map[string]any); ok {
+			if bv, ok := m[k]; ok {
+
+				if bv, ok := bv.(map[string]any); ok {
+					Map(bv).MergeFrom(v)
+					continue
+				}
+			}
+		}
+		m[k] = v
+	}
+}
