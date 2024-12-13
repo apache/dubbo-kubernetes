@@ -17,7 +17,15 @@ package manifests
 
 import (
 	"embed"
+	"io/fs"
+	"os"
 )
 
-//go:embed all:addons/* all:charts/* all:profiles/*
-var EmbedRootFS embed.FS
+var FS embed.FS
+
+func BuiltinDir(dir string) fs.FS {
+	if dir == "" {
+		return FS
+	}
+	return os.DirFS(dir)
+}

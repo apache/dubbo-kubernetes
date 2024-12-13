@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/manifests"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/validation"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
@@ -47,8 +48,51 @@ func MergeInputs(filenames []string, flags []string) ([]values.Map, error) {
 		}
 		ConfigBase.MergeFrom(m)
 	}
-	return nil, nil
+	if err := ConfigBase.SetSpecPaths(flags...); err != nil {
+		return nil, err
+	}
+	path := ConfigBase.GetPathString("")
+	profile := ConfigBase.GetPathString("spec.profile")
+	base, err := readProfile(path, profile)
+	if err != nil {
+		return base, err
+	}
+	base.MergeFrom(ConfigBase)
+	return base, nil
 }
+
+func readProfile(path, profile string) (values.Map, error) {
+	if profile == "" {
+		profile = "default"
+	}
+	base, err := readBuiltinProfile(path, "default")
+	if err != nil {
+		return nil, err
+	}
+	if profile == "default" {
+		return base, nil
+	}
+	p, err := readBuiltinProfile(path, profile)
+	if err != nil {
+		return nil, err
+	}
+	base.MergeFrom(p)
+	return base, nil
+}
+
+func readBuiltinProfile(path, profile string) (values.Map, error) {
+	fs := manifests.BuiltinDir(path)
+	file, err := fs.Open(fmt.Sprintf("profiles/%v.yaml", profile))
+	if err != nil {
+		return nil, err
+	}
+	pb, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+	return values.MapFromYAML(pb)
+}
+
 func checkDops(s string) error {
 	mfs, err := manifest.ParseMultiple(s)
 	if err != nil {
