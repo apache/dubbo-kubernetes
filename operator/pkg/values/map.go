@@ -255,3 +255,89 @@ func (m Map) MergeFrom(other Map) {
 		m[k] = v
 	}
 }
+
+func (m Map) SetPath(paths string, value any) error {
+	path := splitPath(paths)
+	base := m
+	if err := setPathRecurse(base, path, value); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m Map) SetSpecPaths(paths ...string) error {
+	for _, path := range paths {
+		if err := m.SetPaths("spec." + path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func setPathRecurse(base map[string]any, paths []string, value any) error {
+	seg := paths[0]
+	last := len(paths) == 1
+	nextIsArray := len(paths) >= 2 && strings.HasPrefix(paths[1], "[")
+	if nextIsArray {
+		last = len(paths) == 2
+		// Find or create target list
+		if _, f := base[seg]; !f {
+			base[seg] = []any{}
+		}
+		var index int
+		if k, v, ok := extractKV(paths[1]); ok {
+			index = -1
+			for idx, cm := range base[seg].([]any) {
+				if MustCastAsMap(cm)[k] == v {
+					index = idx
+					break
+				}
+			}
+			if index == -1 {
+				return fmt.Errorf("element %v not found", paths[1])
+			}
+		} else if idx, ok := extractIndex(paths[1]); ok {
+			index = idx
+		} else {
+			return fmt.Errorf("unknown segment %v", paths[1])
+		}
+		l := base[seg].([]any)
+		if index < 0 || index >= len(l) {
+			// Index is greater, we need to append
+			if last {
+				l = append(l, value)
+			} else {
+				nm := Map{}
+				if err := setPathRecurse(nm, paths[2:], value); err != nil {
+					return err
+				}
+				l = append(l, nm)
+			}
+			base[seg] = l
+		} else {
+			v := MustCastAsMap(l[index])
+			if err := setPathRecurse(v, paths[2:], value); err != nil {
+				return err
+			}
+			l[index] = v
+		}
+	} else {
+		if _, f := base[seg]; !f {
+			base[seg] = map[string]any{}
+		}
+		if last {
+			base[seg] = value
+		} else {
+			return setPathRecurse(MustCastAsMap(base[seg]), paths[1:], value)
+		}
+	}
+	return nil
+}
+
+func extractKV(seg string) (string, string, bool) {
+	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
+		return "", "", false
+	}
+	sanitized := seg[1 : len(seg)-1]
+	return strings.Cut(sanitized, ":")
+}

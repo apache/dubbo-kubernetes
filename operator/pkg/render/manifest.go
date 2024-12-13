@@ -45,6 +45,7 @@ func MergeInputs(filenames []string, flags []string) ([]values.Map, error) {
 		if m["spec"] == nil {
 			delete(m, "spec")
 		}
+		ConfigBase.MergeFrom(m)
 	}
 	return nil, nil
 }
