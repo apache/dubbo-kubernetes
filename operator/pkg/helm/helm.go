@@ -86,7 +86,7 @@ func loadChart(f fs.FS, root string) (*chart.Chart, error) {
 		}
 		bfs = append(bfs, bf)
 	}
-	return loader.LoadFile(bfs)
+	return loader.LoadFiles(bfs)
 }
 
 func stripPrefix(path, prefix string) string {
