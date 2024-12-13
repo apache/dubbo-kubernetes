@@ -1,5 +1,7 @@
 package util
 
+import "fmt"
+
 const (
 	defaultSeparator = ", "
 )
@@ -8,6 +10,13 @@ type Errors []error
 
 func (e Errors) Error() string {
 	return ToString(e, defaultSeparator)
+}
+
+func (e Errors) ToErrors() error {
+	if len(e) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%s", e)
 }
 
 func ToString(errors []error, separator string) string {
@@ -22,10 +31,6 @@ func ToString(errors []error, separator string) string {
 		out += e.Error()
 	}
 	return out
-}
-
-func (e Errors) ToString() {
-
 }
 
 func NewErrs(err error) Errors {

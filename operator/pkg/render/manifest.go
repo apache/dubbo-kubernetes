@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/validation"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
@@ -63,7 +64,6 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger) ([]
 			return nil, nil, fmt.Errorf("get component %v: %v", comp.UserFacingName, err)
 		}
 		for _, spec := range specs {
-
 		}
 	}
 	return nil, nil, nil
@@ -80,4 +80,12 @@ func validateDubboOperator(dop values.Map, logger clog.Logger) error {
 		}
 	}
 	return nil
+}
+
+func applyComponentValuesToHelmValues(comp component.Component, spec apis.MetadataCompSpec, merged values.Map) values.Map {
+	root := comp.HelmTreeRoot
+	if spec.Namespace != "" {
+		spec.Namespace = "dubbo-system"
+	}
+	return merged
 }
