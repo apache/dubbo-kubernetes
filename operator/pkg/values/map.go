@@ -265,6 +265,55 @@ func (m Map) SetPath(paths string, value any) error {
 	return nil
 }
 
+func (m Map) SetPaths(paths ...string) error {
+	for _, sf := range paths {
+		p, v := getPV(sf)
+		// input value type is always string, transform it to correct type before setting.
+		var val any = v
+		if !isAlwaysString(p) {
+			val = parseValue(v)
+		}
+		if err := m.SetPath(p, val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getPV(setFlag string) (path string, value string) {
+	pv := strings.Split(setFlag, "=")
+	if len(pv) != 2 {
+		return setFlag, ""
+	}
+	path, value = strings.TrimSpace(pv[0]), strings.TrimSpace(pv[1])
+	return
+}
+
+func parseValue(valueStr string) any {
+	var value any
+	if v, err := strconv.Atoi(valueStr); err == nil {
+		value = v
+	} else if v, err := strconv.ParseFloat(valueStr, 64); err == nil {
+		value = v
+	} else if v, err := strconv.ParseBool(valueStr); err == nil {
+		value = v
+	} else {
+		value = strings.ReplaceAll(valueStr, "\\,", ",")
+	}
+	return value
+}
+
+func isAlwaysString(s string) bool {
+	for _, a := range alwaysString {
+		if strings.HasPrefix(s, a) {
+			return true
+		}
+	}
+	return false
+}
+
+var alwaysString = []string{}
+
 func (m Map) SetSpecPaths(paths ...string) error {
 	for _, path := range paths {
 		if err := m.SetPaths("spec." + path); err != nil {
