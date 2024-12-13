@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: dubbo.apache.org/v1alpha1
-kind: DubboConfig
+apiVersion: install.dubbo.io/v1alpha1
+kind: DubboOperator
 metadata:
   namespace: dubbo-system
 spec:
-  profile: default
-  namespace: dubbo-system
-  componentsMeta:
-    admin:
+  components:
+    base:
       enabled: true
-
+  values:
+    global:
+      dubboNamespace: dubbo-system
