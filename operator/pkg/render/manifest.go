@@ -2,7 +2,7 @@ package render
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/operator/manifest"
+	"github.com/apache/dubbo-kubernetes/operator/cmd/validation"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"io"

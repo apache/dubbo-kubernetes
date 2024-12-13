@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/apis"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
+	"sigs.k8s.io/yaml"
 )
+
+type Warnings = util.Errors
 
 func ParseAndValidateDubboOperator(dopMap values.Map) (Warnings, util.Errors) {
 	dop := &apis.DubboOperator{}
@@ -29,4 +33,11 @@ func validateValues(raw *apis.DubboOperator) (Warnings, util.Errors) {
 		return nil, util.NewErrs(fmt.Errorf("could not unmarshal: %v", err))
 	}
 	return nil, nil
+}
+
+func validateComponentNames(components *apis.DubboComponentSpec) error {
+	if components == nil {
+		return fmt.Errorf("components not found")
+	}
+	return nil
 }
