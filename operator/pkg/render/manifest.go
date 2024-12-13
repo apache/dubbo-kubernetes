@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func MergeInputs(filenames []string, flags []string) ([]values.Map, error) {
+func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 	ConfigBase, err := values.MapFromJSON([]byte(`{
 	  "apiVersion": "install.dubbo.io/v1alpha1",
 	  "kind": "DubboOperator",
@@ -122,7 +122,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger) ([]
 			compVals := applyComponentValuesToHelmValues(comp, spec, merged)
 		}
 	}
-	return nil, nil, nil
+	return nil, merged, nil
 }
 
 func validateDubboOperator(dop values.Map, logger clog.Logger) error {
