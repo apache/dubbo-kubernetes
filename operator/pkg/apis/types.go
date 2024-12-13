@@ -36,12 +36,12 @@ type DubboOperator struct {
 type DubboOperatorSpec struct {
 	Profile string `json:"profile,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
-	Revision string           `json:"revision,omitempty"`
-	Components *DubboCompSpec `json:"components,omitempty"`
-	Values json.RawMessage    `json:"values,omitempty"`
+	Revision string                `json:"revision,omitempty"`
+	Components *DubboComponentSpec `json:"components,omitempty"`
+	Values json.RawMessage         `json:"values,omitempty"`
 }
 
-type DubboCompSpec struct {
+type DubboComponentSpec struct {
 	Base    *BaseComponentSpec `json:"base,omitempty"`
 }
 
