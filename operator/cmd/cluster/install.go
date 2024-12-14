@@ -3,8 +3,14 @@ package cluster
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/installer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
 	"github.com/spf13/cobra"
+	"io"
+	"os"
 	"strings"
 	"time"
 )
@@ -46,13 +52,40 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 			if err != nil {
 				return err
 			}
-			return install(kubeClient, rootArgs, iArgs)
 		},
 	}
 	return ic
 }
 
-func install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs) error {
-
+func install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
+	setFlags := applyFlagAliases(iArgs.Set, iArgs.ManifestsPath, iArgs.Revision)
+	manifests, vals, err := render.GenerateManifest(iArgs.Files, setFlags)
+	if err != nil {
+		return fmt.Errorf("generate config: %v", err)
+	}
+	profile := pointer.NonEmptyOrDefault(vals.GetPathString("spec.profile"), "default")
+	if !rootArgs.DryRun && !iArgs.SkipConfirmation {
+		prompt := fmt.Sprintf("You are currently selecting the %q profile to install into the cluster. %v Do you want to proceed? (y/N)", profile, vals)
+		if !OptionDeterminator(prompt, stdOut) {
+			p.Println("Cancelled.")
+			os.Exit(1)
+		}
+	}
+	i := installer.Installer{
+		DryRun:   rootArgs.DryRun,
+		SkipWait: false,
+		Kube:     kubeClient,
+		Values:   vals,
+	}
+	if err := i.InstallManifests(manifests); err != nil {
+		return fmt.Errorf("failed to install manifests: %v", err)
+	}
 	return nil
+}
+
+func applyFlagAliases(flags []string, manifestsPath string, revision string) []string {
+	if manifestsPath != "" {
+		flags = append(flags, fmt.Sprintf("manifestsPath=%s", manifestsPath))
+	}
+	return flags
 }

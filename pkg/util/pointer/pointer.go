@@ -37,3 +37,11 @@ func DerefOr[T any](ptr *T, def T) T {
 func To[T any](t T) *T {
 	return &t
 }
+
+func NonEmptyOrDefault[T comparable](t T, def T) T {
+	var empty T
+	if t != empty {
+		return t
+	}
+	return def
+}
