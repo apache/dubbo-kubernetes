@@ -1,0 +1,108 @@
+syntax = 'proto3';
+
+package dubbo.operator.v1alpha1;
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "dubbo.io/dubbo/operator/pkg/apis";
+
+message ArchConfig {
+  // Sets pod scheduling weight for amd64 arch
+  uint32 amd64 = 1;
+
+  // Sets pod scheduling weight for ppc64le arch.
+  uint32 ppc64le = 2;
+
+  // Sets pod scheduling weight for s390x arch.
+  uint32 s390x = 3;
+
+  // Sets pod scheduling weight for arm64 arch.
+  uint32 arm64 = 4;
+}
+
+// Global Configuration for Dubbo components.
+message GlobalConfig {
+  // Deprecated: replaced by the affinity k8s settings which allows architecture nodeAffinity configuration of this behavior.
+  ArchConfig arch = 1 [deprecated = true];
+
+  // Controls whether the server-side validation is enabled.
+  google.protobuf.BoolValue configValidation = 3;
+
+  // Specifies the default namespace for the dubbo control plane components.
+  string dubboNamespace = 14;
+
+  // Specifies the configution of dubbod
+  dubbodConfig dubbod = 54;
+
+  // Configures the revision this control plane is a part of
+  string revision = 59;
+}
+
+message dubbodConfig {
+  // If enabled, dubbod will perform config analysis
+  google.protobuf.BoolValue enableAnalysis = 2;
+}
+
+message BaseConfig {
+  // For Helm2 use, adds the CRDs to templates.
+  google.protobuf.BoolValue enableCRDTemplates = 1;
+  // CRDs to exclude. Requires `enableCRDTemplates`
+  repeated string excludedCRDs = 6;
+  // URL to use for validating webhook.
+  string validationURL = 2;
+
+  // For dubboctl usage to disable dubbo config crds in base
+  google.protobuf.BoolValue enabledubboConfigCRDs = 3;
+
+  google.protobuf.BoolValue validateGateway = 4;
+
+  // validation webhook CA bundle
+  string validationCABundle = 5;
+}
+
+message Values {
+  // Global configuration for dubbo components.
+  GlobalConfig global = 6;
+
+  // Identifies the revision this installation is associated with.
+  string revision = 21;
+
+  // Used internally to identify the owner of each resource.
+  string ownerName = 22;
+
+  // Configuration for the base component.
+  BaseConfig base = 37;
+
+  // Specifies the aliases for the dubbo control plane revision. A MutatingWebhookConfiguration
+  // is created for each alias.
+  repeated string revisionTags = 39;
+
+  // The name of the default revision in the cluster.
+  string defaultRevision = 40;
+
+  // Specifies which installation configuration profile to apply.
+  string profile = 42;
+
+  // Specifies the compatibility version to use. When this is set, the control plane will
+  // be configured with the same defaults as the specified version.
+  string compatibilityVersion = 43;
+
+}
+
+// IntOrString is a type that can hold an int32 or a string.  When used in
+// JSON or YAML marshalling and unmarshalling, it produces or consumes the
+// inner type.  This allows you to have, for example, a JSON field that can
+// accept a name or number.
+// TODO: Rename to Int32OrString
+//
+// +protobuf=true
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+// +k8s:openapi-gen=true
+message IntOrString {
+  int64 type = 1;
+
+  google.protobuf.Int32Value intVal = 2;
+
+  google.protobuf.StringValue strVal = 3;
+}
+
