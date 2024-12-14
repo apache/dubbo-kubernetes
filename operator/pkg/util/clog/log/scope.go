@@ -3,21 +3,25 @@ package log
 import (
 	"fmt"
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 )
 
 type Scope struct {
-	name        string
-	nameToEmit  string
-	outputLevel *atomic.Value
-	logCallers  *atomic.Value
+	name            string
+	nameToEmit      string
+	outputLevel     *atomic.Value
+	stackTraceLevel *atomic.Value
+	logCallers      *atomic.Value
 }
 
 var (
-	lock sync.RWMutex
+	scopes = make(map[string]*Scope)
+	lock   sync.RWMutex
 )
 
 func RegisterScope(name string, desc string) *Scope {
@@ -28,11 +32,26 @@ func registerScope(name string, desc string) *Scope {
 	if strings.ContainsAny(name, ":,.") {
 		panic(fmt.Sprintf("scope name %s is invalid, it cannot contain colons, commas, or periods", name))
 	}
-	return nil
+	lock.Lock()
+	defer lock.Unlock()
+	s, ok := scopes[name]
+	if !ok {
+		s = &Scope{
+			name:            name,
+			outputLevel:     &atomic.Value{},
+			stackTraceLevel: &atomic.Value{},
+			logCallers:      &atomic.Value{},
+		}
+	}
+	return s
 }
 
 func (s *Scope) GetOutputLevel() Level {
 	return s.outputLevel.Load().(Level)
+}
+
+func (s *Scope) GetStackTraceLevel() Level {
+	return s.stackTraceLevel.Load().(Level)
 }
 
 func (s *Scope) Infof(format string, args ...any) {
@@ -87,7 +106,6 @@ func (s *Scope) emitWithTime(level zapcore.Level, msg string, t time.Time) {
 		}
 	} else if len(s.labelKeys) > 0 {
 		sb := &strings.Builder{}
-		// Assume roughly 15 chars per kv pair. Its fine to be off, this is just an optimization
 		sb.Grow(len(msg) + 15*len(s.labelKeys))
 		sb.WriteString(msg)
 		sb.WriteString("\t")
