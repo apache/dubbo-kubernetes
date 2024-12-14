@@ -13,6 +13,14 @@ type ConsoleLogger struct {
 	scope  *log.Scope
 }
 
+func (l *ConsoleLogger) LogAndPrint(v ...any) {
+	if len(v) == 0 {
+		return
+	}
+	s := fmt.Sprint(v...)
+	l.Print(s + "\n")
+	l.scope.Infof(s)
+}
 func (l *ConsoleLogger) LogAndError(v ...any) {
 	if len(v) == 0 {
 		return

@@ -3,7 +3,7 @@ package cluster
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/installer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/install"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog/log"
@@ -59,15 +59,15 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 			p := NewPrinterForWriter(cmd.OutOrStderr())
 			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 			p.Printf("%v\n", art.DubboArt())
-			return install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
+			return Install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
 		},
 	}
 	return ic
 }
 
-func install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
-	setFlags := applyFlagAliases(iArgs.Set, iArgs.ManifestsPath, iArgs.Revision)
-	manifests, vals, err := render.GenerateManifest(iArgs.Files, setFlags)
+func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
+	setFlags := applyFlagAliases(iArgs.Sets, iArgs.ManifestPath, iArgs.Revision)
+	manifests, vals, err := render.GenerateManifest(iArgs.Files, setFlags, cl)
 	if err != nil {
 		return fmt.Errorf("generate config: %v", err)
 	}
@@ -79,7 +79,7 @@ func install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 			os.Exit(1)
 		}
 	}
-	i := installer.Installer{
+	i := install.Installer{
 		DryRun:   rootArgs.DryRun,
 		SkipWait: false,
 		Kube:     kubeClient,

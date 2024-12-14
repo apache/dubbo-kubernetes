@@ -1,4 +1,4 @@
-package installer
+package install
 
 import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"

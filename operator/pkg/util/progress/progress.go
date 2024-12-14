@@ -40,7 +40,7 @@ func (i *Info) NewComponent(comp string) *ManifestInfo {
 	}
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.components[component] = mi
+	i.components[comp] = mi
 	return mi
 }
 func (i *Info) reportProgress(componentName string) func() {
