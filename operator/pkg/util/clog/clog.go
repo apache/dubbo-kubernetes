@@ -1,6 +1,7 @@
 package clog
 
 import (
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog/log"
 	"io"
 	"os"
@@ -53,10 +54,6 @@ func NewDefaultLogger() *ConsoleLogger {
 	return nil
 }
 
-func (l *ConsoleLogger) LogAndPrint(v ...any) {
-	return
-}
-
 func NewConsoleLogger(stdOut, stdErr io.Writer, scope *log.Scope) *ConsoleLogger {
 	s := scope
 	if s == nil {
@@ -67,4 +64,12 @@ func NewConsoleLogger(stdOut, stdErr io.Writer, scope *log.Scope) *ConsoleLogger
 		stdErr: stdErr,
 		scope:  s,
 	}
+}
+
+func (l *ConsoleLogger) Print(s string) {
+	_, _ = l.stdOut.Write([]byte(s))
+}
+
+func (l *ConsoleLogger) PrintErr(s string) {
+	_, _ = l.stdErr.Write([]byte(s))
 }
