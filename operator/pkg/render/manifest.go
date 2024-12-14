@@ -6,6 +6,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/cmd/validation"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/helm"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
@@ -120,9 +121,38 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger) ([]
 		}
 		for _, spec := range specs {
 			compVals := applyComponentValuesToHelmValues(comp, spec, merged)
+			rendered, warnings, err := helm.Reader(spec.Namespace, comp.HelmSubDir, compVals)
+			if err != nil {
+				return nil, nil, fmt.Errorf("helm render: %v", err)
+			}
+			chartWarnings = util.AppendErrs(chartWarnings, warnings)
+			finalized, err := postProcess(comp, rendered, compVals)
+			if err != nil {
+				return nil, nil, fmt.Errorf("post process: %v", err)
+			}
+			mfs, found := allManifests[comp.UserFacingName]
+			if found {
+				mfs.Manifests = append(mfs.Manifests, finalized...)
+				allManifests[comp.UserFacingName] = mfs
+			} else {
+				allManifests[comp.UserFacingName] = manifest.ManifestSet{
+					Components: comp.UserFacingName,
+					Manifests:  finalized,
+				}
+			}
 		}
 	}
-	return nil, merged, nil
+	if logger != nil {
+		for _, w := range chartWarnings {
+			logger.LogAndErrorf("%s %v", "❗", w)
+		}
+	}
+
+	val := make([]manifest.ManifestSet, 0, len(allManifests))
+	for _, v := range allManifests {
+		val = append(val, v)
+	}
+	return val, merged, nil
 }
 
 func validateDubboOperator(dop values.Map, logger clog.Logger) error {
@@ -139,9 +169,12 @@ func validateDubboOperator(dop values.Map, logger clog.Logger) error {
 }
 
 func applyComponentValuesToHelmValues(comp component.Component, spec apis.MetadataCompSpec, merged values.Map) values.Map {
-	root := comp.HelmTreeRoot
 	if spec.Namespace != "" {
 		spec.Namespace = "dubbo-system"
 	}
 	return merged
+}
+
+func postProcess(comp component.Component, manifests []manifest.Manifest, vals values.Map) ([]manifest.Manifest, error) {
+	return manifests, nil
 }
