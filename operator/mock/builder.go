@@ -15,23 +15,23 @@
 
 package mock
 
-import (
-	"context"
-	"github.com/apache/dubbo-kubernetes/operator/dubbo"
-)
-
-type Builder struct {
-	BuildInvoked bool
-	BuildFn      func(*dubbo.Dubbo) error
-}
-
-func NewBuilder() *Builder {
-	return &Builder{
-		BuildFn: func(*dubbo.Dubbo) error { return nil },
-	}
-}
-
-func (i *Builder) Build(ctx context.Context, f *dubbo.Dubbo) error {
-	i.BuildInvoked = true
-	return i.BuildFn(f)
-}
+//import (
+//	"context"
+//	"github.com/apache/dubbo-kubernetes/operator/dubbo"
+//)
+//
+//type Builder struct {
+//	BuildInvoked bool
+//	BuildFn      func(*dubbo.Dubbo) error
+//}
+//
+//func NewBuilder() *Builder {
+//	return &Builder{
+//		BuildFn: func(*dubbo.Dubbo) error { return nil },
+//	}
+//}
+//
+//func (i *Builder) Build(ctx context.Context, f *dubbo.Dubbo) error {
+//	i.BuildInvoked = true
+//	return i.BuildFn(f)
+//}
