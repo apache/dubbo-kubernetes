@@ -17,6 +17,9 @@ type Scope struct {
 	outputLevel     *atomic.Value
 	stackTraceLevel *atomic.Value
 	logCallers      *atomic.Value
+	labels          map[string]any
+	labelKeys       []string
+	callerSkip      int
 }
 
 var (
@@ -25,10 +28,10 @@ var (
 )
 
 func RegisterScope(name string, desc string) *Scope {
-	return registerScope(name, desc)
+	return registerScope(name, desc, 0)
 }
 
-func registerScope(name string, desc string) *Scope {
+func registerScope(name string, desc string, callerSkip int) *Scope {
 	if strings.ContainsAny(name, ":,.") {
 		panic(fmt.Sprintf("scope name %s is invalid, it cannot contain colons, commas, or periods", name))
 	}
@@ -38,12 +41,31 @@ func registerScope(name string, desc string) *Scope {
 	if !ok {
 		s = &Scope{
 			name:            name,
+			callerSkip:      callerSkip,
 			outputLevel:     &atomic.Value{},
 			stackTraceLevel: &atomic.Value{},
 			logCallers:      &atomic.Value{},
 		}
+		s.SetOutputLevel(InfoLevel)
+		s.SetStackTraceLevel(NoneLevel)
+		s.SetLogCallers(false)
+		if name != DefaultScopeName {
+			s.nameToEmit = name
+		}
+		scopes[name] = s
 	}
+	s.labels = make(map[string]any)
 	return s
+}
+
+func (s *Scope) SetOutputLevel(l Level) {
+	s.outputLevel.Store(l)
+}
+func (s *Scope) SetStackTraceLevel(l Level) {
+	s.stackTraceLevel.Store(l)
+}
+func (s *Scope) SetLogCallers(logCallers bool) {
+	s.logCallers.Store(logCallers)
 }
 
 func (s *Scope) GetOutputLevel() Level {
