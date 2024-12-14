@@ -6,6 +6,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/installer"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog/log"
+	"github.com/apache/dubbo-kubernetes/pkg/art"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
 	"github.com/spf13/cobra"
@@ -14,6 +16,8 @@ import (
 	"strings"
 	"time"
 )
+
+var installerScope = log.RegisterScope("installer", "installer")
 
 type installArgs struct {
 	Files            []string
@@ -52,6 +56,10 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 			if err != nil {
 				return err
 			}
+			p := NewPrinterForWriter(cmd.OutOrStderr())
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+			p.Printf("%v\n", art.DubboArt())
+			return install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
 		},
 	}
 	return ic

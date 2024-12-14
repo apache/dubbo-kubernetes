@@ -6,6 +6,10 @@ import (
 	"sync"
 )
 
+const (
+	DefaultScopeName = "default"
+)
+
 type Scope struct {
 	name string
 }

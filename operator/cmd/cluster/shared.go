@@ -43,3 +43,7 @@ func OptionDeterminator(msg string, writer io.Writer) bool {
 		}
 	}
 }
+
+func NewPrinterForWriter(w io.Writer) Printer {
+	return &writerPrinter{writer: w}
+}
