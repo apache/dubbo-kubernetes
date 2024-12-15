@@ -16,4 +16,5 @@
 base:
   ## dubboctl disable dubbo configuration crds in base.
   enableDubboConfigCRD: true
+
 defaultRevision: "default"

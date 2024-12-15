@@ -64,7 +64,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 			p := NewPrinterForWriter(cmd.OutOrStderr())
 			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 			p.Printf("%v\n", art.DubboArt())
-			return Install(kubeClient, rootArgs, iArgs)
+			return Install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
 		},
 	}
 	return ic

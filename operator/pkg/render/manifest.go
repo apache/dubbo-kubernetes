@@ -27,6 +27,7 @@ func MergeInputs(filenames []string, flags []string, client kube.Client) (values
 	if err != nil {
 		return nil, err
 	}
+
 	for i, fn := range filenames {
 		var b []byte
 		var err error
@@ -50,16 +51,24 @@ func MergeInputs(filenames []string, flags []string, client kube.Client) (values
 		}
 		ConfigBase.MergeFrom(m)
 	}
+
 	if err := ConfigBase.SetSpecPaths(flags...); err != nil {
 		return nil, err
 	}
+
 	path := ConfigBase.GetPathString("")
 	profile := ConfigBase.GetPathString("spec.profile")
+	value, _ := ConfigBase.GetPathMap("spec.values")
 	base, err := readProfile(path, profile)
 	if err != nil {
 		return base, err
 	}
 	base.MergeFrom(ConfigBase)
+
+	if value != nil {
+		base.MergeFrom(values.Map{"spec": values.Map{"values": value}})
+	}
+
 	return base, nil
 }
 
@@ -86,7 +95,7 @@ func readBuiltinProfile(path, profile string) (values.Map, error) {
 	fs := manifests.BuiltinDir(path)
 	file, err := fs.Open(fmt.Sprintf("profiles/%v.yaml", profile))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("profile %q not found: %v", profile, err)
 	}
 	pb, err := io.ReadAll(file)
 	if err != nil {
@@ -111,7 +120,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, cli
 	if err != nil {
 		return nil, nil, fmt.Errorf("merge inputs: %v", err)
 	}
-	if err := validateDubboOperator(merged, logger); err != nil {
+	if err := validateDubboOperator(merged, client, logger); err != nil {
 		return nil, nil, fmt.Errorf("validateDubboOperator err:%v", err)
 	}
 	allManifests := map[component.Name]manifest.ManifestSet{}
@@ -156,8 +165,8 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, cli
 	return val, merged, nil
 }
 
-func validateDubboOperator(dop values.Map, logger clog.Logger) error {
-	warnings, errs := validation.ParseAndValidateDubboOperator(dop)
+func validateDubboOperator(dop values.Map, client kube.Client, logger clog.Logger) error {
+	warnings, errs := validation.ParseAndValidateDubboOperator(dop, client)
 	if err := errs.ToErrors(); err != nil {
 		return err
 	}
