@@ -11,12 +11,13 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
+	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"io"
 	"os"
 	"strings"
 )
 
-func MergeInputs(filenames []string, flags []string) (values.Map, error) {
+func MergeInputs(filenames []string, flags []string, client kube.Client) (values.Map, error) {
 	ConfigBase, err := values.MapFromJSON([]byte(`{
 	  "apiVersion": "install.dubbo.io/v1alpha1",
 	  "kind": "DubboOperator",
@@ -104,9 +105,9 @@ func checkDops(s string) error {
 	}
 	return nil
 }
-func GenerateManifest(files []string, setFlags []string, logger clog.Logger) ([]manifest.ManifestSet, values.Map, error) {
+func GenerateManifest(files []string, setFlags []string, logger clog.Logger, client kube.Client) ([]manifest.ManifestSet, values.Map, error) {
 	var chartWarnings util.Errors
-	merged, err := MergeInputs(files, setFlags)
+	merged, err := MergeInputs(files, setFlags, client)
 	if err != nil {
 		return nil, nil, fmt.Errorf("merge inputs: %v", err)
 	}

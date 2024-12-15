@@ -46,11 +46,16 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 		Use:   "install",
 		Short: "Applies an Dubbo manifest, installing or reconfiguring Dubbo on a cluster",
 		Long:  "The install command generates an Dubbo install manifest and applies it to a cluster",
-		Example: `# Apply a default dubboctl installation.
+		Example: `
+        # Apply a default dubboctl installation.
 		dubboctl install
 		# Apply a default profile.
-		dubboctl install --profile=default`,
-		Args: cobra.ExactArgs(0),
+		dubboctl install --profile=default
+		# Apply a config file
+		dubboctl install -f my-config.yaml
+		`,
+		Aliases: []string{"apply"},
+		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			kubeClient, err := ctx.CLIClient()
 			if err != nil {
@@ -59,7 +64,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 			p := NewPrinterForWriter(cmd.OutOrStderr())
 			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 			p.Printf("%v\n", art.DubboArt())
-			return Install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
+			return Install(kubeClient, rootArgs, iArgs)
 		},
 	}
 	return ic
@@ -67,7 +72,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 
 func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
 	setFlags := applyFlagAliases(iArgs.Sets, iArgs.ManifestPath, iArgs.Revision)
-	manifests, vals, err := render.GenerateManifest(iArgs.Files, setFlags, cl)
+	manifests, vals, err := render.GenerateManifest(iArgs.Files, setFlags, cl, kubeClient)
 	if err != nil {
 		return fmt.Errorf("generate config: %v", err)
 	}

@@ -26,6 +26,7 @@ type Client interface {
 }
 
 type CLIClient interface {
+	Client
 	DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error)
 }
 
