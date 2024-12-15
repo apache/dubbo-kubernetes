@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/dmultierr"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/pointer"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	"github.com/hashicorp/go-multierror"
@@ -24,6 +24,7 @@ type Installer struct {
 	Kube         kube.CLIClient
 	Values       values.Map
 	ProgressInfo *progress.Info
+	Logger       clog.Logger
 }
 
 func (i Installer) install(manifests []manifest.ManifestSet) error {
@@ -111,7 +112,6 @@ func (i Installer) serverSideApply(obj manifest.Manifest) error {
 	}
 	if _, err := dc.Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, []byte(obj.Content), metav1.PatchOptions{
 		DryRun:       dryRun,
-		Force:        pointer.Of(true),
 		FieldManager: operatorFieldOwner,
 	}); err != nil {
 		return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objStr, err)

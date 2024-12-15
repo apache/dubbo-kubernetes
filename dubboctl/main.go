@@ -18,7 +18,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -29,7 +28,6 @@ import (
 func main() {
 	rootCmd := cmd.GetRootCmd(os.Args[1:])
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Errorf("GetRootCmd Execute err:%v", err)
 		os.Exit(1)
 	}
 }

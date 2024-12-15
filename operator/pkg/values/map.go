@@ -22,7 +22,7 @@ func (m Map) JSON() string {
 }
 
 func (m Map) YAML() string {
-	bytes, err := json.Marshal(m)
+	bytes, err := yaml.Marshal(m)
 	if err != nil {
 		panic(fmt.Sprintf("yaml Marshal: %v", err))
 	}
@@ -40,7 +40,7 @@ func MapFromJSON(input []byte) (Map, error) {
 
 func MapFromYAML(input []byte) (Map, error) {
 	m := make(Map)
-	err := json.Unmarshal(input, &m)
+	err := yaml.Unmarshal(input, &m)
 	if err != nil {
 		return nil, err
 	}

@@ -27,7 +27,7 @@ func (w writerPrinter) Println(s string) {
 	_, _ = fmt.Fprintln(w.writer, s)
 }
 
-func OptionDeterminator(msg string, writer io.Writer) bool {
+func OptionDeterminate(msg string, writer io.Writer) bool {
 	for {
 		_, _ = fmt.Fprintf(writer, "%s ", msg)
 		var resp string

@@ -7,6 +7,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog/log"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/pkg/art"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
@@ -87,17 +88,19 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 	}
 	profile := pointer.NonEmptyOrDefault(vals.GetPathString("spec.profile"), "default")
 	if !rootArgs.DryRun && !iArgs.SkipConfirmation {
-		prompt := fmt.Sprintf("You are currently selecting the %q profile to install into the cluster. %v Do you want to proceed? (y/N)", profile, vals)
-		if !OptionDeterminator(prompt, stdOut) {
-			p.Println("Cancelled.")
+		prompt := fmt.Sprintf("You are currently selecting the %q profile to install into the cluster. Do you want to proceed? (y/N)", profile)
+		if !OptionDeterminate(prompt, stdOut) {
+			p.Println("Canceled Completed.")
 			os.Exit(1)
 		}
 	}
 	i := install.Installer{
-		DryRun:   rootArgs.DryRun,
-		SkipWait: false,
-		Kube:     kubeClient,
-		Values:   vals,
+		DryRun:       rootArgs.DryRun,
+		SkipWait:     false,
+		Kube:         kubeClient,
+		Values:       vals,
+		ProgressInfo: progress.NewInfo(),
+		Logger:       cl,
 	}
 	if err := i.InstallManifests(manifests); err != nil {
 		return fmt.Errorf("failed to install manifests: %v", err)

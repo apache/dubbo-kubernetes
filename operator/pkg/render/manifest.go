@@ -60,18 +60,23 @@ func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 
 	path := ConfigBase.GetPathString("")
 	profile := ConfigBase.GetPathString("spec.profile")
-	value, _ := ConfigBase.GetPathMap("spec.values")
 	base, err := readProfile(path, profile)
 	if err != nil {
 		return base, err
 	}
 	base.MergeFrom(ConfigBase)
-
-	if value != nil {
-		base.MergeFrom(values.Map{"spec": values.Map{"values": value}})
-	}
-
 	return base, nil
+}
+
+func checkDops(s string) error {
+	mfs, err := manifest.ParseMultiple(s)
+	if err != nil {
+		return fmt.Errorf("unable to parse file: %v", err)
+	}
+	if len(mfs) > 1 {
+		return fmt.Errorf("contains multiple DubboOperator CRs, only one per file is supported")
+	}
+	return nil
 }
 
 func readProfile(path, profile string) (values.Map, error) {
@@ -106,27 +111,16 @@ func readBuiltinProfile(path, profile string) (values.Map, error) {
 	return values.MapFromYAML(pb)
 }
 
-func checkDops(s string) error {
-	mfs, err := manifest.ParseMultiple(s)
-	if err != nil {
-		return fmt.Errorf("unable to parse file: %v", err)
-	}
-	if len(mfs) > 1 {
-		return fmt.Errorf("contains multiple DubboOperator CRs, only one per file is supported")
-	}
-	return nil
-}
-
 func GenerateManifest(files []string, setFlags []string, logger clog.Logger, client kube.Client) ([]manifest.ManifestSet, values.Map, error) {
-	var chartWarnings util.Errors
 	merged, err := MergeInputs(files, setFlags)
 	if err != nil {
-		return nil, nil, fmt.Errorf("merge inputs: %v", err)
+		return nil, nil, fmt.Errorf("merge inputs: %v %v", err)
 	}
 
 	if err := validateDubboOperator(merged, logger); err != nil {
 		return nil, nil, fmt.Errorf("validateDubboOperator err:%v", err)
 	}
+	var chartWarnings util.Errors
 	allManifests := map[component.Name]manifest.ManifestSet{}
 	for _, comp := range component.AllComponents {
 		specs, err := comp.Get(merged)
@@ -156,6 +150,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, cli
 			}
 		}
 	}
+
 	if logger != nil {
 		for _, w := range chartWarnings {
 			logger.LogAndErrorf("%s %v", "❗", w)
