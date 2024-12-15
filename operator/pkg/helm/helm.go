@@ -2,6 +2,7 @@ package helm
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/manifests"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/parts"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
@@ -101,7 +102,9 @@ func Reader(namespace string, directory string, dop values.Map) ([]manifest.Mani
 		return nil, nil, fmt.Errorf("failed to get values from dop: %v", ok)
 	}
 	path := pathJoin("charts", directory)
-	chrt, err := loadChart(nil, path)
+	pkgPath := dop.GetPathString("spec.packagePath")
+	f := manifests.BuiltinDir(pkgPath)
+	chrt, err := loadChart(f, path)
 	output, warnings, err := readerChart(namespace, vals, chrt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("render chart: %v", err)
