@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-func MergeInputs(filenames []string, flags []string, client kube.Client) (values.Map, error) {
+func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 	ConfigBase, err := values.MapFromJSON([]byte(`{
 	  "apiVersion": "install.dubbo.io/v1alpha1",
 	  "kind": "DubboOperator",
@@ -39,9 +39,11 @@ func MergeInputs(filenames []string, flags []string, client kube.Client) (values
 		} else {
 			b, err = os.ReadFile(strings.TrimSpace(fn))
 		}
+
 		if err := checkDops(string(b)); err != nil {
 			return nil, fmt.Errorf("checkDops err:%v", err)
 		}
+
 		m, err := values.MapFromYAML(b)
 		if err != nil {
 			return nil, fmt.Errorf("yaml Unmarshal err:%v", err)
@@ -110,17 +112,19 @@ func checkDops(s string) error {
 		return fmt.Errorf("unable to parse file: %v", err)
 	}
 	if len(mfs) > 1 {
-		return fmt.Errorf("")
+		return fmt.Errorf("contains multiple DubboOperator CRs, only one per file is supported")
 	}
 	return nil
 }
+
 func GenerateManifest(files []string, setFlags []string, logger clog.Logger, client kube.Client) ([]manifest.ManifestSet, values.Map, error) {
 	var chartWarnings util.Errors
-	merged, err := MergeInputs(files, setFlags, client)
+	merged, err := MergeInputs(files, setFlags)
 	if err != nil {
 		return nil, nil, fmt.Errorf("merge inputs: %v", err)
 	}
-	if err := validateDubboOperator(merged, client, logger); err != nil {
+
+	if err := validateDubboOperator(merged, logger); err != nil {
 		return nil, nil, fmt.Errorf("validateDubboOperator err:%v", err)
 	}
 	allManifests := map[component.Name]manifest.ManifestSet{}
@@ -165,8 +169,8 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, cli
 	return val, merged, nil
 }
 
-func validateDubboOperator(dop values.Map, client kube.Client, logger clog.Logger) error {
-	warnings, errs := validation.ParseAndValidateDubboOperator(dop, client)
+func validateDubboOperator(dop values.Map, logger clog.Logger) error {
+	warnings, errs := validation.ParseAndValidateDubboOperator(dop)
 	if err := errs.ToErrors(); err != nil {
 		return err
 	}
@@ -179,12 +183,28 @@ func validateDubboOperator(dop values.Map, client kube.Client, logger clog.Logge
 }
 
 func applyComponentValuesToHelmValues(comp component.Component, spec apis.MetadataCompSpec, merged values.Map) values.Map {
+	root := comp.HelmTreeRoot
 	if spec.Namespace != "" {
 		spec.Namespace = "dubbo-system"
 	}
+	if comp.FlattenValues {
+		cv, f := merged.GetPathMap("spec.values." + root)
+		if f {
+			vals, _ := merged.GetPathMap("spec.values")
+			nv := values.Map{
+				"global": vals["global"],
+			}
+			for k, v := range vals {
+				_, isMap := v.(map[string]any)
+				if !isMap {
+					nv[k] = v
+				}
+			}
+			for k, v := range cv {
+				nv[k] = v
+			}
+			merged["spec"].(map[string]any)["values"] = nv
+		}
+	}
 	return merged
-}
-
-func postProcess(comp component.Component, manifests []manifest.Manifest, vals values.Map) ([]manifest.Manifest, error) {
-	return manifests, nil
 }

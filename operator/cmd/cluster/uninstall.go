@@ -24,7 +24,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 			return uninstall(cmd, ctx, rootArgs, uiArgs)
 		},
 	}
-	AddFlags(uicmd, rootArgs)
+	addFlags(uicmd, rootArgs)
 	addUninstallFlags()
 	return uicmd
 }

@@ -22,6 +22,6 @@ func AddRootFlags(cmd *cobra.Command) *RootFlags {
 	return rootFlags
 }
 
-func AddFlags(cmd *cobra.Command, rootArgs *RootArgs) {
-	cmd.Flags().BoolVar(&rootArgs.DryRun, "dry-run", false, "")
+func addFlags(cmd *cobra.Command, rootArgs *RootArgs) {
+	cmd.Flags().BoolVar(&rootArgs.DryRun, "dry-run", false, `Outputs only the console/log without making any changes`)
 }

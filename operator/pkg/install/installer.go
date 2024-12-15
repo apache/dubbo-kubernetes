@@ -1,15 +1,20 @@
 package install
 
 import (
+	"context"
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/dmultierr"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/pointer"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	"github.com/hashicorp/go-multierror"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sync"
 )
 
@@ -94,7 +99,23 @@ func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 }
 
 func (i Installer) serverSideApply(obj manifest.Manifest) error {
-	const fieldOwner = "dubbo-operator"
+	var dryRun []string
+	const operatorFieldOwner = "dubbo-operator"
+	dc, err := i.Kube.DynamicClientFor(obj.GroupVersionKind(), obj.Unstructured, "")
+	if err != nil {
+		return err
+	}
+	objStr := fmt.Sprintf("%s/%s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+	if i.DryRun {
+		return nil
+	}
+	if _, err := dc.Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, []byte(obj.Content), metav1.PatchOptions{
+		DryRun:       dryRun,
+		Force:        pointer.Of(true),
+		FieldManager: operatorFieldOwner,
+	}); err != nil {
+		return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objStr, err)
+	}
 	return nil
 }
 

@@ -18,6 +18,7 @@ type Component struct {
 	Default        bool
 	HelmSubDir     string
 	HelmTreeRoot   string
+	FlattenValues  bool
 }
 
 var AllComponents = []Component{
@@ -63,6 +64,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		if err != nil {
 			return apis.MetadataCompSpec{}, fmt.Errorf("fail to convert %v: %v", c.SpecName, err)
 		}
+
 		if spec.Namespace == "" {
 			spec.Namespace = defaultNamespace
 			spec.Namespace = "dubbo-system"

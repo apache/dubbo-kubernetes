@@ -21,6 +21,7 @@ import (
 	"os"
 )
 
+//go:embed all:charts/* profiles/*
 var FS embed.FS
 
 func BuiltinDir(dir string) fs.FS {

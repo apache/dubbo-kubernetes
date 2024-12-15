@@ -27,20 +27,20 @@ func AddFlags(cmd *cobra.Command) {
 }
 
 func GetRootCmd(args []string) *cobra.Command {
-
 	rootCmd := &cobra.Command{
 		Use:   "dubboctl",
 		Short: "Dubbo command line utilities",
 		Long:  `Dubbo configuration command line utility for debug and use dubbo applications.`,
 	}
+	AddFlags(rootCmd)
 	rootCmd.SetArgs(args)
 	flags := rootCmd.PersistentFlags()
-
 	rootOptions := cli.AddRootFlags(flags)
 	ctx := cli.NewCLIContext(rootOptions)
 
 	installCmd := cluster.InstallCmd(ctx)
 	rootCmd.AddCommand(installCmd)
+	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 
 	uninstallCmd := cluster.UninstallCmd(ctx)
 	rootCmd.AddCommand(uninstallCmd)
@@ -48,17 +48,15 @@ func GetRootCmd(args []string) *cobra.Command {
 	upgradeCmd := cluster.UpgradeCmd(ctx)
 	rootCmd.AddCommand(upgradeCmd)
 
-	AddFlags(installCmd)
-	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 	return rootCmd
 }
 
 func hideFlags(origin *cobra.Command, hide ...string) {
-	origin.SetHelpFunc(func(command *cobra.Command, strings []string) {
+	origin.SetHelpFunc(func(command *cobra.Command, args []string) {
 		for _, hf := range hide {
 			_ = command.Flags().MarkHidden(hf)
 		}
 		origin.SetHelpFunc(nil)
-		origin.HelpFunc()(command, strings)
+		origin.HelpFunc()(command, args)
 	})
 }

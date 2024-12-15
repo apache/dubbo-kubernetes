@@ -7,13 +7,12 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
-	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"sigs.k8s.io/yaml"
 )
 
 type Warnings = util.Errors
 
-func ParseAndValidateDubboOperator(dopMap values.Map, client kube.Client) (Warnings, util.Errors) {
+func ParseAndValidateDubboOperator(dopMap values.Map) (Warnings, util.Errors) {
 	dop := &apis.DubboOperator{}
 	dec := json.NewDecoder(bytes.NewBufferString(dopMap.JSON()))
 	dec.DisallowUnknownFields()

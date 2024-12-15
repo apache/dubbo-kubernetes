@@ -37,6 +37,12 @@ func (i *installArgs) String() string {
 	return b.String()
 }
 
+func addInstallFlags(cmd *cobra.Command, args *installArgs) {
+	cmd.PersistentFlags().StringSliceVarP(&args.Files, "files", "f", nil, `Path to the file containing the dubboOperator's custom resources`)
+	cmd.PersistentFlags().StringArrayVarP(&args.Sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc`)
+
+}
+
 func InstallCmd(ctx cli.Context) *cobra.Command {
 	return InstallCmdWithArgs(ctx, &RootArgs{}, &installArgs{})
 }
@@ -46,13 +52,14 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 		Use:   "install",
 		Short: "Applies an Dubbo manifest, installing or reconfiguring Dubbo on a cluster",
 		Long:  "The install command generates an Dubbo install manifest and applies it to a cluster",
-		Example: `
-        # Apply a default dubboctl installation.
-		dubboctl install
-		# Apply a default profile.
-		dubboctl install --profile=default
-		# Apply a config file
-		dubboctl install -f my-config.yaml
+		Example: `# Apply a default dubboctl installation.
+dubboctl install
+
+# Apply a default profile.
+dubboctl install --profile=default
+
+# Apply a config file.
+dubboctl install -f my-config.yaml
 		`,
 		Aliases: []string{"apply"},
 		Args:    cobra.ExactArgs(0),
@@ -63,10 +70,12 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 			}
 			p := NewPrinterForWriter(cmd.OutOrStderr())
 			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
-			p.Printf("%v\n", art.DubboArt())
+			p.Printf("%v\n", art.DubboColoredArt())
 			return Install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
 		},
 	}
+	addFlags(ic, rootArgs)
+	addInstallFlags(ic, iArgs)
 	return ic
 }
 

@@ -18,7 +18,7 @@
 package main
 
 import (
-	"k8s.io/klog/v2"
+	"fmt"
 	"os"
 )
 
@@ -29,7 +29,7 @@ import (
 func main() {
 	rootCmd := cmd.GetRootCmd(os.Args[1:])
 	if err := rootCmd.Execute(); err != nil {
-		klog.Errorf("GetRootCmd Execute err:%v", err)
+		fmt.Errorf("GetRootCmd Execute err:%v", err)
 		os.Exit(1)
 	}
 }
