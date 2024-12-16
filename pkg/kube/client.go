@@ -61,8 +61,14 @@ func (c *client) Dynamic() dynamic.Interface {
 }
 
 func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error) {
+	// TODO
 	var dr dynamic.ResourceInterface
 	return dr, nil
+}
+
+func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (schema.GroupVersionResource, bool) {
+	// TODO
+	return schema.GroupVersionResource{}, false
 }
 
 func WithRevision(revision string) ClientOption {
