@@ -1,6 +1,8 @@
 package install
 
 import (
+	"context"
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
@@ -11,6 +13,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	"github.com/hashicorp/go-multierror"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sync"
 )
 
