@@ -26,8 +26,7 @@ func (s *schemaImpl) GroupVersionAliasKinds() []config.GroupVersionKind {
 }
 
 func (s *schemaImpl) IsClusterScoped() bool {
-	//TODO implement me
-	panic("implement me")
+	return s.clusterScoped
 }
 
 func (s *schemaImpl) Kind() string {
