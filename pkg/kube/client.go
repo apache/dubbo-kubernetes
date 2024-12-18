@@ -5,11 +5,13 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -17,11 +19,13 @@ import (
 )
 
 type client struct {
-	dynamic    dynamic.Interface
-	config     *rest.Config
-	revision   string
-	factory    *clientFactory
-	restClient *rest.RESTClient
+	dynamic         dynamic.Interface
+	config          *rest.Config
+	revision        string
+	factory         *clientFactory
+	restClient      *rest.RESTClient
+	discoveryClient discovery.CachedDiscoveryInterface
+	mapper          meta.ResettableRESTMapper
 }
 
 type Client interface {
@@ -50,6 +54,20 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 	for _, opt := range opts {
 		opt(&c)
 	}
+	c.restClient, err = factory.RestClient()
+	if err != nil {
+		return nil, err
+	}
+	c.discoveryClient, err = factory.ToDiscoveryClient()
+	if err != nil {
+		return nil, err
+	}
+	c.mapper, err = factory.mapper.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	c.factory = informerfactory
 
 	return nil, err
 }
@@ -89,8 +107,15 @@ func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.
 		gvr.Version = gvk.Version
 		return gvr, !s.IsClusterScoped()
 	}
-
-	return schema.GroupVersionResource{}, false
+	if c.mapper != nil {
+		mapping, err := c.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		if err == nil {
+			return mapping.Resource, mapping.Scope.Name() == meta.RESTScopeNameNamespace
+		}
+	}
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	namespaced := (obj != nil && obj.GetNamespace() != "") || namespace != ""
+	return gvr, namespaced
 }
 
 func WithRevision(revision string) ClientOption {
