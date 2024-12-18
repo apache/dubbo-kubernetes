@@ -8,6 +8,7 @@ import (
 	gogoproto "github.com/gogo/protobuf/proto"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type GroupVersionKind struct {
@@ -31,6 +32,14 @@ func CanoncalGroup(group string) string {
 		return group
 	}
 	return "core"
+}
+
+func FromK8sGVK(gvk schema.GroupVersionKind) GroupVersionKind {
+	return GroupVersionKind{
+		Group:   gvk.Group,
+		Version: gvk.Version,
+		Kind:    gvk.Kind,
+	}
 }
 
 type Spec any

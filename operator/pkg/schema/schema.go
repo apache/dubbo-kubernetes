@@ -3,7 +3,11 @@ package schema
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
+	"github.com/hashicorp/go-multierror"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"reflect"
 )
 
 type schemaImpl struct {
@@ -13,6 +17,9 @@ type schemaImpl struct {
 	goPkg          string
 	proto          string
 	versionAliases []string
+	apiVersion     string
+	reflectType    reflect.Type
+	statusType     reflect.Type
 }
 
 func (s *schemaImpl) GroupVersionAliasKinds() []config.GroupVersionKind {
@@ -66,10 +73,14 @@ func (s *schemaImpl) GroupVersionResource() schema.GroupVersionResource {
 }
 
 func (s *schemaImpl) Validate() (err error) {
+	if s.reflectType == nil && getProtoMessageType(s.proto) == nil {
+		err = multierror.Append(err, fmt.Errorf("proto message or reflect type not found: %v", s.proto))
+	}
 	return
 }
 
 type Builder struct {
+	Identifier    string
 	Plural        string
 	ClusterScoped bool
 	ProtoPkg      string
@@ -77,6 +88,10 @@ type Builder struct {
 	Kind          string
 	Group         string
 	Version       string
+	ReflectType   reflect.Type
+	StatusType    reflect.Type
+	Builtin       bool
+	Synthetic     bool
 }
 
 func (b Builder) BuildNoValidate() Schema {
@@ -90,6 +105,9 @@ func (b Builder) BuildNoValidate() Schema {
 		clusterScoped: b.ClusterScoped,
 		goPkg:         b.ProtoPkg,
 		proto:         b.Proto,
+		apiVersion:    b.Group + "/" + b.Version,
+		reflectType:   b.ReflectType,
+		statusType:    b.StatusType,
 	}
 }
 
@@ -101,6 +119,14 @@ func (b Builder) Build() (Schema, error) {
 	return s, nil
 }
 
+func (b Builder) MustBuild() Schema {
+	s, err := b.Build()
+	if err != nil {
+		panic(fmt.Sprintf("MustBuild: %v", err))
+	}
+	return s
+}
+
 type Schema interface {
 	fmt.Stringer
 	GroupVersionResource() schema.GroupVersionResource
@@ -108,4 +134,14 @@ type Schema interface {
 	GroupVersionAliasKinds() []config.GroupVersionKind
 	Validate() error
 	IsClusterScoped() bool
+}
+
+var protoMessageType = protoregistry.GlobalTypes.FindMessageByName
+
+func getProtoMessageType(protoMessageName string) reflect.Type {
+	t, err := protoMessageType(protoreflect.FullName(protoMessageName))
+	if err != nil || t == nil {
+		return nil
+	}
+	return reflect.TypeOf(t.Zero().Interface())
 }

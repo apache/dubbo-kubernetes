@@ -1,6 +1,9 @@
 package kube
 
 import (
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,13 +64,32 @@ func (c *client) Dynamic() dynamic.Interface {
 }
 
 func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error) {
-	// TODO
+	gvr, namespaced := c.bestEffortToGVR(gvk, obj, namespace)
 	var dr dynamic.ResourceInterface
+	if namespaced {
+		ns := ""
+		if obj != nil {
+			ns = obj.GetNamespace()
+		}
+		if ns == "" {
+			ns = namespace
+		} else if namespace != "" && ns != namespace {
+			return nil, fmt.Errorf("object %v/%v provided namespace %q but apply called with %q", gvk, obj.GetName(), ns, namespace)
+		}
+		dr = c.dynamic.Resource(gvr).Namespace(ns)
+	} else {
+		dr = c.dynamic.Resource(gvr)
+	}
 	return dr, nil
 }
 
 func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (schema.GroupVersionResource, bool) {
-	// TODO
+	if s, f := collections.All.FindByGroupVersionAliasesKind(config.FromK8sGVK(gvk)); f {
+		gvr := s.GroupVersionResource()
+		gvr.Version = gvk.Version
+		return gvr, !s.IsClusterScoped()
+	}
+
 	return schema.GroupVersionResource{}, false
 }
 
