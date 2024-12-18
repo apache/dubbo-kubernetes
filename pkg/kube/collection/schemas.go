@@ -11,6 +11,17 @@ type Schemas struct {
 	byAddOrder   []schema.Schema
 }
 
+func (s Schemas) FindByGroupVersionAliasesKind(gvk config.GroupVersionKind) (schema.Schema, bool) {
+	for _, rs := range s.byAddOrder {
+		for _, va := range rs.GroupVersionAliasKinds() {
+			if va == gvk {
+				return rs, true
+			}
+		}
+	}
+	return nil, false
+}
+
 type SchemasBuilder struct {
 	schemas Schemas
 }
@@ -20,6 +31,12 @@ func NewSchemasBuilder() *SchemasBuilder {
 		byCollection: make(map[config.GroupVersionKind]schema.Schema),
 	}
 	return &SchemasBuilder{schemas: s}
+}
+
+func (b *SchemasBuilder) Build() Schemas {
+	s := b.schemas
+	b.schemas = Schemas{}
+	return s
 }
 
 func (b *SchemasBuilder) Add(s schema.Schema) error {
