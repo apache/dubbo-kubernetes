@@ -1,6 +1,8 @@
 package informerfactory
 
 import (
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -128,4 +130,41 @@ func (f *informerFactory) InformerFor(resource schema.GroupVersionResource, opts
 	}
 
 	return f.makeStartableInformer(informer, key)
+}
+
+func checkInformerOverlap(inf builtInformer, resource schema.GroupVersionResource, opts kubetypes.InformerOptions) {
+	if fmt.Sprintf("%p", inf.objectTransform) == fmt.Sprintf("%p", opts.ObjectTransform) {
+		return
+	}
+}
+
+func (f *informerFactory) makeStartableInformer(informer cache.SharedIndexInformer, key informerKey) StartableInformer {
+	return StartableInformer{
+		Informer: informer,
+		start: func(stopCh <-chan struct{}) {
+			f.startOne(stopCh, key)
+		},
+	}
+}
+
+func (f *informerFactory) startOne(stopCh <-chan struct{}, informerType informerKey) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	if f.shuttingDown {
+		return
+	}
+
+	informer, ff := f.informers[informerType]
+	if !ff {
+		panic(fmt.Sprintf("bug: informer key %+v not found", informerType))
+	}
+	if !f.startedInformers.Contains(informerType) {
+		f.wg.Add(1)
+		go func() {
+			defer f.wg.Done()
+			informer.informer.Run(stopCh)
+		}()
+		f.startedInformers.Insert(informerType)
+	}
 }
