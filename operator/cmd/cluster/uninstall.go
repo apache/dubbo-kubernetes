@@ -6,6 +6,10 @@ import (
 )
 
 type uninstallArgs struct {
+	files        []string
+	sets         []string
+	manifestPath string
+	purge        bool
 }
 
 func addUninstallFlags() {

@@ -15,7 +15,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 )
 
 var installerScope = log.RegisterScope("installer", "installer")
@@ -23,17 +22,14 @@ var installerScope = log.RegisterScope("installer", "installer")
 type installArgs struct {
 	Files            []string
 	Sets             []string
-	Revision         string
 	ManifestPath     string
 	SkipConfirmation bool
-	ReadinessTimeout time.Duration
 }
 
 func (i *installArgs) String() string {
 	var b strings.Builder
 	b.WriteString("Files:    " + (fmt.Sprint(i.Files) + "\n"))
 	b.WriteString("Sets:    " + (fmt.Sprint(i.Sets) + "\n"))
-	b.WriteString("Revision:    " + (fmt.Sprint(i.Revision) + "\n"))
 	b.WriteString("ManifestPath:    " + (fmt.Sprint(i.ManifestPath) + "\n"))
 	return b.String()
 }
@@ -81,7 +77,7 @@ dubboctl install -f my-config.yaml
 }
 
 func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
-	setFlags := applyFlagAliases(iArgs.Sets, iArgs.ManifestPath, iArgs.Revision)
+	setFlags := applyFlagAliases(iArgs.Sets, iArgs.ManifestPath)
 	manifests, vals, err := render.GenerateManifest(iArgs.Files, setFlags, cl, kubeClient)
 	if err != nil {
 		return fmt.Errorf("generate config: %v", err)
@@ -108,7 +104,7 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 	return nil
 }
 
-func applyFlagAliases(flags []string, manifestsPath string, revision string) []string {
+func applyFlagAliases(flags []string, manifestsPath string) []string {
 	if manifestsPath != "" {
 		flags = append(flags, fmt.Sprintf("manifestsPath=%s", manifestsPath))
 	}
