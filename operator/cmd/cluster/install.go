@@ -49,14 +49,15 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 		Use:   "install",
 		Short: "Applies an Dubbo manifest, installing or reconfiguring Dubbo on a cluster",
 		Long:  "The install command generates an Dubbo install manifest and applies it to a cluster",
-		Example: `# Apply a default dubboctl installation.
-dubboctl install
+		Example: `  # Apply a default dubboctl installation.
+  dubboctl install
+  
+  # Apply a config file.
+  dubboctl install -f my-config.yaml
+  
+  # Apply a default profile.
+  dubboctl install --profile=demo
 
-# Apply a default profile.
-dubboctl install --profile=default
-
-# Apply a config file.
-dubboctl install -f my-config.yaml
 		`,
 		Aliases: []string{"apply"},
 		Args:    cobra.ExactArgs(0),
