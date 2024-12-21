@@ -3,6 +3,7 @@ package uninstall
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -12,10 +13,16 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func GetPrunedResources(kc kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) (
-	[]*unstructured.Unstructured, error,
-) {
-	return nil, nil
+func GetPrunedResources(dopName, dopNamespace string) ([]*unstructured.UnstructuredList, error) {
+	var usList []*unstructured.UnstructuredList
+	labels := make(map[string]string)
+	if dopName != "" {
+		labels[manifest.OwningResourceName] = dopName
+	}
+	if dopNamespace != "" {
+		labels[manifest.OwningResourceNamespace] = dopNamespace
+	}
+	return usList, nil
 }
 
 func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsList []*unstructured.UnstructuredList) error {
@@ -27,7 +34,6 @@ func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsLi
 			}
 		}
 	}
-
 	return errs.ToErrors()
 }
 

@@ -60,3 +60,16 @@ func Parse(output []string) ([]Manifest, error) {
 func ParseMultiple(output string) ([]Manifest, error) {
 	return Parse(parts.SplitString(output))
 }
+
+func ObjectHash(o *unstructured.Unstructured) string {
+	k := o.GroupVersionKind().Kind
+	switch o.GroupVersionKind().Kind {
+	case "ClusterRole", "ClusterRoleBinding":
+		return k + ":" + o.GetName()
+	}
+	return k + ":" + o.GetNamespace() + ":" + o.GetName()
+}
+
+func (m Manifest) Hash() string {
+	return ObjectHash(m.Unstructured)
+}

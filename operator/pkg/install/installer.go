@@ -119,6 +119,23 @@ func (i Installer) serverSideApply(obj manifest.Manifest) error {
 	return nil
 }
 
+func (i Installer) prune(manifests []manifest.ManifestSet) error {
+	if i.DryRun {
+		return nil
+	}
+	i.ProgressInfo.SetState(progress.StatePruning)
+	excluded := map[component.Name]sets.String{}
+	for _, c := range component.AllComponents {
+		excluded[c.UserFacingName] = sets.New[string]()
+	}
+	for _, mfs := range manifests {
+		for _, m := range mfs.Manifests {
+			excluded[mfs.Components].Insert(m.Hash())
+		}
+	}
+	return
+}
+
 var componentDependencies = map[component.Name][]component.Name{
 	component.BaseComponentName: {},
 }
