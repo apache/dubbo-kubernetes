@@ -2,6 +2,10 @@ package cluster
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
+	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/spf13/cobra"
 )
 
@@ -40,10 +44,22 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	return uicmd
 }
 
-func uninstall(
-	cmd *cobra.Command,
-	ctx cli.Context,
-	rootArgs *RootArgs,
-	uiArgs *uninstallArgs) error {
-	return nil
+func uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
+	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+	var kubeClient kube.CLIClient
+	var err error
+	if err != nil {
+		return err
+	}
+	pl := progress.NewInfo()
+	setFlags := applyFlagAliases(uiArgs.sets, uiArgs.manifestPath)
+	files := []string{}
+	if uiArgs.files != "" {
+		files = append(files, uiArgs.files)
+	}
+	vals, err := render.MergeInputs(files, setFlags)
+	if err != nil {
+		return err
+	}
+	// todo
 }

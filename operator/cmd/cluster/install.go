@@ -20,23 +20,23 @@ import (
 var installerScope = log.RegisterScope("installer", "installer")
 
 type installArgs struct {
-	Files            []string
-	Sets             []string
-	ManifestPath     string
-	SkipConfirmation bool
+	files            []string
+	sets             []string
+	manifestPath     string
+	skipConfirmation bool
 }
 
 func (i *installArgs) String() string {
 	var b strings.Builder
-	b.WriteString("Files:    " + (fmt.Sprint(i.Files) + "\n"))
-	b.WriteString("Sets:    " + (fmt.Sprint(i.Sets) + "\n"))
-	b.WriteString("ManifestPath:    " + (fmt.Sprint(i.ManifestPath) + "\n"))
+	b.WriteString("files:    " + (fmt.Sprint(i.files) + "\n"))
+	b.WriteString("sets:    " + (fmt.Sprint(i.sets) + "\n"))
+	b.WriteString("manifestPath:    " + (fmt.Sprint(i.manifestPath) + "\n"))
 	return b.String()
 }
 
 func addInstallFlags(cmd *cobra.Command, args *installArgs) {
-	cmd.PersistentFlags().StringSliceVarP(&args.Files, "files", "f", nil, `Path to the file containing the dubboOperator's custom resources`)
-	cmd.PersistentFlags().StringArrayVarP(&args.Sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc`)
+	cmd.PersistentFlags().StringSliceVarP(&args.files, "files", "f", nil, `Path to the file containing the dubboOperator's custom resources`)
+	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc`)
 
 }
 
@@ -78,13 +78,13 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 }
 
 func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
-	setFlags := applyFlagAliases(iArgs.Sets, iArgs.ManifestPath)
-	manifests, vals, err := render.GenerateManifest(iArgs.Files, setFlags, cl, kubeClient)
+	setFlags := applyFlagAliases(iArgs.sets, iArgs.manifestPath)
+	manifests, vals, err := render.GenerateManifest(iArgs.files, setFlags, cl, kubeClient)
 	if err != nil {
 		return fmt.Errorf("generate config: %v", err)
 	}
 	profile := pointer.NonEmptyOrDefault(vals.GetPathString("spec.profile"), "default")
-	if !rootArgs.DryRun && !iArgs.SkipConfirmation {
+	if !rootArgs.DryRun && !iArgs.skipConfirmation {
 		prompt := fmt.Sprintf("You are currently selecting the %q profile to install into the cluster. Do you want to proceed? (y/N)", profile)
 		if !OptionDeterminate(prompt, stdOut) {
 			p.Println("Canceled Completed.")
