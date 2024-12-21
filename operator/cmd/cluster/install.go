@@ -53,7 +53,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
   dubboctl install
   
   # Apply a config file.
-  dubboctl install -f my-config.yaml
+  dubboctl install -f dop.yaml
   
   # Apply a default profile.
   dubboctl install --profile=demo

@@ -9,13 +9,19 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/spf13/cobra"
+	"os"
+)
+
+const (
+	AllResourcesRemovedWarning = "All Dubbo resources will be pruned from the cluster\n"
 )
 
 type uninstallArgs struct {
-	files        string
-	sets         []string
-	manifestPath string
-	purge        bool
+	files            string
+	sets             []string
+	manifestPath     string
+	purge            bool
+	skipConfirmation bool
 }
 
 func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
@@ -70,9 +76,27 @@ func UnInstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	if err != nil {
 		return err
 	}
+	preCheck(cmd, uiArgs, cl, rootArgs.DryRun)
 	if err := uninstall.DeleteObjectsList(kubeClient, rootArgs.DryRun, cl, objectsList); err != nil {
 		return fmt.Errorf("failed to delete control plane resources by revision: %v", err)
 	}
 	pl.SetState(progress.StateUninstallComplete)
 	return nil
+}
+
+func preCheck(cmd *cobra.Command, uiArgs *uninstallArgs, cl *clog.ConsoleLogger, dryRun bool) {
+	needConfirmation, message := false, ""
+	if dryRun || uiArgs.skipConfirmation {
+		cl.LogAndPrint(message)
+		return
+	}
+	if uiArgs.purge {
+		needConfirmation = true
+		message += AllResourcesRemovedWarning
+	}
+	message += "Proceed? (y/N)"
+	if needConfirmation && !OptionDeterminate(message, cmd.OutOrStdout()) {
+		cmd.Print("Canceled Completed.\n")
+		os.Exit(1)
+	}
 }
