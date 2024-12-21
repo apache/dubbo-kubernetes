@@ -133,7 +133,7 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 			excluded[mfs.Components].Insert(m.Hash())
 		}
 	}
-	return
+	return nil
 }
 
 var componentDependencies = map[component.Name][]component.Name{

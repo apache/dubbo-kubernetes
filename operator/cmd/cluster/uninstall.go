@@ -1,8 +1,10 @@
 package cluster
 
 import (
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/uninstall"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -36,7 +38,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
   # Uninstall all control planes and shared resources
   dubboctl uninstall --purge`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return uninstall(cmd, ctx, rootArgs, uiArgs)
+			return UnInstall(cmd, ctx, rootArgs, uiArgs)
 		},
 	}
 	addFlags(uicmd, rootArgs)
@@ -44,7 +46,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	return uicmd
 }
 
-func uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
+func UnInstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 	var kubeClient kube.CLIClient
 	var err error
@@ -61,5 +63,16 @@ func uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	if err != nil {
 		return err
 	}
-	// todo
+	objectsList, err := uninstall.GetPrunedResources(
+		vals.GetPathString("metadata.name"),
+		vals.GetPathString("metadata.namespace"),
+	)
+	if err != nil {
+		return err
+	}
+	if err := uninstall.DeleteObjectsList(kubeClient, rootArgs.DryRun, cl, objectsList); err != nil {
+		return fmt.Errorf("failed to delete control plane resources by revision: %v", err)
+	}
+	pl.SetState(progress.StateUninstallComplete)
+	return nil
 }
