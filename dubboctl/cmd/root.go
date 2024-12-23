@@ -48,6 +48,10 @@ func GetRootCmd(args []string) *cobra.Command {
 	upgradeCmd := cluster.UpgradeCmd(ctx)
 	rootCmd.AddCommand(upgradeCmd)
 
+	manifestCmd := cluster.ManifestCmd(ctx)
+	rootCmd.AddCommand(manifestCmd)
+	hideFlags(manifestCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+
 	return rootCmd
 }
 

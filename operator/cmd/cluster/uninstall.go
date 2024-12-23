@@ -38,8 +38,8 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	uiArgs := &uninstallArgs{}
 	uicmd := &cobra.Command{
 		Use:           "uninstall",
-		Short:         "Uninstall Dubbo-related resources",
-		Long:          "This uninstall command will uninstall the dubbo cluster",
+		Short:         "Uninstall Dubbo related resources",
+		Long:          "The uninstall command will uninstall the dubbo cluster",
 		SilenceUsage:  true,
 		SilenceErrors: false,
 		Example: ` # Uninstall a single control plane by dop file
