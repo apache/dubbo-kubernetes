@@ -26,7 +26,7 @@ type uninstallArgs struct {
 
 func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
 	cmd.PersistentFlags().StringVarP(&args.files, "filename", "f", "",
-		"The filename of the IstioOperator CR.")
+		"The filename of the DubboOperator CR.")
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, "Override dubboOperator values, such as selecting profiles, etc")
 	cmd.PersistentFlags().BoolVar(&args.purge, "purge", false, "Remove all dubbo-related source code")
 }
@@ -43,6 +43,9 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
   
   # Uninstall all control planes and shared resources
   dubboctl uninstall --purge`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			return fmt.Errorf("at least one of the --filename or --purge flags must be set")
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return UnInstall(cmd, ctx, rootArgs, uiArgs)
 		},
