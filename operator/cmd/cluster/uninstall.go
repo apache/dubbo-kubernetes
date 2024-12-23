@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	AllResourcesRemovedWarning = "All Dubbo resources will be pruned from the cluster\n"
+	AllResourcesRemovedWarning                  = "All Dubbo resources will be pruned from the cluster\n"
+	PurgeWithRevisionOrOperatorSpecifiedWarning = "Purge uninstall will remove all Dubbo resources, ignoring the specified revision or operator file"
 )
 
 type uninstallArgs struct {
@@ -37,14 +38,20 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	uicmd := &cobra.Command{
 		Use:   "uninstall",
 		Short: "Uninstall Dubbo-related resources",
-		Long:  "Uninstalling Dubbo from the Cluster",
-		Example: `·# Uninstall a single control plane by dop file
+		Long:  "This uninstall command will uninstall the dubbo cluster",
+		Example: ` # Uninstall a single control plane by dop file
   dubboctl uninstall -f dop.yaml
   
   # Uninstall all control planes and shared resources
   dubboctl uninstall --purge`,
 		Args: func(cmd *cobra.Command, args []string) error {
-			return fmt.Errorf("at least one of the --filename or --purge flags must be set")
+			if uiArgs.files == "" && !uiArgs.purge {
+				return fmt.Errorf("at least one of the --filename or --purge flags must be set")
+			}
+			if len(args) > 0 {
+				return fmt.Errorf("dubboctl uninstall does not take arguments")
+			}
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return UnInstall(cmd, ctx, rootArgs, uiArgs)
@@ -59,10 +66,15 @@ func UnInstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 	var kubeClient kube.CLIClient
 	var err error
+
 	if err != nil {
 		return err
 	}
+
 	pl := progress.NewInfo()
+	if uiArgs.purge && uiArgs.files != "" {
+		cl.LogAndPrint(PurgeWithRevisionOrOperatorSpecifiedWarning)
+	}
 	setFlags := applyFlagAliases(uiArgs.sets, uiArgs.manifestPath)
 	files := []string{}
 	if uiArgs.files != "" {

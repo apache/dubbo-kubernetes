@@ -390,3 +390,14 @@ func extractKV(seg string) (string, string, bool) {
 	sanitized := seg[1 : len(seg)-1]
 	return strings.Cut(sanitized, ":")
 }
+
+func GetValueForSetFlag(setFlags []string, path string) string {
+	r := ""
+	for _, sf := range setFlags {
+		p, v := getPV(sf)
+		if p == path {
+			r = v
+		}
+	}
+	return r
+}
