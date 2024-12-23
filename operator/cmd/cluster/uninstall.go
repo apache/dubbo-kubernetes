@@ -30,15 +30,18 @@ func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
 		"The filename of the DubboOperator CR.")
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, "Override dubboOperator values, such as selecting profiles, etc")
 	cmd.PersistentFlags().BoolVar(&args.purge, "purge", false, "Remove all dubbo-related source code")
+	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
 }
 
 func UninstallCmd(ctx cli.Context) *cobra.Command {
 	rootArgs := &RootArgs{}
 	uiArgs := &uninstallArgs{}
 	uicmd := &cobra.Command{
-		Use:   "uninstall",
-		Short: "Uninstall Dubbo-related resources",
-		Long:  "This uninstall command will uninstall the dubbo cluster",
+		Use:           "uninstall",
+		Short:         "Uninstall Dubbo-related resources",
+		Long:          "This uninstall command will uninstall the dubbo cluster",
+		SilenceUsage:  true,
+		SilenceErrors: false,
 		Example: ` # Uninstall a single control plane by dop file
   dubboctl uninstall -f dop.yaml
   
@@ -54,7 +57,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return UnInstall(cmd, ctx, rootArgs, uiArgs)
+			return Uninstall(cmd, ctx, rootArgs, uiArgs)
 		},
 	}
 	addFlags(uicmd, rootArgs)
@@ -62,7 +65,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	return uicmd
 }
 
-func UnInstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
+func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 	var kubeClient kube.CLIClient
 	var err error
@@ -75,39 +78,49 @@ func UnInstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	if uiArgs.purge && uiArgs.files != "" {
 		cl.LogAndPrint(PurgeWithRevisionOrOperatorSpecifiedWarning)
 	}
+
 	setFlags := applyFlagAliases(uiArgs.sets, uiArgs.manifestPath)
+
 	files := []string{}
 	if uiArgs.files != "" {
 		files = append(files, uiArgs.files)
 	}
+
 	vals, err := render.MergeInputs(files, setFlags)
 	if err != nil {
 		return err
 	}
+
 	objectsList, err := uninstall.GetPrunedResources(
+		kubeClient,
 		vals.GetPathString("metadata.name"),
 		vals.GetPathString("metadata.namespace"),
+		uiArgs.purge,
 	)
 	if err != nil {
 		return err
 	}
+
 	preCheck(cmd, uiArgs, cl, rootArgs.DryRun)
+
 	if err := uninstall.DeleteObjectsList(kubeClient, rootArgs.DryRun, cl, objectsList); err != nil {
 		return fmt.Errorf("failed to delete control plane resources by revision: %v", err)
 	}
+
 	pl.SetState(progress.StateUninstallComplete)
+
 	return nil
 }
 
 func preCheck(cmd *cobra.Command, uiArgs *uninstallArgs, cl *clog.ConsoleLogger, dryRun bool) {
 	needConfirmation, message := false, ""
-	if dryRun || uiArgs.skipConfirmation {
-		cl.LogAndPrint(message)
-		return
-	}
 	if uiArgs.purge {
 		needConfirmation = true
 		message += AllResourcesRemovedWarning
+	}
+	if dryRun || uiArgs.skipConfirmation {
+		cl.LogAndPrint(message)
+		return
 	}
 	message += "Proceed? (y/N)"
 	if needConfirmation && !OptionDeterminate(message, cmd.OutOrStdout()) {

@@ -6,14 +6,21 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/pointer"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func GetPrunedResources(dopName, dopNamespace string) ([]*unstructured.UnstructuredList, error) {
+var (
+	ClusterResources    = []schema.GroupVersionKind{}
+	AllClusterResources = append(ClusterResources, gvk.CustomResourceDefinition.K8s())
+)
+
+func GetPrunedResources(clt kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
 	var usList []*unstructured.UnstructuredList
 	labels := make(map[string]string)
 	if dopName != "" {
@@ -22,7 +29,28 @@ func GetPrunedResources(dopName, dopNamespace string) ([]*unstructured.Unstructu
 	if dopNamespace != "" {
 		labels[manifest.OwningResourceNamespace] = dopNamespace
 	}
+	resources := NamespacedResources()
+	gvkList := append(resources, AllClusterResources...)
+	for _, gvks := range gvkList {
+		var result *unstructured.UnstructuredList
+		c, err := clt.DynamicClientFor(gvks, nil, "")
+		if err != nil {
+			return nil, err
+		}
+		if includeClusterResources {
+			result, err = c.List(context.Background(), metav1.ListOptions{})
+		}
+		if result == nil || len(result.Items) == 0 {
+			continue
+		}
+		usList = append(usList, result)
+	}
 	return usList, nil
+}
+
+func NamespacedResources() []schema.GroupVersionKind {
+	var res []schema.GroupVersionKind
+	return res
 }
 
 func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsList []*unstructured.UnstructuredList) error {

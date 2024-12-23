@@ -27,6 +27,14 @@ func (g GroupVersionKind) CanonicalGroup() string {
 	return CanoncalGroup(g.Group)
 }
 
+func (g GroupVersionKind) K8s() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   g.Group,
+		Version: g.Version,
+		Kind:    g.Kind,
+	}
+}
+
 func CanoncalGroup(group string) string {
 	if group != "" {
 		return group
