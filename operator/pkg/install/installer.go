@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/uninstall"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/dmultierr"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
@@ -74,6 +76,11 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 	if err := errors.ErrorOrNil(); err != nil {
 		return err
 	}
+
+	if err := i.prune(manifests); err != nil {
+		return fmt.Errorf("pruning: %v", err)
+	}
+	i.ProgressInfo.SetState(progress.StateComplete)
 	return nil
 }
 
@@ -123,17 +130,43 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 	if i.DryRun {
 		return nil
 	}
+
 	i.ProgressInfo.SetState(progress.StatePruning)
+
 	excluded := map[component.Name]sets.String{}
 	for _, c := range component.AllComponents {
 		excluded[c.UserFacingName] = sets.New[string]()
 	}
+
 	for _, mfs := range manifests {
 		for _, m := range mfs.Manifests {
 			excluded[mfs.Components].Insert(m.Hash())
 		}
 	}
-	return nil
+
+	var errs util.Errors
+	resources := uninstall.PrunedResourcesSchemas()
+	for _, gvk := range resources {
+		dc, err := i.Kube.DynamicClientFor(gvk, nil, "")
+		if err != nil {
+			return err
+		}
+		objs, err := dc.List(context.Background(), metav1.ListOptions{})
+		if objs == nil {
+			continue
+		}
+		for _, excluded := range excluded {
+			for _, obj := range objs.Items {
+				if excluded.Contains(manifest.ObjectHash(&obj)) {
+					continue
+				}
+				if err := uninstall.DeleteResource(i.Kube, i.DryRun, i.Logger, &obj); err != nil {
+					errs = append(errs, err)
+				}
+			}
+		}
+	}
+	return errs.ToErrors()
 }
 
 var componentDependencies = map[component.Name][]component.Name{

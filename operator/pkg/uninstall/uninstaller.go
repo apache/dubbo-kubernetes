@@ -17,9 +17,9 @@ import (
 
 var (
 	ClusterResources    = []schema.GroupVersionKind{}
+	ClusterCPResources  = []schema.GroupVersionKind{}
 	AllClusterResources = append(ClusterResources,
 		gvk.CustomResourceDefinition.K8s())
-	ClusterCPResources []schema.GroupVersionKind
 )
 
 func GetPrunedResources(clt kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
@@ -58,6 +58,10 @@ func NamespacedResources() []schema.GroupVersionKind {
 	return res
 }
 
+func PrunedResourcesSchemas() []schema.GroupVersionKind {
+	return append(NamespacedResources(), ClusterResources...)
+}
+
 func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsList []*unstructured.UnstructuredList) error {
 	var errs util.Errors
 	for _, ul := range objectsList {
@@ -76,6 +80,7 @@ func DeleteResource(clt kube.CLIClient, dryRun bool, log clog.Logger, obj *unstr
 		log.LogAndPrintf("Not pruning object %s because of dry run.", name)
 		return nil
 	}
+
 	c, err := clt.DynamicClientFor(obj.GroupVersionKind(), obj, "")
 	if err != nil {
 		return err

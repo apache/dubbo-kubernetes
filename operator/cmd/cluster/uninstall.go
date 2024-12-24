@@ -65,7 +65,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	return uicmd
 }
 
-func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
+func Uninstall(cmd *cobra.Command, _ cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 	var kubeClient kube.CLIClient
 	var err error
