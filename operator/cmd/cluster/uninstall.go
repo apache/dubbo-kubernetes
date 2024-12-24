@@ -37,11 +37,10 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	rootArgs := &RootArgs{}
 	uiArgs := &uninstallArgs{}
 	uicmd := &cobra.Command{
-		Use:           "uninstall",
-		Short:         "Uninstall Dubbo related resources",
-		Long:          "The uninstall command will uninstall the dubbo cluster",
-		SilenceUsage:  true,
-		SilenceErrors: false,
+		Use:          "uninstall",
+		Short:        "Uninstall Dubbo related resources",
+		Long:         "The uninstall command will uninstall the dubbo cluster",
+		SilenceUsage: true,
 		Example: ` # Uninstall a single control plane by dop file
   dubboctl uninstall -f dop.yaml
   
@@ -69,12 +68,10 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 	var kubeClient kube.CLIClient
 	var err error
-
+	kubeClient, err = ctx.CLIClientWithRevision("")
 	if err != nil {
 		return err
 	}
-
-	kubeClient, err = ctx.CLIClientWithRevision("")
 
 	pl := progress.NewInfo()
 	if uiArgs.purge && uiArgs.files != "" {

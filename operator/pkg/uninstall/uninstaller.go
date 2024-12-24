@@ -24,7 +24,7 @@ var (
 		gvk.CustomResourceDefinition.Kubernetes())
 )
 
-func GetPrunedResources(kcli kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
+func GetPrunedResources(kc kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
 	var usList []*unstructured.UnstructuredList
 	labels := make(map[string]string)
 	if dopName != "" {
@@ -44,7 +44,7 @@ func GetPrunedResources(kcli kube.CLIClient, dopName, dopNamespace string, inclu
 		if err != nil {
 			return nil, err
 		}
-		c, err := kcli.DynamicClientFor(g, nil, "")
+		c, err := kc.DynamicClientFor(g, nil, "")
 		if err != nil {
 			return nil, err
 		}
@@ -56,6 +56,7 @@ func GetPrunedResources(kcli kube.CLIClient, dopName, dopNamespace string, inclu
 			continue
 		}
 		usList = append(usList, result)
+
 	}
 	return usList, nil
 }
@@ -71,8 +72,8 @@ func PrunedResourcesSchemas() []schema.GroupVersionKind {
 
 func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsList []*unstructured.UnstructuredList) error {
 	var errs util.Errors
-	for _, ul := range objectsList {
-		for _, o := range ul.Items {
+	for _, ol := range objectsList {
+		for _, o := range ol.Items {
 			if err := DeleteResource(c, dryRun, log, &o); err != nil {
 				errs = append(errs, err)
 			}
@@ -81,14 +82,14 @@ func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsLi
 	return errs.ToErrors()
 }
 
-func DeleteResource(clt kube.CLIClient, dryRun bool, log clog.Logger, obj *unstructured.Unstructured) error {
+func DeleteResource(kc kube.CLIClient, dryRun bool, log clog.Logger, obj *unstructured.Unstructured) error {
 	name := fmt.Sprintf("%v/%s.%s", obj.GroupVersionKind(), obj.GetName(), obj.GetNamespace())
 	if dryRun {
 		log.LogAndPrintf("Not pruning object %s because of dry run.", name)
 		return nil
 	}
 
-	c, err := clt.DynamicClientFor(obj.GroupVersionKind(), obj, "")
+	c, err := kc.DynamicClientFor(obj.GroupVersionKind(), obj, "")
 	if err != nil {
 		return err
 	}
@@ -101,6 +102,6 @@ func DeleteResource(clt kube.CLIClient, dryRun bool, log clog.Logger, obj *unstr
 		return nil
 	}
 
-	log.LogAndPrintf("  Removed %s.", name)
+	log.LogAndPrintf(" ✔︎ Removed %s.", name)
 	return nil
 }

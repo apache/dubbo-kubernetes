@@ -41,6 +41,17 @@ func FromYAML(y []byte) (Manifest, error) {
 	return Manifest{Unstructured: us, Content: string(y)}, nil
 }
 
+func FromObject(us *unstructured.Unstructured) (Manifest, error) {
+	c, err := yaml.Marshal(us)
+	if err != nil {
+		return Manifest{}, err
+	}
+	return Manifest{
+		Unstructured: us,
+		Content:      string(c),
+	}, nil
+}
+
 func Parse(output []string) ([]Manifest, error) {
 	result := make([]Manifest, 0, len(output))
 	for _, m := range output {

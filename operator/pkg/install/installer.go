@@ -16,6 +16,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	"github.com/hashicorp/go-multierror"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	klabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sync"
 )
@@ -96,6 +98,10 @@ func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 	manifests := manifestSet.Manifests
 	pi := i.ProgressInfo.NewComponent(componentNames)
 	for _, obj := range manifests {
+		obj, err := i.applyLabelsAndAnnotations(obj, componentNames)
+		if err != nil {
+			return err
+		}
 		if err := i.serverSideApply(obj); err != nil {
 			pi.ReportError(err.Error())
 			return err
@@ -126,6 +132,16 @@ func (i Installer) serverSideApply(obj manifest.Manifest) error {
 	return nil
 }
 
+func (i Installer) applyLabelsAndAnnotations(obj manifest.Manifest, cname string) (manifest.Manifest, error) {
+	for k, v := range getOwnerLabels(i.Values, cname) {
+		err := util.SetLabel(obj, k, v)
+		if err != nil {
+			return manifest.Manifest{}, err
+		}
+	}
+	return manifest.FromObject(obj.Unstructured)
+}
+
 func (i Installer) prune(manifests []manifest.ManifestSet) error {
 	if i.DryRun {
 		return nil
@@ -144,6 +160,14 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 		}
 	}
 
+	coreLabels := getOwnerLabels(i.Values, "")
+	selector := klabels.Set(coreLabels).AsSelectorPreValidated()
+	compReq, err := klabels.NewRequirement(manifest.DubboComponentLabel, selection.Exists, nil)
+	if err != nil {
+		return err
+	}
+	selector = selector.Add(*compReq)
+
 	var errs util.Errors
 	resources := uninstall.PrunedResourcesSchemas()
 	for _, gvk := range resources {
@@ -151,13 +175,20 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 		if err != nil {
 			return err
 		}
-		objs, err := dc.List(context.Background(), metav1.ListOptions{})
+		objs, err := dc.List(context.Background(), metav1.ListOptions{LabelSelector: selector.String()})
 		if objs == nil {
 			continue
 		}
-		for _, excluded := range excluded {
+		for comp, excluded := range excluded {
+			compLabels := klabels.SelectorFromSet(getOwnerLabels(i.Values, string(comp)))
 			for _, obj := range objs.Items {
 				if excluded.Contains(manifest.ObjectHash(&obj)) {
+					continue
+				}
+				if obj.GetLabels()[manifest.OwningResourceNotPruned] == "true" {
+					continue
+				}
+				if !compLabels.Matches(klabels.Set(obj.GetLabels())) {
 					continue
 				}
 				if err := uninstall.DeleteResource(i.Kube, i.DryRun, i.Logger, &obj); err != nil {
@@ -181,4 +212,19 @@ func dependenciesChs() map[component.Name]chan struct{} {
 		}
 	}
 	return r
+}
+
+func getOwnerLabels(dop values.Map, c string) map[string]string {
+	labels := make(map[string]string)
+
+	if n := dop.GetPathString("metadata.name"); n != "" {
+		labels[manifest.OwningResourceName] = n
+	}
+	if n := dop.GetPathString("metadata.namespace"); n != "" {
+		labels[manifest.OwningResourceNamespace] = n
+	}
+	if c != "" {
+		labels[manifest.DubboComponentLabel] = c
+	}
+	return labels
 }

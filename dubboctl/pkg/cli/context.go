@@ -12,8 +12,8 @@ type instance struct {
 }
 
 type Context interface {
-	CLIClientWithRevision(rev string) (kube.CLIClient, error)
 	CLIClient() (kube.CLIClient, error)
+	CLIClientWithRevision(rev string) (kube.CLIClient, error)
 }
 
 func NewCLIContext(rootFlags *RootFlags) Context {
