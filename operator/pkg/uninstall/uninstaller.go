@@ -17,7 +17,9 @@ import (
 
 var (
 	ClusterResources    = []schema.GroupVersionKind{}
-	AllClusterResources = append(ClusterResources, gvk.CustomResourceDefinition.K8s())
+	AllClusterResources = append(ClusterResources,
+		gvk.CustomResourceDefinition.K8s())
+	ClusterCPResources []schema.GroupVersionKind
 )
 
 func GetPrunedResources(clt kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
@@ -30,10 +32,13 @@ func GetPrunedResources(clt kube.CLIClient, dopName, dopNamespace string, includ
 		labels[manifest.OwningResourceNamespace] = dopNamespace
 	}
 	resources := NamespacedResources()
-	gvkList := append(resources, AllClusterResources...)
-	for _, gvks := range gvkList {
+	gvkList := append(resources, ClusterCPResources...)
+	if includeClusterResources {
+		gvkList = append(resources, AllClusterResources...)
+	}
+	for _, g := range gvkList {
 		var result *unstructured.UnstructuredList
-		c, err := clt.DynamicClientFor(gvks, nil, "")
+		c, err := clt.DynamicClientFor(g, nil, "")
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +54,7 @@ func GetPrunedResources(clt kube.CLIClient, dopName, dopNamespace string, includ
 }
 
 func NamespacedResources() []schema.GroupVersionKind {
-	var res []schema.GroupVersionKind
+	res := []schema.GroupVersionKind{}
 	return res
 }
 
