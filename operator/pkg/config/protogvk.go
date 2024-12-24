@@ -27,7 +27,7 @@ func (g GroupVersionKind) CanonicalGroup() string {
 	return CanoncalGroup(g.Group)
 }
 
-func (g GroupVersionKind) K8s() schema.GroupVersionKind {
+func (g GroupVersionKind) Kubernetes() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   g.Group,
 		Version: g.Version,

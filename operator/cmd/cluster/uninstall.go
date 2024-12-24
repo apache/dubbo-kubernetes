@@ -28,8 +28,8 @@ type uninstallArgs struct {
 func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
 	cmd.PersistentFlags().StringVarP(&args.files, "filename", "f", "",
 		"The filename of the DubboOperator CR.")
-	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, "Override dubboOperator values, such as selecting profiles, etc")
-	cmd.PersistentFlags().BoolVar(&args.purge, "purge", false, "Remove all dubbo-related source code")
+	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
+	cmd.PersistentFlags().BoolVar(&args.purge, "purge", false, `Remove all dubbo related source code.`)
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
 }
 
@@ -65,7 +65,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	return uicmd
 }
 
-func Uninstall(cmd *cobra.Command, _ cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
+func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
 	var kubeClient kube.CLIClient
 	var err error
@@ -73,6 +73,8 @@ func Uninstall(cmd *cobra.Command, _ cli.Context, rootArgs *RootArgs, uiArgs *un
 	if err != nil {
 		return err
 	}
+
+	kubeClient, err = ctx.CLIClientWithRevision("")
 
 	pl := progress.NewInfo()
 	if uiArgs.purge && uiArgs.files != "" {

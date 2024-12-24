@@ -12,6 +12,7 @@ type instance struct {
 }
 
 type Context interface {
+	CLIClientWithRevision(rev string) (kube.CLIClient, error)
 	CLIClient() (kube.CLIClient, error)
 }
 

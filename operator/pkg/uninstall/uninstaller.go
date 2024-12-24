@@ -12,17 +12,19 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 var (
 	ClusterResources    = []schema.GroupVersionKind{}
 	ClusterCPResources  = []schema.GroupVersionKind{}
 	AllClusterResources = append(ClusterResources,
-		gvk.CustomResourceDefinition.K8s())
+		gvk.CustomResourceDefinition.Kubernetes())
 )
 
-func GetPrunedResources(clt kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
+func GetPrunedResources(kcli kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
 	var usList []*unstructured.UnstructuredList
 	labels := make(map[string]string)
 	if dopName != "" {
@@ -38,12 +40,17 @@ func GetPrunedResources(clt kube.CLIClient, dopName, dopNamespace string, includ
 	}
 	for _, g := range gvkList {
 		var result *unstructured.UnstructuredList
-		c, err := clt.DynamicClientFor(g, nil, "")
+		compReq, err := klabels.NewRequirement(manifest.DubboComponentLabel, selection.Exists, nil)
+		if err != nil {
+			return nil, err
+		}
+		c, err := kcli.DynamicClientFor(g, nil, "")
 		if err != nil {
 			return nil, err
 		}
 		if includeClusterResources {
-			result, err = c.List(context.Background(), metav1.ListOptions{})
+			s := klabels.NewSelector()
+			result, err = c.List(context.Background(), metav1.ListOptions{LabelSelector: s.Add(*compReq).String()})
 		}
 		if result == nil || len(result.Items) == 0 {
 			continue

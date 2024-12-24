@@ -17,7 +17,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 	}
 	return schema.GroupVersionResource{}, false
 }
-
 func MustToGVR(g config.GroupVersionKind) schema.GroupVersionResource {
 	r, ok := ToGVR(g)
 	if !ok {
