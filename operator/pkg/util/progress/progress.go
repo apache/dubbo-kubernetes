@@ -92,10 +92,10 @@ func (i *Info) SetState(state InstallState) {
 		i.SetMessage(inProgress+`Pruning removed resources`, false)
 	case StateComplete:
 		// TODO Install provides the command for copying and running.
-		i.SetMessage(`{{ green "✔" }} Installation complete`, true)
+		i.SetMessage(`{{ green "✔" }} All Dubbo resources have been successfully installed to the cluster.`, true)
 	case StateUninstallComplete:
 		// TODO Uninstall provides a one-click command to delete CRDs.
-		i.SetMessage(`{{ green "✔" }} Uninstallation complete`, true)
+		i.SetMessage(`{{ green "✔" }} All Dubbo resources have been successfully removed from the cluster.`, true)
 	}
 }
 
