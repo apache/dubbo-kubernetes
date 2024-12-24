@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-var installerScope = log.RegisterScope("installer", "installer")
+var installerScope = log.RegisterScope("installer")
 
 type installArgs struct {
 	files            []string

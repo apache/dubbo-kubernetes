@@ -82,10 +82,10 @@ func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsLi
 	return errs.ToErrors()
 }
 
-func DeleteResource(kc kube.CLIClient, dryRun bool, log clog.Logger, obj *unstructured.Unstructured) error {
+func DeleteResource(kc kube.CLIClient, dryRun bool, _ clog.Logger, obj *unstructured.Unstructured) error {
 	name := fmt.Sprintf("%v/%s.%s", obj.GroupVersionKind(), obj.GetName(), obj.GetNamespace())
 	if dryRun {
-		log.LogAndPrintf("Not pruning object %s because of dry run.", name)
+		fmt.Printf("Not pruning object %s because of dry run.", name)
 		return nil
 	}
 
@@ -98,10 +98,12 @@ func DeleteResource(kc kube.CLIClient, dryRun bool, log clog.Logger, obj *unstru
 		if !kerrors.IsNotFound(err) {
 			return err
 		}
-		log.LogAndPrintf("object: %s is not being deleted because it no longer exists", name)
+		fmt.Printf("object: %s is not being deleted because it no longer exists", name)
+
 		return nil
 	}
 
-	log.LogAndPrintf(" ✔︎ Removed %s.", name)
+	fmt.Printf("✔︎ Removed %s.\n", name)
+
 	return nil
 }

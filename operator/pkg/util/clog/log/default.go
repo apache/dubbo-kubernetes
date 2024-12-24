@@ -1,7 +1,7 @@
 package log
 
 func registerDefaultScopes() (defaults *Scope) {
-	return registerScope(DefaultScopeName, "Unscoped logging messages.", 1)
+	return registerScope(DefaultScopeName, 1)
 }
 
 var defaultScope = registerDefaultScopes()

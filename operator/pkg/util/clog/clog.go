@@ -25,7 +25,7 @@ type Logger interface {
 func NewConsoleLogger(stdOut, stdErr io.Writer, scope *log.Scope) *ConsoleLogger {
 	s := scope
 	if s == nil {
-		s = log.RegisterScope(log.DefaultScopeName, log.DefaultScopeName)
+		s = log.RegisterScope(log.DefaultScopeName)
 	}
 	return &ConsoleLogger{
 		stdOut: stdOut,

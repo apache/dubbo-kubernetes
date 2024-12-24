@@ -27,11 +27,11 @@ var (
 	lock   sync.RWMutex
 )
 
-func RegisterScope(name string, desc string) *Scope {
-	return registerScope(name, desc, 0)
+func RegisterScope(name string) *Scope {
+	return registerScope(name, 0)
 }
 
-func registerScope(name string, desc string, callerSkip int) *Scope {
+func registerScope(name string, callerSkip int) *Scope {
 	if strings.ContainsAny(name, ":,.") {
 		panic(fmt.Sprintf("scope name %s is invalid, it cannot contain colons, commas, or periods", name))
 	}
