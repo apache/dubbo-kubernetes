@@ -19,6 +19,7 @@ import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/validate"
 	"github.com/spf13/cobra"
 )
 
@@ -51,6 +52,10 @@ func GetRootCmd(args []string) *cobra.Command {
 	manifestCmd := cluster.ManifestCmd(ctx)
 	rootCmd.AddCommand(manifestCmd)
 	hideFlags(manifestCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+
+	validateCmd := validate.NewValidateCommand(ctx)
+	rootCmd.AddCommand(validateCmd)
+	hideFlags(validateCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 
 	return rootCmd
 }
