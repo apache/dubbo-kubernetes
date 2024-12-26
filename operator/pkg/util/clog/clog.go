@@ -20,6 +20,7 @@ type Logger interface {
 	LogAndPrintf(format string, a ...any)
 	LogAndErrorf(format string, a ...any)
 	LogAndFatalf(format string, a ...any)
+	Print(s string)
 }
 
 func NewConsoleLogger(stdOut, stdErr io.Writer, scope *log.Scope) *ConsoleLogger {

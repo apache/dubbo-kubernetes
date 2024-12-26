@@ -1,9 +1,16 @@
 package cluster
 
 import (
+	"cmp"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
+	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 	"strings"
 )
 
@@ -31,7 +38,6 @@ func ManifestCmd(ctx cli.Context) *cobra.Command {
 	rootArgs := &RootArgs{}
 	mgcArgs := &ManifestGenerateArgs{}
 	mgc := ManifestGenerateCmd(ctx, rootArgs, mgcArgs)
-	ic := InstallCmd(ctx)
 	mc := &cobra.Command{
 		Use:   "manifest",
 		Short: "dubbo manifest related commands",
@@ -41,9 +47,10 @@ func ManifestCmd(ctx cli.Context) *cobra.Command {
 	addFlags(mgc, rootArgs)
 	addManifestGenerateFlags(mgc, mgcArgs)
 	mc.AddCommand(mgc)
-	mc.AddCommand(ic)
 	return mc
 }
+
+var kubeClientFunc func() (kube.CLIClient, error)
 
 func ManifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *ManifestGenerateArgs) *cobra.Command {
 	return &cobra.Command{
@@ -56,7 +63,75 @@ func ManifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *ManifestGenerateA
   # Generate the demo profile
   istioctl manifest generate --set profile=demo
 `,
-		Args: nil,
-		RunE: nil,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				return fmt.Errorf("generate accepts no positional arguments, got %#v", args)
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if kubeClientFunc == nil {
+				kubeClientFunc = ctx.CLIClient
+			}
+			var kubeClient kube.CLIClient
+			kc, err := kubeClientFunc()
+			if err != nil {
+				return err
+			}
+			kubeClient = kc
+
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+			return ManifestGenerate(kubeClient, mgArgs, cl)
+		},
+	}
+}
+
+const (
+	YAMLSeparator = "\n---\n"
+)
+
+func ManifestGenerate(kc kube.CLIClient, mgArgs *ManifestGenerateArgs, cl clog.Logger) error {
+	setFlags := applyFlagAliases(mgArgs.sets, mgArgs.manifestPath)
+	manifests, _, err := render.GenerateManifest(mgArgs.files, setFlags, cl, kc)
+	if err != nil {
+		return err
+	}
+	for _, smf := range sortManifests(manifests) {
+		cl.Print(smf + YAMLSeparator)
+	}
+	return nil
+}
+
+func sortManifests(raw []manifest.ManifestSet) []string {
+	all := []manifest.Manifest{}
+	for _, m := range raw {
+		all = append(all, m.Manifests...)
+	}
+	slices.SortStableFunc(all, func(a, b manifest.Manifest) int {
+		if r := cmp.Compare(objectKindOrder(a), objectKindOrder(b)); r != 0 {
+			return r
+		}
+		if r := cmp.Compare(a.GroupVersionKind().Group, b.GroupVersionKind().Group); r != 0 {
+			return r
+		}
+		if r := cmp.Compare(a.GroupVersionKind().Kind, b.GroupVersionKind().Kind); r != 0 {
+			return r
+		}
+		return cmp.Compare(a.GetName(), b.GetName())
+	})
+	return slices.Map(all, func(e manifest.Manifest) string {
+		res, _ := yaml.Marshal(e.Object)
+		return string(res)
+	})
+}
+
+func objectKindOrder(m manifest.Manifest) int {
+	o := m.Unstructured
+	gk := o.GroupVersionKind().Group + "/" + o.GroupVersionKind().Kind
+	switch {
+	case gk == "apiextensions.k8s.io/CustomResourceDefinition":
+		return -1000
+	default:
+		return 1000
 	}
 }
