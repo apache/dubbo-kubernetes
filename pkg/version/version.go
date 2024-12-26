@@ -31,6 +31,10 @@ func (b BuildInfo) String() string {
 	return fmt.Sprintf("%v-%v-%v", b.Version)
 }
 
+func (b BuildInfo) LongForm() string {
+	return fmt.Sprintf("%#v", b)
+}
+
 func init() {
 	Info = BuildInfo{
 		Version: buildVersion,

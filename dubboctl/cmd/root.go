@@ -30,11 +30,10 @@ func AddFlags(cmd *cobra.Command) {
 
 func GetRootCmd(args []string) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:           "dubboctl",
-		Short:         "Dubbo command line utilities",
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		Long:          `Dubbo configuration command line utility for debug and use dubbo applications.`,
+		Use:          "dubboctl",
+		Short:        "Dubbo command line utilities",
+		SilenceUsage: true,
+		Long:         `Dubbo configuration command line utility for debug and use dubbo applications.`,
 	}
 	AddFlags(rootCmd)
 	rootCmd.SetArgs(args)

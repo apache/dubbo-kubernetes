@@ -35,6 +35,9 @@ func CobraCommandWithOptions() *cobra.Command {
 			case "":
 				if short {
 					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "client version: %s\n", version.ClientVersion.Version)
+
+				} else {
+					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "client version: %s\n", version.ClientVersion.LongForm())
 				}
 			case "yaml":
 				if marshaled, err := yaml.Marshal(&version); err == nil {
