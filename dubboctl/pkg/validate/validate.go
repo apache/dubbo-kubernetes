@@ -120,6 +120,8 @@ func NewValidateCommand(ctx cli.Context) *cobra.Command {
 			return validateFiles(&dn, files, cmd.OutOrStderr())
 		},
 	}
+	flags := vc.PersistentFlags()
+	flags.StringSliceVarP(&files, "filename", "f", nil, "Inputs of files to validate")
 	return vc
 }
 
@@ -195,6 +197,7 @@ func validateFiles(dubboNamespace *string, files []string, writer io.Writer) err
 			errs = multierror.Append(errs, err)
 		}
 	}
+
 	files = []string{}
 	for p := range processedFiles {
 		files = append(files, p)
@@ -217,7 +220,7 @@ func validateFiles(dubboNamespace *string, files []string, writer io.Writer) err
 			if w := warningsByFilename[fname]; w != nil {
 				_, _ = fmt.Fprint(writer, warningToString(w))
 			} else {
-				_, _ = fmt.Fprintf(writer, "validation succeed\n")
+				_, _ = fmt.Fprintf(writer, "validation successfully completed\n")
 			}
 			break
 		}
