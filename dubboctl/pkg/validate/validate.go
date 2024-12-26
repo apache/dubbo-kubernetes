@@ -112,9 +112,8 @@ func NewValidateCommand(ctx cli.Context) *cobra.Command {
   # Validate current services under 'default' namespace with in the cluster
   kubectl get services -o yaml | dubboctl validate -f -
 `,
-		Args:         cobra.NoArgs,
-		Aliases:      []string{"v"},
-		SilenceUsage: true,
+		Args:    cobra.NoArgs,
+		Aliases: []string{"v"},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			dn := ctx.DubboNamespace()
 			return validateFiles(&dn, files, cmd.OutOrStderr())

@@ -17,92 +17,106 @@
 
 package version
 
-import (
-	"fmt"
-	"runtime"
-	"strings"
-)
+import "fmt"
 
 var (
-	Product      = "Dubbo"
-	basedOndubbo = ""
-	version      = "unknown"
-	gitTag       = "unknown"
-	gitCommit    = "unknown"
-	buildDate    = "unknown"
-	Envoy        = "unknown"
+	buildVersion = "unknown"
 )
 
 type BuildInfo struct {
-	Product      string
-	Version      string
-	GitTag       string
-	GitCommit    string
-	BuildDate    string
-	BasedOnDubbo string
+	Version string `json:"version"`
 }
 
-func (b BuildInfo) FormatDetailedProductInfo() string {
-	base := []string{
-		fmt.Sprintf("Product:       %s", b.Product),
-		fmt.Sprintf("Version:       %s", b.Version),
-		fmt.Sprintf("Git Tag:       %s", b.GitTag),
-		fmt.Sprintf("Git Commit:    %s", b.GitCommit),
-		fmt.Sprintf("Build Date:    %s", b.BuildDate),
-	}
-	if b.BasedOnDubbo != "" {
-		base = append(base, fmt.Sprintf("Based on dubbo: %s", b.BasedOnDubbo))
-	}
-	return strings.Join(
-		base,
-		"\n",
-	)
+func (b BuildInfo) String() string {
+	return fmt.Sprintf("%v-%v-%v", b.Version)
 }
-
-func shortCommit(c string) string {
-	if len(c) < 7 {
-		return c
-	}
-	return c[:7]
-}
-
-func (b BuildInfo) AsMap() map[string]string {
-	res := map[string]string{
-		"product":    b.Product,
-		"version":    b.Version,
-		"build_date": b.BuildDate,
-		"git_commit": shortCommit(b.GitCommit),
-		"git_tag":    b.GitTag,
-	}
-	if b.BasedOnDubbo != "" {
-		res["based_on_dubbo"] = b.BasedOnDubbo
-	}
-	return res
-}
-
-func (b BuildInfo) UserAgent(component string) string {
-	commit := shortCommit(b.GitCommit)
-	if b.BasedOnDubbo != "" {
-		commit = fmt.Sprintf("%s/dubbo-%s", commit, b.BasedOnDubbo)
-	}
-	return fmt.Sprintf("%s/%s (%s; %s; %s/%s)",
-		component,
-		b.Version,
-		runtime.GOOS,
-		runtime.GOARCH,
-		b.Product,
-		commit)
-}
-
-var Build BuildInfo
 
 func init() {
-	Build = BuildInfo{
-		Product:      Product,
-		Version:      version,
-		GitTag:       gitTag,
-		GitCommit:    gitCommit,
-		BuildDate:    buildDate,
-		BasedOnDubbo: basedOndubbo,
+	Info = BuildInfo{
+		Version: buildVersion,
 	}
 }
+
+//var (
+//	Product      = "Dubbo"
+//	basedOndubbo = ""
+//	version      = "unknown"
+//	gitTag       = "unknown"
+//	gitCommit    = "unknown"
+//	buildDate    = "unknown"
+//	Envoy        = "unknown"
+//)
+
+//type BuildInfo struct {
+//	Product      string
+//	Version      string
+//	GitTag       string
+//	GitCommit    string
+//	BuildDate    string
+//	BasedOnDubbo string
+//}
+
+//func (b BuildInfo) FormatDetailedProductInfo() string {
+//	base := []string{
+//		fmt.Sprintf("Product:       %s", b.Product),
+//		fmt.Sprintf("Version:       %s", b.Version),
+//		fmt.Sprintf("Git Tag:       %s", b.GitTag),
+//		fmt.Sprintf("Git Commit:    %s", b.GitCommit),
+//		fmt.Sprintf("Build Date:    %s", b.BuildDate),
+//	}
+//	if b.BasedOnDubbo != "" {
+//		base = append(base, fmt.Sprintf("Based on dubbo: %s", b.BasedOnDubbo))
+//	}
+//	return strings.Join(
+//		base,
+//		"\n",
+//	)
+//}
+
+//func shortCommit(c string) string {
+//	if len(c) < 7 {
+//		return c
+//	}
+//	return c[:7]
+//}
+//
+//func (b BuildInfo) AsMap() map[string]string {
+//	res := map[string]string{
+//		"product":    b.Product,
+//		"version":    b.Version,
+//		"build_date": b.BuildDate,
+//		"git_commit": shortCommit(b.GitCommit),
+//		"git_tag":    b.GitTag,
+//	}
+//	if b.BasedOnDubbo != "" {
+//		res["based_on_dubbo"] = b.BasedOnDubbo
+//	}
+//	return res
+//}
+//
+//func (b BuildInfo) UserAgent(component string) string {
+//	commit := shortCommit(b.GitCommit)
+//	if b.BasedOnDubbo != "" {
+//		commit = fmt.Sprintf("%s/dubbo-%s", commit, b.BasedOnDubbo)
+//	}
+//	return fmt.Sprintf("%s/%s (%s; %s; %s/%s)",
+//		component,
+//		b.Version,
+//		runtime.GOOS,
+//		runtime.GOARCH,
+//		b.Product,
+//		commit)
+//}
+//
+//var Build BuildInfo
+//
+//func init() {
+//	Build = BuildInfo{
+//		Product:      Product,
+//		Version:      version,
+//		GitTag:       gitTag,
+//		GitCommit:    gitCommit,
+//		BuildDate:    buildDate,
+//		BasedOnDubbo: basedOndubbo,
+//	}
+//}
