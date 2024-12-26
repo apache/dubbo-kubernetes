@@ -14,6 +14,7 @@ type instance struct {
 type Context interface {
 	CLIClient() (kube.CLIClient, error)
 	CLIClientWithRevision(rev string) (kube.CLIClient, error)
+	DubboNamespace() string
 }
 
 func NewCLIContext(rootFlags *RootFlags) Context {

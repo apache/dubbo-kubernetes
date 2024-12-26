@@ -18,8 +18,8 @@ package cmd
 import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/validate"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/validate"
 	"github.com/spf13/cobra"
 )
 
