@@ -15,49 +15,49 @@
 
 package dockerfile
 
-import (
-	"context"
-	"github.com/apache/dubbo-kubernetes/operator/dubbo"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/docker"
-	"os"
-)
-
-import (
-	"github.com/containers/storage/pkg/archive"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
-
-	"github.com/moby/term"
-)
-
-type Builder struct{}
-
-func (b Builder) Build(ctx context.Context, f *dubbo.Dubbo) error {
-	cli, _, err := docker.NewClient(client.DefaultDockerHost)
-	if err != nil {
-		return err
-	}
-	buildOpts := types.ImageBuildOptions{
-		Dockerfile: "Dockerfile",
-		Tags:       []string{f.Image},
-	}
-
-	buildCtx, _ := archive.TarWithOptions(f.Root, &archive.TarOptions{})
-	resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	termFd, isTerm := term.GetFdInfo(os.Stderr)
-	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func NewBuilder() *Builder {
-	return &Builder{}
-}
+//import (
+//	"context"
+//	"github.com/apache/dubbo-kubernetes/operator/dubbo"
+//	"github.com/apache/dubbo-kubernetes/operator/pkg/docker"
+//	"os"
+//)
+//
+//import (
+//	"github.com/containers/storage/pkg/archive"
+//
+//	"github.com/docker/docker/api/types"
+//	"github.com/docker/docker/client"
+//	"github.com/docker/docker/pkg/jsonmessage"
+//
+//	"github.com/moby/term"
+//)
+//
+//type Builder struct{}
+//
+//func (b Builder) Build(ctx context.Context, f *dubbo.Dubbo) error {
+//	cli, _, err := docker.NewClient(client.DefaultDockerHost)
+//	if err != nil {
+//		return err
+//	}
+//	buildOpts := types.ImageBuildOptions{
+//		Dockerfile: "Dockerfile",
+//		Tags:       []string{f.Image},
+//	}
+//
+//	buildCtx, _ := archive.TarWithOptions(f.Root, &archive.TarOptions{})
+//	resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
+//	if err != nil {
+//		return err
+//	}
+//	defer resp.Body.Close()
+//	termFd, isTerm := term.GetFdInfo(os.Stderr)
+//	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
+//
+//func NewBuilder() *Builder {
+//	return &Builder{}
+//}

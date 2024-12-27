@@ -15,23 +15,23 @@
 
 package mock
 
-import (
-	"context"
-	"github.com/apache/dubbo-kubernetes/operator/dubbo"
-)
-
-type Pusher struct {
-	PushInvoked bool
-	PushFn      func(*dubbo.Dubbo) (string, error)
-}
-
-func NewPusher() *Pusher {
-	return &Pusher{
-		PushFn: func(*dubbo.Dubbo) (string, error) { return "", nil },
-	}
-}
-
-func (i *Pusher) Push(ctx context.Context, f *dubbo.Dubbo) (string, error) {
-	i.PushInvoked = true
-	return i.PushFn(f)
-}
+//import (
+//	"context"
+//	"github.com/apache/dubbo-kubernetes/operator/dubbo"
+//)
+//
+//type Pusher struct {
+//	PushInvoked bool
+//	PushFn      func(*dubbo.Dubbo) (string, error)
+//}
+//
+//func NewPusher() *Pusher {
+//	return &Pusher{
+//		PushFn: func(*dubbo.Dubbo) (string, error) { return "", nil },
+//	}
+//}
+//
+//func (i *Pusher) Push(ctx context.Context, f *dubbo.Dubbo) (string, error) {
+//	i.PushInvoked = true
+//	return i.PushFn(f)
+//}

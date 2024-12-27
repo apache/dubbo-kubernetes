@@ -14,6 +14,7 @@ type instance struct {
 type Context interface {
 	CLIClient() (kube.CLIClient, error)
 	CLIClientWithRevision(rev string) (kube.CLIClient, error)
+	DubboNamespace() string
 }
 
 func NewCLIContext(rootFlags *RootFlags) Context {
@@ -38,19 +39,21 @@ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
 	if i.clients == nil {
 		i.clients = make(map[string]kube.CLIClient)
 	}
-	impersonationConfig := rest.ImpersonationConfig{}
-	client, err := newKubeClientWithRevision(*i.kubeconfig, *i.Context, rev, impersonationConfig)
-	if err != nil {
-		return nil, err
+	if i.clients[rev] == nil {
+		impersonationConfig := rest.ImpersonationConfig{}
+		client, err := newKubeClientWithRevision(*i.kubeconfig, *i.Context, rev, impersonationConfig)
+		if err != nil {
+			return nil, err
+		}
+		i.clients[rev] = client
 	}
-	i.clients[rev] = client
 	return i.clients[rev], nil
 }
 
 func newKubeClientWithRevision(kubeconfig, context, revision string, impersonationConfig rest.ImpersonationConfig) (kube.CLIClient, error) {
 	drc, err := kube.DefaultRestConfig(kubeconfig, context, func(config *rest.Config) {
-		config.QPS = 50
-		config.Burst = 100
+		config.QPS = 55
+		config.Burst = 95
 		config.Impersonate = impersonationConfig
 	})
 	if err != nil {

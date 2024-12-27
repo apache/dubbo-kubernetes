@@ -35,3 +35,11 @@ func AddRootFlags(flags *pflag.FlagSet) *RootFlags {
 	flags.StringVarP(rootFlags.dubboNamespace, DubboNamespaceFlag, "i", viper.GetString(DubboNamespaceFlag), "Dubbo system namespace")
 	return rootFlags
 }
+
+func (r *RootFlags) Namespace() string {
+	return *r.namespace
+}
+
+func (r *RootFlags) DubboNamespace() string {
+	return *r.dubboNamespace
+}

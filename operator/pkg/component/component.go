@@ -9,7 +9,8 @@ import (
 type Name string
 
 const (
-	BaseComponentName Name = "Base"
+	BaseComponentName  Name = "Base"
+	AdminComponentName Name = "Admin"
 )
 
 type Component struct {
@@ -18,6 +19,7 @@ type Component struct {
 	Default        bool
 	HelmSubDir     string
 	HelmTreeRoot   string
+	FlattenValues  bool
 }
 
 var AllComponents = []Component{
@@ -26,16 +28,26 @@ var AllComponents = []Component{
 		SpecName:       "base",
 		Default:        true,
 		HelmSubDir:     "base",
-		HelmTreeRoot:   "global",
+		HelmTreeRoot:   "base.global",
+	},
+	{
+		UserFacingName: AdminComponentName,
+		SpecName:       "admin",
+		Default:        true,
+		HelmSubDir:     "admin",
+		HelmTreeRoot:   "admin.global",
 	},
 }
 
 var (
 	userFacingCompNames = map[Name]string{
-		BaseComponentName: "Dubbo Core",
+		BaseComponentName:  "Dubbo Core",
+		AdminComponentName: "Dubbo Dashboard or Control Plane",
 	}
+
 	Icons = map[Name]string{
-		BaseComponentName: "🚄",
+		BaseComponentName:  "🛸",
+		AdminComponentName: "🛰✗📡",
 	}
 )
 
@@ -63,6 +75,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		if err != nil {
 			return apis.MetadataCompSpec{}, fmt.Errorf("fail to convert %v: %v", c.SpecName, err)
 		}
+
 		if spec.Namespace == "" {
 			spec.Namespace = defaultNamespace
 			spec.Namespace = "dubbo-system"
@@ -71,7 +84,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		return spec, nil
 	}
 	s, ok := merged.GetPathMap("spec.components." + c.SpecName)
-	if ok {
+	if !ok {
 		return defaultResp, nil
 	}
 	spec, err := buildSpec(s)

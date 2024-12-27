@@ -22,7 +22,7 @@ func (m Map) JSON() string {
 }
 
 func (m Map) YAML() string {
-	bytes, err := json.Marshal(m)
+	bytes, err := yaml.Marshal(m)
 	if err != nil {
 		panic(fmt.Sprintf("yaml Marshal: %v", err))
 	}
@@ -40,7 +40,7 @@ func MapFromJSON(input []byte) (Map, error) {
 
 func MapFromYAML(input []byte) (Map, error) {
 	m := make(Map)
-	err := json.Unmarshal(input, &m)
+	err := yaml.Unmarshal(input, &m)
 	if err != nil {
 		return nil, err
 	}
@@ -236,4 +236,168 @@ func extractKeyValue(seg string) (string, string, bool) {
 	}
 	sanitized := seg[1 : len(seg)-1]
 	return strings.Cut(sanitized, ":")
+}
+
+func (m Map) MergeFrom(other Map) {
+	for k, v := range other {
+		if vm, ok := v.(Map); ok {
+			v = map[string]any(vm)
+		}
+		if v, ok := v.(map[string]any); ok {
+			if bv, ok := m[k]; ok {
+
+				if bv, ok := bv.(map[string]any); ok {
+					Map(bv).MergeFrom(v)
+					continue
+				}
+			}
+		}
+		m[k] = v
+	}
+}
+
+func (m Map) SetPath(paths string, value any) error {
+	path := splitPath(paths)
+	base := m
+	if err := setPathRecurse(base, path, value); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m Map) SetPaths(paths ...string) error {
+	for _, sf := range paths {
+		p, v := getPV(sf)
+		// input value type is always string, transform it to correct type before setting.
+		var val any = v
+		if !isAlwaysString(p) {
+			val = parseValue(v)
+		}
+		if err := m.SetPath(p, val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getPV(setFlag string) (path string, value string) {
+	pv := strings.Split(setFlag, "=")
+	if len(pv) != 2 {
+		return setFlag, ""
+	}
+	path, value = strings.TrimSpace(pv[0]), strings.TrimSpace(pv[1])
+	return
+}
+
+func parseValue(valueStr string) any {
+	var value any
+	if v, err := strconv.Atoi(valueStr); err == nil {
+		value = v
+	} else if v, err := strconv.ParseFloat(valueStr, 64); err == nil {
+		value = v
+	} else if v, err := strconv.ParseBool(valueStr); err == nil {
+		value = v
+	} else {
+		value = strings.ReplaceAll(valueStr, "\\,", ",")
+	}
+	return value
+}
+
+func isAlwaysString(s string) bool {
+	for _, a := range alwaysString {
+		if strings.HasPrefix(s, a) {
+			return true
+		}
+	}
+	return false
+}
+
+var alwaysString = []string{}
+
+func (m Map) SetSpecPaths(paths ...string) error {
+	for _, path := range paths {
+		if err := m.SetPaths("spec." + path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func setPathRecurse(base map[string]any, paths []string, value any) error {
+	seg := paths[0]
+	last := len(paths) == 1
+	nextIsArray := len(paths) >= 2 && strings.HasPrefix(paths[1], "[")
+	if nextIsArray {
+		last = len(paths) == 2
+		// Find or create target list
+		if _, f := base[seg]; !f {
+			base[seg] = []any{}
+		}
+		var index int
+		if k, v, ok := extractKV(paths[1]); ok {
+			index = -1
+			for idx, cm := range base[seg].([]any) {
+				if MustCastAsMap(cm)[k] == v {
+					index = idx
+					break
+				}
+			}
+			if index == -1 {
+				return fmt.Errorf("element %v not found", paths[1])
+			}
+		} else if idx, ok := extractIndex(paths[1]); ok {
+			index = idx
+		} else {
+			return fmt.Errorf("unknown segment %v", paths[1])
+		}
+		l := base[seg].([]any)
+		if index < 0 || index >= len(l) {
+			// Index is greater, we need to append
+			if last {
+				l = append(l, value)
+			} else {
+				nm := Map{}
+				if err := setPathRecurse(nm, paths[2:], value); err != nil {
+					return err
+				}
+				l = append(l, nm)
+			}
+			base[seg] = l
+		} else {
+			v := MustCastAsMap(l[index])
+			if err := setPathRecurse(v, paths[2:], value); err != nil {
+				return err
+			}
+			l[index] = v
+		}
+	} else {
+		if _, f := base[seg]; !f {
+			base[seg] = map[string]any{}
+		}
+		if last {
+			base[seg] = value
+		} else {
+			return setPathRecurse(MustCastAsMap(base[seg]), paths[1:], value)
+		}
+	}
+	return nil
+}
+
+func extractKV(seg string) (string, string, bool) {
+	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
+		return "", "", false
+	}
+	sanitized := seg[1 : len(seg)-1]
+	return strings.Cut(sanitized, ":")
+}
+
+func GetValueForSetFlag(setFlags []string, path string) string {
+	r := ""
+	for _, sf := range setFlags {
+		p, v := getPV(sf)
+		if p == path {
+			r = v
+		}
+	}
+	return r
 }

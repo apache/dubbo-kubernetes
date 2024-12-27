@@ -24,23 +24,37 @@ package k8s.io.apimachinery.pkg.apis.meta.v1;
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 
+// Package-wide variables from generator "generated".
 option go_package = "k8s.io/apimachinery/pkg/apis/meta/v1";
 
+// APIGroup contains the name, the supported versions, and the preferred version
+// of a group.
 message APIGroup {
+  // name is the name of the group.
   optional string name = 1;
 
+  // versions are the versions supported in this group.
   // +listType=atomic
   repeated GroupVersionForDiscovery versions = 2;
 
+  // preferredVersion is the version preferred by the API server, which
+  // probably is the storage version.
   // +optional
   optional GroupVersionForDiscovery preferredVersion = 3;
 
+  // a map of client CIDR to server address that is serving this group.
+  // This is to help clients reach servers in the most network-efficient way possible.
+  // Clients can use the appropriate server address as per the CIDR that they match.
+  // In case of multiple matches, clients should use the longest matching CIDR.
+  // The server returns only those CIDRs that it thinks that the client can match.
+  // For example: the master will return an internal IP CIDR only, if the client reaches the server using an internal IP.
+  // Server looks at X-Forwarded-For header or X-Real-Ip header or request.RemoteAddr (in that order) to get the client IP.
   // +optional
   // +listType=atomic
   repeated ServerAddressByClientCIDR serverAddressByClientCIDRs = 4;
 }
 
-//  is a list of APIGroup, to allow clients to discover the API at
+// APIGroupList is a list of APIGroup, to allow clients to discover the API at
 // /apis.
 message APIGroupList {
   // groups is a list of APIGroup.

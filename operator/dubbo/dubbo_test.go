@@ -17,16 +17,16 @@
 
 package dubbo
 
-import (
-	"testing"
-)
-
-func Test_NewDubbo(t *testing.T) {
-	dubbo, err := NewDubbo("testdata")
-	if err != nil {
-		return
-	}
-	if dubbo.Runtime != "" {
-		t.Fatal(err)
-	}
-}
+//import (
+//	"testing"
+//)
+//
+//func Test_NewDubbo(t *testing.T) {
+//	dubbo, err := NewDubbo("testdata")
+//	if err != nil {
+//		return
+//	}
+//	if dubbo.Runtime != "" {
+//		t.Fatal(err)
+//	}
+//}

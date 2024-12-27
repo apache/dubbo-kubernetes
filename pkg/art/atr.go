@@ -8,7 +8,7 @@ import (
 //go:embed dubbo-ascii.txt
 var dubboASCIIArt string
 
-func DubboArt() string {
+func dubboArt() string {
 	return dubboASCIIArt
 }
 

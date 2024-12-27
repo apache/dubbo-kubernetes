@@ -6,6 +6,7 @@ import (
 	"k8s.io/client-go/discovery"
 	diskcached "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
@@ -21,6 +22,13 @@ type clientFactory struct {
 	expander        laziness.Laziness[meta.RESTMapper]
 	mapper          laziness.Laziness[meta.ResettableRESTMapper]
 	discoveryClient laziness.Laziness[discovery.CachedDiscoveryInterface]
+}
+
+type restClientGetter interface {
+	ToRestConfig() (*rest.Config, error)
+	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
+	ToRestMapper() (meta.RESTMapper, error)
+	ToRawKubeConfigLoader() clientcmd.ClientConfig
 }
 
 func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clientFactory {
@@ -69,12 +77,36 @@ func (c *clientFactory) ToDiscoveryClient() (discovery.CachedDiscoveryInterface,
 	return c.discoveryClient.Get()
 }
 
+func (c *clientFactory) RestClient() (*rest.RESTClient, error) {
+	clientConfig, err := c.ToRestConfig()
+	if err != nil {
+		return nil, err
+	}
+	return rest.RESTClientFor(clientConfig)
+}
+
 func (c *clientFactory) ToRestConfig() (*rest.Config, error) {
 	restConfig, err := c.clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 	return SetRestDefaults(restConfig), nil
+}
+
+func (c *clientFactory) ToRestMapper() (meta.RESTMapper, error) {
+	return c.expander.Get()
+}
+
+func (c *clientFactory) DynamicClient() (dynamic.Interface, error) {
+	restConfig, err := c.ToRestConfig()
+	if err != nil {
+		return nil, err
+	}
+	return dynamic.NewForConfig(restConfig)
+}
+
+func (c *clientFactory) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+	return c.clientConfig
 }
 
 var overlyCautiousIllegalFileCharacters = regexp.MustCompile(`[^(\w/.)]`)
