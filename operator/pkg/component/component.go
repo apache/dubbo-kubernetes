@@ -9,7 +9,8 @@ import (
 type Name string
 
 const (
-	BaseComponentName Name = "Base"
+	BaseComponentName  Name = "Base"
+	AdminComponentName Name = "Admin"
 )
 
 type Component struct {
@@ -18,6 +19,7 @@ type Component struct {
 	Default        bool
 	HelmSubDir     string
 	HelmTreeRoot   string
+	ResourceName   string
 	FlattenValues  bool
 }
 
@@ -27,16 +29,27 @@ var AllComponents = []Component{
 		SpecName:       "base",
 		Default:        true,
 		HelmSubDir:     "base",
-		HelmTreeRoot:   "global",
+		HelmTreeRoot:   "base.global",
+	},
+	{
+		UserFacingName: AdminComponentName,
+		SpecName:       "admin",
+		Default:        true,
+		ResourceName:   "admin",
+		HelmSubDir:     "admin",
+		HelmTreeRoot:   "admin.global",
 	},
 }
 
 var (
 	userFacingCompNames = map[Name]string{
-		BaseComponentName: "Dubbo Core",
+		BaseComponentName:  "Dubbo Core",
+		AdminComponentName: "Dubbo Dashboard or Control Plane",
 	}
+
 	Icons = map[Name]string{
-		BaseComponentName: "🛸",
+		BaseComponentName:  "🛸",
+		AdminComponentName: "🛰 ✗📡",
 	}
 )
 

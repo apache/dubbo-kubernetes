@@ -6,6 +6,11 @@ spec:
   components:
     base:
       enabled: true
+    admin:
+      enabled: true
   values:
-    global:
-      dubboNamespace: dubbo-system
+    base:
+      global:
+        dubboNamespace: dubbo-system
+    admin:
+      global: {}

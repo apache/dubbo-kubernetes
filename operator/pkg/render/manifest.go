@@ -111,7 +111,7 @@ func readBuiltinProfile(path, profile string) (values.Map, error) {
 	return values.MapFromYAML(pb)
 }
 
-func GenerateManifest(files []string, setFlags []string, logger clog.Logger, client kube.Client) ([]manifest.ManifestSet, values.Map, error) {
+func GenerateManifest(files []string, setFlags []string, logger clog.Logger, _ kube.Client) ([]manifest.ManifestSet, values.Map, error) {
 	merged, err := MergeInputs(files, setFlags)
 	if err != nil {
 		return nil, nil, fmt.Errorf("merge inputs: %v %v", err)

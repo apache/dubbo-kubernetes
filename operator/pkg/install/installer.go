@@ -202,6 +202,9 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 
 var componentDependencies = map[component.Name][]component.Name{
 	component.BaseComponentName: {},
+	component.AdminComponentName: {
+		component.BaseComponentName,
+	},
 }
 
 func dependenciesChs() map[component.Name]chan struct{} {

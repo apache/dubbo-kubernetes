@@ -5,6 +5,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/cheggaaa/pb/v3"
 	"io"
+	"sort"
+	"strings"
 	"sync"
 )
 
@@ -34,6 +36,30 @@ func NewInfo() *Info {
 	}
 }
 
+func (i *Info) createStatus(maxWidth int) string {
+	comps := make([]string, 0, len(i.components))
+	wait := make([]string, 0, len(i.components))
+	for c, l := range i.components {
+		comps = append(comps, component.UserFacingCompName(component.Name(c)))
+		wait = append(wait, l.waitingResources()...)
+	}
+	sort.Strings(comps)
+	sort.Strings(wait)
+	msg := fmt.Sprintf(`Processing resources for %s.`, strings.Join(comps, ", "))
+	if len(wait) > 0 {
+		msg += fmt.Sprintf(` Waiting for %s`, strings.Join(wait, ", "))
+	}
+	prefix := inProgress
+	if !i.bar.GetBool(pb.Terminal) {
+		prefix = `{{ yellow "-" }} `
+	}
+	maxWidth -= 2
+	if maxWidth > 0 && len(msg) > maxWidth {
+		return prefix + msg[:maxWidth-3] + "..."
+	}
+	return prefix + msg
+}
+
 func (i *Info) NewComponent(comp string) *ManifestInfo {
 	mi := &ManifestInfo{
 		report: i.reportProgress(comp),
@@ -54,7 +80,7 @@ func (i *Info) reportProgress(componentName string) func() {
 		finished := comp.finished
 		compErr := comp.err
 		comp.mu.Unlock()
-		successIcon := "🎉"
+		successIcon := "✅"
 		if icon, found := component.Icons[compName]; found {
 			successIcon = icon
 		}
@@ -68,6 +94,7 @@ func (i *Info) reportProgress(componentName string) func() {
 			i.bar = createBar()
 			return
 		}
+		i.SetMessage(i.createStatus(i.bar.Width()), false)
 	}
 }
 
@@ -145,4 +172,10 @@ func (mi *ManifestInfo) ReportError(err string) {
 	mi.err = err
 	mi.mu.Unlock()
 	mi.report()
+}
+
+func (p *ManifestInfo) waitingResources() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.waiting
 }
