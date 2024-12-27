@@ -84,7 +84,7 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 	}
 	profile := pointer.NonEmptyOrDefault(vals.GetPathString("spec.profile"), "default")
 	if !rootArgs.DryRun && !iArgs.skipConfirmation {
-		prompt := fmt.Sprintf("You are currently selecting the %q profile to install into the cluster. Do you want to proceed? (y/N)", profile)
+		prompt := fmt.Sprintf("You are currently selecting the %q profile to install into the cluster. %v Do you want to proceed? (y/N)", profile, manifests)
 		if !OptionDeterminate(prompt, stdOut) {
 			p.Println("Canceled Completed.")
 			os.Exit(1)

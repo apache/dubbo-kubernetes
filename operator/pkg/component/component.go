@@ -19,7 +19,6 @@ type Component struct {
 	Default        bool
 	HelmSubDir     string
 	HelmTreeRoot   string
-	ResourceName   string
 	FlattenValues  bool
 }
 
@@ -35,7 +34,6 @@ var AllComponents = []Component{
 		UserFacingName: AdminComponentName,
 		SpecName:       "admin",
 		Default:        true,
-		ResourceName:   "admin",
 		HelmSubDir:     "admin",
 		HelmTreeRoot:   "admin.global",
 	},
@@ -49,7 +47,7 @@ var (
 
 	Icons = map[Name]string{
 		BaseComponentName:  "🛸",
-		AdminComponentName: "🛰 ✗📡",
+		AdminComponentName: "🛰✗📡",
 	}
 )
 
@@ -86,7 +84,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		return spec, nil
 	}
 	s, ok := merged.GetPathMap("spec.components." + c.SpecName)
-	if ok {
+	if !ok {
 		return defaultResp, nil
 	}
 	spec, err := buildSpec(s)
