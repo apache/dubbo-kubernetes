@@ -36,7 +36,7 @@ var (
 		BaseComponentName: "Dubbo Core",
 	}
 	Icons = map[Name]string{
-		BaseComponentName: "🎊",
+		BaseComponentName: "🛸",
 	}
 )
 

@@ -32,7 +32,7 @@ data:
     {{- if (eq $prom.enabled true) }}
     PROMETHEUS="https://prometheus-community.github.io/helm-charts"
 
-    helm pull "{{ include "prom.stack.name" . }}" --repo "$PROMETHEUS" --version "{{ $prom.image.tag }}" --untar
+    helm pull {{ include "prom.stack.name" . }} --repo "$PROMETHEUS" --version {{ $prom.image.tag }} --untar && \
 
     for i in {1..5}; do
     if rm -rf "{{ include "prom.stack.name" . }}-{{ $prom.image.tag }}.tgz"; then
@@ -45,10 +45,10 @@ data:
     cp -r "/files/dashboards/dubbo-resources-metrics.yaml" "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
     ls -la "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
 
-    if helm ls --all | grep -q "{{ include "prom.name" . }}"; then
-    helm upgrade {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/"
+    if helm ls --all | grep "{{ include "prom.name" . }}"; then
+    helm uninstall {{ include "prom.name" . }} -n dubbo-system && helm install {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/" -n dubbo-system
     else
-    helm install {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/"
+    helm install {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/" -n dubbo-system
     fi
     {{- end }}
     {{- if (eq $mesh true) }}
@@ -77,12 +77,14 @@ spec:
     spec:
       serviceAccountName: job-sa
       restartPolicy: {{ $jobs.restartPolicy }}
-      dnsPolicy: "None"
+      dnsPolicy: None
       dnsConfig:
         nameservers:
         - 8.8.8.8
         searches:
         - default.svc.cluster.local
+        - svc.cluster.local
+        - cluster.local
       containers:
       - name: kubectl
         image: "{{ $jobs.image.registry }}:{{ $jobs.image.tag }}"
@@ -120,20 +122,22 @@ spec:
     spec:
       serviceAccountName: job-sa
       restartPolicy: {{ $jobs.restartPolicy }}
-      dnsPolicy: "None"
+      dnsPolicy: None
       dnsConfig:
         nameservers:
         - 8.8.8.8
         searches:
         - default.svc.cluster.local
+        - svc.cluster.local
+        - cluster.local
       containers:
       - name: helm
         image: alpine/helm:3.16.2
         imagePullPolicy: IfNotPresent
         command:
-          - "/bin/sh"
-          - "-c"
-          - "sh /files/helm.sh"
+        - "/bin/sh"
+        - "-c"
+        - "sh /files/helm.sh"
         volumeMounts:
         - name: scripts
           mountPath: /files/helm.sh

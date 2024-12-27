@@ -37,6 +37,7 @@ clusterDomain: cluster.local
 ## Number of replicas for the Deployment.
 replicas: 1
 
+## Configure the application image
 image:
   # Source of the container image.
   registry: docker.io/apache/dubbo-admin
@@ -114,7 +115,6 @@ startupProbe:
     path: /health
     # The port on which the HTTP GET request will be made.
     port: 8888
-
 readinessProbe:
   # Delay before the probe is initiated.
   initialDelaySeconds: 60
@@ -130,7 +130,6 @@ readinessProbe:
     path: /health
     # The port on which the HTTP GET request will be made.
     port: 8888
-
 livenessProbe:
   # Delay before the probe is initiated.
   initialDelaySeconds: 60
@@ -146,7 +145,6 @@ livenessProbe:
     path: /health
     # The port on which the HTTP GET request will be made.
     port: 8888
-
 ## Define lifecycle hooks for the application container.
 lifecycleHooks: ~
 #  postStart:
@@ -155,7 +153,6 @@ lifecycleHooks: ~
 #  preStop:
 #    exec:
 #      command: ["/bin/sh", "-c", "while true; do echo Shutting down... >> /var/log/postStop.log; sleep 30; done"]
-
 service:
   # Whether to enable the service.
   enabled: true
@@ -315,8 +312,6 @@ jobs:
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
 
-
-
 cp:
   deploy_mode: universal
   mode: zone # test
@@ -378,17 +373,14 @@ auth:
   authorization:
     # Specify the action for authorization (DENY, ALLOW, etc.)
     action: DENY
-
     # Specify the match type for authorization (anyMatch, allMatch, etc.)
     matchType: anyMatch
-
     # Specify the match type for authorization rule sampling rate has a range of 0 to 100.
     samples: 0
 
   authentication:
     # Specify the action for authentication (STRICT, PERMISSIVE, etc.)
     action: STRICT
-
     # Specify the action for authentication port number for applying the authentication policy
     port: 38080
 
@@ -455,7 +447,6 @@ kubePrometheus:
   enabled: true
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
-
   ## container image.
   image:
     # Version tag of the container image.
@@ -473,22 +464,17 @@ jaeger:
 zookeeper:
   ## Whether to enable the zookeeper.
   enabled: false
-
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
-
   ## Labels to attach to the resource.
   labels: ~
-
   ## Annotations to attach to the resource.
   annotations: ~
-
   ## Specifies the cluster's domain name for DNS resolution.
   clusterDomain: cluster.local
-
   ## Number of replicas for the Deployment.
   replicas: 1
-
+  ## Configure the application image
   image:
     # Source of the container image.
     registry: docker.io/bitnami/zookeeper
@@ -498,13 +484,11 @@ zookeeper:
     pullPolicy: IfNotPresent
     # Set to 'true' to enable debug mode for the image.
     debug: false
-
   securityContext:
     # Whether to enable the security context.
     enabled: true
     # Defines the POSIX group ID that owns the pod's volumes.
     fsGroup: 1001
-
   containerSecurityContext:
     # Whether to enable the container security context.
     enabled: true
@@ -514,7 +498,6 @@ zookeeper:
     runAsNonRoot: true
     # Set to 'false' to disallow privilege escalation for the container.
     allowPrivilegeEscalation: false
-
   service:
     # Labels to be applied to the service.
     labels: ~
@@ -536,7 +519,6 @@ zookeeper:
     sessionAffinity: None
     # Set to 'true' to publish endpoints for not-ready pods.
     publishNotReadyAddresses: true
-
   resources:
     # Maximum CPU and memory resources allowed for the container.
     limits:
@@ -550,7 +532,6 @@ zookeeper:
       cpu: 250m
       # Memory usage request.
       memory: 256Mi
-
   startupProbe:
     # Number of consecutive failures before marking the container as unhealthy.
     failureThreshold: 6
@@ -565,7 +546,6 @@ zookeeper:
     exec:
       # Run the specified command to check.
       command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
-
   readinessProbe:
     # Number of consecutive failures before marking the container as unhealthy.
     failureThreshold: 6
@@ -580,7 +560,6 @@ zookeeper:
     exec:
       # Run the specified command to check.
       command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null' ]
-
   livenessProbe:
     # Number of consecutive failures before marking the container as unhealthy.
     failureThreshold: 6
@@ -595,7 +574,6 @@ zookeeper:
     exec:
       # Run the specified command to check.
       command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep ruok' ]
-
   # This allows a dedicated log device to be used, and helps avoid competition between logging and snapshots.
   dataLogDir: ""
   # tickTime Basic time unit (in milliseconds) used by ZooKeeper for heartbeats.
@@ -660,25 +638,18 @@ zookeeper:
 nacos:
   ## Whether to enable the nacos.
   enabled: true
-
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: standalone
-
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
-
   ## Labels to attach to the resource.
   labels: ~
-
   ## Annotations to attach to the resource.
   annotations: ~
-
   ## Specifies the cluster's domain name for DNS resolution.
   clusterDomain: cluster.local
-
   ## Number of replicas for the Deployment.
   replicas: 1
-
   plugin:
     # Whether to enable the plugin.
     enabled: true
@@ -690,7 +661,7 @@ nacos:
       tag: 1.1
       # Image pull policy (IfNotPresent, Always, Never).
       pullPolicy: IfNotPresent
-
+  ## Configure the application image
   image:
     # Source of the container image.
     registry: docker.io/nacos/nacos-server
@@ -698,13 +669,11 @@ nacos:
     tag: v2.2.3
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
-
   securityContext:
     # Whether to enable the security context.
     enabled: true
     # Defines the POSIX group ID that owns the pod's volumes.
     fsGroup: 1001
-
   containerSecurityContext:
     # Whether to enable the container security context.
     enabled: true
@@ -714,7 +683,6 @@ nacos:
     runAsNonRoot: true
     # Set to 'false' to disallow privilege escalation for the container.
     allowPrivilegeEscalation: false
-
   service:
     # Labels to be applied to the service.
     labels: ~
@@ -736,7 +704,6 @@ nacos:
     sessionAffinity: None
     # Set to 'true' to publish endpoints for not-ready pods.
     publishNotReadyAddresses: true
-
   startupProbe:
     # Delay before the probe is initiated.
     initialDelaySeconds: 180
@@ -752,7 +719,6 @@ nacos:
       port: 8848
       # The path to use for the HTTP GET request.
       path: /nacos/v1/console/health/readiness
-
   readinessProbe:
     # Delay before the probe is initiated.
     initialDelaySeconds: 10
@@ -768,7 +734,6 @@ nacos:
       port: 8848
       # The path to use for the HTTP GET request.
       path: /nacos/v1/console/health/readiness
-
   livenessProbe:
     # Delay before the probe is initiated.
     initialDelaySeconds: 10
@@ -784,7 +749,6 @@ nacos:
       port: 8848
       # The path to use for the HTTP GET request.
       path: /nacos/v1/console/health/liveness
-
   resources:
     # Maximum CPU and memory resources allowed for the container.
     limits:
@@ -798,13 +762,10 @@ nacos:
       cpu: ~
       # Memory usage request.
       memory: ~
-
   # Specifies the port on which the server should run.
   serverPort: 8848
-
   # Specifies the preferred host mode (e.g., 'hostname').
   preferhostmode: ~
-
   storage:
     # Specifies the storage type (embedded, mysql, etc.).
     type: embedded
@@ -826,7 +787,7 @@ nacos:
 ingress:
   ## Whether to enable the ingress.
   enabled: false
-
+  ## Configure the application ingress domain name
   hosts:
     # Specify the host for the admin Ingress
     admin: admin.k8s.example
@@ -834,25 +795,19 @@ ingress:
     prometheus: prom.k8s.example
     # Specify the host for the Grafana Ingress
     grafana: grafana.k8s.example
-
   ## Override the name of the resource.
   nameOverride: ~
-
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
-
   ## Labels to attach to the resource.
   labels: ~
-
   ## Annotations to attach to the resource.
   annotations: ~
-
   ## Node selector to constrain where the pods can be scheduled.
   nodeSelector: ~
-
   ## Number of replicas for the Deployment.
   replicas: 1
-
+  ## Configure the application image
   image:
     # Source of the container image.
     registry: docker.io/traefik
@@ -860,7 +815,6 @@ ingress:
     tag: v2.10.4
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
-
   readinessProbe:
     # Number of consecutive failures before marking the container as unhealthy.
     failureThreshold: 1
@@ -880,7 +834,6 @@ ingress:
       port: 9000
       # The protocol used for the HTTP GET request (HTTP, HTTPS).
       scheme: HTTP
-
     livenessProbe:
       # Number of consecutive failures before marking the container as unhealthy.
       failureThreshold: 3
@@ -900,7 +853,6 @@ ingress:
         port: 9000
         # The protocol used for the HTTP GET request (HTTP, HTTPS).
         scheme: HTTP
-
   strategy:
     # Additional configuration for the RollingUpdate strategy can be specified here.
     rollingUpdate:
@@ -908,7 +860,6 @@ ingress:
       maxSurge: 1
       # Maximum number of pods that can be unavailable during the update.
       maxUnavailable: 0
-
   securityContext:
     # Specifies the user ID under which the container should run.
     runAsUser: 65532
@@ -916,7 +867,6 @@ ingress:
     runAsGroup: 65532
     # Set to 'true' to run the container as a non-root user.
     runAsNonRoot: true
-
   containersecurityContext:
     # Configure Linux capabilities for the container.
     capabilities:
@@ -927,7 +877,6 @@ ingress:
     readOnlyRootFilesystem: true
     # Set to 'false' to disallow privilege escalation for the container.
     allowPrivilegeEscalation: false
-
   resources:
     # Maximum CPU and memory resources allowed for the container.
     limits:
