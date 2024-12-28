@@ -174,6 +174,16 @@ func (mi *ManifestInfo) ReportError(err string) {
 	mi.report()
 }
 
+func (mi *ManifestInfo) ReportWaiting(resources []string) {
+	if mi == nil {
+		return
+	}
+	mi.mu.Lock()
+	mi.waiting = resources
+	mi.mu.Unlock()
+	mi.report()
+}
+
 func (p *ManifestInfo) waitingResources() []string {
 	p.mu.Lock()
 	defer p.mu.Unlock()

@@ -33,12 +33,12 @@ func FromJSON(j []byte) (Manifest, error) {
 func FromYAML(y []byte) (Manifest, error) {
 	us := &unstructured.Unstructured{}
 	if err := yaml.Unmarshal(y, us); err != nil {
-		return Manifest{
-			Unstructured: us,
-			Content:      string(y),
-		}, err
+		return Manifest{}, err
 	}
-	return Manifest{Unstructured: us, Content: string(y)}, nil
+	return Manifest{
+		Unstructured: us,
+		Content:      string(y),
+	}, nil
 }
 
 func FromObject(us *unstructured.Unstructured) (Manifest, error) {
@@ -65,7 +65,6 @@ func Parse(output []string) ([]Manifest, error) {
 		result = append(result, mf)
 	}
 	return result, nil
-
 }
 
 func ParseMultiple(output string) ([]Manifest, error) {

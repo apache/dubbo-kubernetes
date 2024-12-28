@@ -12,5 +12,4 @@ spec:
     base:
       global:
         dubboNamespace: dubbo-system
-    admin:
-      global: {}
+

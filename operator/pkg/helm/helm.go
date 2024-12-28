@@ -30,6 +30,7 @@ type Warnings = util.Errors
 
 func readerChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]string, Warnings, error) {
 	opts := chartutil.ReleaseOptions{
+		Name:      "dubbo",
 		Namespace: namespace,
 	}
 	caps := *chartutil.DefaultCapabilities
@@ -49,6 +50,7 @@ func readerChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]st
 	keys := make([]string, 0, len(files))
 	for k := range files {
 		if strings.HasPrefix(k, NotesFileNameSuffix) {
+			continue
 		}
 		keys = append(keys, k)
 	}
@@ -109,8 +111,10 @@ func Reader(namespace string, directory string, dop values.Map) ([]manifest.Mani
 	if err != nil {
 		return nil, nil, fmt.Errorf("render chart: %v", err)
 	}
+	// todo
 	mfs, err := manifest.Parse(output)
-	return mfs, warnings, nil
+	fmt.Printf("%v", mfs)
+	return mfs, warnings, err
 }
 
 func getFilesRecursive(f fs.FS, root string) ([]string, error) {

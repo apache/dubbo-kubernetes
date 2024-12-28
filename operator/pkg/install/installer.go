@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sync"
+	"time"
 )
 
 type Installer struct {
@@ -28,6 +29,7 @@ type Installer struct {
 	Kube         kube.CLIClient
 	Values       values.Map
 	ProgressInfo *progress.Info
+	WaitTimeout  time.Duration
 	Logger       clog.Logger
 }
 
@@ -107,6 +109,11 @@ func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 			return err
 		}
 		pi.ReportProgress()
+	}
+	if err := WaitForResources(manifests, i.Kube, i.WaitTimeout, i.DryRun, pi); err != nil {
+		werr := fmt.Errorf("failed to wait for resource: %v", err)
+		pi.ReportError(werr.Error())
+		return werr
 	}
 	pi.ReportFinished()
 	return nil

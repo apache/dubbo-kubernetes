@@ -116,7 +116,6 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, _ k
 	if err != nil {
 		return nil, nil, fmt.Errorf("merge inputs: %v %v", err)
 	}
-
 	if err := validateDubboOperator(merged, logger); err != nil {
 		return nil, nil, fmt.Errorf("validateDubboOperator err:%v", err)
 	}

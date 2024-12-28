@@ -6,18 +6,14 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	"github.com/apache/dubbo-kubernetes/pkg/laziness"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -26,6 +22,7 @@ import (
 )
 
 type client struct {
+	extSet          kubeExtClient.Interface
 	config          *rest.Config
 	revision        string
 	factory         *clientFactory
@@ -41,6 +38,8 @@ type client struct {
 }
 
 type Client interface {
+	Ext() kubeExtClient.Interface
+	Kube() kubernetes.Interface
 	Dynamic() dynamic.Interface
 }
 
@@ -125,6 +124,14 @@ func (c *client) Dynamic() dynamic.Interface {
 	return c.dynamic
 }
 
+func (c *client) Ext() kubeExtClient.Interface {
+	return c.extSet
+}
+
+func (c *client) Kube() kubernetes.Interface {
+	return c.kube
+}
+
 func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error) {
 	gvr, namespaced := c.bestEffortToGVR(gvk, obj, namespace)
 	var dr dynamic.ResourceInterface
@@ -168,16 +175,4 @@ func WithRevision(revision string) ClientOption {
 		client.revision = revision
 		return client
 	}
-}
-
-var (
-	DubboScheme = dubboScheme()
-	DubboCodec  = serializer.NewCodecFactory(DubboScheme)
-)
-
-func dubboScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(kubescheme.AddToScheme(scheme))
-	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
-	return scheme
 }
