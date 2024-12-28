@@ -131,7 +131,7 @@ func crdsReady(crds []apiextensions.CustomResourceDefinition) (bool, []string) {
 			}
 		}
 		if !ready {
-			notReady = append(notReady, "CustomResourceDefinition/", crd.Name)
+			notReady = append(notReady, "dubbo", crd.Name)
 		}
 	}
 	return len(notReady) == 0, notReady

@@ -110,29 +110,30 @@ func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 		}
 		pi.ReportProgress()
 	}
-	if err := WaitForResources(manifests, i.Kube, i.WaitTimeout, i.DryRun, pi); err != nil {
-		werr := fmt.Errorf("failed to wait for resource: %v", err)
-		pi.ReportError(werr.Error())
-		return werr
-	}
+	//if err := WaitForResources(manifests, i.Kube, i.WaitTimeout, i.DryRun, pi); err != nil {
+	//	werr := fmt.Errorf("failed to wait for resource: %v", err)
+	//	pi.ReportError(werr.Error())
+	//	return werr
+	//}
 	pi.ReportFinished()
 	return nil
 }
 
 func (i Installer) serverSideApply(obj manifest.Manifest) error {
 	var dryRun []string
-	const operatorFieldOwner = "dubbo-operator"
+	const FieldOwner = ""
 	dc, err := i.Kube.DynamicClientFor(obj.GroupVersionKind(), obj.Unstructured, "")
 	if err != nil {
 		return err
 	}
 	objStr := fmt.Sprintf("%s/%s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+
 	if i.DryRun {
 		return nil
 	}
 	if _, err := dc.Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, []byte(obj.Content), metav1.PatchOptions{
 		DryRun:       dryRun,
-		FieldManager: operatorFieldOwner,
+		FieldManager: FieldOwner,
 	}); err != nil {
 		return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objStr, err)
 	}
