@@ -111,9 +111,7 @@ func Reader(namespace string, directory string, dop values.Map) ([]manifest.Mani
 	if err != nil {
 		return nil, nil, fmt.Errorf("render chart: %v", err)
 	}
-	// todo
 	mfs, err := manifest.Parse(output)
-	fmt.Printf("%v", mfs)
 	return mfs, warnings, err
 }
 
