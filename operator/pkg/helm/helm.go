@@ -28,6 +28,23 @@ const (
 
 type Warnings = util.Errors
 
+func Reader(namespace string, directory string, dop values.Map) ([]manifest.Manifest, util.Errors, error) {
+	vals, ok := dop.GetPathMap("spec.values")
+	if !ok {
+		return nil, nil, fmt.Errorf("failed to get values from dop: %v", ok)
+	}
+	path := pathJoin("charts", directory)
+	pkgPath := dop.GetPathString("spec.packagePath")
+	f := manifests.BuiltinDir(pkgPath)
+	chrt, err := loadChart(f, path)
+	output, warnings, err := readerChart(namespace, vals, chrt)
+	if err != nil {
+		return nil, nil, fmt.Errorf("render chart: %v", err)
+	}
+	mfs, err := manifest.Parse(output)
+	return mfs, warnings, err
+}
+
 func readerChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]string, Warnings, error) {
 	opts := chartutil.ReleaseOptions{
 		Name:      "dubbo",
@@ -49,7 +66,7 @@ func readerChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]st
 	var warnings Warnings
 	keys := make([]string, 0, len(files))
 	for k := range files {
-		if strings.HasPrefix(k, NotesFileNameSuffix) {
+		if strings.HasSuffix(k, NotesFileNameSuffix) {
 			continue
 		}
 		keys = append(keys, k)
@@ -96,23 +113,6 @@ func stripPrefix(path, prefix string) string {
 	pl := len(strings.Split(prefix, "/"))
 	pv := strings.Split(path, "/")
 	return strings.Join(pv[pl:], "/")
-}
-
-func Reader(namespace string, directory string, dop values.Map) ([]manifest.Manifest, util.Errors, error) {
-	vals, ok := dop.GetPathMap("spec.values")
-	if !ok {
-		return nil, nil, fmt.Errorf("failed to get values from dop: %v", ok)
-	}
-	path := pathJoin("charts", directory)
-	pkgPath := dop.GetPathString("spec.packagePath")
-	f := manifests.BuiltinDir(pkgPath)
-	chrt, err := loadChart(f, path)
-	output, warnings, err := readerChart(namespace, vals, chrt)
-	if err != nil {
-		return nil, nil, fmt.Errorf("render chart: %v", err)
-	}
-	mfs, err := manifest.Parse(output)
-	return mfs, warnings, err
 }
 
 func getFilesRecursive(f fs.FS, root string) ([]string, error) {

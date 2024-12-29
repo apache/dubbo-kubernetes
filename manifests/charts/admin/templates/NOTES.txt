@@ -1,63 +1,63 @@
-{{/*⏳ Please wait for all the activated components to be deployed.*/}}
+⏳ Please wait for all the activated components to be deployed.
 
-{{/*Core: Admin*/}}
-{{/*Version: {{ .Values.image.tag }}*/}}
+Core: Admin
+Version: {{ .Values.image.tag }}
 
-{{/*🔄 Please wait a few minutes for other dependent components to finish deploying.*/}}
+🔄 Please wait a few minutes for other dependent components to finish deploying.
 
-{{/*{{- if .Values.zookeeper.enabled }}*/}}
+{{- if .Values.zookeeper.enabled }}
 
-{{/*Dependency: ZooKeeper*/}}
-{{/*Version: {{ .Values.zookeeper.image.tag }}*/}}
+Dependency: ZooKeeper
+Version: {{ .Values.zookeeper.image.tag }}
 
-{{/*🚨 If you are using the Nacos registry, Please disable Zookeeper and enable Nacos.*/}}
-{{/*   Otherwise, Zookeeper is used by default.*/}}
+🚨 If you are using the Nacos registry, Please disable Zookeeper and enable Nacos.
+   Otherwise, Zookeeper is used by default.
 
-{{/*🎊 You have enabled the internal Register Center.*/}}
-{{/*{{- else if .Values.nacos.enabled }}*/}}
+🎊 You have enabled the internal Register Center.
+{{- else if .Values.nacos.enabled }}
 
-{{/*Dependency: Nacos*/}}
-{{/*Version: {{ .Values.nacos.image.tag }}*/}}
+Dependency: Nacos
+Version: {{ .Values.nacos.image.tag }}
 
-{{/*🎊 You have enabled the internal Register Center.*/}}
-{{/*{{- end }}*/}}
+🎊 You have enabled the internal Register Center.
+{{- end }}
 
-{{/*{{- if and (eq .Values.zookeeper.enabled false) (eq .Values.nacos.enabled false) }}*/}}
-{{/*Dependency: ❎*/}}
+{{- if and (eq .Values.zookeeper.enabled false) (eq .Values.nacos.enabled false) }}
+Dependency: ❎
 
-{{/*🚫 You have disabled the internal Register Center.*/}}
+🚫 You have disabled the internal Register Center.
 
-{{/*Please provide an external Register center to ensure proper service operation.*/}}
+Please provide an external Register center to ensure proper service operation.
 
-{{/*{{- end }}*/}}
+{{- end }}
 
-{{/*{{- if .Values.ingress.enabled }}*/}}
+{{- if .Values.ingress.enabled }}
 
-{{/*Exposer: ✅️*/}}
+Exposer: ✅️
 
-{{/*So you should be able to access the website at the following URL:*/}}
+So you should be able to access the website at the following URL:
 
-{{/*1. http://{{ .Values.ingress.hosts.admin }}*/}}
-{{/*2. http://{{ .Values.ingress.hosts.prometheus }}*/}}
-{{/*3. http://{{ .Values.ingress.hosts.grafana }}*/}}
+1. http://{{ .Values.ingress.hosts.admin }}
+2. http://{{ .Values.ingress.hosts.prometheus }}
+3. http://{{ .Values.ingress.hosts.grafana }}
 
-{{/*🎊 You have enabled the internal entrance controller.*/}}
+🎊 You have enabled the internal entrance controller.
 
-{{/*{{- else }}*/}}
+{{- else }}
 
-{{/*Exposer: ❎*/}}
+Exposer: ❎
 
-{{/*🚫 You have disabled the internal entrance controller.*/}}
+🚫 You have disabled the internal entrance controller.
 
-{{/*{{- end }}*/}}
+{{- end }}
 
-{{/*{{- if not .Values.persistence.enabled }}*/}}
+{{- if not .Values.persistence.enabled }}
 
-{{/*           #########################################################*/}}
-{{/*           #         ⚠ Not enabled for persistent storage.         #*/}}
-{{/*           #     If you have important data, please enable it.     #*/}}
-{{/*           #########################################################*/}}
+           #########################################################
+           #         ⚠ Not enabled for persistent storage.         #
+           #     If you have important data, please enable it.     #
+           #########################################################
 
-{{/*{{- end }}*/}}
+{{- end }}
 
-{{/*🌹 For more details, please visit https://dubbo.apache.org.*/}}
+🌹 For more details, please visit https://dubbo.apache.org.
