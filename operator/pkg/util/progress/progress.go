@@ -126,8 +126,9 @@ func (i *Info) SetState(state InstallState) {
 	}
 }
 
+var testWriter *io.Writer
+
 func createBar() *pb.ProgressBar {
-	var testWriter *io.Writer
 	bar := pb.New(0)
 	bar.Set(pb.Static, true)
 	if testWriter != nil {

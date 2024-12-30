@@ -41,13 +41,10 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 		return err
 	}
 
-	disabledComponents := sets.New(slices.Map(
-		component.AllComponents,
-		func(cc component.Component) component.Name {
-			return cc.UserFacingName
-		},
-	)...)
-	dependencyWaitCh := dependenciesChs()
+	disabledComponents := sets.New(slices.Map(component.AllComponents, func(e component.Component) component.Name {
+		return e.UserFacingName
+	})...)
+	dependencyWaitCh := dependenciesChannels()
 	for _, mfs := range manifests {
 		c := mfs.Components
 		m := mfs.Manifests
@@ -68,6 +65,7 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 			for _, ch := range componentDependencies[c] {
 				dependencyWaitCh[ch] <- struct{}{}
 			}
+
 		}()
 	}
 	for cc := range disabledComponents {
@@ -208,22 +206,21 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 }
 
 var componentDependencies = map[component.Name][]component.Name{
-	component.BaseComponentName: {},
-	component.AdminComponentName: {
-		component.BaseComponentName,
+	component.AdminComponentName: {},
+	component.BaseComponentName: {
+		component.AdminComponentName,
 	},
 }
 
-func dependenciesChs() map[component.Name]chan struct{} {
-	r := make(map[component.Name]chan struct{})
+func dependenciesChannels() map[component.Name]chan struct{} {
+	ret := make(map[component.Name]chan struct{})
 	for _, parent := range componentDependencies {
 		for _, child := range parent {
-			r[child] = make(chan struct{}, 1)
+			ret[child] = make(chan struct{}, 1)
 		}
 	}
-	return r
+	return ret
 }
-
 func getOwnerLabels(dop values.Map, c string) map[string]string {
 	labels := make(map[string]string)
 
