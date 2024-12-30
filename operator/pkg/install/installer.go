@@ -121,7 +121,7 @@ func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 
 func (i Installer) serverSideApply(obj manifest.Manifest) error {
 	var dryRun []string
-	const FieldOwner = ""
+	const fieldManager = "dubbo-operator"
 	dc, err := i.Kube.DynamicClientFor(obj.GroupVersionKind(), obj.Unstructured, "")
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func (i Installer) serverSideApply(obj manifest.Manifest) error {
 	}
 	if _, err := dc.Patch(context.TODO(), obj.GetName(), types.ApplyPatchType, []byte(obj.Content), metav1.PatchOptions{
 		DryRun:       dryRun,
-		FieldManager: FieldOwner,
+		FieldManager: fieldManager,
 	}); err != nil {
 		return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objStr, err)
 	}
