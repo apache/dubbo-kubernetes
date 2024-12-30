@@ -11,6 +11,9 @@ var (
 	CustomResourceDefinition = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
 	Deployment               = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
 	StatefulSet              = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
+	Secret                   = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
+	Service                  = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
+	ServiceAccount           = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
@@ -21,6 +24,12 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Deployment, true
 	case StatefulSet:
 		return gvr.StatefulSet, true
+	case Secret:
+		return gvr.Secret, true
+	case Service:
+		return gvr.Service, true
+	case ServiceAccount:
+		return gvr.ServiceAccount, true
 	}
 
 	return schema.GroupVersionResource{}, false

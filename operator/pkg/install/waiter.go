@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	//kctldeployment "k8s.io/kubectl/pkg/util/deployment"
+	kctldeployment "k8s.io/kubectl/pkg/util/deployment"
 	"strings"
 	"time"
 )
@@ -31,7 +31,6 @@ func WaitForResources(objects []manifest.Manifest, client kube.CLIClient, waitTi
 	var notReady []string
 	var debugInfo map[string]string
 
-	// Check if we are ready immediately, to avoid the 2s delay below when we are already ready
 	if ready, _, _, err := waitForResources(objects, client, l); err == nil && ready {
 		return nil
 	}
@@ -86,13 +85,12 @@ func waitForResources(objects []manifest.Manifest, k kube.Client, l *progress.Ma
 			if err != nil {
 				return false, nil, nil, err
 			}
-			//_, _, newReplicaSet, err := kctldeployment.GetAllReplicaSets(currentDeployment, k.Kube().AppsV1())
-			//if err != nil || newReplicaSet == nil {
-			//	return false, nil, nil, err
-			//}
+			_, _, newReplicaSet, err := kctldeployment.GetAllReplicaSets(currentDeployment, k.Kube().AppsV1())
+			if err != nil || newReplicaSet == nil {
+				return false, nil, nil, err
+			}
 			newDeployment := deployment{
-				//newReplicaSet,
-				nil,
+				newReplicaSet,
 				currentDeployment,
 			}
 			deployments = append(deployments, newDeployment)
@@ -185,17 +183,13 @@ func deploymentsReady(cs kubernetes.Interface, deployments []deployment, info ma
 func statefulsetsReady(statefulsets []*appsv1.StatefulSet) (bool, []string) {
 	var notReady []string
 	for _, sts := range statefulsets {
-		// Make sure all the updated pods have been scheduled
 		if sts.Spec.UpdateStrategy.Type == appsv1.OnDeleteStatefulSetStrategyType &&
 			sts.Status.UpdatedReplicas != sts.Status.Replicas {
 			notReady = append(notReady, "StatefulSet/"+sts.Namespace+"/"+sts.Name)
 		}
 		if sts.Spec.UpdateStrategy.Type == appsv1.RollingUpdateStatefulSetStrategyType {
-			// Dereference all the pointers because StatefulSets like them
 			var partition int
-			// default replicas for sts is 1
 			replicas := 1
-			// the rollingUpdate field can be nil even if the update strategy is a rolling update.
 			if sts.Spec.UpdateStrategy.RollingUpdate != nil &&
 				sts.Spec.UpdateStrategy.RollingUpdate.Partition != nil {
 				partition = int(*sts.Spec.UpdateStrategy.RollingUpdate.Partition)
@@ -204,7 +198,6 @@ func statefulsetsReady(statefulsets []*appsv1.StatefulSet) (bool, []string) {
 				replicas = int(*sts.Spec.Replicas)
 			}
 			expectedReplicas := replicas - partition
-			// Make sure all the updated pods have been scheduled
 			if int(sts.Status.UpdatedReplicas) != expectedReplicas {
 				notReady = append(notReady, "StatefulSet/"+sts.Namespace+"/"+sts.Name)
 				continue

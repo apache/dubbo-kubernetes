@@ -51,7 +51,7 @@ type CLIClient interface {
 type ClientOption func(cliClient CLIClient) CLIClient
 
 func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLIClient, error) {
-	return newInternalClient(newClientFactory(clientCfg, true), opts...)
+	return newInternalClient(newClientFactory(clientCfg, false), opts...)
 }
 
 func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient, error) {
@@ -86,6 +86,10 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 		return nil, err
 	}
 	c.dynamic, err = dynamic.NewForConfig(c.config)
+	if err != nil {
+		return nil, err
+	}
+	c.extSet, err = kubeExtClient.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
 	}

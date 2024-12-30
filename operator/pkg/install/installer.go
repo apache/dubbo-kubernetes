@@ -110,11 +110,11 @@ func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 		}
 		pi.ReportProgress()
 	}
-	//if err := WaitForResources(manifests, i.Kube, i.WaitTimeout, i.DryRun, pi); err != nil {
-	//	werr := fmt.Errorf("failed to wait for resource: %v", err)
-	//	pi.ReportError(werr.Error())
-	//	return werr
-	//}
+	if err := WaitForResources(manifests, i.Kube, i.WaitTimeout, i.DryRun, pi); err != nil {
+		werr := fmt.Errorf("failed to wait for resource: %v", err)
+		pi.ReportError(werr.Error())
+		return werr
+	}
 	pi.ReportFinished()
 	return nil
 }
