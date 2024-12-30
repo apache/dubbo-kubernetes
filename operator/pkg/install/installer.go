@@ -49,7 +49,6 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 	)...)
 	dependencyWaitCh := dependenciesChs()
 	for _, mfs := range manifests {
-		mfs := mfs
 		c := mfs.Components
 		m := mfs.Manifests
 		disabledComponents.Delete(c)

@@ -13,15 +13,6 @@ const (
 	AdminComponentName Name = "Admin"
 )
 
-type Component struct {
-	UserFacingName Name
-	SpecName       string
-	Default        bool
-	HelmSubDir     string
-	HelmTreeRoot   string
-	FlattenValues  bool
-}
-
 var AllComponents = []Component{
 	{
 		UserFacingName: BaseComponentName,
@@ -37,6 +28,15 @@ var AllComponents = []Component{
 		HelmSubDir:     "admin",
 		HelmTreeRoot:   "admin.global",
 	},
+}
+
+type Component struct {
+	UserFacingName Name
+	SpecName       string
+	Default        bool
+	HelmSubDir     string
+	HelmTreeRoot   string
+	FlattenValues  bool
 }
 
 var (
@@ -78,6 +78,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 
 		if spec.Namespace == "" {
 			spec.Namespace = defaultNamespace
+		} else {
 			spec.Namespace = "dubbo-system"
 		}
 		spec.Raw = m

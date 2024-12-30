@@ -35,8 +35,6 @@ type DubboOperator struct {
 
 type DubboOperatorSpec struct {
 	Profile    string              `json:"profile,omitempty"`
-	Namespace  string              `json:"namespace,omitempty"`
-	Revision   string              `json:"revision,omitempty"`
 	Components *DubboComponentSpec `json:"components,omitempty"`
 	Values     json.RawMessage     `json:"values,omitempty"`
 }
@@ -58,8 +56,6 @@ type ComponentSpec struct {
 
 type MetadataCompSpec struct {
 	ComponentSpec
-	Name  string            `json:"name,omitempty"`
-	Label map[string]string `json:"label,omitempty"`
 }
 
 type BoolValue struct {

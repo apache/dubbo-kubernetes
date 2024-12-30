@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 var installerScope = log.RegisterScope("installer")
@@ -24,20 +25,21 @@ type installArgs struct {
 	sets             []string
 	manifestPath     string
 	skipConfirmation bool
+	waitTimeout      time.Duration
 }
 
 func (i *installArgs) String() string {
 	var b strings.Builder
 	b.WriteString("files:    " + (fmt.Sprint(i.files) + "\n"))
 	b.WriteString("sets:    " + (fmt.Sprint(i.sets) + "\n"))
-	b.WriteString("manifestPath:    " + (fmt.Sprint(i.manifestPath) + "\n"))
+	b.WriteString("waitTimeout: " + fmt.Sprint(i.waitTimeout) + "\n")
 	return b.String()
 }
 
 func addInstallFlags(cmd *cobra.Command, args *installArgs) {
 	cmd.PersistentFlags().StringSliceVarP(&args.files, "files", "f", nil, `Path to the file containing the dubboOperator's custom resources`)
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc`)
-
+	cmd.PersistentFlags().DurationVar(&args.waitTimeout, "wait-timeout", 300*time.Second, "Maximum time to wait for Dubbo resources in each component to be ready")
 }
 
 func InstallCmd(ctx cli.Context) *cobra.Command {
@@ -95,6 +97,7 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 		SkipWait:     false,
 		Kube:         kubeClient,
 		Values:       vals,
+		WaitTimeout:  iArgs.waitTimeout,
 		ProgressInfo: progress.NewInfo(),
 		Logger:       cl,
 	}

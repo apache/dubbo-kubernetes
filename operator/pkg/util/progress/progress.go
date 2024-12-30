@@ -19,7 +19,7 @@ const (
 	StateUninstallComplete
 )
 
-const inProgress = `{{ yellow (cycle . "-" "-" " ") }}`
+const inProgress = `{{ yellow (cycle . "-" "-" "-" " ") }} `
 
 type Info struct {
 	components map[string]*ManifestInfo
