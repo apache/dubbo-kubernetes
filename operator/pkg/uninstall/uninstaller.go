@@ -22,7 +22,7 @@ var (
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"},
 	}
-	ClusterCPResources = []schema.GroupVersionKind{
+	ClusterControlPlaneResources = []schema.GroupVersionKind{
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"},
 	}
@@ -40,7 +40,7 @@ func GetPrunedResources(kc kube.CLIClient, dopName, dopNamespace string, include
 		labels[manifest.OwningResourceNamespace] = dopNamespace
 	}
 	resources := NamespacedResources()
-	gvkList := append(resources, ClusterCPResources...)
+	gvkList := append(resources, ClusterControlPlaneResources...)
 	if includeClusterResources {
 		gvkList = append(resources, AllClusterResources...)
 	}
@@ -70,6 +70,10 @@ func GetPrunedResources(kc kube.CLIClient, dopName, dopNamespace string, include
 func NamespacedResources() []schema.GroupVersionKind {
 	res := []schema.GroupVersionKind{
 		gvk.Deployment.Kubernetes(),
+		gvk.StatefulSet.Kubernetes(),
+		gvk.Service.Kubernetes(),
+		gvk.Secret.Kubernetes(),
+		gvk.ServiceAccount.Kubernetes(),
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"},
 	}

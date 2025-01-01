@@ -464,7 +464,7 @@ jaeger:
 
 zookeeper:
   ## Whether to enable the zookeeper.
-  enabled: false
+  enabled: true
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
   ## Labels to attach to the resource.
@@ -638,7 +638,7 @@ zookeeper:
 
 nacos:
   ## Whether to enable the nacos.
-  enabled: true
+  enabled: false
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: standalone
   ## Override the namespace where the resource is deployed.
