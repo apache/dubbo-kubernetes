@@ -114,43 +114,7 @@ func (s *Scope) emitWithTime(level zapcore.Level, msg string, t time.Time) {
 	if dumpStack(level, s) {
 		e.Stack = zap.Stack("").String
 	}
-
-	var fields []zapcore.Field
-	if useJSON.Load().(bool) {
-		fields = make([]zapcore.Field, 0, len(s.labelKeys))
-		for _, k := range s.labelKeys {
-			v := s.labels[k]
-			fields = append(fields, zap.Field{
-				Key:       k,
-				Interface: v,
-				Type:      zapcore.ReflectType,
-			})
-		}
-	} else if len(s.labelKeys) > 0 {
-		sb := &strings.Builder{}
-		sb.Grow(len(msg) + 15*len(s.labelKeys))
-		sb.WriteString(msg)
-		sb.WriteString("\t")
-		space := false
-		for _, k := range s.labelKeys {
-			if space {
-				sb.WriteString(" ")
-			}
-			sb.WriteString(k)
-			sb.WriteString("=")
-			sb.WriteString(fmt.Sprint(s.labels[k]))
-			space = true
-		}
-		e.Message = sb.String()
-	}
-
-	pt := funcs.Load().(patchTable)
-	if pt.write != nil {
-		if err := pt.write(e, fields); err != nil {
-			_, _ = fmt.Fprintf(pt.errorSink, "%v log write error: %v\n", time.Now(), err)
-			_ = pt.errorSink.Sync()
-		}
-	}
+	// TODO
 }
 
 func (s *Scope) GetLogCallers() bool {

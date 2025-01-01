@@ -117,7 +117,6 @@ func preCheck(cmd *cobra.Command, uiArgs *uninstallArgs, cl *clog.ConsoleLogger,
 		message += AllResourcesRemovedWarning
 	}
 	if dryRun || uiArgs.skipConfirmation {
-		cl.LogAndPrint(message)
 		return
 	}
 	message += "Proceed? (y/N)"
