@@ -18,3 +18,5 @@ const (
 	InfoLevel
 	DebugLevel
 )
+
+type Options struct{}
