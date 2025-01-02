@@ -29,9 +29,9 @@ func (a *ManifestGenerateArgs) String() string {
 }
 
 func addManifestGenerateFlags(cmd *cobra.Command, args *ManifestGenerateArgs) {
-	cmd.PersistentFlags().StringSliceVarP(&args.files, "filename", "f", nil, "")
-	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, "")
-	cmd.PersistentFlags().StringVarP(&args.manifestPath, "manifests", "d", "", "")
+	cmd.PersistentFlags().StringSliceVarP(&args.files, "filename", "f", nil, ``)
+	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, ``)
+	cmd.PersistentFlags().StringVarP(&args.manifestPath, "manifests", "d", "", ``)
 }
 
 func ManifestCmd(ctx cli.Context) *cobra.Command {
@@ -59,7 +59,7 @@ func ManifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *ManifestGenerateA
 		Long:  "The generate subcommand generates an Dubbo install manifest and outputs to the console by default.",
 		Example: `  # Generate a default Istio installation
   istioctl manifest generate
-
+  
   # Generate the demo profile
   istioctl manifest generate --set profile=demo
 `,

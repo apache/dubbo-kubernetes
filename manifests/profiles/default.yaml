@@ -3,6 +3,7 @@ kind: DubboOperator
 metadata:
   namespace: dubbo-system
 spec:
+  profile: default
   components:
     base:
       enabled: true
@@ -12,4 +13,6 @@ spec:
     base:
       global:
         dubboNamespace: dubbo-system
+
+
 

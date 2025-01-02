@@ -12,10 +12,7 @@ import (
 	"os"
 )
 
-const (
-	AllResourcesRemovedWarning                  = "All Dubbo resources will be pruned from the cluster\n"
-	PurgeWithRevisionOrOperatorSpecifiedWarning = "Purge uninstall will remove all Dubbo resources, ignoring the specified revision or operator file"
-)
+const ()
 
 type uninstallArgs struct {
 	files            string
@@ -26,8 +23,7 @@ type uninstallArgs struct {
 }
 
 func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
-	cmd.PersistentFlags().StringVarP(&args.files, "filename", "f", "",
-		"The filename of the DubboOperator CR.")
+	cmd.PersistentFlags().StringVarP(&args.files, "filename", "f", "", "The filename of the DubboOperator CR.")
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
 	cmd.PersistentFlags().BoolVar(&args.purge, "purge", false, `Remove all dubbo related source code.`)
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
@@ -74,7 +70,7 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 
 	pl := progress.NewInfo()
 	if uiArgs.purge && uiArgs.files != "" {
-		cl.LogAndPrint(PurgeWithRevisionOrOperatorSpecifiedWarning)
+		cl.LogAndPrint("Purge uninstall will remove all Dubbo resources, ignoring the specified revision or operator file")
 	}
 
 	setFlags := applyFlagAliases(uiArgs.sets, uiArgs.manifestPath)
@@ -102,7 +98,7 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	preCheck(cmd, uiArgs, cl, rootArgs.DryRun)
 
 	if err := uninstall.DeleteObjectsList(kubeClient, rootArgs.DryRun, cl, objectsList); err != nil {
-		return fmt.Errorf("failed to delete control plane resources by revision: %v", err)
+		return err
 	}
 
 	pl.SetState(progress.StateUninstallComplete)
@@ -110,16 +106,16 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	return nil
 }
 
-func preCheck(cmd *cobra.Command, uiArgs *uninstallArgs, cl *clog.ConsoleLogger, dryRun bool) {
+func preCheck(cmd *cobra.Command, uiArgs *uninstallArgs, _ *clog.ConsoleLogger, dryRun bool) {
 	needConfirmation, message := false, ""
 	if uiArgs.purge {
 		needConfirmation = true
-		message += AllResourcesRemovedWarning
+		message += "All Dubbo resources will be pruned from the cluster.\n"
 	}
 	if dryRun || uiArgs.skipConfirmation {
 		return
 	}
-	message += "Proceed? (y/N)"
+	message += "Do you want to proceed? (y/N)"
 	if needConfirmation && !OptionDeterminate(message, cmd.OutOrStdout()) {
 		cmd.Print("Canceled Completed.\n")
 		os.Exit(1)

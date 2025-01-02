@@ -26,7 +26,7 @@ var AllComponents = []Component{
 		SpecName:       "admin",
 		Default:        true,
 		HelmSubDir:     "admin",
-		HelmTreeRoot:   "admin.global",
+		HelmTreeRoot:   "",
 	},
 }
 
@@ -42,12 +42,13 @@ type Component struct {
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:  "Dubbo Core",
-		AdminComponentName: "Dubbo Dashboard or Control Plane",
+		AdminComponentName: "Dubbo Dashboard",
 	}
 
 	Icons = map[Name]string{
 		BaseComponentName:  "🛸",
-		AdminComponentName: "🛰✗📡",
+		AdminComponentName: "🛰",
+		// 📡
 	}
 )
 
@@ -78,7 +79,8 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 
 		if spec.Namespace == "" {
 			spec.Namespace = defaultNamespace
-		} else {
+		}
+		if spec.Namespace == "" {
 			spec.Namespace = "dubbo-system"
 		}
 		spec.Raw = m
