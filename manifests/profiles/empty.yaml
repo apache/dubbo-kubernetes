@@ -15,19 +15,10 @@
 
 apiVersion: install.dubbo.io/v1alpha1
 kind: DubboOperator
-metadata:
-  namespace: dubbo-system
 spec:
-  profile: default
+  profile: empty
   components:
     base:
-      enabled: true
+      enabled: false
     admin:
-      enabled: true
-  values:
-    base:
-      global:
-        dubboNamespace: dubbo-system
-
-
-
+      enabled: false
