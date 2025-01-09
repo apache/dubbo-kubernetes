@@ -26,67 +26,26 @@ message GlobalConfig {
   ArchConfig arch = 1 [deprecated = true];
 
   // Controls whether the server-side validation is enabled.
-  google.protobuf.BoolValue configValidation = 3;
+  google.protobuf.BoolValue configValidation = 2;
 
   // Specifies the default namespace for the dubbo control plane components.
   string dubboNamespace = 14;
-
-  // Specifies the configution of dubbod
-  dubbodConfig dubbod = 54;
-
-  // Configures the revision this control plane is a part of
-  string revision = 59;
-}
-
-message dubbodConfig {
-  // If enabled, dubbod will perform config analysis
-  google.protobuf.BoolValue enableAnalysis = 2;
 }
 
 message BaseConfig {
-  // For Helm2 use, adds the CRDs to templates.
-  google.protobuf.BoolValue enableCRDTemplates = 1;
-  // CRDs to exclude. Requires `enableCRDTemplates`
-  repeated string excludedCRDs = 6;
-  // URL to use for validating webhook.
-  string validationURL = 2;
-
-  // For dubboctl usage to disable dubbo config crds in base
-  google.protobuf.BoolValue enabledubboConfigCRDs = 3;
-
-  google.protobuf.BoolValue validateGateway = 4;
-
-  // validation webhook CA bundle
-  string validationCABundle = 5;
+  google.protobuf.BoolValue enabledubboConfigCRDs = 1;
+  GlobalConfig global = 2; // Add this line if `global` is required in BaseConfig
 }
 
 message Values {
   // Global configuration for dubbo components.
-  GlobalConfig global = 6;
-
-  // Identifies the revision this installation is associated with.
-  string revision = 21;
-
-  // Used internally to identify the owner of each resource.
-  string ownerName = 22;
+  GlobalConfig global = 1;
 
   // Configuration for the base component.
-  BaseConfig base = 37;
-
-  // Specifies the aliases for the dubbo control plane revision. A MutatingWebhookConfiguration
-  // is created for each alias.
-  repeated string revisionTags = 39;
-
-  // The name of the default revision in the cluster.
-  string defaultRevision = 40;
+  BaseConfig base = 2;
 
   // Specifies which installation configuration profile to apply.
-  string profile = 42;
-
-  // Specifies the compatibility version to use. When this is set, the control plane will
-  // be configured with the same defaults as the specified version.
-  string compatibilityVersion = 43;
-
+  string profile = 4;
 }
 
 // IntOrString is a type that can hold an int32 or a string.  When used in

@@ -39,7 +39,7 @@ func SetRestDefaults(config *rest.Config) *rest.Config {
 		}
 	}
 	if config.NegotiatedSerializer == nil {
-		config.NegotiatedSerializer = serializer.NewCodecFactory(dubboScheme()).WithoutConversion()
+		config.NegotiatedSerializer = serializer.NewCodecFactory(nil).WithoutConversion()
 	}
 	return config
 }

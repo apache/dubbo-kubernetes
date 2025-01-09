@@ -56,15 +56,6 @@ func fromJSON[T any](overlay []byte) (T, error) {
 	return *v, nil
 }
 
-func fromYAML[T any](overlay []byte) (T, error) {
-	v := new(T)
-	err := yaml.Unmarshal(overlay, &v)
-	if err != nil {
-		return pointer.Empty[T](), err
-	}
-	return *v, nil
-}
-
 func parsePath(key string) []string { return strings.Split(key, ".") }
 
 func tableLookup(m Map, simple string) (Map, bool) {

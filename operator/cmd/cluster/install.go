@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 var installerScope = log.RegisterScope("installer")
@@ -23,6 +24,7 @@ type installArgs struct {
 	files            []string
 	sets             []string
 	manifestPath     string
+	waitTimeout      time.Duration
 	skipConfirmation bool
 }
 
@@ -30,14 +32,15 @@ func (i *installArgs) String() string {
 	var b strings.Builder
 	b.WriteString("files:    " + (fmt.Sprint(i.files) + "\n"))
 	b.WriteString("sets:    " + (fmt.Sprint(i.sets) + "\n"))
-	b.WriteString("manifestPath:    " + (fmt.Sprint(i.manifestPath) + "\n"))
+	b.WriteString("waitTimeout: " + fmt.Sprint(i.waitTimeout) + "\n")
 	return b.String()
 }
 
 func addInstallFlags(cmd *cobra.Command, args *installArgs) {
-	cmd.PersistentFlags().StringSliceVarP(&args.files, "files", "f", nil, `Path to the file containing the dubboOperator's custom resources`)
-	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc`)
-
+	cmd.PersistentFlags().StringSliceVarP(&args.files, "files", "f", nil, `Path to the file containing the dubboOperator's custom resources.`)
+	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
+	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
+	cmd.PersistentFlags().DurationVar(&args.waitTimeout, "wait-timeout", 300*time.Second, "Maximum time to wait for Dubbo resources in each component to be ready.")
 }
 
 func InstallCmd(ctx cli.Context) *cobra.Command {
@@ -84,7 +87,7 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 	}
 	profile := pointer.NonEmptyOrDefault(vals.GetPathString("spec.profile"), "default")
 	if !rootArgs.DryRun && !iArgs.skipConfirmation {
-		prompt := fmt.Sprintf("You are currently selecting the %q profile to install into the cluster. %v Do you want to proceed? (y/N)", profile, manifests)
+		prompt := fmt.Sprintf("The %q profile will be installed into the cluster. \nDo you want to proceed? (y/N)", profile)
 		if !OptionDeterminate(prompt, stdOut) {
 			p.Println("Canceled Completed.")
 			os.Exit(1)
@@ -95,6 +98,7 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 		SkipWait:     false,
 		Kube:         kubeClient,
 		Values:       vals,
+		WaitTimeout:  iArgs.waitTimeout,
 		ProgressInfo: progress.NewInfo(),
 		Logger:       cl,
 	}
