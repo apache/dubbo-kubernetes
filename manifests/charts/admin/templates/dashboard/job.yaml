@@ -1,0 +1,45 @@
+{{- $jobs := .Values.jobs -}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dubbo-job-create
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- include "jobs.labels" . | nindent 4 }}
+  annotations:
+  {{- include "jobs.2.annotations" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      name: dubbo-job-create
+    spec:
+      restartPolicy: {{ $jobs.restartPolicy }}
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+        - 8.8.8.8
+        searches:
+        - default.svc.cluster.local
+        - svc.cluster.local
+        - cluster.local
+      containers:
+      - name: helm
+        image: alpine/helm:3.16.2
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/bin/sh"
+        - "-c"
+        - "sh /files/helm.sh"
+        volumeMounts:
+        - name: scripts
+          mountPath: /files/helm.sh
+          subPath: helm.sh
+        - name: scripts
+          mountPath: /files/dashboards/dubbo-resources-metrics.yaml
+          subPath: dubbo-resources-metrics.yaml
+      volumes:
+      - name: scripts
+        configMap:
+          name: {{ include "job.name" . }}-config
+          defaultMode: 0755

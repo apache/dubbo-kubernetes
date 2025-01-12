@@ -1,4 +1,6 @@
 {{- $admin := .Values -}}
+{{- $jobs := .Values.jobs -}}
+{{- $prom := .Values.kubePrometheus }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -14,3 +16,41 @@ data:
     {{- if $admin.cp }}
     {{ toYaml $admin.cp | nindent 4 | trim }}
     {{- end -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "job.name" . }}-config
+  namespace: {{ template "admin.namespace" . }}
+  labels:
+  {{- include "jobs.labels" . | nindent 4 }}
+  annotations:
+  {{- include "jobs.env.annotations" . | nindent 4 }}
+data:
+  helm.sh: |-
+    #!/bin/bash
+     set -eux
+    {{- if (eq $prom.enabled true) }}
+     PROMETHEUS="https://prometheus-community.github.io/helm-charts"
+
+     helm pull {{ include "prom.stack.name" . }} --repo "$PROMETHEUS" --version {{ $prom.image.tag }} --untar && \
+
+     for i in {1..5}; do
+     if rm -rf "{{ include "prom.stack.name" . }}-{{ $prom.image.tag }}.tgz"; then
+     break
+     else
+     echo "Attempt $i: Failed to remove directory, retrying in 2 seconds..."
+     sleep 2
+     fi
+     done
+     cp -r "/files/dashboards/dubbo-resources-metrics.yaml" "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
+     ls -la "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
+
+     if helm ls --all | grep "{{ include "prom.name" . }}"; then
+     helm uninstall {{ include "prom.name" . }} -n dubbo-system && helm install {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/" -n dubbo-system
+     else
+     helm install {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/" -n dubbo-system
+     fi
+    {{- end }}
+  dubbo-resources-metrics.yaml: |-
+    {{- .Files.Get "files/dashboards/dubbo-resources-metrics.yaml" | nindent 4 }}
