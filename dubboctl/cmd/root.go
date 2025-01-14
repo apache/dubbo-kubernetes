@@ -55,6 +55,10 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(manifestCmd)
 	hideFlags(manifestCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 
+	createCmd := cluster.CreateCmd(ctx)
+	rootCmd.AddCommand(createCmd)
+	hideFlags(rootCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+
 	validateCmd := validate.NewValidateCommand(ctx)
 	rootCmd.AddCommand(validateCmd)
 	hideFlags(validateCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
