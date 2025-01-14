@@ -5,7 +5,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
-	"github.com/ory/viper"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
@@ -16,8 +15,8 @@ type templateArgs struct {
 	template string
 }
 
-func addTemplateFlags(cmd *cobra.Command, args *templateArgs) {
-	cmd.PersistentFlags().StringVarP(&args.template, "template", "t", "", "java or go sdk template")
+func addTemplateFlags(cmd *cobra.Command, tempArgs *templateArgs) {
+	cmd.PersistentFlags().StringVarP(&tempArgs.template, "template", "t", "", "java or go sdk template")
 }
 
 func CreateCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -36,72 +35,72 @@ func CreateCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *
 	return cc
 }
 
-func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+func sdkGenerateCmd(_ *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sdk",
 		Short: "Generate sdk samples for Dubbo supported languages",
-		Long:  "The sdk subcommand generates an SDK sample provided by Dubbo supported languages.",
+		Long:  "The sdk subcommand generates an sdk sample provided by Dubbo supported languages.",
 		Example: `  # Create a java sample sdk.
-  dubboctl create sdk java -t mydubbo
+  dubboctl create sdk java -n mydubbo
 
   # Create a go sample sdk.
-  dubboctl create sdk go -t mydubbogo
+  dubboctl create sdk go -n mydubbogo
 `,
-		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCreate(cmd, clientFactory)
+			return runCreate(cmd, args, clientFactory)
 		},
 	}
 }
 
-type createArgs struct {
+type createConfig struct {
 	Path       string
-	Runtime    string
 	Template   string
 	Name       string
 	Initialzed bool
 }
 
-func runCreate(cmd *cobra.Command, clientFactory ClientFactory) error {
-	dcfg, err := newCreate(cmd, clientFactory)
-	if err != nil {
-		return err
-	}
-	client, cancel := clientFactory()
-	defer cancel()
-	_, err = client.Initialize(&dubbo.DubboConfig{
-		Root:     dcfg.Path,
-		Name:     dcfg.Name,
-		Runtime:  dcfg.Runtime,
-		Template: dcfg.Template,
-	}, dcfg.Initialzed, cmd)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(cmd.OutOrStderr(), "Created %v dubbo sdk in %v\n", dcfg.Runtime, dcfg.Path)
-	return nil
-}
-
-func newCreate(cmd *cobra.Command, clientFactory ClientFactory) (dcfg createArgs, err error) {
+func newCreateConfig(_ *cobra.Command, args []string, _ ClientFactory) (cfg createConfig, err error) {
 	var (
 		path         string
 		dirName      string
 		absolutePath string
 	)
-	dirName, absolutePath = deriveNameAndAbsolutePathFromPath(path)
 
-	dcfg = createArgs{
-		Path:     absolutePath,
-		Runtime:  viper.GetString("language"),
-		Template: viper.GetString("template"),
-		Name:     dirName,
+	if len(args) >= 1 {
+		path = args[0]
 	}
 
-	fmt.Printf("Path:         %v\n", dcfg.Path)
-	fmt.Printf("Language:     %v\n", dcfg.Runtime)
-	fmt.Printf("Template:     %v\n", dcfg.Template)
+	dirName, absolutePath = deriveNameAndAbsolutePathFromPath(path)
 
-	return createArgs{}, nil
+	cfg = createConfig{
+		Name: dirName,
+		Path: absolutePath,
+	}
+	fmt.Printf("Path:         %v\n", cfg.Path)
+	fmt.Printf("Template:     %v\n", cfg.Template)
+	return
+}
+
+func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+	dcfg, err := newCreateConfig(cmd, args, clientFactory)
+	if err != nil {
+		return err
+	}
+
+	dclient, cancel := clientFactory()
+	defer cancel()
+
+	_, err = dclient.Initialize(&dubbo.DubboConfig{
+		Root:     dcfg.Path,
+		Name:     dcfg.Name,
+		Template: dcfg.Template,
+	}, dcfg.Initialzed, cmd)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(cmd.OutOrStderr(), "Created %v dubbo sdk in %v\n", args[0], dcfg.Path)
+	return nil
 }
 
 func cwd() (cwd string) {
