@@ -6,9 +6,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/pointer"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -74,6 +74,7 @@ func NamespacedResources() []schema.GroupVersionKind {
 		gvk.Service.Kubernetes(),
 		gvk.Secret.Kubernetes(),
 		gvk.ServiceAccount.Kubernetes(),
+		gvk.Job.Kubernetes(),
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"},
 	}
