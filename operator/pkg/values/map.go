@@ -3,7 +3,7 @@ package values
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/pointer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
 	"path/filepath"
 	"reflect"
 	"sigs.k8s.io/yaml"

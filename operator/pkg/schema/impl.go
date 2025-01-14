@@ -83,7 +83,7 @@ type Builder struct {
 	Identifier    string
 	Plural        string
 	ClusterScoped bool
-	ProtoPkg      string
+	ProtoPackage  string
 	Proto         string
 	Kind          string
 	Group         string
@@ -103,7 +103,7 @@ func (b Builder) BuildNoValidate() Schema {
 		},
 		plural:        b.Plural,
 		clusterScoped: b.ClusterScoped,
-		goPkg:         b.ProtoPkg,
+		goPkg:         b.ProtoPackage,
 		proto:         b.Proto,
 		apiVersion:    b.Group + "/" + b.Version,
 		reflectType:   b.ReflectType,
