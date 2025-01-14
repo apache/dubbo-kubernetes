@@ -1,8 +1,8 @@
 package cli
 
 import (
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/pointer"
 	"k8s.io/client-go/rest"
 )
 

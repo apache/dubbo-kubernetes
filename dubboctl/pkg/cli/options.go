@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/pointer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
 	"github.com/ory/viper"
 	"github.com/spf13/pflag"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
