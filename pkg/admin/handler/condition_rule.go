@@ -20,6 +20,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	"io"
 	"net/http"
 	"strings"
@@ -35,47 +36,23 @@ import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	res_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 func ConditionRuleSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resList := &mesh.ConditionRouteResourceList{
-			Items: make([]*mesh.ConditionRouteResource, 0),
-		}
-		if err := rt.ResourceManager().List(rt.AppContext(), resList); err != nil {
+		req := model.NewSearchConditionRuleReq()
+		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		resp := model.ConditionRuleSearchResp{
-			Code:    http.StatusOK,
-			Message: "success",
-			Data:    make([]model.ConditionRuleSearchResp_Data, 0, len(resList.Items)),
+		resp, err := service.SearchConditionRules(rt, req)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+			return
 		}
-		for _, item := range resList.Items {
-			if v3 := item.Spec.ToConditionRouteV3(); v3 != nil {
-				resp.Data = append(resp.Data, model.ConditionRuleSearchResp_Data{
-					RuleName:   item.Meta.GetName(),
-					Scope:      v3.GetScope(),
-					CreateTime: item.Meta.GetCreationTime().String(),
-					Enabled:    v3.GetEnabled(),
-				})
-			} else if v3x1 := item.Spec.ToConditionRouteV3x1(); v3x1 != nil {
-				resp.Data = append(resp.Data, model.ConditionRuleSearchResp_Data{
-					RuleName:   item.Meta.GetName(),
-					Scope:      v3x1.GetScope(),
-					CreateTime: item.Meta.GetCreationTime().String(),
-					Enabled:    v3x1.GetEnabled(),
-				})
-			} else {
-				panic("invalid condition route item")
-			}
-		}
-		c.JSON(http.StatusOK, resp)
+		c.JSON(http.StatusOK, model.NewSuccessResp(resp))
 	}
 }
 
@@ -89,27 +66,16 @@ func GetConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
 			return
 		}
-		if res, err := getConditionRule(rt, name); err != nil {
+		if res, err := service.GetConditionRule(rt, name); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
 			if v3x1 := res.Spec.ToConditionRouteV3x1(); v3x1 != nil {
 				res.Spec = v3x1.ToConditionRoute()
 			}
-			c.JSON(http.StatusOK, model.GenConditionRuleToResp(http.StatusOK, "success", res.Spec))
+			c.JSON(http.StatusOK, model.GenConditionRuleToResp(res.Spec))
 		}
 	}
-}
-
-func getConditionRule(rt core_runtime.Runtime, name string) (*mesh.ConditionRouteResource, error) {
-	res := &mesh.ConditionRouteResource{Spec: &mesh_proto.ConditionRoute{}}
-	if err := rt.ResourceManager().Get(rt.AppContext(), res,
-		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
-		store.GetByApplication(name), store.GetByKey(name+consts.ConditionRuleSuffix, res_model.DefaultMesh)); err != nil {
-		logger.Warnf("get %s condition failed with error: %s", name, err.Error())
-		return nil, err
-	}
-	return res, nil
 }
 
 func bodyToMap(reader io.ReadCloser) (map[string]interface{}, error) {
@@ -178,23 +144,13 @@ func PutConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		if err := updateConditionRule(rt, name, res); err != nil {
+		if err := service.UpdateConditionRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusOK, model.GenConditionRuleToResp(http.StatusOK, "success", nil))
+			c.JSON(http.StatusOK, model.GenConditionRuleToResp(res.Spec))
 		}
 	}
-}
-
-func updateConditionRule(rt core_runtime.Runtime, name string, res *mesh.ConditionRouteResource) error {
-	if err := rt.ResourceManager().Update(rt.AppContext(), res,
-		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
-		store.UpdateByApplication(name), store.UpdateByKey(name+consts.ConditionRuleSuffix, res_model.DefaultMesh)); err != nil {
-		logger.Warnf("update %s condition failed with error: %s", name, err.Error())
-		return err
-	}
-	return nil
 }
 
 func PostConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -243,23 +199,13 @@ func PostConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		if err := createConditionRule(rt, name, res); err != nil {
+		if err := service.CreateConditionRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusCreated, model.GenConditionRuleToResp(http.StatusCreated, "success", nil))
+			c.JSON(http.StatusOK, model.GenConditionRuleToResp(res.Spec))
 		}
 	}
-}
-
-func createConditionRule(rt core_runtime.Runtime, name string, res *mesh.ConditionRouteResource) error {
-	if err := rt.ResourceManager().Create(rt.AppContext(), res,
-		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
-		store.CreateByApplication(name), store.CreateByKey(name+consts.ConditionRuleSuffix, res_model.DefaultMesh)); err != nil {
-		logger.Warnf("create %s condition failed with error: %s", name, err.Error())
-		return err
-	}
-	return nil
 }
 
 func DeleteConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -273,20 +219,10 @@ func DeleteConditionRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.ConditionRuleSuffix)))
 			return
 		}
-		if err := deleteConditionRule(rt, name, res); err != nil {
+		if err := service.DeleteConditionRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusNoContent, model.GenConditionRuleToResp(http.StatusNoContent, "success", nil))
+		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
-}
-
-func deleteConditionRule(rt core_runtime.Runtime, name string, res *mesh.ConditionRouteResource) error {
-	if err := rt.ResourceManager().Delete(rt.AppContext(), res,
-		// here `name` may be service-name or app-name, set *ByApplication(`name`) is ok.
-		store.DeleteByApplication(name), store.DeleteByKey(name+consts.ConditionRuleSuffix, res_model.DefaultMesh)); err != nil {
-		logger.Warnf("delete %s condition failed with error: %s", name, err.Error())
-		return err
-	}
-	return nil
 }

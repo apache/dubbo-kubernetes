@@ -18,6 +18,7 @@
 package model
 
 import (
+	"net/http"
 	"strings"
 )
 
@@ -26,13 +27,18 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 )
 
-type ConditionRuleSearchResp struct {
-	Code    int64                          `json:"code"`
-	Data    []ConditionRuleSearchResp_Data `json:"data"`
-	Message string                         `json:"message"`
+type SearchConditionRuleReq struct {
+	Keywords string `json:"keywords"`
+	PageReq
 }
 
-type ConditionRuleSearchResp_Data struct {
+func NewSearchConditionRuleReq() *SearchConditionRuleReq {
+	return &SearchConditionRuleReq{
+		PageReq: PageReq{PageSize: 15},
+	}
+}
+
+type ConditionRuleSearchResp struct {
 	CreateTime string `json:"createTime"`
 	Enabled    bool   `json:"enabled"`
 	RuleName   string `json:"ruleName"`
@@ -40,12 +46,6 @@ type ConditionRuleSearchResp_Data struct {
 }
 
 type ConditionRuleResp struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
-}
-
-type RespConditionRuleData struct {
 	Conditions    []string `json:"conditions"`
 	ConfigVersion string   `json:"configVersion"`
 	Enabled       bool     `json:"enabled"`
@@ -203,27 +203,23 @@ func matchValueToDestinationCondition(val string) []DestinationCondition {
 	return res
 }
 
-func GenConditionRuleToResp(code int, message string, data *mesh_proto.ConditionRoute) *ConditionRuleResp {
+func GenConditionRuleToResp(data *mesh_proto.ConditionRoute) *CommonResp {
 	if data == nil {
-		return &ConditionRuleResp{
-			Code:    code,
-			Message: message,
-			Data:    map[string]string{},
+		return &CommonResp{
+			Code: http.StatusNotFound,
+			Msg:  "not found",
+			Data: map[string]string{},
 		}
 	}
 	if pb := data.ToConditionRouteV3(); pb != nil {
-		return &ConditionRuleResp{
-			Code:    code,
-			Message: message,
-			Data: RespConditionRuleData{
-				Conditions:    pb.Conditions,
-				ConfigVersion: pb.ConfigVersion,
-				Enabled:       pb.Enabled,
-				Key:           pb.Key,
-				Runtime:       pb.Runtime,
-				Scope:         pb.Scope,
-			},
-		}
+		return NewSuccessResp(ConditionRuleResp{
+			Conditions:    pb.Conditions,
+			ConfigVersion: pb.ConfigVersion,
+			Enabled:       pb.Enabled,
+			Key:           pb.Key,
+			Runtime:       pb.Runtime,
+			Scope:         pb.Scope,
+		})
 	} else if pb := data.ToConditionRouteV3x1(); pb != nil {
 		res := ConditionRuleV3X1{
 			Conditions:    make([]Condition, 0, len(pb.Conditions)),
@@ -236,27 +232,23 @@ func GenConditionRuleToResp(code int, message string, data *mesh_proto.Condition
 		}
 		for _, condition := range pb.Conditions {
 			resCondition := Condition{
-				From: Condition_From{Match: condition.From.Match},
-				To:   make([]Condition_To, 0, len(condition.To)),
+				From: ConditionFrom{Match: condition.From.Match},
+				To:   make([]ConditionTo, 0, len(condition.To)),
 			}
 			for _, to := range condition.To {
-				resCondition.To = append(resCondition.To, Condition_To{
+				resCondition.To = append(resCondition.To, ConditionTo{
 					Match:  to.Match,
 					Weight: to.Weight,
 				})
 			}
 			res.Conditions = append(res.Conditions, resCondition)
 		}
-		return &ConditionRuleResp{
-			Code:    code,
-			Message: message,
-			Data:    res,
-		}
+		return NewSuccessResp(res)
 	} else {
-		return &ConditionRuleResp{
-			Code:    code,
-			Message: message,
-			Data:    data,
+		return &CommonResp{
+			Code: http.StatusInternalServerError,
+			Msg:  "invalid condition rule",
+			Data: data,
 		}
 	}
 }
@@ -277,15 +269,15 @@ type AffinityAware struct {
 }
 
 type Condition struct {
-	From Condition_From `json:"from"`
-	To   []Condition_To `json:"to"`
+	From ConditionFrom `json:"from"`
+	To   []ConditionTo `json:"to"`
 }
 
-type Condition_From struct {
+type ConditionFrom struct {
 	Match string `json:"match"`
 }
 
-type Condition_To struct {
+type ConditionTo struct {
 	Match  string `json:"match"`
 	Weight int32  `json:"weight"`
 }

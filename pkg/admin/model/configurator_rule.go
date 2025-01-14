@@ -19,25 +19,28 @@ package model
 
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"net/http"
 )
 
-type ConfiguratorSearchResp struct {
-	Code    int                           `json:"code"`
-	Message string                        `json:"message"`
-	Data    []ConfiguratorSearchResp_Data `json:"data"`
+type SearchConfiguratorReq struct {
+	Keywords string `json:"keywords"`
+	PageReq
 }
 
-type ConfiguratorSearchResp_Data struct {
+func NewSearchConfiguratorReq() *SearchConfiguratorReq {
+	return &SearchConfiguratorReq{
+		PageReq: PageReq{
+			PageSize:   15,
+			PageOffset: 0,
+		},
+	}
+}
+
+type ConfiguratorSearchResp struct {
 	RuleName   string `json:"ruleName"`
 	Scope      string `json:"scope"`
 	CreateTime string `json:"createTime"`
 	Enabled    bool   `json:"enabled"`
-}
-
-type ConfiguratorResp struct {
-	Code    int              `json:"code"`
-	Message string           `json:"message"`
-	Data    RespConfigurator `json:"data"`
 }
 
 type RespConfigurator struct {
@@ -93,7 +96,7 @@ type RespAddressMatch struct {
 	Wildcard *string `json:"wildcard,omitempty"`
 }
 
-func GenDynamicConfigToResp(code int, message string, pb *mesh_proto.DynamicConfig) (res *ConfiguratorResp) {
+func GenDynamicConfigToResp(pb *mesh_proto.DynamicConfig) (res *CommonResp) {
 	cfg := RespConfigurator{}
 	if pb != nil {
 		cfg.ConfigVersion = pb.ConfigVersion
@@ -101,13 +104,12 @@ func GenDynamicConfigToResp(code int, message string, pb *mesh_proto.DynamicConf
 		cfg.Scope = pb.Scope
 		cfg.Enabled = pb.Enabled
 		cfg.Configs = overrideConfigToRespConfigItem(pb.Configs)
+		return NewSuccessResp(cfg)
 	}
-	res = &ConfiguratorResp{
-		Code:    code,
-		Message: message,
-		Data:    cfg,
+	return &CommonResp{
+		Code: http.StatusNotFound,
+		Msg:  "configurator not found",
 	}
-	return
 }
 
 func overrideConfigToRespConfigItem(OverrideConfigs []*mesh_proto.OverrideConfig) []ConfigItem {

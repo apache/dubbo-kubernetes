@@ -97,7 +97,7 @@ func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		res, err := getConditionRule(rt, applicationName)
+		res, err := service.GetConditionRule(rt, applicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
@@ -163,7 +163,7 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		// get
 		NotExist := false
-		rawRes, err := getConditionRule(rt, applicationName)
+		rawRes, err := service.GetConditionRule(rt, applicationName)
 		var res *mesh_proto.ConditionRouteV3X1
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
@@ -192,13 +192,13 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		rawRes.Spec = res.ToConditionRoute()
 
 		if NotExist {
-			err = createConditionRule(rt, applicationName, rawRes)
+			err = service.CreateConditionRule(rt, applicationName, rawRes)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateConditionRule(rt, applicationName, rawRes)
+			err = service.UpdateConditionRule(rt, applicationName, rawRes)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
@@ -244,7 +244,7 @@ func InstanceConfigOperatorLogGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		res, err := getConfigurator(rt, applicationName)
+		res, err := service.GetConfigurator(rt, applicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
@@ -296,7 +296,7 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		res, err := getConfigurator(rt, applicationName)
+		res, err := service.GetConfigurator(rt, applicationName)
 		notExist := false
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
@@ -328,13 +328,13 @@ func InstanceConfigOperatorLogPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		if notExist {
-			err = createConfigurator(rt, applicationName, res)
+			err = service.CreateConfigurator(rt, applicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateConfigurator(rt, applicationName, res)
+			err = service.UpdateConfigurator(rt, applicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return

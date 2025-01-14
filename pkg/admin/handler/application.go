@@ -148,7 +148,7 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		res, err := getConfigurator(rt, ApplicationName)
+		res, err := service.GetConfigurator(rt, ApplicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				// for check app exist
@@ -196,13 +196,13 @@ func ApplicationConfigOperatorLogPut(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 		// restore
 		if isNotExist {
-			err = createConfigurator(rt, ApplicationName, res)
+			err = service.CreateConfigurator(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateConfigurator(rt, ApplicationName, res)
+			err = service.UpdateConfigurator(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
@@ -219,7 +219,7 @@ func ApplicationConfigOperatorLogGet(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("appName is required"))
 			return
 		}
-		res, err := getConfigurator(rt, ApplicationName)
+		res, err := service.GetConfigurator(rt, ApplicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusOK, model.NewSuccessResp(map[string]interface{}{"operatorLog": false}))
@@ -255,7 +255,7 @@ func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		resp.FlowWeightSets = make([]model.FlowWeightSet, 0)
 
-		res, err := getConfigurator(rt, ApplicationName)
+		res, err := service.GetConfigurator(rt, ApplicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusOK, model.NewSuccessResp(resp))
@@ -323,7 +323,7 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 		// get from store, or generate default resource
 		isNotExist := false
-		res, err := getConfigurator(rt, ApplicationName)
+		res, err := service.GetConfigurator(rt, ApplicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				// for check app exist
@@ -363,13 +363,13 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 		// restore
 		if isNotExist {
-			err = createConfigurator(rt, ApplicationName, res)
+			err = service.CreateConfigurator(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateConfigurator(rt, ApplicationName, res)
+			err = service.UpdateConfigurator(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
@@ -393,7 +393,7 @@ func ApplicationConfigGrayGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		res, err := getTagRule(rt, ApplicationName)
+		res, err := service.GetTagRule(rt, ApplicationName)
 		if err != nil {
 			if core_store.IsResourceNotFound(err) {
 				resp.GraySets = make([]model.GraySet, 0)
@@ -440,7 +440,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		isNotExist := false
-		res, err := getTagRule(rt, ApplicationName)
+		res, err := service.GetTagRule(rt, ApplicationName)
 		if core_store.IsResourceNotFound(err) {
 			data, err := service.GetApplicationDetail(rt, &model.ApplicationDetailReq{AppName: ApplicationName})
 			if err != nil {
@@ -473,13 +473,13 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		// restore
 		if isNotExist {
-			err = createTagRule(rt, ApplicationName, res)
+			err = service.CreateTagRule(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateTagRule(rt, ApplicationName, res)
+			err = service.UpdateTagRule(rt, ApplicationName, res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
