@@ -43,8 +43,8 @@ func ManifestCmd(ctx cli.Context) *cobra.Command {
 		Short: "dubbo manifest related commands",
 		Long:  "The manifest command will generates dubbo manifests.",
 	}
-	addFlags(mc, rootArgs)
-	addFlags(mgc, rootArgs)
+	AddFlags(mc, rootArgs)
+	AddFlags(mgc, rootArgs)
 	addManifestGenerateFlags(mgc, mgcArgs)
 	mc.AddCommand(mgc)
 	return mc
@@ -80,7 +80,7 @@ func manifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *manifestGenerateA
 			}
 			kubeClient = kc
 
-			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
 			return manifestGenerate(kubeClient, mgArgs, cl)
 		},
 	}

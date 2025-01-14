@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-var installerScope = log.RegisterScope("installer")
+var InstallerScope = log.RegisterScope("installer")
 
 type installArgs struct {
 	files            []string
@@ -69,12 +69,12 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 				return err
 			}
 			p := NewPrinterForWriter(cmd.OutOrStderr())
-			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
 			p.Printf("%v\n", art.DubboColoredArt())
 			return Install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
 		},
 	}
-	addFlags(ic, rootArgs)
+	AddFlags(ic, rootArgs)
 	addInstallFlags(ic, iArgs)
 	return ic
 }
