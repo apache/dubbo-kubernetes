@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -17,17 +18,13 @@ type Client struct {
 	templates *Templates
 }
 
-type Option func(*Client)
-
-type ClientFactory func(...Option) (*Client, func())
-
 func (c *Client) Templates() *Templates {
 	return c.templates
 }
 
 func (c *Client) Runtimes() ([]string, error) {
-	// TODO
-	return nil, nil
+	runtimes := util.NewSortedSet()
+	return runtimes.Items(), nil
 }
 
 func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, _ *cobra.Command) (*dubbo.DubboConfig, error) {
@@ -100,16 +97,6 @@ func hasInitialized(path string) (bool, error) {
 func nameFromPath(path string) string {
 	pathParts := strings.Split(strings.TrimRight(path, string(os.PathSeparator)), string(os.PathSeparator))
 	return pathParts[len(pathParts)-1]
-	/* the above may have edge conditions as it assumes the trailing value
-	 * is a directory name.  If errors are encountered, we _may_ need to use the
-	 * inbuilt logic in the std lib and either check if the path indicated is a
-	 * directory (appending slash) and then run:
-					 base := filepath.Base(filepath.Dir(path))
-					 if base == string(os.PathSeparator) || base == "." {
-									 return "" // Consider it underivable: string zero value
-					 }
-					 return base
-	*/
 }
 
 func assertEmptyRoot(path string) (err error) {

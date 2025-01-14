@@ -18,11 +18,20 @@ package cmd
 import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/validate"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/version"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
 	"github.com/spf13/cobra"
 )
+
+type option func(*sdk.Client)
+
+type client struct {
+	clientFactory ClientFactory
+}
+
+type ClientFactory func(...option) (*sdk.Client, func())
 
 func AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
@@ -30,16 +39,22 @@ func AddFlags(cmd *cobra.Command) {
 
 func GetRootCmd(args []string) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:          "dubboctl",
-		Short:        "Dubbo command line utilities",
-		SilenceUsage: true,
-		Long:         `Dubbo configuration command line utility for debug and use dubbo applications.`,
+		Use:           "dubboctl",
+		Short:         "Dubbo command line utilities",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Long:          `Dubbo configuration command line utility for debug and use dubbo applications.`,
 	}
 	AddFlags(rootCmd)
 	rootCmd.SetArgs(args)
 	flags := rootCmd.PersistentFlags()
 	rootOptions := cli.AddRootFlags(flags)
 	ctx := cli.NewCLIContext(rootOptions)
+	dcfg := client{}
+	clientFactory := dcfg.clientFactory
+	if clientFactory == nil {
+		// TODO
+	}
 
 	installCmd := cluster.InstallCmd(ctx)
 	rootCmd.AddCommand(installCmd)
@@ -63,10 +78,9 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(versionCmd)
 	hideFlags(versionCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 
-	createCmd := CreateCmd(ctx)
+	createCmd := CreateCmd(ctx, rootCmd, clientFactory)
 	rootCmd.AddCommand(createCmd)
 	hideFlags(createCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
-
 	return rootCmd
 }
 
