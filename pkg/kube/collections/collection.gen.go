@@ -16,7 +16,7 @@ var (
 		Version:       "v1",
 		Proto:         "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
 		ReflectType:   reflect.TypeOf(&k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition{}).Elem(),
-		ProtoPkg:      "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1",
+		ProtoPackage:  "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1",
 		ClusterScoped: true,
 		Synthetic:     false,
 		Builtin:       true,
