@@ -1,6 +1,7 @@
 package dubbo
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
@@ -8,8 +9,8 @@ import (
 )
 
 const (
-	DubboFile = "dubbo.yaml"
-	DataDir   = ".dubbo"
+	DubboConfigFile = "dubbo.yaml"
+	DataDir         = ".dubbo"
 )
 
 type DubboConfig struct {
@@ -22,37 +23,44 @@ type DubboConfig struct {
 
 func NewDubboConfig(path string) (*DubboConfig, error) {
 	var err error
+	f := &DubboConfig{}
+	if path == "" {
+		if path, err = os.Getwd(); err != nil {
+			return f, err
+		}
+	}
+	f.Root = path
 
 	fd, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return f, err
 	}
 	if !fd.IsDir() {
-		return nil, nil
+		return nil, fmt.Errorf("function path must be a directory")
 	}
-	filename := filepath.Join(path, DubboFile)
+	filename := filepath.Join(path, DubboConfigFile)
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
 			err = nil
 		}
-		return nil, err
+		return f, err
 	}
 
 	bb, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return f, err
 	}
-	err = yaml.Unmarshal(bb, nil)
+	err = yaml.Unmarshal(bb, f)
 	if err != nil {
-		return nil, err
+		return f, err
 	}
-	return nil, nil
+	return f, nil
 }
 
 func NewDubboConfigWithTemplate(defaults *DubboConfig, initialized bool) *DubboConfig {
 	if !initialized {
 		if defaults.Template == "" {
-			defaults.Template = "sample"
+			defaults.Template = "common"
 		}
 	}
 	return defaults

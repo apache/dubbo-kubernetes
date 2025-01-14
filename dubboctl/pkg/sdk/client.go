@@ -7,15 +7,27 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/yaml"
 	"strings"
 	"time"
 )
 
 type Client struct {
 	templates *Templates
+}
+
+type Option func(client *Client)
+
+func New(options ...Option) *Client {
+	c := &Client{}
+	for _, o := range options {
+		o(c)
+	}
+	c.templates = newTemplates(c)
+
+	return c
 }
 
 func (c *Client) Templates() *Templates {
@@ -74,13 +86,13 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, _ *cobra.
 
 func hasInitialized(path string) (bool, error) {
 	var err error
-	filename := filepath.Join(path, dubbo.DubboFile)
+	filename := filepath.Join(path, dubbo.DubboConfigFile)
 
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false, err // invalid path or access error
+		return false, err
 	}
 	bb, err := os.ReadFile(filename)
 	if err != nil {
@@ -117,7 +129,7 @@ func assertEmptyRoot(path string) (err error) {
 }
 
 var contentiousFiles = []string{
-	dubbo.DubboFile,
+	dubbo.DubboConfigFile,
 	".gitignore",
 }
 

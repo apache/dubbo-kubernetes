@@ -2,11 +2,7 @@ package cluster
 
 import "github.com/spf13/cobra"
 
-type RootFlags struct {
-	kubeconfig     *string
-	namespace      *string
-	dubboNamespace *string
-}
+type RootFlags struct{}
 
 type RootArgs struct {
 	DryRun bool

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/filesystem"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
+	"path"
 )
 
 type template struct {
@@ -14,7 +15,23 @@ type template struct {
 
 type Template interface {
 	Name() string
-	Fullname() string
 	Runtime() string
 	Write(ctx context.Context, f *dubbo.DubboConfig) error
+}
+
+func (t template) Write(ctx context.Context, f *dubbo.DubboConfig) error {
+	mask := func(p string) bool {
+		_, f := path.Split(p)
+		return f == "manifest.yaml"
+	}
+
+	return filesystem.CopyFromFS(".", f.Root, filesystem.NewMaskingFS(mask, t.fs))
+}
+
+func (t template) Name() string {
+	return t.name
+}
+
+func (t template) Runtime() string {
+	return t.runtime
 }
