@@ -4,7 +4,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 
-	//"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
+	// "github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +32,7 @@ func UpgradeCmd(ctx cli.Context) *cobra.Command {
 
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
 			p := NewPrinterForWriter(cmd.OutOrStderr())
 			client, err := ctx.CLIClient()
 			if err != nil {
@@ -41,7 +41,7 @@ func UpgradeCmd(ctx cli.Context) *cobra.Command {
 			return Install(client, rootArgs, upArgs.installArgs, cl, cmd.OutOrStdout(), p)
 		},
 	}
-	addFlags(cmd, rootArgs)
+	AddFlags(cmd, rootArgs)
 	addInstallFlags(cmd, upArgs.installArgs)
 	return cmd
 }

@@ -13,15 +13,6 @@ type RootArgs struct {
 	RootFlags
 }
 
-func AddRootFlags(cmd *cobra.Command) *RootFlags {
-	rootFlags := &RootFlags{
-		kubeconfig:     nil,
-		namespace:      nil,
-		dubboNamespace: nil,
-	}
-	return rootFlags
-}
-
-func addFlags(cmd *cobra.Command, rootArgs *RootArgs) {
+func AddFlags(cmd *cobra.Command, rootArgs *RootArgs) {
 	cmd.Flags().BoolVar(&rootArgs.DryRun, "dry-run", false, `Outputs only the console/log without making any changes`)
 }

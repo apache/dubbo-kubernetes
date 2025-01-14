@@ -1,8 +1,9 @@
-package cluster
+package cmd
 
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/spf13/cobra"
@@ -20,50 +21,55 @@ func addTemplateFlags(cmd *cobra.Command, args *templateArgs) {
 }
 
 func CreateCmd(ctx cli.Context) *cobra.Command {
-	rootArgs := &RootArgs{}
-	tArgs := &templateArgs{}
-	sc := sdkCmd(ctx, rootArgs, tArgs)
+	rootArgs := &cluster.RootArgs{}
+	tempArgs := &templateArgs{}
+	sc := sdkGenerateCmd(ctx, rootArgs, tempArgs)
 	cc := &cobra.Command{
 		Use:   "create",
-		Short: "Create a custom sdk",
+		Short: "Create a custom dubbo sdk sample",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
 	}
-	addFlags(cc, rootArgs)
-	addFlags(sc, rootArgs)
-	addTemplateFlags(cc, tArgs)
+	cluster.AddFlags(cc, rootArgs)
+	cluster.AddFlags(sc, rootArgs)
+	addTemplateFlags(cc, tempArgs)
 	cc.AddCommand(sc)
 	return cc
 }
 
-func sdkCmd(ctx cli.Context, _ *RootArgs, tArgs *templateArgs) *cobra.Command {
+var kubeClientFunc func() (kube.CLIClient, error)
+
+func sdkGenerateCmd(ctx cli.Context, _ *cluster.RootArgs, tempArgs *templateArgs) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sdk",
-		Short: "Generates dubbo sdk language templates",
-		Long:  "",
-		Example: `
-    Create a java common in the directory 'mydubbo'.
-    dubboctl create sdk java -t common mydubbo
+		Short: "Generate SDK samples for Dubbo supported languages",
+		Long:  "The SDK subcommand generates an SDK sample provided by Dubbo supported languages.",
+		Example: `  # Create a java sample sdk.
+  dubboctl create sdk java -t mydubbo
 
-	Create a go common in the directory ./mydubbo.
-	dubboctl create sdk go -t common mydubbogo
+  # Create a go sample sdk.
+  dubboctl create sdk go -t mydubbogo
 `,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				if args[0] == "java" {
-					// TODO
-					fmt.Println("This is java sdk.")
-				}
-				if args[0] == "go" {
-					// TODO
-					fmt.Println("This is go sdk.")
-				}
+				return fmt.Errorf("generate accepts no positional arguments, got %#v", args)
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return nil
+			if kubeClientFunc == nil {
+				kubeClientFunc = ctx.CLIClient
+			}
+			var kubeClient kube.CLIClient
+			kc, err := kubeClientFunc()
+			if err != nil {
+				return err
+			}
+			kubeClient = kc
+
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), cluster.InstallerScope)
+			return runCreate(kubeClient, tempArgs, cl)
 		},
 	}
 }
@@ -74,22 +80,11 @@ type createArgs struct {
 	create  string
 }
 
-func create(kc kube.CLIClient, tArgs *templateArgs, cl clog.Logger) {
-	return
+func runCreate(kc kube.CLIClient, tempArgs *templateArgs, cl clog.Logger) error {
+	return nil
 }
 
-func newCreate(kc kube.CLIClient, tArgs *templateArgs, cl clog.Logger) (createArgs, error) {
-	var (
-		path         string
-		dirName      string
-		absolutePath string
-	)
-	dirName, absolutePath = deriveNameAndAbsolutePathFromPath(path)
-
-	_ = createArgs{
-		dirname: dirName,
-		path:    absolutePath,
-	}
+func newCreate(kc kube.CLIClient, tempArgs *templateArgs, cl clog.Logger) (createArgs, error) {
 	return createArgs{}, nil
 }
 
