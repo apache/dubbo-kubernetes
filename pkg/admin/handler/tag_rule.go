@@ -19,7 +19,10 @@ package handler
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -31,37 +34,43 @@ import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
-	"github.com/apache/dubbo-kubernetes/pkg/core/logger"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
-	res_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
 func TagRuleSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resList := &mesh.TagRouteResourceList{
-			Items: make([]*mesh.TagRouteResource, 0),
-		}
-		if err := rt.ResourceManager().List(rt.AppContext(), resList); err != nil {
+		req := model.NewSearchReq()
+		if err := c.ShouldBindQuery(req); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		resp := model.TagRuleSearchResp{
-			Code:    200,
-			Message: "success",
-			Data:    make([]model.TagRuleSearchResp_Datum, 0, len(resList.Items)),
+		resList := &mesh.TagRouteResourceList{}
+		if req.Keywords == "" {
+			if err := rt.ResourceManager().List(rt.AppContext(), resList, store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
+		} else {
+			if err := rt.ResourceManager().List(rt.AppContext(), resList, store.ListByNameContains(req.Keywords), store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
+				return
+			}
 		}
+		var respList []model.TagRuleSearchResp
 		for _, item := range resList.Items {
 			time := item.Meta.GetCreationTime().String()
 			name := item.Meta.GetName()
-			resp.Data = append(resp.Data, model.TagRuleSearchResp_Datum{
+			respList = append(respList, model.TagRuleSearchResp{
 				CreateTime: &time,
 				Enabled:    &item.Spec.Enabled,
 				RuleName:   &name,
 			})
 		}
-		c.JSON(http.StatusOK, resp)
+		result := model.NewSearchPaginationResult()
+		result.List = respList
+		result.PageInfo = &resList.Pagination
+		c.JSON(http.StatusOK, model.NewSuccessResp(result))
 	}
 }
 
@@ -75,25 +84,13 @@ func GetTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(fmt.Sprintf("ruleName must end with %s", consts.TagRuleSuffix)))
 			return
 		}
-		if res, err := getTagRule(rt, name); err != nil {
+		if res, err := service.GetTagRule(rt, name); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", res.Spec))
+			c.JSON(http.StatusOK, model.GenTagRouteResp(res.Spec))
 		}
 	}
-}
-
-func getTagRule(rt core_runtime.Runtime, name string) (*mesh.TagRouteResource, error) {
-	res := &mesh.TagRouteResource{Spec: &mesh_proto.TagRoute{}}
-	err := rt.ResourceManager().Get(rt.AppContext(), res,
-		// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-		store.GetByApplication(name), store.GetByKey(name+consts.TagRuleSuffix, res_model.DefaultMesh))
-	if err != nil {
-		logger.Warnf("get tag rule %s error: %v", name, err)
-		return nil, err
-	}
-	return res, nil
 }
 
 func PutTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -115,24 +112,13 @@ func PutTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if err = updateTagRule(rt, name, res); err != nil {
+		if err = service.UpdateTagRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusOK, model.GenTagRouteResp(http.StatusOK, "success", nil))
+			c.JSON(http.StatusOK, model.GenTagRouteResp(res.Spec))
 		}
 	}
-}
-
-func updateTagRule(rt core_runtime.Runtime, name string, res *mesh.TagRouteResource) error {
-	err := rt.ResourceManager().Update(rt.AppContext(), res,
-		// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-		store.UpdateByApplication(name), store.UpdateByKey(name+consts.TagRuleSuffix, res_model.DefaultMesh))
-	if err != nil {
-		logger.Warnf("update tag rule %s error: %v", name, err)
-		return err
-	}
-	return nil
 }
 
 func PostTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -154,24 +140,13 @@ func PostTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		if err = createTagRule(rt, name, res); err != nil {
+		if err = service.CreateTagRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		} else {
-			c.JSON(http.StatusCreated, model.GenTagRouteResp(http.StatusCreated, "success", nil))
+			c.JSON(http.StatusOK, model.GenTagRouteResp(res.Spec))
 		}
 	}
-}
-
-func createTagRule(rt core_runtime.Runtime, name string, res *mesh.TagRouteResource) error {
-	err := rt.ResourceManager().Create(rt.AppContext(), res,
-		// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-		store.CreateByApplication(name), store.CreateByKey(name+consts.TagRuleSuffix, res_model.DefaultMesh))
-	if err != nil {
-		logger.Warnf("create tag rule %s error: %v", name, err)
-		return err
-	}
-	return nil
 }
 
 func DeleteTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -185,21 +160,10 @@ func DeleteTagRuleWithRuleName(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 		res := &mesh.TagRouteResource{Spec: &mesh_proto.TagRoute{}}
-		if err := deleteTagRule(rt, name, res); err != nil {
+		if err := service.DeleteTagRule(rt, name, res); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		c.JSON(http.StatusNoContent, model.GenTagRouteResp(http.StatusNoContent, "success", nil))
+		c.JSON(http.StatusOK, model.NewSuccessResp(""))
 	}
-}
-
-func deleteTagRule(rt core_runtime.Runtime, name string, res *mesh.TagRouteResource) error {
-	err := rt.ResourceManager().Delete(rt.AppContext(), res,
-		// here `name` may be service name or app name, set *ByApplication(`name`) is ok.
-		store.DeleteByApplication(name), store.DeleteByKey(name+consts.TagRuleSuffix, res_model.DefaultMesh))
-	if err != nil {
-		logger.Warnf("delete tag rule %s error: %v", name, err)
-		return err
-	}
-	return nil
 }

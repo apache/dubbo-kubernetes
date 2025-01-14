@@ -20,27 +20,16 @@ package model
 import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
+	"net/http"
 )
 
 type TagRuleSearchResp struct {
-	Code    int64                     `json:"code"`
-	Data    []TagRuleSearchResp_Datum `json:"data"`
-	Message string                    `json:"message"`
-}
-
-type TagRuleSearchResp_Datum struct {
 	CreateTime *string `json:"createTime,omitempty"`
 	Enabled    *bool   `json:"enabled,omitempty"`
 	RuleName   *string `json:"ruleName,omitempty"`
 }
 
 type TagRuleResp struct {
-	Code    int          `json:"code"`
-	Message string       `json:"message"`
-	Data    *RespTagData `json:"data"`
-}
-
-type RespTagData struct {
 	ConfigVersion string           `json:"configVersion"`
 	Enabled       bool             `json:"enabled"`
 	Key           string           `json:"key"`
@@ -55,26 +44,22 @@ type RespTagElement struct {
 	Name      string       `json:"name"`
 }
 
-func GenTagRouteResp(code int, message string, pb *mesh_proto.TagRoute) *TagRuleResp {
+func GenTagRouteResp(pb *mesh_proto.TagRoute) *CommonResp {
 	if pb == nil {
-		return &TagRuleResp{
-			Code:    code,
-			Message: message,
-			Data:    &RespTagData{},
+		return &CommonResp{
+			Code: http.StatusNotFound,
+			Msg:  "tag rule not found",
+			Data: "",
 		}
 	} else {
-		return &TagRuleResp{
-			Code:    code,
-			Message: message,
-			Data: &RespTagData{
-				ConfigVersion: pb.ConfigVersion,
-				Enabled:       pb.Enabled,
-				Key:           pb.Key,
-				Runtime:       pb.Runtime,
-				Scope:         consts.ScopeApplication,
-				Tags:          tagToRespTagElement(pb.Tags),
-			},
-		}
+		return NewSuccessResp(TagRuleResp{
+			ConfigVersion: pb.ConfigVersion,
+			Enabled:       pb.Enabled,
+			Key:           pb.Key,
+			Runtime:       pb.Runtime,
+			Scope:         consts.ScopeApplication,
+			Tags:          tagToRespTagElement(pb.Tags),
+		})
 	}
 }
 

@@ -135,7 +135,7 @@ func ServiceConfigTimeoutGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		res, err := getConfigurator(rt, param.toInterface())
+		res, err := service.GetConfigurator(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -178,7 +178,7 @@ func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		isExist := true
-		res, err := getConfigurator(rt, param.toInterface())
+		res, err := service.GetConfigurator(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -204,13 +204,13 @@ func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 				Parameters:    map[string]string{`timeout`: strconv.Itoa(int(param.Timeout))},
 				XGenerateByCp: true,
 			})
-			err = createConfigurator(rt, param.toInterface(), res)
+			err = service.CreateConfigurator(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateConfigurator(rt, param.toInterface(), res)
+			err = service.UpdateConfigurator(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
@@ -230,7 +230,7 @@ func ServiceConfigRetryGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
 		}
-		res, err := getConfigurator(rt, param.toInterface())
+		res, err := service.GetConfigurator(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -273,7 +273,7 @@ func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		isExist := true
-		res, err := getConfigurator(rt, param.toInterface())
+		res, err := service.GetConfigurator(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -297,13 +297,13 @@ func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		})
 
 		if !isExist {
-			err = createConfigurator(rt, param.toInterface(), res)
+			err = service.CreateConfigurator(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = updateConfigurator(rt, param.toInterface(), res)
+			err = service.UpdateConfigurator(rt, param.toInterface(), res)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
@@ -428,7 +428,7 @@ func ServiceConfigArgumentRouteGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		rawRes, err := getConditionRule(rt, param.toInterface())
+		rawRes, err := service.GetConditionRule(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -467,7 +467,7 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		}
 
 		isExist := true
-		rawRes, err := getConditionRule(rt, param.toInterface())
+		rawRes, err := service.GetConditionRule(rt, param.toInterface())
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
@@ -497,13 +497,13 @@ func ServiceConfigArgumentRoutePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		rawRes.Spec = res.ToConditionRoute()
 
 		if isExist {
-			err = updateConditionRule(rt, param.toInterface(), rawRes)
+			err = service.UpdateConditionRule(rt, param.toInterface(), rawRes)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
 			}
 		} else {
-			err = createConditionRule(rt, param.toInterface(), rawRes)
+			err = service.CreateConditionRule(rt, param.toInterface(), rawRes)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
