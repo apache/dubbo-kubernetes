@@ -15,7 +15,8 @@ import (
 )
 
 type Client struct {
-	templates *Templates
+	templates    *Templates
+	repositories *Repositories
 }
 
 type Option func(client *Client)
@@ -25,6 +26,7 @@ func New(options ...Option) *Client {
 	for _, o := range options {
 		o(c)
 	}
+	c.repositories = newRepositories(c)
 	c.templates = newTemplates(c)
 
 	return c
@@ -39,7 +41,11 @@ func (c *Client) Runtimes() ([]string, error) {
 	return runtimes.Items(), nil
 }
 
-func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, _ *cobra.Command) (*dubbo.DubboConfig, error) {
+func (c *Client) Repositories() *Repositories {
+	return c.repositories
+}
+
+func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobra.Command) (*dubbo.DubboConfig, error) {
 	var err error
 	oldRoot := dcfg.Root
 
@@ -47,7 +53,6 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, _ *cobra.
 	if err != nil {
 		return dcfg, err
 	}
-
 	if err = os.MkdirAll(dcfg.Root, 0o755); err != nil {
 		return dcfg, err
 	}
@@ -76,17 +81,34 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, _ *cobra.
 	}
 
 	f := dubbo.NewDubboConfigWithTemplate(dcfg, initialized)
+
 	if err = EnsureRunDataDir(f.Root); err != nil {
 		return f, err
 	}
 
+	if !initialized {
+		err = c.Templates().Write(f)
+		if err != nil {
+			return f, err
+		}
+	}
+
 	f.Created = time.Now()
+	err = f.Write()
+	if err != nil {
+		return f, err
+	}
+	err = f.EnsureDockerfile(cmd)
+	if err != nil {
+		return f, err
+	}
+
 	return dubbo.NewDubboConfig(oldRoot)
 }
 
 func hasInitialized(path string) (bool, error) {
 	var err error
-	filename := filepath.Join(path, dubbo.DubboConfigFile)
+	filename := filepath.Join(path, dubbo.DubboYamlFile)
 
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
@@ -129,7 +151,7 @@ func assertEmptyRoot(path string) (err error) {
 }
 
 var contentiousFiles = []string{
-	dubbo.DubboConfigFile,
+	dubbo.DubboYamlFile,
 	".gitignore",
 }
 

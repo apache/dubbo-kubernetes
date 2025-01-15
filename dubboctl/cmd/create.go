@@ -11,17 +11,19 @@ import (
 	"strings"
 )
 
-type templateArgs struct {
+type createArgs struct {
+	language string
 	template string
 }
 
-func addTemplateFlags(cmd *cobra.Command, tempArgs *templateArgs) {
+func addTemplateFlags(cmd *cobra.Command, tempArgs *createArgs) {
+	cmd.PersistentFlags().StringVar(&tempArgs.language, "language", "", "java or go language")
 	cmd.PersistentFlags().StringVarP(&tempArgs.template, "template", "t", "", "java or go sdk template")
 }
 
 func CreateCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	rootArgs := &cluster.RootArgs{}
-	tempArgs := &templateArgs{}
+	tempArgs := &createArgs{}
 	sc := sdkGenerateCmd(cmd, clientFactory)
 	cc := &cobra.Command{
 		Use:   "create",
@@ -35,16 +37,16 @@ func CreateCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *
 	return cc
 }
 
-func sdkGenerateCmd(_ *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sdk",
 		Short: "Generate sdk samples for Dubbo supported languages",
 		Long:  "The sdk subcommand generates an sdk sample provided by Dubbo supported languages.",
 		Example: `  # Create a java sample sdk.
-  dubboctl create sdk java -n mydubbo
+  dubboctl create sdk --language java -t mydubbo
 
   # Create a go sample sdk.
-  dubboctl create sdk go -n mydubbogo
+  dubboctl create sdk --language go -t mydubbogo
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCreate(cmd, args, clientFactory)
@@ -54,6 +56,7 @@ func sdkGenerateCmd(_ *cobra.Command, clientFactory ClientFactory) *cobra.Comman
 
 type createConfig struct {
 	Path       string
+	Runtime    string
 	Template   string
 	Name       string
 	Initialzed bool
@@ -69,15 +72,11 @@ func newCreateConfig(_ *cobra.Command, args []string, _ ClientFactory) (cfg crea
 	if len(args) >= 1 {
 		path = args[0]
 	}
-
 	dirName, absolutePath = deriveNameAndAbsolutePathFromPath(path)
-
 	cfg = createConfig{
 		Name: dirName,
 		Path: absolutePath,
 	}
-	fmt.Printf("Path:         %v\n", cfg.Path)
-	fmt.Printf("Template:     %v\n", cfg.Template)
 	return
 }
 
@@ -86,13 +85,13 @@ func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 	if err != nil {
 		return err
 	}
-
 	dclient, cancel := clientFactory()
 	defer cancel()
 
 	_, err = dclient.Initialize(&dubbo.DubboConfig{
 		Root:     dcfg.Path,
 		Name:     dcfg.Name,
+		Runtime:  dcfg.Runtime,
 		Template: dcfg.Template,
 	}, dcfg.Initialzed, cmd)
 	if err != nil {
