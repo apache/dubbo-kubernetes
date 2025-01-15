@@ -2,6 +2,7 @@ package dubbo
 
 import (
 	"fmt"
+	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
@@ -9,8 +10,10 @@ import (
 )
 
 const (
-	DubboConfigFile = "dubbo.yaml"
+	DubboYamlFile   = "dubbo.yaml"
+	Dockerfile      = "Dockerfile"
 	DataDir         = ".dubbo"
+	DefaultTemplate = "common"
 )
 
 type DubboConfig struct {
@@ -30,7 +33,6 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 		}
 	}
 	f.Root = path
-
 	fd, err := os.Stat(path)
 	if err != nil {
 		return f, err
@@ -38,7 +40,7 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 	if !fd.IsDir() {
 		return nil, fmt.Errorf("function path must be a directory")
 	}
-	filename := filepath.Join(path, DubboConfigFile)
+	filename := filepath.Join(path, DubboYamlFile)
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
 			err = nil
@@ -60,7 +62,7 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 func NewDubboConfigWithTemplate(defaults *DubboConfig, initialized bool) *DubboConfig {
 	if !initialized {
 		if defaults.Template == "" {
-			defaults.Template = "common"
+			defaults.Template = DefaultTemplate
 		}
 	}
 	return defaults
@@ -68,4 +70,29 @@ func NewDubboConfigWithTemplate(defaults *DubboConfig, initialized bool) *DubboC
 
 func (dc *DubboConfig) Initialized() bool {
 	return !dc.Created.IsZero()
+}
+
+func (f *DubboConfig) EnsureDockerfile(cmd *cobra.Command) (err error) {
+	dockerfilepath := filepath.Join(f.Root, Dockerfile)
+	dockerfilebytes, ok := DockerfileByRuntime[f.Runtime]
+	if !ok {
+		fmt.Fprintln(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.")
+		return
+	}
+	if err = os.WriteFile(dockerfilepath, []byte(dockerfilebytes), 0o644); err != nil {
+		return
+	}
+	return
+}
+
+func (f *DubboConfig) Write() (err error) {
+	dubboyamlpath := filepath.Join(f.Root, DubboYamlFile)
+	var dubbobytes []byte
+	if dubbobytes, err = yaml.Marshal(f); err != nil {
+		return
+	}
+	if err = os.WriteFile(dubboyamlpath, dubbobytes, 0o644); err != nil {
+		return
+	}
+	return
 }
