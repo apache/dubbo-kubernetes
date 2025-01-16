@@ -1,11 +1,13 @@
 package dubbo
 
 import (
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -67,11 +69,14 @@ func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig 
 		if dc.Template == "" {
 			dc.Template = DefaultTemplate
 		}
+		if dc.Template == "" {
+			dc.Template = "initialzed"
+		}
 	}
 	return dc
 }
 
-func (dc *DubboConfig) WriteYamlfile() (err error) {
+func (dc *DubboConfig) WriteYamlFile() (err error) {
 	file := filepath.Join(dc.Root, DubboYamlFile)
 	var bytes []byte
 	if bytes, err = yaml.Marshal(dc); err != nil {
@@ -94,6 +99,40 @@ func (dc *DubboConfig) WriteDockerfile(cmd *cobra.Command) (err error) {
 		return
 	}
 	return
+}
+
+func (dc *DubboConfig) Validate() error {
+	if dc.Root == "" {
+		return errors.New("dubbo root path is required")
+	}
+
+	var ctr int
+	errs := [][]string{
+		validateOptions(),
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("'%v' contains errors:", DubboYamlFile))
+
+	for _, ee := range errs {
+		if len(ee) > 0 {
+			b.WriteString("\n") // Precede each group of errors with a linebreak
+		}
+		for _, e := range ee {
+			ctr++
+			b.WriteString("\t" + e)
+		}
+	}
+
+	if ctr == 0 {
+		return nil // Return nil if there were no validation errors.
+	}
+
+	return errors.New(b.String())
+}
+
+func validateOptions() []string {
+	return nil
 }
 
 func (dc *DubboConfig) Initialized() bool {

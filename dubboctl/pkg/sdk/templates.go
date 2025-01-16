@@ -62,6 +62,9 @@ func (t *Templates) Get(runtime, fullname string) (Template, error) {
 }
 
 func (t *Templates) Write(dc *dubbo.DubboConfig) error {
+	if err := dc.Validate(); err != nil {
+		return err
+	}
 	template, err := t.Get(dc.Runtime, dc.Template)
 	if err != nil {
 		return err
