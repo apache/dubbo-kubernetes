@@ -164,6 +164,7 @@ func (r *Repository) Runtime(name string) (runtime Runtime, err error) {
 
 func filesystemFromURI(uri string) (fs util.Filesystem, err error) {
 	if uri == "" {
+		return EmbeddedTemplatesFS, nil
 	}
 	if isNonBareGitRepo(uri) {
 		return filesystemFromPath(uri)
