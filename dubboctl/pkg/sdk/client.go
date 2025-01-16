@@ -80,10 +80,10 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 			return dcfg, err
 		}
 	}
-
+	// TODO remove initiallized
 	f := dubbo.NewDubboConfigWithTemplate(dcfg, initialized)
 
-	if err = EnsureRunDataDir(f.Root); err != nil {
+	if err = RunDataDir(f.Root); err != nil {
 		return f, err
 	}
 
@@ -95,11 +95,11 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	}
 
 	f.Created = time.Now()
-	err = f.Write()
+	err = f.WriteYamlfile()
 	if err != nil {
 		return f, err
 	}
-	err = f.EnsureDockerfile(cmd)
+	err = f.WriteDockerfile(cmd)
 	if err != nil {
 		return f, err
 	}
@@ -169,7 +169,6 @@ func contentiousFilesIn(dir string) (contentious []string, err error) {
 }
 
 func isEffectivelyEmpty(dir string) (bool, error) {
-	// Check for any non-hidden files
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return false, err
@@ -182,7 +181,7 @@ func isEffectivelyEmpty(dir string) (bool, error) {
 	return true, nil
 }
 
-func EnsureRunDataDir(root string) error {
+func RunDataDir(root string) error {
 	if err := os.MkdirAll(filepath.Join(root, dubbo.DataDir), os.ModePerm); err != nil {
 		return err
 	}
@@ -192,9 +191,9 @@ func EnsureRunDataDir(root string) error {
 		return err
 	}
 	defer roFile.Close()
-	if !os.IsNotExist(err) { // if no error openeing it
-		s := bufio.NewScanner(roFile) // create a scanner
-		for s.Scan() {                // scan each line
+	if !os.IsNotExist(err) {
+		s := bufio.NewScanner(roFile)
+		for s.Scan() {
 			if strings.HasPrefix(s.Text(), "# /"+dubbo.DataDir) { // if it was commented
 				return nil // user wants it
 			}
@@ -220,9 +219,6 @@ func EnsureRunDataDir(root string) error {
 `); err != nil {
 		return err
 	}
-
-	// Flush to disk immediately since this may affect subsequent calculations
-	// of the build stamp
 	if err = rwFile.Sync(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: error when syncing .gitignore. %s\n", err)
 	}

@@ -33,6 +33,7 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 		}
 	}
 	f.Root = path
+
 	fd, err := os.Stat(path)
 	if err != nil {
 		return f, err
@@ -40,6 +41,7 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 	if !fd.IsDir() {
 		return nil, fmt.Errorf("function path must be a directory")
 	}
+
 	filename := filepath.Join(path, DubboYamlFile)
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
@@ -56,43 +58,44 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 	if err != nil {
 		return f, err
 	}
+
 	return f, nil
 }
 
-func NewDubboConfigWithTemplate(defaults *DubboConfig, initialized bool) *DubboConfig {
+func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig {
 	if !initialized {
-		if defaults.Template == "" {
-			defaults.Template = DefaultTemplate
+		if dc.Template == "" {
+			dc.Template = DefaultTemplate
 		}
 	}
-	return defaults
+	return dc
 }
 
-func (dc *DubboConfig) Initialized() bool {
-	return !dc.Created.IsZero()
+func (dc *DubboConfig) WriteYamlfile() (err error) {
+	file := filepath.Join(dc.Root, DubboYamlFile)
+	var bytes []byte
+	if bytes, err = yaml.Marshal(dc); err != nil {
+		return
+	}
+	if err = os.WriteFile(file, bytes, 0o644); err != nil {
+		return
+	}
+	return
 }
 
-func (f *DubboConfig) EnsureDockerfile(cmd *cobra.Command) (err error) {
-	dockerfilepath := filepath.Join(f.Root, Dockerfile)
-	dockerfilebytes, ok := DockerfileByRuntime[f.Runtime]
+func (dc *DubboConfig) WriteDockerfile(cmd *cobra.Command) (err error) {
+	path := filepath.Join(dc.Root, Dockerfile)
+	bytes, ok := DockerfileByRuntime[dc.Runtime]
 	if !ok {
 		fmt.Fprintln(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.")
 		return
 	}
-	if err = os.WriteFile(dockerfilepath, []byte(dockerfilebytes), 0o644); err != nil {
+	if err = os.WriteFile(path, []byte(bytes), 0o644); err != nil {
 		return
 	}
 	return
 }
 
-func (f *DubboConfig) Write() (err error) {
-	dubboyamlpath := filepath.Join(f.Root, DubboYamlFile)
-	var dubbobytes []byte
-	if dubbobytes, err = yaml.Marshal(f); err != nil {
-		return
-	}
-	if err = os.WriteFile(dubboyamlpath, dubbobytes, 0o644); err != nil {
-		return
-	}
-	return
+func (dc *DubboConfig) Initialized() bool {
+	return !dc.Created.IsZero()
 }

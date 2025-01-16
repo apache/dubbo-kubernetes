@@ -18,7 +18,7 @@
 package dubbo
 
 var (
-	DockerfileGolang = `
+	golang = `
 # Please modify your template according to your business needs!!!
 
 FROM golang:alpine AS builder    
@@ -48,7 +48,7 @@ ENV DUBBO_GO_CONFIG_PATH=/app/conf/dubbogo.yaml
 CMD ["./dubbogo"]    
 `
 
-	DockerfileJava = `
+	java = `
 # Please modify your template according to your business needs!!!
 
 FROM openjdk:8-jdk-alpine
@@ -59,7 +59,7 @@ ENTRYPOINT exec java $JAVA_OPTS -jar /app.jar
 `
 
 	DockerfileByRuntime = map[string]string{
-		"go":   DockerfileGolang,
-		"java": DockerfileJava,
+		"go":   golang,
+		"java": java,
 	}
 )

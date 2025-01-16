@@ -14,21 +14,34 @@ type Templates struct {
 }
 
 func newTemplates(client *Client) *Templates {
-	return &Templates{client: client}
+	return &Templates{
+		client: client,
+	}
 }
 
 func (t *Templates) List(runtime string) ([]string, error) {
 	var names []string
 	extended := util.NewSortedSet()
-	return append(names, extended.Items()...), nil
-}
 
-func (t *Templates) Write(f *dubbo.DubboConfig) error {
-	template, err := t.Get(f.Runtime, f.Template)
+	rr, err := t.client.Repositories().All()
 	if err != nil {
-		return err
+		return []string{}, err
 	}
-	return template.Write(context.TODO(), f)
+
+	for _, r := range rr {
+		tt, err := r.Templates(runtime)
+		if err != nil {
+			return []string{}, err
+		}
+		for _, t := range tt {
+			if r.Name == DefaultRepositoryName {
+				names = append(names, t.Name())
+			} else {
+				extended.Add(t.Fullname())
+			}
+		}
+	}
+	return append(names, extended.Items()...), nil
 }
 
 func (t *Templates) Get(runtime, fullname string) (Template, error) {
@@ -46,6 +59,14 @@ func (t *Templates) Get(runtime, fullname string) (Template, error) {
 	}
 
 	return repo.Template(runtime, tplName)
+}
+
+func (t *Templates) Write(dc *dubbo.DubboConfig) error {
+	template, err := t.Get(dc.Runtime, dc.Template)
+	if err != nil {
+		return err
+	}
+	return template.Write(context.TODO(), dc)
 }
 
 func splitTemplateFullname(name string) (repoName, tplName string) {

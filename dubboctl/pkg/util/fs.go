@@ -1,4 +1,4 @@
-package fs
+package util
 
 import (
 	"archive/zip"

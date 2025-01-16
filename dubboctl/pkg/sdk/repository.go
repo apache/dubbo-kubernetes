@@ -2,17 +2,23 @@ package sdk
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/fs"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
+	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
 type Repository struct {
 	Name     string
 	Runtimes []Runtime
-	fs       fs.Filesystem
+	fs       util.Filesystem
+	uri      string
 }
 
 type repositoryConfig struct {
@@ -21,7 +27,14 @@ type repositoryConfig struct {
 }
 
 func NewRepository(name, uri string) (r Repository, err error) {
-	r = Repository{}
+	r = Repository{
+		uri: uri,
+	}
+	fs, err := filesystemFromURI(uri)
+	if err != nil {
+		return Repository{}, fmt.Errorf("failed to get repository from URI (%q): %w", uri, err)
+	}
+	r.fs = fs
 	repoConfig := repositoryConfig{}
 	if repoConfig.TemplatesPath != "" {
 		if err = checkDir(r.fs, repoConfig.TemplatesPath); err != nil {
@@ -40,7 +53,7 @@ func NewRepository(name, uri string) (r Repository, err error) {
 	if name != "" {
 		r.Name = name
 	}
-	r.Runtimes, err = repositoryRuntimes(nil, r.Name, repoConfig)
+	r.Runtimes, err = repositoryRuntimes(fs, r.Name, repoConfig)
 	return
 }
 
@@ -61,7 +74,7 @@ func repositoryDefaultName(name, uri string) (string, error) {
 	return DefaultRepositoryName, nil
 }
 
-func repositoryRuntimes(fs fs.Filesystem, repoName string, repoConfig repositoryConfig) (runtimes []Runtime, err error) {
+func repositoryRuntimes(fs util.Filesystem, repoName string, repoConfig repositoryConfig) (runtimes []Runtime, err error) {
 	runtimes = []Runtime{}
 
 	fis, err := fs.ReadDir(repoConfig.TemplatesPath)
@@ -85,7 +98,7 @@ func repositoryRuntimes(fs fs.Filesystem, repoName string, repoConfig repository
 	return
 }
 
-func runtimeTemplates(fs fs.Filesystem, templatesPath, repoName, runtimeName string) (templates []Template, err error) {
+func runtimeTemplates(fs util.Filesystem, templatesPath, repoName, runtimeName string) (templates []Template, err error) {
 	runtimePath := path.Join(templatesPath, runtimeName)
 	if err = checkDir(fs, runtimePath); err != nil {
 		err = fmt.Errorf("runtime path '%v' not found. %v", runtimePath, err)
@@ -103,21 +116,11 @@ func runtimeTemplates(fs fs.Filesystem, templatesPath, repoName, runtimeName str
 		t := template{
 			name:    fi.Name(),
 			runtime: runtimeName,
+			fs:      util.NewSubFS(path.Join(runtimePath, fi.Name()), fs),
 		}
-
 		templates = append(templates, t)
 	}
 	return
-}
-
-func checkDir(fs fs.Filesystem, path string) error {
-	fi, err := fs.Stat(path)
-	if err != nil && os.IsNotExist(err) {
-		err = fmt.Errorf("path '%v` not found", path)
-	} else if err == nil && !fi.IsDir() {
-		err = fmt.Errorf("path '%v' is not a directory", path)
-	}
-	return err
 }
 
 type Runtime struct {
@@ -138,6 +141,15 @@ func (r *Repository) Template(runtimeName, name string) (t Template, err error) 
 	return nil, fmt.Errorf("template not found")
 }
 
+func (r *Repository) Templates(runtimeName string) ([]Template, error) {
+	for _, runtime := range r.Runtimes {
+		if runtime.Name == runtimeName {
+			return runtime.Templates, nil
+		}
+	}
+	return nil, nil
+}
+
 func (r *Repository) Runtime(name string) (runtime Runtime, err error) {
 	if name == "" {
 		return Runtime{}, fmt.Errorf("language runtime required")
@@ -148,4 +160,111 @@ func (r *Repository) Runtime(name string) (runtime Runtime, err error) {
 		}
 	}
 	return Runtime{}, fmt.Errorf("language runtime not found")
+}
+
+func filesystemFromURI(uri string) (fs util.Filesystem, err error) {
+	if uri == "" {
+	}
+	if isNonBareGitRepo(uri) {
+		return filesystemFromPath(uri)
+	}
+
+	fs, err = FilesystemFromRepo(uri)
+	if fs != nil || err != nil {
+		return
+	}
+
+	return filesystemFromPath(uri)
+}
+
+func isNonBareGitRepo(uri string) bool {
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		return false
+	}
+	if parsed.Scheme != "file" {
+		return false
+	}
+	p := filepath.Join(filepath.FromSlash(uri[7:]), ".git")
+	fi, err := os.Stat(p)
+	if err != nil {
+		return false
+	}
+	return fi.IsDir()
+}
+
+func filesystemFromPath(uri string) (fs util.Filesystem, err error) {
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		return
+	}
+
+	if parsed.Scheme != "file" {
+		return nil, fmt.Errorf("only file scheme is supported")
+	}
+
+	path := filepath.FromSlash(uri[7:])
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fmt.Errorf("path does not exist: %v", path)
+	}
+	return util.NewOsFilesystem(path), nil
+}
+
+func FilesystemFromRepo(uri string) (util.Filesystem, error) {
+	clone, err := git.Clone(memory.NewStorage(),
+		memfs.New(),
+		getGitCloneOptions(uri),
+	)
+	if err != nil {
+		if isRepoNotFoundError(err) {
+			return nil, nil
+		}
+
+		if isBranchNotFoundError(err) {
+			return nil, fmt.Errorf("failed to clone repository: branch not found for uri %s", uri)
+		}
+		return nil, fmt.Errorf("failed to clone repository: %w", err)
+	}
+	wt, err := clone.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	return util.NewBillyFilesystem(wt.Filesystem), nil
+}
+
+func getGitCloneOptions(uri string) *git.CloneOptions {
+	branch := ""
+	splitUri := strings.Split(uri, "#")
+	if len(splitUri) > 1 {
+		uri = splitUri[0]
+		branch = splitUri[1]
+	}
+
+	opt := &git.CloneOptions{
+		URL: uri, Depth: 1, Tags: git.NoTags,
+		RecurseSubmodules: git.NoRecurseSubmodules,
+	}
+	if branch != "" {
+		opt.ReferenceName = plumbing.NewBranchReferenceName(branch)
+	}
+	return opt
+}
+
+func isRepoNotFoundError(err error) bool {
+	return err != nil && err.Error() == "repository not found"
+}
+
+func isBranchNotFoundError(err error) bool {
+	return err != nil && err.Error() == "reference not found"
+}
+
+func checkDir(fs util.Filesystem, path string) error {
+	fi, err := fs.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		err = fmt.Errorf("path '%v` not found", path)
+	} else if err == nil && !fi.IsDir() {
+		err = fmt.Errorf("path '%v' is not a directory", path)
+	}
+	return err
 }
