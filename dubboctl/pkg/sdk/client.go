@@ -15,8 +15,9 @@ import (
 )
 
 type Client struct {
-	templates    *Templates
-	repositories *Repositories
+	templates        *Templates
+	repositories     *Repositories
+	repositoriesPath string
 }
 
 type Option func(client *Client)

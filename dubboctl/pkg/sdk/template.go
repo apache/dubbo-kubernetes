@@ -2,7 +2,7 @@ package sdk
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/filesystem"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/fs"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"path"
 )
@@ -10,7 +10,7 @@ import (
 type template struct {
 	name    string
 	runtime string
-	fs      filesystem.Filesystem
+	fs      fs.Filesystem
 }
 
 type Template interface {
@@ -25,7 +25,7 @@ func (t template) Write(ctx context.Context, f *dubbo.DubboConfig) error {
 		return f == "manifest.yaml"
 	}
 
-	return filesystem.CopyFromFS(".", f.Root, filesystem.NewMaskingFS(mask, t.fs))
+	return fs.CopyFromFS(".", f.Root, fs.NewMaskingFS(mask, t.fs))
 }
 
 func (t template) Name() string {
