@@ -128,9 +128,10 @@ func (s *baseService) toInterface() string {
 func ServiceConfigTimeoutGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		param := baseService{}
+		// default timeout is 1000ms
 		resp := struct {
 			Timeout int32 `json:"timeout"`
-		}{-1}
+		}{1000}
 		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
