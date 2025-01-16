@@ -18,11 +18,28 @@ package cmd
 import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/validate"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/version"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
 	"github.com/spf13/cobra"
 )
+
+type staticClient struct {
+	clientFactory ClientFactory
+}
+
+type ClientFactory func(...sdk.Option) (*sdk.Client, func())
+
+func NewClientFactory(options ...sdk.Option) (*sdk.Client, func()) {
+	var (
+		o = []sdk.Option{}
+	)
+	client := sdk.New(append(o, options...)...)
+
+	cleanup := func() {}
+	return client, cleanup
+}
 
 func AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
@@ -30,16 +47,22 @@ func AddFlags(cmd *cobra.Command) {
 
 func GetRootCmd(args []string) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:          "dubboctl",
-		Short:        "Dubbo command line utilities",
-		SilenceUsage: true,
-		Long:         `Dubbo configuration command line utility for debug and use dubbo applications.`,
+		Use:           "dubboctl",
+		Short:         "Dubbo command line utilities",
+		Long:          `Dubbo configuration command line utility for debug and use dubbo applications.`,
+		SilenceUsage:  true,
+		SilenceErrors: false,
 	}
 	AddFlags(rootCmd)
 	rootCmd.SetArgs(args)
 	flags := rootCmd.PersistentFlags()
 	rootOptions := cli.AddRootFlags(flags)
 	ctx := cli.NewCLIContext(rootOptions)
+	dcfg := staticClient{}
+	factory := dcfg.clientFactory
+	if factory == nil {
+		factory = NewClientFactory
+	}
 
 	installCmd := cluster.InstallCmd(ctx)
 	rootCmd.AddCommand(installCmd)
@@ -67,6 +90,9 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(versionCmd)
 	hideFlags(versionCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 
+	createCmd := CreateCmd(ctx, rootCmd, factory)
+	rootCmd.AddCommand(createCmd)
+	hideFlags(createCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 	return rootCmd
 }
 
