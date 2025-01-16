@@ -43,8 +43,8 @@ func ManifestCmd(ctx cli.Context) *cobra.Command {
 		Short: "dubbo manifest related commands",
 		Long:  "The manifest command will generates dubbo manifests.",
 	}
-	addFlags(mc, rootArgs)
-	addFlags(mgc, rootArgs)
+	AddFlags(mc, rootArgs)
+	AddFlags(mgc, rootArgs)
 	addManifestGenerateFlags(mgc, mgcArgs)
 	mc.AddCommand(mgc)
 	return mc
@@ -63,12 +63,8 @@ func manifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *manifestGenerateA
   # Generate the demo profile
   dubboctl manifest generate --set profile=demo
 `,
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 0 {
-				return fmt.Errorf("generate accepts no positional arguments, got %#v", args)
-			}
-			return nil
-		},
+
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if kubeClientFunc == nil {
 				kubeClientFunc = ctx.CLIClient
@@ -80,7 +76,7 @@ func manifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *manifestGenerateA
 			}
 			kubeClient = kc
 
-			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), installerScope)
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
 			return manifestGenerate(kubeClient, mgArgs, cl)
 		},
 	}
