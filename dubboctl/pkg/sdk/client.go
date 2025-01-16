@@ -95,7 +95,7 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	}
 
 	f.Created = time.Now()
-	err = f.WriteYamlfile()
+	err = f.WriteYamlFile()
 	if err != nil {
 		return f, err
 	}

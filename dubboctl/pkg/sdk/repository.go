@@ -76,7 +76,6 @@ func repositoryDefaultName(name, uri string) (string, error) {
 
 func repositoryRuntimes(fs util.Filesystem, repoName string, repoConfig repositoryConfig) (runtimes []Runtime, err error) {
 	runtimes = []Runtime{}
-
 	fis, err := fs.ReadDir(repoConfig.TemplatesPath)
 	if err != nil {
 		return
@@ -114,9 +113,10 @@ func runtimeTemplates(fs util.Filesystem, templatesPath, repoName, runtimeName s
 			continue
 		}
 		t := template{
-			name:    fi.Name(),
-			runtime: runtimeName,
-			fs:      util.NewSubFS(path.Join(runtimePath, fi.Name()), fs),
+			name:       fi.Name(),
+			repository: repoName,
+			runtime:    runtimeName,
+			fs:         util.NewSubFS(path.Join(runtimePath, fi.Name()), fs),
 		}
 		templates = append(templates, t)
 	}
