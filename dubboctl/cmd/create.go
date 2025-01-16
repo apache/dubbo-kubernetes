@@ -37,7 +37,7 @@ func CreateCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *
 	return cc
 }
 
-func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+func sdkGenerateCmd(_ *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sdk",
 		Short: "Generate sdk samples for Dubbo supported languages",

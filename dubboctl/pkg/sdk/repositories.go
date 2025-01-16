@@ -79,7 +79,7 @@ func (r *Repositories) Get(name string) (repo Repository, err error) {
 	if err != nil {
 		return
 	}
-	if len(all) == 0 { // should not be possible because embedded always exists.
+	if len(all) == 0 {
 		err = errors.New("internal error: no repositories loaded")
 		return
 	}

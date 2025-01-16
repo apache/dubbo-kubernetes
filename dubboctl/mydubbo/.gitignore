@@ -1,0 +1,5 @@
+
+# Applications use the .dubbo directory for local runtime data which should
+# generally not be tracked in source control. To instruct the system to track
+# .dubbo in source control, comment the following line (prefix it with '# ').
+/.dubbo
