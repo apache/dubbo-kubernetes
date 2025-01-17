@@ -40,6 +40,12 @@ import (
 // API Definition: https://app.apifox.com/project/3732499
 // 资源详情-服务
 // service search
+
+const (
+	DEFAULT_TIMEOUT = 1000
+	DEFAULT_RETRIES = 2
+)
+
 func SearchServices(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		req := model.NewServiceSearchReq()
@@ -130,7 +136,7 @@ func ServiceConfigTimeoutGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		param := baseService{}
 		resp := struct {
 			Timeout int32 `json:"timeout"`
-		}{-1}
+		}{DEFAULT_TIMEOUT}
 		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -163,7 +169,7 @@ func getServiceTimeout(conf *mesh_proto.OverrideConfig) (int32, bool) {
 			return int32(timeout), true
 		}
 	}
-	return -1, false
+	return DEFAULT_TIMEOUT, false
 }
 
 func ServiceConfigTimeoutPUT(rt core_runtime.Runtime) gin.HandlerFunc {
@@ -225,7 +231,7 @@ func ServiceConfigRetryGET(rt core_runtime.Runtime) gin.HandlerFunc {
 		param := baseService{}
 		resp := struct {
 			RetryTimes int32 `json:"retryTimes"`
-		}{-1}
+		}{DEFAULT_RETRIES}
 		if err := param.query(c); err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(err.Error()))
 			return
@@ -258,7 +264,7 @@ func getServiceRetryTimes(conf *mesh_proto.OverrideConfig) (int32, bool) {
 			return int32(retries), true
 		}
 	}
-	return -1, false
+	return DEFAULT_RETRIES, false
 }
 
 func ServiceConfigRetryPUT(rt core_runtime.Runtime) gin.HandlerFunc {
