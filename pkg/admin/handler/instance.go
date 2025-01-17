@@ -269,7 +269,7 @@ func isInstanceOperatorLogOpen(conf *mesh_proto.OverrideConfig, IP string) bool 
 	if conf != nil &&
 		conf.Match != nil &&
 		conf.Match.Address != nil &&
-		conf.Match.Address.Wildcard == `"`+IP+`:*"` &&
+		conf.Match.Address.Wildcard == IP+`:*` &&
 		conf.Side == consts.SideProvider &&
 		conf.Parameters != nil &&
 		conf.Parameters[`accesslog`] == `true` {
