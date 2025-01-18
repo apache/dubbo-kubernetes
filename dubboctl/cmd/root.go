@@ -89,6 +89,10 @@ func GetRootCmd(args []string) *cobra.Command {
 	createCmd := CreateCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(createCmd)
 	hideFlags(createCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+
+	repoCmd := RepoCmd(ctx, rootCmd, factory)
+	rootCmd.AddCommand(repoCmd)
+	hideFlags(createCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 	return rootCmd
 }
 
