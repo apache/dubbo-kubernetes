@@ -8,11 +8,10 @@ import (
 	"github.com/ory/viper"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
-	"strings"
 )
 
 type createArgs struct {
+	dirname  string
 	language string
 	template string
 }
@@ -20,6 +19,7 @@ type createArgs struct {
 func addCreateFlags(cmd *cobra.Command, tempArgs *createArgs) {
 	cmd.PersistentFlags().StringVarP(&tempArgs.language, "language", "l", "", "java or go language")
 	cmd.PersistentFlags().StringVarP(&tempArgs.template, "template", "t", "", "java or go sdk template")
+	cmd.PersistentFlags().StringVarP(&tempArgs.dirname, "dirname", "d", "", "java or go sdk template custom directory name")
 }
 
 type bindFunc func(*cobra.Command, []string) error
@@ -58,12 +58,16 @@ func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 		Short: "Generate sdk samples for Dubbo supported languages",
 		Long:  "The sdk subcommand generates an sdk sample provided by Dubbo supported languages.",
 		Example: `  # Create a java sample sdk.
-  dubboctl create sdk --language java -t common mydubbo
+  dubboctl create sdk --language java --template common --dirname mydubbo
+
+  dubboctl create sdk -l java -t common -d mydubbo
 
   # Create a go sample sdk.
-  dubboctl create sdk --language go -t common mydubbogo
+  dubboctl create sdk --language go --template common --dirname mydubbogo
+
+  dubboctl create sdk -l go -t common -d mydubbogo
 `,
-		PreRunE: bindEnv("language", "template"),
+		PreRunE: bindEnv("language", "template", "dirname"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCreate(cmd, args, clientFactory)
 		},
@@ -74,31 +78,23 @@ type createConfig struct {
 	Path       string
 	Runtime    string
 	Template   string
-	Name       string
+	DirName    string
 	Initialzed bool
 }
 
 func newCreateConfig(cmd *cobra.Command, args []string, clientFactory ClientFactory) (dcfg createConfig, err error) {
-	var (
-		path         string
-		dirName      string
-		absolutePath string
-	)
+	var absolutePath string
+	absolutePath = cwd()
 
-	if len(args) >= 1 {
-		path = args[0]
-	}
-
-	dirName, absolutePath = deriveNameAndAbsolutePathFromPath(path)
 	dcfg = createConfig{
-		Name:       dirName,
-		Path:       absolutePath,
+		DirName:    viper.GetString("dirname"),
+		Path:       absolutePath + "/" + viper.GetString("dirname"),
 		Runtime:    viper.GetString("language"),
 		Template:   viper.GetString("template"),
 		Initialzed: viper.GetBool("initialzed"),
 	}
-	fmt.Printf("Name:     %v\n", dirName)
-	fmt.Printf("Path:     %v\n", absolutePath)
+	fmt.Printf("Name:     %v\n", dcfg.DirName)
+	fmt.Printf("Path:     %v\n", dcfg.Path)
 	fmt.Printf("Language:     %v\n", dcfg.Runtime)
 	fmt.Printf("Template:     %v\n", dcfg.Template)
 	return
@@ -114,14 +110,14 @@ func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 
 	_, err = dclient.Initialize(&dubbo.DubboConfig{
 		Root:     dcfg.Path,
-		Name:     dcfg.Name,
+		Name:     dcfg.DirName,
 		Runtime:  dcfg.Runtime,
 		Template: dcfg.Template,
 	}, dcfg.Initialzed, cmd)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStderr(), "Created %v dubbo sdk in %v\n", args[0], dcfg.Path)
+	fmt.Printf("Custom Dubbo %v SDK was successfully created.", dcfg.Runtime)
 	return nil
 }
 
@@ -131,20 +127,4 @@ func cwd() (cwd string) {
 		panic(fmt.Sprintf("Unable to determine current working directory: %v", err))
 	}
 	return cwd
-}
-
-func deriveNameAndAbsolutePathFromPath(path string) (string, string) {
-	var absPath string
-
-	if path == "" {
-		path = cwd()
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", ""
-	}
-
-	pathParts := strings.Split(strings.TrimRight(path, string(os.PathSeparator)), string(os.PathSeparator))
-	return pathParts[len(pathParts)-1], absPath
 }
