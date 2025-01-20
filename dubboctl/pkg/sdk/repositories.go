@@ -57,6 +57,39 @@ func (r *Repositories) All() (repos []Repository, err error) {
 	return
 }
 
+func (r *Repositories) Add(name, url string) (string, error) {
+	if r.path == "" {
+		return "", fmt.Errorf("repository %v not added.", name)
+	}
+
+	repo, err := NewRepository(name, url)
+	if err != nil {
+		return "", fmt.Errorf("failed to create new repository: %w", err)
+	}
+
+	dest := filepath.Join(r.path, repo.Name)
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		return "", fmt.Errorf("repository '%v' already exists", repo.Name)
+	}
+
+	err = repo.Write(dest)
+	if err != nil {
+		return "", fmt.Errorf("failed to write repository: %w", err)
+	}
+	return repo.Name, nil
+}
+
+func (r *Repositories) Remove(name string) error {
+	if r.path == "" {
+		return fmt.Errorf("repository %v not removed.", name)
+	}
+	if name == "" {
+		return errors.New("name is required")
+	}
+	path := filepath.Join(r.path, name)
+	return os.RemoveAll(path)
+}
+
 func (r *Repositories) Get(name string) (repo Repository, err error) {
 	all, err := r.All()
 	if err != nil {
