@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -160,6 +161,64 @@ func (r *Repository) Runtime(name string) (runtime Runtime, err error) {
 		}
 	}
 	return Runtime{}, fmt.Errorf("language runtime not found")
+}
+
+func (r *Repository) Write(dest string) (err error) {
+	if r.fs == nil {
+		return errors.New("the write operation is not supported on this repo")
+	}
+	fs := r.fs
+
+	if _, ok := r.fs.(util.BillyFilesystem); ok {
+		var (
+			tempDir string
+			clone   *git.Repository
+			wt      *git.Worktree
+		)
+		if tempDir, err = os.MkdirTemp("", "dubbo"); err != nil {
+			return
+		}
+		if clone, err = git.PlainClone(tempDir, false,
+			getGitCloneOptions(r.uri)); err != nil {
+			return fmt.Errorf("failed to plain clone repository: %w", err)
+		}
+		if wt, err = clone.Worktree(); err != nil {
+			return fmt.Errorf("failed to get worktree: %w", err)
+		}
+		fs = util.NewBillyFilesystem(wt.Filesystem)
+	}
+	return util.CopyFromFS(".", dest, fs)
+}
+
+func (r *Repository) URL() string {
+	uri := r.uri
+
+	if uri == "" {
+		return ""
+	}
+
+	if strings.HasPrefix(uri, "file://") {
+		uri = filepath.FromSlash(r.uri[7:])
+	}
+
+	repo, err := git.PlainOpen(uri)
+	if err != nil {
+		return ""
+	}
+
+	c, err := repo.Config()
+	if err != nil {
+		return ""
+	}
+
+	ref, _ := repo.Head()
+	if _, ok := c.Remotes["origin"]; ok {
+		urls := c.Remotes["origin"].URLs
+		if len(urls) > 0 {
+			return urls[0] + "#" + ref.Name().Short()
+		}
+	}
+	return ""
 }
 
 func filesystemFromURI(uri string) (fs util.Filesystem, err error) {
