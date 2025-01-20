@@ -15,6 +15,9 @@ func addRepoFlags(cmd *cobra.Command, rArgs *repoArgs) {
 func RepoCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	rootArgs := &cluster.RootArgs{}
 	rArgs := &repoArgs{}
+	ad := addCmd(cmd, clientFactory)
+	li := listCmd(cmd, clientFactory)
+	re := removeCmd(cmd, clientFactory)
 	rc := &cobra.Command{
 		Use:   "repo",
 		Short: "Manage existing Dubbo SDK module libraries",
@@ -29,31 +32,60 @@ func RepoCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *co
   dubboctl repo remove [name]
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return nil
+			return runRepo(cmd, args, clientFactory)
 		},
 	}
 	cluster.AddFlags(rc, rootArgs)
 	addRepoFlags(rc, rArgs)
-	rc.AddCommand(newRepoAdd(clientFactory))
-	rc.AddCommand(newRepoList(clientFactory))
-	rc.AddCommand(newRepoRemove(clientFactory))
+	rc.AddCommand(ad)
+	rc.AddCommand(li)
+	rc.AddCommand(re)
 	return rc
 }
 
-func runRepo() {
-
-}
-
-func newRepoAdd(clientFactory ClientFactory) *cobra.Command {
+func runRepo(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
 	return nil
-
 }
 
-func newRepoList(clientFactory ClientFactory) *cobra.Command {
+func addCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	ac := &cobra.Command{
+		Use: "add",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAdd(cmd, args, clientFactory)
+		},
+	}
+	return ac
+}
+
+func runAdd(_ *cobra.Command, args []string, clientFactory ClientFactory) error {
 	return nil
-
 }
 
-func newRepoRemove(clientFactory ClientFactory) *cobra.Command {
+func listCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	lc := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runList(cmd, args, clientFactory)
+		},
+	}
+	return lc
+}
+
+func runList(_ *cobra.Command, args []string, clientFactory ClientFactory) error {
+	return nil
+}
+
+func removeCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	rc := &cobra.Command{
+		Use: "remove",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runRemove(cmd, args, clientFactory)
+		},
+	}
+	return rc
+}
+
+func runRemove(_ *cobra.Command, args []string, clientFactory ClientFactory) error {
 	return nil
 }
