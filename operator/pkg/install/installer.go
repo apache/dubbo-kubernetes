@@ -206,10 +206,11 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 }
 
 var componentDependencies = map[component.Name][]component.Name{
-	component.AdminComponentName: {},
+	component.RegisterComponentName: {},
 	component.BaseComponentName: {
-		component.AdminComponentName,
+		component.RegisterComponentName,
 	},
+	component.AdminComponentName: {},
 }
 
 func dependenciesChannels() map[component.Name]chan struct{} {

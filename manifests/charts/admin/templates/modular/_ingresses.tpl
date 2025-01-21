@@ -10,3 +10,4 @@ ingress.kubernetes.io/proxy-body-size: "0"
 nginx.ingress.kubernetes.io/ssl-redirect: "true"
 nginx.ingress.kubernetes.io/proxy-body-size: "0"
 {{- end -}}
+

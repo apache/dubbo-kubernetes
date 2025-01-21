@@ -1,4 +1,7 @@
-{{- $traffic := .Values.traffic -}}{{- $tr := $traffic.tagRoute -}}{{- $dc := $traffic.dynamicConfig -}}{{- $cr := $traffic.conditionRoute -}}
+{{- $traffic := .Values.traffic -}}
+{{- $tr := $traffic.tagRoute -}}
+{{- $dc := $traffic.dynamicConfig -}}
+{{- $cr := $traffic.conditionRoute -}}
 apiVersion: dubbo.io/v1alpha1
 kind: ConditionRoute
 metadata:
