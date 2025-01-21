@@ -10,7 +10,7 @@ spec:
   PortLevel:
     - port: {{ $authc.port }}
   selector:
-    - namespaces: ["dubbo-system"]
+    - namespaces: [{{ template "admin.namespace" . }}]
 ---
 apiVersion: dubbo.io/v1alpha1
 kind: AuthorizationPolicy

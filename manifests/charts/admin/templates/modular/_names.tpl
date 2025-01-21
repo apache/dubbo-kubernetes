@@ -62,8 +62,6 @@ Return Grafana Name to use.
 {{- printf "grafana" -}}
 {{- end -}}
 
-
-
 {{/*
 Return Job Name to use.
 */}}
