@@ -32,6 +32,7 @@ func RepoCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *co
   dubboctl repo remove [name]
 `,
 	}
+
 	cluster.AddFlags(rc, rootArgs)
 	addRepoFlags(rc, rArgs)
 	rc.AddCommand(ad)
@@ -52,7 +53,7 @@ func addCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	return ac
 }
 
-func runAdd(_ *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
+func runAdd(cmd *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
 	if err = util.CreatePath(); err != nil {
 		return
 	}
@@ -96,7 +97,7 @@ func listCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	return lc
 }
 
-func runList(_ *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
+func runList(cmd *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
 	client, done := clientFactory()
 	defer done()
 
@@ -124,7 +125,7 @@ func removeCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	return rc
 }
 
-func runRemove(_ *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
+func runRemove(cmd *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
 	client, done := clientFactory()
 	defer done()
 
@@ -141,6 +142,6 @@ func runRemove(_ *cobra.Command, args []string, clientFactory ClientFactory) (er
 		return
 	}
 
-	fmt.Printf("%s Repositories removed", p.name)
+	fmt.Printf("%s Repositories removed.\n", p.name)
 	return
 }

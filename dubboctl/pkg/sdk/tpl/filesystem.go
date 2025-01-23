@@ -1,4 +1,4 @@
-package main
+package tpl
 
 import (
 	"archive/zip"
@@ -11,10 +11,13 @@ import (
 	"path/filepath"
 )
 
-const templatesPath = "./template"
+const (
+	templatesPath = "dubboctl/pkg/sdk/tpl/default"
+	generatePath  = "dubboctl/pkg/sdk/tpl/zz_filesystem_generated.go"
+)
 
 func main() {
-	f, err := os.OpenFile("../zz_filesystem_generated.go", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(generatePath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}
