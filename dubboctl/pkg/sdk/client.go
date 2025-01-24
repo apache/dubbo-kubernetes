@@ -83,7 +83,7 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	// TODO remove initiallized
 	f := dubbo.NewDubboConfigWithTemplate(dcfg, initialized)
 
-	if err = RunDataDir(f.Root); err != nil {
+	if err = runDataDir(f.Root); err != nil {
 		return f, err
 	}
 
@@ -181,7 +181,7 @@ func isEffectivelyEmpty(dir string) (bool, error) {
 	return true, nil
 }
 
-func RunDataDir(root string) error {
+func runDataDir(root string) error {
 	if err := os.MkdirAll(filepath.Join(root, dubbo.DataDir), os.ModePerm); err != nil {
 		return err
 	}
@@ -223,4 +223,10 @@ func RunDataDir(root string) error {
 		fmt.Fprintf(os.Stderr, "warning: error when syncing .gitignore. %s\n", err)
 	}
 	return nil
+}
+
+func WithRepositoriesPath(path string) Option {
+	return func(c *Client) {
+		c.repositoriesPath = path
+	}
 }

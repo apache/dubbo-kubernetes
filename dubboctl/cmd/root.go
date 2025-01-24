@@ -19,6 +19,7 @@ import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/validate"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/version"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
@@ -33,7 +34,9 @@ type ClientFactory func(...sdk.Option) (*sdk.Client, func())
 
 func NewClientFactory(options ...sdk.Option) (*sdk.Client, func()) {
 	var (
-		o = []sdk.Option{}
+		o = []sdk.Option{
+			sdk.WithRepositoriesPath(util.RepositoriesPath()),
+		}
 	)
 	client := sdk.New(append(o, options...)...)
 
