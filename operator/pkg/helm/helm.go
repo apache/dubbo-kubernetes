@@ -24,6 +24,7 @@ const (
 	// see https://helm.sh/docs/chart_template_guide/notes_files/
 	NotesFileNameSuffix = ".txt"
 	BaseChartName       = "base"
+	profilesDirName     = "profiles"
 )
 
 type Warnings = util.Errors
@@ -128,4 +129,38 @@ func getFilesRecursive(f fs.FS, root string) ([]string, error) {
 		return nil
 	})
 	return result, err
+}
+
+func readProfiles(chartsDir string) (map[string]bool, error) {
+	profiles := map[string]bool{}
+	f := manifests.BuiltinDir(chartsDir)
+	dir, err := fs.ReadDir(f, profilesDirName)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range dir {
+		trimmedString := strings.TrimSuffix(f.Name(), ".yaml")
+		if f.Name() != trimmedString {
+			profiles[trimmedString] = true
+		}
+	}
+	return profiles, nil
+}
+
+func ListProfiles(charts string) ([]string, error) {
+	profiles, err := readProfiles(charts)
+	if err != nil {
+		return nil, err
+	}
+	return stringBoolMapToSlice(profiles), nil
+}
+
+func stringBoolMapToSlice(m map[string]bool) []string {
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		if v {
+			s = append(s, k)
+		}
+	}
+	return s
 }
