@@ -65,9 +65,6 @@
               layout="horizontal"
             >
               <slot :name="'form_' + currentOption.key" :current="currentOption"></slot>
-              <!--              <div style="width: 100%;height: 10000px;background: #0a90d5">-->
-
-              <!--              </div>-->
               <a-form-item style="margin: 20px 0 0 100px">
                 <a-button type="primary" @click="submit">{{ $t('submit') }}</a-button>
                 <a-button style="margin-left: 10px" @click="reset">{{ $t('reset') }}</a-button>

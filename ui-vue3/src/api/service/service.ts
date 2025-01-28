@@ -41,7 +41,7 @@ export const getServiceDistribution = (params: any): Promise<any> => {
   })
 }
 
-//获取超时时间
+//Get timeout time.
 export const getServiceTimeout = (params: any): Promise<any> => {
   return request({
     url: '/service/config/timeout',
