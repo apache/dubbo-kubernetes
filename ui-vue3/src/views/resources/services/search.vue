@@ -17,15 +17,17 @@
 <template>
   <div class="__container_services_index">
     <search-table :search-domain="searchDomain">
-      <template #bodyCell="{ column, text }">
+      <template #bodyCell="{ column, record, text }">
         <template v-if="column.dataIndex === 'serviceName'">
-          <span class="service-link" @click="viewDistribution(text)">
+          {{ record.versionGroup }}
+          <span class="service-link" @click="viewDistribution(text, text.versionGroupValue)">
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
             </b>
           </span>
         </template>
+
         <template v-else-if="column.dataIndex === 'versionGroupSelect'">
           <a-select :value="text.versionGroupValue" :bordered="false" style="width: 80%">
             <a-select-option
@@ -44,7 +46,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { provide, reactive } from 'vue'
+import { provide, reactive, ref } from 'vue'
 import { searchService } from '@/api/service/service'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
@@ -94,6 +96,24 @@ const columns = [
   }
 ]
 
+// Extract version and group.
+// Todo
+// const extractVersionAndGroup = (input:string) =>{
+//   console.log(input)
+//   return
+//   const regex = /version:\s*(\d+\.\d+),\s*group:\s*(\d+\.\d+)/;
+//   const match = input.match(regex);
+//   console.log(match)
+//   if (match) {
+//     return {
+//       version: match[1],
+//       group: match[2]
+//     };
+//   } else {
+//     return null;
+//   }
+// }
+
 const handleResult = (result: any) => {
   return result.map((service: any) => {
     service.versionGroupSelect = {}
@@ -110,6 +130,7 @@ const handleResult = (result: any) => {
 function serviceInfo(params: any) {
   return searchService(params).then(async (res) => {
     let services = res?.data?.list
+
     try {
       for (let service of services) {
         let qps = await queryMetrics(
@@ -159,8 +180,10 @@ const viewDetail = (serviceName: string) => {
   router.push({ name: 'detail', params: { pathId: serviceName } })
 }
 
-const viewDistribution = (serviceName: string) => {
-  router.push({ name: 'distribution', params: { pathId: serviceName } })
+const viewDistribution = (serviceName: string, versionAndGroup: string) => {
+  let group = extractVersionAndGroup(versionAndGroup)?.group || ''
+  let version = extractVersionAndGroup(versionAndGroup)?.version || ''
+  router.push({ name: 'distribution', params: { pathId: serviceName, group, version } })
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)

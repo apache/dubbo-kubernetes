@@ -70,3 +70,100 @@ export const listApplicationEvent = (params: any): Promise<any> => {
     params
   })
 }
+
+/**
+ * @description Get whether the execution log is turned on
+ * @param appName application name
+ */
+export const getAppLogSwitch = (appName: string): Promise<any> => {
+  return request({
+    url: '/application/config/operatorLog',
+    method: 'get',
+    params: {
+      appName
+    }
+  })
+}
+
+/**
+ * @description Modify the execution log switch
+ * @param appName application name
+ * @param operatorLog Whether to turn on?
+ */
+export const updateAppLogSwitch = (appName: string, operatorLog: boolean): Promise<any> => {
+  return request({
+    url: '/application/config/operatorLog',
+    method: 'put',
+    params: {
+      appName,
+      operatorLog
+    }
+  })
+}
+
+/**
+ * @description Obtain traffic weight.
+ * @param appName application name
+ */
+export const getAppTrafficWeight = (appName: string): Promise<any> => {
+  return request({
+    url: '/application/config/flowWeight',
+    method: 'get',
+    params: {
+      appName
+    }
+  })
+}
+
+/**
+ * @description Modify traffic weight.
+ * @param appName application name
+ * @param  flowWeightSets traffic weight
+ */
+export const updateAppTrafficWeight = (
+  appName: string,
+  flowWeightSets: Array<any>
+): Promise<any> => {
+  return request({
+    url: '/application/config/flowWeight',
+    method: 'put',
+    params: {
+      appName
+    },
+    data: {
+      flowWeightSets
+    }
+  })
+}
+
+/**
+ * @description Obtain gray-scale isolation configuration
+ * @param appName application name
+ */
+export const getAppGrayIsolation = (appName: string): Promise<any> => {
+  return request({
+    url: '/application/config/gray',
+    method: 'get',
+    params: {
+      appName
+    }
+  })
+}
+
+/**
+ * @description Modify gray-scale isolation configuration
+ * @param appName application name
+ * @param  graySets gray-scale isolation configuration
+ */
+export const updateAppGrayIsolation = (appName: string, graySets: Array<any>): Promise<any> => {
+  return request({
+    url: '/application/config/gray',
+    method: 'put',
+    params: {
+      appName
+    },
+    data: {
+      graySets
+    }
+  })
+}

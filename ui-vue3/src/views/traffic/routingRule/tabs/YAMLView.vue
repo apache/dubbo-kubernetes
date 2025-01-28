@@ -58,13 +58,27 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { computed, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { getConditionRuleDetailAPI } from '@/api/service/traffic'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const isReadonly = ref(true)
 
 const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
+
+// Condition routing details
+const conditionRuleDetail = reactive({
+  configVersion: 'v3.0',
+  scope: 'service',
+  key: 'org.apache.dubbo.samples.UserService',
+  enabled: true,
+  runtime: true,
+  force: false,
+  conditions: ['=>host!=192.168.0.68']
+})
 
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
@@ -78,6 +92,19 @@ const YAMLValue = ref(
     '        value:\n' +
     '          exact: gray'
 )
+
+// Get condition routing details
+async function getRoutingRuleDetail() {
+  let res = await getConditionRuleDetailAPI(<string>route.params?.ruleName)
+  console.log(res)
+  if (res?.code === 200) {
+    Object.assign(conditionRuleDetail, res?.data || {})
+  }
+}
+
+onMounted(() => {
+  getRoutingRuleDetail()
+})
 </script>
 
 <style scoped lang="less">

@@ -35,6 +35,10 @@ const words: I18nType = {
     YAMLView: 'YAML视图',
     formView: '表单视图'
   },
+  addRoutingRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
   tagRuleDomain: {
     YAMLView: 'YAML视图',
     formView: '表单视图'

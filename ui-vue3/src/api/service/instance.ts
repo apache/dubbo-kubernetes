@@ -40,3 +40,79 @@ export const getInstanceMetricsInfo = (params: any): Promise<any> => {
     params
   })
 }
+
+/**
+ * @description Obtain whether the execution log is enabled.
+ * @param instanceIP
+ * @param appName
+ */
+export const getInstanceLogSwitchAPI = (instanceIP: string, appName: string): Promise<any> => {
+  return request({
+    url: '/instance/config/operatorLog',
+    method: 'get',
+    params: {
+      instanceIP,
+      appName
+    }
+  })
+}
+
+/**
+ * @description Modify the execution log switch.
+ * @param instanceIP
+ * @param appName
+ * @param operatorLog
+ */
+export const updateInstanceLogSwitchAPI = (
+  instanceIP: string,
+  appName: string,
+  operatorLog: boolean
+): Promise<any> => {
+  return request({
+    url: '/instance/config/operatorLog',
+    method: 'put',
+    params: {
+      instanceIP,
+      appName,
+      operatorLog
+    }
+  })
+}
+
+/**
+ * @description get the traffic switch.
+ * @param instanceIP
+ * @param appName
+ */
+export const getInstanceTrafficSwitchAPI = (instanceIP: string, appName: string): Promise<any> => {
+  return request({
+    url: '/instance/config/trafficDisable',
+    method: 'get',
+    params: {
+      instanceIP,
+      appName
+    }
+  })
+}
+
+/**
+ * @description Modify the traffic switch.
+ * @param instanceIP
+ * @param appName
+ * @param trafficDisable
+ */
+export const updateInstanceTrafficSwitchAPI = (
+  instanceIP: string,
+  appName: string,
+  trafficDisable: boolean
+): Promise<any> => {
+  return request({
+    url: '/instance/config/trafficDisable',
+    method: 'put',
+    params: {
+      instanceIP,
+      appName,
+      trafficDisable
+    }
+  })
+}

@@ -36,6 +36,16 @@
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from 'vue'
 import ConfigPage from '@/components/ConfigPage.vue'
+import { useRoute } from 'vue-router'
+import {
+  getInstanceLogSwitchAPI,
+  getInstanceTrafficSwitchAPI,
+  updateInstanceLogSwitchAPI,
+  updateInstanceTrafficSwitch,
+  updateInstanceTrafficSwitchAPI
+} from '@/api/service/instance'
+const route = useRoute()
+
 let options: any = reactive({
   list: [
     {
@@ -44,11 +54,9 @@ let options: any = reactive({
       form: {
         logFlag: false
       },
-      submit: (form: {}) => {
+      submit: (form: any) => {
         return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(1)
-          }, 1000)
+          resolve(updateInstanceLogSwitch(form?.logFlag))
         })
       },
       reset(form: any) {
@@ -61,11 +69,9 @@ let options: any = reactive({
         flowDisabledFlag: false
       },
       key: 'flowDisabled',
-      submit: (form: {}) => {
+      submit: (form: any) => {
         return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(1)
-          }, 1000)
+          resolve(updateInstanceTrafficSwitch(form?.flowDisabledFlag))
         })
       },
       reset(form: any) {
@@ -75,8 +81,68 @@ let options: any = reactive({
   ],
   current: [0]
 })
+
+// Get whether execution logs are enabled.
+const getInstanceLogSwitch = async () => {
+  const res = await getInstanceLogSwitchAPI(
+    <string>route.params?.pathId,
+    <string>route.params?.appName
+  )
+  if (res?.code == 200) {
+    options.list.forEach((item: any) => {
+      if (item.key === 'log') {
+        item.form.logFlag = res.data.operatorLog
+        return
+      }
+    })
+  }
+}
+
+// Switch whether to enable execution logs.
+const updateInstanceLogSwitch = async (operatorLog: boolean) => {
+  const res = await updateInstanceLogSwitchAPI(
+    <string>route.params?.pathId,
+    <string>route.params?.appName,
+    operatorLog
+  )
+  if (res?.code == 200) {
+    await getInstanceLogSwitch()
+  }
+}
+
+// Get whether traffic is disabled.
+const getInstanceTrafficSwitch = async () => {
+  const res = await getInstanceTrafficSwitchAPI(
+    <string>route.params?.pathId,
+    <string>route.params?.appName
+  )
+  if (res?.code == 200) {
+    options.list.forEach((item: any) => {
+      if (item.key === 'flowDisabled') {
+        item.form.flowDisabledFlag = res.data.trafficDisable
+      }
+    })
+  }
+}
+
+//  Switch whether to enable traffic.
+const updateInstanceTrafficSwitch = async (trafficDisable: boolean) => {
+  const res = await updateInstanceTrafficSwitchAPI(
+    <string>route.params?.pathId,
+    <string>route.params?.appName,
+    trafficDisable
+  )
+  console.log(res)
+  return
+  if (res?.code == 200) {
+    await getInstanceTrafficSwitch()
+  }
+}
+
 onMounted(() => {
   console.log(333)
+  getInstanceLogSwitch()
+  getInstanceTrafficSwitch()
 })
 </script>
 

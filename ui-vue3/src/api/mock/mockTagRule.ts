@@ -16,8 +16,9 @@
  */
 
 import Mock from 'mockjs'
+import DevToolUtil from '@/utils/DevToolUtil'
 
-Mock.mock('/mock/tagRule/search', 'get', () => {
+Mock.mock(DevToolUtil.mockUrl('/mock/tag-rule/search'), 'get', () => {
   const total = Mock.mock('@integer(8, 1000)')
   const list = []
   for (let i = 0; i < total; i++) {
@@ -29,12 +30,13 @@ Mock.mock('/mock/tagRule/search', 'get', () => {
   }
   return {
     code: 200,
-    message: 'success',
-    data: Mock.mock({
-      total: total,
-      curPage: 1,
-      pageSize: 10,
-      data: list
-    })
+    msg: 'success',
+    data: {
+      pageInfo: {
+        Total: total,
+        NextOffset: '0'
+      },
+      list
+    }
   }
 })

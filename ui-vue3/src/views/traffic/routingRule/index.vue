@@ -18,13 +18,18 @@
   <div class="__container_resources_application_index">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
-        <a-button type="primary">新增条件路由规则</a-button>
+        <a-button type="primary" @click="router.push('/traffic/addRoutingRule')"
+          >新增条件路由规则</a-button
+        >
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <a-button type="link" @click="router.replace(`formview/${record[column.key]}`)">{{
-            text
-          }}</a-button>
+          <span class="rule-link" @click="router.push(`formview/${record[column.key]}`)">
+            <b>
+              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+              {{ text }}
+            </b>
+          </span>
         </template>
         <template v-if="column.dataIndex === 'ruleGranularity'">
           {{ text ? '服务' : '应用' }}
@@ -33,15 +38,17 @@
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
-          <a-button type="link">查看</a-button>
+          <a-button type="link" @click="router.replace(`formview/${record.ruleName}`)">
+            查看
+          </a-button>
           <a-button type="link">修改</a-button>
           <a-popconfirm
             title="确认删除该条件路由规则？"
             ok-text="Yes"
             cancel-text="No"
-            @confirm="confirm"
+            @confirm="confirm(record.ruleName)"
           >
-            <a-button type="link">删除</a-button>
+            <a-button type="link"> 删除 </a-button>
           </a-popconfirm>
         </template>
       </template>
@@ -51,11 +58,13 @@
 
 <script setup lang="ts">
 import { onMounted, provide, reactive } from 'vue'
-import { searchRoutingRule } from '@/api/service/traffic'
+import { deleteConditionRuleAPI, searchRoutingRule } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import router from '@/router'
+import { Icon } from '@iconify/vue'
+import { PRIMARY_COLOR } from '@/base/constants'
 
 let columns = [
   {
@@ -112,11 +121,21 @@ const searchDomain = reactive(
   )
 )
 
+//Delete conditional routing
+const deleteRule = async (ruleName: string) => {
+  const res = await deleteConditionRuleAPI(ruleName)
+  if (res.code === 200) {
+    await searchDomain.onSearch()
+  }
+}
+
 onMounted(() => {
   searchDomain.onSearch()
 })
 
-const confirm = () => {}
+const confirm = (ruleName) => {
+  deleteRule(ruleName)
+}
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
@@ -124,5 +143,16 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 .search-table-container {
   min-height: 60vh;
   //max-height: 70vh; //overflow: auto;
+
+  .rule-link {
+    padding: 4px 10px 4px 4px;
+    border-radius: 4px;
+    color: v-bind('PRIMARY_COLOR');
+
+    &:hover {
+      cursor: pointer;
+      background: rgba(133, 131, 131, 0.13);
+    }
+  }
 }
 </style>

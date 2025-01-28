@@ -19,23 +19,55 @@ import request from '@/base/http/request'
 
 export const searchRoutingRule = (params: any): Promise<any> => {
   return request({
-    url: '/routingRule/search',
+    url: '/condition-rule/search',
     method: 'get',
     params
+  })
+}
+
+// Get condition routing details
+export const getConditionRuleDetailAPI = (ruleName: string): Promise<any> => {
+  return request({
+    url: `/condition-rule/${ruleName}`,
+    method: 'get'
+  })
+}
+
+// Delete condition routing.
+export const deleteConditionRuleAPI = (ruleName: string): Promise<any> => {
+  return request({
+    url: `/condition-rule/${ruleName}`,
+    method: 'delete'
   })
 }
 
 export const searchTagRule = (params: any): Promise<any> => {
   return request({
-    url: '/tagRule/search',
+    url: '/tag-rule/search',
     method: 'get',
     params
   })
 }
 
+// Delete tag routing.
+export const deleteTagRuleAPI = (ruleName: string): Promise<any> => {
+  return request({
+    url: `/tag-rule/${ruleName}`,
+    method: 'delete'
+  })
+}
+
+// Get tag routing details.
+export const getTagRuleDetailAPI = (ruleName: string): Promise<any> => {
+  return request({
+    url: `/tag-rule/${ruleName}`,
+    method: 'get'
+  })
+}
+
 export const searchDynamicConfig = (params: any): Promise<any> => {
   return request({
-    url: '/dynamicConfig/search',
+    url: '/configurator/search',
     method: 'get',
     params
   })
@@ -51,7 +83,7 @@ export const searchVirtualService = (params: any): Promise<any> => {
 
 export const searchDestinationRule = (params: any): Promise<any> => {
   return request({
-    url: '/destinationRule/search',
+    url: '/configurator/search',
     method: 'get',
     params
   })

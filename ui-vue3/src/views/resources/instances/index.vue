@@ -19,7 +19,10 @@
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ text, record, index, column }">
         <template v-if="column.dataIndex === 'ip'">
-          <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
+          <span
+            class="app-link"
+            @click="router.replace(`detail/${record[column.key]}/${record.name}`)"
+          >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
