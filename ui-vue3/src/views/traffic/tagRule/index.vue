@@ -22,12 +22,18 @@
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <a-button type="link" @click="router.replace(`formview/${record[column.key]}`)">{{
-            text
-          }}</a-button>
+          <span class="rule-link" @click="router.replace(`formview/${record[column.key]}`)">
+            <b>
+              <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
+              {{ text }}
+            </b>
+          </span>
+        </template>
+        <template v-if="column.dataIndex === 'createTime'">
+          {{ formattedDate(text) }}
         </template>
         <template v-if="column.dataIndex === 'enable'">
-          {{ text ? '启用' : '禁用' }}
+          {{ text ? $t('flowControlDomain.enabled') : $t('flowControlDomain.disabled') }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
           <a-button type="link">查看</a-button>
@@ -38,7 +44,7 @@
             cancel-text="No"
             @confirm="confirm"
           >
-            <a-button type="link">删除</a-button>
+            <a-button type="link"> 删除 </a-button>
           </a-popconfirm>
         </template>
       </template>
@@ -48,12 +54,17 @@
 
 <script setup lang="ts">
 import { onMounted, provide, reactive } from 'vue'
-import { searchTagRule } from '@/api/service/traffic'
+import { deleteTagRuleAPI, searchTagRule } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import router from '@/router'
+import { Icon } from '@iconify/vue'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { formattedDate } from '@/utils/DateUtil'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 let columns = [
   {
     title: 'ruleName',
@@ -101,11 +112,21 @@ const searchDomain = reactive(
   )
 )
 
+// Delete tag routing.
+const deleteTagRule = async (ruleName: string) => {
+  const res = await deleteTagRuleAPI(ruleName)
+  if (res.code === 200) {
+    await searchDomain.onSearch()
+  }
+}
+
 onMounted(() => {
   searchDomain.onSearch()
 })
 
-const confirm = () => {}
+const confirm = () => {
+  deleteTagRule(route.params.ruleName as string)
+}
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
@@ -113,5 +134,16 @@ provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 .search-table-container {
   min-height: 60vh;
   //max-height: 70vh; //overflow: auto;
+
+  .rule-link {
+    padding: 4px 10px 4px 4px;
+    border-radius: 4px;
+    color: v-bind('PRIMARY_COLOR');
+
+    &:hover {
+      cursor: pointer;
+      background: rgba(133, 131, 131, 0.13);
+    }
+  }
 }
 </style>

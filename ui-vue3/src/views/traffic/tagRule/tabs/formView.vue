@@ -25,11 +25,8 @@
             :label="$t('flowControlDomain.ruleName')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <p
-              @click="copyIt('org.apache.dubbo.samples.UserService::.condition-router')"
-              class="description-item-content with-card"
-            >
-              org.apache.dubbo.samples.UserService::.condition-router
+            <p @click="copyIt(tagRuleDetail.key)" class="description-item-content with-card">
+              {{ tagRuleDetail.key }}
               <CopyOutlined />
             </p>
           </a-descriptions-item>
@@ -39,7 +36,9 @@
             :label="$t('flowControlDomain.ruleGranularity')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <a-typography-paragraph> 服务 </a-typography-paragraph>
+            <a-typography-paragraph>
+              {{ tagRuleDetail.scope }}
+            </a-typography-paragraph>
           </a-descriptions-item>
 
           <!-- actionObject -->
@@ -47,29 +46,29 @@
             :label="$t('flowControlDomain.actionObject')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <p @click="copyIt('shop-user')" class="description-item-content with-card">
-              shop-user
+            <p @click="copyIt(actionObj)" class="description-item-content with-card">
+              {{ actionObj }}
               <CopyOutlined />
             </p>
           </a-descriptions-item>
 
           <!-- effectTime -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.effectTime')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-typography-paragraph> 20230/12/19 22:09:34</a-typography-paragraph>
-          </a-descriptions-item>
+          <!--          <a-descriptions-item-->
+          <!--            :label="$t('flowControlDomain.effectTime')"-->
+          <!--            :labelStyle="{ fontWeight: 'bold' }"-->
+          <!--          >-->
+          <!--            <a-typography-paragraph> 20230/12/19 22:09:34</a-typography-paragraph>-->
+          <!--          </a-descriptions-item>-->
 
           <!-- faultTolerantProtection -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.faultTolerantProtection')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-typography-paragraph>
-              {{ $t('flowControlDomain.opened') }}
-            </a-typography-paragraph>
-          </a-descriptions-item>
+          <!--          <a-descriptions-item-->
+          <!--            :label="$t('flowControlDomain.faultTolerantProtection')"-->
+          <!--            :labelStyle="{ fontWeight: 'bold' }"-->
+          <!--          >-->
+          <!--            <a-typography-paragraph>-->
+          <!--              {{ $t('flowControlDomain.opened') }}-->
+          <!--            </a-typography-paragraph>-->
+          <!--          </a-descriptions-item>-->
 
           <!-- enabledState -->
           <a-descriptions-item
@@ -77,7 +76,11 @@
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <a-typography-paragraph>
-              {{ $t('flowControlDomain.enabled') }}
+              {{
+                tagRuleDetail.enabled
+                  ? $t('flowControlDomain.enabled')
+                  : $t('flowControlDomain.disabled')
+              }}
             </a-typography-paragraph>
           </a-descriptions-item>
 
@@ -87,35 +90,48 @@
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <a-typography-paragraph>
-              {{ $t('flowControlDomain.opened') }}
+              {{
+                tagRuleDetail.runtime
+                  ? $t('flowControlDomain.opened')
+                  : $t('flowControlDomain.closed')
+              }}
             </a-typography-paragraph>
           </a-descriptions-item>
 
           <!-- priority -->
-          <a-descriptions-item
-            :label="$t('flowControlDomain.priority')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-typography-paragraph>
-              {{ '未设置' }}
-            </a-typography-paragraph>
-          </a-descriptions-item>
+          <!--          <a-descriptions-item-->
+          <!--            :label="$t('flowControlDomain.priority')"-->
+          <!--            :labelStyle="{ fontWeight: 'bold' }"-->
+          <!--          >-->
+          <!--            <a-typography-paragraph>-->
+          <!--              {{ '未设置' }}-->
+          <!--            </a-typography-paragraph>-->
+          <!--          </a-descriptions-item>-->
         </a-descriptions>
       </a-card>
     </a-flex>
 
-    <a-card title="标签【1】" style="margin-top: 10px" class="_detail">
+    <a-card
+      v-for="(item, index) in tagRuleDetail.tags"
+      :title="`标签【${index + 1}】`"
+      style="margin-top: 10px"
+      class="_detail"
+    >
       <a-space align="center">
         <a-typography-title :level="5">
           {{ $t('flowControlDomain.labelName') }}:
-          <a-typography-text class="labelName">gray</a-typography-text>
+          <a-typography-text class="labelName">
+            {{ item.name }}
+          </a-typography-text>
         </a-typography-title>
       </a-space>
       <a-space align="start" style="width: 100%">
         <a-typography-title :level="5"
-          >{{ $t('flowControlDomain.actuatingRange') }}:</a-typography-title
-        >
-        <a-tag color="#2db7f5">version=v1</a-tag>
+          >{{ $t('flowControlDomain.actuatingRange') }}:
+        </a-typography-title>
+        <a-tag v-for="(scope, index) in item.match" :key="index" color="#2db7f5">
+          {{ scope.key }}
+        </a-tag>
       </a-space>
     </a-card>
   </div>
@@ -125,9 +141,18 @@
 import { CopyOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
-import { type ComponentInternalInstance, getCurrentInstance } from 'vue'
+import {
+  type ComponentInternalInstance,
+  computed,
+  getCurrentInstance,
+  onMounted,
+  reactive
+} from 'vue'
 import { PRIMARY_COLOR } from '@/base/constants'
+import { getTagRuleDetailAPI } from '@/api/service/traffic'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const {
   appContext: {
     config: { globalProperties }
@@ -141,6 +166,45 @@ function copyIt(v: string) {
   message.success(globalProperties.$t('messageDomain.success.copy'))
   toClipboard(v)
 }
+
+const actionObj = computed(() => {
+  const arr = tagRuleDetail.key.split(':')
+  return arr[0] ? arr[0] : ''
+})
+
+// Route details
+const tagRuleDetail = reactive({
+  configVersion: 'v3.0',
+  scope: 'application',
+  key: 'shop-user',
+  enabled: true,
+  runtime: true,
+  tags: [
+    {
+      name: 'gray',
+      match: [
+        {
+          key: 'version',
+          value: {
+            exact: 'v1'
+          }
+        }
+      ]
+    }
+  ]
+})
+
+// Get label routing details
+const getTagRuleDetail = async () => {
+  const res = await getTagRuleDetailAPI(<string>route.params?.ruleName)
+  if (res.code === 200) {
+    Object.assign(tagRuleDetail, res.data || {})
+  }
+}
+
+onMounted(() => {
+  getTagRuleDetail()
+})
 </script>
 
 <style lang="less" scoped>

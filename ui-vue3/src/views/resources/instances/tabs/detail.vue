@@ -29,10 +29,10 @@
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
                   <p
-                    @click="copyIt(<string>route.params?.pathId)"
+                    @click="copyIt(<string>route.params?.appName)"
                     class="description-item-content with-card"
                   >
-                    {{ route.params?.pathId }}
+                    {{ route.params?.appName }}
                     <CopyOutlined />
                   </p>
                 </a-descriptions-item>
