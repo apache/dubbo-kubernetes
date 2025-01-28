@@ -36,6 +36,14 @@
             />
           </div>
         </a-flex>
+        <a-affix :offset-bottom="10">
+          <div class="bottom-action-footer">
+            <a-space align="center" size="large">
+              <a-button type="primary"> 确认 </a-button>
+              <a-button> 取消 </a-button>
+            </a-space>
+          </div>
+        </a-affix>
       </a-col>
 
       <a-col :span="isDrawerOpened ? sliderSpan : 0" class="right">
@@ -125,6 +133,16 @@ onMounted(() => {
   border-radius: 0.3rem;
   overflow: hidden;
   width: 100%;
+}
+
+.bottom-action-footer {
+  width: 100%;
+  background-color: white;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1); /* 添加顶部阴影 */
 }
 
 .sliderBox {
