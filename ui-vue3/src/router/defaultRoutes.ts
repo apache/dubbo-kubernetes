@@ -24,6 +24,7 @@ import ServiceTabHeaderSlot from '@/views/resources/services/slots/ServiceTabHea
 import InstanceTabHeaderSlot from '@/views/resources/instances/slots/InstanceTabHeaderSlot.vue'
 import AddConditionRuleTabHeaderSlot from '@/views/traffic/routingRule/slots/addConditionRuleTabHeaderSlot.vue'
 import ConditionRuleDetailTabHeaderSlot from '@/views/traffic/routingRule/slots/conditionRuleDetailTabHeaderSlot.vue'
+import UpdateConditionRuleTabHeaderSlot from '@/views/traffic/routingRule/slots/updateConditionRuleTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -366,6 +367,36 @@ export const routes: Readonly<RouteRecordType[]> = [
                 meta: {
                   tab: true,
                   icon: 'oui:app-console'
+                }
+              }
+            ]
+          },
+          {
+            path: '/updateRoutingRule',
+            name: 'updateRoutingRule',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true,
+              hidden: true,
+              slots: {
+                header: UpdateConditionRuleTabHeaderSlot
+              }
+            },
+            children: [
+              {
+                path: '/updateByFormView/:ruleName',
+                name: 'updateRoutingRuleDomain.formView',
+                component: () => import('../views/traffic/routingRule/tabs/updateByFormView.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/updateByYAMLView/:ruleName',
+                name: 'updateRoutingRuleDomain.YAMLView',
+                component: () => import('../views/traffic/routingRule/tabs/updateByYAMLView.vue'),
+                meta: {
+                  tab: true
                 }
               }
             ]

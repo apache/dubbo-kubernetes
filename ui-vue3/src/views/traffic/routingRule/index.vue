@@ -19,8 +19,8 @@
     <search-table :search-domain="searchDomain">
       <template #customOperation>
         <a-button type="primary" @click="router.push('/traffic/addRoutingRule')"
-          >新增条件路由规则</a-button
-        >
+          >新增条件路由规则
+        </a-button>
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
@@ -38,17 +38,22 @@
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
-          <a-button type="link" @click="router.replace(`formview/${record.ruleName}`)">
+          <a-button type="link" @click="router.push(`formview/${record.ruleName}`)">
             查看
           </a-button>
-          <a-button type="link">修改</a-button>
+          <a-button
+            type="link"
+            @click="router.push(`/traffic/updateRoutingRule/updateByFormView/${record.ruleName}`)"
+          >
+            修改
+          </a-button>
           <a-popconfirm
             title="确认删除该条件路由规则？"
             ok-text="Yes"
             cancel-text="No"
             @confirm="confirm(record.ruleName)"
           >
-            <a-button type="link"> 删除 </a-button>
+            <a-button type="link"> 删除</a-button>
           </a-popconfirm>
         </template>
       </template>
