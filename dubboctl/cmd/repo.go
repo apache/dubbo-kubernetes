@@ -20,7 +20,7 @@ func RepoCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *co
 	re := removeCmd(cmd, clientFactory)
 	rc := &cobra.Command{
 		Use:   "repo",
-		Short: "Manage existing Dubbo SDK module libraries",
+		Short: "Manage exist Dubbo sdk module libraries",
 		Long:  "The repo command Manage existing Dubbo SDK module libraries",
 		Example: `  # Add a new template library.
   dubboctl repo add [name] [URL]
