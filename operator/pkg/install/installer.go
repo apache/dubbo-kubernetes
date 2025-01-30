@@ -202,7 +202,7 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 			}
 		}
 	}
-	return errs.ToErrors()
+	return errs.ToError()
 }
 
 var componentDependencies = map[component.Name][]component.Name{

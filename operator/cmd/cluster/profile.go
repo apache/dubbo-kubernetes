@@ -1,12 +1,15 @@
 package cluster
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/helm"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
+	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
 	"sort"
+	"strings"
 )
 
 const (
@@ -64,9 +67,10 @@ func ProfileCmd(ctx cli.Context) *cobra.Command {
 			"  dubboctl profile list\n" +
 			"  dubboctl install --set profile=demo",
 	}
-	pc.AddCommand(plc)
 	addProfileListFlags(plc, plArgs)
 	addProfileShowFlags(psc, psArgs)
+	pc.AddCommand(plc)
+	pc.AddCommand(psc)
 	AddFlags(pc, rootArgs)
 	return pc
 }
@@ -86,7 +90,7 @@ func profileListCmd(rootArgs *RootArgs, plArgs *profileListArgs) *cobra.Command 
 func profileShowCmd(rootArgs *RootArgs, pdArgs *profileShowArgs) *cobra.Command {
 	return &cobra.Command{
 		Use:   "show [<profile>]",
-		Short: "Show an Dubbo configuration profile",
+		Short: "Shows an Dubbo configuration profile",
 		Long:  "The show subcommand show the values in an Dubbo configuration profile.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 1 {
@@ -135,5 +139,56 @@ func profileShow(args []string, rootArgs *RootArgs, pdArgs *profileShowArgs, l c
 		setFlags = append(setFlags, "profile="+args[0])
 	}
 
+	y, _, err := GenerateConfig(pdArgs.filenames, setFlags, nil, l)
+	if err != nil {
+		return err
+	}
+
+	switch pdArgs.outputFormat {
+	case jsonOutput:
+		j, err := yamlToPrettyJSON(y)
+		if err != nil {
+			return err
+		}
+		l.Print(j + "\n")
+	case yamlOutput:
+		l.Print(y + "\n")
+	case flagsOutput:
+		f, err := yamlToFlags(y)
+		if err != nil {
+			return err
+		}
+		l.Print(strings.Join(f, "\n") + "\n")
+	}
+
 	return nil
+}
+
+func yamlToFlags(yml string) ([]string, error) {
+
+	uglyJSON, err := yaml.YAMLToJSON([]byte(yml))
+	if err != nil {
+		return []string{}, err
+	}
+	var decoded map[string]interface{}
+	if err := json.Unmarshal(uglyJSON, &decoded); err != nil {
+		return []string{}, err
+	}
+	return nil, nil
+}
+
+func yamlToPrettyJSON(yml string) (string, error) {
+	uglyJSON, err := yaml.YAMLToJSON([]byte(yml))
+	if err != nil {
+		return "", err
+	}
+	var decoded map[string]interface{}
+	if err := json.Unmarshal(uglyJSON, &decoded); err != nil {
+		return "", err
+	}
+	prettyJSON, err := json.MarshalIndent(decoded, "", "    ")
+	if err != nil {
+		return "", err
+	}
+	return string(prettyJSON), nil
 }

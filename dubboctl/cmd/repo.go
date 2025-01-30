@@ -23,13 +23,13 @@ func RepoCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *co
 		Short: "Manage exist Dubbo sdk module libraries",
 		Long:  "The repo command Manage existing Dubbo SDK module libraries",
 		Example: `  # Add a new template library.
-  dubboctl repo add [name] [URL]
+  dubboctl repo add [<name>] [<url>]
 	
   # View the list of template library.
   dubboctl repo list
 	
   # Remove an existing template library.
-  dubboctl repo remove [name]
+  dubboctl repo remove [<name>]
 `,
 	}
 
@@ -43,7 +43,7 @@ func RepoCmd(_ cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *co
 
 func addCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	ac := &cobra.Command{
-		Use:   "add [name] [URL]",
+		Use:   "add [<name>] [<url>]",
 		Short: "Add a new template library.",
 		Long:  "The add subcommand is used to add a new template library.",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -54,14 +54,14 @@ func addCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 }
 
 func runAdd(cmd *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
-	if err = util.CreatePath(); err != nil {
+	if err = util.GetCreatePath(); err != nil {
 		return
 	}
 	client, done := clientFactory()
 	defer done()
 
 	if len(args) != 2 {
-		return fmt.Errorf("Usage: dubboctl repo add [name] [URL]")
+		return fmt.Errorf("Usage: dubboctl repo add [<name>] [<url>]")
 	}
 
 	p := struct {
@@ -114,7 +114,7 @@ func runList(cmd *cobra.Command, args []string, clientFactory ClientFactory) (er
 
 func removeCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	rc := &cobra.Command{
-		Use:     "remove [name]",
+		Use:     "remove [<name>]",
 		Short:   "Remove an existing template library.",
 		Long:    "The delete subcommand is used to delete a template from an existing repository.",
 		Aliases: []string{"delete"},

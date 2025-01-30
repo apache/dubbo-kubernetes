@@ -83,7 +83,7 @@ func (v *validator) validateResource(dubboNamespace string, un *unstructured.Uns
 				return nil, err
 			}
 			if len(warnings) > 0 {
-				return validation.Warning(warnings.ToErrors()), nil
+				return validation.Warning(warnings.ToError()), nil
 			}
 		}
 	}

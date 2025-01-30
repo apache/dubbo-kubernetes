@@ -94,7 +94,7 @@ func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsLi
 			}
 		}
 	}
-	return errs.ToErrors()
+	return errs.ToError()
 }
 
 func DeleteResource(kc kube.CLIClient, dryRun bool, _ clog.Logger, obj *unstructured.Unstructured) error {
