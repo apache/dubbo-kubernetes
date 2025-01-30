@@ -139,7 +139,7 @@ func profileShow(args []string, rootArgs *RootArgs, pdArgs *profileShowArgs, l c
 		setFlags = append(setFlags, "profile="+args[0])
 	}
 
-	y, _, err := GenerateConfig(pdArgs.filenames, setFlags, nil, l)
+	y, _, err := GenerateConfig(pdArgs.filenames, setFlags, l)
 	if err != nil {
 		return err
 	}

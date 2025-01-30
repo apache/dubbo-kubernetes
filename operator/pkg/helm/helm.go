@@ -13,6 +13,7 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -22,9 +23,10 @@ import (
 const (
 	// NotesFileNameSuffix is the file name suffix for helm notes.
 	// see https://helm.sh/docs/chart_template_guide/notes_files/
-	NotesFileNameSuffix = ".txt"
-	BaseChartName       = "base"
-	profilesDirName     = "profiles"
+	NotesFileNameSuffix    = ".txt"
+	BaseChartName          = "base"
+	profilesDirName        = "profiles"
+	DefaultProfileFilename = "default.yaml"
 )
 
 type Warnings = util.Errors
@@ -163,4 +165,62 @@ func stringBoolMapToSlice(m map[string]bool) []string {
 		}
 	}
 	return s
+}
+
+func GetProfileYAML(installPackagePath, profileOrPath string) (string, error) {
+	if profileOrPath == "" {
+		profileOrPath = "default"
+	}
+	profiles, err := readProfiles(installPackagePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read profiles: %v", err)
+	}
+	if profiles[profileOrPath] && installPackagePath != "" {
+		profileOrPath = filepath.Join(installPackagePath, "profiles", profileOrPath+".yaml")
+	}
+	baseCRYAML, err := ReadProfileYAML(profileOrPath, installPackagePath)
+	if err != nil {
+		return "", err
+	}
+
+	return baseCRYAML, nil
+}
+
+func readFile(path string) (string, error) {
+	b, err := ioutil.ReadFile(path)
+	return string(b), err
+}
+
+func ReadProfileYAML(profile, manifestsPath string) (string, error) {
+	var err error
+	var globalValues string
+
+	switch {
+	case util.IsFilePath(profile):
+		if globalValues, err = readFile(profile); err != nil {
+			return "", err
+		}
+	default:
+		if globalValues, err = LoadValues(profile, manifestsPath); err != nil {
+			return "", fmt.Errorf("failed to read profile %v from %v: %v", profile, manifestsPath, err)
+		}
+	}
+
+	return globalValues, nil
+}
+
+func LoadValues(profileName string, chartsDir string) (string, error) {
+	path := strings.Join([]string{profilesDirName, builtinProfileToFilename(profileName)}, "/")
+	by, err := fs.ReadFile(manifests.BuiltinDir(chartsDir), path)
+	if err != nil {
+		return "", err
+	}
+	return string(by), nil
+}
+
+func builtinProfileToFilename(name string) string {
+	if name == "" {
+		return DefaultProfileFilename
+	}
+	return name + ".yaml"
 }
