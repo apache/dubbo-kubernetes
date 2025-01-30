@@ -44,10 +44,8 @@ func addProfileListFlags(cmd *cobra.Command, args *profileListArgs) {
 	cmd.PersistentFlags().StringVarP(&args.manifestsPath, "manifests", "d", "", "Specify a path to a directory of charts and profiles")
 }
 
-func addProfileShowFlags(cmd *cobra.Command, args *profileShowArgs) {
+func addProfileDescFlags(cmd *cobra.Command, args *profileShowArgs) {
 	cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filenames", "f", nil, "")
-	cmd.PersistentFlags().StringVarP(&args.configPath, "config-path", "p", "",
-		"The path the root of the configuration subtree to dump e.g. components.pilot. By default, dump whole tree")
 	cmd.PersistentFlags().StringVarP(&args.outputFormat, "output", "o", yamlOutput,
 		"Output format: one of json|yaml|flags")
 	cmd.PersistentFlags().StringVarP(&args.manifestsPath, "manifests", "d", "", "")
@@ -58,7 +56,7 @@ func ProfileCmd(ctx cli.Context) *cobra.Command {
 	plArgs := &profileListArgs{}
 	psArgs := &profileShowArgs{}
 	plc := profileListCmd(rootArgs, plArgs)
-	psc := profileShowCmd(rootArgs, psArgs)
+	pdc := profileDescCmd(rootArgs, psArgs)
 	pc := &cobra.Command{
 		Use:   "profile",
 		Short: "Commands related to Dubbo configuration profiles",
@@ -68,9 +66,9 @@ func ProfileCmd(ctx cli.Context) *cobra.Command {
 			"  dubboctl install --set profile=demo",
 	}
 	addProfileListFlags(plc, plArgs)
-	addProfileShowFlags(psc, psArgs)
+	addProfileDescFlags(pdc, psArgs)
 	pc.AddCommand(plc)
-	pc.AddCommand(psc)
+	pc.AddCommand(pdc)
 	AddFlags(pc, rootArgs)
 	return pc
 }
@@ -87,11 +85,11 @@ func profileListCmd(rootArgs *RootArgs, plArgs *profileListArgs) *cobra.Command 
 	}
 }
 
-func profileShowCmd(rootArgs *RootArgs, pdArgs *profileShowArgs) *cobra.Command {
+func profileDescCmd(rootArgs *RootArgs, pdArgs *profileShowArgs) *cobra.Command {
 	return &cobra.Command{
-		Use:   "show [<profile>]",
-		Short: "Shows an Dubbo configuration profile",
-		Long:  "The show subcommand show the values in an Dubbo configuration profile.",
+		Use:   "desc [<profile>]",
+		Short: "Describes an Dubbo configuration profile",
+		Long:  "The desc subcommand describe the values in an Dubbo configuration profile.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 1 {
 				return fmt.Errorf("too many positional arguments")
@@ -100,7 +98,7 @@ func profileShowCmd(rootArgs *RootArgs, pdArgs *profileShowArgs) *cobra.Command 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			l := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
-			return profileShow(args, rootArgs, pdArgs, l)
+			return profileDesc(args, rootArgs, pdArgs, l)
 		},
 	}
 }
@@ -123,7 +121,7 @@ func profileList(cmd *cobra.Command, args *RootArgs, plArgs *profileListArgs) er
 	return nil
 }
 
-func profileShow(args []string, rootArgs *RootArgs, pdArgs *profileShowArgs, l clog.Logger) error {
+func profileDesc(args []string, rootArgs *RootArgs, pdArgs *profileShowArgs, l clog.Logger) error {
 	if len(args) == 1 && pdArgs.filenames != nil {
 		return fmt.Errorf("cannot specify both profile name and filename flag")
 	}

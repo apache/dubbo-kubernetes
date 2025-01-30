@@ -13,20 +13,24 @@ import (
 type DubboOperator struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty""`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// +optional
 	Spec DubboOperatorSpec `json:"spec,omitempty"`
 }
 
 type DubboOperatorSpec struct {
-	Profile    string              `json:"profile,omitempty"`
-	Components *DubboComponentSpec `json:"components,omitempty"`
-	Values     json.RawMessage     `json:"values,omitempty"`
+	Profile    string                   `json:"profile,omitempty"`
+	Dashboard  *DubboAdminDashboardSpec `json:"dashboard,omitempty"`
+	Components *DubboComponentSpec      `json:"components,omitempty"`
+	Values     json.RawMessage          `json:"values,omitempty"`
 }
 
 type DubboComponentSpec struct {
-	Base  *BaseComponentSpec `json:"base,omitempty"`
-	Admin *ComponentSpec     `json:"admin,omitempty"`
+	Base *BaseComponentSpec `json:"base,omitempty"`
+}
+
+type DubboAdminDashboardSpec struct {
+	Admin *ComponentSpec `json:"admin,omitempty"`
 }
 
 type BaseComponentSpec struct {

@@ -20,5 +20,6 @@ spec:
   components:
     base:
       enabled: false
+  dashboard:
     admin:
       enabled: false
