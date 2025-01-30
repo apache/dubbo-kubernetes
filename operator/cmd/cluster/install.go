@@ -30,14 +30,14 @@ type installArgs struct {
 
 func (i *installArgs) String() string {
 	var b strings.Builder
-	b.WriteString("files:    " + (fmt.Sprint(i.files) + "\n"))
+	b.WriteString("filenames:    " + (fmt.Sprint(i.files) + "\n"))
 	b.WriteString("sets:    " + (fmt.Sprint(i.sets) + "\n"))
 	b.WriteString("waitTimeout: " + fmt.Sprint(i.waitTimeout) + "\n")
 	return b.String()
 }
 
 func addInstallFlags(cmd *cobra.Command, args *installArgs) {
-	cmd.PersistentFlags().StringSliceVarP(&args.files, "files", "f", nil, `Path to the file containing the dubboOperator's custom resources.`)
+	cmd.PersistentFlags().StringSliceVarP(&args.files, "filenames", "f", nil, `Path to the file containing the dubboOperator's custom resources.`)
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
 	cmd.PersistentFlags().DurationVar(&args.waitTimeout, "wait-timeout", 300*time.Second, "Maximum time to wait for Dubbo resources in each component to be ready.")
