@@ -53,18 +53,17 @@ func NewPrinterForWriter(w io.Writer) Printer {
 	return &writerPrinter{writer: w}
 }
 
-func GenerateConfig(filenames []string, setFlags []string, force bool, kubeConfig *rest.Config,
-	l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
+func GenerateConfig(filenames []string, setFlags []string,
+	kubeConfig *rest.Config, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
 	if err := validateSetFlags(setFlags); err != nil {
 		return "", nil, err
 	}
 
-	_, _, err := readYamlProfile(filenames, setFlags, force, l)
+	fy, profile, err := readYamlProfile(filenames, setFlags, l)
 	if err != nil {
 		return "", nil, err
 	}
-
-	return "", nil, err
+	return overlayYAMLStrings(profile, fy, setFlags, kubeConfig, l)
 }
 
 func validateSetFlags(setFlags []string) error {
@@ -77,23 +76,39 @@ func validateSetFlags(setFlags []string) error {
 	return nil
 }
 
-func readYamlProfile(filenames []string, setFlags []string, force bool, l clog.Logger) (string, string, error) {
+func overlayYAMLStrings(
+	profile string, fy string,
+	setFlags []string, kubeConfig *rest.Config, l clog.Logger,
+) (string, *dopv1alpha1.DubboOperator, error) {
+	dopsString, dops, err := GenDOPFromProfile(profile, fy, setFlags, kubeConfig, l)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return dopsString, dops, nil
+}
+
+func GenDOPFromProfile(profileOrPath, fileOverlayYAML string, setFlags []string, kubeConfig *rest.Config, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
+	return "", nil, nil
+}
+
+func readYamlProfile(filenames []string, setFlags []string, l clog.Logger) (string, string, error) {
 	profile := DefaultProfileName
-	fy, fp, err := ParseYAMLfilenames(filenames, force, l)
+	fy, fp, err := ParseYAMLfilenames(filenames, l)
 	if err != nil {
 		return "", "", err
 	}
 	if fp != "" {
 		profile = fp
 	}
-	psf := GetValueForSetFlag(setFlags, "profile")
+	psf := getValueForSetFlag(setFlags, "profile")
 	if psf != "" {
 		profile = psf
 	}
 	return fy, profile, nil
 }
 
-func ParseYAMLfilenames(filenames []string, force bool, l clog.Logger) (overlayYAML string, profile string, err error) {
+func ParseYAMLfilenames(filenames []string, l clog.Logger) (overlayYAML string, profile string, err error) {
 	if filenames == nil {
 		return "", "", nil
 	}
@@ -130,7 +145,7 @@ func readLayeredYAMLs(filenames []string, stdinReader io.Reader) (string, error)
 	return ly, nil
 }
 
-func GetValueForSetFlag(setFlags []string, path string) string {
+func getValueForSetFlag(setFlags []string, path string) string {
 	ret := ""
 	for _, sf := range setFlags {
 		p, v := getPV(sf)

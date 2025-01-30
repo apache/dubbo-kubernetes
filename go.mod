@@ -31,6 +31,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/fatih/color v1.18.0
 	github.com/fullstorydev/grpcurl v1.9.1
+	github.com/ghodss/yaml v1.0.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-co-op/gocron v1.9.0
 	github.com/go-git/go-billy/v5 v5.6.2
