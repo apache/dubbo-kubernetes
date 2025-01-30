@@ -3,10 +3,11 @@ package cluster
 import (
 	"fmt"
 	dopv1alpha1 "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/helm"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"io"
 	"io/ioutil"
-	"k8s.io/client-go/rest"
 	"os"
 	"strings"
 )
@@ -53,8 +54,7 @@ func NewPrinterForWriter(w io.Writer) Printer {
 	return &writerPrinter{writer: w}
 }
 
-func GenerateConfig(filenames []string, setFlags []string,
-	kubeConfig *rest.Config, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
+func GenerateConfig(filenames []string, setFlags []string, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
 	if err := validateSetFlags(setFlags); err != nil {
 		return "", nil, err
 	}
@@ -63,7 +63,7 @@ func GenerateConfig(filenames []string, setFlags []string,
 	if err != nil {
 		return "", nil, err
 	}
-	return overlayYAMLStrings(profile, fy, setFlags, kubeConfig, l)
+	return overlayYAMLStrings(profile, fy, setFlags, l)
 }
 
 func validateSetFlags(setFlags []string) error {
@@ -78,18 +78,37 @@ func validateSetFlags(setFlags []string) error {
 
 func overlayYAMLStrings(
 	profile string, fy string,
-	setFlags []string, kubeConfig *rest.Config, l clog.Logger,
+	setFlags []string, l clog.Logger,
 ) (string, *dopv1alpha1.DubboOperator, error) {
-	dopsString, dops, err := GenDOPFromProfile(profile, fy, setFlags, kubeConfig, l)
+	dopsString, dops, err := GenDOPFromProfile(profile, fy, setFlags, l)
+	if err != nil {
+		return "", nil, err
+	}
+	return dopsString, dops, nil
+}
+
+func GenDOPFromProfile(profileOrPath, fileOverlayYAML string, setFlags []string, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
+	outYAML, err := helm.GetProfileYAML("", profileOrPath)
+	if err != nil {
+		return "", nil, err
+	}
+	finalIOP, err := unmarshalDOP(outYAML, false, l)
 	if err != nil {
 		return "", nil, err
 	}
 
-	return dopsString, dops, nil
+	if finalIOP.Spec.Profile == "" {
+		finalIOP.Spec.Profile = DefaultProfileName
+	}
+	return util.ToYAMLWithJSONPB(finalIOP), finalIOP, nil
 }
 
-func GenDOPFromProfile(profileOrPath, fileOverlayYAML string, setFlags []string, kubeConfig *rest.Config, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
-	return "", nil, nil
+func unmarshalDOP(dopsYAML string, allowUnknownField bool, l clog.Logger) (*dopv1alpha1.DubboOperator, error) {
+	dop := &dopv1alpha1.DubboOperator{}
+	if err := util.UnmarshalWithJSONPB(dopsYAML, dop, allowUnknownField); err != nil {
+		return nil, fmt.Errorf("could not unmarshal merged YAML: %s\n\nYAML:\n%s", err, dopsYAML)
+	}
+	return dop, nil
 }
 
 func readYamlProfile(filenames []string, setFlags []string, l clog.Logger) (string, string, error) {

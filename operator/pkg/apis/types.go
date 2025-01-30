@@ -2,7 +2,7 @@ package apis
 
 import (
 	"encoding/json"
-
+	proto "github.com/gogo/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -47,9 +47,13 @@ type BoolValue struct {
 	bool
 }
 
-func (b *BoolValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(b.GetValueOrFalse())
-}
+func (d *DubboOperator) Reset() { *d = DubboOperator{} }
+
+func (d *DubboOperator) String() string { return proto.CompactTextString(d) }
+
+func (*DubboOperator) ProtoMessage() {}
+
+func (b *BoolValue) MarshalJSON() ([]byte, error) { return json.Marshal(b.GetValueOrFalse()) }
 
 func (b *BoolValue) UnmarshalJSON(bytes []byte) error {
 	bb := false
