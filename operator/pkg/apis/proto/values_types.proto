@@ -22,14 +22,8 @@ message ArchConfig {
 
 // Global Configuration for Dubbo components.
 message GlobalConfig {
-  // Deprecated: replaced by the affinity k8s settings which allows architecture nodeAffinity configuration of this behavior.
-  ArchConfig arch = 1 [deprecated = true];
-
-  // Controls whether the server-side validation is enabled.
-  google.protobuf.BoolValue configValidation = 2;
-
-  // Specifies the default namespace for the dubbo control plane components.
-  string dubboNamespace = 14;
+  // Specifies the default namespace.
+  string dubboNamespace = 1;
 }
 
 message BaseConfig {
@@ -45,7 +39,7 @@ message Values {
   BaseConfig base = 2;
 
   // Specifies which installation configuration profile to apply.
-  string profile = 4;
+  string profile = 3;
 }
 
 // IntOrString is a type that can hold an int32 or a string.  When used in
