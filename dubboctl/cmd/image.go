@@ -4,11 +4,45 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
+	"github.com/ory/viper"
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
 )
+
+type BuildConfig struct {
+	Build bool
+}
+
+type PushConfig struct {
+	Push bool
+}
+
+type ApplyConfig struct {
+	Apply bool
+}
+
+func newBuildConfig(cmd *cobra.Command) *BuildConfig {
+	bc := &BuildConfig{
+		Build: viper.GetBool("build"),
+	}
+	return bc
+}
+
+func newPushConfig(cmd *cobra.Command) *PushConfig {
+	pc := &PushConfig{
+		Push: viper.GetBool("push"),
+	}
+	return pc
+}
+
+func newApplyConfig(cmd *cobra.Command) *ApplyConfig {
+	ac := &ApplyConfig{
+		Apply: viper.GetBool("apply"),
+	}
+	return ac
+}
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	ibc := imageBuildCmd(cmd, clientFactory)
