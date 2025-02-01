@@ -19,6 +19,7 @@ type Client struct {
 	templates        *Templates
 	repositories     *Repositories
 	repositoriesPath string
+	builder          Builder
 }
 
 type Builder interface {
@@ -135,6 +136,25 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	}
 
 	return dubbo.NewDubboConfig(oldRoot)
+}
+
+type BuildOptions struct{}
+
+type BuildOption func(c *BuildOptions)
+
+func (c *Client) Build(ctx context.Context, dcfg *dubbo.DubboConfig, options ...BuildOption) (*dubbo.DubboConfig, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	bo := BuildOptions{}
+	for _, o := range options {
+		o(&bo)
+	}
+	if err := c.builder.Build(ctx, dcfg); err != nil {
+		return dcfg, err
+	}
+	fmt.Printf("Application built: %v\n", dcfg.Image)
+	return dcfg, nil
 }
 
 func hasInitialized(path string) (bool, error) {
@@ -258,5 +278,11 @@ func runDataDir(root string) error {
 func WithRepositoriesPath(path string) Option {
 	return func(c *Client) {
 		c.repositoriesPath = path
+	}
+}
+
+func WithBuilder(b Builder) Option {
+	return func(c *Client) {
+		c.builder = b
 	}
 }

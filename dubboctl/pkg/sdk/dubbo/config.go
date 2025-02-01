@@ -21,6 +21,7 @@ const (
 type DubboConfig struct {
 	Root     string    `yaml:"-"`
 	Name     string    `yaml:"name,omitempty" jsonschema:"pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"`
+	Image    string    `yaml:"image,omitempty"`
 	Runtime  string    `yaml:"runtime,omitempty"`
 	Template string    `yaml:"template,omitempty"`
 	Created  time.Time `yaml:"created,omitempty"`
