@@ -13,5 +13,5 @@ func dubboArt() string {
 }
 
 func DubboColoredArt() string {
-	return color.New(color.FgHiCyan).Add(color.Bold).Sprint(dubboASCIIArt)
+	return color.New(color.FgHiBlue).Add(color.Bold).Sprint(dubboASCIIArt)
 }
