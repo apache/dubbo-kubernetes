@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
@@ -18,6 +19,35 @@ type Client struct {
 	templates        *Templates
 	repositories     *Repositories
 	repositoriesPath string
+}
+
+type Builder interface {
+	Build(context.Context, *dubbo.DubboConfig) error
+}
+
+type Pusher interface {
+	Push(ctx context.Context, dcfg *dubbo.DubboConfig) (string, error)
+}
+
+type DeploymentResult struct {
+	Status    Status
+	Namespace string
+}
+
+type Status int
+
+const (
+	Failed Status = iota
+	Deployed
+)
+
+type DeployParams struct {
+	skipBuiltCheck bool
+}
+type DeployOption func(f *DeployParams)
+
+type Deployer interface {
+	Deploy(context.Context, *dubbo.DubboConfig, ...DeployOption) (DeploymentResult, error)
 }
 
 type Option func(client *Client)

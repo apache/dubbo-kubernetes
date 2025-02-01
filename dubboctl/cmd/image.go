@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/ory/viper"
 	"github.com/spf13/cobra"
 	"os"
@@ -13,19 +14,23 @@ import (
 
 type BuildConfig struct {
 	Build bool
+	Path  string
 }
 
 type PushConfig struct {
 	Push bool
+	Path string
 }
 
 type ApplyConfig struct {
 	Apply bool
+	Path  string
 }
 
 func newBuildConfig(cmd *cobra.Command) *BuildConfig {
 	bc := &BuildConfig{
 		Build: viper.GetBool("build"),
+		Path:  viper.GetString("path"),
 	}
 	return bc
 }
@@ -33,6 +38,7 @@ func newBuildConfig(cmd *cobra.Command) *BuildConfig {
 func newPushConfig(cmd *cobra.Command) *PushConfig {
 	pc := &PushConfig{
 		Push: viper.GetBool("push"),
+		Path: viper.GetString("path"),
 	}
 	return pc
 }
@@ -40,6 +46,7 @@ func newPushConfig(cmd *cobra.Command) *PushConfig {
 func newApplyConfig(cmd *cobra.Command) *ApplyConfig {
 	ac := &ApplyConfig{
 		Apply: viper.GetBool("apply"),
+		Path:  viper.GetString("path"),
 	}
 	return ac
 }
@@ -73,6 +80,19 @@ func imageBuildCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comma
 }
 
 func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+	if err := util.GetCreatePath(); err != nil {
+		return err
+	}
+	config := newBuildConfig(cmd)
+
+	fp, err := dubbo.NewDubboConfig(config.Path)
+	if err != nil {
+		return err
+	}
+
+	if !fp.Initialized() {
+	}
+
 	return fmt.Errorf("TODO")
 }
 
@@ -90,6 +110,19 @@ func imagePushCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comman
 }
 
 func runPush(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+	if err := util.GetCreatePath(); err != nil {
+		return err
+	}
+	config := newPushConfig(cmd)
+
+	fp, err := dubbo.NewDubboConfig(config.Path)
+	if err != nil {
+		return err
+	}
+
+	if !fp.Initialized() {
+	}
+
 	return fmt.Errorf("TODO")
 }
 
@@ -107,7 +140,21 @@ func imageApplyCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comma
 }
 
 func runApply(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
-	if err := applyToCluster(cmd, nil); err != nil {
+	if err := util.GetCreatePath(); err != nil {
+		return err
+	}
+
+	config := newApplyConfig(cmd)
+
+	fp, err := dubbo.NewDubboConfig(config.Path)
+	if err != nil {
+		return err
+	}
+
+	if !fp.Initialized() {
+	}
+
+	if err := applyToCluster(cmd, fp); err != nil {
 		return err
 	}
 
