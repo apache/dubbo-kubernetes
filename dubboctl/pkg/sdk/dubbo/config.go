@@ -22,13 +22,34 @@ const (
 )
 
 type DubboConfig struct {
-	Root        string    `yaml:"-"`
-	Name        string    `yaml:"name,omitempty" jsonschema:"pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"`
-	Image       string    `yaml:"image,omitempty"`
-	ImageDigest string    `yaml:"-"`
-	Runtime     string    `yaml:"runtime,omitempty"`
-	Template    string    `yaml:"template,omitempty"`
-	Created     time.Time `yaml:"created,omitempty"`
+	Root        string     `yaml:"-"`
+	Name        string     `yaml:"name,omitempty" jsonschema:"pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"`
+	Image       string     `yaml:"image,omitempty"`
+	ImageDigest string     `yaml:"-"`
+	Runtime     string     `yaml:"runtime,omitempty"`
+	Template    string     `yaml:"template,omitempty"`
+	Created     time.Time  `yaml:"created,omitempty"`
+	Build       BuildSpec  `yaml:"build,omitempty"`
+	Deploy      DeploySpec `yaml:"deploy,omitempty"`
+}
+
+type BuildSpec struct {
+	BuilderImages map[string]string `yaml:"builderImages,omitempty"`
+	Buildpacks    []string          `yaml:"buildpacks,omitempty"`
+	BuildEnvs     []Env             `json:"buildEnvs,omitempty"`
+}
+
+type DeploySpec struct {
+	Namespace     string `yaml:"namespace,omitempty"`
+	Output        string `yaml:"output,omitempty"`
+	ContainerPort int    `yaml:"containerPort,omitempty"`
+	TargetPort    int    `yaml:"targetPort,omitempty"`
+	NodePort      int    `yaml:"nodePort,omitempty"`
+}
+
+type Env struct {
+	Name  *string `yaml:"name,omitempty" jsonschema:"pattern=^[-._a-zA-Z][-._a-zA-Z0-9]*$"`
+	Value *string `yaml:"value,omitempty"`
 }
 
 func NewDubboConfig(path string) (*DubboConfig, error) {

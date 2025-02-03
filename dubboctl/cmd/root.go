@@ -18,6 +18,7 @@ package cmd
 import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/deployer"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/validate"
@@ -34,14 +35,22 @@ type ClientFactory func(...sdk.Option) (*sdk.Client, func())
 
 func NewClientFactory(options ...sdk.Option) (*sdk.Client, func()) {
 	var (
+		d = newDubboDeployer()
 		o = []sdk.Option{
 			sdk.WithRepositoriesPath(util.RepositoriesPath()),
+			sdk.WithDeployer(d),
 		}
 	)
 	client := sdk.New(append(o, options...)...)
 
 	cleanup := func() {}
 	return client, cleanup
+}
+
+func newDubboDeployer() sdk.Deployer {
+	var options []deployer.DeployerOption
+
+	return deployer.NewDeployer(options...)
 }
 
 func AddFlags(cmd *cobra.Command) {
