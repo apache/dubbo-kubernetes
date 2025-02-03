@@ -40,7 +40,6 @@ func readSecret(prompt string) (pw []byte, err error) {
 			return pw, err
 		}
 	}
-
 }
 
 func NewPasswordCbk() PasswordCallback {
