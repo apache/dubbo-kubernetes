@@ -1,10 +1,13 @@
 package dubbo
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,19 +15,20 @@ import (
 )
 
 const (
-	DubboYamlFile   = "dubbo.yaml"
+	DubboLogFile    = ".dubbo/dubbo.log"
 	Dockerfile      = "Dockerfile"
 	DataDir         = ".dubbo"
 	DefaultTemplate = "common"
 )
 
 type DubboConfig struct {
-	Root     string    `yaml:"-"`
-	Name     string    `yaml:"name,omitempty" jsonschema:"pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"`
-	Image    string    `yaml:"image,omitempty"`
-	Runtime  string    `yaml:"runtime,omitempty"`
-	Template string    `yaml:"template,omitempty"`
-	Created  time.Time `yaml:"created,omitempty"`
+	Root        string    `yaml:"-"`
+	Name        string    `yaml:"name,omitempty" jsonschema:"pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"`
+	Image       string    `yaml:"image,omitempty"`
+	ImageDigest string    `yaml:"-"`
+	Runtime     string    `yaml:"runtime,omitempty"`
+	Template    string    `yaml:"template,omitempty"`
+	Created     time.Time `yaml:"created,omitempty"`
 }
 
 func NewDubboConfig(path string) (*DubboConfig, error) {
@@ -45,7 +49,7 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 		return nil, fmt.Errorf("function path must be a directory")
 	}
 
-	filename := filepath.Join(path, DubboYamlFile)
+	filename := filepath.Join(path, DubboLogFile)
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
 			err = nil
@@ -78,7 +82,7 @@ func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig 
 }
 
 func (dc *DubboConfig) WriteYamlFile() (err error) {
-	file := filepath.Join(dc.Root, DubboYamlFile)
+	file := filepath.Join(dc.Root, DubboLogFile)
 	var bytes []byte
 	if bytes, err = yaml.Marshal(dc); err != nil {
 		return
@@ -113,7 +117,7 @@ func (dc *DubboConfig) Validate() error {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("'%v' contains errors:", DubboYamlFile))
+	b.WriteString(fmt.Sprintf("'%v' contains errors:", DubboLogFile))
 
 	for _, ee := range errs {
 		if len(ee) > 0 {
@@ -130,6 +134,69 @@ func (dc *DubboConfig) Validate() error {
 	}
 
 	return errors.New(b.String())
+}
+
+func (dc *DubboConfig) BuildStamp() string {
+	path := filepath.Join(dc.Root, DataDir, "built")
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func (dc *DubboConfig) Built() bool {
+	// If there is no build stamp, it is not built.
+	stamp := dc.BuildStamp()
+	if stamp == "" {
+		return false
+	}
+
+	if dc.Image == "" {
+		return false
+	}
+
+	hash, _, err := Fingerprint(dc)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error calculating function's fingerprint: %v\n", err)
+		return false
+	}
+	return stamp == hash
+}
+
+func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
+	h := sha256.New()   // Hash builder
+	l := bytes.Buffer{} // Log buffer
+
+	root := dc.Root
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return "", "", err
+	}
+	// TODO
+	output := ""
+
+	err = filepath.Walk(abs, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == root {
+			return nil
+		}
+		if info.IsDir() && (info.Name() == DataDir || info.Name() == ".git" || info.Name() == ".idea") {
+			return filepath.SkipDir
+		}
+		if info.Name() == DubboLogFile || info.Name() == Dockerfile || info.Name() == output {
+			return nil
+		}
+		fmt.Fprintf(h, "%v:%v:", path, info.ModTime().UnixNano())   // Write to the Hashed
+		fmt.Fprintf(&l, "%v:%v\n", path, info.ModTime().UnixNano()) // Write to the Log
+		return nil
+	})
+	return fmt.Sprintf("%x", h.Sum(nil)), l.String(), err
 }
 
 func validateOptions() []string {
