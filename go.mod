@@ -20,10 +20,13 @@ go 1.23.0
 require (
 	dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240926033233-f03922ab1bcb
 	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Microsoft/go-winio v0.6.1
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/bakito/go-log-logr-adapter v0.0.2
 	github.com/cheggaaa/pb/v3 v3.1.5
+	github.com/docker/cli v23.0.1+incompatible
 	github.com/docker/docker v23.0.1+incompatible
+	github.com/docker/go-connections v0.4.0
 	github.com/dubbogo/go-zookeeper v1.0.4-0.20211212162352-f9d2183d89d5
 	github.com/dubbogo/gost v1.14.0
 	github.com/emicklei/go-restful/v3 v3.11.0
@@ -67,10 +70,12 @@ require (
 	go.uber.org/atomic v1.10.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
+	golang.org/x/crypto v0.32.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/net v0.34.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.29.0
+	golang.org/x/term v0.28.0
 	golang.org/x/text v0.21.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240826202546-f6391c0de4c7
 	google.golang.org/grpc v1.65.0
@@ -100,7 +105,6 @@ require (
 	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
-	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/ProtonMail/go-crypto v1.1.3 // indirect
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
@@ -132,6 +136,9 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgraph-io/ristretto v0.0.1 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
+	github.com/docker/docker-credential-helpers v0.7.0 // indirect
+	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dop251/goja v0.0.0-20240220182346-e401ed450204 // indirect
 	github.com/dubbogo/grpc-go v1.42.10 // indirect
 	github.com/dubbogo/triple v1.2.2-rc3 // indirect
@@ -200,7 +207,6 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/moby/sys/symlink v0.3.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
@@ -209,6 +215,8 @@ require (
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.2 // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible // indirect
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852 // indirect
+	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
@@ -227,6 +235,7 @@ require (
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.2 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/smartystreets/assertions v1.0.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
@@ -262,10 +271,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.28.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
