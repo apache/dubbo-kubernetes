@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
@@ -16,6 +15,7 @@ import (
 type buildConfig struct {
 	Build bool
 	Path  string
+	Push  bool
 }
 
 func (c buildConfig) buildclientOptions() ([]sdk.Option, error) {
@@ -58,39 +58,37 @@ func newApplyConfig(cmd *cobra.Command) *applyConfig {
 }
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
-	ibc := imageBuildCmd(cmd, clientFactory)
 	ipc := imagePushCmd(cmd, clientFactory)
 	iac := imageApplyCmd(cmd, clientFactory)
 
 	ic := &cobra.Command{
 		Use:   "image",
-		Short: "Used to build images, push images, apply to cluster",
+		Short: "Used to build and push images, apply to cluster",
 	}
-	ic.AddCommand(ibc)
 	ic.AddCommand(ipc)
 	ic.AddCommand(iac)
 	return ic
 }
 
-func imageBuildCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
-	bc := &cobra.Command{
-		Use:     "build",
-		Short:   "build to images",
-		Long:    "The build subcommand used to build images",
+func imagePushCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	pc := &cobra.Command{
+		Use:     "push",
+		Short:   "Build and push to images",
+		Long:    "The push subcommand used to push images",
 		Example: "",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runBuild(cmd, args, clientFactory)
+			return runPush(cmd, args, clientFactory)
 		},
 	}
-	return bc
+	return pc
 }
 
-func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+func runPush(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
 	if err := util.GetCreatePath(); err != nil {
 		return err
 	}
-
 	config := newBuildConfig(cmd)
+
 	fp, err := dubbo.NewDubboConfig(config.Path)
 	if err != nil {
 		return err
@@ -108,44 +106,24 @@ func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) er
 	if fp, err = client.Build(cmd.Context(), fp); err != nil {
 		return err
 	}
-
-	return fmt.Errorf("TODO")
-}
-
-func imagePushCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
-	pc := &cobra.Command{
-		Use:     "push",
-		Short:   "push to images",
-		Long:    "The push subcommand used to push images",
-		Example: "",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPush(cmd, args, clientFactory)
-		},
+	if config.Push {
+		if fp, err = client.Push(cmd.Context(), fp); err != nil {
+			return err
+		}
 	}
-	return pc
-}
 
-func runPush(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
-	if err := util.GetCreatePath(); err != nil {
-		return err
-	}
-	config := newPushConfig(cmd)
-
-	fp, err := dubbo.NewDubboConfig(config.Path)
+	err = fp.WriteYamlFile()
 	if err != nil {
 		return err
 	}
 
-	if !fp.Initialized() {
-	}
-
-	return fmt.Errorf("TODO")
+	return nil
 }
 
 func imageApplyCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	ac := &cobra.Command{
 		Use:     "apply",
-		Short:   "apply to images",
+		Short:   "Deploy the images to the cluster",
 		Long:    "The apply subcommand used to apply images",
 		Example: "",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -169,7 +147,6 @@ func runApply(cmd *cobra.Command, args []string, clientFactory ClientFactory) er
 
 	if !fp.Initialized() {
 	}
-
 	if err := applyToCluster(cmd, fp); err != nil {
 		return err
 	}

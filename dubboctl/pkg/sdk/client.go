@@ -20,6 +20,7 @@ type Client struct {
 	repositories     *Repositories
 	repositoriesPath string
 	builder          Builder
+	pusher           Pusher
 }
 
 type Builder interface {
@@ -157,9 +158,21 @@ func (c *Client) Build(ctx context.Context, dcfg *dubbo.DubboConfig, options ...
 	return dcfg, nil
 }
 
+func (c *Client) Push(ctx context.Context, dc *dubbo.DubboConfig) (*dubbo.DubboConfig, error) {
+	if !dc.Built() {
+		return dc, errors.New("not built")
+	}
+	var err error
+	if dc.ImageDigest, err = c.pusher.Push(ctx, dc); err != nil {
+		return dc, err
+	}
+
+	return dc, nil
+}
+
 func hasInitialized(path string) (bool, error) {
 	var err error
-	filename := filepath.Join(path, dubbo.DubboYamlFile)
+	filename := filepath.Join(path, dubbo.DubboLogFile)
 
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
@@ -202,7 +215,7 @@ func assertEmptyRoot(path string) (err error) {
 }
 
 var contentiousFiles = []string{
-	dubbo.DubboYamlFile,
+	dubbo.DubboLogFile,
 	".gitignore",
 }
 
