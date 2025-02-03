@@ -75,6 +75,7 @@ func (d *dialer) Close() error {
 type ContextDialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
+
 type DialContextFn = func(ctx context.Context, network, addr string) (net.Conn, error)
 
 func NewDialContext(url *nurl.URL, config Config) (ContextDialer, string, error) {

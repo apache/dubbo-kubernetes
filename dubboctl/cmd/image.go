@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/ory/viper"
@@ -12,39 +13,44 @@ import (
 	"path/filepath"
 )
 
-type BuildConfig struct {
+type buildConfig struct {
 	Build bool
 	Path  string
 }
 
-type PushConfig struct {
+func (c buildConfig) buildclientOptions() ([]sdk.Option, error) {
+	var do []sdk.Option
+	return do, nil
+}
+
+type pushConfig struct {
 	Push bool
 	Path string
 }
 
-type ApplyConfig struct {
+type applyConfig struct {
 	Apply bool
 	Path  string
 }
 
-func newBuildConfig(cmd *cobra.Command) *BuildConfig {
-	bc := &BuildConfig{
+func newBuildConfig(cmd *cobra.Command) *buildConfig {
+	bc := &buildConfig{
 		Build: viper.GetBool("build"),
 		Path:  viper.GetString("path"),
 	}
 	return bc
 }
 
-func newPushConfig(cmd *cobra.Command) *PushConfig {
-	pc := &PushConfig{
+func newPushConfig(cmd *cobra.Command) *pushConfig {
+	pc := &pushConfig{
 		Push: viper.GetBool("push"),
 		Path: viper.GetString("path"),
 	}
 	return pc
 }
 
-func newApplyConfig(cmd *cobra.Command) *ApplyConfig {
-	ac := &ApplyConfig{
+func newApplyConfig(cmd *cobra.Command) *applyConfig {
+	ac := &applyConfig{
 		Apply: viper.GetBool("apply"),
 		Path:  viper.GetString("path"),
 	}
@@ -83,14 +89,24 @@ func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) er
 	if err := util.GetCreatePath(); err != nil {
 		return err
 	}
-	config := newBuildConfig(cmd)
 
+	config := newBuildConfig(cmd)
 	fp, err := dubbo.NewDubboConfig(config.Path)
 	if err != nil {
 		return err
 	}
 
 	if !fp.Initialized() {
+	}
+
+	clientOptions, err := config.buildclientOptions()
+	if err != nil {
+		return err
+	}
+	client, done := clientFactory(clientOptions...)
+	defer done()
+	if fp, err = client.Build(cmd.Context(), fp); err != nil {
+		return err
 	}
 
 	return fmt.Errorf("TODO")
