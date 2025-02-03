@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	fnssh "github.com/apache/dubbo-kubernetes/dubboctl/pkg/mirror/ssh"
+	fnssh "github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/ssh"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"

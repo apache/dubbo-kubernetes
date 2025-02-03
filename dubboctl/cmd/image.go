@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder/pack"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
@@ -20,6 +21,7 @@ type buildConfig struct {
 
 func (c buildConfig) buildclientOptions() ([]sdk.Option, error) {
 	var do []sdk.Option
+	do = append(do, sdk.WithBuilder(pack.NewBuilder()))
 	return do, nil
 }
 

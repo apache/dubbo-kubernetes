@@ -21,6 +21,7 @@ type Client struct {
 	repositoriesPath string
 	builder          Builder
 	pusher           Pusher
+	deployer         Deployer
 }
 
 type Builder interface {
@@ -29,6 +30,12 @@ type Builder interface {
 
 type Pusher interface {
 	Push(ctx context.Context, dcfg *dubbo.DubboConfig) (string, error)
+}
+
+type DeployOption func(f *DeployParams)
+
+type Deployer interface {
+	Deploy(context.Context, *dubbo.DubboConfig, ...DeployOption) (DeploymentResult, error)
 }
 
 type DeploymentResult struct {
@@ -46,12 +53,6 @@ const (
 type DeployParams struct {
 	skipBuiltCheck bool
 }
-type DeployOption func(f *DeployParams)
-
-type Deployer interface {
-	Deploy(context.Context, *dubbo.DubboConfig, ...DeployOption) (DeploymentResult, error)
-}
-
 type Option func(client *Client)
 
 func New(options ...Option) *Client {
@@ -165,6 +166,37 @@ func (c *Client) Push(ctx context.Context, dc *dubbo.DubboConfig) (*dubbo.DubboC
 	var err error
 	if dc.ImageDigest, err = c.pusher.Push(ctx, dc); err != nil {
 		return dc, err
+	}
+
+	return dc, nil
+}
+
+func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...DeployOption) (*dubbo.DubboConfig, error) {
+	deployParams := &DeployParams{skipBuiltCheck: false}
+	for _, opt := range opts {
+		opt(deployParams)
+	}
+
+	go func() {
+		<-ctx.Done()
+	}()
+
+	if dc.Name == "" {
+		return dc, errors.New("name required")
+	}
+	// TODO
+	fmt.Fprintln(os.Stderr, "⬆️  Deploying application to the cluster or generate manifest")
+	result, err := c.deployer.Deploy(ctx, dc)
+	if err != nil {
+		fmt.Printf("deploy error: %v\n", err)
+		return dc, err
+	}
+
+	dc.Deploy.Namespace = result.Namespace
+
+	if result.Status == Deployed {
+		// TODO
+		fmt.Fprintf(os.Stderr, "✅ Application deployed in namespace %q or manifest had been generated\n", result.Namespace)
 	}
 
 	return dc, nil
@@ -297,5 +329,11 @@ func WithRepositoriesPath(path string) Option {
 func WithBuilder(b Builder) Option {
 	return func(c *Client) {
 		c.builder = b
+	}
+}
+
+func WithDeployer(d Deployer) Option {
+	return func(c *Client) {
+		c.deployer = d
 	}
 }
