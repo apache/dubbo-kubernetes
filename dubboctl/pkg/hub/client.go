@@ -1,4 +1,4 @@
-package mirror
+package hub
 
 import (
 	"crypto/tls"
