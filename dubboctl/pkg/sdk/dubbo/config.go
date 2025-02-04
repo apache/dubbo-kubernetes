@@ -48,7 +48,10 @@ type DeploySpec struct {
 
 func NewDubboConfig(path string) (*DubboConfig, error) {
 	var err error
+
 	f := &DubboConfig{}
+	f.Build.BuilderImages = make(map[string]string)
+
 	if path == "" {
 		if path, err = os.Getwd(); err != nil {
 			return f, err
@@ -92,6 +95,9 @@ func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig 
 		if dc.Template == "" {
 			dc.Template = "initialzed"
 		}
+	}
+	if dc.Build.BuilderImages == nil {
+		dc.Build.BuilderImages = make(map[string]string)
 	}
 	return dc
 }
