@@ -18,6 +18,7 @@ package cmd
 import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder/pack"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/deployer"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
@@ -39,6 +40,7 @@ func NewClientFactory(options ...sdk.Option) (*sdk.Client, func()) {
 		o = []sdk.Option{
 			sdk.WithRepositoriesPath(util.RepositoriesPath()),
 			sdk.WithDeployer(d),
+			sdk.WithBuilder(pack.NewBuilder()),
 		}
 	)
 	client := sdk.New(append(o, options...)...)

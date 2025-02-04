@@ -128,7 +128,7 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	}
 
 	f.Created = time.Now()
-	err = f.WriteYamlFile()
+	err = f.WriteFile()
 	if err != nil {
 		return f, err
 	}
@@ -145,6 +145,7 @@ type BuildOptions struct{}
 type BuildOption func(c *BuildOptions)
 
 func (c *Client) Build(ctx context.Context, dcfg *dubbo.DubboConfig, options ...BuildOption) (*dubbo.DubboConfig, error) {
+	fmt.Fprintln(os.Stderr, "Building application image")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
