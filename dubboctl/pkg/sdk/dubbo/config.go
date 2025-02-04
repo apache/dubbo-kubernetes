@@ -36,7 +36,6 @@ type DubboConfig struct {
 type BuildSpec struct {
 	BuilderImages map[string]string `yaml:"builderImages,omitempty"`
 	Buildpacks    []string          `yaml:"buildpacks,omitempty"`
-	BuildEnvs     []Env             `json:"buildEnvs,omitempty"`
 }
 
 type DeploySpec struct {
@@ -45,11 +44,6 @@ type DeploySpec struct {
 	ContainerPort int    `yaml:"containerPort,omitempty"`
 	TargetPort    int    `yaml:"targetPort,omitempty"`
 	NodePort      int    `yaml:"nodePort,omitempty"`
-}
-
-type Env struct {
-	Name  *string `yaml:"name,omitempty" jsonschema:"pattern=^[-._a-zA-Z][-._a-zA-Z0-9]*$"`
-	Value *string `yaml:"value,omitempty"`
 }
 
 func NewDubboConfig(path string) (*DubboConfig, error) {
@@ -102,7 +96,7 @@ func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig 
 	return dc
 }
 
-func (dc *DubboConfig) WriteYamlFile() (err error) {
+func (dc *DubboConfig) WriteFile() (err error) {
 	file := filepath.Join(dc.Root, DubboLogFile)
 	var bytes []byte
 	if bytes, err = yaml.Marshal(dc); err != nil {
@@ -170,7 +164,6 @@ func (dc *DubboConfig) BuildStamp() string {
 }
 
 func (dc *DubboConfig) Built() bool {
-	// If there is no build stamp, it is not built.
 	stamp := dc.BuildStamp()
 	if stamp == "" {
 		return false
@@ -186,6 +179,10 @@ func (dc *DubboConfig) Built() bool {
 		return false
 	}
 	return stamp == hash
+}
+
+func (dc *DubboConfig) Initialized() bool {
+	return !dc.Created.IsZero()
 }
 
 func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
@@ -222,8 +219,4 @@ func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
 
 func validateOptions() []string {
 	return nil
-}
-
-func (dc *DubboConfig) Initialized() bool {
-	return !dc.Created.IsZero()
 }

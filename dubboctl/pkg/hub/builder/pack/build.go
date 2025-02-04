@@ -3,7 +3,6 @@ package pack
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder"
@@ -15,7 +14,6 @@ import (
 	"github.com/heroku/color"
 	"io"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -30,15 +28,6 @@ var (
 	DefaultBuilderImages = map[string]string{
 		"go":   DefaultTinyBuilder,
 		"java": DefaultBaseBuilder,
-	}
-
-	trustedBuilderImagePrefixes = []string{
-		"quay.io/boson/",
-		"gcr.io/paketo-buildpacks/",
-		"docker.io/paketobuildpacks/",
-		"ghcr.io/vmware-tanzu/function-buildpacks-for-knative/",
-		"gcr.io/buildpacks/",
-		"ghcr.io/knative/",
 	}
 
 	defaultBuildpacks = map[string][]string{}
@@ -102,10 +91,6 @@ func (b *Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) (err error) 
 		now := time.Now()
 		opts.CreationTime = &now
 	}
-	opts.Env, err = transportEnv(dc.Build.BuildEnvs)
-	if err != nil {
-		return err
-	}
 	if runtime.GOOS == "linux" {
 		opts.ContainerConfig.Network = "host"
 	}
@@ -140,32 +125,4 @@ func (b *Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) (err error) 
 		}
 	}
 	return
-}
-
-func transportEnv(ee []dubbo.Env) (map[string]string, error) {
-	envs := make(map[string]string, len(ee))
-	for _, e := range ee {
-		// Assert non-nil name.
-		if e.Name == nil {
-			return envs, errors.New("env name may not be nil")
-		}
-		if e.Value == nil {
-			continue
-		}
-		k, v := *e.Name, *e.Value
-		envs[k] = v
-	}
-	return envs, nil
-}
-
-func TrustBuilder(b string) bool {
-	for _, v := range trustedBuilderImagePrefixes {
-		if !strings.HasSuffix(v, "/") {
-			v = v + "/"
-		}
-		if strings.HasPrefix(b, v) {
-			return true
-		}
-	}
-	return false
 }

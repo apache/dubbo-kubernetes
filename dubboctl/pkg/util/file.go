@@ -1,6 +1,7 @@
 package util
 
 import (
+	"golang.org/x/term"
 	"os"
 	"path/filepath"
 )
@@ -22,4 +23,8 @@ func LoadTemplate(path, file, builtin string) (string, error) {
 func FileExists(file string) bool {
 	_, err := os.Stat(file)
 	return err == nil
+}
+
+func InteractiveTerminal() bool {
+	return term.IsTerminal(int(os.Stdin.Fd()))
 }

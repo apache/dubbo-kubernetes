@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder/pack"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
@@ -14,9 +15,26 @@ import (
 )
 
 type buildConfig struct {
-	Build bool
-	Path  string
-	Push  bool
+	Image        string
+	BuilderImage string
+	Path         string
+}
+
+func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	ibc := imageBuildCmd(cmd, clientFactory)
+	ic := &cobra.Command{
+		Use:   "image",
+		Short: "Used to build and push images, apply to cluster",
+	}
+	ic.AddCommand(ibc)
+	return ic
+}
+
+func newBuildConfig(cmd *cobra.Command) *buildConfig {
+	bc := &buildConfig{
+		BuilderImage: viper.GetString("builder-image"),
+	}
+	return bc
 }
 
 func (c buildConfig) buildclientOptions() ([]sdk.Option, error) {
@@ -25,67 +43,20 @@ func (c buildConfig) buildclientOptions() ([]sdk.Option, error) {
 	return do, nil
 }
 
-type pushConfig struct {
-	Push bool
-	Path string
-}
-
-type applyConfig struct {
-	Apply bool
-	Path  string
-}
-
-func newBuildConfig(cmd *cobra.Command) *buildConfig {
-	bc := &buildConfig{
-		Build: viper.GetBool("build"),
-		Path:  viper.GetString("path"),
-	}
-	return bc
-}
-
-func newPushConfig(cmd *cobra.Command) *pushConfig {
-	pc := &pushConfig{
-		Push: viper.GetBool("push"),
-		Path: viper.GetString("path"),
-	}
-	return pc
-}
-
-func newApplyConfig(cmd *cobra.Command) *applyConfig {
-	ac := &applyConfig{
-		Apply: viper.GetBool("apply"),
-		Path:  viper.GetString("path"),
-	}
-	return ac
-}
-
-func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
-	ipc := imagePushCmd(cmd, clientFactory)
-	iac := imageApplyCmd(cmd, clientFactory)
-
-	ic := &cobra.Command{
-		Use:   "image",
-		Short: "Used to build and push images, apply to cluster",
-	}
-	ic.AddCommand(ipc)
-	ic.AddCommand(iac)
-	return ic
-}
-
-func imagePushCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+func imageBuildCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	pc := &cobra.Command{
-		Use:     "push",
-		Short:   "Build and push to images",
-		Long:    "The push subcommand used to push images",
+		Use:     "build",
+		Short:   "Build to images",
+		Long:    "The build subcommand used to build images",
 		Example: "",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPush(cmd, args, clientFactory)
+			return runBuild(cmd, args, clientFactory)
 		},
 	}
 	return pc
 }
 
-func runPush(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
 	if err := util.GetCreatePath(); err != nil {
 		return err
 	}
@@ -96,60 +67,30 @@ func runPush(cmd *cobra.Command, args []string, clientFactory ClientFactory) err
 		return err
 	}
 
-	if !fp.Initialized() {
+	config, err = config.prompt(fp)
+	if err != nil {
+		return err
 	}
+
+	if !fp.Initialized() {
+		return util.NewErrNotInitialized(fp.Root)
+	}
+
+	config.configure(fp)
 
 	clientOptions, err := config.buildclientOptions()
 	if err != nil {
 		return err
 	}
+
 	client, done := clientFactory(clientOptions...)
 	defer done()
 	if fp, err = client.Build(cmd.Context(), fp); err != nil {
 		return err
 	}
-	if config.Push {
-		if fp, err = client.Push(cmd.Context(), fp); err != nil {
-			return err
-		}
-	}
 
-	err = fp.WriteYamlFile()
+	err = fp.WriteFile()
 	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func imageApplyCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
-	ac := &cobra.Command{
-		Use:     "apply",
-		Short:   "Deploy the images to the cluster",
-		Long:    "The apply subcommand used to apply images",
-		Example: "",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runApply(cmd, args, clientFactory)
-		},
-	}
-	return ac
-}
-
-func runApply(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
-	if err := util.GetCreatePath(); err != nil {
-		return err
-	}
-
-	config := newApplyConfig(cmd)
-
-	fp, err := dubbo.NewDubboConfig(config.Path)
-	if err != nil {
-		return err
-	}
-
-	if !fp.Initialized() {
-	}
-	if err := applyToCluster(cmd, fp); err != nil {
 		return err
 	}
 
@@ -165,4 +106,46 @@ func applyToCluster(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 		return err
 	}
 	return nil
+}
+
+func (c *buildConfig) configure(dc *dubbo.DubboConfig) {
+	if c.Path == "" {
+		root, err := os.Getwd()
+		if err != nil {
+			return
+		}
+		dc.Root = root
+	} else {
+		dc.Root = c.Path
+	}
+	if c.BuilderImage != "" {
+		dc.Build.BuilderImages["pack"] = c.BuilderImage
+	}
+	if c.Image != "" {
+		dc.Image = c.Image
+	}
+}
+
+func (c *buildConfig) prompt(dc *dubbo.DubboConfig) (*buildConfig, error) {
+	var err error
+	if !util.InteractiveTerminal() {
+		return c, nil
+	}
+
+	if c.Image == "" && dc.Image == "" {
+		qs := []*survey.Question{
+			{
+				Name:     "image",
+				Validate: survey.Required,
+				Prompt: &survey.Input{
+					Message: "Please enter the image tag ([REGISTRY]/[USERNAME]/[IMAGENAME]:tag)\n Image: ",
+					Default: c.Image,
+				},
+			},
+		}
+		if err = survey.Ask(qs, c); err != nil {
+			return c, err
+		}
+	}
+	return c, err
 }
