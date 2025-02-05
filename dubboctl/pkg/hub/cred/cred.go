@@ -17,6 +17,21 @@ type keyChain struct {
 	pwd  string
 }
 
+type verifyCredentialsCallback func(ctx context.Context, image string, credentials hub.Credentials) error
+
+type credentialsCallback func(registry string) (hub.Credentials, error)
+
+type chooseCredentialHelperCallback func(available []string) (string, error)
+
+type credentialsProvider struct {
+	promptForCredentials     credentialsCallback
+	verifyCredentials        verifyCredentialsCallback
+	promptForCredentialStore chooseCredentialHelperCallback
+	credentialLoaders        []credentialsCallback
+	authFilePath             string
+	transport                http.RoundTripper
+}
+
 func (k keyChain) Resolve(resource authn.Resource) (authn.Authenticator, error) {
 	return &authn.Basic{
 		Username: k.user,
@@ -24,7 +39,7 @@ func (k keyChain) Resolve(resource authn.Resource) (authn.Authenticator, error) 
 	}, nil
 }
 
-func CheckAuth(ctx context.Context, image string, credentials hub.Credentials, trans http.RoundTripper) error {
+func checkAuth(ctx context.Context, image string, credentials hub.Credentials, trans http.RoundTripper) error {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return fmt.Errorf("cannot parse image reference: %w", err)
@@ -45,4 +60,30 @@ func CheckAuth(ctx context.Context, image string, credentials hub.Credentials, t
 	}
 
 	return nil
+}
+
+type Opt func(opts *credentialsProvider)
+
+func WithPromptForCredentials(cbk credentialsCallback) Opt {
+	return func(opts *credentialsProvider) {
+		opts.promptForCredentials = cbk
+	}
+}
+
+func WithVerifyCredentials(cbk verifyCredentialsCallback) Opt {
+	return func(opts *credentialsProvider) {
+		opts.verifyCredentials = cbk
+	}
+}
+
+func WithPromptForCredentialStore(cbk chooseCredentialHelperCallback) Opt {
+	return func(opts *credentialsProvider) {
+		opts.promptForCredentialStore = cbk
+	}
+}
+
+func WithTransport(transport http.RoundTripper) Opt {
+	return func(opts *credentialsProvider) {
+		opts.transport = transport
+	}
 }

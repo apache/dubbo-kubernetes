@@ -20,13 +20,19 @@ type buildConfig struct {
 	Path         string
 }
 
+type pushConfig struct {
+	Apply bool
+}
+
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	ibc := imageBuildCmd(cmd, clientFactory)
+	ipc := imagePushCmd(cmd, clientFactory)
 	ic := &cobra.Command{
 		Use:   "image",
 		Short: "Used to build and push images, apply to cluster",
 	}
 	ic.AddCommand(ibc)
+	ic.AddCommand(ipc)
 	return ic
 }
 
@@ -37,6 +43,13 @@ func newBuildConfig(cmd *cobra.Command) *buildConfig {
 	return bc
 }
 
+func newPushConfig(cmd *cobra.Command) *pushConfig {
+	pc := &pushConfig{
+		Apply: viper.GetBool("apply"),
+	}
+	return pc
+}
+
 func (c buildConfig) buildclientOptions() ([]sdk.Option, error) {
 	var do []sdk.Option
 	do = append(do, sdk.WithBuilder(pack.NewBuilder()))
@@ -44,7 +57,7 @@ func (c buildConfig) buildclientOptions() ([]sdk.Option, error) {
 }
 
 func imageBuildCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
-	pc := &cobra.Command{
+	bc := &cobra.Command{
 		Use:     "build",
 		Short:   "Build to images",
 		Long:    "The build subcommand used to build images",
@@ -53,7 +66,70 @@ func imageBuildCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comma
 			return runBuild(cmd, args, clientFactory)
 		},
 	}
+	return bc
+}
+
+func imagePushCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	pc := &cobra.Command{
+		Use:     "push",
+		Short:   "Push to images",
+		Long:    "The push subcommand used to push images",
+		Example: "",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runPush(cmd, args, clientFactory)
+		},
+	}
 	return pc
+}
+
+func runPush(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+	if err := util.GetCreatePath(); err != nil {
+		return err
+	}
+	config := newBuildConfig(cmd)
+
+	fp, err := dubbo.NewDubboConfig(config.Path)
+	if err != nil {
+		return err
+	}
+
+	config, err = config.prompt(fp)
+	if err != nil {
+		return err
+	}
+
+	if !fp.Initialized() {
+		return util.NewErrNotInitialized(fp.Root)
+	}
+
+	config.configure(fp)
+
+	clientOptions, err := config.buildclientOptions()
+	if err != nil {
+		return err
+	}
+
+	client, done := clientFactory(clientOptions...)
+	defer done()
+	if fp, err = client.Push(cmd.Context(), fp); err != nil {
+		return err
+	}
+
+	pushArgs := newPushConfig(cmd)
+
+	if pushArgs.Apply {
+		err := apply(cmd, fp)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = fp.WriteFile()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
@@ -97,7 +173,7 @@ func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) er
 	return nil
 }
 
-func applyToCluster(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
+func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
 	ec.Stdout = os.Stdout

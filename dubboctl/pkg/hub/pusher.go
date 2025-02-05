@@ -15,6 +15,10 @@ type Credentials struct {
 	Password string
 }
 
+type CredentialsProvider func(ctx context.Context, image string) (Credentials, error)
+
+type PusherDockerClientFactory func() (PusherDockerClient, error)
+
 type Pusher struct {
 	credentialsProvider CredentialsProvider
 	transport           http.RoundTripper
@@ -26,7 +30,3 @@ type PusherDockerClient interface {
 	ImagePush(ctx context.Context, ref string, options types.ImagePushOptions) (io.ReadCloser, error)
 	Close() error
 }
-
-type CredentialsProvider func(ctx context.Context, image string) (Credentials, error)
-
-type PusherDockerClientFactory func() (PusherDockerClient, error)
