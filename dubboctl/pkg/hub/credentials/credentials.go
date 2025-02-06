@@ -1,10 +1,10 @@
-package cred
+package credentials
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/pusher"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -17,17 +17,17 @@ type keyChain struct {
 	pwd  string
 }
 
-type verifyCredentialsCallback func(ctx context.Context, image string, credentials hub.Credentials) error
+type VerifyCredentialsCallback func(ctx context.Context, image string, credentials pusher.Credentials) error
 
-type credentialsCallback func(registry string) (hub.Credentials, error)
+type CredentialsCallback func(registry string) (pusher.Credentials, error)
 
-type chooseCredentialHelperCallback func(available []string) (string, error)
+type ChooseCredentialHelperCallback func(available []string) (string, error)
 
 type credentialsProvider struct {
-	promptForCredentials     credentialsCallback
-	verifyCredentials        verifyCredentialsCallback
-	promptForCredentialStore chooseCredentialHelperCallback
-	credentialLoaders        []credentialsCallback
+	promptForCredentials     CredentialsCallback
+	verifyCredentials        VerifyCredentialsCallback
+	promptForCredentialStore ChooseCredentialHelperCallback
+	credentialLoaders        []CredentialsCallback
 	authFilePath             string
 	transport                http.RoundTripper
 }
@@ -39,7 +39,7 @@ func (k keyChain) Resolve(resource authn.Resource) (authn.Authenticator, error) 
 	}, nil
 }
 
-func checkAuth(ctx context.Context, image string, credentials hub.Credentials, trans http.RoundTripper) error {
+func checkAuth(ctx context.Context, image string, credentials pusher.Credentials, trans http.RoundTripper) error {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return fmt.Errorf("cannot parse image reference: %w", err)
@@ -64,19 +64,19 @@ func checkAuth(ctx context.Context, image string, credentials hub.Credentials, t
 
 type Opt func(opts *credentialsProvider)
 
-func WithPromptForCredentials(cbk credentialsCallback) Opt {
+func WithPromptForCredentials(cbk CredentialsCallback) Opt {
 	return func(opts *credentialsProvider) {
 		opts.promptForCredentials = cbk
 	}
 }
 
-func WithVerifyCredentials(cbk verifyCredentialsCallback) Opt {
+func WithVerifyCredentials(cbk VerifyCredentialsCallback) Opt {
 	return func(opts *credentialsProvider) {
 		opts.verifyCredentials = cbk
 	}
 }
 
-func WithPromptForCredentialStore(cbk chooseCredentialHelperCallback) Opt {
+func WithPromptForCredentialStore(cbk ChooseCredentialHelperCallback) Opt {
 	return func(opts *credentialsProvider) {
 		opts.promptForCredentialStore = cbk
 	}
