@@ -333,6 +333,12 @@ func WithBuilder(b Builder) Option {
 	}
 }
 
+func WithPusher(pusher Pusher) Option {
+	return func(c *Client) {
+		c.pusher = pusher
+	}
+}
+
 func WithDeployer(d Deployer) Option {
 	return func(c *Client) {
 		c.deployer = d
