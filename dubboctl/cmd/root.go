@@ -19,8 +19,8 @@ import (
 	"flag"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder/pack"
-	// "github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/credentials"
-	// "github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/credentials/prompt"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/credentials"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/credentials/prompt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/deployer"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/pusher"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
@@ -30,6 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
 	"github.com/spf13/cobra"
 	"net/http"
+	"os"
 	// "os"
 )
 
@@ -42,13 +43,13 @@ type ClientFactory func(...sdk.Option) (*sdk.Client, func())
 func NewClientFactory(options ...sdk.Option) (*sdk.Client, func()) {
 	var (
 		t = newTransport(false)
-		// c = newCredentialsProvider(config.Dir(), t)
+		c = newCredentialsProvider(util.Dir(), t)
 		d = newDubboDeployer()
 		o = []sdk.Option{
 			sdk.WithRepositoriesPath(util.RepositoriesPath()),
 			sdk.WithBuilder(pack.NewBuilder()),
 			sdk.WithPusher(pusher.NewPusher(
-				// pusher.WithCredentialsProvider(c),
+				pusher.WithCredentialsProvider(c),
 				pusher.WithTransport(t))),
 			sdk.WithDeployer(d),
 		}
@@ -64,13 +65,12 @@ func newTransport(insecureSkipVerify bool) pusher.RoundTripCloser {
 }
 
 func newCredentialsProvider(configPath string, t http.RoundTripper) pusher.CredentialsProvider {
-	// options := []credentials.Opt{
-	// 	credentials.WithPromptForCredentials(prompt.NewPromptForCredentials(os.Stdin, os.Stdout, os.Stderr)),
-	// 	credentials.WithPromptForCredentialStore(prompt.NewPromptForCredentialStore()),
-	// 	credentials.WithTransport(t),
-	// }
-	// TODO
-	return nil
+	options := []credentials.Opt{
+		credentials.WithPromptForCredentials(prompt.NewPromptForCredentials(os.Stdin, os.Stdout, os.Stderr)),
+		credentials.WithPromptForCredentialStore(prompt.NewPromptForCredentialStore()),
+		credentials.WithTransport(t),
+	}
+	return credentials.NewCredentialsProvider(configPath, options...)
 }
 
 func newDubboDeployer() sdk.Deployer {
