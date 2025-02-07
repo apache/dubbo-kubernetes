@@ -1,6 +1,7 @@
 package dubbo
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"errors"
@@ -157,20 +158,8 @@ func (dc *DubboConfig) Validate() error {
 	return errors.New(b.String())
 }
 
-func (dc *DubboConfig) BuildStamp() string {
-	path := filepath.Join(dc.Root, DataDir, "built")
-	if _, err := os.Stat(path); err != nil {
-		return ""
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return string(b)
-}
-
 func (dc *DubboConfig) Built() bool {
-	stamp := dc.BuildStamp()
+	stamp := dc.buildStamp()
 	if stamp == "" {
 		return false
 	}
@@ -185,6 +174,61 @@ func (dc *DubboConfig) Built() bool {
 		return false
 	}
 	return stamp == hash
+}
+
+func (dc *DubboConfig) buildStamp() string {
+	path := filepath.Join(dc.Root, DataDir, "built")
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+type (
+	stampOptions struct {
+		log bool
+	}
+	stampOption func(o *stampOptions)
+)
+
+func (dc *DubboConfig) Stamp(oo ...stampOption) (err error) {
+	options := &stampOptions{}
+	for _, o := range oo {
+		o(options)
+	}
+	if err = runDataDir(dc.Root); err != nil {
+		return
+	}
+
+	var hash, log string
+	if hash, log, err = Fingerprint(dc); err != nil {
+		return
+	}
+
+	if err = os.WriteFile(filepath.Join(dc.Root, DataDir, "built"), []byte(hash), os.ModePerm); err != nil {
+		return
+	}
+
+	blt := "built.log"
+	if options.log {
+		blt = timestamp(blt)
+	}
+	logfile, err := os.Create(filepath.Join(dc.Root, DataDir, blt))
+	if err != nil {
+		return
+	}
+	defer logfile.Close()
+	_, err = fmt.Fprintln(logfile, log)
+	return
+}
+
+func timestamp(s string) string {
+	t := time.Now()
+	return fmt.Sprintf("%s.%09d.%s", t.Format("20060102150405"), t.Nanosecond(), s)
 }
 
 func (dc *DubboConfig) Initialized() bool {
@@ -221,6 +265,50 @@ func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
 		return nil
 	})
 	return fmt.Sprintf("%x", h.Sum(nil)), l.String(), err
+}
+
+func runDataDir(root string) error {
+	if err := os.MkdirAll(filepath.Join(root, DataDir), os.ModePerm); err != nil {
+		return err
+	}
+	filePath := filepath.Join(root, ".gitignore")
+	roFile, err := os.Open(filePath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	defer roFile.Close()
+	if !os.IsNotExist(err) {
+		s := bufio.NewScanner(roFile)
+		for s.Scan() {
+			if strings.HasPrefix(s.Text(), "# /"+DataDir) { // if it was commented
+				return nil // user wants it
+			}
+			if strings.HasPrefix(s.Text(), "#/"+DataDir) {
+				return nil // user wants it
+			}
+			if strings.HasPrefix(s.Text(), "/"+DataDir) { // if it is there
+				return nil // we're done
+			}
+		}
+	}
+	roFile.Close()
+	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return err
+	}
+	defer rwFile.Close()
+	if _, err = rwFile.WriteString(`
+# Applications use the .dubbo directory for local runtime data which should
+# generally not be tracked in source control. To instruct the system to track
+# .dubbo in source control, comment the following line (prefix it with '# ').
+/.dubbo
+`); err != nil {
+		return err
+	}
+	if err = rwFile.Sync(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: error when syncing .gitignore. %s\n", err)
+	}
+	return nil
 }
 
 func validateOptions() []string {
