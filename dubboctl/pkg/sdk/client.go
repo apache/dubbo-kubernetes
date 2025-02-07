@@ -144,7 +144,7 @@ type BuildOptions struct{}
 
 type BuildOption func(c *BuildOptions)
 
-func (c *Client) Build(ctx context.Context, dcfg *dubbo.DubboConfig, options ...BuildOption) (*dubbo.DubboConfig, error) {
+func (c *Client) Build(ctx context.Context, dc *dubbo.DubboConfig, options ...BuildOption) (*dubbo.DubboConfig, error) {
 	fmt.Fprintln(os.Stderr, "Building application image")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -153,18 +153,22 @@ func (c *Client) Build(ctx context.Context, dcfg *dubbo.DubboConfig, options ...
 	for _, o := range options {
 		o(&bo)
 	}
-	if err := c.builder.Build(ctx, dcfg); err != nil {
-		return dcfg, err
+
+	if err := c.builder.Build(ctx, dc); err != nil {
+		return dc, err
 	}
-	fmt.Printf("Application built: %v\n", dcfg.Image)
-	return dcfg, nil
+	if err := dc.Stamp(); err != nil {
+		return dc, err
+	}
+	fmt.Printf("Application built: %v\n", dc.Image)
+	return dc, nil
 }
 
 func (c *Client) Push(ctx context.Context, dc *dubbo.DubboConfig) (*dubbo.DubboConfig, error) {
+	var err error
 	if !dc.Built() {
 		return dc, errors.New("not built")
 	}
-	var err error
 	if dc.ImageDigest, err = c.pusher.Push(ctx, dc); err != nil {
 		return dc, err
 	}
@@ -197,7 +201,7 @@ func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...Depl
 
 	if result.Status == Deployed {
 		// TODO
-		fmt.Fprintf(os.Stderr, "✅ Application deployed in namespace %q or manifest had been generated\n", result.Namespace)
+		fmt.Fprintf(os.Stderr, "Application deployed in namespace %q or manifest had been generated\n", result.Namespace)
 	}
 
 	return dc, nil
@@ -247,36 +251,6 @@ func assertEmptyRoot(path string) (err error) {
 	return
 }
 
-var contentiousFiles = []string{
-	dubbo.DubboLogFile,
-	".gitignore",
-}
-
-func contentiousFilesIn(dir string) (contentious []string, err error) {
-	files, err := os.ReadDir(dir)
-	for _, file := range files {
-		for _, name := range contentiousFiles {
-			if file.Name() == name {
-				contentious = append(contentious, name)
-			}
-		}
-	}
-	return
-}
-
-func isEffectivelyEmpty(dir string) (bool, error) {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return false, err
-	}
-	for _, file := range files {
-		if !strings.HasPrefix(file.Name(), ".") {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
 func runDataDir(root string) error {
 	if err := os.MkdirAll(filepath.Join(root, dubbo.DataDir), os.ModePerm); err != nil {
 		return err
@@ -319,6 +293,36 @@ func runDataDir(root string) error {
 		fmt.Fprintf(os.Stderr, "warning: error when syncing .gitignore. %s\n", err)
 	}
 	return nil
+}
+
+var contentiousFiles = []string{
+	dubbo.DubboLogFile,
+	".gitignore",
+}
+
+func contentiousFilesIn(dir string) (contentious []string, err error) {
+	files, err := os.ReadDir(dir)
+	for _, file := range files {
+		for _, name := range contentiousFiles {
+			if file.Name() == name {
+				contentious = append(contentious, name)
+			}
+		}
+	}
+	return
+}
+
+func isEffectivelyEmpty(dir string) (bool, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return false, err
+	}
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), ".") {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func WithRepositoriesPath(path string) Option {

@@ -37,9 +37,7 @@ func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) 
 }
 
 func newBuildConfig(cmd *cobra.Command) *buildConfig {
-	bc := &buildConfig{
-		BuilderImage: viper.GetString("builder-image"),
-	}
+	bc := &buildConfig{}
 	return bc
 }
 
@@ -108,20 +106,11 @@ func runPush(cmd *cobra.Command, args []string, clientFactory ClientFactory) err
 	if err != nil {
 		return err
 	}
-
 	client, done := clientFactory(clientOptions...)
 	defer done()
+
 	if fp, err = client.Push(cmd.Context(), fp); err != nil {
 		return err
-	}
-
-	pushArgs := newPushConfig(cmd)
-
-	if pushArgs.Apply {
-		err := apply(cmd, fp)
-		if err != nil {
-			return err
-		}
 	}
 
 	err = fp.WriteFile()
@@ -165,6 +154,10 @@ func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) er
 		return err
 	}
 
+	if fp, err = client.Push(cmd.Context(), fp); err != nil {
+		return err
+	}
+
 	err = fp.WriteFile()
 	if err != nil {
 		return err
@@ -173,7 +166,7 @@ func runBuild(cmd *cobra.Command, args []string, clientFactory ClientFactory) er
 	return nil
 }
 
-func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
+func runApply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
 	ec.Stdout = os.Stdout
