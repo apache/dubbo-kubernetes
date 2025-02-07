@@ -24,8 +24,8 @@ import (
 )
 
 var (
-	ErrUnauthorized                 = errors.New("bad credentials")
-	ErrCredentialsNotFound          = errors.New("credentials not found")
+	errUnauthorized                 = errors.New("bad credentials")
+	errCredentialsNotFound          = errors.New("credentials not found")
 	errNoCredentialHelperConfigured = errors.New("no credential helper configure")
 )
 
@@ -126,7 +126,7 @@ func (c *credentialsProvider) getCredentials(ctx context.Context, image string) 
 		result, err = load(registry)
 
 		if err != nil {
-			if errors.Is(err, ErrCredentialsNotFound) {
+			if errors.Is(err, errCredentialsNotFound) {
 				continue
 			}
 			return pusher.Credentials{}, err
@@ -136,7 +136,7 @@ func (c *credentialsProvider) getCredentials(ctx context.Context, image string) 
 		if err == nil {
 			return result, nil
 		} else {
-			if !errors.Is(err, ErrUnauthorized) {
+			if !errors.Is(err, errUnauthorized) {
 				return pusher.Credentials{}, err
 			}
 		}
@@ -144,7 +144,7 @@ func (c *credentialsProvider) getCredentials(ctx context.Context, image string) 
 	}
 
 	if c.promptForCredentials == nil {
-		return pusher.Credentials{}, ErrCredentialsNotFound
+		return pusher.Credentials{}, errCredentialsNotFound
 	}
 
 	for {
@@ -158,7 +158,6 @@ func (c *credentialsProvider) getCredentials(ctx context.Context, image string) 
 			err = setCredentialsByCredentialHelper(c.authFilePath, registry, result.Username, result.Password)
 			if err != nil {
 
-				// This shouldn't be fatal error.
 				if strings.Contains(err.Error(), "not implemented") {
 					fmt.Fprintf(os.Stderr, "the cred-helper does not support write operation (consider changing the cred-helper it in auth.json)\n")
 					return pusher.Credentials{}, nil
@@ -192,7 +191,7 @@ func (c *credentialsProvider) getCredentials(ctx context.Context, image string) 
 			}
 			return result, nil
 		} else {
-			if errors.Is(err, ErrUnauthorized) {
+			if errors.Is(err, errUnauthorized) {
 				continue
 			}
 			return pusher.Credentials{}, err
@@ -222,7 +221,7 @@ func checkAuth(ctx context.Context, image string, credentials pusher.Credentials
 	if err != nil {
 		var transportErr *transport.Error
 		if errors.As(err, &transportErr) && transportErr.StatusCode == 401 {
-			return errors.New("bad credentials")
+			return errUnauthorized
 		}
 		return err
 	}
@@ -283,7 +282,7 @@ func getCredentialsByCredentialHelper(confFilePath, registry string) (pusher.Cre
 		return result, fmt.Errorf("failed to get helper from config: %w", err)
 	}
 	if helper == "" {
-		return result, ErrCredentialsNotFound
+		return result, errCredentialsNotFound
 	}
 
 	helperName := fmt.Sprintf("docker-credential-%s", helper)
@@ -306,7 +305,7 @@ func getCredentialsByCredentialHelper(confFilePath, registry string) (pusher.Cre
 		}
 	}
 
-	return result, fmt.Errorf("failed to get credentials from helper specified in ~/.docker/config.json: %w", ErrCredentialsNotFound)
+	return result, fmt.Errorf("failed to get credentials from helper specified in ~/.docker/config.json: %w", errCredentialsNotFound)
 }
 
 func setCredentialsByCredentialHelper(confFilePath, registry, username, secret string) error {
@@ -405,12 +404,6 @@ type Opt func(opts *credentialsProvider)
 func WithPromptForCredentials(cbk CredentialsCallback) Opt {
 	return func(opts *credentialsProvider) {
 		opts.promptForCredentials = cbk
-	}
-}
-
-func WithVerifyCredentials(cbk VerifyCredentialsCallback) Opt {
-	return func(opts *credentialsProvider) {
-		opts.verifyCredentials = cbk
 	}
 }
 

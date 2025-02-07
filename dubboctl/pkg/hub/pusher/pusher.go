@@ -14,7 +14,7 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"golang.org/x/term"
@@ -42,7 +42,7 @@ type Pusher struct {
 	dockerClientFactory PusherDockerClientFactory
 }
 
-type AuthConfig struct {
+type authConfig struct {
 	Username      string `json:"username,omitempty"`
 	Password      string `json:"password,omitempty"`
 	Auth          string `json:"auth,omitempty"`
@@ -89,7 +89,7 @@ func (p *Pusher) Push(ctx context.Context, dc *dubbo.DubboConfig) (digest string
 	fmt.Fprintf(os.Stderr, "Pushing function image to the registry %q using the %q user credentials\n", registry, credentials.Username)
 
 	if _, err = net.DefaultResolver.LookupHost(ctx, registry); err == nil {
-		return p.daemon(ctx, dc, credentials, output)
+		return p.daemonPush(ctx, dc, credentials, output)
 	}
 
 	return p.push(ctx, dc, credentials, output)
@@ -104,19 +104,19 @@ func getRegistry(img string) (string, error) {
 	return registry, nil
 }
 
-func (p *Pusher) daemon(ctx context.Context, dc *dubbo.DubboConfig, credentials Credentials, output io.Writer) (digest string, err error) {
+func (p *Pusher) daemonPush(ctx context.Context, dc *dubbo.DubboConfig, credentials Credentials, output io.Writer) (digest string, err error) {
 	cli, err := p.dockerClientFactory()
 	if err != nil {
 		return "", fmt.Errorf("failed to create docker api client: %w", err)
 	}
 	defer cli.Close()
 
-	authConfig := AuthConfig{
+	ac := authConfig{
 		Username: credentials.Username,
 		Password: credentials.Password,
 	}
 
-	b, err := json.Marshal(&authConfig)
+	b, err := json.Marshal(&ac)
 	if err != nil {
 		return "", err
 	}
