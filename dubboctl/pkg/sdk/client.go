@@ -29,7 +29,7 @@ type Builder interface {
 }
 
 type Pusher interface {
-	Push(ctx context.Context, dcfg *dubbo.DubboConfig) (string, error)
+	Push(ctx context.Context, dc *dubbo.DubboConfig) (string, error)
 }
 
 type DeployOption func(f *DeployParams)
