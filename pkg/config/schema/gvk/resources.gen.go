@@ -31,6 +31,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Service, true
 	case ServiceAccount:
 		return gvr.ServiceAccount, true
+	case Namespace:
+		return gvr.Namespace, true
 	case Job:
 		return gvr.Job, true
 	}
@@ -48,6 +50,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 	switch g {
 	case gvr.CustomResourceDefinition:
 		return CustomResourceDefinition, true
+	case gvr.Namespace:
+		return Namespace, true
 	case gvr.Deployment:
 		return Deployment, true
 	case gvr.StatefulSet:

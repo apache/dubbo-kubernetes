@@ -75,6 +75,7 @@ func NamespacedResources() []schema.GroupVersionKind {
 		gvk.Secret.Kubernetes(),
 		gvk.ServiceAccount.Kubernetes(),
 		gvk.Job.Kubernetes(),
+		gvk.Namespace.Kubernetes(),
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"},
 	}
