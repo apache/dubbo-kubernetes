@@ -8,10 +8,6 @@ import (
 //go:embed dubbo-ascii.txt
 var dubboASCIIArt string
 
-func dubboArt() string {
-	return dubboASCIIArt
-}
-
 func DubboColoredArt() string {
 	return color.New(color.FgHiBlue).Add(color.Bold).Sprint(dubboASCIIArt)
 }
