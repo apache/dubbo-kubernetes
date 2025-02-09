@@ -104,7 +104,7 @@ In kubernetes mode, the control plane will interact directly with the Kubernetes
 
 ![kubernetes-mode](docs/static/images/homepage/kubernetes-mode.png)
 
-We all know the `service` definitions of Kubernetes and Dubo are different, `Kubernetes Service` is more like an application concept run on a selected group of pods while `Dubbo Service` can mean a specific RPC service inside the application process. So how does dubbo control plane manages to bridge the `interface-application` gap, check [here]() for more details.
+We all know the `service` definitions of Kubernetes and Dubbo are different, `Kubernetes Service` is more like an application concept run on a selected group of pods while `Dubbo Service` can mean a specific RPC service inside the application process. So how does dubbo control plane manages to bridge the `interface-application` gap, check [here]() for more details.
 
 ### Universal
 In Universal mode, Dubbo still uses Nacos or Zookeeper as registries for service discovery, control plane then interact with registry directly to work as the console UI,  as the entry point for viewing and managing the cluster.
