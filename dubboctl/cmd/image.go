@@ -19,11 +19,13 @@ import (
 
 type imageArgs struct {
 	dockerfile bool
+	builder    bool
 	deployment bool
 }
 
 func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
 	cmd.PersistentFlags().BoolVarP(&iArgs.dockerfile, "file", "f", false, "Specify the file as a dockerfile")
+	cmd.PersistentFlags().BoolVarP(&iArgs.builder, "builder", "b", false, "The builder generates the image")
 }
 
 func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
@@ -32,6 +34,7 @@ func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
 
 type hubConfig struct {
 	Dockerfile   bool
+	Builder      bool
 	Image        string
 	BuilderImage string
 	Path         string
@@ -39,8 +42,8 @@ type hubConfig struct {
 
 type deployConfig struct {
 	*hubConfig
-	Deployment bool
-	Path       string
+	Apply bool
+	Path  string
 }
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -58,13 +61,15 @@ func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) 
 func newHubConfig(cmd *cobra.Command) *hubConfig {
 	hc := &hubConfig{
 		Dockerfile: viper.GetBool("file"),
+		Builder:    viper.GetBool("builder"),
 	}
 	return hc
 }
 
 func newDeployConfig(cmd *cobra.Command) *deployConfig {
 	dc := &deployConfig{
-		Deployment: viper.GetBool("apply"),
+		hubConfig: newHubConfig(cmd),
+		Apply:     viper.GetBool("apply"),
 	}
 	return dc
 }
@@ -84,6 +89,7 @@ func (dc deployConfig) deployClientOptions() ([]sdk.Option, error) {
 	if err != nil {
 		return i, err
 	}
+
 	return i, nil
 }
 
@@ -95,10 +101,6 @@ func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command
 		Long:    "The hub subcommand used to build and push images",
 		Example: "",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("accepts %d arg(s), received %d", args, len(args))
-			}
-
 			if cmd.Flags().Changed("file") {
 				if len(args) != 1 {
 					return fmt.Errorf("you must provide exactly one argument when using the -f flag: the path to the Dockerfile")
@@ -111,7 +113,7 @@ func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command
 			}
 			return nil
 		},
-		PreRunE: bindEnv("file"),
+		PreRunE: bindEnv("file", "builder"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runHub(cmd, args, clientFactory)
 		},
@@ -209,6 +211,11 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 	}
 
 	if err := apply(cmd, fp); err != nil {
+		return err
+	}
+
+	err = fp.WriteFile()
+	if err != nil {
 		return err
 	}
 

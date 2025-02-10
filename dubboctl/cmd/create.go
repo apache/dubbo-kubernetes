@@ -121,7 +121,7 @@ func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 	if err != nil {
 		return err
 	}
-	fmt.Printf("🎉 Custom Dubbo %v sdk was successfully created.\n", dcfg.Runtime)
+	fmt.Printf("Custom Dubbo %v sdk was successfully created.\n", dcfg.Runtime)
 	return nil
 }
 
