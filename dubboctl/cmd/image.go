@@ -38,7 +38,9 @@ type hubConfig struct {
 }
 
 type deployConfig struct {
-	Path string
+	*hubConfig
+	Deployment bool
+	Path       string
 }
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -60,6 +62,13 @@ func newHubConfig(cmd *cobra.Command) *hubConfig {
 	return hc
 }
 
+func newDeployConfig(cmd *cobra.Command) *deployConfig {
+	dc := &deployConfig{
+		Deployment: viper.GetBool("apply"),
+	}
+	return dc
+}
+
 func (hc hubConfig) imageClientOptions() ([]sdk.Option, error) {
 	var do []sdk.Option
 	if hc.Dockerfile {
@@ -68,6 +77,14 @@ func (hc hubConfig) imageClientOptions() ([]sdk.Option, error) {
 		do = append(do, sdk.WithBuilder(pack.NewBuilder()))
 	}
 	return do, nil
+}
+
+func (dc deployConfig) deployClientOptions() ([]sdk.Option, error) {
+	i, err := dc.imageClientOptions()
+	if err != nil {
+		return i, err
+	}
+	return i, nil
 }
 
 func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -161,15 +178,44 @@ func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 		Example: "",
 		PreRunE: bindEnv("apply"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runApply(cmd, args, clientFactory)
+			return runDeploy(cmd, args, clientFactory)
 		},
 	}
 	addDeployFlags(hc, iArgs)
 	return hc
 }
 
-func runApply(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
-	dc := &dubbo.DubboConfig{}
+func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+	if err := util.GetCreatePath(); err != nil {
+		return err
+	}
+	config := newDeployConfig(cmd)
+
+	fp, err := dubbo.NewDubboConfig(config.Path)
+	if err != nil {
+		return err
+	}
+
+	clientOptions, err := config.deployClientOptions()
+	if err != nil {
+		return err
+	}
+
+	client, done := clientFactory(clientOptions...)
+	defer done()
+
+	if fp, err = client.Deploy(cmd.Context(), fp); err != nil {
+		return err
+	}
+
+	if err := apply(cmd, fp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
 	ec.Stdout = os.Stdout
