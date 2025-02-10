@@ -43,7 +43,7 @@ func (d *deploy) Deploy(ctx context.Context, dc *dubbo.DubboConfig, option ...sd
 	ns := dc.Deploy.Namespace
 
 	var err error
-	text, err := util.LoadTemplate(dc.Root, deployTemplateFile, deployTemplate)
+	text, err := util.LoadTemplate("", deployTemplateFile, deployTemplate)
 	if err != nil {
 		return sdk.DeploymentResult{
 			Status:    sdk.Failed,
