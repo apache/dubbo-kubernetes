@@ -18,9 +18,10 @@ import (
 )
 
 type imageArgs struct {
-	dockerfile bool
-	builder    bool
-	deployment bool
+	dockerfile   bool
+	builder      bool
+	deployment   bool
+	generateYaml string
 }
 
 func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
@@ -29,7 +30,8 @@ func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
 }
 
 func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
-	cmd.PersistentFlags().BoolVarP(&iArgs.deployment, "apply", "a", false, "Deploy to Cluster")
+	cmd.PersistentFlags().StringVarP(&iArgs.generateYaml, "output", "o", "dubbo-deploy.yaml", "The output generates k8s yaml file")
+
 }
 
 type hubConfig struct {
@@ -42,8 +44,8 @@ type hubConfig struct {
 
 type deployConfig struct {
 	*hubConfig
-	Apply bool
-	Path  string
+	Output string
+	Path   string
 }
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -69,7 +71,7 @@ func newHubConfig(cmd *cobra.Command) *hubConfig {
 func newDeployConfig(cmd *cobra.Command) *deployConfig {
 	dc := &deployConfig{
 		hubConfig: newHubConfig(cmd),
-		Apply:     viper.GetBool("apply"),
+		Output:    viper.GetString("output"),
 	}
 	return dc
 }
@@ -126,14 +128,13 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 	if err := util.GetCreatePath(); err != nil {
 		return err
 	}
-	config := newHubConfig(cmd)
-
-	fp, err := dubbo.NewDubboConfig(config.Path)
+	hcfg := newHubConfig(cmd)
+	fp, err := dubbo.NewDubboConfig(hcfg.Path)
 	if err != nil {
 		return err
 	}
 
-	config, err = config.prompt(fp)
+	hcfg, err = hcfg.prompt(fp)
 	if err != nil {
 		return err
 	}
@@ -142,9 +143,9 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 		return util.NewErrNotInitialized(fp.Root)
 	}
 
-	config.configure(fp)
+	hcfg.checkHubConfig(fp)
 
-	clientOptions, err := config.imageClientOptions()
+	clientOptions, err := hcfg.imageClientOptions()
 	if err != nil {
 		return err
 	}
@@ -152,6 +153,9 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 	client, done := clientFactory(clientOptions...)
 	defer done()
 
+	if fp, err = client.Deploy(cmd.Context(), fp); err != nil {
+		return err
+	}
 	if fp.Built() {
 		return nil
 	}
@@ -178,7 +182,7 @@ func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 		Short:   "Deploy to cluster",
 		Long:    "The deploy subcommand used to deploy to cluster",
 		Example: "",
-		PreRunE: bindEnv("apply"),
+		PreRunE: bindEnv("output"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, args, clientFactory)
 		},
@@ -198,6 +202,8 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 		return err
 	}
 
+	config.checkDeployConfig(fp)
+
 	clientOptions, err := config.deployClientOptions()
 	if err != nil {
 		return err
@@ -205,7 +211,6 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 
 	client, done := clientFactory(clientOptions...)
 	defer done()
-
 	if fp, err = client.Deploy(cmd.Context(), fp); err != nil {
 		return err
 	}
@@ -223,7 +228,7 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 }
 
 func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
-	file := filepath.Join(dc.Root)
+	file := filepath.Join(dc.Root, dc.Deploy.Output)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
 	ec.Stdout = os.Stdout
 	ec.Stderr = os.Stderr
@@ -233,7 +238,7 @@ func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	return nil
 }
 
-func (hc *hubConfig) configure(dc *dubbo.DubboConfig) {
+func (hc *hubConfig) checkHubConfig(dc *dubbo.DubboConfig) {
 	if hc.Path == "" {
 		root, err := os.Getwd()
 		if err != nil {
@@ -248,6 +253,13 @@ func (hc *hubConfig) configure(dc *dubbo.DubboConfig) {
 	}
 	if hc.Image != "" {
 		dc.Image = hc.Image
+	}
+}
+
+func (dc deployConfig) checkDeployConfig(dc2 *dubbo.DubboConfig) {
+	dc.checkHubConfig(dc2)
+	if dc.Output != "" {
+		dc2.Deploy.Output = dc.Output
 	}
 }
 
