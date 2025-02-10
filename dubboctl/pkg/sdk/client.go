@@ -189,8 +189,7 @@ func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...Depl
 	if dc.Name == "" {
 		return dc, errors.New("name required")
 	}
-	// TODO
-	fmt.Fprintln(os.Stderr, "⬆️  Deploying application to the cluster or generate manifest")
+	fmt.Fprintln(os.Stderr, "Deploying to the cluster or generate manifest")
 	result, err := c.deployer.Deploy(ctx, dc)
 	if err != nil {
 		fmt.Printf("deploy error: %v\n", err)
@@ -200,8 +199,7 @@ func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...Depl
 	dc.Deploy.Namespace = result.Namespace
 
 	if result.Status == Deployed {
-		// TODO
-		fmt.Fprintf(os.Stderr, "Application deployed in namespace %q or manifest had been generated\n", result.Namespace)
+		fmt.Fprintf(os.Stderr, "deployed in namespace %q or manifest had been generated\n", result.Namespace)
 	}
 
 	return dc, nil
