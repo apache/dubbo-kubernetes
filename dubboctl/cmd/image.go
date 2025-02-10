@@ -19,10 +19,15 @@ import (
 
 type imageArgs struct {
 	dockerfile bool
+	deployment bool
 }
 
-func addImageFlags(cmd *cobra.Command, iArgs *imageArgs) {
+func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
 	cmd.PersistentFlags().BoolVarP(&iArgs.dockerfile, "file", "f", false, "Specify the file as a dockerfile")
+}
+
+func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
+	cmd.PersistentFlags().BoolVarP(&iArgs.deployment, "apply", "a", false, "Deploy to Cluster")
 }
 
 type hubConfig struct {
@@ -32,13 +37,19 @@ type hubConfig struct {
 	Path         string
 }
 
+type deployConfig struct {
+	Path string
+}
+
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	ihc := imageHubCmd(cmd, clientFactory)
+	idc := imageDeployCmd(cmd, clientFactory)
 	ic := &cobra.Command{
 		Use:   "image",
 		Short: "Used to build and push images, apply to cluster",
 	}
 	ic.AddCommand(ihc)
+	ic.AddCommand(idc)
 	return ic
 }
 
@@ -88,7 +99,7 @@ func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command
 			return runHub(cmd, args, clientFactory)
 		},
 	}
-	addImageFlags(hc, iArgs)
+	addHubFlags(hc, iArgs)
 	return hc
 }
 
@@ -141,7 +152,24 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 	return nil
 }
 
-func runApply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
+func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	iArgs := &imageArgs{}
+	hc := &cobra.Command{
+		Use:     "deploy",
+		Short:   "Deploy to cluster",
+		Long:    "The deploy subcommand used to deploy to cluster",
+		Example: "",
+		PreRunE: bindEnv("apply"),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runApply(cmd, args, clientFactory)
+		},
+	}
+	addDeployFlags(hc, iArgs)
+	return hc
+}
+
+func runApply(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+	dc := &dubbo.DubboConfig{}
 	file := filepath.Join(dc.Root)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
 	ec.Stdout = os.Stdout
