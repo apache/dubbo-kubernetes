@@ -20,14 +20,16 @@ import (
 const DefaultName = builder.Pack
 
 var (
-	DefaultBaseBuilder = "ghcr.io/knative/builder-jammy-base:latest"
-	DefaultTinyBuilder = "ghcr.io/knative/builder-jammy-tiny:latest"
+	// DefaultGoBuilder   = "ghcr.io/knative/builder-jammy-tiny:latest"
+	// DefaultJavaBuilder = "ghcr.io/knative/builder-jammy-base:latest"
+	DefaultGoBuilder   = "heroku/builder:24"
+	DefaultJavaBuilder = "heroku/builder:24"
 )
 
 var (
 	DefaultBuilderImages = map[string]string{
-		"go":   DefaultTinyBuilder,
-		"java": DefaultBaseBuilder,
+		"go":   DefaultGoBuilder,
+		"java": DefaultJavaBuilder,
 	}
 
 	defaultBuildpacks = map[string][]string{}
@@ -53,7 +55,6 @@ func NewBuilder(options ...Option) *Builder {
 		o(b)
 	}
 	b.logger = logging.NewLogWithWriters(color.Stdout(), color.Stderr(), logging.WithVerbose())
-
 	return b
 }
 
