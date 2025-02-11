@@ -18,10 +18,9 @@ import (
 )
 
 type imageArgs struct {
-	dockerfile   bool
-	builder      bool
-	deployment   bool
-	generateYaml string
+	dockerfile bool
+	builder    bool
+	output     string
 }
 
 func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
@@ -30,7 +29,7 @@ func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
 }
 
 func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
-	cmd.PersistentFlags().StringVarP(&iArgs.generateYaml, "output", "o", "dubbo-deploy.yaml", "The output generates k8s yaml file")
+	cmd.PersistentFlags().StringVarP(&iArgs.output, "output", "o", "dubbo-deploy.yaml", "The output generates k8s yaml file")
 
 }
 
@@ -44,8 +43,10 @@ type hubConfig struct {
 
 type deployConfig struct {
 	*hubConfig
-	Output string
-	Path   string
+	Output    string
+	Namespace string
+	Port      int
+	Path      string
 }
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -134,7 +135,7 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 		return err
 	}
 
-	hcfg, err = hcfg.prompt(fp)
+	hcfg, err = hcfg.hubPrompt(fp)
 	if err != nil {
 		return err
 	}
@@ -195,16 +196,21 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 	if err := util.GetCreatePath(); err != nil {
 		return err
 	}
-	config := newDeployConfig(cmd)
+	dcfg := newDeployConfig(cmd)
 
-	fp, err := dubbo.NewDubboConfig(config.Path)
+	fp, err := dubbo.NewDubboConfig(dcfg.Path)
 	if err != nil {
 		return err
 	}
 
-	config.checkDeployConfig(fp)
+	dcfg, err = dcfg.deployPrompt(fp)
+	if err != nil {
+		return err
+	}
 
-	clientOptions, err := config.deployClientOptions()
+	dcfg.checkDeployConfig(fp)
+
+	clientOptions, err := dcfg.deployClientOptions()
 	if err != nil {
 		return err
 	}
@@ -261,9 +267,15 @@ func (dc deployConfig) checkDeployConfig(dc2 *dubbo.DubboConfig) {
 	if dc.Output != "" {
 		dc2.Deploy.Output = dc.Output
 	}
+	if dc.Namespace != "" {
+		dc2.Deploy.Namespace = dc.Namespace
+	}
+	if dc.Port != 0 {
+		dc2.Deploy.Port = dc.Port
+	}
 }
 
-func (hc *hubConfig) prompt(dc *dubbo.DubboConfig) (*hubConfig, error) {
+func (hc *hubConfig) hubPrompt(dc *dubbo.DubboConfig) (*hubConfig, error) {
 	var err error
 	if !util.InteractiveTerminal() {
 		return hc, nil
@@ -285,4 +297,49 @@ func (hc *hubConfig) prompt(dc *dubbo.DubboConfig) (*hubConfig, error) {
 		}
 	}
 	return hc, err
+}
+
+func (dc *deployConfig) deployPrompt(dc2 *dubbo.DubboConfig) (*deployConfig, error) {
+	var err error
+	if !util.InteractiveTerminal() {
+		return dc, nil
+	}
+	if dc2.Deploy.Namespace == "" {
+		qs := []*survey.Question{
+			{
+				Name:     "namespace",
+				Validate: survey.Required,
+				Prompt: &survey.Input{
+					Message: "Namespace",
+				},
+			},
+		}
+		if err = survey.Ask(qs, dc); err != nil {
+			return dc, err
+		}
+	}
+
+	buildconfig, err := dc.hubConfig.hubPrompt(dc2)
+	if err != nil {
+		return dc, err
+	}
+
+	dc.hubConfig = buildconfig
+
+	if dc2.Deploy.Port == 0 && dc.Port == 0 {
+		qs := []*survey.Question{
+			{
+				Name:     "port",
+				Validate: survey.Required,
+				Prompt: &survey.Input{
+					Message: "Port",
+				},
+			},
+		}
+		if err = survey.Ask(qs, dc); err != nil {
+			return dc, err
+		}
+	}
+
+	return dc, err
 }

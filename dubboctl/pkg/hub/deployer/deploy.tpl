@@ -46,11 +46,10 @@ metadata:
   namespace: {{.Namespace}}
 spec:
   ports:
-  - nodePort: {{.NodePort}}
-    port: {{.Port}}
+  - port: {{.Port}}
     protocol: TCP
-    targetPort: {{.TargetPort}}
-  type: NodePort
+    targetPort: dubbo
+  type: ClusterIP
   selector:
     app: {{.Name}}
 
