@@ -154,9 +154,6 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 	client, done := clientFactory(clientOptions...)
 	defer done()
 
-	if fp, err = client.Deploy(cmd.Context(), fp); err != nil {
-		return err
-	}
 	if fp.Built() {
 		return nil
 	}

@@ -36,6 +36,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0
 	github.com/envoyproxy/go-control-plane v0.13.1
 	github.com/envoyproxy/protoc-gen-validate v1.1.0
+	github.com/evanphx/json-patch v5.7.0+incompatible
 	github.com/fatih/color v1.18.0
 	github.com/fullstorydev/grpcurl v1.9.1
 	github.com/ghodss/yaml v1.0.0
@@ -186,7 +187,6 @@ require (
 	github.com/dubbogo/triple v1.2.2-rc3 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
