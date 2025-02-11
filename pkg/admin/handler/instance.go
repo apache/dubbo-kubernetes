@@ -58,6 +58,7 @@ func GetInstanceDetail(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		if len(resp) == 0 {
 			c.JSON(http.StatusNotFound, model.NewErrorResp("instance not exist"))
+			return
 		}
 		c.JSON(http.StatusOK, model.NewSuccessResp(resp[0]))
 	}

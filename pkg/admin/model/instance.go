@@ -109,7 +109,7 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 		r.DeployState = statusValue
 		r.WorkloadName = spec.Extensions[dataplane.ExtensionsWorkLoadKey]
 		// name field source is different between universal and k8s mode
-		r.AppName = spec.Extensions[dataplane.ExtensionApplicationNameKey]
+		r.AppName = spec.Extensions[mesh_proto.Application]
 		if r.AppName == "" {
 			for _, inbound := range spec.Networking.Inbound {
 				r.AppName = inbound.Tags[v1alpha1.AppTag]
@@ -261,7 +261,7 @@ func (a *InstanceDetail) mergeExtensions(extensions map[string]string) {
 	image := extensions[dataplane.ExtensionsImageKey]
 	a.Image = image
 	if a.AppName == "" {
-		a.AppName = extensions[dataplane.ExtensionApplicationNameKey]
+		a.AppName = extensions[mesh_proto.Application]
 	}
 	a.WorkloadName = extensions[dataplane.ExtensionsWorkLoadKey]
 	a.DeployState = extensions[dataplane.ExtensionsPodPhaseKey]
