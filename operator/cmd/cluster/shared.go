@@ -54,7 +54,7 @@ func NewPrinterForWriter(w io.Writer) Printer {
 	return &writerPrinter{writer: w}
 }
 
-func GenerateConfig(filenames []string, setFlags []string, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
+func generateConfig(filenames []string, setFlags []string, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
 	if err := validateSetFlags(setFlags); err != nil {
 		return "", nil, err
 	}
@@ -76,23 +76,20 @@ func validateSetFlags(setFlags []string) error {
 	return nil
 }
 
-func overlayYAMLStrings(
-	profile string, fy string,
-	setFlags []string, l clog.Logger,
-) (string, *dopv1alpha1.DubboOperator, error) {
-	dopsString, dops, err := GenDOPFromProfile(profile, fy, setFlags, l)
+func overlayYAMLStrings(profile string, fy string, setFlags []string, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
+	dopsString, dops, err := GenDOPFromProfile(profile, fy, setFlags, false, l)
 	if err != nil {
 		return "", nil, err
 	}
 	return dopsString, dops, nil
 }
 
-func GenDOPFromProfile(profileOrPath, fileOverlayYAML string, setFlags []string, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
-	outYAML, err := helm.GetProfileYAML("", profileOrPath)
+func GenDOPFromProfile(profileOrPath, fileOverlayYAML string, setFlags []string, allowUnknownField bool, l clog.Logger) (string, *dopv1alpha1.DubboOperator, error) {
+	_, err := helm.GetProfileYAML("", profileOrPath)
 	if err != nil {
 		return "", nil, err
 	}
-	finalIOP, err := unmarshalDOP(outYAML, false, l)
+	finalIOP, err := unmarshalDOP("", allowUnknownField, l)
 	if err != nil {
 		return "", nil, err
 	}

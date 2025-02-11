@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/helm"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/tpath"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
@@ -33,7 +35,7 @@ type profileListArgs struct {
 	manifestsPath string
 }
 
-type profileShowArgs struct {
+type profileDumpArgs struct {
 	filenames     []string
 	configPath    string
 	outputFormat  string
@@ -44,7 +46,7 @@ func addProfileListFlags(cmd *cobra.Command, args *profileListArgs) {
 	cmd.PersistentFlags().StringVarP(&args.manifestsPath, "manifests", "d", "", "Specify a path to a directory of charts and profiles")
 }
 
-func addProfileDescFlags(cmd *cobra.Command, args *profileShowArgs) {
+func addProfileDumpFlags(cmd *cobra.Command, args *profileDumpArgs) {
 	cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filenames", "f", nil, "")
 	cmd.PersistentFlags().StringVarP(&args.outputFormat, "output", "o", yamlOutput,
 		"Output format: one of json|yaml|flags")
@@ -54,9 +56,9 @@ func addProfileDescFlags(cmd *cobra.Command, args *profileShowArgs) {
 func ProfileCmd(ctx cli.Context) *cobra.Command {
 	rootArgs := &RootArgs{}
 	plArgs := &profileListArgs{}
-	psArgs := &profileShowArgs{}
+	pdArgs := &profileDumpArgs{}
 	plc := profileListCmd(rootArgs, plArgs)
-	pdc := profileDescCmd(rootArgs, psArgs)
+	pdc := profileDumpCmd(rootArgs, pdArgs)
 	pc := &cobra.Command{
 		Use:   "profile",
 		Short: "Commands related to Dubbo configuration profiles",
@@ -66,7 +68,7 @@ func ProfileCmd(ctx cli.Context) *cobra.Command {
 			"  dubboctl install --set profile=demo",
 	}
 	addProfileListFlags(plc, plArgs)
-	addProfileDescFlags(pdc, psArgs)
+	addProfileDumpFlags(pdc, pdArgs)
 	pc.AddCommand(plc)
 	pc.AddCommand(pdc)
 	AddFlags(pc, rootArgs)
@@ -85,11 +87,11 @@ func profileListCmd(rootArgs *RootArgs, plArgs *profileListArgs) *cobra.Command 
 	}
 }
 
-func profileDescCmd(rootArgs *RootArgs, pdArgs *profileShowArgs) *cobra.Command {
+func profileDumpCmd(rootArgs *RootArgs, pdArgs *profileDumpArgs) *cobra.Command {
 	return &cobra.Command{
-		Use:   "desc [<profile>]",
-		Short: "Describes an Dubbo configuration profile",
-		Long:  "The desc subcommand describe the values in an Dubbo configuration profile.",
+		Use:   "dump [<profile>]",
+		Short: "Dumps an Dubbo configuration profile",
+		Long:  "The dump subcommand describe the values in an Dubbo configuration profile.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 1 {
 				return fmt.Errorf("too many positional arguments")
@@ -98,7 +100,7 @@ func profileDescCmd(rootArgs *RootArgs, pdArgs *profileShowArgs) *cobra.Command 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			l := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
-			return profileDesc(args, rootArgs, pdArgs, l)
+			return profileDump(args, rootArgs, pdArgs, l)
 		},
 	}
 }
@@ -121,7 +123,7 @@ func profileList(cmd *cobra.Command, args *RootArgs, plArgs *profileListArgs) er
 	return nil
 }
 
-func profileDesc(args []string, rootArgs *RootArgs, pdArgs *profileShowArgs, l clog.Logger) error {
+func profileDump(args []string, rootArgs *RootArgs, pdArgs *profileDumpArgs, l clog.Logger) error {
 	if len(args) == 1 && pdArgs.filenames != nil {
 		return fmt.Errorf("cannot specify both profile name and filename flag")
 	}
@@ -137,9 +139,23 @@ func profileDesc(args []string, rootArgs *RootArgs, pdArgs *profileShowArgs, l c
 		setFlags = append(setFlags, "profile="+args[0])
 	}
 
-	y, _, err := GenerateConfig(pdArgs.filenames, setFlags, l)
+	y, _, err := generateConfig(pdArgs.filenames, setFlags, l)
 	if err != nil {
 		return err
+	}
+	y, err = tpath.GetConfigSubtree(y, "spec")
+	if err != nil {
+		return err
+	}
+
+	if pdArgs.configPath == "" {
+		if y, err = prependHeader(y); err != nil {
+			return err
+		}
+	} else {
+		if y, err = tpath.GetConfigSubtree(y, pdArgs.configPath); err != nil {
+			return err
+		}
 	}
 
 	switch pdArgs.outputFormat {
@@ -162,8 +178,19 @@ func profileDesc(args []string, rootArgs *RootArgs, pdArgs *profileShowArgs, l c
 	return nil
 }
 
-func yamlToFlags(yml string) ([]string, error) {
+func prependHeader(yml string) (string, error) {
+	out, err := tpath.AddSpecRoot(yml)
+	if err != nil {
+		return "", err
+	}
+	out2, err := util.OverlayYAML(dubboOperatorTreeString, out)
+	if err != nil {
+		return "", err
+	}
+	return out2, nil
+}
 
+func yamlToFlags(yml string) ([]string, error) {
 	uglyJSON, err := yaml.YAMLToJSON([]byte(yml))
 	if err != nil {
 		return []string{}, err
