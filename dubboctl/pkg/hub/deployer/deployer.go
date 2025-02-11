@@ -53,7 +53,7 @@ func (d *deploy) Deploy(ctx context.Context, dc *dubbo.DubboConfig, option ...sd
 
 	targetPort := dc.Deploy.TargetPort
 	if targetPort == 0 {
-		targetPort = dc.Deploy.ContainerPort
+		targetPort = dc.Deploy.Port
 	}
 
 	path := dc.Root + "/" + dc.Deploy.Output
@@ -74,7 +74,7 @@ func (d *deploy) Deploy(ctx context.Context, dc *dubbo.DubboConfig, option ...sd
 		Name:       dc.Name,
 		Namespace:  ns,
 		Image:      dc.Image,
-		Port:       dc.Deploy.ContainerPort,
+		Port:       dc.Deploy.Port,
 		TargetPort: targetPort,
 		NodePort:   dc.Deploy.NodePort,
 	})

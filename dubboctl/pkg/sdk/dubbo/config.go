@@ -40,11 +40,11 @@ type BuildSpec struct {
 }
 
 type DeploySpec struct {
-	Namespace     string `yaml:"namespace,omitempty"`
-	Output        string `yaml:"output,omitempty"`
-	ContainerPort int    `yaml:"containerPort,omitempty"`
-	TargetPort    int    `yaml:"targetPort,omitempty"`
-	NodePort      int    `yaml:"nodePort,omitempty"`
+	Namespace  string `yaml:"namespace,omitempty"`
+	Output     string `yaml:"output,omitempty"`
+	Port       int    `yaml:"port,omitempty"`
+	TargetPort int    `yaml:"targetPort,omitempty"`
+	NodePort   int    `yaml:"nodePort,omitempty"`
 }
 
 func NewDubboConfig(path string) (*DubboConfig, error) {
