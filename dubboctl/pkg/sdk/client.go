@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
@@ -18,8 +19,40 @@ type Client struct {
 	templates        *Templates
 	repositories     *Repositories
 	repositoriesPath string
+	builder          Builder
+	pusher           Pusher
+	deployer         Deployer
 }
 
+type Builder interface {
+	Build(context.Context, *dubbo.DubboConfig) error
+}
+
+type Pusher interface {
+	Push(ctx context.Context, dc *dubbo.DubboConfig) (string, error)
+}
+
+type DeployOption func(f *DeployParams)
+
+type Deployer interface {
+	Deploy(context.Context, *dubbo.DubboConfig, ...DeployOption) (DeploymentResult, error)
+}
+
+type DeploymentResult struct {
+	Status    Status
+	Namespace string
+}
+
+type Status int
+
+const (
+	Failed Status = iota
+	Deployed
+)
+
+type DeployParams struct {
+	skipBuiltCheck bool
+}
 type Option func(client *Client)
 
 func New(options ...Option) *Client {
@@ -95,7 +128,7 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	}
 
 	f.Created = time.Now()
-	err = f.WriteYamlFile()
+	err = f.WriteFile()
 	if err != nil {
 		return f, err
 	}
@@ -107,9 +140,74 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	return dubbo.NewDubboConfig(oldRoot)
 }
 
+type BuildOptions struct{}
+
+type BuildOption func(c *BuildOptions)
+
+func (c *Client) Build(ctx context.Context, dc *dubbo.DubboConfig, options ...BuildOption) (*dubbo.DubboConfig, error) {
+	fmt.Fprintln(os.Stderr, "Building application image")
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	bo := BuildOptions{}
+	for _, o := range options {
+		o(&bo)
+	}
+
+	if err := c.builder.Build(ctx, dc); err != nil {
+		return dc, err
+	}
+	if err := dc.Stamp(); err != nil {
+		return dc, err
+	}
+	fmt.Printf("Application built: %v\n", dc.Image)
+	return dc, nil
+}
+
+func (c *Client) Push(ctx context.Context, dc *dubbo.DubboConfig) (*dubbo.DubboConfig, error) {
+	var err error
+	if !dc.Built() {
+		return dc, errors.New("not built")
+	}
+	if dc.ImageDigest, err = c.pusher.Push(ctx, dc); err != nil {
+		return dc, err
+	}
+
+	return dc, nil
+}
+
+func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...DeployOption) (*dubbo.DubboConfig, error) {
+	deployParams := &DeployParams{skipBuiltCheck: false}
+	for _, opt := range opts {
+		opt(deployParams)
+	}
+
+	go func() {
+		<-ctx.Done()
+	}()
+
+	if dc.Name == "" {
+		return dc, errors.New("name required")
+	}
+	fmt.Fprintln(os.Stderr, "Deploying to the cluster or generate manifest")
+	result, err := c.deployer.Deploy(ctx, dc)
+	if err != nil {
+		fmt.Printf("deploy error: %v\n", err)
+		return dc, err
+	}
+
+	dc.Deploy.Namespace = result.Namespace
+
+	if result.Status == Deployed {
+		fmt.Fprintf(os.Stderr, "deployed in namespace %q or manifest had been generated\n", result.Namespace)
+	}
+
+	return dc, nil
+}
+
 func hasInitialized(path string) (bool, error) {
 	var err error
-	filename := filepath.Join(path, dubbo.DubboYamlFile)
+	filename := filepath.Join(path, dubbo.DubboLogFile)
 
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
@@ -149,36 +247,6 @@ func assertEmptyRoot(path string) (err error) {
 		return
 	}
 	return
-}
-
-var contentiousFiles = []string{
-	dubbo.DubboYamlFile,
-	".gitignore",
-}
-
-func contentiousFilesIn(dir string) (contentious []string, err error) {
-	files, err := os.ReadDir(dir)
-	for _, file := range files {
-		for _, name := range contentiousFiles {
-			if file.Name() == name {
-				contentious = append(contentious, name)
-			}
-		}
-	}
-	return
-}
-
-func isEffectivelyEmpty(dir string) (bool, error) {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return false, err
-	}
-	for _, file := range files {
-		if !strings.HasPrefix(file.Name(), ".") {
-			return false, nil
-		}
-	}
-	return true, nil
 }
 
 func runDataDir(root string) error {
@@ -225,8 +293,56 @@ func runDataDir(root string) error {
 	return nil
 }
 
+var contentiousFiles = []string{
+	dubbo.DubboLogFile,
+	".gitignore",
+}
+
+func contentiousFilesIn(dir string) (contentious []string, err error) {
+	files, err := os.ReadDir(dir)
+	for _, file := range files {
+		for _, name := range contentiousFiles {
+			if file.Name() == name {
+				contentious = append(contentious, name)
+			}
+		}
+	}
+	return
+}
+
+func isEffectivelyEmpty(dir string) (bool, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return false, err
+	}
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), ".") {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func WithRepositoriesPath(path string) Option {
 	return func(c *Client) {
 		c.repositoriesPath = path
+	}
+}
+
+func WithBuilder(b Builder) Option {
+	return func(c *Client) {
+		c.builder = b
+	}
+}
+
+func WithPusher(pusher Pusher) Option {
+	return func(c *Client) {
+		c.pusher = pusher
+	}
+}
+
+func WithDeployer(d Deployer) Option {
+	return func(c *Client) {
+		c.deployer = d
 	}
 }

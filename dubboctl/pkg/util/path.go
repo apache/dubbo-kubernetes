@@ -17,7 +17,7 @@ func Dir() (path string) {
 	return
 }
 
-func CreatePath() (err error) {
+func GetCreatePath() (err error) {
 	if err = os.MkdirAll(Dir(), os.ModePerm); err != nil {
 		return fmt.Errorf("error creating global config path: %v", err)
 	}

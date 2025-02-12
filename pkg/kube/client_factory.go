@@ -24,13 +24,6 @@ type clientFactory struct {
 	discoveryClient laziness.Laziness[discovery.CachedDiscoveryInterface]
 }
 
-type restClientGetter interface {
-	ToRestConfig() (*rest.Config, error)
-	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
-	ToRestMapper() (meta.RESTMapper, error)
-	ToRawKubeConfigLoader() clientcmd.ClientConfig
-}
-
 func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clientFactory {
 	cf := &clientFactory{
 		clientConfig: clientConfig,

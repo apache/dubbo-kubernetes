@@ -165,7 +165,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, _ k
 
 func validateDubboOperator(dop values.Map, logger clog.Logger) error {
 	warnings, errs := validation.ParseAndValidateDubboOperator(dop)
-	if err := errs.ToErrors(); err != nil {
+	if err := errs.ToError(); err != nil {
 		return err
 	}
 	if logger != nil {

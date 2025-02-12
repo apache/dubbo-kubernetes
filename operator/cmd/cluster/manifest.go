@@ -22,7 +22,7 @@ type manifestGenerateArgs struct {
 
 func (a *manifestGenerateArgs) String() string {
 	var b strings.Builder
-	b.WriteString("files:   " + fmt.Sprint(a.files) + "\n")
+	b.WriteString("filenames:   " + fmt.Sprint(a.files) + "\n")
 	b.WriteString("sets:           " + fmt.Sprint(a.sets) + "\n")
 	b.WriteString("manifestPath: " + a.manifestPath + "\n")
 	return b.String()

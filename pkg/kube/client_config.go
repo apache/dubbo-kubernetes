@@ -10,6 +10,12 @@ type clientConfig struct {
 	restConfig rest.Config
 }
 
+func NewClientConfigForRestConfig(restConfig *rest.Config) clientcmd.ClientConfig {
+	return &clientConfig{
+		restConfig: *restConfig,
+	}
+}
+
 func (c clientConfig) RawConfig() (api.Config, error) {
 	cfg := api.Config{
 		Kind:           "Config",
@@ -38,10 +44,4 @@ func (c clientConfig) Namespace() (string, bool, error) {
 
 func (c clientConfig) ConfigAccess() clientcmd.ConfigAccess {
 	return nil
-}
-
-func NewClientConfigForRestConfig(restConfig *rest.Config) clientcmd.ClientConfig {
-	return &clientConfig{
-		restConfig: *restConfig,
-	}
 }

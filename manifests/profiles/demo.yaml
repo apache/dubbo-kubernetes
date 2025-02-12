@@ -18,4 +18,9 @@ kind: DubboOperator
 metadata:
   namespace: dubbo-system
 spec:
-  profile: demo
+  components:
+    base:
+      enabled: true
+  values:
+    profile: demo
+

@@ -33,12 +33,6 @@ func NewSchemasBuilder() *SchemasBuilder {
 	return &SchemasBuilder{schemas: s}
 }
 
-func (b *SchemasBuilder) Build() Schemas {
-	s := b.schemas
-	b.schemas = Schemas{}
-	return s
-}
-
 func (b *SchemasBuilder) Add(s schema.Schema) error {
 	if _, found := b.schemas.byCollection[s.GroupVersionKind()]; found {
 		return fmt.Errorf("collection already exists: %v", s.GroupVersionKind())
@@ -53,4 +47,10 @@ func (b *SchemasBuilder) MustAdd(s schema.Schema) *SchemasBuilder {
 		panic(fmt.Sprintf("SchemasBuilder.MustAdd: %v", err))
 	}
 	return b
+}
+
+func (b *SchemasBuilder) Build() Schemas {
+	s := b.schemas
+	b.schemas = Schemas{}
+	return s
 }

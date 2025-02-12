@@ -103,6 +103,7 @@ func (f *informerFactory) Shutdown() {
 
 	f.lock.Lock()
 	defer f.lock.Unlock()
+
 	f.shuttingDown = true
 }
 

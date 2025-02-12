@@ -12,7 +12,7 @@ func (e Errors) Error() string {
 	return ToString(e, defaultSeparator)
 }
 
-func (e Errors) ToErrors() error {
+func (e Errors) ToError() error {
 	if len(e) == 0 {
 		return nil
 	}

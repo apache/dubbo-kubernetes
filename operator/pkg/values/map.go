@@ -127,6 +127,10 @@ func (m Map) GetPathString(s string) string {
 	return GetPathHelper[string](m, s)
 }
 
+func (m Map) GetPathStringOr(s string, def string) string {
+	return pointer.NonEmptyOrDefault(m.GetPathString(s), def)
+}
+
 func GetPathHelper[T any](m Map, name string) T {
 	v, ok := m.GetPath(name)
 	if !ok {
