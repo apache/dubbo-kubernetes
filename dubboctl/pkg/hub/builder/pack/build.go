@@ -26,8 +26,8 @@ var (
 
 var (
 	DefaultBuilderImages = map[string]string{
-		"go":   DefaultTinyBuilder,
-		"java": DefaultBaseBuilder,
+		"go":   DefaultBaseBuilder,
+		"java": DefaultTinyBuilder,
 	}
 
 	defaultBuildpacks = map[string][]string{}
@@ -118,7 +118,7 @@ func (b *Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) (err error) 
 		if ctx.Err() != nil {
 			return
 		} else {
-			err = fmt.Errorf("failed to build the application: %w", err)
+			err = fmt.Errorf("failed to build: %w", err)
 			fmt.Fprintln(color.Stderr(), "")
 			_, _ = io.Copy(color.Stderr(), &b.outBuff)
 			fmt.Fprintln(color.Stderr(), "")

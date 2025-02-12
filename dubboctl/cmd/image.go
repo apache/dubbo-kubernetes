@@ -21,6 +21,7 @@ type imageArgs struct {
 	dockerfile bool
 	builder    bool
 	output     string
+	delete     bool
 }
 
 func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
@@ -30,7 +31,7 @@ func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
 
 func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
 	cmd.PersistentFlags().StringVarP(&iArgs.output, "output", "o", "dubbo-deploy.yaml", "The output generates k8s yaml file")
-
+	cmd.PersistentFlags().BoolVarP(&iArgs.delete, "delete", "d", false, "delete k8s yaml file")
 }
 
 type hubConfig struct {
@@ -44,6 +45,7 @@ type hubConfig struct {
 type deployConfig struct {
 	*hubConfig
 	Output    string
+	Delete    bool
 	Namespace string
 	Port      int
 	Path      string
@@ -73,6 +75,7 @@ func newDeployConfig(cmd *cobra.Command) *deployConfig {
 	dc := &deployConfig{
 		hubConfig: newHubConfig(cmd),
 		Output:    viper.GetString("output"),
+		Delete:    viper.GetBool("delete"),
 	}
 	return dc
 }
@@ -154,9 +157,6 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 	client, done := clientFactory(clientOptions...)
 	defer done()
 
-	if fp, err = client.Deploy(cmd.Context(), fp); err != nil {
-		return err
-	}
 	if fp.Built() {
 		return nil
 	}
@@ -183,7 +183,7 @@ func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 		Short:   "Deploy to cluster",
 		Long:    "The deploy subcommand used to deploy to cluster",
 		Example: "",
-		PreRunE: bindEnv("output"),
+		PreRunE: bindEnv("output", "delete"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, args, clientFactory)
 		},
@@ -225,6 +225,12 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 		return err
 	}
 
+	if dcfg.Delete {
+		if err := destroy(cmd, fp); err != nil {
+			return err
+		}
+	}
+
 	err = fp.WriteFile()
 	if err != nil {
 		return err
@@ -236,6 +242,17 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root, dc.Deploy.Output)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
+	ec.Stdout = os.Stdout
+	ec.Stderr = os.Stderr
+	if err := ec.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func destroy(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
+	file := filepath.Join(dc.Root, dc.Deploy.Output)
+	ec := exec.CommandContext(cmd.Context(), "kubectl", "delete", "-f", file)
 	ec.Stdout = os.Stdout
 	ec.Stderr = os.Stderr
 	if err := ec.Run(); err != nil {

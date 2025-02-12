@@ -48,6 +48,7 @@ type Status int
 const (
 	Failed Status = iota
 	Deployed
+	Destroyed // TODO
 )
 
 type DeployParams struct {
@@ -145,7 +146,7 @@ type BuildOptions struct{}
 type BuildOption func(c *BuildOptions)
 
 func (c *Client) Build(ctx context.Context, dc *dubbo.DubboConfig, options ...BuildOption) (*dubbo.DubboConfig, error) {
-	fmt.Fprintln(os.Stderr, "Building application image")
+	fmt.Println("Starting to built the image...")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -160,7 +161,7 @@ func (c *Client) Build(ctx context.Context, dc *dubbo.DubboConfig, options ...Bu
 	if err := dc.Stamp(); err != nil {
 		return dc, err
 	}
-	fmt.Printf("Application built: %v\n", dc.Image)
+	fmt.Printf("Image built completed: %v\n", dc.Image)
 	return dc, nil
 }
 
@@ -189,7 +190,6 @@ func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...Depl
 	if dc.Name == "" {
 		return dc, errors.New("name required")
 	}
-	fmt.Fprintln(os.Stderr, "Deploying to the cluster or generate manifest")
 	result, err := c.deployer.Deploy(ctx, dc)
 	if err != nil {
 		fmt.Printf("deploy error: %v\n", err)
@@ -199,8 +199,9 @@ func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...Depl
 	dc.Deploy.Namespace = result.Namespace
 
 	if result.Status == Deployed {
-		fmt.Fprintf(os.Stderr, "deployed in namespace %q or manifest had been generated\n", result.Namespace)
 	}
+	if result.Status == Destroyed {
+	} // TODO
 
 	return dc, nil
 }

@@ -3,12 +3,13 @@ package deployer
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
+	"log"
 	"os"
 	template2 "text/template"
+	"time"
 )
 
 const (
@@ -58,7 +59,7 @@ func (d *deploy) Deploy(ctx context.Context, dc *dubbo.DubboConfig, option ...sd
 
 	path := dc.Root + "/" + dc.Deploy.Output
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		fmt.Fprintln(os.Stderr, "WARNING! The file already exists in this directory and has been overwritten.")
+		log.Printf("[WARN] %s - File '%s' already exists and will be overwritten.\n", time.Now().Format(time.RFC3339), path)
 	}
 
 	out, err := os.Create(path)
@@ -78,15 +79,10 @@ func (d *deploy) Deploy(ctx context.Context, dc *dubbo.DubboConfig, option ...sd
 		TargetPort: targetPort,
 		NodePort:   dc.Deploy.NodePort,
 	})
+
 	if err != nil {
-		return sdk.DeploymentResult{
-			Status:    sdk.Failed,
-			Namespace: ns,
-		}, err
+		return sdk.DeploymentResult{Status: sdk.Failed, Namespace: ns}, err
 	}
 
-	return sdk.DeploymentResult{
-		Status:    sdk.Deployed,
-		Namespace: ns,
-	}, nil
+	return sdk.DeploymentResult{Status: sdk.Deployed, Namespace: ns}, nil
 }
