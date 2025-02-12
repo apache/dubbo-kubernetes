@@ -58,7 +58,7 @@ func (d *deploy) Deploy(ctx context.Context, dc *dubbo.DubboConfig, option ...sd
 
 	path := dc.Root + "/" + dc.Deploy.Output
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		fmt.Fprintln(os.Stderr, "WARNING! The file already exists in this directory and has been overwritten.")
+		fmt.Println("The k8s yaml file already exists in this directory.")
 	}
 
 	out, err := os.Create(path)
