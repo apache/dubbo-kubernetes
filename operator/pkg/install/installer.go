@@ -221,6 +221,7 @@ var componentDependencies = map[component.Name][]component.Name{
 	component.RegisterComponentName: {},
 	component.BaseComponentName: {
 		component.RegisterComponentName,
+		component.AdminComponentName,
 	},
 	component.AdminComponentName: {},
 }
