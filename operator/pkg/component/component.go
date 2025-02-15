@@ -9,8 +9,9 @@ import (
 type Name string
 
 const (
-	BaseComponentName  Name = "Base"
-	AdminComponentName Name = "Admin"
+	BaseComponentName     Name = "Base"
+	AdminComponentName    Name = "Admin"
+	RegisterComponentName Name = "Register"
 )
 
 var AllComponents = []Component{
@@ -28,6 +29,13 @@ var AllComponents = []Component{
 		HelmSubDir:     "admin",
 		HelmTreeRoot:   "",
 	},
+	{
+		UserFacingName: RegisterComponentName,
+		SpecName:       "register",
+		Default:        true,
+		HelmSubDir:     "dubbo-control/register-discovery",
+		HelmTreeRoot:   "",
+	},
 }
 
 type Component struct {
@@ -41,14 +49,15 @@ type Component struct {
 
 var (
 	userFacingCompNames = map[Name]string{
-		BaseComponentName:  "Dubbo Core",
-		AdminComponentName: "Dubbo Dashboard",
+		BaseComponentName:     "Dubbo Core",
+		AdminComponentName:    "Dubbo Dashboard",
+		RegisterComponentName: "Dubbo Register Plane",
 	}
 
 	Icons = map[Name]string{
-		BaseComponentName:  "🛸",
-		AdminComponentName: "🛰",
-		// 📡
+		BaseComponentName:     "🛸",
+		RegisterComponentName: "📡",
+		AdminComponentName:    "🛰",
 	}
 )
 

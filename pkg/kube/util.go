@@ -27,23 +27,6 @@ func BuildClientConfig(kubeconfig, context string) (*rest.Config, error) {
 	return c, nil
 }
 
-func SetRestDefaults(config *rest.Config) *rest.Config {
-	if config.GroupVersion == nil || config.GroupVersion.Empty() {
-		config.GroupVersion = &corev1.SchemeGroupVersion
-	}
-	if len(config.APIPath) == 0 {
-		if len(config.GroupVersion.Group) == 0 {
-			config.APIPath = "/api"
-		} else {
-			config.APIPath = "/apis"
-		}
-	}
-	if config.NegotiatedSerializer == nil {
-		config.NegotiatedSerializer = serializer.NewCodecFactory(nil).WithoutConversion()
-	}
-	return config
-}
-
 func BuildClientCmd(kubeconfig, context string, overrides ...func(configOverrides *clientcmd.ConfigOverrides)) clientcmd.ClientConfig {
 	if kubeconfig != "" {
 		info, err := os.Stat(kubeconfig)
@@ -62,4 +45,21 @@ func BuildClientCmd(kubeconfig, context string, overrides ...func(configOverride
 		fn(configOverrides)
 	}
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+}
+
+func SetRestDefaults(config *rest.Config) *rest.Config {
+	if config.GroupVersion == nil || config.GroupVersion.Empty() {
+		config.GroupVersion = &corev1.SchemeGroupVersion
+	}
+	if len(config.APIPath) == 0 {
+		if len(config.GroupVersion.Group) == 0 {
+			config.APIPath = "/api"
+		} else {
+			config.APIPath = "/apis"
+		}
+	}
+	if config.NegotiatedSerializer == nil {
+		config.NegotiatedSerializer = serializer.NewCodecFactory(nil).WithoutConversion()
+	}
+	return config
 }

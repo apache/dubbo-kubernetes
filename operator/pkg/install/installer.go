@@ -86,7 +86,19 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 }
 
 func (i Installer) InstallManifests(manifests []manifest.ManifestSet) error {
+	err := i.installSystemNamespace()
+	if err != nil {
+		return err
+	}
 	if err := i.install(manifests); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i Installer) installSystemNamespace() error {
+	ns := i.Values.GetPathStringOr("metadata.namespace", "dubbo-system")
+	if err := util.CreateNamespace(i.Kube.Kube(), ns, i.DryRun); err != nil {
 		return err
 	}
 	return nil
@@ -202,14 +214,16 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 			}
 		}
 	}
-	return errs.ToErrors()
+	return errs.ToError()
 }
 
 var componentDependencies = map[component.Name][]component.Name{
-	component.AdminComponentName: {},
+	component.RegisterComponentName: {},
 	component.BaseComponentName: {
+		component.RegisterComponentName,
 		component.AdminComponentName,
 	},
+	component.AdminComponentName: {},
 }
 
 func dependenciesChannels() map[component.Name]chan struct{} {

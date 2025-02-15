@@ -13,6 +13,7 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -22,8 +23,10 @@ import (
 const (
 	// NotesFileNameSuffix is the file name suffix for helm notes.
 	// see https://helm.sh/docs/chart_template_guide/notes_files/
-	NotesFileNameSuffix = ".txt"
-	BaseChartName       = "base"
+	NotesFileNameSuffix    = ".txt"
+	BaseChartName          = "base"
+	profilesDirName        = "profiles"
+	DefaultProfileFilename = "default.yaml"
 )
 
 type Warnings = util.Errors
@@ -128,4 +131,96 @@ func getFilesRecursive(f fs.FS, root string) ([]string, error) {
 		return nil
 	})
 	return result, err
+}
+
+func readProfiles(chartsDir string) (map[string]bool, error) {
+	profiles := map[string]bool{}
+	f := manifests.BuiltinDir(chartsDir)
+	dir, err := fs.ReadDir(f, profilesDirName)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range dir {
+		trimmedString := strings.TrimSuffix(f.Name(), ".yaml")
+		if f.Name() != trimmedString {
+			profiles[trimmedString] = true
+		}
+	}
+	return profiles, nil
+}
+
+func ListProfiles(charts string) ([]string, error) {
+	profiles, err := readProfiles(charts)
+	if err != nil {
+		return nil, err
+	}
+	return stringBoolMapToSlice(profiles), nil
+}
+
+func stringBoolMapToSlice(m map[string]bool) []string {
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		if v {
+			s = append(s, k)
+		}
+	}
+	return s
+}
+
+func GetProfileYAML(installPackagePath, profileOrPath string) (string, error) {
+	if profileOrPath == "" {
+		profileOrPath = "default"
+	}
+	profiles, err := readProfiles(installPackagePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read profiles: %v", err)
+	}
+	if profiles[profileOrPath] && installPackagePath != "" {
+		profileOrPath = filepath.Join(installPackagePath, "profiles", profileOrPath+".yaml")
+	}
+	baseCRYAML, err := ReadProfileYAML(profileOrPath, installPackagePath)
+	if err != nil {
+		return "", err
+	}
+
+	return baseCRYAML, nil
+}
+
+func readFile(path string) (string, error) {
+	b, err := ioutil.ReadFile(path)
+	return string(b), err
+}
+
+func ReadProfileYAML(profile, manifestsPath string) (string, error) {
+	var err error
+	var globalValues string
+
+	switch {
+	case util.IsFilePath(profile):
+		if globalValues, err = readFile(profile); err != nil {
+			return "", err
+		}
+	default:
+		if globalValues, err = LoadValues(profile, manifestsPath); err != nil {
+			return "", fmt.Errorf("failed to read profile %v from %v: %v", profile, manifestsPath, err)
+		}
+	}
+
+	return globalValues, nil
+}
+
+func LoadValues(profileName string, chartsDir string) (string, error) {
+	path := strings.Join([]string{profilesDirName, builtinProfileToFilename(profileName)}, "/")
+	by, err := fs.ReadFile(manifests.BuiltinDir(chartsDir), path)
+	if err != nil {
+		return "", err
+	}
+	return string(by), nil
+}
+
+func builtinProfileToFilename(name string) string {
+	if name == "" {
+		return DefaultProfileFilename
+	}
+	return name + ".yaml"
 }

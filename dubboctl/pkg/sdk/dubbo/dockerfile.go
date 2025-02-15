@@ -19,43 +19,43 @@ package dubbo
 
 var (
 	golang = `
-# Please modify your template according to your business needs!!!
+FROM golang:1.20-alpine AS builder
 
-FROM golang:alpine AS builder    
-                                                                                                                                                                           
-LABEL stage=gobuilder    
-    
-ENV CGO_ENABLED 0    
-ENV GOPROXY https://goproxy.cn,direct    
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories    
-    
-WORKDIR /build    
-    
-ADD go.mod .    
-ADD go.sum .    
-RUN go mod download    
-COPY . .    
-COPY ./conf /app/conf    
-RUN go build -ldflags="-s -w" -o /app/dubbogo ./cmd    
-    
-FROM scratch    
-    
-WORKDIR /app    
-COPY --from=builder /app/dubbogo /app/dubbogo    
-COPY --from=builder /app/conf /app/conf    
-ENV DUBBO_GO_CONFIG_PATH=/app/conf/dubbogo.yaml    
-    
-CMD ["./dubbogo"]    
+LABEL stage=gobuilder
+
+ENV CGO_ENABLED=0
+ENV GOPROXY=https://goproxy.cn,direct
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+WORKDIR /build
+
+ADD go.mod go.sum ./
+RUN go mod download
+
+COPY . ./
+COPY ./conf /app/conf
+RUN go build -ldflags="-s -w" -o /app/dubbogo ./cmd
+
+FROM scratch
+
+WORKDIR /app
+
+COPY --from=builder /app/dubbogo /app/dubbogo
+COPY --from=builder /app/conf /app/conf
+
+ENV DUBBO_GO_CONFIG_PATH=/app/conf/dubbogo.yaml
+
+CMD ["./dubbogo"]  
 `
 
 	java = `
-# Please modify your template according to your business needs!!!
-
 FROM openjdk:8-jdk-alpine
 
-ADD target/demo-0.0.1-SNAPSHOT.jar app.jar
+ADD target/demo-0.0.1-SNAPSHOT.jar /app.jar
+
 ENV JAVA_OPTS=""
-ENTRYPOINT exec java $JAVA_OPTS -jar /app.jar
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app.jar"]
 `
 
 	DockerfileByRuntime = map[string]string{

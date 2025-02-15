@@ -23,7 +23,7 @@
         </a-form-item>
       </template>
       <template v-slot:form_flow="{ current }">
-        <a-space>
+        <a-space direction="vertical" size="middle" class="flowWeight-box">
           <a-card v-for="(item, i) in current.form.rules">
             <template #title>
               {{ $t('applicationDomain.flowWeight') }} {{ i + 1 }}
@@ -43,7 +43,7 @@
             </template>
 
             <a-form-item :name="'rules[' + i + '].weight'" label="权重">
-              <a-input-number v-model:value="item.weight"></a-input-number>
+              <a-input-number min="1" v-model:value="item.weight"></a-input-number>
             </a-form-item>
             <a-form-item label="作用范围">
               <a-table
@@ -57,25 +57,21 @@
                 :data-source="[item.scope]"
               >
                 <template #bodyCell="{ column, record, index }">
-                  <a-form-item
-                    v-if="column.key === 'condition'"
-                    :name="'rules[' + i + '].scope.condition'"
-                    label=""
-                  >
-                    <a-select v-model:value="item.scope.condition">
-                      <a-select-option value="=">=</a-select-option>
-                      <a-select-option value="!=">!=</a-select-option>
-                      <a-select-option value=">">></a-select-option>
-                      <a-select-option value="<">{{ '<' }}</a-select-option>
-                    </a-select>
-                  </a-form-item>
-                  <a-form-item
-                    v-else
-                    :name="'rules[' + i + '].scope.condition.' + column.key"
-                    label=""
-                  >
-                    <a-input v-model:value="item.scope[column.key]"></a-input>
-                  </a-form-item>
+                  <template v-if="column.key === 'label'">
+                    <a-form-item :name="'rules[' + i + '].scope.key'">
+                      <a-input v-model:value="item.scope.key"></a-input>
+                    </a-form-item>
+                  </template>
+                  <template v-if="column.key === 'condition'">
+                    <a-form-item :name="'rules[' + i + '].scope.condition'">
+                      <a-input v-model:value="scopeConditionOfFlowWeight[i]"></a-input>
+                    </a-form-item>
+                  </template>
+                  <template v-if="column.key === 'value'">
+                    <a-form-item :name="'rules[' + i + '].scope.value'">
+                      <a-input v-model:value="scopeValueOfFlowWeight[i]"></a-input>
+                    </a-form-item>
+                  </template>
                 </template>
               </a-table>
             </a-form-item>
@@ -117,25 +113,21 @@
                 :data-source="[item.scope]"
               >
                 <template #bodyCell="{ column, record, index }">
-                  <a-form-item
-                    v-if="column.key === 'condition'"
-                    :name="'rules[' + i + '].scope.condition'"
-                    label=""
-                  >
-                    <a-select v-model:value="item.scope.condition">
-                      <a-select-option value="=">=</a-select-option>
-                      <a-select-option value="!=">!=</a-select-option>
-                      <a-select-option value=">">></a-select-option>
-                      <a-select-option value="<">{{ '<' }}</a-select-option>
-                    </a-select>
-                  </a-form-item>
-                  <a-form-item
-                    v-else
-                    :name="'rules[' + i + '].scope.condition.' + column.key"
-                    label=""
-                  >
-                    <a-input v-model:value="item.scope[column.key]"></a-input>
-                  </a-form-item>
+                  <template v-if="column.key === 'label'">
+                    <a-form-item :name="'rules[' + i + '].scope.key'">
+                      <a-input v-model:value="item.scope.key"></a-input>
+                    </a-form-item>
+                  </template>
+                  <template v-if="column.key === 'condition'">
+                    <a-form-item :name="'rules[' + i + '].scope.condition'">
+                      <a-input v-model:value="scopeConditionOfGrayIsolation[i]"></a-input>
+                    </a-form-item>
+                  </template>
+                  <template v-if="column.key === 'value'">
+                    <a-form-item :name="'rules[' + i + '].scope.value'">
+                      <a-input v-model:value="scopeValueOfGrayIsolation[i]"></a-input>
+                    </a-form-item>
+                  </template>
                 </template>
               </a-table>
             </a-form-item>
@@ -147,9 +139,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import ConfigPage from '@/components/ConfigPage.vue'
 import { Icon } from '@iconify/vue'
+import {
+  getAppGrayIsolation,
+  getAppLogSwitch,
+  getAppTrafficWeight,
+  updateAppGrayIsolation,
+  updateAppLogSwitch,
+  updateAppTrafficWeight
+} from '@/api/service/app'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
 
 let options: any = reactive({
   list: [
@@ -159,11 +162,9 @@ let options: any = reactive({
       form: {
         logFlag: false
       },
-      submit: (form: {}) => {
+      submit: (form: any) => {
         return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(1)
-          }, 1000)
+          resolve(updateLogFlag(form?.logFlag))
         })
       },
       reset(form: any) {
@@ -180,20 +181,19 @@ let options: any = reactive({
       form: {
         rules: [
           {
-            weight: '100',
+            weight: 10,
             scope: {
-              label: 'key1',
-              condition: '=',
-              value: 'value1'
+              key: 'version',
+              value: {
+                exact: 'v1'
+              }
             }
           }
         ]
       },
       submit(form: {}) {
         return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(1)
-          }, 1000)
+          resolve(updateFlowWeight())
         })
       }
     },
@@ -208,31 +208,160 @@ let options: any = reactive({
       form: {
         rules: [
           {
-            name: '100',
+            name: 'env-nam',
             scope: {
-              label: 'key1',
-              condition: '=',
-              value: 'value1'
+              key: 'env',
+              value: {
+                exact: 'gray'
+              }
             }
           }
         ]
       },
       submit(form: {}) {
         return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(1)
-          }, 1000)
+          resolve(updateGrayIsolation())
         })
       }
     }
   ],
   current: [0]
 })
+
+// Is execution log acquisition enabled?
+const getLogFlag = async () => {
+  const res = await getAppLogSwitch(<string>route.params?.pathId)
+  console.log(res)
+  if (res?.code == 200) {
+    options.list.forEach((item: any) => {
+      if (item.key === 'log') {
+        item.form.logFlag = res.data.operatorLog
+        return
+      }
+    })
+  }
+}
+
+// Modify the execution log switch
+const updateLogFlag = async (operatorLog: boolean) => {
+  const res = await updateAppLogSwitch(<string>route.params?.pathId, operatorLog)
+  console.log(res)
+  if (res?.code == 200) {
+    await getLogFlag()
+  }
+}
+
+const scopeConditionOfFlowWeight: any = ref([])
+const scopeValueOfFlowWeight: any = ref([])
+
+// Obtain flow weight
+const getFlowWeight = async () => {
+  const res = await getAppTrafficWeight(<string>route.params?.pathId)
+  if (res?.code == 200) {
+    options.list.forEach((item: any) => {
+      if (item.key === 'flow') {
+        item.form.rules = JSON.parse(JSON.stringify(res.data.flowWeightSets))
+        // 将后端发的流量权重数据拆出来
+        item.form.rules.forEach((rule: any) => {
+          if (Object.keys(rule.scope.value).length == 0) {
+            scopeConditionOfFlowWeight.value.push('')
+            scopeValueOfFlowWeight.value.push('')
+          }
+          for (const [key, value] of Object.entries(rule.scope.value)) {
+            scopeConditionOfFlowWeight.value.push(key)
+            scopeValueOfFlowWeight.value.push(value)
+          }
+          rule.scope.value = {}
+        })
+      }
+    })
+  }
+}
+
+// Modify flow weight
+const updateFlowWeight = async () => {
+  let flowWeightSets: any = []
+  options.list.forEach((item: any) => {
+    if (item.key === 'flow') {
+      flowWeightSets = JSON.parse(JSON.stringify(item.form.rules))
+      flowWeightSets.forEach((rule: any, index: number) => {
+        if (scopeConditionOfFlowWeight.value[index] && scopeValueOfFlowWeight.value[index]) {
+          rule.scope.value[scopeConditionOfFlowWeight.value[index]] =
+            scopeValueOfFlowWeight.value[index]
+        }
+      })
+    }
+  })
+  const res = await updateAppTrafficWeight(<string>route.params?.pathId, flowWeightSets)
+  if (res.code === 200) {
+    scopeConditionOfFlowWeight.value = []
+    scopeValueOfFlowWeight.value = []
+    await getFlowWeight()
+  }
+}
+
+const scopeConditionOfGrayIsolation: any = ref([])
+const scopeValueOfGrayIsolation: any = ref([])
+
+// Obtain GrayIsolation
+const getGrayIsolation = async () => {
+  const res = await getAppGrayIsolation(<string>route.params?.pathId)
+  if (res?.code == 200) {
+    options.list.forEach((item: any) => {
+      if (item.key === 'gray') {
+        item.form.rules = JSON.parse(JSON.stringify(res.data.graySets))
+        //Extract the traffic weight data sent by the backend.
+        item.form.rules.forEach((rule: any) => {
+          if (Object.keys(rule.scope.value).length == 0) {
+            scopeConditionOfGrayIsolation.value.push('')
+            scopeValueOfGrayIsolation.value.push('')
+          }
+          for (const [key, value] of Object.entries(rule.scope.value)) {
+            scopeConditionOfGrayIsolation.value.push(key)
+            scopeValueOfGrayIsolation.value.push(value)
+          }
+          rule.scope.value = {}
+        })
+      }
+    })
+  }
+}
+
+// Modify GrayIsolation
+const updateGrayIsolation = async () => {
+  let graySets: any = []
+  options.list.forEach((item: any) => {
+    if (item.key === 'gray') {
+      graySets = JSON.parse(JSON.stringify(item.form.rules))
+      graySets.forEach((rule: any, index: number) => {
+        if (scopeConditionOfGrayIsolation.value[index] && scopeValueOfGrayIsolation.value[index]) {
+          rule.scope.value[scopeConditionOfGrayIsolation.value[index]] =
+            scopeValueOfGrayIsolation.value[index]
+        }
+      })
+    }
+  })
+  const res = await updateAppGrayIsolation(<string>route.params?.pathId, graySets)
+  if (res.code === 200) {
+    scopeConditionOfGrayIsolation.value = []
+    scopeValueOfGrayIsolation.value = []
+    await getGrayIsolation()
+  }
+}
+
 onMounted(() => {
   console.log(333)
+  getLogFlag()
+  getFlowWeight()
+  getGrayIsolation()
 })
 </script>
 <style lang="less" scoped>
 .__container_app_config {
+  .flowWeight-box {
+    width: 100%;
+    height: 100%;
+    //overflow: scroll;
+  }
 }
 </style>

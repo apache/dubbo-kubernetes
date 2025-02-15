@@ -2,7 +2,7 @@ package apis
 
 import (
 	"encoding/json"
-
+	proto "github.com/gogo/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -13,20 +13,24 @@ import (
 type DubboOperator struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty""`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// +optional
 	Spec DubboOperatorSpec `json:"spec,omitempty"`
 }
 
 type DubboOperatorSpec struct {
-	Profile    string              `json:"profile,omitempty"`
-	Components *DubboComponentSpec `json:"components,omitempty"`
-	Values     json.RawMessage     `json:"values,omitempty"`
+	Profile    string                   `json:"profile,omitempty"`
+	Dashboard  *DubboAdminDashboardSpec `json:"dashboard,omitempty"`
+	Components *DubboComponentSpec      `json:"components,omitempty"`
+	Values     json.RawMessage          `json:"values,omitempty"`
 }
 
 type DubboComponentSpec struct {
-	Base  *BaseComponentSpec `json:"base,omitempty"`
-	Admin *ComponentSpec     `json:"admin,omitempty"`
+	Base *BaseComponentSpec `json:"base,omitempty"`
+}
+
+type DubboAdminDashboardSpec struct {
+	Admin *ComponentSpec `json:"admin,omitempty"`
 }
 
 type BaseComponentSpec struct {
@@ -47,9 +51,13 @@ type BoolValue struct {
 	bool
 }
 
-func (b *BoolValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(b.GetValueOrFalse())
-}
+func (d *DubboOperator) Reset() { *d = DubboOperator{} }
+
+func (d *DubboOperator) String() string { return proto.CompactTextString(d) }
+
+func (*DubboOperator) ProtoMessage() {}
+
+func (b *BoolValue) MarshalJSON() ([]byte, error) { return json.Marshal(b.GetValueOrFalse()) }
 
 func (b *BoolValue) UnmarshalJSON(bytes []byte) error {
 	bb := false

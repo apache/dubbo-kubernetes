@@ -21,11 +21,11 @@
         <a-descriptions layout="vertical">
           <a-descriptions-item label="超时时间">
             <a-flex v-if="!editForm.timeout.isEdit">
-              <span class="item-content">1000ms</span>
+              <span class="item-content">{{ timeout }}ms</span>
               <EditOutlined @click="showEdit('timeout')" class="item-icon" />
             </a-flex>
             <a-flex v-else align="center">
-              <a-input v-model:value="editForm.timeout.value" class="item-input" />
+              <a-input-number min="0" v-model:value="editForm.timeout.value" class="item-input" />
               <span style="margin-left: 5px">ms</span>
               <CheckOutlined @click="hideEdit('timeout')" class="item-icon" />
               <CloseOutlined @click="hideEdit('timeout')" class="item-icon" />
@@ -80,7 +80,8 @@ import { ref, reactive } from 'vue'
 import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons-vue'
 import ParamRoute from './paramRoute.vue'
 
-const editForm = reactive({
+const timeout = ref('1000')
+const editForm: any = reactive({
   timeout: {
     isEdit: false,
     value: ''
@@ -100,9 +101,14 @@ const showEdit = (param: string) => {
 }
 const hideEdit = (param: string) => {
   editForm[param].isEdit = false
+  switch (param) {
+    case 'timeout':
+      timeout.value = editForm[param].value
+      break
+  }
 }
 
-const paramRouteForms = ref([])
+const paramRouteForms: any = ref([])
 
 const addParamRoute = () => {
   paramRouteForms.value.push({
@@ -127,8 +133,6 @@ const addParamRoute = () => {
     ]
   })
 }
-
-addParamRoute()
 
 const deleteParamRoute = (index: number) => {
   paramRouteForms.value.splice(index, 1)

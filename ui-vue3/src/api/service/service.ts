@@ -40,3 +40,12 @@ export const getServiceDistribution = (params: any): Promise<any> => {
     params
   })
 }
+
+//Get timeout time.
+export const getServiceTimeout = (params: any): Promise<any> => {
+  return request({
+    url: '/service/config/timeout',
+    method: 'get',
+    params
+  })
+}

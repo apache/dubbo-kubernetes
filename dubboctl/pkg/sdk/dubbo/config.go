@@ -1,10 +1,14 @@
 package dubbo
 
 import (
+	"bufio"
+	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,23 +16,43 @@ import (
 )
 
 const (
-	DubboYamlFile   = "dubbo.yaml"
+	DubboLogFile    = ".dubbo/dubbo.log"
 	Dockerfile      = "Dockerfile"
 	DataDir         = ".dubbo"
 	DefaultTemplate = "common"
 )
 
 type DubboConfig struct {
-	Root     string    `yaml:"-"`
-	Name     string    `yaml:"name,omitempty" jsonschema:"pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"`
-	Runtime  string    `yaml:"runtime,omitempty"`
-	Template string    `yaml:"template,omitempty"`
-	Created  time.Time `yaml:"created,omitempty"`
+	Root        string     `yaml:"-"`
+	Name        string     `yaml:"name,omitempty" jsonschema:"pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"`
+	Image       string     `yaml:"image,omitempty"`
+	ImageDigest string     `yaml:"-"`
+	Runtime     string     `yaml:"runtime,omitempty"`
+	Template    string     `yaml:"template,omitempty"`
+	Created     time.Time  `yaml:"created,omitempty"`
+	Build       BuildSpec  `yaml:"build,omitempty"`
+	Deploy      DeploySpec `yaml:"deploy,omitempty"`
+}
+
+type BuildSpec struct {
+	BuilderImages map[string]string `yaml:"builderImages,omitempty"`
+	Buildpacks    []string          `yaml:"buildpacks,omitempty"`
+}
+
+type DeploySpec struct {
+	Namespace  string `yaml:"namespace,omitempty"`
+	Output     string `yaml:"output,omitempty"`
+	Port       int    `yaml:"port,omitempty"`
+	TargetPort int    `yaml:"targetPort,omitempty"`
+	NodePort   int    `yaml:"nodePort,omitempty"`
 }
 
 func NewDubboConfig(path string) (*DubboConfig, error) {
 	var err error
+
 	f := &DubboConfig{}
+	f.Build.BuilderImages = make(map[string]string)
+
 	if path == "" {
 		if path, err = os.Getwd(); err != nil {
 			return f, err
@@ -44,7 +68,7 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 		return nil, fmt.Errorf("function path must be a directory")
 	}
 
-	filename := filepath.Join(path, DubboYamlFile)
+	filename := filepath.Join(path, DubboLogFile)
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
 			err = nil
@@ -73,11 +97,14 @@ func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig 
 			dc.Template = "initialzed"
 		}
 	}
+	if dc.Build.BuilderImages == nil {
+		dc.Build.BuilderImages = make(map[string]string)
+	}
 	return dc
 }
 
-func (dc *DubboConfig) WriteYamlFile() (err error) {
-	file := filepath.Join(dc.Root, DubboYamlFile)
+func (dc *DubboConfig) WriteFile() (err error) {
+	file := filepath.Join(dc.Root, DubboLogFile)
 	var bytes []byte
 	if bytes, err = yaml.Marshal(dc); err != nil {
 		return
@@ -112,7 +139,7 @@ func (dc *DubboConfig) Validate() error {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("'%v' contains errors:", DubboYamlFile))
+	b.WriteString(fmt.Sprintf("'%v' contains errors:", DubboLogFile))
 
 	for _, ee := range errs {
 		if len(ee) > 0 {
@@ -131,10 +158,159 @@ func (dc *DubboConfig) Validate() error {
 	return errors.New(b.String())
 }
 
-func validateOptions() []string {
-	return nil
+func (dc *DubboConfig) Built() bool {
+	stamp := dc.buildStamp()
+	if stamp == "" {
+		return false
+	}
+
+	if dc.Image == "" {
+		return false
+	}
+
+	hash, _, err := Fingerprint(dc)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error calculating function's fingerprint: %v\n", err)
+		return false
+	}
+	return stamp == hash
+}
+
+func (dc *DubboConfig) buildStamp() string {
+	path := filepath.Join(dc.Root, DataDir, "built")
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+type (
+	stampOptions struct {
+		log bool
+	}
+	stampOption func(o *stampOptions)
+)
+
+func (dc *DubboConfig) Stamp(oo ...stampOption) (err error) {
+	options := &stampOptions{}
+	for _, o := range oo {
+		o(options)
+	}
+	if err = runDataDir(dc.Root); err != nil {
+		return
+	}
+
+	var hash, log string
+	if hash, log, err = Fingerprint(dc); err != nil {
+		return
+	}
+
+	if err = os.WriteFile(filepath.Join(dc.Root, DataDir, "built"), []byte(hash), os.ModePerm); err != nil {
+		return
+	}
+
+	blt := "built.log"
+	if options.log {
+		blt = timestamp(blt)
+	}
+	logfile, err := os.Create(filepath.Join(dc.Root, DataDir, blt))
+	if err != nil {
+		return
+	}
+	defer logfile.Close()
+	_, err = fmt.Fprintln(logfile, log)
+	return
+}
+
+func timestamp(s string) string {
+	t := time.Now()
+	return fmt.Sprintf("%s.%09d.%s", t.Format("20060102150405"), t.Nanosecond(), s)
 }
 
 func (dc *DubboConfig) Initialized() bool {
 	return !dc.Created.IsZero()
+}
+
+func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
+	h := sha256.New()   // Hash builder
+	l := bytes.Buffer{} // Log buffer
+
+	root := dc.Root
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return "", "", err
+	}
+	// TODO
+	output := ""
+
+	err = filepath.Walk(abs, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == root {
+			return nil
+		}
+		if info.IsDir() && (info.Name() == DataDir || info.Name() == ".git" || info.Name() == ".idea") {
+			return filepath.SkipDir
+		}
+		if info.Name() == DubboLogFile || info.Name() == Dockerfile || info.Name() == output {
+			return nil
+		}
+		fmt.Fprintf(h, "%v:%v:", path, info.ModTime().UnixNano())   // Write to the Hashed
+		fmt.Fprintf(&l, "%v:%v\n", path, info.ModTime().UnixNano()) // Write to the Log
+		return nil
+	})
+	return fmt.Sprintf("%x", h.Sum(nil)), l.String(), err
+}
+
+func runDataDir(root string) error {
+	if err := os.MkdirAll(filepath.Join(root, DataDir), os.ModePerm); err != nil {
+		return err
+	}
+	filePath := filepath.Join(root, ".gitignore")
+	roFile, err := os.Open(filePath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	defer roFile.Close()
+	if !os.IsNotExist(err) {
+		s := bufio.NewScanner(roFile)
+		for s.Scan() {
+			if strings.HasPrefix(s.Text(), "# /"+DataDir) { // if it was commented
+				return nil // user wants it
+			}
+			if strings.HasPrefix(s.Text(), "#/"+DataDir) {
+				return nil // user wants it
+			}
+			if strings.HasPrefix(s.Text(), "/"+DataDir) { // if it is there
+				return nil // we're done
+			}
+		}
+	}
+	roFile.Close()
+	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return err
+	}
+	defer rwFile.Close()
+	if _, err = rwFile.WriteString(`
+# Applications use the .dubbo directory for local runtime data which should
+# generally not be tracked in source control. To instruct the system to track
+# .dubbo in source control, comment the following line (prefix it with '# ').
+/.dubbo
+`); err != nil {
+		return err
+	}
+	if err = rwFile.Sync(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: error when syncing .gitignore. %s\n", err)
+	}
+	return nil
+}
+
+func validateOptions() []string {
+	return nil
 }

@@ -22,6 +22,9 @@ import _ from 'lodash'
 import AppTabHeaderSlot from '@/views/resources/applications/slots/AppTabHeaderSlot.vue'
 import ServiceTabHeaderSlot from '@/views/resources/services/slots/ServiceTabHeaderSlot.vue'
 import InstanceTabHeaderSlot from '@/views/resources/instances/slots/InstanceTabHeaderSlot.vue'
+import AddConditionRuleTabHeaderSlot from '@/views/traffic/routingRule/slots/addConditionRuleTabHeaderSlot.vue'
+import ConditionRuleDetailTabHeaderSlot from '@/views/traffic/routingRule/slots/conditionRuleDetailTabHeaderSlot.vue'
+import UpdateConditionRuleTabHeaderSlot from '@/views/traffic/routingRule/slots/updateConditionRuleTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -161,7 +164,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/detail/:pathId',
+                path: '/detail/:pathId/:appName',
                 name: 'instanceDomain.details',
                 component: () => import('../views/resources/instances/tabs/detail.vue'),
                 meta: {
@@ -170,7 +173,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/monitor/:pathId',
+                path: '/monitor/:pathId/:appName',
                 name: 'instanceDomain.monitor',
                 component: () => import('../views/resources/instances/tabs/monitor.vue'),
                 meta: {
@@ -179,7 +182,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/linktracking/:pathId',
+                path: '/linktracking/:pathId/:appName',
                 name: 'instanceDomain.linkTracking',
                 component: () => import('../views/resources/instances/tabs/linkTracking.vue'),
                 meta: {
@@ -188,7 +191,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/configuration/:pathId',
+                path: '/configuration/:pathId/:appName',
                 name: 'instanceDomain.configuration',
                 component: () => import('../views/resources/instances/tabs/configuration.vue'),
                 meta: {
@@ -197,7 +200,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/event/:pathId',
+                path: '/event/:pathId/:appName',
                 name: 'instanceDomain.event',
                 component: () => import('../views/resources/instances/tabs/event.vue'),
                 meta: {
@@ -228,7 +231,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/distribution/:pathId',
+                path: '/distribution/:pathId/:group/:version',
                 name: 'distribution',
                 component: () => import('../views/resources/services/tabs/distribution.vue'),
                 meta: {
@@ -245,16 +248,15 @@ export const routes: Readonly<RouteRecordType[]> = [
               //   }
               // },
               {
-                path: '/debug/:pathId',
+                path: '/debug/:pathId/:group/:version',
                 name: 'debug',
                 component: () => import('../views/resources/services/tabs/debug.vue'),
                 meta: {
                   tab: true
                 }
               },
-
               {
-                path: '/monitor/:pathId',
+                path: '/monitor/:pathId/:group/:version',
                 name: 'monitor',
                 component: () => import('../views/resources/services/tabs/monitor.vue'),
                 meta: {
@@ -262,7 +264,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/tracing/:pathId',
+                path: '/tracing/:pathId/:group/:version',
                 name: 'tracing',
                 component: () => import('../views/resources/services/tabs/tracing.vue'),
                 meta: {
@@ -270,7 +272,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/sceneConfig/:pathId',
+                path: '/sceneConfig/:pathId/:group/:version',
                 name: 'sceneConfig',
                 component: () => import('../views/resources/services/tabs/sceneConfig.vue'),
                 meta: {
@@ -278,7 +280,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               },
               {
-                path: '/event/:pathId',
+                path: '/event/:pathId/:group/:version',
                 name: 'event',
                 component: () => import('../views/resources/services/tabs/event.vue'),
                 meta: {
@@ -302,7 +304,10 @@ export const routes: Readonly<RouteRecordType[]> = [
             redirect: 'index',
             component: LayoutTab,
             meta: {
-              tab_parent: true
+              tab_parent: true,
+              slots: {
+                header: ConditionRuleDetailTabHeaderSlot
+              }
             },
             children: [
               {
@@ -329,6 +334,69 @@ export const routes: Readonly<RouteRecordType[]> = [
                 meta: {
                   tab: true,
                   icon: 'oui:app-console'
+                }
+              }
+            ]
+          },
+          {
+            path: '/addRoutingRule',
+            name: 'addRoutingRule',
+            component: LayoutTab,
+            redirect: 'addByFormView',
+            meta: {
+              tab_parent: true,
+              hidden: true,
+              slots: {
+                header: AddConditionRuleTabHeaderSlot
+              }
+            },
+            children: [
+              {
+                path: '/addByFormView',
+                name: 'addRoutingRuleDomain.formView',
+                component: () => import('../views/traffic/routingRule/tabs/addByFormView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:apm-trace'
+                }
+              },
+              {
+                path: '/addByYamlView',
+                name: 'addRoutingRuleDomain.YAMLView',
+                component: () => import('../views/traffic/routingRule/tabs/addByYAMLView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:app-console'
+                }
+              }
+            ]
+          },
+          {
+            path: '/updateRoutingRule',
+            name: 'updateRoutingRule',
+            component: LayoutTab,
+            meta: {
+              tab_parent: true,
+              hidden: true,
+              slots: {
+                header: UpdateConditionRuleTabHeaderSlot
+              }
+            },
+            children: [
+              {
+                path: '/updateByFormView/:ruleName',
+                name: 'updateRoutingRuleDomain.formView',
+                component: () => import('../views/traffic/routingRule/tabs/updateByFormView.vue'),
+                meta: {
+                  tab: true
+                }
+              },
+              {
+                path: '/updateByYAMLView/:ruleName',
+                name: 'updateRoutingRuleDomain.YAMLView',
+                component: () => import('../views/traffic/routingRule/tabs/updateByYAMLView.vue'),
+                meta: {
+                  tab: true
                 }
               }
             ]
@@ -363,6 +431,24 @@ export const routes: Readonly<RouteRecordType[]> = [
                 path: '/yamlview/:ruleName',
                 name: 'tagRuleDomain.YAMLView',
                 component: () => import('../views/traffic/tagRule/tabs/YAMLView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:app-console'
+                }
+              },
+              {
+                path: '/addbyformview',
+                name: 'tagRuleDomain.addByFormView',
+                component: () => import('../views/traffic/tagRule/tabs/addByFormView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:apm-trace'
+                }
+              },
+              {
+                path: '/addbyyamlview',
+                name: 'tagRuleDomain.addByYAMLView',
+                component: () => import('../views/traffic/tagRule/tabs/addByYAMLView.vue'),
                 meta: {
                   tab: true,
                   icon: 'oui:app-console'
@@ -413,6 +499,26 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
                 meta: {
                   tab: true,
+                  icon: 'oui:app-console',
+                  back: '../../'
+                }
+              },
+              {
+                path: '/addbyformview',
+                name: 'dynamicConfigDomain.addByFormView',
+                component: () => import('../views/traffic/dynamicConfig/tabs/addByFormView.vue'),
+                meta: {
+                  tab: true,
+                  icon: 'oui:apm-trace',
+                  back: '../../'
+                }
+              },
+              {
+                path: '/addbyyamlview',
+                name: 'dynamicConfigDomain.addByYAMLView',
+                component: () => import('../views/traffic/dynamicConfig/tabs/addByYAMLView.vue'),
+                meta: {
+                  // tab: true,
                   icon: 'oui:app-console',
                   back: '../../'
                 }
