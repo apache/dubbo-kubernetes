@@ -103,6 +103,7 @@ func (kt DDSFlagType) Has(flag DDSFlagType) bool {
 }
 
 type ResourceSpec interface{}
+type ResourceStatus interface{}
 
 type Resource interface {
 	GetMeta() ResourceMeta

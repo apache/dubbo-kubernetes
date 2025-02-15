@@ -19,6 +19,7 @@ package context
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/dds/service"
 	"reflect"
 )
 
@@ -64,6 +65,7 @@ type Context struct {
 
 	ServerStreamInterceptors []grpc.StreamServerInterceptor
 	ServerUnaryInterceptor   []grpc.UnaryServerInterceptor
+	EnvoyAdminRPCs           service.EnvoyAdminRPCs
 }
 
 func DefaultContext(

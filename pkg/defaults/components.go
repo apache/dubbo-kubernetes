@@ -19,6 +19,8 @@ package defaults
 
 import (
 	"context"
+	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
+	"github.com/apache/dubbo-kubernetes/pkg/core/tokens"
 	"sync"
 	"time"
 )
@@ -37,10 +39,12 @@ import (
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/zone"
 )
 
 var log = core.Log.WithName("defaults")
 
+// TODO:not exposed
 func Setup(runtime runtime.Runtime) error {
 	if !runtime.Config().IsFederatedZoneCP() { // Don't run defaults in Zone connected to global (it's done in Global)
 		defaultsComponent := NewDefaultsComponent(
@@ -49,7 +53,32 @@ func Setup(runtime runtime.Runtime) error {
 			runtime.Extensions(),
 		)
 
+		zoneSigningKeyManager := tokens.NewSigningKeyManager(runtime.ResourceManager(), zone.SigningKeyPrefix)
+		if err := runtime.Add(tokens.NewDefaultSigningKeyComponent(
+			runtime.AppContext(),
+			zoneSigningKeyManager,
+			log.WithValues("secretPrefix", zone.SigningKeyPrefix),
+			runtime.Extensions(),
+		)); err != nil {
+			return err
+		}
+
 		if err := runtime.Add(defaultsComponent); err != nil {
+			return err
+		}
+	}
+
+	if runtime.Config().Mode != config_core.Global { // Envoy Admin CA is not synced in multizone and not needed in Global CP.
+		envoyAdminCaDefault := &EnvoyAdminCaDefaultComponent{
+			ResManager: runtime.ResourceManager(),
+			Extensions: runtime.Extensions(),
+		}
+		zoneDefault := &ZoneDefaultComponent{
+			ResManager: runtime.ResourceManager(),
+			Extensions: runtime.Extensions(),
+			ZoneName:   runtime.Config().Multizone.Zone.Name,
+		}
+		if err := runtime.Add(envoyAdminCaDefault, zoneDefault); err != nil {
 			return err
 		}
 	}

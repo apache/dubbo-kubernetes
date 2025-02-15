@@ -18,17 +18,21 @@
 package server
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 	"github.com/pkg/errors"
-)
 
-import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
+
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
+
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+
 	util_xds "github.com/apache/dubbo-kubernetes/pkg/util/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/cla"
+
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
+
 	v3 "github.com/apache/dubbo-kubernetes/pkg/xds/server/v3"
 )
 
@@ -49,9 +53,20 @@ func RegisterXDS(rt core_runtime.Runtime) error {
 		return err
 	}
 
+	idProvider, err := secrets.NewIdentityProvider(rt.CaManagers())
+	if err != nil {
+		return err
+	}
+
+	secrets, err := secrets.NewSecrets(
+		rt.CAProvider(),
+		idProvider,
+	)
+
 	envoyCpCtx := &xds_context.ControlPlaneContext{
 		CLACache: claCache,
 		Zone:     "",
+		Secrets:  secrets,
 	}
 	if err := v3.RegisterXDS(statsCallbacks, envoyCpCtx, rt); err != nil {
 		return errors.Wrap(err, "could not register V3 XDS")

@@ -21,30 +21,47 @@ import (
 	"context"
 	"sync"
 	"time"
-)
 
-import (
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
-	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
-)
+	"github.com/apache/dubbo-kubernetes/pkg/core/access"
+	"github.com/apache/dubbo-kubernetes/pkg/core/ca"
+	"github.com/apache/dubbo-kubernetes/pkg/multitenant"
+	"github.com/apache/dubbo-kubernetes/pkg/xds/secrets"
 
-import (
+	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
+
 	dubbo_cp "github.com/apache/dubbo-kubernetes/pkg/config/app/dubbo-cp"
 	"github.com/apache/dubbo-kubernetes/pkg/config/core"
+
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
+
 	managers_dataplane "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/dataplane"
+
 	managers_mesh "github.com/apache/dubbo-kubernetes/pkg/core/managers/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/reg_client"
 	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
+
+	resources_access "github.com/apache/dubbo-kubernetes/pkg/core/resources/access"
+
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
+
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+
 	dds_context "github.com/apache/dubbo-kubernetes/pkg/dds/context"
+
 	dp_server "github.com/apache/dubbo-kubernetes/pkg/dp-server/server"
+
+	envoyadmin_access "github.com/apache/dubbo-kubernetes/pkg/envoy/admin/access"
 	"github.com/apache/dubbo-kubernetes/pkg/events"
+
+	tokens_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/access"
+
+	zone_access "github.com/apache/dubbo-kubernetes/pkg/tokens/builtin/zone/access"
 	"github.com/apache/dubbo-kubernetes/pkg/xds/cache/mesh"
+
 	xds_runtime "github.com/apache/dubbo-kubernetes/pkg/xds/runtime"
 )
 
@@ -85,10 +102,22 @@ type RuntimeContext interface {
 	AdminRegistry() *registry.Registry
 	RegClient() reg_client.RegClient
 	ResourceValidators() ResourceValidators
+	Tenants() multitenant.Tenants
 	// AppContext returns a context.Context which tracks the lifetime of the apps, it gets cancelled when the app is starting to shutdown.
 	AppContext() context.Context
 	XDS() xds_runtime.XDSRuntimeContext
 	MeshCache() *mesh.Cache
+	CAProvider() secrets.CaProvider
+	CaManagers() ca.Managers
+	Access() Access
+}
+
+type Access struct {
+	ResourceAccess             resources_access.ResourceAccess
+	DataplaneTokenAccess       tokens_access.DataplaneTokenAccess
+	ZoneTokenAccess            zone_access.ZoneTokenAccess
+	EnvoyAdminAccess           envoyadmin_access.EnvoyAdminAccess
+	ControlPlaneMetadataAccess access.ControlPlaneMetadataAccess
 }
 
 type ResourceValidators struct {
@@ -171,7 +200,27 @@ type runtimeContext struct {
 	appCtx               context.Context
 	meshCache            *mesh.Cache
 	regClient            reg_client.RegClient
+	tenants              multitenant.Tenants
 	serviceDiscovery     dubboRegistry.ServiceDiscovery
+	cap                  secrets.CaProvider
+	cam                  ca.Managers
+	acc                  Access
+}
+
+func (rc *runtimeContext) Access() Access {
+	return rc.acc
+}
+
+func (rc *runtimeContext) CaManagers() ca.Managers {
+	return rc.cam
+}
+
+func (rc *runtimeContext) CAProvider() secrets.CaProvider {
+	return rc.cap
+}
+
+func (b *runtimeContext) Tenants() multitenant.Tenants {
+	return b.tenants
 }
 
 func (b *runtimeContext) RegClient() reg_client.RegClient {

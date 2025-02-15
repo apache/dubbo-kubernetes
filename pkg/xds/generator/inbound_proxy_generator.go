@@ -19,22 +19,28 @@ package generator
 
 import (
 	"context"
-)
 
-import (
 	"github.com/pkg/errors"
-)
 
-import (
 	core_mesh "github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
+
 	core_xds "github.com/apache/dubbo-kubernetes/pkg/core/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/util/net"
+
 	xds_context "github.com/apache/dubbo-kubernetes/pkg/xds/context"
+
 	envoy_common "github.com/apache/dubbo-kubernetes/pkg/xds/envoy"
+
 	envoy_clusters "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/clusters"
+
 	envoy_listeners "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/listeners"
+
 	envoy_names "github.com/apache/dubbo-kubernetes/pkg/xds/envoy/names"
+
+	"github.com/apache/dubbo-kubernetes/api/common/v1alpha1/tls"
+
+	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 )
 
 const OriginInbound = "inbound"
@@ -92,7 +98,7 @@ func (g InboundProxyGenerator) Generator(ctx context.Context, _ *core_xds.Resour
 		// generate LDS resource
 		service := iface.GetService()
 		inboundListenerName := envoy_names.GetInboundListenerName(endpoint.DataplaneIP, endpoint.DataplanePort)
-		filterChainBuilder := func(serverSideMTLS bool) *envoy_listeners.FilterChainBuilder {
+		filterChainBuilder := func(serverSideMTLS bool, ciphers tls.TlsCiphers, tlsVersion *tls.Version, xdsCtx xds_context.Context, endpoint mesh_proto.InboundInterface, service string, protocol core_mesh.Protocol, proxy *core_xds.Proxy) *envoy_listeners.FilterChainBuilder {
 			filterChainBuilder := envoy_listeners.NewFilterChainBuilder(proxy.APIVersion, envoy_common.AnonymousResource)
 			switch protocol {
 			case core_mesh.ProtocolTriple:
@@ -121,13 +127,23 @@ func (g InboundProxyGenerator) Generator(ctx context.Context, _ *core_xds.Resour
 				// configuration for non-HTTP cases
 				filterChainBuilder.Configure(envoy_listeners.TcpProxyDeprecated(localClusterName, envoy_common.NewCluster(envoy_common.WithService(localClusterName))))
 			}
+			if serverSideMTLS {
+				filterChainBuilder.Configure(envoy_listeners.ServerSideMTLS(xdsCtx.Mesh.Resource, proxy.SecretsTracker, tlsVersion, ciphers))
+			}
 			return filterChainBuilder
 		}
 
 		listenerBuilder := envoy_listeners.NewInboundListenerBuilder(proxy.APIVersion, endpoint.DataplaneIP, endpoint.DataplanePort, core_xds.SocketAddressProtocolTCP).
 			Configure(envoy_listeners.TagsMetadata(iface.GetTags()))
 
-		listenerBuilder.Configure(envoy_listeners.FilterChain(filterChainBuilder(false)))
+		switch xdsCtx.Mesh.Resource.GetEnabledCertificateAuthorityBackend().GetMode() {
+		case mesh_proto.CertificateAuthorityBackend_STRICT:
+			//TODO: implement the logic of STRICT
+		case mesh_proto.CertificateAuthorityBackend_PERMISSIVE:
+			//TODO: implement the logic of PERMISSIVE
+		}
+
+		listenerBuilder.Configure(envoy_listeners.FilterChain(filterChainBuilder(false, nil, nil, xdsCtx, endpoint, service, protocol, proxy)))
 
 		inboundListener, err := listenerBuilder.Build()
 		if err != nil {

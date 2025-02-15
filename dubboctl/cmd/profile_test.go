@@ -16,6 +16,8 @@
 package cmd
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -67,7 +69,7 @@ func TestProfileList(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			res := testExecute(t, test.cmd, test.wantErr)
+			res := testProfileExecute(t, test.cmd, test.wantErr)
 			if test.want != "" && test.want != res {
 				t.Errorf("want:\n%s\nbutgot:\n%s\n", test.want, res)
 				return
@@ -120,11 +122,30 @@ func TestProfileDiff(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			res := testExecute(t, test.cmd, test.wantErr)
+			res := testProfileExecute(t, test.cmd, test.wantErr)
 			if test.want != "" && test.want != res {
 				t.Errorf("want:\n%s\nbutgot:\n%s\n", test.want, res)
 				return
 			}
 		})
 	}
+}
+
+func testProfileExecute(t *testing.T, cmds string, wantErr bool) string {
+	var out bytes.Buffer
+	args := strings.Split(cmds, " ")
+	rootCmd := GetRootCmd(args)
+	rootCmd.SetOut(&out)
+	if err := rootCmd.Execute(); err != nil {
+		if wantErr {
+			return ""
+		}
+		t.Errorf("execute %s failed, err: %s", cmds, err)
+		return ""
+	}
+	if wantErr {
+		t.Errorf("want err but got no err")
+		return ""
+	}
+	return out.String()
 }

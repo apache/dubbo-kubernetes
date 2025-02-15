@@ -44,3 +44,5 @@ coverage.txt
 bin/
 build/
 vendor/
+
+dockercompose.yaml
