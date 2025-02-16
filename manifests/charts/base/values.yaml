@@ -16,3 +16,6 @@
 _internal_default_values_not_set:
   global:
     dubboNamespace: dubbo-system
+  base:
+    # For dubboctl usage to disable dubbo config crds in base
+    enabledubboConfigCRDs: true
