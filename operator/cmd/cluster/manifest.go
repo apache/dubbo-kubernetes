@@ -63,8 +63,6 @@ func manifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *manifestGenerateA
   # Generate the demo profile
   dubboctl manifest generate --set profile=demo
 `,
-
-		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if kubeClientFunc == nil {
 				kubeClientFunc = ctx.CLIClient
