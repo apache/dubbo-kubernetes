@@ -53,7 +53,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 		Short: "Applies an Dubbo manifest, installing or reconfiguring Dubbo on a cluster",
 		Long:  "The install command generates an Dubbo install manifest and applies it to a cluster",
 		Example: ` # Apply a default dubboctl installation.
-  dubboctl install
+  dubboctl install -y
   
   # Apply a config file.
   dubboctl install -f dop.yaml
