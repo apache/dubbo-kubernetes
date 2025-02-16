@@ -6,20 +6,6 @@ import "google/protobuf/wrappers.proto";
 
 option go_package = "dubbo.io/dubbo/operator/pkg/apis";
 
-message ArchConfig {
-  // Sets pod scheduling weight for amd64 arch
-  uint32 amd64 = 1;
-
-  // Sets pod scheduling weight for ppc64le arch.
-  uint32 ppc64le = 2;
-
-  // Sets pod scheduling weight for s390x arch.
-  uint32 s390x = 3;
-
-  // Sets pod scheduling weight for arm64 arch.
-  uint32 arm64 = 4;
-}
-
 // Global Configuration for Dubbo components.
 message GlobalConfig {
   // Specifies the default namespace.
@@ -27,8 +13,8 @@ message GlobalConfig {
 }
 
 message BaseConfig {
-  google.protobuf.BoolValue enabledubboConfigCRDs = 1;
-  GlobalConfig global = 2; // Add this line if `global` is required in BaseConfig
+  // For dubboctl usage to disable dubbo config crds in base
+  google.protobuf.BoolValue enableDubboConfigCRDs = 1;
 }
 
 message Values {
