@@ -132,10 +132,6 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(repoCmd)
 	hideFlags(repoCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
 
-	profileCmd := cluster.ProfileCmd(ctx)
-	rootCmd.AddCommand(profileCmd)
-	hideFlags(profileCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
-
 	imageCmd := ImageCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(imageCmd)
 	hideFlags(imageCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
