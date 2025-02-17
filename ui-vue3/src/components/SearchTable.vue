@@ -96,10 +96,8 @@
         </a-col>
       </a-row>
     </div>
-
     <div class="search-table-container">
       <a-table
-        :loading="searchDomain.table.loading"
         :pagination="pagination"
         :scroll="{
           scrollToFirstRowOnChange: true,
@@ -112,6 +110,9 @@
       >
         <template #bodyCell="{ text, record, index, column }">
           <span v-if="column.key === 'idx'">{{ index + 1 }}</span>
+          <span v-if="text === 'skeleton-loading'">
+            <a-skeleton-button active size="small"></a-skeleton-button>
+          </span>
           <slot
             name="bodyCell"
             :text="text"

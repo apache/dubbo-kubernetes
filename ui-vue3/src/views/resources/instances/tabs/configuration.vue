@@ -16,7 +16,7 @@
 -->
 
 <template>
-  <div class="__container_app_config">
+  <div class="__container_ins_config">
     <config-page :options="options">
       <template v-slot:form_log="{ current }">
         <a-form-item :label="$t('instanceDomain.operatorLog')" name="logFlag">

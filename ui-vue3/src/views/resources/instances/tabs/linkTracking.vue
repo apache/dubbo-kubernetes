@@ -14,13 +14,28 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
-
 <template>
-  <div>linkTracking todo</div>
+  <div class="__container_ins_tracing">
+    <GrafanaPage></GrafanaPage>
+  </div>
 </template>
 
-<script lang="ts" setup>
-import { ref } from 'vue'
-</script>
+<script setup lang="ts">
+import GrafanaPage from '@/components/GrafanaPage.vue'
+import { provide, reactive, ref } from 'vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { getInstanceTracingDashboard } from '@/api/service/instance'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
+provide(
+  PROVIDE_INJECT_KEY.GRAFANA,
+  reactive({
+    api: getInstanceTracingDashboard,
+    showIframe: false,
+    name: route.params?.pathId + ':22222',
+    type: 'instance'
+  })
+)
+</script>
 <style lang="less" scoped></style>

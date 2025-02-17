@@ -20,7 +20,7 @@
       <div v-if="tabRoute.meta.tab" class="header">
         <a-row>
           <a-col :span="1">
-            <span @click="router.push(tabRoute.meta.back ?? '../')" style="float: left">
+            <span @click="router.replace(tabRoute.meta.back || '../')" style="float: left">
               <Icon icon="material-symbols:keyboard-backspace-rounded" class="back" />
             </span>
           </a-col>
@@ -29,7 +29,7 @@
           </a-col>
         </a-row>
         <a-tabs @change="router.push({ name: activeKey || '' })" v-model:activeKey="activeKey">
-          <a-tab-pane :key="v.name" v-for="v in tabRouters">
+          <a-tab-pane :key="v.name" v-for="v in tabRouters.filter((x: any) => !x.meta.hidden)">
             <template #tab>
               <span>
                 <Icon style="margin-bottom: -2px" :icon="v.meta.icon"></Icon>
@@ -67,7 +67,6 @@ let activeKey = ref(tabRoute.name)
 let transitionFlag = ref(false)
 let key = _.uniqueId('__tab_page')
 router.beforeEach((to, from, next) => {
-  console.log(tabRoute)
   key = _.uniqueId('__tab_page')
   transitionFlag.value = true
   activeKey.value = <string>to.name

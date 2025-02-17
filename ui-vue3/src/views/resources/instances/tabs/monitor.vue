@@ -14,41 +14,28 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
-
 <template>
-  <div class="__container_tabDemo3">
-    <div class="option">
-      <a-button class="btn" @click="refresh"> refresh </a-button>
-      <a-button class="btn" @click="newPageForGrafana"> grafana </a-button>
-    </div>
-    <a-spin class="spin" :spinning="!showIframe">
-      <div class="__container_iframe_container">
-        <iframe v-if="showIframe" id="grafanaIframe" :src="grafanaUrl" frameborder="0"></iframe>
-      </div>
-    </a-spin>
+  <div class="__container_ins_monitor">
+    <GrafanaPage></GrafanaPage>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { getInstanceMetricsInfo } from '@/api/service/instance'
+import GrafanaPage from '@/components/GrafanaPage.vue'
+import { provide, reactive, ref } from 'vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { getInstanceMetricsDashboard } from '@/api/service/instance'
+import { useRoute } from 'vue-router'
 
-let grafanaUrl = ref('')
-let showIframe = ref(true)
-onMounted(async () => {
-  let res = await getInstanceMetricsInfo({})
-  grafanaUrl.value = res.data
-})
-
-function refresh() {
-  showIframe.value = false
-  setTimeout(() => {
-    showIframe.value = true
-  }, 200)
-}
-
-function newPageForGrafana() {
-  window.open(grafanaUrl.value, '_blank')
-}
+const route = useRoute()
+provide(
+  PROVIDE_INJECT_KEY.GRAFANA,
+  reactive({
+    api: getInstanceMetricsDashboard,
+    showIframe: false,
+    name: route.params?.pathId + ':22222',
+    type: 'instance'
+  })
+)
 </script>
 <style lang="less" scoped></style>

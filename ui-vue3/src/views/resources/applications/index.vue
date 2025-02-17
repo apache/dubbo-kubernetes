@@ -30,7 +30,10 @@
           </a-tag>
         </template>
         <template v-else-if="column.dataIndex === 'appName'">
-          <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
+          <span
+            class="app-link"
+            @click="router.push(`/resources/applications/detail/${record[column.key]}`)"
+          >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
@@ -51,7 +54,10 @@ import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { Icon } from '@iconify/vue'
 import router from '@/router'
 import { PRIMARY_COLOR } from '@/base/constants'
+import { useRoute } from 'vue-router'
 
+let route = useRoute()
+let query = route.query['query']
 let __null = PRIMARY_COLOR
 let columns = [
   // {
@@ -94,6 +100,7 @@ const searchDomain = reactive(
       {
         label: 'appName',
         param: 'keywords',
+        defaultValue: query,
         placeholder: 'typeAppName',
         style: {
           width: '200px'

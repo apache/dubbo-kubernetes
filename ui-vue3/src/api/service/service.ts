@@ -41,6 +41,21 @@ export const getServiceDistribution = (params: any): Promise<any> => {
   })
 }
 
+export const getServiceMetricsDashboard = (params: any): Promise<any> => {
+  return request({
+    url: '/service/metric-dashboard',
+    method: 'get',
+    params
+  })
+}
+export const getServiceTracingDashboard = (params: any): Promise<any> => {
+  return request({
+    url: '/service/trace-dashboard',
+    method: 'get',
+    params
+  })
+}
+
 //Get timeout time.
 export const getServiceTimeout = (params: any): Promise<any> => {
   return request({

@@ -452,7 +452,20 @@ const words: I18nType = {
   dependentService: '依赖服务',
   idx: '序号',
   submit: '提交',
-  reset: '重置'
+  reset: '重置',
+  router: {
+    resource: {
+      app: {
+        list: '列表'
+      },
+      ins: {
+        list: '列表'
+      },
+      svc: {
+        list: '列表'
+      }
+    }
+  }
 }
 
 export default words

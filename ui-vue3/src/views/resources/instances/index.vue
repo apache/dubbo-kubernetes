@@ -21,7 +21,7 @@
         <template v-if="column.dataIndex === 'ip'">
           <span
             class="app-link"
-            @click="router.replace(`detail/${record[column.key]}/${record.name}`)"
+            @click="router.push(`/resources/instances/detail/${record[column.key]}/${record.name}`)"
           >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
@@ -77,6 +77,7 @@ import { formattedDate } from '../../../utils/DateUtil'
 import { queryMetrics } from '@/base/http/promQuery'
 import { isNumber } from 'lodash'
 import { bytesToHuman } from '@/utils/ByteUtil'
+import { promQueryList } from '@/utils/PromQueryUtil'
 
 let __null = PRIMARY_COLOR
 let columns = [
@@ -161,24 +162,17 @@ let columns = [
 
 function instanceInfo(params: any) {
   return searchInstances(params).then(async (res) => {
-    let instances = res?.data?.list
-    try {
-      for (let instance of instances) {
-        let ip = instance.ip.split(':')[0]
-        let cpu =
-          await queryMetrics(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!=""}) by (pod) * on (pod) group_left(pod_ip)
+    return promQueryList(res, ['cpu', 'memory'], async (instance: any) => {
+      let ip = instance.ip.split(':')[0]
+      let cpu =
+        await queryMetrics(`sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{container!=""}) by (pod) * on (pod) group_left(pod_ip)
         kube_pod_info{pod_ip="${ip}"}`)
-        let mem =
-          await queryMetrics(`sum(container_memory_working_set_bytes{container!=""}) by (pod)
+      let mem = await queryMetrics(`sum(container_memory_working_set_bytes{container!=""}) by (pod)
 * on (pod) group_left(pod_ip)
 kube_pod_info{pod_ip="${ip}"}`)
-        instance.cpu = isNumber(cpu) ? cpu.toFixed(3) + 'u' : cpu
-        instance.memory = isNumber(mem) ? bytesToHuman(mem) : mem
-      }
-    } catch (e) {
-      console.error(e)
-    }
-    return res
+      instance.cpu = isNumber(cpu) ? cpu.toFixed(3) + 'u' : cpu
+      instance.memory = bytesToHuman(mem)
+    })
   })
 }
 
@@ -203,7 +197,7 @@ const searchDomain = reactive(
 onMounted(() => {
   searchDomain.tableStyle = {
     // scrollX: '100',
-    scrollY: 'calc(100vh - 200px)'
+    scrollY: 'calc(100vh - 400px)'
   }
   searchDomain.onSearch()
 })
