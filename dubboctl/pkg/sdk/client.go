@@ -72,6 +72,15 @@ func (c *Client) Templates() *Templates {
 
 func (c *Client) Runtimes() ([]string, error) {
 	runtimes := util.NewSortedSet()
+	repos, err := c.Repositories().All()
+	if err != nil {
+		return []string{}, err
+	}
+	for _, repo := range repos {
+		for _, runtime := range repo.Runtimes {
+			runtimes.Add(runtime.Name)
+		}
+	}
 	return runtimes.Items(), nil
 }
 
