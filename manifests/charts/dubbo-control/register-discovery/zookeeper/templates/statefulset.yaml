@@ -1,10 +1,9 @@
-{{- $zoo := .Values.zookeeper -}}
-{{- if $zoo.enabled }}
+{{- $zoo := .Values -}}
 apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet
 metadata:
   name: {{ template "zoo.name" . }}
-  namespace: {{ template "admin.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
@@ -75,7 +74,7 @@ spec:
         {{- $zooName := include "zoo.name" . }}
         {{- $zooReplicas := int $zoo.replicas  }}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 }}
-        {{- $zooNamespace := include "admin.namespace" . }}
+        {{- $zooNamespace := .Release.Namespace }}
         {{- $zooDomain := $zoo.clusterDomain }}
         - name: ZOO_SERVERS
           value: {{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::{{ add $v 1 }} {{ end }}
@@ -158,4 +157,3 @@ spec:
           defaultMode: 0755
       - name: data
         emptyDir: {}
-{{- end -}}

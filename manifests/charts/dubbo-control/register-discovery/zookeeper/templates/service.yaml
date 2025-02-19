@@ -1,11 +1,10 @@
 {{- $zoo := .Values.zookeeper -}}
 {{- $service := $zoo.service -}}
-{{- if .Values.zookeeper.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "zoo.name" . }}
-  namespace: {{ template "admin.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
@@ -51,7 +50,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "zoo.name" . }}-headless
-  namespace: {{ template "admin.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
   {{- with .Values.labels }}
@@ -99,4 +98,3 @@ spec:
     targetPort: election
   selector:
     app: {{ template "zoo.selector" . }}
-{{- end -}}

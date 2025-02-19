@@ -1,10 +1,9 @@
 {{- $zoo := .Values.zookeeper -}}
-{{- if $zoo.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ template "zoo.name" . }}-scripts
-  namespace: {{ template "admin.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
   {{- with $zoo.labels }}
@@ -35,4 +34,3 @@ data:
         fi
     fi
     exec /entrypoint.sh /run.sh
-{{- end -}}

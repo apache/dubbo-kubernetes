@@ -1,10 +1,9 @@
-{{- $nacos := .Values.nacos -}}
-{{- if $nacos.enabled }}
+{{- $nacos := .Values -}}
 apiVersion: {{ template "apiVersion" . }}
 kind: StatefulSet
 metadata:
   name: {{ template "nacos.name" . }}
-  namespace: {{ template "admin.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}
@@ -144,4 +143,3 @@ spec:
       volumes:
       - name: data
         emptyDir: {}
-{{- end -}}
