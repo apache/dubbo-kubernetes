@@ -9,55 +9,72 @@ import (
 type Name string
 
 const (
-	BaseComponentName     Name = "Base"
-	AdminComponentName    Name = "Admin"
-	RegisterComponentName Name = "Register"
+	BaseComponentName              Name = "Base"
+	AdminComponentName             Name = "Admin"
+	NacosRegisterComponentName     Name = "Nacos"
+	ZookeeperRegisterComponentName Name = "Zookeeper"
 )
+
+type Component struct {
+	UserFacingName     Name
+	SpecName           string
+	ResourceType       string
+	ResourceName       string
+	Default            bool
+	HelmSubDir         string
+	HelmValuesTreeRoot string
+	FlattenValues      bool
+}
 
 var AllComponents = []Component{
 	{
-		UserFacingName: BaseComponentName,
-		SpecName:       "base",
-		Default:        true,
-		HelmSubDir:     "base",
-		HelmTreeRoot:   "base.global",
+		UserFacingName:     BaseComponentName,
+		SpecName:           "base",
+		Default:            true,
+		HelmSubDir:         "base",
+		HelmValuesTreeRoot: "global",
 	},
 	{
-		UserFacingName: AdminComponentName,
-		SpecName:       "admin",
-		Default:        true,
-		HelmSubDir:     "admin",
-		HelmTreeRoot:   "",
+		UserFacingName:     AdminComponentName,
+		SpecName:           "admin",
+		ResourceType:       "Deployment",
+		Default:            true,
+		HelmSubDir:         "admin",
+		HelmValuesTreeRoot: "admin",
 	},
 	{
-		UserFacingName: RegisterComponentName,
-		SpecName:       "register",
-		Default:        true,
-		HelmSubDir:     "dubbo-control/register-discovery",
-		HelmTreeRoot:   "",
+		UserFacingName:     NacosRegisterComponentName,
+		SpecName:           "nacos",
+		ResourceType:       "StatefulSet",
+		ResourceName:       "register",
+		Default:            true,
+		HelmSubDir:         "dubbo-control/register-discovery/nacos",
+		HelmValuesTreeRoot: "nacos",
 	},
-}
-
-type Component struct {
-	UserFacingName Name
-	SpecName       string
-	Default        bool
-	HelmSubDir     string
-	HelmTreeRoot   string
-	FlattenValues  bool
+	{
+		UserFacingName:     ZookeeperRegisterComponentName,
+		SpecName:           "zookeeper",
+		ResourceType:       "StatefulSet",
+		ResourceName:       "register",
+		Default:            true,
+		HelmSubDir:         "dubbo-control/register-discovery/zookeeper",
+		HelmValuesTreeRoot: "zookeeper",
+	},
 }
 
 var (
 	userFacingCompNames = map[Name]string{
-		BaseComponentName:     "Dubbo Core",
-		AdminComponentName:    "Dubbo Dashboard",
-		RegisterComponentName: "Dubbo Register Plane",
+		BaseComponentName:          "Dubbo Core",
+		AdminComponentName:         "Dubbo Dashboard",
+		NacosRegisterComponentName: "Dubbo Nacos Register Plane",
 	}
 
 	Icons = map[Name]string{
-		BaseComponentName:     "🛸",
-		RegisterComponentName: "📡",
-		AdminComponentName:    "🛰",
+		BaseComponentName: "🛸",
+		// TODO DubbodComponentName: "📡",
+		NacosRegisterComponentName:     "🪝",
+		ZookeeperRegisterComponentName: "⚓",
+		AdminComponentName:             "🛰",
 	}
 )
 
@@ -92,6 +109,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		if spec.Namespace == "" {
 			spec.Namespace = "dubbo-system"
 		}
+
 		spec.Raw = m
 		return spec, nil
 	}
