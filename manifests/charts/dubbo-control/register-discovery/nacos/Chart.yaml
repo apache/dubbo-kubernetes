@@ -12,3 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+apiVersion: v2
+annotations:
+  licenses: Apache-2.0
+name: nacos
+home: https://github.com/apache/dubbo-kubernetes
+description: Helm chart for nacos register plane.
+version: 1.0.0
+appVersion: 1.0.0
+maintainers:
+  - name: mfordjody
+    email: zhongxjian@apache.org
+sources:
+  - https://dubbo.apache.org
+  - https://github.com/apache/dubbo-kubernetes

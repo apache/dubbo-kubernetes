@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-## Specifies the type of Kubernetes resource, such as "Deployment" or "StatefulSet."
-
 deployType: Deployment
 
 ## Override the namespace where the resource is deployed.
