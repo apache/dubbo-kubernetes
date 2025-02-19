@@ -16,7 +16,6 @@
 apiVersion: install.dubbo.io/v1alpha1
 kind: DubboOperator
 spec:
-  profile: empty
   components:
     base:
       enabled: false

@@ -1,3 +1,6 @@
+_internal_default_values_not_set:
+#  global:
+    dubboNamespace: dubbo-system
 zookeeper:
   ## Whether to enable the zookeeper.
   enabled: false

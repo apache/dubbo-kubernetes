@@ -26,9 +26,8 @@ spec:
     admin:
       enabled: true
   values:
-    base:
-      global:
-        dubboNamespace: dubbo-system
+    global:
+      dubboNamespace: dubbo-system
 
 
 

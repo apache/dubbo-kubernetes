@@ -23,4 +23,3 @@ spec:
       enabled: true
   values:
     profile: demo
-
