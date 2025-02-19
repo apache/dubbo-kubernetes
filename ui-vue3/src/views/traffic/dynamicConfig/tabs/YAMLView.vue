@@ -23,28 +23,36 @@
           <a-flex vertical align="end">
             <a-row style="width: 100%" justify="space-between">
               <a-col :span="12">
-                <a-button type="primary" size="small" style="width:80px; float: left" @click="saveConfig">
-                  {{$t('form.save')}}
+                <a-button
+                  type="primary"
+                  size="small"
+                  style="width: 80px; float: left"
+                  @click="saveConfig"
+                >
+                  {{ $t('form.save') }}
                 </a-button>
               </a-col>
-              <a-col :span="12" >
-                <a-button type="text" style="color: #0a90d5; float: right; margin-top: -5px" @click="isDrawerOpened = !isDrawerOpened">
+              <a-col :span="12">
+                <!--                todo 版本记录后续添加-->
+                <a-button
+                  type="text"
+                  style="color: #0a90d5; float: right; margin-top: -5px"
+                  @click="isDrawerOpened = !isDrawerOpened"
+                >
                   {{ $t('flowControlDomain.versionRecords') }}
                   <DoubleLeftOutlined v-if="!isDrawerOpened" />
                   <DoubleRightOutlined v-else />
                 </a-button>
               </a-col>
-
             </a-row>
-
 
             <div class="editorBox">
               <MonacoEditor
-                  v-model:modelValue="YAMLValue"
-                  theme="vs-dark"
-                  :height="500"
-                  language="yaml"
-                  :readonly="!isEdit"
+                v-model:modelValue="YAMLValue"
+                theme="vs-dark"
+                :height="500"
+                language="yaml"
+                :readonly="!isEdit"
               />
             </div>
           </a-flex>
@@ -76,14 +84,13 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import {inject, onMounted, reactive, ref} from 'vue'
+import { inject, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import {PROVIDE_INJECT_KEY} from "@/base/enums/ProvideInject";
-import {getConfiguratorDetail, saveConfiguratorDetail} from "@/api/service/traffic";
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
 // @ts-ignore
 import yaml from 'js-yaml'
-import {message} from "ant-design-vue";
-
+import { message } from 'ant-design-vue'
 
 const route = useRoute()
 const isEdit = ref(route.params.isEdit === '1')
@@ -94,17 +101,17 @@ const sliderSpan = ref(8)
 
 const YAMLValue = ref()
 onMounted(async () => {
-  const res = await getConfiguratorDetail({name: route.params?.pathId})
+  const res = await getConfiguratorDetail({ name: route.params?.pathId })
   const json = yaml.dump(res.data) // 输出为 json 格式
-  YAMLValue.value = json;
+  YAMLValue.value = json
 })
 async function saveConfig() {
   loading.value = true
   let newVal = yaml.load(YAMLValue.value)
   try {
-    let res = await saveConfiguratorDetail({name: route.params?.pathId}, newVal);
-    message.success("config save success")
-  }finally {
+    let res = await saveConfiguratorDetail({ name: route.params?.pathId }, newVal)
+    message.success('config save success')
+  } finally {
     loading.value = false
   }
 }

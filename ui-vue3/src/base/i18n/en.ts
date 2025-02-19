@@ -492,7 +492,7 @@ const words: I18nType = {
     }
   },
   form: {
-    save: "SAVE"
+    save: 'SAVE'
   }
 }
 

@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import {useRoute, useRouter} from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { nextTick, provide, reactive, watch } from 'vue'
 import { searchService } from '@/api/service/service'
 import { SearchDomain } from '@/utils/SearchUtil'
@@ -67,7 +67,7 @@ const columns = [
     dataIndex: 'serviceName',
     sorter: true,
     width: '30%',
-    ellipsis: true,
+    ellipsis: true
   },
   {
     title: 'versionGroup',
@@ -179,7 +179,7 @@ const viewDistribution = (serviceName: string, versionAndGroup: string) => {
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
-watch(route, (a,b)=>{
+watch(route, (a, b) => {
   searchDomain.queryForm['keywords'] = a.query['query']
   searchDomain.onSearch()
   console.log(a)

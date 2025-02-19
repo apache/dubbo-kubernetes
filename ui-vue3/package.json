@@ -29,6 +29,7 @@
     "@types/nprogress": "^0.2.3",
     "ant-design-vue": "4.x",
     "dayjs": "^1.11.13",
+    "gsap": "^3.12.7",
     "js-yaml": "^4.1.0",
     "less": "^4.2.0",
     "lodash": "^4.17.21",

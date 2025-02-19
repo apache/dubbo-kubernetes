@@ -22,7 +22,10 @@
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
-          <span class="rule-link" @click="router.push(`/traffic/tagRule/formview/${record[column.key]}`)">
+          <span
+            class="rule-link"
+            @click="router.push(`/traffic/tagRule/formview/${record[column.key]}`)"
+          >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}

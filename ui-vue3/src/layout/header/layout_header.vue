@@ -28,9 +28,7 @@
         </a-flex>
         <div></div>
         <a-flex>
-          <a-input-group
-              @keyup.enter="globalSearch"
-              class="search-group" compact>
+          <a-input-group @keyup.enter="globalSearch" class="search-group" compact>
             <a-select v-model:value="searchType" class="select-type">
               <a-select-option v-for="option in searchTypeOptions" :value="option.value"
                 >{{ option.label }}
@@ -96,7 +94,7 @@ import {
   UserOutlined
 } from '@ant-design/icons-vue'
 import type { ComponentInternalInstance } from 'vue'
-import {computed, getCurrentInstance, h, inject, nextTick, reactive, ref, watch} from 'vue'
+import { computed, getCurrentInstance, h, inject, nextTick, reactive, ref, watch } from 'vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { changeLanguage, localeConfig } from '@/base/i18n'
 import { LOCAL_STORAGE_THEME, PRIMARY_COLOR, PRIMARY_COLOR_DEFAULT } from '@/base/constants'

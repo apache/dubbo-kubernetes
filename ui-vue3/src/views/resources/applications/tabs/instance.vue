@@ -253,7 +253,7 @@ onMounted(() => {
 })
 
 const viewDetail = (serviceName: string) => {
-  router.replace(`/resources/instances/detail/${serviceName.split(":")[0]}/${serviceName}` )
+  router.replace(`/resources/instances/detail/${serviceName.split(':')[0]}/${serviceName}`)
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)

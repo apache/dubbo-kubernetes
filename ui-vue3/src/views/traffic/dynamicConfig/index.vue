@@ -84,7 +84,7 @@ let columns = [
     dataIndex: 'ruleName',
     sorter: (a: any, b: any) => sortString(a.appName, b.appName),
     width: 200,
-    ellipsis: true,
+    ellipsis: true
   },
   {
     title: 'ruleGranularity',
@@ -98,7 +98,7 @@ let columns = [
     title: 'createTime',
     key: 'createTime',
     dataIndex: 'createTime',
-    width: 120,
+    width: 200,
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
   {

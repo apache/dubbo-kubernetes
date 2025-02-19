@@ -46,7 +46,7 @@
       </a-col>
 
       <a-col :span="18">
-        <a-card >
+        <a-card>
           <template #title>
             {{ $t(currentOption.title) }}
             <div v-if="currentOption?.ext" style="float: right">
@@ -57,7 +57,7 @@
           </template>
           <a-spin :spinning="waitResponse">
             <a-form
-                style="overflow: auto; max-height: calc(100vh - 450px)"
+              style="overflow: auto; max-height: calc(100vh - 450px)"
               ref="__config_form"
               :key="options.current"
               :wrapper-col="{ span: 14 }"
@@ -66,9 +66,8 @@
               layout="horizontal"
             >
               <slot :name="'form_' + currentOption.key" :current="currentOption"></slot>
-
             </a-form>
-            <a-form-item style="margin: 20px 0 0 100px; ">
+            <a-form-item style="margin: 20px 0 0 100px">
               <a-button type="primary" @click="submit">{{ $t('submit') }}</a-button>
               <a-button style="margin-left: 10px" @click="reset">{{ $t('reset') }}</a-button>
             </a-form-item>

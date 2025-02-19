@@ -144,7 +144,7 @@ const tableColumns = [
     title: '实例名',
     dataIndex: 'instanceName',
     width: '25%',
-    ellipsis: true,
+    ellipsis: true
   },
   {
     title: 'RPC端口',
