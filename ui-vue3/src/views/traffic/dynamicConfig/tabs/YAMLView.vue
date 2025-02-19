@@ -17,42 +17,56 @@
 
 <template>
   <a-card>
-    <a-flex style="width: 100%">
-      <a-col :span="isDrawerOpened ? 24 - sliderSpan : 24" class="left">
-        <a-flex vertical align="end">
-          <a-button type="text" style="color: #0a90d5" @click="isDrawerOpened = !isDrawerOpened">
-            {{ $t('flowControlDomain.versionRecords') }}
-            <DoubleLeftOutlined v-if="!isDrawerOpened" />
-            <DoubleRightOutlined v-else />
-          </a-button>
+    <a-spin :spinning="loading">
+      <a-flex style="width: 100%">
+        <a-col :span="isDrawerOpened ? 24 - sliderSpan : 24" class="left">
+          <a-flex vertical align="end">
+            <a-row style="width: 100%" justify="space-between">
+              <a-col :span="12">
+                <a-button type="primary" size="small" style="width:80px; float: left" @click="saveConfig">
+                  {{$t('form.save')}}
+                </a-button>
+              </a-col>
+              <a-col :span="12" >
+                <a-button type="text" style="color: #0a90d5; float: right; margin-top: -5px" @click="isDrawerOpened = !isDrawerOpened">
+                  {{ $t('flowControlDomain.versionRecords') }}
+                  <DoubleLeftOutlined v-if="!isDrawerOpened" />
+                  <DoubleRightOutlined v-else />
+                </a-button>
+              </a-col>
 
-          <div class="editorBox">
-            <MonacoEditor
-              :modelValue="YAMLValue"
-              theme="vs-dark"
-              :height="500"
-              language="yaml"
-              :readonly="!isEdit"
-            />
-          </div>
-        </a-flex>
-      </a-col>
+            </a-row>
 
-      <a-col :span="isDrawerOpened ? sliderSpan : 0" class="right">
-        <a-card v-if="isDrawerOpened" class="sliderBox">
-          <a-card v-for="i in 2" :key="i">
-            <p>修改时间: 2024/3/20 15:20:31</p>
-            <p>版本号: xo842xqpx834</p>
 
-            <a-flex justify="flex-end">
-              <a-button type="text" style="color: #0a90d5">查看</a-button>
-              <a-button type="text" style="color: #0a90d5">回滚</a-button>
-            </a-flex>
+            <div class="editorBox">
+              <MonacoEditor
+                  v-model:modelValue="YAMLValue"
+                  theme="vs-dark"
+                  :height="500"
+                  language="yaml"
+                  :readonly="!isEdit"
+              />
+            </div>
+          </a-flex>
+        </a-col>
+
+        <a-col :span="isDrawerOpened ? sliderSpan : 0" class="right">
+          <a-card v-if="isDrawerOpened" class="sliderBox">
+            <a-card v-for="i in 2" :key="i">
+              <p>修改时间: 2024/3/20 15:20:31</p>
+              <p>版本号: xo842xqpx834</p>
+
+              <a-flex justify="flex-end">
+                <a-button type="text" style="color: #0a90d5">查看</a-button>
+                <a-button type="text" style="color: #0a90d5">回滚</a-button>
+              </a-flex>
+            </a-card>
           </a-card>
-        </a-card>
-      </a-col>
-    </a-flex>
+        </a-col>
+      </a-flex>
+    </a-spin>
   </a-card>
+
   <a-flex v-if="isEdit" style="margin-top: 30px">
     <a-button type="primary">确认</a-button>
     <a-button style="margin-left: 30px">取消</a-button>
@@ -62,27 +76,38 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { ref } from 'vue'
+import {inject, onMounted, reactive, ref} from 'vue'
 import { useRoute } from 'vue-router'
+import {PROVIDE_INJECT_KEY} from "@/base/enums/ProvideInject";
+import {getConfiguratorDetail, saveConfiguratorDetail} from "@/api/service/traffic";
+// @ts-ignore
+import yaml from 'js-yaml'
+import {message} from "ant-design-vue";
+
 
 const route = useRoute()
 const isEdit = ref(route.params.isEdit === '1')
 const isDrawerOpened = ref(false)
+const loading = ref(false)
 
 const sliderSpan = ref(8)
 
-const YAMLValue = ref(
-  'configVersion: v3.0\n' +
-    'force: true\n' +
-    'enabled: true\n' +
-    'key: shop-detail\n' +
-    'tags:\n' +
-    '  - name: gray\n' +
-    '    match:\n' +
-    '      - key: env\n' +
-    '        value:\n' +
-    '          exact: gray'
-)
+const YAMLValue = ref()
+onMounted(async () => {
+  const res = await getConfiguratorDetail({name: route.params?.pathId})
+  const json = yaml.dump(res.data) // 输出为 json 格式
+  YAMLValue.value = json;
+})
+async function saveConfig() {
+  loading.value = true
+  let newVal = yaml.load(YAMLValue.value)
+  try {
+    let res = await saveConfiguratorDetail({name: route.params?.pathId}, newVal);
+    message.success("config save success")
+  }finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style scoped lang="less">

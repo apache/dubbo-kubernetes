@@ -490,6 +490,9 @@ const words: I18nType = {
         list: 'List'
       }
     }
+  },
+  form: {
+    save: "SAVE"
   }
 }
 

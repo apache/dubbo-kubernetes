@@ -98,7 +98,6 @@ export class SearchDomain {
 
     try {
       const res = await this.searchApi(queryParams)
-      console.log(res)
       if (!res) {
         this.table.loading = false
         return

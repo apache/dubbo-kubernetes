@@ -143,12 +143,13 @@ const tableColumns = [
   {
     title: '实例名',
     dataIndex: 'instanceName',
-    width: '15%'
+    width: '25%',
+    ellipsis: true,
   },
   {
     title: 'RPC端口',
     dataIndex: 'rpcPort',
-    width: '15%'
+    width: '8%'
   },
   {
     title: '超时时间',

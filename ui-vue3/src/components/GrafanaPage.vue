@@ -48,7 +48,6 @@ onMounted(async () => {
   let res = await grafana.api({})
   grafana.url = `${window.location.origin}/grafana/d/${res.data?.baseURL.split('/d/')[1].split('?')[0]}?var-${grafana.type}=${grafana.name}&kiosk=tv`
   grafana.showIframe = true
-  console.log(grafana)
 })
 
 function tryDo(handle: any) {

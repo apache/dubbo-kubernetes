@@ -83,7 +83,8 @@ let columns = [
     key: 'ruleName',
     dataIndex: 'ruleName',
     sorter: (a: any, b: any) => sortString(a.appName, b.appName),
-    width: 140
+    width: 200,
+    ellipsis: true,
   },
   {
     title: 'ruleGranularity',

@@ -465,6 +465,9 @@ const words: I18nType = {
         list: '列表'
       }
     }
+  },
+  form: {
+    save: "保存"
   }
 }
 

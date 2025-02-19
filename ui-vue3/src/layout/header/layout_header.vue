@@ -28,7 +28,9 @@
         </a-flex>
         <div></div>
         <a-flex>
-          <a-input-group class="search-group" compact>
+          <a-input-group
+              @keyup.enter="globalSearch"
+              class="search-group" compact>
             <a-select v-model:value="searchType" class="select-type">
               <a-select-option v-for="option in searchTypeOptions" :value="option.value"
                 >{{ option.label }}
@@ -94,7 +96,7 @@ import {
   UserOutlined
 } from '@ant-design/icons-vue'
 import type { ComponentInternalInstance } from 'vue'
-import { computed, getCurrentInstance, h, inject, reactive, ref, watch } from 'vue'
+import {computed, getCurrentInstance, h, inject, nextTick, reactive, ref, watch} from 'vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { changeLanguage, localeConfig } from '@/base/i18n'
 import { LOCAL_STORAGE_THEME, PRIMARY_COLOR, PRIMARY_COLOR_DEFAULT } from '@/base/constants'
@@ -140,15 +142,15 @@ const searchTypeOptions = reactive([
   // },
   {
     label: computed(() => globalProperties.$t('application')),
-    value: 'appName'
+    value: 'applications'
   },
   {
     label: computed(() => globalProperties.$t('instance')),
-    value: 'instanceName'
+    value: 'instances'
   },
   {
     label: computed(() => globalProperties.$t('service')),
-    value: 'serviceName'
+    value: 'services'
   }
 ])
 const searchType = ref(searchTypeOptions[0].value)
@@ -171,7 +173,6 @@ const onSearch = async () => {
       label: item[labelKey],
       value: item[labelKey]
     }))
-    console.log('candidates', candidates.value)
   }
 
   // Various types of search functions
@@ -183,13 +184,13 @@ const onSearch = async () => {
     case 'ip':
       globalSearchByIp()
       break
-    case 'appName':
+    case 'applications':
       await globalSearch(searchApplications, 'appName')
       break
-    case 'instanceName':
+    case 'instances':
       await globalSearch(searchInstances, 'name')
       break
-    case 'serviceName':
+    case 'services':
       await globalSearch(searchService, 'serviceName')
       break
     default:
@@ -207,7 +208,7 @@ const candidates = ref<Array<SelectOption>>([])
 const inputChange = debounce(onSearch, 300)
 const router = useRouter()
 const globalSearch = () => {
-  router.replace(`/resources/application/index?query=${keywords}`)
+  router.replace(`/resources/${searchType.value}/list?query=${keywords.value}`)
 }
 const onSelect = () => {}
 </script>

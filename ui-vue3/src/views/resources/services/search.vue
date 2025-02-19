@@ -45,8 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { nextTick, provide, reactive } from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import { nextTick, provide, reactive, watch } from 'vue'
 import { searchService } from '@/api/service/service'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
@@ -58,13 +58,16 @@ import { promQueryList } from '@/utils/PromQueryUtil'
 
 let __null = PRIMARY_COLOR
 const router = useRouter()
+const route = useRoute()
+let query = route.query['query']
 const columns = [
   {
     title: 'service',
     key: 'service',
     dataIndex: 'serviceName',
     sorter: true,
-    width: '30%'
+    width: '30%',
+    ellipsis: true,
   },
   {
     title: 'versionGroup',
@@ -129,7 +132,6 @@ const handleResult = (result: any) => {
 function serviceInfo(params: any, table: any) {
   return searchService(params).then(async (res) => {
     return promQueryList(res, ['avgQPS', 'avgRT', 'requestTotal'], async (service: any) => {
-      console.log(service)
       service.avgQPS = await queryMetrics(
         `sum (dubbo_provider_qps_total{interface='${service.serviceName}'}) by (interface)`
       )
@@ -150,6 +152,7 @@ const searchDomain = reactive(
         label: 'serviceName',
         param: 'keywords',
         placeholder: 'typeAppName',
+        defaultValue: query,
         style: {
           width: '200px'
         }
@@ -172,10 +175,15 @@ const viewDetail = (serviceName: string) => {
 const viewDistribution = (serviceName: string, versionAndGroup: string) => {
   // let group = extractVersionAndGroup(versionAndGroup)?.group || ''
   // let version = extractVersionAndGroup(versionAndGroup)?.version || ''
-  router.push({ path: `distribution/${serviceName}` })
+  router.push({ path: `/resources/services/distribution/${serviceName}` })
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
+watch(route, (a,b)=>{
+  searchDomain.queryForm['keywords'] = a.query['query']
+  searchDomain.onSearch()
+  console.log(a)
+})
 </script>
 <style lang="less" scoped>
 .__container_services_index {

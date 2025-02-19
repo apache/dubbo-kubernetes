@@ -91,6 +91,7 @@ onMounted(() => {
       emit('update:modelValue', editor.getValue())
     })
     editor.onDidBlurEditorText(() => {
+      console.log(222)
       emit('blur')
     })
   }

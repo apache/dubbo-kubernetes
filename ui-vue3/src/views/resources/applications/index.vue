@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
+import {onMounted, provide, reactive, watch} from 'vue'
 import { searchApplications } from '@/api/service/app'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -71,7 +71,8 @@ let columns = [
     key: 'appName',
     dataIndex: 'appName',
     sorter: (a: any, b: any) => sortString(a.appName, b.appName),
-    width: 140
+    width: 140,
+    ellipsis: true,
   },
   {
     title: 'applicationDomain.instanceCount',
@@ -121,6 +122,11 @@ onMounted(() => {
 })
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
+watch(route, (a,b)=>{
+  searchDomain.queryForm['keywords'] = a.query['query']
+  searchDomain.onSearch()
+  console.log(a)
+})
 </script>
 <style lang="less" scoped>
 .search-table-container {

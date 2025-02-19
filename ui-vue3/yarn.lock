@@ -4097,10 +4097,10 @@ mockjs@^1.1.0:
   dependencies:
     commander "*"
 
-monaco-editor@^0.45.0:
-  version "0.45.0"
-  resolved "https://registry.npmmirror.com/monaco-editor/-/monaco-editor-0.45.0.tgz#6939123a6254aea9fea2d647697f846306dd4448"
-  integrity sha512-mjv1G1ZzfEE3k9HZN0dQ2olMdwIfaeAAjFiwNprLfYNRSz7ctv9XuCT7gPtBGrMUeV1/iZzYKj17Khu1hxoHOA==
+monaco-editor@^0.52.2:
+  version "0.52.2"
+  resolved "https://registry.npmmirror.com/monaco-editor/-/monaco-editor-0.52.2.tgz#53c75a6fcc6802684e99fd1b2700299857002205"
+  integrity sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==
 
 ms@2.1.2:
   version "2.1.2"

@@ -41,18 +41,21 @@
       </div>
 
       <a-spin class="tab-spin" :spinning="transitionFlag">
-        <router-view v-show="!transitionFlag" />
+       <div style="overflow: auto; height: calc(100vh - 300px); padding-bottom: 20px">
+         <router-view v-show="!transitionFlag" />
+       </div>
       </a-spin>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import {computed, provide, reactive, ref} from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRoute, useRouter } from 'vue-router'
 import _ from 'lodash'
 import { PRIMARY_COLOR, TAB_HEADER_TITLE } from '@/base/constants'
+import {PROVIDE_INJECT_KEY} from "@/base/enums/ProvideInject";
 
 const router = useRouter()
 const tabRoute = useRoute()

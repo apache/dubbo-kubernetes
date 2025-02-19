@@ -19,29 +19,29 @@
     <div class="search-query-container">
       <a-row>
         <a-col :span="18">
-          <a-form>
+          <a-form @keyup.enter="searchDomain.onSearch()">
             <a-flex wrap="wrap" gap="large">
               <template v-for="q in searchDomain.params">
                 <a-form-item :label="$t(q.label)">
                   <template v-if="q.dict && q.dict.length > 0">
                     <a-radio-group
-                      button-style="solid"
-                      v-model:value="searchDomain.queryForm[q.param]"
-                      v-if="q.dictType === 'BUTTON'"
+                        button-style="solid"
+                        v-model:value="searchDomain.queryForm[q.param]"
+                        v-if="q.dictType === 'BUTTON'"
                     >
                       <a-radio-button v-for="item in q.dict" :value="item.value">
                         {{ $t(item.label) }}
                       </a-radio-button>
                     </a-radio-group>
                     <a-select
-                      v-else
-                      class="select-type"
-                      :style="q.style"
-                      v-model:value="searchDomain.queryForm[q.param]"
+                        v-else
+                        class="select-type"
+                        :style="q.style"
+                        v-model:value="searchDomain.queryForm[q.param]"
                     >
                       <a-select-option
-                        :value="item.value"
-                        v-for="item in [...q.dict, { label: 'none', value: '' }]"
+                          :value="item.value"
+                          v-for="item in [...q.dict, { label: 'none', value: '' }]"
                       >
                         {{ $t(item.label) }}
                       </a-select-option>
@@ -49,18 +49,18 @@
                   </template>
 
                   <a-input
-                    v-else
-                    :style="q.style"
-                    :placeholder="$t('placeholder.' + (q.placeholder || `typeDefault`))"
-                    v-model:value="searchDomain.queryForm[q.param]"
+                      v-else
+                      :style="q.style"
+                      :placeholder="$t('placeholder.' + (q.placeholder || `typeDefault`))"
+                      v-model:value="searchDomain.queryForm[q.param]"
                   ></a-input>
                 </a-form-item>
               </template>
               <a-form-item :label="''">
                 <a-button type="primary" @click="searchDomain.onSearch()">
                   <Icon
-                    style="margin-bottom: -2px; font-size: 1.3rem"
-                    icon="ic:outline-manage-search"
+                      style="margin-bottom: -2px; font-size: 1.3rem"
+                      icon="ic:outline-manage-search"
                   ></Icon>
                 </a-button>
               </a-form-item>
@@ -78,13 +78,13 @@
                 <a-card style="max-width: 300px" title="Custom Column">
                   <div class="body">
                     <div
-                      class="item"
-                      @click.stop="hideColumn(item)"
-                      v-for="(item, i) in searchDomain?.table.columns"
+                        class="item"
+                        @click.stop="hideColumn(item)"
+                        v-for="(item, i) in searchDomain?.table.columns"
                     >
                       <Icon
-                        style="margin-bottom: -4px; font-size: 1rem; margin-right: 2px"
-                        :icon="item.__hide ? 'zondicons:view-hide' : 'zondicons:view-show'"
+                          style="margin-bottom: -4px; font-size: 1rem; margin-right: 2px"
+                          :icon="item.__hide ? 'zondicons:view-hide' : 'zondicons:view-show'"
                       ></Icon>
                       {{ item.title }}
                     </div>
@@ -98,15 +98,16 @@
     </div>
     <div class="search-table-container">
       <a-table
-        :pagination="pagination"
-        :scroll="{
+          :loading="searchDomain.table.loading"
+          :pagination="pagination"
+          :scroll="{
           scrollToFirstRowOnChange: true,
           y: searchDomain.tableStyle?.scrollY || '',
           x: searchDomain.tableStyle?.scrollX || ''
         }"
-        :columns="searchDomain?.table.columns.filter((x: any) => !x.__hide)"
-        :data-source="searchDomain?.result"
-        @change="handleTableChange"
+          :columns="searchDomain?.table.columns.filter((x: any) => !x.__hide)"
+          :data-source="searchDomain?.result"
+          @change="handleTableChange"
       >
         <template #bodyCell="{ text, record, index, column }">
           <span v-if="column.key === 'idx'">{{ index + 1 }}</span>
@@ -114,12 +115,12 @@
             <a-skeleton-button active size="small"></a-skeleton-button>
           </span>
           <slot
-            name="bodyCell"
-            :text="text"
-            :record="record"
-            :index="index"
-            :column="column"
-            v-else
+              name="bodyCell"
+              :text="text"
+              :record="record"
+              :index="index"
+              :column="column"
+              v-else
           >
           </slot>
         </template>
@@ -129,14 +130,14 @@
 </template>
 
 <script setup lang="ts">
-import type { ComponentInternalInstance } from 'vue'
-import { computed, getCurrentInstance, inject, reactive } from 'vue'
+import type {ComponentInternalInstance} from 'vue'
+import {computed, getCurrentInstance, inject, reactive} from 'vue'
 
-import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
-import type { SearchDomain } from '@/utils/SearchUtil'
-import { Icon } from '@iconify/vue'
-import { PRIMARY_COLOR } from '@/base/constants'
-import { message } from 'ant-design-vue'
+import {PROVIDE_INJECT_KEY} from '@/base/enums/ProvideInject'
+import type {SearchDomain} from '@/utils/SearchUtil'
+import {Icon} from '@iconify/vue'
+import {PRIMARY_COLOR} from '@/base/constants'
+import {message} from 'ant-design-vue'
 
 const commonTool = reactive({
   customColumns: false
@@ -145,7 +146,7 @@ let __ = PRIMARY_COLOR
 
 const {
   appContext: {
-    config: { globalProperties }
+    config: {globalProperties}
   }
 } = <ComponentInternalInstance>getCurrentInstance()
 
@@ -166,18 +167,18 @@ const pagination: any = computed(() => {
     current: searchDomain.paged.curPage,
     total: searchDomain.paged.total,
     showTotal: (v: any) =>
-      globalProperties.$t('searchDomain.total') +
-      ': ' +
-      v +
-      ' ' +
-      globalProperties.$t('searchDomain.unit')
+        globalProperties.$t('searchDomain.total') +
+        ': ' +
+        v +
+        ' ' +
+        globalProperties.$t('searchDomain.unit')
   }
 })
 
 const handleTableChange = (
-  pag: { pageSize: number; current: number },
-  filters: any,
-  sorter: any
+    pag: { pageSize: number; current: number },
+    filters: any,
+    sorter: any
 ) => {
   searchDomain.paged.pageSize = pag.pageSize
   searchDomain.paged.curPage = pag.current
@@ -203,7 +204,7 @@ function hideColumn(item: any) {
     border-bottom: 1px solid rgba(220, 219, 219, 0.29);
     background: #fafafa;
     padding: 20px 20px 0 20px;
-    //margin-bottom: 20px;
+  //margin-bottom: 20px;
   }
 
   .select-type {
@@ -223,6 +224,7 @@ function hideColumn(item: any) {
     width: 100px;
     cursor: pointer;
     position: relative;
+
     .button {
       vertical-align: center;
       line-height: 24px;
@@ -237,12 +239,14 @@ function hideColumn(item: any) {
         margin-left: 10px;
       }
     }
+
     .dropdown {
       top: 40px;
       right: -40px;
       position: absolute;
       height: auto;
       z-index: 1000;
+
       .body {
         max-height: 200px;
         overflow: auto;
@@ -250,6 +254,7 @@ function hideColumn(item: any) {
 
       .item {
         line-height: 30px;
+
         &:hover {
           color: v-bind('PRIMARY_COLOR');
         }

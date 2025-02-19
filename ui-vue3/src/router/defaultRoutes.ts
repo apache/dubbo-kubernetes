@@ -446,7 +446,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/traffic/tagRule/tabs/formView.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:apm-trace'
+                  icon: 'oui:apm-trace',
+                  back: '/traffic/tagRule'
                 }
               },
               {
@@ -520,6 +521,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'dynamicConfigDomain.event',
                 component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
                 meta: {
+                  hidden: true,
                   tab: true,
                   icon: 'oui:app-console',
                   back: '../../'
@@ -530,6 +532,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'dynamicConfigDomain.addByFormView',
                 component: () => import('../views/traffic/dynamicConfig/tabs/addByFormView.vue'),
                 meta: {
+                  hidden: true,
                   tab: true,
                   icon: 'oui:apm-trace',
                   back: '../../'

@@ -89,4 +89,18 @@ export const searchDestinationRule = (params: any): Promise<any> => {
   })
 }
 
+export const getConfiguratorDetail = (params: any): Promise<any> => {
+  return request({
+    url: `/configurator/${encodeURIComponent(params.name)}`,
+    method: 'get',
+  })
+}
+export const saveConfiguratorDetail = (params: any, data:any): Promise<any> => {
+  return request({
+    url: `/configurator/${encodeURIComponent(params.name)}`,
+    method: 'put',
+    data
+  })
+}
+
 // TODO Perform front-end and back-end joint debugging

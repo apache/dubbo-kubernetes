@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
+import { onMounted, provide, reactive,watch } from 'vue'
 import { searchInstances } from '@/api/service/instance'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -78,7 +78,9 @@ import { queryMetrics } from '@/base/http/promQuery'
 import { isNumber } from 'lodash'
 import { bytesToHuman } from '@/utils/ByteUtil'
 import { promQueryList } from '@/utils/PromQueryUtil'
-
+import {useRoute} from "vue-router";
+let route = useRoute()
+let query = route.query['query']
 let __null = PRIMARY_COLOR
 let columns = [
   {
@@ -183,6 +185,7 @@ const searchDomain = reactive(
       {
         label: 'appName',
         param: 'keywords',
+        defaultValue: query,
         placeholder: 'typeAppName',
         style: {
           width: '200px'
@@ -203,6 +206,11 @@ onMounted(() => {
 })
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
+watch(route, (a,b)=>{
+  searchDomain.queryForm['keywords'] = a.query['query']
+  searchDomain.onSearch()
+  console.log(a)
+})
 </script>
 <style lang="less" scoped>
 .search-table-container {
