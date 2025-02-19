@@ -1,10 +1,10 @@
 {{- $nacos := .Values.nacos -}}
-{{- if and $nacos.enabled (eq $nacos.storage.type "mysql") }}
+{{- if $nacos.storage.type "mysql" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ template "nacos.name" . }}-db-config
-  namespace: {{ template "admin.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}

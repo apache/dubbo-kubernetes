@@ -56,7 +56,7 @@ var AllComponents = []Component{
 		SpecName:           "zookeeper",
 		ResourceType:       "StatefulSet",
 		ResourceName:       "register",
-		Default:            true,
+		Default:            false,
 		HelmSubDir:         "dubbo-control/register-discovery/zookeeper",
 		HelmValuesTreeRoot: "zookeeper",
 	},
@@ -64,9 +64,10 @@ var AllComponents = []Component{
 
 var (
 	userFacingCompNames = map[Name]string{
-		BaseComponentName:          "Dubbo Core",
-		AdminComponentName:         "Dubbo Dashboard",
-		NacosRegisterComponentName: "Dubbo Nacos Register Plane",
+		BaseComponentName:              "Dubbo Resource Core",
+		AdminComponentName:             "Dubbo Admin Dashboard",
+		NacosRegisterComponentName:     "Dubbo Nacos Register Plane",
+		ZookeeperRegisterComponentName: "Dubbo Zookeeper Register Plane",
 	}
 
 	Icons = map[Name]string{

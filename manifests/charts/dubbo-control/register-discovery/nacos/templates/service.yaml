@@ -1,11 +1,10 @@
 {{- $nacos := .Values.nacos -}}
 {{- $service := $nacos.service -}}
-{{- if $nacos.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "nacos.name" . }}
-  namespace: {{ template "admin.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "nacos.labels" . | nindent 4 }}
   {{- with $nacos.labels }}
@@ -103,5 +102,4 @@ spec:
     protocol: TCP
   selector:
     app: {{ template "nacos.selector" . }}
-{{- end -}}
 {{- end -}}

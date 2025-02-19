@@ -12,20 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-apiVersion: install.dubbo.io/v1alpha1
-kind: DubboOperator
-spec:
-  control: register
-  components:
-    base:
-      enabled: false
-    register:
-      nacos:
-        enabled: false
-      zookeeper:
-        enabled: false
-  dashboard:
-    admin:
-      enabled: false
-
