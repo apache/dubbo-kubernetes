@@ -19,9 +19,15 @@ metadata:
   namespace: dubbo-system
 spec:
   profile: default
+  control: register
   components:
     base:
       enabled: true
+    register:
+      nacos:
+        enabled: true
+      zookeeper:
+        enabled: false
   dashboard:
     admin:
       enabled: true

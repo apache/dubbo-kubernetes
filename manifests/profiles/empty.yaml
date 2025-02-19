@@ -16,9 +16,16 @@
 apiVersion: install.dubbo.io/v1alpha1
 kind: DubboOperator
 spec:
+  control: register
   components:
     base:
       enabled: false
+    register:
+      nacos:
+        enabled: true
+      zookeeper:
+        enabled: false
   dashboard:
     admin:
       enabled: false
+
