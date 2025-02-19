@@ -49,20 +49,24 @@ request.use(
     Promise.reject(error)
   }
 )
+const rejectState: { errorHandler: Function | null } = {
+  errorHandler: null
+}
 
 response.use(
   (response) => {
     NProgress.done()
-
-    if (response.status === 200) {
+    if (response.status === 200 && response.data.code === 200) {
       return Promise.resolve(response.data)
     }
-    return Promise.reject(response)
+    message.error(response.data.code + ':' + response.data.msg)
+    return Promise.reject(response.data)
   },
   (error) => {
+    console.log(33, error)
     NProgress.done()
-    message.error(error.message)
-    return Promise.resolve(error.response)
+    message.error(error.response.data.code + ':' + error.response.data.msg)
+    return Promise.reject(error.response.data)
   }
 )
 export default service

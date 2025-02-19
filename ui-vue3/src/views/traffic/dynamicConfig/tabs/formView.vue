@@ -169,117 +169,115 @@
 
     <template v-else>
       <a-spin :spinning="loading">
-      <a-card v-for="(config, index) in formViewEdit.config" class="dynamic-config-card">
-        <template #title>
-          配置【{{ index + 1 }}】
-          <span style="font-weight: normal; font-size: 12px" :style="{ color: PRIMARY_COLOR }">
-            对于{{ formViewData?.basicInfo?.scope === 'application' ? '应用' : '服务' }}的{{
-              config.side === 'provider' ? '提供者' : '消费者'
-            }}，将满足
-            <a-tag
-              :color="PRIMARY_COLOR"
-              v-for="item in config.matches.map(
-                (x: any) => x.key + ' ' + x.relation + ' ' + x.value
-              )"
+        <a-card v-for="(config, index) in formViewEdit.config" class="dynamic-config-card">
+          <template #title>
+            配置【{{ index + 1 }}】
+            <span style="font-weight: normal; font-size: 12px" :style="{ color: PRIMARY_COLOR }">
+              对于{{ formViewData?.basicInfo?.scope === 'application' ? '应用' : '服务' }}的{{
+                config.side === 'provider' ? '提供者' : '消费者'
+              }}，将满足
+              <a-tag
+                :color="PRIMARY_COLOR"
+                v-for="item in config.matches.map(
+                  (x: any) => x.key + ' ' + x.relation + ' ' + x.value
+                )"
+              >
+                {{ item }}
+              </a-tag>
+              的实例，配置
+              <a-tag
+                :color="PRIMARY_COLOR"
+                v-for="item in config.parameters.map((x: any) => x.key + ' = ' + x.value)"
+              >
+                {{ item }}
+              </a-tag>
+            </span>
+          </template>
+          <a-descriptions :column="2">
+            <a-descriptions-item
+              :label="$t('flowControlDomain.enabled')"
+              :labelStyle="{ fontWeight: 'bold' }"
             >
-              {{ item }}
-            </a-tag>
-            的实例，配置
-            <a-tag
-              :color="PRIMARY_COLOR"
-              v-for="item in config.parameters.map((x: any) => x.key + ' = ' + x.value)"
+              <a-switch
+                v-model:checked="config.enabled"
+                checked-children="是"
+                un-checked-children="否"
+              />
+            </a-descriptions-item>
+            <a-descriptions-item
+              :label="$t('flowControlDomain.side')"
+              :labelStyle="{ fontWeight: 'bold' }"
             >
-              {{ item }}
-            </a-tag>
-          </span>
-        </template>
-        <a-descriptions :column="2">
-          <a-descriptions-item
-            :label="$t('flowControlDomain.enabled')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-switch
-              v-model:checked="config.enabled"
-              checked-children="是"
-              un-checked-children="否"
-            />
-          </a-descriptions-item>
-          <a-descriptions-item
-            :label="$t('flowControlDomain.side')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-radio-group v-model:value="config.side" :options="sideOptions" />
-          </a-descriptions-item>
-          <a-descriptions-item
-            :label="$t('flowControlDomain.matches')"
-            :labelStyle="{ fontWeight: 'bold' }"
-            :span="2"
-          >
-            <div>
-              <a-select
-                ref="select"
-                v-model:value="config.matchKeys"
-                style="width: 500px"
-                @change="handleChange(index, 'matches')"
-                mode="multiple"
-                :options="matchesArr.map((item) => ({ value: item }))"
-              />
-              <div v-for="item in config.matches" :key="item.key" style="margin-top: 20px">
-                <a-input-group compact>
-                  <a-input disabled :value="item.key" style="width: 160px" />
-                  <a-input
-                    placeholer="relation"
-                    v-model:value="item.relation"
-                    style="width: 100px"
-                  />
-                  <a-input placeholer="value" v-model:value="item.value" style="width: 240px" />
-                </a-input-group>
+              <a-radio-group v-model:value="config.side" :options="sideOptions" />
+            </a-descriptions-item>
+            <a-descriptions-item
+              :label="$t('flowControlDomain.matches')"
+              :labelStyle="{ fontWeight: 'bold' }"
+              :span="2"
+            >
+              <div>
+                <a-select
+                  ref="select"
+                  v-model:value="config.matchKeys"
+                  style="width: 500px"
+                  @change="handleChange(index, 'matches', 'matchKeys')"
+                  mode="multiple"
+                  :options="matchesArr.map((item) => ({ value: item }))"
+                />
+                <div v-for="item in config.matches" :key="item.key" style="margin-top: 20px">
+                  <a-input-group compact>
+                    <a-input disabled :value="item.key" style="width: 160px" />
+                    <a-input
+                      placeholer="relation"
+                      v-model:value="item.relation"
+                      style="width: 100px"
+                    />
+                    <a-input placeholer="value" v-model:value="item.value" style="width: 240px" />
+                  </a-input-group>
+                </div>
               </div>
-            </div>
-          </a-descriptions-item>
-          <a-descriptions-item
-            :label="$t('flowControlDomain.configurationItem')"
-            :labelStyle="{ fontWeight: 'bold' }"
-            :span="2"
-          >
-            <div>
-              <a-select
-                ref="select"
-                v-model:value="config.parameterKeys"
-                style="width: 500px"
-                @change="handleChange(index, 'parameters')"
-                mode="multiple"
-                :options="parametersArr.map((item) => ({ value: item }))"
-              />
-              <div v-for="item in config.parameters" :key="item.key" style="margin-top: 20px">
-                <a-input-group compact>
-                  <a-input disabled :value="item.key" style="width: 160px" />
-                  <a-input
-                    disabled
-                    placeholer="relation"
-                    :value="item.relation"
-                    style="width: 100px"
-                  />
-                  <a-input placeholer="value" v-model:value="item.value" style="width: 240px" />
-                </a-input-group>
+            </a-descriptions-item>
+            <a-descriptions-item
+              :label="$t('flowControlDomain.configurationItem')"
+              :labelStyle="{ fontWeight: 'bold' }"
+              :span="2"
+            >
+              <div>
+                <a-select
+                  ref="select"
+                  v-model:value="config.parameterKeys"
+                  style="width: 500px"
+                  @change="handleChange(index, 'parameters', 'parameterKeys')"
+                  mode="multiple"
+                  :options="parametersArr.map((item) => ({ value: item }))"
+                />
+                <div v-for="item in config.parameters" :key="item.key" style="margin-top: 20px">
+                  <a-input-group compact>
+                    <a-input disabled :value="item.key" style="width: 160px" />
+                    <a-input
+                      disabled
+                      placeholer="relation"
+                      :value="item.relation"
+                      style="width: 100px"
+                    />
+                    <a-input placeholer="value" v-model:value="item.value" style="width: 240px" />
+                  </a-input-group>
+                </div>
               </div>
-            </div>
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-card>
+            </a-descriptions-item>
+          </a-descriptions>
+        </a-card>
       </a-spin>
     </template>
-
-
-
 
     <a-button style="margin-bottom: 20px" v-if="isEdit" @click="addConfig">增加配置</a-button>
 
     <a-card class="footer">
       <a-flex v-if="isEdit">
-        <a-button type="primary" @click="saveConfig" >确认</a-button>
-        <a-button style="margin-left: 30px"
-                  @click="router.replace('/traffic/dynamicConfig')">取消</a-button>
+        <a-button type="primary" @click="saveConfig">确认</a-button>
+        <a-button style="margin-left: 30px" @click="router.replace('/traffic/dynamicConfig')"
+          >取消
+        </a-button>
       </a-flex>
     </a-card>
   </div>
@@ -293,7 +291,7 @@ import { PRIMARY_COLOR } from '@/base/constants'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
-import {getConfiguratorDetail, saveConfiguratorDetail} from '@/api/service/traffic'
+import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
 import gsap from 'gsap'
 
 let __ = PRIMARY_COLOR
@@ -379,14 +377,14 @@ const addConfig = () => {
   })
 }
 
-const handleChange = (index: number, name: string) => {
+const handleChange = (index: number, name: string, keys: string) => {
   const config: any = formViewData.config[index]
   config[name] = config[name].filter((item: any) => {
-    return config[name + 'Keys'].find((i: any) => {
+    return config[keys].find((i: any) => {
       return i === item.key
     })
   })
-  config[name + 'Keys'].forEach((item: any) => {
+  config[keys].forEach((item: any) => {
     if (
       !config[name].find((i: any) => {
         return i.key === item
@@ -401,10 +399,7 @@ const handleChange = (index: number, name: string) => {
   })
 }
 
-onMounted(async () => {
-  const res = await getConfiguratorDetail({ name: route.params?.pathId })
-  // console.log(formViewData.config)
-  const data = res.data
+function transApiData(data: any) {
   if (data) {
     formViewData.basicInfo.configVerison = data.configVerison
     formViewData.basicInfo.scope = data.scope
@@ -439,8 +434,15 @@ onMounted(async () => {
       }
     })
   }
+}
+
+onMounted(async () => {
+  const res = await getConfiguratorDetail({ name: route.params?.pathId })
+  // console.log(formViewData.config)
+  transApiData(res.data)
 })
 const loading = ref(false)
+
 async function saveConfig() {
   loading.value = true
   let newVal = {
@@ -448,27 +450,30 @@ async function saveConfig() {
     key: formViewEdit.basicInfo.key,
     enabled: formViewEdit.basicInfo.enabled,
     configVersion: formViewEdit.basicInfo.configVerison,
-    configs: formViewEdit.config.map((x:any)=>{
-      const match:any = {}
-      const parameters:any = {}
+    configs: formViewEdit.config.map((x: any) => {
+      const match: any = {}
+      const parameters: any = {}
       for (let m of x.matches) {
-        match[m.key] = {[m.relation]: m.value  }
+        match[m.key] = { [m.relation]: m.value }
       }
       for (let m of x.parameters) {
-        parameters[m.key] =  m.value
+        parameters[m.key] = m.value
       }
 
       return {
         match,
         parameters,
         enabled: x.enabled,
-        side: x.side,
+        side: x.side
       }
     })
   }
   try {
     let res = await saveConfiguratorDetail({ name: route.params?.pathId }, newVal)
+    transApiData(res.data)
     message.success('config save success')
+  } catch (e) {
+    console.error(e)
   } finally {
     loading.value = false
   }
