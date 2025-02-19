@@ -177,28 +177,8 @@ func validateDubboOperator(dop values.Map, logger clog.Logger) error {
 }
 
 func applyComponentValuesToHelmValues(comp component.Component, spec apis.MetadataCompSpec, merged values.Map) values.Map {
-	root := comp.HelmTreeRoot
 	if spec.Namespace != "" {
 		spec.Namespace = "dubbo-system"
-	}
-	if comp.FlattenValues {
-		cv, f := merged.GetPathMap("spec.values." + root)
-		if f {
-			vals, _ := merged.GetPathMap("spec.values")
-			nv := values.Map{
-				"global": vals["global"],
-			}
-			for k, v := range vals {
-				_, isMap := v.(map[string]any)
-				if !isMap {
-					nv[k] = v
-				}
-			}
-			for k, v := range cv {
-				nv[k] = v
-			}
-			merged["spec"].(map[string]any)["values"] = nv
-		}
 	}
 	return merged
 }
