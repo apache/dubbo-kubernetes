@@ -20,20 +20,31 @@ type DubboOperator struct {
 
 type DubboOperatorSpec struct {
 	Profile    string                   `json:"profile,omitempty"`
+	Control    string                   `json:"control,omitempty"`
 	Dashboard  *DubboAdminDashboardSpec `json:"dashboard,omitempty"`
 	Components *DubboComponentSpec      `json:"components,omitempty"`
 	Values     json.RawMessage          `json:"values,omitempty"`
 }
 
 type DubboComponentSpec struct {
-	Base *BaseComponentSpec `json:"base,omitempty"`
+	Base     *BaseComponentSpec `json:"base,omitempty"`
+	Register *RegisterSpec      `json:"register,omitempty"`
+}
+
+type BaseComponentSpec struct {
+	Enabled *BoolValue `json:"enabled,omitempty"`
 }
 
 type DubboAdminDashboardSpec struct {
 	Admin *ComponentSpec `json:"admin,omitempty"`
 }
 
-type BaseComponentSpec struct {
+type RegisterSpec struct {
+	Nacos     *RegisterComponentSpec `json:"nacos,omitempty"`
+	Zookeeper *RegisterComponentSpec `json:"zookeeper,omitempty"`
+}
+
+type RegisterComponentSpec struct {
 	Enabled *BoolValue `json:"enabled,omitempty"`
 }
 
