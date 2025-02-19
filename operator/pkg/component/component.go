@@ -17,6 +17,7 @@ const (
 
 type Component struct {
 	UserFacingName     Name
+	ContainerName      string
 	SpecName           string
 	ResourceType       string
 	ResourceName       string
@@ -37,6 +38,7 @@ var AllComponents = []Component{
 	{
 		UserFacingName:     AdminComponentName,
 		SpecName:           "admin",
+		ContainerName:      "dashboard",
 		ResourceType:       "Deployment",
 		Default:            true,
 		HelmSubDir:         "admin",
@@ -47,6 +49,7 @@ var AllComponents = []Component{
 		SpecName:           "nacos",
 		ResourceType:       "StatefulSet",
 		ResourceName:       "register",
+		ContainerName:      "register-discovery",
 		Default:            true,
 		HelmSubDir:         "dubbo-control/register-discovery/nacos",
 		HelmValuesTreeRoot: "nacos",
@@ -56,6 +59,7 @@ var AllComponents = []Component{
 		SpecName:           "zookeeper",
 		ResourceType:       "StatefulSet",
 		ResourceName:       "register",
+		ContainerName:      "register-discovery",
 		Default:            false,
 		HelmSubDir:         "dubbo-control/register-discovery/zookeeper",
 		HelmValuesTreeRoot: "zookeeper",
@@ -113,6 +117,33 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 
 		spec.Raw = m
 		return spec, nil
+	}
+	if c.ContainerName == "dashboard" {
+		s, ok := merged.GetPathMap("spec.dashboard." + c.SpecName)
+		if !ok {
+			return defaultResp, nil
+		}
+		spec, err := buildSpec(s)
+		if err != nil {
+			return nil, err
+		}
+		if !(spec.Enabled.GetValueOrTrue()) {
+			return nil, nil
+		}
+	}
+
+	if c.ContainerName == "register-discovery" {
+		s, ok := merged.GetPathMap("spec.components.register." + c.SpecName)
+		if !ok {
+			return defaultResp, nil
+		}
+		spec, err := buildSpec(s)
+		if err != nil {
+			return nil, err
+		}
+		if !(spec.Enabled.GetValueOrTrue()) {
+			return nil, nil
+		}
 	}
 	s, ok := merged.GetPathMap("spec.components." + c.SpecName)
 	if !ok {
