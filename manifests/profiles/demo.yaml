@@ -18,7 +18,6 @@ kind: DubboOperator
 metadata:
   namespace: dubbo-system
 spec:
-  control: register
   components:
     base:
       enabled: true

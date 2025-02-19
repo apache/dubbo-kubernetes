@@ -2,7 +2,6 @@ package apis
 
 import (
 	"encoding/json"
-	proto "github.com/gogo/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -19,11 +18,11 @@ type DubboOperator struct {
 }
 
 type DubboOperatorSpec struct {
-	Profile    string                   `json:"profile,omitempty"`
-	Control    string                   `json:"control,omitempty"`
-	Dashboard  *DubboAdminDashboardSpec `json:"dashboard,omitempty"`
-	Components *DubboComponentSpec      `json:"components,omitempty"`
-	Values     json.RawMessage          `json:"values,omitempty"`
+	Profile    string              `json:"profile,omitempty"`
+	Control    string              `json:"control,omitempty"`
+	Dashboard  *DubboDashboardSpec `json:"dashboard,omitempty"`
+	Components *DubboComponentSpec `json:"components,omitempty"`
+	Values     json.RawMessage     `json:"values,omitempty"`
 }
 
 type DubboComponentSpec struct {
@@ -31,12 +30,8 @@ type DubboComponentSpec struct {
 	Register *RegisterSpec      `json:"register,omitempty"`
 }
 
-type BaseComponentSpec struct {
-	Enabled *BoolValue `json:"enabled,omitempty"`
-}
-
-type DubboAdminDashboardSpec struct {
-	Admin *ComponentSpec `json:"admin,omitempty"`
+type DubboDashboardSpec struct {
+	Admin *DashboardComponentSpec `json:"admin,omitempty"`
 }
 
 type RegisterSpec struct {
@@ -44,10 +39,19 @@ type RegisterSpec struct {
 	Zookeeper *RegisterComponentSpec `json:"zookeeper,omitempty"`
 }
 
+type BaseComponentSpec struct {
+	Enabled *BoolValue `json:"enabled,omitempty"`
+}
+
+type DashboardComponentSpec struct {
+	Enabled *BoolValue `json:"enabled,omitempty"`
+}
+
 type RegisterComponentSpec struct {
 	Enabled *BoolValue `json:"enabled,omitempty"`
 }
 
+// TODO Remove?
 type ComponentSpec struct {
 	Enabled   *BoolValue     `json:"enabled,omitempty"`
 	Namespace string         `json:"namespace,omitempty"`
@@ -62,13 +66,9 @@ type BoolValue struct {
 	bool
 }
 
-func (d *DubboOperator) Reset() { *d = DubboOperator{} }
-
-func (d *DubboOperator) String() string { return proto.CompactTextString(d) }
-
-func (*DubboOperator) ProtoMessage() {}
-
-func (b *BoolValue) MarshalJSON() ([]byte, error) { return json.Marshal(b.GetValueOrFalse()) }
+func (b *BoolValue) MarshalJSON() ([]byte, error) {
+	return json.Marshal(b.GetValueOrFalse())
+}
 
 func (b *BoolValue) UnmarshalJSON(bytes []byte) error {
 	bb := false
