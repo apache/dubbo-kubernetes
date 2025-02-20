@@ -42,9 +42,9 @@ _internal_default_values_not_set:
   ## Configure the application image
   image:
     # Source of the container image.
-    registry: docker.io/nacos/nacos-server
+    registry: nacos/nacos-server
     # Version tag of the container image.
-    tag: v2.2.3
+    tag: latest
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
   securityContext:
