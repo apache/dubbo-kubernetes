@@ -60,7 +60,7 @@ var AllComponents = []Component{
 		ResourceType:       "StatefulSet",
 		ResourceName:       "register",
 		ContainerName:      "register-discovery",
-		Default:            false,
+		Default:            true,
 		HelmSubDir:         "dubbo-control/register-discovery/zookeeper",
 		HelmValuesTreeRoot: "zookeeper",
 	},
@@ -97,7 +97,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 	def := c.Default
 	if def {
 		defaultResp = []apis.MetadataCompSpec{{
-			ComponentSpec: apis.ComponentSpec{
+			RegisterComponentSpec: apis.RegisterComponentSpec{
 				Namespace: defaultNamespace,
 			}},
 		}
@@ -114,7 +114,6 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		if spec.Namespace == "" {
 			spec.Namespace = "dubbo-system"
 		}
-
 		spec.Raw = m
 		return spec, nil
 	}
@@ -137,6 +136,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		if !ok {
 			return defaultResp, nil
 		}
+
 		spec, err := buildSpec(s)
 		if err != nil {
 			return nil, err
