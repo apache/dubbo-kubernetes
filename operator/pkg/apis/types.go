@@ -48,18 +48,13 @@ type DashboardComponentSpec struct {
 }
 
 type RegisterComponentSpec struct {
-	Enabled *BoolValue `json:"enabled,omitempty"`
-}
-
-// TODO Remove?
-type ComponentSpec struct {
 	Enabled   *BoolValue     `json:"enabled,omitempty"`
 	Namespace string         `json:"namespace,omitempty"`
 	Raw       map[string]any `json:"-"`
 }
 
 type MetadataCompSpec struct {
-	ComponentSpec
+	RegisterComponentSpec
 }
 
 type BoolValue struct {
