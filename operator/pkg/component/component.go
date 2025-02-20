@@ -136,7 +136,6 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		if !ok {
 			return defaultResp, nil
 		}
-
 		spec, err := buildSpec(s)
 		if err != nil {
 			return nil, err

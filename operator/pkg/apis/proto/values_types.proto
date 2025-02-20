@@ -17,6 +17,22 @@ message BaseConfig {
   google.protobuf.BoolValue enableDubboConfigCRDs = 1;
 }
 
+message ZookeeperConfig {
+  google.protobuf.StringValue dataLogDir = 1;
+  google.protobuf.Int64Value tickTime = 2;
+  google.protobuf.Int64Value  initLimit = 3;
+  google.protobuf.Int64Value   syncLimit = 4;
+  google.protobuf.Int64Value preAllocSize = 5;
+  google.protobuf.Int64Value snapCount = 6;
+  google.protobuf.StringValue fourlwCommandsWhitelist = 7;
+  google.protobuf.BoolValue listenOnAllIPs = 8;
+}
+
+message NacosConfig {
+  string mode = 1;
+}
+
+
 message Values {
   // Global configuration for dubbo components.
   GlobalConfig global = 1;
@@ -26,6 +42,10 @@ message Values {
 
   // Specifies which installation configuration profile to apply.
   string profile = 3;
+
+  ZookeeperConfig zookeeper = 4;
+
+  NacosConfig nacos = 5;
 }
 
 // IntOrString is a type that can hold an int32 or a string.  When used in

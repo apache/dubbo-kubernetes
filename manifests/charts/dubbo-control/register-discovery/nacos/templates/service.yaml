@@ -1,4 +1,4 @@
-{{- $nacos := .Values.nacos -}}
+{{- $nacos := .Values -}}
 {{- $service := $nacos.service -}}
 apiVersion: v1
 kind: Service
@@ -54,7 +54,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ template "nacos.name" . }}-headless
-  namespace: {{ template "nacos.namespace" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
   {{- include "nacos.labels" . | nindent 4 }}
   {{- with .Values.labels }}
