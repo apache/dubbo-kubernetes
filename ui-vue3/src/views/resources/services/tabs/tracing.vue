@@ -15,8 +15,27 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_services_tabs_tracing">链路todo</div>
+  <div class="__container_app_monitor">
+    <GrafanaPage></GrafanaPage>
+  </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import GrafanaPage from '@/components/GrafanaPage.vue'
+import { provide, reactive, ref } from 'vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { useRoute } from 'vue-router'
+import { getServiceTracingDashboard } from '@/api/service/service'
+
+const route = useRoute()
+provide(
+  PROVIDE_INJECT_KEY.GRAFANA,
+  reactive({
+    api: getServiceTracingDashboard,
+    showIframe: false,
+    name: route.params?.pathId + ':22222',
+    type: 'service'
+  })
+)
+</script>
 <style lang="less" scoped></style>

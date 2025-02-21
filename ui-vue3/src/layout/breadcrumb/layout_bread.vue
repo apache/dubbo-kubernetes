@@ -36,8 +36,8 @@ let pathId = computed(() => {
 const routes = computed(() => {
   return route.matched.slice(1).map((x, idx) => {
     return {
-      name: <string>x.name,
-      handle: router.push(x)
+      name: <string>x.name
+      // handle: router.push(x)
     }
   })
 })

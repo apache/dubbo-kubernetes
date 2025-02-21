@@ -14,17 +14,12 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/admin/dubbo.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dubbo Admin</title>
-  <script type="module" crossorigin src="/admin/assets/index-JbZl4GaQ.js"></script>
-  <link rel="stylesheet" crossorigin href="/admin/assets/index-gxZAlqCI.css">
-</head>
-<body>
-<div id="app"></div>
-</body>
-</html>
+<template>
+  <div class="__container_a">
+    outer A
+    <router-view />
+  </div>
+</template>
+
+<script setup lang="ts"></script>
+<style lang="less" scoped></style>

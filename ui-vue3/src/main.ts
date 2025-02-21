@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createApp } from 'vue'
+import { createApp, ref } from 'vue'
 import Antd from 'ant-design-vue'
 
 import router from './router'
@@ -28,9 +28,16 @@ import './api/mock/index'
 import Vue3ColorPicker from 'vue3-colorpicker'
 import 'vue3-colorpicker/style.css'
 import 'nprogress/nprogress.css'
+// import 'monaco-editor/esm/vs/editor/editor.main.css';
 
 import { PRIMARY_COLOR } from '@/base/constants'
+import { useRouter } from 'vue-router'
+import _ from 'lodash'
 
 const app = createApp(App)
 
 app.use(Antd).use(Vue3ColorPicker).use(i18n).use(router).mount('#app')
+// router.beforeEach((to, from, next) => {
+//     console.log(to, from)
+//     next(to.fullPath)
+// })

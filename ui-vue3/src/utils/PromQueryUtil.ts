@@ -15,12 +15,25 @@
  * limitations under the License.
  */
 
-const KEY_PREFIX = '__PROVIDE_INJECT_KEY_'
+import { nextTick, reactive } from 'vue'
 
-export const PROVIDE_INJECT_KEY = {
-  LOCALE: KEY_PREFIX + 'LOCALE',
-  GRAFANA: KEY_PREFIX + 'GRAFANA',
-  SEARCH_DOMAIN: KEY_PREFIX + 'SEARCH_DOMAIN',
-  COLLAPSED: KEY_PREFIX + 'COLLAPSED',
-  TAB_LAYOUT_STATE: KEY_PREFIX + 'TAB_LAYOUT_STATE'
+export function promQueryList(res: any, initArr: string[], asyncFun: any) {
+  const react_res = reactive(res)
+  for (let key of initArr) {
+    let list = res?.data?.list
+    for (let r of list) {
+      r[key] = 'skeleton-loading'
+    }
+  }
+  nextTick(async () => {
+    try {
+      let list = react_res?.data?.list || []
+      for (let r of list) {
+        asyncFun(r)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  })
+  return react_res
 }

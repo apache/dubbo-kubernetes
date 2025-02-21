@@ -17,18 +17,18 @@
 <template>
   <div class="__container_layout_header">
     <a-layout-header class="header">
-      <a-row>
-        <a-col :span="2">
+      <a-flex style="height: 100%" justify="space-between" align="center">
+        <a-flex>
           <menu-unfold-outlined
             v-if="collapsed"
             class="trigger"
             @click="() => (collapsed = !collapsed)"
           />
           <menu-fold-outlined v-else class="trigger" @click="() => (collapsed = !collapsed)" />
-        </a-col>
-        <a-col :span="3"></a-col>
-        <a-col :span="10" class="search-group">
-          <a-input-group compact>
+        </a-flex>
+        <div></div>
+        <a-flex>
+          <a-input-group @keyup.enter="globalSearch" class="search-group" compact>
             <a-select v-model:value="searchType" class="select-type">
               <a-select-option v-for="option in searchTypeOptions" :value="option.value"
                 >{{ option.label }}
@@ -42,64 +42,70 @@
               @select="onSelect"
               @search="inputChange"
             />
-            <a-button :icon="h(SearchOutlined)" class="search-icon" @click="inputChange"></a-button>
+            <a-button
+              :icon="h(SearchOutlined)"
+              class="search-icon"
+              @click="globalSearch"
+            ></a-button>
           </a-input-group>
-        </a-col>
-        <a-col :span="3"></a-col>
-        <a-col :span="2">
-          <a-segmented v-model:value="locale" :options="i18nConfig.opts" />
-        </a-col>
-        <a-col :span="2">
-          <color-picker
-            :pureColor="PRIMARY_COLOR"
-            @pureColorChange="changeTheme"
-            format="hex6"
-            shape="circle"
-            useType="pure"
-          ></color-picker>
-          <a-popover>
-            <template #content>reset the theme</template>
-            <Icon
-              class="reset-icon"
-              icon="material-symbols:reset-tv-outline"
-              @click="resetTheme"
-            ></Icon>
-          </a-popover>
-        </a-col>
-        <a-col :span="2">
-          <a-avatar @click="devTool.todo('avatar and user info')">
-            <template #icon>
-              <UserOutlined />
-            </template>
-          </a-avatar>
-          <span class="username">张三</span>
-        </a-col>
-      </a-row>
+        </a-flex>
+        <div></div>
+
+        <a-flex align="center" gap="middle">
+          <a-flex align="center">
+            <a-segmented v-model:value="locale" :options="i18nConfig.opts" />
+          </a-flex>
+          <a-flex align="center">
+            <color-picker
+              :pureColor="PRIMARY_COLOR"
+              @pureColorChange="changeTheme"
+              format="hex6"
+              shape="circle"
+              useType="pure"
+            ></color-picker>
+            <a-popover>
+              <template #content>reset the theme</template>
+              <Icon
+                class="reset-icon"
+                icon="material-symbols:reset-tv-outline"
+                @click="resetTheme"
+              ></Icon>
+            </a-popover>
+          </a-flex>
+          <a-flex align="center">
+            <a-avatar @click="devTool.todo('avatar and user info')">
+              <template #icon>
+                <UserOutlined />
+              </template>
+            </a-avatar>
+            <span class="username">dubbo</span>
+          </a-flex>
+        </a-flex>
+      </a-flex>
     </a-layout-header>
   </div>
 </template>
 
 <script setup lang="ts">
-import { MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined } from '@ant-design/icons-vue'
+import {
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  SearchOutlined,
+  UserOutlined
+} from '@ant-design/icons-vue'
 import type { ComponentInternalInstance } from 'vue'
-import { inject, ref, reactive, watch, h, getCurrentInstance, computed } from 'vue'
+import { computed, getCurrentInstance, h, inject, nextTick, reactive, ref, watch } from 'vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { changeLanguage, localeConfig } from '@/base/i18n'
-import {
-  LOCAL_STORAGE_LOCALE,
-  LOCAL_STORAGE_THEME,
-  PRIMARY_COLOR,
-  PRIMARY_COLOR_DEFAULT
-} from '@/base/constants'
+import { LOCAL_STORAGE_THEME, PRIMARY_COLOR, PRIMARY_COLOR_DEFAULT } from '@/base/constants'
 import devTool from '@/utils/DevToolUtil'
 import { Icon } from '@iconify/vue'
-import { SearchOutlined } from '@ant-design/icons-vue'
-import { globalSearch } from '@/api/service/globalSearch'
 import { debounce } from 'lodash'
 import type { SelectOption } from '@/types/common.ts'
 import { searchApplications } from '@/api/service/app'
 import { searchInstances } from '@/api/service/instance'
 import { searchService } from '@/api/service/service'
+import { useRouter } from 'vue-router'
 
 const {
   appContext: {
@@ -134,15 +140,15 @@ const searchTypeOptions = reactive([
   // },
   {
     label: computed(() => globalProperties.$t('application')),
-    value: 'appName'
+    value: 'applications'
   },
   {
     label: computed(() => globalProperties.$t('instance')),
-    value: 'instanceName'
+    value: 'instances'
   },
   {
     label: computed(() => globalProperties.$t('service')),
-    value: 'serviceName'
+    value: 'services'
   }
 ])
 const searchType = ref(searchTypeOptions[0].value)
@@ -165,7 +171,6 @@ const onSearch = async () => {
       label: item[labelKey],
       value: item[labelKey]
     }))
-    console.log('candidates', candidates.value)
   }
 
   // Various types of search functions
@@ -177,13 +182,13 @@ const onSearch = async () => {
     case 'ip':
       globalSearchByIp()
       break
-    case 'appName':
+    case 'applications':
       await globalSearch(searchApplications, 'appName')
       break
-    case 'instanceName':
+    case 'instances':
       await globalSearch(searchInstances, 'name')
       break
-    case 'serviceName':
+    case 'services':
       await globalSearch(searchService, 'serviceName')
       break
     default:
@@ -199,7 +204,10 @@ watch(searchType, async (newType) => {
 const candidates = ref<Array<SelectOption>>([])
 
 const inputChange = debounce(onSearch, 300)
-
+const router = useRouter()
+const globalSearch = () => {
+  router.replace(`/resources/${searchType.value}/list?query=${keywords.value}`)
+}
 const onSelect = () => {}
 </script>
 <style lang="less" scoped>
@@ -217,7 +225,21 @@ const onSelect = () => {}
       }
 
       .input-keywords {
-        width: calc(100% - 152px);
+        &:hover {
+          border-color: #d9d9d9;
+          :deep(.ant-select-selector) {
+            border-color: #d9d9d9;
+          }
+        }
+        width: calc(20vw);
+        :deep(.ant-select-selector) {
+          border-color: #d9d9d9;
+          box-shadow: none;
+          &:hover {
+            border-color: #d9d9d9;
+            box-shadow: none;
+          }
+        }
       }
 
       .search-icon {
@@ -240,7 +262,7 @@ const onSelect = () => {}
   .reset-icon {
     font-size: 25px;
     color: white;
-    margin-bottom: -9px;
+    //margin-bottom: -9px;
   }
 }
 </style>

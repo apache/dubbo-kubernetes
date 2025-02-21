@@ -15,89 +15,27 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_tabDemo3">
-    <!--    <div class="option">-->
-    <!--      <a-button class="btn" @click="refresh"> refresh </a-button>-->
-    <!--      <a-button class="btn" @click="newPageForGrafana"> grafana </a-button>-->
-    <!--    </div>-->
-    <a-spin class="spin" :spinning="!showIframe">
-      <div class="__container_iframe_container">
-        <iframe
-          :onload="onIframeLoad"
-          v-show="showIframe"
-          id="grafanaIframe"
-          :src="grafanaUrl"
-          frameborder="0"
-        ></iframe>
-      </div>
-    </a-spin>
+  <div class="__container_app_monitor">
+    <GrafanaPage></GrafanaPage>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { getApplicationMetricsInfo } from '@/api/service/app'
+import GrafanaPage from '@/components/GrafanaPage'
+import { getApplicationMetricsDashboard } from '@/api/service/app'
+import { provide, reactive, ref } from 'vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-let appNameParam: any = route.params?.pathId
-
-let grafanaUrl = ref('')
-let showIframe = ref(true)
-onMounted(async () => {
-  let res = await getApplicationMetricsInfo({})
-
-  showIframe.value = false
-  grafanaUrl.value = `${window.location.origin}/grafana/d/${res.data?.baseURL.split('/d/')[1].split('?')[0]}?var-application=${appNameParam}&kiosk=tv`
-  console.log(grafanaUrl)
-})
-
-function refresh() {
-  showIframe.value = false
-  setTimeout(() => {
-    showIframe.value = true
-  }, 200)
-}
-
-function tryDo(handle: any) {
-  try {
-    handle()
-  } catch (e) {
-    console.log(e)
-  }
-}
-
-function onIframeLoad() {
-  console.log('The iframe has been loaded.')
-  setTimeout(() => {
-    try {
-      let iframeDocument = document.querySelector('#grafanaIframe').contentDocument
-      tryDo(() => {
-        iframeDocument.querySelector('header').remove()
-      })
-      tryDo(() => {
-        iframeDocument.querySelector(`[data-testid*='controls']`).remove()
-      })
-      setTimeout(() => {
-        tryDo(() => {
-          iframeDocument.querySelector(`[data-testid*='navigation mega-menu']`).remove()
-        })
-        tryDo(() => {
-          for (let querySelectorAllElement of iframeDocument.querySelectorAll(
-            `[data-testid*='Panel menu']`
-          )) {
-            console.log(querySelectorAllElement)
-            querySelectorAllElement.remove()
-          }
-        })
-      }, 1000)
-    } catch (e) {}
-    showIframe.value = true
-  }, 1000)
-}
-
-function newPageForGrafana() {
-  window.open(grafanaUrl.value, '_blank')
-}
+provide(
+  PROVIDE_INJECT_KEY.GRAFANA,
+  reactive({
+    api: getApplicationMetricsDashboard,
+    showIframe: false,
+    name: route.params?.pathId,
+    type: 'application'
+  })
+)
 </script>
 <style lang="less" scoped></style>

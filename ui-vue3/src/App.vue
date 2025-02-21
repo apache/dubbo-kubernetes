@@ -16,7 +16,7 @@
 -->
 
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import enUS from 'ant-design-vue/es/locale/en_US'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { computed, provide, reactive, ref, watch } from 'vue'
@@ -111,21 +111,6 @@ const localeGlobal = reactive(i18n.global.locale)
   }
   :deep(.spin) {
     margin-top: 30px;
-  }
-  .__container_iframe_container {
-    z-index: 1;
-    position: relative;
-    width: calc(100vw - 332px);
-    height: calc(100vh - 200px);
-    clip-path: inset(0px 0px);
-
-    #grafanaIframe {
-      z-index: 0;
-      top: -112px;
-      position: absolute;
-      width: calc(100vw - 332px);
-      height: calc(100vh - 200px);
-    }
   }
 }
 </style>

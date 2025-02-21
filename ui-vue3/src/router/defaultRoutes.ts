@@ -37,7 +37,7 @@ export const routes: Readonly<RouteRecordType[]> = [
   {
     path: '/',
     name: 'Root',
-    redirect: 'home',
+    redirect: '/home',
     component: () => import('../layout/index.vue'),
     meta: {
       skip: true
@@ -62,7 +62,7 @@ export const routes: Readonly<RouteRecordType[]> = [
             path: '/applications',
             name: 'applications',
             component: LayoutTab,
-            redirect: 'index',
+            redirect: 'list',
             meta: {
               tab_parent: true,
               slots: {
@@ -71,8 +71,8 @@ export const routes: Readonly<RouteRecordType[]> = [
             },
             children: [
               {
-                path: '/index',
-                name: 'index',
+                path: '/list',
+                name: 'router.resource.app.list',
                 component: () => import('../views/resources/applications/index.vue'),
                 meta: {
                   hidden: true
@@ -84,7 +84,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/applications/tabs/detail.vue'),
                 meta: {
                   tab: true,
-                  icon: 'tabler:list-details'
+                  icon: 'tabler:list-details',
+                  back: '/resources/applications/list'
                 }
               },
               {
@@ -93,7 +94,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/applications/tabs/instance.vue'),
                 meta: {
                   tab: true,
-                  icon: 'ooui:instance-ltr'
+                  icon: 'ooui:instance-ltr',
+                  back: '/resources/applications/list'
                 }
               },
               {
@@ -102,7 +104,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/applications/tabs/service.vue'),
                 meta: {
                   tab: true,
-                  icon: 'carbon:web-services-definition'
+                  icon: 'carbon:web-services-definition',
+                  back: '/resources/applications/list'
                 }
               },
               {
@@ -111,7 +114,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/applications/tabs/monitor.vue'),
                 meta: {
                   tab: true,
-                  icon: 'material-symbols-light:monitor-heart-outline'
+                  icon: 'material-symbols-light:monitor-heart-outline',
+                  back: '/resources/applications/list'
                 }
               },
               {
@@ -120,7 +124,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/applications/tabs/tracing.vue'),
                 meta: {
                   tab: true,
-                  icon: 'game-icons:digital-trace'
+                  icon: 'game-icons:digital-trace',
+                  back: '/resources/applications/list'
                 }
               },
               {
@@ -129,16 +134,20 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/applications/tabs/config.vue'),
                 meta: {
                   tab: true,
-                  icon: 'material-symbols:settings'
+                  icon: 'material-symbols:settings',
+                  back: '/resources/applications/list'
                 }
               },
               {
                 path: '/event/:pathId',
                 name: 'applicationDomain.event',
+
                 component: () => import('../views/resources/applications/tabs/event.vue'),
                 meta: {
                   tab: true,
-                  icon: 'material-symbols:date-range'
+                  hidden: true,
+                  icon: 'material-symbols:date-range',
+                  back: '/resources/applications/list'
                 }
               }
             ]
@@ -147,7 +156,7 @@ export const routes: Readonly<RouteRecordType[]> = [
             path: '/instances',
             name: 'instances',
             component: LayoutTab,
-            redirect: 'all',
+            redirect: 'list',
             meta: {
               tab_parent: true,
               slots: {
@@ -156,8 +165,8 @@ export const routes: Readonly<RouteRecordType[]> = [
             },
             children: [
               {
-                path: '/all',
-                name: 'all',
+                path: '/list',
+                name: 'router.resource.ins.list',
                 component: () => import('../views/resources/instances/index.vue'),
                 meta: {
                   hidden: true
@@ -169,7 +178,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/instances/tabs/detail.vue'),
                 meta: {
                   tab: true,
-                  icon: 'tabler:list-details'
+                  icon: 'tabler:list-details',
+                  back: '/resources/instances/list'
                 }
               },
               {
@@ -178,7 +188,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/instances/tabs/monitor.vue'),
                 meta: {
                   tab: true,
-                  icon: 'ooui:instance-ltr'
+                  icon: 'ooui:instance-ltr',
+                  back: '/resources/instances/list'
                 }
               },
               {
@@ -187,7 +198,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/instances/tabs/linkTracking.vue'),
                 meta: {
                   tab: true,
-                  icon: 'material-symbols-light:monitor-heart-outline'
+                  icon: 'material-symbols-light:monitor-heart-outline',
+                  back: '/resources/instances/list'
                 }
               },
               {
@@ -196,7 +208,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/instances/tabs/configuration.vue'),
                 meta: {
                   tab: true,
-                  icon: 'material-symbols:settings'
+                  icon: 'material-symbols:settings',
+                  back: '/resources/instances/list'
                 }
               },
               {
@@ -205,7 +218,9 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/resources/instances/tabs/event.vue'),
                 meta: {
                   tab: true,
-                  icon: 'material-symbols:date-range'
+                  hidden: true,
+                  icon: 'material-symbols:date-range',
+                  back: '/resources/instances/list'
                 }
               }
             ]
@@ -213,7 +228,7 @@ export const routes: Readonly<RouteRecordType[]> = [
           {
             path: '/services',
             name: 'services',
-            redirect: 'search',
+            redirect: 'list',
             component: LayoutTab,
             meta: {
               tab_parent: true,
@@ -223,19 +238,20 @@ export const routes: Readonly<RouteRecordType[]> = [
             },
             children: [
               {
-                path: '/search',
-                name: 'search',
+                path: '/list',
+                name: 'router.resource.svc.list',
                 component: () => import('../views/resources/services/search.vue'),
                 meta: {
                   hidden: true
                 }
               },
               {
-                path: '/distribution/:pathId/:group/:version',
+                path: '/distribution/:pathId',
                 name: 'distribution',
                 component: () => import('../views/resources/services/tabs/distribution.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  back: '/resources/services/list'
                 }
               },
               // Temporarily hidden
@@ -252,7 +268,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'debug',
                 component: () => import('../views/resources/services/tabs/debug.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  back: '/resources/services/list'
                 }
               },
               {
@@ -260,7 +277,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'monitor',
                 component: () => import('../views/resources/services/tabs/monitor.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  back: '/resources/services/list'
                 }
               },
               {
@@ -268,7 +286,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'tracing',
                 component: () => import('../views/resources/services/tabs/tracing.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  back: '/resources/services/list'
                 }
               },
               {
@@ -276,7 +295,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'sceneConfig',
                 component: () => import('../views/resources/services/tabs/sceneConfig.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  back: '/resources/services/list'
                 }
               },
               {
@@ -284,7 +304,9 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'event',
                 component: () => import('../views/resources/services/tabs/event.vue'),
                 meta: {
-                  tab: true
+                  tab: true,
+                  hidden: true,
+                  back: '/resources/services/list'
                 }
               }
             ]
@@ -424,7 +446,8 @@ export const routes: Readonly<RouteRecordType[]> = [
                 component: () => import('../views/traffic/tagRule/tabs/formView.vue'),
                 meta: {
                   tab: true,
-                  icon: 'oui:apm-trace'
+                  icon: 'oui:apm-trace',
+                  back: '/traffic/tagRule'
                 }
               },
               {
@@ -498,6 +521,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'dynamicConfigDomain.event',
                 component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
                 meta: {
+                  hidden: true,
                   tab: true,
                   icon: 'oui:app-console',
                   back: '../../'
@@ -508,6 +532,7 @@ export const routes: Readonly<RouteRecordType[]> = [
                 name: 'dynamicConfigDomain.addByFormView',
                 component: () => import('../views/traffic/dynamicConfig/tabs/addByFormView.vue'),
                 meta: {
+                  hidden: true,
                   tab: true,
                   icon: 'oui:apm-trace',
                   back: '../../'
@@ -612,6 +637,7 @@ export const routes: Readonly<RouteRecordType[]> = [
         name: 'commonDemo',
         redirect: 'tab',
         meta: {
+          hidden: true,
           icon: 'tdesign:play-demo'
         },
         children: [
@@ -705,4 +731,3 @@ function handleRoutes(
 }
 
 handleRoutes(routes, undefined)
-console.log(routes)

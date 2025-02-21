@@ -28,8 +28,8 @@ import NProgress from 'nprogress'
 
 const service: AxiosInstance = axios.create({
   //  change this to decide where to go
-  baseURL: '/mock',
-  // baseURL: '/api/v1',
+  // baseURL: '/mock',
+  baseURL: '/api/v1',
   timeout: 30 * 1000
 })
 const request: AxiosInterceptorManager<InternalAxiosRequestConfig> = service.interceptors.request
@@ -41,7 +41,7 @@ request.use(
     config.headers = <AxiosRequestHeaders>{
       'Content-Type': 'application/json' //配置请求头
     }
-    NProgress.start()
+    // NProgress.start()
     // console.log(config)
     return config
   },
@@ -49,20 +49,24 @@ request.use(
     Promise.reject(error)
   }
 )
+const rejectState: { errorHandler: Function | null } = {
+  errorHandler: null
+}
 
 response.use(
   (response) => {
     NProgress.done()
-
-    if (response.status === 200) {
+    if (response.status === 200 && response.data.code === 200) {
       return Promise.resolve(response.data)
     }
-    return Promise.reject(response)
+    message.error(response.data.code + ':' + response.data.msg)
+    return Promise.reject(response.data)
   },
   (error) => {
+    console.log(33, error)
     NProgress.done()
-    message.error(error.message)
-    return Promise.resolve(error.response)
+    message.error(error.response.data.code + ':' + error.response.data.msg)
+    return Promise.reject(error.response.data)
   }
 )
 export default service
