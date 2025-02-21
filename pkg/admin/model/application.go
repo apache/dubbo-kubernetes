@@ -199,7 +199,7 @@ func (a *ApplicationTabInstanceInfoResp) FromDataplaneResource(dataplane *mesh.D
 
 // nolint
 func (a *ApplicationTabInstanceInfoResp) mergeMainDataplane(dataplane *mesh.DataplaneResource) {
-	a.AppName = dataplane.GetMeta().GetLabels()[v1alpha1.AppTag]
+	a.AppName = dataplane.GetMeta().GetLabels()[v1alpha1.Application]
 	a.CreateTime = dataplane.Meta.GetCreationTime().String()
 	a.IP = dataplane.Spec.Networking.Address
 	a.DeployClusters = dataplane.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]

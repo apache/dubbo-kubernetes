@@ -19,15 +19,11 @@ package handler
 
 import (
 	"net/http"
-)
 
-import (
-	"github.com/gin-gonic/gin"
-)
-
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/service"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/gin-gonic/gin"
 )
 
 // Search API Definition: https://app.apifox.com/project/3732499
@@ -44,16 +40,28 @@ func BannerGlobalSearch(rt core_runtime.Runtime) gin.HandlerFunc {
 		// 根据 request 分流调用，如服务未实现继续实现
 
 		var res *model.SearchRes
-		//if req.SearchType == "instance" {
-		//	instances, _ := service.BannerSearchInstances(rt, req)
-		//	res = convertInstancesToSearchRes(instances)
-		//} else if req.SearchType == "application" {
-		//	applications, _ := service.BannerSearchApplications(rt, req)
-		//	res = convertApplicationsToSearchRes(applications)
-		//} else if req.SearchType == "service" {
-		//	services, _ := service.BannerSearchServices(rt, req)
-		//	res = convertServicesToSearchRes(services)
-		//}
+		switch req.SearchType {
+		case "ip":
+			instances, _ := service.BannerSearchIp(rt, req)
+			res = convertInstancesToSearchRes(instances)
+		case "instanceName":
+			instances, _ := service.BannerSearchInstances(rt, req)
+			res = convertInstancesToSearchRes(instances)
+		case "appName":
+			applications, _ := service.BannerSearchApplications(rt, req)
+			res = convertApplicationsToSearchRes(applications)
+		case "serviceName":
+			sreq := &model.ServiceSearchReq{
+				ServiceName: "",
+				Keywords:    req.Keywords,
+				PageReq:     req.PageReq,
+			}
+			services, _ := service.BannerSearchServices(rt, sreq)
+			res = convertServicesToSearchRes(services)
+		default:
+			c.JSON(http.StatusBadRequest, model.NewErrorResp("invalid search type"))
+			return
+		}
 
 		c.JSON(http.StatusOK, model.NewSuccessResp(model.NewPageData().WithData(res).WithTotal(len(res.Candidates)).WithPageSize(req.PageSize).WithCurPage(req.PageOffset)))
 	}
@@ -86,7 +94,8 @@ func convertApplicationsToSearchRes(apps []*model.ApplicationSearchResp) *model.
 	return res
 }
 
-func convertServicesToSearchRes(services []*model.ServiceSearchResp) *model.SearchRes {
+func convertServicesToSearchRes(pagedServices *model.SearchPaginationResult) *model.SearchRes {
+	services := pagedServices.List.([]*model.ServiceSearchResp)
 	res := &model.SearchRes{}
 	if len(services) == 0 {
 		res.Find = false
