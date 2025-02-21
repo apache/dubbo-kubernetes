@@ -20,6 +20,7 @@ package dataplane
 import (
 	"context"
 	"maps"
+	"time"
 
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
@@ -119,12 +120,14 @@ func (m *dataplaneManager) List(ctx context.Context, r core_model.ResourceList, 
 	return nil
 }
 
-// replaceMeta is a ResourceMeta implementation that replace the following name extenions:
+// replaceMeta is a ResourceMeta implementation that replace the following name extenions when set any of them:
 // - "k8s.dubbo.io/namespace": replace with the field "namespace"
 // - "k8s.dubbo.io/name": replace with the field "name"
+// And replace the creation time when set the field "creationTime"
 type replaceMeta struct {
-	name      string
-	namespace string
+	name         string
+	namespace    string
+	creationTime time.Time
 	core_model.ResourceMeta
 }
 
@@ -132,6 +135,9 @@ var _ core_model.ResourceMeta = &replaceMeta{}
 
 func (m *replaceMeta) GetNameExtensions() core_model.ResourceNameExtensions {
 	extensions := m.ResourceMeta.GetNameExtensions()
+	if m.name == "" && m.namespace == "" {
+		return extensions
+	}
 	if extensions == nil {
 		return map[string]string{
 			core_model.K8sNamespaceComponent: m.namespace,
@@ -142,6 +148,14 @@ func (m *replaceMeta) GetNameExtensions() core_model.ResourceNameExtensions {
 		extensions[core_model.K8sNamespaceComponent] = m.namespace
 		extensions[core_model.K8sNameComponent] = m.name
 		return extensions
+	}
+}
+
+func (m *replaceMeta) GetCreationTime() time.Time {
+	if m.creationTime.IsZero() {
+		return m.ResourceMeta.GetCreationTime()
+	} else {
+		return m.creationTime
 	}
 }
 
@@ -264,10 +278,19 @@ func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.Data
 	if err = client.Get(ctx, replicaSetNamespacedName, replicaSet); err != nil {
 		return
 	}
-	if replicaSet.ObjectMeta.OwnerReferences[0].Name != "" {
-		extensions[ExtensionsWorkLoadKey] = replicaSet.ObjectMeta.OwnerReferences[0].Name
-	} else if pod.ObjectMeta.OwnerReferences[0].Name != "" {
+	if pod.ObjectMeta.OwnerReferences[0].Name != "" {
 		extensions[ExtensionsWorkLoadKey] = pod.ObjectMeta.OwnerReferences[0].Name
+	} else if replicaSet.ObjectMeta.OwnerReferences[0].Name != "" {
+		extensions[ExtensionsWorkLoadKey] = replicaSet.ObjectMeta.OwnerReferences[0].Name
+	}
+
+	// replace the creation time when the creation time is zero
+	if dp.GetMeta().GetCreationTime().IsZero() {
+		rm := &replaceMeta{
+			ResourceMeta: dp.GetMeta(),
+			creationTime: pod.CreationTimestamp.Time,
+		}
+		dp.SetMeta(rm)
 	}
 
 	// get NodeName
