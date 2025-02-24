@@ -4,7 +4,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "admin.name" . }}-control-plane-config
+  name: {{ template "admin.name" . }}-config
   namespace: {{ template "admin.namespace" . }}
   labels:
     {{- include "admin.labels" . | nindent 4 }}
@@ -25,7 +25,9 @@ metadata:
   labels:
   {{- include "jobs.labels" . | nindent 4 }}
   annotations:
-  {{- include "jobs.env.annotations" . | nindent 4 }}
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
 data:
   helm.sh: |-
     #!/bin/bash
@@ -43,7 +45,7 @@ data:
      sleep 2
      fi
      done
-     cp -r "/files/dashboards/dubbo-resources-metrics.yaml" "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
+     cp -r "/files/resources/dubbo-metrics.yaml" "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
      ls -la "{{ include "prom.stack.name" . }}/templates/{{ include "grafana.name" . }}/dashboards-{{ $prom.dashboardsVersion }}"
 
      if helm ls --all | grep "{{ include "prom.name" . }}"; then
@@ -52,5 +54,5 @@ data:
      helm install {{ include "prom.name" . }} "./{{ include "prom.stack.name" . }}/" -n dubbo-system
      fi
     {{- end }}
-  dubbo-resources-metrics.yaml: |-
-    {{- .Files.Get "files/dashboards/dubbo-resources-metrics.yaml" | nindent 4 }}
+  dubbo-metrics.yaml: |-
+    {{- .Files.Get "files/resources/dubbo-metrics.yaml" | nindent 4 }}

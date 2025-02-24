@@ -1,6 +1,6 @@
 ⏳ Please wait for all the activated components to be deployed.
 
-Core: Admin
+Dashboard: Admin
 Version: {{ .Values.image.tag }}
 
 {{- if .Values.ingress.enabled }}

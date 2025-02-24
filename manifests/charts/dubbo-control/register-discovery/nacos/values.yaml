@@ -14,8 +14,6 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
-  global:
-    dubboNamespace: dubbo-system
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: standalone
   ## Override the namespace where the resource is deployed.
@@ -161,3 +159,6 @@ _internal_default_values_not_set:
       password: passw0rd
       # Additional database connection parameters (if needed).
       param: ""
+  global:
+    # Used to locate dubbod.
+    dubboNamespace: dubbo-system

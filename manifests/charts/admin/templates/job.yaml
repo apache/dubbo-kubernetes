@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: dubbo-job-create
+  name: extra-job-create
   namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "jobs.labels" . | nindent 4 }}
@@ -11,7 +11,7 @@ metadata:
 spec:
   template:
     metadata:
-      name: dubbo-job-create
+      name: extra-job-create
     spec:
       restartPolicy: {{ $jobs.restartPolicy }}
       dnsPolicy: None
@@ -35,8 +35,8 @@ spec:
           mountPath: /files/helm.sh
           subPath: helm.sh
         - name: scripts
-          mountPath: /files/dashboards/dubbo-resources-metrics.yaml
-          subPath: dubbo-resources-metrics.yaml
+          mountPath: /files/resources/dubbo-metrics.yaml
+          subPath: dubbo-metrics.yaml
       volumes:
       - name: scripts
         configMap:

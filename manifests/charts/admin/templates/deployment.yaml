@@ -13,18 +13,8 @@ metadata:
   {{- with $admin.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
-  annotations:
-  {{- with $admin.annotations }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
 spec:
   replicas: {{ $admin.replicas }}
-  {{- if $admin.revisionHistoryLimit }}
-  revisionHistoryLimit: {{ $admin.revisionHistoryLimit }}
-  {{- end }}
-  {{- if $admin.minReadySeconds }}
-  minReadySeconds: {{ $admin.minReadySeconds }}
-  {{- end }}
   strategy:
   {{- if $admin.strategy }}
   {{- toYaml $admin.strategy | nindent 4 }}
@@ -60,14 +50,14 @@ spec:
         {{- end }}
         args:
         - run
-        - --config-file=/etc/dubbo.io/cp-config/config.yaml
+        - --config-file=/etc/dubbo.io/config.yaml
         ports:
         - name: admin-http
-          containerPort: {{ template "admin.web.containerPort" . }}
-        - name: admin-xds-grpc
-          containerPort: {{ template "admin.xds.containerPort" . }}
+          containerPort: 8888
+        - name: admin-grpc
+          containerPort: 5678
         - name: admin-admission
-          containerPort: {{ template "admin.admissionServer.containerPort" . }}
+          containerPort: 5443
         env:
         {{- $zooName := include "zoo.name" . -}}
         {{- $nacosName := include "nacos.name" . -}}
@@ -124,8 +114,8 @@ spec:
           mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
           subPath: ca.crt
           readOnly: true
-        - name: cp-config
-          mountPath: /etc/dubbo.io/cp-config/config.yaml
+        - name: config
+          mountPath: /etc/dubbo.io/config.yaml
           subPath: config.yaml
           readOnly: true
         securityContext:
@@ -152,9 +142,9 @@ spec:
       {{- if $admin.volumes }}
       {{- toYaml $admin.volumes | nindent 6 }}
       {{- end }}
-      - name: cp-config
+      - name: config
         configMap:
-          name: {{ include "admin.name" . }}-control-plane-config
+          name: {{ include "admin.name" . }}-config
       {{- if $cp.tls.secretName }}
       - name: general-tls-cert
         secret:
