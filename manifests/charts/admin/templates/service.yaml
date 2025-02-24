@@ -38,9 +38,9 @@ spec:
     port: 8888
     targetPort: admin-http
     appProtocol: TCP
-  - name: admin-xds-grpc
+  - name: admin-grpc
     port: 5678
-    targetPort: admin-xds-grpc
+    targetPort: admin-grpc
   selector:
     app: {{ template "admin.selector" . }}
 {{- end }}
