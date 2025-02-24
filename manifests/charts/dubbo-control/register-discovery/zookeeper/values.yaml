@@ -14,8 +14,6 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
-  global:
-    dubboNamespace: dubbo-system
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
   ## Labels to attach to the resource.
@@ -186,3 +184,5 @@ _internal_default_values_not_set:
       serverPasswords: ""
       # auth.quorum.existingSecret Use existing secret (ignores previous passwords).
       existingSecret: ""
+  global:
+    dubboNamespace: dubbo-system

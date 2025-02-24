@@ -34,6 +34,7 @@ We only autogenerate certs if the cert is not yet generated. This way we keep th
   {{ $caBundle = $ca.Cert | b64enc }}
 {{- end -}}
 ---
+{{- if .Values.cp.enabled }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -45,4 +46,5 @@ data:
   tls.crt: {{ $cert }}
   tls.key: {{ $key }}
   ca.crt: {{ $caBundle }}
+{{- end }}
 {{- end }}
