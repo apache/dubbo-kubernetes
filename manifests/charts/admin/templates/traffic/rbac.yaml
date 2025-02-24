@@ -4,7 +4,7 @@ metadata:
   name: {{ template "dubbo.cp.name" . }}-sa
   namespace: {{ template "admin.namespace" . }}
 ---
-apiVersion: {{ include "rbac.apiVersion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "dubbo.cp.name" . }}-clusterrole
@@ -16,7 +16,7 @@ rules:
     verbs:
       - get
 ---
-apiVersion: {{ include "rbac.apiVersion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ include "dubbo.cp.name" . }}-clusterrolebinding
