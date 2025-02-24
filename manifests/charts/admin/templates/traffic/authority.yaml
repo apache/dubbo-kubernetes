@@ -3,7 +3,7 @@
 apiVersion: dubbo.io/v1alpha1
 kind: AuthenticationPolicy
 metadata:
-  name: {{ template "dubbo.cp.nam" . }}-authentication
+  name: admin-authentication
   namespace: {{ template "admin.namespace" . }}
 spec:
   action: {{ $authc.action }}
@@ -15,7 +15,7 @@ spec:
 apiVersion: dubbo.io/v1alpha1
 kind: AuthorizationPolicy
 metadata:
-  name: {{ template "dubbo.cp.name" . }}-authorization
+  name: admin-authorization
   namespace: {{ template "admin.namespace" . }}
 spec:
   action: {{ $authz.action }}

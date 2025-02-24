@@ -24,8 +24,8 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "admin.name" . }}
-  namespace: {{ include "admin.namespace" . }}
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
@@ -43,23 +43,12 @@ rules:
   - pods
   verbs:
   - get
-{{- if (semverCompare "<1.25.0-0" .Capabilities.KubeVersion.Version) }}
-{{- if $psp.enabled }}
-- apiGroups:
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
-  resourceNames:
-  - {{ include "admin.name" . }}
-{{- end }}
-{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "admin.name" . }}
-  namespace: {{ include "admin.namespace" . }}
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
   labels:
   {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
@@ -72,16 +61,16 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "admin.name" . }}
+  name: {{ template "admin.name" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "admin.name" . }}
-  namespace: {{ include "admin.namespace" . }}
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "admin.name" . }}-clusterrole
+  name: {{ template "admin.name" . }}-clusterrole
   labels:
   {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
@@ -129,7 +118,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "admin.name" . }}-clusterrolebinding
+  name: {{ template "admin.name" . }}-clusterrolebinding
   labels:
   {{- include "admin.labels" . | nindent 4 }}
   {{- with $rbac.labels }}
@@ -141,10 +130,10 @@ metadata:
   {{- end }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "admin.name" . }}
-  namespace: {{ include "admin.namespace" . }}
+  name: {{ template "admin.name" . }}
+  namespace: {{ template "admin.namespace" . }}
 roleRef:
   kind: ClusterRole
-  name: {{ include "admin.name" . }}-clusterrole
+  name: {{ template "admin.name" . }}-clusterrole
   apiGroup: rbac.authorization.k8s.io
 {{- end -}}

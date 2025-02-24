@@ -47,7 +47,6 @@ Return Kube-Prometheus-Stack Name to use.
 {{- printf "kube-prometheus" -}}
 {{- end -}}
 
-
 {{/*
 Return kube-prometheus-grafana to use.
 */}}
@@ -164,23 +163,9 @@ Return xds Port to use.
 {{- end -}}
 
 {{/*
-Return xds Container Port to use.
-*/}}
-{{- define "admin.xds.containerPort" -}}
-{{- print "5678" -}}
-{{- end -}}
-
-{{/*
 Return Admin Port to use.
 */}}
 {{- define "admin.web.port" -}}
-{{- printf "8888" -}}
-{{- end -}}
-
-{{/*
-Return Admin Container Port to use.
-*/}}
-{{- define "admin.web.containerPort" -}}
 {{- printf "8888" -}}
 {{- end -}}
 
@@ -254,16 +239,6 @@ Return Nacos Port to use.
 {{- define "grafana.port" -}}
 {{- printf "3000" -}}
 {{- end -}}
-
-{{/*
-Return jobs env annotations to use.
-*/}}
-{{- define "jobs.env.annotations" -}}
-"helm.sh/hook": "pre-install"
-"helm.sh/hook-weight": "0"
-"helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
-{{- end -}}
-
 
 {{/*
 Return jobs-1 annotations to use.
