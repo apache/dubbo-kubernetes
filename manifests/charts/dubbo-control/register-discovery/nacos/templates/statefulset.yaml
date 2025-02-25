@@ -1,4 +1,5 @@
 {{- $nacos := .Values -}}
+{{- $ncs := .Values.nacos }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -31,7 +32,7 @@ spec:
       {{- if $nacos.securityContext.enabled }}
       {{- omit $nacos.securityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
-      {{- if and (eq $nacos.mode "cluster") ($nacos.plugin.enabled) }}
+      {{- if and (eq $nacos.mode "cluster" |default $ncs.mode) ($nacos.plugin.enabled | default $ncs.plugin.enabled) }}
       initContainers:
         - name: peer-finder-plugin-install
           image: {{ $nacos.plugin.image.registry }}:{{ $nacos.plugin.image.tag }}
@@ -63,7 +64,7 @@ spec:
         {{- end }}
         ports:
         - name: http
-          containerPort: {{ template "nacos.port" . }}
+          containerPort: 8848
         - name: clientgen-rpc
           containerPort: {{ add $nacos.serverPort 1000 }}
         - name: raft-rpc
@@ -79,10 +80,10 @@ spec:
           value: {{ $nacos.serverPort | quote }}
         - name: PREFER_HOST_MODE
           value: {{ $nacos.preferhostmode | quote }}
-        {{- if eq $nacos.mode "standalone" }}
+        {{- if eq $nacos.mode "standalone" |default $ncs.mode }}
         - name: MODE
           value: "standalone"
-        {{- else if eq $nacos.mode "cluster" }}
+        {{- else if eq $nacos.mode "cluster" |default $ncs.mode }}
         - name: SERVICE_NAME
           value: "{{ template "nacos.name" . }}-headless"
         - name: DOMAIN_NAME
@@ -93,7 +94,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         {{- end }}
-        {{- if eq $nacos.storage.type "mysql" }}
+        {{- if eq $nacos.storage.type "mysql" | default $ncs.storage.type }}
         - name: SPRING_DATASOURCE_PLATFORM
           value: "mysql"
         - name: MYSQL_SERVICE_HOST

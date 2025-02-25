@@ -1,4 +1,5 @@
 {{- $nacos := .Values -}}
+{{- $ncs   := .Values.nacos }}
 {{- $service := $nacos.service -}}
 apiVersion: v1
 kind: Service
@@ -49,7 +50,7 @@ spec:
   selector:
     app: {{ template "nacos.selector" . }}
 ---
-{{- if and (eq $nacos.mode "cluster") }}
+{{- if and (eq $nacos.mode "cluster"|default $ncs.mode) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -89,7 +90,7 @@ spec:
   {{- end }}
   ports:
   - name: http
-    port: {{ template "nacos.port" }}
+    port: 8848
     targetPort: http
     protocol: TCP
   - name: clientgen-rpc
