@@ -79,10 +79,10 @@ spec:
           value: {{ $nacos.serverPort | quote }}
         - name: PREFER_HOST_MODE
           value: {{ $nacos.preferhostmode | quote }}
-        {{- if eq $nacos.nacos.mode "standalone" }}
+        {{- if eq $nacos.mode "standalone" }}
         - name: MODE
           value: "standalone"
-        {{- else if eq $nacos.nacos.mode "cluster" }}
+        {{- else if eq $nacos.mode "cluster" }}
         - name: SERVICE_NAME
           value: "{{ template "nacos.name" . }}-headless"
         - name: DOMAIN_NAME

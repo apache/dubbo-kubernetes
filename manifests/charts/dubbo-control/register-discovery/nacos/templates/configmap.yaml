@@ -1,5 +1,5 @@
 {{- $nacos := .Values -}}
-{{- if $nacos.storage.type "mysql" }}
+{{- if eq $nacos.storage.type "mysql" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
