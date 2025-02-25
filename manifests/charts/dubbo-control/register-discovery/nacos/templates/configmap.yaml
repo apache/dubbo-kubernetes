@@ -1,5 +1,6 @@
 {{- $nacos := .Values -}}
-{{- if eq $nacos.storage.type "mysql" }}
+{{- $ncs := .Values.nacos }}
+{{- if eq $nacos.storage.type "mysql" | default $ncs.storage.type }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -15,7 +16,7 @@ metadata:
   {{- toYaml . | nindent 4 }}
   {{- end }}
 data:
-  {{- with $nacos.storage }}
+  {{- with $nacos.storage | default $ncs.storage }}
   mysql.db.host: {{ .db.host }}
   mysql.db.name: {{ .db.name }}
   mysql.port: "{{ .db.host | default 3306 }}"
