@@ -19,19 +19,72 @@ message BaseConfig {
 
 message ZookeeperConfig {
   google.protobuf.StringValue dataLogDir = 1;
-  google.protobuf.Int64Value tickTime = 2;
+
+  google.protobuf.Int64Value  tickTime = 2;
+
   google.protobuf.Int64Value  initLimit = 3;
-  google.protobuf.Int64Value   syncLimit = 4;
-  google.protobuf.Int64Value preAllocSize = 5;
-  google.protobuf.Int64Value snapCount = 6;
+
+  google.protobuf.Int64Value  syncLimit = 4;
+
+  google.protobuf.Int64Value  preAllocSize = 5;
+
+  google.protobuf.Int64Value  snapCount = 6;
+
   google.protobuf.StringValue fourlwCommandsWhitelist = 7;
+
   google.protobuf.BoolValue listenOnAllIPs = 8;
+
+  ZookeeperAutopurge autopurge = 9;
+
+  google.protobuf.Int64Value maxClientCnxns = 10;
+
+  google.protobuf.Int64Value maxSessionTimeout = 11;
+
+  google.protobuf.Int64Value heapSize = 12;
+
+  google.protobuf.StringValue logLevel = 13;
 }
+
+message ZookeeperAutopurge {
+  int64 snapRetainCount = 1;
+
+  int64 purgeInterval = 2;
+}
+
 
 message NacosConfig {
-  string mode = 1;
+  google.protobuf.StringValue mode = 1;
+
+  NacosStorage storage = 2;
+
+  NacosPlugin plugin = 3;
+
+  string preferhostmode = 4;
 }
 
+message NacosStorage {
+  string type = 1;
+
+  NacosDB db = 2;
+}
+
+message NacosDB {
+  string host = 1;
+
+  string name = 2;
+
+  int64 port = 3;
+
+  string username = 4;
+
+  string password = 5;
+
+  string param = 6;
+}
+
+message NacosPlugin {
+  google.protobuf.BoolValue enabled = 1;
+}
 
 message Values {
   // Global configuration for dubbo components.
@@ -43,8 +96,10 @@ message Values {
   // Specifies which installation configuration profile to apply.
   string profile = 3;
 
+  // Configuration for the zookeeper component.
   ZookeeperConfig zookeeper = 4;
 
+  // Configuration for the nacos component.
   NacosConfig nacos = 5;
 }
 

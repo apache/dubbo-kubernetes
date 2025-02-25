@@ -1,5 +1,6 @@
 {{- $zoo := .Values -}}
-apiVersion: {{ template "apiVersion" . }}
+{{- $zooprofile := .Values.zookeeper }}
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ template "zoo.name" . }}
