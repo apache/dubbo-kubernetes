@@ -24,9 +24,9 @@ spec:
       enabled: true
     register:
       nacos:
-        enabled: false
-      zookeeper:
         enabled: true
+      zookeeper:
+        enabled: false
   dashboard:
     admin:
       enabled: true

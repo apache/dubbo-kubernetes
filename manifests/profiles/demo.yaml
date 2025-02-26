@@ -23,8 +23,8 @@ spec:
       enabled: true
     register:
       nacos:
-        enabled: true
-      zookeeper:
         enabled: false
+      zookeeper:
+        enabled: true
   values:
     profile: demo

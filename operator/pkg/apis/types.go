@@ -19,7 +19,6 @@ type DubboOperator struct {
 
 type DubboOperatorSpec struct {
 	Profile    string              `json:"profile,omitempty"`
-	Control    string              `json:"control,omitempty"`
 	Dashboard  *DubboDashboardSpec `json:"dashboard,omitempty"`
 	Components *DubboComponentSpec `json:"components,omitempty"`
 	Values     json.RawMessage     `json:"values,omitempty"`
