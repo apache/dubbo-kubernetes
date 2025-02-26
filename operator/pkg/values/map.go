@@ -72,7 +72,6 @@ func tableLookup(m Map, simple string) (Map, bool) {
 	return nil, false
 }
 
-// GetPathMap key.subkey
 func (m Map) GetPathMap(s string) (Map, bool) {
 	current := m
 	for _, n := range parsePath(s) {
