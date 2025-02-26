@@ -43,14 +43,49 @@ message ZookeeperConfig {
   google.protobuf.Int64Value heapSize = 12;
 
   google.protobuf.StringValue logLevel = 13;
+
+  ZookeeperAuth auth = 14;
 }
 
 message ZookeeperAutopurge {
-  int64 snapRetainCount = 1;
+  google.protobuf.Int64Value snapRetainCount = 1;
 
-  int64 purgeInterval = 2;
+  google.protobuf.Int64Value purgeInterval = 2;
 }
 
+message ZookeeperAuth {
+  ZookeeperAuthClientConfig client = 1;
+
+  ZookeeperAuthQuorumConfig quorum = 2;
+}
+
+message ZookeeperAuthClientConfig {
+  google.protobuf.BoolValue enabled = 1;
+
+  google.protobuf.StringValue clientUser = 2;
+
+  google.protobuf.StringValue clientPassword = 3;
+
+  google.protobuf.StringValue serverUsers = 4;
+
+  google.protobuf.StringValue serverPasswords = 5;
+
+  google.protobuf.StringValue existingSecret = 6;
+}
+
+message ZookeeperAuthQuorumConfig {
+  google.protobuf.BoolValue enabled = 1;
+
+  google.protobuf.StringValue learnerUser = 2;
+
+  google.protobuf.StringValue learnerPassword =3;
+
+  google.protobuf.StringValue serverUsers = 4;
+
+  google.protobuf.StringValue serverPasswords = 5;
+
+  google.protobuf.StringValue existingSecret = 6;
+}
 
 message NacosConfig {
   google.protobuf.StringValue mode = 1;

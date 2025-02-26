@@ -17,11 +17,11 @@ metadata:
   {{- end }}
 data:
   {{- with $nacos.storage | default $ncs.storage }}
-  mysql.db.host: {{ .db.host }}
-  mysql.db.name: {{ .db.name }}
-  mysql.port: "{{ .db.host | default 3306 }}"
-  mysql.user: {{ .db.username }}
-  mysql.password: {{ .db.password }}
-  mysql.param: {{ .db.param | default "characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false" }}
+  mysql.db.host: {{ .db.host | default $ncs.db.host }}
+  mysql.db.name: {{ .db.name | default $ncs.db.name }}
+  mysql.port: "{{ .db.host | default $ncs.db.host | default 3306 }}"
+  mysql.user: {{ .db.username | default $ncs.db.username }}
+  mysql.password: {{ .db.password | default $ncs.db.password }}
+  mysql.param: {{ .db.param | default $ncs.db.param | default "characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false" }}
 {{- end -}}
 {{- end -}}

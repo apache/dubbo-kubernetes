@@ -1,5 +1,5 @@
-{{- $zoo := .Values -}}
-{{- $zooprofile := .Values.zookeeper }}
+{{- $zookeeper := .Values -}}
+{{- $zoo := .Values.zookeeper }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -7,15 +7,15 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
   {{- include "zoo.labels" . | nindent 4 }}
-  {{- with $zoo.labels }}
+  {{- with $zookeeper.labels }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
   annotations:
-  {{- with $zoo.annotations }}
+  {{- with $zookeeper.annotations }}
   {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ $zoo.replicas }}
+  replicas: {{ $zookeeper.replicas }}
   selector:
     matchLabels:
     {{- include "zoo.matchLabels" . | nindent 6 }}
@@ -26,73 +26,73 @@ spec:
       {{- include "zoo.labels" . | nindent 8 }}
     spec:
       securityContext:
-      {{- if $zoo.securityContext.enabled }}
-      {{- omit $zoo.securityContext "enabled" | toYaml | nindent 8 }}
+      {{- if $zookeeper.securityContext.enabled }}
+      {{- omit $zookeeper.securityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
       containers:
       - name: zookeeper
-        image: {{ $zoo.image.registry }}:{{ $zoo.image.tag }}
-        imagePullPolicy: {{ $zoo.image.pullPolicy }}
+        image: {{ $zookeeper.image.registry }}:{{ $zookeeper.image.tag }}
+        imagePullPolicy: {{ $zookeeper.image.pullPolicy }}
         securityContext:
-        {{- if $zoo.containerSecurityContext.enabled }}
-        {{- omit $zoo.containerSecurityContext "enabled" | toYaml | nindent 10 }}
+        {{- if $zookeeper.containerSecurityContext.enabled }}
+        {{- omit $zookeeper.containerSecurityContext "enabled" | toYaml | nindent 10 }}
         {{- end }}
         command:
         - /scripts/setup.sh
         resources:
-        {{- if $zoo.resources }}
-        {{- toYaml $zoo.resources | nindent 10 }}
+        {{- if $zookeeper.resources }}
+        {{- toYaml $zookeeper.resources | nindent 10 }}
         {{- end }}
         env:
         - name: BITNAMI_DEBUG
-          value: {{ ternary "true" "false" (or $zoo.image.debug) | quote }}
+          value: {{ ternary "true" "false" (or $zookeeper.image.debug) | quote }}
         - name: ZOO_DATA_LOG_DIR
-          value: {{ $zoo.dataLogDir | quote }}
+          value: {{ $zookeeper.dataLogDir | default $zoo.dataLogDir | quote }}
         - name: ZOO_PORT_NUMBER
           value: {{ 2181 | quote }}
         - name: ZOO_TICK_TIME
-          value: {{ $zoo.tickTime | quote }}
+          value: {{ $zookeeper.tickTime | quote }}
         - name: ZOO_INIT_LIMIT
-          value: {{ $zoo.initLimit | quote }}
+          value: {{ $zookeeper.initLimit | default $zoo.initLimit | quote }}
         - name: ZOO_SYNC_LIMIT
-          value: {{ $zoo.syncLimit | quote }}
+          value: {{ $zookeeper.syncLimit | quote }}
         - name: ZOO_PRE_ALLOC_SIZE
-          value: {{ $zoo.preAllocSize | quote }}
+          value: {{ $zookeeper.preAllocSize | quote }}
         - name: ZOO_SNAPCOUNT
-          value: {{ $zoo.snapCount | quote }}
+          value: {{ $zookeeper.snapCount | quote }}
         - name: ZOO_MAX_CLIENT_CNXNS
-          value: {{ $zoo.maxClientCnxns | quote }}
+          value: {{ $zookeeper.maxClientCnxns | quote }}
         - name: ZOO_4LW_COMMANDS_WHITELIST
-          value: {{ $zoo.fourlwCommandsWhitelist | quote }}
+          value: {{ $zookeeper.fourlwCommandsWhitelist | quote }}
         - name: ZOO_LISTEN_ALLIPS_ENABLED
-          value: {{ ternary "yes" "no" $zoo.listenOnAllIPs | quote }}
+          value: {{ ternary "yes" "no" $zookeeper.listenOnAllIPs | quote }}
         - name: ZOO_AUTOPURGE_INTERVAL
-          value: {{ $zoo.autopurge.purgeInterval | quote }}
+          value: {{ $zookeeper.autopurge.purgeInterval |default $zoo.autopurge.purgeInterval | quote }}
         - name: ZOO_AUTOPURGE_RETAIN_COUNT
-          value: {{ $zoo.autopurge.snapRetainCount | quote }}
+          value: {{ $zookeeper.autopurge.snapRetainCount |default $zoo.autopurge.snapRetainCount | quote }}
         - name: ZOO_MAX_SESSION_TIMEOUT
-          value: {{ $zoo.maxSessionTimeout | quote }}
+          value: {{ $zookeeper.maxSessionTimeout | quote }}
         {{- $zooName := include "zoo.name" . }}
-        {{- $zooReplicas := int $zoo.replicas  }}
+        {{- $zooReplicas := int $zookeeper.replicas  }}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 }}
         {{- $zooNamespace := .Release.Namespace }}
-        {{- $zooDomain := $zoo.clusterDomain }}
+        {{- $zooDomain := $zookeeper.clusterDomain }}
         - name: ZOO_SERVERS
           value: {{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::{{ add $v 1 }} {{ end }}
         - name: ZOO_ENABLE_AUTH
-          value: {{ ternary "no" "yes" $zoo.auth.client.enabled | quote }}
+          value: {{ ternary "no" "yes" $zookeeper.auth.client.enabled | quote }}
         - name: ALLOW_ANONYMOUS_LOGIN
-          value: {{ ternary "no" "yes" $zoo.auth.client.enabled | quote }}
-        {{- if $zoo.auth.client.enabled }}
+          value: {{ ternary "no" "yes" $zookeeper.auth.client.enabled | quote }}
+        {{- if $zookeeper.auth.client.enabled }}
         - name: ZOO_CLIENT_USER
-          value: {{ $zoo.auth.client.clientUser | quote }}
+          value: {{ $zookeeper.auth.client.clientUser | quote }}
         - name: ZOO_CLIENT_PASSWORD
           valueFrom:
             secretKeyRef:
               name: {{ include "zoo.client.secretName" . }}
               key: client-password
         - name: ZOO_SERVER_USERS
-          value: {{ $zoo.auth.client.serverUsers | quote }}
+          value: {{ $zookeeper.auth.client.serverUsers | quote }}
         - name: ZOO_SERVER_PASSWORDS
           valueFrom:
             secretKeyRef:
@@ -100,17 +100,17 @@ spec:
               key: server-password
         {{- end }}
         - name: ZOO_ENABLE_QUORUM_AUTH
-          value: {{ ternary "yes" "no" $zoo.auth.quorum.enabled | quote }}
-        {{- if $zoo.auth.quorum.enabled }}
+          value: {{ ternary "yes" "no" $zookeeper.auth.quorum.enabled | quote }}
+        {{- if $zookeeper.auth.quorum.enabled }}
         - name: ZOO_QUORUM_LEARNER_USER
-          value: {{ $zoo.auth.quorum.learnerUser | quote }}
+          value: {{ $zookeeper.auth.quorum.learnerUser | quote }}
         - name: ZOO_QUORUM_LEARNER_PASSWORD
           valueFrom:
             secretKeyRef:
               name: {{ include "zoo.quorum.secretName" . }}
               key: quorum-learner-password
         - name: ZOO_QUORUM_SERVER_USERS
-          value: {{ $zoo.auth.quorum.serverUsers | quote }}
+          value: {{ $zookeeper.auth.quorum.serverUsers | quote }}
         - name: ZOO_QUORUM_SERVER_PASSWORDS
           valueFrom:
             secretKeyRef:
@@ -118,9 +118,9 @@ spec:
               key: quorum-server-password
         {{- end }}
         - name: ZOO_HEAP_SIZE
-          value: {{ $zoo.heapSize | quote }}
+          value: {{ $zookeeper.heapSize | quote }}
         - name: ZOO_LOG_LEVEL
-          value: {{ $zoo.logLevel | quote }}
+          value: {{ $zookeeper.logLevel | quote }}
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -134,16 +134,16 @@ spec:
         - name: election
           containerPort: {{ template "zoo.election" . }}
         startupProbe:
-        {{- if $zoo.startupProbe }}
-        {{- toYaml $zoo.startupProbe | nindent 10 }}
+        {{- if $zookeeper.startupProbe }}
+        {{- toYaml $zookeeper.startupProbe | nindent 10 }}
         {{- end }}
         readinessProbe:
-        {{- if $zoo.readinessProbe }}
-        {{- toYaml $zoo.readinessProbe | nindent 10 }}
+        {{- if $zookeeper.readinessProbe }}
+        {{- toYaml $zookeeper.readinessProbe | nindent 10 }}
         {{- end }}
         livenessProbe:
-        {{- if $zoo.livenessProbe }}
-        {{- toYaml $zoo.livenessProbe | nindent 10 }}
+        {{- if $zookeeper.livenessProbe }}
+        {{- toYaml $zookeeper.livenessProbe | nindent 10 }}
         {{- end }}
         volumeMounts:
         - name: scripts
