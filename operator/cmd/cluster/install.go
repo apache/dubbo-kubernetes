@@ -23,7 +23,6 @@ var InstallerScope = log.RegisterScope("installer")
 type installArgs struct {
 	files            []string
 	sets             []string
-	manifestPath     string
 	waitTimeout      time.Duration
 	skipConfirmation bool
 }
@@ -80,7 +79,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 }
 
 func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
-	setFlags := applyFlagAliases(iArgs.sets, iArgs.manifestPath)
+	setFlags := applyFlagAliases(iArgs.sets)
 	manifests, vals, err := render.GenerateManifest(iArgs.files, setFlags, cl, kubeClient)
 	if err != nil {
 		return fmt.Errorf("generate config: %v", err)
@@ -108,9 +107,6 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 	return nil
 }
 
-func applyFlagAliases(flags []string, manifestsPath string) []string {
-	if manifestsPath != "" {
-		flags = append(flags, fmt.Sprintf("manifestsPath=%s", manifestsPath))
-	}
+func applyFlagAliases(flags []string) []string {
 	return flags
 }
