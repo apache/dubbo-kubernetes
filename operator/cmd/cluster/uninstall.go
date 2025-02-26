@@ -73,7 +73,7 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 		cl.LogAndPrint("Purge uninstall will remove all Dubbo resources, ignoring the specified revision or operator file")
 	}
 
-	setFlags := applyFlagAliases(uiArgs.sets, uiArgs.manifestPath)
+	setFlags := applyFlagAliases(uiArgs.sets)
 
 	files := []string{}
 	if uiArgs.files != "" {
