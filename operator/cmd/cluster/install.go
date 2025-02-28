@@ -21,7 +21,7 @@ import (
 var InstallerScope = log.RegisterScope("installer")
 
 type installArgs struct {
-	files            []string
+	filenames        []string
 	sets             []string
 	waitTimeout      time.Duration
 	skipConfirmation bool
@@ -29,14 +29,14 @@ type installArgs struct {
 
 func (i *installArgs) String() string {
 	var b strings.Builder
-	b.WriteString("filenames:    " + (fmt.Sprint(i.files) + "\n"))
+	b.WriteString("filenames:    " + (fmt.Sprint(i.filenames) + "\n"))
 	b.WriteString("sets:    " + (fmt.Sprint(i.sets) + "\n"))
 	b.WriteString("waitTimeout: " + fmt.Sprint(i.waitTimeout) + "\n")
 	return b.String()
 }
 
 func addInstallFlags(cmd *cobra.Command, args *installArgs) {
-	cmd.PersistentFlags().StringSliceVarP(&args.files, "filenames", "f", nil, `Path to the file containing the dubboOperator's custom resources.`)
+	cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filenames", "f", nil, `Path to the file containing the dubboOperator's custom resources.`)
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
 	cmd.PersistentFlags().DurationVar(&args.waitTimeout, "wait-timeout", 300*time.Second, "Maximum time to wait for Dubbo resources in each component to be ready.")
@@ -80,7 +80,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 
 func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
 	setFlags := applyFlagAliases(iArgs.sets)
-	manifests, vals, err := render.GenerateManifest(iArgs.files, setFlags, cl, kubeClient)
+	manifests, vals, err := render.GenerateManifest(iArgs.filenames, setFlags, cl, kubeClient)
 	if err != nil {
 		return fmt.Errorf("generate config: %v", err)
 	}
