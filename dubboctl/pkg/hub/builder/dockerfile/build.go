@@ -33,11 +33,14 @@ func (b Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) error {
 	if err != nil {
 		return err
 	}
+
 	defer resp.Body.Close()
+
 	termFd, isTerm := term.GetFdInfo(os.Stderr)
 	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

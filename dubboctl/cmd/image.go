@@ -34,6 +34,18 @@ func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
 	cmd.PersistentFlags().BoolVarP(&iArgs.destroy, "delete", "d", false, "delete k8s yaml file")
 }
 
+func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
+	ihc := imageHubCmd(cmd, clientFactory)
+	idc := imageDeployCmd(cmd, clientFactory)
+	ic := &cobra.Command{
+		Use:   "image",
+		Short: "Used to build and push images, apply to cluster",
+	}
+	ic.AddCommand(ihc)
+	ic.AddCommand(idc)
+	return ic
+}
+
 type hubConfig struct {
 	Dockerfile   bool
 	Builder      bool
@@ -49,18 +61,6 @@ type deployConfig struct {
 	Namespace string
 	Port      int
 	Path      string
-}
-
-func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
-	ihc := imageHubCmd(cmd, clientFactory)
-	idc := imageDeployCmd(cmd, clientFactory)
-	ic := &cobra.Command{
-		Use:   "image",
-		Short: "Used to build and push images, apply to cluster",
-	}
-	ic.AddCommand(ihc)
-	ic.AddCommand(idc)
-	return ic
 }
 
 func newHubConfig(cmd *cobra.Command) *hubConfig {
@@ -128,6 +128,24 @@ func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command
 	return hc
 }
 
+func (hc *hubConfig) checkHubConfig(dc *dubbo.DubboConfig) {
+	if hc.Path == "" {
+		root, err := os.Getwd()
+		if err != nil {
+			return
+		}
+		dc.Root = root
+	} else {
+		dc.Root = hc.Path
+	}
+	if hc.BuilderImage != "" {
+		dc.Build.BuilderImages["pack"] = hc.BuilderImage
+	}
+	if hc.Image != "" {
+		dc.Image = hc.Image
+	}
+}
+
 func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
 	if err := util.GetCreatePath(); err != nil {
 		return err
@@ -190,6 +208,19 @@ func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 	}
 	addDeployFlags(hc, iArgs)
 	return hc
+}
+
+func (dc deployConfig) checkDeployConfig(dc2 *dubbo.DubboConfig) {
+	dc.checkHubConfig(dc2)
+	if dc.Output != "" {
+		dc2.Deploy.Output = dc.Output
+	}
+	if dc.Namespace != "" {
+		dc2.Deploy.Namespace = dc.Namespace
+	}
+	if dc.Port != 0 {
+		dc2.Deploy.Port = dc.Port
+	}
 }
 
 func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
@@ -260,37 +291,6 @@ func remove(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 		return err
 	}
 	return nil
-}
-
-func (hc *hubConfig) checkHubConfig(dc *dubbo.DubboConfig) {
-	if hc.Path == "" {
-		root, err := os.Getwd()
-		if err != nil {
-			return
-		}
-		dc.Root = root
-	} else {
-		dc.Root = hc.Path
-	}
-	if hc.BuilderImage != "" {
-		dc.Build.BuilderImages["pack"] = hc.BuilderImage
-	}
-	if hc.Image != "" {
-		dc.Image = hc.Image
-	}
-}
-
-func (dc deployConfig) checkDeployConfig(dc2 *dubbo.DubboConfig) {
-	dc.checkHubConfig(dc2)
-	if dc.Output != "" {
-		dc2.Deploy.Output = dc.Output
-	}
-	if dc.Namespace != "" {
-		dc2.Deploy.Namespace = dc.Namespace
-	}
-	if dc.Port != 0 {
-		dc2.Deploy.Port = dc.Port
-	}
 }
 
 func (hc *hubConfig) hubPrompt(dc *dubbo.DubboConfig) (*hubConfig, error) {

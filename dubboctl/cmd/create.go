@@ -90,7 +90,7 @@ type createConfig struct {
 	Initialzed bool
 }
 
-func newCreateConfig(cmd *cobra.Command, args []string, clientFactory ClientFactory) (dcfg createConfig, err error) {
+func newCreateConfig(_ *cobra.Command, _ []string, _ ClientFactory) (dcfg createConfig, err error) {
 	var absolutePath string
 	absolutePath = cwd()
 

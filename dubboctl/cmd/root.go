@@ -34,6 +34,8 @@ import (
 	// "os"
 )
 
+const ChartFlag = "charts"
+
 type staticClient struct {
 	clientFactory ClientFactory
 }
@@ -104,7 +106,7 @@ func GetRootCmd(args []string) *cobra.Command {
 
 	installCmd := cluster.InstallCmd(ctx)
 	rootCmd.AddCommand(installCmd)
-	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
 
 	uninstallCmd := cluster.UninstallCmd(ctx)
 	rootCmd.AddCommand(uninstallCmd)
@@ -114,27 +116,27 @@ func GetRootCmd(args []string) *cobra.Command {
 
 	manifestCmd := cluster.ManifestCmd(ctx)
 	rootCmd.AddCommand(manifestCmd)
-	hideFlags(manifestCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+	hideFlags(manifestCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
 
 	validateCmd := validate.NewValidateCommand(ctx)
 	rootCmd.AddCommand(validateCmd)
-	hideFlags(validateCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+	hideFlags(validateCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
 
 	versionCmd := version.NewVersionCommand(ctx)
 	rootCmd.AddCommand(versionCmd)
-	hideFlags(versionCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+	hideFlags(versionCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
 
 	createCmd := CreateCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(createCmd)
-	hideFlags(createCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+	hideFlags(createCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
 
 	repoCmd := RepoCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(repoCmd)
-	hideFlags(repoCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+	hideFlags(repoCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
 
 	imageCmd := ImageCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(imageCmd)
-	hideFlags(imageCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, cli.ChartFlag)
+	hideFlags(imageCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
 
 	return rootCmd
 

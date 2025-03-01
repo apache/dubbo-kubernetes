@@ -12,7 +12,6 @@ const (
 	ContextFlag        = "context"
 	NamespaceFlag      = "namespace"
 	DubboNamespaceFlag = "dubbo-namespace"
-	ChartFlag          = "charts"
 )
 
 type RootFlags struct {

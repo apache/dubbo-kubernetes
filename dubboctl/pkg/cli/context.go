@@ -39,6 +39,7 @@ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
 	if i.clients == nil {
 		i.clients = make(map[string]kube.CLIClient)
 	}
+
 	if i.clients[rev] == nil {
 		impersonationConfig := rest.ImpersonationConfig{}
 		client, err := newKubeClientWithRevision(*i.kubeconfig, *i.Context, rev, impersonationConfig)
@@ -47,6 +48,7 @@ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
 		}
 		i.clients[rev] = client
 	}
+
 	return i.clients[rev], nil
 }
 
@@ -56,8 +58,10 @@ func newKubeClientWithRevision(kubeconfig, context, revision string, impersonati
 		config.Burst = 95
 		config.Impersonate = impersonationConfig
 	})
+
 	if err != nil {
 		return nil, err
 	}
+
 	return kube.NewCLIClient(kube.NewClientConfigForRestConfig(drc), kube.WithRevision(revision))
 }
