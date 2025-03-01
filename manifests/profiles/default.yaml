@@ -33,6 +33,9 @@ spec:
   values:
     global:
       dubboNamespace: dubbo-system
+    nacos:
+      enabled: true
+    zookeeper: {}
 
 
 

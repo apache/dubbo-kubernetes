@@ -94,7 +94,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         {{- end }}
-        {{- if eq $nacos.storage.type "mysql" | default $ncs.storage.type }}
+        {{- if eq $nacos.storage.type "mysql" }}
         - name: SPRING_DATASOURCE_PLATFORM
           value: "mysql"
         - name: MYSQL_SERVICE_HOST

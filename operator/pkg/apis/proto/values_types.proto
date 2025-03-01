@@ -18,33 +18,35 @@ message BaseConfig {
 }
 
 message ZookeeperConfig {
-  google.protobuf.StringValue dataLogDir = 1;
+  google.protobuf.BoolValue enabled = 1;
 
-  google.protobuf.Int64Value  tickTime = 2;
+  google.protobuf.StringValue dataLogDir = 2;
 
-  google.protobuf.Int64Value  initLimit = 3;
+  google.protobuf.Int64Value  tickTime = 3;
 
-  google.protobuf.Int64Value  syncLimit = 4;
+  google.protobuf.Int64Value  initLimit = 4;
 
-  google.protobuf.Int64Value  preAllocSize = 5;
+  google.protobuf.Int64Value  syncLimit = 5;
 
-  google.protobuf.Int64Value  snapCount = 6;
+  google.protobuf.Int64Value  preAllocSize = 6;
 
-  google.protobuf.StringValue fourlwCommandsWhitelist = 7;
+  google.protobuf.Int64Value  snapCount = 7;
 
-  google.protobuf.BoolValue listenOnAllIPs = 8;
+  google.protobuf.StringValue fourlwCommandsWhitelist = 8;
 
-  ZookeeperAutopurge autopurge = 9;
+  google.protobuf.BoolValue listenOnAllIPs = 9;
 
-  google.protobuf.Int64Value maxClientCnxns = 10;
+  ZookeeperAutopurge autopurge = 10;
 
-  google.protobuf.Int64Value maxSessionTimeout = 11;
+  google.protobuf.Int64Value maxClientCnxns = 11;
 
-  google.protobuf.Int64Value heapSize = 12;
+  google.protobuf.Int64Value maxSessionTimeout = 12;
 
-  google.protobuf.StringValue logLevel = 13;
+  google.protobuf.Int64Value heapSize = 13;
 
-  ZookeeperAuth auth = 14;
+  google.protobuf.StringValue logLevel = 14;
+
+  ZookeeperAuth auth = 15;
 }
 
 message ZookeeperAutopurge {
@@ -88,13 +90,15 @@ message ZookeeperAuthQuorumConfig {
 }
 
 message NacosConfig {
-  google.protobuf.StringValue mode = 1;
+  google.protobuf.BoolValue enabled = 1;
 
-  NacosStorage storage = 2;
+  google.protobuf.StringValue mode = 2;
 
-  NacosPlugin plugin = 3;
+  NacosStorage storage = 3;
 
-  string preferhostmode = 4;
+  NacosPlugin plugin = 4;
+
+  string preferhostmode = 5;
 }
 
 message NacosStorage {

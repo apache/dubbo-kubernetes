@@ -31,6 +31,7 @@ var AllComponents = []Component{
 	{
 		UserFacingName:     BaseComponentName,
 		SpecName:           "base",
+		ResourceType:       "Base",
 		Default:            true,
 		HelmSubDir:         "base",
 		HelmValuesTreeRoot: "global",
@@ -38,8 +39,8 @@ var AllComponents = []Component{
 	{
 		UserFacingName:     AdminComponentName,
 		SpecName:           "admin",
-		ContainerName:      "dashboard",
 		ResourceType:       "Deployment",
+		ContainerName:      "dashboard",
 		Default:            true,
 		HelmSubDir:         "admin",
 		HelmValuesTreeRoot: "admin",

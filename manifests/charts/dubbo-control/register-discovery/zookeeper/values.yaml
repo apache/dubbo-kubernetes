@@ -14,6 +14,8 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
+  ## Whether to enable the zookeeper.
+  enabled: false
   ## Override the namespace where the resource is deployed.
   namespaceOverride: ~
   ## Labels to attach to the resource.
