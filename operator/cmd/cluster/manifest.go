@@ -15,23 +15,20 @@ import (
 )
 
 type manifestGenerateArgs struct {
-	files        []string
-	sets         []string
-	manifestPath string
+	filenames []string
+	sets      []string
 }
 
 func (a *manifestGenerateArgs) String() string {
 	var b strings.Builder
-	b.WriteString("filenames:   " + fmt.Sprint(a.files) + "\n")
+	b.WriteString("filenames:   " + fmt.Sprint(a.filenames) + "\n")
 	b.WriteString("sets:           " + fmt.Sprint(a.sets) + "\n")
-	b.WriteString("manifestPath: " + a.manifestPath + "\n")
 	return b.String()
 }
 
 func addManifestGenerateFlags(cmd *cobra.Command, args *manifestGenerateArgs) {
-	cmd.PersistentFlags().StringSliceVarP(&args.files, "filename", "f", nil, ``)
+	cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filename", "f", nil, ``)
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, ``)
-	cmd.PersistentFlags().StringVarP(&args.manifestPath, "manifests", "d", "", ``)
 }
 
 func ManifestCmd(ctx cli.Context) *cobra.Command {
@@ -63,8 +60,6 @@ func manifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *manifestGenerateA
   # Generate the demo profile
   dubboctl manifest generate --set profile=demo
 `,
-
-		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if kubeClientFunc == nil {
 				kubeClientFunc = ctx.CLIClient
@@ -87,8 +82,8 @@ const (
 )
 
 func manifestGenerate(kc kube.CLIClient, mgArgs *manifestGenerateArgs, cl clog.Logger) error {
-	setFlags := applyFlagAliases(mgArgs.sets, mgArgs.manifestPath)
-	manifests, _, err := render.GenerateManifest(mgArgs.files, setFlags, cl, kc)
+	setFlags := applyFlagAliases(mgArgs.sets)
+	manifests, _, err := render.GenerateManifest(mgArgs.filenames, setFlags, cl, kc)
 	if err != nil {
 		return err
 	}

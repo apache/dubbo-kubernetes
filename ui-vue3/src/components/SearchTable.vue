@@ -19,7 +19,7 @@
     <div class="search-query-container">
       <a-row>
         <a-col :span="18">
-          <a-form>
+          <a-form @keyup.enter="searchDomain.onSearch()">
             <a-flex wrap="wrap" gap="large">
               <template v-for="q in searchDomain.params">
                 <a-form-item :label="$t(q.label)">
@@ -96,7 +96,6 @@
         </a-col>
       </a-row>
     </div>
-
     <div class="search-table-container">
       <a-table
         :loading="searchDomain.table.loading"
@@ -112,6 +111,9 @@
       >
         <template #bodyCell="{ text, record, index, column }">
           <span v-if="column.key === 'idx'">{{ index + 1 }}</span>
+          <span v-if="text === 'skeleton-loading'">
+            <a-skeleton-button active size="small"></a-skeleton-button>
+          </span>
           <slot
             name="bodyCell"
             :text="text"
@@ -222,6 +224,7 @@ function hideColumn(item: any) {
     width: 100px;
     cursor: pointer;
     position: relative;
+
     .button {
       vertical-align: center;
       line-height: 24px;
@@ -236,12 +239,14 @@ function hideColumn(item: any) {
         margin-left: 10px;
       }
     }
+
     .dropdown {
       top: 40px;
       right: -40px;
       position: absolute;
       height: auto;
       z-index: 1000;
+
       .body {
         max-height: 200px;
         overflow: auto;
@@ -249,6 +254,7 @@ function hideColumn(item: any) {
 
       .item {
         line-height: 30px;
+
         &:hover {
           color: v-bind('PRIMARY_COLOR');
         }

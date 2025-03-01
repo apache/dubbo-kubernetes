@@ -15,14 +15,27 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_app_tracing">tracing todo</div>
+  <div class="__container_app_tracing">
+    <GrafanaPage></GrafanaPage>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import GrafanaPage from '@/components/GrafanaPage'
+import { getApplicationTraceDashboard } from '@/api/service/app'
+import { provide, reactive, ref } from 'vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { useRoute } from 'vue-router'
 
-onMounted(() => {
-  console.log(333)
-})
+const route = useRoute()
+provide(
+  PROVIDE_INJECT_KEY.GRAFANA,
+  reactive({
+    api: getApplicationTraceDashboard,
+    showIframe: false,
+    name: route.params?.pathId,
+    type: 'application'
+  })
+)
 </script>
 <style lang="less" scoped></style>

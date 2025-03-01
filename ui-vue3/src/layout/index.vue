@@ -54,22 +54,11 @@ import logo from '@/assets/logo.png'
 import Layout_header from '@/layout/header/layout_header.vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import Layout_bread from '@/layout/breadcrumb/layout_bread.vue'
-import { PRIMARY_COLOR, TAB_HEADER_TITLE_VNODE } from '@/base/constants'
-import { useRoute, useRouter } from 'vue-router'
+import { PRIMARY_COLOR, TAB_HEADER_TITLE } from '@/base/constants'
 
 let __null = PRIMARY_COLOR
 const collapsed = ref<boolean>(false)
 provide(PROVIDE_INJECT_KEY.COLLAPSED, collapsed)
-const route = useRoute()
-const router = useRouter()
-let transitionFlag = ref(true)
-router.beforeEach((to, from, next) => {
-  transitionFlag.value = false
-  next()
-  setTimeout(() => {
-    transitionFlag.value = true
-  }, 500)
-})
 </script>
 <style lang="less" scoped>
 .__container_layout_index {

@@ -477,7 +477,23 @@ const words: I18nType = {
   provideService: 'Provide Service',
   dependentService: 'Dependent Service',
   submit: 'Submit',
-  reset: 'Reset'
+  reset: 'Reset',
+  router: {
+    resource: {
+      app: {
+        list: 'List'
+      },
+      ins: {
+        list: 'List'
+      },
+      svc: {
+        list: 'List'
+      }
+    }
+  },
+  form: {
+    save: 'SAVE'
+  }
 }
 
 export default words

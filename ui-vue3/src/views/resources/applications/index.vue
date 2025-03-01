@@ -30,7 +30,10 @@
           </a-tag>
         </template>
         <template v-else-if="column.dataIndex === 'appName'">
-          <span class="app-link" @click="router.replace(`detail/${record[column.key]}`)">
+          <span
+            class="app-link"
+            @click="router.push(`/resources/applications/detail/${record[column.key]}`)"
+          >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
@@ -43,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
+import { onMounted, provide, reactive, watch } from 'vue'
 import { searchApplications } from '@/api/service/app'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -51,7 +54,10 @@ import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { Icon } from '@iconify/vue'
 import router from '@/router'
 import { PRIMARY_COLOR } from '@/base/constants'
+import { useRoute } from 'vue-router'
 
+let route = useRoute()
+let query = route.query['query']
 let __null = PRIMARY_COLOR
 let columns = [
   // {
@@ -65,7 +71,8 @@ let columns = [
     key: 'appName',
     dataIndex: 'appName',
     sorter: (a: any, b: any) => sortString(a.appName, b.appName),
-    width: 140
+    width: 140,
+    ellipsis: true
   },
   {
     title: 'applicationDomain.instanceCount',
@@ -94,6 +101,7 @@ const searchDomain = reactive(
       {
         label: 'appName',
         param: 'keywords',
+        defaultValue: query,
         placeholder: 'typeAppName',
         style: {
           width: '200px'
@@ -114,6 +122,11 @@ onMounted(() => {
 })
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
+watch(route, (a, b) => {
+  searchDomain.queryForm['keywords'] = a.query['query']
+  searchDomain.onSearch()
+  console.log(a)
+})
 </script>
 <style lang="less" scoped>
 .search-table-container {

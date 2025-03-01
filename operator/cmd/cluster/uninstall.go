@@ -15,7 +15,7 @@ import (
 const ()
 
 type uninstallArgs struct {
-	files            string
+	filenames        string
 	sets             []string
 	manifestPath     string
 	remove           bool
@@ -23,7 +23,7 @@ type uninstallArgs struct {
 }
 
 func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
-	cmd.PersistentFlags().StringVarP(&args.files, "filename", "f", "", "The filename of the DubboOperator CR.")
+	cmd.PersistentFlags().StringVarP(&args.filenames, "filename", "f", "", "The filename of the DubboOperator CR.")
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
 	cmd.PersistentFlags().BoolVar(&args.remove, "remove", false, `Remove all dubbo related source code.`)
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
@@ -42,7 +42,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
   # Uninstall all control planes and shared resources
   dubboctl uninstall --remove`,
 		Args: func(cmd *cobra.Command, args []string) error {
-			if uiArgs.files == "" && !uiArgs.remove {
+			if uiArgs.filenames == "" && !uiArgs.remove {
 				return fmt.Errorf("at least one of the --filename or --remove flags must be set")
 			}
 			if len(args) > 0 {
@@ -69,15 +69,15 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	}
 
 	pl := progress.NewInfo()
-	if uiArgs.remove && uiArgs.files != "" {
+	if uiArgs.remove && uiArgs.filenames != "" {
 		cl.LogAndPrint("Purge uninstall will remove all Dubbo resources, ignoring the specified revision or operator file")
 	}
 
-	setFlags := applyFlagAliases(uiArgs.sets, uiArgs.manifestPath)
+	setFlags := applyFlagAliases(uiArgs.sets)
 
 	files := []string{}
-	if uiArgs.files != "" {
-		files = append(files, uiArgs.files)
+	if uiArgs.filenames != "" {
+		files = append(files, uiArgs.filenames)
 	}
 
 	vals, err := render.MergeInputs(files, setFlags)

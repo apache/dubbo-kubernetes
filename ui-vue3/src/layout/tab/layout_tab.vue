@@ -20,7 +20,7 @@
       <div v-if="tabRoute.meta.tab" class="header">
         <a-row>
           <a-col :span="1">
-            <span @click="router.push(tabRoute.meta.back ?? '../')" style="float: left">
+            <span @click="router.replace(tabRoute.meta.back || '../')" style="float: left">
               <Icon icon="material-symbols:keyboard-backspace-rounded" class="back" />
             </span>
           </a-col>
@@ -29,7 +29,7 @@
           </a-col>
         </a-row>
         <a-tabs @change="router.push({ name: activeKey || '' })" v-model:activeKey="activeKey">
-          <a-tab-pane :key="v.name" v-for="v in tabRouters">
+          <a-tab-pane :key="v.name" v-for="v in tabRouters.filter((x: any) => !x.meta.hidden)">
             <template #tab>
               <span>
                 <Icon style="margin-bottom: -2px" :icon="v.meta.icon"></Icon>
@@ -41,18 +41,30 @@
       </div>
 
       <a-spin class="tab-spin" :spinning="transitionFlag">
-        <router-view v-show="!transitionFlag" />
+        <div
+          id="layout-tab-body"
+          style="
+            transition: scroll-top 0.5s ease;
+            overflow: auto;
+            height: calc(100vh - 300px);
+            padding-bottom: 20px;
+          "
+        >
+          <router-view v-show="!transitionFlag" />
+        </div>
       </a-spin>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, provide, reactive, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRoute, useRouter } from 'vue-router'
 import _ from 'lodash'
+
 import { PRIMARY_COLOR, TAB_HEADER_TITLE } from '@/base/constants'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 
 const router = useRouter()
 const tabRoute = useRoute()
@@ -67,7 +79,6 @@ let activeKey = ref(tabRoute.name)
 let transitionFlag = ref(false)
 let key = _.uniqueId('__tab_page')
 router.beforeEach((to, from, next) => {
-  console.log(tabRoute)
   key = _.uniqueId('__tab_page')
   transitionFlag.value = true
   activeKey.value = <string>to.name

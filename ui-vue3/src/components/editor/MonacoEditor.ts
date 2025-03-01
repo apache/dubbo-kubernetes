@@ -38,12 +38,13 @@ export default function useMonaco(language = 'json') {
       return
     }
     initReadOnly = !!editorOption.readOnly
+
     monacoEditor =
       el &&
       monaco.editor.create(el, {
         language,
-        minimap: { enabled: false },
-        theme: 'vs-light',
+        minimap: { enabled: true },
+        theme: 'vs-dark',
         multiCursorModifier: 'ctrlCmd',
         tabSize: 2,
         automaticLayout: true, // 自适应宽高

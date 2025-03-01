@@ -56,9 +56,16 @@ export const getApplicationServiceForm = (params: any): Promise<any> => {
   })
 }
 
-export const getApplicationMetricsInfo = (params: any): Promise<any> => {
+export const getApplicationMetricsDashboard = (params: any): Promise<any> => {
   return request({
     url: '/application/metric-dashboard',
+    method: 'get',
+    params
+  })
+}
+export const getApplicationTraceDashboard = (params: any): Promise<any> => {
+  return request({
+    url: '/application/trace-dashboard',
     method: 'get',
     params
   })

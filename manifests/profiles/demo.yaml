@@ -21,6 +21,14 @@ spec:
   components:
     base:
       enabled: true
+    register:
+      nacos:
+        enabled: false
+      zookeeper:
+        enabled: true
   values:
     profile: demo
-
+    nacos:
+      enabled: false
+    zookeeper:
+      enabled: true

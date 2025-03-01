@@ -47,7 +47,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url)),
-            'monaco-editor': 'monaco-editor/esm/vs/editor/editor.api.js'
+            // 'monaco-editor': 'monaco-editor/esm/vs/editor/editor.api.js'
         },
         // ignore suffix
         extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue']

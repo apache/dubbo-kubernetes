@@ -22,13 +22,20 @@ spec:
   components:
     base:
       enabled: true
+    register:
+      nacos:
+        enabled: true
+      zookeeper:
+        enabled: false
   dashboard:
     admin:
       enabled: true
   values:
-    base:
-      global:
-        dubboNamespace: dubbo-system
+    global:
+      dubboNamespace: dubbo-system
+    nacos:
+      enabled: true
+    zookeeper: {}
 
 
 

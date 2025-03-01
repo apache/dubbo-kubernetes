@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
 	"github.com/ory/viper"
 	"github.com/spf13/cobra"
 	"os"
+	"strings"
 )
 
 type createArgs struct {
@@ -82,11 +85,12 @@ type createConfig struct {
 	Path       string
 	Runtime    string
 	Template   string
+	Repo       string
 	DirName    string
 	Initialzed bool
 }
 
-func newCreateConfig(cmd *cobra.Command, args []string, clientFactory ClientFactory) (dcfg createConfig, err error) {
+func newCreateConfig(_ *cobra.Command, _ []string, _ ClientFactory) (dcfg createConfig, err error) {
 	var absolutePath string
 	absolutePath = cwd()
 
@@ -112,6 +116,10 @@ func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 	dclient, cancel := clientFactory()
 	defer cancel()
 
+	if err = dcfg.validate(dclient); err != nil {
+		return err
+	}
+
 	_, err = dclient.Initialize(&dubbo.DubboConfig{
 		Root:     dcfg.Path,
 		Name:     dcfg.DirName,
@@ -123,6 +131,98 @@ func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 	}
 	fmt.Printf("Custom Dubbo %v sdk was successfully created.\n", dcfg.Runtime)
 	return nil
+}
+
+type ErrNoRuntime error
+type ErrInvalidRuntime error
+type ErrInvalidTemplate error
+
+func (c createConfig) validate(client *sdk.Client) (err error) {
+	if c.Runtime == "" {
+		return noRuntimeError(client)
+	}
+
+	if c.Runtime != "" && c.Repo == "" &&
+		!isValidRuntime(client, c.Runtime) {
+		return newInvalidRuntimeError(client, c.Runtime)
+	}
+
+	if c.Template != "" && c.Repo == "" &&
+		!isValidTemplate(client, c.Runtime, c.Template) {
+		return newInvalidTemplateError(client, c.Runtime, c.Template)
+	}
+
+	return
+}
+
+func newInvalidRuntimeError(client *sdk.Client, runtime string) error {
+	b := strings.Builder{}
+	fmt.Fprintf(&b, "The language runtime '%v' is not recognized.\n", runtime)
+	runtimes, err := client.Runtimes()
+	if err != nil {
+		return err
+	}
+	for _, v := range runtimes {
+		fmt.Fprintf(&b, "  %v\n", v)
+	}
+	return ErrInvalidRuntime(errors.New(b.String()))
+}
+
+func isValidTemplate(client *sdk.Client, runtime, template string) bool {
+	if !isValidRuntime(client, runtime) {
+		return false
+	}
+	templates, err := client.Templates().List(runtime)
+	if err != nil {
+		return false
+	}
+	for _, v := range templates {
+		if v == template {
+			return true
+		}
+	}
+	return false
+}
+
+func isValidRuntime(client *sdk.Client, runtime string) bool {
+	runtimes, err := client.Runtimes()
+	if err != nil {
+		return false
+	}
+	for _, v := range runtimes {
+		if v == runtime {
+			return true
+		}
+	}
+	return false
+}
+
+func noRuntimeError(client *sdk.Client) error {
+	b := strings.Builder{}
+	fmt.Fprintln(&b, "Required flag \"language\" not set.")
+	fmt.Fprintln(&b, "Available language runtimes are:")
+	runtimes, err := client.Runtimes()
+	if err != nil {
+		return err
+	}
+	for _, v := range runtimes {
+		fmt.Fprintf(&b, "  %v\n", v)
+	}
+	return ErrNoRuntime(errors.New(b.String()))
+}
+
+func newInvalidTemplateError(client *sdk.Client, runtime, template string) error {
+	b := strings.Builder{}
+	fmt.Fprintf(&b, "The template '%v' was not found for language runtime '%v'.\n", template, runtime)
+	fmt.Fprintln(&b, "Available templates for this language runtime are:")
+	templates, err := client.Templates().List(runtime)
+	if err != nil {
+		return err
+	}
+	for _, v := range templates {
+		fmt.Fprintf(&b, "  %v\n", v)
+	}
+	return ErrInvalidTemplate(errors.New(b.String()))
 }
 
 func cwd() (cwd string) {

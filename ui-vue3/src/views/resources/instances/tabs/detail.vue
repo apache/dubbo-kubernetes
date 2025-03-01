@@ -287,8 +287,6 @@ onMounted(async () => {
   }
   apiData.detail = await getInstanceDetail(params)
   Object.assign(instanceDetail, apiData.detail.data)
-  // console.log('instance',apiData)
-  console.log('assign', instanceDetail)
 })
 
 // Click on the application name to view the application

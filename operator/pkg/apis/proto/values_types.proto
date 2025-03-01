@@ -6,20 +6,6 @@ import "google/protobuf/wrappers.proto";
 
 option go_package = "dubbo.io/dubbo/operator/pkg/apis";
 
-message ArchConfig {
-  // Sets pod scheduling weight for amd64 arch
-  uint32 amd64 = 1;
-
-  // Sets pod scheduling weight for ppc64le arch.
-  uint32 ppc64le = 2;
-
-  // Sets pod scheduling weight for s390x arch.
-  uint32 s390x = 3;
-
-  // Sets pod scheduling weight for arm64 arch.
-  uint32 arm64 = 4;
-}
-
 // Global Configuration for Dubbo components.
 message GlobalConfig {
   // Specifies the default namespace.
@@ -27,8 +13,116 @@ message GlobalConfig {
 }
 
 message BaseConfig {
-  google.protobuf.BoolValue enabledubboConfigCRDs = 1;
-  GlobalConfig global = 2; // Add this line if `global` is required in BaseConfig
+  // For dubboctl usage to disable dubbo config crds in base
+  google.protobuf.BoolValue enableDubboConfigCRDs = 1;
+}
+
+message ZookeeperConfig {
+  google.protobuf.BoolValue enabled = 1;
+
+  google.protobuf.StringValue dataLogDir = 2;
+
+  google.protobuf.Int64Value  tickTime = 3;
+
+  google.protobuf.Int64Value  initLimit = 4;
+
+  google.protobuf.Int64Value  syncLimit = 5;
+
+  google.protobuf.Int64Value  preAllocSize = 6;
+
+  google.protobuf.Int64Value  snapCount = 7;
+
+  google.protobuf.StringValue fourlwCommandsWhitelist = 8;
+
+  google.protobuf.BoolValue listenOnAllIPs = 9;
+
+  ZookeeperAutopurge autopurge = 10;
+
+  google.protobuf.Int64Value maxClientCnxns = 11;
+
+  google.protobuf.Int64Value maxSessionTimeout = 12;
+
+  google.protobuf.Int64Value heapSize = 13;
+
+  google.protobuf.StringValue logLevel = 14;
+
+  ZookeeperAuth auth = 15;
+}
+
+message ZookeeperAutopurge {
+  google.protobuf.Int64Value snapRetainCount = 1;
+
+  google.protobuf.Int64Value purgeInterval = 2;
+}
+
+message ZookeeperAuth {
+  ZookeeperAuthClientConfig client = 1;
+
+  ZookeeperAuthQuorumConfig quorum = 2;
+}
+
+message ZookeeperAuthClientConfig {
+  google.protobuf.BoolValue enabled = 1;
+
+  google.protobuf.StringValue clientUser = 2;
+
+  google.protobuf.StringValue clientPassword = 3;
+
+  google.protobuf.StringValue serverUsers = 4;
+
+  google.protobuf.StringValue serverPasswords = 5;
+
+  google.protobuf.StringValue existingSecret = 6;
+}
+
+message ZookeeperAuthQuorumConfig {
+  google.protobuf.BoolValue enabled = 1;
+
+  google.protobuf.StringValue learnerUser = 2;
+
+  google.protobuf.StringValue learnerPassword =3;
+
+  google.protobuf.StringValue serverUsers = 4;
+
+  google.protobuf.StringValue serverPasswords = 5;
+
+  google.protobuf.StringValue existingSecret = 6;
+}
+
+message NacosConfig {
+  google.protobuf.BoolValue enabled = 1;
+
+  google.protobuf.StringValue mode = 2;
+
+  NacosStorage storage = 3;
+
+  NacosPlugin plugin = 4;
+
+  string preferhostmode = 5;
+}
+
+message NacosStorage {
+  string type = 1;
+
+  NacosDB db = 2;
+}
+
+message NacosDB {
+  string host = 1;
+
+  string name = 2;
+
+  int64 port = 3;
+
+  string username = 4;
+
+  string password = 5;
+
+  string param = 6;
+}
+
+message NacosPlugin {
+  google.protobuf.BoolValue enabled = 1;
 }
 
 message Values {
@@ -40,6 +134,12 @@ message Values {
 
   // Specifies which installation configuration profile to apply.
   string profile = 3;
+
+  // Configuration for the zookeeper component.
+  ZookeeperConfig zookeeper = 4;
+
+  // Configuration for the nacos component.
+  NacosConfig nacos = 5;
 }
 
 // IntOrString is a type that can hold an int32 or a string.  When used in

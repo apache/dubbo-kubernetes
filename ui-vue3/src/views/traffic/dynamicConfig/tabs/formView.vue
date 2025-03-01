@@ -31,21 +31,21 @@
           </a-descriptions-item>
 
           <a-descriptions-item
-            :label="$t('flowControlDomain.ruleGranularity')"
+            :label="$t('flowControlDomain.scope')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <span>{{ formViewData.basicInfo.ruleGranularity }}</span>
+            <span>{{ formViewData.basicInfo.scope }}</span>
           </a-descriptions-item>
 
           <a-descriptions-item
-            :label="$t('flowControlDomain.actionObject')"
+            :label="$t('flowControlDomain.key')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <p
               @click="copyIt('org.apache.dubbo.samples.UserService')"
               class="description-item-content with-card"
             >
-              {{ formViewData.basicInfo.actionObject }}
+              {{ formViewData.basicInfo.key }}
               <CopyOutlined />
             </p>
           </a-descriptions-item>
@@ -58,47 +58,43 @@
           </a-descriptions-item>
 
           <a-descriptions-item
-            :label="$t('flowControlDomain.enabledState')"
+            :label="$t('flowControlDomain.enabled')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <span>{{ formViewData.basicInfo.enabledState ? '启用' : '不启用' }}</span>
+            <span>{{ formViewData.basicInfo.enabled ? '启用' : '不启用' }}</span>
           </a-descriptions-item>
         </a-descriptions>
       </div>
       <div v-else>
         <a-descriptions :column="2" layout="vertical">
           <a-descriptions-item
-            :label="$t('flowControlDomain.ruleGranularity')"
+            :label="$t('flowControlDomain.scope')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <a-select
-              v-model:value="formViewEdit.basicInfo.ruleGranularity"
+              v-model:value="formViewEdit.basicInfo.scope"
               style="min-width: 120px"
               disabled
             >
-              <a-select-option :value="formViewEdit.basicInfo.ruleGranularity">{{
-                formViewData.basicInfo.ruleGranularity
-              }}</a-select-option>
+              <a-select-option :value="formViewEdit.basicInfo.scope"
+                >{{ formViewData.basicInfo.scope }}
+              </a-select-option>
             </a-select>
           </a-descriptions-item>
 
           <a-descriptions-item
-            :label="$t('flowControlDomain.actionObject')"
+            :label="$t('flowControlDomain.key')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            <a-input
-              v-model:value="formViewEdit.basicInfo.actionObject"
-              style="min-width: 300px"
-              disabled
-            />
+            <a-input v-model:value="formViewEdit.basicInfo.key" style="min-width: 300px" disabled />
           </a-descriptions-item>
 
           <a-descriptions-item
-            :label="$t('flowControlDomain.enabledState')"
+            :label="$t('flowControlDomain.enabled')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
             <a-switch
-              v-model:checked="formViewEdit.basicInfo.enabledState"
+              v-model:checked="formViewEdit.basicInfo.enabled"
               checked-children="是"
               un-checked-children="否"
             />
@@ -108,30 +104,49 @@
     </a-card>
 
     <template v-if="!isEdit">
-      <a-card
-        v-for="(config, index) in formViewData.config"
-        :title="'配置【' + (index + 1) + '】'"
-        class="dynamic-config-card"
-      >
+      <a-card v-for="(config, index) in formViewData.config" class="dynamic-config-card">
+        <template #title>
+          配置【{{ index + 1 }}】
+          <span style="font-weight: normal; font-size: 12px" :style="{ color: PRIMARY_COLOR }">
+            对于{{ formViewData?.basicInfo?.scope === 'application' ? '应用' : '服务' }}的{{
+              config.side === 'provider' ? '提供者' : '消费者'
+            }}，将满足
+            <a-tag
+              :color="PRIMARY_COLOR"
+              v-for="item in config.matches.map(
+                (x: any) => x.key + ' ' + x.relation + ' ' + x.value
+              )"
+            >
+              {{ item }}
+            </a-tag>
+            的实例，配置
+            <a-tag
+              :color="PRIMARY_COLOR"
+              v-for="item in config.parameters.map((x: any) => x.key + ' = ' + x.value)"
+            >
+              {{ item }}
+            </a-tag>
+          </span>
+        </template>
         <a-descriptions :column="2">
           <a-descriptions-item
-            :label="$t('flowControlDomain.enabledState')"
+            :label="$t('flowControlDomain.enabled')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            {{ config.enabledState ? '启用' : '不启用' }}
+            {{ config.enabled ? '启用' : '不启用' }}
           </a-descriptions-item>
           <a-descriptions-item
-            :label="$t('flowControlDomain.endOfAction')"
+            :label="$t('flowControlDomain.side')"
             :labelStyle="{ fontWeight: 'bold' }"
           >
-            {{ config.endOfAction }}
+            {{ config.side }}
           </a-descriptions-item>
           <a-descriptions-item
-            :label="$t('flowControlDomain.actuatingRange')"
+            :label="$t('flowControlDomain.matches')"
             :labelStyle="{ fontWeight: 'bold' }"
             :span="2"
           >
-            <a-input-group compact v-for="item in config.actuatingRange" :key="item.key">
+            <a-input-group compact v-for="item in config.matches" :key="item.key">
               <a-input disabled :value="item.key" style="width: 200px" />
               <a-input disabled :value="item.relation" style="width: 50px" />
               <a-input disabled :value="item.value" style="width: 200px" />
@@ -142,7 +157,7 @@
             :labelStyle="{ fontWeight: 'bold' }"
             :span="2"
           >
-            <a-input-group compact v-for="item in config.configItem" :key="item.key">
+            <a-input-group compact v-for="item in config.parameters" :key="item.key">
               <a-input disabled :value="item.key" style="width: 200px" />
               <a-input disabled :value="item.relation" style="width: 50px" />
               <a-input disabled :value="item.value" style="width: 200px" />
@@ -153,95 +168,131 @@
     </template>
 
     <template v-else>
-      <a-card
-        v-for="(config, index) in formViewEdit.config"
-        :title="'配置【' + (index + 1) + '】'"
-        class="dynamic-config-card"
-      >
-        <a-descriptions :column="2">
-          <a-descriptions-item
-            :label="$t('flowControlDomain.enabledState')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-switch
-              v-model:checked="config.enabledState"
-              checked-children="是"
-              un-checked-children="否"
-            />
-          </a-descriptions-item>
-          <a-descriptions-item
-            :label="$t('flowControlDomain.endOfAction')"
-            :labelStyle="{ fontWeight: 'bold' }"
-          >
-            <a-radio-group v-model:value="config.endOfAction" :options="endOfActionOptions" />
-          </a-descriptions-item>
-          <a-descriptions-item
-            :label="$t('flowControlDomain.actuatingRange')"
-            :labelStyle="{ fontWeight: 'bold' }"
-            :span="2"
-          >
-            <div>
-              <a-select
-                ref="select"
-                v-model:value="config.actuatingRangeKeys"
-                style="width: 500px"
-                @change="handleChange(index, 'actuatingRange')"
-                mode="multiple"
-                :options="actuatingRangeArr.map((item) => ({ value: item }))"
+      <a-spin :spinning="loading">
+        <a-card v-for="(config, index) in formViewEdit.config" class="dynamic-config-card">
+          <template #title>
+            配置【{{ index + 1 }}】
+            <span style="font-weight: normal; font-size: 12px" :style="{ color: PRIMARY_COLOR }">
+              对于{{ formViewData?.basicInfo?.scope === 'application' ? '应用' : '服务' }}的{{
+                config.side === 'provider' ? '提供者' : '消费者'
+              }}，将满足
+              <a-tag
+                :color="PRIMARY_COLOR"
+                v-for="item in config.matches.map(
+                  (x: any) => x.key + ' ' + x.relation + ' ' + x.value
+                )"
+              >
+                {{ item }}
+              </a-tag>
+              的实例，配置
+              <a-tag
+                :color="PRIMARY_COLOR"
+                v-for="item in config.parameters.map((x: any) => x.key + ' = ' + x.value)"
+              >
+                {{ item }}
+              </a-tag>
+            </span>
+          </template>
+          <a-descriptions :column="2">
+            <a-descriptions-item
+              :label="$t('flowControlDomain.enabled')"
+              :labelStyle="{ fontWeight: 'bold' }"
+            >
+              <a-switch
+                v-model:checked="config.enabled"
+                checked-children="是"
+                un-checked-children="否"
               />
-              <div v-for="item in config.actuatingRange" :key="item.key" style="margin-top: 20px">
-                <a-input-group compact>
-                  <a-input disabled :value="item.key" style="width: 200px" />
-                  <a-input disabled :value="item.relation" style="width: 50px" />
-                  <a-input :value="item.value" style="width: 200px" />
-                </a-input-group>
+            </a-descriptions-item>
+            <a-descriptions-item
+              :label="$t('flowControlDomain.side')"
+              :labelStyle="{ fontWeight: 'bold' }"
+            >
+              <a-radio-group v-model:value="config.side" :options="sideOptions" />
+            </a-descriptions-item>
+            <a-descriptions-item
+              :label="$t('flowControlDomain.matches')"
+              :labelStyle="{ fontWeight: 'bold' }"
+              :span="2"
+            >
+              <div>
+                <a-select
+                  ref="select"
+                  v-model:value="config.matchKeys"
+                  style="width: 500px"
+                  @change="handleChange(index, 'matches', 'matchKeys')"
+                  mode="multiple"
+                  :options="matchesArr.map((item) => ({ value: item }))"
+                />
+                <div v-for="item in config.matches" :key="item.key" style="margin-top: 20px">
+                  <a-input-group compact>
+                    <a-input disabled :value="item.key" style="width: 160px" />
+                    <a-input
+                      placeholer="relation"
+                      v-model:value="item.relation"
+                      style="width: 100px"
+                    />
+                    <a-input placeholer="value" v-model:value="item.value" style="width: 240px" />
+                  </a-input-group>
+                </div>
               </div>
-            </div>
-          </a-descriptions-item>
-          <a-descriptions-item
-            :label="$t('flowControlDomain.configurationItem')"
-            :labelStyle="{ fontWeight: 'bold' }"
-            :span="2"
-          >
-            <div>
-              <a-select
-                ref="select"
-                v-model:value="config.configItemKeys"
-                style="width: 500px"
-                @change="handleChange(index, 'configItem')"
-                mode="multiple"
-                :options="configItemArr.map((item) => ({ value: item }))"
-              />
-              <div v-for="item in config.configItem" :key="item.key" style="margin-top: 20px">
-                <a-input-group compact>
-                  <a-input disabled :value="item.key" style="width: 200px" />
-                  <a-input disabled :value="item.relation" style="width: 50px" />
-                  <a-input :value="item.value" style="width: 200px" />
-                </a-input-group>
+            </a-descriptions-item>
+            <a-descriptions-item
+              :label="$t('flowControlDomain.configurationItem')"
+              :labelStyle="{ fontWeight: 'bold' }"
+              :span="2"
+            >
+              <div>
+                <a-select
+                  ref="select"
+                  v-model:value="config.parameterKeys"
+                  style="width: 500px"
+                  @change="handleChange(index, 'parameters', 'parameterKeys')"
+                  mode="multiple"
+                  :options="parametersArr.map((item) => ({ value: item }))"
+                />
+                <div v-for="item in config.parameters" :key="item.key" style="margin-top: 20px">
+                  <a-input-group compact>
+                    <a-input disabled :value="item.key" style="width: 160px" />
+                    <a-input
+                      disabled
+                      placeholer="relation"
+                      :value="item.relation"
+                      style="width: 100px"
+                    />
+                    <a-input placeholer="value" v-model:value="item.value" style="width: 240px" />
+                  </a-input-group>
+                </div>
               </div>
-            </div>
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-card>
+            </a-descriptions-item>
+          </a-descriptions>
+        </a-card>
+      </a-spin>
     </template>
 
-    <a-button v-if="isEdit" @click="addConfig">增加配置</a-button>
+    <a-button style="margin-bottom: 20px" v-if="isEdit" @click="addConfig">增加配置</a-button>
 
-    <a-flex v-if="isEdit" style="margin-top: 30px">
-      <a-button type="primary">确认</a-button>
-      <a-button style="margin-left: 30px" @click="router.push('../../')">取消</a-button>
-    </a-flex>
+    <a-card class="footer">
+      <a-flex v-if="isEdit">
+        <a-button type="primary" @click="saveConfig">确认</a-button>
+        <a-button style="margin-left: 30px" @click="router.replace('/traffic/dynamicConfig')"
+          >取消
+        </a-button>
+      </a-flex>
+    </a-card>
   </div>
 </template>
 
 <script lang="ts" setup>
 import type { ComponentInternalInstance } from 'vue'
-import { getCurrentInstance, ref } from 'vue'
+import { getCurrentInstance, nextTick, onMounted, reactive, ref } from 'vue'
 import { CopyOutlined } from '@ant-design/icons-vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
+import gsap from 'gsap'
 
 let __ = PRIMARY_COLOR
 const {
@@ -261,28 +312,28 @@ function copyIt(v: string) {
   toClipboard(v)
 }
 
-const formViewData = ref({
+const formViewData: any = reactive({
   basicInfo: {
     ruleName: 'org.apache.dubbo.samples.UserService::.condition-router',
-    ruleGranularity: '服务',
-    actionObject: 'org.apache.dubbo.samples.UserService',
+    scope: '服务',
+    key: 'org.apache.dubbo.samples.UserService',
     effectTime: '20230/12/19 22:09:34',
-    enabledState: true
+    enabled: true
   },
   config: [
     {
-      enabledState: true,
-      endOfAction: 'provider',
-      actuatingRangeKeys: ['address'],
-      actuatingRange: [
+      enabled: true,
+      side: 'provider',
+      matchKeys: ['address'],
+      matches: [
         {
           key: 'address',
           relation: '=',
           value: '10.255.10.11'
         }
       ],
-      configItemKeys: ['retries'],
-      configItem: [
+      parameterKeys: ['retries'],
+      parameters: [
         {
           key: 'retries',
           relation: '=',
@@ -293,12 +344,12 @@ const formViewData = ref({
   ]
 })
 
-const actuatingRangeArr = ['address', 'providerAddress', 'service', 'app', 'param']
-const configItemArr = ['retries', 'timeout', 'accesslog', 'weight', '其他']
+const matchesArr = ['address', 'providerAddress', 'service', 'app', 'param']
+const parametersArr = ['retries', 'timeout', 'accesslog', 'weight', '其他']
 
-const formViewEdit = ref(formViewData.value)
+const formViewEdit: any = formViewData
 
-const endOfActionOptions = [
+const sideOptions = [
   {
     label: 'provider',
     value: 'provider'
@@ -310,41 +361,142 @@ const endOfActionOptions = [
 ]
 
 const addConfig = () => {
-  formViewEdit.value.config.push({
-    enabledState: true,
-    endOfAction: 'provider',
-    actuatingRange: [],
-    configItem: []
+  const container: any = document.getElementById('layout-tab-body')
+  formViewEdit.config.push({
+    enabled: true,
+    side: 'provider',
+    matches: [],
+    parameters: []
+  })
+  nextTick(() => {
+    gsap.to(container, {
+      duration: 1, // 动画持续时间（秒）
+      scrollTop: container.scrollHeight,
+      ease: 'power2.out'
+    })
   })
 }
 
-const handleChange = (index: number, name: string) => {
-  const config = formViewData.value.config[index]
-  config[name] = config[name].filter((item) => {
-    return config[name + 'Keys'].find((i) => {
+const handleChange = (index: number, name: string, keys: string) => {
+  const config: any = formViewData.config[index]
+  config[name] = config[name].filter((item: any) => {
+    return config[keys].find((i: any) => {
       return i === item.key
     })
   })
-  config[name + 'Keys'].forEach((item) => {
+  config[keys].forEach((item: any) => {
     if (
-      !config[name].find((i) => {
+      !config[name].find((i: any) => {
         return i.key === item
       })
     ) {
       config[name].push({
         key: item,
-        relation: '=',
+        relation: name === 'parameters' ? '=' : 'exact',
         value: ''
       })
     }
   })
 }
+
+function transApiData(data: any) {
+  if (data) {
+    formViewData.basicInfo.configVerison = data.configVerison
+    formViewData.basicInfo.scope = data.scope
+    formViewData.basicInfo.key = data.key
+    formViewData.basicInfo.enabled = data.enabled
+    formViewData.config = data.configs.map((x: any) => {
+      let matches = []
+      for (let matchKey in x.match) {
+        let relation = Object.keys(x.match[matchKey])[0]
+        matches.push({
+          key: matchKey,
+          relation: relation,
+          value: x.match[matchKey][relation]
+        })
+      }
+      let parameters = []
+      for (let paramKey in x.parameters) {
+        parameters.push({
+          key: paramKey,
+          relation: '=',
+          value: x.parameters[paramKey]
+        })
+      }
+
+      return {
+        enabled: x.enabled,
+        side: x.side,
+        matchKeys: Object.keys(x.match),
+        matches: matches,
+        parameterKeys: Object.keys(x.parameters),
+        parameters: parameters
+      }
+    })
+  }
+}
+
+onMounted(async () => {
+  const res = await getConfiguratorDetail({ name: route.params?.pathId })
+  // console.log(formViewData.config)
+  transApiData(res.data)
+})
+const loading = ref(false)
+
+async function saveConfig() {
+  loading.value = true
+  let newVal = {
+    scope: formViewEdit.basicInfo.scope,
+    key: formViewEdit.basicInfo.key,
+    enabled: formViewEdit.basicInfo.enabled,
+    configVersion: formViewEdit.basicInfo.configVerison,
+    configs: formViewEdit.config.map((x: any) => {
+      const match: any = {}
+      const parameters: any = {}
+      for (let m of x.matches) {
+        match[m.key] = { [m.relation]: m.value }
+      }
+      for (let m of x.parameters) {
+        parameters[m.key] = m.value
+      }
+
+      return {
+        match,
+        parameters,
+        enabled: x.enabled,
+        side: x.side
+      }
+    })
+  }
+  try {
+    let res = await saveConfiguratorDetail({ name: route.params?.pathId }, newVal)
+    transApiData(res.data)
+    message.success('config save success')
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style lang="less" scoped>
 .__container_traffic_config_form {
+  position: relative;
+  width: 100%;
+
+  .footer {
+    //position: sticky; //bottom: 0; //width: 100%;
+  }
+
   .dynamic-config-card {
+    :deep(.ant-descriptions-item-label) {
+      width: 120px;
+      text-align: right;
+    }
+
     margin-bottom: 20px;
+
     .description-item-content {
       &.no-card {
         padding-left: 20px;

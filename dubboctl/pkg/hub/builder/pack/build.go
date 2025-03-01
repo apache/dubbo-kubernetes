@@ -20,8 +20,6 @@ import (
 const DefaultName = builder.Pack
 
 var (
-	// DefaulttinyBuilder   = "ghcr.io/knative/builder-jammy-tiny:latest"
-	// DefaulttinyBuilder = "ghcr.io/knative/builder-jammy-tiny:latest"
 	DefaultGoBuilder   = "heroku/builder:24"
 	DefaultJavaBuilder = "heroku/builder:24"
 )

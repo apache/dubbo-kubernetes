@@ -97,9 +97,14 @@ export class SearchDomain {
     }
 
     try {
+      const res = await this.searchApi(queryParams)
+      if (!res) {
+        this.table.loading = false
+        return
+      }
       const {
         data: { list, pageInfo }
-      } = await this.searchApi(queryParams)
+      } = res
       this.result = handleResult ? handleResult(list) : list
 
       if (!this.noPaged) {

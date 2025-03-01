@@ -37,9 +37,9 @@
           <a-button type="link" @click="viewDetail(text)">{{ text }}</a-button>
         </template>
         <template v-else-if="column.dataIndex === 'versionGroupSelect'">
-          <a-select :value="text.versionGroupValue" :bordered="false" style="width: 80%">
+          <a-select :value="text?.versionGroupValue" :bordered="false" style="width: 80%">
             <a-select-option
-              v-for="(item, index) in text.versionGroupArr"
+              v-for="(item, index) in text?.versionGroupArr"
               :value="item"
               :key="index"
             >
@@ -66,6 +66,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { getApplicationServiceForm } from '@/api/service/app'
 import { searchService } from '@/api/service/service'
 import { queryMetrics } from '@/base/http/promQuery'
+import { promQueryList } from '@/utils/PromQueryUtil'
+import { isNumber } from 'lodash'
+import { bytesToHuman } from '@/utils/ByteUtil'
 
 const route = useRoute()
 const router = useRouter()
@@ -85,6 +88,7 @@ onMounted(async () => {
     scrollX: '100',
     scrollY: 'calc(100vh - 600px)'
   }
+
   let clusterData = (await getClusterInfo({})).data
   metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
   clusterInfo.info = <{ [key: string]: string }>clusterData
@@ -143,34 +147,28 @@ const appName = computed(() => {
 
 function serviceInfo(params: any) {
   return getApplicationServiceForm(params).then(async (res) => {
-    let services = res?.data?.list
-    try {
-      for (let service of services) {
-        let qps = await queryMetrics(
-          `sum (dubbo_provider_qps_total{interface='${service.serviceName}'}) by (interface)`
-        )
-        let rt = await queryMetrics(
-          `avg(dubbo_consumer_rt_avg_milliseconds_aggregate{interface="${service.serviceName}",method=~"$method"}>0)`
-        )
-        let request = await queryMetrics(
-          `sum (increase(dubbo_provider_requests_total{interface="${service.serviceName}"}[1m]))`
-        )
+    return promQueryList(res, ['qps', 'rt', 'request'], async (service: any) => {
+      service.versionGroupSelect = {}
+      service.versionGroupSelect.versionGroupArr = service.versionGroups.map((item: any) => {
+        return (item.versionGroup =
+          (item.version ? 'version: ' + item.version + ', ' : '') +
+            (item.group ? 'group: ' + item.group : '') || '无')
+      })
+      service.versionGroupSelect.versionGroupValue = service.versionGroupSelect.versionGroupArr[0]
+      let qps = await queryMetrics(
+        `sum (dubbo_provider_qps_total{interface='${service.serviceName}'}) by (interface)`
+      )
+      let rt = await queryMetrics(
+        `avg(dubbo_consumer_rt_avg_milliseconds_aggregate{interface="${service.serviceName}",method=~"$method"}>0)`
+      )
+      let request = await queryMetrics(
+        `sum (increase(dubbo_provider_requests_total{interface="${service.serviceName}"}[1m]))`
+      )
 
-        service.avgQPS = qps
-        service.avgRT = rt
-        service.requestTotal = request
-        service.versionGroupSelect = {}
-        service.versionGroupSelect.versionGroupArr = service.versionGroups.map((item: any) => {
-          return (item.versionGroup =
-            (item.version ? 'version: ' + item.version + ', ' : '') +
-              (item.group ? 'group: ' + item.group : '') || '无')
-        })
-        service.versionGroupSelect.versionGroupValue = service.versionGroupSelect.versionGroupArr[0]
-      }
-    } catch (e) {
-      console.error(e)
-    }
-    return res
+      service.avgQPS = qps
+      service.avgRT = rt
+      service.requestTotal = request
+    })
   })
 }
 const searchDomain = reactive(
@@ -205,7 +203,7 @@ const searchDomain = reactive(
 searchDomain.onSearch()
 
 const viewDetail = (serviceName: string) => {
-  router.push('/resources/services/detail/' + serviceName)
+  router.push('/resources/services/distribution/' + serviceName)
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)

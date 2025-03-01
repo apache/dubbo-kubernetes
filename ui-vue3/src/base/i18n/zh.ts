@@ -52,8 +52,10 @@ const words: I18nType = {
     addFilter: '增加筛选',
     configurationItem: '配置项',
     actuatingRange: '作用范围',
+    matches: '作用范围',
     scopeScreening: '作用范围筛选',
     endOfAction: '作用端',
+    side: '作用端',
     actions: '操作',
     filterType: '筛选类型',
     labelName: '标签名',
@@ -69,9 +71,11 @@ const words: I18nType = {
     parameter: '参数',
     ruleName: '规则名',
     actionObject: '作用对象',
+    key: '作用对象',
     faultTolerantProtection: '容错保护',
     runTimeEffective: '运行时生效',
     ruleGranularity: '规则粒度',
+    scope: '规则粒度',
     effectTime: '生效时间',
     enabledState: '启用状态',
     priority: '优先级',
@@ -452,7 +456,23 @@ const words: I18nType = {
   dependentService: '依赖服务',
   idx: '序号',
   submit: '提交',
-  reset: '重置'
+  reset: '重置',
+  router: {
+    resource: {
+      app: {
+        list: '列表'
+      },
+      ins: {
+        list: '列表'
+      },
+      svc: {
+        list: '列表'
+      }
+    }
+  },
+  form: {
+    save: '保存'
+  }
 }
 
 export default words

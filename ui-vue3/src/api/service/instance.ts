@@ -33,9 +33,16 @@ export const getInstanceDetail = (params: any): Promise<any> => {
   })
 }
 
-export const getInstanceMetricsInfo = (params: any): Promise<any> => {
+export const getInstanceMetricsDashboard = (params: any): Promise<any> => {
   return request({
-    url: '/instance/metrics',
+    url: '/instance/metric-dashboard',
+    method: 'get',
+    params
+  })
+}
+export const getInstanceTracingDashboard = (params: any): Promise<any> => {
+  return request({
+    url: '/instance/trace-dashboard',
     method: 'get',
     params
   })

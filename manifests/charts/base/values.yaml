@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-base:
-  ## dubboctl disable dubbo configuration crds in base.
-  enableDubboConfigCRD: true
-
-defaultRevision: "default"
+_internal_default_values_not_set:
+  global:
+    dubboNamespace: dubbo-system
+  base:
+    # For dubboctl usage to disable dubbo config crds in base
+    enabledubboConfigCRDs: true

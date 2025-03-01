@@ -1,0 +1,146 @@
+{{- $nacos := .Values -}}
+{{- $ncs := .Values.nacos }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "nacos.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "nacos.labels" . | nindent 4 }}
+  {{- with $nacos.labels }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+  annotations:
+  {{- with $nacos.annotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if eq $nacos.mode "cluster" }}
+  serviceName: {{ template "nacos.name" . }}-headless
+  {{- else }}
+  serviceName: {{ template "nacos.name" . }}
+  {{- end }}
+  selector:
+    matchLabels:
+    {{- include "nacos.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "nacos.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+      {{- if $nacos.securityContext.enabled }}
+      {{- omit $nacos.securityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if and (eq $nacos.mode "cluster" |default $ncs.mode) ($nacos.plugin.enabled | default $ncs.plugin.enabled) }}
+      initContainers:
+        - name: peer-finder-plugin-install
+          image: {{ $nacos.plugin.image.registry }}:{{ $nacos.plugin.image.tag }}
+          imagePullPolicy: {{ $nacos.plugin.image.pullPolicy }}
+          volumeMounts:
+          - name: data
+            mountPath: /home/nacos/plugins/peer-finder
+            subPath: peer-finder
+      {{- end }}
+      containers:
+      - name: nacos
+        image: {{ $nacos.image.registry }}:{{ $nacos.image.tag }}
+        imagePullPolicy: {{ $nacos.image.pullPolicy }}
+        securityContext:
+        {{- if $nacos.containerSecurityContext.enabled }}
+        {{- omit $nacos.containerSecurityContext "enabled" | toYaml | nindent 10 }}
+        {{- end }}
+        startupProbe:
+        {{- if $nacos.startupProbe }}
+        {{- toYaml $nacos.startupProbe | nindent 10 }}
+        {{- end }}
+        readinessProbe:
+        {{- if $nacos.readinessProbe }}
+        {{- toYaml $nacos.readinessProbe | nindent 10 }}
+        {{- end }}
+        livenessProbe:
+        {{- if $nacos.livenessProbe }}
+        {{- toYaml $nacos.livenessProbe | nindent 10 }}
+        {{- end }}
+        ports:
+        - name: http
+          containerPort: 8848
+        - name: clientgen-rpc
+          containerPort: {{ add $nacos.serverPort 1000 }}
+        - name: raft-rpc
+          containerPort: {{ add $nacos.serverPort 1001 }}
+        resources:
+        {{- if $nacos.resources }}
+        {{- toYaml $nacos.resources | nindent 10 }}
+        {{- end }}
+        env:
+        - name: NACOS_SERVER_PORT
+          value: {{ $nacos.serverPort | quote }}
+        - name: NACOS_APPLICATION_PORT
+          value: {{ $nacos.serverPort | quote }}
+        - name: PREFER_HOST_MODE
+          value: {{ $nacos.preferhostmode | quote }}
+        {{- if eq $nacos.mode "standalone" |default $ncs.mode }}
+        - name: MODE
+          value: "standalone"
+        {{- else if eq $nacos.mode "cluster" |default $ncs.mode }}
+        - name: SERVICE_NAME
+          value: "{{ template "nacos.name" . }}-headless"
+        - name: DOMAIN_NAME
+          value: {{ $nacos.clusterDomain | quote }}
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        {{- end }}
+        {{- if eq $nacos.storage.type "mysql" }}
+        - name: SPRING_DATASOURCE_PLATFORM
+          value: "mysql"
+        - name: MYSQL_SERVICE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ template "nacos.name" . }}-db-config
+              key: mysql.db.host
+        - name: MYSQL_SERVICE_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ template "nacos.name" . }}-db-config
+              key: mysql.db.name
+        - name: MYSQL_SERVICE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ template "nacos.name" . }}-db-config
+              key: mysql.port
+        - name: MYSQL_SERVICE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ template "nacos.name" . }}-db-config
+              key: mysql.user
+        - name: MYSQL_SERVICE_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: {{ template "nacos.name" . }}-db-config
+              key: mysql.password
+        - name: MYSQL_SERVICE_DB_PARAM
+          valueFrom:
+            configMapKeyRef:
+              name: {{ template "nacos.name" . }}-db-config
+              key: mysql.param
+        {{- else }}
+        - name: EMBEDDED_STORAGE
+          value: embedded
+        {{- end }}
+        volumeMounts:
+        - name: data
+          mountPath: /home/nacos/plugins/peer-finder
+          subPath: peer-finder
+        - name: data
+          mountPath: /home/nacos/data
+          subPath: data
+        - name: data
+          mountPath: /home/nacos/logs
+          subPath: logs
+      volumes:
+      - name: data
+        emptyDir: {}
