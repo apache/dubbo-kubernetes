@@ -28,3 +28,7 @@ spec:
         enabled: true
   values:
     profile: demo
+    nacos:
+      enabled: false
+    zookeeper:
+      enabled: true

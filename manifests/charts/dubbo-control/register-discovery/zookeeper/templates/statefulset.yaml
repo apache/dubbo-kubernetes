@@ -67,9 +67,9 @@ spec:
         - name: ZOO_LISTEN_ALLIPS_ENABLED
           value: {{ ternary "yes" "no" $zookeeper.listenOnAllIPs | quote }}
         - name: ZOO_AUTOPURGE_INTERVAL
-          value: {{ $zookeeper.autopurge.purgeInterval |default $zoo.autopurge.purgeInterval | quote }}
+          value: {{ $zookeeper.autopurge.purgeInterval | quote }}
         - name: ZOO_AUTOPURGE_RETAIN_COUNT
-          value: {{ $zookeeper.autopurge.snapRetainCount |default $zoo.autopurge.snapRetainCount | quote }}
+          value: {{ $zookeeper.autopurge.snapRetainCount | quote }}
         - name: ZOO_MAX_SESSION_TIMEOUT
           value: {{ $zookeeper.maxSessionTimeout | quote }}
         {{- $zooName := include "zoo.name" . }}

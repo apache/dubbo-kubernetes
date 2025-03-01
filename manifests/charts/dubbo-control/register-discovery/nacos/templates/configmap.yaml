@@ -1,6 +1,6 @@
 {{- $nacos := .Values -}}
 {{- $ncs := .Values.nacos }}
-{{- if eq $nacos.storage.type "mysql" | default $ncs.storage.type }}
+{{- if eq $nacos.storage.type "mysql" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
