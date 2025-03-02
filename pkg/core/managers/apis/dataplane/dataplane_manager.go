@@ -19,21 +19,9 @@ package dataplane
 
 import (
 	"context"
-)
+	"maps"
+	"time"
 
-import (
-	"github.com/pkg/errors"
-
-	kube_apps "k8s.io/api/apps/v1"
-
-	kube_core "k8s.io/api/core/v1"
-
-	"k8s.io/apimachinery/pkg/types"
-
-	kube_ctrl "sigs.k8s.io/controller-runtime"
-)
-
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	config_core "github.com/apache/dubbo-kubernetes/pkg/config/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
@@ -41,6 +29,14 @@ import (
 	core_manager "github.com/apache/dubbo-kubernetes/pkg/core/resources/manager"
 	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_store "github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+
+	"github.com/pkg/errors"
+	kube_apps "k8s.io/api/apps/v1"
+	kube_core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	kube_ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
@@ -91,6 +87,11 @@ func (m *dataplaneManager) Get(ctx context.Context, r core_model.Resource, opts 
 	m.setInboundsClusterTag(dataplane)
 	m.setHealth(dataplane)
 	if m.deployMode != config_core.UniversalMode {
+		if m.deployMode == config_core.HalfHostMode {
+			if err = m.mergeK8sPodMeta(ctx, dataplane); err != nil {
+				return err
+			}
+		}
 		m.setExtensions(ctx, dataplane)
 	}
 	return nil
@@ -108,9 +109,83 @@ func (m *dataplaneManager) List(ctx context.Context, r core_model.ResourceList, 
 		m.setHealth(item)
 		m.setInboundsClusterTag(item)
 		if m.deployMode != config_core.UniversalMode {
+			if m.deployMode == config_core.HalfHostMode {
+				if err = m.mergeK8sPodMeta(ctx, item); err != nil {
+					return err
+				}
+			}
 			m.setExtensions(ctx, item)
 		}
 	}
+	return nil
+}
+
+// replaceMeta is a ResourceMeta implementation that replace the following name extenions when set any of them:
+// - "k8s.dubbo.io/namespace": replace with the field "namespace"
+// - "k8s.dubbo.io/name": replace with the field "name"
+// And replace the creation time when set the field "creationTime"
+type replaceMeta struct {
+	name         string
+	namespace    string
+	creationTime time.Time
+	core_model.ResourceMeta
+}
+
+var _ core_model.ResourceMeta = &replaceMeta{}
+
+func (m *replaceMeta) GetNameExtensions() core_model.ResourceNameExtensions {
+	extensions := m.ResourceMeta.GetNameExtensions()
+	if m.name == "" && m.namespace == "" {
+		return extensions
+	}
+	if extensions == nil {
+		return map[string]string{
+			core_model.K8sNamespaceComponent: m.namespace,
+			core_model.K8sNameComponent:      m.name,
+		}
+	} else {
+		extensions = maps.Clone(extensions)
+		extensions[core_model.K8sNamespaceComponent] = m.namespace
+		extensions[core_model.K8sNameComponent] = m.name
+		return extensions
+	}
+}
+
+func (m *replaceMeta) GetCreationTime() time.Time {
+	if m.creationTime.IsZero() {
+		return m.ResourceMeta.GetCreationTime()
+	} else {
+		return m.creationTime
+	}
+}
+
+// mergeK8sPodMeta merge k8s pod meta to dataplane
+// so we can use the dataplane to merge extensions from pod
+func (m *dataplaneManager) mergeK8sPodMeta(ctx context.Context, dp *core_mesh.DataplaneResource) error {
+	if m.manager == nil {
+		return nil
+	}
+	// get the pod related to the dataplane (ip)
+	clientset, err := kubernetes.NewForConfig(m.manager.GetConfig())
+	if err != nil {
+		return err
+	}
+
+	ip := dp.GetIP()
+	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+		FieldSelector: "status.podIP=" + ip,
+	})
+	if err != nil || len(pods.Items) == 0 {
+		return err
+	}
+	pod := pods.Items[0]
+	rm := &replaceMeta{
+		name:         pod.Name,
+		namespace:    pod.Namespace,
+		ResourceMeta: dp.GetMeta(),
+	}
+	dp.SetMeta(rm)
+
 	return nil
 }
 
@@ -203,10 +278,19 @@ func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.Data
 	if err = client.Get(ctx, replicaSetNamespacedName, replicaSet); err != nil {
 		return
 	}
-	if replicaSet.ObjectMeta.OwnerReferences[0].Name != "" {
-		extensions[ExtensionsWorkLoadKey] = replicaSet.ObjectMeta.OwnerReferences[0].Name
-	} else if pod.ObjectMeta.OwnerReferences[0].Name != "" {
+	if pod.ObjectMeta.OwnerReferences[0].Name != "" {
 		extensions[ExtensionsWorkLoadKey] = pod.ObjectMeta.OwnerReferences[0].Name
+	} else if replicaSet.ObjectMeta.OwnerReferences[0].Name != "" {
+		extensions[ExtensionsWorkLoadKey] = replicaSet.ObjectMeta.OwnerReferences[0].Name
+	}
+
+	// replace the creation time when the creation time is zero
+	if dp.GetMeta().GetCreationTime().IsZero() {
+		rm := &replaceMeta{
+			ResourceMeta: dp.GetMeta(),
+			creationTime: pod.CreationTimestamp.Time,
+		}
+		dp.SetMeta(rm)
 	}
 
 	// get NodeName
