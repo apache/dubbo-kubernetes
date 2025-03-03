@@ -23,14 +23,45 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/store"
+
+	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
 	core_runtime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
+
+func BannerSearchIp(rt core_runtime.Runtime, req *model.SearchReq) (*model.SearchPaginationResult, error) {
+	manager := rt.ResourceManager()
+	dataplaneList := &mesh.DataplaneResourceList{}
+
+	if err := manager.List(rt.AppContext(), dataplaneList, store.ListByFilterFunc(searchByIp(req.Keywords)), store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+		return nil, err
+	}
+
+	res := model.NewSearchPaginationResult()
+	list := make([]*model.SearchInstanceResp, len(dataplaneList.Items))
+	for i, item := range dataplaneList.Items {
+		list[i] = model.NewSearchInstanceResp()
+		list[i] = list[i].FromDataplaneResource(item)
+	}
+
+	res.List = list
+	res.PageInfo = &dataplaneList.Pagination
+
+	return res, nil
+}
+
+func searchByIp(ip string) store.ListFilterFunc {
+	return func(rs core_model.Resource) bool {
+		// make sure that the resource is of type mesh.DataplaneResource
+		if dp, ok := rs.(*mesh.DataplaneResource); ok {
+			return dp.GetIP() == ip
+		}
+		return false
+	}
+}
 
 func BannerSearchInstances(rt core_runtime.Runtime, req *model.SearchReq) (*model.SearchPaginationResult, error) {
 	manager := rt.ResourceManager()
