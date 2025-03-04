@@ -404,8 +404,8 @@ func (a *ApplicationSearch) GetRegistry(rt core_runtime.Runtime) {
 }
 
 type FlowWeightSet struct {
-	Weight int32      `json:"weight"`
-	Scope  ParamMatch `json:"scope,omitempty"`
+	Weight int32        `json:"weight"`
+	Scope  []ParamMatch `json:"scope,omitempty"`
 }
 
 type GraySet struct {

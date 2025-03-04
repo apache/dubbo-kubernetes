@@ -273,12 +273,17 @@ func ApplicationConfigFlowWeightGET(rt core_runtime.Runtime) gin.HandlerFunc {
 					logger.Error("parse weight failed", err)
 					return true
 				}
+				scope := make([]model.ParamMatch, 0, len(conf.Match.Param))
+				for _, param := range conf.Match.Param {
+					scope = append(scope, model.ParamMatch{
+						Key:   &param.Key,
+						Value: model.StringMatchToModelStringMatch(param.Value),
+					})
+				}
+
 				resp.FlowWeightSets = append(resp.FlowWeightSets, model.FlowWeightSet{
 					Weight: int32(weight),
-					Scope: model.ParamMatch{
-						Key:   &conf.Match.Param[0].Key,
-						Value: model.StringMatchToModelStringMatch(conf.Match.Param[0].Value),
-					},
+					Scope:  scope,
 				})
 			}
 			return false
@@ -349,14 +354,18 @@ func ApplicationConfigFlowWeightPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		})
 		// append new
 		for _, set := range body.FlowWeightSets {
+			paramMatch := make([]*mesh_proto.ParamMatch, 0, len(set.Scope))
+			for _, match := range set.Scope {
+				paramMatch = append(paramMatch, &mesh_proto.ParamMatch{
+					Key:   *match.Key,
+					Value: model.ModelStringMatchToStringMatch(match.Value),
+				})
+			}
 			res.Spec.Configs = append(res.Spec.Configs, &mesh_proto.OverrideConfig{
 				Side:       consts.SideProvider,
 				Parameters: map[string]string{`weight`: strconv.Itoa(int(set.Weight))},
 				Match: &mesh_proto.ConditionMatch{
-					Param: []*mesh_proto.ParamMatch{{
-						Key:   *set.Scope.Key,
-						Value: model.ModelStringMatchToStringMatch(set.Scope.Value),
-					}},
+					Param: paramMatch,
 				},
 				XGenerateByCp: true,
 			})
