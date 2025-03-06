@@ -9,7 +9,6 @@
 
 | Key                                              | Description                                                                                | Default                                   |
 |--------------------------------------------------|--------------------------------------------------------------------------------------------|-------------------------------------------|
-| `deployType`                                     | Define the deployment mode for Admin.                                                      | `Deployment`                              |
 | `auth.enabled`                                   | Auth Status for Admin Control Plane.                                                       | `true`                                    |
 | `auth.authorization.action`                      | Define the Authorization Action for Admin Control Plane.                                   | `DENY`                                    |
 | `auth.authorization.matchType`                   | Define the Authorization MatchType for Admin Control Plane.                                | `anyMatch`                                |
