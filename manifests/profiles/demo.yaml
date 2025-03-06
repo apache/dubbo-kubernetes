@@ -26,6 +26,9 @@ spec:
         enabled: false
       zookeeper:
         enabled: true
+  dashboard:
+    admin:
+      enabled: true
   values:
     profile: demo
     nacos:

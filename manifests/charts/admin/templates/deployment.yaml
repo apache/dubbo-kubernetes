@@ -62,9 +62,7 @@ spec:
         {{- $zooName := printf "zookeeper" -}}
         {{- $nacosName := printf "nacos" -}}
         {{- $zooReplicas := int .Values.zookeeper.replicas -}}
-        {{- $nacosReplicas := int $nacos.replicas -}}
-        {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 -}}
-        {{- $nacosHeadless := printf "%s-%s" $nacosName "headless" | trunc 63 -}}
+        {{- $nacosReplicas := int .Values.nacos.replicas -}}
         {{- $zooNamespace := include "admin.namespace" . -}}
         {{- $nacosNamespace := include "admin.namespace" . -}}
         {{- $clusterDomain := $admin.clusterDomain -}}
@@ -72,13 +70,13 @@ spec:
         {{- $nacosPort := $nacos.serverPort -}}
         {{- if $nacos.enabled }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://{{ range $k, $v := until $nacosReplicas }}{{ $nacosName }}-{{ $v }}.{{ $nacosName }}.{{ $nacosNamespace }}.svc.{{ $clusterDomain }}:{{ $nacosPort }}{{ if ne (add $k 1) $nacosReplicas }},{{ end }}{{ end }}
+          value: nacos://nacos-0.nacos.dubbo-system.svc.cluster.local:8848
           {{- else if $zoo.enabled }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: zookeeper://{{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $clusterDomain }}:{{ $zooPort }}{{ if ne (add $k 1) $zooReplicas }},{{ end }}{{ end }}
+          value: zookeeper://zookeeper-0.zookeeper.dubbo-system.svc.cluster.local:2181
           {{- else }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://{{ range $k, $v := until $nacosReplicas }}{{ $nacosName }}-{{ $v }}.{{ $nacosName }}.{{ $nacosNamespace }}.svc.{{ $clusterDomain }}:{{ $nacosPort }}{{ if ne (add $k 1) $nacosReplicas }},{{ end }}{{ end }}
+          value: nacos://nacos-0.nacos.dubbo-system.svc.cluster.local:8848
         {{- end }}
         - name: DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_CERT_DIR
           value: /var/run/secrets/dubbo.io/tls-cert
