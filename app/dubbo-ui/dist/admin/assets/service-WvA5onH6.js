@@ -1,0 +1,1 @@
+import{r}from"./request-hwqjhTR7.js";const s=e=>r({url:"/service/search",method:"get",params:e}),a=e=>r({url:"/service/distribution",method:"get",params:e}),c=e=>r({url:"/service/metric-dashboard",method:"get",params:e}),i=e=>r({url:"/service/trace-dashboard",method:"get",params:e});export{c as a,i as b,a as g,s};
