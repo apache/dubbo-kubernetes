@@ -166,6 +166,7 @@ func (m *dataplaneManager) mergeK8sPodMeta(ctx context.Context, dp *core_mesh.Da
 		return nil
 	}
 	// get the pod related to the dataplane (ip)
+	// TODO improve
 	clientset, err := kubernetes.NewForConfig(m.manager.GetConfig())
 	if err != nil {
 		return err
@@ -295,5 +296,7 @@ func (m *dataplaneManager) setExtensions(ctx context.Context, dp *core_mesh.Data
 
 	// get NodeName
 	extensions[ExtensionsNodeNameKey] = pod.Spec.NodeName
-	dp.Spec.Extensions = extensions
+	for key, val := range extensions {
+		dp.Spec.Extensions[key] = val
+	}
 }
