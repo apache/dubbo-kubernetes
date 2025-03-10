@@ -27,9 +27,9 @@ type Name string
 
 const (
 	BaseComponentName              Name = "Base"
-	AdminComponentName             Name = "Admin"
 	NacosRegisterComponentName     Name = "Nacos"
 	ZookeeperRegisterComponentName Name = "Zookeeper"
+	AdminComponentName             Name = "Admin"
 )
 
 type Component struct {
@@ -87,17 +87,16 @@ var AllComponents = []Component{
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:              "Dubbo Resource Core",
-		AdminComponentName:             "Dubbo Admin Dashboard",
-		NacosRegisterComponentName:     "Dubbo Nacos Register Plane",
-		ZookeeperRegisterComponentName: "Dubbo Zookeeper Register Plane",
+		AdminComponentName:             "Admin Dashboard",
+		NacosRegisterComponentName:     "Nacos Register Plane",
+		ZookeeperRegisterComponentName: "Zookeeper Register Plane",
 	}
 
 	Icons = map[Name]string{
-		BaseComponentName: "🛸",
-		// TODO DubbodComponentName: "📡",
-		NacosRegisterComponentName:     "🪝",
-		ZookeeperRegisterComponentName: "⚓",
-		AdminComponentName:             "🛰",
+		BaseComponentName:              "🔭",
+		NacosRegisterComponentName:     "🚡",
+		ZookeeperRegisterComponentName: "🚠",
+		AdminComponentName:             "🔬",
 	}
 )
 
