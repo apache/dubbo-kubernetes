@@ -63,6 +63,7 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 	})...)
 	dependencyWaitCh := dependenciesChannels()
 	for _, mfs := range manifests {
+		mfs := mfs
 		c := mfs.Components
 		m := mfs.Manifests
 		disabledComponents.Delete(c)
@@ -209,7 +210,9 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 		if err != nil {
 			return err
 		}
-		objs, err := dc.List(context.Background(), metav1.ListOptions{LabelSelector: selector.String()})
+		objs, err := dc.List(context.Background(), metav1.ListOptions{
+			LabelSelector: selector.String(),
+		})
 		if objs == nil {
 			continue
 		}
@@ -263,6 +266,7 @@ func getOwnerLabels(dop values.Map, c string) map[string]string {
 	if n := dop.GetPathString("metadata.namespace"); n != "" {
 		labels[manifest.OwningResourceNamespace] = n
 	}
+
 	if c != "" {
 		labels[manifest.DubboComponentLabel] = c
 	}
