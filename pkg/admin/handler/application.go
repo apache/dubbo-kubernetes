@@ -300,9 +300,7 @@ func isFlowWeight(conf *mesh_proto.OverrideConfig) bool {
 	if conf.Side != consts.SideProvider ||
 		conf.Parameters == nil ||
 		conf.Match == nil ||
-		conf.Match.Param == nil ||
-		len(conf.Match.Param) != 1 ||
-		conf.Match.Param[0].Value == nil {
+		conf.Match.Param == nil {
 		return false
 	} else if _, ok := conf.Parameters[`weight`]; !ok {
 		return false
@@ -416,12 +414,16 @@ func ApplicationConfigGrayGET(rt core_runtime.Runtime) gin.HandlerFunc {
 
 		res.Spec.RangeTags(func(tag *mesh_proto.Tag) (isStop bool) {
 			if isGrayTag(tag) {
+				scope := make([]model.ParamMatch, 0, len(tag.Match))
+				for _, paramMatch := range tag.Match {
+					scope = append(scope, model.ParamMatch{
+						Key:   &paramMatch.Key,
+						Value: model.StringMatchToModelStringMatch(paramMatch.Value),
+					})
+				}
 				resp.GraySets = append(resp.GraySets, model.GraySet{
 					EnvName: tag.Name,
-					Scope: model.ParamMatch{
-						Key:   &tag.Match[0].Key,
-						Value: model.StringMatchToModelStringMatch(tag.Match[0].Value),
-					},
+					Scope:   scope,
 				})
 			}
 			return false
@@ -436,7 +438,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		var (
 			ApplicationName = ""
 			body            = struct {
-				FlowWeightSets []model.GraySet `json:"graySets"`
+				GraySets []model.GraySet `json:"graySets"`
 			}{}
 		)
 		ApplicationName = c.Query("appName")
@@ -467,18 +469,22 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 		res.Spec.RangeTagsToRemove(func(tag *mesh_proto.Tag) (IsRemove bool) {
 			return isGrayTag(tag)
 		})
-		newList := make([]*mesh_proto.Tag, 0)
-		for _, set := range body.FlowWeightSets {
-			newList = append(newList, &mesh_proto.Tag{
-				Name: set.EnvName,
-				Match: []*mesh_proto.ParamMatch{{
-					Key:   *set.Scope.Key,
-					Value: model.ModelStringMatchToStringMatch(set.Scope.Value),
-				}},
+		newTags := make([]*mesh_proto.Tag, 0)
+		for _, set := range body.GraySets {
+			paramMatches := make([]*mesh_proto.ParamMatch, 0, len(set.Scope))
+			for _, match := range set.Scope {
+				paramMatches = append(paramMatches, &mesh_proto.ParamMatch{
+					Key:   *match.Key,
+					Value: model.ModelStringMatchToStringMatch(match.Value),
+				})
+			}
+			newTags = append(newTags, &mesh_proto.Tag{
+				Name:          set.EnvName,
+				Match:         paramMatches,
 				XGenerateByCp: true,
 			})
 		}
-		res.Spec.Tags = append(res.Spec.Tags, newList...)
+		res.Spec.Tags = append(res.Spec.Tags, newTags...)
 
 		// restore
 		if isNotExist {
@@ -499,7 +505,7 @@ func ApplicationConfigGrayPUT(rt core_runtime.Runtime) gin.HandlerFunc {
 }
 
 func isGrayTag(tag *mesh_proto.Tag) bool {
-	if tag.Name == "" || tag.Addresses != nil || len(tag.Addresses) != 0 || len(tag.Match) != 1 || tag.Match[0].Key == "" || tag.Match[0].Value == nil {
+	if tag.Name == "" || tag.Addresses != nil || len(tag.Addresses) != 0 {
 		return false
 	}
 	return true

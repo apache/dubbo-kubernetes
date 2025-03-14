@@ -409,6 +409,6 @@ type FlowWeightSet struct {
 }
 
 type GraySet struct {
-	EnvName string     `json:"name,omitempty"`
-	Scope   ParamMatch `json:"scope,omitempty"`
+	EnvName string       `json:"name,omitempty"`
+	Scope   []ParamMatch `json:"scope,omitempty"`
 }
