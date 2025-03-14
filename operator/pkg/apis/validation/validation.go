@@ -30,9 +30,9 @@ import (
 
 type Warnings = util.Errors
 
-func ParseAndValidateDubboOperator(dopm values.Map, client kube.CLIClient) (Warnings, util.Errors) {
+func ParseAndValidateDubboOperator(dopMap values.Map, _ kube.CLIClient) (Warnings, util.Errors) {
 	iop := &apis.DubboOperator{}
-	dec := json.NewDecoder(bytes.NewBufferString(dopm.JSON()))
+	dec := json.NewDecoder(bytes.NewBufferString(dopMap.JSON()))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(iop); err != nil {
 		return nil, util.NewErrs(fmt.Errorf("could not unmarshal: %v", err))
@@ -62,11 +62,11 @@ func validateFeatures(values *apis.Values, spec apis.DubboOperatorSpec) (Warning
 }
 
 func validateValues(raw *apis.DubboOperator) (Warnings, util.Errors) {
-	values := &apis.Values{}
-	if err := yaml.Unmarshal(raw.Spec.Values, values); err != nil {
+	vls := &apis.Values{}
+	if err := yaml.Unmarshal(raw.Spec.Values, vls); err != nil {
 		return nil, util.NewErrs(fmt.Errorf("could not unmarshal: %v", err))
 	}
-	warnings, errs := validateFeatures(values, raw.Spec)
+	warnings, errs := validateFeatures(vls, raw.Spec)
 
 	return warnings, errs
 }

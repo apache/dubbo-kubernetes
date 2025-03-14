@@ -44,7 +44,7 @@ func (a *manifestGenerateArgs) String() string {
 }
 
 func addManifestGenerateFlags(cmd *cobra.Command, args *manifestGenerateArgs) {
-	cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filename", "f", nil, ``)
+	cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filenames", "f", nil, ``)
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, ``)
 }
 

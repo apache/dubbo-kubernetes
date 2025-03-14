@@ -51,8 +51,8 @@ func Reader(namespace string, directory string, dop values.Map) ([]manifest.Mani
 		return nil, nil, fmt.Errorf("failed to get values from dop: %v", ok)
 	}
 	path := pathJoin("charts", directory)
-	pkgPath := dop.GetPathString("spec.packagePath")
-	f := manifests.BuiltinDir(pkgPath)
+	// pkgPath := dop.GetPathString("spec.packagePath")
+	f := manifests.BuiltinDir("")
 	chrt, err := loadChart(f, path)
 	output, warnings, err := readerChart(namespace, vals, chrt)
 	if err != nil {

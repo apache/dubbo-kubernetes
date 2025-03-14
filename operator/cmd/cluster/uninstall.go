@@ -40,7 +40,7 @@ type uninstallArgs struct {
 }
 
 func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
-	cmd.PersistentFlags().StringVarP(&args.filenames, "filename", "f", "", "The filename of the DubboOperator CR.")
+	cmd.PersistentFlags().StringVarP(&args.filenames, "filenames", "f", "", "The filename of the DubboOperator CR.")
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
 	cmd.PersistentFlags().BoolVar(&args.remove, "remove", false, `Remove all dubbo related source code.`)
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
