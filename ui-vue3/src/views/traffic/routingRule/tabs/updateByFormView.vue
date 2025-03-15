@@ -641,14 +641,7 @@
 </template>
 
 <script lang="ts" setup>
-import {
-  type ComponentInternalInstance,
-  getCurrentInstance,
-  onBeforeMount,
-  onMounted,
-  reactive,
-  ref
-} from 'vue'
+import { type ComponentInternalInstance, getCurrentInstance, onMounted, reactive, ref } from 'vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
@@ -656,7 +649,6 @@ import { PRIMARY_COLOR } from '@/base/constants'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { getConditionRuleDetailAPI, updateConditionRuleAPI } from '@/api/service/traffic'
-import { b } from 'vitest/dist/suite-ghspeorC'
 
 const {
   appContext: {
