@@ -50,9 +50,11 @@
           <template #title>
             {{ $t(currentOption.title) }}
             <div v-if="currentOption?.ext" style="float: right">
-              <a-button type="primary" @click="currentOption?.ext?.fun">{{
-                currentOption?.ext?.title
-              }}</a-button>
+              <a-button
+                type="primary"
+                @click="currentOption?.ext?.fun(currentOption?.form?.rules)"
+                >{{ currentOption?.ext?.title }}</a-button
+              >
             </div>
           </template>
           <a-spin :spinning="waitResponse">

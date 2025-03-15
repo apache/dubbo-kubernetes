@@ -18,7 +18,7 @@
   <div class="__container_resources_application_index">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
-        <a-button type="primary" @click="router.push('/traffic/addRoutingRule')"
+        <a-button type="primary" @click="router.push(`/traffic/addRoutingRule/addByFormView`)"
           >新增条件路由规则
         </a-button>
       </template>
@@ -32,7 +32,7 @@
           </span>
         </template>
         <template v-if="column.dataIndex === 'ruleGranularity'">
-          {{ text ? '服务' : '应用' }}
+          {{ record.scope === 'service' ? '服务' : '应用' }}
         </template>
         <template v-if="column.dataIndex === 'enable'">
           {{ text ? '启用' : '禁用' }}

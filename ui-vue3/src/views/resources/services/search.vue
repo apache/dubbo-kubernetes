@@ -17,10 +17,10 @@
 <template>
   <div class="__container_services_index">
     <search-table :search-domain="searchDomain">
-      <template #bodyCell="{ column, record, text }">
+      <template #bodyCell="{ column, record, text, index: tableRowIndex }">
         <template v-if="column.dataIndex === 'serviceName'">
           {{ record.versionGroup }}
-          <span class="service-link" @click="viewDistribution(text, text.versionGroupValue)">
+          <span class="service-link" @click="viewDistribution(text, tableRowIndex)">
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>
               {{ text }}
@@ -33,6 +33,7 @@
             <a-select-option
               v-for="(item, index) in text?.versionGroupArr"
               :value="item"
+              @click="selectedVersionAndGroup(tableRowIndex, index, item)"
               :key="index"
             >
               {{ item }}
@@ -46,7 +47,7 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { nextTick, provide, reactive, watch } from 'vue'
+import { nextTick, provide, reactive, ref, watch } from 'vue'
 import { searchService } from '@/api/service/service'
 import { SearchDomain } from '@/utils/SearchUtil'
 import SearchTable from '@/components/SearchTable.vue'
@@ -98,23 +99,7 @@ const columns = [
   }
 ]
 
-// Extract version and group.
-// Todo
-// const extractVersionAndGroup = (input:string) =>{
-//   console.log(input)
-//   return
-//   const regex = /version:\s*(\d+\.\d+),\s*group:\s*(\d+\.\d+)/;
-//   const match = input.match(regex);
-//   console.log(match)
-//   if (match) {
-//     return {
-//       version: match[1],
-//       group: match[2]
-//     };
-//   } else {
-//     return null;
-//   }
-// }
+const tempServiceList = ref([])
 
 const handleResult = (result: any) => {
   return result.map((service: any) => {
@@ -131,6 +116,12 @@ const handleResult = (result: any) => {
 
 function serviceInfo(params: any, table: any) {
   return searchService(params).then(async (res) => {
+    tempServiceList.value = res.data?.list
+    tempServiceList.value.forEach((service: any) => {
+      service.selectedIndex = -1
+    })
+
+    console.log(tempServiceList.value)
     return promQueryList(res, ['avgQPS', 'avgRT', 'requestTotal'], async (service: any) => {
       service.avgQPS = await queryMetrics(
         `sum (dubbo_provider_qps_total{interface='${service.serviceName}'}) by (interface)`
@@ -168,14 +159,23 @@ const searchDomain = reactive(
 
 searchDomain.onSearch(handleResult)
 
-const viewDetail = (serviceName: string) => {
-  router.push({ name: 'detail', params: { pathId: serviceName } })
+const selectedVersionAndGroup = (
+  tableRowIndex: number,
+  versionAndGroupIndex: number,
+  versionAndGroupText: string
+) => {
+  if (versionAndGroupText === '无') {
+    tempServiceList.value[tableRowIndex].selectedIndex = -1
+  } else {
+    tempServiceList.value[tableRowIndex].selectedIndex = versionAndGroupIndex
+  }
 }
 
-const viewDistribution = (serviceName: string, versionAndGroup: string) => {
-  // let group = extractVersionAndGroup(versionAndGroup)?.group || ''
-  // let version = extractVersionAndGroup(versionAndGroup)?.version || ''
-  router.push({ path: `/resources/services/distribution/${serviceName}` })
+const viewDistribution = (serviceName: string, tableRowIndex: number) => {
+  const selectedIndex = tempServiceList.value[tableRowIndex]?.selectedIndex
+  const group = tempServiceList.value[tableRowIndex].versionGroups[selectedIndex]?.group || ''
+  const version = tempServiceList.value[tableRowIndex].versionGroups[selectedIndex]?.version || ''
+  router.push({ name: 'distribution', params: { pathId: serviceName, group, version } })
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)

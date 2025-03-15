@@ -44,6 +44,13 @@
                           :options="ruleGranularityOptions"
                         ></a-select>
                       </a-form-item>
+                      <a-form-item
+                        v-if="baseInfo.ruleGranularity === 'service'"
+                        label="版本"
+                        required
+                      >
+                        <a-input v-model:value="baseInfo.configVersion" style="width: 300px" />
+                      </a-form-item>
                       <a-form-item label="容错保护">
                         <a-switch
                           v-model:checked="baseInfo.faultTolerantProtection"
@@ -61,7 +68,14 @@
                     </a-col>
                     <a-col :span="12">
                       <a-form-item label="作用对象" required>
-                        <a-input v-model:value="baseInfo.objectOfAction" style="width: 200px" />
+                        <a-input v-model:value="baseInfo.objectOfAction" style="width: 300px" />
+                      </a-form-item>
+                      <a-form-item
+                        v-if="baseInfo.ruleGranularity === 'service'"
+                        label="分组"
+                        required
+                      >
+                        <a-input v-model:value="baseInfo.group" style="width: 300px" />
                       </a-form-item>
                       <a-form-item label="立即启用">
                         <a-switch
@@ -69,6 +83,9 @@
                           checked-children="开"
                           un-checked-children="关"
                         />
+                      </a-form-item>
+                      <a-form-item label="优先级">
+                        <a-input-number v-model:value="baseInfo.priority" min="1" />
                       </a-form-item>
                     </a-col>
                   </a-row>
@@ -79,12 +96,19 @@
             <a-card title="路由列表" style="width: 100%" class="_detail">
               <a-card v-for="(routeItem, routeItemIndex) in routeList">
                 <template #title>
-                  <a-space align="center">
-                    <div>路由【{{ routeItemIndex + 1 }}】</div>
-                    <div>
-                      对于服务org.apahe.dubbo.samples.UserService，将满足请求方法等于login，且该方法的第一个参数等于dubbo的请求，导向带有标签version=v1的实例
-                    </div>
-                  </a-space>
+                  <a-flex justify="space-between">
+                    <a-space align="center">
+                      <div>路由【{{ routeItemIndex + 1 }}】</div>
+                      <div>
+                        {{ routeItemDes(routeItemIndex) }}
+                      </div>
+                    </a-space>
+                    <Icon
+                      @click="deleteRoute(routeItemIndex)"
+                      class="action-icon"
+                      icon="tdesign:delete"
+                    />
+                  </a-flex>
                 </template>
 
                 <a-form layout="horizontal">
@@ -131,7 +155,10 @@
                                 style="min-width: 120px"
                                 :options="conditionOptions"
                               />
-                              <a-input v-model="conditionItem.value" placeholder="请求来源ip" />
+                              <a-input
+                                v-model:value="conditionItem.value"
+                                placeholder="请求来源ip"
+                              />
 
                               <Icon
                                 @click="
@@ -162,7 +189,10 @@
                                 style="min-width: 120px"
                                 :options="conditionOptions"
                               />
-                              <a-input v-model="conditionItem.value" placeholder="请求来源应用名" />
+                              <a-input
+                                v-model:value="conditionItem.value"
+                                placeholder="请求来源应用名"
+                              />
 
                               <Icon
                                 @click="
@@ -193,7 +223,7 @@
                                 style="min-width: 120px"
                                 :options="conditionOptions"
                               />
-                              <a-input v-model="conditionItem.value" placeholder="方法值" />
+                              <a-input v-model:value="conditionItem.value" placeholder="方法值" />
 
                               <Icon
                                 @click="
@@ -220,48 +250,58 @@
                               >
                                 {{ conditionItem?.type }}
                               </a-tag>
-                              <a-table
-                                :pagination="false"
-                                :columns="argumentsColumns"
-                                :data-source="routeItem.requestMatch[conditionItemIndex].list"
-                              >
-                                <template #bodyCell="{ column, record, text }">
-                                  <template v-if="column.key === 'index'">
-                                    <a-input v-model:value="record.index" placeholder="index" />
-                                  </template>
-                                  <template v-else-if="column.key === 'condition'">
-                                    <a-select
-                                      v-model:value="record.condition"
-                                      :options="conditionOptions"
-                                    />
-                                  </template>
-                                  <template v-else-if="column.key === 'value'">
-                                    <a-input v-model:value="record.value" placeholder="value" />
-                                  </template>
-                                  <template v-else-if="column.key === 'operation'">
-                                    <a-space align="center">
-                                      <Icon
-                                        @click="
-                                          deleteArgumentsItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            addArgumentsItemIndex
-                                          )
-                                        "
-                                        icon="tdesign:remove"
-                                        class="action-icon"
+                              <a-space direction="vertical">
+                                <a-button
+                                  type="primary"
+                                  @click="addArgumentsItem(routeItemIndex, conditionItemIndex)"
+                                >
+                                  添加argument
+                                </a-button>
+                                <a-table
+                                  :pagination="false"
+                                  :columns="argumentsColumns"
+                                  :data-source="routeItem.requestMatch[conditionItemIndex].list"
+                                >
+                                  <template
+                                    #bodyCell="{ column, record, text, index: argumentIndex }"
+                                  >
+                                    <template v-if="column.key === 'index'">
+                                      <a-input v-model:value="record.index" placeholder="index" />
+                                    </template>
+                                    <template v-else-if="column.key === 'condition'">
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
                                       />
-                                      <Icon
-                                        class="action-icon"
-                                        @click="
-                                          addArgumentsItem(routeItemIndex, conditionItemIndex)
-                                        "
-                                        icon="tdesign:add"
-                                      />
-                                    </a-space>
+                                    </template>
+                                    <template v-else-if="column.key === 'value'">
+                                      <a-input v-model:value="record.value" placeholder="value" />
+                                    </template>
+                                    <template v-else-if="column.key === 'operation'">
+                                      <a-space align="center">
+                                        <Icon
+                                          @click="
+                                            deleteArgumentsItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              argumentIndex
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
+                                        <!--                                      <Icon-->
+                                        <!--                                        class="action-icon"-->
+                                        <!--                                        @click="-->
+                                        <!--                                          addArgumentsItem(routeItemIndex, conditionItemIndex)-->
+                                        <!--                                        "-->
+                                        <!--                                        icon="tdesign:add"-->
+                                        <!--                                      />-->
+                                      </a-space>
+                                    </template>
                                   </template>
-                                </template>
-                              </a-table>
+                                </a-table>
+                              </a-space>
                             </a-space>
                             <!--                      attachments-->
                             <a-space
@@ -280,48 +320,58 @@
                               >
                                 {{ conditionItem?.type }}
                               </a-tag>
-                              <a-table
-                                :pagination="false"
-                                :columns="attachmentsColumns"
-                                :data-source="routeItem.requestMatch[conditionItemIndex].list"
-                              >
-                                <template #bodyCell="{ column, record, text }">
-                                  <template v-if="column.key === 'myKey'">
-                                    <a-input v-model:value="record.myKey" placeholder="key" />
-                                  </template>
-                                  <template v-else-if="column.key === 'condition'">
-                                    <a-select
-                                      v-model:value="record.condition"
-                                      :options="conditionOptions"
-                                    />
-                                  </template>
-                                  <template v-else-if="column.key === 'value'">
-                                    <a-input v-model:value="record.value" placeholder="value" />
-                                  </template>
-                                  <template v-else-if="column.key === 'operation'">
-                                    <a-space align="center">
-                                      <Icon
-                                        @click="
-                                          deleteAttachmentsItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            record.index
-                                          )
-                                        "
-                                        icon="tdesign:remove"
-                                        class="action-icon"
+                              <a-space direction="vertical">
+                                <a-button
+                                  type="primary"
+                                  @click="addAttachmentsItem(routeItemIndex, conditionItemIndex)"
+                                >
+                                  添加attachment
+                                </a-button>
+                                <a-table
+                                  :pagination="false"
+                                  :columns="attachmentsColumns"
+                                  :data-source="routeItem.requestMatch[conditionItemIndex].list"
+                                >
+                                  <template
+                                    #bodyCell="{ column, record, text, index: attachmentsIndex }"
+                                  >
+                                    <template v-if="column.key === 'myKey'">
+                                      <a-input v-model:value="record.myKey" placeholder="key" />
+                                    </template>
+                                    <template v-else-if="column.key === 'condition'">
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
                                       />
-                                      <Icon
-                                        class="action-icon"
-                                        @click="
-                                          addAttachmentsItem(routeItemIndex, conditionItemIndex)
-                                        "
-                                        icon="tdesign:add"
-                                      />
-                                    </a-space>
+                                    </template>
+                                    <template v-else-if="column.key === 'value'">
+                                      <a-input v-model:value="record.value" placeholder="value" />
+                                    </template>
+                                    <template v-else-if="column.key === 'operation'">
+                                      <a-space align="center">
+                                        <Icon
+                                          @click="
+                                            deleteAttachmentsItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              attachmentsIndex
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
+                                        <!--                                        <Icon-->
+                                        <!--                                          class="action-icon"-->
+                                        <!--                                          @click="-->
+                                        <!--                                          addAttachmentsItem(routeItemIndex, conditionItemIndex)-->
+                                        <!--                                        "-->
+                                        <!--                                          icon="tdesign:add"-->
+                                        <!--                                        />-->
+                                      </a-space>
+                                    </template>
                                   </template>
-                                </template>
-                              </a-table>
+                                </a-table>
+                              </a-space>
                             </a-space>
                             <!--                      other-->
                             <a-space
@@ -340,46 +390,54 @@
                               >
                                 {{ conditionItem?.type == 'other' ? '其他' : conditionItem?.type }}
                               </a-tag>
-                              <a-table
-                                :pagination="false"
-                                :columns="otherColumns"
-                                :data-source="routeItem.requestMatch[conditionItemIndex].list"
-                              >
-                                <template #bodyCell="{ column, record, text }">
-                                  <template v-if="column.key === 'myKey'">
-                                    <a-input v-model:value="record.myKey" placeholder="key" />
-                                  </template>
-                                  <template v-else-if="column.key === 'condition'">
-                                    <a-select
-                                      v-model:value="record.condition"
-                                      :options="conditionOptions"
-                                    />
-                                  </template>
-                                  <template v-else-if="column.key === 'value'">
-                                    <a-input v-model:value="record.value" placeholder="value" />
-                                  </template>
-                                  <template v-else-if="column.key === 'operation'">
-                                    <a-space align="center">
-                                      <Icon
-                                        @click="
-                                          deleteOtherItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            record.index
-                                          )
-                                        "
-                                        icon="tdesign:remove"
-                                        class="action-icon"
+                              <a-space direction="vertical">
+                                <a-button
+                                  type="primary"
+                                  @click="addOtherItem(routeItemIndex, conditionItemIndex)"
+                                >
+                                  添加other
+                                </a-button>
+                                <a-table
+                                  :pagination="false"
+                                  :columns="otherColumns"
+                                  :data-source="routeItem.requestMatch[conditionItemIndex].list"
+                                >
+                                  <template #bodyCell="{ column, record, text }">
+                                    <template v-if="column.key === 'myKey'">
+                                      <a-input v-model:value="record.myKey" placeholder="key" />
+                                    </template>
+                                    <template v-else-if="column.key === 'condition'">
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
                                       />
-                                      <Icon
-                                        @click="addOtherItem(routeItemIndex, conditionItemIndex)"
-                                        icon="tdesign:add"
-                                        class="action-icon"
-                                      />
-                                    </a-space>
+                                    </template>
+                                    <template v-else-if="column.key === 'value'">
+                                      <a-input v-model:value="record.value" placeholder="value" />
+                                    </template>
+                                    <template v-else-if="column.key === 'operation'">
+                                      <a-space align="center">
+                                        <Icon
+                                          @click="
+                                            deleteOtherItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              record.index
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
+                                        <!--                                      <Icon-->
+                                        <!--                                        @click="addOtherItem(routeItemIndex, conditionItemIndex)"-->
+                                        <!--                                        icon="tdesign:add"-->
+                                        <!--                                        class="action-icon"-->
+                                        <!--                                      />-->
+                                      </a-space>
+                                    </template>
                                   </template>
-                                </template>
-                              </a-table>
+                                </a-table>
+                              </a-space>
                             </a-space>
                           </template>
                         </a-space>
@@ -434,7 +492,10 @@
                                 style="min-width: 120px"
                                 :options="conditionOptions"
                               />
-                              <a-input v-model="conditionItem.value" placeholder="请求来源ip" />
+                              <a-input
+                                v-model:value="conditionItem.value"
+                                placeholder="请求来源ip"
+                              />
 
                               <Icon
                                 @click="
@@ -465,51 +526,61 @@
                               >
                                 {{ conditionItem?.type == 'other' ? '其他' : conditionItem?.type }}
                               </a-tag>
-                              <a-table
-                                :pagination="false"
-                                :columns="otherColumns"
-                                :data-source="routeItem.routeDistribute[conditionItemIndex].list"
-                              >
-                                <template #bodyCell="{ column, record, text }">
-                                  <template v-if="column.key === 'myKey'">
-                                    <a-input v-model:value="record.myKey" placeholder="key" />
-                                  </template>
-                                  <template v-else-if="column.key === 'condition'">
-                                    <a-select
-                                      v-model:value="record.condition"
-                                      :options="conditionOptions"
-                                    />
-                                  </template>
-                                  <template v-else-if="column.key === 'value'">
-                                    <a-input v-model:value="record.value" placeholder="value" />
-                                  </template>
-                                  <template v-else-if="column.key === 'operation'">
-                                    <a-space align="center">
-                                      <Icon
-                                        @click="
-                                          deleteRouteDistributeOtherItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            record.index
-                                          )
-                                        "
-                                        icon="tdesign:remove"
-                                        class="action-icon"
+                              <a-space direction="vertical">
+                                <a-button
+                                  type="primary"
+                                  @click="
+                                    addRouteDistributeOtherItem(routeItemIndex, conditionItemIndex)
+                                  "
+                                >
+                                  添加其他
+                                </a-button>
+                                <a-table
+                                  :pagination="false"
+                                  :columns="otherColumns"
+                                  :data-source="routeItem.routeDistribute[conditionItemIndex].list"
+                                >
+                                  <template #bodyCell="{ column, record, text, index: otherIndex }">
+                                    <template v-if="column.key === 'myKey'">
+                                      <a-input v-model:value="record.myKey" placeholder="key" />
+                                    </template>
+                                    <template v-else-if="column.key === 'condition'">
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
                                       />
-                                      <Icon
-                                        @click="
-                                          addRouteDistributeOtherItem(
-                                            routeItemIndex,
-                                            conditionItemIndex
-                                          )
-                                        "
-                                        icon="tdesign:add"
-                                        class="action-icon"
-                                      />
-                                    </a-space>
+                                    </template>
+                                    <template v-else-if="column.key === 'value'">
+                                      <a-input v-model:value="record.value" placeholder="value" />
+                                    </template>
+                                    <template v-else-if="column.key === 'operation'">
+                                      <a-space align="center">
+                                        <Icon
+                                          @click="
+                                            deleteRouteDistributeOtherItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              otherIndex
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
+                                        <!--                                     <Icon-->
+                                        <!--                                       @click="-->
+                                        <!--                                          addRouteDistributeOtherItem(-->
+                                        <!--                                            routeItemIndex,-->
+                                        <!--                                            conditionItemIndex-->
+                                        <!--                                          )-->
+                                        <!--                                        "-->
+                                        <!--                                       icon="tdesign:add"-->
+                                        <!--                                       class="action-icon"-->
+                                        <!--                                     />-->
+                                      </a-space>
+                                    </template>
                                   </template>
-                                </template>
-                              </a-table>
+                                </a-table>
+                              </a-space>
                             </a-space>
                           </template>
                         </a-space>
@@ -519,7 +590,7 @@
                 </a-form>
               </a-card>
             </a-card>
-            <a-button @click="addRoute" type="primary"> 增加路由 </a-button>
+            <a-button @click="addRoute" type="primary"> 增加路由</a-button>
           </a-space>
         </a-card>
       </a-col>
@@ -551,14 +622,12 @@
         </a-card>
       </a-col>
     </a-flex>
-    <a-affix :offset-bottom="10">
-      <div class="bottom-action-footer">
-        <a-space align="center" size="large">
-          <a-button type="primary"> 确认 </a-button>
-          <a-button> 取消 </a-button>
-        </a-space>
-      </div>
-    </a-affix>
+    <a-card class="footer">
+      <a-flex>
+        <a-button type="primary" @click="addRoutingRule">确认</a-button>
+        <a-button style="margin-left: 30px" @click="console.log(routeList)"> 取消</a-button>
+      </a-flex>
+    </a-card>
   </div>
 </template>
 
@@ -568,15 +637,16 @@ import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
 import { PRIMARY_COLOR } from '@/base/constants'
-import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { addConditionRuleAPI } from '@/api/service/traffic'
 
 const {
   appContext: {
     config: { globalProperties }
   }
 } = <ComponentInternalInstance>getCurrentInstance()
-const route = useRoute()
+const router = useRouter()
 
 const isDrawerOpened = ref(false)
 
@@ -593,11 +663,14 @@ function copyIt(v: string) {
 
 // base info
 const baseInfo = reactive({
-  ruleGranularity: 'application',
+  configVersion: 'v3.0',
+  ruleGranularity: '',
   objectOfAction: '',
-  enable: true,
-  faultTolerantProtection: true,
-  runtime: true
+  enable: false,
+  faultTolerantProtection: false,
+  runtime: false,
+  priority: null,
+  group: ''
 })
 
 const matchConditionTypeOptions = ref([
@@ -661,6 +734,11 @@ const ruleGranularityOptions = ref([
   }
 ])
 
+enum ruleGranularityEnum {
+  application = '应用',
+  service = '服务'
+}
+
 // route list
 const routeList = ref([
   {
@@ -670,16 +748,16 @@ const routeList = ref([
     routeDistribute: [
       {
         type: 'host',
-        condition: '=',
-        value: '127.0.0.1'
+        condition: '',
+        value: ''
       },
       {
         type: 'other',
         list: [
           {
-            myKey: 'key',
-            condition: '=',
-            value: 'value'
+            myKey: '',
+            condition: '',
+            value: ''
           }
         ]
       }
@@ -712,34 +790,39 @@ const addRoute = () => {
   })
 }
 
+const deleteRoute = (index: number) => {
+  routeList.value.splice(index, 1)
+}
+
 const deleteRequestMatch = (index: number) => {
   routeList.value[index].requestMatch = []
+  routeList.value[index].selectedMatchConditionTypes = []
 }
 
 const addRequestMatch = (index: number) => {
   routeList.value[index].requestMatch = [
     {
       type: 'host',
-      condition: '=',
-      value: '127.0.0.1'
+      condition: '',
+      value: ''
     },
     {
       type: 'application',
-      condition: '=',
-      value: 'appName'
+      condition: '',
+      value: ''
     },
     {
       type: 'method',
-      condition: '=',
-      value: 'methodName'
+      condition: '',
+      value: ''
     },
     {
       type: 'arguments',
       list: [
         {
           index: 0,
-          condition: '=',
-          value: 'arg0'
+          condition: '',
+          value: ''
         }
       ]
     },
@@ -748,8 +831,8 @@ const addRequestMatch = (index: number) => {
       list: [
         {
           myKey: 'key',
-          condition: '=',
-          value: 'value'
+          condition: '',
+          value: ''
         }
       ]
     },
@@ -758,8 +841,8 @@ const addRequestMatch = (index: number) => {
       list: [
         {
           myKey: 'key',
-          condition: '=',
-          value: 'value'
+          condition: '',
+          value: ''
         }
       ]
     }
@@ -767,7 +850,7 @@ const addRequestMatch = (index: number) => {
 }
 
 const deleteMatchConditionTypeItem = (type: string, index: number) => {
-  console.log(type, index)
+  // console.log(type, index)
   routeList.value[index].selectedMatchConditionTypes = routeList.value[
     index
   ].selectedMatchConditionTypes.filter((item) => item !== type)
@@ -821,7 +904,6 @@ const deleteArgumentsItem = (
     routeList.value[routeItemIndex].selectedMatchConditionTypes = routeList.value[
       routeItemIndex
     ].selectedMatchConditionTypes.filter((item) => item !== 'arguments')
-    return
   }
 
   routeList.value[routeItemIndex].requestMatch[conditionItemIndex].list.splice(argumentsIndex, 1)
@@ -868,7 +950,6 @@ const deleteAttachmentsItem = (
     routeList.value[routeItemIndex].selectedMatchConditionTypes = routeList.value[
       routeItemIndex
     ].selectedMatchConditionTypes.filter((item) => item !== 'attachments')
-    return
   }
   routeList.value[routeItemIndex].requestMatch[conditionItemIndex].list.splice(
     attachmentsItemIndex,
@@ -944,10 +1025,306 @@ const deleteRouteDistributeOtherItem = (
 
   routeList.value[routeItemIndex].routeDistribute[conditionItemIndex].list.splice(otherItemIndex, 1)
 }
+
+const routeItemDes = (routeIndex: number) => {
+  let type: string = ruleGranularityEnum[baseInfo.ruleGranularity] + baseInfo.objectOfAction
+  let preCondition = ''
+  let lastCondition = ''
+
+  routeList.value[routeIndex].requestMatch.forEach(
+    (requestMatchItem: any, requestMatchItemIndex: number) => {
+      if (routeList.value[routeIndex].selectedMatchConditionTypes.includes(requestMatchItem.type)) {
+        if (requestMatchItem.type === 'arguments') {
+          requestMatchItem.list.forEach((item: any, itemIndex: number) => {
+            const { index, condition, value } = item
+            let srt = `${index}${condition}${value}`
+            preCondition += srt + ','
+          })
+
+          return
+        } else {
+          const { type, condition, value } = requestMatchItem
+          let str = type + condition + value
+          preCondition += str + ' , '
+        }
+      }
+    }
+  )
+
+  return `对于${type},将满足=>${preCondition}的请求，转发到=>${lastCondition}的实例`
+}
+
+function parseConditionMatchStringToArray(matchStr: string, routeItemIndex: number) {
+  const tempArray: any = []
+  const parts = matchStr.split(' & ')
+
+  // Initialize default structure
+  const defaultStructure = [
+    { type: 'host', condition: '', value: '' },
+    { type: 'application', condition: '', value: '' },
+    { type: 'method', condition: '', value: '' },
+    { type: 'arguments', list: [] },
+    { type: 'attachments', list: [] },
+    { type: 'other', list: [] }
+  ]
+
+  // Copy default structure to result array
+  defaultStructure.forEach((item) => tempArray.push({ ...item }))
+
+  parts.forEach((part) => {
+    part = part.trim()
+    // Handle host
+    if (part.startsWith('host')) {
+      routeList.value[routeItemIndex].selectedMatchConditionTypes.push('host')
+      const match = part.match(/^host(!=|=)(.+)/)
+      if (match) {
+        const condition = match[1]
+        const value = match[2].trim()
+        const hostObj = tempArray.find((item) => item.type === 'host')
+        hostObj.condition = condition
+        hostObj.value = value
+      }
+    }
+    // Handle application
+    else if (part.startsWith('application')) {
+      routeList.value[routeItemIndex].selectedMatchConditionTypes.push('application')
+      const match = part.match(/^application(!=|=)(.+)/)
+      if (match) {
+        const condition = match[1]
+        const value = match[2].trim()
+        const appObj = tempArray.find((item) => item.type === 'application')
+        appObj.condition = condition
+        appObj.value = value
+      }
+    }
+    // Handle method
+    else if (part.startsWith('method')) {
+      routeList.value[routeItemIndex].selectedMatchConditionTypes.push('method')
+      const match = part.match(/^method(!=|=)(.+)/)
+      if (match) {
+        const condition = match[1]
+        const value = match[2].trim()
+        const methodObj = tempArray.find((item) => item.type === 'method')
+        methodObj.condition = condition
+        methodObj.value = value
+      }
+    }
+    // Handle arguments
+    else if (part.startsWith('arguments')) {
+      !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('arguments') &&
+        routeList.value[routeItemIndex].selectedMatchConditionTypes.push('arguments')
+      const match = part.match(/^arguments\[(\d+)\](!=|=)(.+)/)
+      if (match) {
+        const index = parseInt(match[1], 10)
+        const condition = match[2]
+        const value = match[3].trim()
+        const argObj = tempArray.find((item) => item.type === 'arguments')
+        argObj.list.push({ index, condition, value })
+      }
+    }
+    // Handle attachments
+    else if (part.startsWith('attachments')) {
+      !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('attachments') &&
+        routeList.value[routeItemIndex].selectedMatchConditionTypes.push('attachments')
+      const match = part.match(/^attachments\[(.+)\](!=|=)(.+)/)
+      if (match) {
+        const myKey = match[1].trim()
+        const condition = match[2]
+        const value = match[3].trim()
+        const attachObj = tempArray.find((item) => item.type === 'attachments')
+        attachObj.list.push({ myKey, condition, value })
+      }
+    }
+    // Handle other
+    else if (part.startsWith('other')) {
+      !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('other') &&
+        routeList.value[routeItemIndex].selectedMatchConditionTypes.push('other')
+      const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+      if (match) {
+        const myKey = match[1].trim()
+        const condition = match[2]
+        const value = match[3].trim()
+        const otherObj = tempArray.find((item) => item.type === 'other')
+        otherObj.list.push({ myKey, condition, value })
+      }
+    }
+  })
+
+  return tempArray
+}
+
+function parseConditionToStringToArray(toStr: string, routeItemIndex: number) {
+  const tempArray: any = []
+  const parts = toStr.split(' & ')
+
+  // Initialize default structure
+  const defaultStructure = [
+    { type: 'host', condition: '', value: '' },
+    { type: 'other', list: [] }
+  ]
+
+  // Copy default structure to result array
+  defaultStructure.forEach((item) => tempArray.push({ ...item }))
+
+  parts.forEach((part) => {
+    part = part.trim()
+    // Handle host
+    if (part.startsWith('host')) {
+      routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('host')
+      const match = part.match(/^host(!=|=)(.+)/)
+      if (match) {
+        const condition = match[1]
+        const value = match[2].trim()
+        const hostObj = tempArray.find((item) => item.type === 'host')
+        hostObj.condition = condition
+        hostObj.value = value
+      }
+    }
+
+    // Handle other
+    else if (part.startsWith('other')) {
+      !routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.includes('other') &&
+        routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('other')
+      const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+      if (match) {
+        const myKey = match[1].trim()
+        const condition = match[2]
+        const value = match[3].trim()
+        const otherObj = tempArray.find((item) => item.type === 'other')
+        otherObj.list.push({ myKey, condition, value })
+      }
+    }
+  })
+  return tempArray
+}
+
+// Test case
+// const str = 'host=example.com & application=myApp & method=getItem & arguments[1]!=dubbo & arguments[2]=dubbo2 & attachments[myKey]=myValue & other[myKey2]=myValue2';
+// const test = parseConditionsStringToArray(str, 0);
+// routeList.value[0].requestMatch = test
+// console.log('test', test)
+
+function mergeConditions() {
+  let conditions: string[] = []
+  let matchStr = ''
+  let toStr = ''
+  routeList.value.forEach((routeItem, routeItemIndex) => {
+    // mergeMatch
+    routeItem.selectedMatchConditionTypes.forEach((type, typeIndex) => {
+      routeItem.requestMatch.forEach((matchItem, matchItemIndex) => {
+        if (type == matchItem?.type) {
+          // matchStr.length > 0 && (matchStr += ' & ')
+          switch (matchItem?.type) {
+            case 'arguments':
+              {
+                matchItem.list.forEach((item, index) => {
+                  matchStr.length > 0 && (matchStr += ' & ')
+                  matchStr += `${type}[${item.index}]${item.condition}${item.value}`
+                })
+              }
+              break
+            case 'attachments':
+              {
+                matchItem.list.forEach((item, index) => {
+                  matchStr.length > 0 && (matchStr += ' & ')
+                  matchStr += `${type}[${item.myKey}]${item.condition}${item.value}`
+                })
+              }
+              break
+            case 'other':
+              {
+                matchItem.list.forEach((item, index) => {
+                  matchStr.length > 0 && (matchStr += ' & ')
+                  matchStr += `${type}[${item.myKey}]${item.condition}${item.value}`
+                })
+              }
+              break
+            default:
+              matchStr.length > 0 && (matchStr += ' & ')
+              matchStr += `${matchItem.type}${matchItem.condition}${matchItem.value}`
+          }
+        }
+      })
+    })
+
+    //   mergeDistribute
+    routeItem.selectedRouteDistributeMatchTypes.forEach((type, typeIndex) => {
+      routeItem.routeDistribute.forEach((distributeItem, distributeItemIndex) => {
+        if (type == distributeItem?.type) {
+          // toStr.length > 0 && (toStr += ' & ')
+          switch (distributeItem?.type) {
+            case 'other':
+              {
+                distributeItem?.list.forEach((item, index) => {
+                  toStr.length > 0 && (toStr += ' & ')
+                  toStr += `${type}[${item.myKey}]${item.condition}${item.value}`
+                })
+              }
+              break
+            default:
+              toStr.length > 0 && (toStr += ' & ')
+              toStr += `${distributeItem.type}${distributeItem.condition}${distributeItem.value}`
+          }
+        }
+      })
+    })
+    let condition = ''
+    if (matchStr.length > 0 && toStr.length > 0) {
+      condition = `${matchStr} => ${toStr}`
+    } else if (matchStr.length > 0 && toStr.length == 0) {
+      condition = `${matchStr}`
+    }
+    // merge match and tostr
+    conditions.push(condition)
+  })
+  // console.log('matchStr', matchStr)
+  // console.log('toStr', toStr)
+  // console.log('conditions', conditions)
+  return conditions
+}
+
+const addRoutingRule = async () => {
+  const {
+    configVersion,
+    ruleGranularity,
+    objectOfAction,
+    enable,
+    faultTolerantProtection,
+    runtime,
+    group
+  } = baseInfo
+  const data = {
+    configVersion,
+    scope: ruleGranularity,
+    key: objectOfAction,
+    enabled: enable,
+    force: faultTolerantProtection,
+    runtime,
+    conditions: mergeConditions()
+  }
+
+  let ruleName = ''
+  if (ruleGranularity == 'application') {
+    ruleName = `${objectOfAction}.condition-router`
+  } else {
+    ruleName = `${objectOfAction}:${configVersion}:${group}.condition-router`
+  }
+  const res = await addConditionRuleAPI(<string>ruleName, data)
+  if (res.code === 200) {
+    router.push('/traffic/routingRule')
+  }
+}
 </script>
 
 <style lang="less" scoped>
 .__container_routingRule_detail {
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
   .action-icon {
     font-size: 17px;
     margin-left: 10px;

@@ -21,7 +21,7 @@
         <template v-if="column.dataIndex === 'ip'">
           <span
             class="app-link"
-            @click="router.push(`/resources/instances/detail/${record[column.key]}/${record.name}`)"
+            @click="router.push(`/resources/instances/detail/${record.name}/${record[column.key]}`)"
           >
             <b>
               <Icon style="margin-bottom: -2px" icon="material-symbols:attach-file-rounded"></Icon>

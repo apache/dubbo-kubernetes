@@ -41,6 +41,24 @@ export const deleteConditionRuleAPI = (ruleName: string): Promise<any> => {
   })
 }
 
+// update condition routing.
+export const updateConditionRuleAPI = (ruleName: string, data: any): Promise<any> => {
+  return request({
+    url: `/condition-rule/${ruleName}`,
+    method: 'put',
+    data
+  })
+}
+
+// add condition routing.
+export const addConditionRuleAPI = (ruleName: string, data: any): Promise<any> => {
+  return request({
+    url: `/condition-rule/${ruleName}`,
+    method: 'post',
+    data
+  })
+}
+
 export const searchTagRule = (params: any): Promise<any> => {
   return request({
     url: '/tag-rule/search',
@@ -62,6 +80,22 @@ export const getTagRuleDetailAPI = (ruleName: string): Promise<any> => {
   return request({
     url: `/tag-rule/${ruleName}`,
     method: 'get'
+  })
+}
+
+export const updateTagRuleAPI = (ruleName: string, data: any): Promise<any> => {
+  return request({
+    url: `/tag-rule/${ruleName}`,
+    method: 'put',
+    data
+  })
+}
+
+export const addTagRuleAPI = (ruleName: string, data: any): Promise<any> => {
+  return request({
+    url: `/tag-rule/${ruleName}`,
+    method: 'post',
+    data
   })
 }
 

@@ -18,7 +18,9 @@
   <div class="__container_resources_application_index">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
-        <a-button type="primary">新增标签路由规则</a-button>
+        <a-button type="primary" @click="router.push('/traffic/addTagRule/addByFormView')">
+          新增标签路由规则
+        </a-button>
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
@@ -39,13 +41,20 @@
           {{ text ? $t('flowControlDomain.enabled') : $t('flowControlDomain.disabled') }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
-          <a-button type="link">查看</a-button>
-          <a-button type="link">修改</a-button>
+          <a-button type="link" @click="router.push(`formview/${record.ruleName}`)">
+            查看
+          </a-button>
+          <a-button
+            @click="router.push(`/traffic/updateTagRule/updateByFormView/${record.ruleName}`)"
+            type="link"
+          >
+            修改
+          </a-button>
           <a-popconfirm
             title="确认删除该标签路由规则？"
             ok-text="Yes"
             cancel-text="No"
-            @confirm="confirm"
+            @confirm="confirm(record.ruleName)"
           >
             <a-button type="link"> 删除 </a-button>
           </a-popconfirm>
@@ -127,8 +136,8 @@ onMounted(() => {
   searchDomain.onSearch()
 })
 
-const confirm = () => {
-  deleteTagRule(route.params.ruleName as string)
+const confirm = (ruleName: string) => {
+  deleteTagRule(ruleName)
 }
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)

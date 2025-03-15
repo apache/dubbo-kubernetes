@@ -35,6 +35,10 @@ const words: I18nType = {
     YAMLView: 'YAML视图',
     formView: '表单视图'
   },
+  updateRoutingRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
   addRoutingRuleDomain: {
     YAMLView: 'YAML视图',
     formView: '表单视图'
@@ -43,6 +47,15 @@ const words: I18nType = {
     YAMLView: 'YAML视图',
     formView: '表单视图'
   },
+  updateTagRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+  addTagRuleDomain: {
+    YAMLView: 'YAML视图',
+    formView: '表单视图'
+  },
+
   flowControlDomain: {
     notSet: '未设置',
     versionRecords: '版本记录',

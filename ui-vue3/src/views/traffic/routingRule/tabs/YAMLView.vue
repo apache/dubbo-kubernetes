@@ -28,7 +28,7 @@
 
           <div class="editorBox">
             <MonacoEditor
-              :modelValue="YAMLValue"
+              v-model:modelValue="YAMLValue"
               theme="vs-dark"
               :height="500"
               language="yaml"
@@ -58,9 +58,10 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { getConditionRuleDetailAPI } from '@/api/service/traffic'
 import { useRoute } from 'vue-router'
+import yaml from 'js-yaml'
 
 const route = useRoute()
 const isReadonly = ref(true)
@@ -77,7 +78,9 @@ const conditionRuleDetail = reactive({
   enabled: true,
   runtime: true,
   force: false,
-  conditions: ['=>host!=192.168.0.68']
+  conditions: ['=>host!=192.168.0.68'],
+  version: '1.0',
+  group: 'default'
 })
 
 const YAMLValue = ref(
@@ -98,7 +101,14 @@ async function getRoutingRuleDetail() {
   let res = await getConditionRuleDetailAPI(<string>route.params?.ruleName)
   console.log(res)
   if (res?.code === 200) {
-    Object.assign(conditionRuleDetail, res?.data || {})
+    const conditionName = route.params?.ruleName
+    if (conditionName && res.data.scope === 'service') {
+      const arr = conditionName.split(':')
+      res.data.configVersion = arr[1]
+      const tempArr = arr[2].split('.')
+      res.data.group = tempArr[0]
+    }
+    YAMLValue.value = yaml.dump(res?.data)
   }
 }
 

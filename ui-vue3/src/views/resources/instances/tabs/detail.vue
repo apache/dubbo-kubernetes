@@ -282,8 +282,10 @@ let PRIMARY_COLOR_20 = PRIMARY_COLOR_T('20')
 const instanceDetail = <any>reactive({})
 
 onMounted(async () => {
+  const { appName, pathId } = route.params
   let params = {
-    instanceName: route.params.pathId
+    instanceName: appName,
+    instanceIP: pathId
   }
   apiData.detail = await getInstanceDetail(params)
   Object.assign(instanceDetail, apiData.detail.data)

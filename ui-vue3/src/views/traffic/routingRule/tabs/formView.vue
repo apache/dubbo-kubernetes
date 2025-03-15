@@ -21,7 +21,7 @@
       <a-col :span="isDrawerOpened ? 24 - sliderSpan : 24" class="left">
         <a-row>
           <a-flex justify="space-between" style="width: 100%">
-            <a-typography-title :level="3"> 基础信息 </a-typography-title>
+            <a-typography-title :level="3"> 基础信息</a-typography-title>
             <a-button type="text" style="color: #0a90d5" @click="isDrawerOpened = !isDrawerOpened">
               {{ $t('flowControlDomain.versionRecords') }}
               <DoubleLeftOutlined v-if="!isDrawerOpened" />
@@ -52,6 +52,34 @@
                 <a-typography-paragraph>
                   {{ conditionRuleDetail.scope }}
                 </a-typography-paragraph>
+              </a-descriptions-item>
+              <a-descriptions-item
+                label="版本"
+                :labelStyle="{ fontWeight: 'bold' }"
+                v-if="conditionRuleDetail.scope == 'service'"
+              >
+                {{ conditionRuleDetail.scope }}
+                <p
+                  class="description-item-content with-card"
+                  @click="copyIt(conditionRuleDetail.version)"
+                >
+                  {{ conditionRuleDetail.version }}
+                  <CopyOutlined />
+                </p>
+              </a-descriptions-item>
+
+              <a-descriptions-item
+                label="分组"
+                :labelStyle="{ fontWeight: 'bold' }"
+                v-if="conditionRuleDetail.scope == 'service'"
+              >
+                <p
+                  class="description-item-content with-card"
+                  @click="copyIt(conditionRuleDetail.group)"
+                >
+                  {{ conditionRuleDetail.group }}
+                  <CopyOutlined />
+                </p>
               </a-descriptions-item>
 
               <!-- actionObject -->
@@ -213,7 +241,9 @@ const conditionRuleDetail = reactive({
   enabled: true,
   runtime: true,
   force: false,
-  conditions: ['=>host!=192.168.0.68']
+  conditions: ['=>host!=192.168.0.68'],
+  group: 'default',
+  version: '1.0.0'
 })
 
 const actionObj = computed(() => {
@@ -233,18 +263,29 @@ async function getRoutingRuleDetail() {
   console.log(res)
   if (res?.code === 200) {
     Object.assign(conditionRuleDetail, res?.data || {})
-    conditionRuleDetail.conditions.forEach((item: any) => {
-      const arr = item.split(' & ')
-      const arr1 = arr[1].split(' => ')
-      requestParameterMatch.value.push(arr[0])
-      requestParameterMatch.value.push(arr1[0])
-      addressSubsetMatch.value.push(arr1[1])
+
+    conditionRuleDetail.conditions.forEach((item: any, index: number) => {
+      const arr = item.split(' => ')
+      const addressArr = arr[1]?.split(' & ')
+      const requestMatchArr = arr[0]?.split(' & ')
+      requestParameterMatch.value = requestParameterMatch.value.concat(requestMatchArr)
+      addressSubsetMatch.value = addressSubsetMatch.value.concat(addressArr)
     })
   }
 }
 
-onMounted(() => {
-  getRoutingRuleDetail()
+const getVersionAndGroup = () => {
+  const conditionName = route.params?.ruleName
+  if (conditionName && conditionRuleDetail.scope === 'service') {
+    const arr = conditionName?.split(':')
+    conditionRuleDetail.version = arr[1]
+    conditionRuleDetail.group = arr[2].split('.')[0]
+  }
+}
+
+onMounted(async () => {
+  await getRoutingRuleDetail()
+  getVersionAndGroup()
 })
 </script>
 
