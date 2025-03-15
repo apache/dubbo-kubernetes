@@ -55,7 +55,11 @@
                     </a-col>
                     <a-col :span="12">
                       <a-form-item label="作用对象" required>
-                        <a-input v-model:value="baseInfo.objectOfAction" style="width: 200px" />
+                        <a-input
+                          disabled
+                          v-model:value="baseInfo.objectOfAction"
+                          style="width: 200px"
+                        />
                       </a-form-item>
                       <a-form-item label="立即启用">
                         <a-switch
@@ -200,7 +204,7 @@
     <a-affix :offset-bottom="10">
       <div class="bottom-action-footer">
         <a-space align="center" size="large">
-          <a-button type="primary" @click="addTagRule"> 确认</a-button>
+          <a-button type="primary" @click="updateTagRule"> 确认</a-button>
           <a-button> 取消</a-button>
         </a-space>
       </div>
@@ -214,9 +218,10 @@ import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
 import { PRIMARY_COLOR } from '@/base/constants'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { addTagRuleAPI, getTagRuleDetailAPI, updateTagRuleAPI } from '@/api/service/traffic'
+import { getTagRuleDetailAPI, updateTagRuleAPI } from '@/api/service/traffic'
+import yaml from 'js-yaml'
 
 const {
   appContext: {
@@ -233,8 +238,6 @@ let __ = PRIMARY_COLOR
 
 const toClipboard = useClipboard().toClipboard
 
-const router = useRouter()
-
 function copyIt(v: string) {
   message.success(globalProperties.$t('messageDomain.success.copy'))
   toClipboard(v)
@@ -243,12 +246,12 @@ function copyIt(v: string) {
 // base info
 const baseInfo = reactive({
   ruleGranularity: 'application',
-  objectOfAction: '',
+  objectOfAction: 'shop-user',
   enable: true,
   faultTolerantProtection: true,
   runtime: true,
   priority: 1,
-  configVersion: 'v3.0'
+  configVersion: ''
 })
 
 const matchConditionTypeOptions = ref([
@@ -366,7 +369,48 @@ const deleteTagItem = (tagItemIndex: number) => {
   tagList.value.splice(tagItemIndex, 1)
 }
 
-const addTagRule = async () => {
+// Get label routing details
+const getTagRuleDetail = async () => {
+  const res = await getTagRuleDetailAPI(<string>route.params?.ruleName)
+  if (res.code === 200) {
+    const { configVersion, enabled, key, runtime, scope, tags } = res?.data
+    baseInfo.configVersion = configVersion
+    baseInfo.enable = enabled
+    // baseInfo.faultTolerantProtection =
+    baseInfo.runtime = runtime
+    baseInfo.ruleGranularity = scope
+    baseInfo.objectOfAction = key
+    tagList.value = []
+    tags.forEach((tagItem, tagIndex) => {
+      tagList.value.push({
+        tagName: tagItem.name,
+        scope: {
+          type: 'labels',
+          labels: [],
+          addresses: {
+            condition: '=',
+            addressesStr: ''
+          }
+        }
+      })
+
+      const { match } = tagItem
+      let formatLabels: any[] = []
+      match.forEach((matchItem, matchIndex) => {
+        formatLabels.push({
+          myKey: matchItem.key,
+          condition: Object.keys(matchItem.value)[0],
+          value: matchItem.value[Object.keys(matchItem.value)[0]]
+        })
+      })
+      if (tagList.value[tagIndex] && tagList.value[tagIndex].scope) {
+        tagList.value[tagIndex].scope.labels = formatLabels
+      }
+    })
+  }
+}
+
+const updateTagRule = async () => {
   const {
     ruleGranularity,
     objectOfAction,
@@ -399,17 +443,13 @@ const addTagRule = async () => {
     })
     data.tags.push(tag)
   })
-  let ruleName = ''
-  if (ruleGranularity == 'application') {
-    ruleName = `${objectOfAction}.tag-router`
-  } else {
-    ruleName = `${objectOfAction}:${configVersion}.tag-router`
-  }
-  const res = await addTagRuleAPI(ruleName, data)
-  if (res.code === 200) {
-    router.push('/traffic/tagRule')
-  }
+  const res = await updateTagRuleAPI(route.params?.ruleName, data)
+  res.code === 200 && (await getTagRuleDetail())
 }
+
+onMounted(() => {
+  getTagRuleDetail()
+})
 </script>
 
 <style scoped lang="less">

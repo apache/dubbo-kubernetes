@@ -21,14 +21,14 @@
       <a-col :span="isDrawerOpened ? 24 - sliderSpan : 24" class="left">
         <a-flex vertical align="end">
           <a-button type="text" style="color: #0a90d5" @click="isDrawerOpened = !isDrawerOpened">
-            {{ $t('flowControlDomain.versionRecords') }}
+            字段说明
             <DoubleLeftOutlined v-if="!isDrawerOpened" />
             <DoubleRightOutlined v-else />
           </a-button>
 
           <div class="editorBox">
             <MonacoEditor
-              :modelValue="YAMLValue"
+              v-model:modelValue="YAMLValue"
               theme="vs-dark"
               :height="500"
               language="yaml"
@@ -36,19 +36,40 @@
             />
           </div>
         </a-flex>
+        <a-affix :offset-bottom="10">
+          <div class="bottom-action-footer">
+            <a-space align="center" size="large">
+              <a-button type="primary" @click="updateTagRule"> 确认 </a-button>
+              <a-button> 取消 </a-button>
+            </a-space>
+          </div>
+        </a-affix>
       </a-col>
 
       <a-col :span="isDrawerOpened ? sliderSpan : 0" class="right">
         <a-card v-if="isDrawerOpened" class="sliderBox">
-          <a-card v-for="i in 2" :key="i">
-            <p>修改时间: 2024/3/20 15:20:31</p>
-            <p>版本号: xo842xqpx834</p>
-
-            <a-flex justify="flex-end">
-              <a-button type="text" style="color: #0a90d5">查看</a-button>
-              <a-button type="text" style="color: #0a90d5">回滚</a-button>
-            </a-flex>
-          </a-card>
+          <div>
+            <a-descriptions title="字段说明" :column="1">
+              <a-descriptions-item label="key">
+                作用对象<br />
+                可能的值：Dubbo应用名或者服务名
+              </a-descriptions-item>
+              <a-descriptions-item label="scope">
+                规则粒度<br />
+                可能的值：application, service
+              </a-descriptions-item>
+              <a-descriptions-item label="force">
+                容错保护<br />
+                可能的值：true, false<br />
+                描述：如果为true，则路由筛选后若没有可用的地址则会直接报异常；如果为false，则会从可用地址中选择完成RPC调用
+              </a-descriptions-item>
+              <a-descriptions-item label="runtime">
+                运行时生效<br />
+                可能的值：true, false<br />
+                描述：如果为true，则该rule下的所有路由将会实时生效；若为false，则只有在启动时才会生效
+              </a-descriptions-item>
+            </a-descriptions>
+          </div>
         </a-card>
       </a-col>
     </a-flex>
@@ -58,18 +79,33 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { computed, onMounted, ref } from 'vue'
-import { getTagRuleDetailAPI } from '@/api/service/traffic'
-import yaml from 'js-yaml'
+import { computed, onMounted, reactive, ref } from 'vue'
+import {
+  getConditionRuleDetailAPI,
+  getTagRuleDetailAPI,
+  updateConditionRuleAPI,
+  updateTagRuleAPI
+} from '@/api/service/traffic'
 import { useRoute } from 'vue-router'
+import yaml from 'js-yaml'
 
 const route = useRoute()
-
-const isReadonly = ref(true)
+const isReadonly = ref(false)
 
 const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
+
+// Condition routing details
+const conditionRuleDetail = reactive({
+  configVersion: 'v3.0',
+  scope: 'service',
+  key: 'org.apache.dubbo.samples.UserService',
+  enabled: true,
+  runtime: true,
+  force: false,
+  conditions: ['=>host!=192.168.0.68']
+})
 
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
@@ -84,12 +120,18 @@ const YAMLValue = ref(
     '          exact: gray'
 )
 
-// Get label routing details
-const getTagRuleDetail = async () => {
-  const res = await getTagRuleDetailAPI(<string>route.params?.ruleName)
-  if (res.code === 200) {
+async function getTagRuleDetail() {
+  let res = await getTagRuleDetailAPI(<string>route.params?.ruleName)
+  // console.log(res)
+  if (res?.code === 200) {
     YAMLValue.value = yaml.dump(res?.data)
   }
+}
+
+const updateTagRule = async () => {
+  const data = yaml.load(YAMLValue.value)
+  const res = await updateTagRuleAPI(<string>route.params?.ruleName, data)
+  res.code === 200 && (await getTagRuleDetail())
 }
 
 onMounted(() => {
@@ -102,6 +144,16 @@ onMounted(() => {
   border-radius: 0.3rem;
   overflow: hidden;
   width: 100%;
+}
+
+.bottom-action-footer {
+  width: 100%;
+  background-color: white;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1); /* 添加顶部阴影 */
 }
 
 .sliderBox {
