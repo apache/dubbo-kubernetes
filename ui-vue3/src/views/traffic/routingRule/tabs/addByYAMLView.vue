@@ -28,7 +28,7 @@
 
           <div class="editorBox">
             <MonacoEditor
-              :modelValue="YAMLValue"
+              v-model:modelValue="YAMLValue"
               theme="vs-dark"
               :height="500"
               language="yaml"
@@ -39,7 +39,7 @@
         <a-affix :offset-bottom="10">
           <div class="bottom-action-footer">
             <a-space align="center" size="large">
-              <a-button type="primary"> 确认 </a-button>
+              <a-button type="primary" @click="addRoutingRule"> 确认 </a-button>
               <a-button> 取消 </a-button>
             </a-space>
           </div>
@@ -80,10 +80,15 @@
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getConditionRuleDetailAPI } from '@/api/service/traffic'
-import { useRoute } from 'vue-router'
+import {
+  addConditionRuleAPI,
+  getConditionRuleDetailAPI,
+  updateConditionRuleAPI
+} from '@/api/service/traffic'
+import { useRouter } from 'vue-router'
+import yaml from 'js-yaml'
 
-const route = useRoute()
+const router = useRouter()
 const isReadonly = ref(false)
 
 const isDrawerOpened = ref(false)
@@ -114,18 +119,20 @@ const YAMLValue = ref(
     '          exact: gray'
 )
 
-// Get condition routing details
-async function getRoutingRuleDetail() {
-  let res = await getConditionRuleDetailAPI(<string>route.params?.ruleName)
-  console.log(res)
-  if (res?.code === 200) {
-    Object.assign(conditionRuleDetail, res?.data || {})
+const addRoutingRule = async () => {
+  const data = yaml.load(YAMLValue.value)
+  const { configVersion, scope, key, runtime, force, conditions } = data
+  let ruleName = ''
+  if (key == 'application') {
+    ruleName = `${key}.condition-router`
+  } else {
+    ruleName = `${key}:${configVersion}.condition-router`
+  }
+  const res = await addConditionRuleAPI(ruleName, data)
+  if (res.code === 200) {
+    router.push('/traffic/routingRule')
   }
 }
-
-onMounted(() => {
-  getRoutingRuleDetail()
-})
 </script>
 
 <style scoped lang="less">

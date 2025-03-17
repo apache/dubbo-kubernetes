@@ -16,6 +16,7 @@
  */
 
 import request from '@/base/http/request'
+import type { RouteParamValue } from 'vue-router'
 
 export const searchService = (params: any): Promise<any> => {
   return request({
@@ -57,10 +58,81 @@ export const getServiceTracingDashboard = (params: any): Promise<any> => {
 }
 
 //Get timeout time.
-export const getServiceTimeout = (params: any): Promise<any> => {
+export const getServiceTimeoutAPI = (params: any): Promise<any> => {
   return request({
     url: '/service/config/timeout',
     method: 'get',
     params
+  })
+}
+
+//update timeout time.
+export const updateServiceTimeoutAPI = (data: any): Promise<any> => {
+  return request({
+    url: '/service/config/timeout',
+    method: 'put',
+    data
+  })
+}
+
+//get service retry
+export const getServiceRetryAPI = (params: any): Promise<any> => {
+  return request({
+    url: '/service/config/retry',
+    method: 'get',
+    params
+  })
+}
+
+//update service retry
+export const updateServiceRetryAPI = (data: any): Promise<any> => {
+  return request({
+    url: '/service/config/retry',
+    method: 'put',
+    data
+  })
+}
+
+//Get whether intra-region priority is enabled.
+export const getServiceIntraRegionPriorityAPI = (params: any): Promise<any> => {
+  return request({
+    url: '/service/config/regionPriority',
+    method: 'get',
+    params
+  })
+}
+
+export const updateServiceIntraRegionPriorityAPI = (data: any): Promise<any> => {
+  return request({
+    url: '/service/config/regionPriority',
+    method: 'put',
+    data
+  })
+}
+
+// get paramRoute
+export const getParamRouteAPI = (params: {
+  serviceName: string | RouteParamValue[]
+  version: string | RouteParamValue[]
+  group: string | RouteParamValue[]
+}): Promise<any> => {
+  return request({
+    url: '/service/config/argumentRoute',
+    method: 'get',
+    params
+  })
+}
+
+//update paramRoute
+export const updateParamRouteAPI = (data: {
+  serviceName: string
+  group?: string
+  version?: string
+  routes: any
+}): Promise<any> => {
+  return request({
+    url: '/service/config/argumentRoute',
+    method: 'put',
+    data
   })
 }

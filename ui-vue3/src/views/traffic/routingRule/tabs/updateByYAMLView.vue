@@ -28,7 +28,7 @@
 
           <div class="editorBox">
             <MonacoEditor
-              :modelValue="YAMLValue"
+              v-model:modelValue="YAMLValue"
               theme="vs-dark"
               :height="500"
               language="yaml"
@@ -39,8 +39,8 @@
         <a-affix :offset-bottom="10">
           <div class="bottom-action-footer">
             <a-space align="center" size="large">
-              <a-button type="primary"> 确认 </a-button>
-              <a-button> 取消 </a-button>
+              <a-button type="primary" @click="updateRoutingRule"> 确认</a-button>
+              <a-button> 取消</a-button>
             </a-space>
           </div>
         </a-affix>
@@ -79,9 +79,10 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { getConditionRuleDetailAPI } from '@/api/service/traffic'
+import { onMounted, reactive, ref } from 'vue'
+import { getConditionRuleDetailAPI, updateConditionRuleAPI } from '@/api/service/traffic'
 import { useRoute } from 'vue-router'
+import yaml from 'js-yaml'
 
 const route = useRoute()
 const isReadonly = ref(false)
@@ -117,9 +118,23 @@ const YAMLValue = ref(
 // Get condition routing details
 async function getRoutingRuleDetail() {
   let res = await getConditionRuleDetailAPI(<string>route.params?.ruleName)
-  console.log(res)
   if (res?.code === 200) {
-    Object.assign(conditionRuleDetail, res?.data || {})
+    const conditionName = route.params?.ruleName
+    if (conditionName && res.data.scope === 'service') {
+      const arr = conditionName?.split(':')
+      res.data.configVersion = arr[1]
+      res.data.group = arr[2]?.split('.')[0]
+    }
+    YAMLValue.value = yaml.dump(res?.data)
+  }
+}
+
+const updateRoutingRule = async () => {
+  // console.log('ymal',YAMLValue.value)
+  const data = yaml.load(YAMLValue.value)
+  const res = await updateConditionRuleAPI(<string>route.params?.ruleName, data)
+  if (res.code === 200) {
+    await getRoutingRuleDetail()
   }
 }
 

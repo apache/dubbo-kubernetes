@@ -187,6 +187,8 @@ const onSearch = async () => {
   let params = {
     serviceName: route.params?.pathId,
     side: type.value,
+    version: route.params?.version || '',
+    group: route.params?.group || '',
     pageOffset: pagination.pageOffset,
     pageSize: pagination.pageSize
   }

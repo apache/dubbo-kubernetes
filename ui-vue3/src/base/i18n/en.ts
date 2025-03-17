@@ -31,6 +31,11 @@ const words: I18nType = {
     formView: 'Form view',
     event: 'Event'
   },
+  updateRoutingRuleDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+
   routingRuleDomain: {
     YAMLView: 'YAML view',
     formView: 'Form view'
@@ -40,6 +45,14 @@ const words: I18nType = {
     formView: 'Form view'
   },
   tagRuleDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+  updateTagRuleDomain: {
+    YAMLView: 'YAML view',
+    formView: 'Form view'
+  },
+  addTagRuleDomain: {
     YAMLView: 'YAML view',
     formView: 'Form view'
   },
