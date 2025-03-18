@@ -29,6 +29,7 @@ type upgradeArgs struct {
 	*installArgs
 }
 
+// UpgradeCmd performs an in-place upgrade with eligibility checks.
 func UpgradeCmd(ctx cli.Context) *cobra.Command {
 	rootArgs := &RootArgs{}
 	upArgs := &upgradeArgs{

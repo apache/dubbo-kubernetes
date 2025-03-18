@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// DubboOperator defines the custom API.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubetype-gen
 // +kubetype-gen:groupVersion=install.dubbo.io/v1alpha1
@@ -30,20 +31,31 @@ type DubboOperator struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// Spec defines the implementation of this definition.
 	// +optional
 	Spec DubboOperatorSpec `json:"spec,omitempty"`
 }
 
+// DubboOperatorSpec defines the desired installed state of Dubbo components.
+// This specification is used to customize the default profile values provided with each Dubbo release.
+// Since this specification is a customization API, specifying an empty DubboOperatorSpec results in the default Dubbo component values.
 type DubboOperatorSpec struct {
-	Profile    string              `json:"profile,omitempty"`
-	Dashboard  *DubboDashboardSpec `json:"dashboard,omitempty"`
+	// Path or name for the profile.
+	// default profile is used if this field is unset.
+	Profile string `json:"profile,omitempty"`
+	// For admin dashboard.
+	Dashboard *DubboDashboardSpec `json:"dashboard,omitempty"`
+	// enablement and component-specific settings that are not internal to the component.
 	Components *DubboComponentSpec `json:"components,omitempty"`
-	Values     json.RawMessage     `json:"values,omitempty"`
+	// Overrides for default `values.yaml`. This is a validated pass-through to Helm templates.
+	Values json.RawMessage `json:"values,omitempty"`
 }
 
 type DubboComponentSpec struct {
-	Base     *BaseComponentSpec `json:"base,omitempty"`
-	Register *RegisterSpec      `json:"register,omitempty"`
+	// Used for Dubbo resources.
+	Base *BaseComponentSpec `json:"base,omitempty"`
+	// Using Zookeeper and Nacos as the registration plane.
+	Register *RegisterSpec `json:"register,omitempty"`
 }
 
 type DubboDashboardSpec struct {
@@ -51,22 +63,29 @@ type DubboDashboardSpec struct {
 }
 
 type RegisterSpec struct {
-	Nacos     *RegisterComponentSpec `json:"nacos,omitempty"`
+	// Nacos component.
+	Nacos *RegisterComponentSpec `json:"nacos,omitempty"`
+	// Zookeeper component.
 	Zookeeper *RegisterComponentSpec `json:"zookeeper,omitempty"`
 }
 
 type BaseComponentSpec struct {
+	// Selects whether this component is installed.
 	Enabled *BoolValue `json:"enabled,omitempty"`
 }
 
 type DashboardComponentSpec struct {
+	// Selects whether this component is installed.
 	Enabled *BoolValue `json:"enabled,omitempty"`
 }
 
 type RegisterComponentSpec struct {
-	Enabled   *BoolValue     `json:"enabled,omitempty"`
-	Namespace string         `json:"namespace,omitempty"`
-	Raw       map[string]any `json:"-"`
+	// Selects whether this component is installed.
+	Enabled *BoolValue `json:"enabled,omitempty"`
+	// Namespace for the component.
+	Namespace string `json:"namespace,omitempty"`
+	// Raw is the raw inputs. This allows distinguishing unset vs zero-values for KubernetesResources
+	Raw map[string]any `json:"-"`
 }
 
 type MetadataCompSpec struct {
