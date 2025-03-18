@@ -22,6 +22,7 @@ import "github.com/spf13/cobra"
 type RootFlags struct{}
 
 type RootArgs struct {
+	// DryRun executes all steps without actually applying the manifests or creating output directories/files.
 	DryRun bool
 	RootFlags
 }

@@ -29,13 +29,17 @@ import (
 	"os"
 )
 
-const ()
-
 type uninstallArgs struct {
-	filenames        string
-	sets             []string
-	manifestPath     string
-	remove           bool
+	// filenames is an array of paths to input DubboOperator CR files.
+	filenames string
+	// sets is a string with the format "path=value".
+	sets []string
+	// manifestPath is a path to a charts and profiles directory in the local filesystem with a release tgz.
+	manifestPath string
+	// remove results in deletion of all Dubbo resources.
+	remove bool
+	// skipConfirmation determines whether the user is prompted for confirmation.
+	// If set to true, the user is not prompted, and a "Yes" response is assumed in all cases.
 	skipConfirmation bool
 }
 
@@ -46,6 +50,7 @@ func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
 }
 
+// UninstallCmd command uninstalls Dubbo from a cluster
 func UninstallCmd(ctx cli.Context) *cobra.Command {
 	rootArgs := &RootArgs{}
 	uiArgs := &uninstallArgs{}
@@ -76,6 +81,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 	return uicmd
 }
 
+// Uninstall uninstalls by deleting specified manifests.
 func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
 	var kubeClient kube.CLIClient
@@ -123,6 +129,7 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	return nil
 }
 
+// preCheck checks for potential major changes.
 func preCheck(cmd *cobra.Command, uiArgs *uninstallArgs, _ *clog.ConsoleLogger, dryRun bool) {
 	needConfirmation, message := false, ""
 	if uiArgs.remove {

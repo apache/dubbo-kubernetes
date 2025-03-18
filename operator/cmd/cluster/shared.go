@@ -32,7 +32,7 @@ type Printer interface {
 	Println(string)
 }
 
-func NewPtrForWtr(w io.Writer) Printer {
+func NewPrinterForWriter(w io.Writer) Printer {
 	return &writerPrinter{writer: w}
 }
 
@@ -44,6 +44,7 @@ func (w writerPrinter) Println(s string) {
 	_, _ = fmt.Fprintln(w.writer, s)
 }
 
+// OptionDeterminate waits for a user to confirm with the supplied message.
 func OptionDeterminate(msg string, writer io.Writer) bool {
 	for {
 		_, _ = fmt.Fprintf(writer, "%s ", msg)
@@ -59,8 +60,4 @@ func OptionDeterminate(msg string, writer io.Writer) bool {
 			return false
 		}
 	}
-}
-
-func NewPrinterForWriter(w io.Writer) Printer {
-	return &writerPrinter{writer: w}
 }

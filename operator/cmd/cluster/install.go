@@ -38,9 +38,15 @@ import (
 var InstallerScope = log.RegisterScope("installer")
 
 type installArgs struct {
-	filenames        []string
-	sets             []string
-	waitTimeout      time.Duration
+	// filenames is an array of paths to input DubboOperator CR files.
+	filenames []string
+	// sets is a string with the format "path=value".
+	sets []string
+	// waitTimeout is the maximum time to wait for all Dubbo resources to be ready.
+	// This setting takes effect only when the "wait" parameter is set to true.
+	waitTimeout time.Duration
+	// skipConfirmation determines whether the user is prompted for confirmation.
+	// If set to true, the user is not prompted, and a "Yes" response is assumed in all cases.
 	skipConfirmation bool
 }
 
@@ -59,10 +65,7 @@ func addInstallFlags(cmd *cobra.Command, args *installArgs) {
 	cmd.PersistentFlags().DurationVar(&args.waitTimeout, "wait-timeout", 300*time.Second, "Maximum time to wait for Dubbo resources in each component to be ready.")
 }
 
-func InstallCmd(ctx cli.Context) *cobra.Command {
-	return InstallCmdWithArgs(ctx, &RootArgs{}, &installArgs{})
-}
-
+// InstallCmdWithArgs generates an Dubbo install manifest and applies it to a cluster.
 func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs) *cobra.Command {
 	ic := &cobra.Command{
 		Use:   "install",
@@ -95,6 +98,11 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 	return ic
 }
 
+// InstallCmd generates an Dubbo install manifest and applies it to a cluster.
+func InstallCmd(ctx cli.Context) *cobra.Command {
+	return InstallCmdWithArgs(ctx, &RootArgs{}, &installArgs{})
+}
+
 func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, cl clog.Logger, stdOut io.Writer, p Printer) error {
 	setFlags := applyFlagAliases(iArgs.sets)
 	manifests, vals, err := render.GenerateManifest(iArgs.filenames, setFlags, cl, kubeClient)
@@ -124,6 +132,8 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 	return nil
 }
 
+// --bar is an alias for --set bar=
+// --foo is an alias for --set foo=
 func applyFlagAliases(flags []string) []string {
 	return flags
 }

@@ -32,8 +32,10 @@ import (
 )
 
 type manifestGenerateArgs struct {
+	// filenames is an array of paths to input DubboOperator CR files.
 	filenames []string
-	sets      []string
+	// sets is a string with the format "path=value".
+	sets []string
 }
 
 func (a *manifestGenerateArgs) String() string {
@@ -137,8 +139,32 @@ func objectKindOrder(m manifest.Manifest) int {
 	o := m.Unstructured
 	gk := o.GroupVersionKind().Group + "/" + o.GroupVersionKind().Kind
 	switch {
+	// Create CRDs asap - both because they are slow and because we will likely create instances of them soon
 	case gk == "apiextensions.k8s.io/CustomResourceDefinition":
 		return -1000
+
+		// We need to create ServiceAccounts, Roles before we bind them with a RoleBinding
+	case gk == "/ServiceAccount" || gk == "rbac.authorization.k8s.io/ClusterRole":
+		return 1
+	case gk == "rbac.authorization.k8s.io/ClusterRoleBinding":
+		return 2
+
+		// Pods might need configmap or secrets - avoid backoff by creating them first
+	case gk == "/ConfigMap" || gk == "/Secrets":
+		return 100
+
+		// Create the pods after we've created other things they might be waiting for
+	case gk == "extensions/Deployment" || gk == "apps/Deployment":
+		return 1000
+
+		// Autoscalers typically act on a deployment
+	case gk == "autoscaling/HorizontalPodAutoscaler":
+		return 1001
+
+		// Create services late - after pods have been started
+	case gk == "/Service":
+		return 10000
+
 	default:
 		return 1000
 	}
