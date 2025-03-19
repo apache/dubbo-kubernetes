@@ -35,11 +35,14 @@ import (
 	"time"
 )
 
+// deployment holds associated replicaSets for a deployment
 type deployment struct {
 	replicaSets *appsv1.ReplicaSet
 	deployment  *appsv1.Deployment
 }
 
+// WaitForResources polls to get the current status of various objects that are not immediately ready
+// until all are ready or a timeout is reached.
 func WaitForResources(objects []manifest.Manifest, client kube.CLIClient, waitTimeout time.Duration, dryRun bool, l *progress.ManifestInfo) error {
 	if dryRun {
 		return nil
@@ -48,6 +51,7 @@ func WaitForResources(objects []manifest.Manifest, client kube.CLIClient, waitTi
 	var notReady []string
 	var debugInfo map[string]string
 
+	// Check if we are ready immediately, to avoid the 2s delay below when we are already ready
 	if ready, _, _, err := waitForResources(objects, client, l); err == nil && ready {
 		return nil
 	}

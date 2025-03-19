@@ -174,7 +174,7 @@ func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured
 }
 
 func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (schema.GroupVersionResource, bool) {
-	if s, f := collections.All.FindByGroupVersionAliasesKind(config.FromK8sGVK(gvk)); f {
+	if s, f := collections.All.FindByGroupVersionAliasesKind(config.FromKubernetesGVK(gvk)); f {
 		gvr := s.GroupVersionResource()
 		gvr.Version = gvk.Version
 		return gvr, !s.IsClusterScoped()

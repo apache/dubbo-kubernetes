@@ -50,6 +50,29 @@ type Installer struct {
 	Logger       clog.Logger
 }
 
+// InstallManifests applies a set of rendered manifests to the cluster.
+func (i Installer) InstallManifests(manifests []manifest.ManifestSet) error {
+	err := i.installSystemNamespace()
+	if err != nil {
+		return err
+	}
+	if err := i.install(manifests); err != nil {
+		return err
+	}
+	return nil
+}
+
+// installSystemNamespace creates the system namespace before installation.
+func (i Installer) installSystemNamespace() error {
+	ns := i.Values.GetPathStringOr("metadata.namespace", "dubbo-system")
+	if err := util.CreateNamespace(i.Kube.Kube(), ns, i.DryRun); err != nil {
+		return err
+	}
+	return nil
+}
+
+// install takes rendered manifests and actually applies them to the cluster.
+// This considers ordering based on components.
 func (i Installer) install(manifests []manifest.ManifestSet) error {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -103,25 +126,7 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 	return nil
 }
 
-func (i Installer) InstallManifests(manifests []manifest.ManifestSet) error {
-	err := i.installSystemNamespace()
-	if err != nil {
-		return err
-	}
-	if err := i.install(manifests); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (i Installer) installSystemNamespace() error {
-	ns := i.Values.GetPathStringOr("metadata.namespace", "dubbo-system")
-	if err := util.CreateNamespace(i.Kube.Kube(), ns, i.DryRun); err != nil {
-		return err
-	}
-	return nil
-}
-
+// applyManifestSet applies a set of manifests to the cluster.
 func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 	componentNames := string(manifestSet.Components)
 	manifests := manifestSet.Manifests
@@ -146,8 +151,8 @@ func (i Installer) applyManifestSet(manifestSet manifest.ManifestSet) error {
 	return nil
 }
 
+// serverSideApply creates or updates an object in the API server depending on whether it already exists.
 func (i Installer) serverSideApply(obj manifest.Manifest) error {
-	var dryRun []string
 	const fieldManager = "dubbo-operator"
 	dc, err := i.Kube.DynamicClientFor(obj.GroupVersionKind(), obj.Unstructured, "")
 	if err != nil {
@@ -155,6 +160,7 @@ func (i Installer) serverSideApply(obj manifest.Manifest) error {
 	}
 	objStr := fmt.Sprintf("%s/%s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
 
+	var dryRun []string
 	if i.DryRun {
 		return nil
 	}
@@ -174,9 +180,11 @@ func (i Installer) applyLabelsAndAnnotations(obj manifest.Manifest, cname string
 			return manifest.Manifest{}, err
 		}
 	}
+	// We're mutating the unstructured, must rebuild the YAML.
 	return manifest.FromObject(obj.Unstructured)
 }
 
+// prune removes resources that are in the cluster, but not a part of the currently installed set of objects.
 func (i Installer) prune(manifests []manifest.ManifestSet) error {
 	if i.DryRun {
 		return nil
@@ -184,11 +192,12 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 
 	i.ProgressInfo.SetState(progress.StatePruning)
 
+	// Build up a map of component->resources, so we know what to keep around
 	excluded := map[component.Name]sets.String{}
+	// Include all components in case we disabled some.
 	for _, c := range component.AllComponents {
 		excluded[c.UserFacingName] = sets.New[string]()
 	}
-
 	for _, mfs := range manifests {
 		for _, m := range mfs.Manifests {
 			excluded[mfs.Components].Insert(m.Hash())
@@ -225,6 +234,8 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 				if obj.GetLabels()[manifest.OwningResourceNotPruned] == "true" {
 					continue
 				}
+				// Label mismatch. Provided objects don't select against the component, so this likely means the object
+				// is for another component.
 				if !compLabels.Matches(klabels.Set(obj.GetLabels())) {
 					continue
 				}

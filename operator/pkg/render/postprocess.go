@@ -32,10 +32,14 @@ type patchContext struct {
 	PostProcess func([]byte) ([]byte, error)
 }
 
+// postProcess applies any manifest manipulation to be done after Helm chart rendering.
 func postProcess(_ component.Component, manifests []manifest.Manifest, _ values.Map) ([]manifest.Manifest, error) {
+	// needPatching builds a map of manifest index -> patch. This ensures we only do the full round-tripping once per object.
 	needPatching := map[int][]patchContext{}
+	// For anything needing a patch, apply them.
 	for idx, patches := range needPatching {
 		m := manifests[idx]
+		// Convert to JSON, which the StrategicMergePatch requires
 		baseJSON, err := yaml.YAMLToJSON([]byte(m.Content))
 		if err != nil {
 			return nil, err
@@ -44,7 +48,7 @@ func postProcess(_ component.Component, manifests []manifest.Manifest, _ values.
 		if err != nil {
 			return nil, err
 		}
-
+		// Apply all the patches.
 		for _, patch := range patches {
 			newBytes, err := strategicpatch.StrategicMergePatch(baseJSON, []byte(patch.Patch), typed)
 			if err != nil {
@@ -58,10 +62,12 @@ func postProcess(_ component.Component, manifests []manifest.Manifest, _ values.
 			}
 			baseJSON = newBytes
 		}
+		// Rebuild our manifest.
 		nm, err := manifest.FromJSON(baseJSON)
 		if err != nil {
 			return nil, err
 		}
+		// Update the manifests list.
 		manifests[idx] = nm
 	}
 

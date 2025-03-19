@@ -25,6 +25,8 @@ import (
 
 type Name string
 
+// DubboComponent names corresponding to the IstioOperator proto component names.
+// These must be the same since they are used for struct traversal.
 const (
 	BaseComponentName              Name = "Base"
 	NacosRegisterComponentName     Name = "Nacos"
@@ -33,15 +35,22 @@ const (
 )
 
 type Component struct {
-	UserFacingName     Name
-	ContainerName      string
-	SpecName           string
-	ResourceType       string
-	ResourceName       string
-	Default            bool
-	HelmSubDir         string
+	// UserFacingName is the component name in user-facing cases.
+	UserFacingName Name
+	// ContainerName maps a Name to the name of the container in a Deployment.
+	ContainerName string
+	// SpecName is the yaml key in the DubboOperator spec.
+	SpecName string
+	// ResourceType maps a Name to the type of the rendered k8s resource.
+	ResourceType string
+	// ResourceName maps a Name to the name of the rendered k8s resource.
+	ResourceName string
+	// Default defines whether the component is enabled by default.
+	Default bool
+	// HelmSubDir is a mapping between a component name and the subdirectory of the component Chart.
+	HelmSubDir string
+	// HelmValuesTreeRoot is the tree root in values YAML files for the component.
 	HelmValuesTreeRoot string
-	FlattenValues      bool
 }
 
 var AllComponents = []Component{
@@ -100,29 +109,21 @@ var (
 	}
 )
 
-func UserFacingCompName(name Name) string {
-	s, ok := userFacingCompNames[name]
-	if !ok {
-		return "Unknown"
-	}
-	return s
-}
-
-func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
+func (c Component) Get(merged values.Map) ([]apis.DefaultCompSpec, error) {
 	defaultNamespace := merged.GetPathString("metadata.namespace")
-	var defaultResp []apis.MetadataCompSpec
+	var defaultResp []apis.DefaultCompSpec
 	def := c.Default
 	if def {
-		defaultResp = []apis.MetadataCompSpec{{
+		defaultResp = []apis.DefaultCompSpec{{
 			RegisterComponentSpec: apis.RegisterComponentSpec{
 				Namespace: defaultNamespace,
 			}},
 		}
 	}
-	buildSpec := func(m values.Map) (apis.MetadataCompSpec, error) {
-		spec, err := values.ConvertMap[apis.MetadataCompSpec](m)
+	buildSpec := func(m values.Map) (apis.DefaultCompSpec, error) {
+		spec, err := values.ConvertMap[apis.DefaultCompSpec](m)
 		if err != nil {
-			return apis.MetadataCompSpec{}, fmt.Errorf("fail to convert %v: %v", c.SpecName, err)
+			return apis.DefaultCompSpec{}, fmt.Errorf("fail to convert %v: %v", c.SpecName, err)
 		}
 
 		if spec.Namespace == "" {
@@ -134,6 +135,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 		spec.Raw = m
 		return spec, nil
 	}
+	// List of components
 	if c.ContainerName == "dashboard" {
 		s, ok := merged.GetPathMap("spec.dashboard." + c.SpecName)
 		if !ok {
@@ -147,7 +149,6 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 			return nil, nil
 		}
 	}
-
 	if c.ContainerName == "register-discovery" {
 		s, ok := merged.GetPathMap("spec.components.register." + c.SpecName)
 		if !ok {
@@ -161,6 +162,7 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 			return nil, nil
 		}
 	}
+	// Single component
 	s, ok := merged.GetPathMap("spec.components." + c.SpecName)
 	if !ok {
 		return defaultResp, nil
@@ -172,5 +174,15 @@ func (c Component) Get(merged values.Map) ([]apis.MetadataCompSpec, error) {
 	if !(spec.Enabled.GetValueOrTrue()) {
 		return nil, nil
 	}
-	return []apis.MetadataCompSpec{spec}, nil
+	return []apis.DefaultCompSpec{spec}, nil
+}
+
+// UserFacingCompName returns the name of the given component that should be displayed to the user in high
+// level CLIs (like progress log).
+func UserFacingCompName(name Name) string {
+	s, ok := userFacingCompNames[name]
+	if !ok {
+		return "Unknown"
+	}
+	return s
 }
