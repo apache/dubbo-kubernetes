@@ -45,7 +45,7 @@ type Installer struct {
 	SkipWait     bool
 	Kube         kube.CLIClient
 	Values       values.Map
-	ProgressInfo *progress.Info
+	ProgressInfo *progress.Log
 	WaitTimeout  time.Duration
 	Logger       clog.Logger
 }

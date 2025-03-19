@@ -82,7 +82,7 @@ func renderChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]st
 	}
 	crdFiles := chrt.CRDObjects()
 	if chrt.Metadata.Name == BaseChartName {
-		values.GetPathHelper[bool](chrtVals, "base.enableDubboConfigCRD")
+		values.GetPathAs[bool](chrtVals, "base.enableDubboConfigCRD")
 	}
 	var warnings Warnings
 	keys := make([]string, 0, len(files))

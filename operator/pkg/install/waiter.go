@@ -43,7 +43,7 @@ type deployment struct {
 
 // WaitForResources polls to get the current status of various objects that are not immediately ready
 // until all are ready or a timeout is reached.
-func WaitForResources(objects []manifest.Manifest, client kube.CLIClient, waitTimeout time.Duration, dryRun bool, l *progress.ManifestInfo) error {
+func WaitForResources(objects []manifest.Manifest, client kube.CLIClient, waitTimeout time.Duration, dryRun bool, l *progress.ManifestLog) error {
 	if dryRun {
 		return nil
 	}
@@ -78,7 +78,7 @@ func WaitForResources(objects []manifest.Manifest, client kube.CLIClient, waitTi
 	return nil
 }
 
-func waitForResources(objects []manifest.Manifest, k kube.Client, l *progress.ManifestInfo) (bool, []string, map[string]string, error) {
+func waitForResources(objects []manifest.Manifest, k kube.Client, l *progress.ManifestLog) (bool, []string, map[string]string, error) {
 	pods := []corev1.Pod{}
 	deployments := []deployment{}
 	statefulsets := []*appsv1.StatefulSet{}
