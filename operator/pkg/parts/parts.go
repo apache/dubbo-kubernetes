@@ -22,6 +22,7 @@ import (
 	"strings"
 )
 
+// SplitString splits the given yaml doc if it's multipart document.
 func SplitString(yamlText string) []string {
 	out := make([]string, 0)
 	scanner := bufio.NewScanner(strings.NewReader(yamlText))

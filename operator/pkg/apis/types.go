@@ -88,7 +88,7 @@ type RegisterComponentSpec struct {
 	Raw map[string]any `json:"-"`
 }
 
-type MetadataCompSpec struct {
+type DefaultCompSpec struct {
 	RegisterComponentSpec
 }
 
