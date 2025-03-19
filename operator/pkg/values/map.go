@@ -28,8 +28,10 @@ import (
 	"strings"
 )
 
+// Map is a wrapper around an untyped map, used throughout the operator codebase for generic access.
 type Map map[string]any
 
+// JSON serializes a Map to a JSON string.
 func (m Map) JSON() string {
 	bytes, err := json.Marshal(m)
 	if err != nil {
@@ -38,6 +40,7 @@ func (m Map) JSON() string {
 	return string(bytes)
 }
 
+// YAML serializes a Map to a YAML string.
 func (m Map) YAML() string {
 	bytes, err := yaml.Marshal(m)
 	if err != nil {
@@ -46,6 +49,7 @@ func (m Map) YAML() string {
 	return string(bytes)
 }
 
+// MapFromJSON constructs a Map from JSON
 func MapFromJSON(input []byte) (Map, error) {
 	m := make(Map)
 	err := json.Unmarshal(input, &m)
@@ -55,6 +59,7 @@ func MapFromJSON(input []byte) (Map, error) {
 	return m, nil
 }
 
+// MapFromYAML constructs a Map from YAML
 func MapFromYAML(input []byte) (Map, error) {
 	m := make(Map)
 	err := yaml.Unmarshal(input, &m)
@@ -64,17 +69,6 @@ func MapFromYAML(input []byte) (Map, error) {
 	return m, nil
 }
 
-func fromJSON[T any](overlay []byte) (T, error) {
-	v := new(T)
-	err := json.Unmarshal(overlay, &v)
-	if err != nil {
-		return pointer.Empty[T](), err
-	}
-	return *v, nil
-}
-
-func parsePath(key string) []string { return strings.Split(key, ".") }
-
 func tableLookup(m Map, simple string) (Map, bool) {
 	v, ok := m[simple]
 	if !ok {
@@ -83,11 +77,16 @@ func tableLookup(m Map, simple string) (Map, bool) {
 	if vv, ok := v.(map[string]interface{}); ok {
 		return vv, true
 	}
+	// This catches a case where a value is of type Values, but doesn't (for some
+	// reason) match the map[string]interface{}. This has been observed in the
+	// wild, and might be a result of a nil map of type Values.
 	if vv, ok := v.(Map); ok {
 		return vv, true
 	}
 	return nil, false
 }
+
+func parsePath(key string) []string { return strings.Split(key, ".") }
 
 func (m Map) GetPathMap(s string) (Map, bool) {
 	current := m
@@ -128,10 +127,12 @@ func splitPath(path string) []string {
 	for _, str := range pv {
 		if str != "" {
 			str = strings.ReplaceAll(str, "\\.", ".")
+			// Is str of the form node[expr], convert to "node", "[expr]"?
 			nBracket := strings.IndexRune(str, '[')
 			if nBracket > 0 {
 				r = append(r, str[:nBracket], str[nBracket:])
 			} else {
+				// str is "[expr]" or "node"
 				r = append(r, str)
 			}
 		}
@@ -139,21 +140,26 @@ func splitPath(path string) []string {
 	return r
 }
 
-func (m Map) GetPathString(s string) string {
-	return GetPathHelper[string](m, s)
-}
-
-func (m Map) GetPathStringOr(s string, def string) string {
-	return pointer.NonEmptyOrDefault(m.GetPathString(s), def)
-}
-
-func GetPathHelper[T any](m Map, name string) T {
+// GetPathAs is a helper function to get a patch value and cast it to a specified type.
+// If the path is not found, or the cast fails, the zero value is returned.
+func GetPathAs[T any](m Map, name string) T {
 	v, ok := m.GetPath(name)
 	if !ok {
 		return pointer.Empty[T]()
 	}
 	t, _ := v.(T)
 	return t
+}
+
+// GetPathString is a helper around TryGetPathAs[string] to allow usage as a method (otherwise impossible with generics)
+func (m Map) GetPathString(s string) string {
+	return GetPathAs[string](m, s)
+}
+
+// GetPathStringOr is a helper around TryGetPathAs[string] to allow usage as a method (otherwise impossible with generics),
+// with an allowance for a default value if it is not found/not set.
+func (m Map) GetPathStringOr(s string, def string) string {
+	return pointer.NonEmptyOrDefault(m.GetPathString(s), def)
 }
 
 func (m Map) GetPath(name string) (any, bool) {
@@ -204,6 +210,7 @@ func (m Map) GetPath(name string) (any, bool) {
 	return current, true
 }
 
+// MustCastAsMap casts a value to a Map; if the value is not a map, it will panic..
 func MustCastAsMap(current any) Map {
 	m, ok := CastAsMap(current)
 	if !ok {
@@ -215,6 +222,7 @@ func MustCastAsMap(current any) Map {
 	return m
 }
 
+// CastAsMap casts a value to a Map, if possible.
 func CastAsMap(current any) (Map, bool) {
 	if m, ok := current.(Map); ok {
 		return m, true
@@ -225,48 +233,31 @@ func CastAsMap(current any) (Map, bool) {
 	return nil, false
 }
 
+// ConvertMap translates a Map to a T, via JSON
 func ConvertMap[T any](m Map) (T, error) {
 	return fromJSON[T]([]byte(m.JSON()))
 }
 
-func extractIndex(seg string) (int, bool) {
-	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
-		return 0, false
-	}
-	sanitized := seg[1 : len(seg)-1]
-	v, err := strconv.Atoi(sanitized)
+func fromJSON[T any](overlay []byte) (T, error) {
+	v := new(T)
+	err := json.Unmarshal(overlay, &v)
 	if err != nil {
-		return 0, false
+		return pointer.Empty[T](), err
 	}
-	return v, true
+	return *v, nil
 }
 
-func extractKeyValue(seg string) (string, string, bool) {
-	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
-		return "", "", false
+// getPV returns the path and value components for the given set flag string, which must be in path=value format.
+func getPV(setFlag string) (path string, value string) {
+	pv := strings.Split(setFlag, "=")
+	if len(pv) != 2 {
+		return setFlag, ""
 	}
-	sanitized := seg[1 : len(seg)-1]
-	return strings.Cut(sanitized, ":")
+	path, value = strings.TrimSpace(pv[0]), strings.TrimSpace(pv[1])
+	return
 }
 
-func (m Map) MergeFrom(other Map) {
-	for k, v := range other {
-		if vm, ok := v.(Map); ok {
-			v = map[string]any(vm)
-		}
-		if v, ok := v.(map[string]any); ok {
-			if bv, ok := m[k]; ok {
-
-				if bv, ok := bv.(map[string]any); ok {
-					Map(bv).MergeFrom(v)
-					continue
-				}
-			}
-		}
-		m[k] = v
-	}
-}
-
+// SetPath applies values from a path like `key.subkey`, `key.[0].var`, or `key.[name:foo]`.
 func (m Map) SetPath(paths string, value any) error {
 	path := splitPath(paths)
 	base := m
@@ -276,6 +267,7 @@ func (m Map) SetPath(paths string, value any) error {
 	return nil
 }
 
+// SetPaths applies values from input like `key.subkey=val`
 func (m Map) SetPaths(paths ...string) error {
 	for _, sf := range paths {
 		p, v := getPV(sf)
@@ -291,40 +283,7 @@ func (m Map) SetPaths(paths ...string) error {
 	return nil
 }
 
-func getPV(setFlag string) (path string, value string) {
-	pv := strings.Split(setFlag, "=")
-	if len(pv) != 2 {
-		return setFlag, ""
-	}
-	path, value = strings.TrimSpace(pv[0]), strings.TrimSpace(pv[1])
-	return
-}
-
-func parseValue(valueStr string) any {
-	var value any
-	if v, err := strconv.Atoi(valueStr); err == nil {
-		value = v
-	} else if v, err := strconv.ParseFloat(valueStr, 64); err == nil {
-		value = v
-	} else if v, err := strconv.ParseBool(valueStr); err == nil {
-		value = v
-	} else {
-		value = strings.ReplaceAll(valueStr, "\\,", ",")
-	}
-	return value
-}
-
-func isAlwaysString(s string) bool {
-	for _, a := range alwaysString {
-		if strings.HasPrefix(s, a) {
-			return true
-		}
-	}
-	return false
-}
-
-var alwaysString = []string{}
-
+// SetSpecPaths applies values from input like `key.subkey=val`, and applies them under 'spec'
 func (m Map) SetSpecPaths(paths ...string) error {
 	for _, path := range paths {
 		if err := m.SetPaths("spec." + path); err != nil {
@@ -402,13 +361,69 @@ func extractKV(seg string) (string, string, bool) {
 	return strings.Cut(sanitized, ":")
 }
 
-func GetValueForSetFlag(setFlags []string, path string) string {
-	r := ""
-	for _, sf := range setFlags {
-		p, v := getPV(sf)
-		if p == path {
-			r = v
+func extractIndex(seg string) (int, bool) {
+	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
+		return 0, false
+	}
+	sanitized := seg[1 : len(seg)-1]
+	v, err := strconv.Atoi(sanitized)
+	if err != nil {
+		return 0, false
+	}
+	return v, true
+}
+
+func extractKeyValue(seg string) (string, string, bool) {
+	if !strings.HasPrefix(seg, "[") || !strings.HasSuffix(seg, "]") {
+		return "", "", false
+	}
+	sanitized := seg[1 : len(seg)-1]
+	return strings.Cut(sanitized, ":")
+}
+
+// alwaysString represents types that should always be decoded as strings
+var alwaysString = []string{}
+
+func isAlwaysString(s string) bool {
+	for _, a := range alwaysString {
+		if strings.HasPrefix(s, a) {
+			return true
 		}
 	}
-	return r
+	return false
+}
+
+// parseValue parses string into a value.
+func parseValue(valueStr string) any {
+	var value any
+	if v, err := strconv.Atoi(valueStr); err == nil {
+		value = v
+	} else if v, err := strconv.ParseFloat(valueStr, 64); err == nil {
+		value = v
+	} else if v, err := strconv.ParseBool(valueStr); err == nil {
+		value = v
+	} else {
+		value = strings.ReplaceAll(valueStr, "\\,", ",")
+	}
+	return value
+}
+
+// MergeFrom does a key-wise merge between the current map and the passed in map.
+// The other map has precedence, and the result will modify the current map.
+func (m Map) MergeFrom(other Map) {
+	for k, v := range other {
+		if vm, ok := v.(Map); ok {
+			v = map[string]any(vm)
+		}
+		if v, ok := v.(map[string]any); ok {
+			if bv, ok := m[k]; ok {
+
+				if bv, ok := bv.(map[string]any); ok {
+					Map(bv).MergeFrom(v)
+					continue
+				}
+			}
+		}
+		m[k] = v
+	}
 }

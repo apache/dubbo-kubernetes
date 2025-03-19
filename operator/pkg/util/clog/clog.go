@@ -24,12 +24,7 @@ import (
 	"os"
 )
 
-type ConsoleLogger struct {
-	stdOut io.Writer
-	stdErr io.Writer
-	scope  *log.Scope
-}
-
+// Logger provides optional log taps for console and test buffer outputs.
 type Logger interface {
 	LogAndPrint(v ...any)
 	LogAndError(v ...any)
@@ -40,6 +35,15 @@ type Logger interface {
 	Print(s string)
 }
 
+// ConsoleLogger is the struct used for mesh command.
+type ConsoleLogger struct {
+	stdOut io.Writer
+	stdErr io.Writer
+	scope  *log.Scope
+}
+
+// NewConsoleLogger creates a new logger and returns a pointer to it.
+// stdOut and stdErr can be used to capture output for testing.
 func NewConsoleLogger(stdOut, stdErr io.Writer, scope *log.Scope) *ConsoleLogger {
 	s := scope
 	if s == nil {
@@ -52,6 +56,7 @@ func NewConsoleLogger(stdOut, stdErr io.Writer, scope *log.Scope) *ConsoleLogger
 	}
 }
 
+// NewDefaultLogger creates a new logger that outputs to stdout/stderr at default scope.
 func NewDefaultLogger() *ConsoleLogger {
 	return NewConsoleLogger(os.Stdout, os.Stderr, nil)
 }

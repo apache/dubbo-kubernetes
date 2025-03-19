@@ -31,12 +31,22 @@ type schemaImpl struct {
 	gvk            config.GroupVersionKind
 	plural         string
 	clusterScoped  bool
-	goPkg          string
+	goPackage      string
 	proto          string
 	versionAliases []string
 	apiVersion     string
 	reflectType    reflect.Type
 	statusType     reflect.Type
+}
+
+// Schema for a resource.
+type Schema interface {
+	fmt.Stringer
+	GroupVersionResource() schema.GroupVersionResource
+	GroupVersionKind() config.GroupVersionKind
+	GroupVersionAliasKinds() []config.GroupVersionKind
+	Validate() error
+	IsClusterScoped() bool
 }
 
 func (s *schemaImpl) GroupVersionAliasKinds() []config.GroupVersionKind {
@@ -49,8 +59,12 @@ func (s *schemaImpl) GroupVersionAliasKinds() []config.GroupVersionKind {
 	return gvks
 }
 
-func (s *schemaImpl) IsClusterScoped() bool {
-	return s.clusterScoped
+func (s *schemaImpl) String() string {
+	return fmt.Sprintf("[Schema](%s, %q, %s)", s.Kind(), s.goPackage, s.proto)
+}
+
+func (s *schemaImpl) APIVersion() string {
+	return s.apiVersion
 }
 
 func (s *schemaImpl) Kind() string {
@@ -69,16 +83,12 @@ func (s *schemaImpl) Plural() string {
 	return s.plural
 }
 
-func (s *schemaImpl) GroupVersionKind() config.GroupVersionKind {
-	return s.gvk
-}
-
-func (s *schemaImpl) InClusterScoped() bool {
+func (s *schemaImpl) IsClusterScoped() bool {
 	return s.clusterScoped
 }
 
-func (s *schemaImpl) String() string {
-	return fmt.Sprintf("[Schema](%s, %q, %s)", s.Kind(), s.goPkg, s.proto)
+func (s *schemaImpl) GroupVersionKind() config.GroupVersionKind {
+	return s.gvk
 }
 
 func (s *schemaImpl) GroupVersionResource() schema.GroupVersionResource {
@@ -96,6 +106,7 @@ func (s *schemaImpl) Validate() (err error) {
 	return
 }
 
+// Builder for a Schema.
 type Builder struct {
 	Identifier    string
 	Plural        string
@@ -111,6 +122,7 @@ type Builder struct {
 	Synthetic     bool
 }
 
+// BuildNoValidate builds the Schema without checking the fields.
 func (b Builder) BuildNoValidate() Schema {
 	return &schemaImpl{
 		gvk: config.GroupVersionKind{
@@ -120,7 +132,7 @@ func (b Builder) BuildNoValidate() Schema {
 		},
 		plural:        b.Plural,
 		clusterScoped: b.ClusterScoped,
-		goPkg:         b.ProtoPackage,
+		goPackage:     b.ProtoPackage,
 		proto:         b.Proto,
 		apiVersion:    b.Group + "/" + b.Version,
 		reflectType:   b.ReflectType,
@@ -128,14 +140,17 @@ func (b Builder) BuildNoValidate() Schema {
 	}
 }
 
+// Build a Schema instance.
 func (b Builder) Build() (Schema, error) {
 	s := b.BuildNoValidate()
+	// Validate the schema.
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
+// MustBuild calls Build and panics if it fails.
 func (b Builder) MustBuild() Schema {
 	s, err := b.Build()
 	if err != nil {
@@ -144,17 +159,9 @@ func (b Builder) MustBuild() Schema {
 	return s
 }
 
-type Schema interface {
-	fmt.Stringer
-	GroupVersionResource() schema.GroupVersionResource
-	GroupVersionKind() config.GroupVersionKind
-	GroupVersionAliasKinds() []config.GroupVersionKind
-	Validate() error
-	IsClusterScoped() bool
-}
-
 var protoMessageType = protoregistry.GlobalTypes.FindMessageByName
 
+// getProtoMessageType returns the Go lang type of the proto with the specified name.
 func getProtoMessageType(protoMessageName string) reflect.Type {
 	t, err := protoMessageType(protoreflect.FullName(protoMessageName))
 	if err != nil || t == nil {

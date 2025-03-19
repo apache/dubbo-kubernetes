@@ -123,7 +123,7 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 		Kube:         kubeClient,
 		Values:       vals,
 		WaitTimeout:  iArgs.waitTimeout,
-		ProgressInfo: progress.NewInfo(),
+		ProgressInfo: progress.NewLog(),
 		Logger:       cl,
 	}
 	if err := i.InstallManifests(manifests); err != nil {

@@ -23,6 +23,8 @@ import (
 	"strings"
 )
 
+// MultiErrorFormat provides a format for multierrors. This matches the default format, but if there
+// is only one error we will not expand to multiple lines.
 func MultiErrorFormat() multierror.ErrorFormatFunc {
 	return func(errors []error) string {
 		if len(errors) == 1 {
