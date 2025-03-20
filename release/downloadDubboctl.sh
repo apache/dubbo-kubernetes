@@ -15,20 +15,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 # Determines the operating system.
 OS="${TARGET_OS:-$(uname)}"
 if [ "${OS}" = "Darwin" ] ; then
-  OSEXT="darwin"
+  OSEXT="osx"
 else
   OSEXT="linux"
 fi
 
 # Determine the latest Dubboctl version by version number ignoring alpha, beta, and rc versions.
-if [ "${DUBBOCTL_VERSION}" = "" ] ; then
-  DUBBOCTL_VERSION="$(curl -sL https://github.com/apache/dubbo-kubernetes/releases | \
+if [ "${DUBBO_VERSION}" = "" ] ; then
+  DUBBO_VERSION="$(curl -sL https://github.com/apache/dubbo-kubernetes/releases | \
                   grep -E -o 'dubboctl/([v,V]?)[0-9]*.[0-9]*.[0-9]*' | sort -V | \
                   tail -1 | awk -F'/' '{ print $2}')"
-  DUBBOCTL_VERSION="${DUBBOCTL_VERSION##*/}"
+  DUBBO_VERSION="${DUBBOCTL_VERSION##*/}"
 fi
 
 if [ "${DUBBOCTL_VERSION}" = "" ] ; then
@@ -62,11 +64,13 @@ download_failed () {
   exit 1
 }
 
+download_failed
+
 # Downloads the dubboctl binary archive.
 tmp=$(mktemp -d /tmp/dubboctl.XXXXXX)
-NAME="dubboctl-${DUBBOCTL_VERSION}"
-
-ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/dubboctl%2F${DUBBOCTL_VERSION}/dubboctl-${DUBBOCTL_VERSION}-${OSEXT}-${DUBBOCTL_ARCH}.tar.gz"
+NAME="dubboctl-${DUBBO_VERSION}"
+URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBOCTL_VERSION}/dubboctl-${DUBBOCTL_VERSION}-${OSEXT}-${DUBBOCTL_ARCH}.tar.gz"
+ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBOCTL_VERSION}/dubboctl-${DUBBOCTL_VERSION}-${OSEXT}-${DUBBOCTL_ARCH}.tar.gz"
 
 with_arch() {
   printf "\nDownloading %s from %s ...\n" "${NAME}" "$ARCH_URL"
@@ -79,9 +83,20 @@ with_arch() {
   tar -xzf "${tmp}/${filename}" -C "${tmp}"
 }
 
-with_arch
+without_arch() {
+  printf "\nDownloading %s from %s ..." "$NAME" "$URL"
+  if ! curl -o /dev/null -sIf "$URL"; then
+    printf "\n%s is not found, please specify a valid DUBBO_VERSION\n" "$URL"
+    exit 1
+  fi
+  curl -fsLO "$URL"
+  filename="dubboctl-${DUBBO_VERSION}-${OSEXT}.tar.gz"
+  curl -fsL -o "${tmp}/${filename}" "$URL"
+  tar -xzf "${tmp}/${filename}" -C "${tmp}"
+}
 
-printf "%s download complete!\n" "${filename}"
+with_arch
+without_arch
 
 # setup dubboctl
 mkdir -p "$HOME/.dubboctl/bin"
@@ -89,13 +104,11 @@ mv "${tmp}/dubboctl" "$HOME/.dubboctl/bin/dubboctl"
 chmod +x "$HOME/.dubboctl/bin/dubboctl"
 rm -r "${tmp}"
 
+printf "%s download complete!\n" "${filename}"
+
 # Print message
 printf "\n"
 printf "Add the dubboctl to your path with:"
 printf "\n"
 printf "  export PATH=\$HOME/.dubboctl/bin:\$PATH \n"
 printf "\n"
-printf "Begin the Dubbo pre-installation check by running:\n"
-printf "\t dubboctl x precheck \n"
-printf "\n"
-
