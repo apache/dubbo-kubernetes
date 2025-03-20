@@ -119,10 +119,15 @@ func (dc deployConfig) deployClientOptions() ([]sdk.Option, error) {
 func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	iArgs := &imageArgs{}
 	hc := &cobra.Command{
-		Use:     "hub",
-		Short:   "Build and Push to images",
-		Long:    "The hub subcommand used to build and push images",
-		Example: "",
+		Use:   "hub",
+		Short: "Build and Push to images",
+		Long:  "The hub subcommand used to build and push images",
+		Example: `  # Build an image using a Dockerfile.
+  dubboctl image hub -f Dockerfile
+
+  # Build an image using a builder.
+  dubboctl image hub -b
+`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if cmd.Flags().Changed("file") {
 				if len(args) != 1 {
@@ -214,10 +219,15 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 	iArgs := &imageArgs{}
 	hc := &cobra.Command{
-		Use:     "deploy",
-		Short:   "Deploy to cluster",
-		Long:    "The deploy subcommand used to deploy to cluster",
-		Example: "",
+		Use:   "deploy",
+		Short: "Deploy to cluster",
+		Long:  "The deploy subcommand used to deploy to cluster",
+		Example: `  # Deploy the application to the cluster.
+  dubboctl image deploy
+
+  # Delete the deployed application.
+  dubboctl image deploy -d
+`,
 		PreRunE: bindEnv("output", "delete"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, args, clientFactory)
@@ -291,8 +301,7 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root, dc.Deploy.Output)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
-	ec.Stdout = os.Stdout
-	ec.Stderr = os.Stderr
+	ec.Stdout, ec.Stderr = os.Stdout, os.Stderr
 	if err := ec.Run(); err != nil {
 		return err
 	}
@@ -302,8 +311,7 @@ func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 func remove(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root, dc.Deploy.Output)
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "delete", "-f", file)
-	ec.Stdout = os.Stdout
-	ec.Stderr = os.Stderr
+	ec.Stdout, ec.Stderr = os.Stdout, os.Stderr
 	if err := ec.Run(); err != nil {
 		return err
 	}

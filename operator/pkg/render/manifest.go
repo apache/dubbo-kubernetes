@@ -149,7 +149,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, _ k
 	// This allows safe access to get/fetch values dynamically, and avoids issues are typing and whether we should emit empty fields.
 	merged, err := MergeInputs(files, setFlags)
 	if err != nil {
-		return nil, nil, fmt.Errorf("merge inputs: %v %v", err)
+		return nil, nil, fmt.Errorf("merge inputs: %v", err)
 	}
 	// Validate the config. This can emit warnings to the logger. If force is set, errors will be logged as warnings but not returned.
 	if err := validateDubboOperator(merged, logger); err != nil {
