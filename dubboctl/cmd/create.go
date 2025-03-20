@@ -99,12 +99,12 @@ func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 }
 
 type createConfig struct {
-	Path       string
-	Runtime    string
-	Template   string
-	Repo       string
-	DirName    string
-	Initialzed bool
+	Path        string
+	Runtime     string
+	Template    string
+	Repo        string
+	DirName     string
+	Initialized bool
 }
 
 func newCreateConfig(_ *cobra.Command, _ []string, _ ClientFactory) (dcfg createConfig, err error) {
@@ -112,11 +112,11 @@ func newCreateConfig(_ *cobra.Command, _ []string, _ ClientFactory) (dcfg create
 	absolutePath = cwd()
 
 	dcfg = createConfig{
-		DirName:    viper.GetString("dirname"),
-		Path:       absolutePath + "/" + viper.GetString("dirname"),
-		Runtime:    viper.GetString("language"),
-		Template:   viper.GetString("template"),
-		Initialzed: viper.GetBool("initialzed"),
+		DirName:     viper.GetString("dirname"),
+		Path:        absolutePath + "/" + viper.GetString("dirname"),
+		Runtime:     viper.GetString("language"),
+		Template:    viper.GetString("template"),
+		Initialized: viper.GetBool("initialized"),
 	}
 	fmt.Printf("Name:     %v\n", dcfg.DirName)
 	fmt.Printf("Path:     %v\n", dcfg.Path)
@@ -142,11 +142,11 @@ func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 		Name:     dcfg.DirName,
 		Runtime:  dcfg.Runtime,
 		Template: dcfg.Template,
-	}, dcfg.Initialzed, cmd)
+	}, dcfg.Initialized, cmd)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Custom Dubbo %v sdk was successfully created.\n", dcfg.Runtime)
+	fmt.Printf("Custom dubbo %v sdk was successfully created.\n", dcfg.Runtime)
 	return nil
 }
 

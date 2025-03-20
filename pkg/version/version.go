@@ -27,12 +27,12 @@ var (
 	buildVersion = "unknown"
 )
 
-//type BuildInfo struct {
+// type BuildInfo struct {
 //	Version string `json:"version"`
-//}
+// }
 
 func (b BuildInfo) String() string {
-	return fmt.Sprintf("%v-%v-%v", b.Version)
+	return fmt.Sprintf("%v", b.Version)
 }
 
 func (b BuildInfo) LongForm() string {

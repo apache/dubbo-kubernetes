@@ -35,7 +35,7 @@ import (
 	billy "github.com/go-git/go-billy/v5"
 )
 
-// Filesystems
+// Filesystem
 // Wrap the implementations of FS with their subtle differences into the
 // common interface for accessing template files defined herein.
 // os:    standard for on-disk extensible template repositories.
