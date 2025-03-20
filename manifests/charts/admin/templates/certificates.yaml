@@ -38,7 +38,7 @@ We only autogenerate certs if the cert is not yet generated. This way we keep th
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ $secretName }}
+  name: {{ include "admin.name" . }}-tls-cert
   namespace: {{ .Release.Namespace }}
   labels: {{ include "admin.labels" . | nindent 4 }}
 type: kubernetes.io/tls

@@ -6,13 +6,6 @@
 {{- $defaults := $.Values._internal_default_values_not_set }}
 {{- $_ := unset $.Values "_internal_default_values_not_set " }}
 {{- $profile := dict }}
-{{- with (coalesce ($.Values).profile ($.Values.global).profile) }}
-{{- with $.Files.Get (printf "files/profile-%s.yaml" .)}}
-{{- $profile = (. | fromYaml) }}
-{{- else }}
-{{ fail (cat "unknown profile" .) }}
-{{- end }}
-{{- end }}
 {{- if false }}
 {{- $a := mustMergeOverwrite $defaults ($profile.global) ($.Values.global | default dict)  }}
 {{- end }}
