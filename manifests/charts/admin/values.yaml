@@ -40,7 +40,7 @@ _internal_default_values_not_set:
     # Source of the container image.
     registry: docker.io/apache/dubbo-admin
     # Version tag of the container image.
-    tag: latest
+    tag: 0.5.0-SNAPSHOT
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
 
@@ -174,15 +174,15 @@ _internal_default_values_not_set:
     # Maximum CPU and memory resources allowed for the container.
     limits:
       # CPU usage limit.
-      cpu: 1024m
+      cpu: 102m
       # Memory usage limit.
-      memory: 1Gi
+      memory: 100Mi
     # Initial CPU and memory resource requests for the container.
     requests:
       # CPU usage request.
-      cpu: 512m
+      cpu: 102m
       # Memory usage request.
-      memory: 512Mi
+      memory: 100Mi
 
   ## Define toleration's for the application pods.
   tolerations: ~
