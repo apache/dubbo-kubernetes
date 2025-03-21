@@ -18,7 +18,7 @@ module github.com/apache/dubbo-kubernetes
 go 1.23.0
 
 require (
-	dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20240926033233-f03922ab1bcb
+	dubbo.apache.org/dubbo-go/v3 v3.2.0-rc1.0.20250311023625-ec49b40dced8
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
@@ -133,7 +133,7 @@ require (
 	github.com/alibaba/sentinel-golang v1.0.4 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1800 // indirect
 	github.com/apache/dubbo-getty v1.4.10 // indirect
-	github.com/apache/dubbo-go-hessian2 v1.12.2 // indirect
+	github.com/apache/dubbo-go-hessian2 v1.12.5 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.18.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.18.27 // indirect
@@ -182,7 +182,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dop251/goja v0.0.0-20240220182346-e401ed450204 // indirect
 	github.com/dubbogo/grpc-go v1.42.10 // indirect
-	github.com/dubbogo/triple v1.2.2-rc3 // indirect
+	github.com/dubbogo/triple v1.2.2-rc4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect

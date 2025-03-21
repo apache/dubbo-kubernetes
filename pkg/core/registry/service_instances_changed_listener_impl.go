@@ -18,7 +18,8 @@
 package registry
 
 import (
-	"context"
+	"dubbo.apache.org/dubbo-go/v3/metadata"
+	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"reflect"
 )
 
@@ -26,17 +27,11 @@ import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
-	"dubbo.apache.org/dubbo-go/v3/common/extension"
-	"dubbo.apache.org/dubbo-go/v3/metadata/service"
-	"dubbo.apache.org/dubbo-go/v3/metadata/service/local"
-	triple_api "dubbo.apache.org/dubbo-go/v3/metadata/triple_api/proto"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 	"dubbo.apache.org/dubbo-go/v3/remoting"
 
 	gxset "github.com/dubbogo/gost/container/set"
 	"github.com/dubbogo/gost/gof/observer"
-
-	"github.com/pkg/errors"
 )
 
 import (
@@ -73,7 +68,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	defer lstn.ctx.mu.Unlock()
 
 	revisionToInstances := make(map[string][]registry.ServiceInstance)
-	localServiceToRevisions := make(map[*common.ServiceInfo]*gxset.HashSet)
+	localServiceToRevisions := make(map[*info.ServiceInfo]*gxset.HashSet)
 	protocolRevisionsToUrls := make(map[string]map[*gxset.HashSet][]*common.URL)
 	newServiceURLs := make(map[string][]*common.URL)
 
@@ -218,53 +213,24 @@ func (lstn *DubboSDNotifyListener) GetEventType() reflect.Type {
 }
 
 // GetMetadataInfo get metadata info when MetadataStorageTypePropertyName is null
-func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*common.MetadataInfo, error) {
+func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*info.MetadataInfo, error) {
 	var metadataStorageType string
-	var metadataInfo *common.MetadataInfo
+	var metadataInfo *info.MetadataInfo
+	var err error
 	if instance.GetMetadata() == nil {
-		metadataStorageType = dubboconstant.DefaultMetadataStorageType
+		metadataStorageType = constant.DefaultMetadataStorageType
 	} else {
-		metadataStorageType = instance.GetMetadata()[dubboconstant.MetadataStorageTypePropertyName]
+		metadataStorageType = instance.GetMetadata()[constant.MetadataStorageTypePropertyName]
 	}
-	if metadataStorageType == dubboconstant.RemoteMetadataStorageType {
-		remoteMetadataServiceImpl, err := extension.GetRemoteMetadataService()
+	if metadataStorageType == constant.RemoteMetadataStorageType {
+		metadataInfo, err = metadata.GetMetadataFromMetadataReport(revision, instance)
 		if err != nil {
-			return &common.MetadataInfo{}, err
-		}
-		metadataInfo, err = remoteMetadataServiceImpl.GetMetadata(instance)
-		if err != nil {
-			return &common.MetadataInfo{}, err
+			return nil, err
 		}
 	} else {
-		var err error
-		if instance.GetMetadata()[constant.MetadataVersion] == constant.MetadataServiceV2Version {
-			proxyFactoryV2 := extension.GetMetadataServiceProxyFactoryV2(constant.MetadataServiceV2)
-			metadataServiceV2 := proxyFactoryV2.GetProxy(instance)
-			if metadataServiceV2 != nil {
-				defer destroyInvokerV2(metadataServiceV2)
-				var metadataInfoV2 *triple_api.MetadataInfoV2
-				metadataInfoV2, err = metadataServiceV2.GetMetadataInfo(context.Background(), &triple_api.MetadataRequest{Revision: revision})
-				if err != nil {
-					logger.Errorf("get metadata of %s failed, %v", instance.GetHost(), err)
-					return &common.MetadataInfo{}, err
-				}
-				metadataInfo = convertMetadataInfo(metadataInfoV2)
-			} else {
-				err = errors.New("get remote metadata error please check instance " + instance.GetHost() + " is alive")
-			}
-		} else {
-			proxyFactory := extension.GetMetadataServiceProxyFactory(constant.DefaultKey)
-			metadataService := proxyFactory.GetProxy(instance)
-			if metadataService != nil {
-				defer destroyInvoker(metadataService)
-				metadataInfo, err = metadataService.GetMetadataInfo(revision)
-				if err != nil {
-					logger.Errorf("get metadata of %s failed, %v", instance.GetHost(), err)
-					return &common.MetadataInfo{}, err
-				}
-			} else {
-				err = errors.New("get remote metadata error please check instance " + instance.GetHost() + " is alive")
-			}
+		metadataInfo, err = metadata.GetMetadataFromRpc(revision, instance)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return metadataInfo, nil
@@ -284,53 +250,4 @@ func findInstancesToDelete(localAllInstances, newAllInstances []registry.Service
 	}
 
 	return instancesToDelete
-}
-
-func convertMetadataInfo(v2 *triple_api.MetadataInfoV2) *common.MetadataInfo {
-	infos := make(map[string]*common.ServiceInfo, 0)
-	for k, v := range v2.Services {
-		info := &common.ServiceInfo{
-			Name:     v.Name,
-			Group:    v.Group,
-			Version:  v.Version,
-			Protocol: v.Protocol,
-			Path:     v.Path,
-			Params:   v.Params,
-		}
-		infos[k] = info
-	}
-
-	metadataInfo := &common.MetadataInfo{
-		Reported: false,
-		App:      v2.App,
-		Revision: v2.Version,
-		Services: infos,
-	}
-	return metadataInfo
-}
-
-func destroyInvoker(metadataService service.MetadataService) {
-	if metadataService == nil {
-		return
-	}
-
-	proxy := metadataService.(*local.MetadataServiceProxy)
-	if proxy.Invoker == nil {
-		return
-	}
-
-	proxy.Invoker.Destroy()
-}
-
-func destroyInvokerV2(metadataService service.MetadataServiceV2) {
-	if metadataService == nil {
-		return
-	}
-
-	proxy := metadataService.(*local.MetadataServiceProxyV2)
-	if proxy.Invoker == nil {
-		return
-	}
-
-	proxy.Invoker.Destroy()
 }

@@ -18,6 +18,8 @@
 package registry
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/common/constant"
+	"dubbo.apache.org/dubbo-go/v3/config_center"
 	"net/url"
 	"reflect"
 	"sync"
@@ -44,15 +46,17 @@ import (
 type Registry struct {
 	delegate   dubboRegistry.Registry
 	sdDelegate dubboRegistry.ServiceDiscovery
+	cfgCenter  config_center.DynamicConfiguration
 	ctx        *ApplicationContext
 	infCtx     *InterfaceContext
 	scheduler  *gocron.Scheduler
 }
 
-func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery, ctx *ApplicationContext, infCtx *InterfaceContext) *Registry {
+func NewRegistry(delegate dubboRegistry.Registry, sdDelegate dubboRegistry.ServiceDiscovery, ctx *ApplicationContext, infCtx *InterfaceContext, cfgCenter config_center.DynamicConfiguration) *Registry {
 	return &Registry{
 		delegate:   delegate,
 		sdDelegate: sdDelegate,
+		cfgCenter:  cfgCenter,
 		ctx:        ctx,
 		infCtx:     infCtx,
 		scheduler:  gocron.NewScheduler(time.UTC),
@@ -71,16 +75,15 @@ func (r *Registry) Subscribe(
 	metadataReport report.MetadataReport,
 	resourceManager core_manager.ResourceManager,
 	cache *sync.Map,
-	discovery dubboRegistry.ServiceDiscovery,
 	out events.Emitter,
 	systemNamespace string,
 ) error {
 	listener := NewNotifyListener(resourceManager, cache, out, r.ctx)
 
-	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.infCtx)
+	interfaceListener := NewInterfaceServiceChangedNotifyListener(listener, r.infCtx, r)
 	r.listenToAllServices(interfaceListener)
 
-	r.subscribeApp(metadataReport, listener, "mapping", out, systemNamespace)
+	r.subscribeApp(metadataReport, listener, "mapping", out, systemNamespace, r.cfgCenter)
 
 	r.scheduler.StartAsync()
 
@@ -88,10 +91,10 @@ func (r *Registry) Subscribe(
 }
 
 func (r *Registry) subscribeApp(metadataReport report.MetadataReport, listener *NotifyListener, group string, out events.Emitter,
-	systemNamespace string,
+	systemNamespace string, cfg config_center.DynamicConfiguration,
 ) {
 	_, err := r.scheduler.Every(30 * 60).Second().Do(func() {
-		err := doAppSubscribe(r, metadataReport, listener, group, out, systemNamespace)
+		err := doAppSubscribe(r, metadataReport, listener, group, out, systemNamespace, cfg)
 		if err != nil {
 			logger.Error("Run app subscription scheduling task failed")
 		}
@@ -109,10 +112,8 @@ func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNo
 		consts.VersionKey:    {consts.AnyValue},
 		consts.ClassifierKey: {consts.AnyValue},
 		consts.CategoryKey: {
-			consts.ProvidersCategory,
-			consts.ConsumersCategory,
-			consts.RoutersCategory,
-			consts.ConfiguratorsCategory,
+			consts.ProvidersCategory + constant.CommaSeparator +
+				consts.ConsumersCategory,
 		},
 		consts.EnabledKey: {consts.AnyValue},
 		consts.CheckKey:   {"false"},
@@ -140,9 +141,9 @@ func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNo
 }
 
 func doAppSubscribe(r *Registry, metadataReport report.MetadataReport, listener *NotifyListener, group string, out events.Emitter,
-	systemNamespace string,
+	systemNamespace string, cfg config_center.DynamicConfiguration,
 ) error {
-	keys, err := metadataReport.GetConfigKeysByGroup(group)
+	keys, err := cfg.GetConfigKeysByGroup(group)
 	if err != nil {
 		return err
 	}
@@ -153,14 +154,11 @@ func doAppSubscribe(r *Registry, metadataReport report.MetadataReport, listener 
 		if !(interfaceKey == "org.apache.dubbo.mock.api.MockService") {
 			rule, err := metadataReport.GetServiceAppMapping(interfaceKey, group, nil)
 			if err != nil {
+				logger.Error("Failed to get mapping")
 				return err
 			}
 			mappings[interfaceKey] = rule
 		}
-	}
-
-	if err != nil {
-		logger.Error("Failed to get mapping")
 	}
 
 	r.ctx.UpdateMapping(mappings)

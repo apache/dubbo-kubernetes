@@ -18,7 +18,9 @@
 package service
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"strconv"
+	"strings"
 )
 
 import (
@@ -77,6 +79,9 @@ func GetApplicationTabInstanceInfo(rt core_runtime.Runtime, req *model.Applicati
 	res := model.NewSearchPaginationResult()
 	list := make([]*model.ApplicationTabInstanceInfoResp, 0, len(dataplaneList.Items))
 	for _, dataplane := range dataplaneList.Items {
+		if strings.Split(dataplane.Meta.GetName(), constant.KeySeparator)[1] == "0" {
+			continue
+		}
 		resItem := &model.ApplicationTabInstanceInfoResp{}
 		resItem.FromDataplaneResource(dataplane)
 		resItem.GetRegistry(rt)
@@ -162,6 +167,9 @@ func GetApplicationSearchInfo(rt core_runtime.Runtime, req *model.ApplicationSea
 	res := make([]*model.ApplicationSearchResp, 0)
 	appMap := make(map[string]*model.ApplicationSearch)
 	for _, dataplane := range dataplaneList.Items {
+		if strings.Split(dataplane.GetMeta().GetName(), constant.KeySeparator)[1] == "0" {
+			continue
+		}
 		appName := dataplane.Spec.GetExtensions()[mesh_proto.Application]
 		if _, ok := appMap[appName]; !ok {
 			appMap[appName] = model.NewApplicationSearch(appName)

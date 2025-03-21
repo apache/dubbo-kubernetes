@@ -28,7 +28,6 @@ import (
 import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/extension"
-	"dubbo.apache.org/dubbo-go/v3/config/instance"
 	"dubbo.apache.org/dubbo-go/v3/config_center"
 
 	"github.com/pkg/errors"
@@ -227,7 +226,7 @@ func initializeTraditional(cfg dubbo_cp.Config, builder *core_runtime.Builder) e
 			return err
 		}
 		builder.WithServiceDiscovery(sdDelegate)
-		adminRegistry := dubbo_registry.NewRegistry(delegate, sdDelegate, builder.AppRegCtx(), builder.InfRegCtx())
+		adminRegistry := dubbo_registry.NewRegistry(delegate, sdDelegate, builder.AppRegCtx(), builder.InfRegCtx(), configCenter)
 		builder.WithAdminRegistry(adminRegistry)
 	}
 	if len(metadataReportAddress) > 0 {
@@ -241,10 +240,6 @@ func initializeTraditional(cfg dubbo_cp.Config, builder *core_runtime.Builder) e
 		metadataReport := factory.CreateMetadataReport(addrUrl)
 		builder.WithMetadataReport(metadataReport)
 	}
-	// 设置MetadataReportUrl
-	instance.SetMetadataReportUrl(addrUrl)
-	// 设置MetadataReportInstance
-	instance.SetMetadataReportInstanceByReg(addrUrl)
 
 	return nil
 }
