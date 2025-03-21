@@ -20,6 +20,7 @@ package registry
 import (
 	"dubbo.apache.org/dubbo-go/v3/metadata"
 	"dubbo.apache.org/dubbo-go/v3/metadata/info"
+	"fmt"
 	"reflect"
 )
 
@@ -223,7 +224,11 @@ func GetMetadataInfo(instance registry.ServiceInstance, revision string) (*info.
 		metadataStorageType = instance.GetMetadata()[constant.MetadataStorageTypePropertyName]
 	}
 	if metadataStorageType == constant.RemoteMetadataStorageType {
-		metadataInfo, err = GetMetadataReport().GetAppMetadata(instance.GetServiceName(), revision)
+		report := GetMetadataReport()
+		if report == nil {
+			return nil, fmt.Errorf("failed to request remote metadata, unable to retrieve the metadata report")
+		}
+		metadataInfo, err = report.GetAppMetadata(instance.GetServiceName(), revision)
 		if err != nil {
 			return nil, err
 		}
