@@ -48,9 +48,9 @@ spec:
         {{- if $admin.lifecycleHooks }}
         {{- toYaml $admin.lifecycleHooks | nindent 10 }}
         {{- end }}
-        args:
-        - run
-        - --config-file=/etc/dubbo.io/config.yaml
+        # args:
+        # - run
+        # - --config-file=/etc/dubbo.io/config.yaml
         ports:
         - name: admin-http
           containerPort: 8888
@@ -59,15 +59,6 @@ spec:
         - name: admin-admission
           containerPort: 5443
         env:
-        {{- $zooName := printf "zookeeper" -}}
-        {{- $nacosName := printf "nacos" -}}
-        {{- $zooReplicas := int .Values.zookeeper.replicas -}}
-        {{- $nacosReplicas := int .Values.nacos.replicas -}}
-        {{- $zooNamespace := include "admin.namespace" . -}}
-        {{- $nacosNamespace := include "admin.namespace" . -}}
-        {{- $clusterDomain := $admin.clusterDomain -}}
-        {{- $zooPort := include "zoo.client" . -}}
-        {{- $nacosPort := $nacos.serverPort -}}
         {{- if $nacos.enabled }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
           value: nacos://nacos-0.nacos.dubbo-system.svc.cluster.local:8848

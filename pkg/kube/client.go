@@ -28,10 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
-	"k8s.io/client-go/discovery"
+	// "k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
@@ -45,19 +44,18 @@ type client struct {
 	factory         *clientFactory
 	version         laziness.Laziness[*kubeVersion.Info]
 	informerFactory informerfactory.InformerFactory
-	restClient      *rest.RESTClient
-	discoveryClient discovery.CachedDiscoveryInterface
 	dynamic         dynamic.Interface
 	kube            kubernetes.Interface
-	metadata        metadata.Interface
 	mapper          meta.ResettableRESTMapper
 	http            *http.Client
 }
 
 type Client interface {
+	// Ext returns the API extensions client.
 	Ext() kubeExtClient.Interface
+
+	// Kube returns the core kube client
 	Kube() kubernetes.Interface
-	Dynamic() dynamic.Interface
 }
 
 type CLIClient interface {
@@ -82,23 +80,11 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 	for _, opt := range opts {
 		opt(&c)
 	}
-	c.restClient, err = factory.RestClient()
-	if err != nil {
-		return nil, err
-	}
-	c.discoveryClient, err = factory.ToDiscoveryClient()
-	if err != nil {
-		return nil, err
-	}
 	c.mapper, err = factory.mapper.Get()
 	if err != nil {
 		return nil, err
 	}
 	c.kube, err = kubernetes.NewForConfig(c.config)
-	if err != nil {
-		return nil, err
-	}
-	c.metadata, err = metadata.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
 	}
@@ -140,10 +126,6 @@ var (
 	_ Client    = &client{}
 	_ CLIClient = &client{}
 )
-
-func (c *client) Dynamic() dynamic.Interface {
-	return c.dynamic
-}
 
 func (c *client) Ext() kubeExtClient.Interface {
 	return c.extSet
