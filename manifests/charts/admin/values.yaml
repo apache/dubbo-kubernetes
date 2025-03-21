@@ -38,9 +38,9 @@ _internal_default_values_not_set:
   ## Configure the application image
   image:
     # Source of the container image.
-    registry: docker.io/apache/dubbo-admin
+    registry: mfordjody/gin-web-log
     # Version tag of the container image.
-    tag: 0.5.0-SNAPSHOT
+    tag: latest
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
 
@@ -92,51 +92,51 @@ _internal_default_values_not_set:
   ## Termination grace period for pods.
   terminationGracePeriodSeconds: 30
 
-  startupProbe:
-    # Delay before the probe is initiated.
-    initialDelaySeconds: 60
-    # Time to wait for the probe to complete.
-    timeoutSeconds: 30
-    # How often to perform the probe.
-    periodSeconds: 10
-    # Minimum consecutive successes for the probe to be considered successful.
-    successThreshold: 1
-    # Perform an HTTP GET request to check.
-    httpGet:
-      # The path to use for the HTTP GET request.
-      path: /health
-      # The port on which the HTTP GET request will be made.
-      port: 8888
-  readinessProbe:
-    # Delay before the probe is initiated.
-    initialDelaySeconds: 60
-    # Time to wait for the probe to complete.
-    timeoutSeconds: 30
-    # How often to perform the probe.
-    periodSeconds: 10
-    # Minimum consecutive successes for the probe to be considered successful.
-    successThreshold: 1
-    # Perform an HTTP GET request to check.
-    httpGet:
-      # The path to use for the HTTP GET request.
-      path: /health
-      # The port on which the HTTP GET request will be made.
-      port: 8888
-  livenessProbe:
-    # Delay before the probe is initiated.
-    initialDelaySeconds: 60
-    # Time to wait for the probe to complete.
-    timeoutSeconds: 30
-    # How often to perform the probe.
-    periodSeconds: 10
-    # Minimum consecutive successes for the probe to be considered successful.
-    successThreshold: 1
-    # Perform an HTTP GET request to check.
-    httpGet:
-      # The path to use for the HTTP GET request.
-      path: /health
-      # The port on which the HTTP GET request will be made.
-      port: 8888
+#  startupProbe:
+#    # Delay before the probe is initiated.
+#    initialDelaySeconds: 60
+#    # Time to wait for the probe to complete.
+#    timeoutSeconds: 30
+#    # How often to perform the probe.
+#    periodSeconds: 10
+#    # Minimum consecutive successes for the probe to be considered successful.
+#    successThreshold: 1
+#    # Perform an HTTP GET request to check.
+#    httpGet:
+#      # The path to use for the HTTP GET request.
+#      path: /health
+#      # The port on which the HTTP GET request will be made.
+#      port: 8888
+#  readinessProbe:
+#    # Delay before the probe is initiated.
+#    initialDelaySeconds: 60
+#    # Time to wait for the probe to complete.
+#    timeoutSeconds: 30
+#    # How often to perform the probe.
+#    periodSeconds: 10
+#    # Minimum consecutive successes for the probe to be considered successful.
+#    successThreshold: 1
+#    # Perform an HTTP GET request to check.
+#    httpGet:
+#      # The path to use for the HTTP GET request.
+#      path: /health
+#      # The port on which the HTTP GET request will be made.
+#      port: 8888
+#  livenessProbe:
+#    # Delay before the probe is initiated.
+#    initialDelaySeconds: 60
+#    # Time to wait for the probe to complete.
+#    timeoutSeconds: 30
+#    # How often to perform the probe.
+#    periodSeconds: 10
+#    # Minimum consecutive successes for the probe to be considered successful.
+#    successThreshold: 1
+#    # Perform an HTTP GET request to check.
+#    httpGet:
+#      # The path to use for the HTTP GET request.
+#      path: /health
+#      # The port on which the HTTP GET request will be made.
+#      port: 8888
   ## Define lifecycle hooks for the application container.
   lifecycleHooks: ~
   #  postStart:
@@ -174,15 +174,15 @@ _internal_default_values_not_set:
     # Maximum CPU and memory resources allowed for the container.
     limits:
       # CPU usage limit.
-      cpu: 102m
+      cpu: 512m
       # Memory usage limit.
-      memory: 100Mi
+      memory: 512Mi
     # Initial CPU and memory resource requests for the container.
     requests:
       # CPU usage request.
-      cpu: 102m
+      cpu: 512m
       # Memory usage request.
-      memory: 100Mi
+      memory: 512Mi
 
   ## Define toleration's for the application pods.
   tolerations: ~

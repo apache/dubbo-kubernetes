@@ -18,17 +18,13 @@
 package kubetypes
 
 type InformerOptions struct {
-	LabelSelector   string
-	FieldSelector   string
-	Namespace       string
+	// A selector to restrict the list of returned objects by their labels.
+	LabelSelector string
+	// A selector to restrict the list of returned objects by their fields.
+	FieldSelector string
+	// Namespace to watch.
+	Namespace string
+	// ObjectTransform allows arbitrarily modifying objects stored in the underlying cache.
+	// If unset, a default transform is provided to remove ManagedFields (high cost, low value)
 	ObjectTransform func(obj any) (any, error)
-	InformerType    InformerType
 }
-
-type InformerType int
-
-const (
-	StandardInformer InformerType = iota
-	DynamicInformer
-	MetadataInformer
-)
