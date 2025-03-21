@@ -43,6 +43,21 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/events"
 )
 
+var (
+	metadataReports = make(map[string]report.MetadataReport)
+)
+
+func AddMetadataReport(report report.MetadataReport, registryId string) {
+	metadataReports[registryId] = report
+}
+
+func GetMetadataReport() report.MetadataReport {
+	for _, v := range metadataReports {
+		return v
+	}
+	return nil
+}
+
 type Registry struct {
 	delegate   dubboRegistry.Registry
 	sdDelegate dubboRegistry.ServiceDiscovery
@@ -112,7 +127,8 @@ func (r *Registry) listenToAllServices(notifyListener *InterfaceServiceChangedNo
 		consts.VersionKey:    {consts.AnyValue},
 		consts.ClassifierKey: {consts.AnyValue},
 		consts.CategoryKey: {
-			consts.ProvidersCategory + constant.CommaSeparator +
+			consts.ProvidersCategory +
+				constant.CommaSeparator +
 				consts.ConsumersCategory,
 		},
 		consts.EnabledKey: {consts.AnyValue},

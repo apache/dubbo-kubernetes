@@ -239,6 +239,7 @@ func initializeTraditional(cfg dubbo_cp.Config, builder *core_runtime.Builder) e
 		factory := extension.GetMetadataReportFactory(c.GetProtocol())
 		metadataReport := factory.CreateMetadataReport(addrUrl)
 		builder.WithMetadataReport(metadataReport)
+		dubbo_registry.AddMetadataReport(metadataReport, addrUrl.Address())
 	}
 
 	return nil
