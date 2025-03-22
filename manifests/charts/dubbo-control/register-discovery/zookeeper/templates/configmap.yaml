@@ -2,17 +2,16 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "zoo.name" . }}-scripts
+  name: zookeeper-scripts
   namespace: {{ .Release.Namespace }}
   labels:
-  {{- include "zoo.labels" . | nindent 4 }}
-  {{- with $zoo.labels }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
-  annotations:
-  {{- with $zoo.annotations }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app: zookeeper
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Zookeeper"
+    dubbo: zookeeper
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "register"
 data:
   init-certs.sh: |-
     #!/bin/bash

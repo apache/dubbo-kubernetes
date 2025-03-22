@@ -3,46 +3,43 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ template "zoo.name" . }}
+  name: zookeeper
   namespace: {{ .Release.Namespace }}
   labels:
-  {{- include "zoo.labels" . | nindent 4 }}
-  {{- with $zookeeper.labels }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
-  annotations:
-  {{- with $zookeeper.annotations }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app: zookeeper
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Zookeeper"
+    dubbo: zookeeper
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "register"
 spec:
   replicas: {{ $zookeeper.replicas }}
   selector:
     matchLabels:
-    {{- include "zoo.matchLabels" . | nindent 6 }}
-  serviceName: {{ template "zoo.name" . }}
+      app: zookeeper
+      dubbo.io/rev: {{ default "default" | quote }}
+      dubbo: zookeeper
+  serviceName: zookeeper
   template:
     metadata:
       labels:
-      {{- include "zoo.labels" . | nindent 8 }}
+        app: zookeeper
+        dubbo.io/rev: {{ default "default" | quote }}
+        install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+        operator.dubbo.io/component: "Zookeeper"
+        dubbo: zookeeper
+        release: {{ .Release.Name }}
+        app.kubernetes.io/name: "register"
     spec:
-      securityContext:
-      {{- if $zookeeper.securityContext.enabled }}
-      {{- omit $zookeeper.securityContext "enabled" | toYaml | nindent 8 }}
-      {{- end }}
       containers:
       - name: zookeeper
         image: {{ $zookeeper.image.registry }}:{{ $zookeeper.image.tag }}
         imagePullPolicy: {{ $zookeeper.image.pullPolicy }}
-        securityContext:
-        {{- if $zookeeper.containerSecurityContext.enabled }}
-        {{- omit $zookeeper.containerSecurityContext "enabled" | toYaml | nindent 10 }}
-        {{- end }}
         command:
         - /scripts/setup.sh
         resources:
-        {{- if $zookeeper.resources }}
-        {{- toYaml $zookeeper.resources | nindent 10 }}
-        {{- end }}
+{{ toYaml $zookeeper.resources | trim | indent 10 }}
         env:
         - name: BITNAMI_DEBUG
           value: {{ ternary "true" "false" (or $zookeeper.image.debug) | quote }}
@@ -72,11 +69,11 @@ spec:
           value: {{ $zookeeper.autopurge.snapRetainCount | quote }}
         - name: ZOO_MAX_SESSION_TIMEOUT
           value: {{ $zookeeper.maxSessionTimeout | quote }}
-        {{- $zooName := include "zoo.name" . }}
+        {{- $zooName := "zookeeper" }}
         {{- $zooReplicas := int $zookeeper.replicas  }}
         {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 }}
         {{- $zooNamespace := .Release.Namespace }}
-        {{- $zooDomain := $zookeeper.clusterDomain }}
+        {{- $zooDomain := "cluster.local" }}
         - name: ZOO_SERVERS
           value: {{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::{{ add $v 1 }} {{ end }}
         - name: ZOO_ENABLE_AUTH
@@ -89,14 +86,14 @@ spec:
         - name: ZOO_CLIENT_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "zoo.client.secretName" . }}
+              name: {{ include "zookeeper.client.secretName" . }}
               key: client-password
         - name: ZOO_SERVER_USERS
           value: {{ $zookeeper.auth.client.serverUsers | quote }}
         - name: ZOO_SERVER_PASSWORDS
           valueFrom:
             secretKeyRef:
-              name: {{ include "zoo.client.secretName" . }}
+              name: {{ include "zookeeper.client.secretName" . }}
               key: server-password
         {{- end }}
         - name: ZOO_ENABLE_QUORUM_AUTH
@@ -107,44 +104,51 @@ spec:
         - name: ZOO_QUORUM_LEARNER_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "zoo.quorum.secretName" . }}
+              name: {{ include "zookeeper.quorum.secretName" . }}
               key: quorum-learner-password
         - name: ZOO_QUORUM_SERVER_USERS
           value: {{ $zookeeper.auth.quorum.serverUsers | quote }}
         - name: ZOO_QUORUM_SERVER_PASSWORDS
           valueFrom:
             secretKeyRef:
-              name: {{ include "zoo.quorum.secretName" . }}
+              name: {{ include "zookeeper.quorum.secretName" . }}
               key: quorum-server-password
         {{- end }}
         - name: ZOO_HEAP_SIZE
           value: {{ $zookeeper.heapSize | quote }}
         - name: ZOO_LOG_LEVEL
           value: {{ $zookeeper.logLevel | quote }}
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.name
         ports:
         - name: client
-          containerPort: {{ template "zoo.client" . }}
+          containerPort: 2181
         - name: follower
-          containerPort: {{ template "zoo.follower" . }}
+          containerPort: 2888
         - name: election
-          containerPort: {{ template "zoo.election" . }}
+          containerPort: 3888
         startupProbe:
-        {{- if $zookeeper.startupProbe }}
-        {{- toYaml $zookeeper.startupProbe | nindent 10 }}
-        {{- end }}
+          exec:
+            command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 5
+          timeoutSeconds: 5
         readinessProbe:
-        {{- if $zookeeper.readinessProbe }}
-        {{- toYaml $zookeeper.readinessProbe | nindent 10 }}
-        {{- end }}
+          exec:
+            command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null' ]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 5
+          timeoutSeconds: 5
         livenessProbe:
-        {{- if $zookeeper.livenessProbe }}
-        {{- toYaml $zookeeper.livenessProbe | nindent 10 }}
-        {{- end }}
+          exec:
+            command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep ruok' ]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 5
+          timeoutSeconds: 5
         volumeMounts:
         - name: scripts
           mountPath: /scripts/setup.sh
@@ -154,7 +158,7 @@ spec:
       volumes:
       - name: scripts
         configMap:
-          name: {{ template "zoo.name" . }}-scripts
+          name: zookeeper-scripts
           defaultMode: 0755
       - name: data
         emptyDir: {}
