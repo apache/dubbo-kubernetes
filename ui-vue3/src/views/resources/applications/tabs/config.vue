@@ -305,7 +305,7 @@ const updateFlowWeight = async () => {
         weight.scope.forEach((scopeItem: any) => {
           const { key, value, condition } = scopeItem
           let scopeItemTem = {
-            key: scopeItem.label,
+            key: scopeItem.label || key,
             value: {}
           }
           if (condition) {
