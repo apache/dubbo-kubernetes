@@ -16,14 +16,6 @@
 _internal_default_values_not_set:
   ## Whether to enable the zookeeper.
   enabled: false
-  ## Override the namespace where the resource is deployed.
-  namespaceOverride: ~
-  ## Labels to attach to the resource.
-  labels: ~
-  ## Annotations to attach to the resource.
-  annotations: ~
-  ## Specifies the cluster's domain name for DNS resolution.
-  clusterDomain: cluster.local
   ## Number of replicas for the Deployment.
   replicas: 1
   ## Configure the application image
@@ -36,96 +28,12 @@ _internal_default_values_not_set:
     pullPolicy: IfNotPresent
     # Set to 'true' to enable debug mode for the image.
     debug: false
-  securityContext:
-    # Whether to enable the security context.
-    enabled: true
-    # Defines the POSIX group ID that owns the pod's volumes.
-    fsGroup: 1001
-  containerSecurityContext:
-    # Whether to enable the container security context.
-    enabled: true
-    # Specifies the user ID under which the container should run.
-    runAsUser: 1001
-    # Set to 'true' to run the container as a non-root user.
-    runAsNonRoot: true
-    # Set to 'false' to disallow privilege escalation for the container.
-    allowPrivilegeEscalation: false
-  service:
-    # Labels to be applied to the service.
-    labels: ~
-    # Annotations to be added to the service.
-    annotations: ~
-    # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
-    type: ClusterIP
-    # Specifies the ClusterIP for the service, or use "~" to auto-assign.
-    clusterIP: ~
-    # List of external IPs to associate with the service.
-    externalIPs: ~
-    # Specifies the IP address for a LoadBalancer service.
-    loadBalancerIP: ~
-    # Restrict access to the LoadBalancer by IP ranges.
-    loadBalancerSourceRanges: ~
-    # Specifies the LoadBalancer class (if applicable).
-    loadBalancerClass: ~
-    # Specifies the session affinity mode (None, ClientIP)
-    sessionAffinity: None
-    # Set to 'true' to publish endpoints for not-ready pods.
-    publishNotReadyAddresses: true
+
   resources:
-    # Maximum CPU and memory resources allowed for the container.
-    limits:
-      # CPU usage limit.
-      cpu: 250m
-      # Memory usage limit.
-      memory: 256Mi
-    # Initial CPU and memory resource requests for the container.
     requests:
-      # CPU usage request.
       cpu: 250m
-      # Memory usage request.
       memory: 256Mi
-  startupProbe:
-    # Number of consecutive failures before marking the container as unhealthy.
-    failureThreshold: 6
-    # Delay before the probe is initiated.
-    initialDelaySeconds: 5
-    # How often to perform the probe.
-    periodSeconds: 10
-    # Minimum consecutive successes for the probe to be considered successful.
-    successThreshold: 1
-    # Time to wait for the probe to complete.
-    timeoutSeconds: 5
-    exec:
-      # Run the specified command to check.
-      command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
-  readinessProbe:
-    # Number of consecutive failures before marking the container as unhealthy.
-    failureThreshold: 6
-    # Delay before the probe is initiated.
-    initialDelaySeconds: 5
-    # How often to perform the probe.
-    periodSeconds: 10
-    # Minimum consecutive successes for the probe to be considered successful.
-    successThreshold: 1
-    # Time to wait for the probe to complete.
-    timeoutSeconds: 5
-    exec:
-      # Run the specified command to check.
-      command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null' ]
-  livenessProbe:
-    # Number of consecutive failures before marking the container as unhealthy.
-    failureThreshold: 6
-    # Delay before the probe is initiated.
-    initialDelaySeconds: 30
-    # How often to perform the probe.
-    periodSeconds: 10
-    # Minimum consecutive successes for the probe to be considered successful.
-    successThreshold: 1
-    # Time to wait for the probe to complete.
-    timeoutSeconds: 5
-    exec:
-      # Run the specified command to check.
-      command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep ruok' ]
+
   # This allows a dedicated log device to be used, and helps avoid competition between logging and snapshots.
   dataLogDir: ""
   # tickTime Basic time unit (in milliseconds) used by ZooKeeper for heartbeats.
@@ -186,5 +94,3 @@ _internal_default_values_not_set:
       serverPasswords: ""
       # auth.quorum.existingSecret Use existing secret (ignores previous passwords).
       existingSecret: ""
-  global:
-    dubboNamespace: dubbo-system

@@ -1,4 +1,4 @@
-{{- if $.Values.defaults}}
+{{- if $.Values.defaults }}
 {{ fail (cat
   "`--set defaults.foo=bar` with `--set foo=bar`. Defaults set:\n"
   ($.Values.defaults | toYaml |nindent 4) ) }}
