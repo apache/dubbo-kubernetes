@@ -43,7 +43,10 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 	revisions := make(map[string]*mesh.MetaDataResource, 0)
 	applicationDetail := model.NewApplicationDetail()
 	for _, dataplane := range dataplaneList.Items {
-		rev, ok := dataplane.Spec.GetExtensions()[mesh_proto.Application]
+		if strings.Split(dataplane.GetMeta().GetName(), constant.KeySeparator)[1] == "0" {
+			continue
+		}
+		rev, ok := dataplane.Spec.GetExtensions()[mesh_proto.Revision]
 		if ok {
 			if metadata, cached := revisions[rev]; !cached {
 				metadata = &mesh.MetaDataResource{
@@ -56,7 +59,7 @@ func GetApplicationDetail(rt core_runtime.Runtime, req *model.ApplicationDetailR
 				applicationDetail.MergeMetaData(metadata)
 			}
 		}
-		applicationDetail.MergeDatapalne(dataplane)
+		applicationDetail.MergeDataplane(dataplane)
 		applicationDetail.GetRegistry(rt)
 	}
 
