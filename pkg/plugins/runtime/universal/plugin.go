@@ -43,7 +43,6 @@ func (p *plugin) Customize(rt core_runtime.Runtime) error {
 		rt.MetadataReportCenter(),
 		rt.ResourceManager(),
 		rt.DataplaneCache(),
-		rt.ServiceDiscovery(),
 		rt.EventBus(),
 		rt.Config().Store.Kubernetes.SystemNamespace,
 	); err != nil {

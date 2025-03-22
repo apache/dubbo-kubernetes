@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"strings"
 	"sync"
 )
@@ -36,7 +37,7 @@ type ApplicationContext struct {
 	// InterfaceName Urls
 	serviceUrls map[string][]*common.URL
 	// Revision Metadata
-	revisionToMetadata map[string]*common.MetadataInfo
+	revisionToMetadata map[string]*info.MetadataInfo
 	// AppName Instances
 	allInstances map[string][]registry.ServiceInstance
 
@@ -50,7 +51,7 @@ type ApplicationContext struct {
 func NewApplicationContext() *ApplicationContext {
 	return &ApplicationContext{
 		serviceUrls:        make(map[string][]*common.URL),
-		revisionToMetadata: make(map[string]*common.MetadataInfo),
+		revisionToMetadata: make(map[string]*info.MetadataInfo),
 		allInstances:       make(map[string][]registry.ServiceInstance),
 	}
 }
@@ -106,11 +107,11 @@ func (ac *ApplicationContext) AddServiceUrls(newServiceUrls map[string][]*common
 }
 
 // GetRevisionToMetadata returns the reference to the revisionToMetadata map with read lock
-func (ac *ApplicationContext) GetRevisionToMetadata(revision string) *common.MetadataInfo {
+func (ac *ApplicationContext) GetRevisionToMetadata(revision string) *info.MetadataInfo {
 	return ac.revisionToMetadata[revision]
 }
 
-func (ac *ApplicationContext) UpdateRevisionToMetadata(key string, newKey string, value *common.MetadataInfo) {
+func (ac *ApplicationContext) UpdateRevisionToMetadata(key string, newKey string, value *info.MetadataInfo) {
 	if key == newKey {
 		return
 	}
@@ -126,7 +127,7 @@ func (ac *ApplicationContext) DeleteRevisionToMetadata(key string) {
 	}
 }
 
-func (ac *ApplicationContext) NewRevisionToMetadata(newRevisionToMetadata map[string]*common.MetadataInfo) {
+func (ac *ApplicationContext) NewRevisionToMetadata(newRevisionToMetadata map[string]*info.MetadataInfo) {
 	ac.revisionToMetadata = newRevisionToMetadata
 }
 

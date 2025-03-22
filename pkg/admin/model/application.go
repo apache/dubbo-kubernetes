@@ -100,13 +100,15 @@ func (a *ApplicationDetail) MergeMetaData(metadata *mesh.MetaDataResource) {
 func (a *ApplicationDetail) mergeServiceInfo(metadata *mesh.MetaDataResource) {
 	for _, serviceInfo := range metadata.Spec.Services {
 		a.DubboVersions.Add(fmt.Sprintf("dubbo %s", serviceInfo.Params[constants.DubboVersionKey]))
+		a.RPCProtocols.Add(serviceInfo.Protocol)
 		a.SerialProtocols.Add(serviceInfo.Params[constants.SerializationKey])
+
 	}
 }
 
-func (a *ApplicationDetail) MergeDatapalne(dataplane *mesh.DataplaneResource) {
+func (a *ApplicationDetail) MergeDataplane(dataplane *mesh.DataplaneResource) {
 	// TODO: support more fields
-	a.AppTypes.Add("无状态")
+	a.AppTypes.Add(dataplane.Spec.Extensions[v1alpha1.ApplicationType])
 	inbounds := dataplane.Spec.Networking.Inbound
 	for _, inbound := range inbounds {
 		a.mergeInbound(inbound)
@@ -117,7 +119,6 @@ func (a *ApplicationDetail) MergeDatapalne(dataplane *mesh.DataplaneResource) {
 
 func (a *ApplicationDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
 	a.DubboPorts.Add(strconv.Itoa(int(inbound.Port)))
-	a.RPCProtocols.Add(inbound.Tags[v1alpha1.ProtocolTag])
 	a.DeployClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
 }
 
@@ -135,7 +136,7 @@ func (a *ApplicationDetail) GetRegistry(rt core_runtime.Runtime) {
 	} else if runtimeMode == core.HalfHostMode || runtimeMode == core.UniversalMode {
 		// In half or universal mode, registry cluster is the zookeeper cluster or other registry center
 		registryURL := rt.RegistryCenter().GetURL()
-		registryCluster := registryURL.GetParam(constants.RegistryClusterKey, "")
+		registryCluster := registryURL.GetParam(constants.RemoteClientNameKey, "")
 		a.RegisterClusters.Add(registryCluster)
 
 		registryMode := registryURL.GetParam(constants.RegisterModeKey, constants.DefaultRegisterModeAll)

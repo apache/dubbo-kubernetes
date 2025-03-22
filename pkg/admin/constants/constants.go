@@ -19,18 +19,18 @@ package constants
 
 // Registry Constants
 const (
-	RegistryKey            = "registry"
-	RegistryClusterKey     = "REGISTRY_CLUSTER"
-	RegisterModeKey        = "register-mode"
-	RegistryClusterTypeKey = "registry-cluster-type"
-
+	RegistryKey                  = "registry"
+	RegistryClusterKey           = "REGISTRY_CLUSTER"
+	RegisterModeKey              = "register-mode"
+	RegistryClusterTypeKey       = "registry-cluster-type"
+	RemoteClientNameKey          = "remote-client-name"
 	DefaultRegisterModeInterface = "interface"
 	DefaultRegisterModeInstance  = "instance"
 	DefaultRegisterModeAll       = "all"
 )
 
 const (
-	SerializationKey = "serialization"
+	SerializationKey = "prefer.serialization"
 )
 
 const (

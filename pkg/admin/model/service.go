@@ -176,15 +176,12 @@ func (r *ServiceTabDistributionResp) FromServiceDistribution(distribution *Servi
 func (r *ServiceTabDistributionResp) mergeMetaData(metadata *core_mesh.MetaDataResource, req *ServiceTabDistributionReq) {
 	// key format is '{group}/{interface name}:{version}:{protocol}'
 	serviceinfos := metadata.Spec.Services
-	if req.Side == constants.ConsumerSide {
-		r.Retries = ""
-		r.TimeOut = ""
-	}
+
 	for _, serviceinfo := range serviceinfos {
 		if serviceinfo.Name == req.ServiceName &&
 			serviceinfo.Group == req.Group &&
 			serviceinfo.Version == req.Version &&
-			req.Side == constants.ProviderSide {
+			req.Side == serviceinfo.GetParams()[constants.ServiceInfoSide] {
 			r.Retries = serviceinfo.Params[constants.RetriesKey]
 			r.TimeOut = serviceinfo.Params[constants.TimeoutKey]
 			r.Params = serviceinfo.Params

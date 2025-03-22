@@ -19,16 +19,15 @@ package traditional
 
 import (
 	"context"
+	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"fmt"
 	"strings"
 	"sync"
 )
 
 import (
-	"dubbo.apache.org/dubbo-go/v3/common"
 	dubboconstant "dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/config_center"
-	dubbo_identifier "dubbo.apache.org/dubbo-go/v3/metadata/identifier"
 	"dubbo.apache.org/dubbo-go/v3/metadata/report"
 	dubboRegistry "dubbo.apache.org/dubbo-go/v3/registry"
 
@@ -125,17 +124,10 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 	case mesh.MetaDataType:
 		spec := resource.GetSpec()
 		metadata := spec.(*mesh_proto.MetaData)
-		identifier := &dubbo_identifier.SubscriberMetadataIdentifier{
-			Revision: metadata.GetRevision(),
-			BaseApplicationMetadataIdentifier: dubbo_identifier.BaseApplicationMetadataIdentifier{
-				Application: metadata.GetApp(),
-				Group:       dubboGroup,
-			},
-		}
-		services := map[string]*common.ServiceInfo{}
+		services := map[string]*info.ServiceInfo{}
 		// 把metadata赋值到services中
 		for key, serviceInfo := range metadata.GetServices() {
-			services[key] = &common.ServiceInfo{
+			services[key] = &info.ServiceInfo{
 				Name:     serviceInfo.GetName(),
 				Group:    serviceInfo.GetGroup(),
 				Version:  serviceInfo.GetVersion(),
@@ -144,12 +136,12 @@ func (t *traditionalStore) Create(ctx context.Context, resource core_model.Resou
 				Params:   serviceInfo.GetParams(),
 			}
 		}
-		info := &common.MetadataInfo{
+		metadataInfo := &info.MetadataInfo{
 			App:      metadata.GetApp(),
 			Revision: metadata.GetRevision(),
 			Services: services,
 		}
-		err = t.metadataReport.PublishAppMetadata(identifier, info)
+		err = t.metadataReport.PublishAppMetadata(metadataInfo.App, metadataInfo.Revision, metadataInfo)
 		if err != nil {
 			return err
 		}
@@ -431,13 +423,6 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 	case mesh.MetaDataType:
 		spec := resource.GetSpec()
 		metadata := spec.(*mesh_proto.MetaData)
-		identifier := &dubbo_identifier.SubscriberMetadataIdentifier{
-			Revision: metadata.GetRevision(),
-			BaseApplicationMetadataIdentifier: dubbo_identifier.BaseApplicationMetadataIdentifier{
-				Application: metadata.GetApp(),
-				Group:       dubboGroup,
-			},
-		}
 		// 先判断identifier是否存在, 如果存在到话需要将其删除
 		content, err := t.regClient.GetContent(getMetadataPath(metadata.GetApp(), metadata.GetRevision()))
 		if err != nil {
@@ -450,10 +435,10 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 				return err
 			}
 		}
-		services := map[string]*common.ServiceInfo{}
+		services := map[string]*info.ServiceInfo{}
 		// 把metadata赋值到services中
 		for key, serviceInfo := range metadata.GetServices() {
-			services[key] = &common.ServiceInfo{
+			services[key] = &info.ServiceInfo{
 				Name:     serviceInfo.GetName(),
 				Group:    serviceInfo.GetGroup(),
 				Version:  serviceInfo.GetVersion(),
@@ -462,12 +447,12 @@ func (t *traditionalStore) Update(ctx context.Context, resource core_model.Resou
 				Params:   serviceInfo.GetParams(),
 			}
 		}
-		info := &common.MetadataInfo{
+		metadataInfo := &info.MetadataInfo{
 			App:      metadata.GetApp(),
 			Revision: metadata.GetRevision(),
 			Services: services,
 		}
-		err = t.metadataReport.PublishAppMetadata(identifier, info)
+		err = t.metadataReport.PublishAppMetadata(metadataInfo.App, metadataInfo.Revision, metadataInfo)
 		if err != nil {
 			return err
 		}
@@ -803,7 +788,7 @@ func (c *traditionalStore) Get(_ context.Context, resource core_model.Resource, 
 		if err2 != nil {
 			return err2
 		}
-		var appMetadata *common.MetadataInfo
+		var appMetadata *info.MetadataInfo
 		if opts.Type == "interface" {
 			appMetadata = c.infContext.GetMetadata(revision)
 		} else {
@@ -958,7 +943,7 @@ func (c *traditionalStore) List(_ context.Context, resources core_model.Resource
 			for revision := range revisions {
 				appMetadata := c.appContext.GetRevisionToMetadata(revision)
 				if appMetadata == nil {
-					log.Error(nil, "Err loading app metadata with id %s", dubbo_identifier.NewSubscriberMetadataIdentifier(app, revision))
+					log.Error(nil, "Err loading app metadata with id %s", app+dubboconstant.DotSeparator+revision)
 					continue
 				}
 				item := resources.NewItem()

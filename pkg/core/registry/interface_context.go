@@ -18,6 +18,7 @@
 package registry
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"sync"
 )
 
@@ -32,7 +33,7 @@ type InterfaceContext struct {
 	// InterfaceName Urls
 	serviceUrls map[string][]*common.URL
 	// Revision Metadata
-	revisionToMetadata map[string]*common.MetadataInfo
+	revisionToMetadata map[string]*info.MetadataInfo
 	instances          map[string][]registry.ServiceInstance
 
 	mappings map[string]*gxset.HashSet
@@ -43,13 +44,13 @@ type InterfaceContext struct {
 func NewInterfaceContext() *InterfaceContext {
 	return &InterfaceContext{
 		serviceUrls:        make(map[string][]*common.URL),
-		revisionToMetadata: make(map[string]*common.MetadataInfo),
+		revisionToMetadata: make(map[string]*info.MetadataInfo),
 		instances:          make(map[string][]registry.ServiceInstance),
 		mappings:           make(map[string]*gxset.HashSet),
 	}
 }
 
-func (ac *InterfaceContext) GetMetadata(r string) *common.MetadataInfo {
+func (ac *InterfaceContext) GetMetadata(r string) *info.MetadataInfo {
 	return ac.revisionToMetadata[r]
 }
 
@@ -126,7 +127,7 @@ func (ac *InterfaceContext) RemoveInstance(key string, addr string) {
 }
 
 func MergeInstances(insMap1 map[string][]registry.ServiceInstance, insMap2 map[string][]registry.ServiceInstance) map[string][]registry.ServiceInstance {
-	instances := make(map[string][]registry.ServiceInstance, 0)
+	instances := make(map[string][]registry.ServiceInstance)
 	for app, serviceInstances := range insMap1 {
 		newServiceInstances := make([]registry.ServiceInstance, 0, len(serviceInstances))
 		newServiceInstances = append(newServiceInstances, serviceInstances...)

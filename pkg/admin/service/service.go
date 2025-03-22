@@ -18,6 +18,7 @@
 package service
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"sort"
 	"strconv"
 )
@@ -63,9 +64,19 @@ func GetServiceTabDistribution(rt core_runtime.Runtime, req *model.ServiceTabDis
 						return nil, err
 					}
 					respItem := &model.ServiceTabDistributionResp{}
-					res = append(res, respItem.FromServiceDataplaneResource(dataplane, metadata, appName, req))
-				}
 
+					serviceInfos := metadata.GetSpec().(*v1alpha1.MetaData).Services
+					var sideServiceInfos []*v1alpha1.ServiceInfo
+					for _, serviceInfo := range serviceInfos {
+						if serviceInfo.GetParams()[constant.SideKey] == req.Side &&
+							serviceInfo.Name == req.ServiceName {
+							sideServiceInfos = append(sideServiceInfos, serviceInfo)
+						}
+					}
+					if len(sideServiceInfos) > 0 {
+						res = append(res, respItem.FromServiceDataplaneResource(dataplane, metadata, appName, req))
+					}
+				}
 			}
 		}
 	}
