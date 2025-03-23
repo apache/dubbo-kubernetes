@@ -64,11 +64,15 @@ func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) 
 }
 
 type hubConfig struct {
-	Dockerfile   bool
-	Builder      bool
-	Image        string
+	Dockerfile bool
+	Builder    bool
+	Image      string
+	// BuilderImage is the image (name or mapping) to use for building.  Usually
+	// set automatically.
 	BuilderImage string
-	Path         string
+	// Path of the application implementation on local disk. Defaults to current
+	// working directory of the process.
+	Path string
 }
 
 type deployConfig struct {

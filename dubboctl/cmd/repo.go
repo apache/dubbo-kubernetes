@@ -71,16 +71,26 @@ func addCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
 }
 
 func runAdd(cmd *cobra.Command, args []string, clientFactory ClientFactory) (err error) {
+	// Adding a repository requires there be a config path structure on disk
 	if err = util.GetCreatePath(); err != nil {
 		return
 	}
+	// Create a client instance which utilizes the given repositories path.
+	// Note that this MAY not be in the config structure if the environment
+	// variable to override said path was provided explicitly.
+	// be created in XDG_CONFIG_HOME/dubbo even if the repo path environment
+	// was set to some other location on disk.
 	client, done := clientFactory()
 	defer done()
 
+	// Preconditions
+	// If not confirming/prompting, assert the args were both provided.
 	if len(args) != 2 {
 		return fmt.Errorf("Usage: dubboctl repo add [<name>] [<url>]")
 	}
 
+	// Extract Params
+	// Populate a struct with the arguments (if provided).
 	p := struct {
 		name string
 		url  string
