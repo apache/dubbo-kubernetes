@@ -2,6 +2,7 @@
 {{ fail (cat
   "`--set defaults.foo=bar` with `--set foo=bar`. Defaults set:\n"
   ($.Values.defaults | toYaml |nindent 4) ) }}
+
 {{- end }}
 {{- $defaults := $.Values._internal_default_values_not_set }}
 {{- $_ := unset $.Values "_internal_default_values_not_set " }}

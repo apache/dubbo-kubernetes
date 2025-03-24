@@ -14,24 +14,6 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
-  ## Override the namespace where the resource is deployed.
-  namespaceOverride: ~
-
-  ## Labels to attach to the resource.
-  labels: ~
-
-  ## Annotations to attach to the resource.
-  annotations: ~
-
-  ## Node selector to constrain where the pods can be scheduled.
-  nodeSelector: ~
-
-  ## List of image pull secrets for pulling private container images.
-  imagePullSecrets: ~
-
-  ## Specifies the cluster's domain name for DNS resolution.
-  clusterDomain: cluster.local
-
   ## Number of replicas for the Deployment.
   replicas: 1
 
@@ -43,22 +25,6 @@ _internal_default_values_not_set:
     tag: latest
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     pullPolicy: IfNotPresent
-
-  rbac:
-    # Whether to enable the RBAC.
-    enabled: true
-    # Labels for RBAC resources.
-    labels: ~
-    # Annotations for RBAC resources.
-    annotations: ~
-
-  serviceAccount:
-    # Whether to enable the ServiceAccount.
-    enabled: true
-    # Labels to be applied to the ServiceAccount.
-    labels: ~
-    # Annotations to be added to the ServiceAccount.
-    annotations: ~
 
   ## Define volume mounts for the application, Each item in the list represents a separate volume mount.
   volumeMounts: ~
@@ -73,420 +39,35 @@ _internal_default_values_not_set:
   #    hostPath:
   #      path: /data
 
-  strategy:
-    # Define the strategy for the application's deployment.
-    type: RollingUpdate
-    # Additional configuration for the RollingUpdate strategy can be specified here.
-    rollingUpdate:
-      # Maximum number or percentage of new replicas that can be created during an update.
-      maxSurge: 25%
-      # Maximum number or percentage of replicas that can be unavailable during an update.
-      maxUnavailable: 1
-
-  updateStrategy:
-    # Define the update strategy for the application's statefulSet.
-    type: RollingUpdate
-    # Additional configuration for the RollingUpdate update strategy can be specified here.
-    rollingUpdate: ~
-
-  ## Termination grace period for pods.
-  terminationGracePeriodSeconds: 30
-
-#  startupProbe:
-#    # Delay before the probe is initiated.
-#    initialDelaySeconds: 60
-#    # Time to wait for the probe to complete.
-#    timeoutSeconds: 30
-#    # How often to perform the probe.
-#    periodSeconds: 10
-#    # Minimum consecutive successes for the probe to be considered successful.
-#    successThreshold: 1
-#    # Perform an HTTP GET request to check.
-#    httpGet:
-#      # The path to use for the HTTP GET request.
-#      path: /health
-#      # The port on which the HTTP GET request will be made.
-#      port: 8888
-#  readinessProbe:
-#    # Delay before the probe is initiated.
-#    initialDelaySeconds: 60
-#    # Time to wait for the probe to complete.
-#    timeoutSeconds: 30
-#    # How often to perform the probe.
-#    periodSeconds: 10
-#    # Minimum consecutive successes for the probe to be considered successful.
-#    successThreshold: 1
-#    # Perform an HTTP GET request to check.
-#    httpGet:
-#      # The path to use for the HTTP GET request.
-#      path: /health
-#      # The port on which the HTTP GET request will be made.
-#      port: 8888
-#  livenessProbe:
-#    # Delay before the probe is initiated.
-#    initialDelaySeconds: 60
-#    # Time to wait for the probe to complete.
-#    timeoutSeconds: 30
-#    # How often to perform the probe.
-#    periodSeconds: 10
-#    # Minimum consecutive successes for the probe to be considered successful.
-#    successThreshold: 1
-#    # Perform an HTTP GET request to check.
-#    httpGet:
-#      # The path to use for the HTTP GET request.
-#      path: /health
-#      # The port on which the HTTP GET request will be made.
-#      port: 8888
-  ## Define lifecycle hooks for the application container.
-  lifecycleHooks: ~
-  #  postStart:
-  #    exec:
-  #      command: ["/bin/sh", "-c", "echo Discover Infinite Possibilities, Starting Now! >> /var/log/postStart.log"]
-  #  preStop:
-  #    exec:
-  #      command: ["/bin/sh", "-c", "while true; do echo Shutting down... >> /var/log/postStop.log; sleep 30; done"]
-
-  service:
-    # Whether to enable the service.
-    enabled: true
-    # Labels to be applied to the service.
-    labels: ~
-    # Annotations to be added to the service.
-    annotations: ~
-    # Specifies the service type (ClusterIP, NodePort, LoadBalancer, etc.).
-    type: ClusterIP
-    # Specifies the ClusterIP for the service, or use "~" to auto-assign.
-    clusterIP: ~
-    # List of external IPs to associate with the service.
-    externalIPs: ~
-    # Specifies the IP address for a LoadBalancer service.
-    loadBalancerIP: ~
-    # Restrict access to the LoadBalancer by IP ranges.
-    loadBalancerSourceRanges: ~
-    # Specifies the LoadBalancer class (if applicable).
-    loadBalancerClass: ~
-    # Specifies the session affinity mode (None, ClientIP)
-    sessionAffinity: None
-    # Set to 'true' to publish endpoints for not-ready pods.
-    publishNotReadyAddresses: true
-
   resources:
-    # Maximum CPU and memory resources allowed for the container.
-    limits:
-      # CPU usage limit.
-      cpu: 512m
-      # Memory usage limit.
-      memory: 512Mi
-    # Initial CPU and memory resource requests for the container.
     requests:
-      # CPU usage request.
       cpu: 512m
-      # Memory usage request.
       memory: 512Mi
 
-  ## Define toleration's for the application pods.
-  tolerations: ~
-  #  - key: CriticalAddonsOnly
-  #    operator: Exists
-  #  - effect: NoSchedule
-  #    key: node-role.kubernetes.io/control-plane
-
-  persistence:
-    # Whether to enable the persistence volume.
-    enabled: false
-    # Labels to be applied to the persistence volume.
-    labels: ~
-    # Annotations to be added to the persistence volume.
-    annotations: ~
-    # Name of the PersistentVolumeClaim.
-    claimName: ""
-    # Storage class for the PersistentVolumeClaim.
-    storageclass: ""
-    # Size of the PersistentVolumeClaim.
-    size: 5Gi
-    # Access modes for the PersistentVolumeClaim.
-    accessModes: ReadWriteOnce
-
-  securityContext:
-    # Specifies the user ID under which the container should run.
-    runAsUser: 1000
-    # Specifies the user ID under which the container should run.
-    runAsGroup: 1000
-    # Set to 'true' to run the container as a non-root user.
-    runAsNonRoot: false
-    # Prevent the container from writing to the root file system.
-    readOnlyRootFilesystem: true
-    # Set to 'false' to disallow privilege escalation for the container.
-    allowPrivilegeEscalation: false
-
-  podSecurityPolicy:
-    # Whether to enable the PSP.
-    enabled: false
-    # Labels to be applied to the PSP.
-    labels: ~
-    # Annotations to be added to the PSP.
-    annotations: ~
-
-  jobs:
-    # Override the namespace where the resource is deployed.
-    namespaceOverride: ~
-    # Labels to attach to the resource.
-    labels: ~
-    # Annotations to attach to the resource.
-    annotations: ~
-    # Specify the restart policy (OnFailure, Never, Always, etc.).
-    restartPolicy: OnFailure
-
-    image:
-      # Source of the container image.
-      registry: docker.io/bitnami/kubectl
-      # Version tag of the container image.
-      tag: 1.28.4
-      # Image pull policy, available options are: Always, IfNotPresent, Never.
-      pullPolicy: IfNotPresent
-
-  # TODO Waiting for the control plane
-  cp:
-    enabled: false
-    deploy_mode: universal
-    mode: zone # test
-    tls:
-      secretName: ""
-      caSecretName: ""
-      caBundle: ""
-    store:
-      traditional:
-        config_center: zookeeper://zookeeper:2181
-        registry:
-          address: zookeeper://zookeeper:2181
-        metadata_report:
-          address: zookeeper://zookeeper:2181
-      # Uncomment the following block if you want to use Nacos instead of Zookeeper
-      # nacos:
-      #   config_center: nacos://nacos:8848
-      #   registry:
-      #     address: nacos://nacos:8848
-      #   metadata_report:
-      #     address: nacos://nacos:8848
-    admin:
-      prometheus: http://kube-prometheus-kube-prome-prometheus.svc.cluster.local:9090
-      metric:
-        application:
-          baseURL: http://kube-prometheus-grafana:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application
-        instance:
-          baseURL: http://kube-prometheus-grafana:3000/d/dcf5defe-d198-4704-9edf-6520838880e9/instance
-        service:
-          baseURL: http://kube-prometheus-grafana:3000/d/ec689613-b4a1-45b1-b8bd-9d557059f970/service
-      trace:
-        application:
-          baseURL: http://kube-prometheus-grafana:3000/d/e968a89b-f03d-42e3-8ad3-930ae815cb0f/application
-        instance:
-          baseURL: http://kube-prometheus-grafana:3000/d/f5f48f75-13ec-489b-88ae-635ae38d8618/instance
-        service:
-          baseURL: http://kube-prometheus-grafana:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
-    multizone:
-      zone:
-        globalAddress: grpc://127.0.0.1:5685
-      global:
-        dds:
-          grpcPort: 5685
-    runtime:
-      kubernetes:
-        admissionServer:
-          address: 10.23.132.51
-          port: 5443
-          certDir: test/cert
-
-  # TODO
-  auth:
-    ## Whether to enable the control-plane auth control.
-    enabled: false
-
-    authorization:
-      # Specify the action for authorization (DENY, ALLOW, etc.)
-      action: DENY
-      # Specify the match type for authorization (anyMatch, allMatch, etc.)
-      matchType: anyMatch
-      # Specify the match type for authorization rule sampling rate has a range of 0 to 100.
-      samples: 0
-
-    authentication:
-      # Specify the action for authentication (STRICT, PERMISSIVE, etc.)
-      action: STRICT
-      # Specify the action for authentication port number for applying the authentication policy
-      port: 38080
-  # TODO Waiting for the control plane
-  traffic:
-    ## Whether to enable the traffic.
-    enabled: false
-
-    conditionRoute:
-      # Supports service and application scope rules.
-      scope: service
-      # Whether enable this rule or not, set enabled:false to disable this rule.
-      enabled: true
-      # The behaviour when the instance subset is empty after routing.
-      force: true
-      # Whether run routing rule for every rpc invocation or use routing cache if available.
-      runtime: true
-      # Specify the specific priority for traffic (adjust within the range 1 ~ 100).
-      priority: 100
-      # The version of the condition rule definition, currently available version is v3.0.
-      configVersion: v3.0
-      # The identifier of the target service or application that this rule is about to apply to.
-      # If scope:service is set, then keyshould be specified as the Dubbo service key that this rule targets to control.
-      # If scope:application is set, then keyshould be specified as the name of the application that this rule targets to control, application should always be a Dubbo Consumer.
-      key: org.apache.dubbo.samples.CommentService
-      # The condition routing rule definition of this configuration. Check Condition for details.
-      conditions: method=getComment => region=Hangzhou
-
-    dynamicConfig:
-      # Supports service and application scope rules.
-      scope: service
-      # The version of the tag rule definition, currently available version is v3.0.
-      configVersion: v3.0
-      # The identifier of the target service or application that this rule is about to apply to.
-      # If scope:service is set, then keyshould be specified as the Dubbo service key that this rule targets to control.
-      # If scope:application is set, then keyshould be specified as the name of the application that this rule targets to control, application should always be a Dubbo Consumer.
-      key: org.apache.dubbo.samples.UserService
-      # Especially useful when scope:service is set.
-      # side: providermeans this Config will only take effect on the provider instances of the service key.
-      # side: consumermeans this Config will only take effect on the consumer instances of the service key
-      side: consumer
-      # The application matching condition for this config rule to take effect.
-      # Effective when scope:service is set.
-      # https://github.com/google/re2/wiki/Syntax.
-      # exact: value for exact string
-      exact: shop-frontend
-
-    tagRoute:
-      # The name of the tag used to match the dubbo tag value in the request context.
-      name: gray
-      # Whether enable this rule or not, set enabled:false to disable this rule.
-      enabled: false
-      # The behaviour when the instance subset is empty after routing.
-      force: true
-      # The version of the tag rule definition, currently available version is v3.0.
-      configVersion: v3.0
-      # Specify the specific priority for traffic (adjust within the range 1 ~ 100).
-      priority: 99
-      # The identifier of the target application that this rule is about to control.
-      key: details
-
-  kubePrometheus:
-    ## Whether to enable the kube-prometheus.
-    enabled: true
-    ## Override the namespace where the resource is deployed.
-    namespaceOverride: ~
-    ## container image.
-    image:
-      # Version tag of the container image.
-      tag: 65.2.0
-    dashboardsVersion: 1.14
-
-  ingress:
-    ## Whether to enable the ingress.
-    enabled: false
-    ## Configure the application ingress domain name
-    hosts:
-      # Specify the host for the admin Ingress
-      admin: admin.k8s.example
-      # Specify the host for the Prometheus Ingress
-      prometheus: prom.k8s.example
-      # Specify the host for the Grafana Ingress
-      grafana: grafana.k8s.example
-    ## Override the name of the resource.
-    nameOverride: ~
-    ## Override the namespace where the resource is deployed.
-    namespaceOverride: ~
-    ## Labels to attach to the resource.
-    labels: ~
-    ## Annotations to attach to the resource.
-    annotations: ~
-    ## Node selector to constrain where the pods can be scheduled.
-    nodeSelector: ~
-    ## Number of replicas for the Deployment.
-    replicas: 1
-    ## Configure the application image
-    image:
-      # Source of the container image.
-      registry: docker.io/traefik
-      # Version tag of the container image.
-      tag: v2.10.4
-      # Image pull policy, available options are: Always, IfNotPresent, Never.
-      pullPolicy: IfNotPresent
-    readinessProbe:
-      # Number of consecutive failures before marking the container as unhealthy.
-      failureThreshold: 1
-      # Delay before the probe is initiated.
-      initialDelaySeconds: 2
-      # How often to perform the probe.
-      periodSeconds: 10
-      # Minimum consecutive successes for the probe to be considered successful.
-      successThreshold: 1
-      # Time to wait for the probe to complete.
-      timeoutSeconds: 2
-      # Perform an HTTP GET request to check.
-      httpGet:
-        # The path to use for the HTTP GET request.
-        path: /ping
-        # The port on which the HTTP GET request will be made.
-        port: 9000
-        # The protocol used for the HTTP GET request (HTTP, HTTPS).
-        scheme: HTTP
-      livenessProbe:
-        # Number of consecutive failures before marking the container as unhealthy.
-        failureThreshold: 3
-        # Delay before the probe is initiated.
-        initialDelaySeconds: 2
-        # How often to perform the probe.
-        periodSeconds: 10
-        # Minimum consecutive successes for the probe to be considered successful.
-        successThreshold: 1
-        # Time to wait for the probe to complete.
-        timeoutSeconds: 2
-        # Perform an HTTP GET request to check.
-        httpGet:
-          # The path to use for the HTTP GET request.
-          path: /ping
-          # The port on which the HTTP GET request will be made.
-          port: 9000
-          # The protocol used for the HTTP GET request (HTTP, HTTPS).
-          scheme: HTTP
-    strategy:
-      # Additional configuration for the RollingUpdate strategy can be specified here.
-      rollingUpdate:
-        # Maximum number of pods that can be created above the desired replica count.
-        maxSurge: 1
-        # Maximum number of pods that can be unavailable during the update.
-        maxUnavailable: 0
-    securityContext:
-      # Specifies the user ID under which the container should run.
-      runAsUser: 65532
-      # Specifies the group ID under which the container should run.
-      runAsGroup: 65532
-      # Set to 'true' to run the container as a non-root user.
-      runAsNonRoot: true
-    containersecurityContext:
-      # Configure Linux capabilities for the container.
-      capabilities:
-        # Drop all capabilities
-        drop:
-        - ALL
-      # Prevent the container from writing to the root file system.
-      readOnlyRootFilesystem: true
-      # Set to 'false' to disallow privilege escalation for the container.
-      allowPrivilegeEscalation: false
-    resources:
-      # Maximum CPU and memory resources allowed for the container.
-      limits:
-        # CPU usage limit.
-        cpu: 100m
-        # Memory usage limit.
-        memory: 100Mi
-      # Initial CPU and memory resource requests for the container.
-      requests:
-        # CPU usage request.
-        cpu: 100m
-        # Memory usage request.
-        memory: 100Mi
+  deploy_mode: half
+  #mode: test
+  mode: zone
+  store:
+    traditional:
+      config_center: nacos://nacos:8848?username=nacos&password=nacos
+      registry:
+        address: nacos://nacos:8848?username=nacos&password=nacos
+      metadata_report:
+        address: nacos://nacos:8848?username=nacos&password=nacos
+  admin:
+    metric:
+      application:
+        baseURL: http://kube-prometheus-grafana:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application
+      instance:
+        baseURL: http://kube-prometheus-grafana:3000/d/dcf5defe-d198-4704-9edf-6520838880e9/instance
+      service:
+        baseURL: http://kube-prometheus-grafana:3000/d/ec689613-b4a1-45b1-b8bd-9d557059f970/service
+    trace:
+      application:
+        baseURL: http://kube-prometheus-grafana:3000/d/e968a89b-f03d-42e3-8ad3-930ae815cb0f/application
+      instance:
+        baseURL: http://kube-prometheus-grafana:3000/d/f5f48f75-13ec-489b-88ae-635ae38d8618/instance
+      service:
+        baseURL: http://kube-prometheus-grafana:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
+    prometheus: http://kube-prometheus-kube-prome-prometheus.svc.cluster.local:9090
+    grafana: http://47.251.1.59:3000/
