@@ -62,7 +62,7 @@ spec:
           value: grafana:3000
         volumeMounts:
           - name: data
-            mountPath: /var/lib/admin-dashboard-data
+            mountPath: /var/lib/admin-data
         readinessProbe:
           httpGet:
             path: /admin
@@ -76,5 +76,5 @@ spec:
 {{ toYaml $admin.resources | trim | indent 10 }}
       volumes:
       - name: data
-        hostPath:
-          path: /tmp/admin-dashboard-data
+        emptyDir:
+          medium: Memory
