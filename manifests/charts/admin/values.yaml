@@ -44,15 +44,15 @@ _internal_default_values_not_set:
       cpu: 512m
       memory: 512Mi
 
-  deploy_mode: half
-  #mode: test
+  deployMode: half
+  # mode: test
   mode: zone
   store:
     traditional:
-      config_center: nacos://nacos:8848?username=nacos&password=nacos
+      configCenter: nacos://nacos:8848?username=nacos&password=nacos
       registry:
         address: nacos://nacos:8848?username=nacos&password=nacos
-      metadata_report:
+      metadataReport:
         address: nacos://nacos:8848?username=nacos&password=nacos
   admin:
     metric:
@@ -71,3 +71,6 @@ _internal_default_values_not_set:
         baseURL: http://kube-prometheus-grafana:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
     prometheus: http://kube-prometheus-kube-prome-prometheus.svc.cluster.local:9090
     grafana: http://47.251.1.59:3000/
+
+  kube-prometheus-stack:
+    enabled: false
