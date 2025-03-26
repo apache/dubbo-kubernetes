@@ -20,6 +20,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 )
 
@@ -99,7 +100,7 @@ func (a *ApplicationDetail) MergeMetaData(metadata *mesh.MetaDataResource) {
 
 func (a *ApplicationDetail) mergeServiceInfo(metadata *mesh.MetaDataResource) {
 	for _, serviceInfo := range metadata.Spec.Services {
-		a.DubboVersions.Add(fmt.Sprintf("dubbo %s", serviceInfo.Params[constants.DubboVersionKey]))
+		a.DubboVersions.Add(fmt.Sprintf("dubbo %s", serviceInfo.Params[constants.ReleaseKey]))
 		a.RPCProtocols.Add(serviceInfo.Protocol)
 		a.SerialProtocols.Add(serviceInfo.Params[constants.SerializationKey])
 
@@ -108,7 +109,13 @@ func (a *ApplicationDetail) mergeServiceInfo(metadata *mesh.MetaDataResource) {
 
 func (a *ApplicationDetail) MergeDataplane(dataplane *mesh.DataplaneResource) {
 	// TODO: support more fields
-	a.AppTypes.Add(dataplane.Spec.Extensions[v1alpha1.ApplicationType])
+	if work, ok := dataplane.Spec.Extensions[constants.WorkLoadKey]; ok &&
+		regexp.MustCompile(`^.*-\d+$`).MatchString(work) {
+		a.AppTypes.Add(constants.Stateful)
+	} else {
+		a.AppTypes.Add(constants.Stateless)
+	}
+
 	inbounds := dataplane.Spec.Networking.Inbound
 	for _, inbound := range inbounds {
 		a.mergeInbound(inbound)

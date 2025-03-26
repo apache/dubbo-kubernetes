@@ -79,7 +79,6 @@ const (
 // extensions
 const (
 	ApplicationName = "applicationName"
-	ApplicationType = "podPhase"
 )
 
 type ResourceOrigin string

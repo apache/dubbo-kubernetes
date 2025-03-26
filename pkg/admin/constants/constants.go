@@ -35,6 +35,8 @@ const (
 
 const (
 	DubboVersionKey = "dubbo"
+	WorkLoadKey     = "workLoad"
+	ReleaseKey      = "release"
 )
 
 const (
@@ -52,4 +54,9 @@ const (
 	Application = "application"
 	Instance    = "instance"
 	Service     = "service"
+)
+
+const (
+	Stateful  = "有状态"
+	Stateless = "无状态"
 )
