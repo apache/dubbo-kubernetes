@@ -108,7 +108,6 @@ func (a *ApplicationDetail) mergeServiceInfo(metadata *mesh.MetaDataResource) {
 }
 
 func (a *ApplicationDetail) MergeDataplane(dataplane *mesh.DataplaneResource) {
-	// TODO: support more fields
 	if work, ok := dataplane.Spec.Extensions[constants.WorkLoadKey]; ok &&
 		regexp.MustCompile(`^.*-\d+$`).MatchString(work) {
 		a.AppTypes.Add(constants.Stateful)
