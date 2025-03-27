@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package parts
+package util
 
 import (
 	"bufio"
