@@ -18,14 +18,13 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 10,
+  "id": 35,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "jaeger",
-        "uid": "d87232fb-9036-4566-bfd9-881fc9b5c1e4"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -75,17 +74,17 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
             "type": "jaeger",
-            "uid": "d87232fb-9036-4566-bfd9-881fc9b5c1e4"
+            "uid": "${datasource}"
           },
           "queryType": "search",
           "refId": "A",
-          "service": "shop-detail",
-          "tags": "net.peer.name=${instance_ip}"
+          "service": "${application}",
+          "tags": "net.peer.name=${instance}"
         }
       ],
       "title": "Panel Title",
@@ -93,24 +92,53 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
           "selected": false,
-          "text": "192.168.20.8",
-          "value": "192.168.20.8"
+          "text": "jaeger",
+          "value": "fe670vj54q48wc"
         },
         "hide": 0,
         "includeAll": false,
         "multi": false,
-        "name": "instance_ip",
+        "name": "datasource",
+        "options": [],
+        "query": "jaeger",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "application",
+        "multi": false,
+        "name": "application",
         "options": [],
         "query": "",
-        "queryValue": "192.168.20.8",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "instance",
+        "options": [],
+        "query": "",
         "skipUrlSync": false,
         "type": "custom"
       }
@@ -124,6 +152,6 @@
   "timezone": "",
   "title": "instance",
   "uid": "f5f48f75-13ec-489b-88ae-635ae38d8618",
-  "version": 2,
+  "version": 8,
   "weekStart": ""
 }

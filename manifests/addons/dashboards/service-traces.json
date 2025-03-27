@@ -18,14 +18,13 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 11,
+  "id": 36,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "jaeger",
-        "uid": "d87232fb-9036-4566-bfd9-881fc9b5c1e4"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -89,17 +88,17 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
             "type": "jaeger",
-            "uid": "d87232fb-9036-4566-bfd9-881fc9b5c1e4"
+            "uid": "${datasource}"
           },
           "queryType": "search",
           "refId": "A",
-          "service": "${application_name}",
-          "tags": "rpc.service=${service_name}"
+          "service": "${application}",
+          "tags": "rpc.service=${service}"
         }
       ],
       "title": "Panel Title",
@@ -107,36 +106,55 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
           "selected": false,
-          "text": "shop-comment",
-          "value": "shop-comment"
+          "text": "jaeger",
+          "value": "fe670vj54q48wc"
         },
         "hide": 0,
         "includeAll": false,
         "multi": false,
-        "name": "application_name",
+        "name": "datasource",
+        "options": [],
+        "query": "jaeger",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": "shop-detail",
+          "value": "shop-detail"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "application",
+        "multi": false,
+        "name": "application",
         "options": [],
         "query": "",
-        "queryValue": "shop-comment",
         "skipUrlSync": false,
         "type": "custom"
       },
       {
-        "current": {},
+        "current": {
+          "text": "All",
+          "value": "All"
+        },
         "hide": 0,
         "includeAll": false,
+        "label": "service",
         "multi": false,
-        "name": "service_name",
+        "name": "service",
         "options": [],
         "query": "",
-        "queryValue": "org.apache.dubbo.samples.CommentService",
+        "queryValue": "org.apache.dubbo.samples.DetailService",
         "skipUrlSync": false,
         "type": "custom"
       }
@@ -150,6 +168,6 @@
   "timezone": "",
   "title": "service",
   "uid": "b2e178fb-ada3-4d5e-9f54-de99e7f07662",
-  "version": 2,
+  "version": 7,
   "weekStart": ""
 }
