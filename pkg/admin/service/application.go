@@ -19,6 +19,7 @@ package service
 
 import (
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/constants"
 	"strconv"
 	"strings"
 )
@@ -125,6 +126,9 @@ func GetApplicationServiceFormInfo(rt core_runtime.Runtime, req *model.Applicati
 		}
 
 		for _, serviceInfo := range metadata.Spec.Services {
+			if serviceInfo.Params[constants.ServiceInfoSide] != req.Side {
+				continue
+			}
 			applicationServiceForm := model.NewApplicationServiceForm(serviceInfo.Name)
 			if _, ok := serviceMap[serviceInfo.Name]; !ok {
 				serviceMap[serviceInfo.Name] = applicationServiceForm
