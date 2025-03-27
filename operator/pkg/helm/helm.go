@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/manifests"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/parts"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
@@ -94,13 +93,13 @@ func renderChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]st
 	sort.Strings(keys)
 	res := make([]string, 0, len(keys))
 	for _, k := range keys {
-		res = append(res, parts.SplitString(files[k])...)
+		res = append(res, util.SplitString(files[k])...)
 	}
 	slices.SortBy(crdFiles, func(a chart.CRD) string {
 		return a.Name
 	})
 	for _, crd := range crdFiles {
-		res = append(res, parts.SplitString(string(crd.File.Data))...)
+		res = append(res, util.SplitString(string(crd.File.Data))...)
 	}
 	return res, warnings, nil
 }

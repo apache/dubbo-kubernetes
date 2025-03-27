@@ -20,7 +20,7 @@ package manifest
 import (
 	"encoding/json"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/parts"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
@@ -48,7 +48,7 @@ func FromObject(us *unstructured.Unstructured) (Manifest, error) {
 
 // ParseMultiple splits a string containing potentially many YAML objects, and parses them.
 func ParseMultiple(output string) ([]Manifest, error) {
-	return Parse(parts.SplitString(output))
+	return Parse(util.SplitString(output))
 }
 
 // Parse parses a list of YAML objects.
