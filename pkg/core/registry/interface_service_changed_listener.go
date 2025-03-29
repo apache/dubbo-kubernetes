@@ -18,12 +18,9 @@
 package registry
 
 import (
-	"crypto/md5"
-	"encoding/hex"
+	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"encoding/json"
-	"sort"
 	"strconv"
-	"strings"
 )
 
 import (
@@ -43,6 +40,7 @@ type InterfaceServiceChangedNotifyListener struct {
 	listener *NotifyListener
 	ctx      *InterfaceContext
 	allUrls  *gxset.HashSet
+	registry *Registry
 }
 
 // Endpoint nolint
@@ -54,11 +52,13 @@ type Endpoint struct {
 func NewInterfaceServiceChangedNotifyListener(
 	listener *NotifyListener,
 	ctx *InterfaceContext,
+	registry *Registry,
 ) *InterfaceServiceChangedNotifyListener {
 	return &InterfaceServiceChangedNotifyListener{
 		listener: listener,
 		ctx:      ctx,
 		allUrls:  gxset.NewSet(),
+		registry: registry,
 	}
 }
 
@@ -90,7 +90,7 @@ func (iscnl *InterfaceServiceChangedNotifyListener) NotifyAll(events []*registry
 }
 
 func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(url *common.URL) {
-	serviceInfo := common.NewServiceInfoWithURL(url)
+	serviceInfo := info.NewServiceInfoWithURL(url)
 	appName := url.GetParam(constant.ApplicationKey, "")
 
 	iscnl.ctx.UpdateMapping(url.Service(), appName)
@@ -128,12 +128,12 @@ func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(ur
 			Instance: instance,
 			Key:      appName,
 		})
-		instance.SetServiceMetadata(common.NewMetadataInfo(appName, url.Address(), make(map[string]*common.ServiceInfo)))
+		instance.SetServiceMetadata(info.NewMetadataInfo(appName, ""))
 		iscnl.ctx.AddInstance(appName, instance)
 	}
 
 	metadataInfo := instance.ServiceMetadata
-	metadataInfo.AddService(serviceInfo)
+	metadataInfo.AddService(url)
 
 	iscnl.listener.NotifyInstance(&AdminInstanceEvent{
 		Action:   remoting.EventTypeUpdate,
@@ -143,7 +143,6 @@ func (iscnl *InterfaceServiceChangedNotifyListener) CreateOrUpdateServiceInfo(ur
 }
 
 func (iscnl *InterfaceServiceChangedNotifyListener) deleteServiceInfo(url *common.URL) {
-	serviceInfo := common.NewServiceInfoWithURL(url)
 
 	appName := url.GetParam(constant.ApplicationKey, "")
 	var instance *registry.DefaultServiceInstance
@@ -157,7 +156,7 @@ func (iscnl *InterfaceServiceChangedNotifyListener) deleteServiceInfo(url *commo
 
 	metadataInfo := instance.ServiceMetadata
 	if metadataInfo != nil {
-		metadataInfo.RemoveService(serviceInfo)
+		metadataInfo.RemoveService(url)
 		// delete(metadataInfo.Services, serviceInfo.GetMatchKey())
 	}
 
@@ -196,53 +195,11 @@ func getEndpointsStr(protocol string, port int) string {
 	return string(str)
 }
 
-func getURLParams(serviceInfo *common.ServiceInfo) string {
+func getURLParams(serviceInfo *info.ServiceInfo) string {
 	urlParams, err := json.Marshal(serviceInfo.Params)
 	if err != nil {
 		logger.Error("could not convert the url params to json")
 		return ""
 	}
 	return string(urlParams)
-}
-
-func resolveRevision(appName string, servicesInfo map[string]*common.ServiceInfo) string {
-	var sb strings.Builder
-	sb.WriteString(appName)
-	keys := make([]string, 0, len(servicesInfo))
-	for key := range servicesInfo {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		sb.WriteString(ToDescString(servicesInfo[key]))
-	}
-	tempRevision := getMd5(sb.String())
-	return tempRevision
-}
-
-func ToDescString(s *common.ServiceInfo) string {
-	var sb strings.Builder
-	sb.WriteString(s.GetMatchKey())
-	sb.WriteString(s.URL.Port)
-	sb.WriteString(s.Path)
-
-	params := s.GetParams()
-	keys := make([]string, 0, len(params))
-	for key := range params {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		sb.WriteString(key)
-		sb.WriteString(params[key][0])
-	}
-
-	return sb.String()
-}
-
-func getMd5(data string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(data))
-	return hex.EncodeToString(hasher.Sum(nil))
 }

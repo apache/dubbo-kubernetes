@@ -23,8 +23,6 @@ import (
 	_ "dubbo.apache.org/dubbo-go/v3/imports"
 	_ "dubbo.apache.org/dubbo-go/v3/metadata/report/nacos"
 	_ "dubbo.apache.org/dubbo-go/v3/metadata/report/zookeeper"
-	_ "dubbo.apache.org/dubbo-go/v3/metadata/service/local"
-	_ "dubbo.apache.org/dubbo-go/v3/metadata/service/remote"
 	_ "dubbo.apache.org/dubbo-go/v3/registry/nacos"
 	_ "dubbo.apache.org/dubbo-go/v3/registry/zookeeper"
 )
