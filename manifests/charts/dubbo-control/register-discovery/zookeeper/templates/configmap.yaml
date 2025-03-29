@@ -13,8 +13,6 @@ metadata:
     release: {{ .Release.Name }}
     app.kubernetes.io/name: "register"
 data:
-  init-certs.sh: |-
-    #!/bin/bash
   setup.sh: |-
     #!/bin/bash
     # Execute entrypoint as usual after obtaining ZOO_SERVER_ID
@@ -32,4 +30,3 @@ data:
             exit 1
         fi
     fi
-    exec /entrypoint.sh /run.sh

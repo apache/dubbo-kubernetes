@@ -17,9 +17,14 @@ _internal_default_values_not_set:
   ## Whether to enable the nacos.
   enabled: false
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
-  mode: standalone
+  mode: "cluster"
   ## Number of replicas for the Deployment.
   replicas: 1
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
 
   ## Configure the application image
   image:
@@ -30,34 +35,17 @@ _internal_default_values_not_set:
     # Image pull policy, available options are: Always, IfNotPresent, Never.
     imagePullPolicy: ~
 
-  plugin:
-    # Whether to enable the plugin.
-    enabled: true
-    # Configure the container image for the plugin.
-    image:
-      # Docker registry where the plugin image is hosted.
-      registry: nacos/nacos-peer-finder-plugin
-      # Specifies the image tag to use.
-      tag: 1.1
-      # Image pull policy (IfNotPresent, Always, Never).
-      imagePullPolicy: IfNotPresent
-
-  resources:
-    requests:
-      cpu: 250m
-      memory: 256Mi
-
   storage:
     # Specifies the storage type (embedded, mysql, etc.).
     type: "mysql"
     # For MySQL storage, you need to change the "embedded" to "mysql" before you can use the db configuration.
     database:
       # Specifies the database host.
-      host: ""
+      host: "nacos-mysql"
       # Specifies the database name.
       name: nacos
       # Specifies the database port.
-      port: 3306
+      port: ""
       # Specifies the database username.
       username: nacos
       # Specifies the database password.
