@@ -17,6 +17,8 @@ module github.com/apache/dubbo-kubernetes
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	dubbo.apache.org/dubbo-go/v3 v3.3.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -209,7 +211,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.0.1 // indirect
