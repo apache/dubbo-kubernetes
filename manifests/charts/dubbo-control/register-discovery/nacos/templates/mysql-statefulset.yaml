@@ -1,0 +1,65 @@
+{{- $nacos := .Values -}}
+{{- if eq $nacos.storage.type "mysql" }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nacos-mysql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: nacos-mysql
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Nacos"
+    dubbo: nacos
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "register"
+spec:
+  replicas: 1
+  serviceName: nacos-mysql-headless
+  selector:
+    matchLabels:
+      app: nacos-mysql
+      dubbo.io/rev: {{ default "default" | quote }}
+      dubbo: nacos
+  template:
+    metadata:
+      labels:
+        app: nacos-mysql
+        dubbo.io/rev: {{ default "default" | quote }}
+        install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+        operator.dubbo.io/component: "Nacos"
+        dubbo: nacos
+        release: {{ .Release.Name }}
+        app.kubernetes.io/name: "register"
+    spec:
+      containers:
+        - name: mysql
+          image: bitnami/mysql:latest
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "root"
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-db-config
+                  key: mysql.db.name
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-db-config
+                  key: mysql.user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: nacos-db-config
+                  key: mysql.password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/lib/mysql
+{{- end -}}

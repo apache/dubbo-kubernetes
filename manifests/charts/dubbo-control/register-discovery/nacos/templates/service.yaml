@@ -34,7 +34,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "nacos.name" . }}-headless
+  name: nacos-headless
   namespace: {{ .Release.Namespace }}
   labels:
     app: nacos
@@ -45,6 +45,7 @@ metadata:
     release: {{ .Release.Name }}
     app.kubernetes.io/name: "register"
 spec:
+  clusterIP: None
   ports:
   - name: http
     port: 8848

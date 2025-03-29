@@ -21,6 +21,15 @@ _internal_default_values_not_set:
   ## Number of replicas for the Deployment.
   replicas: 1
 
+  ## Configure the application image
+  image:
+    # Source of the container image.
+    registry: nacos/nacos-server
+    # Version tag of the container image.
+    tag: latest
+    # Image pull policy, available options are: Always, IfNotPresent, Never.
+    imagePullPolicy: ~
+
   plugin:
     # Whether to enable the plugin.
     enabled: true
@@ -31,37 +40,27 @@ _internal_default_values_not_set:
       # Specifies the image tag to use.
       tag: 1.1
       # Image pull policy (IfNotPresent, Always, Never).
-      pullPolicy: IfNotPresent
-  ## Configure the application image
-  image:
-    # Source of the container image.
-    registry: nacos/nacos-server
-    # Version tag of the container image.
-    tag: latest
-    # Image pull policy, available options are: Always, IfNotPresent, Never.
-    pullPolicy: IfNotPresent
+      imagePullPolicy: IfNotPresent
 
   resources:
     requests:
-      cpu: 500m
-      memory: 2Gi
+      cpu: 250m
+      memory: 256Mi
 
-  # Specifies the preferred host mode (e.g., 'hostname').
-  preferhostmode: ~
   storage:
     # Specifies the storage type (embedded, mysql, etc.).
-    type: ""
+    type: "mysql"
     # For MySQL storage, you need to change the "embedded" to "mysql" before you can use the db configuration.
-    db:
+    database:
       # Specifies the database host.
-      host: localhost
+      host: ""
       # Specifies the database name.
       name: nacos
       # Specifies the database port.
       port: 3306
       # Specifies the database username.
-      username: mysql
+      username: nacos
       # Specifies the database password.
-      password: passw0rd
+      password: nacos
       # Additional database connection parameters (if needed).
       param: ""
