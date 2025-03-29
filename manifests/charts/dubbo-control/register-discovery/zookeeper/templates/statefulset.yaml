@@ -35,7 +35,7 @@ spec:
       containers:
       - name: zookeeper
         image: {{ $zookeeper.image.registry }}:{{ $zookeeper.image.tag }}
-        imagePullPolicy: {{ $zookeeper.image.pullPolicy }}
+        imagePullPolicy: {{ $zookeeper.image.imagePullPolicy }}
         command:
         - /scripts/setup.sh
         resources:
@@ -154,7 +154,7 @@ spec:
           mountPath: /scripts/setup.sh
           subPath: setup.sh
         - name: data
-          mountPath: /bitnami/zookeeper
+          mountPath: /zookeeper/zookeeper
       volumes:
       - name: scripts
         configMap:
