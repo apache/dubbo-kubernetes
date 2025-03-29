@@ -14,12 +14,12 @@ metadata:
     release: {{ .Release.Name }}
     app.kubernetes.io/name: "register"
 spec:
-  replicas: {{ $zookeeper.replicas }}
   selector:
     matchLabels:
       app: zookeeper
       dubbo.io/rev: {{ default "default" | quote }}
       dubbo: zookeeper
+  replicas: {{ $zookeeper.replicas }}
   serviceName: zookeeper
   template:
     metadata:
@@ -36,88 +36,8 @@ spec:
       - name: zookeeper
         image: {{ $zookeeper.image.registry }}:{{ $zookeeper.image.tag }}
         imagePullPolicy: {{ $zookeeper.image.imagePullPolicy }}
-        command:
-        - /scripts/setup.sh
         resources:
 {{ toYaml $zookeeper.resources | trim | indent 10 }}
-        env:
-        - name: BITNAMI_DEBUG
-          value: {{ ternary "true" "false" (or $zookeeper.image.debug) | quote }}
-        - name: ZOO_DATA_LOG_DIR
-          value: {{ $zookeeper.dataLogDir | default $zoo.dataLogDir | quote }}
-        - name: ZOO_PORT_NUMBER
-          value: {{ 2181 | quote }}
-        - name: ZOO_TICK_TIME
-          value: {{ $zookeeper.tickTime | quote }}
-        - name: ZOO_INIT_LIMIT
-          value: {{ $zookeeper.initLimit | default $zoo.initLimit | quote }}
-        - name: ZOO_SYNC_LIMIT
-          value: {{ $zookeeper.syncLimit | quote }}
-        - name: ZOO_PRE_ALLOC_SIZE
-          value: {{ $zookeeper.preAllocSize | quote }}
-        - name: ZOO_SNAPCOUNT
-          value: {{ $zookeeper.snapCount | quote }}
-        - name: ZOO_MAX_CLIENT_CNXNS
-          value: {{ $zookeeper.maxClientCnxns | quote }}
-        - name: ZOO_4LW_COMMANDS_WHITELIST
-          value: {{ $zookeeper.fourlwCommandsWhitelist | quote }}
-        - name: ZOO_LISTEN_ALLIPS_ENABLED
-          value: {{ ternary "yes" "no" $zookeeper.listenOnAllIPs | quote }}
-        - name: ZOO_AUTOPURGE_INTERVAL
-          value: {{ $zookeeper.autopurge.purgeInterval | quote }}
-        - name: ZOO_AUTOPURGE_RETAIN_COUNT
-          value: {{ $zookeeper.autopurge.snapRetainCount | quote }}
-        - name: ZOO_MAX_SESSION_TIMEOUT
-          value: {{ $zookeeper.maxSessionTimeout | quote }}
-        {{- $zooName := "zookeeper" }}
-        {{- $zooReplicas := int $zookeeper.replicas  }}
-        {{- $zooHeadless := printf "%s-%s" $zooName "headless" | trunc 63 }}
-        {{- $zooNamespace := .Release.Namespace }}
-        {{- $zooDomain := "cluster.local" }}
-        - name: ZOO_SERVERS
-          value: {{ range $k, $v := until $zooReplicas }}{{ $zooName }}-{{ $v }}.{{ $zooName }}.{{ $zooNamespace }}.svc.{{ $zooDomain }}:2888:3888::{{ add $v 1 }} {{ end }}
-        - name: ZOO_ENABLE_AUTH
-          value: {{ ternary "no" "yes" $zookeeper.auth.client.enabled | quote }}
-        - name: ALLOW_ANONYMOUS_LOGIN
-          value: {{ ternary "no" "yes" $zookeeper.auth.client.enabled | quote }}
-        {{- if $zookeeper.auth.client.enabled }}
-        - name: ZOO_CLIENT_USER
-          value: {{ $zookeeper.auth.client.clientUser | quote }}
-        - name: ZOO_CLIENT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "zookeeper.client.secretName" . }}
-              key: client-password
-        - name: ZOO_SERVER_USERS
-          value: {{ $zookeeper.auth.client.serverUsers | quote }}
-        - name: ZOO_SERVER_PASSWORDS
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "zookeeper.client.secretName" . }}
-              key: server-password
-        {{- end }}
-        - name: ZOO_ENABLE_QUORUM_AUTH
-          value: {{ ternary "yes" "no" $zookeeper.auth.quorum.enabled | quote }}
-        {{- if $zookeeper.auth.quorum.enabled }}
-        - name: ZOO_QUORUM_LEARNER_USER
-          value: {{ $zookeeper.auth.quorum.learnerUser | quote }}
-        - name: ZOO_QUORUM_LEARNER_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "zookeeper.quorum.secretName" . }}
-              key: quorum-learner-password
-        - name: ZOO_QUORUM_SERVER_USERS
-          value: {{ $zookeeper.auth.quorum.serverUsers | quote }}
-        - name: ZOO_QUORUM_SERVER_PASSWORDS
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "zookeeper.quorum.secretName" . }}
-              key: quorum-server-password
-        {{- end }}
-        - name: ZOO_HEAP_SIZE
-          value: {{ $zookeeper.heapSize | quote }}
-        - name: ZOO_LOG_LEVEL
-          value: {{ $zookeeper.logLevel | quote }}
         ports:
         - name: client
           containerPort: 2181
@@ -125,36 +45,9 @@ spec:
           containerPort: 2888
         - name: election
           containerPort: 3888
-        startupProbe:
-          exec:
-            command: [ '/bin/bash', '-c', 'echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok' ]
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          failureThreshold: 5
-          timeoutSeconds: 5
-        readinessProbe:
-          exec:
-            command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null' ]
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          failureThreshold: 5
-          timeoutSeconds: 5
-        livenessProbe:
-          exec:
-            command: [ '/bin/bash', '-c', 'curl -s -m 2 http://localhost:8080/commands/ruok | grep ruok' ]
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          failureThreshold: 5
-          timeoutSeconds: 5
         volumeMounts:
-        - name: scripts
-          mountPath: /scripts/setup.sh
-          subPath: setup.sh
         - name: data
-          mountPath: /zookeeper/zookeeper
+          mountPath: /var/lib/zookeeper
       volumes:
       - name: scripts
         configMap:

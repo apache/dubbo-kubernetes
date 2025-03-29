@@ -36,15 +36,14 @@ spec:
         release: {{ .Release.Name }}
         app.kubernetes.io/name: "register"
     spec:
-      {{- if and (eq $nacos.mode "cluster" | default $ncs.mode) ($nacos.plugin.enabled | default $ncs.plugin.enabled) }}
+      {{- if eq $nacos.storage.type "mysql" }}
       initContainers:
-      - name: peer-finder-plugin-install
-        image: {{ $nacos.plugin.image.registry }}:{{ $nacos.plugin.image.tag }}
-        imagePullPolicy: {{ $nacos.plugin.image.pullPolicy }}
-        volumeMounts:
-        - name: data
-          mountPath: /home/nacos/plugins/peer-finder
-          subPath: peer-finder
+        - name: wait-init-mysql
+          image: busybox
+          command:
+          - "/bin/sh"
+          - "-c"
+          - "sleep 45"
       {{- end }}
       containers:
       - name: nacos
@@ -66,18 +65,20 @@ spec:
           value: "8848"
         - name: PREFER_HOST_MODE
           value: hostname
-        {{- if eq $nacos.mode "standalone" | default $ncs.mode }}
+        {{- if eq $nacos.mode "cluster" | default $ncs.mode }}
         - name: MODE
-          value: "standalone"
-        {{- else if eq $nacos.mode "cluster" | default $ncs.mode }}
+          value: "cluster"
         - name: SERVICE_NAME
           value: "nacos-headless"
         - name: DOMAIN_NAME
           value: "cluster.local"
+        {{- else }}
+        - name: MODE
+          value: "standalone"
         {{- end }}
-        {{- if eq $nacos.storage.type "mysql" }}
         - name: SPRING_DATASOURCE_PLATFORM
           value: "mysql"
+        {{- if eq $nacos.storage.type "mysql" }}
         - name: MYSQL_SERVICE_HOST
           valueFrom:
             configMapKeyRef:
@@ -112,14 +113,6 @@ spec:
         - name: EMBEDDED_STORAGE
           value: embedded
         {{- end }}
-        readinessProbe:
-          httpGet:
-            path: /nacos/v1/console/health/readiness
-            port: 8848
-            scheme: HTTP
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 10
         volumeMounts:
         - name: data
           mountPath: /home/nacos/data
@@ -127,9 +120,6 @@ spec:
         - name: data
           mountPath: /home/nacos/logs
           subPath: logs
-        - name: data
-          mountPath: /home/nacos/plugins/peer-finder
-          subPath: peer-finder
       volumes:
       - name: data
         emptyDir: {}
