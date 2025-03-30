@@ -17,27 +17,10 @@ _internal_default_values_not_set:
   ## Number of replicas for the Deployment.
   replicas: 1
 
-  ## Configure the application image
-  image:
-    # Source of the container image.
-    registry: mfordjody/gin-web-log
-    # Version tag of the container image.
-    tag: latest
-    # Image pull policy, available options are: Always, IfNotPresent, Never.
-    pullPolicy: IfNotPresent
-
-  ## Define volume mounts for the application, Each item in the list represents a separate volume mount.
-  volumeMounts: ~
-  ## Example:
-  #  - name: vol
-  #    mountPath: /data
-  #    readOnly: true
-
-  ## Define volumes for the application, Each item in the list represents a separate volume.
-  volumes: ~
-  #  - name: vol
-  #    hostPath:
-  #      path: /data
+  image: mfordjody/gin-web-log
+  tag: ""
+  # Image pull policy, available options are: Always, IfNotPresent, Never.
+  imagePullPolicy: ~
 
   resources:
     requests:

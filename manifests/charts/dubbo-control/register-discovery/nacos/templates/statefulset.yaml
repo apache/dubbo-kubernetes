@@ -14,7 +14,7 @@ metadata:
     release: {{ .Release.Name }}
     app.kubernetes.io/name: "register"
 spec:
-  replicas: {{ $ncs.replicas }}
+  replicas: {{ $nacos.replicas }}
   {{- if eq $nacos.mode "cluster" }}
   serviceName: nacos-headless
   {{- else }}
@@ -47,8 +47,8 @@ spec:
       {{- end }}
       containers:
       - name: nacos
-        image: {{ $nacos.image.registry }}:{{ $nacos.image.tag }}
-        imagePullPolicy: {{ $nacos.image.pullPolicy }}
+        image: {{ $nacos.image }}:{{ $nacos.tag }}
+        imagePullPolicy: {{ $nacos.imagePullPolicy }}
         ports:
         - name: http
           containerPort: 8848
@@ -122,4 +122,5 @@ spec:
           subPath: logs
       volumes:
       - name: data
-        emptyDir: {}
+        hostPath:
+          path: /var/lib/nacos

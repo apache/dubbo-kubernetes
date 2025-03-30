@@ -40,8 +40,8 @@ spec:
       serviceAccountName: admin-sa
       containers:
       - name: admin
-        image: {{ $admin.image.registry }}:{{ $admin.image.tag }}
-        imagePullPolicy: {{ $admin.image.pullPolicy }}
+        image: {{ $admin.image }}:{{ $admin.tag }}
+        imagePullPolicy: {{ $admin.imagePullPolicy }}
         ports:
         - name: http
           containerPort: 8888
@@ -62,19 +62,10 @@ spec:
           value: grafana:3000
         volumeMounts:
           - name: data
-            mountPath: /var/lib/admin-data
-        readinessProbe:
-          httpGet:
-            path: /admin
-            port: 8888
-          initialDelaySeconds: 60
-          successThreshold: 1
-          failureThreshold: 5
-          periodSeconds: 10
-          timeoutSeconds: 30
+            mountPath: /var/lib/admin-dashboard
         resources:
 {{ toYaml $admin.resources | trim | indent 10 }}
       volumes:
       - name: data
-        emptyDir:
-          medium: Memory
+        hostPath:
+          path: /var/lib/admin-dashboard
