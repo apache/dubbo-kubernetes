@@ -15,7 +15,7 @@ metadata:
     app.kubernetes.io/name: "register"
 spec:
   replicas: 1
-  serviceName: nacos-mysql
+  serviceName: nacos-mysql-headless
   selector:
     matchLabels:
       app: nacos-mysql
@@ -59,7 +59,6 @@ spec:
         lifecycle:
           postStart:
             exec:
-{{/*              command: [ "/bin/sh", "-c", "sleep 30 && mysql -unacos -pnacos nacos < /mysql-schema.sql" ]*/}}
               command: [ "/bin/sh", "-c", "sleep 30 && mysql -unacos -pnacos -e 'SELECT 1 FROM nacos.config_info LIMIT 1;' || mysql -unacos -pnacos nacos < /mysql-schema.sql" ]
         volumeMounts:
         - name: table-data

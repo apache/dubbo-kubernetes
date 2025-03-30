@@ -30,14 +30,11 @@ github:
     # Enable projects for project management boards
     projects: true
   protected_branches:
-    master:
+    master: {}
       # only disable force push
-      foo: bar
+      # foo: bar
   labels:
-    - kubernetes
     - dubbo
+    - kubernetes
     - microservices
     - service-mesh
-    - devops
-    - dubboctl
-    - control-plane

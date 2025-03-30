@@ -26,14 +26,10 @@ _internal_default_values_not_set:
       cpu: 250m
       memory: 256Mi
 
-  ## Configure the application image
-  image:
-    # Source of the container image.
-    registry: nacos/nacos-server
-    # Version tag of the container image.
-    tag: latest
-    # Image pull policy, available options are: Always, IfNotPresent, Never.
-    imagePullPolicy: ~
+  image: nacos/nacos-server
+  tag: ""
+  # Image pull policy, available options are: Always, IfNotPresent, Never.
+  imagePullPolicy: ~
 
   storage:
     # Specifies the storage type (embedded, mysql, etc.).

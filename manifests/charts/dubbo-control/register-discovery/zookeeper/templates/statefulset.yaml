@@ -34,8 +34,8 @@ spec:
     spec:
       containers:
       - name: zookeeper
-        image: {{ $zookeeper.image.registry }}:{{ $zookeeper.image.tag }}
-        imagePullPolicy: {{ $zookeeper.image.imagePullPolicy }}
+        image: {{ $zookeeper.image }}:{{ $zookeeper.tag }}
+        imagePullPolicy: {{ $zookeeper.imagePullPolicy }}
         resources:
 {{ toYaml $zookeeper.resources | trim | indent 10 }}
         ports:
@@ -54,4 +54,5 @@ spec:
           name: zookeeper-scripts
           defaultMode: 0755
       - name: data
-        emptyDir: {}
+        hostPath:
+          path: /var/lib/zookeeper
