@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// SetLabel is a helper function which sets the specified label and value on the specified object.
 func SetLabel(resource runtime.Object, label, value string) error {
 	resourceAccessor, err := meta.Accessor(resource)
 	if err != nil {

@@ -26,13 +26,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// CreateNamespace creates a namespace using the given k8s interface.
 func CreateNamespace(cs kubernetes.Interface, namespace string, dryRun bool) error {
 	if dryRun {
 		return nil
 	}
 	if namespace == "" {
+		// Setup default namespace.
 		namespace = "dubbo-system"
 	}
+	// check if the namespace already exists. If yes, do nothing. If no, create a new one.
 	if _, err := cs.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{}); err != nil {
 		if errors.IsNotFound(err) {
 			ns := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{

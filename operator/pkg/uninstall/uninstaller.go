@@ -35,19 +35,29 @@ import (
 )
 
 var (
+	// ClusterResources are resource types the operator prunes, ordered by which types should be deleted, first to last.
 	ClusterResources = []schema.GroupVersionKind{
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"},
+		// Cannot currently prune CRDs because this will also wipe out user config.
+		// {Group: "apiextensions.k8s.io", Version: "v1beta1", Kind: name.CRDStr},
 	}
+	// ClusterControlPlaneResources lists cluster scope resources types which should be deleted during uninstall command.
 	ClusterControlPlaneResources = []schema.GroupVersionKind{
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"},
 	}
+	// AllClusterResources lists all cluster scope resources types which should be deleted in purge case, including CRD.
 	AllClusterResources = append(ClusterResources,
 		gvk.CustomResourceDefinition.Kubernetes(),
 	)
 )
 
+// GetRemovedResources get the list of resources to be removed
+// 1. if includeClusterResources is false, we list the namespaced resources by matching revision and component labels.
+// 2. if includeClusterResources is true, we list the namespaced and cluster resources by component labels only.
+// If componentName is not empty, only resources associated with specific components would be returned
+// UnstructuredList of objects and corresponding list of name kind hash of k8sObjects would be returned
 func GetRemovedResources(kc kube.CLIClient, dopName, dopNamespace string, includeClusterResources bool) ([]*unstructured.UnstructuredList, error) {
 	var usList []*unstructured.UnstructuredList
 	labels := make(map[string]string)
@@ -85,6 +95,7 @@ func GetRemovedResources(kc kube.CLIClient, dopName, dopNamespace string, includ
 	return usList, nil
 }
 
+// NamespacedResources gets specific pruning resources based on the k8s version
 func NamespacedResources() []schema.GroupVersionKind {
 	res := []schema.GroupVersionKind{
 		gvk.Deployment.Kubernetes(),
@@ -103,6 +114,7 @@ func PrunedResourcesSchemas() []schema.GroupVersionKind {
 	return append(NamespacedResources(), ClusterResources...)
 }
 
+// DeleteObjectsList removed resources that are in the slice of UnstructuredList.
 func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsList []*unstructured.UnstructuredList) error {
 	var errs util.Errors
 	for _, ol := range objectsList {

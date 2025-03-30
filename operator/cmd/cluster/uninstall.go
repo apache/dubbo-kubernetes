@@ -91,7 +91,7 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 		return err
 	}
 
-	pl := progress.NewInfo()
+	pl := progress.NewLog()
 	if uiArgs.remove && uiArgs.filenames != "" {
 		cl.LogAndPrint("Purge uninstall will remove all Dubbo resources, ignoring the specified revision or operator file")
 	}

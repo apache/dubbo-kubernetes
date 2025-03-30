@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/manifests"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/parts"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
@@ -45,16 +44,18 @@ const (
 
 type Warnings = util.Errors
 
-func Reader(namespace string, directory string, dop values.Map) ([]manifest.Manifest, util.Errors, error) {
-	vals, ok := dop.GetPathMap("spec.values")
+// Render produces a set of fully rendered manifests from Helm.
+// Any warnings are also propagated up.
+// Note: this is the direct result of the Helm call. Postprocessing steps are done later.
+func Render(namespace string, directory string, dop values.Map) ([]manifest.Manifest, util.Errors, error) {
+	val, ok := dop.GetPathMap("spec.values")
 	if !ok {
 		return nil, nil, fmt.Errorf("failed to get values from dop: %v", ok)
 	}
 	path := pathJoin("charts", directory)
-	// pkgPath := dop.GetPathString("spec.packagePath")
 	f := manifests.BuiltinDir("")
 	chrt, err := loadChart(f, path)
-	output, warnings, err := readerChart(namespace, vals, chrt)
+	output, warnings, err := renderChart(namespace, val, chrt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("render chart: %v", err)
 	}
@@ -62,7 +63,8 @@ func Reader(namespace string, directory string, dop values.Map) ([]manifest.Mani
 	return mfs, warnings, err
 }
 
-func readerChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]string, Warnings, error) {
+// renderChart renders the given chart with the given values and returns the resulting YAML manifest string.
+func renderChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]string, Warnings, error) {
 	opts := chartutil.ReleaseOptions{
 		Name:      "dubbo",
 		Namespace: namespace,
@@ -78,7 +80,7 @@ func readerChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]st
 	}
 	crdFiles := chrt.CRDObjects()
 	if chrt.Metadata.Name == BaseChartName {
-		values.GetPathHelper[bool](chrtVals, "base.enableDubboConfigCRD")
+		values.GetPathAs[bool](chrtVals, "base.enableDubboConfigCRD")
 	}
 	var warnings Warnings
 	keys := make([]string, 0, len(files))
@@ -91,17 +93,18 @@ func readerChart(namespace string, chrtVals values.Map, chrt *chart.Chart) ([]st
 	sort.Strings(keys)
 	res := make([]string, 0, len(keys))
 	for _, k := range keys {
-		res = append(res, parts.SplitString(files[k])...)
+		res = append(res, util.SplitString(files[k])...)
 	}
 	slices.SortBy(crdFiles, func(a chart.CRD) string {
 		return a.Name
 	})
 	for _, crd := range crdFiles {
-		res = append(res, parts.SplitString(string(crd.File.Data))...)
+		res = append(res, util.SplitString(string(crd.File.Data))...)
 	}
 	return res, warnings, nil
 }
 
+// loadChart reads a chart from the filesystem. This is like loader.LoadDir but allows a fs.FS.
 func loadChart(f fs.FS, root string) (*chart.Chart, error) {
 	fnames, err := getFilesRecursive(f, root)
 	if err != nil {
@@ -126,6 +129,7 @@ func loadChart(f fs.FS, root string) (*chart.Chart, error) {
 	return loader.LoadFiles(bfs)
 }
 
+// stripPrefix removes the given prefix from prefix.
 func stripPrefix(path, prefix string) string {
 	pl := len(strings.Split(prefix, "/"))
 	pv := strings.Split(path, "/")

@@ -24,7 +24,9 @@ type ErrNotInitialized struct {
 }
 
 func NewErrNotInitialized(path string) error {
-	return &ErrNotInitialized{Path: path}
+	return &ErrNotInitialized{
+		Path: path,
+	}
 }
 
 func (e ErrNotInitialized) Error() string {

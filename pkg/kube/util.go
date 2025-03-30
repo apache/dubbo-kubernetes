@@ -25,6 +25,7 @@ import (
 	"os"
 )
 
+// DefaultRestConfig returns the rest.Config for the given kube config file and context.
 func DefaultRestConfig(kubeconfig, context string, fns ...func(config *rest.Config)) (*rest.Config, error) {
 	bcc, err := BuildClientConfig(kubeconfig, context)
 	if err != nil {
@@ -36,14 +37,11 @@ func DefaultRestConfig(kubeconfig, context string, fns ...func(config *rest.Conf
 	return bcc, nil
 }
 
-func BuildClientConfig(kubeconfig, context string) (*rest.Config, error) {
-	c, err := BuildClientCmd(kubeconfig, context).ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
-}
-
+// BuildClientCmd builds a client cmd config from a kubeconfig filepath and context.
+// It overrides the current context with the one provided (empty to use default).
+//
+// This is a modified version of k8s.io/client-go/tools/clientcmd/BuildConfigFromFlags with the
+// difference that it loads default configs if not running in-cluster.
 func BuildClientCmd(kubeconfig, context string, overrides ...func(configOverrides *clientcmd.ConfigOverrides)) clientcmd.ClientConfig {
 	if kubeconfig != "" {
 		info, err := os.Stat(kubeconfig)
@@ -64,6 +62,21 @@ func BuildClientCmd(kubeconfig, context string, overrides ...func(configOverride
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
 }
 
+// BuildClientConfig builds a client rest config from a kubeconfig filepath and context.
+// It overrides the current context with the one provided (empty to use default).
+//
+// This is a modified version of k8s.io/client-go/tools/clientcmd/BuildConfigFromFlags with the
+// difference that it loads default configs if not running in-cluster.
+func BuildClientConfig(kubeconfig, context string) (*rest.Config, error) {
+	c, err := BuildClientCmd(kubeconfig, context).ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// SetRestDefaults is a helper function that sets default values for the given rest.Config.
+// This function is idempotent.
 func SetRestDefaults(config *rest.Config) *rest.Config {
 	if config.GroupVersion == nil || config.GroupVersion.Empty() {
 		config.GroupVersion = &corev1.SchemeGroupVersion

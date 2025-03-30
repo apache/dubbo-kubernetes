@@ -1,167 +1,80 @@
 {{- $admin := .Values -}}
-{{- $cp := .Values.cp -}}
 {{- $zoo := .Values.zookeeper }}
 {{- $nacos := .Values.nacos }}
-{{- $prom := .Values.kubePrometheus }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "admin.name" . }}
-  namespace: {{ template "admin.namespace" . }}
+  name: admin-dashboard
+  namespace: {{ .Release.Namespace }}
   labels:
-  {{- include "admin.labels" . | nindent 4 }}
-  {{- with $admin.labels }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app: admin
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Admin"
+    dubbo: admin
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "dashboard"
 spec:
   replicas: {{ $admin.replicas }}
   strategy:
-  {{- if $admin.strategy }}
-  {{- toYaml $admin.strategy | nindent 4 }}
-  {{- end }}
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
   selector:
     matchLabels:
-    {{- include "admin.matchLabels" . | nindent 6 }}
+      app: admin
+      dubbo.io/rev: {{ default "default" | quote }}
+      dubbo: admin
   template:
     metadata:
       labels:
-      {{- include "admin.labels" . | nindent 8 }}
+        app: admin
+        dubbo.io/rev: {{ default "default" | quote }}
+        install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+        operator.dubbo.io/component: "Admin"
+        dubbo: admin
+        release: {{ .Release.Name }}
+        app.kubernetes.io/name: "dashboard"
     spec:
-      {{- if $admin.imagePullSecrets }}
-      imagePullSecrets: {{ toYaml $admin.imagePullSecrets | nindent 8 }}
-      {{- end }}
-      {{- if $admin.nodeSelector }}
-      nodeSelector: {{ toYaml $admin.nodeSelector | nindent 8 }}
-      {{- end }}
-      {{- if $admin.tolerations }}
-      tolerations: {{ toYaml $admin.tolerations | nindent 8 }}
-      {{- end }}
-      {{- if $admin.terminationGracePeriodSeconds }}
-      terminationGracePeriodSeconds: {{ $admin.terminationGracePeriodSeconds }}
-      {{- end }}
-      serviceAccountName: {{ template "admin.name" . }}
+      serviceAccountName: admin-sa
       containers:
       - name: admin
         image: {{ $admin.image.registry }}:{{ $admin.image.tag }}
         imagePullPolicy: {{ $admin.image.pullPolicy }}
-        lifecycle:
-        {{- if $admin.lifecycleHooks }}
-        {{- toYaml $admin.lifecycleHooks | nindent 10 }}
-        {{- end }}
-        args:
-        - run
-        - --config-file=/etc/dubbo.io/config.yaml
         ports:
-        - name: admin-http
+        - name: http
           containerPort: 8888
-        - name: admin-grpc
-          containerPort: 5678
-        - name: admin-admission
-          containerPort: 5443
         env:
-        {{- $zooName := printf "zookeeper" -}}
-        {{- $nacosName := printf "nacos" -}}
-        {{- $zooReplicas := int .Values.zookeeper.replicas -}}
-        {{- $nacosReplicas := int .Values.nacos.replicas -}}
-        {{- $zooNamespace := include "admin.namespace" . -}}
-        {{- $nacosNamespace := include "admin.namespace" . -}}
-        {{- $clusterDomain := $admin.clusterDomain -}}
-        {{- $zooPort := include "zoo.client" . -}}
-        {{- $nacosPort := $nacos.serverPort -}}
         {{- if $nacos.enabled }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://nacos-0.nacos.dubbo-system.svc.cluster.local:8848
+          value: nacos://nacos:8848
           {{- else if $zoo.enabled }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: zookeeper://zookeeper-0.zookeeper.dubbo-system.svc.cluster.local:2181
+          value: zookeeper://zookeeper:2181
           {{- else }}
         - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://nacos-0.nacos.dubbo-system.svc.cluster.local:8848
+          value: nacos://nacos:8848
         {{- end }}
-        - name: DUBBO_RUNTIME_KUBERNETES_ADMISSION_SERVER_CERT_DIR
-          value: /var/run/secrets/dubbo.io/tls-cert
-        {{- $promName := include "prom.name" . }}
-        {{- $promPort := include "prom.port" . }}
-        {{- $promStationaryName := printf "kube-prome-prometheus" }}
-        {{- $promFullName := printf "%s-%s" $promName $promStationaryName }}
-        {{- if $prom.enabled }}
         - name: ADMIN_PROMETHEUS_ADDRESS
-          value: {{ $promFullName }}:{{ $promPort }}
-        {{- $grafanaName := include "grafana.name" . }}
-        {{- $grafanaPort := include "grafana.port" . }}
-        {{- $grafanaFullName := printf "%s-%s" $promName $grafanaName }}
+          value: prometheus:9090
         - name: ADMIN_GRAFANA_ADDRESS
-          value: {{ $grafanaFullName }}:{{ $grafanaPort }}
-        {{- end }}
+          value: grafana:3000
         volumeMounts:
-        {{- if $admin.volumeMounts }}
-        {{- toYaml $admin.volumeMounts | nindent 8 }}
-        {{- end }}
-        - name: general-tls-cert
-          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.crt
-          subPath: tls.crt
-          readOnly: true
-        - name: general-tls-cert
-          mountPath: /var/run/secrets/dubbo.io/tls-cert/tls.key
-          subPath: tls.key
-          readOnly: true
-        - name: general-tls-cert{{- if $cp.tls.caSecretName }}-ca{{- end }}
-          mountPath: /var/run/secrets/dubbo.io/tls-cert/ca.crt
-          subPath: ca.crt
-          readOnly: true
-        - name: config
-          mountPath: /etc/dubbo.io/config.yaml
-          subPath: config.yaml
-          readOnly: true
-        securityContext:
-        {{- if $admin.securityContext }}
-        {{- toYaml $admin.securityContext | nindent 10 }}
-        {{- end }}
-        startupProbe:
-        {{- if $admin.startupProbe }}
-        {{- toYaml $admin.startupProbe | nindent 10 }}
-        {{- end }}
-        livenessProbe:
-        {{- if $admin.livenessProbe }}
-        {{- toYaml $admin.livenessProbe | nindent 10 }}
-        {{- end }}
+          - name: data
+            mountPath: /var/lib/admin-data
         readinessProbe:
-        {{- if $admin.readinessProbe }}
-        {{- toYaml $admin.readinessProbe | nindent 10 }}
-        {{- end }}
+          httpGet:
+            path: /admin
+            port: 8888
+          initialDelaySeconds: 60
+          successThreshold: 1
+          failureThreshold: 5
+          periodSeconds: 10
+          timeoutSeconds: 30
         resources:
-        {{- if $admin.resources }}
-        {{- toYaml $admin.resources | nindent 10 }}
-        {{- end }}
+{{ toYaml $admin.resources | trim | indent 10 }}
       volumes:
-      {{- if $admin.volumes }}
-      {{- toYaml $admin.volumes | nindent 6 }}
-      {{- end }}
-      - name: config
-        configMap:
-          name: {{ include "admin.name" . }}-config
-      {{- if $cp.tls.secretName }}
-      - name: general-tls-cert
-        secret:
-          secretName: {{ $cp.tls.secretName }}
-      {{- else }}
-      - name: general-tls-cert
-        secret:
-          secretName: {{ include "admin.name" . }}-tls-cert
-      {{- end }}
-      {{- if $cp.tls.caSecretName }}
-      - name: general-tls-cert-ca
-        secret:
-          secretName: {{ $cp.tls.caSecretName }}
-      {{- end }}
-      - name: storage
-        {{- if $admin.persistence.enabled }}
-        persistentVolumeClaim:
-        {{- with $admin.persistence }}
-        {{- if .claimName }}
-          claimName: {{ .claimName }}
-        {{- else }}
-        emptyDir: {}
-        {{- end -}}
-        {{- end -}}
-        {{- end -}}
+      - name: data
+        emptyDir:
+          medium: Memory

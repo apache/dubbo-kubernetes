@@ -31,8 +31,8 @@ spec:
     admin:
       enabled: true
   values:
-    global:
-      dubboNamespace: dubbo-system
+    global: {}
+    base: {}
     nacos:
       enabled: true
     zookeeper: {}

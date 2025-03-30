@@ -31,7 +31,9 @@ import (
 )
 
 type createArgs struct {
-	dirname  string
+	// dirname specifies the name of the custom-created directory.
+	dirname string
+	// language specifies different SDK languages.
 	language string
 	template string
 }
@@ -99,24 +101,31 @@ func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 }
 
 type createConfig struct {
-	Path       string
-	Runtime    string
-	Template   string
-	Repo       string
-	DirName    string
-	Initialzed bool
+	// Path Absolute to function source
+	Path     string
+	Runtime  string
+	Template string
+	// Repo URI (overrides builtin and installed)
+	Repo        string
+	DirName     string
+	Initialized bool
 }
 
+// newCreateConfig returns a config populated from the current execution context
+// (args, flags and environment variables)
+// The client constructor function is used to create a transient client for
+// accessing things like the current valid templates list, and uses the
+// current value of the config at time of prompting.
 func newCreateConfig(_ *cobra.Command, _ []string, _ ClientFactory) (dcfg createConfig, err error) {
 	var absolutePath string
 	absolutePath = cwd()
 
 	dcfg = createConfig{
-		DirName:    viper.GetString("dirname"),
-		Path:       absolutePath + "/" + viper.GetString("dirname"),
-		Runtime:    viper.GetString("language"),
-		Template:   viper.GetString("template"),
-		Initialzed: viper.GetBool("initialzed"),
+		DirName:     viper.GetString("dirname"),
+		Path:        absolutePath + "/" + viper.GetString("dirname"),
+		Runtime:     viper.GetString("language"),
+		Template:    viper.GetString("template"),
+		Initialized: viper.GetBool("initialized"),
 	}
 	fmt.Printf("Name:     %v\n", dcfg.DirName)
 	fmt.Printf("Path:     %v\n", dcfg.Path)
@@ -126,27 +135,35 @@ func newCreateConfig(_ *cobra.Command, _ []string, _ ClientFactory) (dcfg create
 }
 
 func runCreate(cmd *cobra.Command, args []string, clientFactory ClientFactory) error {
+	// Create a config based on args.  Also uses the newClient to create a
+	// temporary client for completing options such as available runtimes.
 	dcfg, err := newCreateConfig(cmd, args, clientFactory)
 	if err != nil {
 		return err
 	}
+	// From environment variables, flags, arguments, and user prompts if --confirm
+	// (in increasing levels of precedence)
 	dclient, cancel := clientFactory()
 	defer cancel()
 
+	// a deeper validation than that which is performed when
+	// instantiating the client with the raw config above.
 	if err = dcfg.validate(dclient); err != nil {
 		return err
 	}
 
+	// Initialization creation
 	_, err = dclient.Initialize(&dubbo.DubboConfig{
 		Root:     dcfg.Path,
 		Name:     dcfg.DirName,
 		Runtime:  dcfg.Runtime,
 		Template: dcfg.Template,
-	}, dcfg.Initialzed, cmd)
+	}, dcfg.Initialized, cmd)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Custom Dubbo %v sdk was successfully created.\n", dcfg.Runtime)
+
+	fmt.Printf("Custom dubbo %v sdk was successfully created.\n", dcfg.Runtime)
 	return nil
 }
 
@@ -185,6 +202,7 @@ func newInvalidRuntimeError(client *sdk.Client, runtime string) error {
 	return ErrInvalidRuntime(errors.New(b.String()))
 }
 
+// isValidTemplate determines if the given template is valid for the given runtime.
 func isValidTemplate(client *sdk.Client, runtime, template string) bool {
 	if !isValidRuntime(client, runtime) {
 		return false
@@ -201,6 +219,7 @@ func isValidTemplate(client *sdk.Client, runtime, template string) bool {
 	return false
 }
 
+// isValidRuntime determines if the given language runtime is a valid choice.
 func isValidRuntime(client *sdk.Client, runtime string) bool {
 	runtimes, err := client.Runtimes()
 	if err != nil {

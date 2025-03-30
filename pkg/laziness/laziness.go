@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+// Package laziness is a package to expose lazily computed values.
 package laziness
 
 import (
@@ -24,13 +25,16 @@ import (
 
 type lazinessImpl[T any] struct {
 	getter func() (T, error)
-	retry  bool
-	res    T
-	err    error
-	done   uint32
-	m      sync.Mutex
+	// retry, if true, will ensure getter() is called for each Get() until a non-nil error is returned.
+	retry bool
+	// Cached responses. Note: with retry enabled, this will be unset until a non-nil error
+	res  T
+	err  error
+	done uint32
+	m    sync.Mutex
 }
 
+// Laziness represents a value whose computation is deferred until the first access.
 type Laziness[T any] interface {
 	Get() (T, error)
 }
@@ -43,6 +47,8 @@ func New[T any](f func() (T, error)) Laziness[T] {
 	}
 }
 
+// NewWithRetry returns a new lazily computed value. The value will be computed on each call until a
+// non-nil error is returned.
 func NewWithRetry[T any](f func() (T, error)) Laziness[T] {
 	return &lazinessImpl[T]{
 		getter: f,
@@ -62,6 +68,7 @@ func (l *lazinessImpl[T]) doSlow() (T, error) {
 	defer l.m.Unlock()
 	if l.done == 0 {
 		done := uint32(1)
+		// Defer in case of panic
 		defer func() {
 			atomic.StoreUint32(&l.done, done)
 		}()

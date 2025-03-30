@@ -18,8 +18,13 @@
 package manifest
 
 const (
-	OwningResourceName      = "install.operator.dubbo.io/owning-resource"
+	// OwningResourceName represents the name of the owner to which the resource relates.
+	OwningResourceName = "install.operator.dubbo.io/owning-resource"
+	// OwningResourceNamespace represents the namespace of the owner to which the resource relates.
 	OwningResourceNamespace = "install.operator.dubbo.io/owning-resource-namespace"
-	DubboComponentLabel     = "operator.dubbo.io/component"
+	// DubboComponentLabel indicates which Dubbo component a resource belongs to.
+	DubboComponentLabel = "operator.dubbo.io/component"
+	// OwningResourceNotPruned indicates that the resource should not be pruned during reconciliation cycles,
+	// note this will not prevent the resource from being deleted if the owning resource is deleted.
 	OwningResourceNotPruned = "install.operator.dubbo.io/owning-resource-not-pruned"
 )

@@ -18,6 +18,7 @@
 package service
 
 import (
+	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"fmt"
 	"io"
 	"net/http"
@@ -99,10 +100,12 @@ func SearchInstances(rt core_runtime.Runtime, req *model.SearchInstanceReq) (*mo
 	}
 
 	res := model.NewSearchPaginationResult()
-	list := make([]*model.SearchInstanceResp, len(dataplaneList.Items))
-	for i, item := range dataplaneList.Items {
-		list[i] = model.NewSearchInstanceResp()
-		list[i] = list[i].FromDataplaneResource(item)
+	var list []*model.SearchInstanceResp
+	for _, item := range dataplaneList.Items {
+		if strings.Split(item.Meta.GetName(), constant.KeySeparator)[1] == "0" {
+			continue
+		}
+		list = append(list, model.NewSearchInstanceResp().FromDataplaneResource(item))
 	}
 
 	res.List = list

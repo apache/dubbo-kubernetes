@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/discovery"
 	diskcached "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/discovery/cached/memory"
-	"k8s.io/client-go/dynamic"
+	// "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
@@ -34,6 +34,9 @@ import (
 	"time"
 )
 
+// clientFactory partially implements the kubectl util.Factory, which is provides access to various k8s clients.
+// The full Factory can be built with MakeKubeFactory.
+// This split is to avoid huge dependencies.
 type clientFactory struct {
 	clientConfig    clientcmd.ClientConfig
 	expander        laziness.Laziness[meta.RESTMapper]
@@ -41,6 +44,7 @@ type clientFactory struct {
 	discoveryClient laziness.Laziness[discovery.CachedDiscoveryInterface]
 }
 
+// newClientFactory creates a new util.Factory from the given clientcmd.ClientConfig.
 func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clientFactory {
 	cf := &clientFactory{
 		clientConfig: clientConfig,
@@ -50,6 +54,7 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 		if err != nil {
 			return nil, err
 		}
+		// Setup cached discovery. CLIs uses disk cache, controllers use memory cache.
 		if diskCache {
 			cacheDir := filepath.Join(homedir.HomeDir(), ".kube", "cache")
 			httpCacheDir := filepath.Join(cacheDir, "http")
@@ -83,16 +88,16 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 	return cf
 }
 
-func (c *clientFactory) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
-	return c.discoveryClient.Get()
-}
-
 func (c *clientFactory) RestClient() (*rest.RESTClient, error) {
 	clientConfig, err := c.ToRestConfig()
 	if err != nil {
 		return nil, err
 	}
 	return rest.RESTClientFor(clientConfig)
+}
+
+func (c *clientFactory) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
+	return c.discoveryClient.Get()
 }
 
 func (c *clientFactory) ToRestConfig() (*rest.Config, error) {
@@ -103,22 +108,7 @@ func (c *clientFactory) ToRestConfig() (*rest.Config, error) {
 	return SetRestDefaults(restConfig), nil
 }
 
-func (c *clientFactory) ToRestMapper() (meta.RESTMapper, error) {
-	return c.expander.Get()
-}
-
-func (c *clientFactory) DynamicClient() (dynamic.Interface, error) {
-	restConfig, err := c.ToRestConfig()
-	if err != nil {
-		return nil, err
-	}
-	return dynamic.NewForConfig(restConfig)
-}
-
-func (c *clientFactory) ToRawKubeConfigLoader() clientcmd.ClientConfig {
-	return c.clientConfig
-}
-
+// overlyCautiousIllegalFileCharacters matches characters that *might* not be supported.  Windows is really restrictive, so this is really restrictive
 var overlyCautiousIllegalFileCharacters = regexp.MustCompile(`[^(\w/.)]`)
 
 func computeDiscoverCacheDir(dir, host string) string {

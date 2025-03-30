@@ -20,7 +20,7 @@ package manifest
 import (
 	"encoding/json"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/parts"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
@@ -33,6 +33,52 @@ type Manifest struct {
 type ManifestSet struct {
 	Components component.Name
 	Manifests  []Manifest
+}
+
+func FromObject(us *unstructured.Unstructured) (Manifest, error) {
+	c, err := yaml.Marshal(us)
+	if err != nil {
+		return Manifest{}, err
+	}
+	return Manifest{
+		Unstructured: us,
+		Content:      string(c),
+	}, nil
+}
+
+// ParseMultiple splits a string containing potentially many YAML objects, and parses them.
+func ParseMultiple(output string) ([]Manifest, error) {
+	return Parse(util.SplitString(output))
+}
+
+// Parse parses a list of YAML objects.
+func Parse(output []string) ([]Manifest, error) {
+	result := make([]Manifest, 0, len(output))
+	for _, m := range output {
+		mf, err := FromYAML([]byte(m))
+		if err != nil {
+			return nil, err
+		}
+		if mf.GetObjectKind().GroupVersionKind().Kind == "" {
+			// This is not an object. Could be empty template, comments only, etc
+			continue
+		}
+		result = append(result, mf)
+	}
+	return result, nil
+}
+
+func (m Manifest) Hash() string {
+	return ObjectHash(m.Unstructured)
+}
+
+func ObjectHash(o *unstructured.Unstructured) string {
+	k := o.GroupVersionKind().Kind
+	switch o.GroupVersionKind().Kind {
+	case "ClusterRole", "ClusterRoleBinding":
+		return k + ":" + o.GetName()
+	}
+	return k + ":" + o.GetNamespace() + ":" + o.GetName()
 }
 
 func FromJSON(j []byte) (Manifest, error) {
@@ -56,47 +102,4 @@ func FromYAML(y []byte) (Manifest, error) {
 		Unstructured: us,
 		Content:      string(y),
 	}, nil
-}
-
-func FromObject(us *unstructured.Unstructured) (Manifest, error) {
-	c, err := yaml.Marshal(us)
-	if err != nil {
-		return Manifest{}, err
-	}
-	return Manifest{
-		Unstructured: us,
-		Content:      string(c),
-	}, nil
-}
-
-func Parse(output []string) ([]Manifest, error) {
-	result := make([]Manifest, 0, len(output))
-	for _, m := range output {
-		mf, err := FromYAML([]byte(m))
-		if err != nil {
-			return nil, err
-		}
-		if mf.GetObjectKind().GroupVersionKind().Kind == "" {
-			continue
-		}
-		result = append(result, mf)
-	}
-	return result, nil
-}
-
-func ParseMultiple(output string) ([]Manifest, error) {
-	return Parse(parts.SplitString(output))
-}
-
-func ObjectHash(o *unstructured.Unstructured) string {
-	k := o.GroupVersionKind().Kind
-	switch o.GroupVersionKind().Kind {
-	case "ClusterRole", "ClusterRoleBinding":
-		return k + ":" + o.GetName()
-	}
-	return k + ":" + o.GetNamespace() + ":" + o.GetName()
-}
-
-func (m Manifest) Hash() string {
-	return ObjectHash(m.Unstructured)
 }

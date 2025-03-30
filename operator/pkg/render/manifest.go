@@ -34,7 +34,14 @@ import (
 	"strings"
 )
 
+// MergeInputs merges the various configuration inputs into one single DubboOperator.
 func MergeInputs(filenames []string, flags []string) (values.Map, error) {
+	// We want our precedence order to be:
+	// base < profile < auto-detected settings < files (in order) < --set flags (in order).
+	// The tricky part is that we don't know where to read the profile from until we read the files/--set flags.
+	// To handle this, we will first build up these values,
+	// then apply them on top of the base once we determine which base to use.
+	// Initial base values.
 	ConfigBase, err := values.MapFromJSON([]byte(`{
 	  "apiVersion": "install.dubbo.io/v1alpha1",
 	  "kind": "DubboOperator",
@@ -45,6 +52,7 @@ func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 		return nil, err
 	}
 
+	// Apply all passed in files
 	for i, fn := range filenames {
 		var b []byte
 		var err error
@@ -65,22 +73,25 @@ func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 		if err != nil {
 			return nil, fmt.Errorf("yaml Unmarshal err:%v", err)
 		}
+		// Special hack to allow an empty spec to work. Should this be more generic?
 		if m["spec"] == nil {
 			delete(m, "spec")
 		}
 		ConfigBase.MergeFrom(m)
 	}
-
+	// Apply any --set flags
 	if err := ConfigBase.SetSpecPaths(flags...); err != nil {
 		return nil, err
 	}
 
 	path := ConfigBase.GetPathString("")
 	profile := ConfigBase.GetPathString("spec.profile")
+	// Now we have the base
 	base, err := readProfile(path, profile)
 	if err != nil {
 		return base, err
 	}
+	// Merge the user values on top
 	base.MergeFrom(ConfigBase)
 	return base, nil
 }
@@ -96,6 +107,7 @@ func checkDops(s string) error {
 	return nil
 }
 
+// readProfile reads a profile, from given path.
 func readProfile(path, profile string) (values.Map, error) {
 	if profile == "" {
 		profile = "default"
@@ -128,11 +140,18 @@ func readBuiltinProfile(path, profile string) (values.Map, error) {
 	return values.MapFromYAML(pb)
 }
 
+// GenerateManifest produces fully rendered Kubernetes objects from rendering Helm charts.
+// Inputs can be files and --set strings.
+// Client is option; if it is provided, cluster-specific settings can be auto-detected.
+// Logger is also option; if it is provided warning messages may be logged.
 func GenerateManifest(files []string, setFlags []string, logger clog.Logger, _ kube.Client) ([]manifest.ManifestSet, values.Map, error) {
+	// First, compute our final configuration input. This will be in the form of an DubboOperator, but as an unstructured values.Map.
+	// This allows safe access to get/fetch values dynamically, and avoids issues are typing and whether we should emit empty fields.
 	merged, err := MergeInputs(files, setFlags)
 	if err != nil {
-		return nil, nil, fmt.Errorf("merge inputs: %v %v", err)
+		return nil, nil, fmt.Errorf("merge inputs: %v", err)
 	}
+	// Validate the config. This can emit warnings to the logger. If force is set, errors will be logged as warnings but not returned.
 	if err := validateDubboOperator(merged, logger); err != nil {
 		return nil, nil, fmt.Errorf("validateDubboOperator err:%v", err)
 	}
@@ -144,12 +163,15 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, _ k
 			return nil, nil, fmt.Errorf("get component %v: %v", comp.UserFacingName, err)
 		}
 		for _, spec := range specs {
+			// Each component may get a different view of the values; modify them as needed (with a copy)
 			compVals := applyComponentValuesToHelmValues(comp, spec, merged)
-			rendered, warnings, err := helm.Reader(spec.Namespace, comp.HelmSubDir, compVals)
+			// Render the chart.
+			rendered, warnings, err := helm.Render(spec.Namespace, comp.HelmSubDir, compVals)
 			if err != nil {
 				return nil, nil, fmt.Errorf("helm render: %v", err)
 			}
 			chartWarnings = util.AppendErrs(chartWarnings, warnings)
+			// DubboOperator has a variety of processing steps that are done *after* Helm, such as patching. Apply any of these steps.
 			finalized, err := postProcess(comp, rendered, compVals)
 			if err != nil {
 				return nil, nil, fmt.Errorf("post process: %v", err)
@@ -167,6 +189,7 @@ func GenerateManifest(files []string, setFlags []string, logger clog.Logger, _ k
 		}
 	}
 
+	// Log any warnings we got from the charts
 	if logger != nil {
 		for _, w := range chartWarnings {
 			logger.LogAndErrorf("%s %v", "❗", w)
@@ -193,7 +216,8 @@ func validateDubboOperator(dop values.Map, logger clog.Logger) error {
 	return nil
 }
 
-func applyComponentValuesToHelmValues(comp component.Component, spec apis.MetadataCompSpec, merged values.Map) values.Map {
+// applyComponentValuesToHelmValues translates a generic values set into a component-specific one.
+func applyComponentValuesToHelmValues(_ component.Component, spec apis.DefaultCompSpec, merged values.Map) values.Map {
 	if spec.Namespace != "" {
 		spec.Namespace = "dubbo-system"
 	}

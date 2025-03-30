@@ -1,100 +1,53 @@
-{{- $zoo := .Values.zookeeper -}}
-{{- $service := $zoo.service -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "zoo.name" . }}
+  name: zookeeper
   namespace: {{ .Release.Namespace }}
   labels:
-  {{- include "zoo.labels" . | nindent 4 }}
-  {{- with $zoo.labels }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
-  annotations:
-  {{- with $zoo.annotations }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app: zookeeper
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Zookeeper"
+    dubbo: zookeeper
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "register"
 spec:
-  {{- if $service.type }}
-  type: {{ $service.type }}
-  {{- end }}
-  {{- if $service.clusterIP }}
-  clusterIP: {{ $service.clusterIP }}
-  {{- end }}
-  {{- if $service.externalIPs }}
-  externalIPs: {{ $service.externalIPs }}
-  {{- end }}
-  {{- if $service.loadBalancerIP }}
-  loadBalancerIP: {{ $service.loadBalancerIP }}
-  {{- end }}
-  {{- if $service.loadBalancerSourceRanges }}
-  loadBalancerSourceRanges: {{ $service.loadBalancerSourceRanges }}
-  {{- end }}
-  {{- if $service.loadBalancerClass }}
-  loadBalancerClass: {{ $service.loadBalancerClass }}
-  {{- end }}
   ports:
   - name: tcp-client
-    port: {{ template "zoo.client" . }}
+    port: 2181
     targetPort: client
   - name: tcp-follower
-    port: {{ template "zoo.follower" . }}
+    port: 2888
     targetPort: follower
   - name: tcp-election
-    port: {{ template "zoo.election" . }}
+    port: 3888
     targetPort: election
   selector:
-    app: {{ template "zoo.selector" . }}
+    app: zookeeper
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "zoo.name" . }}-headless
+  name: zookeeper-headless
   namespace: {{ .Release.Namespace }}
   labels:
-  {{- include "zoo.labels" . | nindent 4 }}
-  {{- with .Values.labels }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
-  annotations:
-  {{- with $zoo.annotations }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app: zookeeper
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Zookeeper"
+    dubbo: zookeeper
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "register"
 spec:
-  {{- if $service.type }}
-  type: {{ $service.type }}
-  {{- end }}
-  clusterIP: None
-  {{- if $service.type }}
-  type: {{ $service.type }}
-  {{- end }}
-  {{- if $service.externalIPs }}
-  externalIPs: {{ $service.externalIPs }}
-  {{- end }}
-  {{- if $service.loadBalancerIP }}
-  loadBalancerIP: {{ $service.loadBalancerIP }}
-  {{- end }}
-  {{- if $service.loadBalancerSourceRanges }}
-  loadBalancerSourceRanges: {{ $service.loadBalancerSourceRanges }}
-  {{- end }}
-  {{- if $service.loadBalancerClass }}
-  loadBalancerClass: {{ $service.loadBalancerClass }}
-  {{- end }}
-  {{- if $service.sessionAffinity }}
-  sessionAffinity: {{ $service.sessionAffinity }}
-  {{- end }}
-  {{- if $service.publishNotReadyAddresses }}
-  publishNotReadyAddresses: {{ $service.publishNotReadyAddresses }}
-  {{- end }}
   ports:
-  - name: tcp-client
-    port: {{ template "zoo.client" . }}
-    targetPort: client
-  - name: tcp-follower
-    port: {{ template "zoo.follower" . }}
-    targetPort: follower
-  - name: tcp-election
-    port: {{ template "zoo.election" . }}
-    targetPort: election
+    - name: tcp-client
+      port: 2181
+      targetPort: client
+    - name: tcp-follower
+      port: 2888
+      targetPort: follower
+    - name: tcp-election
+      port: 3888
+      targetPort: election
   selector:
-    app: {{ template "zoo.selector" . }}
+    app: zookeeper

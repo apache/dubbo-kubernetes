@@ -23,12 +23,20 @@ const (
 	defaultSeparator = ", "
 )
 
+// Errors is a slice of error.
 type Errors []error
 
+// String implements the stringer#String method.
+func (e Errors) String() string {
+	return e.Error()
+}
+
+// Error implements the error#Error method.
 func (e Errors) Error() string {
 	return ToString(e, defaultSeparator)
 }
 
+// ToError returns an error from Errors.
 func (e Errors) ToError() error {
 	if len(e) == 0 {
 		return nil
@@ -36,6 +44,8 @@ func (e Errors) ToError() error {
 	return fmt.Errorf("%s", e)
 }
 
+// ToString returns a string representation of errors, with elements separated by separator string. Any nil errors in the
+// slice are skipped.
 func ToString(errors []error, separator string) string {
 	var out string
 	for i, e := range errors {
@@ -50,6 +60,8 @@ func ToString(errors []error, separator string) string {
 	return out
 }
 
+// NewErrs returns a slice of error with a single element err.
+// If err is nil, returns nil.
 func NewErrs(err error) Errors {
 	if err == nil {
 		return nil
@@ -57,6 +69,8 @@ func NewErrs(err error) Errors {
 	return []error{err}
 }
 
+// AppendErr appends err to errors if it is not nil and returns the result.
+// If err is nil, it is not appended.
 func AppendErr(errors []error, err error) Errors {
 	if err == nil {
 		if len(errors) == 0 {
@@ -67,6 +81,8 @@ func AppendErr(errors []error, err error) Errors {
 	return append(errors, err)
 }
 
+// AppendErrs appends newErrs to errors and returns the result.
+// If newErrs is empty, nothing is appended.
 func AppendErrs(errors []error, newErrs []error) Errors {
 	if len(newErrs) == 0 {
 		return errors

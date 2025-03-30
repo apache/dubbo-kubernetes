@@ -3,95 +3,45 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "admin.name" . }}
-  namespace: {{ template "admin.namespace" . }}
+  name: admin-dashboard
+  namespace: {{ .Release.Namespace }}
   labels:
-  {{- include "admin.labels" . | nindent 4 }}
-  {{- with $svc.labels }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
-  annotations:
-  {{- with $svc.annotations }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app: admin
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Admin"
+    dubbo: admin
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "dashboard"
 spec:
-  {{- if $svc.type }}
-  type: {{ $svc.type }}
-  {{- end }}
-  {{- if $svc.clusterIP }}
-  clusterIP: {{ $svc.clusterIP }}
-  {{- end }}
-  {{- if $svc.externalIPs }}
-  externalIPs: {{ $svc.externalIPs }}
-  {{- end }}
-  {{- if $svc.loadBalancerIP }}
-  loadBalancerIP: {{ $svc.loadBalancerIP }}
-  {{- end }}
-  {{- if $svc.loadBalancerSourceRanges }}
-  loadBalancerSourceRanges: {{ $svc.loadBalancerSourceRanges }}
-  {{- end }}
-  {{- if $svc.loadBalancerClass }}
-  loadBalancerClass: {{ $svc.loadBalancerClass }}
-  {{- end }}
   ports:
-  - name: admin-http
+  - name: http
     port: 8888
-    targetPort: admin-http
-    appProtocol: TCP
-  - name: admin-grpc
-    port: 5678
-    targetPort: admin-grpc
+    targetPort: http
   selector:
-    app: {{ template "admin.selector" . }}
+    app: admin-dashboard
 {{- end }}
 ---
 {{- if $svc.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "admin.name" . }}-headless
+  name: admin-dashboard-headless
   namespace: {{ include "admin.namespace" . }}
   labels:
-  {{- include "admin.labels" . | nindent 4 }}
-  {{- with $svc.labels }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
-  annotations:
-  {{- with $svc.annotations }}
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    app: admin
+    dubbo.io/rev: {{ default "default" | quote }}
+    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
+    operator.dubbo.io/component: "Admin"
+    dubbo: admin
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "dashboard"
 spec:
-  {{- if $svc.type }}
-  type: {{ $svc.type }}
-  {{- end }}
   clusterIP: None
-  {{- if $svc.externalIPs }}
-  externalIPs: {{ $svc.externalIPs }}
-  {{- end }}
-  {{- if $svc.loadBalancerIP }}
-  loadBalancerIP: {{ $svc.loadBalancerIP }}
-  {{- end }}
-  {{- if $svc.loadBalancerSourceRanges }}
-  loadBalancerSourceRanges: {{ $svc.loadBalancerSourceRanges }}
-  {{- end }}
-  {{- if $svc.loadBalancerClass }}
-  loadBalancerClass: {{ $svc.loadBalancerClass }}
-  {{- end }}
-  {{- if $svc.sessionAffinity }}
-  sessionAffinity: {{ $svc.sessionAffinity }}
-  {{- end }}
-  {{- if $svc.publishNotReadyAddresses }}
-  publishNotReadyAddresses: {{ $svc.publishNotReadyAddresses }}
-  {{- end }}
   ports:
-  - name: admin-http
+  - name: http
     port: 8888
-    targetPort: admin-http
-    appProtocol: tcp
-  - name: admin-grpc
-    port: 5678
-    targetPort: admin-grpc
-    appProtocol: tcp
+    targetPort: http
   selector:
-    app: {{ template "admin.selector" . }}
+    app: admin-dashboard
 {{- end -}}
