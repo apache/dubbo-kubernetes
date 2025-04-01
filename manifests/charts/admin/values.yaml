@@ -19,7 +19,7 @@ _internal_default_values_not_set:
 
   image: mfordjody/gin-web-log
   tag: ""
-  # Image pull policy, available options are: Always, IfNotPresent, Never.
+  ## Image pull policy, available options are: Always, IfNotPresent, Never.
   imagePullPolicy: ~
 
   resources:
@@ -27,9 +27,14 @@ _internal_default_values_not_set:
       cpu: 512m
       memory: 512Mi
 
-  deployMode: half
-  # mode: test
-  mode: zone
+  ## Whether to enable the csiDriver.
+  csiDriver:
+    enabled: false
+
+  dubbo:
+    mode: half
+  remote:
+    mode: zone # test
   store:
     traditional:
       configCenter: nacos://nacos:8848?username=nacos&password=nacos
@@ -54,6 +59,5 @@ _internal_default_values_not_set:
         baseURL: http://kube-prometheus-grafana:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
     prometheus: http://kube-prometheus-kube-prome-prometheus.svc.cluster.local:9090
     grafana: http://47.251.1.59:3000/
-
   kube-prometheus-stack:
     enabled: false
