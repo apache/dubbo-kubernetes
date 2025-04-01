@@ -29,3 +29,7 @@ _internal_default_values_not_set:
     requests:
       cpu: 250m
       memory: 256Mi
+
+  ## Whether to enable the csiDriver.
+  csiDriver:
+    enabled: false

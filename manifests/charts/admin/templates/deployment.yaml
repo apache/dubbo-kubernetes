@@ -16,11 +16,6 @@ metadata:
     app.kubernetes.io/name: "dashboard"
 spec:
   replicas: {{ $admin.replicas }}
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
-    type: RollingUpdate
   selector:
     matchLabels:
       app: admin
@@ -40,8 +35,8 @@ spec:
       serviceAccountName: admin-sa
       containers:
       - name: admin
-        image: {{ $admin.image }}:{{ $admin.tag }}
-        imagePullPolicy: {{ $admin.imagePullPolicy }}
+        image: "{{ $admin.image }}:{{ $admin.tag }}"
+        imagePullPolicy: "{{ $admin.imagePullPolicy }}"
         ports:
         - name: http
           containerPort: 8888

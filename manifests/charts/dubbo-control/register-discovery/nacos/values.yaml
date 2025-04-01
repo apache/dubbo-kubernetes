@@ -31,20 +31,24 @@ _internal_default_values_not_set:
   # Image pull policy, available options are: Always, IfNotPresent, Never.
   imagePullPolicy: ~
 
-  storage:
-    # Specifies the storage type (embedded, mysql, etc.).
-    type: "mysql"
-    # For MySQL storage, you need to change the "embedded" to "mysql" before you can use the db configuration.
-    database:
-      # Specifies the database host.
-      host: "nacos-mysql"
-      # Specifies the database name.
-      name: nacos
-      # Specifies the database port.
-      port: ""
-      # Specifies the database username.
-      username: nacos
-      # Specifies the database password.
-      password: nacos
-      # Additional database connection parameters (if needed).
-      param: ""
+  ## Whether to enable the csiDriver.
+  csiDriver:
+    enabled: false
+
+    storage:
+      # Specifies the storage type (embedded, mysql, etc.).
+      type: "mysql"
+      # For MySQL storage, you need to change the "embedded" to "mysql" before you can use the db configuration.
+      database:
+        # Specifies the database host.
+        host: "nacos-mysql"
+        # Specifies the database name.
+        name: nacos
+        # Specifies the database port.
+        port: ""
+        # Specifies the database username.
+        username: nacos
+        # Specifies the database password.
+        password: nacos
+        # Additional database connection parameters (if needed).
+        param: ""
