@@ -19,12 +19,6 @@ _internal_default_values_not_set:
   ## Number of replicas for the Deployment.
   replicas: 1
 
-  # Source of the container image.
-  image: zookeeper
-  tag: ""
-  # Image pull policy, available options are: Always, IfNotPresent, Never.
-  imagePullPolicy: ~
-
   resources:
     requests:
       cpu: 250m

@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rook-csi-driver-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rook-csi-driver
+  annotations:
+    "rook.sh/hook": "pre-install"
+    "rook.sh/hook-weight": "0"
+    "rook.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
+data:
+  rook.sh: |-
+    #!/usr/bin/env bash
+
+    kubectl label node osp ceph-mon=enabled
+    kubectl label node osp ceph-mgr=enabled
+    kubectl label node osp ceph-mds=enabled
+    kubectl label node osp ceph-osd=enabled
+
+    git clone https://github.com/rook/rook.git ; cd rook/deploy/examples/
+    sed -i 's/ROOK_DISCOVER_DEVICES_INTERVAL: "60m"/ROOK_DISCOVER_DEVICES_INTERVAL: "60s"/' operator.yaml
+    kubectl apply -f crds.yaml -f common.yaml -f operator.yaml
+    sed -i 's/useAllNodes: true/useAllNodes: false/' cluster.yaml
+    sed -i 's/useAllDevices: true/useAllDevices: false/' cluster.yaml
+    sed -i '/^  mon:/,/^    count:/s/^\(    count:\) [0-9]\+/\1 1/' cluster.yaml
+    sed -i '/mon:/, /allowMultiplePerNode:/ s/allowMultiplePerNode: false/allowMultiplePerNode: true/' cluster.yaml
+    sed -i '/^  mgr:/,/^    count:/s/^\(    count:\) [0-9]\+/\1 1/' cluster.yaml
+
+    sed -i '/resources:/,/^[^ ]/ {
+      /resources:/c\
+      resources:\
+        mon:\
+          limits:\
+            cpu: "102m"\
+            memory: "256Mi"\
+          requests:\
+            cpu: "102m"\
+            memory: "256Mi"\
+        mgr:\
+          limits:\
+            cpu: "102m"\
+            memory: "512Mi"\
+          requests:\
+            cpu: "102m"\
+            memory: "512Mi"\
+        mds:\
+          limits:\
+            cpu: "102m"\
+            memory: "256Mi"\
+          requests:\
+            cpu: "102m"\
+            memory: "256Mi"\
+        osd:\
+          limits:\
+            cpu: "512m"\
+            memory: "2048Mi"\
+          requests:\
+            cpu: "512m"\
+            memory: "2048Mi"
+    }' cluster.yaml
+
+    sed -i 's/^  # placement:/  placement:/' cluster.yaml
+    sed -i '/placement:/,/^[^ ]/ {
+      /placement:/c\
+      placement:\
+        mon:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mon\
+                  operator: In\
+                  values:\
+                  - enabled\
+        mgr:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mgr\
+                  operator: In\
+                  values:\
+                  - enabled\
+        mds:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mds\
+                  operator: In\
+                  values:\
+                  - enabled\
+        osd:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-osd\
+                  operator: In\
+                  values:\
+                  - enabled
+    }' cluster.yaml
+
+    sed -i 's/^    # nodes:/    nodes:/' cluster.yaml
+    sed -i '/nodes:/,/^[^ ]/ {
+      /nodes:/c\
+        nodes:\
+        - name: "osp"\
+          devices: # specific devices to use for storage can be specified for each node\
+            - name: "nvme0n2"\
+              config:\
+                storeType: bluestore\
+                journalSizeMB: "4096"
+    }' cluster.yaml
+
+    kubectl apply -f cluster.yaml -f toolbox.yaml -f dashboard-external-https.yaml
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dubbo-rook-csi-driver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rook-csi-driver
+  annotations:
+    "rook.sh/hook": "pre-install"
+    "rook.sh/hook-weight": "1"
+    "rook.sh/hook-delete-policy": "hook-succeeded"
+spec:
+  template:
+    metadata:
+      name: dubbo-rook-csi-driver
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: busybox
+        image: busybox
+        command:
+        - "/bin/sh"
+        - "-c"
+        - "sh /files/rook.sh"
+        volumeMounts:
+        - name: scripts
+          mountPath: /files/rook.sh
+          subPath: rook.sh
+      volumes:
+      - name: scripts
+        configMap:
+          name: rook-csi-driver-config
+          defaultMode: 0755
