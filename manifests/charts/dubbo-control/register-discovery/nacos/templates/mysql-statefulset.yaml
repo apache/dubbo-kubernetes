@@ -71,7 +71,25 @@ spec:
         configMap:
           name: nacos-table-config
           defaultMode: 0755
-      - name: data
-        hostPath:
-          path: /var/lib/mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
 {{- end -}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  storageClassName: rook-ceph-block
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

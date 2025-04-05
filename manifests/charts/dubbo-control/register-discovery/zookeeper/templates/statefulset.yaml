@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
       - name: zookeeper
-        image: {{ $zookeeper.image }}:{{ $zookeeper.tag }}
+        image: zookeeper
         imagePullPolicy: {{ $zookeeper.imagePullPolicy }}
         resources:
 {{ toYaml $zookeeper.resources | trim | indent 10 }}
@@ -54,5 +54,25 @@ spec:
           name: zookeeper-scripts
           defaultMode: 0755
       - name: data
-        hostPath:
-          path: /var/lib/zookeeper
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zookeeper-pvc
+spec:
+  storageClassName: rook-ceph-block
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

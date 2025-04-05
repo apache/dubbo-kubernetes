@@ -62,5 +62,19 @@ spec:
 {{ toYaml $admin.resources | trim | indent 10 }}
       volumes:
       - name: data
-        hostPath:
-          path: /var/lib/admin-dashboard
+        emptyDir: {}
+      - name: data
+        persistentVolumeClaim:
+          claimName: admin-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: admin-pvc
+spec:
+  storageClassName: rook-ceph-block
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

@@ -19,8 +19,8 @@ annotations:
 name: admin
 home: https://github.com/apache/dubbo-kubernetes
 description: Helm chart for dubbo admin dashboard.
-version: 1.0.0
-appVersion: 1.0.0
+version: 0.0.0
+appVersion: 0.0.0
 maintainers:
   - name: mfordjody
     email: zhongxjian@apache.org
