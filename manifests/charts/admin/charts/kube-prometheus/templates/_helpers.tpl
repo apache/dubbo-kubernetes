@@ -15,11 +15,10 @@ The longest name that gets created adds and extra 37 characters, so truncation s
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 26 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- $name := default .Chart.Name -}}
 {{- if contains $name .Release.Name -}}
-{{- .Release.Name | trunc 26 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 26 | trimSuffix "-" -}}
+{{- printf "%s" $name | trunc 26 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -39,7 +38,7 @@ The longest name that gets created adds and extra 37 characters, so truncation s
 {{- if .Values.cleanPrometheusOperatorObjectNames }}
 {{- include "kube-prometheus-stack.fullname" . }}
 {{- else }}
-{{- print (include "kube-prometheus-stack.fullname" .) "-prometheus" }}
+{{- print (include "kube-prometheus-stack.fullname" .) }}
 {{- end }}
 {{- end }}
 
@@ -53,7 +52,7 @@ The longest name that gets created adds and extra 37 characters, so truncation s
 {{- if .Values.cleanPrometheusOperatorObjectNames }}
 {{- include "kube-prometheus-stack.fullname" . }}
 {{- else }}
-{{- print (include "kube-prometheus-stack.fullname" .) "-alertmanager" -}}
+{{- print (include "kube-prometheus-stack.fullname" .)  -}}
 {{- end }}
 {{- end }}
 
@@ -163,11 +162,7 @@ Use the grafana namespace override for multi-namespace deployments in combined c
 Allow kube-state-metrics job name to be overridden
 */}}
 {{- define "kube-prometheus-stack-kube-state-metrics.name" -}}
-  {{- if index .Values "kube-state-metrics" "nameOverride" -}}
-    {{- index .Values "kube-state-metrics" "nameOverride" -}}
-  {{- else -}}
-    {{- print "kube-state-metrics" -}}
-  {{- end -}}
+{{- print "kube-state-metrics" -}}
 {{- end -}}
 
 {{/*
