@@ -20,7 +20,7 @@ dependencies:
   repository: https://prometheus-community.github.io/helm-charts
   version: 5.31.*
 - condition: nodeExporter.enabled
-  name: prometheus-node-exporter
+  name: node-exporter
   repository: https://prometheus-community.github.io/helm-charts
   version: 4.45.*
 - condition: grafana.enabled
@@ -63,7 +63,7 @@ maintainers:
 - email: quentin.bisson@gmail.com
   name: QuentinBisson
   url: https://github.com/QuentinBisson
-name: kube-prometheus-stack
+name: kube-prometheus
 sources:
 - https://github.com/prometheus-community/helm-charts
 - https://github.com/prometheus-operator/kube-prometheus

@@ -21,7 +21,7 @@ maintainers:
 - email: rootsandtrees@posteo.de
   name: zeritti
   url: https://github.com/zeritti
-name: prometheus-node-exporter
+name: node-exporter
 sources:
 - https://github.com/prometheus/node_exporter/
 type: application
