@@ -71,8 +71,8 @@ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
 
 func newKubeClientWithRevision(kubeconfig, context, revision string, impersonationConfig rest.ImpersonationConfig) (kube.CLIClient, error) {
 	drc, err := kube.DefaultRestConfig(kubeconfig, context, func(config *rest.Config) {
-		config.QPS = 55
-		config.Burst = 95
+		config.QPS = 50
+		config.Burst = 100
 		config.Impersonate = impersonationConfig
 	})
 
