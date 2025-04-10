@@ -35,10 +35,14 @@ import (
 )
 
 type imageArgs struct {
+	// dockerfile Defines the required Dockerfile files.
 	dockerfile bool
-	builder    bool
-	output     string
-	destroy    bool
+	// builder Defines the path used by the builder.
+	builder bool
+	// output Defines the generated dubbo deploy yaml file.
+	output string
+	// destroy Defines the deletion of deploy yaml file.
+	destroy bool
 }
 
 func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
@@ -48,7 +52,7 @@ func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
 
 func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
 	cmd.PersistentFlags().StringVarP(&iArgs.output, "output", "o", "dubbo-deploy.yaml", "The output generates k8s yaml file")
-	cmd.PersistentFlags().BoolVarP(&iArgs.destroy, "delete", "d", false, "delete k8s yaml file")
+	cmd.PersistentFlags().BoolVarP(&iArgs.destroy, "delete", "d", false, "deletion k8s yaml file")
 }
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -64,9 +68,12 @@ func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) 
 }
 
 type hubConfig struct {
+	// Dockerfile Defines the required files.
 	Dockerfile bool
-	Builder    bool
-	Image      string
+	// Builder Defines the path used by the builder.
+	Builder bool
+	// Image information required by image.
+	Image string
 	// BuilderImage is the image (name or mapping) to use for building.  Usually
 	// set automatically.
 	BuilderImage string

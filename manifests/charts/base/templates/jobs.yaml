@@ -2,31 +2,28 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: rook-csi-driver-config
-  namespace: {{ .Release.Namespace }}
   labels:
     app: rook-csi-driver
-  annotations:
-    "rook.sh/hook": "pre-install"
-    "rook.sh/hook-weight": "0"
-    "rook.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
 data:
-  rook.sh: |-
+  rook-setup.sh: |-
     #!/usr/bin/env bash
-
-    kubectl label node osp ceph-mon=enabled
-    kubectl label node osp ceph-mgr=enabled
-    kubectl label node osp ceph-mds=enabled
-    kubectl label node osp ceph-osd=enabled
-
-    git clone https://github.com/rook/rook.git ; cd rook/deploy/examples/
+    
+    set -ex
+    
+    if [ ! -d "rook" ]; then
+    echo "Pull Rook Project"
+    git clone https://github.com/rook/rook.git
+    else
+    echo "Rook Project Exist，Continue editing..."
+    fi
+    
+    cd rook/deploy/examples/
     sed -i 's/ROOK_DISCOVER_DEVICES_INTERVAL: "60m"/ROOK_DISCOVER_DEVICES_INTERVAL: "60s"/' operator.yaml
-    kubectl apply -f crds.yaml -f common.yaml -f operator.yaml
     sed -i 's/useAllNodes: true/useAllNodes: false/' cluster.yaml
     sed -i 's/useAllDevices: true/useAllDevices: false/' cluster.yaml
     sed -i '/^  mon:/,/^    count:/s/^\(    count:\) [0-9]\+/\1 1/' cluster.yaml
     sed -i '/mon:/, /allowMultiplePerNode:/ s/allowMultiplePerNode: false/allowMultiplePerNode: true/' cluster.yaml
     sed -i '/^  mgr:/,/^    count:/s/^\(    count:\) [0-9]\+/\1 1/' cluster.yaml
-
     sed -i '/resources:/,/^[^ ]/ {
       /resources:/c\
       resources:\
@@ -59,7 +56,7 @@ data:
             cpu: "512m"\
             memory: "2048Mi"
     }' cluster.yaml
-
+    
     sed -i 's/^  # placement:/  placement:/' cluster.yaml
     sed -i '/placement:/,/^[^ ]/ {
       /placement:/c\
@@ -101,7 +98,7 @@ data:
                   values:\
                   - enabled
     }' cluster.yaml
-
+    
     sed -i 's/^    # nodes:/    nodes:/' cluster.yaml
     sed -i '/nodes:/,/^[^ ]/ {
       /nodes:/c\
@@ -113,39 +110,94 @@ data:
                 storeType: bluestore\
                 journalSizeMB: "4096"
     }' cluster.yaml
-
+    
+    kubectl label node osp ceph-mon=enabled
+    kubectl label node osp ceph-mgr=enabled
+    kubectl label node osp ceph-mds=enabled
+    kubectl label node osp ceph-osd=enabled
+    
+    kubectl apply -f crds.yaml -f common.yaml -f operator.yaml
     kubectl apply -f cluster.yaml -f toolbox.yaml -f dashboard-external-https.yaml
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: dubbo-rook-csi-driver
-  namespace: {{ .Release.Namespace }}
+  name: rook-job
   labels:
     app: rook-csi-driver
-  annotations:
-    "rook.sh/hook": "pre-install"
-    "rook.sh/hook-weight": "1"
-    "rook.sh/hook-delete-policy": "hook-succeeded"
 spec:
   template:
     metadata:
-      name: dubbo-rook-csi-driver
+      name: rook-job
     spec:
-      restartPolicy: Never
+      hostNetwork: true
+      restartPolicy: OnFailure
+      serviceAccountName: rook-admin
       containers:
-      - name: busybox
-        image: busybox
+      - name: rook-setup
+        image: mfordjody/rook-setup:dev
+        imagePullPolicy: Always
         command:
-        - "/bin/sh"
-        - "-c"
-        - "sh /files/rook.sh"
+        - /bin/sh
+        - -c
+        - sh /scripts/rook-setup.sh
         volumeMounts:
         - name: scripts
-          mountPath: /files/rook.sh
-          subPath: rook.sh
+          mountPath: /scripts
       volumes:
       - name: scripts
         configMap:
           name: rook-csi-driver-config
           defaultMode: 0755
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rook-admin
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rook-admin-role
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "namespaces"]
+  verbs: ["*"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["*"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["*"]
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["*"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles", "clusterrolebindings"]
+  verbs: ["*"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["*"]
+- apiGroups: ["ceph.rook.io"]
+  resources: ["cephclusters"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rook-admin-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rook-admin-role
+subjects:
+  - kind: ServiceAccount
+    name: rook-admin
+    namespace: default

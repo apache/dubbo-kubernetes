@@ -51,29 +51,24 @@ type Credentials struct {
 
 type CredentialsProvider func(ctx context.Context, image string) (Credentials, error)
 
-type PusherDockerClientFactory func() (PusherDockerClient, error)
+type DockerClientFactory func() (DockerClient, error)
 
 type Pusher struct {
 	credentialsProvider CredentialsProvider
 	transport           http.RoundTripper
-	dockerClientFactory PusherDockerClientFactory
+	dockerClientFactory DockerClientFactory
 }
 
 type authConfig struct {
-	Username      string `json:"username,omitempty"`
-	Password      string `json:"password,omitempty"`
-	Auth          string `json:"auth,omitempty"`
-	Email         string `json:"email,omitempty"`
-	ServerAddress string `json:"serveraddress,omitempty"`
-	IdentityToken string `json:"identitytoken,omitempty"`
-	RegistryToken string `json:"registrytoken,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 func NewPusher(opts ...Opt) *Pusher {
 	result := &Pusher{
 		credentialsProvider: EmptyCredentialsProvider,
 		transport:           http.DefaultTransport,
-		dockerClientFactory: func() (PusherDockerClient, error) {
+		dockerClientFactory: func() (DockerClient, error) {
 			c, _, err := hub.NewClient(client.DefaultDockerHost)
 			return c, err
 		},
@@ -236,7 +231,7 @@ func (n *Pusher) push(ctx context.Context, dc *dubbo.DubboConfig, credentials Cr
 	return hash.String(), nil
 }
 
-type PusherDockerClient interface {
+type DockerClient interface {
 	daemon.Client
 	ImagePush(ctx context.Context, ref string, options types.ImagePushOptions) (io.ReadCloser, error)
 	Close() error
