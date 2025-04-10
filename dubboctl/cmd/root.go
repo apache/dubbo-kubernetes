@@ -48,7 +48,7 @@ func NewClientFactory(options ...sdk.Option) (*sdk.Client, func()) {
 	var (
 		t = newTransport(false)
 		c = newCredentialsProvider(util.Dir(), t)
-		d = newDubboDeployer()
+		d = newDeployer()
 		o = []sdk.Option{
 			sdk.WithRepositoriesPath(util.RepositoriesPath()),
 			sdk.WithBuilder(pack.NewBuilder()),
@@ -77,7 +77,7 @@ func newCredentialsProvider(configPath string, t http.RoundTripper) pusher.Crede
 	return credentials.NewCredentialsProvider(configPath, options...)
 }
 
-func newDubboDeployer() sdk.Deployer {
+func newDeployer() sdk.Deployer {
 	var options []deployer.DeployerOption
 
 	return deployer.NewDeployer(options...)
