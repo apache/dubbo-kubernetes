@@ -118,6 +118,41 @@ data:
     
     kubectl apply -f crds.yaml -f common.yaml -f operator.yaml
     kubectl apply -f cluster.yaml -f toolbox.yaml -f dashboard-external-https.yaml
+
+    # 至少需要 1 个 osd
+    sed -i '/resources:/,/^[^ ]/ {
+      /resources:/c\
+        resources:\
+          limits:\
+            cpu: "256m"\
+            memory: "512Mi"\
+          requests:\
+            cpu: "256m"\
+            memory: "512Mi"
+    }' filesystem-test.yaml
+    sed -i '/podAntiAffinity:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/preferredDuringSchedulingIgnoredDuringExecution:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/topologyKey: kubernetes.io\/hostname/ s/^/            #/' filesystem-test.yaml
+    sed -i '/topologyKey: topology.kubernetes.io\/zone/ s/^/            #/' filesystem-test.yaml
+    sed -i '/podAntiAffinity:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/preferredDuringSchedulingIgnoredDuringExecution:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/topologyKey: kubernetes.io\/hostname/ s/^/            #/' filesystem-test.yaml
+    sed -i '/topologyKey: topology.kubernetes.io\/zone/ s/^/            #/' filesystem-test.yaml
+    sed -i '/placement:/,/^[^ ]/ {
+      /placement:/c\
+        placement:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mds\
+                  operator: In\
+                  values:\
+                  - enabled
+    }' filesystem-test.yaml
+
+    # 至少需要 1 个 osd
+    kubectl apply -f filesystem-test.yaml ; kubectl apply -f csi/cephfs/storageclass.yaml
 ---
 apiVersion: batch/v1
 kind: Job
@@ -186,7 +221,10 @@ rules:
   resources: ["serviceaccounts"]
   verbs: ["*"]
 - apiGroups: ["ceph.rook.io"]
-  resources: ["cephclusters"]
+  resources: ["cephclusters","cephfilesystemsubvolumegroups","cephfilesystems"]
+  verbs: ["*"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
   verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
