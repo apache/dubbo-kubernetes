@@ -34,28 +34,30 @@ spec:
     spec:
       containers:
       - name: zookeeper
-        image: zookeeper
-        imagePullPolicy: {{ $zookeeper.imagePullPolicy }}
+        {{- if contains "/" $zookeeper.image }}
+        image: {{ $zookeeper.image }}
+        {{- end }}
+        imagePullPolicy: IfNotPresent
         env:
-        # The number of milliseconds of each tick
-        - name: TICK_TIME
-          value: "2000"
-        # The number of ticks that the initial
-        # synchronization phase can take
-        - name: INIT_LIMIT
-          value: "10"
-        # The number of ticks that can pass between
-        # sending a request and getting an acknowledgement
-        - name: SYNC_LIMIT
-          value: "5"
-        # the directory where the snapshot is stored.
-        # do not use /tmp for storage, /tmp here is just
-        # example sakes.
-        - name: DATA_LOG_DIR
-          value: ''
-        # the port at which the clients will connect
-        - name: PORT_NUMBER
-          value: "2181"
+          # The number of milliseconds of each tick
+          - name: TICK_TIME
+            value: {{ $zookeeper.tickTime | quote }}
+          # The number of ticks that the initial
+          # synchronization phase can take
+          - name: INIT_LIMIT
+            value: {{ $zookeeper.initLimit | quote }}
+          # The number of ticks that can pass between
+          # sending a request and getting an acknowledgement
+          - name: SYNC_LIMIT
+            value: {{ $zookeeper.syncLimit | quote }}
+          # the directory where the snapshot is stored.
+          # do not use /tmp for storage, /tmp here is just
+          # example sakes.
+          - name: DATA_LOG_DIR
+            value: {{ $zoo.dataLogDir | quote }}
+          # the port at which the clients will connect
+          - name: PORT_NUMBER
+            value: {{ $zookeeper.portNumber | quote }}
         resources:
 {{ toYaml $zookeeper.resources | trim | indent 10 }}
         ports:

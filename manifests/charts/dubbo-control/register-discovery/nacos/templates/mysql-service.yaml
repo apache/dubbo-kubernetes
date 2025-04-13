@@ -1,4 +1,4 @@
-{{- $nacos := .Values -}}
+{{ $nacos := .Values }}
 {{- if eq $nacos.storage.type "mysql" }}
 apiVersion: v1
 kind: Service
@@ -21,10 +21,7 @@ spec:
       protocol: TCP
   selector:
     app: nacos-mysql
-{{- end -}}
 ---
-{{- $nacos := .Values -}}
-{{- if eq $nacos.storage.type "mysql" }}
 apiVersion: v1
 kind: Service
 metadata:

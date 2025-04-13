@@ -63,18 +63,18 @@ spec:
       volumes:
       - name: data
         emptyDir: {}
-      - name: data
-        persistentVolumeClaim:
-          claimName: admin-pvc
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: admin-pvc
-spec:
-  storageClassName: rook-ceph-block
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
+{{/*      - name: data*/}}
+{{/*        persistentVolumeClaim:*/}}
+{{/*          claimName: admin-pvc*/}}
+{{/*---*/}}
+{{/*apiVersion: v1*/}}
+{{/*kind: PersistentVolumeClaim*/}}
+{{/*metadata:*/}}
+{{/*  name: admin-pvc*/}}
+{{/*spec:*/}}
+{{/*  storageClassName: rook-ceph-block*/}}
+{{/*  accessModes:*/}}
+{{/*    - ReadWriteOnce*/}}
+{{/*  resources:*/}}
+{{/*    requests:*/}}
+{{/*      storage: 20Gi*/}}

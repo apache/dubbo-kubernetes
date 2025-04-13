@@ -24,58 +24,16 @@ set -eux
 # script set up the plain text rendered
 
 KUBERNETES=${WORKDIR}/../kubernetes
-DASHBOARDS=${WORKDIR}
 mkdir -p "${KUBERNETES}"
-kubectl delete ns dubbo-system && kubectl create ns dubbo-system
-
-
-# Set up zookeeper
-helm template zookeeper zookeeper \
-  --namespace dubbo-system \
-  --version 11.1.6 \
-  --repo https://charts.bitnami.com/bitnami  \
-  -f "${WORKDIR}/values-zookeeper.yaml" \
-  > "${KUBERNETES}/zookeeper.yaml"
-
+kubectl create ns dubbo-system
+if [ $? -ne 0 ];then
+  kubectl delete ns dubbo-system ; kubectl create ns dubbo-system
+fi
 
 # Set up prometheus
 helm template prometheus prometheus \
   --namespace dubbo-system \
-  --version 20.0.2 \
+  --version 27.5.1 \
   --repo https://prometheus-community.github.io/helm-charts \
-  -f "${WORKDIR}/values-prometheus.yaml" \
-  > "${KUBERNETES}/prometheus.yaml"
-
-
-# Set up grafana
-{
-  helm template grafana grafana \
-    --namespace dubbo-system \
-    --version 6.52.4 \
-    --repo https://grafana.github.io/helm-charts \
-    -f "${WORKDIR}/values-grafana.yaml" \
-
-  echo -e "\n---\n"
-
-  kubectl create configmap -n dubbo-system admin-extra-dashboards \
-    --dry-run=client -oyaml \
-    --from-file=extra-dashboard.json="${DASHBOARDS}/dashboards/external-dashboard.json"
-} > "${KUBERNETES}/grafana.yaml"
-
-
-# Set up skywalking
-helm template skywalking skywalking \
-  --namespace dubbo-system \
-  --version 4.3.0 \
-  --repo https://apache.jfrog.io/artifactory/skywalking-helm \
-  -f "${WORKDIR}/values-skywalking.yaml" \
-  > "${KUBERNETES}/skywalking.yaml"
-
-
-# Set up zipkin
-helm template zipkin zipkin \
-  --namespace dubbo-system \
-  --version 0.1.2 \
-  --repo https://zipkin.io/zipkin-helm \
-  -f "${WORKDIR}/values-zipkin.yaml" \
-  > "${KUBERNETES}/zipkin.yaml"
+  -f "${WD}/values-prometheus.yaml" \
+  > "${ADDONS}/prometheus.yaml"
