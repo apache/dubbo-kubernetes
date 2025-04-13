@@ -1,6 +1,5 @@
 # mysql -unacos -pnacos nacos < mysql-schema.sql
-{{- $nacos := .Values -}}
-{{- $ncs := .Values.nacos }}
+{{ $nacos := .Values }}
 {{- if eq $nacos.storage.type "mysql" }}
 apiVersion: v1
 kind: ConfigMap

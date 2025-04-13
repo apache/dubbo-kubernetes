@@ -14,16 +14,29 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
-  ## Whether to enable the zookeeper.
+  # Whether to enable the zookeeper.
   enabled: false
-  ## Number of replicas for the Deployment.
+  # Number of replicas for the Deployment.
   replicas: 1
-
+  # Deploy the required container images.
+  image: docker.io/library/zookeeper
+  # The size of application resources required for deployment.
   resources:
     requests:
       cpu: 250m
       memory: 256Mi
+  # The number of milliseconds of each tick
+  tickTime: 2000
+  # The number of ticks that the initial
+  # synchronization phase can take
+  initLimit: 10
+  # The number of ticks that can pass between
+  # sending a request and getting an acknowledgement
+  syncLimit: 5
+  # the directory where the snapshot is stored.
+  # do not use /tmp for storage, /tmp here is just
+  # example sakes.
+  dataLogDir: ""
+  # the port at which the clients will connect
+  portNumber: 2181
 
-  ## Whether to enable the csiDriver.
-  csiDriver:
-    enabled: false

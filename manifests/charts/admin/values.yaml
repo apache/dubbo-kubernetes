@@ -23,9 +23,12 @@ _internal_default_values_not_set:
   imagePullPolicy: ~
 
   resources:
+    limits:
+      cpu: "512m"
+      memory: "512Mi"
     requests:
-      cpu: 512m
-      memory: 512Mi
+      cpu: "512m"
+      memory: "512Mi"
 
   ## Whether to enable the csiDriver.
   csiDriver:

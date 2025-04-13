@@ -16,3 +16,52 @@
 _internal_default_values_not_set:
   global: {}
   base: {}
+
+  rook:
+    labelSelector:
+      node: ""
+    mon:
+      limits:
+        cpu: "102m"
+        memory: "256Mi"
+      requests:
+        cpu: "102m"
+        memory: "256Mi"
+    mgr:
+      limits:
+        cpu: "102m"
+        memory: "512Mi"
+      requests:
+        cpu: "102m"
+        memory: "512Mi"
+    mds:
+      limits:
+        cpu: "102m"
+        memory: "256Mi"
+      requests:
+        cpu: "102m"
+        memory: "256Mi"
+    osd:
+      limits:
+        cpu: "512m"
+        memory: "2048Mi"
+      requests:
+        cpu: "512m"
+        memory: "2048Mi"
+
+    nodes:
+      - name: "osp"
+        devices:
+          - name: "nvme0n2"
+            config:
+              storeType: bluestore
+              journalSizeMB: "4096"
+
+    cephfs:
+      resources:
+        limits:
+          cpu: "256m"
+          memory: "512Mi"
+        requests:
+          cpu: "256m"
+          memory: "512Mi"

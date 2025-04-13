@@ -1,4 +1,4 @@
-{{- $nacos := .Values -}}
+{{ $nacos := .Values }}
 {{- if eq $nacos.storage.type "mysql" }}
 apiVersion: apps/v1
 kind: StatefulSet
@@ -71,25 +71,25 @@ spec:
         configMap:
           name: nacos-table-config
           defaultMode: 0755
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 5Gi
 {{- end -}}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mysql-pvc
-spec:
-  storageClassName: rook-ceph-block
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
+{{/*  volumeClaimTemplates:*/}}
+{{/*  - metadata:*/}}
+{{/*      name: data*/}}
+{{/*    spec:*/}}
+{{/*      accessModes:*/}}
+{{/*      - ReadWriteOnce*/}}
+{{/*      resources:*/}}
+{{/*        requests:*/}}
+{{/*          storage: 5Gi*/}}
+{{/*---*/}}
+{{/*apiVersion: v1*/}}
+{{/*kind: PersistentVolumeClaim*/}}
+{{/*metadata:*/}}
+{{/*  name: mysql-pvc*/}}
+{{/*spec:*/}}
+{{/*  storageClassName: rook-ceph-block*/}}
+{{/*  accessModes:*/}}
+{{/*    - ReadWriteOnce*/}}
+{{/*  resources:*/}}
+{{/*    requests:*/}}
+{{/*      storage: 20Gi*/}}
