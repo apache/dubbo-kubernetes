@@ -27,6 +27,9 @@ const words: I18nType = {
     formView: '表单视图'
   },
   dynamicConfigDomain: {
+    addByFormView: '新增动态配置',
+    updateByFormView: '修改动态配置',
+    detailByFormView: '查看动态配置',
     YAMLView: 'YAML视图',
     formView: '表单视图',
     event: '事件'
@@ -196,6 +199,7 @@ const words: I18nType = {
   deployCluster: '部署集群',
   registerClusters: '注册集群列表',
   serviceName: '服务名',
+  provideServiceName: '提供服务',
   registrySource: '注册来源',
   instanceRegistry: '应用级',
   interfaceRegistry: '接口级',

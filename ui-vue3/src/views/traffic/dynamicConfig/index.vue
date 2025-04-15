@@ -18,7 +18,7 @@
   <div class="__container_traffic_config_index">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
-        <a-button type="primary">新增动态配置</a-button>
+        <a-button type="primary" @click="addDynamicConfig">新增动态配置</a-button>
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
@@ -54,7 +54,7 @@
             title="确认删除该动态配置？"
             ok-text="Yes"
             cancel-text="No"
-            @confirm="confirm"
+            @confirm="delDynamicConfig(record)"
           >
             <a-button type="link">删除</a-button>
           </a-popconfirm>
@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import { onMounted, provide, reactive } from 'vue'
-import { searchDynamicConfig } from '@/api/service/traffic'
+import {delConfiguratorDetail, searchDynamicConfig} from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
@@ -132,12 +132,18 @@ const searchDomain = reactive(
     columns
   )
 )
+const addDynamicConfig = ()=>{
+  router.push(`/traffic/dynamicConfig/addbyformview`)
+}
 
-onMounted(() => {
-  searchDomain.onSearch()
+onMounted(async () => {
+  await searchDomain.onSearch()
 })
 
-const confirm = () => {}
+const delDynamicConfig = async (record:any) => {
+  await delConfiguratorDetail({name: record.ruleName})
+  await searchDomain.onSearch()
+}
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>

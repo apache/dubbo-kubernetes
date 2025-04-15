@@ -171,7 +171,9 @@
       <a-spin :spinning="loading">
         <a-card v-for="(config, index) in formViewEdit.config" class="dynamic-config-card">
           <template #title>
-            配置【{{ index + 1 }}】
+            <a-button danger size="small"
+                      @click="delConfig(index)"
+                      style="margin-right: 10px">删除 </a-button>配置【{{ index + 1 }}】
             <span style="font-weight: normal; font-size: 12px" :style="{ color: PRIMARY_COLOR }">
               对于{{ formViewData?.basicInfo?.scope === 'application' ? '应用' : '服务' }}的{{
                 config.side === 'provider' ? '提供者' : '消费者'
@@ -274,9 +276,10 @@
 
     <a-card class="footer">
       <a-flex v-if="isEdit">
-        <a-button type="primary" @click="saveConfig">确认</a-button>
-        <a-button style="margin-left: 30px" @click="router.replace('/traffic/dynamicConfig')"
-          >取消
+        <a-button type="primary" @click="saveConfig">保存</a-button>
+        <a-button style="margin-left: 30px"
+                  @click="resetConfig"
+          >重置
         </a-button>
       </a-flex>
     </a-card>
@@ -289,10 +292,11 @@ import { getCurrentInstance, nextTick, onMounted, reactive, ref } from 'vue'
 import { CopyOutlined } from '@ant-design/icons-vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import useClipboard from 'vue-clipboard3'
-import { message } from 'ant-design-vue'
+import {message, Modal} from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
 import gsap from 'gsap'
+import {onBeforeUnmount} from "@vue/runtime-core";
 
 let __ = PRIMARY_COLOR
 const {
@@ -321,26 +325,26 @@ const formViewData: any = reactive({
     enabled: true
   },
   config: [
-    {
-      enabled: true,
-      side: 'provider',
-      matchKeys: ['address'],
-      matches: [
-        {
-          key: 'address',
-          relation: '=',
-          value: '10.255.10.11'
-        }
-      ],
-      parameterKeys: ['retries'],
-      parameters: [
-        {
-          key: 'retries',
-          relation: '=',
-          value: '2'
-        }
-      ]
-    }
+    // {
+    //   enabled: true,
+    //   side: 'provider',
+    //   matchKeys: ['address'],
+    //   matches: [
+    //     {
+    //       key: 'address',
+    //       relation: '=',
+    //       value: '10.255.10.11'
+    //     }
+    //   ],
+    //   parameterKeys: ['retries'],
+    //   parameters: [
+    //     {
+    //       key: 'retries',
+    //       relation: '=',
+    //       value: '2'
+    //     }
+    //   ]
+    // }
   ]
 })
 
@@ -423,11 +427,11 @@ function transApiData(data: any) {
           value: x.parameters[paramKey]
         })
       }
-
+      console.log(333, x.match)
       return {
         enabled: x.enabled,
         side: x.side,
-        matchKeys: Object.keys(x.match),
+        matchKeys: x.match?Object.keys(x.match):[],
         matches: matches,
         parameterKeys: Object.keys(x.parameters),
         parameters: parameters
@@ -435,14 +439,38 @@ function transApiData(data: any) {
     })
   }
 }
+const hasUnsavedChanges = ref(true);
 
 onMounted(async () => {
-  const res = await getConfiguratorDetail({ name: route.params?.pathId })
-  // console.log(formViewData.config)
-  transApiData(res.data)
+   await initConfig()
 })
+const delConfig = (idx)=>{
+  Modal.confirm({
+    title: '确认删除该配置么？',
+    onOk() {
+      formViewEdit.config.splice(idx, 1)
+    },
+  })
+}
 const loading = ref(false)
 
+async function resetConfig() {
+  loading.value = true
+  try {
+    await initConfig()
+    message.success('config reset success')
+  }finally {
+    loading.value = false
+  }
+}
+async function initConfig() {
+  if(route.params?.pathId === '__tmp'){
+
+  }else{
+    const res = await getConfiguratorDetail({ name: route.params?.pathId })
+    transApiData(res.data)
+  }
+}
 async function saveConfig() {
   loading.value = true
   let newVal = {

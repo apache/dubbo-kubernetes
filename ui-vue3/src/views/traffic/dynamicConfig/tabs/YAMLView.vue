@@ -23,14 +23,16 @@
           <a-flex vertical align="end">
             <a-row style="width: 100%" justify="space-between">
               <a-col :span="12">
-                <a-button
-                  type="primary"
-                  size="small"
-                  style="width: 80px; float: left"
-                  @click="saveConfig"
-                >
-                  {{ $t('form.save') }}
-                </a-button>
+<!--                <a-button-->
+<!--                  type="primary"-->
+<!--                  size="small"-->
+<!--                  style="width: 80px; float: left"-->
+<!--                  @click="saveConfig"-->
+<!--                >-->
+<!--                  {{ $t('form.save') }}-->
+<!--                </a-button>-->
+                <a-tag v-if='modify' color="red" :bordered=false>*改动未保存</a-tag>
+                <a-tag v-else :color="PRIMARY_COLOR" :bordered=false>配置无改动</a-tag>
               </a-col>
               <a-col :span="12">
                 <!--                todo 版本记录后续添加-->
@@ -76,35 +78,54 @@
   </a-card>
 
   <a-flex v-if="isEdit" style="margin-top: 30px">
-    <a-button type="primary">确认</a-button>
-    <a-button style="margin-left: 30px">取消</a-button>
+    <a-button type="primary" @click="saveConfig">保存</a-button>
+    <a-button style="margin-left: 30px" @click="resetConfig">重置</a-button>
   </a-flex>
 </template>
 
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { inject, onMounted, reactive, ref } from 'vue'
+import {computed, inject, onMounted, reactive, ref} from 'vue'
 import { useRoute } from 'vue-router'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
 // @ts-ignore
 import yaml from 'js-yaml'
 import { message } from 'ant-design-vue'
+import {PRIMARY_COLOR} from "@/base/constants";
 
 const route = useRoute()
 const isEdit = ref(route.params.isEdit === '1')
 const isDrawerOpened = ref(false)
 const loading = ref(false)
-
 const sliderSpan = ref(8)
 
 const YAMLValue = ref()
+const initValue = ref()
 onMounted(async () => {
+  await initConfig();
+})
+const modify = computed(()=>{
+  console.log(initValue.value)
+  console.log(JSON.stringify(YAMLValue.value))
+  return initValue.value !== JSON.stringify(YAMLValue.value)
+})
+async function initConfig(){
   const res = await getConfiguratorDetail({ name: route.params?.pathId })
   const json = yaml.dump(res.data) // 输出为 json 格式
+  initValue.value = JSON.stringify(json)
   YAMLValue.value = json
-})
+}
+async function resetConfig(){
+  loading.value = true
+  try {
+    await initConfig();
+    message.success('config reset success')
+  }finally {
+    loading.value = false
+  }
+}
 async function saveConfig() {
   loading.value = true
   let newVal = yaml.load(YAMLValue.value)

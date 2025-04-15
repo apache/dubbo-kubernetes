@@ -16,57 +16,64 @@
  */
 
 import type {
-  AxiosInstance,
-  AxiosInterceptorManager,
-  AxiosRequestHeaders,
-  AxiosResponse,
-  InternalAxiosRequestConfig
+    AxiosInstance,
+    AxiosInterceptorManager,
+    AxiosRequestHeaders,
+    AxiosResponse,
+    InternalAxiosRequestConfig
 } from 'axios'
 import axios from 'axios'
-import { message } from 'ant-design-vue'
 import NProgress from 'nprogress'
 
 const service: AxiosInstance = axios.create({
-  //  change this to decide where to go
-  // baseURL: '/mock',
-  baseURL: '/api/v1',
-  timeout: 30 * 1000
+    //  change this to decide where to go
+    // baseURL: '/mock',
+    baseURL: '/api/v1',
+    timeout: 30 * 1000
 })
 const request: AxiosInterceptorManager<InternalAxiosRequestConfig> = service.interceptors.request
 const response: AxiosInterceptorManager<AxiosResponse> = service.interceptors.response
 
 request.use(
-  (config) => {
-    config.data = JSON.stringify(config.data) //数据转化,也可以使用qs转换
-    config.headers = <AxiosRequestHeaders>{
-      'Content-Type': 'application/json' //配置请求头
+    (config) => {
+        config.data = JSON.stringify(config.data) //数据转化,也可以使用qs转换
+        config.headers = <AxiosRequestHeaders>{
+            'Content-Type': 'application/json' //配置请求头
+        }
+        // NProgress.start()
+        // console.log(config)
+        return config
+    },
+    (error) => {
+        Promise.reject(error)
     }
-    // NProgress.start()
-    // console.log(config)
-    return config
-  },
-  (error) => {
-    Promise.reject(error)
-  }
 )
 const rejectState: { errorHandler: Function | null } = {
-  errorHandler: null
+    errorHandler: null
 }
 
 response.use(
-  (response) => {
-    NProgress.done()
-    if (response.status === 200 && response.data.code === 200) {
-      return Promise.resolve(response.data)
+    (response) => {
+        NProgress.done()
+        if (response.status === 200  && (
+            response.data.code === 200
+            || response.data.status === 'success'
+        )) {
+            return Promise.resolve(response.data)
+        }
+        console.error(response.data.code + ':' + response.data.msg)
+        return Promise.reject(response.data)
+    },
+    (error) => {
+        NProgress.done()
+        if(error.response.data){
+
+            console.error(error.response.data.code + ':' + error.response.data.msg)
+        }else {
+            console.error(error.response)
+        }
+
+        return Promise.reject(error.response.data)
     }
-    message.error(response.data.code + ':' + response.data.msg)
-    return Promise.reject(response.data)
-  },
-  (error) => {
-    console.log(33, error)
-    NProgress.done()
-    message.error(error.response.data.code + ':' + error.response.data.msg)
-    return Promise.reject(error.response.data)
-  }
 )
 export default service

@@ -26,11 +26,11 @@ mode: zone
 #      address: zookeeper://localhost:2181
 store:
   traditional:
-    config_center: nacos://47.251.163.73:8848?username=nacos&password=nacos
+    config_center: nacos://47.251.165.168:8848?username=nacos&password=nacos
     registry:
-      address: nacos://47.251.163.73:8848?username=nacos&password=nacos
+      address: nacos://47.251.165.168:8848?username=nacos&password=nacos
     metadata_report:
-      address: nacos://47.251.163.73:8848?username=nacos&password=nacos
+      address: nacos://47.251.165.168:8848?username=nacos&password=nacos
 admin:
   metric_dashboards:
     application:
@@ -46,7 +46,7 @@ admin:
       baseURL: http://47.251.1.59:3000/d/f5f48f75-13ec-489b-88ae-635ae38d8618/instance
     service:
       baseURL: http://47.251.1.59:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
-  prometheus: http://47.89.225.116:9090
+  prometheus: http://47.251.116.82:9090
 
   # grafana should config root_url/allowed_origins/serve_from_sub_path:
   # eg.

@@ -136,5 +136,18 @@ export const saveConfiguratorDetail = (params: any, data: any): Promise<any> => 
     data
   })
 }
+export const addConfiguratorDetail = (params: any, data: any): Promise<any> => {
+  return request({
+    url: `/configurator/${encodeURIComponent(params.name)}`,
+    method: 'post',
+    data
+  })
+}
+export const delConfiguratorDetail = (params: any): Promise<any> => {
+  return request({
+    url: `/configurator/${encodeURIComponent(params.name)}`,
+    method: 'delete',
+  })
+}
 
 // TODO Perform front-end and back-end joint debugging

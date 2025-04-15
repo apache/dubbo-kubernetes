@@ -96,12 +96,7 @@ export class SearchDomain {
           })
     }
 
-    try {
-      const res = await this.searchApi(queryParams)
-      if (!res) {
-        this.table.loading = false
-        return
-      }
+    this.searchApi(queryParams).then((res: any)=>{
       const {
         data: { list, pageInfo }
       } = res
@@ -110,11 +105,11 @@ export class SearchDomain {
       if (!this.noPaged) {
         this.paged.total = pageInfo?.Total || 0
       }
-    } catch (error) {
+    }).catch((error: any)=>{
       console.error('Error fetching data:', error)
-    } finally {
+    }).finally(()=>{
       this.table.loading = false
-    }
+    })
   }
 }
 

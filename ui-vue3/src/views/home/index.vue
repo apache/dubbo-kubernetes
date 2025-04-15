@@ -83,192 +83,194 @@ let metricsMetadata = reactive({
   info: <{ [key: string]: string }>{}
 })
 
-onMounted(async () => {
-  let clusterData = (await getClusterInfo({})).data
-  metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
-  clusterInfo.info = <{ [key: string]: any }>clusterData
-  clusterInfo.report = {
-    application: {
-      icon: 'cil:applications-settings',
-      value: clusterInfo.info.appCount
-    },
-    services: {
-      icon: 'carbon:microservices-1',
-      value: clusterInfo.info.serviceCount
-    },
-    instances: {
-      icon: 'ri:instance-line',
-      value: clusterInfo.info.insCount
+onMounted( () => {
+  setTimeout(async () => {
+    let clusterData = (await getClusterInfo({})).data
+    metricsMetadata.info = <{ [key: string]: string }>(await getMetricsMetadata({})).data
+    clusterInfo.info = <{ [key: string]: any }>clusterData
+    clusterInfo.report = {
+      application: {
+        icon: 'cil:applications-settings',
+        value: clusterInfo.info.appCount
+      },
+      services: {
+        icon: 'carbon:microservices-1',
+        value: clusterInfo.info.serviceCount
+      },
+      instances: {
+        icon: 'ri:instance-line',
+        value: clusterInfo.info.insCount
+      }
     }
-  }
 
-  // releasesChart
-  const releasesData: any = []
-  const totalReleases = Object.values(clusterInfo.info.releases).reduce(
-    (acc: number, count: number) => acc + count,
-    0
-  )
+    // releasesChart
+    const releasesData: any = []
+    const totalReleases = Object.values(clusterInfo.info.releases).reduce(
+        (acc: number, count: number) => acc + count,
+        0
+    )
 
-  if (typeof clusterInfo.info.releases === 'object') {
-    Object.keys(clusterInfo.info.releases).forEach((key) => {
-      const count = clusterInfo.info.releases[key]
-      releasesData.push({
-        item: key,
-        count: count,
-        percent: count / totalReleases
+    if (typeof clusterInfo.info.releases === 'object') {
+      Object.keys(clusterInfo.info.releases).forEach((key) => {
+        const count = clusterInfo.info.releases[key]
+        releasesData.push({
+          item: key,
+          count: count,
+          percent: count / totalReleases
+        })
       })
+    }
+
+    const releasesChart = new Chart({
+      container: 'releases_container',
+      width: 200,
+      height: 200,
+      autoFit: false
     })
-  }
 
-  const releasesChart = new Chart({
-    container: 'releases_container',
-    width: 200,
-    height: 200,
-    autoFit: false
-  })
+    releasesChart.coordinate({type: 'theta', outerRadius: 0.8, innerRadius: 0.5})
 
-  releasesChart.coordinate({ type: 'theta', outerRadius: 0.8, innerRadius: 0.5 })
+    releasesChart
+        .interval()
+        .data(releasesData)
+        .transform({type: 'stackY'})
+        .encode('y', 'percent')
+        .encode('color', 'item')
+        .legend('color', {position: 'bottom', layout: {justifyContent: 'center'}})
+        .label({
+          position: 'outside',
+          text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
+        })
+        .tooltip((data) => ({
+          name: data.item,
+          value: `${(data.percent * 100).toFixed(2)}%`
+        }))
 
-  releasesChart
-    .interval()
-    .data(releasesData)
-    .transform({ type: 'stackY' })
-    .encode('y', 'percent')
-    .encode('color', 'item')
-    .legend('color', { position: 'bottom', layout: { justifyContent: 'center' } })
-    .label({
-      position: 'outside',
-      text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
-    })
-    .tooltip((data) => ({
-      name: data.item,
-      value: `${(data.percent * 100).toFixed(2)}%`
-    }))
+    releasesChart
+        .text()
+        .style('text', '版本分布')
+        // Relative position
+        .style('x', '50%')
+        .style('y', '50%')
+        .style('fontSize', 10)
+        .style('fill', '#8c8c8c')
+        .style('textAlign', 'center')
+        .style('textBaseline', 'middle') // 垂直对齐
 
-  releasesChart
-    .text()
-    .style('text', '版本分布')
-    // Relative position
-    .style('x', '50%')
-    .style('y', '50%')
-    .style('fontSize', 10)
-    .style('fill', '#8c8c8c')
-    .style('textAlign', 'center')
-    .style('textBaseline', 'middle') // 垂直对齐
+    await releasesChart.render()
 
-  await releasesChart.render()
+    // protocolsChart
+    const protocolsData: any = []
+    const totalProtocols = Object.values(clusterInfo.info.protocols).reduce(
+        (acc: number, count: number) => acc + count,
+        0
+    )
 
-  // protocolsChart
-  const protocolsData: any = []
-  const totalProtocols = Object.values(clusterInfo.info.protocols).reduce(
-    (acc: number, count: number) => acc + count,
-    0
-  )
-
-  if (typeof clusterInfo.info.protocols === 'object') {
-    Object.keys(clusterInfo.info.protocols).forEach((key) => {
-      const count = clusterInfo.info.protocols[key]
-      protocolsData.push({
-        item: key,
-        count: count,
-        percent: count / totalProtocols
+    if (typeof clusterInfo.info.protocols === 'object') {
+      Object.keys(clusterInfo.info.protocols).forEach((key) => {
+        const count = clusterInfo.info.protocols[key]
+        protocolsData.push({
+          item: key,
+          count: count,
+          percent: count / totalProtocols
+        })
       })
+    }
+
+    const protocolsChart = new Chart({
+      container: 'protocols_container',
+      width: 200,
+      height: 200,
+      autoFit: false
     })
-  }
 
-  const protocolsChart = new Chart({
-    container: 'protocols_container',
-    width: 200,
-    height: 200,
-    autoFit: false
-  })
+    protocolsChart.coordinate({type: 'theta', outerRadius: 0.8, innerRadius: 0.5})
 
-  protocolsChart.coordinate({ type: 'theta', outerRadius: 0.8, innerRadius: 0.5 })
+    protocolsChart
+        .interval()
+        .data(protocolsData)
+        .transform({type: 'stackY'})
+        .encode('y', 'percent')
+        .encode('color', 'item')
+        .legend('color', {position: 'bottom', layout: {justifyContent: 'center'}})
+        .label({
+          position: 'outside',
+          text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
+        })
+        .tooltip((data) => ({
+          name: data.item,
+          value: `${(data.percent * 100).toFixed(2)}%`
+        }))
 
-  protocolsChart
-    .interval()
-    .data(protocolsData)
-    .transform({ type: 'stackY' })
-    .encode('y', 'percent')
-    .encode('color', 'item')
-    .legend('color', { position: 'bottom', layout: { justifyContent: 'center' } })
-    .label({
-      position: 'outside',
-      text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
-    })
-    .tooltip((data) => ({
-      name: data.item,
-      value: `${(data.percent * 100).toFixed(2)}%`
-    }))
+    protocolsChart
+        .text()
+        .style('text', '协议分布')
+        // Relative position
+        .style('x', '50%')
+        .style('y', '50%')
+        .style('fontSize', 10)
+        .style('fill', '#8c8c8c')
+        .style('textAlign', 'center')
+        .style('textBaseline', 'middle') // 垂直对齐
 
-  protocolsChart
-    .text()
-    .style('text', '协议分布')
-    // Relative position
-    .style('x', '50%')
-    .style('y', '50%')
-    .style('fontSize', 10)
-    .style('fill', '#8c8c8c')
-    .style('textAlign', 'center')
-    .style('textBaseline', 'middle') // 垂直对齐
+    await protocolsChart.render()
 
-  await protocolsChart.render()
+    // discoveriesChart
+    const discoveriesData: any = []
+    const totalDiscoveries = Object.values(clusterInfo.info.discoveries).reduce(
+        (acc: number, count: number) => acc + count,
+        0
+    )
 
-  // discoveriesChart
-  const discoveriesData: any = []
-  const totalDiscoveries = Object.values(clusterInfo.info.discoveries).reduce(
-    (acc: number, count: number) => acc + count,
-    0
-  )
-
-  if (typeof clusterInfo.info.discoveries === 'object') {
-    Object.keys(clusterInfo.info.discoveries).forEach((key) => {
-      const count = clusterInfo.info.discoveries[key]
-      discoveriesData.push({
-        item: key,
-        count: count,
-        percent: count / totalDiscoveries
+    if (typeof clusterInfo.info.discoveries === 'object') {
+      Object.keys(clusterInfo.info.discoveries).forEach((key) => {
+        const count = clusterInfo.info.discoveries[key]
+        discoveriesData.push({
+          item: key,
+          count: count,
+          percent: count / totalDiscoveries
+        })
       })
-    })
-  }
+    }
 
-  const discoveriesChart = new Chart({
-    container: 'discoveries_container',
-    width: 200,
-    height: 200,
-    autoFit: false
+    const discoveriesChart = new Chart({
+      container: 'discoveries_container',
+      width: 200,
+      height: 200,
+      autoFit: false
+    })
+
+    discoveriesChart.coordinate({type: 'theta', outerRadius: 0.8, innerRadius: 0.5})
+
+    discoveriesChart
+        .interval()
+        .data(discoveriesData)
+        .transform({type: 'stackY'})
+        .encode('y', 'percent')
+        .encode('color', 'item')
+        .legend('color', {position: 'bottom', layout: {justifyContent: 'center'}})
+        .label({
+          position: 'outside',
+          text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
+        })
+        .tooltip((data) => ({
+          name: data.item,
+          value: `${(data.percent * 100).toFixed(2)}%`
+        }))
+
+    discoveriesChart
+        .text()
+        .style('text', '服务发现类型分布')
+        // Relative position
+        .style('x', '50%')
+        .style('y', '50%')
+        .style('fontSize', 10)
+        .style('fill', '#8c8c8c')
+        .style('textAlign', 'center')
+        .style('textBaseline', 'middle') // 垂直对齐
+
+    await discoveriesChart.render()
   })
-
-  discoveriesChart.coordinate({ type: 'theta', outerRadius: 0.8, innerRadius: 0.5 })
-
-  discoveriesChart
-    .interval()
-    .data(discoveriesData)
-    .transform({ type: 'stackY' })
-    .encode('y', 'percent')
-    .encode('color', 'item')
-    .legend('color', { position: 'bottom', layout: { justifyContent: 'center' } })
-    .label({
-      position: 'outside',
-      text: (data) => `${data.item}: ${(data.percent * 100).toFixed(2)}%`
-    })
-    .tooltip((data) => ({
-      name: data.item,
-      value: `${(data.percent * 100).toFixed(2)}%`
-    }))
-
-  discoveriesChart
-    .text()
-    .style('text', '服务发现类型分布')
-    // Relative position
-    .style('x', '50%')
-    .style('y', '50%')
-    .style('fontSize', 10)
-    .style('fill', '#8c8c8c')
-    .style('textAlign', 'center')
-    .style('textBaseline', 'middle') // 垂直对齐
-
-  await discoveriesChart.render()
 })
 </script>
 <style lang="less" scoped>
