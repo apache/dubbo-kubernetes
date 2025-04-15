@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 annotations:
   artifacthub.io/license: Apache-2.0
   artifacthub.io/links: |
@@ -20,17 +35,13 @@ dependencies:
   repository: https://prometheus-community.github.io/helm-charts
   version: 5.31.*
 - condition: nodeExporter.enabled
-  name: prometheus-node-exporter
+  name: node-exporter
   repository: https://prometheus-community.github.io/helm-charts
   version: 4.45.*
 - condition: grafana.enabled
   name: grafana
   repository: https://grafana.github.io/helm-charts
   version: 8.10.*
-- condition: windowsMonitoring.enabled
-  name: prometheus-windows-exporter
-  repository: https://prometheus-community.github.io/helm-charts
-  version: 0.9.*
 description: kube-prometheus-stack collects Kubernetes manifests, Grafana dashboards,
   and Prometheus rules combined with documentation and scripts to provide easy to
   operate end-to-end Kubernetes cluster monitoring with Prometheus using the Prometheus
@@ -67,7 +78,7 @@ maintainers:
 - email: quentin.bisson@gmail.com
   name: QuentinBisson
   url: https://github.com/QuentinBisson
-name: kube-prometheus-stack
+name: kube-prometheus
 sources:
 - https://github.com/prometheus-community/helm-charts
 - https://github.com/prometheus-operator/kube-prometheus

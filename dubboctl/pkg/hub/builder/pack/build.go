@@ -52,7 +52,7 @@ var (
 
 type Builder struct {
 	name          string
-	outBuff       bytes.Buffer
+	outBuffer     bytes.Buffer
 	logger        logging.Logger
 	impl          Impl
 	withTimestamp bool
@@ -136,7 +136,7 @@ func (b *Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) (err error) 
 		} else {
 			err = fmt.Errorf("failed to build the application: %w", err)
 			fmt.Fprintln(color.Stderr(), "")
-			_, _ = io.Copy(color.Stderr(), &b.outBuff)
+			_, _ = io.Copy(color.Stderr(), &b.outBuffer)
 			fmt.Fprintln(color.Stderr(), "")
 		}
 	}

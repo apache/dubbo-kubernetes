@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Default values for kube-prometheus-stack.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -201,7 +216,6 @@ defaultRules:
     nodeExporterRecording: true
     prometheus: true
     prometheusOperator: true
-    windows: true
 
   ## Reduce app namespace alert scope
   appNamespacesTarget: ".*"
@@ -354,34 +368,6 @@ global:
   # - name: "image-pull-secret"
   # or
   # - "image-pull-secret"
-
-windowsMonitoring:
-  ## Deploys the windows-exporter and Windows-specific dashboards and rules (job name must be 'windows-exporter')
-  enabled: false
-
-## Configuration for prometheus-windows-exporter
-## ref: https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-windows-exporter
-##
-prometheus-windows-exporter:
-  ## Enable ServiceMonitor and set Kubernetes label to use as a job label
-  ##
-  prometheus:
-    monitor:
-      enabled: true
-      jobLabel: jobLabel
-
-  releaseLabel: true
-
-  ## Set job label to 'windows-exporter' as required by the default Prometheus rules and Grafana dashboards
-  ##
-  podLabels:
-    jobLabel: windows-exporter
-
-  ## Enable memory and container metrics as required by the default Prometheus rules and Grafana dashboards
-  ##
-  config: |-
-    collectors:
-      enabled: '[defaults],memory,container'
 
 ## Configuration for alertmanager
 ## ref: https://prometheus.io/docs/alerting/alertmanager/

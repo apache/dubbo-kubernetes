@@ -32,6 +32,8 @@ message BaseConfig {}
 message ZookeeperConfig {
   // Controls whether Zookeeper is installed.
   google.protobuf.BoolValue enabled = 1;
+  // Zookeeper the directory where the snapshot is stored.
+  google.protobuf.StringValue dataLogDir = 2;
 }
 
 message NacosConfig {

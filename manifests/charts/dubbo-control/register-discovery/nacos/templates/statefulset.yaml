@@ -47,7 +47,9 @@ spec:
       {{- end }}
       containers:
       - name: nacos
-        image: {{ $nacos.image }}:{{ $nacos.tag }}
+        {{- if contains "/" $nacos.image }}
+        image: {{ $nacos.image }}
+        {{- end }}
         imagePullPolicy: {{ $nacos.imagePullPolicy }}
         ports:
         - name: http
@@ -122,5 +124,25 @@ spec:
           subPath: logs
       volumes:
       - name: data
-        hostPath:
-          path: /var/lib/nacos
+        emptyDir: {}
+{{/*  volumeClaimTemplates:*/}}
+{{/*    - metadata:*/}}
+{{/*        name: data*/}}
+{{/*      spec:*/}}
+{{/*        accessModes:*/}}
+{{/*          - ReadWriteOnce*/}}
+{{/*        resources:*/}}
+{{/*          requests:*/}}
+{{/*            storage: 5Gi*/}}
+{{/*---*/}}
+{{/*apiVersion: v1*/}}
+{{/*kind: PersistentVolumeClaim*/}}
+{{/*metadata:*/}}
+{{/*  name: nacos-pvc*/}}
+{{/*spec:*/}}
+{{/*  storageClassName: rook-ceph-block*/}}
+{{/*  accessModes:*/}}
+{{/*    - ReadWriteOnce*/}}
+{{/*  resources:*/}}
+{{/*    requests:*/}}
+{{/*      storage: 20Gi*/}}

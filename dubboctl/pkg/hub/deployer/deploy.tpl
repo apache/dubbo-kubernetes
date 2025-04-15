@@ -21,16 +21,6 @@ spec:
         ports:
         - containerPort: {{.Port}}
           name: dubbo
-        readinessProbe:
-          tcpSocket:
-            port: {{.Port}}
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        livenessProbe:
-          tcpSocket:
-            port: {{.Port}}
-          initialDelaySeconds: 15
-          periodSeconds: 20
         resources:
           requests:
             cpu: 100m

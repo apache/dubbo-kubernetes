@@ -33,8 +33,9 @@ import (
 type createArgs struct {
 	// dirname specifies the name of the custom-created directory.
 	dirname string
-	// language specifies different SDK languages.
+	// language specifies different sdk languages.
 	language string
+	// template specifies repository or default common.
 	template string
 }
 
@@ -102,12 +103,16 @@ func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 
 type createConfig struct {
 	// Path Absolute to function source
-	Path     string
-	Runtime  string
+	Path string
+	// Runtime
+	Runtime string
+	// Template
 	Template string
-	// Repo URI (overrides builtin and installed)
-	Repo        string
-	DirName     string
+	// Repo Uri (overrides builtin and installed)
+	Repo string
+	// DirName Defines a custom creation directory name。
+	DirName string
+	// Initialized
 	Initialized bool
 }
 

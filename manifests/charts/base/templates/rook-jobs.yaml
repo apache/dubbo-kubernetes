@@ -1,0 +1,245 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rook-csi-driver-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rook-csi-driver
+data:
+  rook-setup.sh: |-
+    #!/usr/bin/env bash
+
+    set -ex
+
+    if [ ! -d "rook" ]; then
+    echo "Pull Rook Project"
+    git clone https://github.com/rook/rook.git
+    else
+    echo "Rook Project Exist，Continue editing..."
+    fi
+
+    cd rook/deploy/examples/
+    sed -i 's/ROOK_DISCOVER_DEVICES_INTERVAL: "60m"/ROOK_DISCOVER_DEVICES_INTERVAL: "60s"/' operator.yaml
+    sed -i 's/useAllNodes: true/useAllNodes: false/' cluster.yaml
+    sed -i 's/useAllDevices: true/useAllDevices: false/' cluster.yaml
+    sed -i '/^  mon:/,/^    count:/s/^\(    count:\) [0-9]\+/\1 1/' cluster.yaml
+    sed -i '/mon:/, /allowMultiplePerNode:/ s/allowMultiplePerNode: false/allowMultiplePerNode: true/' cluster.yaml
+    sed -i '/^  mgr:/,/^    count:/s/^\(    count:\) [0-9]\+/\1 1/' cluster.yaml
+    sed -i '/resources:/,/^[^ ]/ {
+      /resources:/c\
+      resources:\
+        mon:\
+          limits:\
+            cpu: "102m"\
+            memory: "256Mi"\
+          requests:\
+            cpu: "102m"\
+            memory: "256Mi"\
+        mgr:\
+          limits:\
+            cpu: "102m"\
+            memory: "512Mi"\
+          requests:\
+            cpu: "102m"\
+            memory: "512Mi"\
+        mds:\
+          limits:\
+            cpu: "102m"\
+            memory: "256Mi"\
+          requests:\
+            cpu: "102m"\
+            memory: "256Mi"\
+        osd:\
+          limits:\
+            cpu: "512m"\
+            memory: "2048Mi"\
+          requests:\
+            cpu: "512m"\
+            memory: "2048Mi"
+    }' cluster.yaml
+
+    sed -i 's/^  # placement:/  placement:/' cluster.yaml
+    sed -i '/placement:/,/^[^ ]/ {
+      /placement:/c\
+      placement:\
+        mon:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mon\
+                  operator: In\
+                  values:\
+                  - enabled\
+        mgr:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mgr\
+                  operator: In\
+                  values:\
+                  - enabled\
+        mds:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mds\
+                  operator: In\
+                  values:\
+                  - enabled\
+        osd:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-osd\
+                  operator: In\
+                  values:\
+                  - enabled
+    }' cluster.yaml
+
+    sed -i 's/^    # nodes:/    nodes:/' cluster.yaml
+    sed -i '/nodes:/,/^[^ ]/ {
+      /nodes:/c\
+        nodes:\
+        - name: "osp"\
+          devices: # specific devices to use for storage can be specified for each node\
+            - name: "nvme0n2"\
+              config:\
+                storeType: bluestore\
+                journalSizeMB: "4096"
+    }' cluster.yaml
+
+    kubectl label node osp ceph-mon=enabled
+    kubectl label node osp ceph-mgr=enabled
+    kubectl label node osp ceph-mds=enabled
+    kubectl label node osp ceph-osd=enabled
+
+    kubectl apply -f crds.yaml -f common.yaml -f operator.yaml
+    kubectl apply -f cluster.yaml -f toolbox.yaml -f dashboard-external-https.yaml
+
+    # 至少需要 1 个 osd
+    sed -i '/resources:/,/^[^ ]/ {
+      /resources:/c\
+        resources:\
+          limits:\
+            cpu: "256m"\
+            memory: "512Mi"\
+          requests:\
+            cpu: "256m"\
+            memory: "512Mi"
+    }' filesystem-test.yaml
+    sed -i '/podAntiAffinity:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/preferredDuringSchedulingIgnoredDuringExecution:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/topologyKey: kubernetes.io\/hostname/ s/^/            #/' filesystem-test.yaml
+    sed -i '/topologyKey: topology.kubernetes.io\/zone/ s/^/            #/' filesystem-test.yaml
+    sed -i '/podAntiAffinity:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/preferredDuringSchedulingIgnoredDuringExecution:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
+    sed -i '/topologyKey: kubernetes.io\/hostname/ s/^/            #/' filesystem-test.yaml
+    sed -i '/topologyKey: topology.kubernetes.io\/zone/ s/^/            #/' filesystem-test.yaml
+    sed -i '/placement:/,/^[^ ]/ {
+      /placement:/c\
+        placement:\
+          nodeAffinity:\
+            requiredDuringSchedulingIgnoredDuringExecution:\
+              nodeSelectorTerms:\
+              - matchExpressions:\
+                - key: ceph-mds\
+                  operator: In\
+                  values:\
+                  - enabled
+    }' filesystem-test.yaml
+
+    # 至少需要 1 个 osd
+    kubectl apply -f filesystem-test.yaml ; kubectl apply -f csi/cephfs/storageclass.yaml
+    kubectl apply -f csi/rbd/storageclass-test.yaml
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rook-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rook-csi-driver
+spec:
+  template:
+    metadata:
+      name: rook-job
+    spec:
+      hostNetwork: true
+      restartPolicy: OnFailure
+      serviceAccountName: rook-admin
+      containers:
+        - name: rook-setup
+          image: mfordjody/rook-setup:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - sh /scripts/rook-setup.sh
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: rook-csi-driver-config
+            defaultMode: 0755
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rook-admin
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rook-admin-role
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "namespaces"]
+    verbs: ["*"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["*"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["*"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["*"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles", "clusterrolebindings"]
+    verbs: ["*"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["*"]
+  - apiGroups: ["ceph.rook.io"]
+    resources: ["cephclusters","cephfilesystemsubvolumegroups","cephfilesystems"]
+    verbs: ["*"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rook-admin-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rook-admin-role
+subjects:
+  - kind: ServiceAccount
+    name: rook-admin
+    namespace: {{ .Release.Namespace }}
