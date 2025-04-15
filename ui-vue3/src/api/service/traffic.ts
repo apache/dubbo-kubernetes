@@ -146,7 +146,7 @@ export const addConfiguratorDetail = (params: any, data: any): Promise<any> => {
 export const delConfiguratorDetail = (params: any): Promise<any> => {
   return request({
     url: `/configurator/${encodeURIComponent(params.name)}`,
-    method: 'delete',
+    method: 'delete'
   })
 }
 

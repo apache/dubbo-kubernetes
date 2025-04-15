@@ -28,8 +28,8 @@ import UpdateConditionRuleTabHeaderSlot from '@/views/traffic/routingRule/slots/
 import AddTagRuleTabHeaderSlot from '@/views/traffic/tagRule/slots/addTagRuleTabHeaderSlot.vue'
 import TagRuleDetailTabHeaderSlot from '@/views/traffic/tagRule/slots/tagRuleDetailTabHeaderSlot.vue'
 import UpdateTagRuleTabHeaderSlot from '@/views/traffic/tagRule/slots/updateTagRuleTabHeaderSlot.vue'
-import AddDCTabHeaderSlot from "@/views/traffic/dynamicConfig/slots/addDCTabHeaderSlot.vue";
-import UpdateDCTabHeaderSlot from "@/views/traffic/dynamicConfig/slots/updateDCTabHeaderSlot.vue";
+import AddDCTabHeaderSlot from '@/views/traffic/dynamicConfig/slots/addDCTabHeaderSlot.vue'
+import UpdateDCTabHeaderSlot from '@/views/traffic/dynamicConfig/slots/updateDCTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string

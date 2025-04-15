@@ -23,16 +23,20 @@
           <a-flex vertical align="end">
             <a-row style="width: 100%" justify="space-between">
               <a-col :span="12">
-<!--                <a-button-->
-<!--                  type="primary"-->
-<!--                  size="small"-->
-<!--                  style="width: 80px; float: left"-->
-<!--                  @click="saveConfig"-->
-<!--                >-->
-<!--                  {{ $t('form.save') }}-->
-<!--                </a-button>-->
-                <a-tag v-if='modify' color="red" :bordered=false>*改动未保存</a-tag>
-                <a-tag v-else :color="PRIMARY_COLOR" :bordered=false>配置无改动</a-tag>
+                <!--                <a-button-->
+                <!--                  type="primary"-->
+                <!--                  size="small"-->
+                <!--                  style="width: 80px; float: left"-->
+                <!--                  @click="saveConfig"-->
+                <!--                >-->
+                <!--                  {{ $t('form.save') }}-->
+                <!--                </a-button>-->
+                <a-tag v-if="modify" color="red" :bordered="false">{{
+                  $t('dynamicConfigDomain.notSaved')
+                }}</a-tag>
+                <a-tag v-else :color="PRIMARY_COLOR" :bordered="false">{{
+                  $t('dynamicConfigDomain.saved')
+                }}</a-tag>
               </a-col>
               <a-col :span="12">
                 <!--                todo 版本记录后续添加-->
@@ -86,14 +90,14 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import {computed, inject, onMounted, reactive, ref} from 'vue'
+import { computed, inject, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
 // @ts-ignore
 import yaml from 'js-yaml'
 import { message } from 'ant-design-vue'
-import {PRIMARY_COLOR} from "@/base/constants";
+import { PRIMARY_COLOR } from '@/base/constants'
 
 const route = useRoute()
 const isEdit = ref(route.params.isEdit === '1')
@@ -104,25 +108,25 @@ const sliderSpan = ref(8)
 const YAMLValue = ref()
 const initValue = ref()
 onMounted(async () => {
-  await initConfig();
+  await initConfig()
 })
-const modify = computed(()=>{
+const modify = computed(() => {
   console.log(initValue.value)
   console.log(JSON.stringify(YAMLValue.value))
   return initValue.value !== JSON.stringify(YAMLValue.value)
 })
-async function initConfig(){
+async function initConfig() {
   const res = await getConfiguratorDetail({ name: route.params?.pathId })
   const json = yaml.dump(res.data) // 输出为 json 格式
   initValue.value = JSON.stringify(json)
   YAMLValue.value = json
 }
-async function resetConfig(){
+async function resetConfig() {
   loading.value = true
   try {
-    await initConfig();
+    await initConfig()
     message.success('config reset success')
-  }finally {
+  } finally {
     loading.value = false
   }
 }

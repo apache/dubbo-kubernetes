@@ -30,6 +30,8 @@ const words: I18nType = {
     addByFormView: '新增动态配置',
     updateByFormView: '修改动态配置',
     detailByFormView: '查看动态配置',
+    notSaved: '*改动未保存',
+    saved: '配置无改动',
     YAMLView: 'YAML视图',
     formView: '表单视图',
     event: '事件'

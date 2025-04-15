@@ -172,7 +172,7 @@ const columns = [
     key: 'startTime',
     sorter: true,
     width: 150
-  },
+  }
   // {
   //   title: 'instanceDomain.registerTime',
   //   dataIndex: 'registerTime',

@@ -19,10 +19,14 @@
   <div class="__container_AppTabHeaderSlot">
     <a-row>
       <a-col :span="12">
-        <span class="header-desc"> {{ route.params?.isEdit==="1"
-            ?$t('dynamicConfigDomain.updateByFormView')
-            :$t('dynamicConfigDomain.detailByFormView')
-          }} {{ route.params?.pathId }} </span>
+        <span class="header-desc">
+          {{
+            route.params?.isEdit === '1'
+              ? $t('dynamicConfigDomain.updateByFormView')
+              : $t('dynamicConfigDomain.detailByFormView')
+          }}
+          {{ route.params?.pathId }}
+        </span>
       </a-col>
     </a-row>
   </div>

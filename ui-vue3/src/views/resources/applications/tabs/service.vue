@@ -16,9 +16,7 @@
 -->
 <template>
   <div class="__container_app_service">
-    <a-flex
-        v-if="false"
-        wrap="wrap" gap="small" :vertical="false" justify="start" align="left">
+    <a-flex v-if="false" wrap="wrap" gap="small" :vertical="false" justify="start" align="left">
       <a-card class="statistic-card" v-for="(v, k) in clusterInfo.report">
         <a-flex gap="middle" :vertical="false" justify="space-between" align="center">
           <a-statistic :value="v.value" class="statistic">

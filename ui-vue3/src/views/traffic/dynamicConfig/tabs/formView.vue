@@ -171,9 +171,9 @@
       <a-spin :spinning="loading">
         <a-card v-for="(config, index) in formViewEdit.config" class="dynamic-config-card">
           <template #title>
-            <a-button danger size="small"
-                      @click="delConfig(index)"
-                      style="margin-right: 10px">删除 </a-button>配置【{{ index + 1 }}】
+            <a-button danger size="small" @click="delConfig(index)" style="margin-right: 10px"
+              >删除 </a-button
+            >配置【{{ index + 1 }}】
             <span style="font-weight: normal; font-size: 12px" :style="{ color: PRIMARY_COLOR }">
               对于{{ formViewData?.basicInfo?.scope === 'application' ? '应用' : '服务' }}的{{
                 config.side === 'provider' ? '提供者' : '消费者'
@@ -277,10 +277,7 @@
     <a-card class="footer">
       <a-flex v-if="isEdit">
         <a-button type="primary" @click="saveConfig">保存</a-button>
-        <a-button style="margin-left: 30px"
-                  @click="resetConfig"
-          >重置
-        </a-button>
+        <a-button style="margin-left: 30px" @click="resetConfig">重置 </a-button>
       </a-flex>
     </a-card>
   </div>
@@ -292,11 +289,11 @@ import { getCurrentInstance, nextTick, onMounted, reactive, ref } from 'vue'
 import { CopyOutlined } from '@ant-design/icons-vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import useClipboard from 'vue-clipboard3'
-import {message, Modal} from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
 import gsap from 'gsap'
-import {onBeforeUnmount} from "@vue/runtime-core";
+import { onBeforeUnmount } from '@vue/runtime-core'
 
 let __ = PRIMARY_COLOR
 const {
@@ -431,7 +428,7 @@ function transApiData(data: any) {
       return {
         enabled: x.enabled,
         side: x.side,
-        matchKeys: x.match?Object.keys(x.match):[],
+        matchKeys: x.match ? Object.keys(x.match) : [],
         matches: matches,
         parameterKeys: Object.keys(x.parameters),
         parameters: parameters
@@ -439,17 +436,17 @@ function transApiData(data: any) {
     })
   }
 }
-const hasUnsavedChanges = ref(true);
+const hasUnsavedChanges = ref(true)
 
 onMounted(async () => {
-   await initConfig()
+  await initConfig()
 })
-const delConfig = (idx)=>{
+const delConfig = (idx) => {
   Modal.confirm({
     title: '确认删除该配置么？',
     onOk() {
       formViewEdit.config.splice(idx, 1)
-    },
+    }
   })
 }
 const loading = ref(false)
@@ -459,14 +456,13 @@ async function resetConfig() {
   try {
     await initConfig()
     message.success('config reset success')
-  }finally {
+  } finally {
     loading.value = false
   }
 }
 async function initConfig() {
-  if(route.params?.pathId === '__tmp'){
-
-  }else{
+  if (route.params?.pathId === '__tmp') {
+  } else {
     const res = await getConfiguratorDetail({ name: route.params?.pathId })
     transApiData(res.data)
   }

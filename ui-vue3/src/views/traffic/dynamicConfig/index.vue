@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import { onMounted, provide, reactive } from 'vue'
-import {delConfiguratorDetail, searchDynamicConfig} from '@/api/service/traffic'
+import { delConfiguratorDetail, searchDynamicConfig } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
@@ -132,7 +132,7 @@ const searchDomain = reactive(
     columns
   )
 )
-const addDynamicConfig = ()=>{
+const addDynamicConfig = () => {
   router.push(`/traffic/dynamicConfig/addbyformview`)
 }
 
@@ -140,8 +140,8 @@ onMounted(async () => {
   await searchDomain.onSearch()
 })
 
-const delDynamicConfig = async (record:any) => {
-  await delConfiguratorDetail({name: record.ruleName})
+const delDynamicConfig = async (record: any) => {
+  await delConfiguratorDetail({ name: record.ruleName })
   await searchDomain.onSearch()
 }
 
