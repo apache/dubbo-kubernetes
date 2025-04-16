@@ -108,14 +108,14 @@ func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 			return
 		}
 
-		if res.Spec.GetVersion() != consts.ConfiguratorVersionV3x1 {
-			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
+		if res.Spec.GetVersion() != consts.ConfiguratorVersionV3 {
+			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3, got v3.1 config "))
 			return
 		}
 
-		cr := res.Spec.ToConditionRouteV3x1()
-		cr.RangeConditions(func(r *mesh_proto.ConditionRule) (isStop bool) {
-			resp.TrafficDisable = isTrafficDisabled(r, instanceIP)
+		cr := res.Spec.ToConditionRouteV3()
+		cr.RangeConditions(func(condition string) (isStop bool) {
+			_, resp.TrafficDisable = isTrafficDisabledV3(condition, instanceIP)
 			return resp.TrafficDisable
 		})
 
@@ -123,7 +123,7 @@ func InstanceConfigTrafficDisableGET(rt core_runtime.Runtime) gin.HandlerFunc {
 	}
 }
 
-func isTrafficDisabled(r *mesh_proto.ConditionRule, targetIP string) bool {
+func isTrafficDisabledV3X1(r *mesh_proto.ConditionRule, targetIP string) bool {
 	if len(r.To) != 0 {
 		return false
 	}
@@ -144,10 +144,38 @@ func isTrafficDisabled(r *mesh_proto.ConditionRule, targetIP string) bool {
 	return false
 }
 
+/*
+*
+isTrafficDisabledV3 judge if a condition is disabled or not.
+A condition include fromCondition and toCondition which is seperated by `=>`.
+The first return parameter `exist` indicates if a condition of specific targetIP exists.
+The second return parameter `disabled` indicates if the traffic of targetIP is disabled.
+*/
+func isTrafficDisabledV3(condition string, targetIP string) (exist bool, disabled bool) {
+	if len(condition) == 0 {
+		return false, false
+	}
+	condition = strings.ReplaceAll(condition, " ", "")
+	// only accept string start with `=>`
+	if !strings.HasPrefix(condition, "=>") {
+		return false, false
+	}
+	toCondition := strings.TrimPrefix(condition, "=>")
+	// TODO more specific judge
+	if !strings.Contains(toCondition, targetIP) {
+		return false, false
+	}
+	targetExpression := "host!=" + targetIP
+	if targetExpression != toCondition {
+		return true, false
+	}
+	return true, true
+}
+
 func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		applicationName := strings.TrimSpace(c.Query("appName"))
-		if applicationName == "" {
+		appName := strings.TrimSpace(c.Query("appName"))
+		if appName == "" {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("application name is empty"))
 			return
 		}
@@ -156,65 +184,85 @@ func InstanceConfigTrafficDisablePUT(rt core_runtime.Runtime) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp("instanceIP is empty"))
 			return
 		}
-		trafficDisabled, err := strconv.ParseBool(c.Query(`trafficDisable`))
+		newDisabled, err := strconv.ParseBool(c.Query(`trafficDisable`))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, model.NewErrorResp(errors.Wrap(err, "parse trafficDisable fail").Error()))
 			return
 		}
 
-		// get
-		NotExist := false
-		rawRes, err := service.GetConditionRule(rt, applicationName)
-		var res *mesh_proto.ConditionRouteV3X1
+		existRule := true
+		rawRes, err := service.GetConditionRule(rt, appName)
+		var res *mesh_proto.ConditionRouteV3
 		if err != nil {
 			if !core_store.IsResourceNotFound(err) {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
 				return
-			} else if !trafficDisabled { // not found && cancel traffic-disable
+			} else if !newDisabled { // not found && cancel traffic-disable
 				c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 				return
 			}
-			NotExist = true
-			res = generateDefaultConditionV3x1(true, true, true, applicationName, consts.ScopeApplication)
+			existRule = false
+			res = generateDefaultConditionV3(true, true, true, appName, consts.ScopeApplication)
 			rawRes = &mesh.ConditionRouteResource{Spec: res.ToConditionRoute()}
-		} else if res = rawRes.Spec.ToConditionRouteV3x1(); res == nil {
+		} else if res = rawRes.Spec.ToConditionRouteV3(); res == nil {
 			c.JSON(http.StatusServiceUnavailable, model.NewErrorResp("this config only serve condition-route.configVersion == v3.1, got v3.0 config "))
 			return
 		}
 
-		ok := false
-		res.RangeConditions(func(r *mesh_proto.ConditionRule) (isStop bool) {
-			ok = isTrafficDisabled(r, instanceIP)
-			return ok
-		})
-		if !ok {
-			res.Conditions = append(res.Conditions, newDisableCondition(instanceIP))
-		}
-		rawRes.Spec = res.ToConditionRoute()
-
-		if NotExist {
-			err = service.CreateConditionRule(rt, applicationName, rawRes)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
-				return
+		// enable traffic
+		if !newDisabled {
+			for i, condition := range res.Conditions {
+				existCondition, oldDisabled := isTrafficDisabledV3(condition, instanceIP)
+				if existCondition {
+					if oldDisabled != newDisabled {
+						res.Conditions = append(res.Conditions[:i], res.Conditions[i+1:]...)
+						rawRes.Spec = res.ToConditionRoute()
+						if err = updateORCreateConditionRule(rt, existRule, appName, rawRes); err != nil {
+							c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+						}
+						c.JSON(http.StatusOK, model.NewSuccessResp(nil))
+						return
+					}
+				}
 			}
-		} else {
-			err = service.UpdateConditionRule(rt, applicationName, rawRes)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
-				return
+		} else { // disable traffic
+			// check if condition exists
+			for _, condition := range res.Conditions {
+				existCondition, oldDisabled := isTrafficDisabledV3(condition, instanceIP)
+				if existCondition && oldDisabled {
+					c.JSON(http.StatusBadRequest, model.NewErrorResp("The instance has been disabled!"))
+					return
+				}
 			}
+			res.Conditions = append(res.Conditions, disableExpression(instanceIP))
+			if err = updateORCreateConditionRule(rt, existRule, appName, rawRes); err != nil {
+				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
+			}
+			c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 		}
-
-		c.JSON(http.StatusOK, model.NewSuccessResp(nil))
 	}
 }
 
-func newDisableCondition(ip string) *mesh_proto.ConditionRule {
+func disableExpression(instanceIP string) string {
+	return "=>host!=" + instanceIP
+}
+func updateORCreateConditionRule(rt core_runtime.Runtime, existRule bool, appName string, rawRes *mesh.ConditionRouteResource) error {
+	if !existRule {
+		return service.CreateConditionRule(rt, appName, rawRes)
+	} else {
+		return service.UpdateConditionRule(rt, appName, rawRes)
+	}
+}
+
+func newDisableConditionV3x1(ip string) *mesh_proto.ConditionRule {
 	return &mesh_proto.ConditionRule{
 		From: &mesh_proto.ConditionRuleFrom{Match: "host=" + ip},
 		To:   nil,
 	}
+}
+
+func newDisableConditionV3(ip string) string {
+	return "=>host!=" + ip
 }
 
 func generateDefaultConditionV3x1(Enabled, Force, Runtime bool, Key, Scope string) *mesh_proto.ConditionRouteV3X1 {
@@ -226,6 +274,19 @@ func generateDefaultConditionV3x1(Enabled, Force, Runtime bool, Key, Scope strin
 		Key:           Key,
 		Scope:         Scope,
 		Conditions:    make([]*mesh_proto.ConditionRule, 0),
+	}
+}
+
+func generateDefaultConditionV3(Enabled, Force, Runtime bool, Key, Scope string) *mesh_proto.ConditionRouteV3 {
+	return &mesh_proto.ConditionRouteV3{
+		ConfigVersion: consts.ConfiguratorVersionV3,
+		Priority:      0,
+		Enabled:       true,
+		Force:         Force,
+		Runtime:       Runtime,
+		Key:           Key,
+		Scope:         Scope,
+		Conditions:    make([]string, 0),
 	}
 }
 

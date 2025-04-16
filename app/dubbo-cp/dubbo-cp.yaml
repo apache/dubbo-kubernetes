@@ -26,11 +26,11 @@ mode: zone
 #      address: zookeeper://localhost:2181
 store:
   traditional:
-    config_center: nacos://47.251.163.73:8848?username=nacos&password=nacos
+    config_center: nacos://47.251.165.168:8848?username=nacos&password=nacos
     registry:
-      address: nacos://47.251.163.73:8848?username=nacos&password=nacos
+      address: nacos://47.251.165.168:8848?username=nacos&password=nacos
     metadata_report:
-      address: nacos://47.251.163.73:8848?username=nacos&password=nacos
+      address: nacos://47.251.165.168:8848?username=nacos&password=nacos
 admin:
   metric_dashboards:
     application:
