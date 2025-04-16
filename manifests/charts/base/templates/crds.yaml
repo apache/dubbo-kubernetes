@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $file := .Files }}
-{{- range $path, $_ := .Files.Glob  "files/**.yaml" }}
-{{- $file.Get $path }}
-{{- end -}}
+{{/*{{- $file := .Files }}*/}}
+{{/*{{- range $path, $_ := .Files.Glob  "files/**.yaml" }}*/}}
+{{/*{{- $file.Get $path }}*/}}
+{{/*{{- end -}}*/}}
 
 

@@ -1,3 +1,4 @@
+{{ $rook := .Values.csi }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -30,32 +31,32 @@ data:
       resources:\
         mon:\
           limits:\
-            cpu: "102m"\
-            memory: "256Mi"\
+            cpu: {{ $rook.mon.limits.cpu | default "102m" | quote }}\
+            memory: {{ $rook.mon.limits.memory | default "256Mi" | quote }}\
           requests:\
-            cpu: "102m"\
-            memory: "256Mi"\
+            cpu: {{ $rook.mon.requests.cpu | default "102m" | quote }}\
+            memory: {{ $rook.mon.requests.memory | default "256Mi" | quote }}\
         mgr:\
           limits:\
-            cpu: "102m"\
-            memory: "512Mi"\
+            cpu: {{ $rook.mgr.limits.cpu | default "102m" | quote }}\
+            memory: {{ $rook.mgr.limits.memory | default "512Mi" | quote }}\
           requests:\
-            cpu: "102m"\
-            memory: "512Mi"\
+            cpu: {{ $rook.mgr.requests.cpu | default "102m" | quote }}\
+            memory: {{ $rook.mgr.requests.memory | default "512Mi" | quote }}\
         mds:\
           limits:\
-            cpu: "102m"\
-            memory: "256Mi"\
+            cpu: {{ $rook.mds.limits.cpu | default "102m" | quote }}\
+            memory: {{ $rook.mds.limits.memory | default "256Mi" | quote }}\
           requests:\
-            cpu: "102m"\
-            memory: "256Mi"\
+            cpu: {{ $rook.mds.requests.cpu | default "102m" | quote }}\
+            memory: {{ $rook.mds.requests.memory | default "256Mi" | quote }}\
         osd:\
           limits:\
-            cpu: "512m"\
-            memory: "2048Mi"\
+            cpu: {{ $rook.osd.limits.cpu | default "512m" | quote }}\
+            memory: {{ $rook.osd.limits.memory | default "2048Mi" | quote }}\
           requests:\
-            cpu: "512m"\
-            memory: "2048Mi"
+            cpu: {{ $rook.osd.requests.cpu | default "512m" | quote }}\
+            memory: {{ $rook.osd.requests.memory | default "2048Mi" | quote }}
     }' cluster.yaml
 
     sed -i 's/^  # placement:/  placement:/' cluster.yaml
@@ -104,18 +105,18 @@ data:
     sed -i '/nodes:/,/^[^ ]/ {
       /nodes:/c\
         nodes:\
-        - name: "osp"\
+        - name: {{ $rook.nodes.name | quote }}\
           devices: # specific devices to use for storage can be specified for each node\
-            - name: "nvme0n2"\
+            - name: {{ $rook.nodes.devices.name | quote }}\
               config:\
-                storeType: bluestore\
-                journalSizeMB: "4096"
+                storeType: {{ $rook.nodes.devices.storeType  }}\
+                journalSizeMB: {{ $rook.nodes.devices.journalSizeMB | default "4096" | quote }}
     }' cluster.yaml
 
-    kubectl label node osp ceph-mon=enabled
-    kubectl label node osp ceph-mgr=enabled
-    kubectl label node osp ceph-mds=enabled
-    kubectl label node osp ceph-osd=enabled
+    kubectl label node {{ $rook.labelSelector.node }} ceph-mon=enabled
+    kubectl label node {{ $rook.labelSelector.node }} ceph-mgr=enabled
+    kubectl label node {{ $rook.labelSelector.node }} ceph-mds=enabled
+    kubectl label node {{ $rook.labelSelector.node }} ceph-osd=enabled
 
     kubectl apply -f crds.yaml -f common.yaml -f operator.yaml
     kubectl apply -f cluster.yaml -f toolbox.yaml -f dashboard-external-https.yaml
@@ -125,11 +126,11 @@ data:
       /resources:/c\
         resources:\
           limits:\
-            cpu: "256m"\
-            memory: "512Mi"\
+            cpu: {{ $rook.cephfs.limits.cpu | default "256m" | quote}}\
+            memory: {{ $rook.cephfs.limits.memory | default "512Mi" | quote }}\
           requests:\
-            cpu: "256m"\
-            memory: "512Mi"
+            cpu: {{ $rook.cephfs.requests.cpu | default "256m" | quote }}\
+            memory: {{ $rook.cephfs.requests.memory | default "512Mi" | quote }}
     }' filesystem-test.yaml
     sed -i '/podAntiAffinity:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
     sed -i '/preferredDuringSchedulingIgnoredDuringExecution:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
@@ -225,7 +226,7 @@ rules:
     resources: ["serviceaccounts"]
     verbs: ["*"]
   - apiGroups: ["ceph.rook.io"]
-    resources: ["cephclusters","cephfilesystemsubvolumegroups","cephfilesystems"]
+    resources: ["cephclusters","cephfilesystemsubvolumegroups","cephfilesystems","cephblockpools"]
     verbs: ["*"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["storageclasses"]
