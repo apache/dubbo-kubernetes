@@ -18,29 +18,23 @@
 package registry
 
 import (
-	"strings"
-	"sync"
-
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
 	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"dubbo.apache.org/dubbo-go/v3/registry"
-
 	gxset "github.com/dubbogo/gost/container/set"
+	"strings"
+	"sync"
 )
 
-const AppCtx = "ApplicationContext"
-
 type ApplicationContext struct {
-	// InterfaceName Urls
+	// InterfaceName []*common.URL
 	serviceUrls sync.Map
-	// Revision Metadata
+	// Revision *info.MetadataInfo
 	revisionToMetadata sync.Map
-	// AppName Instances
+	// AppName []registry.ServiceInstance
 	allInstances sync.Map
-
-	appToRevision sync.Map
-
+	// Mappings *gxset.HashSet
 	mappings sync.Map
 }
 

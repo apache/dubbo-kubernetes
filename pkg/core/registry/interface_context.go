@@ -26,12 +26,14 @@ import (
 )
 
 type InterfaceContext struct {
-	// InterfaceName Urls
+	// InterfaceName []*common.URL
 	serviceUrls sync.Map
-	// Revision Metadata
+	// Revision *info.MetadataInfo
 	revisionToMetadata sync.Map
-	instances          sync.Map
-	mappings           sync.Map
+	// Service []registry.ServiceInstance
+	instances sync.Map
+	// Mappings *gxset.HashSet
+	mappings sync.Map
 }
 
 func NewInterfaceContext() *InterfaceContext {
