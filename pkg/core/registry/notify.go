@@ -93,10 +93,12 @@ func (l *NotifyListener) NotifyAllInstances(events []*AdminInstanceEvent, f func
 func (l *NotifyListener) deleteDataplane(ctx context.Context, app string, instance registry.ServiceInstance) error {
 	address := instance.GetAddress()
 	var revision string
-	instances := l.ctx.allInstances[app]
-	for _, instance := range instances {
-		if instance.GetAddress() == address {
-			revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
+	if v, ok := l.ctx.allInstances.Load(app); ok {
+		instances := v.([]registry.ServiceInstance)
+		for _, instance := range instances {
+			if instance.GetAddress() == address {
+				revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
+			}
 		}
 	}
 	key := getDataplaneKey(app, revision)
@@ -119,11 +121,13 @@ func (l *NotifyListener) deleteDataplane(ctx context.Context, app string, instan
 func (l *NotifyListener) createOrUpdateDataplane(ctx context.Context, app string, instance registry.ServiceInstance) error {
 	address := instance.GetAddress()
 	var revision string
-	instances := l.ctx.allInstances[app]
-	for _, instance := range instances {
-		if instance.GetAddress() == address {
-			revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
-			break
+	if v, ok := l.ctx.allInstances.Load(app); ok {
+		instances := v.([]registry.ServiceInstance)
+		for _, instance := range instances {
+			if instance.GetAddress() == address {
+				revision = instance.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
+				break
+			}
 		}
 	}
 	key := getDataplaneKey(app, address)

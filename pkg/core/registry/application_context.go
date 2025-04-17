@@ -18,14 +18,12 @@
 package registry
 
 import (
-	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"strings"
 	"sync"
-)
 
-import (
 	"dubbo.apache.org/dubbo-go/v3/common"
 	"dubbo.apache.org/dubbo-go/v3/common/constant"
+	"dubbo.apache.org/dubbo-go/v3/metadata/info"
 	"dubbo.apache.org/dubbo-go/v3/registry"
 
 	gxset "github.com/dubbogo/gost/container/set"
@@ -35,55 +33,57 @@ const AppCtx = "ApplicationContext"
 
 type ApplicationContext struct {
 	// InterfaceName Urls
-	serviceUrls map[string][]*common.URL
+	serviceUrls sync.Map
 	// Revision Metadata
-	revisionToMetadata map[string]*info.MetadataInfo
+	revisionToMetadata sync.Map
 	// AppName Instances
-	allInstances map[string][]registry.ServiceInstance
+	allInstances sync.Map
 
 	appToRevision sync.Map
 
-	mappings map[string]*gxset.HashSet
-
-	mu sync.RWMutex
+	mappings sync.Map
 }
 
 func NewApplicationContext() *ApplicationContext {
-	return &ApplicationContext{
-		serviceUrls:        make(map[string][]*common.URL),
-		revisionToMetadata: make(map[string]*info.MetadataInfo),
-		allInstances:       make(map[string][]registry.ServiceInstance),
-	}
+	return &ApplicationContext{}
 }
 
 // GetServiceUrls returns the reference to the serviceUrls map with read lock
 func (ac *ApplicationContext) GetServiceUrls() map[string][]*common.URL {
-	return ac.serviceUrls
+	result := make(map[string][]*common.URL)
+	ac.serviceUrls.Range(func(key, value interface{}) bool {
+		result[key.(string)] = value.([]*common.URL)
+		return true
+	})
+	return result
 }
 
 func (ac *ApplicationContext) DeleteServiceUrl(key string, url *common.URL) {
-	urls := ac.serviceUrls[key]
-	if urls == nil {
-		return
-	}
-
-	for i, u := range urls {
-		if urlEqual(u, url) {
-			ac.serviceUrls[key] = append(urls[:i], urls[i+1:]...)
-			return
+	if v, ok := ac.serviceUrls.Load(key); ok {
+		urls := v.([]*common.URL)
+		for i, u := range urls {
+			if urlEqual(u, url) {
+				urls = append(urls[:i], urls[i+1:]...)
+				ac.serviceUrls.Store(key, urls)
+				return
+			}
 		}
 	}
 }
 
 func (ac *ApplicationContext) UpdateServiceUrls(interfaceKey string, url *common.URL) {
-	urls := ac.serviceUrls[interfaceKey]
+	v, _ := ac.serviceUrls.LoadOrStore(interfaceKey, []*common.URL{})
+	urls := v.([]*common.URL)
 	urls = append(urls, url)
-	ac.serviceUrls[interfaceKey] = urls
+	ac.serviceUrls.Store(interfaceKey, urls)
 }
 
 func (ac *ApplicationContext) AddServiceUrls(newServiceUrls map[string][]*common.URL) {
 	for k, v := range newServiceUrls {
-		urls := ac.serviceUrls[k]
+		var urls []*common.URL
+		if existingV, ok := ac.serviceUrls.Load(k); ok {
+			urls = existingV.([]*common.URL)
+		}
 
 		urlExists := func(newUrl *common.URL) bool {
 			for _, url := range urls {
@@ -95,46 +95,54 @@ func (ac *ApplicationContext) AddServiceUrls(newServiceUrls map[string][]*common
 		}
 
 		if urls == nil {
-			ac.serviceUrls[k] = v
+			ac.serviceUrls.Store(k, v)
 		} else {
 			for _, newUrl := range v {
 				if !urlExists(newUrl) {
-					ac.serviceUrls[k] = append(urls, newUrl)
+					urls = append(urls, newUrl)
 				}
 			}
+			ac.serviceUrls.Store(k, urls)
 		}
 	}
 }
 
 // GetRevisionToMetadata returns the reference to the revisionToMetadata map with read lock
 func (ac *ApplicationContext) GetRevisionToMetadata(revision string) *info.MetadataInfo {
-	return ac.revisionToMetadata[revision]
+	if v, ok := ac.revisionToMetadata.Load(revision); ok {
+		return v.(*info.MetadataInfo)
+	}
+	return nil
 }
 
 func (ac *ApplicationContext) UpdateRevisionToMetadata(key string, newKey string, value *info.MetadataInfo) {
 	if key == newKey {
 		return
 	}
-	if "" != key {
-		delete(ac.revisionToMetadata, key)
+	if key != "" {
+		ac.revisionToMetadata.Delete(key)
 	}
-	ac.revisionToMetadata[newKey] = value
+	ac.revisionToMetadata.Store(newKey, value)
 }
 
 func (ac *ApplicationContext) DeleteRevisionToMetadata(key string) {
-	if "" != key {
-		delete(ac.revisionToMetadata, key)
+	if key != "" {
+		ac.revisionToMetadata.Delete(key)
 	}
 }
 
 func (ac *ApplicationContext) NewRevisionToMetadata(newRevisionToMetadata map[string]*info.MetadataInfo) {
-	ac.revisionToMetadata = newRevisionToMetadata
+	for k, v := range newRevisionToMetadata {
+		ac.revisionToMetadata.Store(k, v)
+	}
 }
 
 func (ac *ApplicationContext) GetOldRevision(instance registry.ServiceInstance) string {
-	for _, elem := range ac.allInstances[instance.GetServiceName()] {
-		if instance.GetID() == elem.GetID() {
-			return elem.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
+	if v, ok := ac.allInstances.Load(instance.GetServiceName()); ok {
+		for _, elem := range v.([]registry.ServiceInstance) {
+			if instance.GetID() == elem.GetID() {
+				return elem.GetMetadata()[constant.ExportedServicesRevisionPropertyName]
+			}
 		}
 	}
 	return ""
@@ -142,36 +150,47 @@ func (ac *ApplicationContext) GetOldRevision(instance registry.ServiceInstance) 
 
 // GetAllInstances returns the reference to the allInstances map with read lock
 func (ac *ApplicationContext) GetAllInstances() map[string][]registry.ServiceInstance {
-	return ac.allInstances
+	result := make(map[string][]registry.ServiceInstance)
+	ac.allInstances.Range(func(key, value interface{}) bool {
+		result[key.(string)] = value.([]registry.ServiceInstance)
+		return true
+	})
+	return result
 }
 
 func (ac *ApplicationContext) DeleteAllInstance(key string, instance registry.ServiceInstance) {
-	instances := ac.allInstances[key]
-	for i, serviceInstance := range instances {
-		if serviceInstance.GetID() == instance.GetID() {
-			ac.allInstances[key] = append(instances[:i], instances[i+1:]...)
-			return
+	if v, ok := ac.allInstances.Load(key); ok {
+		instances := v.([]registry.ServiceInstance)
+		for i, serviceInstance := range instances {
+			if serviceInstance.GetID() == instance.GetID() {
+				instances = append(instances[:i], instances[i+1:]...)
+				ac.allInstances.Store(key, instances)
+				return
+			}
 		}
 	}
 }
 
 func (ac *ApplicationContext) UpdateAllInstances(key string, instance registry.ServiceInstance) {
-	instances := ac.allInstances[key]
-	for i, serviceInstance := range instances {
-		if serviceInstance.GetID() == instance.GetID() {
-			instances[i] = serviceInstance
-			return
+	if v, ok := ac.allInstances.Load(key); ok {
+		instances := v.([]registry.ServiceInstance)
+		for i, serviceInstance := range instances {
+			if serviceInstance.GetID() == instance.GetID() {
+				instances[i] = serviceInstance
+				ac.allInstances.Store(key, instances)
+				return
+			}
 		}
 	}
-	ac.allInstances[key] = append(instances, instance)
+	v, _ := ac.allInstances.LoadOrStore(key, []registry.ServiceInstance{})
+	instances := v.([]registry.ServiceInstance)
+	instances = append(instances, instance)
+	ac.allInstances.Store(key, instances)
 }
 
 func (ac *ApplicationContext) AddAllInstances(key string, value []registry.ServiceInstance) {
-	instances, exists := ac.allInstances[key]
-	if !exists {
-		ac.allInstances[key] = value
-		return
-	}
+	v, _ := ac.allInstances.LoadOrStore(key, []registry.ServiceInstance{})
+	instances := v.([]registry.ServiceInstance)
 
 	instanceExists := func(instance registry.ServiceInstance) bool {
 		for i, inst := range instances {
@@ -189,15 +208,22 @@ func (ac *ApplicationContext) AddAllInstances(key string, value []registry.Servi
 		}
 	}
 
-	ac.allInstances[key] = instances
+	ac.allInstances.Store(key, instances)
 }
 
 func (ac *ApplicationContext) UpdateMapping(mapping map[string]*gxset.HashSet) {
-	ac.mappings = mapping
+	for k, v := range mapping {
+		ac.mappings.Store(k, v)
+	}
 }
 
 func (ac *ApplicationContext) GetMapping() map[string]*gxset.HashSet {
-	return ac.mappings
+	result := make(map[string]*gxset.HashSet)
+	ac.mappings.Range(func(key, value interface{}) bool {
+		result[key.(string)] = value.(*gxset.HashSet)
+		return true
+	})
+	return result
 }
 
 func urlEqual(url *common.URL, c *common.URL) bool {

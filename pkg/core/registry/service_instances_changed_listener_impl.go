@@ -65,9 +65,6 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 	}
 	var err error
 
-	lstn.ctx.mu.Lock()
-	defer lstn.ctx.mu.Unlock()
-
 	revisionToInstances := make(map[string][]registry.ServiceInstance)
 	localServiceToRevisions := make(map[*info.ServiceInfo]*gxset.HashSet)
 	protocolRevisionsToUrls := make(map[string]map[*gxset.HashSet][]*common.URL)
@@ -152,7 +149,7 @@ func (lstn *DubboSDNotifyListener) OnEvent(e observer.Event) error {
 
 	for _, instance := range findInstancesToDelete(lstn.localAllInstances[ce.ServiceName], ce.Instances) {
 		revision := instance.GetMetadata()[dubboconstant.ExportedServicesRevisionPropertyName]
-		metadataInfo := lstn.ctx.revisionToMetadata[revision]
+		metadataInfo := lstn.ctx.GetRevisionToMetadata(revision)
 		for _, v := range metadataInfo.Services {
 			notifyListener := lstn.listeners[v.Name]
 			for _, url := range instance.ToURLs(v) {
