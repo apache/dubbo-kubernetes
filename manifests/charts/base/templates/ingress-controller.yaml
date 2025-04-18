@@ -69,3 +69,17 @@ metadata:
   name: dubbo
 spec:
   controller: "dubbo.io/dubbo-kubernetes-ingress-controller"
+---
+{{ $ingress := .Values.ingress }}
+{{- $ca := genCA "dubbo-kubernetes-ca" 365 }}
+{{- $cert := genSignedCert $ingress.hosts.admin nil (list $ingress.hosts.admin $ingress.hosts.prometheus $ingress.hosts.grafana) 365 $ca }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dubbo-kubernetes-ingress-tls
+  namespace: {{ .Release.Namespace }}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $cert.Cert | b64enc | quote }}
+  tls.key: {{ $cert.Key | b64enc | quote }}
+  ca.crt: {{ $ca.Cert | b64enc | quote }}

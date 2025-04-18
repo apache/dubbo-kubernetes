@@ -132,6 +132,7 @@ data:
             cpu: {{ $rook.cephfs.requests.cpu | default "256m" | quote }}\
             memory: {{ $rook.cephfs.requests.memory | default "512Mi" | quote }}
     }' filesystem-test.yaml
+
     sed -i '/podAntiAffinity:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
     sed -i '/preferredDuringSchedulingIgnoredDuringExecution:/,/- rook-ceph-mds/ s/^/      # /' filesystem-test.yaml
     sed -i '/topologyKey: kubernetes.io\/hostname/ s/^/            #/' filesystem-test.yaml
@@ -155,6 +156,18 @@ data:
 
     # 至少需要 1 个 osd
     kubectl apply -f filesystem-test.yaml ; kubectl apply -f csi/cephfs/storageclass.yaml
+
+    sed -i '/^spec:/a\
+    resources:\
+    limits:\
+    cpu: "256m"\
+    memory: "512Mi"\
+    requests:\
+    cpu: "256m"\
+    memory: "512Mi"
+    ' csi/rbd/storageclass-test.yaml
+
+    # 至少需要 1 个 osd
     kubectl apply -f csi/rbd/storageclass-test.yaml
 ---
 apiVersion: batch/v1
