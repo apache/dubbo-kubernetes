@@ -17,6 +17,13 @@ _internal_default_values_not_set:
   global: {}
   base: {}
 
+  ingress:
+    class: ""
+    hosts:
+      admin: admin.dubbo.domain
+      prometheus: prom.dubbo.domain
+      grafana: grafana.dubbo.domain
+
   csi:
     labelSelector:
       node: ""
@@ -55,6 +62,14 @@ _internal_default_values_not_set:
         name: ""
         storeType: bluestore
         journalSizeMB: ""
+
+    rbd:
+      limits:
+        cpu: ""
+        memory: ""
+      requests:
+        cpu: ""
+        memory: ""
 
     cephfs:
       limits:
