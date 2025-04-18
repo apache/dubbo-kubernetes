@@ -16,7 +16,7 @@
 -->
 <template>
   <div class="__container_app_service">
-    <a-flex wrap="wrap" gap="small" :vertical="false" justify="start" align="left">
+    <a-flex v-if="false" wrap="wrap" gap="small" :vertical="false" justify="start" align="left">
       <a-card class="statistic-card" v-for="(v, k) in clusterInfo.report">
         <a-flex gap="middle" :vertical="false" justify="space-between" align="center">
           <a-statistic :value="v.value" class="statistic">
@@ -106,7 +106,7 @@ onMounted(async () => {
 
 const columns = [
   {
-    title: 'service',
+    title: 'provideServiceName',
     key: 'service',
     dataIndex: 'serviceName',
     sorter: true,
@@ -174,16 +174,16 @@ function serviceInfo(params: any) {
 const searchDomain = reactive(
   new SearchDomain(
     [
-      {
-        label: '',
-        param: 'side',
-        defaultValue: 'provider',
-        dict: [
-          { label: 'providers', value: 'provider' },
-          { label: 'consumers', value: 'consumer' }
-        ],
-        dictType: 'BUTTON'
-      },
+      // {
+      //   label: '',
+      //   param: 'side',
+      //   defaultValue: 'provider',
+      //   dict: [
+      //     { label: 'providers', value: 'provider' },
+      //     { label: 'consumers', value: 'consumer' }
+      //   ],
+      //   dictType: 'BUTTON'
+      // },
       {
         label: 'serviceName',
         param: 'serviceName'

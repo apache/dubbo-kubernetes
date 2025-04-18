@@ -27,6 +27,7 @@ export default defineConfig({
         outDir: './dist/admin',
     },
     server: {
+        port:8881,
         proxy: {
             // with options: http://localhost:5173/api/bar-> http://jsonplaceholder.typicode.com/bar
             '/api': {

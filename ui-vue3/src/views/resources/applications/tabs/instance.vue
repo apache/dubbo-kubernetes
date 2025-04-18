@@ -172,22 +172,22 @@ const columns = [
     key: 'startTime',
     sorter: true,
     width: 150
-  },
-  {
-    title: 'instanceDomain.registerTime',
-    dataIndex: 'registerTime',
-    key: 'registerTime',
-    sorter: true,
-    width: 150
-  },
-  {
-    title: 'instanceDomain.labels',
-    dataIndex: 'labels',
-    key: 'labels',
-    sorter: true,
-    fixed: 'left',
-    width: 800
   }
+  // {
+  //   title: 'instanceDomain.registerTime',
+  //   dataIndex: 'registerTime',
+  //   key: 'registerTime',
+  //   sorter: true,
+  //   width: 150
+  // },
+  // {
+  //   title: 'instanceDomain.labels',
+  //   dataIndex: 'labels',
+  //   key: 'labels',
+  //   sorter: true,
+  //   fixed: 'left',
+  //   width: 800
+  // }
 ]
 
 function instanceInfo(params: any) {
