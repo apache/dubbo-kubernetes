@@ -119,27 +119,27 @@ const tableColumns = [
   {
     title: '应用名',
     dataIndex: 'appName',
-    width: '20%',
-    customCell: (_, index) => {
-      if (index === 0) {
-        return { rowSpan: tableData.value.length }
-      } else {
-        return { rowSpan: 0 }
-      }
-    }
+    width: '20%'
+    // customCell: (_, index) => {
+    //   if (index === 0) {
+    //     return { rowSpan: tableData.value.length }
+    //   } else {
+    //     return { rowSpan: 0 }
+    //   }
+    // }
   },
-  {
-    title: '实例数',
-    dataIndex: 'instanceNum',
-    width: '15%',
-    customCell: (_, index) => {
-      if (index === 0) {
-        return { rowSpan: tableData.value.length }
-      } else {
-        return { rowSpan: 0 }
-      }
-    }
-  },
+  // {
+  //   title: '实例数',
+  //   dataIndex: 'instanceNum',
+  //   width: '15%',
+  //   // customCell: (_, index) => {
+  //   //   if (index === 0) {
+  //   //     return { rowSpan: tableData.value.length }
+  //   //   } else {
+  //   //     return { rowSpan: 0 }
+  //   //   }
+  //   // }
+  // },
   {
     title: '实例名',
     dataIndex: 'instanceName',
@@ -160,12 +160,12 @@ const tableColumns = [
     title: '重试次数',
     dataIndex: 'retryNum',
     width: '10%'
-  },
-  {
-    title: '标签',
-    dataIndex: 'label',
-    width: '15%'
   }
+  // {
+  //   title: '标签',
+  //   dataIndex: 'label',
+  //   width: '15%'
+  // }
 ]
 
 const tableData = ref([])

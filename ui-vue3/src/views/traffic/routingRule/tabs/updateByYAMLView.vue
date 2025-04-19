@@ -104,8 +104,9 @@ const conditionRuleDetail = reactive({
 
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
-    'force: true\n' +
+    'force: false\n' +
     'enabled: true\n' +
+    'runtime: false\n' +
     'key: shop-detail\n' +
     'tags:\n' +
     '  - name: gray\n' +

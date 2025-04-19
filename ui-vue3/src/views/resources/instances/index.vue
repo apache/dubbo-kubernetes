@@ -52,13 +52,13 @@
           </a-tag>
         </template>
 
-        <template v-if="column.dataIndex === 'registerTime'">
+        <!-- <template v-if="column.dataIndex === 'registerTime'">
           {{ formattedDate(text) }}
         </template>
 
         <template v-if="column.dataIndex === 'labels'">
           <a-tag v-for="(value, key) in text" :key="key"> {{ key }}:{{ value }}</a-tag>
-        </template>
+        </template> -->
       </template>
     </search-table>
   </div>
@@ -146,20 +146,20 @@ let columns = [
     dataIndex: 'startTime',
     sorter: (a: any, b: any) => sortString(a.startTime, b.startTime),
     width: 200
-  },
-  {
-    title: 'instanceDomain.registerTime',
-    key: 'registerTime',
-    dataIndex: 'registerTime',
-    sorter: (a: any, b: any) => sortString(a.registerTime, b.registerTime),
-    width: 200
-  },
-  {
-    title: 'instanceDomain.labels',
-    key: 'labels',
-    dataIndex: 'labels',
-    width: 800
   }
+  // {
+  //   title: 'instanceDomain.registerTime',
+  //   key: 'registerTime',
+  //   dataIndex: 'registerTime',
+  //   sorter: (a: any, b: any) => sortString(a.registerTime, b.registerTime),
+  //   width: 200
+  // },
+  // {
+  //   title: 'instanceDomain.labels',
+  //   key: 'labels',
+  //   dataIndex: 'labels',
+  //   width: 800
+  // }
 ]
 
 function instanceInfo(params: any) {
