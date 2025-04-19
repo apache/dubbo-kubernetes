@@ -232,7 +232,7 @@ func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...Depl
 
 func hasInitialized(path string) (bool, error) {
 	var err error
-	filename := filepath.Join(path, dubbo.DubboLogFile)
+	filename := filepath.Join(path, dubbo.LogFile)
 
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
@@ -319,7 +319,7 @@ func runDataDir(root string) error {
 }
 
 var contentiousFiles = []string{
-	dubbo.DubboLogFile,
+	dubbo.LogFile,
 	".gitignore",
 }
 

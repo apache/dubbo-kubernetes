@@ -118,8 +118,8 @@ func (hc hubConfig) imageClientOptions() ([]sdk.Option, error) {
 	return do, nil
 }
 
-func (dc deployConfig) deployClientOptions() ([]sdk.Option, error) {
-	i, err := dc.imageClientOptions()
+func (d deployConfig) deployClientOptions() ([]sdk.Option, error) {
+	i, err := d.imageClientOptions()
 	if err != nil {
 		return i, err
 	}
@@ -140,6 +140,10 @@ func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command
   dubboctl image hub -b
 `,
 		Args: func(cmd *cobra.Command, args []string) error {
+			if !iArgs.dockerfile && !iArgs.builder {
+				return fmt.Errorf("at least one of the -b or -f flags must be set")
+			}
+
 			if cmd.Flags().Changed("file") {
 				if len(args) != 1 {
 					return fmt.Errorf("you must provide exactly one argument when using the -f flag: the path to the Dockerfile")
@@ -183,24 +187,24 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 	if err := util.GetCreatePath(); err != nil {
 		return err
 	}
-	hcfg := newHubConfig(cmd)
-	fp, err := dubbo.NewDubboConfig(hcfg.Path)
+	hubCfg := newHubConfig(cmd)
+	filePath, err := dubbo.NewDubboConfig(hubCfg.Path)
 	if err != nil {
 		return err
 	}
 
-	hcfg, err = hcfg.hubPrompt(fp)
+	hubCfg, err = hubCfg.hubPrompt(filePath)
 	if err != nil {
 		return err
 	}
 
-	if !fp.Initialized() {
-		return util.NewErrNotInitialized(fp.Root)
+	if !filePath.Initialized() {
+		return util.NewErrNotInitialized(filePath.Root)
 	}
 
-	hcfg.checkHubConfig(fp)
+	hubCfg.checkHubConfig(filePath)
 
-	clientOptions, err := hcfg.imageClientOptions()
+	clientOptions, err := hubCfg.imageClientOptions()
 	if err != nil {
 		return err
 	}
@@ -208,18 +212,17 @@ func runHub(cmd *cobra.Command, args []string, clientFactory ClientFactory) erro
 	client, done := clientFactory(clientOptions...)
 	defer done()
 
-	if fp.Built() {
-		return nil
-	}
-	if fp, err = client.Build(cmd.Context(), fp); err != nil {
+	filePath.Built()
+
+	if filePath, err = client.Build(cmd.Context(), filePath); err != nil {
 		return err
 	}
 
-	if fp, err = client.Push(cmd.Context(), fp); err != nil {
+	if filePath, err = client.Push(cmd.Context(), filePath); err != nil {
 		return err
 	}
 
-	err = fp.WriteFile()
+	err = filePath.WriteFile()
 	if err != nil {
 		return err
 	}
@@ -248,16 +251,16 @@ func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 	return hc
 }
 
-func (dc deployConfig) checkDeployConfig(dc2 *dubbo.DubboConfig) {
-	dc.checkHubConfig(dc2)
-	if dc.Output != "" {
-		dc2.Deploy.Output = dc.Output
+func (d deployConfig) checkDeployConfig(dc *dubbo.DubboConfig) {
+	d.checkHubConfig(dc)
+	if d.Output != "" {
+		dc.Deploy.Output = d.Output
 	}
-	if dc.Namespace != "" {
-		dc2.Deploy.Namespace = dc.Namespace
+	if d.Namespace != "" {
+		dc.Deploy.Namespace = d.Namespace
 	}
-	if dc.Port != 0 {
-		dc2.Deploy.Port = dc.Port
+	if d.Port != 0 {
+		dc.Deploy.Port = d.Port
 	}
 }
 
@@ -265,43 +268,43 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 	if err := util.GetCreatePath(); err != nil {
 		return err
 	}
-	dcfg := newDeployConfig(cmd)
+	deployCfg := newDeployConfig(cmd)
 
-	fp, err := dubbo.NewDubboConfig(dcfg.Path)
+	filePath, err := dubbo.NewDubboConfig(deployCfg.Path)
 	if err != nil {
 		return err
 	}
 
-	dcfg, err = dcfg.deployPrompt(fp)
+	deployCfg, err = deployCfg.deployPrompt(filePath)
 	if err != nil {
 		return err
 	}
 
-	dcfg.checkDeployConfig(fp)
+	deployCfg.checkDeployConfig(filePath)
 
-	clientOptions, err := dcfg.deployClientOptions()
+	clientOptions, err := deployCfg.deployClientOptions()
 	if err != nil {
 		return err
 	}
 
 	client, done := clientFactory(clientOptions...)
 	defer done()
-	if fp, err = client.Deploy(cmd.Context(), fp); err != nil {
+	if filePath, err = client.Deploy(cmd.Context(), filePath); err != nil {
 		return err
 	}
 
-	if !dcfg.Destroy {
-		if err := apply(cmd, fp); err != nil {
+	if !deployCfg.Destroy {
+		if err := apply(cmd, filePath); err != nil {
 			return err
 		}
 	}
-	if dcfg.Destroy {
-		if err := remove(cmd, fp); err != nil {
+	if deployCfg.Destroy {
+		if err := remove(cmd, filePath); err != nil {
 			return err
 		}
 	}
 
-	err = fp.WriteFile()
+	err = filePath.WriteFile()
 	if err != nil {
 		return err
 	}
@@ -353,10 +356,10 @@ func (hc *hubConfig) hubPrompt(dc *dubbo.DubboConfig) (*hubConfig, error) {
 	return hc, err
 }
 
-func (dc *deployConfig) deployPrompt(dc2 *dubbo.DubboConfig) (*deployConfig, error) {
+func (d *deployConfig) deployPrompt(dc2 *dubbo.DubboConfig) (*deployConfig, error) {
 	var err error
 	if !util.InteractiveTerminal() {
-		return dc, nil
+		return d, nil
 	}
 	if dc2.Deploy.Namespace == "" {
 		qs := []*survey.Question{
@@ -368,19 +371,19 @@ func (dc *deployConfig) deployPrompt(dc2 *dubbo.DubboConfig) (*deployConfig, err
 				},
 			},
 		}
-		if err = survey.Ask(qs, dc); err != nil {
-			return dc, err
+		if err = survey.Ask(qs, d); err != nil {
+			return d, err
 		}
 	}
 
-	buildconfig, err := dc.hubConfig.hubPrompt(dc2)
+	buildconfig, err := d.hubConfig.hubPrompt(dc2)
 	if err != nil {
-		return dc, err
+		return d, err
 	}
 
-	dc.hubConfig = buildconfig
+	d.hubConfig = buildconfig
 
-	if dc2.Deploy.Port == 0 && dc.Port == 0 {
+	if dc2.Deploy.Port == 0 && d.Port == 0 {
 		qs := []*survey.Question{
 			{
 				Name:     "port",
@@ -390,10 +393,10 @@ func (dc *deployConfig) deployPrompt(dc2 *dubbo.DubboConfig) (*deployConfig, err
 				},
 			},
 		}
-		if err = survey.Ask(qs, dc); err != nil {
-			return dc, err
+		if err = survey.Ask(qs, d); err != nil {
+			return d, err
 		}
 	}
 
-	return dc, err
+	return d, err
 }
