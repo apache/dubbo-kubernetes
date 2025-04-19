@@ -130,7 +130,7 @@
           >{{ $t('flowControlDomain.actuatingRange') }}:
         </a-typography-title>
         <a-tag v-for="(scope, index) in item.match" :key="index" color="#2db7f5">
-          {{ scope.key }}
+          {{ scope.key }}: {{ Object.keys(scope.value)[0] }}={{ Object.values(scope.value)[0] }}
         </a-tag>
       </a-space>
     </a-card>
