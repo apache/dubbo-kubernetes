@@ -267,15 +267,15 @@ export const routes: Readonly<RouteRecordType[]> = [
               //     tab: true
               //   }
               // },
-              {
-                path: '/debug/:pathId/:group?/:version?',
-                name: 'debug',
-                component: () => import('../views/resources/services/tabs/debug.vue'),
-                meta: {
-                  tab: true,
-                  back: '/resources/services/list'
-                }
-              },
+              // {
+              //   path: '/debug/:pathId/:group?/:version?',
+              //   name: 'debug',
+              //   component: () => import('../views/resources/services/tabs/debug.vue'),
+              //   meta: {
+              //     tab: true,
+              //     back: '/resources/services/list'
+              //   }
+              // },
               {
                 path: '/monitor/:pathId/:group?/:version?',
                 name: 'monitor',

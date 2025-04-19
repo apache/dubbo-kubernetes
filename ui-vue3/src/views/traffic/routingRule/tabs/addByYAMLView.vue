@@ -97,7 +97,7 @@ const sliderSpan = ref(8)
 
 // Condition routing details
 const conditionRuleDetail = reactive({
-  configVersion: 'v3.0',
+  configVersion: '',
   scope: 'service',
   key: 'org.apache.dubbo.samples.UserService',
   enabled: true,
@@ -107,9 +107,10 @@ const conditionRuleDetail = reactive({
 })
 
 const YAMLValue = ref(
-  'configVersion: v3.0\n' +
+  'configVersion: \n' +
     'force: true\n' +
     'enabled: true\n' +
+    'runtime: false\n' +
     'key: shop-detail\n' +
     'tags:\n' +
     '  - name: gray\n' +

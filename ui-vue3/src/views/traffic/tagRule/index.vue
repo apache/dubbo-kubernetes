@@ -37,7 +37,7 @@
         <template v-if="column.dataIndex === 'createTime'">
           {{ formattedDate(text) }}
         </template>
-        <template v-if="column.dataIndex === 'enable'">
+        <template v-if="column.dataIndex === 'enabled'">
           {{ text ? $t('flowControlDomain.enabled') : $t('flowControlDomain.disabled') }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
@@ -94,9 +94,9 @@ let columns = [
   },
   {
     title: 'enable',
-    key: 'enable',
-    dataIndex: 'enable',
-    render: (text, record) => (record.enable ? '是' : '否'),
+    key: 'enabled',
+    dataIndex: 'enabled',
+    // render: (text, record) => (record.enable ? '是' : '否'),
     width: 120,
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },

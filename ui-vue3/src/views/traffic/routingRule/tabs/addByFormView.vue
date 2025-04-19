@@ -663,12 +663,12 @@ function copyIt(v: string) {
 
 // base info
 const baseInfo = reactive({
-  configVersion: 'v3.0',
+  configVersion: '',
   ruleGranularity: '',
   objectOfAction: '',
-  enable: false,
+  enable: true,
   faultTolerantProtection: false,
-  runtime: false,
+  runtime: true,
   priority: null,
   group: ''
 })
