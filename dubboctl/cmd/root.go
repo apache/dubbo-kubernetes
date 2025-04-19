@@ -108,7 +108,7 @@ func GetRootCmd(args []string) *cobra.Command {
 
 	installCmd := cluster.InstallCmd(ctx)
 	rootCmd.AddCommand(installCmd)
-	hideFlags(installCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
+	hideFlags(installCmd, ChartFlag)
 
 	uninstallCmd := cluster.UninstallCmd(ctx)
 	rootCmd.AddCommand(uninstallCmd)
@@ -118,27 +118,27 @@ func GetRootCmd(args []string) *cobra.Command {
 
 	manifestCmd := cluster.ManifestCmd(ctx)
 	rootCmd.AddCommand(manifestCmd)
-	hideFlags(manifestCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
+	hideFlags(manifestCmd, ChartFlag)
 
 	validateCmd := validate.NewValidateCommand(ctx)
 	rootCmd.AddCommand(validateCmd)
-	hideFlags(validateCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
+	hideFlags(validateCmd, ChartFlag)
 
 	versionCmd := version.NewVersionCommand(ctx)
 	rootCmd.AddCommand(versionCmd)
-	hideFlags(versionCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
+	hideFlags(versionCmd, ChartFlag)
 
 	createCmd := CreateCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(createCmd)
-	hideFlags(createCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
+	hideFlags(createCmd, ChartFlag)
 
 	repoCmd := RepoCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(repoCmd)
-	hideFlags(repoCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
+	hideFlags(repoCmd, ChartFlag)
 
 	imageCmd := ImageCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(imageCmd)
-	hideFlags(imageCmd, cli.NamespaceFlag, cli.DubboNamespaceFlag, ChartFlag)
+	hideFlags(imageCmd, ChartFlag)
 
 	return rootCmd
 

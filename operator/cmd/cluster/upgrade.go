@@ -37,13 +37,10 @@ func UpgradeCmd(ctx cli.Context) *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrade the Dubbo Control Plane",
+		Short: "Upgrade the Dubbo",
 		Long:  "The upgrade command can be used instead of the install command",
 		Example: `  # Apply a default dubboctl installation.
   dubboctl upgrade
-  
-  # Apply a config file.
-  dubboctl upgrade -f dop.yaml
   
   # Apply a default profile.
   dubboctl upgrade --profile=demo

@@ -132,7 +132,7 @@ func NewValidateCommand(ctx cli.Context) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Aliases: []string{"v"},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			dn := ctx.DubboNamespace()
+			dn := ctx.Namespace()
 			return validateFiles(&dn, files, cmd.OutOrStderr())
 		},
 	}
