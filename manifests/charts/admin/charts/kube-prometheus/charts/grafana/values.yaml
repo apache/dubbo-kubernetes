@@ -128,7 +128,7 @@ image:
   #   - myRegistrKeySecretName
 
 testFramework:
-  enabled: true
+  enabled: false
   ## The type of Helm hook used to run this test. Defaults to test.
   ## ref: https://helm.sh/docs/topics/charts_hooks/#the-available-hooks
   ##

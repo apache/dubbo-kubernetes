@@ -50,7 +50,7 @@ spec:
         {{- if contains "/" $nacos.image }}
         image: {{ $nacos.image }}
         {{- end }}
-        imagePullPolicy: {{ $nacos.imagePullPolicy }}
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8848
