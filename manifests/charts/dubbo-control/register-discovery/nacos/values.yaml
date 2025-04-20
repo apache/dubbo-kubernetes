@@ -30,7 +30,7 @@ _internal_default_values_not_set:
 
   storage:
     # Specifies the storage type (embedded, mysql, etc.).
-    type: "mysql"
+    type: ""
     # For MySQL storage, you need to change the "embedded" to "mysql" before you can use the db configuration.
     database:
       # Specifies the database host.

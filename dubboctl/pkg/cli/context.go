@@ -24,23 +24,21 @@ import (
 )
 
 type instance struct {
-	clients map[string]kube.CLIClient
+	cliClient map[string]kube.CLIClient
 	RootFlags
 }
 
 type Context interface {
 	CLIClient() (kube.CLIClient, error)
 	CLIClientWithRevision(rev string) (kube.CLIClient, error)
-	DubboNamespace() string
+	Namespace() string
 }
 
 func NewCLIContext(rootFlags *RootFlags) Context {
 	if rootFlags == nil {
 		rootFlags = &RootFlags{
-			kubeconfig:     pointer.Of[string](""),
-			Context:        pointer.Of[string](""),
-			namespace:      pointer.Of[string](""),
-			dubboNamespace: pointer.Of[string](""),
+			kubeconfig: pointer.Of[string](""),
+			Context:    pointer.Of[string](""),
 		}
 	}
 	return &instance{
@@ -53,20 +51,24 @@ func (i *instance) CLIClient() (kube.CLIClient, error) {
 }
 
 func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
-	if i.clients == nil {
-		i.clients = make(map[string]kube.CLIClient)
+	if i.cliClient == nil {
+		i.cliClient = make(map[string]kube.CLIClient)
 	}
 
-	if i.clients[rev] == nil {
+	if i.cliClient[rev] == nil {
 		impersonationConfig := rest.ImpersonationConfig{}
 		client, err := newKubeClientWithRevision(*i.kubeconfig, *i.Context, rev, impersonationConfig)
 		if err != nil {
 			return nil, err
 		}
-		i.clients[rev] = client
+		i.cliClient[rev] = client
 	}
 
-	return i.clients[rev], nil
+	return i.cliClient[rev], nil
+}
+
+func (i *instance) Namespace() string {
+	return "dubbo-system"
 }
 
 func newKubeClientWithRevision(kubeconfig, context, revision string, impersonationConfig rest.ImpersonationConfig) (kube.CLIClient, error) {

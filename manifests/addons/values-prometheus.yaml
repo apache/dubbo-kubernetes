@@ -15,31 +15,23 @@
 
 alertmanager:
   enabled: false
-
 prometheus-pushgateway:
   enabled: false
-
 kube-state-metrics:
   enabled: false
-
 prometheus-node-exporter:
   enabled: false
-
 server:
   persistentVolume:
     enabled: false
   service:
     servicePort: 9090
   readinessProbeInitialDelay: 0
-
   global:
     scrape_interval: 15s
-
   image:
     repository: prom/prometheus
-
   securityContext: null
-
 configmapReload:
   prometheus:
     image:

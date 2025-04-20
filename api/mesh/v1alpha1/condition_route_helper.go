@@ -110,6 +110,17 @@ func (x *ConditionRouteV3X1) RangeConditions(f func(r *ConditionRule) (isStop bo
 	}
 }
 
+func (x *ConditionRouteV3) RangeConditions(f func(condition string) (isStop bool)) {
+	if f == nil {
+		return
+	}
+	for _, condition := range x.Conditions {
+		if f(condition) {
+			break
+		}
+	}
+}
+
 func (x *ConditionRouteV3X1) RangeConditionsToRemove(f func(r *ConditionRule) (isRemove bool)) {
 	if f == nil {
 		return

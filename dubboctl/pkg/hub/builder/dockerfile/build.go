@@ -50,7 +50,6 @@ func (b Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) error {
 	if err != nil {
 		return err
 	}
-
 	defer resp.Body.Close()
 
 	termFd, isTerm := term.GetFdInfo(os.Stderr)

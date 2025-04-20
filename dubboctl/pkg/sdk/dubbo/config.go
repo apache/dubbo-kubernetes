@@ -33,10 +33,12 @@ import (
 )
 
 const (
-	DubboLogFile    = ".dubbo/dubbo.log"
-	Dockerfile      = "Dockerfile"
 	DataDir         = ".dubbo"
+	LogFile         = ".dubbo/dubbo.log"
+	Dockerfile      = "Dockerfile"
 	DefaultTemplate = "common"
+	builtLogFile    = "built.log"
+	built           = "built"
 )
 
 type DubboConfig struct {
@@ -85,7 +87,7 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 		return nil, fmt.Errorf("function path must be a directory")
 	}
 
-	filename := filepath.Join(path, DubboLogFile)
+	filename := filepath.Join(path, LogFile)
 	if _, err = os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
 			err = nil
@@ -111,7 +113,7 @@ func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig 
 			dc.Template = DefaultTemplate
 		}
 		if dc.Template == "" {
-			dc.Template = "initialzed"
+			dc.Template = "initialized"
 		}
 	}
 	if dc.Build.BuilderImages == nil {
@@ -121,7 +123,7 @@ func NewDubboConfigWithTemplate(dc *DubboConfig, initialized bool) *DubboConfig 
 }
 
 func (dc *DubboConfig) WriteFile() (err error) {
-	file := filepath.Join(dc.Root, DubboLogFile)
+	file := filepath.Join(dc.Root, LogFile)
 	var bytes []byte
 	if bytes, err = yaml.Marshal(dc); err != nil {
 		return
@@ -156,7 +158,7 @@ func (dc *DubboConfig) Validate() error {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("'%v' contains errors:", DubboLogFile))
+	b.WriteString(fmt.Sprintf("'%v' contains errors:", LogFile))
 
 	for _, ee := range errs {
 		if len(ee) > 0 {
@@ -194,7 +196,7 @@ func (dc *DubboConfig) Built() bool {
 }
 
 func (dc *DubboConfig) buildStamp() string {
-	path := filepath.Join(dc.Root, DataDir, "built")
+	path := filepath.Join(dc.Root, DataDir, built)
 	if _, err := os.Stat(path); err != nil {
 		return ""
 	}
@@ -226,11 +228,11 @@ func (dc *DubboConfig) Stamp(oo ...stampOption) (err error) {
 		return
 	}
 
-	if err = os.WriteFile(filepath.Join(dc.Root, DataDir, "built"), []byte(hash), os.ModePerm); err != nil {
-		return
+	if err = os.WriteFile(filepath.Join(dc.Root, DataDir, built), []byte(hash), os.ModePerm); err != nil {
+		return err
 	}
 
-	blt := "built.log"
+	blt := builtLogFile
 	if options.log {
 		blt = timestamp(blt)
 	}
@@ -274,7 +276,7 @@ func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
 		if info.IsDir() && (info.Name() == DataDir || info.Name() == ".git" || info.Name() == ".idea") {
 			return filepath.SkipDir
 		}
-		if info.Name() == DubboLogFile || info.Name() == Dockerfile || info.Name() == output {
+		if info.Name() == LogFile || info.Name() == Dockerfile || info.Name() == output {
 			return nil
 		}
 		fmt.Fprintf(h, "%v:%v:", path, info.ModTime().UnixNano())   // Write to the Hashed

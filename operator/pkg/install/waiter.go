@@ -35,10 +35,10 @@ import (
 	"time"
 )
 
-// deployment holds associated replicaSets for a deployment
+// deployment holds associated replicaSet for a deployment
 type deployment struct {
-	replicaSets *appsv1.ReplicaSet
-	deployment  *appsv1.Deployment
+	replicaSet *appsv1.ReplicaSet
+	deployment *appsv1.Deployment
 }
 
 // WaitForResources polls to get the current status of various objects that are not immediately ready
@@ -191,7 +191,7 @@ func namespacesReady(namespaces []corev1.Namespace) (bool, []string) {
 func deploymentsReady(cs kubernetes.Interface, deployments []deployment, info map[string]string) (bool, []string) {
 	var notReady []string
 	for _, v := range deployments {
-		if v.replicaSets.Status.ReadyReplicas >= *v.deployment.Spec.Replicas {
+		if v.replicaSet.Status.ReadyReplicas >= *v.deployment.Spec.Replicas {
 			// Ready
 			continue
 		}

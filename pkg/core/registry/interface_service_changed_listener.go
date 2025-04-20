@@ -64,9 +64,6 @@ func NewInterfaceServiceChangedNotifyListener(
 
 // Notify OnEvent on ServiceInstancesChangedEvent the service instances change event
 func (iscnl *InterfaceServiceChangedNotifyListener) Notify(event *registry.ServiceEvent) {
-	iscnl.ctx.mu.Lock()
-	defer iscnl.ctx.mu.Unlock()
-
 	switch event.Action {
 	case remoting.EventTypeAdd:
 		url := event.Service
