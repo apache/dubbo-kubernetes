@@ -51,7 +51,7 @@
                         required
                       >
                         <a-input
-                          v-model:value="baseInfo.configVersion"
+                          v-model:value="baseInfo.version"
                           style="width: 300px"
                           disabled
                         />
@@ -108,7 +108,7 @@
                   <a-flex justify="space-between">
                     <a-space align="center">
                       <div>路由【{{ routeItemIndex + 1 }}】</div>
-                      <div>
+                      <div style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         {{ routeItemDes(routeItemIndex) }}
                       </div>
                     </a-space>
@@ -672,7 +672,7 @@ function copyIt(v: string) {
 
 // base info
 const baseInfo = reactive({
-  configVersion: '',
+  version: '',
   ruleGranularity: '',
   objectOfAction: '',
   enable: true,
@@ -1398,7 +1398,7 @@ function mergeConditions() {
 const updateRoutingRule = async () => {
   const { ruleName } = route.params
   const {
-    configVersion,
+    version,
     ruleGranularity,
     objectOfAction,
     enable,
@@ -1406,7 +1406,7 @@ const updateRoutingRule = async () => {
     runtime
   } = baseInfo
   const data = {
-    configVersion,
+    configVersion: 'v3.0',
     scope: ruleGranularity,
     key: objectOfAction,
     enabled: enable,
@@ -1420,10 +1420,10 @@ const updateRoutingRule = async () => {
 
 const getVersionAndGroup = () => {
   const conditionName = route.params?.ruleName
-  console.log('lll', baseInfo)
+  // console.log('lll', baseInfo)
   if (conditionName && baseInfo.ruleGranularity === 'service') {
     const arr = conditionName?.split(':')
-    baseInfo.configVersion = arr[1]
+    baseInfo.version = arr[1]
     baseInfo.group = arr[2].split('.')[0]
   }
 }

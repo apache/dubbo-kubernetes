@@ -15,7 +15,7 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_resources_application_index">
+  <div class="instances-container">
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ text, record, index, column }">
         <template v-if="column.dataIndex === 'ip'">
@@ -213,17 +213,23 @@ watch(route, (a, b) => {
 })
 </script>
 <style lang="less" scoped>
-.search-table-container {
-  min-height: 60vh;
+.instances-container {
+  width: 100%;
+  height: 100%;
+  // background-color: #f5f5f5;
 
-  .app-link {
-    padding: 4px 10px 4px 4px;
-    border-radius: 4px;
-    color: v-bind('PRIMARY_COLOR');
+  .search-table-container {
+    min-height: 60vh;
 
-    &:hover {
-      cursor: pointer;
-      background: rgba(133, 131, 131, 0.13);
+    .app-link {
+      padding: 4px 10px 4px 4px;
+      border-radius: 4px;
+      color: v-bind('PRIMARY_COLOR');
+
+      &:hover {
+        cursor: pointer;
+        background: rgba(133, 131, 131, 0.13);
+      }
     }
   }
 }
