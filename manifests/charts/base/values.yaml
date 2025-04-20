@@ -20,9 +20,9 @@ _internal_default_values_not_set:
   ingress:
     class: ""
     hosts:
-      admin: admin.dubbo.domain
-      prometheus: prom.dubbo.domain
-      grafana: grafana.dubbo.domain
+      admin: admin.example.local
+      prometheus: prom.example.local
+      grafana: grafana.example.local
 
   csi:
     labelSelector:

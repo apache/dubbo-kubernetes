@@ -40,7 +40,7 @@ metadata:
   labels:
     app: ingress-controller
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ingress-controller
@@ -54,7 +54,7 @@ spec:
       containers:
       - name: dubbo-kubernetes-ingress-controller
         image: docker.io/mfordjody/dubbo-kubernetes-ingress-controller:dev
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         resources:
           limits:
             cpu: "100m"
@@ -72,7 +72,7 @@ spec:
 ---
 {{ $ingress := .Values.ingress }}
 {{- $ca := genCA "dubbo-kubernetes-ca" 365 }}
-{{- $cert := genSignedCert $ingress.hosts.admin nil (list $ingress.hosts.admin $ingress.hosts.prometheus $ingress.hosts.grafana) 365 $ca }}
+{{- $cert := genSignedCert "" nil (list "dubbo-kubernetes-user") 365 $ca }}
 apiVersion: v1
 kind: Secret
 metadata:
