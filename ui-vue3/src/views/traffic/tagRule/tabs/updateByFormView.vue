@@ -82,16 +82,19 @@
                 <template #title>
                   <a-space align="center">
                     <div>路由【{{ tagItemIndex + 1 }}】</div>
-                    <div
-                      style="
-                        max-width: 400px;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                      "
-                    >
-                      {{ generateDescription(tagItem, baseInfo.objectOfAction) }}
-                    </div>
+                    <a-tooltip>
+                      <template #title>{{ generateDescription(tagItem, baseInfo.objectOfAction) }}</template>
+                      <div
+                        style="
+                          max-width: 400px;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                          white-space: nowrap;
+                        "
+                      >
+                        {{ generateDescription(tagItem, baseInfo.objectOfAction) }}
+                      </div>
+                    </a-tooltip>
                   </a-space>
                 </template>
 

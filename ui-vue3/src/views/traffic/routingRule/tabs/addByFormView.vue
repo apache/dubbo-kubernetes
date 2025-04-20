@@ -99,16 +99,19 @@
                   <a-flex justify="space-between">
                     <a-space align="center">
                       <div>路由【{{ routeItemIndex + 1 }}】</div>
-                      <div
-                        style="
-                          max-width: 400px;
-                          overflow: hidden;
-                          text-overflow: ellipsis;
-                          white-space: nowrap;
-                        "
-                      >
-                        {{ routeItemDes(routeItemIndex) }}
-                      </div>
+                      <a-tooltip>
+                        <template #title>{{ routeItemDes(routeItemIndex) }}</template>
+                        <div
+                          style="
+                            max-width: 400px;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                          "
+                        >
+                          {{ routeItemDes(routeItemIndex) }}
+                        </div>
+                      </a-tooltip>
                     </a-space>
                     <Icon
                       @click="deleteRoute(routeItemIndex)"
