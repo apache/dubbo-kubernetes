@@ -79,7 +79,9 @@
                   <a-space align="center">
                     <div>路由【{{ tagItemIndex + 1 }}】</div>
                     <a-tooltip>
-                      <template #title>{{ generateDescription(tagItem, baseInfo.objectOfAction) }}</template>
+                      <template #title>{{
+                        generateDescription(tagItem, baseInfo.objectOfAction)
+                      }}</template>
                       <div
                         style="
                           max-width: 400px;
