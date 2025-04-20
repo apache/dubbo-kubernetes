@@ -23,7 +23,11 @@
           <a-space style="width: 100%" direction="vertical" size="middle">
             <a-row>
               <a-flex justify="end" style="width: 100%">
-                <a-button type="text" style="color: #0a90d5" @click="isDrawerOpened = !isDrawerOpened">
+                <a-button
+                  type="text"
+                  style="color: #0a90d5"
+                  @click="isDrawerOpened = !isDrawerOpened"
+                >
                   字段说明
                   <DoubleLeftOutlined v-if="!isDrawerOpened" />
                   <DoubleRightOutlined v-else />
@@ -34,29 +38,51 @@
                   <a-row style="width: 100%">
                     <a-col :span="12">
                       <a-form-item label="规则粒度" required>
-                        <a-select v-model:value="baseInfo.ruleGranularity" style="width: 120px"
-                          :options="ruleGranularityOptions"></a-select>
+                        <a-select
+                          v-model:value="baseInfo.ruleGranularity"
+                          style="width: 120px"
+                          :options="ruleGranularityOptions"
+                        ></a-select>
                       </a-form-item>
-                      <a-form-item v-if="baseInfo.ruleGranularity === 'service'" label="版本" required>
+                      <a-form-item
+                        v-if="baseInfo.ruleGranularity === 'service'"
+                        label="版本"
+                        required
+                      >
                         <a-input v-model:value="baseInfo.version" style="width: 300px" />
                       </a-form-item>
                       <a-form-item label="容错保护">
-                        <a-switch v-model:checked="baseInfo.faultTolerantProtection" checked-children="开"
-                          un-checked-children="关" />
+                        <a-switch
+                          v-model:checked="baseInfo.faultTolerantProtection"
+                          checked-children="开"
+                          un-checked-children="关"
+                        />
                       </a-form-item>
                       <a-form-item label="运行时生效">
-                        <a-switch v-model:checked="baseInfo.runtime" checked-children="开" un-checked-children="关" />
+                        <a-switch
+                          v-model:checked="baseInfo.runtime"
+                          checked-children="开"
+                          un-checked-children="关"
+                        />
                       </a-form-item>
                     </a-col>
                     <a-col :span="12">
                       <a-form-item label="作用对象" required>
                         <a-input v-model:value="baseInfo.objectOfAction" style="width: 300px" />
                       </a-form-item>
-                      <a-form-item v-if="baseInfo.ruleGranularity === 'service'" label="分组" required>
+                      <a-form-item
+                        v-if="baseInfo.ruleGranularity === 'service'"
+                        label="分组"
+                        required
+                      >
                         <a-input v-model:value="baseInfo.group" style="width: 300px" />
                       </a-form-item>
                       <a-form-item label="立即启用">
-                        <a-switch v-model:checked="baseInfo.enable" checked-children="开" un-checked-children="关" />
+                        <a-switch
+                          v-model:checked="baseInfo.enable"
+                          checked-children="开"
+                          un-checked-children="关"
+                        />
                       </a-form-item>
                       <a-form-item label="优先级">
                         <a-input-number v-model:value="baseInfo.priority" min="1" />
@@ -73,11 +99,22 @@
                   <a-flex justify="space-between">
                     <a-space align="center">
                       <div>路由【{{ routeItemIndex + 1 }}】</div>
-                      <div style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      <div
+                        style="
+                          max-width: 400px;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                          white-space: nowrap;
+                        "
+                      >
                         {{ routeItemDes(routeItemIndex) }}
                       </div>
                     </a-space>
-                    <Icon @click="deleteRoute(routeItemIndex)" class="action-icon" icon="tdesign:delete" />
+                    <Icon
+                      @click="deleteRoute(routeItemIndex)"
+                      class="action-icon"
+                      icon="tdesign:delete"
+                    />
                   </a-flex>
                 </template>
 
@@ -88,94 +125,178 @@
                         <a-space style="width: 100%" direction="vertical" size="small">
                           <a-flex align="center" justify="space-between">
                             <a-form-item label="匹配条件类型">
-                              <a-select v-model:value="routeItem.selectedMatchConditionTypes"
-                                :options="matchConditionTypeOptions" mode="multiple" style="min-width: 200px" />
+                              <a-select
+                                v-model:value="routeItem.selectedMatchConditionTypes"
+                                :options="matchConditionTypeOptions"
+                                mode="multiple"
+                                style="min-width: 200px"
+                              />
                             </a-form-item>
-                            <Icon @click="deleteRequestMatch(routeItemIndex)" class="action-icon"
-                              icon="tdesign:delete" />
+                            <Icon
+                              @click="deleteRequestMatch(routeItemIndex)"
+                              class="action-icon"
+                              icon="tdesign:delete"
+                            />
                           </a-flex>
-                          <template v-for="(conditionItem, conditionItemIndex) in routeItem.requestMatch">
+                          <template
+                            v-for="(conditionItem, conditionItemIndex) in routeItem.requestMatch"
+                          >
                             <!--                        host-->
-                            <a-space size="large" align="center" v-if="
-                              routeItem.selectedMatchConditionTypes.includes('host') &&
-                              conditionItem.type === 'host'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              size="large"
+                              align="center"
+                              v-if="
+                                routeItem.selectedMatchConditionTypes.includes('host') &&
+                                conditionItem.type === 'host'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type }}
                               </a-tag>
-                              <a-select v-model:value="conditionItem.condition" style="min-width: 120px"
-                                :options="conditionOptions" />
-                              <a-input v-model:value="conditionItem.value" placeholder="请求来源ip" />
+                              <a-select
+                                v-model:value="conditionItem.condition"
+                                style="min-width: 120px"
+                                :options="conditionOptions"
+                              />
+                              <a-input
+                                v-model:value="conditionItem.value"
+                                placeholder="请求来源ip"
+                              />
 
-                              <Icon @click="
-                                deleteMatchConditionTypeItem(conditionItem?.type, routeItemIndex)
-                                " class="action-icon" icon="tdesign:delete" />
+                              <Icon
+                                @click="
+                                  deleteMatchConditionTypeItem(conditionItem?.type, routeItemIndex)
+                                "
+                                class="action-icon"
+                                icon="tdesign:delete"
+                              />
                             </a-space>
                             <!--application-->
-                            <a-space size="large" align="center" v-if="
-                              routeItem.selectedMatchConditionTypes.includes('application') &&
-                              conditionItem.type === 'application'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              size="large"
+                              align="center"
+                              v-if="
+                                routeItem.selectedMatchConditionTypes.includes('application') &&
+                                conditionItem.type === 'application'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type }}
                               </a-tag>
-                              <a-select v-model:value="conditionItem.condition" style="min-width: 120px"
-                                :options="conditionOptions" />
-                              <a-input v-model:value="conditionItem.value" placeholder="请求来源应用名" />
+                              <a-select
+                                v-model:value="conditionItem.condition"
+                                style="min-width: 120px"
+                                :options="conditionOptions"
+                              />
+                              <a-input
+                                v-model:value="conditionItem.value"
+                                placeholder="请求来源应用名"
+                              />
 
-                              <Icon @click="
-                                deleteMatchConditionTypeItem(conditionItem?.type, routeItemIndex)
-                                " class="action-icon" icon="tdesign:delete" />
+                              <Icon
+                                @click="
+                                  deleteMatchConditionTypeItem(conditionItem?.type, routeItemIndex)
+                                "
+                                class="action-icon"
+                                icon="tdesign:delete"
+                              />
                             </a-space>
                             <!--                      method-->
-                            <a-space size="large" align="center" v-if="
-                              routeItem.selectedMatchConditionTypes.includes('method') &&
-                              conditionItem.type === 'method'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              size="large"
+                              align="center"
+                              v-if="
+                                routeItem.selectedMatchConditionTypes.includes('method') &&
+                                conditionItem.type === 'method'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type }}
                               </a-tag>
-                              <a-select v-model:value="conditionItem.condition" style="min-width: 120px"
-                                :options="conditionOptions" />
+                              <a-select
+                                v-model:value="conditionItem.condition"
+                                style="min-width: 120px"
+                                :options="conditionOptions"
+                              />
                               <a-input v-model:value="conditionItem.value" placeholder="方法值" />
 
-                              <Icon @click="
-                                deleteMatchConditionTypeItem(conditionItem?.type, routeItemIndex)
-                                " class="action-icon" icon="tdesign:delete" />
+                              <Icon
+                                @click="
+                                  deleteMatchConditionTypeItem(conditionItem?.type, routeItemIndex)
+                                "
+                                class="action-icon"
+                                icon="tdesign:delete"
+                              />
                             </a-space>
                             <!--                      arguments-->
-                            <a-space style="width: 100%" size="large" align="start" v-if="
-                              routeItem.selectedMatchConditionTypes.includes('arguments') &&
-                              conditionItem.type === 'arguments'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              style="width: 100%"
+                              size="large"
+                              align="start"
+                              v-if="
+                                routeItem.selectedMatchConditionTypes.includes('arguments') &&
+                                conditionItem.type === 'arguments'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type }}
                               </a-tag>
                               <a-space direction="vertical">
-                                <a-button type="primary" @click="addArgumentsItem(routeItemIndex, conditionItemIndex)">
+                                <a-button
+                                  type="primary"
+                                  @click="addArgumentsItem(routeItemIndex, conditionItemIndex)"
+                                >
                                   添加argument
                                 </a-button>
-                                <a-table :pagination="false" :columns="argumentsColumns"
-                                  :data-source="routeItem.requestMatch[conditionItemIndex].list">
-                                  <template #bodyCell="{ column, record, text, index: argumentIndex }">
+                                <a-table
+                                  :pagination="false"
+                                  :columns="argumentsColumns"
+                                  :data-source="routeItem.requestMatch[conditionItemIndex].list"
+                                >
+                                  <template
+                                    #bodyCell="{ column, record, text, index: argumentIndex }"
+                                  >
                                     <template v-if="column.key === 'index'">
                                       <a-input v-model:value="record.index" placeholder="index" />
                                     </template>
                                     <template v-else-if="column.key === 'condition'">
-                                      <a-select v-model:value="record.condition" :options="conditionOptions" />
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
+                                      />
                                     </template>
                                     <template v-else-if="column.key === 'value'">
                                       <a-input v-model:value="record.value" placeholder="value" />
                                     </template>
                                     <template v-else-if="column.key === 'operation'">
                                       <a-space align="center">
-                                        <Icon @click="
-                                          deleteArgumentsItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            argumentIndex
-                                          )
-                                          " icon="tdesign:remove" class="action-icon" />
+                                        <Icon
+                                          @click="
+                                            deleteArgumentsItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              argumentIndex
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
                                         <!--                                      <Icon-->
                                         <!--                                        class="action-icon"-->
                                         <!--                                        @click="-->
@@ -190,39 +311,62 @@
                               </a-space>
                             </a-space>
                             <!--                      attachments-->
-                            <a-space style="width: 100%" size="large" align="start" v-if="
-                              routeItem.selectedMatchConditionTypes.includes('attachments') &&
-                              conditionItem.type === 'attachments'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              style="width: 100%"
+                              size="large"
+                              align="start"
+                              v-if="
+                                routeItem.selectedMatchConditionTypes.includes('attachments') &&
+                                conditionItem.type === 'attachments'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type }}
                               </a-tag>
                               <a-space direction="vertical">
-                                <a-button type="primary"
-                                  @click="addAttachmentsItem(routeItemIndex, conditionItemIndex)">
+                                <a-button
+                                  type="primary"
+                                  @click="addAttachmentsItem(routeItemIndex, conditionItemIndex)"
+                                >
                                   添加attachment
                                 </a-button>
-                                <a-table :pagination="false" :columns="attachmentsColumns"
-                                  :data-source="routeItem.requestMatch[conditionItemIndex].list">
-                                  <template #bodyCell="{ column, record, text, index: attachmentsIndex }">
+                                <a-table
+                                  :pagination="false"
+                                  :columns="attachmentsColumns"
+                                  :data-source="routeItem.requestMatch[conditionItemIndex].list"
+                                >
+                                  <template
+                                    #bodyCell="{ column, record, text, index: attachmentsIndex }"
+                                  >
                                     <template v-if="column.key === 'myKey'">
                                       <a-input v-model:value="record.myKey" placeholder="key" />
                                     </template>
                                     <template v-else-if="column.key === 'condition'">
-                                      <a-select v-model:value="record.condition" :options="conditionOptions" />
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
+                                      />
                                     </template>
                                     <template v-else-if="column.key === 'value'">
                                       <a-input v-model:value="record.value" placeholder="value" />
                                     </template>
                                     <template v-else-if="column.key === 'operation'">
                                       <a-space align="center">
-                                        <Icon @click="
-                                          deleteAttachmentsItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            attachmentsIndex
-                                          )
-                                          " icon="tdesign:remove" class="action-icon" />
+                                        <Icon
+                                          @click="
+                                            deleteAttachmentsItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              attachmentsIndex
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
                                         <!--                                        <Icon-->
                                         <!--                                          class="action-icon"-->
                                         <!--                                          @click="-->
@@ -237,38 +381,60 @@
                               </a-space>
                             </a-space>
                             <!--                      other-->
-                            <a-space style="width: 100%" size="large" align="start" v-if="
-                              routeItem.selectedMatchConditionTypes.includes('other') &&
-                              conditionItem.type === 'other'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              style="width: 100%"
+                              size="large"
+                              align="start"
+                              v-if="
+                                routeItem.selectedMatchConditionTypes.includes('other') &&
+                                conditionItem.type === 'other'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type == 'other' ? '其他' : conditionItem?.type }}
                               </a-tag>
                               <a-space direction="vertical">
-                                <a-button type="primary" @click="addOtherItem(routeItemIndex, conditionItemIndex)">
+                                <a-button
+                                  type="primary"
+                                  @click="addOtherItem(routeItemIndex, conditionItemIndex)"
+                                >
                                   添加other
                                 </a-button>
-                                <a-table :pagination="false" :columns="otherColumns"
-                                  :data-source="routeItem.requestMatch[conditionItemIndex].list">
+                                <a-table
+                                  :pagination="false"
+                                  :columns="otherColumns"
+                                  :data-source="routeItem.requestMatch[conditionItemIndex].list"
+                                >
                                   <template #bodyCell="{ column, record, text }">
                                     <template v-if="column.key === 'myKey'">
                                       <a-input v-model:value="record.myKey" placeholder="key" />
                                     </template>
                                     <template v-else-if="column.key === 'condition'">
-                                      <a-select v-model:value="record.condition" :options="conditionOptions" />
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
+                                      />
                                     </template>
                                     <template v-else-if="column.key === 'value'">
                                       <a-input v-model:value="record.value" placeholder="value" />
                                     </template>
                                     <template v-else-if="column.key === 'operation'">
                                       <a-space align="center">
-                                        <Icon @click="
-                                          deleteOtherItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            record.index
-                                          )
-                                          " icon="tdesign:remove" class="action-icon" />
+                                        <Icon
+                                          @click="
+                                            deleteOtherItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              record.index
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
                                         <!--                                      <Icon-->
                                         <!--                                        @click="addOtherItem(routeItemIndex, conditionItemIndex)"-->
                                         <!--                                        icon="tdesign:add"-->
@@ -283,7 +449,12 @@
                           </template>
                         </a-space>
                       </a-card>
-                      <a-button @click="addRequestMatch(routeItemIndex)" v-else type="dashed" size="large">
+                      <a-button
+                        @click="addRequestMatch(routeItemIndex)"
+                        v-else
+                        type="dashed"
+                        size="large"
+                      >
                         <template #icon>
                           <Icon icon="tdesign:add" />
                         </template>
@@ -295,67 +466,113 @@
                         <a-space style="width: 100%" direction="vertical" size="small">
                           <a-flex>
                             <a-form-item label="匹配条件类型">
-                              <a-select v-model:value="routeItem.selectedRouteDistributeMatchTypes"
-                                :options="routeDistributionTypeOptions" mode="multiple" style="min-width: 200px" />
+                              <a-select
+                                v-model:value="routeItem.selectedRouteDistributeMatchTypes"
+                                :options="routeDistributionTypeOptions"
+                                mode="multiple"
+                                style="min-width: 200px"
+                              />
                             </a-form-item>
                           </a-flex>
-                          <template v-for="(conditionItem, conditionItemIndex) in routeItem.routeDistribute"
-                            :key="conditionItemIndex">
+                          <template
+                            v-for="(conditionItem, conditionItemIndex) in routeItem.routeDistribute"
+                            :key="conditionItemIndex"
+                          >
                             <!--                        host-->
-                            <a-space size="large" align="center" v-if="
-                              routeItem.selectedRouteDistributeMatchTypes.includes('host') &&
-                              conditionItem.type === 'host'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              size="large"
+                              align="center"
+                              v-if="
+                                routeItem.selectedRouteDistributeMatchTypes.includes('host') &&
+                                conditionItem.type === 'host'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type }}
                               </a-tag>
-                              <a-select v-model:value="conditionItem.condition" style="min-width: 120px"
-                                :options="conditionOptions" />
-                              <a-input v-model:value="conditionItem.value" placeholder="请求来源ip" />
+                              <a-select
+                                v-model:value="conditionItem.condition"
+                                style="min-width: 120px"
+                                :options="conditionOptions"
+                              />
+                              <a-input
+                                v-model:value="conditionItem.value"
+                                placeholder="请求来源ip"
+                              />
 
-                              <Icon @click="
-                                deleteRouteDistributeMatchTypeItem(
-                                  conditionItem?.type,
-                                  routeItemIndex
-                                )
-                                " class="action-icon" icon="tdesign:delete" />
+                              <Icon
+                                @click="
+                                  deleteRouteDistributeMatchTypeItem(
+                                    conditionItem?.type,
+                                    routeItemIndex
+                                  )
+                                "
+                                class="action-icon"
+                                icon="tdesign:delete"
+                              />
                             </a-space>
 
                             <!--                      other-->
-                            <a-space style="width: 100%" size="large" align="start" v-if="
-                              routeItem.selectedRouteDistributeMatchTypes.includes('other') &&
-                              conditionItem.type === 'other'
-                            ">
-                              <a-tag class="match-condition-type-label" :bordered="false" color="processing">
+                            <a-space
+                              style="width: 100%"
+                              size="large"
+                              align="start"
+                              v-if="
+                                routeItem.selectedRouteDistributeMatchTypes.includes('other') &&
+                                conditionItem.type === 'other'
+                              "
+                            >
+                              <a-tag
+                                class="match-condition-type-label"
+                                :bordered="false"
+                                color="processing"
+                              >
                                 {{ conditionItem?.type == 'other' ? '其他' : conditionItem?.type }}
                               </a-tag>
                               <a-space direction="vertical">
-                                <a-button type="primary" @click="
-                                  addRouteDistributeOtherItem(routeItemIndex, conditionItemIndex)
-                                  ">
+                                <a-button
+                                  type="primary"
+                                  @click="
+                                    addRouteDistributeOtherItem(routeItemIndex, conditionItemIndex)
+                                  "
+                                >
                                   添加其他
                                 </a-button>
-                                <a-table :pagination="false" :columns="otherColumns"
-                                  :data-source="routeItem.routeDistribute[conditionItemIndex].list">
+                                <a-table
+                                  :pagination="false"
+                                  :columns="otherColumns"
+                                  :data-source="routeItem.routeDistribute[conditionItemIndex].list"
+                                >
                                   <template #bodyCell="{ column, record, text, index: otherIndex }">
                                     <template v-if="column.key === 'myKey'">
                                       <a-input v-model:value="record.myKey" placeholder="key" />
                                     </template>
                                     <template v-else-if="column.key === 'condition'">
-                                      <a-select v-model:value="record.condition" :options="conditionOptions" />
+                                      <a-select
+                                        v-model:value="record.condition"
+                                        :options="conditionOptions"
+                                      />
                                     </template>
                                     <template v-else-if="column.key === 'value'">
                                       <a-input v-model:value="record.value" placeholder="value" />
                                     </template>
                                     <template v-else-if="column.key === 'operation'">
                                       <a-space align="center">
-                                        <Icon @click="
-                                          deleteRouteDistributeOtherItem(
-                                            routeItemIndex,
-                                            conditionItemIndex,
-                                            otherIndex
-                                          )
-                                          " icon="tdesign:remove" class="action-icon" />
+                                        <Icon
+                                          @click="
+                                            deleteRouteDistributeOtherItem(
+                                              routeItemIndex,
+                                              conditionItemIndex,
+                                              otherIndex
+                                            )
+                                          "
+                                          icon="tdesign:remove"
+                                          class="action-icon"
+                                        />
                                         <!--                                     <Icon-->
                                         <!--                                       @click="-->
                                         <!--                                          addRouteDistributeOtherItem(-->
@@ -817,105 +1034,148 @@ const deleteRouteDistributeOtherItem = (
 }
 
 function routeItemDes(routeIndex: number): string {
-  const routeItem = routeList.value[routeIndex];
-  const { ruleGranularity, objectOfAction } = baseInfo;
+  const routeItem = routeList.value[routeIndex]
+  const { ruleGranularity, objectOfAction } = baseInfo
 
-  const typeText = ruleGranularity === 'service' ? '服务' : '应用';
-  let baseDescription = `对于${typeText}【${objectOfAction || '未指定'}】`;
+  const typeText = ruleGranularity === 'service' ? '服务' : '应用'
+  let baseDescription = `对于${typeText}【${objectOfAction || '未指定'}】`
 
   // 构建匹配条件描述 (when)
-  let whenConditions: string[] = [];
-  routeItem.selectedMatchConditionTypes?.forEach(type => {
-    const matchItem = routeItem.requestMatch?.find(item => item.type === type);
-    if (!matchItem) return;
+  let whenConditions: string[] = []
+  routeItem.selectedMatchConditionTypes?.forEach((type) => {
+    const matchItem = routeItem.requestMatch?.find((item) => item.type === type)
+    if (!matchItem) return
 
-    let conditionStr = '';
-    const conditionSymbol = matchItem.condition === '=' ? '等于' : (matchItem.condition === '!=' ? '不等于' : matchItem.condition || '');
-    const valueStr = matchItem.value || '未指定';
+    let conditionStr = ''
+    const conditionSymbol =
+      matchItem.condition === '='
+        ? '等于'
+        : matchItem.condition === '!='
+          ? '不等于'
+          : matchItem.condition || ''
+    const valueStr = matchItem.value || '未指定'
 
     switch (type) {
       case 'host':
-        conditionStr = `请求来源主机 ${conditionSymbol} ${valueStr}`;
-        break;
+        conditionStr = `请求来源主机 ${conditionSymbol} ${valueStr}`
+        break
       case 'application':
-        conditionStr = `请求来源应用 ${conditionSymbol} ${valueStr}`;
-        break;
+        conditionStr = `请求来源应用 ${conditionSymbol} ${valueStr}`
+        break
       case 'method':
-        conditionStr = `请求方法 ${conditionSymbol} ${valueStr}`;
-        break;
+        conditionStr = `请求方法 ${conditionSymbol} ${valueStr}`
+        break
       case 'arguments':
-        const argConditions = matchItem.list?.map(arg => {
-          const argConditionSymbol = arg.condition === '=' ? '等于' : (arg.condition === '!=' ? '不等于' : arg.condition || '');
-          const argValueStr = arg.value !== undefined && arg.value !== '' ? arg.value : '未指定';
-          return `参数[${arg.index}] ${argConditionSymbol} ${argValueStr}`;
-        }).filter(Boolean);
-        if (argConditions?.length > 0) conditionStr = argConditions.join(' 且 ');
-        break;
+        const argConditions = matchItem.list
+          ?.map((arg) => {
+            const argConditionSymbol =
+              arg.condition === '='
+                ? '等于'
+                : arg.condition === '!='
+                  ? '不等于'
+                  : arg.condition || ''
+            const argValueStr = arg.value !== undefined && arg.value !== '' ? arg.value : '未指定'
+            return `参数[${arg.index}] ${argConditionSymbol} ${argValueStr}`
+          })
+          .filter(Boolean)
+        if (argConditions?.length > 0) conditionStr = argConditions.join(' 且 ')
+        break
       case 'attachments':
-        const attachConditions = matchItem.list?.map(attach => {
-          const attachConditionSymbol = attach.condition === '=' ? '等于' : (attach.condition === '!=' ? '不等于' : attach.condition || '');
-          const attachValueStr = attach.value !== undefined && attach.value !== '' ? attach.value : '未指定';
-          return `附件[${attach.myKey || '未指定'}] ${attachConditionSymbol} ${attachValueStr}`;
-        }).filter(Boolean);
-        if (attachConditions?.length > 0) conditionStr = attachConditions.join(' 且 ');
-        break;
+        const attachConditions = matchItem.list
+          ?.map((attach) => {
+            const attachConditionSymbol =
+              attach.condition === '='
+                ? '等于'
+                : attach.condition === '!='
+                  ? '不等于'
+                  : attach.condition || ''
+            const attachValueStr =
+              attach.value !== undefined && attach.value !== '' ? attach.value : '未指定'
+            return `附件[${attach.myKey || '未指定'}] ${attachConditionSymbol} ${attachValueStr}`
+          })
+          .filter(Boolean)
+        if (attachConditions?.length > 0) conditionStr = attachConditions.join(' 且 ')
+        break
       case 'other':
-        const otherConditions = matchItem.list?.map(other => {
-          const otherConditionSymbol = other.condition === '=' ? '等于' : (other.condition === '!=' ? '不等于' : other.condition || '');
-          const otherValueStr = other.value !== undefined && other.value !== '' ? other.value : '未指定';
-          return `自定义匹配[${other.myKey || '未指定'}] ${otherConditionSymbol} ${otherValueStr}`;
-        }).filter(Boolean);
-        if (otherConditions?.length > 0) conditionStr = otherConditions.join(' 且 ');
-        break;
+        const otherConditions = matchItem.list
+          ?.map((other) => {
+            const otherConditionSymbol =
+              other.condition === '='
+                ? '等于'
+                : other.condition === '!='
+                  ? '不等于'
+                  : other.condition || ''
+            const otherValueStr =
+              other.value !== undefined && other.value !== '' ? other.value : '未指定'
+            return `自定义匹配[${other.myKey || '未指定'}] ${otherConditionSymbol} ${otherValueStr}`
+          })
+          .filter(Boolean)
+        if (otherConditions?.length > 0) conditionStr = otherConditions.join(' 且 ')
+        break
     }
     if (conditionStr) {
       // Check for empty mandatory fields
       if ((type === 'host' || type === 'application' || type === 'method') && !matchItem.value) {
-        whenConditions.push(`${type === 'host' ? '请求来源主机' : (type === 'application' ? '请求来源应用' : '请求方法')} 未填写`);
+        whenConditions.push(
+          `${type === 'host' ? '请求来源主机' : type === 'application' ? '请求来源应用' : '请求方法'} 未填写`
+        )
       } else {
-        whenConditions.push(conditionStr);
+        whenConditions.push(conditionStr)
       }
     }
-  });
+  })
 
-  const whenConditionStr = whenConditions.length > 0 ? whenConditions.join(' 且 ') : '任意请求';
+  const whenConditionStr = whenConditions.length > 0 ? whenConditions.join(' 且 ') : '任意请求'
 
   // 构建转发条件描述 (then)
-  let thenConditions: string[] = [];
-  routeItem.selectedRouteDistributeMatchTypes?.forEach(type => {
-    const distributeItem = routeItem.routeDistribute?.find(item => item.type === type);
-    if (!distributeItem) return;
+  let thenConditions: string[] = []
+  routeItem.selectedRouteDistributeMatchTypes?.forEach((type) => {
+    const distributeItem = routeItem.routeDistribute?.find((item) => item.type === type)
+    if (!distributeItem) return
 
-    let conditionStr = '';
-    const conditionSymbol = distributeItem.condition === '=' ? '等于' : (distributeItem.condition === '!=' ? '不等于' : distributeItem.condition || '');
-    const valueStr = distributeItem.value || '未指定';
+    let conditionStr = ''
+    const conditionSymbol =
+      distributeItem.condition === '='
+        ? '等于'
+        : distributeItem.condition === '!='
+          ? '不等于'
+          : distributeItem.condition || ''
+    const valueStr = distributeItem.value || '未指定'
 
     switch (type) {
       case 'host':
-        conditionStr = `目标主机 ${conditionSymbol} ${valueStr}`;
-        break;
+        conditionStr = `目标主机 ${conditionSymbol} ${valueStr}`
+        break
       case 'other':
-        const otherConditions = distributeItem.list?.map(other => {
-          const otherConditionSymbol = other.condition === '=' ? '等于' : (other.condition === '!=' ? '不等于' : other.condition || '');
-          const otherValueStr = other.value !== undefined && other.value !== '' ? other.value : '未指定';
-          return `目标标签[${other.myKey || '未指定'}] ${otherConditionSymbol} ${otherValueStr}`;
-        }).filter(Boolean);
-        if (otherConditions?.length > 0) conditionStr = otherConditions.join(' 且 ');
-        break;
+        const otherConditions = distributeItem.list
+          ?.map((other) => {
+            const otherConditionSymbol =
+              other.condition === '='
+                ? '等于'
+                : other.condition === '!='
+                  ? '不等于'
+                  : other.condition || ''
+            const otherValueStr =
+              other.value !== undefined && other.value !== '' ? other.value : '未指定'
+            return `目标标签[${other.myKey || '未指定'}] ${otherConditionSymbol} ${otherValueStr}`
+          })
+          .filter(Boolean)
+        if (otherConditions?.length > 0) conditionStr = otherConditions.join(' 且 ')
+        break
     }
     if (conditionStr) {
       if (type === 'host' && !distributeItem.value) {
-        thenConditions.push(`目标主机 未填写`);
+        thenConditions.push(`目标主机 未填写`)
       } else {
-        thenConditions.push(conditionStr);
+        thenConditions.push(conditionStr)
       }
     }
-  });
+  })
 
-  const thenConditionStr = thenConditions.length > 0 ? `满足 【${thenConditions.join(' 且 ')}】` : '默认路由规则';
+  const thenConditionStr =
+    thenConditions.length > 0 ? `满足 【${thenConditions.join(' 且 ')}】` : '默认路由规则'
 
-
-  return `${baseDescription}，将满足 【${whenConditionStr}】 条件的请求，转发到 ${thenConditionStr} 的实例。`;
+  return `${baseDescription}，将满足 【${whenConditionStr}】 条件的请求，转发到 ${thenConditionStr} 的实例。`
 }
 
 function parseConditionMatchStringToArray(matchStr: string, routeItemIndex: number) {

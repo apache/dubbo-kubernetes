@@ -78,7 +78,14 @@
                 <template #title>
                   <a-space align="center">
                     <div>路由【{{ tagItemIndex + 1 }}】</div>
-                    <div style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div
+                      style="
+                        max-width: 400px;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                      "
+                    >
                       {{ generateDescription(tagItem, baseInfo.objectOfAction) }}
                     </div>
                   </a-space>
@@ -241,75 +248,72 @@ function copyIt(v: string) {
 }
 
 const generateDescription = (tagItem: any, serviceName: string): string => {
-  let description = `对于服务 ${serviceName || '未指定'}，将满足 `;
-  const conditions: string[] = [];
+  let description = `对于服务 ${serviceName || '未指定'}，将满足 `
+  const conditions: string[] = []
 
   if (tagItem.scope?.type === 'labels' && tagItem.scope.labels?.length > 0) {
     tagItem.scope.labels.forEach((label: any) => {
-      let keyDesc = '';
+      let keyDesc = ''
       if (label.myKey === 'method') {
-        keyDesc = '请求方法';
+        keyDesc = '请求方法'
       } else if (label.myKey?.startsWith('args[')) {
-        const index = label.myKey.match(/\\[(\\d+)\\]/)?.[1];
+        const index = label.myKey.match(/\\[(\\d+)\\]/)?.[1]
         if (index !== undefined) {
-          keyDesc = `第 ${parseInt(index) + 1} 个参数`;
+          keyDesc = `第 ${parseInt(index) + 1} 个参数`
         } else {
-          keyDesc = `标签 ${label.myKey || '未指定'}`;
+          keyDesc = `标签 ${label.myKey || '未指定'}`
         }
-      }
-      else {
-         keyDesc = `标签 ${label.myKey || '未指定'}`;
+      } else {
+        keyDesc = `标签 ${label.myKey || '未指定'}`
       }
 
-
-      let conditionDesc = '';
-      const value = label.value || '未指定';
+      let conditionDesc = ''
+      const value = label.value || '未指定'
       switch (label.condition) {
         case 'exact':
-          conditionDesc = `等于 ${value}`;
-          break;
+          conditionDesc = `等于 ${value}`
+          break
         case 'regex':
-          conditionDesc = `匹配正则 ${value}`;
-          break;
+          conditionDesc = `匹配正则 ${value}`
+          break
         case 'prefix':
-          conditionDesc = `前缀为 ${value}`;
-          break;
+          conditionDesc = `前缀为 ${value}`
+          break
         case 'noempty':
-          conditionDesc = `不为空`;
-          break;
+          conditionDesc = `不为空`
+          break
         case 'empty':
-          conditionDesc = `为空`;
-          break;
+          conditionDesc = `为空`
+          break
         case 'wildcard':
-            conditionDesc = `匹配通配符 ${value}`
-            break;
+          conditionDesc = `匹配通配符 ${value}`
+          break
         case '!=': // Although usually for addresses, include for flexibility
-            conditionDesc = `不等于 ${value}`;
-            break;
+          conditionDesc = `不等于 ${value}`
+          break
         default:
-          conditionDesc = `${label.condition || '未知关系'} ${value}`;
+          conditionDesc = `${label.condition || '未知关系'} ${value}`
       }
-       if (label.condition !== 'empty' && label.condition !== 'noempty' && !label.value){
-           conditions.push(`${keyDesc} 未填写`)
-       } else {
-          conditions.push(`${keyDesc} ${conditionDesc}`);
-       }
-
-    });
+      if (label.condition !== 'empty' && label.condition !== 'noempty' && !label.value) {
+        conditions.push(`${keyDesc} 未填写`)
+      } else {
+        conditions.push(`${keyDesc} ${conditionDesc}`)
+      }
+    })
   } else if (tagItem.scope?.type === 'addresses' && tagItem.scope.addresses?.addressesStr) {
-      const addrCondition = tagItem.scope.addresses.condition === '=' ? '等于' : '不等于';
-      conditions.push(`地址 ${addrCondition} [${tagItem.scope.addresses.addressesStr}]`)
+    const addrCondition = tagItem.scope.addresses.condition === '=' ? '等于' : '不等于'
+    conditions.push(`地址 ${addrCondition} [${tagItem.scope.addresses.addressesStr}]`)
   }
 
   if (conditions.length === 0) {
-    description += '任意请求';
+    description += '任意请求'
   } else {
-    description += conditions.join(' 且 ');
+    description += conditions.join(' 且 ')
   }
 
-  description += ` 的请求，导向带有标签 ${tagItem.tagName || '未指定'} 的实例`;
-  return description;
-};
+  description += ` 的请求，导向带有标签 ${tagItem.tagName || '未指定'} 的实例`
+  return description
+}
 
 // base info
 const baseInfo = reactive({
