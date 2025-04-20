@@ -78,7 +78,7 @@ const router = useRouter()
 
 let __null = PRIMARY_COLOR
 const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
-TAB_STATE.dynamicConfigForm.data = null
+TAB_STATE.dynamicConfigForm = reactive({})
 let columns = [
   {
     title: 'ruleName',
