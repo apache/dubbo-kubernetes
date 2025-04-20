@@ -35,7 +35,7 @@
         <template v-if="column.dataIndex === 'ruleGranularity'">
           {{ text ? '服务' : '应用' }}
         </template>
-        <template v-if="column.dataIndex === 'enable'">
+        <template v-if="column.dataIndex === 'enabled'">
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
+import { inject, onMounted, provide, reactive } from 'vue'
 import { delConfiguratorDetail, searchDynamicConfig } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -77,6 +77,8 @@ import { Icon } from '@iconify/vue'
 const router = useRouter()
 
 let __null = PRIMARY_COLOR
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
+TAB_STATE.dynamicConfigForm.data = null
 let columns = [
   {
     title: 'ruleName',
@@ -102,10 +104,10 @@ let columns = [
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
   {
-    title: 'enable',
-    key: 'enable',
-    dataIndex: 'enable',
-    render: (text, record) => (record.enable ? '是' : '否'),
+    title: 'enabled',
+    key: 'enabled',
+    dataIndex: 'enabled',
+    render: (text, record) => (record.enabled ? '是' : '否'),
     width: 120,
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
@@ -133,7 +135,7 @@ const searchDomain = reactive(
   )
 )
 const addDynamicConfig = () => {
-  router.push(`/traffic/dynamicConfig/addbyformview`)
+  router.push(`/traffic/dynamicConfig/formview/_tmp/1`)
 }
 
 onMounted(async () => {

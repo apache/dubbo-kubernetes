@@ -27,14 +27,20 @@ const words: I18nType = {
     formView: '表单视图'
   },
   dynamicConfigDomain: {
+    addConfig: '增加配置',
     addByFormView: '新增动态配置',
     updateByFormView: '修改动态配置',
     detailByFormView: '查看动态配置',
+    addMatches: '增加匹配条件',
+    matchType: '匹配条件类型',
+    configType: '配置项类型',
     notSaved: '*改动未保存',
     saved: '配置无改动',
     YAMLView: 'YAML视图',
     formView: '表单视图',
-    event: '事件'
+    event: '事件',
+    save: '保存',
+    reset: '重置'
   },
   routingRuleDomain: {
     YAMLView: 'YAML视图',
@@ -71,6 +77,7 @@ const words: I18nType = {
     configurationItem: '配置项',
     actuatingRange: '作用范围',
     matches: '作用范围',
+
     scopeScreening: '作用范围筛选',
     endOfAction: '作用端',
     side: '作用端',

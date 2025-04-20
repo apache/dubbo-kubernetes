@@ -576,33 +576,6 @@ export const routes: Readonly<RouteRecordType[]> = [
                     header: UpdateDCTabHeaderSlot
                   }
                 }
-              },
-              {
-                path: '/addbyformview',
-                name: 'dynamicConfigDomain.addByFormView',
-                component: () => import('../views/traffic/dynamicConfig/tabs/addByFormView.vue'),
-                meta: {
-                  hidden: true,
-                  tab: true,
-                  icon: 'oui:apm-trace',
-                  back: '/traffic/dynamicConfig',
-                  slots: {
-                    header: AddDCTabHeaderSlot
-                  }
-                }
-              },
-              {
-                path: '/addbyyamlview',
-                name: 'dynamicConfigDomain.addByYAMLView',
-                component: () => import('../views/traffic/dynamicConfig/tabs/addByYAMLView.vue'),
-                meta: {
-                  // tab: true,
-                  icon: 'oui:app-console',
-                  back: '/traffic/dynamicConfig',
-                  slots: {
-                    header: AddDCTabHeaderSlot
-                  }
-                }
               }
             ]
           },

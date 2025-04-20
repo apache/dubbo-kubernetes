@@ -18,7 +18,7 @@
 <template>
   <div class="__container_AppTabHeaderSlot">
     <a-row>
-      <a-col :span="12">
+      <a-col :span="20">
         <span class="header-desc"> {{ $t('dynamicConfigDomain.addByFormView') }} </span>
       </a-col>
     </a-row>

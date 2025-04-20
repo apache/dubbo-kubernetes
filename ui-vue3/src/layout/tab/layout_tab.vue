@@ -50,7 +50,7 @@
             padding-bottom: 20px;
           "
         >
-          <router-view v-show="!transitionFlag" />
+          <router-view :key="routerKey" v-if="!transitionFlag" />
         </div>
       </a-spin>
     </div>
@@ -65,7 +65,8 @@ import _ from 'lodash'
 
 import { PRIMARY_COLOR, TAB_HEADER_TITLE } from '@/base/constants'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
-
+const TAB_STATE = reactive({})
+provide(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY, TAB_STATE)
 const router = useRouter()
 const tabRoute = useRoute()
 let __ = PRIMARY_COLOR
@@ -74,6 +75,9 @@ let meta: any = tabRoute.meta
 const tabRouters = computed(() => {
   let meta: any = tabRoute.meta
   return meta?.parent?.children?.filter((x: any): any => x.meta.tab)
+})
+const routerKey = computed(() => {
+  return tabRoute.name + '_' + _.uniqueId()
 })
 let activeKey = ref(tabRoute.name)
 let transitionFlag = ref(false)
