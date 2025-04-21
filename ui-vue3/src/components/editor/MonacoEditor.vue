@@ -28,7 +28,7 @@
 import { onMounted, watch } from 'vue'
 import useMonaco from './MonacoEditor'
 
-const emit = defineEmits(['update:modelValue', 'blur'])
+const emit = defineEmits(['update:modelValue', 'blur', 'change'])
 
 const props = defineProps({
   modelValue: {
@@ -71,11 +71,12 @@ const updateMonacoVal = (_val?: string) => {
   const val = _val || props.modelValue
   updateVal(val)
 }
-
 watch(
   () => props.modelValue,
   (val) => {
-    val !== getEditor()?.getValue() && updateMonacoVal(val)
+    if (val !== getEditor()?.getValue()) {
+      updateMonacoVal(val)
+    }
   }
 )
 
@@ -89,6 +90,7 @@ onMounted(() => {
   if (editor) {
     editor.onDidChangeModelContent(() => {
       emit('update:modelValue', editor.getValue())
+      emit('change', editor.getValue())
     })
     editor.onDidBlurEditorText(() => {
       console.log(222)

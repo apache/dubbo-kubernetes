@@ -28,6 +28,8 @@ import UpdateConditionRuleTabHeaderSlot from '@/views/traffic/routingRule/slots/
 import AddTagRuleTabHeaderSlot from '@/views/traffic/tagRule/slots/addTagRuleTabHeaderSlot.vue'
 import TagRuleDetailTabHeaderSlot from '@/views/traffic/tagRule/slots/tagRuleDetailTabHeaderSlot.vue'
 import UpdateTagRuleTabHeaderSlot from '@/views/traffic/tagRule/slots/updateTagRuleTabHeaderSlot.vue'
+import AddDCTabHeaderSlot from '@/views/traffic/dynamicConfig/slots/addDCTabHeaderSlot.vue'
+import UpdateDCTabHeaderSlot from '@/views/traffic/dynamicConfig/slots/updateDCTabHeaderSlot.vue'
 
 export declare type RouteRecordType = RouteRecordRaw & {
   key?: string
@@ -556,7 +558,10 @@ export const routes: Readonly<RouteRecordType[]> = [
                 meta: {
                   tab: true,
                   icon: 'oui:apm-trace',
-                  back: '../../'
+                  back: '/traffic/dynamicConfig',
+                  slots: {
+                    header: UpdateDCTabHeaderSlot
+                  }
                 }
               },
               {
@@ -566,39 +571,10 @@ export const routes: Readonly<RouteRecordType[]> = [
                 meta: {
                   tab: true,
                   icon: 'oui:app-console',
-                  back: '../../'
-                }
-              },
-              {
-                path: '/event/:pathId/:isEdit',
-                name: 'dynamicConfigDomain.event',
-                component: () => import('../views/traffic/dynamicConfig/tabs/event.vue'),
-                meta: {
-                  hidden: true,
-                  tab: true,
-                  icon: 'oui:app-console',
-                  back: '../../'
-                }
-              },
-              {
-                path: '/addbyformview',
-                name: 'dynamicConfigDomain.addByFormView',
-                component: () => import('../views/traffic/dynamicConfig/tabs/addByFormView.vue'),
-                meta: {
-                  hidden: true,
-                  tab: true,
-                  icon: 'oui:apm-trace',
-                  back: '../../'
-                }
-              },
-              {
-                path: '/addbyyamlview',
-                name: 'dynamicConfigDomain.addByYAMLView',
-                component: () => import('../views/traffic/dynamicConfig/tabs/addByYAMLView.vue'),
-                meta: {
-                  // tab: true,
-                  icon: 'oui:app-console',
-                  back: '../../'
+                  back: '/traffic/dynamicConfig',
+                  slots: {
+                    header: UpdateDCTabHeaderSlot
+                  }
                 }
               }
             ]

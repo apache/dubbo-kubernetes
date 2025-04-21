@@ -18,7 +18,7 @@
   <div class="__container_traffic_config_index">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
-        <a-button type="primary">新增动态配置</a-button>
+        <a-button type="primary" @click="addDynamicConfig">新增动态配置</a-button>
       </template>
       <template #bodyCell="{ text, column, record }">
         <template v-if="column.dataIndex === 'ruleName'">
@@ -35,7 +35,7 @@
         <template v-if="column.dataIndex === 'ruleGranularity'">
           {{ text ? '服务' : '应用' }}
         </template>
-        <template v-if="column.dataIndex === 'enable'">
+        <template v-if="column.dataIndex === 'enabled'">
           {{ text ? '启用' : '禁用' }}
         </template>
         <template v-if="column.dataIndex === 'operation'">
@@ -54,7 +54,7 @@
             title="确认删除该动态配置？"
             ok-text="Yes"
             cancel-text="No"
-            @confirm="confirm"
+            @confirm="delDynamicConfig(record)"
           >
             <a-button type="link">删除</a-button>
           </a-popconfirm>
@@ -65,8 +65,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
-import { searchDynamicConfig } from '@/api/service/traffic'
+import { inject, onMounted, provide, reactive } from 'vue'
+import { delConfiguratorDetail, searchDynamicConfig } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
@@ -77,6 +77,8 @@ import { Icon } from '@iconify/vue'
 const router = useRouter()
 
 let __null = PRIMARY_COLOR
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
+TAB_STATE.dynamicConfigForm = reactive({})
 let columns = [
   {
     title: 'ruleName',
@@ -102,10 +104,10 @@ let columns = [
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
   {
-    title: 'enable',
-    key: 'enable',
-    dataIndex: 'enable',
-    render: (text, record) => (record.enable ? '是' : '否'),
+    title: 'enabled',
+    key: 'enabled',
+    dataIndex: 'enabled',
+    render: (text, record) => (record.enabled ? '是' : '否'),
     width: 120,
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
@@ -132,12 +134,18 @@ const searchDomain = reactive(
     columns
   )
 )
+const addDynamicConfig = () => {
+  router.push(`/traffic/dynamicConfig/formview/_tmp/1`)
+}
 
-onMounted(() => {
-  searchDomain.onSearch()
+onMounted(async () => {
+  await searchDomain.onSearch()
 })
 
-const confirm = () => {}
+const delDynamicConfig = async (record: any) => {
+  await delConfiguratorDetail({ name: record.ruleName })
+  await searchDomain.onSearch()
+}
 
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>

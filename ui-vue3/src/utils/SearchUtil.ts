@@ -96,25 +96,23 @@ export class SearchDomain {
           })
     }
 
-    try {
-      const res = await this.searchApi(queryParams)
-      if (!res) {
-        this.table.loading = false
-        return
-      }
-      const {
-        data: { list, pageInfo }
-      } = res
-      this.result = handleResult ? handleResult(list) : list
+    this.searchApi(queryParams)
+      .then((res: any) => {
+        const {
+          data: { list, pageInfo }
+        } = res
+        this.result = handleResult ? handleResult(list) : list
 
-      if (!this.noPaged) {
-        this.paged.total = pageInfo?.Total || 0
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      this.table.loading = false
-    }
+        if (!this.noPaged) {
+          this.paged.total = pageInfo?.Total || 0
+        }
+      })
+      .catch((error: any) => {
+        console.error('Error fetching data:', error)
+      })
+      .finally(() => {
+        this.table.loading = false
+      })
   }
 }
 

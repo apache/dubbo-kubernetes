@@ -23,7 +23,6 @@ import type {
   InternalAxiosRequestConfig
 } from 'axios'
 import axios from 'axios'
-import { message } from 'ant-design-vue'
 import NProgress from 'nprogress'
 
 const service: AxiosInstance = axios.create({
@@ -56,16 +55,23 @@ const rejectState: { errorHandler: Function | null } = {
 response.use(
   (response) => {
     NProgress.done()
-    if (response.status === 200 && response.data.code === 200) {
+    if (
+      response.status === 200 &&
+      (response.data.code === 200 || response.data.status === 'success')
+    ) {
       return Promise.resolve(response.data)
     }
-    message.error(response.data.code + ':' + response.data.msg)
+    console.error(response.data.code + ':' + response.data.msg)
     return Promise.reject(response.data)
   },
   (error) => {
-    console.log(33, error)
     NProgress.done()
-    message.error(error.response.data.code + ':' + error.response.data.msg)
+    if (error.response.data) {
+      console.error(error.response.data.code + ':' + error.response.data.msg)
+    } else {
+      console.error(error.response)
+    }
+
     return Promise.reject(error.response.data)
   }
 )
