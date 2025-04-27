@@ -22,35 +22,27 @@
         <a-col :span="isDrawerOpened ? 24 - sliderSpan : 24" class="left">
           <a-flex vertical align="end">
             <a-row style="width: 100%" justify="space-between">
-              <a-col :span="12">
-                <a-button
-                  type="primary"
-                  size="small"
-                  style="width: 80px; float: left"
-                  @click="saveConfig"
-                >
-                  {{ $t('form.save') }}
-                </a-button>
-              </a-col>
+              <a-col :span="12"> </a-col>
               <a-col :span="12">
                 <!--                todo 版本记录后续添加-->
-                <a-button
-                  type="text"
-                  style="color: #0a90d5; float: right; margin-top: -5px"
-                  @click="isDrawerOpened = !isDrawerOpened"
-                >
-                  {{ $t('flowControlDomain.versionRecords') }}
-                  <DoubleLeftOutlined v-if="!isDrawerOpened" />
-                  <DoubleRightOutlined v-else />
-                </a-button>
+                <!--                <a-button-->
+                <!--                  type="text"-->
+                <!--                  style="color: #0a90d5; float: right; margin-top: -5px"-->
+                <!--                  @click="isDrawerOpened = !isDrawerOpened"-->
+                <!--                >-->
+                <!--                  {{ $t('flowControlDomain.versionRecords') }}-->
+                <!--                  <DoubleLeftOutlined v-if="!isDrawerOpened" />-->
+                <!--                  <DoubleRightOutlined v-else />-->
+                <!--                </a-button>-->
               </a-col>
             </a-row>
 
             <div class="editorBox">
               <MonacoEditor
                 v-model:modelValue="YAMLValue"
+                @change="changeEditor"
                 theme="vs-dark"
-                :height="500"
+                height="calc(100vh - 450px)"
                 language="yaml"
                 :readonly="!isEdit"
               />
@@ -76,44 +68,107 @@
   </a-card>
 
   <a-flex v-if="isEdit" style="margin-top: 30px">
-    <a-button type="primary">确认</a-button>
-    <a-button style="margin-left: 30px">取消</a-button>
+    <a-button type="primary" @click="saveConfig">保存</a-button>
+    <a-button style="margin-left: 30px" @click="resetConfig">重置</a-button>
   </a-flex>
 </template>
 
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { inject, onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, inject, nextTick, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
-import { getConfiguratorDetail, saveConfiguratorDetail } from '@/api/service/traffic'
+import {
+  addConfiguratorDetail,
+  getConfiguratorDetail,
+  saveConfiguratorDetail
+} from '@/api/service/traffic'
 // @ts-ignore
 import yaml from 'js-yaml'
 import { message } from 'ant-design-vue'
+import { PRIMARY_COLOR } from '@/base/constants'
+import { ViewDataModel } from '@/views/traffic/dynamicConfig/model/ConfigModel'
 
 const route = useRoute()
 const isEdit = ref(route.params.isEdit === '1')
+const isAdd = ref(false)
 const isDrawerOpened = ref(false)
 const loading = ref(false)
-
 const sliderSpan = ref(8)
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
 const YAMLValue = ref()
+const initValue = ref()
 onMounted(async () => {
-  const res = await getConfiguratorDetail({ name: route.params?.pathId })
-  const json = yaml.dump(res.data) // 输出为 json 格式
-  YAMLValue.value = json
+  await initConfig()
 })
+const modify = computed(() => {
+  console.log(initValue.value)
+  console.log(JSON.stringify(YAMLValue.value))
+  return initValue.value !== JSON.stringify(YAMLValue.value)
+})
+const viewData = reactive(new ViewDataModel())
+async function initConfig() {
+  if (TAB_STATE.dynamicConfigForm?.data) {
+    viewData.fromData(TAB_STATE.dynamicConfigForm.data)
+  } else {
+    if (route.params?.pathId === '_tmp') {
+      isEdit.value = true
+      isAdd.value = true
+      viewData.basicInfo.ruleName = '_tmp'
+    } else {
+      isAdd.value = false
+      const res = await getConfiguratorDetail({ name: route.params?.pathId })
+      viewData.fromApiOutput(res.data)
+    }
+    TAB_STATE.dynamicConfigForm = reactive({
+      data: viewData
+    })
+  }
+  const json = yaml.dump(viewData.toApiInput()) // 输出为 json 格式
+  initValue.value = JSON.stringify(json)
+  YAMLValue.value = json
+}
+async function resetConfig() {
+  loading.value = true
+  try {
+    TAB_STATE.dynamicConfigForm.data = null
+    await initConfig()
+    message.success('config reset success')
+  } finally {
+    loading.value = false
+  }
+}
+const router = useRouter()
 async function saveConfig() {
   loading.value = true
-  let newVal = yaml.load(YAMLValue.value)
+  let data = yaml.load(YAMLValue.value)
   try {
-    let res = await saveConfiguratorDetail({ name: route.params?.pathId }, newVal)
+    if (isAdd.value) {
+      addConfiguratorDetail({ name: data.ruleName }, data)
+        .then((res) => {
+          TAB_STATE.dynamicConfigForm.data = null
+          nextTick(() => {
+            router.replace('/traffic/dynamicConfig')
+            message.success('config add success')
+          })
+        })
+        .catch((e) => {
+          message.error('添加失败： ' + e.msg)
+        })
+      return
+    }
+    let res = await saveConfiguratorDetail({ name: route.params?.pathId }, data)
+    viewData.fromApiOutput(res.data)
     message.success('config save success')
   } finally {
     loading.value = false
   }
+}
+
+function changeEditor(val) {
+  viewData.fromApiOutput(yaml.load(YAMLValue.value))
 }
 </script>
 

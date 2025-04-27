@@ -755,7 +755,7 @@ enum ruleGranularityEnum {
 }
 
 // route list
-const routeList = ref([
+const routeList: any = ref([
   {
     selectedMatchConditionTypes: [],
     requestMatch: [],
