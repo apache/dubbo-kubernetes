@@ -62,6 +62,3 @@ _internal_default_values_not_set:
         baseURL: http://grafana:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
     prometheus: http://kube-prometheus-prometheus.svc.cluster.local:9090
     grafana: http://grafana:3000/
-
-  kube-prometheus:
-    enabled: false
