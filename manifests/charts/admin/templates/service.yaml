@@ -19,14 +19,14 @@ spec:
     port: 8888
     targetPort: http
   selector:
-    app: admin-dashboard
+    app: admin
 {{- end }}
 ---
 {{- if $svc.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: admin-dashboard-headless
+  name: admin-headless
   namespace: {{ include "admin.namespace" . }}
   labels:
     app: admin
@@ -43,5 +43,5 @@ spec:
     port: 8888
     targetPort: http
   selector:
-    app: admin-dashboard
+    app: admin
 {{- end -}}
