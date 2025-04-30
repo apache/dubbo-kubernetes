@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-// Package laziness is a package to expose lazily computed values.
-package laziness
+// Package lazy is a package to expose lazily computed values.
+package lazy
 
 import (
 	"sync"
 	"sync/atomic"
 )
 
-type lazinessImpl[T any] struct {
+type lazyImpl[T any] struct {
 	getter func() (T, error)
 	// retry, if true, will ensure getter() is called for each Get() until a non-nil error is returned.
 	retry bool
@@ -34,36 +34,36 @@ type lazinessImpl[T any] struct {
 	m    sync.Mutex
 }
 
-// Laziness represents a value whose computation is deferred until the first access.
-type Laziness[T any] interface {
+// Lazy represents a value whose computation is deferred until the first access.
+type Lazy[T any] interface {
 	Get() (T, error)
 }
 
-var _ Laziness[any] = &lazinessImpl[any]{}
+var _ Lazy[any] = &lazyImpl[any]{}
 
-func New[T any](f func() (T, error)) Laziness[T] {
-	return &lazinessImpl[T]{
+func New[T any](f func() (T, error)) Lazy[T] {
+	return &lazyImpl[T]{
 		getter: f,
 	}
 }
 
 // NewWithRetry returns a new lazily computed value. The value will be computed on each call until a
 // non-nil error is returned.
-func NewWithRetry[T any](f func() (T, error)) Laziness[T] {
-	return &lazinessImpl[T]{
+func NewWithRetry[T any](f func() (T, error)) Lazy[T] {
+	return &lazyImpl[T]{
 		getter: f,
 		retry:  true,
 	}
 }
 
-func (l *lazinessImpl[T]) Get() (T, error) {
+func (l *lazyImpl[T]) Get() (T, error) {
 	if atomic.LoadUint32(&l.done) == 0 {
 		return l.doSlow()
 	}
 	return l.res, l.err
 }
 
-func (l *lazinessImpl[T]) doSlow() (T, error) {
+func (l *lazyImpl[T]) doSlow() (T, error) {
 	l.m.Lock()
 	defer l.m.Unlock()
 	if l.done == 0 {
