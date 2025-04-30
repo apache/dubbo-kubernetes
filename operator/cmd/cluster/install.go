@@ -75,8 +75,8 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 		Example: ` # Apply a default dubboctl installation.
   dubboctl install -y
  
-  # Apply a default profile.
-  dubboctl install --set --profile=demo -y
+  # Apply a demo profile.
+  dubboctl install --set profile=demo -y
 		`,
 		Aliases: []string{"apply"},
 		Args:    cobra.ExactArgs(0),

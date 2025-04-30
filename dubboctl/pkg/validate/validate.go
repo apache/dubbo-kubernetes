@@ -37,8 +37,7 @@ import (
 )
 
 var (
-	errFiles = errors.New(`error: you must specify resources by --filename.
-Example resource specifications include: '-f default.yaml'`)
+	errFiles    = errors.New(`error: you must specify resources by -f.`)
 	validFields = map[string]struct{}{
 		"apiVersion": {},
 		"kind":       {},
@@ -128,7 +127,11 @@ func NewValidateCommand(ctx cli.Context) *cobra.Command {
 
   # Validate current services under 'default' namespace with in the cluster
   kubectl get services -o yaml | dubboctl validate -f -
+
+  # Validate resource yaml specifications
+  dubboctl validate -f default.yaml
 `,
+
 		Args:    cobra.NoArgs,
 		Aliases: []string{"v"},
 		RunE: func(cmd *cobra.Command, _ []string) error {

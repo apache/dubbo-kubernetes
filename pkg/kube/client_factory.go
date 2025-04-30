@@ -18,7 +18,7 @@
 package kube
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/laziness"
+	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
 	diskcached "k8s.io/client-go/discovery/cached/disk"
@@ -39,9 +39,9 @@ import (
 // This split is to avoid huge dependencies.
 type clientFactory struct {
 	clientConfig    clientcmd.ClientConfig
-	expander        laziness.Laziness[meta.RESTMapper]
-	mapper          laziness.Laziness[meta.ResettableRESTMapper]
-	discoveryClient laziness.Laziness[discovery.CachedDiscoveryInterface]
+	expander        lazy.Lazy[meta.RESTMapper]
+	mapper          lazy.Lazy[meta.ResettableRESTMapper]
+	discoveryClient lazy.Lazy[discovery.CachedDiscoveryInterface]
 }
 
 // newClientFactory creates a new util.Factory from the given clientcmd.ClientConfig.
@@ -49,7 +49,7 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 	cf := &clientFactory{
 		clientConfig: clientConfig,
 	}
-	cf.discoveryClient = laziness.NewWithRetry(func() (discovery.CachedDiscoveryInterface, error) {
+	cf.discoveryClient = lazy.NewWithRetry(func() (discovery.CachedDiscoveryInterface, error) {
 		restConfig, err := cf.ToRestConfig()
 		if err != nil {
 			return nil, err
@@ -67,14 +67,14 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 		}
 		return memory.NewMemCacheClient(d), nil
 	})
-	cf.mapper = laziness.NewWithRetry(func() (meta.ResettableRESTMapper, error) {
+	cf.mapper = lazy.NewWithRetry(func() (meta.ResettableRESTMapper, error) {
 		discoveryClient, err := cf.ToDiscoveryClient()
 		if err != nil {
 			return nil, err
 		}
 		return restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient), nil
 	})
-	cf.expander = laziness.NewWithRetry(func() (meta.RESTMapper, error) {
+	cf.expander = lazy.NewWithRetry(func() (meta.RESTMapper, error) {
 		discoveryClient, err := cf.discoveryClient.Get()
 		if err != nil {
 			return nil, err

@@ -22,7 +22,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
-	"github.com/apache/dubbo-kubernetes/pkg/laziness"
+	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -42,7 +42,7 @@ type client struct {
 	config          *rest.Config
 	revision        string
 	factory         *clientFactory
-	version         laziness.Laziness[*kubeVersion.Info]
+	version         lazy.Lazy[*kubeVersion.Info]
 	informerFactory informerfactory.InformerFactory
 	dynamic         dynamic.Interface
 	kube            kubernetes.Interface
@@ -110,7 +110,7 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 			clientWithTimeout = kubeClient
 		}
 	}
-	c.version = laziness.NewWithRetry(clientWithTimeout.Discovery().ServerVersion)
+	c.version = lazy.NewWithRetry(clientWithTimeout.Discovery().ServerVersion)
 	return &c, nil
 }
 
