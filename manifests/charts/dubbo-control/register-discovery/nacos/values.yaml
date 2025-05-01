@@ -17,7 +17,7 @@ _internal_default_values_not_set:
   ## Whether to enable the nacos.
   enabled: false
   ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
-  mode: "cluster"
+  mode: ""
   ## Number of replicas for the Deployment.
   replicas: 1
   # Deploy the required container images.
@@ -25,8 +25,8 @@ _internal_default_values_not_set:
   # The size of application resources required for deployment.
   resources:
     requests:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 500m
+      memory: 1Gi
 
   storage:
     # Specifies the storage type (embedded, mysql, etc.).

@@ -48,7 +48,7 @@ spec:
       containers:
       - name: nacos
         {{- if contains "/" $nacos.image }}
-        image: {{ $nacos.image }}
+        image: {{ $nacos.image }}:v2.5.1
         {{- end }}
         imagePullPolicy: IfNotPresent
         ports:
@@ -78,9 +78,9 @@ spec:
         - name: MODE
           value: "standalone"
         {{- end }}
+        {{- if eq $nacos.storage.type "mysql" }}
         - name: SPRING_DATASOURCE_PLATFORM
           value: "mysql"
-        {{- if eq $nacos.storage.type "mysql" }}
         - name: MYSQL_SERVICE_HOST
           valueFrom:
             configMapKeyRef:
@@ -114,6 +114,8 @@ spec:
         {{- else }}
         - name: EMBEDDED_STORAGE
           value: embedded
+        - name: SPRING_DATASOURCE_PLATFORM
+          value: ""
         {{- end }}
         volumeMounts:
         - name: data
