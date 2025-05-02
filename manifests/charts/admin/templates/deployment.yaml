@@ -35,8 +35,8 @@ spec:
       serviceAccountName: admin-sa
       containers:
       - name: admin
-        image: "{{ $admin.image }}:{{ $admin.tag }}"
-        imagePullPolicy: "{{ $admin.imagePullPolicy }}"
+        image: "{{ $admin.image }}
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8888
