@@ -65,7 +65,7 @@
           </a-col>
 
           <a-col :span="12">
-            <a-card class="_detail">
+            <a-card class="_detail" style="height: 100%">
               <a-descriptions class="description-column" :column="1">
                 <!-- Start time -->
                 <a-descriptions-item
@@ -90,14 +90,14 @@
                 </a-descriptions-item>
 
                 <!-- Register Time -->
-                <a-descriptions-item
+                <!-- <a-descriptions-item
                   :label="$t('instanceDomain.registerTime')"
                   :labelStyle="{ fontWeight: 'bold' }"
                 >
                   <a-typography-paragraph>
                     {{ formattedDate(instanceDetail?.registerTime) }}
                   </a-typography-paragraph>
-                </a-descriptions-item>
+                </a-descriptions-item> -->
               </a-descriptions>
             </a-card>
           </a-col>
@@ -158,7 +158,7 @@
               :label="$t('instanceDomain.whichApplication')"
               :labelStyle="{ fontWeight: 'bold' }"
             >
-              <a-typography-link @click="checkApplication()">
+              <a-typography-link @click="checkApplication(instanceDetail?.appName)">
                 {{ instanceDetail?.appName }}
               </a-typography-link>
             </a-descriptions-item>
@@ -292,12 +292,11 @@ onMounted(async () => {
 })
 
 // Click on the application name to view the application
-const checkApplication = () => {
+const checkApplication = (appName: string) => {
+  console.log('appName', appName)
+
   router.push({
-    path: '/resources/applications/detail',
-    params: {
-      pathId: route.params.pathId
-    }
+    path: '/resources/applications/detail/' + appName
   })
 }
 
