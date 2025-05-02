@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package pointer
+package ptr
 
 // Of returns a pointer to the input. In most cases, callers should just do &t. However, in some cases
 // Go cannot take a pointer. For example, `pointer.Of(f())`.

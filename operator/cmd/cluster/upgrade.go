@@ -47,7 +47,7 @@ func UpgradeCmd(ctx cli.Context) *cobra.Command {
 
 		`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr())
 			p := NewPrinterForWriter(cmd.OutOrStderr())
 			client, err := ctx.CLIClient()
 			if err != nil {

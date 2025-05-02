@@ -23,7 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -127,7 +127,7 @@ func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsLi
 	return errs.ToError()
 }
 
-func DeleteResource(kc kube.CLIClient, dryRun bool, _ clog.Logger, obj *unstructured.Unstructured) error {
+func DeleteResource(kc kube.CLIClient, dryRun bool, log clog.Logger, obj *unstructured.Unstructured) error {
 	name := fmt.Sprintf("%v/%s.%s", obj.GroupVersionKind(), obj.GetName(), obj.GetNamespace())
 	if dryRun {
 		fmt.Printf("Not remove object %s because of dry run.", name)
@@ -139,16 +139,17 @@ func DeleteResource(kc kube.CLIClient, dryRun bool, _ clog.Logger, obj *unstruct
 		return err
 	}
 
-	if err := c.Delete(context.TODO(), obj.GetName(), metav1.DeleteOptions{PropagationPolicy: pointer.Of(metav1.DeletePropagationForeground)}); err != nil {
+	if err := c.Delete(context.TODO(), obj.GetName(), metav1.DeleteOptions{PropagationPolicy: ptr.Of(metav1.DeletePropagationForeground)}); err != nil {
 		if !kerrors.IsNotFound(err) {
 			return err
 		}
-		fmt.Printf("object: %s is not being deleted because it no longer exists", name)
+		// do not return error if resources are not found
+		log.LogAndPrintf("object: %s is not being deleted because it no longer exists", name)
 
 		return nil
 	}
 
-	fmt.Printf("✔︎ Removed %s.\n", name)
+	log.LogAndPrintf("✔︎ Removed %s.\n", name)
 
 	return nil
 }
