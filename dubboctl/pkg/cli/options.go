@@ -18,7 +18,7 @@
 package cli
 
 import (
-	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
 	"github.com/spf13/pflag"
 )
 
@@ -34,8 +34,8 @@ type RootFlags struct {
 
 func AddRootFlags(flags *pflag.FlagSet) *RootFlags {
 	rootFlags := &RootFlags{
-		kubeconfig: pointer.Of[string](""),
-		Context:    pointer.Of[string](""),
+		kubeconfig: ptr.Of[string](""),
+		Context:    ptr.Of[string](""),
 	}
 	flags.StringVarP(rootFlags.kubeconfig, KubeConfigFlag, "c", "", "Kubernetes configuration file")
 	flags.StringVar(rootFlags.Context, ContextFlag, "", "Kubernetes configuration context")

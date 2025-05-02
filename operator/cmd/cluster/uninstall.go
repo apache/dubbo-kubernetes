@@ -81,7 +81,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 
 // Uninstall uninstalls by deleting specified manifests.
 func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
-	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
+	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr())
 	var kubeClient kube.CLIClient
 	var err error
 	kubeClient, err = ctx.CLIClientWithRevision("")
