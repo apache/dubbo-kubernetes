@@ -14,11 +14,11 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
-  ## Whether to enable the nacos.
+  # Whether to enable the nacos.
   enabled: false
-  ## Specifies the mode in which nacos is running (standalone, cluster, etc.).
+  # Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: ""
-  ## Number of replicas for the Deployment.
+  # Number of replicas for the Deployment.
   replicas: 1
   # Deploy the required container images.
   image: nacos/nacos-server
@@ -27,7 +27,7 @@ _internal_default_values_not_set:
     requests:
       cpu: 500m
       memory: 1Gi
-
+  # Define the way to store Nacos data.
   storage:
     # Specifies the storage type (embedded, mysql, etc.).
     type: ""
