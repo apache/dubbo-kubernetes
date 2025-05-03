@@ -37,13 +37,15 @@ import (
 var (
 	// ClusterResources are resource types the operator prunes, ordered by which types should be deleted, first to last.
 	ClusterResources = []schema.GroupVersionKind{
+		gvk.MutatingWebhookConfiguration.Kubernetes(),
+		gvk.ValidatingWebhookConfiguration.Kubernetes(),
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"},
-		// Cannot currently prune CRDs because this will also wipe out user config.
-		// {Group: "apiextensions.k8s.io", Version: "v1beta1", Kind: name.CRDStr},
 	}
 	// ClusterControlPlaneResources lists cluster scope resources types which should be deleted during uninstall command.
 	ClusterControlPlaneResources = []schema.GroupVersionKind{
+		gvk.MutatingWebhookConfiguration.Kubernetes(),
+		gvk.ValidatingWebhookConfiguration.Kubernetes(),
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRoleBinding"},
 	}
@@ -100,12 +102,15 @@ func NamespacedResources() []schema.GroupVersionKind {
 	res := []schema.GroupVersionKind{
 		gvk.Deployment.Kubernetes(),
 		gvk.StatefulSet.Kubernetes(),
+		gvk.DaemonSet.Kubernetes(),
 		gvk.Service.Kubernetes(),
+		gvk.ConfigMap.Kubernetes(),
 		gvk.Secret.Kubernetes(),
 		gvk.ServiceAccount.Kubernetes(),
 		gvk.Job.Kubernetes(),
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "RoleBinding"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "Role"},
+		{Group: "policy", Version: "v1", Kind: "PodDisruptionBudget"},
 	}
 	return res
 }
@@ -149,7 +154,7 @@ func DeleteResource(kc kube.CLIClient, dryRun bool, log clog.Logger, obj *unstru
 		return nil
 	}
 
-	log.LogAndPrintf("✔︎ Removed %s.\n", name)
+	log.LogAndPrintf("✔︎ Removed %s.", name)
 
 	return nil
 }
