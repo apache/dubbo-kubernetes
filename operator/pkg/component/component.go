@@ -32,6 +32,7 @@ const (
 	NacosRegisterComponentName     Name = "Nacos"
 	ZookeeperRegisterComponentName Name = "Zookeeper"
 	AdminComponentName             Name = "Admin"
+	AdminExtraComponentName        Name = "Kube-Prometheus"
 )
 
 type Component struct {
@@ -70,6 +71,11 @@ var AllComponents = []Component{
 		Default:            true,
 		HelmSubDir:         "admin",
 		HelmValuesTreeRoot: "admin",
+	},
+	{
+		UserFacingName: AdminExtraComponentName,
+		Default:        true,
+		HelmSubDir:     "admin/charts/kube-prometheus",
 	},
 	{
 		UserFacingName:     NacosRegisterComponentName,
