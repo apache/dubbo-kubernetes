@@ -7,24 +7,36 @@ import (
 )
 
 var (
-	Namespace                = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
-	CustomResourceDefinition = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
-	Deployment               = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
-	StatefulSet              = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
-	Job                      = config.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
-	Secret                   = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
-	Service                  = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
-	ServiceAccount           = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
+	Namespace                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
+	CustomResourceDefinition       = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
+	MutatingWebhookConfiguration   = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "MutatingWebhookConfiguration"}
+	ValidatingWebhookConfiguration = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "ValidatingWebhookConfiguration"}
+	Deployment                     = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
+	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
+	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
+	Job                            = config.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
+	ConfigMap                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
+	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
+	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
+	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 	switch g {
 	case CustomResourceDefinition:
 		return gvr.CustomResourceDefinition, true
+	case MutatingWebhookConfiguration:
+		return gvr.MutatingWebhookConfiguration, true
+	case ValidatingWebhookConfiguration:
+		return gvr.ValidatingWebhookConfiguration, true
 	case Deployment:
 		return gvr.Deployment, true
 	case StatefulSet:
 		return gvr.StatefulSet, true
+	case DaemonSet:
+		return gvr.DaemonSet, true
+	case ConfigMap:
+		return gvr.ConfigMap, true
 	case Secret:
 		return gvr.Secret, true
 	case Service:
@@ -56,6 +68,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Deployment, true
 	case gvr.StatefulSet:
 		return StatefulSet, true
+	case gvr.DaemonSet:
+		return DaemonSet, true
 	case gvr.Job:
 		return Job, true
 	}
