@@ -256,7 +256,9 @@ var componentDependencies = map[component.Name][]component.Name{
 		component.ZookeeperRegisterComponentName,
 		component.AdminComponentName,
 	},
-	component.AdminComponentName: {},
+	component.AdminComponentName: {
+		component.AdminExtraComponentName,
+	},
 }
 
 func dependenciesChannels() map[component.Name]chan struct{} {
