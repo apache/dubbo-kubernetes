@@ -19,6 +19,7 @@ package dataplane
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"time"
 
@@ -55,16 +56,33 @@ type dataplaneManager struct {
 	zone       string
 	manager    kube_ctrl.Manager
 	deployMode config_core.DeployMode
+	clientset  *kubernetes.Clientset
 }
 
-func NewDataplaneManager(store core_store.ResourceStore, zone string, manager kube_ctrl.Manager, mode config_core.DeployMode) core_manager.ResourceManager {
+func NewDataplaneManager(store core_store.ResourceStore, zone string, manager kube_ctrl.Manager, mode config_core.DeployMode) (core_manager.ResourceManager, error) {
+	if mode == config_core.KubernetesMode || mode == config_core.HalfHostMode {
+		clientset, err := kubernetes.NewForConfig(manager.GetConfig())
+		if err != nil {
+			return nil, fmt.Errorf("come up with error when initializing kubernetes.clientset: %w", err)
+		}
+		return &dataplaneManager{
+			ResourceManager: core_manager.NewResourceManager(store),
+			store:           store,
+			zone:            zone,
+			manager:         manager,
+			deployMode:      mode,
+			clientset:       clientset,
+		}, nil
+	}
+
 	return &dataplaneManager{
 		ResourceManager: core_manager.NewResourceManager(store),
 		store:           store,
 		zone:            zone,
 		manager:         manager,
 		deployMode:      mode,
-	}
+		clientset:       nil,
+	}, nil
 }
 
 func (m *dataplaneManager) Create(ctx context.Context, r core_model.Resource, fs ...core_store.CreateOptionsFunc) error {
@@ -166,14 +184,9 @@ func (m *dataplaneManager) mergeK8sPodMeta(ctx context.Context, dp *core_mesh.Da
 		return nil
 	}
 	// get the pod related to the dataplane (ip)
-	// TODO improve
-	clientset, err := kubernetes.NewForConfig(m.manager.GetConfig())
-	if err != nil {
-		return err
-	}
 
 	ip := dp.GetIP()
-	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+	pods, err := m.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 		FieldSelector: "status.podIP=" + ip,
 	})
 	if err != nil || len(pods.Items) == 0 {

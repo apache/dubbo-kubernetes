@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -374,14 +375,19 @@ func initializeResourceManager(cfg dubbo_cp.Config, builder *core_runtime.Builde
 			return errors.New("get kube manager err")
 		}
 	}
+	dataplaneManager, err := dataplane_managers.NewDataplaneManager(
+		builder.ResourceStore(),
+		cfg.Multizone.Zone.Name,
+		manager,
+		deployMode,
+	)
+	if err != nil {
+		return fmt.Errorf("initializing datalane manager error: %w", err)
+	}
 	customizableManager.Customize(
 		mesh.DataplaneType,
-		dataplane_managers.NewDataplaneManager(
-			builder.ResourceStore(),
-			cfg.Multizone.Zone.Name,
-			manager,
-			deployMode,
-		))
+		dataplaneManager,
+	)
 
 	customizableManager.Customize(
 		mesh.MappingType,
