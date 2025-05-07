@@ -16,7 +16,9 @@
 _internal_default_values_not_set:
   replicas: 1
 
-  image: mfordjody/gin-web-log
+  image: mfordjody/dubbo-cp
+
+  tag: latest
 
   resources:
     limits:

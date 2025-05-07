@@ -35,31 +35,25 @@ spec:
       serviceAccountName: admin-sa
       containers:
       - name: admin
-        image: "{{ $admin.image }}"
+        image: "{{ $admin.image }}:{{ $admin.tag }}"
         imagePullPolicy: IfNotPresent
+        args:
+        - --config-file=/var/lib/admin/dubbo-cp.yaml
         ports:
         - name: http
           containerPort: 8888
-        env:
-        {{- if $nacos.enabled }}
-        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://nacos:8848
-          {{- else if $zoo.enabled }}
-        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: zookeeper://zookeeper:2181
-          {{- else }}
-        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://nacos:8848
-        {{- end }}
-        - name: ADMIN_PROMETHEUS_ADDRESS
-          value: prometheus:9090
-        - name: ADMIN_GRAFANA_ADDRESS
-          value: grafana:3000
         volumeMounts:
           - name: data
             mountPath: /var/lib/admin
+          - name: config
+            mountPath: /var/lib/admin/dubbo-cp.yaml
+            subPath: dubbo-cp.yaml
         resources:
 {{ toYaml $admin.resources | trim | indent 10 }}
       volumes:
       - name: data
         emptyDir: {}
+      - name: config
+        configMap:
+          name: admin-config
+          defaultMode: 0755
