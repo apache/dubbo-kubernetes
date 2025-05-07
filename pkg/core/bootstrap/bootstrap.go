@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 )
 
@@ -42,7 +41,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/core/resources/store"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	config_manager "github.com/apache/dubbo-kubernetes/pkg/core/config/manager"
-	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 	"github.com/apache/dubbo-kubernetes/pkg/core/datasource"
 	"github.com/apache/dubbo-kubernetes/pkg/core/extensions"
 	"github.com/apache/dubbo-kubernetes/pkg/core/governance"
@@ -170,26 +168,11 @@ func initializeTraditional(cfg dubbo_cp.Config, builder *core_runtime.Builder) e
 	if cfg.DeployMode == config_core.KubernetesMode {
 		return nil
 	}
-	address := cfg.Store.Traditional.ConfigCenter
+	configCenterAddress := cfg.Store.Traditional.ConfigCenter.Address
 	registryAddress := cfg.Store.Traditional.Registry.Address
 	metadataReportAddress := cfg.Store.Traditional.MetadataReport.Address
-	c, addrUrl := getValidAddressConfig(address, registryAddress)
+	c, addrUrl := getValidConfigCenterConfig(configCenterAddress, registryAddress)
 	configCenter := newConfigCenter(c, addrUrl)
-	properties, err := configCenter.GetProperties(consts.DubboPropertyKey)
-	if err != nil {
-		logger.Info("No configuration found in config center.")
-	}
-	if len(properties) > 0 {
-		logger.Infof("Loaded remote configuration from config center:\n %s", properties)
-		for _, property := range strings.Split(properties, "\n") {
-			if strings.HasPrefix(property, consts.RegistryAddressKey) {
-				registryAddress = strings.Split(property, "=")[1]
-			}
-			if strings.HasPrefix(property, consts.MetadataReportAddressKey) {
-				metadataReportAddress = strings.Split(property, "=")[1]
-			}
-		}
-	}
 	if len(registryAddress) > 0 {
 		logger.Infof("Valid registry address is %s", registryAddress)
 		c := newAddressConfig(registryAddress)
@@ -242,13 +225,12 @@ func initializeTraditional(cfg dubbo_cp.Config, builder *core_runtime.Builder) e
 		builder.WithMetadataReport(metadataReport)
 		dubbo_registry.AddMetadataReport(metadataReport, addrUrl.Address())
 	}
-
 	return nil
 }
 
-func getValidAddressConfig(address string, registryAddress string) (store.AddressConfig, *common.URL) {
+func getValidConfigCenterConfig(address string, registryAddress string) (store.AddressConfig, *common.URL) {
 	if len(address) <= 0 && len(registryAddress) <= 0 {
-		panic("Must at least specify `admin.config-center.address` or `admin.registry.address`!")
+		panic("Must at least specify `admin.configCenter.address` or `admin.registry.address`!")
 	}
 
 	var c store.AddressConfig
