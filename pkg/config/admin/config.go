@@ -29,8 +29,8 @@ import (
 type Admin struct {
 	config.BaseConfig
 	Port             int                    `json:"port" envconfig:"DUBBO_ADMIN_PORT"`
-	MetricDashboards *MetricDashboardConfig `json:"metric_dashboards"`
-	TraceDashboards  *TraceDashboardConfig  `json:"trace_dashboards"`
+	MetricDashboards *MetricDashboardConfig `json:"metricDashboards"`
+	TraceDashboards  *TraceDashboardConfig  `json:"traceDashboards"`
 	Prometheus       string                 `json:"prometheus"`
 	Grafana          string                 `json:"grafana"`
 }
@@ -43,10 +43,17 @@ func (s *Admin) PostProcess() error {
 }
 
 func (s *Admin) Validate() error {
-	return multierr.Combine(
-		s.MetricDashboards.Validate(),
-		s.TraceDashboards.Validate(),
-	)
+	if s.MetricDashboards != nil {
+		if err := s.MetricDashboards.Validate(); err != nil {
+			return err
+		}
+	}
+	if s.TraceDashboards != nil {
+		if err := s.TraceDashboards.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func DefaultAdminConfig() *Admin {

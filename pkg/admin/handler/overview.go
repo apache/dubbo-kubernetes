@@ -85,7 +85,7 @@ func AdminMetadata(rt core_runtime.Runtime) gin.HandlerFunc {
 		config := rt.Config()
 		res.Registry = config.Store.Traditional.Registry.Address
 		res.Metadata = config.Store.Traditional.MetadataReport.Address
-		res.Config = config.Store.Traditional.ConfigCenter
+		res.Config = config.Store.Traditional.ConfigCenter.Address
 		res.Grafana = config.Admin.MetricDashboards.Application.BaseURL
 		res.Prometheus = config.Admin.Prometheus
 		res.Tracing = config.Admin.TraceDashboards.Application.BaseURL

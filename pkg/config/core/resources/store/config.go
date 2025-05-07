@@ -148,7 +148,9 @@ func DefaultMysqlConfig() *mysql.MysqlStoreConfig {
 
 func DefaultTraditionalConfig() Registry {
 	return Registry{
-		ConfigCenter: "zookeeper://127.0.0.1:2181",
+		ConfigCenter: AddressConfig{
+			Address: "zookeeper://127.0.0.1:2181",
+		},
 		Registry: AddressConfig{
 			Address: "zookeeper://127.0.0.1:2181",
 		},
@@ -179,8 +181,8 @@ func (u *UpsertConfig) Validate() error {
 var _ config.Config = &UpsertConfig{}
 
 type Registry struct {
-	ConfigCenter   string        `json:"config_center,omitempty"`
-	MetadataReport AddressConfig `json:"metadata_report,omitempty"`
+	ConfigCenter   AddressConfig `json:"configCenter,omitempty"`
+	MetadataReport AddressConfig `json:"metadataReport,omitempty"`
 	Registry       AddressConfig `json:"registry,omitempty"`
 }
 
@@ -201,7 +203,7 @@ func (r *Registry) Decode(val string) error {
 		return json.Unmarshal([]byte(val), r)
 	}
 	// else treat as a global address for all
-	r.ConfigCenter = val
+	r.ConfigCenter.Address = val
 	r.MetadataReport.Address = val
 	r.Registry.Address = val
 	return nil
