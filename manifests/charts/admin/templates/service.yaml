@@ -1,9 +1,7 @@
-{{- $svc := .Values.service -}}
-{{- if $svc.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: admin-dashboard
+  name: admin
   namespace: {{ .Release.Namespace }}
   labels:
     app: admin
@@ -20,28 +18,3 @@ spec:
     targetPort: http
   selector:
     app: admin
-{{- end }}
----
-{{- if $svc.enabled }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: admin-headless
-  namespace: {{ include "admin.namespace" . }}
-  labels:
-    app: admin
-    dubbo.io/rev: {{ default "default" | quote }}
-    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
-    operator.dubbo.io/component: "Admin"
-    dubbo: admin
-    release: {{ .Release.Name }}
-    app.kubernetes.io/name: "dashboard"
-spec:
-  clusterIP: None
-  ports:
-  - name: http
-    port: 8888
-    targetPort: http
-  selector:
-    app: admin
-{{- end -}}
