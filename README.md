@@ -57,6 +57,6 @@ control plane then interact with registry directly.
 ## Contributing
 If you're interested and want to dive into this project, you can follow these docs:
 [Developer](./DEVELOPER.md)
-[Dubboctl](./docs/dubboctl/concepts.md)
+[Dubboctl](https://github.com/apache/dubbo-kubernetes/blob/ospp-2024/docs/dubboctl/concepts.md)
 
 
