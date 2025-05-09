@@ -15,10 +15,15 @@
 
 _internal_default_values_not_set:
   replicas: 1
+  rollingMaxSurge: 100%
+  rollingMaxUnavailable: 25%
 
   image: mfordjody/dubbo-cp
-
   tag: latest
+
+  volumeMounts: []
+
+  volumes: []
 
   resources:
     limits:

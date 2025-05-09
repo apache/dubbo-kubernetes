@@ -1,6 +1,4 @@
 {{- $admin := .Values -}}
-{{- $zoo := .Values.zookeeper }}
-{{- $nacos := .Values.nacos }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,6 +14,10 @@ metadata:
     app.kubernetes.io/name: "dashboard"
 spec:
   replicas: {{ $admin.replicas }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ $admin.rollingMaxSurge }}
+      maxUnavailable: {{ $admin.rollingMaxUnavailable }}
   selector:
     matchLabels:
       app: admin
@@ -48,6 +50,9 @@ spec:
           - name: config
             mountPath: /var/lib/admin/dubbo-cp.yaml
             subPath: dubbo-cp.yaml
+        {{- with $admin.volumeMounts }}
+        {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
 {{ toYaml $admin.resources | trim | indent 10 }}
       volumes:
@@ -57,3 +62,6 @@ spec:
         configMap:
           name: admin-config
           defaultMode: 0755
+      {{- with $admin.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
