@@ -1384,7 +1384,7 @@ function mergeConditions() {
               {
                 distributeItem?.list.forEach((item, index) => {
                   toStr.length > 0 && (toStr += ' & ')
-                  toStr += `${type}[${item.myKey}]${item.condition}${item.value}`
+                  toStr += `${item.myKey}${item.condition}${item.value}`
                 })
               }
               break
@@ -1406,7 +1406,6 @@ function mergeConditions() {
   })
   // console.log('matchStr', matchStr)
   // console.log('toStr', toStr)
-  // console.log('conditions', conditions)
   return conditions
 }
 

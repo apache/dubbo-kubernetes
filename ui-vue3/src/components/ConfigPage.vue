@@ -23,8 +23,10 @@
             <div class="title">
               <div class="bg"></div>
               <Icon class="title-icon" icon="icon-park-twotone:application-one"></Icon>
-
-              {{ route.params?.pathId }}
+              <a-tooltip placement="topLeft">
+                <template #title>{{ route.params?.pathId }}</template>
+                <span class="truncate-text">{{ route.params?.pathId }}</span>
+              </a-tooltip>
             </div>
           </template>
           <a-menu v-model:selectedKeys="options.current">
@@ -69,9 +71,16 @@
             >
               <slot :name="'form_' + currentOption.key" :current="currentOption"></slot>
             </a-form>
-            <a-form-item style="margin: 20px 0 0 100px">
-              <a-button type="primary" @click="submit">{{ $t('submit') }}</a-button>
-              <a-button style="margin-left: 10px" @click="reset">{{ $t('reset') }}</a-button>
+            <a-form-item
+              v-if="currentOption?.submit || currentOption?.reset"
+              style="margin: 20px 0 0 100px"
+            >
+              <a-button v-if="currentOption?.submit" type="primary" @click="submit">{{
+                $t('submit')
+              }}</a-button>
+              <a-button v-if="currentOption?.reset" style="margin-left: 10px" @click="reset">{{
+                $t('reset')
+              }}</a-button>
             </a-form-item>
           </a-spin>
         </a-card>
@@ -130,12 +139,21 @@ function reset() {
 </script>
 <style lang="less" scoped>
 .__container_common_config {
+  .truncate-text {
+    max-width: 200px;
+    /* 根据实际需求调整 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   :deep(.ant-segmented-group) {
     flex-flow: column;
   }
 
   .__opt {
     .title {
+      padding: 0 20px;
       font-size: 30px;
       text-align: center;
       color: #605f5f;

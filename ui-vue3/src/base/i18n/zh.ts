@@ -161,7 +161,13 @@ const words: I18nType = {
   },
   serviceDomain: {
     name: '服务名',
-    notSpecified: '不指定'
+    notSpecified: '不指定',
+    timeout: '超时时间',
+    retryNum: '重试次数',
+    sameAreaFirst: '同区域优先',
+    closed: '关闭',
+    opened: '开启',
+    paramRoute: '参数路由'
   },
   service: '服务',
   versionGroup: '版本&分组',

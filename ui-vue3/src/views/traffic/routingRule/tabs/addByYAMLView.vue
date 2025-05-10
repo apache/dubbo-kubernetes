@@ -107,7 +107,7 @@ const conditionRuleDetail = reactive({
 })
 
 const YAMLValue = ref(
-  'configVersion: \n' +
+  'configVersion: v3.0\n' +
     'force: true\n' +
     'enabled: true\n' +
     'runtime: false\n' +

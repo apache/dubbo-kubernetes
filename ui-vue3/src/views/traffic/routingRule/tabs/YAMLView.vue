@@ -93,7 +93,6 @@ async function getRoutingRuleDetail() {
     const conditionName = route.params?.ruleName
     if (conditionName && res.data.scope === 'service') {
       const arr = conditionName.split(':')
-      res.data.configVersion = arr[1]
       const tempArr = arr[2].split('.')
       res.data.group = tempArr[0]
     }

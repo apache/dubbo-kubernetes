@@ -144,7 +144,13 @@ const words: I18nType = {
     instanceCount: 'Instance Count'
   },
   serviceDomain: {
-    name: 'Name'
+    name: 'Name',
+    timeout: 'Timeout',
+    retryNum: 'Retry Num',
+    sameAreaFirst: 'Same Area First',
+    closed: 'Closed',
+    opened: 'Opened',
+    paramRoute: 'Param Route'
   },
   appServiceTimeout: 'Adjusting the timeout for application service provision',
   enableAppInstanceLogs: 'Enable access logs for all instances of this application',
