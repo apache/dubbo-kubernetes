@@ -91,17 +91,6 @@ const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
 
-// Condition routing details
-const conditionRuleDetail = reactive({
-  configVersion: 'v3.0',
-  scope: 'service',
-  key: 'org.apache.dubbo.samples.UserService',
-  enabled: true,
-  runtime: true,
-  force: false,
-  conditions: ['=>host!=192.168.0.68']
-})
-
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
     'force: false\n' +
@@ -123,7 +112,6 @@ async function getRoutingRuleDetail() {
     const conditionName = route.params?.ruleName
     if (conditionName && res.data.scope === 'service') {
       const arr = conditionName?.split(':')
-      res.data.configVersion = arr[1]
       res.data.group = arr[2]?.split('.')[0]
     }
     YAMLValue.value = yaml.dump(res?.data)
