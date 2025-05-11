@@ -21,7 +21,7 @@ import router from './router'
 import App from './App.vue'
 import 'ant-design-vue/dist/reset.css'
 import { i18n } from '@/base/i18n'
-// import './api/mock/index'
+import './api/mock/index'
 // import './api/mock/mockCluster'
 // import './api/mock/mockVersion'
 
