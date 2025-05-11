@@ -16,41 +16,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dubbo-samples-apiserver-consumer
+  name: dubbo-samples-provider
   namespace: dubbo-system
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: dubbo-samples-apiserver-consumer
+      app: dubbo-samples-provider
   template:
     metadata:
-      annotations:
-        dubbo.io/xds-enable: enabled
       labels:
-        app: dubbo-samples-apiserver-consumer
+        app: dubbo-samples-provider
     spec:
       containers:
         - name: server
-          image: apache/dubbo-demo:dubbo-samples-apiserver-consumer_0.0.1
+          image: apache/dubbo-demo:dubbo-samples-apiserver-provider_0.0.1
           imagePullPolicy: Always
           ports:
             - containerPort: 20880
-          livenessProbe:
-            httpGet:
-              path: /live
-              port: 22222
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 22222
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          startupProbe:
-            httpGet:
-              path: /startup
-              port: 22222
-            failureThreshold: 30
-            periodSeconds: 10
