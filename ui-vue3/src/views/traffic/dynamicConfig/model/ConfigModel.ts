@@ -268,7 +268,6 @@ export class ConfigModel {
         }
       }
     }
-    console.log(3333)
     return true
   }
 }

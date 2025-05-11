@@ -553,14 +553,12 @@ async function resetConfig() {
 }
 
 async function initConfig() {
-  console.log(TAB_STATE.dynamicConfigForm)
   if (TAB_STATE.dynamicConfigForm?.data) {
     formViewData.fromData(TAB_STATE.dynamicConfigForm.data)
   } else {
     if (route.params?.pathId !== '_tmp') {
       const res = await getConfiguratorDetail({ name: route.params?.pathId })
       transApiData(res.data)
-      formViewData.isAdd = true
     } else {
       formViewData.basicInfo.ruleName = '_tmp'
       isEdit.value = true
@@ -577,8 +575,8 @@ async function saveConfig() {
 
   try {
     let data = formViewEdit.toApiInput(true)
-    if ((formViewData.isAdd = true)) {
-      addConfiguratorDetail({ name: data.ruleName }, data)
+    if (formViewData.isAdd === true) {
+      addConfiguratorDetail({ name: formViewEdit.basicInfo.key + '.configurators' }, data)
         .then((res) => {
           TAB_STATE.dynamicConfigForm.data = null
           nextTick(() => {

@@ -146,8 +146,8 @@ async function saveConfig() {
   loading.value = true
   let data = yaml.load(YAMLValue.value)
   try {
-    if (viewData.isAdd) {
-      addConfiguratorDetail({ name: ruleName.value }, data)
+    if (viewData.isAdd === true) {
+      addConfiguratorDetail({ name: viewData.basicInfo.key + '.configurators' }, data)
         .then((res) => {
           TAB_STATE.dynamicConfigForm.data = null
           nextTick(() => {
