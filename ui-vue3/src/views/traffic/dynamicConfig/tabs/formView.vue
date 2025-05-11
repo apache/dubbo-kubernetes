@@ -408,7 +408,6 @@ const route = useRoute()
 const router = useRouter()
 const isEdit = ref(route.params.isEdit === '1')
 
-const isAdd = ref(false)
 
 const toClipboard = useClipboard().toClipboard
 
@@ -562,11 +561,11 @@ async function initConfig() {
     if (route.params?.pathId !== '_tmp') {
       const res = await getConfiguratorDetail({ name: route.params?.pathId })
       transApiData(res.data)
-      isAdd.value = false
+      formViewData.isAdd = true
     } else {
       formViewData.basicInfo.ruleName = '_tmp'
       isEdit.value = true
-      isAdd.value = true
+      formViewData.isAdd = true
     }
     TAB_STATE.dynamicConfigForm = reactive({
       data: formViewData
@@ -579,7 +578,7 @@ async function saveConfig() {
 
   try {
     let data = formViewEdit.toApiInput(true)
-    if (isAdd.value) {
+    if (formViewData.isAdd = true) {
       addConfiguratorDetail({ name: data.ruleName }, data)
         .then((res) => {
           TAB_STATE.dynamicConfigForm.data = null

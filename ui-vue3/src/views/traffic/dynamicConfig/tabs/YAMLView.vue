@@ -92,7 +92,6 @@ import { ViewDataModel } from '@/views/traffic/dynamicConfig/model/ConfigModel'
 
 const route = useRoute()
 const isEdit = ref(route.params.isEdit === '1')
-const isAdd = ref(false)
 const isDrawerOpened = ref(false)
 const loading = ref(false)
 const sliderSpan = ref(8)
@@ -100,12 +99,12 @@ const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
 const YAMLValue = ref()
 const initValue = ref()
+const ruleName = ref("")
+
 onMounted(async () => {
   await initConfig()
 })
 const modify = computed(() => {
-  console.log(initValue.value)
-  console.log(JSON.stringify(YAMLValue.value))
   return initValue.value !== JSON.stringify(YAMLValue.value)
 })
 const viewData = reactive(new ViewDataModel())
@@ -115,10 +114,9 @@ async function initConfig() {
   } else {
     if (route.params?.pathId === '_tmp') {
       isEdit.value = true
-      isAdd.value = true
-      viewData.basicInfo.ruleName = '_tmp'
+      viewData.isAdd = true
     } else {
-      isAdd.value = false
+      viewData.isAdd = false
       const res = await getConfiguratorDetail({ name: route.params?.pathId })
       viewData.fromApiOutput(res.data)
     }
@@ -126,7 +124,10 @@ async function initConfig() {
       data: viewData
     })
   }
-  const json = yaml.dump(viewData.toApiInput()) // 输出为 json 格式
+  const toApiInput = viewData.toApiInput();
+  ruleName.value = toApiInput.ruleName
+  toApiInput.ruleName = undefined
+  const json = yaml.dump(toApiInput) // 输出为 json 格式
   initValue.value = JSON.stringify(json)
   YAMLValue.value = json
 }
@@ -145,8 +146,8 @@ async function saveConfig() {
   loading.value = true
   let data = yaml.load(YAMLValue.value)
   try {
-    if (isAdd.value) {
-      addConfiguratorDetail({ name: data.ruleName }, data)
+    if (viewData.isAdd) {
+      addConfiguratorDetail({ name: ruleName.value }, data)
         .then((res) => {
           TAB_STATE.dynamicConfigForm.data = null
           nextTick(() => {

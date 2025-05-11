@@ -286,12 +286,14 @@ export class ViewDataModel {
   basicInfo: DynamicConfigBasicInfo = new DynamicConfigBasicInfo()
   config: ConfigModel[] = []
   errorMsg = []
+  isAdd:boolean =  false
 
   constructor() {}
 
   fromData(data: ViewDataModel) {
     this.basicInfo = data.basicInfo
     this.config = data.config
+    this.isAdd = data.isAdd
   }
 
   fromApiOutput(data: any) {
