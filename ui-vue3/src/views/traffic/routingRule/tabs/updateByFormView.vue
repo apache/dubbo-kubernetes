@@ -50,11 +50,7 @@
                         label="版本"
                         required
                       >
-                        <a-input
-                          v-model:value="baseInfo.configVersion"
-                          style="width: 300px"
-                          disabled
-                        />
+                        <a-input v-model:value="baseInfo.version" style="width: 300px" disabled />
                       </a-form-item>
                       <a-form-item label="容错保护">
                         <a-switch
@@ -108,9 +104,19 @@
                   <a-flex justify="space-between">
                     <a-space align="center">
                       <div>路由【{{ routeItemIndex + 1 }}】</div>
-                      <div>
-                        {{ routeItemDes(routeItemIndex) }}
-                      </div>
+                      <a-tooltip>
+                        <template #title>{{ routeItemDes(routeItemIndex) }}</template>
+                        <div
+                          style="
+                            max-width: 400px;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                          "
+                        >
+                          {{ routeItemDes(routeItemIndex) }}
+                        </div>
+                      </a-tooltip>
                     </a-space>
                     <Icon
                       @click="deleteRoute(routeItemIndex)"
@@ -672,12 +678,12 @@ function copyIt(v: string) {
 
 // base info
 const baseInfo = reactive({
-  configVersion: '',
+  version: '',
   ruleGranularity: '',
   objectOfAction: '',
-  enable: false,
+  enable: true,
   faultTolerantProtection: false,
-  runtime: false,
+  runtime: true,
   priority: null,
   group: ''
 })
@@ -1036,31 +1042,148 @@ const deleteRouteDistributeOtherItem = (
 }
 
 const routeItemDes = (routeIndex: number) => {
-  let type: string = ruleGranularityEnum[baseInfo.ruleGranularity] + baseInfo.objectOfAction
-  let preCondition = ''
-  let lastCondition = ''
+  const routeItem = routeList.value[routeIndex]
+  const { ruleGranularity, objectOfAction } = baseInfo
 
-  routeList.value[routeIndex].requestMatch.forEach(
-    (requestMatchItem: any, requestMatchItemIndex: number) => {
-      if (routeList.value[routeIndex].selectedMatchConditionTypes.includes(requestMatchItem.type)) {
-        if (requestMatchItem.type === 'arguments') {
-          requestMatchItem.list.forEach((item: any, itemIndex: number) => {
-            const { index, condition, value } = item
-            let srt = `${index}${condition}${value}`
-            preCondition += srt + ','
+  const typeText = ruleGranularity === 'service' ? '服务' : '应用'
+  let baseDescription = `对于${typeText}【${objectOfAction || '未指定'}】`
+
+  // 构建匹配条件描述 (when)
+  let whenConditions: string[] = []
+  routeItem.selectedMatchConditionTypes?.forEach((type) => {
+    const matchItem = routeItem.requestMatch?.find((item) => item.type === type)
+    if (!matchItem) return
+
+    let conditionStr = ''
+    const conditionSymbol =
+      matchItem.condition === '='
+        ? '等于'
+        : matchItem.condition === '!='
+          ? '不等于'
+          : matchItem.condition || ''
+    const valueStr = matchItem.value || '未指定'
+
+    switch (type) {
+      case 'host':
+        conditionStr = `请求来源主机 ${conditionSymbol} ${valueStr}`
+        break
+      case 'application':
+        conditionStr = `请求来源应用 ${conditionSymbol} ${valueStr}`
+        break
+      case 'method':
+        conditionStr = `请求方法 ${conditionSymbol} ${valueStr}`
+        break
+      case 'arguments':
+        const argConditions = matchItem.list
+          ?.map((arg) => {
+            const argConditionSymbol =
+              arg.condition === '='
+                ? '等于'
+                : arg.condition === '!='
+                  ? '不等于'
+                  : arg.condition || ''
+            const argValueStr = arg.value !== undefined && arg.value !== '' ? arg.value : '未指定'
+            return `参数[${arg.index}] ${argConditionSymbol} ${argValueStr}`
           })
-
-          return
-        } else {
-          const { type, condition, value } = requestMatchItem
-          let str = type + condition + value
-          preCondition += str + ' , '
-        }
+          .filter(Boolean)
+        if (argConditions?.length > 0) conditionStr = argConditions.join(' 且 ')
+        break
+      case 'attachments':
+        const attachConditions = matchItem.list
+          ?.map((attach) => {
+            const attachConditionSymbol =
+              attach.condition === '='
+                ? '等于'
+                : attach.condition === '!='
+                  ? '不等于'
+                  : attach.condition || ''
+            const attachValueStr =
+              attach.value !== undefined && attach.value !== '' ? attach.value : '未指定'
+            return `附件[${attach.myKey || '未指定'}] ${attachConditionSymbol} ${attachValueStr}`
+          })
+          .filter(Boolean)
+        if (attachConditions?.length > 0) conditionStr = attachConditions.join(' 且 ')
+        break
+      case 'other':
+        const otherConditions = matchItem.list
+          ?.map((other) => {
+            const otherConditionSymbol =
+              other.condition === '='
+                ? '等于'
+                : other.condition === '!='
+                  ? '不等于'
+                  : other.condition || ''
+            const otherValueStr =
+              other.value !== undefined && other.value !== '' ? other.value : '未指定'
+            return `自定义匹配[${other.myKey || '未指定'}] ${otherConditionSymbol} ${otherValueStr}`
+          })
+          .filter(Boolean)
+        if (otherConditions?.length > 0) conditionStr = otherConditions.join(' 且 ')
+        break
+    }
+    if (conditionStr) {
+      // Check for empty mandatory fields
+      if ((type === 'host' || type === 'application' || type === 'method') && !matchItem.value) {
+        whenConditions.push(
+          `${type === 'host' ? '请求来源主机' : type === 'application' ? '请求来源应用' : '请求方法'} 未填写`
+        )
+      } else {
+        whenConditions.push(conditionStr)
       }
     }
-  )
+  })
 
-  return `对于${type},将满足=>${preCondition}的请求，转发到=>${lastCondition}的实例`
+  const whenConditionStr = whenConditions.length > 0 ? whenConditions.join(' 且 ') : '任意请求'
+
+  // 构建转发条件描述 (then)
+  let thenConditions: string[] = []
+  routeItem.selectedRouteDistributeMatchTypes?.forEach((type) => {
+    const distributeItem = routeItem.routeDistribute?.find((item) => item.type === type)
+    if (!distributeItem) return
+
+    let conditionStr = ''
+    const conditionSymbol =
+      distributeItem.condition === '='
+        ? '等于'
+        : distributeItem.condition === '!='
+          ? '不等于'
+          : distributeItem.condition || ''
+    const valueStr = distributeItem.value || '未指定'
+
+    switch (type) {
+      case 'host':
+        conditionStr = `目标主机 ${conditionSymbol} ${valueStr}`
+        break
+      case 'other':
+        const otherConditions = distributeItem.list
+          ?.map((other) => {
+            const otherConditionSymbol =
+              other.condition === '='
+                ? '等于'
+                : other.condition === '!='
+                  ? '不等于'
+                  : other.condition || ''
+            const otherValueStr =
+              other.value !== undefined && other.value !== '' ? other.value : '未指定'
+            return `目标标签[${other.myKey || '未指定'}] ${otherConditionSymbol} ${otherValueStr}`
+          })
+          .filter(Boolean)
+        if (otherConditions?.length > 0) conditionStr = otherConditions.join(' 且 ')
+        break
+    }
+    if (conditionStr) {
+      if (type === 'host' && !distributeItem.value) {
+        thenConditions.push(`目标主机 未填写`)
+      } else {
+        thenConditions.push(conditionStr)
+      }
+    }
+  })
+
+  const thenConditionStr =
+    thenConditions.length > 0 ? `满足 【${thenConditions.join(' 且 ')}】` : '默认路由规则'
+
+  return `${baseDescription}，将满足 【${whenConditionStr}】 条件的请求，转发到 ${thenConditionStr} 的实例。`
 }
 
 function parseConditionMatchStringToArray(matchStr: string, routeItemIndex: number) {
@@ -1323,16 +1446,10 @@ function mergeConditions() {
 
 const updateRoutingRule = async () => {
   const { ruleName } = route.params
-  const {
-    configVersion,
-    ruleGranularity,
-    objectOfAction,
-    enable,
-    faultTolerantProtection,
-    runtime
-  } = baseInfo
+  const { version, ruleGranularity, objectOfAction, enable, faultTolerantProtection, runtime } =
+    baseInfo
   const data = {
-    configVersion,
+    configVersion: 'v3.0',
     scope: ruleGranularity,
     key: objectOfAction,
     enabled: enable,
@@ -1346,10 +1463,10 @@ const updateRoutingRule = async () => {
 
 const getVersionAndGroup = () => {
   const conditionName = route.params?.ruleName
-  console.log('lll', baseInfo)
+  // console.log('lll', baseInfo)
   if (conditionName && baseInfo.ruleGranularity === 'service') {
     const arr = conditionName?.split(':')
-    baseInfo.configVersion = arr[1]
+    baseInfo.version = arr[1]
     baseInfo.group = arr[2].split('.')[0]
   }
 }

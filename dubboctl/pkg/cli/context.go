@@ -18,7 +18,7 @@
 package cli
 
 import (
-	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"k8s.io/client-go/rest"
 )
@@ -37,8 +37,8 @@ type Context interface {
 func NewCLIContext(rootFlags *RootFlags) Context {
 	if rootFlags == nil {
 		rootFlags = &RootFlags{
-			kubeconfig: pointer.Of[string](""),
-			Context:    pointer.Of[string](""),
+			kubeconfig: ptr.Of[string](""),
+			Context:    ptr.Of[string](""),
 		}
 	}
 	return &instance{

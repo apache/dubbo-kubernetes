@@ -20,7 +20,7 @@ package values
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/util/pointer"
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
 	"path/filepath"
 	"reflect"
 	"sigs.k8s.io/yaml"
@@ -145,7 +145,7 @@ func splitPath(path string) []string {
 func GetPathAs[T any](m Map, name string) T {
 	v, ok := m.GetPath(name)
 	if !ok {
-		return pointer.Empty[T]()
+		return ptr.Empty[T]()
 	}
 	t, _ := v.(T)
 	return t
@@ -159,7 +159,7 @@ func (m Map) GetPathString(s string) string {
 // GetPathStringOr is a helper around TryGetPathAs[string] to allow usage as a method (otherwise impossible with generics),
 // with an allowance for a default value if it is not found/not set.
 func (m Map) GetPathStringOr(s string, def string) string {
-	return pointer.NonEmptyOrDefault(m.GetPathString(s), def)
+	return ptr.NonEmptyOrDefault(m.GetPathString(s), def)
 }
 
 func (m Map) GetPath(name string) (any, bool) {
@@ -242,7 +242,7 @@ func fromJSON[T any](overlay []byte) (T, error) {
 	v := new(T)
 	err := json.Unmarshal(overlay, &v)
 	if err != nil {
-		return pointer.Empty[T](), err
+		return ptr.Empty[T](), err
 	}
 	return *v, nil
 }

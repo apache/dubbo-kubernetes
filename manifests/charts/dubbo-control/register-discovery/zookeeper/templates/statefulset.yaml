@@ -39,23 +39,14 @@ spec:
         {{- end }}
         imagePullPolicy: IfNotPresent
         env:
-          # The number of milliseconds of each tick
           - name: TICK_TIME
             value: {{ $zookeeper.tickTime | quote }}
-          # The number of ticks that the initial
-          # synchronization phase can take
           - name: INIT_LIMIT
             value: {{ $zookeeper.initLimit | quote }}
-          # The number of ticks that can pass between
-          # sending a request and getting an acknowledgement
           - name: SYNC_LIMIT
             value: {{ $zookeeper.syncLimit | quote }}
-          # the directory where the snapshot is stored.
-          # do not use /tmp for storage, /tmp here is just
-          # example sakes.
           - name: DATA_LOG_DIR
             value: {{ $zoo.dataLogDir | quote }}
-          # the port at which the clients will connect
           - name: PORT_NUMBER
             value: {{ $zookeeper.portNumber | quote }}
         resources:
@@ -77,24 +68,3 @@ spec:
           defaultMode: 0755
       - name: data
         emptyDir: {}
-{{/*  volumeClaimTemplates:*/}}
-{{/*  - metadata:*/}}
-{{/*      name: data*/}}
-{{/*    spec:*/}}
-{{/*      accessModes:*/}}
-{{/*        - ReadWriteOnce*/}}
-{{/*      resources:*/}}
-{{/*        requests:*/}}
-{{/*          storage: 5Gi*/}}
-{{/*---*/}}
-{{/*apiVersion: v1*/}}
-{{/*kind: PersistentVolumeClaim*/}}
-{{/*metadata:*/}}
-{{/*  name: zookeeper-pvc*/}}
-{{/*spec:*/}}
-{{/*  storageClassName: rook-ceph-block*/}}
-{{/*  accessModes:*/}}
-{{/*    - ReadWriteOnce*/}}
-{{/*  resources:*/}}
-{{/*    requests:*/}}
-{{/*      storage: 20Gi*/}}

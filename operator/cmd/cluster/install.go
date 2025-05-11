@@ -23,7 +23,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/install"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog/log"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/pkg/art"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -34,8 +33,6 @@ import (
 	"strings"
 	"time"
 )
-
-var InstallerScope = log.RegisterScope("installer")
 
 type installArgs struct {
 	// filenames is an array of paths to input DubboOperator CR files.
@@ -75,8 +72,8 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 		Example: ` # Apply a default dubboctl installation.
   dubboctl install -y
  
-  # Apply a default profile.
-  dubboctl install --set --profile=demo -y
+  # Apply a demo profile.
+  dubboctl install --set profile=demo -y
 		`,
 		Aliases: []string{"apply"},
 		Args:    cobra.ExactArgs(0),
@@ -86,7 +83,7 @@ func InstallCmdWithArgs(ctx cli.Context, rootArgs *RootArgs, iArgs *installArgs)
 				return err
 			}
 			p := NewPrinterForWriter(cmd.OutOrStderr())
-			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr())
 			p.Printf("%v\n", art.DubboColoredArt())
 			return Install(kubeClient, rootArgs, iArgs, cl, cmd.OutOrStdout(), p)
 		},

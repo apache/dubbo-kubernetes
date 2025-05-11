@@ -15,7 +15,7 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_resources_application_index">
+  <div class="instances-container">
     <search-table :search-domain="searchDomain">
       <template #bodyCell="{ text, record, index, column }">
         <template v-if="column.dataIndex === 'ip'">
@@ -52,13 +52,13 @@
           </a-tag>
         </template>
 
-        <template v-if="column.dataIndex === 'registerTime'">
+        <!-- <template v-if="column.dataIndex === 'registerTime'">
           {{ formattedDate(text) }}
         </template>
 
         <template v-if="column.dataIndex === 'labels'">
           <a-tag v-for="(value, key) in text" :key="key"> {{ key }}:{{ value }}</a-tag>
-        </template>
+        </template> -->
       </template>
     </search-table>
   </div>
@@ -146,20 +146,20 @@ let columns = [
     dataIndex: 'startTime',
     sorter: (a: any, b: any) => sortString(a.startTime, b.startTime),
     width: 200
-  },
-  {
-    title: 'instanceDomain.registerTime',
-    key: 'registerTime',
-    dataIndex: 'registerTime',
-    sorter: (a: any, b: any) => sortString(a.registerTime, b.registerTime),
-    width: 200
-  },
-  {
-    title: 'instanceDomain.labels',
-    key: 'labels',
-    dataIndex: 'labels',
-    width: 800
   }
+  // {
+  //   title: 'instanceDomain.registerTime',
+  //   key: 'registerTime',
+  //   dataIndex: 'registerTime',
+  //   sorter: (a: any, b: any) => sortString(a.registerTime, b.registerTime),
+  //   width: 200
+  // },
+  // {
+  //   title: 'instanceDomain.labels',
+  //   key: 'labels',
+  //   dataIndex: 'labels',
+  //   width: 800
+  // }
 ]
 
 function instanceInfo(params: any) {
@@ -213,17 +213,23 @@ watch(route, (a, b) => {
 })
 </script>
 <style lang="less" scoped>
-.search-table-container {
-  min-height: 60vh;
+.instances-container {
+  width: 100%;
+  height: 100%;
+  // background-color: #f5f5f5;
 
-  .app-link {
-    padding: 4px 10px 4px 4px;
-    border-radius: 4px;
-    color: v-bind('PRIMARY_COLOR');
+  .search-table-container {
+    min-height: 60vh;
 
-    &:hover {
-      cursor: pointer;
-      background: rgba(133, 131, 131, 0.13);
+    .app-link {
+      padding: 4px 10px 4px 4px;
+      border-radius: 4px;
+      color: v-bind('PRIMARY_COLOR');
+
+      &:hover {
+        cursor: pointer;
+        background: rgba(133, 131, 131, 0.13);
+      }
     }
   }
 }

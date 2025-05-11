@@ -80,7 +80,7 @@ type Config struct {
 	// General configuration
 	General *GeneralConfig `json:"general,omitempty"`
 	// DeployMode Type, can be either "kubernetes" or "universal" and "half"
-	DeployMode core.DeployMode `json:"deploy_mode,omitempty" envconfig:"DUBBO_DEPLOYMODE"`
+	DeployMode core.DeployMode `json:"deployMode,omitempty" envconfig:"DUBBO_DEPLOYMODE"`
 	// Mode in which dubbo CP is running. Available values are: "test", "global", "zone"
 	Mode core.CpMode `json:"mode" envconfig:"DUBBO_MODE"`
 	// Configuration of Bootstrap Server, which provides bootstrap config to Dataplanes

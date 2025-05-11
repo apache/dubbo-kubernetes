@@ -37,8 +37,8 @@ type uninstallArgs struct {
 	sets []string
 	// manifestPath is a path to a charts and profiles directory in the local filesystem with a release tgz.
 	manifestPath string
-	// remove results in deletion of all Dubbo resources.
-	remove bool
+	// purge results in deletion of all Dubbo resources.
+	purge bool
 	// skipConfirmation determines whether the user is prompted for confirmation.
 	// If set to true, the user is not prompted, and a "Yes" response is assumed in all cases.
 	skipConfirmation bool
@@ -47,7 +47,7 @@ type uninstallArgs struct {
 func addUninstallFlags(cmd *cobra.Command, args *uninstallArgs) {
 	// cmd.PersistentFlags().StringVarP(&args.filenames, "filenames", "f", "", "The filename of the DubboOperator CR.")
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
-	cmd.PersistentFlags().BoolVar(&args.remove, "remove", false, `Remove all dubbo related source code.`)
+	cmd.PersistentFlags().BoolVar(&args.purge, "purge", false, `Remove all dubbo related source code.`)
 	cmd.PersistentFlags().BoolVarP(&args.skipConfirmation, "skip-confirmation", "y", false, `The skipConfirmation determines whether the user is prompted for confirmation.`)
 }
 
@@ -59,14 +59,11 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 		Use:   "uninstall",
 		Short: "Uninstall Dubbo related resources",
 		Long:  "The uninstall command will uninstall the dubbo cluster",
-		Example: ` # Uninstall a single control plane by dop file
-  dubboctl uninstall -f dop.yaml
-  
-  # Uninstall all control planes and shared resources
-  dubboctl uninstall --remove`,
+		Example: ` # Uninstall all control planes and shared resources
+  dubboctl uninstall --purge`,
 		Args: func(cmd *cobra.Command, args []string) error {
-			if !uiArgs.remove {
-				return fmt.Errorf("at least one of the --remove flags must be set")
+			if !uiArgs.purge {
+				return fmt.Errorf("at least one of the --purge flags must be set")
 			}
 			if len(args) > 0 {
 				return fmt.Errorf("dubboctl uninstall does not take arguments")
@@ -84,7 +81,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 
 // Uninstall uninstalls by deleting specified manifests.
 func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
-	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
+	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr())
 	var kubeClient kube.CLIClient
 	var err error
 	kubeClient, err = ctx.CLIClientWithRevision("")
@@ -93,8 +90,8 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 	}
 
 	pl := progress.NewLog()
-	if uiArgs.remove {
-		cl.LogAndPrint("Purge uninstall will remove all Dubbo resources, ignoring the specified revision or operator file")
+	if uiArgs.purge {
+		cl.LogAndPrint("Purge uninstall will purge all Dubbo resources, ignoring the specified revision or operator file")
 	}
 
 	setFlags := applyFlagAliases(uiArgs.sets)
@@ -110,7 +107,7 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 		kubeClient,
 		vals.GetPathString("metadata.name"),
 		vals.GetPathString("metadata.namespace"),
-		uiArgs.remove,
+		uiArgs.purge,
 	)
 	if err != nil {
 		return err
@@ -130,7 +127,7 @@ func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *
 // preCheck checks for potential major changes.
 func preCheck(cmd *cobra.Command, uiArgs *uninstallArgs, _ *clog.ConsoleLogger, dryRun bool) {
 	needConfirmation, message := false, ""
-	if uiArgs.remove {
+	if uiArgs.purge {
 		needConfirmation = true
 		message += "All Dubbo resources will be pruned from the cluster.\n"
 	}

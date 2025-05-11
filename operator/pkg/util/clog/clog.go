@@ -19,7 +19,6 @@ package clog
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog/log"
 	"io"
 	"os"
 )
@@ -39,26 +38,15 @@ type Logger interface {
 type ConsoleLogger struct {
 	stdOut io.Writer
 	stdErr io.Writer
-	scope  *log.Scope
 }
 
 // NewConsoleLogger creates a new logger and returns a pointer to it.
 // stdOut and stdErr can be used to capture output for testing.
-func NewConsoleLogger(stdOut, stdErr io.Writer, scope *log.Scope) *ConsoleLogger {
-	s := scope
-	if s == nil {
-		s = log.RegisterScope(log.DefaultScopeName)
-	}
+func NewConsoleLogger(stdOut, stdErr io.Writer) *ConsoleLogger {
 	return &ConsoleLogger{
 		stdOut: stdOut,
 		stdErr: stdErr,
-		scope:  s,
 	}
-}
-
-// NewDefaultLogger creates a new logger that outputs to stdout/stderr at default scope.
-func NewDefaultLogger() *ConsoleLogger {
-	return NewConsoleLogger(os.Stdout, os.Stderr, nil)
 }
 
 func (l *ConsoleLogger) LogAndPrint(v ...any) {
@@ -67,7 +55,6 @@ func (l *ConsoleLogger) LogAndPrint(v ...any) {
 	}
 	s := fmt.Sprint(v...)
 	l.Print(s + "\n")
-	l.scope.Infof(s)
 }
 func (l *ConsoleLogger) LogAndError(v ...any) {
 	if len(v) == 0 {
@@ -75,7 +62,6 @@ func (l *ConsoleLogger) LogAndError(v ...any) {
 	}
 	s := fmt.Sprint(v...)
 	l.PrintErr(s + "\n")
-	l.scope.Infof(s)
 }
 func (l *ConsoleLogger) LogAndFatal(a ...any) {
 	l.LogAndError(a...)
@@ -84,12 +70,10 @@ func (l *ConsoleLogger) LogAndFatal(a ...any) {
 func (l *ConsoleLogger) LogAndPrintf(format string, a ...any) {
 	s := fmt.Sprintf(format, a...)
 	l.Print(s + "\n")
-	l.scope.Infof(s)
 }
 func (l *ConsoleLogger) LogAndErrorf(format string, a ...any) {
 	s := fmt.Sprintf(format, a...)
 	l.PrintErr(s + "\n")
-	l.scope.Infof(s)
 }
 
 func (l *ConsoleLogger) LogAndFatalf(format string, a ...any) {

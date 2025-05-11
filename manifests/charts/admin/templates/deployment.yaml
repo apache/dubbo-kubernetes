@@ -1,10 +1,8 @@
 {{- $admin := .Values -}}
-{{- $zoo := .Values.zookeeper }}
-{{- $nacos := .Values.nacos }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: admin-dashboard
+  name: admin
   namespace: {{ .Release.Namespace }}
   labels:
     app: admin
@@ -16,6 +14,10 @@ metadata:
     app.kubernetes.io/name: "dashboard"
 spec:
   replicas: {{ $admin.replicas }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ $admin.rollingMaxSurge }}
+      maxUnavailable: {{ $admin.rollingMaxUnavailable }}
   selector:
     matchLabels:
       app: admin
@@ -36,45 +38,30 @@ spec:
       containers:
       - name: admin
         image: "{{ $admin.image }}:{{ $admin.tag }}"
-        imagePullPolicy: "{{ $admin.imagePullPolicy }}"
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config-file=/var/lib/admin/dubbo-cp.yaml
         ports:
         - name: http
           containerPort: 8888
-        env:
-        {{- if $nacos.enabled }}
-        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://nacos:8848
-          {{- else if $zoo.enabled }}
-        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: zookeeper://zookeeper:2181
-          {{- else }}
-        - name: DUBBO_STORE_TRADITIONAL_REGISTRY
-          value: nacos://nacos:8848
-        {{- end }}
-        - name: ADMIN_PROMETHEUS_ADDRESS
-          value: prometheus:9090
-        - name: ADMIN_GRAFANA_ADDRESS
-          value: grafana:3000
         volumeMounts:
           - name: data
-            mountPath: /var/lib/admin-dashboard
+            mountPath: /var/lib/admin
+          - name: config
+            mountPath: /var/lib/admin/dubbo-cp.yaml
+            subPath: dubbo-cp.yaml
+        {{- with $admin.volumeMounts }}
+        {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
 {{ toYaml $admin.resources | trim | indent 10 }}
       volumes:
       - name: data
         emptyDir: {}
-{{/*      - name: data*/}}
-{{/*        persistentVolumeClaim:*/}}
-{{/*          claimName: admin-pvc*/}}
-{{/*---*/}}
-{{/*apiVersion: v1*/}}
-{{/*kind: PersistentVolumeClaim*/}}
-{{/*metadata:*/}}
-{{/*  name: admin-pvc*/}}
-{{/*spec:*/}}
-{{/*  storageClassName: rook-ceph-block*/}}
-{{/*  accessModes:*/}}
-{{/*    - ReadWriteOnce*/}}
-{{/*  resources:*/}}
-{{/*    requests:*/}}
-{{/*      storage: 20Gi*/}}
+      - name: config
+        configMap:
+          name: admin-config
+          defaultMode: 0755
+      {{- with $admin.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}

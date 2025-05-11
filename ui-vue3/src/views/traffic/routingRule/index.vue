@@ -37,6 +37,10 @@
         <template v-if="column.dataIndex === 'enable'">
           {{ text ? '启用' : '禁用' }}
         </template>
+        <!-- 时间 -->
+        <template v-if="column.dataIndex === 'createTime'">
+          {{ formattedDate(record.createTime) }}
+        </template>
         <template v-if="column.dataIndex === 'operation'">
           <a-button type="link" @click="router.push(`formview/${record.ruleName}`)">
             查看
@@ -70,6 +74,7 @@ import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import router from '@/router'
 import { Icon } from '@iconify/vue'
 import { PRIMARY_COLOR } from '@/base/constants'
+import { formattedDate } from '@/utils/DateUtil'
 
 let columns = [
   {

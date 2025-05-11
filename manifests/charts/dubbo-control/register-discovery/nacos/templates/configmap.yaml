@@ -1,5 +1,4 @@
 {{- $nacos := .Values -}}
-{{- $ncs := .Values.nacos }}
 {{- if eq $nacos.storage.type "mysql" }}
 apiVersion: v1
 kind: ConfigMap
@@ -22,5 +21,5 @@ data:
   mysql.user: {{ .database.username }}
   mysql.password: {{ .database.password }}
   mysql.param: {{ .database.param | default "characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true" }}
-{{- end -}}
-{{- end -}}
+  {{- end -}}
+  {{- end -}}

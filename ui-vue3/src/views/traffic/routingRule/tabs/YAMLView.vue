@@ -83,24 +83,13 @@ const conditionRuleDetail = reactive({
   group: 'default'
 })
 
-const YAMLValue = ref(
-  'configVersion: v3.0\n' +
-    'force: true\n' +
-    'enabled: true\n' +
-    'key: shop-detail\n' +
-    'tags:\n' +
-    '  - name: gray\n' +
-    '    match:\n' +
-    '      - key: env\n' +
-    '        value:\n' +
-    '          exact: gray'
-)
+const YAMLValue = ref('')
 
 // Get condition routing details
 async function getRoutingRuleDetail() {
   let res = await getConditionRuleDetailAPI(<string>route.params?.ruleName)
   console.log(res)
-  if (res?.code === 200) {
+  if (res?.code === 200 && res.data) {
     const conditionName = route.params?.ruleName
     if (conditionName && res.data.scope === 'service') {
       const arr = conditionName.split(':')
@@ -108,7 +97,28 @@ async function getRoutingRuleDetail() {
       const tempArr = arr[2].split('.')
       res.data.group = tempArr[0]
     }
-    YAMLValue.value = yaml.dump(res?.data)
+
+    // Modify conditions before dumping to YAML
+    if (Array.isArray(res.data.conditions)) {
+      res.data.conditions = res.data.conditions.map((condition: string) => {
+        const parts = condition.split('=>')
+        if (parts.length === 2) {
+          const before = parts[0].trim()
+          let after = parts[1].trim()
+
+          // Apply transformation: other[key]=value -> key=value
+          const match = after.match(/other\[(.*?)\]=(.*)/)
+          if (match && match[1] && match[2]) {
+            after = `${match[1]}=${match[2]}`
+          }
+
+          return `${before} => ${after}`
+        }
+        return condition // Return unchanged if format is different
+      })
+    }
+
+    YAMLValue.value = yaml.dump(res.data) // Use modified res.data
   }
 }
 

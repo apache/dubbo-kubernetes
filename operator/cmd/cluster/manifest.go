@@ -90,7 +90,7 @@ func manifestGenerateCmd(ctx cli.Context, _ *RootArgs, mgArgs *manifestGenerateA
 			}
 			kubeClient = kc
 
-			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr(), InstallerScope)
+			cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr())
 			return manifestGenerate(kubeClient, mgArgs, cl)
 		},
 	}

@@ -83,16 +83,20 @@ func sdkGenerateCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
 		Example: `  # Create a java sample sdk.
   dubboctl create sdk --language java --template common --dirname mydubbo
 
+  # Select a default java repository.
   dubboctl create sdk -l java -t common --dirname mydubbo
-  
-  dubboctl create sdk -l java -t common --dirname myrepo/mydubbo
+
+  # Select a java repository.
+  dubboctl create sdk -l java -t myrepo/mydubbo --dirname myapp
 
   # Create a go sample sdk.
   dubboctl create sdk --language go --template common --dirname mydubbogo
-
+  
+  # Select a default go repository.
   dubboctl create sdk -l go -t common --dirname mydubbogo
 
-  dubboctl create sdk -l go -t common --dirname myrepo/mydubbogo
+  # Select a go repository.
+  dubboctl create sdk -l go -t myrepo/mydubbo --dirname myapp 
 `,
 		PreRunE: bindEnv("language", "template", "dirname"),
 		RunE: func(cmd *cobra.Command, args []string) error {

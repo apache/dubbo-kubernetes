@@ -53,9 +53,10 @@ func (c *RuntimeConfig) PostProcess() error {
 func (c *RuntimeConfig) Validate(env core.DeployMode) error {
 	switch env {
 	case core.KubernetesMode, core.HalfHostMode:
-		if err := c.Kubernetes.Validate(); err != nil {
-			return errors.Wrap(err, "Kubernetes validation failed")
-		}
+		//todo make it available
+		//if err := c.Kubernetes.Validate(); err != nil {
+		//	return errors.Wrap(err, "Kubernetes validation failed")
+		//}
 	case core.UniversalMode:
 	default:
 		return errors.Errorf("unknown environment type %q", env)
