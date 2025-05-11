@@ -99,7 +99,7 @@ const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
 const YAMLValue = ref()
 const initValue = ref()
-const ruleName = ref("")
+const ruleName = ref('')
 
 onMounted(async () => {
   await initConfig()
@@ -124,7 +124,7 @@ async function initConfig() {
       data: viewData
     })
   }
-  const toApiInput = viewData.toApiInput();
+  const toApiInput = viewData.toApiInput()
   ruleName.value = toApiInput.ruleName
   toApiInput.ruleName = undefined
   const json = yaml.dump(toApiInput) // 输出为 json 格式

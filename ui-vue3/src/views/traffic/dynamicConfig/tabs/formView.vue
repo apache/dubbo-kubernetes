@@ -408,7 +408,6 @@ const route = useRoute()
 const router = useRouter()
 const isEdit = ref(route.params.isEdit === '1')
 
-
 const toClipboard = useClipboard().toClipboard
 
 function copyIt(v: string) {
@@ -578,7 +577,7 @@ async function saveConfig() {
 
   try {
     let data = formViewEdit.toApiInput(true)
-    if (formViewData.isAdd = true) {
+    if ((formViewData.isAdd = true)) {
       addConfiguratorDetail({ name: data.ruleName }, data)
         .then((res) => {
           TAB_STATE.dynamicConfigForm.data = null

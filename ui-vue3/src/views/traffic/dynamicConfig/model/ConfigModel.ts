@@ -286,7 +286,7 @@ export class ViewDataModel {
   basicInfo: DynamicConfigBasicInfo = new DynamicConfigBasicInfo()
   config: ConfigModel[] = []
   errorMsg = []
-  isAdd:boolean =  false
+  isAdd: boolean = false
 
   constructor() {}
 
