@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: jaeger
-          image: "docker.io/jaegertracing/all-in-one:1.67.0"
+          image: "sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/jager-all-in-one:1.67.0"
           env:
             - name: BADGER_EPHEMERAL
               value: "false"
