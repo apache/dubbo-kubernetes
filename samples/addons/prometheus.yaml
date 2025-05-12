@@ -499,7 +499,7 @@ spec:
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "ghcr.io/prometheus-operator/prometheus-config-reloader:v0.81.0"
+          image: "sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/prometheus-config-reloader:v0.81.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
@@ -527,7 +527,7 @@ spec:
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v3.2.1"
+          image: "sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/prometheus:v3.2.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d
