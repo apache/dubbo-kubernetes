@@ -1348,7 +1348,7 @@ const addRoutingRule = async () => {
   if (ruleGranularity == 'application') {
     ruleName = `${objectOfAction}.condition-router`
   } else {
-    ruleName = `${objectOfAction}:${version}:${group}.condition-router`
+    ruleName = `${objectOfAction}:${version || ''}:${group || ''}.condition-router`
   }
   const res = await addConditionRuleAPI(<string>ruleName, data)
   if (res.code === 200) {

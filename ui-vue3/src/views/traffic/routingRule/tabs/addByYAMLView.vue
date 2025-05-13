@@ -86,6 +86,7 @@ import { addConditionRuleAPI } from '@/api/service/traffic'
 import { useRouter } from 'vue-router'
 import yaml from 'js-yaml'
 import { isNil } from 'lodash'
+import { message } from 'ant-design-vue'
 
 const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
@@ -142,11 +143,23 @@ const addRoutingRule = async () => {
   const data = yaml.load(YAMLValue.value)
   const { configVersion, scope, key, runtime, force, conditions } = data
   let ruleName = ''
+
   if (key == 'application') {
     ruleName = `${key}.condition-router`
   } else {
-    ruleName = `${key}:${configVersion}.condition-router`
+    if (!isNil(TAB_STATE.addConditionRuleSate)) {
+      const { version, group } = TAB_STATE.addConditionRuleSate
+      if (version == '' || group == '') {
+        message.error('请先填写版本和分组字段')
+        return
+      }
+      ruleName = `${key}:${version}:${group}.condition-router`
+    } else {
+      message.error('请先填写版本和分组字段')
+      return
+    }
   }
+  data.configVersion = 'v3.0'
   const res = await addConditionRuleAPI(ruleName, data)
   if (res.code === 200) {
     router.push('/traffic/routingRule')

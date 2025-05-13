@@ -15,7 +15,7 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_resources_application_index">
+  <div class="routing-rule-container">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
         <a-button type="primary" @click="router.push(`/traffic/addRoutingRule/addByFormView`)"
@@ -142,6 +142,10 @@ onMounted(() => {
   TAB_STATE.conditionRule = null
   TAB_STATE.addConditionRuleSate = null
   searchDomain.onSearch()
+  searchDomain.tableStyle = {
+    scrollX: '100',
+    scrollY: '367px'
+  }
 })
 
 const confirm = (ruleName) => {
@@ -151,18 +155,22 @@ const confirm = (ruleName) => {
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
 <style lang="less" scoped>
-.search-table-container {
-  min-height: 60vh;
-  //max-height: 70vh; //overflow: auto;
+.routing-rule-container {
+  height: 100%;
+  .search-table-container {
+    height: 100%;
+    //min-height: 60vh;
+    //max-height: 70vh; //overflow: auto;
 
-  .rule-link {
-    padding: 4px 10px 4px 4px;
-    border-radius: 4px;
-    color: v-bind('PRIMARY_COLOR');
+    .rule-link {
+      padding: 4px 10px 4px 4px;
+      border-radius: 4px;
+      color: v-bind('PRIMARY_COLOR');
 
-    &:hover {
-      cursor: pointer;
-      background: rgba(133, 131, 131, 0.13);
+      &:hover {
+        cursor: pointer;
+        background: rgba(133, 131, 131, 0.13);
+      }
     }
   }
 }
