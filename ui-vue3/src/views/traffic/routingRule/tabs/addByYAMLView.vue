@@ -28,6 +28,7 @@
 
           <div class="editorBox">
             <MonacoEditor
+              @change="changeEditor"
               v-model:modelValue="YAMLValue"
               theme="vs-dark"
               :height="500"
@@ -79,14 +80,14 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
-import {
-  addConditionRuleAPI,
-  getConditionRuleDetailAPI,
-  updateConditionRuleAPI
-} from '@/api/service/traffic'
+import { ref, inject, onMounted, watch } from 'vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { addConditionRuleAPI } from '@/api/service/traffic'
 import { useRouter } from 'vue-router'
 import yaml from 'js-yaml'
+import { isNil } from 'lodash'
+
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
 const router = useRouter()
 const isReadonly = ref(false)
@@ -95,30 +96,47 @@ const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
 
-// Condition routing details
-const conditionRuleDetail = reactive({
-  configVersion: '',
-  scope: 'service',
-  key: 'org.apache.dubbo.samples.UserService',
-  enabled: true,
-  runtime: true,
-  force: false,
-  conditions: ['=>host!=192.168.0.68']
+const YAMLValue = ref(`conditions:
+  - from:
+      match: >-
+        method=string & arguments[method]=string &
+        arguments[arguments[method]]=string &
+        arguments[arguments[arguments[method]]]=string &
+        arguments[arguments[arguments[arguments[string]]]]!=string
+    to:
+      - match: string!=string
+        weight: 0
+  - from:
+      match: >-
+        method=string & arguments[method]=string &
+        arguments[arguments[method]]=string &
+        arguments[arguments[arguments[string]]]!=string
+    to:
+      - match: string!=lggbond
+        weight: 0
+      - match: ss!=ss
+        weight: 0
+configVersion: v3.1
+enabled: true
+force: false
+key: org.apache.dubbo.samples.CommentService
+runtime: true
+scope: service`)
+
+onMounted(() => {
+  if (!isNil(TAB_STATE.conditionRule)) {
+    const data = TAB_STATE.conditionRule
+    // console.log('%c [ data ]-117', 'font-size:13px; background:pink; color:#bf2c9f;', data)
+    YAMLValue.value = yaml.dump(data)
+  } else {
+    YAMLValue.value = ``
+  }
 })
 
-const YAMLValue = ref(
-  'configVersion: v3.0\n' +
-    'force: true\n' +
-    'enabled: true\n' +
-    'runtime: false\n' +
-    'key: shop-detail\n' +
-    'tags:\n' +
-    '  - name: gray\n' +
-    '    match:\n' +
-    '      - key: env\n' +
-    '        value:\n' +
-    '          exact: gray'
-)
+const changeEditor = (val) => {
+  TAB_STATE.conditionRule = yaml.load(YAMLValue.value)
+  // console.log('[ TAB_STATE.conditionRule ] >', TAB_STATE.conditionRule)
+}
 
 const addRoutingRule = async () => {
   const data = yaml.load(YAMLValue.value)
@@ -150,7 +168,8 @@ const addRoutingRule = async () => {
   display: flex;
   align-items: center;
   padding-left: 20px;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1); /* 添加顶部阴影 */
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  /* 添加顶部阴影 */
 }
 
 .sliderBox {

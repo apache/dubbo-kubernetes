@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
+import { inject, onMounted, provide, reactive } from 'vue'
 import { deleteTagRuleAPI, searchTagRule } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -75,7 +75,11 @@ import { Icon } from '@iconify/vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { formattedDate } from '@/utils/DateUtil'
 import { useRoute } from 'vue-router'
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
+onMounted(() => {
+  TAB_STATE.tagRule = null
+})
 const route = useRoute()
 let columns = [
   {

@@ -15,7 +15,7 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_services_tabs_scene_config">
+  <div class="container-services-tabs-scene-config">
     <config-page :options="options">
       <template v-slot:form_timeout="{ current }">
         <a-form-item :label="$t('serviceDomain.timeout')" name="timeout">
@@ -48,11 +48,9 @@
           <div class="param-route">
             <ParamRoute
               v-for="(item, index) in current.form.paramRoute"
-              class="param-route"
               :key="index"
               :paramRouteForm="item"
               :index="index"
-              @update="updateParamRouteFormsItem"
               @deleteParamRoute="deleteParamRoute"
             />
             <a-button type="primary" style="margin-top: 20px" @click="addParamRoute"
@@ -139,97 +137,72 @@ const options: any = reactive({
       key: 'paramRoute',
       form: {
         paramRoute: []
+      },
+      submit: (form: any) => {
+        return new Promise((resolve) => {
+          resolve(updateParamRoute(form?.paramRoute))
+        })
+      },
+      reset(form: any) {
+        return new Promise((resolve) => {
+          resolve(getParamRoute())
+        })
       }
-      // submit: (form: any) => {
-      //   return new Promise((resolve) => {
-      //     resolve(updateParamRoute(form?.paramRoute))
-      //   })
-      // },
-      // reset(form: any) {
-      //   return new Promise((resolve) => {
-      //     resolve(getParamRoute())
-      //   })
-      // }
     }
   ],
   current: [0]
 })
 
-const paramRouteForms: any = ref([
-  {
-    method: 'string',
-    conditions: [
-      {
-        index: 'string',
-        relation: 'string',
-        value: 'string'
-      }
-    ],
-    destinations: [
-      {
-        conditions: [
-          {
-            tag: 'string',
-            relation: 'string',
-            value: 'string'
-          }
-        ],
-        weight: 0
-      }
-    ]
-  }
-])
-
 const addParamRoute = () => {
-  paramRouteForms.value.push({
-    method: 'string',
-    conditions: [
-      {
-        index: 'string',
-        relation: 'string',
-        value: 'string'
-      }
-    ],
-    destinations: [
-      {
+  options.list.forEach((item: any) => {
+    if (item.key === 'paramRoute') {
+      const newData = {
+        method: 'string',
         conditions: [
           {
-            tag: 'string',
+            index: 'string',
             relation: 'string',
             value: 'string'
           }
         ],
-        weight: 0
+        destinations: [
+          {
+            conditions: [
+              {
+                tag: 'string',
+                relation: 'string',
+                value: 'string'
+              }
+            ],
+            weight: 0
+          }
+        ]
       }
-    ]
+      item.form.paramRoute.push(newData)
+    }
   })
-  updateParamRoute()
-  getParamRoute()
-}
-
-const updateParamRouteFormsItem = (index: number, value: any) => {
-  const route = {
-    conditions: value.functionParams,
-    destinations: value.destination,
-    method: value.method.value
-  }
-  paramRouteForms.value[index] = route
-  console.log(paramRouteForms.value)
-  updateParamRoute()
-  getParamRoute()
 }
 
 const updateParamRoute = async () => {
   const { pathId: serviceName, group, version } = route.params
-  await updateParamRouteAPI({
-    serviceName: serviceName,
-    group: group || '',
-    version: version || '',
-    routes: paramRouteForms.value
+  options.list.forEach(async (item: any) => {
+    if (item.key === 'paramRoute') {
+      await updateParamRouteAPI({
+        serviceName: serviceName,
+        group: group || '',
+        version: version || '',
+        routes: item.form.paramRoute
+      })
+      await getParamRoute()
+    }
   })
 }
 const deleteParamRoute = (index: number) => {
-  paramRouteForms.value.splice(index, 1)
+  options.list.forEach((item: any) => {
+    if (item.key === 'paramRoute') {
+      item.form.paramRoute.splice(index, 1)
+    }
+  })
 }
 
 const getParamRoute = async () => {
@@ -343,7 +316,7 @@ onMounted(async () => {
 </script>
 
 <style lang="less" scoped>
-.__container_services_tabs_scene_config {
+.container-services-tabs-scene-config {
   .item-content {
     margin-right: 20px;
   }
@@ -359,6 +332,7 @@ onMounted(async () => {
 
   .param-route {
     // margin-bottom: 20px;
+    height: 320px;
   }
 }
 
