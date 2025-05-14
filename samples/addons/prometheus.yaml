@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 ---
 # Source: prometheus/templates/serviceaccount.yaml
 apiVersion: v1
@@ -484,7 +499,7 @@ spec:
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "ghcr.io/prometheus-operator/prometheus-config-reloader:v0.81.0"
+          image: "sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/prometheus-config-reloader:v0.81.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
@@ -512,7 +527,7 @@ spec:
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v3.2.1"
+          image: "sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/prometheus:v3.2.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d

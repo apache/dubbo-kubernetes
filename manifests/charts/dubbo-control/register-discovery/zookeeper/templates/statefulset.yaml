@@ -21,6 +21,10 @@ spec:
       dubbo: zookeeper
   replicas: {{ $zookeeper.replicas }}
   serviceName: zookeeper
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: {{ $zookeeper.rollingPartition }}
   template:
     metadata:
       labels:
@@ -58,6 +62,13 @@ spec:
           containerPort: 2888
         - name: election
           containerPort: 3888
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+              - ALL
         volumeMounts:
         - name: data
           mountPath: /var/lib/zookeeper

@@ -25,6 +25,10 @@ spec:
       app: nacos
       dubbo.io/rev: {{ default "default" | quote }}
       dubbo: nacos
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: {{ $nacos.rollingPartition }}
   template:
     metadata:
       labels:
@@ -117,6 +121,13 @@ spec:
         - name: SPRING_DATASOURCE_PLATFORM
           value: ""
         {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+              - ALL
         volumeMounts:
         - name: data
           mountPath: /home/nacos/data
