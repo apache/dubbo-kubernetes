@@ -119,27 +119,48 @@ const tableColumns = [
   {
     title: '应用名',
     dataIndex: 'appName',
-    width: '20%'
-    // customCell: (_, index) => {
-    //   if (index === 0) {
-    //     return { rowSpan: tableData.value.length }
-    //   } else {
-    //     return { rowSpan: 0 }
-    //   }
-    // }
+    width: '20%',
+    customCell: (_, index) => {
+      const currentAppName = tableData.value[index].appName
+      if (index === 0 || tableData.value[index - 1].appName !== currentAppName) {
+        const sameAppCount = tableData.value.filter(
+          (item: any) => item.appName === currentAppName
+        ).length
+        return {
+          rowSpan: sameAppCount
+        }
+      } else {
+        return {
+          rowSpan: 0
+        }
+      }
+    }
   },
-  // {
-  //   title: '实例数',
-  //   dataIndex: 'instanceNum',
-  //   width: '15%',
-  //   // customCell: (_, index) => {
-  //   //   if (index === 0) {
-  //   //     return { rowSpan: tableData.value.length }
-  //   //   } else {
-  //   //     return { rowSpan: 0 }
-  //   //   }
-  //   // }
-  // },
+  {
+    title: '实例数',
+    dataIndex: 'instanceNum',
+    width: '15%',
+    customRender: ({ record }) => {
+      const appName = record.appName
+      const instanceNum = tableData.value.filter((item: any) => item.appName === appName).length
+      return instanceNum ?? 0
+    },
+    customCell: (_, index) => {
+      const currentAppName = tableData.value[index].appName
+      if (index === 0 || tableData.value[index - 1].appName !== currentAppName) {
+        const sameAppCount = tableData.value.filter(
+          (item: any) => item.appName === currentAppName
+        ).length
+        return {
+          rowSpan: sameAppCount
+        }
+      } else {
+        return {
+          rowSpan: 0
+        }
+      }
+    }
+  },
   {
     title: '实例名',
     dataIndex: 'instanceName',

@@ -305,13 +305,6 @@
                                           icon="tdesign:remove"
                                           class="action-icon"
                                         />
-                                        <!--                                      <Icon-->
-                                        <!--                                        class="action-icon"-->
-                                        <!--                                        @click="-->
-                                        <!--                                          addArgumentsItem(routeItemIndex, conditionItemIndex)-->
-                                        <!--                                        "-->
-                                        <!--                                        icon="tdesign:add"-->
-                                        <!--                                      />-->
                                       </a-space>
                                     </template>
                                   </template>
@@ -375,13 +368,6 @@
                                           icon="tdesign:remove"
                                           class="action-icon"
                                         />
-                                        <!--                                        <Icon-->
-                                        <!--                                          class="action-icon"-->
-                                        <!--                                          @click="-->
-                                        <!--                                          addAttachmentsItem(routeItemIndex, conditionItemIndex)-->
-                                        <!--                                        "-->
-                                        <!--                                          icon="tdesign:add"-->
-                                        <!--                                        />-->
                                       </a-space>
                                     </template>
                                   </template>
@@ -647,7 +633,15 @@
 </template>
 
 <script lang="ts" setup>
-import { type ComponentInternalInstance, getCurrentInstance, onMounted, reactive, ref } from 'vue'
+import {
+  ComponentInternalInstance,
+  getCurrentInstance,
+  onMounted,
+  reactive,
+  ref,
+  inject,
+  watch
+} from 'vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
@@ -655,7 +649,32 @@ import { PRIMARY_COLOR } from '@/base/constants'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { getConditionRuleDetailAPI, updateConditionRuleAPI } from '@/api/service/traffic'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { isNil } from 'lodash'
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
+onMounted(async () => {
+  if (!isNil(TAB_STATE.conditionRule)) {
+    const { enabled = true, key, scope, runtime = true, conditions } = TAB_STATE.conditionRule
+    console.log('[ TAB_STATE.conditionRule ] >', TAB_STATE.conditionRule)
+    baseInfo.enable = enabled
+    baseInfo.objectOfAction = key
+    baseInfo.ruleGranularity = scope
+    baseInfo.runtime = runtime
 
+    conditions &&
+      conditions.length &&
+      conditions.forEach((item, index) => {
+        const conditionArr = item.split('=>')
+        const match = conditionArr[0]?.trim()
+        const to = conditionArr[1]?.trim()
+        routeList.value[index].requestMatch = parseConditionMatchStringToArray(match, index)
+        routeList.value[index].routeDistribute = parseConditionToStringToArray(to, index)
+      })
+  } else {
+    await getRoutingRuleDetail()
+  }
+  getVersionAndGroup()
+})
 const {
   appContext: {
     config: { globalProperties }
@@ -686,6 +705,18 @@ const baseInfo = reactive({
   runtime: true,
   priority: null,
   group: ''
+})
+
+watch(baseInfo, (newVal) => {
+  const { ruleGranularity, enable = true, runtime = true, objectOfAction } = newVal
+  TAB_STATE.conditionRule = {
+    ...TAB_STATE.conditionRule,
+    enabled: enable,
+    key: objectOfAction,
+    runtime: runtime,
+    scope: ruleGranularity
+  }
+  // console.log('watch baseInfo',TAB_STATE.conditionRule);
 })
 
 const matchConditionTypeOptions = ref([
@@ -779,6 +810,19 @@ const routeList: any = ref([
     ]
   }
 ])
+
+watch(
+  routeList,
+  (newVal) => {
+    TAB_STATE.conditionRule = {
+      ...TAB_STATE.conditionRule,
+      conditions: mergeConditions()
+    }
+  },
+  {
+    deep: true
+  }
+)
 
 const addRoute = () => {
   routeList.value.push({
@@ -1268,16 +1312,32 @@ function parseConditionMatchStringToArray(matchStr: string, routeItemIndex: numb
       }
     }
     // Handle other
-    else if (part.startsWith('other')) {
-      !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('other') &&
-        routeList.value[routeItemIndex].selectedMatchConditionTypes.push('other')
-      const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+    // else if (part.startsWith('other')) {
+    //   !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('other') &&
+    //     routeList.value[routeItemIndex].selectedMatchConditionTypes.push('other')
+    //   const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+    //   if (match) {
+    //     const myKey = match[1].trim()
+    //     const condition = match[2]
+    //     const value = match[3].trim()
+    //     const otherObj = tempArray.find((item) => item.type === 'other')
+    //     otherObj.list.push({ myKey, condition, value })
+    //   }
+    // }
+    else {
+      // Parse unknown condition, assume format is key=value
+      const match = part.match(/^([^!=]+)(!?=)(.+)$/)
       if (match) {
-        const myKey = match[1].trim()
-        const condition = match[2]
-        const value = match[3].trim()
-        const otherObj = tempArray.find((item) => item.type === 'other')
-        otherObj.list.push({ myKey, condition, value })
+        !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('other') &&
+          routeList.value[routeItemIndex].selectedMatchConditionTypes.push('other')
+        const otherItem = tempArray.find((item) => item.type === 'other')
+        if (otherItem) {
+          otherItem.list.push({
+            myKey: match[1].trim(),
+            condition: match[2], // '=' 或 '!='
+            value: match[3].trim()
+          })
+        }
       }
     }
   })
@@ -1315,16 +1375,32 @@ function parseConditionToStringToArray(toStr: string, routeItemIndex: number) {
       }
 
       // Handle other
-      else if (part.startsWith('other')) {
-        !routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.includes('other') &&
-          routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('other')
-        const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+      // else if (part.startsWith('other')) {
+      //   !routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.includes('other') &&
+      //     routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('other')
+      //   const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+      //   if (match) {
+      //     const myKey = match[1].trim()
+      //     const condition = match[2]
+      //     const value = match[3].trim()
+      //     const otherObj = tempArray.find((item) => item.type === 'other')
+      //     otherObj.list.push({ myKey, condition, value })
+      //   }
+      // }
+      else {
+        // Parse unknown condition, assume format is key=value
+        const match = part.match(/^([^!=]+)(!?=)(.+)$/)
         if (match) {
-          const myKey = match[1].trim()
-          const condition = match[2]
-          const value = match[3].trim()
-          const otherObj = tempArray.find((item) => item.type === 'other')
-          otherObj.list.push({ myKey, condition, value })
+          !routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.includes('other') &&
+            routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('other')
+          const otherItem = tempArray.find((item) => item.type === 'other')
+          if (otherItem) {
+            otherItem.list.push({
+              myKey: match[1].trim(),
+              condition: match[2], // '=' 或 '!='
+              value: match[3].trim()
+            })
+          }
         }
       }
     })
@@ -1370,6 +1446,7 @@ function mergeConditions() {
   let toStr = ''
   routeList.value.forEach((routeItem, routeItemIndex) => {
     // mergeMatch
+    // console.log('[ routeItem.selectedMatchConditionTypes ] >', routeItem.selectedMatchConditionTypes)
     routeItem.selectedMatchConditionTypes.forEach((type, typeIndex) => {
       routeItem.requestMatch.forEach((matchItem, matchItemIndex) => {
         if (type == matchItem?.type) {
@@ -1395,7 +1472,7 @@ function mergeConditions() {
               {
                 matchItem.list.forEach((item, index) => {
                   matchStr.length > 0 && (matchStr += ' & ')
-                  matchStr += `${type}[${item.myKey}]${item.condition}${item.value}`
+                  matchStr += `${item.myKey}${item.condition}${item.value}`
                 })
               }
               break
@@ -1417,7 +1494,7 @@ function mergeConditions() {
               {
                 distributeItem?.list.forEach((item, index) => {
                   toStr.length > 0 && (toStr += ' & ')
-                  toStr += `${type}[${item.myKey}]${item.condition}${item.value}`
+                  toStr += `${item.myKey}${item.condition}${item.value}`
                 })
               }
               break
@@ -1428,7 +1505,6 @@ function mergeConditions() {
         }
       })
     })
-
     let condition = ''
     if (matchStr.length > 0 && toStr.length > 0) {
       condition = `${matchStr} => ${toStr}`
@@ -1440,7 +1516,6 @@ function mergeConditions() {
   })
   // console.log('matchStr', matchStr)
   // console.log('toStr', toStr)
-  // console.log('conditions', conditions)
   return conditions
 }
 
@@ -1458,7 +1533,10 @@ const updateRoutingRule = async () => {
     conditions: mergeConditions()
   }
   const res = await updateConditionRuleAPI(<string>ruleName, data)
-  res?.code === 200 && (await getRoutingRuleDetail())
+  if (res?.code === 200) {
+    await getRoutingRuleDetail()
+    message.success('修改成功')
+  }
 }
 
 const getVersionAndGroup = () => {
@@ -1470,11 +1548,6 @@ const getVersionAndGroup = () => {
     baseInfo.group = arr[2].split('.')[0]
   }
 }
-
-onMounted(async () => {
-  await getRoutingRuleDetail()
-  getVersionAndGroup()
-})
 </script>
 
 <style lang="less" scoped>
@@ -1504,7 +1577,8 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     padding-left: 20px;
-    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1); /* 添加顶部阴影 */
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+    /* 添加顶部阴影 */
   }
 
   .sliderBox {

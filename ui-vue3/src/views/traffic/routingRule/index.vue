@@ -15,7 +15,7 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_resources_application_index">
+  <div class="routing-rule-container">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
         <a-button type="primary" @click="router.push(`/traffic/addRoutingRule/addByFormView`)"
@@ -34,7 +34,7 @@
         <template v-if="column.dataIndex === 'ruleGranularity'">
           {{ record.scope === 'service' ? '服务' : '应用' }}
         </template>
-        <template v-if="column.dataIndex === 'enable'">
+        <template v-if="column.dataIndex === 'enabled'">
           {{ text ? '启用' : '禁用' }}
         </template>
         <!-- 时间 -->
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
+import { onMounted, provide, reactive, inject } from 'vue'
 import { deleteConditionRuleAPI, searchRoutingRule } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -75,7 +75,7 @@ import router from '@/router'
 import { Icon } from '@iconify/vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { formattedDate } from '@/utils/DateUtil'
-
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 let columns = [
   {
     title: 'ruleName',
@@ -100,10 +100,9 @@ let columns = [
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
   {
-    title: 'enable',
-    key: 'enable',
-    dataIndex: 'enable',
-    render: (text, record) => (record.enable ? '是' : '否'),
+    title: 'enabled',
+    key: 'enabled',
+    dataIndex: 'enabled',
     width: 120,
     sorter: (a: any, b: any) => sortString(a.instanceNum, b.instanceNum)
   },
@@ -140,7 +139,13 @@ const deleteRule = async (ruleName: string) => {
 }
 
 onMounted(() => {
+  TAB_STATE.conditionRule = null
+  TAB_STATE.addConditionRuleSate = null
   searchDomain.onSearch()
+  searchDomain.tableStyle = {
+    scrollX: '100',
+    scrollY: '367px'
+  }
 })
 
 const confirm = (ruleName) => {
@@ -150,18 +155,22 @@ const confirm = (ruleName) => {
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
 <style lang="less" scoped>
-.search-table-container {
-  min-height: 60vh;
-  //max-height: 70vh; //overflow: auto;
+.routing-rule-container {
+  height: 100%;
+  .search-table-container {
+    height: 100%;
+    //min-height: 60vh;
+    //max-height: 70vh; //overflow: auto;
 
-  .rule-link {
-    padding: 4px 10px 4px 4px;
-    border-radius: 4px;
-    color: v-bind('PRIMARY_COLOR');
+    .rule-link {
+      padding: 4px 10px 4px 4px;
+      border-radius: 4px;
+      color: v-bind('PRIMARY_COLOR');
 
-    &:hover {
-      cursor: pointer;
-      background: rgba(133, 131, 131, 0.13);
+      &:hover {
+        cursor: pointer;
+        background: rgba(133, 131, 131, 0.13);
+      }
     }
   }
 }

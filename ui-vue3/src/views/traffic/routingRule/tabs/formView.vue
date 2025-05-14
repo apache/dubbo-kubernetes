@@ -58,13 +58,12 @@
                 :labelStyle="{ fontWeight: 'bold' }"
                 v-if="conditionRuleDetail.scope == 'service'"
               >
-                {{ conditionRuleDetail.scope }}
                 <p
                   class="description-item-content with-card"
                   @click="copyIt(conditionRuleDetail.version)"
                 >
                   {{ conditionRuleDetail.version }}
-                  <CopyOutlined />
+                  <CopyOutlined v-if="conditionRuleDetail.version.length" />
                 </p>
               </a-descriptions-item>
 
@@ -78,7 +77,7 @@
                   @click="copyIt(conditionRuleDetail.group)"
                 >
                   {{ conditionRuleDetail.group }}
-                  <CopyOutlined />
+                  <CopyOutlined v-if="conditionRuleDetail.group.length" />
                 </p>
               </a-descriptions-item>
 
@@ -109,8 +108,8 @@
                 <a-typography-paragraph>
                   {{
                     conditionRuleDetail.force
-                      ? $t('flowControlDomain.closed')
-                      : $t('flowControlDomain.opened')
+                      ? $t('flowControlDomain.opened')
+                      : $t('flowControlDomain.closed')
                   }}
                 </a-typography-paragraph>
               </a-descriptions-item>
@@ -162,14 +161,14 @@
               >{{ $t('flowControlDomain.requestParameterMatching') }}:
             </a-typography-title>
 
-            <a-space align="center" direction="horizontal" size="middle">
+            <a-space align="center" direction="horizontal" size="middle" wrap>
               <a-tag v-for="(item, index) in requestParameterMatch" :key="index" color="#2db7f5">
                 {{ item }}
               </a-tag>
             </a-space>
           </a-space>
 
-          <a-space align="start" style="width: 100%">
+          <a-space align="start" style="width: 100%" wrap>
             <a-typography-title :level="5"
               >{{ $t('flowControlDomain.addressSubsetMatching') }}:
             </a-typography-title>
@@ -242,12 +241,14 @@ const conditionRuleDetail = reactive({
   runtime: true,
   force: false,
   conditions: ['=>host!=192.168.0.68'],
-  group: 'default',
-  version: '1.0.0'
+  group: '',
+  version: ''
 })
 
 const actionObj = computed(() => {
   const arr = conditionRuleDetail.key.split(':')
+  conditionRuleDetail.version = arr[1] || ''
+  conditionRuleDetail.group = arr[2] || ''
   return arr[0] ? arr[0] : ''
 })
 
