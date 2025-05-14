@@ -28,6 +28,7 @@
 
           <div class="editorBox">
             <MonacoEditor
+              @change="changeEditor"
               v-model:modelValue="YAMLValue"
               theme="vs-dark"
               :height="500"
@@ -79,33 +80,37 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
-import {
-  getConditionRuleDetailAPI,
-  getTagRuleDetailAPI,
-  updateConditionRuleAPI,
-  updateTagRuleAPI
-} from '@/api/service/traffic'
-import { useRoute } from 'vue-router'
+import { inject, onMounted, reactive, ref } from 'vue'
+import { getTagRuleDetailAPI, updateTagRuleAPI } from '@/api/service/traffic'
+import { useRoute, useRouter } from 'vue-router'
 import yaml from 'js-yaml'
+import { isNil } from 'lodash'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
+import { message } from 'ant-design-vue'
+
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
 const route = useRoute()
+const router = useRouter()
 const isReadonly = ref(false)
 
 const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
 
-// Condition routing details
-const conditionRuleDetail = reactive({
-  configVersion: 'v3.0',
-  scope: 'service',
-  key: 'org.apache.dubbo.samples.UserService',
-  enabled: true,
-  runtime: true,
-  force: false,
-  conditions: ['=>host!=192.168.0.68']
+onMounted(() => {
+  if (!isNil(TAB_STATE.tagRule)) {
+    const data = TAB_STATE.tagRule
+    YAMLValue.value = yaml.dump(data)
+  } else {
+    YAMLValue.value = ``
+    getTagRuleDetail()
+  }
 })
+
+const changeEditor = (val) => {
+  TAB_STATE.tagRule = yaml.load(YAMLValue.value)
+}
 
 const YAMLValue = ref(
   'configVersion: v3.0\n' +
@@ -131,12 +136,11 @@ async function getTagRuleDetail() {
 const updateTagRule = async () => {
   const data = yaml.load(YAMLValue.value)
   const res = await updateTagRuleAPI(<string>route.params?.ruleName, data)
-  res.code === 200 && (await getTagRuleDetail())
+  if (res.code === 200) {
+    await getTagRuleDetail()
+    message.success('修改成功')
+  }
 }
-
-onMounted(() => {
-  getTagRuleDetail()
-})
 </script>
 
 <style scoped lang="less">

@@ -37,7 +37,7 @@
                 <a-form layout="horizontal">
                   <a-row style="width: 100%">
                     <a-col :span="12">
-                      <a-form-item label="规则粒度" required> 应用 </a-form-item>
+                      <a-form-item label="规则粒度" required> 应用</a-form-item>
                       <a-form-item label="容错保护">
                         <a-switch
                           v-model:checked="baseInfo.faultTolerantProtection"
@@ -79,9 +79,9 @@
                   <a-space align="center">
                     <div>路由【{{ tagItemIndex + 1 }}】</div>
                     <a-tooltip>
-                      <template #title>{{
-                        generateDescription(tagItem, baseInfo.objectOfAction)
-                      }}</template>
+                      <template #title
+                        >{{ generateDescription(tagItem, baseInfo.objectOfAction) }}
+                      </template>
                       <div
                         style="
                           max-width: 400px;
@@ -221,7 +221,15 @@
 </template>
 
 <script setup lang="ts">
-import { type ComponentInternalInstance, getCurrentInstance, onMounted, reactive, ref } from 'vue'
+import {
+  type ComponentInternalInstance,
+  getCurrentInstance,
+  inject,
+  onMounted,
+  reactive,
+  ref,
+  watch
+} from 'vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
@@ -229,7 +237,48 @@ import { PRIMARY_COLOR } from '@/base/constants'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { addTagRuleAPI, getTagRuleDetailAPI, updateTagRuleAPI } from '@/api/service/traffic'
+import { isNil } from 'lodash'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
+
+onMounted(() => {
+  if (!isNil(TAB_STATE.tagRule)) {
+    const { enabled = true, key, scope, runtime = true, tags } = TAB_STATE.tagRule
+    baseInfo.enable = enabled
+    baseInfo.objectOfAction = key
+    baseInfo.ruleGranularity = scope
+    baseInfo.runtime = runtime
+    tags &&
+      tags.length &&
+      tags.forEach((tagItem, tagIndex) => {
+        tagList.value.push({
+          tagName: tagItem.name,
+          scope: {
+            type: 'labels',
+            labels: [],
+            addresses: {
+              condition: '=',
+              addressesStr: ''
+            }
+          }
+        })
+
+        const { match } = tagItem
+        let formatLabels: any[] = []
+        match.forEach((matchItem, matchIndex) => {
+          formatLabels.push({
+            myKey: matchItem.key,
+            condition: Object.keys(matchItem.value)[0],
+            value: matchItem.value[Object.keys(matchItem.value)[0]]
+          })
+        })
+        if (tagList.value[tagIndex] && tagList.value[tagIndex].scope) {
+          tagList.value[tagIndex].scope.labels = formatLabels
+        }
+      })
+  }
+})
 const {
   appContext: {
     config: { globalProperties }
@@ -253,7 +302,7 @@ function copyIt(v: string) {
 }
 
 const generateDescription = (tagItem: any, serviceName: string): string => {
-  let description = `对于服务 ${serviceName || '未指定'}，将满足 `
+  let description = `对于应用 ${serviceName || '未指定'}，将满足 `
   const conditions: string[] = []
 
   if (tagItem.scope?.type === 'labels' && tagItem.scope.labels?.length > 0) {
@@ -262,7 +311,7 @@ const generateDescription = (tagItem: any, serviceName: string): string => {
       if (label.myKey === 'method') {
         keyDesc = '请求方法'
       } else if (label.myKey?.startsWith('args[')) {
-        const index = label.myKey.match(/\\[(\\d+)\\]/)?.[1]
+        const index = label.myKey.match(/\[(\d+)\]/)?.[1]
         if (index !== undefined) {
           keyDesc = `第 ${parseInt(index) + 1} 个参数`
         } else {
@@ -276,25 +325,25 @@ const generateDescription = (tagItem: any, serviceName: string): string => {
       const value = label.value || '未指定'
       switch (label.condition) {
         case 'exact':
-          conditionDesc = `等于 ${value}`
+          conditionDesc = `exact ${value}`
           break
         case 'regex':
-          conditionDesc = `匹配正则 ${value}`
+          conditionDesc = `regex ${value}`
           break
         case 'prefix':
-          conditionDesc = `前缀为 ${value}`
+          conditionDesc = `prefix ${value}`
           break
         case 'noempty':
-          conditionDesc = `不为空`
+          conditionDesc = `noempty`
           break
         case 'empty':
-          conditionDesc = `为空`
+          conditionDesc = `empty`
           break
         case 'wildcard':
-          conditionDesc = `匹配通配符 ${value}`
+          conditionDesc = `wildcard ${value}`
           break
         case '!=': // Although usually for addresses, include for flexibility
-          conditionDesc = `不等于 ${value}`
+          conditionDesc = `!= ${value}`
           break
         default:
           conditionDesc = `${label.condition || '未知关系'} ${value}`
@@ -316,7 +365,7 @@ const generateDescription = (tagItem: any, serviceName: string): string => {
     description += conditions.join(' 且 ')
   }
 
-  description += ` 的请求，导向带有标签 ${tagItem.tagName || '未指定'} 的实例`
+  description += ` 的实例，打上 ${tagItem.tagName || '未指定'} 标签，划入 ${tagItem.tagName || '未指定'} 的隔离环境`
   return description
 }
 
@@ -331,15 +380,31 @@ const baseInfo = reactive({
   configVersion: 'v3.0'
 })
 
+watch(
+  baseInfo,
+  (newVal) => {
+    const { enable, objectOfAction, runtime, ruleGranularity } = newVal
+    TAB_STATE.tagRule = {
+      ...TAB_STATE.tagRule,
+      enabled: enable,
+      key: objectOfAction,
+      runtime,
+      scope: ruleGranularity
+    }
+  },
+  {
+    immediate: isNil(TAB_STATE.tagRule) ? true : false
+  }
+)
 const matchConditionTypeOptions = ref([
   {
     label: 'labels',
     value: 'labels'
-  },
-  {
-    label: 'addresses',
-    value: 'addresses'
   }
+  // {
+  //   label: 'addresses',
+  //   value: 'addresses'
+  // }
 ])
 
 const labelConditionOptions = ref([
@@ -405,6 +470,45 @@ const labelsColumns = ref([
 
 // tag list
 const tagList: any[] = ref([])
+
+watch(
+  tagList,
+  (newVal) => {
+    console.log(newVal)
+    const tags = []
+    newVal.forEach((tagItem) => {
+      const { tagName, scope } = tagItem
+      const labels = scope.labels
+
+      const newTagItem = {
+        name: tagName,
+        match: []
+      }
+
+      if (labels && labels.length > 0) {
+        labels.forEach((labelItem) => {
+          newTagItem.match.push({
+            key: labelItem.myKey,
+            value: {
+              [labelItem.condition]: labelItem.value
+            }
+          })
+        })
+      }
+      tags.push(newTagItem)
+    })
+
+    // console.log("tags",tags)
+    TAB_STATE.tagRule = {
+      ...TAB_STATE.tagRule,
+      tags
+    }
+  },
+  {
+    deep: true,
+    immediate: isNil(TAB_STATE.tagRule) ? true : false
+  }
+)
 
 const deleteLabelItem = (tagItemIndex: number, labelItemIndex: number) => {
   if (tagList.value[tagItemIndex].scope.labels.length === 1) {

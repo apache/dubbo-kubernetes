@@ -158,6 +158,10 @@ const searchDomain = reactive(
 )
 
 searchDomain.onSearch(handleResult)
+searchDomain.tableStyle = {
+  scrollX: '100',
+  scrollY: '367px'
+}
 
 const selectedVersionAndGroup = (
   tableRowIndex: number,

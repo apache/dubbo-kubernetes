@@ -15,74 +15,58 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_services_tabs_scene_config">
-    <a-tabs v-model:activeKey="activeKey" tab-position="left" animated>
-      <a-tab-pane key="timeout" tab="超时时间">
-        <a-descriptions layout="vertical">
-          <a-descriptions-item label="超时时间">
-            <a-flex v-if="!editForm.timeout.isEdit">
-              <span class="item-content">{{ timeout }}ms</span>
-              <EditOutlined @click="showEdit('timeout')" class="item-icon" />
-            </a-flex>
-            <a-flex v-else align="center">
-              <a-input-number min="0" v-model:value="editForm.timeout.value" class="item-input" />
-              <span style="margin-left: 5px">ms</span>
-              <CheckOutlined @click="saveEdit('timeout')" class="item-icon" />
-              <CloseOutlined @click="hideEdit('timeout')" class="item-icon" />
-            </a-flex>
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-tab-pane>
-      <a-tab-pane key="retryNum" tab="重试次数">
-        <a-descriptions layout="vertical">
-          <a-descriptions-item label="重试次数">
-            <a-flex v-if="!editForm.retryNum.isEdit">
-              <span class="item-content">{{ retryNum }}次</span>
-              <EditOutlined @click="showEdit('retryNum')" class="item-icon" />
-            </a-flex>
-            <a-flex v-else align="center">
-              <a-input-number min="0" v-model:value="editForm.retryNum.value" class="item-input" />
-              <span style="margin-left: 5px">次</span>
-              <CheckOutlined @click="saveEdit('retryNum')" class="item-icon" />
-              <CloseOutlined @click="hideEdit('retryNum')" class="item-icon" />
-            </a-flex>
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-tab-pane>
-      <a-tab-pane key="sameArea" tab="同区域优先">
-        <a-descriptions layout="vertical">
-          <a-descriptions-item label="同区域优先">
-            <a-radio-group
-              @change="changeServiceIntraRegionPriority"
-              v-bind:value="editForm.sameArea.value"
-              button-style="solid"
+  <div class="container-services-tabs-scene-config">
+    <config-page :options="options">
+      <template v-slot:form_timeout="{ current }">
+        <a-form-item :label="$t('serviceDomain.timeout')" name="timeout">
+          <a-input-number
+            v-model:value="current.form.timeout"
+            addon-after="ms"
+            style="width: 150px"
+          />
+        </a-form-item>
+      </template>
+      <template v-slot:form_retryNum="{ current }">
+        <a-form-item :label="$t('serviceDomain.retryNum')" name="retryNum">
+          <a-input-number
+            v-model:value="current.form.retryNum"
+            addon-after="次"
+            style="width: 150px"
+          />
+        </a-form-item>
+      </template>
+      <template v-slot:form_sameAreaFirst="{ current }">
+        <a-form-item :label="$t('serviceDomain.sameAreaFirst')" name="sameAreaFirst">
+          <a-radio-group v-model:value="current.form.sameAreaFirst" button-style="solid">
+            <a-radio-button :value="false">{{ $t('serviceDomain.closed') }}</a-radio-button>
+            <a-radio-button :value="true">{{ $t('serviceDomain.opened') }}</a-radio-button>
+          </a-radio-group>
+        </a-form-item>
+      </template>
+      <template v-slot:form_paramRoute="{ current }">
+        <a-form-item name="paramRoute">
+          <div class="param-route">
+            <ParamRoute
+              v-for="(item, index) in current.form.paramRoute"
+              :key="index"
+              :paramRouteForm="item"
+              :index="index"
+              @deleteParamRoute="deleteParamRoute"
+            />
+            <a-button type="primary" style="margin-top: 20px" @click="addParamRoute"
+              >增加路由</a-button
             >
-              <a-radio-button :value="false">关闭</a-radio-button>
-              <a-radio-button :value="true">开启</a-radio-button>
-            </a-radio-group>
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-tab-pane>
-      <a-tab-pane key="paramRoute" tab="参数路由">
-        <ParamRoute
-          v-for="(item, index) in paramRouteForms"
-          class="param-route"
-          :key="index"
-          :paramRouteForm="item"
-          :index="index"
-          @update="updateParamRouteFormsItem"
-          @deleteParamRoute="deleteParamRoute"
-        />
-        <a-button type="primary" style="margin-top: 20px" @click="addParamRoute">增加路由</a-button>
-      </a-tab-pane>
-    </a-tabs>
+          </div>
+        </a-form-item>
+      </template>
+    </config-page>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { CheckOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons-vue'
 import ParamRoute from './paramRoute.vue'
+import ConfigPage from '@/components/ConfigPage.vue'
 import {
   getParamRouteAPI,
   getServiceIntraRegionPriorityAPI,
@@ -96,138 +80,129 @@ import {
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const timeout = ref(1000)
-const retryNum = ref(1000)
-const editForm: any = reactive({
-  timeout: {
-    isEdit: false,
-    value: ''
-  },
-  retryNum: {
-    isEdit: false,
-    value: ''
-  },
-  sameArea: {
-    value: false
-  }
+
+const options: any = reactive({
+  list: [
+    // timeout
+    {
+      title: 'serviceDomain.timeout',
+      key: 'timeout',
+      form: {
+        timeout: 1000
+      },
+      submit: (form: any) => {
+        return new Promise((resolve) => {
+          resolve(updateServiceTimeout(form?.timeout))
+        })
+      },
+      async reset(form: any) {
+        await getServiceTimeout()
+      }
+    },
+    // retryNum
+    {
+      title: 'serviceDomain.retryNum',
+      key: 'retryNum',
+      form: {
+        retryNum: 0
+      },
+      submit: (form: any) => {
+        return new Promise((resolve) => {
+          resolve(updateServiceRetry(form?.retryNum))
+        })
+      },
+      async reset(form: any) {
+        await getServiceRetry()
+      }
+    },
+    // sameAreaFirst
+    {
+      title: 'serviceDomain.sameAreaFirst',
+      key: 'sameAreaFirst',
+      form: {
+        sameAreaFirst: false
+      },
+      submit: (form: any) => {
+        return new Promise((resolve) => {
+          resolve(updateServiceIntraRegionPriority(form?.sameAreaFirst))
+        })
+      },
+      async reset(form: any) {
+        await getServiceIntraRegionPriority()
+      }
+    },
+    // paramRoute
+    {
+      title: 'serviceDomain.paramRoute',
+      key: 'paramRoute',
+      form: {
+        paramRoute: []
+      },
+      submit: (form: any) => {
+        return new Promise((resolve) => {
+          resolve(updateParamRoute(form?.paramRoute))
+        })
+      },
+      reset(form: any) {
+        return new Promise((resolve) => {
+          resolve(getParamRoute())
+        })
+      }
+    }
+  ],
+  current: [0]
 })
 
-const activeKey = ref('timeout')
-const showEdit = (param: string) => {
-  editForm[param].isEdit = true
-  switch (param) {
-    case 'timeout':
-      editForm[param].value = timeout.value
-      break
-    case 'retryNum':
-      editForm[param].value = retryNum.value
-      break
-    default:
-      break
-  }
-}
-
-const saveEdit = async (param: string) => {
-  switch (param) {
-    case 'timeout': {
-      await updateServiceTimeout()
-      await getServiceTimeout()
-      break
-    }
-    case 'retryNum': {
-      await updateServiceRetry()
-      await getServiceRetry()
-      break
-    }
-    default:
-      break
-  }
-  editForm[param].isEdit = false
-}
-const hideEdit = (param: string) => {
-  editForm[param].isEdit = false
-  switch (param) {
-    case 'timeout':
-      timeout.value = editForm[param].value
-      break
-  }
-}
-
-const paramRouteForms: any = ref([
-  {
-    method: 'string',
-    conditions: [
-      {
-        index: 'string',
-        relation: 'string',
-        value: 'string'
-      }
-    ],
-    destinations: [
-      {
-        conditions: [
-          {
-            tag: 'string',
-            relation: 'string',
-            value: 'string'
-          }
-        ],
-        weight: 0
-      }
-    ]
-  }
-])
-
 const addParamRoute = () => {
-  paramRouteForms.value.push({
-    method: 'string',
-    conditions: [
-      {
-        index: 'string',
-        relation: 'string',
-        value: 'string'
-      }
-    ],
-    destinations: [
-      {
+  options.list.forEach((item: any) => {
+    if (item.key === 'paramRoute') {
+      const newData = {
+        method: 'string',
         conditions: [
           {
-            tag: 'string',
+            index: 'string',
             relation: 'string',
             value: 'string'
           }
         ],
-        weight: 0
+        destinations: [
+          {
+            conditions: [
+              {
+                tag: 'string',
+                relation: 'string',
+                value: 'string'
+              }
+            ],
+            weight: 0
+          }
+        ]
       }
-    ]
+      item.form.paramRoute.push(newData)
+    }
   })
-  updateParamRoute()
-  getParamRoute()
-}
-
-const updateParamRouteFormsItem = (index: number, value: any) => {
-  const route = {
-    conditions: value.functionParams,
-    destinations: value.destination,
-    method: value.method.value
-  }
-  paramRouteForms.value[index] = route
-  console.log(paramRouteForms.value)
-  updateParamRoute()
-  getParamRoute()
 }
 
 const updateParamRoute = async () => {
   const { pathId: serviceName, group, version } = route.params
-  await updateParamRouteAPI({
-    serviceName: serviceName,
-    group: group || '',
-    version: version || '',
-    routes: paramRouteForms.value
+  options.list.forEach(async (item: any) => {
+    if (item.key === 'paramRoute') {
+      await updateParamRouteAPI({
+        serviceName: serviceName,
+        group: group || '',
+        version: version || '',
+        routes: item.form.paramRoute
+      })
+      await getParamRoute()
+    }
   })
 }
 const deleteParamRoute = (index: number) => {
-  paramRouteForms.value.splice(index, 1)
+  options.list.forEach((item: any) => {
+    if (item.key === 'paramRoute') {
+      item.form.paramRoute.splice(index, 1)
+    }
+  })
 }
 
 const getParamRoute = async () => {
@@ -239,7 +214,11 @@ const getParamRoute = async () => {
   }
   const res = await getParamRouteAPI(params)
   if (res.code === 200) {
-    paramRouteForms.value = res.data?.routes
+    options.list.forEach((item: any) => {
+      if (item.key === 'paramRoute') {
+        item.form.paramRoute = res.data?.routes
+      }
+    })
   }
 }
 
@@ -252,19 +231,24 @@ const getServiceTimeout = async () => {
     version: version || ''
   }
   const res = await getServiceTimeoutAPI(params)
-  timeout.value = res.data?.timeout
+  options.list.forEach((item: any) => {
+    if (item.key === 'timeout') {
+      item.form.timeout = res.data.timeout
+    }
+  })
 }
 
 // update timeout
-const updateServiceTimeout = async () => {
+const updateServiceTimeout = async (timeout: number) => {
   const { pathId: serviceName, group, version } = route.params
   const data = {
     serviceName,
     group: group || '',
     version: version || '',
-    timeout: parseInt(editForm.timeout.value)
+    timeout
   }
   await updateServiceTimeoutAPI(data)
+  await getServiceTimeout()
 }
 
 // get service retry
@@ -276,25 +260,24 @@ const getServiceRetry = async () => {
     version: version || ''
   }
   const res = await getServiceRetryAPI(params)
-  retryNum.value = res.data?.retryTimes
+  options.list.forEach((item: any) => {
+    if (item.key === 'retryNum') {
+      item.form.retryNum = res.data.retryTimes
+    }
+  })
 }
 
 // update service retry
-const updateServiceRetry = async () => {
+const updateServiceRetry = async (retryTimes: number) => {
   const { pathId: serviceName, group, version } = route.params
   const data = {
     serviceName,
     group: group || '',
     version: version || '',
-    retryTimes: parseInt(editForm.retryNum.value)
+    retryTimes
   }
   await updateServiceRetryAPI(data)
-}
-
-const changeServiceIntraRegionPriority = async (e) => {
-  editForm.sameArea.value = e.target.value
-  await updateServiceIntraRegionPriority()
-  await getServiceIntraRegionPriority()
+  await getServiceRetry()
 }
 
 const getServiceIntraRegionPriority = async () => {
@@ -305,18 +288,23 @@ const getServiceIntraRegionPriority = async () => {
     version: version || ''
   }
   const res: any = await getServiceIntraRegionPriorityAPI(params)
-  editForm.sameArea.value = res.data?.enabled
+  options.list.forEach((item: any) => {
+    if (item.key === 'sameAreaFirst') {
+      item.form.sameAreaFirst = res.data?.enabled
+    }
+  })
 }
 
-const updateServiceIntraRegionPriority = async () => {
+const updateServiceIntraRegionPriority = async (enabled: boolean) => {
   const { pathId: serviceName, group, version } = route.params
   const data = {
     serviceName,
     group: group || '',
     version: version || '',
-    enabled: editForm.sameArea.value
+    enabled
   }
   await updateServiceIntraRegionPriorityAPI(data)
+  await getServiceIntraRegionPriority()
 }
 
 onMounted(async () => {
@@ -328,7 +316,7 @@ onMounted(async () => {
 </script>
 
 <style lang="less" scoped>
-.__container_services_tabs_scene_config {
+.container-services-tabs-scene-config {
   .item-content {
     margin-right: 20px;
   }
@@ -343,7 +331,45 @@ onMounted(async () => {
   }
 
   .param-route {
-    margin-bottom: 20px;
+    // margin-bottom: 20px;
+    height: 320px;
   }
+}
+
+.item-content {
+  margin-right: 10px;
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 500;
+}
+
+.item-icon {
+  color: #1890ff;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.item-icon:hover {
+  color: #40a9ff;
+}
+
+.item-input {
+  width: 120px;
+}
+
+.scene-config-pane {
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border: 1px solid #e8e8e8;
+}
+
+.pane-content {
+  background-color: white;
+  padding: 16px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
 }
 </style>

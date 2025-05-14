@@ -33,6 +33,7 @@
               :height="500"
               language="yaml"
               :readonly="isReadonly"
+              @change="changeEditor"
             />
           </div>
         </a-flex>
@@ -79,10 +80,14 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, inject } from 'vue'
 import { getConditionRuleDetailAPI, updateConditionRuleAPI } from '@/api/service/traffic'
 import { useRoute } from 'vue-router'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import yaml from 'js-yaml'
+import { isNil } from 'lodash'
+import { message } from 'ant-design-vue'
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
 const route = useRoute()
 const isReadonly = ref(false)
@@ -91,30 +96,48 @@ const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
 
-// Condition routing details
-const conditionRuleDetail = reactive({
-  configVersion: 'v3.0',
-  scope: 'service',
-  key: 'org.apache.dubbo.samples.UserService',
-  enabled: true,
-  runtime: true,
-  force: false,
-  conditions: ['=>host!=192.168.0.68']
+const YAMLValue = ref(`conditions:
+  - from:
+      match: >-
+        method=string & arguments[method]=string &
+        arguments[arguments[method]]=string &
+        arguments[arguments[arguments[method]]]=string &
+        arguments[arguments[arguments[arguments[string]]]]!=string
+    to:
+      - match: string!=string
+        weight: 0
+  - from:
+      match: >-
+        method=string & arguments[method]=string &
+        arguments[arguments[method]]=string &
+        arguments[arguments[arguments[string]]]!=string
+    to:
+      - match: string!=lggbond
+        weight: 0
+      - match: ss!=ss
+        weight: 0
+configVersion: v3.1
+enabled: true
+force: false
+key: org.apache.dubbo.samples.CommentService
+runtime: true
+scope: service`)
+
+onMounted(() => {
+  if (!isNil(TAB_STATE.conditionRule)) {
+    const data = TAB_STATE.conditionRule
+    // console.log('%c [ data ]-117', 'font-size:13px; background:pink; color:#bf2c9f;', data)
+    YAMLValue.value = yaml.dump(data)
+  } else {
+    YAMLValue.value = ``
+    getRoutingRuleDetail()
+  }
 })
 
-const YAMLValue = ref(
-  'configVersion: v3.0\n' +
-    'force: false\n' +
-    'enabled: true\n' +
-    'runtime: false\n' +
-    'key: shop-detail\n' +
-    'tags:\n' +
-    '  - name: gray\n' +
-    '    match:\n' +
-    '      - key: env\n' +
-    '        value:\n' +
-    '          exact: gray'
-)
+const changeEditor = (val) => {
+  TAB_STATE.conditionRule = yaml.load(YAMLValue.value)
+  // console.log('[ TAB_STATE.conditionRule ] >', TAB_STATE.conditionRule)
+}
 
 // Get condition routing details
 async function getRoutingRuleDetail() {
@@ -123,7 +146,6 @@ async function getRoutingRuleDetail() {
     const conditionName = route.params?.ruleName
     if (conditionName && res.data.scope === 'service') {
       const arr = conditionName?.split(':')
-      res.data.configVersion = arr[1]
       res.data.group = arr[2]?.split('.')[0]
     }
     YAMLValue.value = yaml.dump(res?.data)
@@ -133,15 +155,13 @@ async function getRoutingRuleDetail() {
 const updateRoutingRule = async () => {
   // console.log('ymal',YAMLValue.value)
   const data = yaml.load(YAMLValue.value)
+  data.configVersion = 'v3.0'
   const res = await updateConditionRuleAPI(<string>route.params?.ruleName, data)
   if (res.code === 200) {
     await getRoutingRuleDetail()
+    message.success('修改成功')
   }
 }
-
-onMounted(() => {
-  getRoutingRuleDetail()
-})
 </script>
 
 <style scoped lang="less">

@@ -578,87 +578,87 @@ export const routes: Readonly<RouteRecordType[]> = [
                 }
               }
             ]
-          },
-          {
-            path: '/meshRule',
-            name: 'meshRule',
-            children: [
-              {
-                path: '/virtualService',
-                name: 'virtualService',
-                redirect: 'index',
-                component: LayoutTab,
-                meta: {
-                  tab_parent: true
-                },
-                children: [
-                  {
-                    path: '/index',
-                    name: 'virtualServiceIndex',
-                    component: () => import('../views/traffic/virtualService/index.vue'),
-                    meta: {
-                      hidden: true
-                    }
-                  },
-                  {
-                    path: '/formview/:ruleName',
-                    name: 'virtualServiceDomain.formView',
-                    component: () => import('../views/traffic/virtualService/tabs/formView.vue'),
-                    meta: {
-                      tab: true,
-                      icon: 'oui:apm-trace'
-                    }
-                  },
-                  {
-                    path: '/yamlview/:ruleName',
-                    name: 'virtualServiceDomain.YAMLView',
-                    component: () => import('../views/traffic/virtualService/tabs/YAMLView.vue'),
-                    meta: {
-                      tab: true,
-                      icon: 'oui:app-console'
-                    }
-                  }
-                ]
-              },
-              {
-                path: '/destinationRule',
-                name: 'destinationRule',
-                redirect: 'index',
-                component: LayoutTab,
-                meta: {
-                  tab_parent: true
-                },
-                children: [
-                  {
-                    path: '/index',
-                    name: 'destinationRuleIndex',
-                    component: () => import('../views/traffic/destinationRule/index.vue'),
-                    meta: {
-                      hidden: true
-                    }
-                  },
-                  {
-                    path: '/formview/:ruleName',
-                    name: 'destinationRuleDomain.formView',
-                    component: () => import('../views/traffic/destinationRule/tabs/formView.vue'),
-                    meta: {
-                      tab: true,
-                      icon: 'oui:apm-trace'
-                    }
-                  },
-                  {
-                    path: '/yamlview/:ruleName',
-                    name: 'destinationRuleDomain.YAMLView',
-                    component: () => import('../views/traffic/destinationRule/tabs/YAMLView.vue'),
-                    meta: {
-                      tab: true,
-                      icon: 'oui:app-console'
-                    }
-                  }
-                ]
-              }
-            ]
           }
+          // {
+          //   path: '/meshRule',
+          //   name: 'meshRule',
+          //   children: [
+          //     {
+          //       path: '/virtualService',
+          //       name: 'virtualService',
+          //       redirect: 'index',
+          //       component: LayoutTab,
+          //       meta: {
+          //         tab_parent: true
+          //       },
+          //       children: [
+          //         {
+          //           path: '/index',
+          //           name: 'virtualServiceIndex',
+          //           component: () => import('../views/traffic/virtualService/index.vue'),
+          //           meta: {
+          //             hidden: true
+          //           }
+          //         },
+          //         {
+          //           path: '/formview/:ruleName',
+          //           name: 'virtualServiceDomain.formView',
+          //           component: () => import('../views/traffic/virtualService/tabs/formView.vue'),
+          //           meta: {
+          //             tab: true,
+          //             icon: 'oui:apm-trace'
+          //           }
+          //         },
+          //         {
+          //           path: '/yamlview/:ruleName',
+          //           name: 'virtualServiceDomain.YAMLView',
+          //           component: () => import('../views/traffic/virtualService/tabs/YAMLView.vue'),
+          //           meta: {
+          //             tab: true,
+          //             icon: 'oui:app-console'
+          //           }
+          //         }
+          //       ]
+          //     },
+          //     {
+          //       path: '/destinationRule',
+          //       name: 'destinationRule',
+          //       redirect: 'index',
+          //       component: LayoutTab,
+          //       meta: {
+          //         tab_parent: true
+          //       },
+          //       children: [
+          //         {
+          //           path: '/index',
+          //           name: 'destinationRuleIndex',
+          //           component: () => import('../views/traffic/destinationRule/index.vue'),
+          //           meta: {
+          //             hidden: true
+          //           }
+          //         },
+          //         {
+          //           path: '/formview/:ruleName',
+          //           name: 'destinationRuleDomain.formView',
+          //           component: () => import('../views/traffic/destinationRule/tabs/formView.vue'),
+          //           meta: {
+          //             tab: true,
+          //             icon: 'oui:apm-trace'
+          //           }
+          //         },
+          //         {
+          //           path: '/yamlview/:ruleName',
+          //           name: 'destinationRuleDomain.YAMLView',
+          //           component: () => import('../views/traffic/destinationRule/tabs/YAMLView.vue'),
+          //           meta: {
+          //             tab: true,
+          //             icon: 'oui:app-console'
+          //           }
+          //         }
+          //       ]
+          //     }
+          //   ]
+          // }
         ]
       },
       {

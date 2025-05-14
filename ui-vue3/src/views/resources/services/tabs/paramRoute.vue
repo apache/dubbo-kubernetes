@@ -19,63 +19,45 @@
     <a-card :bordered="false" style="width: 1000px">
       <template #title>
         <a-flex justify="space-between">
-          <span>路由{{ props?.index + 1 }}</span>
-          <a-flex class="handle-form" v-if="!isEdit">
-            <EditOutlined @click="changeEditState" class="edit-icon" />
+          <a-flex align="center" :gap="8">
+            <span>路由{{ props?.index + 1 }}</span>
             <DeleteOutlined @click="emit('deleteParamRoute', props.index)" class="edit-icon" />
-          </a-flex>
-          <a-flex class="handle-form" v-else>
-            <CheckOutlined @click="update" class="edit-icon" />
-            <CloseOutlined @click="reset" class="edit-icon" />
           </a-flex>
         </a-flex>
       </template>
-      <a-form :labelCol="{ span: 3 }" :disabled="!isEdit">
+      <a-form :labelCol="{ span: 3 }">
         <a-form-item label="选择方法">
-          <a-select v-model:value="editValue.method.value" style="width: 200px">
-            <a-select-option
-              v-for="(item, index) in editValue.method.selectArr"
-              :value="item.value"
-              :key="index"
-            >
+          <a-select v-model:value="props.paramRouteForm.method" style="width: 200px">
+            <a-select-option v-for="(item, index) in selectArr" :value="item.value" :key="index">
               {{ item.label }}
             </a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item label="指定方法参数">
           <a-space direction="vertical">
-            <a-button type="primary" @click="addFunctionParams" :disabled="!isEdit">
-              添加参数
-            </a-button>
+            <a-button type="primary" @click="addFunctionParams"> 添加参数 </a-button>
             <a-table
               :columns="functionParamsColumn"
-              :data-source="editValue.functionParams"
+              :data-source="props.paramRouteForm.conditions"
               :pagination="false"
             >
               <template #bodyCell="{ column, index: idx }">
                 <template v-if="column.dataIndex === 'index'">
-                  <a-input v-model:value="editValue.functionParams[idx].index" />
+                  <a-input v-model:value="props.paramRouteForm.conditions[idx].index" />
                 </template>
                 <template v-if="column.dataIndex === 'relation'">
-                  <a-input v-model:value="editValue.functionParams[idx].relation" />
+                  <a-input v-model:value="props.paramRouteForm.conditions[idx].relation" />
                 </template>
                 <template v-if="column.dataIndex === 'value'">
-                  <a-input v-model:value="editValue.functionParams[idx].value" />
+                  <a-input v-model:value="props.paramRouteForm.conditions[idx].value" />
                 </template>
                 <template v-if="column.dataIndex === 'handle'">
                   <a-flex justify="space-between">
-                    <!--                   <PlusOutlined-->
-                    <!--                       class="edit-icon"-->
-                    <!--                       :class="{ 'disabled-icon': !isEdit }"-->
-                    <!--                       @click="isEdit && addFunctionParams()"-->
-                    <!--                   />-->
                     <MinusOutlined
                       class="edit-icon"
-                      :class="{ 'disabled-icon': !isEdit || editValue.functionParams.length === 1 }"
+                      :class="{ 'disabled-icon': props.paramRouteForm.conditions.length === 1 }"
                       @click="
-                        isEdit &&
-                          editValue.functionParams.length !== 1 &&
-                          deleteFunctionParams(props.index, idx)
+                        props.paramRouteForm.conditions.length !== 1 && deleteFunctionParams(idx)
                       "
                     />
                   </a-flex>
@@ -87,7 +69,11 @@
         <a-form-item label="路由目的地">
           <a-space direction="vertical">
             <a-button type="primary" @click="addDestination"> 添加目的地 </a-button>
-            <a-card v-for="(destinationItem, index) in editValue.destination" :bordered="false">
+            <a-card
+              v-for="(destinationItem, index) in props.paramRouteForm.destinations"
+              :key="index"
+              :bordered="false"
+            >
               <template #title>
                 <a-space>
                   目的地{{ index + 1 }}
@@ -111,24 +97,16 @@
                   <template v-if="column.dataIndex === 'value'">
                     <a-input v-model:value="record.value" />
                   </template>
-                  <!--              <template v-if="column.dataIndex === 'weight'">-->
-                  <!--                <a-input v-model:value="editValue.destination[idx].weight" />-->
-                  <!--              </template>-->
                   <template v-if="column.dataIndex === 'handle'">
                     <a-flex justify="space-between">
-                      <!--                    <PlusOutlined-->
-                      <!--                        class="edit-icon"-->
-                      <!--                        :class="{ 'disabled-icon': !isEdit }"-->
-                      <!--                        @click="isEdit && addDestination(idx)"-->
-                      <!--                    />-->
                       <MinusOutlined
-                        class="edit-icon"
                         :class="{
-                          'disabled-icon': !isEdit || editValue.functionParams.length === 1
+                          'disabled-icon':
+                            props.paramRouteForm.destinations[index].conditions.length === 1 &&
+                            props.paramRouteForm.destinations.length === 1
                         }"
-                        @click="
-                          isEdit && editValue.functionParams.length !== 1 && deleteDestination(idx)
-                        "
+                        class="edit-icon"
+                        @click="deleteDestinationCondition(index, idx)"
                       />
                     </a-flex>
                   </template>
@@ -143,22 +121,9 @@
 </template>
 
 <script setup lang="ts">
-import {
-  CheckOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  MinusOutlined
-} from '@ant-design/icons-vue'
-import { ref } from 'vue'
+import { DeleteOutlined, MinusOutlined } from '@ant-design/icons-vue'
 
-const isEdit = ref(false)
-
-const changeEditState = () => {
-  isEdit.value = true
-}
-
-const emit = defineEmits(['deleteParamRoute', 'update'])
+const emit = defineEmits(['deleteParamRoute'])
 const props = defineProps({
   paramRouteForm: {
     type: Object,
@@ -169,60 +134,20 @@ const props = defineProps({
   }
 })
 
-const editValue = ref({
-  method: {
-    value: undefined,
-    selectArr: [
-      {
-        label: 'getUserInfo',
-        value: 'getUserInfo'
-      },
-      {
-        label: 'register',
-        value: 'register'
-      },
-      {
-        label: 'login',
-        value: 'login'
-      }
-    ]
+const selectArr = [
+  {
+    label: 'getUserInfo',
+    value: 'getUserInfo'
   },
-  functionParams: [],
-  destination: []
-})
-
-const reset = () => {
-  isEdit.value = false
-  let res = JSON.parse(JSON.stringify(props.paramRouteForm))
-  editValue.value = {
-    method: {
-      value: res.method,
-      selectArr: [
-        {
-          label: 'getUserInfo',
-          value: 'getUserInfo'
-        },
-        {
-          label: 'register',
-          value: 'register'
-        },
-        {
-          label: 'login',
-          value: 'login'
-        }
-      ]
-    },
-    functionParams: res.conditions,
-    destination: res.destinations
+  {
+    label: 'register',
+    value: 'register'
+  },
+  {
+    label: 'login',
+    value: 'login'
   }
-}
-
-reset()
-
-const update = () => {
-  isEdit.value = false
-  emit('update', props.index, editValue.value)
-}
+]
 
 const functionParamsColumn = [
   {
@@ -279,7 +204,7 @@ const destinationColumn = [
 ]
 
 const addFunctionParams = () => {
-  editValue.value.functionParams.push({
+  props.paramRouteForm.conditions.push({
     index: '',
     relation: '',
     value: ''
@@ -287,11 +212,11 @@ const addFunctionParams = () => {
 }
 
 const deleteFunctionParams = (idx: number) => {
-  editValue.value.functionParams.splice(idx, 1)
+  props.paramRouteForm.conditions.splice(idx, 1)
 }
 
 const addDestination = () => {
-  editValue.value.destination.push({
+  props.paramRouteForm.destinations.push({
     conditions: [
       {
         tag: '',
@@ -304,15 +229,27 @@ const addDestination = () => {
 }
 
 const addDestinationCondition = (idx: number) => {
-  editValue.value.destination[idx].conditions.push({
+  props.paramRouteForm.destinations[idx].conditions.push({
     tag: '',
     relation: '',
     value: ''
   })
 }
 
-const deleteDestination = (idx: number) => {
-  editValue.value.destination.splice(idx, 1)
+const deleteDestinationCondition = (idx: number, idy: number) => {
+  const { destinations } = props.paramRouteForm
+  const currentDest = destinations[idx]
+
+  // If the current destination has only one condition and is not the last destination, delete the entire destination
+  if (currentDest.conditions.length === 1 && destinations.length > 1) {
+    destinations.splice(idx, 1)
+    return
+  }
+
+  // Otherwise just delete the condition (ensure at least one condition remains)
+  if (currentDest.conditions.length > 1) {
+    currentDest.conditions.splice(idy, 1)
+  }
 }
 </script>
 
@@ -329,6 +266,7 @@ const deleteDestination = (idx: number) => {
 
   .disabled-icon {
     color: #71777d;
+    cursor: not-allowed;
   }
 }
 </style>
