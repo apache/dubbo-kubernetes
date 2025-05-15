@@ -117,7 +117,7 @@ onMounted(() => {
   searchDomain.onSearch()
   searchDomain.tableStyle = {
     scrollX: '100',
-    scrollY: 'calc(100vh - 200px)'
+    scrollY: '367px'
   }
 })
 

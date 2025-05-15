@@ -199,8 +199,8 @@ const searchDomain = reactive(
 
 onMounted(() => {
   searchDomain.tableStyle = {
-    // scrollX: '100',
-    scrollY: 'calc(100vh - 400px)'
+    scrollX: '100',
+    scrollY: '367px'
   }
   searchDomain.onSearch()
 })
@@ -216,7 +216,7 @@ watch(route, (a, b) => {
 .instances-container {
   width: 100%;
   height: 100%;
-  // background-color: #f5f5f5;
+  // background-color:rgb(145, 41, 41);
 
   .search-table-container {
     min-height: 60vh;

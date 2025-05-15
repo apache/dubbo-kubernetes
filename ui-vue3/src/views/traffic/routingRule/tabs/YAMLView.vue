@@ -37,13 +37,12 @@
           </div>
         </a-flex>
       </a-col>
-
+      Ï
       <a-col :span="isDrawerOpened ? sliderSpan : 0" class="right">
         <a-card v-if="isDrawerOpened" class="sliderBox">
           <a-card v-for="i in 2" :key="i">
             <p>修改时间: 2024/3/20 15:20:31</p>
             <p>版本号: xo842xqpx834</p>
-
             <a-flex justify="flex-end">
               <a-button type="text" style="color: #0a90d5">查看</a-button>
               <a-button type="text" style="color: #0a90d5">回滚</a-button>
@@ -58,7 +57,7 @@
 <script setup lang="ts">
 import MonacoEditor from '@/components/editor/MonacoEditor.vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { getConditionRuleDetailAPI } from '@/api/service/traffic'
 import { useRoute } from 'vue-router'
 import yaml from 'js-yaml'
@@ -70,19 +69,6 @@ const isDrawerOpened = ref(false)
 
 const sliderSpan = ref(8)
 
-// Condition routing details
-const conditionRuleDetail = reactive({
-  configVersion: 'v3.0',
-  scope: 'service',
-  key: 'org.apache.dubbo.samples.UserService',
-  enabled: true,
-  runtime: true,
-  force: false,
-  conditions: ['=>host!=192.168.0.68'],
-  version: '1.0',
-  group: 'default'
-})
-
 const YAMLValue = ref('')
 
 // Get condition routing details
@@ -92,33 +78,38 @@ async function getRoutingRuleDetail() {
   if (res?.code === 200 && res.data) {
     const conditionName = route.params?.ruleName
     if (conditionName && res.data.scope === 'service') {
-      const arr = conditionName.split(':')
-      res.data.configVersion = arr[1]
-      const tempArr = arr[2].split('.')
-      res.data.group = tempArr[0]
-    }
+      // const arr = conditionName.split(':')
+      // const tempArr = arr[2].split('.')
 
-    // Modify conditions before dumping to YAML
-    if (Array.isArray(res.data.conditions)) {
-      res.data.conditions = res.data.conditions.map((condition: string) => {
-        const parts = condition.split('=>')
-        if (parts.length === 2) {
-          const before = parts[0].trim()
-          let after = parts[1].trim()
+      // const conditionName = route.params?.ruleName
+      // if (conditionName && res.data.scope === 'service') {
+      //   const arr = conditionName.split(':')
+      //   // const tempArr = arr[2].split('.')
+      //   // res.data.group = tempArr[0]
+      // }
 
-          // Apply transformation: other[key]=value -> key=value
-          const match = after.match(/other\[(.*?)\]=(.*)/)
-          if (match && match[1] && match[2]) {
-            after = `${match[1]}=${match[2]}`
+      // Modify conditions before dumping to YAML
+      if (Array.isArray(res.data.conditions)) {
+        res.data.conditions = res.data.conditions.map((condition: string) => {
+          const parts = condition.split('=>')
+          if (parts.length === 2) {
+            const before = parts[0].trim()
+            let after = parts[1].trim()
+
+            // Apply transformation: other[key]=value -> key=value
+            const match = after.match(/other\[(.*?)\]=(.*)/)
+            if (match && match[1] && match[2]) {
+              after = `${match[1]}=${match[2]}`
+            }
+
+            return `${before} => ${after}`
           }
+          return condition // Return unchanged if format is different
+        })
+      }
 
-          return `${before} => ${after}`
-        }
-        return condition // Return unchanged if format is different
-      })
+      YAMLValue.value = yaml.dump(res.data) // Use modified res.data
     }
-
-    YAMLValue.value = yaml.dump(res.data) // Use modified res.data
   }
 }
 

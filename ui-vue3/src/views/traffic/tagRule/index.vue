@@ -15,7 +15,7 @@
   ~ limitations under the License.
 -->
 <template>
-  <div class="__container_resources_application_index">
+  <div class="tag-rule-container">
     <search-table :search-domain="searchDomain">
       <template #customOperation>
         <a-button type="primary" @click="router.push('/traffic/addTagRule/addByFormView')">
@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, reactive } from 'vue'
+import { inject, onMounted, provide, reactive } from 'vue'
 import { deleteTagRuleAPI, searchTagRule } from '@/api/service/traffic'
 import SearchTable from '@/components/SearchTable.vue'
 import { SearchDomain, sortString } from '@/utils/SearchUtil'
@@ -75,7 +75,11 @@ import { Icon } from '@iconify/vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { formattedDate } from '@/utils/DateUtil'
 import { useRoute } from 'vue-router'
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
 
+onMounted(() => {
+  TAB_STATE.tagRule = null
+})
 const route = useRoute()
 let columns = [
   {
@@ -134,6 +138,10 @@ const deleteTagRule = async (ruleName: string) => {
 
 onMounted(() => {
   searchDomain.onSearch()
+  searchDomain.tableStyle = {
+    scrollX: '100',
+    scrollY: '367px'
+  }
 })
 
 const confirm = (ruleName: string) => {
@@ -143,18 +151,21 @@ const confirm = (ruleName: string) => {
 provide(PROVIDE_INJECT_KEY.SEARCH_DOMAIN, searchDomain)
 </script>
 <style lang="less" scoped>
-.search-table-container {
-  min-height: 60vh;
-  //max-height: 70vh; //overflow: auto;
+.tag-rule-container {
+  height: 100%;
+  .search-table-container {
+    min-height: 60vh;
+    //max-height: 70vh; //overflow: auto;
 
-  .rule-link {
-    padding: 4px 10px 4px 4px;
-    border-radius: 4px;
-    color: v-bind('PRIMARY_COLOR');
+    .rule-link {
+      padding: 4px 10px 4px 4px;
+      border-radius: 4px;
+      color: v-bind('PRIMARY_COLOR');
 
-    &:hover {
-      cursor: pointer;
-      background: rgba(133, 131, 131, 0.13);
+      &:hover {
+        cursor: pointer;
+        background: rgba(133, 131, 131, 0.13);
+      }
     }
   }
 }

@@ -370,13 +370,6 @@
                                           icon="tdesign:remove"
                                           class="action-icon"
                                         />
-                                        <!--                                        <Icon-->
-                                        <!--                                          class="action-icon"-->
-                                        <!--                                          @click="-->
-                                        <!--                                          addAttachmentsItem(routeItemIndex, conditionItemIndex)-->
-                                        <!--                                        "-->
-                                        <!--                                          icon="tdesign:add"-->
-                                        <!--                                        />-->
                                       </a-space>
                                     </template>
                                   </template>
@@ -438,11 +431,6 @@
                                           icon="tdesign:remove"
                                           class="action-icon"
                                         />
-                                        <!--                                      <Icon-->
-                                        <!--                                        @click="addOtherItem(routeItemIndex, conditionItemIndex)"-->
-                                        <!--                                        icon="tdesign:add"-->
-                                        <!--                                        class="action-icon"-->
-                                        <!--                                      />-->
                                       </a-space>
                                     </template>
                                   </template>
@@ -635,22 +623,57 @@
     <a-card class="footer">
       <a-flex>
         <a-button type="primary" @click="addRoutingRule">确认</a-button>
-        <a-button style="margin-left: 30px" @click="console.log(routeList)"> 取消</a-button>
       </a-flex>
     </a-card>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { type ComponentInternalInstance, getCurrentInstance, reactive, ref } from 'vue'
+import {
+  type ComponentInternalInstance,
+  getCurrentInstance,
+  reactive,
+  ref,
+  inject,
+  onMounted,
+  watch
+} from 'vue'
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons-vue'
 import useClipboard from 'vue-clipboard3'
 import { message } from 'ant-design-vue'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { addConditionRuleAPI } from '@/api/service/traffic'
+import { isNil } from 'lodash'
+const TAB_STATE = inject(PROVIDE_INJECT_KEY.PROVIDE_INJECT_KEY)
+onMounted(() => {
+  if (!isNil(TAB_STATE.conditionRule)) {
+    const { enabled = true, key, scope, runtime = true, conditions } = TAB_STATE.conditionRule
+    // console.log('[ TAB_STATE.conditionRule ] >', TAB_STATE.conditionRule)
+    baseInfo.enable = enabled
+    baseInfo.objectOfAction = key
+    baseInfo.ruleGranularity = scope
+    baseInfo.runtime = runtime
 
+    conditions &&
+      conditions.length &&
+      conditions.forEach((item, index) => {
+        const conditionArr = item.split('=>')
+        const match = conditionArr[0]?.trim()
+        const to = conditionArr[1]?.trim()
+        routeList.value[index].requestMatch = parseConditionMatchStringToArray(match, index)
+        routeList.value[index].routeDistribute = parseConditionToStringToArray(to, index)
+      })
+  }
+
+  if (!isNil(TAB_STATE.addConditionRuleSate)) {
+    const { version, group } = TAB_STATE.addConditionRuleSate
+    baseInfo.version = version
+    baseInfo.group = group
+  }
+})
 const {
   appContext: {
     config: { globalProperties }
@@ -682,6 +705,27 @@ const baseInfo = reactive({
   priority: null,
   group: ''
 })
+
+watch(
+  baseInfo,
+  (newVal) => {
+    const { ruleGranularity, enable = true, runtime = true, objectOfAction } = newVal
+    TAB_STATE.conditionRule = {
+      ...TAB_STATE.conditionRule,
+      enabled: enable,
+      key: objectOfAction,
+      runtime: runtime,
+      scope: ruleGranularity
+    }
+    TAB_STATE.addConditionRuleSate = {
+      version: newVal.version,
+      group: newVal.group
+    }
+  },
+  {
+    immediate: isNil(TAB_STATE.conditionRule) ? true : false
+  }
+)
 
 const matchConditionTypeOptions = ref([
   {
@@ -774,6 +818,20 @@ const routeList = ref([
     ]
   }
 ])
+
+watch(
+  routeList,
+  (newVal) => {
+    TAB_STATE.conditionRule = {
+      ...TAB_STATE.conditionRule,
+      conditions: mergeConditions()
+    }
+  },
+  {
+    deep: true,
+    immediate: isNil(TAB_STATE.conditionRule) ? true : false
+  }
+)
 
 const addRoute = () => {
   routeList.value.push({
@@ -1181,6 +1239,123 @@ function routeItemDes(routeIndex: number): string {
   return `${baseDescription}，将满足 【${whenConditionStr}】 条件的请求，转发到 ${thenConditionStr} 的实例。`
 }
 
+// Test case
+// const str = 'host=example.com & application=myApp & method=getItem & arguments[1]!=dubbo & arguments[2]=dubbo2 & attachments[myKey]=myValue & other[myKey2]=myValue2';
+// const test = parseConditionsStringToArray(str, 0);
+// routeList.value[0].requestMatch = test
+// console.log('test', test)
+
+function mergeConditions() {
+  let conditions: string[] = []
+  let matchStr = ''
+  let toStr = ''
+  routeList.value.forEach((routeItem, routeItemIndex) => {
+    // mergeMatch
+    // console.log('[ routeItem.selectedMatchConditionTypes ] >', routeItem.selectedMatchConditionTypes)
+    routeItem.selectedMatchConditionTypes.forEach((type, typeIndex) => {
+      routeItem.requestMatch.forEach((matchItem, matchItemIndex) => {
+        if (type == matchItem?.type) {
+          // matchStr.length > 0 && (matchStr += ' & ')
+          switch (matchItem?.type) {
+            case 'arguments':
+              {
+                matchItem.list.forEach((item, index) => {
+                  matchStr.length > 0 && (matchStr += ' & ')
+                  matchStr += `${type}[${item.index}]${item.condition}${item.value}`
+                })
+              }
+              break
+            case 'attachments':
+              {
+                matchItem.list.forEach((item, index) => {
+                  matchStr.length > 0 && (matchStr += ' & ')
+                  matchStr += `${type}[${item.myKey}]${item.condition}${item.value}`
+                })
+              }
+              break
+            case 'other':
+              {
+                matchItem.list.forEach((item, index) => {
+                  matchStr.length > 0 && (matchStr += ' & ')
+                  matchStr += `${item.myKey}${item.condition}${item.value}`
+                })
+              }
+              break
+            default:
+              matchStr.length > 0 && (matchStr += ' & ')
+              matchStr += `${matchItem.type}${matchItem.condition}${matchItem.value}`
+          }
+        }
+      })
+    })
+
+    //   mergeDistribute
+    routeItem.selectedRouteDistributeMatchTypes.forEach((type, typeIndex) => {
+      routeItem.routeDistribute.forEach((distributeItem, distributeItemIndex) => {
+        if (type == distributeItem?.type) {
+          // toStr.length > 0 && (toStr += ' & ')
+          switch (distributeItem?.type) {
+            case 'other':
+              {
+                distributeItem?.list.forEach((item, index) => {
+                  toStr.length > 0 && (toStr += ' & ')
+                  toStr += `${item.myKey}${item.condition}${item.value}`
+                })
+              }
+              break
+            default:
+              toStr.length > 0 && (toStr += ' & ')
+              toStr += `${distributeItem.type}${distributeItem.condition}${distributeItem.value}`
+          }
+        }
+      })
+    })
+    let condition = ''
+    if (matchStr.length > 0 && toStr.length > 0) {
+      condition = `${matchStr} => ${toStr}`
+    } else if (matchStr.length > 0 && toStr.length == 0) {
+      condition = `${matchStr}`
+    }
+    // merge match and tostr
+    conditions.push(condition)
+  })
+  // console.log('matchStr', matchStr)
+  // console.log('toStr', toStr)
+  return conditions
+}
+
+const addRoutingRule = async () => {
+  const {
+    version,
+    ruleGranularity,
+    objectOfAction,
+    enable,
+    faultTolerantProtection,
+    runtime,
+    group
+  } = baseInfo
+  const data = {
+    configVersion: 'v3.0',
+    scope: ruleGranularity,
+    key: objectOfAction,
+    enabled: enable,
+    force: faultTolerantProtection,
+    runtime,
+    conditions: mergeConditions()
+  }
+
+  let ruleName = ''
+  if (ruleGranularity == 'application') {
+    ruleName = `${objectOfAction}.condition-router`
+  } else {
+    ruleName = `${objectOfAction}:${version || ''}:${group || ''}.condition-router`
+  }
+  const res = await addConditionRuleAPI(<string>ruleName, data)
+  if (res.code === 200) {
+    router.push('/traffic/routingRule')
+  }
+}
+
 function parseConditionMatchStringToArray(matchStr: string, routeItemIndex: number) {
   const tempArray: any = []
   const parts = matchStr.split(' & ')
@@ -1263,16 +1438,32 @@ function parseConditionMatchStringToArray(matchStr: string, routeItemIndex: numb
       }
     }
     // Handle other
-    else if (part.startsWith('other')) {
-      !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('other') &&
-        routeList.value[routeItemIndex].selectedMatchConditionTypes.push('other')
-      const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+    // else if (part.startsWith('other')) {
+    //   !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('other') &&
+    //     routeList.value[routeItemIndex].selectedMatchConditionTypes.push('other')
+    //   const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+    //   if (match) {
+    //     const myKey = match[1].trim()
+    //     const condition = match[2]
+    //     const value = match[3].trim()
+    //     const otherObj = tempArray.find((item) => item.type === 'other')
+    //     otherObj.list.push({ myKey, condition, value })
+    //   }
+    // }
+    else {
+      // Parse unknown condition, assume format is key=value
+      const match = part.match(/^([^!=]+)(!?=)(.+)$/)
       if (match) {
-        const myKey = match[1].trim()
-        const condition = match[2]
-        const value = match[3].trim()
-        const otherObj = tempArray.find((item) => item.type === 'other')
-        otherObj.list.push({ myKey, condition, value })
+        !routeList.value[routeItemIndex].selectedMatchConditionTypes.includes('other') &&
+          routeList.value[routeItemIndex].selectedMatchConditionTypes.push('other')
+        const otherItem = tempArray.find((item) => item.type === 'other')
+        if (otherItem) {
+          otherItem.list.push({
+            myKey: match[1].trim(),
+            condition: match[2], // '=' 或 '!='
+            value: match[3].trim()
+          })
+        }
       }
     }
   })
@@ -1282,7 +1473,7 @@ function parseConditionMatchStringToArray(matchStr: string, routeItemIndex: numb
 
 function parseConditionToStringToArray(toStr: string, routeItemIndex: number) {
   const tempArray: any = []
-  const parts = toStr.split(' & ')
+  const parts = toStr?.split(' & ')
 
   // Initialize default structure
   const defaultStructure = [
@@ -1293,153 +1484,53 @@ function parseConditionToStringToArray(toStr: string, routeItemIndex: number) {
   // Copy default structure to result array
   defaultStructure.forEach((item) => tempArray.push({ ...item }))
 
-  parts.forEach((part) => {
-    part = part.trim()
-    // Handle host
-    if (part.startsWith('host')) {
-      routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('host')
-      const match = part.match(/^host(!=|=)(.+)/)
-      if (match) {
-        const condition = match[1]
-        const value = match[2].trim()
-        const hostObj = tempArray.find((item) => item.type === 'host')
-        hostObj.condition = condition
-        hostObj.value = value
+  parts?.length &&
+    parts.forEach((part) => {
+      part = part.trim()
+      // Handle host
+      if (part.startsWith('host')) {
+        routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('host')
+        const match = part.match(/^host(!=|=)(.+)/)
+        if (match) {
+          const condition = match[1]
+          const value = match[2].trim()
+          const hostObj = tempArray.find((item) => item.type === 'host')
+          hostObj.condition = condition
+          hostObj.value = value
+        }
       }
-    }
 
-    // Handle other
-    else if (part.startsWith('other')) {
-      !routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.includes('other') &&
-        routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('other')
-      const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
-      if (match) {
-        const myKey = match[1].trim()
-        const condition = match[2]
-        const value = match[3].trim()
-        const otherObj = tempArray.find((item) => item.type === 'other')
-        otherObj.list.push({ myKey, condition, value })
+      // Handle other
+      // else if (part.startsWith('other')) {
+      //   !routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.includes('other') &&
+      //     routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('other')
+      //   const match = part.match(/^other\[(.+)\](!=|=)(.+)/)
+      //   if (match) {
+      //     const myKey = match[1].trim()
+      //     const condition = match[2]
+      //     const value = match[3].trim()
+      //     const otherObj = tempArray.find((item) => item.type === 'other')
+      //     otherObj.list.push({ myKey, condition, value })
+      //   }
+      // }
+      else {
+        // Parse unknown condition, assume format is key=value
+        const match = part.match(/^([^!=]+)(!?=)(.+)$/)
+        if (match) {
+          !routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.includes('other') &&
+            routeList.value[routeItemIndex].selectedRouteDistributeMatchTypes.push('other')
+          const otherItem = tempArray.find((item) => item.type === 'other')
+          if (otherItem) {
+            otherItem.list.push({
+              myKey: match[1].trim(),
+              condition: match[2], // '=' 或 '!='
+              value: match[3].trim()
+            })
+          }
+        }
       }
-    }
-  })
+    })
   return tempArray
-}
-
-// Test case
-// const str = 'host=example.com & application=myApp & method=getItem & arguments[1]!=dubbo & arguments[2]=dubbo2 & attachments[myKey]=myValue & other[myKey2]=myValue2';
-// const test = parseConditionsStringToArray(str, 0);
-// routeList.value[0].requestMatch = test
-// console.log('test', test)
-
-function mergeConditions() {
-  let conditions: string[] = []
-  let matchStr = ''
-  let toStr = ''
-  routeList.value.forEach((routeItem, routeItemIndex) => {
-    // mergeMatch
-    routeItem.selectedMatchConditionTypes.forEach((type, typeIndex) => {
-      routeItem.requestMatch.forEach((matchItem, matchItemIndex) => {
-        if (type == matchItem?.type) {
-          // matchStr.length > 0 && (matchStr += ' & ')
-          switch (matchItem?.type) {
-            case 'arguments':
-              {
-                matchItem.list.forEach((item, index) => {
-                  matchStr.length > 0 && (matchStr += ' & ')
-                  matchStr += `${type}[${item.index}]${item.condition}${item.value}`
-                })
-              }
-              break
-            case 'attachments':
-              {
-                matchItem.list.forEach((item, index) => {
-                  matchStr.length > 0 && (matchStr += ' & ')
-                  matchStr += `${type}[${item.myKey}]${item.condition}${item.value}`
-                })
-              }
-              break
-            case 'other':
-              {
-                matchItem.list.forEach((item, index) => {
-                  matchStr.length > 0 && (matchStr += ' & ')
-                  matchStr += `${type}[${item.myKey}]${item.condition}${item.value}`
-                })
-              }
-              break
-            default:
-              matchStr.length > 0 && (matchStr += ' & ')
-              matchStr += `${matchItem.type}${matchItem.condition}${matchItem.value}`
-          }
-        }
-      })
-    })
-
-    //   mergeDistribute
-    routeItem.selectedRouteDistributeMatchTypes.forEach((type, typeIndex) => {
-      routeItem.routeDistribute.forEach((distributeItem, distributeItemIndex) => {
-        if (type == distributeItem?.type) {
-          // toStr.length > 0 && (toStr += ' & ')
-          switch (distributeItem?.type) {
-            case 'other':
-              {
-                distributeItem?.list.forEach((item, index) => {
-                  toStr.length > 0 && (toStr += ' & ')
-                  toStr += `${type}[${item.myKey}]${item.condition}${item.value}`
-                })
-              }
-              break
-            default:
-              toStr.length > 0 && (toStr += ' & ')
-              toStr += `${distributeItem.type}${distributeItem.condition}${distributeItem.value}`
-          }
-        }
-      })
-    })
-    let condition = ''
-    if (matchStr.length > 0 && toStr.length > 0) {
-      condition = `${matchStr} => ${toStr}`
-    } else if (matchStr.length > 0 && toStr.length == 0) {
-      condition = `${matchStr}`
-    }
-    // merge match and tostr
-    conditions.push(condition)
-  })
-  // console.log('matchStr', matchStr)
-  // console.log('toStr', toStr)
-  // console.log('conditions', conditions)
-  return conditions
-}
-
-const addRoutingRule = async () => {
-  const {
-    version,
-    ruleGranularity,
-    objectOfAction,
-    enable,
-    faultTolerantProtection,
-    runtime,
-    group
-  } = baseInfo
-  const data = {
-    configVersion: 'v3.0',
-    scope: ruleGranularity,
-    key: objectOfAction,
-    enabled: enable,
-    force: faultTolerantProtection,
-    runtime,
-    conditions: mergeConditions()
-  }
-
-  let ruleName = ''
-  if (ruleGranularity == 'application') {
-    ruleName = `${objectOfAction}.condition-router`
-  } else {
-    ruleName = `${objectOfAction}:${version}:${group}.condition-router`
-  }
-  const res = await addConditionRuleAPI(<string>ruleName, data)
-  if (res.code === 200) {
-    router.push('/traffic/routingRule')
-  }
 }
 </script>
 
