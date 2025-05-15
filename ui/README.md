@@ -5,7 +5,7 @@
 
 ## Build Setup
 
-前端依赖的所有后端 Swagger API 文档目前存放在 `[hack/swagger/swagger.json](hack/swagger/swagger.json)` 目录，可参考了解后端 API 详情，基于 API 数据格式可对后端接口进行 mock，实现前端闭环开发。
+前端依赖的所有后端 Swagger API 文档目前存放在 [`hack/swagger/swagger.json`](../hack/swagger/swagger.json) 目录，可参考了解后端 API 详情，基于 API 数据格式可对后端接口进行 mock，实现前端闭环开发。
 
 ### 前后端集成测试
 接下来是关于如何实现前后端集成测试的，首先是对前端代码打包，然后完成后端代码打包并启动 dubbo-cp 进程。
