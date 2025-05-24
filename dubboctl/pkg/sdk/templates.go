@@ -24,7 +24,7 @@ import (
 	"strings"
 )
 
-const DefaultRepositoryName = "default"
+const DefaultRepositoryName = "common"
 
 type Templates struct {
 	client *Client
