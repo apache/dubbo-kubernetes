@@ -54,4 +54,8 @@ admin:
   # allow_embedding = true
   # [auth.anonymous]
   # enabled = true
-  grafana: http://47.76.81.123:3000/grafana
+  grafana: http://47.76.81.123:3000/
+  auth:
+    user: admin
+    password: Dubbo@2025
+    expirationTime: 7200
