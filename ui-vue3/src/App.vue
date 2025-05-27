@@ -19,14 +19,14 @@
 import { RouterView, useRouter } from 'vue-router'
 import enUS from 'ant-design-vue/es/locale/en_US'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
-import { computed, provide, reactive, ref, watch } from 'vue'
+import { provide, reactive, watch } from 'vue'
 import dayjs from 'dayjs'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
-import { notification } from 'ant-design-vue'
 import { PROVIDE_INJECT_KEY } from '@/base/enums/ProvideInject'
 import { PRIMARY_COLOR } from '@/base/constants'
-import { changeLanguage, i18n, localeConfig } from '@/base/i18n'
+import { i18n, localeConfig } from '@/base/i18n'
 import devTool from '@/utils/DevToolUtil'
+import { getAuthState } from '@/utils/AuthUtil'
 
 dayjs.locale('en')
 
@@ -46,6 +46,8 @@ function globalQuestion() {
 }
 
 const localeGlobal = reactive(i18n.global.locale)
+
+const router = useRouter()
 </script>
 
 <template>
@@ -86,6 +88,7 @@ const localeGlobal = reactive(i18n.global.locale)
   :deep(.ant-card-body) {
     padding: 10px;
   }
+
   width: 80%;
   margin-left: 20px;
   border: 1px dashed rgba(162, 162, 162, 0.19);
@@ -96,6 +99,7 @@ const localeGlobal = reactive(i18n.global.locale)
   &.no-card {
     padding-left: 20px;
   }
+
   &.with-card:hover {
     color: v-bind('PRIMARY_COLOR');
   }
@@ -105,10 +109,12 @@ const localeGlobal = reactive(i18n.global.locale)
 .__container_tabDemo3 {
   .option {
     padding-left: 16px;
+
     .btn {
       margin-right: 10px;
     }
   }
+
   :deep(.spin) {
     margin-top: 30px;
   }

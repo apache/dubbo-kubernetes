@@ -18,6 +18,12 @@
 import type { I18nType } from './type.ts'
 
 const words: I18nType = {
+  loginDomain: {
+    username: 'Username',
+    password: 'Password',
+    login: 'Login',
+    authFail: 'Auth Fail'
+  },
   destinationRuleDomain: {
     YAMLView: 'YAML view',
     formView: 'Form view'

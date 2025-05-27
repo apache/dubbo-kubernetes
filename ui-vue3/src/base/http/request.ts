@@ -24,6 +24,9 @@ import type {
 } from 'axios'
 import axios from 'axios'
 import NProgress from 'nprogress'
+import { useRoute, useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import { removeAuthState } from '@/utils/AuthUtil'
 
 const service: AxiosInstance = axios.create({
   //  change this to decide where to go
@@ -36,10 +39,15 @@ const response: AxiosInterceptorManager<AxiosResponse> = service.interceptors.re
 
 request.use(
   (config) => {
-    config.data = JSON.stringify(config.data) //数据转化,也可以使用qs转换
-    config.headers = <AxiosRequestHeaders>{
-      'Content-Type': 'application/json' //配置请求头
+    if (!config.headers) {
+      config.headers = <AxiosRequestHeaders>{}
     }
+    if (!config.headers['Content-Type']) {
+      config.headers['Content-Type'] = 'application/json'
+      config.data = JSON.stringify(config.data)
+    }
+    console.log(config.data)
+
     // NProgress.start()
     // console.log(config)
     return config
@@ -60,6 +68,9 @@ response.use(
       (response.data.code === 200 || response.data.status === 'success')
     ) {
       return Promise.resolve(response.data)
+    }
+    if (response.status === 401) {
+      removeAuthState()
     }
     console.error(response.data.code + ':' + response.data.msg)
     return Promise.reject(response.data)
