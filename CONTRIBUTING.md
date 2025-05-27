@@ -16,7 +16,7 @@ The mailing list is the recommended way of pursuing a discussion on almost anyth
 
 ### Reporting issue
 
-Please crete an issue here https://github.com/apache/dubbo-kubernetes
+Please create an issue here https://github.com/apache/dubbo-kubernetes
 
 
 ### Contribution flow

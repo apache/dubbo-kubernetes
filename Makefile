@@ -29,10 +29,3 @@ help: ## Display this help screen
 		grep -h -E "^$$section/[^:]+:.*?## .*$$" $(MAKEFILE_LIST) | sort -k1 | \
 			awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' ; \
 	done
-
-include mk/dev.mk
-
-include mk/api.mk
-include mk/check.mk
-include mk/generate.mk
-include mk/run.mk
