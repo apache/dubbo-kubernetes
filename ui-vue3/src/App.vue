@@ -42,7 +42,8 @@ provide(PROVIDE_INJECT_KEY.LOCALE, i18nConfig)
  * TODO
  */
 function globalQuestion() {
-  devTool.todo('show Q&A tips')
+  // devTool.todo('show Q&A tips')
+  window.open("https://cn.dubbo.apache.org/zh-cn/overview/what/")
 }
 
 const localeGlobal = reactive(i18n.global.locale)
