@@ -73,12 +73,21 @@
             </a-popover>
           </a-flex>
           <a-flex align="center">
-            <a-avatar @click="devTool.todo('avatar and user info')">
-              <template #icon>
-                <UserOutlined />
+            <a-dropdown>
+              <a-avatar @click="">
+                <template #icon>
+                  <UserOutlined />
+                </template>
+              </a-avatar>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item @click="logoutHandle">
+                    <a href="javascript:;">logout</a>
+                  </a-menu-item>
+                </a-menu>
               </template>
-            </a-avatar>
-            <span class="username">dubbo</span>
+            </a-dropdown>
+            <span class="username">{{ authState?.userinfo?.username }}</span>
           </a-flex>
         </a-flex>
       </a-flex>
@@ -105,7 +114,9 @@ import type { SelectOption } from '@/types/common.ts'
 import { searchApplications } from '@/api/service/app'
 import { searchInstances } from '@/api/service/instance'
 import { searchService } from '@/api/service/service'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { getAuthState, removeAuthState } from '@/utils/AuthUtil'
+import { logout } from '@/api/service/login'
 
 const {
   appContext: {
@@ -127,7 +138,13 @@ function resetTheme(val: string) {
   localStorage.removeItem(LOCAL_STORAGE_THEME)
   PRIMARY_COLOR.value = PRIMARY_COLOR_DEFAULT
 }
-
+function logoutHandle() {
+  removeAuthState()
+  logout().then(() => {
+    router.replace(`/login?redirect=${route.path}`)
+  })
+}
+const authState = getAuthState()
 watch(locale, (value) => {
   changeLanguage(value)
 })
@@ -205,6 +222,7 @@ const candidates = ref<Array<SelectOption>>([])
 
 const inputChange = debounce(onSearch, 300)
 const router = useRouter()
+const route = useRoute()
 const globalSearch = () => {
   router.replace(`/resources/${searchType.value}/list?query=${keywords.value}`)
 }

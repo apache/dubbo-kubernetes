@@ -18,12 +18,14 @@
 package admin
 
 import (
+	"errors"
+	"github.com/apache/dubbo-kubernetes/pkg/config/admin/auth"
+	. "github.com/apache/dubbo-kubernetes/pkg/config/admin/observability"
 	"go.uber.org/multierr"
 )
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	. "github.com/apache/dubbo-kubernetes/pkg/config/observability"
 )
 
 type Admin struct {
@@ -33,6 +35,7 @@ type Admin struct {
 	TraceDashboards  *TraceDashboardConfig  `json:"traceDashboards"`
 	Prometheus       string                 `json:"prometheus"`
 	Grafana          string                 `json:"grafana"`
+	Auth             *auth.AuthConfig       `json:"auth"`
 }
 
 func (s *Admin) PostProcess() error {
@@ -52,6 +55,12 @@ func (s *Admin) Validate() error {
 		if err := s.TraceDashboards.Validate(); err != nil {
 			return err
 		}
+	}
+	if s.Auth == nil {
+		return errors.New("auth config is needed, but found empty")
+	}
+	if err := s.Auth.Validate(); err != nil {
+		return err
 	}
 	return nil
 }

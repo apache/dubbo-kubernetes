@@ -40,6 +40,15 @@ export declare type RouteRecordType = RouteRecordRaw & {
 
 export const routes: Readonly<RouteRecordType[]> = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/Login.vue'),
+    meta: {
+      skip: true
+    },
+    children: []
+  },
+  {
     path: '/',
     name: 'Root',
     redirect: '/home',

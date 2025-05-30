@@ -39,6 +39,12 @@ func initRouter(r *gin.Engine, rt core_runtime.Runtime) {
 	}
 
 	{
+		auth := router.Group("/auth")
+		auth.POST("/login", handler.Login(rt))
+		auth.POST("/logout", handler.Logout(rt))
+	}
+
+	{
 		instance := router.Group("/instance")
 		instance.GET("/search", handler.SearchInstances(rt))
 		instance.GET("/detail", handler.GetInstanceDetail(rt))

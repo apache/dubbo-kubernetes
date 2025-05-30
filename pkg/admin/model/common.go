@@ -18,8 +18,9 @@
 package model
 
 const (
-	successCode = 200
-	errorCode   = 500
+	successCode      = 200
+	unauthorizedCode = 401
+	errorCode        = 500
 )
 
 type CommonResp struct {
@@ -48,6 +49,14 @@ func NewSuccessResp(data any) *CommonResp {
 		Code: successCode,
 		Msg:  "success",
 		Data: data,
+	}
+}
+
+func NewUnauthorizedResp() *CommonResp {
+	return &CommonResp{
+		Code: unauthorizedCode,
+		Msg:  "UnAuthorized, please login",
+		Data: nil,
 	}
 }
 

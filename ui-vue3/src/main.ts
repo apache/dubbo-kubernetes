@@ -33,6 +33,7 @@ import 'nprogress/nprogress.css'
 import { PRIMARY_COLOR } from '@/base/constants'
 import { useRouter } from 'vue-router'
 import _ from 'lodash'
+import { getAuthState } from '@/utils/AuthUtil'
 
 const app = createApp(App)
 
@@ -41,3 +42,12 @@ app.use(Antd).use(Vue3ColorPicker).use(i18n).use(router).mount('#app')
 //     console.log(to, from)
 //     next(to.fullPath)
 // })
+router.beforeEach((from, to, next) => {
+  const authState = getAuthState()
+  if (authState?.state || from.path.startsWith('/login')) {
+    next()
+  } else {
+    console.log(222)
+    next({ path: `/login?redirect=${to.path}` })
+  }
+})

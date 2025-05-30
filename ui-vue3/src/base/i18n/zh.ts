@@ -26,6 +26,12 @@ const words: I18nType = {
     YAMLView: 'YAML视图',
     formView: '表单视图'
   },
+  loginDomain: {
+    username: '用户名',
+    password: '密码',
+    login: '登录',
+    authFail: '认证失败'
+  },
   dynamicConfigDomain: {
     addConfig: '增加配置',
     addByFormView: '新增动态配置',

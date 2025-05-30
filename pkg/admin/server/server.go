@@ -19,6 +19,9 @@ package server
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/admin/model"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"net/http"
 	"strconv"
 	"strings"
@@ -65,9 +68,31 @@ func (a *AdminServer) InitHTTPRouter(rt core_runtime.Runtime) *AdminServer {
 			"status": "UP",
 		})
 	})
+	store := cookie.NewStore([]byte("secret"))
+	r.Use(sessions.Sessions("session", store))
+	r.Use(a.authMiddleware())
 	initRouter(r, rt)
 	a.Engine = r
 	return a
+}
+
+func (a *AdminServer) authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// skip login api
+		requestPath := c.Request.URL.Path
+		if strings.HasSuffix(requestPath, "/login") {
+			c.Next()
+			return
+		}
+		session := sessions.Default(c)
+		user := session.Get("user")
+		if user == nil {
+			c.JSON(http.StatusUnauthorized, model.NewUnauthorizedResp())
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }
 
 func (a *AdminServer) Start(stop <-chan struct{}) error {
