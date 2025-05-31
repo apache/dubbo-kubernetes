@@ -20,6 +20,9 @@
 name: dubboctl Release
 
 on:
+  push:
+    tags:
+      - 'dubboctl/**'
   release:
     types: [published]
 
