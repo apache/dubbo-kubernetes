@@ -17,19 +17,18 @@
 # under the License.
 #
 
-name: dubboctl release
+name: dubboctl Release
 
 on:
   release:
-    types: [create, published]
+    types: [published]
 
 jobs:
   release:
+    name: Release dubboctl
     permissions:
       contents: write
-    name: Release Dubboctl
     runs-on: ubuntu-latest
-    if: startsWith(github.event.release.tag_name, 'dubboctl/')
     strategy:
       matrix:
         goos: [linux, darwin, windows]
@@ -39,42 +38,46 @@ jobs:
             goarch: 386
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Go 1.x
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
       - name: Download dependencies
-        run: |
-          go mod download
+        run: go mod download
 
-      - name: Prepare build directory
-        run: |
-          mkdir -p build/
-          cp README.md build/
-          cp LICENSE build/
-
-      - name: Build
+      - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GIT_VERSION: ${{ github.ref_name }}
         run: |
-          make build-dubboctl
-          mv bin/dubboctl build/dubboctl
-      - name: Rename on windows
+          mkdir -p build/
+          make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
+          cp README.md LICENSE build/
+          mv bin/dubboctl* build/
+
+      - name: Rename on Windows
         if: matrix.goos == 'windows'
-        run: |
-          mv build/dubboctl build/dubboctl.exe
+        run: mv build/dubboctl build/dubboctl.exe
 
       - name: Create package
         id: package
         run: |
-          PACKAGE_NAME=dubboctl-${GITHUB_REF#refs/tags/dubboctl/}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
-          tar -czvf $PACKAGE_NAME -C build .
-          echo "name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+          VERSION=${GITHUB_REF#refs/tags/dubboctl/}
+          FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -j ${FILENAME}.zip build/*
+            echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
+          else
+            tar -czvf ${FILENAME}.tar.gz -C build .
+            echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Upload asset
+      - name: Upload release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -82,4 +85,4 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
-          asset_content_type: application/gzip
+          asset_content_type: application/zip

@@ -15,17 +15,9 @@
 
 SHELL := /usr/bin/env bash
 
-.PHONY: help
-help: ## Display this help screen
-	@# Display top-level targets since they are the ones most developes will need.
-	@grep -h -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort -k1 | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@# Now show hierarchical targets in separate sections.
-	@grep -h -E '^[a-zA-Z0-9_-]+/[a-zA-Z0-9/_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk '{print $$1}' | \
-		awk -F/ '{print $$1}' | \
-		sort -u | \
-	while read section ; do \
-		echo; \
-		grep -h -E "^$$section/[^:]+:.*?## .*$$" $(MAKEFILE_LIST) | sort -k1 | \
-			awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' ; \
-	done
+.PHONY: build-dubboctl
+build-dubboctl:
+	mkdir -p bin
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
+	-ldflags "-X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=$(GIT_VERSION)" \
+	-o bin/dubboctl dubboctl/main.go
