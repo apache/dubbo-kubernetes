@@ -24,10 +24,10 @@ on:
     tags:
       - 'dubboctl-**'
   release:
-    types: [published]
+    types: [created, published]
 
 jobs:
-  release:
+  build-go-binary:
     name: Release dubboctl
     permissions:
       contents: write
