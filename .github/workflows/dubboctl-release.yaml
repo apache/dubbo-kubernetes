@@ -22,7 +22,7 @@ name: dubboctl Release
 on:
   push:
     tags:
-      - 'dubboctl-*'
+      - 'v*'
 
 jobs:
   release:
