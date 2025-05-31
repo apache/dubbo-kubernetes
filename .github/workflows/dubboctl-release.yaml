@@ -24,11 +24,35 @@ on:
     tags:
       - "dubboctl-*"
 
+permissions:
+  contents: write
+
 jobs:
-  release:
-    name: Release dubboctl
-    permissions:
-      contents: write
+  create_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: "dubboctl-${{ github.ref_name }}"
+          body: |
+            ## Automated Release - ${{ github.ref_name }}
+            This release contains pre-built binaries for multiple platforms/architectures.
+          draft: false
+          prerelease: false
+
+  build_and_upload:
+    name: Build & Upload Binaries
+    needs: create_release
     runs-on: ubuntu-latest
 
     strategy:
@@ -40,7 +64,7 @@ jobs:
             goarch: 386
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up Go
@@ -48,53 +72,46 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Download Dependencies
+        run: |
+          go mod download
 
-      - name: Build binary
+      - name: Build dubboctl Binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          # If your Makefile embeds the version, pass it here
           GIT_VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p build/
+          # Assume your Makefile has a target “build-dubboctl” that respects GOOS/GOARCH/GIT_VERSION
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
+          # Copy README and LICENSE into the “build” folder
           cp README.md LICENSE build/
+          # Move the compiled binary (e.g. bin/dubboctl_…) into “build”
           mv bin/dubboctl* build/
 
-      - name: Create package
+      - name: Package into Archive
         id: package
         run: |
+          # Strip “refs/tags/” prefix to get the pure tag, e.g. “dubboctl-v1.0.0”
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
+          # Use .zip on Windows, .tar.gz elsewhere
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/*
-            echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
+            zip -j "${FILENAME}.zip" build/*
+            echo "name=${FILENAME}.zip" >> "$GITHUB_OUTPUT"
           else
-            tar -czvf ${FILENAME}.tar.gz -C build .
-            echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
+            tar -czvf "${FILENAME}.tar.gz" -C build .
+            echo "name=${FILENAME}.tar.gz" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Get existing release by tag
-        id: get_release
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const tag = context.ref.replace('refs/tags/', '');
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: tag
-            });
-            return release.data.upload_url;
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.get_release.outputs.result }}
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./build/${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
