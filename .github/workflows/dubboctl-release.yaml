@@ -22,7 +22,7 @@ name: dubboctl Release
 on:
   push:
     tags:
-      - 'dubboctl-*'
+      - "dubboctl-*"
 
 jobs:
   release:
@@ -30,6 +30,7 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         goos: [linux, darwin]
@@ -74,10 +75,27 @@ jobs:
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
+      - name: Get existing release by tag
+        id: get_release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: tag
+            });
+            return release.data.upload_url;
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ steps.get_release.outputs.result }}
           asset_path: ./build/${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
+
