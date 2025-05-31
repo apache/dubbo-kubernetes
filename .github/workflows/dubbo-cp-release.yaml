@@ -26,25 +26,68 @@ on:
   release:
     types: [published]
 
-
 jobs:
   release:
+    name: Release dubbo-cp
     permissions:
       contents: write
-    name: Release Dubbo
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [386, amd64, arm64]
+        exclude:
+          - goos: darwin
+            goarch: 386
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup Docker
-        uses: docker-practice/actions-setup-docker@v1
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
-      - name: Build and push dubbo-cp image
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binary
         env:
-          GIT_VERSION: ${GITHUB_REF#refs/tags/dubbo/}
-          REGISTRY_USER_NAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GIT_VERSION: ${{ github.ref_name }}
         run: |
-          make image-dubbocp
-          make push-image-dubbocp
+          mkdir -p build/
+          make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
+          cp README.md LICENSE build/
+          mv bin/dubbo-cp* build/
+
+      - name: Create package
+        id: package
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -j ${FILENAME}.zip build/*
+            echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
+          else
+            tar -czvf ${FILENAME}.tar.gz -C build .
+            echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.package.outputs.name }}
+          asset_name: ${{ steps.package.outputs.name }}
+          asset_content_type: application/octet-stream
