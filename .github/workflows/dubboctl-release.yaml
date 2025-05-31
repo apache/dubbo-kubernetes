@@ -85,6 +85,7 @@ jobs:
 
       - name: Package files
         id: package
+        shell: bash
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
