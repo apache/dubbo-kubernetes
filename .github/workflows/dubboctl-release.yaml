@@ -86,15 +86,14 @@ jobs:
 
       - name: Package files
         id: package
-        shell: bash
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/*
+            zip -j build/${FILENAME}.zip build/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build .
+            tar --warning=no-file-changed -czvf build/${FILENAME}.tar.gz -C build .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
