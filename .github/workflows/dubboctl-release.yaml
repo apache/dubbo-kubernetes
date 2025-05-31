@@ -20,6 +20,9 @@
 name: dubboctl Release
 
 on:
+  push:
+    tags:
+      - 'dubboctl/**'
   release:
     types: [published]
 
@@ -31,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
+        goos: [linux, darwin]
         goarch: [386, amd64, arm64]
         exclude:
           - goos: darwin
@@ -58,10 +61,6 @@ jobs:
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
           mv bin/dubboctl* build/
-
-      - name: Rename on Windows
-        if: matrix.goos == 'windows'
-        run: mv build/dubboctl build/dubboctl.exe
 
       - name: Create package
         id: package
