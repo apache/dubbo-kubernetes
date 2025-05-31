@@ -22,9 +22,7 @@ name: dubboctl Release
 on:
   push:
     tags:
-      - 'dubboctl-**'
-  release:
-    types: [published]
+      - 'dubboctl-*'
 
 jobs:
   release:
@@ -39,6 +37,7 @@ jobs:
         exclude:
           - goos: darwin
             goarch: 386
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,6 +61,15 @@ jobs:
           cp README.md LICENSE build/
           mv bin/dubboctl* build/
 
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
       - name: Create package
         id: package
         run: |
@@ -75,19 +83,10 @@ jobs:
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ steps.package.outputs.name }}
+          asset_path: ./build/${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
