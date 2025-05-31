@@ -64,7 +64,7 @@ jobs:
             goarch: 386
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Go
@@ -72,37 +72,31 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Download Dependencies
-        run: |
-          go mod download
+      - name: Download dependencies
+        run: go mod download
 
-      - name: Build dubboctl Binary
+      - name: Build dubboctl binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          # If your Makefile embeds the version, pass it here
           GIT_VERSION: ${{ github.ref_name }}
         run: |
           mkdir -p build/
-          # Assume your Makefile has a target “build-dubboctl” that respects GOOS/GOARCH/GIT_VERSION
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          # Copy README and LICENSE into the “build” folder
           cp README.md LICENSE build/
-          # Move the compiled binary (e.g. bin/dubboctl_…) into “build”
           mv bin/dubboctl* build/
 
-      - name: Package into Archive
+      - name: Package into archive
         id: package
         run: |
-          # Strip “refs/tags/” prefix to get the pure tag, e.g. “dubboctl-v1.0.0”
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
-          # Use .zip on Windows, .tar.gz elsewhere
+
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j "${FILENAME}.zip" build/*
+            zip -j "build/${FILENAME}.zip" build/*
             echo "name=${FILENAME}.zip" >> "$GITHUB_OUTPUT"
           else
-            tar -czvf "${FILENAME}.tar.gz" -C build .
+            tar -czvf "build/${FILENAME}.tar.gz" -C build .
             echo "name=${FILENAME}.tar.gz" >> "$GITHUB_OUTPUT"
           fi
 
@@ -115,4 +109,6 @@ jobs:
           asset_path: ./build/${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
+
+
 
