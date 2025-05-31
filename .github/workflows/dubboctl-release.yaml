@@ -93,7 +93,7 @@ jobs:
             zip -j build/${FILENAME}.zip build/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar --warning=no-file-changed -czvf build/${FILENAME}.tar.gz -C build .
+            tar -czvf build/${FILENAME}.tar.gz -C build .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
@@ -103,6 +103,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./build/${{ steps.package.outputs.name }}
+          asset_path: ${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
