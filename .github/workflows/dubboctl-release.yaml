@@ -24,7 +24,7 @@ on:
     tags:
       - 'dubboctl-**'
   release:
-    types: [created, published]
+    types: [created]
 
 jobs:
   release:

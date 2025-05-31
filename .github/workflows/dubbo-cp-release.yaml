@@ -17,11 +17,11 @@
 # under the License.
 #
 
-name: dubbo admin control plane release
+name: dubbo-cp release
 
 on:
   release:
-    types: [create, published]
+    types: [created]
 
 jobs:
   release:
@@ -29,7 +29,6 @@ jobs:
       contents: write
     name: Release Dubbo
     runs-on: ubuntu-latest
-    if: startsWith(github.event.release.tag_name, 'dubbo/')
 
     steps:
       - uses: actions/checkout@v4
