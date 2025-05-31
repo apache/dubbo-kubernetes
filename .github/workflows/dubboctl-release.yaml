@@ -75,7 +75,7 @@ jobs:
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v2
+        uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./${{ steps.package.outputs.name }}
