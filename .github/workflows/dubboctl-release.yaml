@@ -22,7 +22,7 @@ name: dubboctl Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'  # 触发格式示例：v0.1.0、v1.0.0
 
 permissions:
   contents: write
@@ -31,8 +31,25 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: "Release ${{ github.ref_name }}"
+          body: |
+            Automated release for ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
   build_and_upload:
-    name: Release dubboctl
+    name: Build and Upload Binaries
     needs: create_release
     runs-on: ubuntu-latest
     strategy:
@@ -66,23 +83,25 @@ jobs:
           cp README.md LICENSE build/
           mv bin/dubboctl* build/
 
-      - name: Create package
+      - name: Package files
         id: package
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/*
+            zip -j build/${FILENAME}.zip build/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build .
+            tar --warning=no-file-changed -czvf build/${FILENAME}.tar.gz -C build .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./build/${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
