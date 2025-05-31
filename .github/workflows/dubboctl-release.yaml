@@ -22,39 +22,14 @@ name: dubboctl Release
 on:
   push:
     tags:
-      - "dubboctl-*"
-
-permissions:
-  contents: write
+      - 'dubboctl-*'
 
 jobs:
-  create_release:
-    name: Create GitHub Release
+  release:
+    name: Release dubboctl
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
-
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-
-    steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: "dubboctl-${{ github.ref_name }}"
-          body: |
-            ## Automated Release - ${{ github.ref_name }}
-            This release contains pre-built binaries for multiple platforms/architectures.
-          draft: false
-          prerelease: false
-
-  build_and_upload:
-    name: Build & Upload Binaries
-    needs: create_release
-    runs-on: ubuntu-latest
-
     strategy:
       matrix:
         goos: [linux, darwin]
@@ -75,7 +50,7 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Build dubboctl binary
+      - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -86,29 +61,23 @@ jobs:
           cp README.md LICENSE build/
           mv bin/dubboctl* build/
 
-      - name: Package into archive
+      - name: Create package
         id: package
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
-
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j "build/${FILENAME}.zip" build/*
-            echo "name=${FILENAME}.zip" >> "$GITHUB_OUTPUT"
+            zip -j ${FILENAME}.zip build/*
+            echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf "build/${FILENAME}.tar.gz" -C build .
-            echo "name=${FILENAME}.tar.gz" >> "$GITHUB_OUTPUT"
+            tar -czvf ${FILENAME}.tar.gz -C build .
+            echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./build/${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
-
-
-
