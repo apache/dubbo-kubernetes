@@ -74,11 +74,10 @@ jobs:
             tar -czvf ${FILENAME}.tar.gz -C build .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
-
-      - name: Upload release asset
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v2
         with:
-          files: ./${{ steps.package.outputs.name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ steps.package.outputs.name }}
+          asset_name: ${{ steps.package.outputs.name }}
+          asset_content_type: application/octet-stream
