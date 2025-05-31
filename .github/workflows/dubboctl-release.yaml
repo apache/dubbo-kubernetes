@@ -65,7 +65,7 @@ jobs:
       - name: Create package
         id: package
         run: |
-          VERSION=${GITHUB_REF#refs/tags/dubboctl/}
+          VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -j ${FILENAME}.zip build/*
