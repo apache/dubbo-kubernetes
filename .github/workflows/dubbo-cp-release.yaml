@@ -17,11 +17,15 @@
 # under the License.
 #
 
-name: dubbo-cp release
+name: dubbo-cp Release
 
 on:
+  push:
+    tags:
+      - 'dubbo-cp-**'
   release:
-    types: [created]
+    types: [published]
+
 
 jobs:
   release:

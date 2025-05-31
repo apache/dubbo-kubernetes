@@ -15,8 +15,14 @@
 
 SHELL := /usr/bin/env bash
 
+.PHONY: build-dubbo-cp
+build-dubbo-cp:
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
+	-ldflags "-X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=$(GIT_VERSION)" \
+	-o bin/dubbo-cp app/dubbo-cp/main.go
+
 .PHONY: build-dubboctl
 build-dubboctl:
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
 	-ldflags "-X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=$(GIT_VERSION)" \
-	-o bin/dubboctl dubboctl/main.go
+    -o bin/dubboctl dubboctl/main.go
