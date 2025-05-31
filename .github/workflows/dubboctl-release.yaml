@@ -77,11 +77,8 @@ jobs:
 
       - name: Upload release asset
         if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./${{ steps.package.outputs.name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ steps.package.outputs.name }}
-          asset_name: ${{ steps.package.outputs.name }}
-          asset_content_type: application/zip
