@@ -1,36 +1,50 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
 #
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 name: dubbo-cp Release
 
 on:
   push:
     tags:
-      - 'dubbo-cp-**'
-  release:
-    types: [published]
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
-  release:
-    name: Release dubbo-cp
-    permissions:
-      contents: write
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: "${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+
+  build_and_upload:
+    name: Build and Upload Binaries
+    needs: create_release
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -39,6 +53,7 @@ jobs:
         exclude:
           - goos: darwin
             goarch: 386
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,8 +76,9 @@ jobs:
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
           mv bin/dubbo-cp* build/
+          ls -ln build/
 
-      - name: Create package
+      - name: Package files
         id: package
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
@@ -77,8 +93,10 @@ jobs:
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ .upload_url }}
-          asset_path: ./${{ steps.package.outputs.name }}
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.package.outputs.name }}
           asset_name: ${{ steps.package.outputs.name }}
           asset_content_type: application/octet-stream
