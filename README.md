@@ -8,6 +8,15 @@ The Dubbo Kubernetes Integration
 
 Provides observability features and supporting tools for building and deploying Dubbo applications in various environments, including Kubernetes and Alibaba Cloud ACK.
 
+## Repositories
+The main code repositories of Dubbo on Kubernetes include:
+
+- [dubboctl](dubboctl/). This directory contains code for the command line utility.
+- [admin](app/). This directory contains code for the
+[dubbo admin dashboard](https://github.com/apache/dubbo-kubernetes/blob/master/app/README.md).
+
+
+
 ## Quick Start
 Please refer to [official website](https://cn.dubbo.apache.org/zh-cn/overview/home/)
 
