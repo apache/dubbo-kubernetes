@@ -31,8 +31,28 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
+      - name: Check if Release Exists
+        id: check
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tag,
+              });
+              return "exists";
+            } catch (e) {
+              if (e.status === 404) return "not_found";
+              throw e;
+            }
+
       - name: Create GitHub Release
         id: create_release
+        if: steps.check.outputs.result == 'not_found'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
