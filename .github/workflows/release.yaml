@@ -94,12 +94,14 @@ jobs:
         run: |
           mkdir -p build/
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
+          make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
           mv bin/dubboctl* build/
+          mv bin/dubbo-cp* build/
           ls -ln build/
 
-      - name: Package files
-        id: package
+      - name: dubboctl Package files
+        id: package_ctl
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -111,12 +113,35 @@ jobs:
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload Release Asset
+      - name: dubbo-cp Package files
+        id: package_cp
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -j ${FILENAME}.zip build/*
+            echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
+          else
+            tar -czvf ${FILENAME}.tar.gz -C build .
+            echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Dubboctl Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.package.outputs.name }}
-          asset_name: ${{ steps.package.outputs.name }}
+          asset_path: ${{ steps.package_ctl.outputs.name }}
+          asset_name: ${{ steps.package_ctl.outputs.name }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload Dubbo-CP Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.package_cp.outputs.name }}
+          asset_name: ${{ steps.package_cp.outputs.name }}
           asset_content_type: application/octet-stream
