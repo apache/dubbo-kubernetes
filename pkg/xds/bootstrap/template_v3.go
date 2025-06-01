@@ -78,8 +78,8 @@ func genConfig(parameters configParameters, proxyConfig xds.Proxy, enableReloada
 		Name: "dubbo",
 		LayerSpecifier: &envoy_bootstrap_v3.RuntimeLayer_StaticLayer{
 			StaticLayer: util_proto.MustStruct(map[string]interface{}{
-				"re2.max_program_size.error_level": 4294967295,
-				"re2.max_program_size.warn_level":  1000,
+				"re2.max_program_size.error_level": float64(4294967295),
+				"re2.max_program_size.warn_level":  float64(1000),
 			}),
 		},
 	}}
@@ -196,7 +196,7 @@ func genConfig(parameters configParameters, proxyConfig xds.Proxy, enableReloada
 			},
 		},
 		StaticResources: &envoy_bootstrap_v3.Bootstrap_StaticResources{
-			//Secrets: []*envoy_tls.Secret{
+			// Secrets: []*envoy_tls.Secret{
 			//	{
 			//		Name: tls.CpValidationCtx,
 			//		Type: &envoy_tls.Secret_ValidationContext{
@@ -210,7 +210,7 @@ func genConfig(parameters configParameters, proxyConfig xds.Proxy, enableReloada
 			//			},
 			//		},
 			//	},
-			//},
+			// },
 			Clusters: staticClusters,
 		},
 		DefaultRegexEngine: &envoy_core_v3.TypedExtensionConfig{
@@ -223,14 +223,14 @@ func genConfig(parameters configParameters, proxyConfig xds.Proxy, enableReloada
 			transport := &envoy_tls.UpstreamTlsContext{
 				Sni:              parameters.XdsHost,
 				CommonTlsContext: &envoy_tls.CommonTlsContext{
-					//TlsParams: &envoy_tls.TlsParameters{
+					// TlsParams: &envoy_tls.TlsParameters{
 					//	TlsMinimumProtocolVersion: envoy_tls.TlsParameters_TLSv1_2,
-					//},
-					//ValidationContextType: &envoy_tls.CommonTlsContext_ValidationContextSdsSecretConfig{
-					//ValidationContextSdsSecretConfig: &envoy_tls.SdsSecretConfig{
+					// },
+					// ValidationContextType: &envoy_tls.CommonTlsContext_ValidationContextSdsSecretConfig{
+					// ValidationContextSdsSecretConfig: &envoy_tls.SdsSecretConfig{
 					//	Name: tls.CpValidationCtx,
-					//},
-					//},
+					// },
+					// },
 				},
 			}
 			any, err := util_proto.MarshalAnyDeterministic(transport)
