@@ -96,6 +96,7 @@ jobs:
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
           mv bin/dubbo-cp* build/
+          mv bin/dubbo-cp.yaml build/
           ls -ln build/
 
       - name: Package files
