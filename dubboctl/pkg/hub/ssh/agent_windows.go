@@ -1,4 +1,5 @@
 //go:build windows
+// +build windows
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,10 +18,22 @@
  * limitations under the License.
  */
 
-package helm
+package ssh
 
-func pathJoin(elem ...string) string {
-	elems := make([]string, 0, len(elem))
-	elems = append(elems, elem...)
-	return strings.Join(elems, "/")
+import (
+	"net"
+	"strings"
+)
+
+import (
+	"github.com/Microsoft/go-winio"
+)
+
+func dialSSHAgentConnection(sock string) (agentConn net.Conn, error error) {
+	if strings.Contains(sock, "\\pipe\\") {
+		agentConn, error = winio.DialPipe(sock, nil)
+	} else {
+		agentConn, error = net.Dial("unix", sock)
+	}
+	return
 }

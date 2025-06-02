@@ -1,4 +1,4 @@
-//go:build windows
+//go:build !windows
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,8 +19,10 @@
 
 package helm
 
+import (
+	"path/filepath"
+)
+
 func pathJoin(elem ...string) string {
-	elems := make([]string, 0, len(elem))
-	elems = append(elems, elem...)
-	return strings.Join(elems, "/")
+	return filepath.Join(elem...)
 }
