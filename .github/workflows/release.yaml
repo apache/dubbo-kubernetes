@@ -59,8 +59,10 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
-          draft: false
-          prerelease: false
+          body: |
+            ⚠️ This is a pre release version。
+          draft: true
+          prerelease: true
 
   build_and_upload:
     name: Build and Upload Binaries
@@ -68,11 +70,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin]
+        goos: [linux, darwin, windows]
         goarch: [386, amd64, arm64]
         exclude:
           - goos: darwin
             goarch: 386
+          - goos: windows
+            goarch: arm64  # 可选排除，如果不支持
 
     steps:
       - name: Checkout code
