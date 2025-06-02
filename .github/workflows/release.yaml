@@ -60,7 +60,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            ⚠️ This is a pre release version。
+            ⚠️ This is a pre release version.
+            
+            Repair compressed files in Windows compatible format.
           draft: false
           prerelease: true
 
@@ -103,6 +105,12 @@ jobs:
           mv bin/dubboctl* build/
           mv bin/dubbo-cp* build/
           ls -ln build/
+
+      - name: Rename windows
+        if: matrix.goos == 'windows'
+        run: |
+          mv build/dubboctl build/dubboctl.exe
+          mv build/dubbo-cp build/dubbo-cp.exe
 
       - name: dubboctl Package files
         id: package_ctl
