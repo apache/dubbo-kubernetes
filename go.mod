@@ -21,6 +21,7 @@ require (
 	dubbo.apache.org/dubbo-go/v3 v3.3.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Microsoft/go-winio v0.6.2
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/bakito/go-log-logr-adapter v0.0.2
 	github.com/buildpacks/pack v0.30.0
@@ -121,7 +122,6 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
-	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/ProtonMail/go-crypto v1.1.3 // indirect
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
