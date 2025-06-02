@@ -19,6 +19,8 @@
 
 package helm
 
+import "strings"
+
 func pathJoin(elem ...string) string {
 	elems := make([]string, 0, len(elem))
 	elems = append(elems, elem...)
