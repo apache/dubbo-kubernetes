@@ -61,7 +61,7 @@ jobs:
           release_name: "${{ github.ref_name }}"
           body: |
             ⚠️ This is a pre release version。
-          draft: true
+          draft: false
           prerelease: true
 
   build_and_upload:
@@ -76,7 +76,7 @@ jobs:
           - goos: darwin
             goarch: 386
           - goos: windows
-            goarch: arm64  # 可选排除，如果不支持
+            goarch: arm64
 
     steps:
       - name: Checkout code
