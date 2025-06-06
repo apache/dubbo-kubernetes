@@ -123,11 +123,8 @@ spec:
         {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: false
-          capabilities:
-            drop:
-              - ALL
         volumeMounts:
         - name: data
           mountPath: /home/nacos/data
@@ -137,4 +134,5 @@ spec:
           subPath: logs
       volumes:
       - name: data
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
