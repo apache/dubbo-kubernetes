@@ -27,9 +27,11 @@ fi
 
 # Determine the latest Dubbo version by version number ignoring alpha, beta, and rc versions.
 if [ "${DUBBO_VERSION}" = "" ] ; then
-  DUBBO_VERSION="$(curl -sL  https://github.com/apache/dubbo-kubernetes/releases | \
-                  grep -E -o 'dubbo/([v,V]?)[0-9]*.[0-9]*.[0-9]*' | sort -V | \
-                  tail -1 | awk -F'/' '{ print $2}')"
+  DUBBO_VERSION="$(curl -s https://api.github.com/repos/apache/dubbo-kubernetes/releases | \
+                       grep '"tag_name":' | \
+                       grep -vE '(alpha|beta|rc)' | \
+                       head -1 | \
+                       sed -E 's/.*"([^"]+)".*/\1/')"
   DUBBO_VERSION="${DUBBO_VERSION##*/}"
 fi
 
