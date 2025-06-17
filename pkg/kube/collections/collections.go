@@ -18,10 +18,12 @@
 package collections
 
 import (
+	"reflect"
+
+	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	"github.com/apache/dubbo-kubernetes/operator/pkg/schema"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/collection"
-	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"reflect"
 )
 
 var (

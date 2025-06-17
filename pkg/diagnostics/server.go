@@ -20,37 +20,52 @@ package diagnostics
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
-	pprof "net/http/pprof"
+	"net/http/pprof"
 	"time"
-)
 
-import (
 	"github.com/bakito/go-log-logr-adapter/adapter"
-)
 
-import (
-	diagnostics_config "github.com/apache/dubbo-kubernetes/pkg/config/diagnostics"
+	diagnosticsconfig "github.com/apache/dubbo-kubernetes/pkg/config/diagnostics"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
-	"github.com/apache/dubbo-kubernetes/pkg/core/runtime/component"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 )
 
-var diagnosticsServerLog = core.Log.WithName("xds-server").WithName("diagnostics")
+func init() {
+	runtime.RegisterComponent(&diagnosticsServer{})
+}
+
+var diagnosticsServerLog = core.Log.WithName("diagnostics")
+
+const DiagnosticsServer = "diagnostics server"
 
 type diagnosticsServer struct {
-	config *diagnostics_config.DiagnosticsConfig
+	config *diagnosticsconfig.Config
 }
 
-func (s *diagnosticsServer) NeedLeaderElection() bool {
-	return false
-}
-
-// Make sure that grpcServer implements all relevant interfaces
 var (
-	_ component.Component = &diagnosticsServer{}
+	_ runtime.Component = &diagnosticsServer{}
 )
 
-func (s *diagnosticsServer) Start(stop <-chan struct{}) error {
+func (s *diagnosticsServer) Type() runtime.ComponentType {
+	return DiagnosticsServer
+}
+
+func (s *diagnosticsServer) SubType() runtime.ComponentType {
+	return runtime.DefaultComponentSubType
+}
+
+func (s *diagnosticsServer) Order() int {
+	return math.MaxInt
+}
+
+func (s *diagnosticsServer) Init(ctx runtime.BuilderContext) error {
+	s.config = ctx.Config().Diagnostics
+	return nil
+}
+
+func (s *diagnosticsServer) Start(_ runtime.Runtime, stop <-chan struct{}) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ready", func(resp http.ResponseWriter, _ *http.Request) {
 		resp.WriteHeader(http.StatusOK)

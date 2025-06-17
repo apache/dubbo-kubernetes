@@ -76,9 +76,9 @@ var AllComponents = []Component{
 		SpecName:           "nacos",
 		ResourceType:       "StatefulSet",
 		ResourceName:       "register",
-		ContainerName:      "register-discovery",
+		ContainerName:      "register-discoveryengine",
 		Default:            true,
-		HelmSubDir:         "dubbo-control/register-discovery/nacos",
+		HelmSubDir:         "dubbo-control/register-discoveryengine/nacos",
 		HelmValuesTreeRoot: "nacos",
 	},
 	{
@@ -86,9 +86,9 @@ var AllComponents = []Component{
 		SpecName:           "zookeeper",
 		ResourceType:       "StatefulSet",
 		ResourceName:       "register",
-		ContainerName:      "register-discovery",
+		ContainerName:      "register-discoveryengine",
 		Default:            true,
-		HelmSubDir:         "dubbo-control/register-discovery/zookeeper",
+		HelmSubDir:         "dubbo-control/register-discoveryengine/zookeeper",
 		HelmValuesTreeRoot: "zookeeper",
 	},
 }
@@ -149,7 +149,7 @@ func (c Component) Get(merged values.Map) ([]apis.DefaultCompSpec, error) {
 			return nil, nil
 		}
 	}
-	if c.ContainerName == "register-discovery" {
+	if c.ContainerName == "register-discoveryengine" {
 		s, ok := merged.GetPathMap("spec.components.register." + c.SpecName)
 		if !ok {
 			return defaultResp, nil

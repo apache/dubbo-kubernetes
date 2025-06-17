@@ -400,7 +400,7 @@ rules:
       - list
       - watch
   - apiGroups:
-      - "discovery.k8s.io"
+      - "discoveryengine.k8s.io"
     resources:
       - endpointslices
     verbs:
