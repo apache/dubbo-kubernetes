@@ -61,9 +61,9 @@ case "${LOCAL_ARCH}" in
     ;;
 esac
 
-NAME="dubbo-$DUBBO_VERSION"
-URL=" https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/dubbo-${DUBBO_VERSION}-${OSEXT}.tar.gz"
-ARCH_URL=" https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/dubbo-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+NAME="dubbo-cp-$DUBBO_VERSION"
+URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/dubbo-cp-${DUBBO_VERSION}-${OSEXT}.tar.gz"
+ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/dubbo-cp-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
 
 
 with_arch() {
@@ -72,7 +72,7 @@ with_arch() {
     printf "\n%s is not found, please specify a valid DUBBO_VERSION and TARGET_ARCH\n" "$ARCH_URL"
     exit 1
   fi
-  filename="dubbo-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+  filename="dubbo-cp-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
   tar -xzf "${filename}"
   rm "${filename}"
 }
@@ -84,7 +84,7 @@ without_arch() {
     exit 1
   fi
   curl -fsLO "$URL"
-  filename="dubbo-${DUBBO_VERSION}-${OSEXT}.tar.gz"
+  filename="dubbo-cp-${DUBBO_VERSION}-${OSEXT}.tar.gz"
   tar -xzf "${filename}"
   rm "${filename}"
 }

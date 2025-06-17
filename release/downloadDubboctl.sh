@@ -27,14 +27,16 @@ fi
 
 # Determine the latest Dubboctl version by version number ignoring alpha, beta, and rc versions.
 if [ "${DUBBO_VERSION}" = "" ] ; then
-  DUBBO_VERSION="$(curl -sL https://github.com/apache/dubbo-kubernetes/releases | \
-                  grep -E -o 'dubboctl/([v,V]?)[0-9]*.[0-9]*.[0-9]*' | sort -V | \
-                  tail -1 | awk -F'/' '{ print $2}')"
-  DUBBO_VERSION="${DUBBOCTL_VERSION##*/}"
+  DUBBO_VERSION="$(curl -s https://api.github.com/repos/apache/dubbo-kubernetes/releases | \
+                       grep '"tag_name":' | \
+                       grep -vE '(alpha|beta|rc)' | \
+                       head -1 | \
+                       sed -E 's/.*"([^"]+)".*/\1/')"
+  DUBBO_VERSION="${DUBBO_VERSION##*/}"
 fi
 
 if [ "${DUBBOCTL_VERSION}" = "" ] ; then
-  printf "Unable to get latest Dubboctl version. Set DUBBOCTL_VERSION env var and re-run. For example: export DUBBOCTL_VERSION=0.0.1\n"
+  printf "Unable to get latest Dubboctl version. Set DUBBOCTL_VERSION env var and re-run. For example: export DUBBOCTL_VERSION=0.1.0\n"
   exit 1;
 fi
 
