@@ -1,20 +1,4 @@
 #!/bin/sh
-
-# Licensed to the Apache Software Foundation (ASF) under one or more
-# contributor license agreements.  See the NOTICE file distributed with
-# this work for additional information regarding copyright ownership.
-# The ASF licenses this file to You under the Apache License, Version 2.0
-# (the "License"); you may not use this file except in compliance with
-# the License.  You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 set -e
 
 # Determines the operating system.
@@ -24,6 +8,9 @@ if [ "${OS}" = "Darwin" ] ; then
 else
   OSEXT="linux"
 fi
+
+# Package type, default to dubbo-cp
+PACKAGE_TYPE="${PACKAGE_TYPE:-dubbo-cp}"
 
 # Determine the latest Dubbo version by version number ignoring alpha, beta, and rc versions.
 if [ "${DUBBO_VERSION}" = "" ] ; then
@@ -61,43 +48,47 @@ case "${LOCAL_ARCH}" in
     ;;
 esac
 
-NAME="dubbo-cp-$DUBBO_VERSION"
-URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/dubbo-cp-${DUBBO_VERSION}-${OSEXT}.tar.gz"
-ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/dubbo-cp-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
-
+NAME="${PACKAGE_TYPE}-${DUBBO_VERSION}"
+URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/${PACKAGE_TYPE}-${DUBBO_VERSION}-${OSEXT}.tar.gz"
+ARCH_URL="https://github.com/apache/dubbo-kubernetes/releases/download/${DUBBO_VERSION}/${PACKAGE_TYPE}-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
 
 with_arch() {
   printf "\nDownloading %s from %s ...\n" "${NAME}" "$ARCH_URL"
   if ! curl -o /dev/null -sIf "$ARCH_URL"; then
     printf "\n%s is not found, please specify a valid DUBBO_VERSION and TARGET_ARCH\n" "$ARCH_URL"
-    exit 1
+    return 1
   fi
-  filename="dubbo-cp-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+  filename="${PACKAGE_TYPE}-${DUBBO_VERSION}-${OSEXT}-${DUBBO_ARCH}.tar.gz"
+  curl -fLO "$ARCH_URL"
   tar -xzf "${filename}"
   rm "${filename}"
+  return 0
 }
 
 without_arch() {
-  printf "\nDownloading %s from %s ..." "$NAME" "$URL"
+  printf "\nDownloading %s from %s ...\n" "$NAME" "$URL"
   if ! curl -o /dev/null -sIf "$URL"; then
     printf "\n%s is not found, please specify a valid DUBBO_VERSION\n" "$URL"
-    exit 1
+    return 1
   fi
-  curl -fsLO "$URL"
-  filename="dubbo-cp-${DUBBO_VERSION}-${OSEXT}.tar.gz"
+  filename="${PACKAGE_TYPE}-${DUBBO_VERSION}-${OSEXT}.tar.gz"
+  curl -fLO "$URL"
   tar -xzf "${filename}"
   rm "${filename}"
+  return 0
 }
 
-with_arch
-without_arch
+if ! with_arch; then
+  if ! without_arch; then
+    echo "Download failed."
+    exit 1
+  fi
+fi
 
 printf "%s download complete!\n" "${filename}"
 
 # Print message.
 printf "\n"
-printf "Add the dubbo to your path with:"
-printf "\n"
+printf "Add the dubbo to your path with:\n"
 printf "  export PATH=\$HOME/.dubbo/bin:\$PATH \n"
 printf "\n"
-
