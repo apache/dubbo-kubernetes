@@ -13,12 +13,8 @@ metadata:
     app.kubernetes.io/name: "dashboard"
 data:
   dubbo-cp.yaml: |-
-    # Support multi deploy status, see https://github.com/apache/dubbo-kubernetes/blob/master/README.md
-    # Available options: k8s(not supported yet), half, universal
-    deployMode: half
-    # Support multi-cluster
-    # Available options: zone, global(not supported yet)
-    mode: zone
+    deployMode: {{ .Values.deployMode }}
+    mode: {{ .Values.mode }}
     store:
       # Traditional Store support nacos and zookeeper
       traditional:
@@ -44,7 +40,7 @@ data:
           baseURL: http://47.76.81.123:3000/d/f5f48f75-13ec-489b-88ae-635ae38d8618/instance
         service:
           baseURL: http://47.76.81.123:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
-      prometheus: http://8.218.148.84:9090
+      prometheus: {{ .Values.prometheus }}
       # grafana should custom configs below:
       # [server]
       # root_url = %(protocol)s://%(domain)s：%(http_port)s/grafana
@@ -54,8 +50,8 @@ data:
       # allow_embedding = true
       # [auth.anonymous]
       # enabled = true
-      grafana: http://47.76.81.123:3000/
+      grafana: {{ .Values.grafana }}
       auth:
-        user: admin
-        password: Dubbo@2025
-        expirationTime: 7200
+        user: {{ .Values.user }}
+        password: {{ .Values.password }}
+        expirationTime: {{ .Values.expirationTime }}
