@@ -102,10 +102,10 @@ var (
 	}
 
 	Icons = map[Name]string{
-		BaseComponentName:              "🔭",
-		NacosRegisterComponentName:     "🚡",
-		ZookeeperRegisterComponentName: "🚠",
-		AdminComponentName:             "🔬",
+		BaseComponentName:              "",
+		NacosRegisterComponentName:     "",
+		ZookeeperRegisterComponentName: "",
+		AdminComponentName:             "",
 	}
 )
 
