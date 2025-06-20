@@ -32,3 +32,20 @@ _internal_default_values_not_set:
     requests:
       cpu: "256m"
       memory: "512Mi"
+
+  # Support multi deploy status, see https://github.com/apache/dubbo-kubernetes/blob/master/README.md
+  # Available options: k8s(not supported yet), half, universal
+  deployMode: half
+
+  # Support multi-cluster
+  # Available options: zone, global(not supported yet)
+  mode: zone
+
+  # dubbo-cp login
+  user: admin
+  password: Dubbo@2025
+  expirationTime: 7200
+
+  prometheus: http://prometheus.dubbo-system:9090
+
+  grafana: http://grafana.dubbo-system:3000
