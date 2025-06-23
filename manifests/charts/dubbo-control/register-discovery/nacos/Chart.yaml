@@ -19,7 +19,7 @@ annotations:
 name: nacos
 home: https://github.com/apache/dubbo-kubernetes
 description: Helm chart for nacos register plane.
-version: 1.0.0
+version: 0.1.1
 appVersion: 1.0.0
 maintainers:
   - name: mfordjody
