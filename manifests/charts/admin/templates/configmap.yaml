@@ -1,3 +1,5 @@
+{{ $nacos := .Values.nacos }}
+{{ $zookeeper := .Values.zookeeper }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,30 +18,48 @@ data:
     deployMode: {{ .Values.deployMode }}
     mode: {{ .Values.mode }}
     store:
+      {{- if $nacos.nacos.enabled }}
       # Traditional Store support nacos and zookeeper
       traditional:
         registry:
-          address: nacos://47.76.94.134:8848?username=nacos&password=nacos
+          address: nacos://nacos:8848?username=nacos&password=nacos
         configCenter:
-          address: nacos://47.76.94.134:8848?username=nacos&password=nacos
+          address: nacos://nacos:8848?username=nacos&password=nacos
         metadataReport:
-          address: nacos://47.76.94.134:8848?username=nacos&password=nacos
+          address: nacos://nacos:8848?username=nacos&password=nacos
+      {{- else if $zookeeper.zookeeper.enabled }}
+      traditional:
+        registry:
+          address: zookeeper://zookeeper:2181
+        configCenter:
+          address: zookeeper://zookeeper:2181
+        metadataReport:
+          address: zookeeper://zookeeper:2181
+      {{- else }}
+      traditional:
+        registry:
+          address: nacos://nacos:8848?username=nacos&password=nacos
+        configCenter:
+          address: nacos://nacos:8848?username=nacos&password=nacos
+        metadataReport:
+          address: nacos://nacos:8848?username=nacos&password=nacos
+      {{- end }}
     admin:
       # metric and trace grafana dashboards
-      metricDashboards:
+       metricDashboards:
         application:
-          baseURL: http://47.76.81.123:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application
+          baseURL: http://grafana:3000/d/a0b114ca-edf7-4dfe-ac2c-34a4fc545fed/application
         instance:
-          baseURL: http://47.76.81.123:3000/d/dcf5defe-d198-4704-9edf-6520838880e9/instance
+          baseURL: http://grafana:3000/d/dcf5defe-d198-4704-9edf-6520838880e9/instance
         service:
-          baseURL: http://47.76.81.123:3000/d/ec689613-b4a1-45b1-b8bd-9d557059f970/service/
+          baseURL: http://grafana:3000/d/ec689613-b4a1-45b1-b8bd-9d557059f970/service/
       traceDashboards:
         application:
-          baseURL: http://47.76.81.123:3000/d/e968a89b-f03d-42e3-8ad3-930ae815cb0f/application
+          baseURL: http://grafana:3000/d/e968a89b-f03d-42e3-8ad3-930ae815cb0f/application
         instance:
-          baseURL: http://47.76.81.123:3000/d/f5f48f75-13ec-489b-88ae-635ae38d8618/instance
+          baseURL: http://grafana:3000/d/f5f48f75-13ec-489b-88ae-635ae38d8618/instance
         service:
-          baseURL: http://47.76.81.123:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
+          baseURL: http://grafana:3000/d/b2e178fb-ada3-4d5e-9f54-de99e7f07662/service
       prometheus: {{ .Values.prometheus }}
       # grafana should custom configs below:
       # [server]
