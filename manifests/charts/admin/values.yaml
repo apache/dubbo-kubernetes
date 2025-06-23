@@ -19,7 +19,7 @@ _internal_default_values_not_set:
   rollingMaxUnavailable: 25%
 
   image: mfordjody/dubbo-cp
-  tag: latest
+  tag: test
 
   volumeMounts: []
 
@@ -46,6 +46,10 @@ _internal_default_values_not_set:
   password: Dubbo@2025
   expirationTime: 7200
 
-  prometheus: http://prometheus.dubbo-system:9090
+  zookeeperAddress: zookeeper://zookeeper:2181
 
-  grafana: http://grafana.dubbo-system:3000
+  nacosAddress: nacos://nacos:8848?username=nacos&password=nacos
+
+  grafanaAddress: http://grafana.dubbo-system:3000
+
+  prometheusAddress: http://prometheus.dubbo-system:9090

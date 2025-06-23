@@ -19,7 +19,7 @@ containers:
     timeoutSeconds: 5
   securityContext:
     allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: true
+    readOnlyRootFilesystem: false
     runAsNonRoot: false
     capabilities:
       drop:
