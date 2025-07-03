@@ -18,8 +18,9 @@ annotations:
   licenses: Apache-2.0
 name: zookeeper
 home: https://github.com/apache/dubbo-kubernetes
+icon: https://avatars.githubusercontent.com/u/11751992?s=200&v=4
 description: Helm chart for zookeeper register plane.
-version: 0.1.1
+version: 0.1.2
 appVersion: 1.0.0
 maintainers:
   - name: mfordjody
