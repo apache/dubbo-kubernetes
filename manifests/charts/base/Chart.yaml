@@ -19,7 +19,7 @@ annotations:
 name: base
 home: https://github.com/apache/dubbo-kubernetes
 description: Helm chart for deploying dubbo cluster resources and CRDs.
-version: 0.1.1
+version: 0.1.2
 appVersion: 1.0.0
 maintainers:
   - name: mfordjody
