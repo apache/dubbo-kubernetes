@@ -18,8 +18,8 @@ _internal_default_values_not_set:
   rollingMaxSurge: 100%
   rollingMaxUnavailable: 25%
 
-  image: mfordjody/dubbo-cp
-  tag: test
+  image: sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/dubbo-cp
+  tag: v0.1.2
 
   volumeMounts: []
 

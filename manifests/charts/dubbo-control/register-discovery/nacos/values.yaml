@@ -22,7 +22,7 @@ _internal_default_values_not_set:
   # Number of replicas for the Deployment.
   replicas: 1
   # Deploy the required container images.
-  image: nacos/nacos-server
+  image: nacos-registry.cn-hangzhou.cr.aliyuncs.com/nacos/nacos-server
   # The size of application resources required for deployment.
   resources:
     requests:

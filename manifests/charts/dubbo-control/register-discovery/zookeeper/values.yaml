@@ -20,7 +20,7 @@ _internal_default_values_not_set:
   # Number of replicas for the Deployment.
   replicas: 1
   # Deploy the required container images.
-  image: docker.io/library/zookeeper
+  image: sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/zookeeper
   # The size of application resources required for deployment.
   resources:
     requests:
