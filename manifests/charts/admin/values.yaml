@@ -18,8 +18,8 @@ _internal_default_values_not_set:
   rollingMaxSurge: 100%
   rollingMaxUnavailable: 25%
 
-  image: mfordjody/dubbo-cp
-  tag: test
+  image: sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/dubbo-cp
+  tag: v0.1.2
 
   volumeMounts: []
 
@@ -41,7 +41,7 @@ _internal_default_values_not_set:
   # Available options: zone, global(not supported yet)
   mode: zone
 
-  # dubbo-cp login
+  # Dashboard login information
   user: admin
   password: Dubbo@2025
   expirationTime: 7200

@@ -15,6 +15,6 @@ spec:
   ports:
   - name: http
     port: 8888
-    targetPort: http
+    targetPort: 8888
   selector:
     app: admin

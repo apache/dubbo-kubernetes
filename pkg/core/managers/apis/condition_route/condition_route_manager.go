@@ -29,9 +29,9 @@ import (
 
 type conditionRouteManager struct {
 	core_manager.ResourceManager
-	store      core_store.ResourceStore
-	manager    kube_ctrl.Manager
-	deployMode config_core.DeployMode
+	store   core_store.ResourceStore
+	manager kube_ctrl.Manager
+	config_core.DeployMode
 }
 
 func NewConditionRouteManager(store core_store.ResourceStore, manager kube_ctrl.Manager, mode config_core.DeployMode) core_manager.ResourceManager {
