@@ -92,7 +92,7 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Build binary
+      - name: Dubboctl Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -100,16 +100,30 @@ jobs:
         run: |
           mkdir -p build/
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
           mv bin/dubboctl* build/
+          ls -ln build/
+
+      - name: Dubbo-CP Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GIT_VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p build/
+          make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
+          cp README.md LICENSE build/
           mv bin/dubbo-cp* build/
           ls -ln build/
 
-      - name: Rename windows
+      - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
           mv build/dubboctl build/dubboctl.exe
+
+      - name: Dubbo-CP Rename windows
+        if: matrix.goos == 'windows'
+        run: |
           mv build/dubbo-cp build/dubbo-cp.exe
 
       - name: dubboctl Package files
