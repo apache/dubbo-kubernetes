@@ -131,7 +131,7 @@ jobs:
           cp README.md LICENSE build/
           mv bin/dubbo-cp* build/dubbo-cp/
           mv bin/dubboctl* build/dubboctl/
-          mv bin/samples build/samples
+          mv bin/samples/ build/samples
           ls -ln build/dubboctl/ ; ls -ln build/dubbo-cp/ ; ls -ln build/
 
       - name: Dubboctl Rename windows
@@ -193,7 +193,7 @@ jobs:
           cp build/dubbo-cp/dubbo-cp ${DIRNAME}/bin/
           cp build/README.md build/LICENSE ${DIRNAME}
           cp build/dubbo-cp/dubbo-cp.yaml ${DIRNAME}
-          cp build/samples ${DIRNAME}
+          cp -r build/samples ${DIRNAME}
           ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -r ${FILENAME}.zip ${DIRNAME}
