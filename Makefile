@@ -26,3 +26,7 @@ build-dubboctl:
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
 	-ldflags "-X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=$(GIT_VERSION)" \
     -o bin/dubboctl dubboctl/main.go
+
+.PHONY: build-sample
+clone-sample:
+	cp -r samples bin/samples
