@@ -131,13 +131,16 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
-          mkdir dubboctl-${VERSION}
-          cp build/dubboctl/* dubboctl-${VERSION}/
+          mkdir -p dubboctl-${VERSION}/bin
+          cp build/dubboctl/dubboctl dubboctl-${VERSION}/bin
+          ls -ln dubboctl-${VERSION}/bin
+          cp build/dubboctl/README.md build/dubboctl/LICENSE dubboctl-${VERSION}
+          ls -ln dubboctl-${VERSION}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -j ${FILENAME}.zip dubboctl-${VERSION}/
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C dubboctl-${VERSION}/*
+            tar -czvf ${FILENAME}.tar.gz -C dubboctl-${VERSION} .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
@@ -147,12 +150,15 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           mkdir dubbo-cp-${VERSION}
-          cp build/dubbo-cp/* dubbo-cp-${VERSION}/
+          cp build/dubbo-cp/dubbo-cp dubbo-cp-${VERSION}/bin
+          ls -ln dubbo-cp-${VERSION}/bin
+          cp build/dubbo-cp/README.md build/dubbo-cp/LICENSE build/dubbo-cp/dubbo-cp.yaml dubbo-cp-${VERSION}
+          ls -ln dubbo-cp-${VERSION}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip dubbo-cp-${VERSION}/
+            zip -j ${FILENAME}.zip dubbo-cp-${VERSION}
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C dubbo-cp-${VERSION}/*
+            tar -czvf ${FILENAME}.tar.gz -C dubbo-cp-${VERSION} .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
