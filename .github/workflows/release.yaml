@@ -60,11 +60,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            ⚠️ This is a pre release version.
-            
-            Repair compressed files in Windows compatible format.
+            🎖️ This is the first official release of the milestone.
           draft: false
-          prerelease: true
+          prerelease: false
 
   build_and_upload:
     name: Build and Upload Binaries
