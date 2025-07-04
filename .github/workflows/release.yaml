@@ -203,15 +203,15 @@ jobs:
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
             
-          - name: Upload Dubboctl Release Asset
-            uses: actions/upload-release-asset@v1
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            with:
-              upload_url: ${{ needs.create_release.outputs.upload_url }}
-              asset_path: ${{ steps.package_ctl.outputs.name }}
-              asset_name: ${{ steps.package_ctl.outputs.name }}
-              asset_content_type: application/octet-stream
+      - name: Upload Dubboctl Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.package_ctl.outputs.name }}
+          asset_name: ${{ steps.package_ctl.outputs.name }}
+          asset_content_type: application/octet-stream
 
       - name: Upload Dubbo-CP Release Asset
         uses: actions/upload-release-asset@v1
