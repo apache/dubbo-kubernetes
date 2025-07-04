@@ -53,7 +53,7 @@ func (t template) Runtime() string {
 func (t template) Write(ctx context.Context, dc *dubbo.DubboConfig) error {
 	mask := func(p string) bool {
 		_, f := path.Split(p)
-		return f == "template.yaml"
+		return f == "manifest.yaml"
 	}
 
 	return util.CopyFromFS(".", dc.Root, util.NewMaskingFS(mask, t.fs))

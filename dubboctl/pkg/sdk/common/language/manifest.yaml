@@ -13,16 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-dubbo:
-  registries:
-    nacos:
-      protocol: nacos
-      address: nacos:8848
-  protocols:
-    triple:
-      name: tri
-      port: 20000
-  provider:
-    services:
-      GreeterServerImpl:
-        interface: "" # read from stub
+schema_version: 0.1.0 # The version for manifest.yaml schema
+
+# The name used for this language pack repository when referenced
+# in the UX, and its version
+name: language
+version: 1.0.0
