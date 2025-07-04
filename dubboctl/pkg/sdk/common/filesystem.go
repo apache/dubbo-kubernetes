@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tpl
+package common
 
 import (
 	"archive/zip"
@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	templatesPath = "dubboctl/pkg/sdk/tpl/default"
-	generatePath  = "dubboctl/pkg/sdk/tpl/zz_filesystem_generated.go"
+	templatesPath = "dubboctl/pkg/sdk/common/language"
+	generatePath  = "dubboctl/pkg/sdk/common/zz_filesystem_generated.go"
 )
 
 func main() {
