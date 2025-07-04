@@ -18,45 +18,8 @@
 package dubbo
 
 var (
-	golang = `
-FROM golang:1.20-alpine AS builder
-
-LABEL stage=gobuilder
-
-ENV CGO_ENABLED=0 && GOPROXY=https://goproxy.cn,direct
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
-
-WORKDIR /build
-
-WORKDIR /workspace
-COPY go.mod go.mod
-COPY go.sum go.sum
-COPY . .
-COPY ./conf /app/conf
-
-RUN go build -ldflags="-s -w" -o /app/dubbogo ./cmd
-
-FROM scratch
-
-WORKDIR /app
-
-COPY --from=builder /app/dubbogo /app/dubbogo
-COPY --from=builder /app/conf /app/conf
-
-ENV DUBBO_GO_CONFIG_PATH=/app/conf/dubbogo.yaml
-
-ENTRYPOINT ["./dubbogo"]  
-`
-
-	java = `
-FROM openjdk:8-jdk-alpine
-
-ADD target/demo-0.0.1-SNAPSHOT.jar /app.jar
-
-ENV JAVA_OPTS=""
-
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app.jar"]
-`
+	golang = ``
+	java   = ``
 
 	DockerfileByRuntime = map[string]string{
 		"go":   golang,
