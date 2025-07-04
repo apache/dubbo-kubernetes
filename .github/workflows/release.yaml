@@ -129,26 +129,28 @@ jobs:
       - name: dubboctl Package files
         id: package_ctl
         run: |
+          mkdir -p dubboctl-${VERSION}/bin
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -j ${FILENAME}.zip build/dubboctl/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl dubboctl-${VERSION}/bin
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
       - name: dubbo-cp Package files
         id: package_cp
         run: |
+          mkdir -p dubbo-cp-${VERSION}/bin
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -j ${FILENAME}.zip build/dubbo-cp/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp dubbo-cp-${VERSION}/bin
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
