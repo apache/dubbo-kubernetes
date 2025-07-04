@@ -100,9 +100,9 @@ jobs:
         run: |
           mkdir -p build/dubboctl
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/dubboctl
-          mv bin/dubboctl* build/dubboctl
-          ls -ln build/dubboctl
+          cp README.md LICENSE build/dubboctl/
+          mv bin/dubboctl* build/dubboctl/
+          ls -ln build/dubboctl/
 
       - name: Dubbo-CP Build binary
         env:
@@ -112,9 +112,9 @@ jobs:
         run: |
           mkdir -p build/dubbo-cp
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/dubbo-cp
-          mv bin/dubbo-cp* build/dubbo-cp
-          ls -ln build/dubbo-cp
+          cp README.md LICENSE build/dubbo-cp/
+          mv bin/dubbo-cp* build/dubbo-cp/
+          ls -ln build/dubbo-cp/
 
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
@@ -135,7 +135,7 @@ jobs:
             zip -j ${FILENAME}.zip build/dubboctl/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl/dubboctl .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
@@ -148,7 +148,7 @@ jobs:
             zip -j ${FILENAME}.zip build/dubbo-cp/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp/dubbo-cp .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
