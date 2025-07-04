@@ -20,6 +20,7 @@ package sdk
 import (
 	"archive/zip"
 	"bytes"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/common"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 )
 
