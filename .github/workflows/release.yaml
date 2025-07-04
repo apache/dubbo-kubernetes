@@ -124,14 +124,13 @@ jobs:
         run: |
           mkdir -p build/dubbo-cp
           mkdir -p build/dubboctl
-          mkdir -p build/samples
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make clone-sample GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
           mv bin/dubbo-cp* build/dubbo-cp/
           mv bin/dubboctl* build/dubboctl/
-          mv bin/samples/ build/samples
+          mv bin/samples/ build/
           ls -ln build/dubboctl/ ; ls -ln build/dubbo-cp/ ; ls -ln build/
 
       - name: Dubboctl Rename windows
