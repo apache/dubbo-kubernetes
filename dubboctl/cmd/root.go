@@ -28,7 +28,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/validate"
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/version"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
 	"github.com/spf13/cobra"
 	"net/http"
@@ -124,9 +123,9 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(validateCmd)
 	hideFlags(validateCmd, ChartFlag)
 
-	versionCmd := version.NewVersionCommand(ctx)
-	rootCmd.AddCommand(versionCmd)
-	hideFlags(versionCmd, ChartFlag)
+	// versionCmd := version.NewVersionCommand(ctx)
+	// rootCmd.AddCommand(versionCmd)
+	// hideFlags(versionCmd, ChartFlag)
 
 	createCmd := CreateCmd(ctx, rootCmd, factory)
 	rootCmd.AddCommand(createCmd)

@@ -90,5 +90,6 @@ printf "%s download complete!\n" "${filename}"
 # Print message.
 printf "\n"
 printf "Add the dubbo to your path with:\n"
-printf "  export PATH=\$HOME/.dubbo/bin:\$PATH \n"
+# shellcheck disable=SC2059
+printf "  export PATH=$(pwd)/dubbo-${DUBBO_VERSION}/bin:$PATH \n"
 printf "\n"
