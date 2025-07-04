@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: dubboctl Release
+name: Dubbo Release
 
 on:
   push:
@@ -101,8 +101,8 @@ jobs:
           mkdir -p build/
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
-          mv bin/dubboctl* build/
-          ls -ln build/
+          mv bin/dubboctl* build/cli/
+          ls -ln build/cli/
 
       - name: Dubbo-CP Build binary
         env:
@@ -112,19 +112,19 @@ jobs:
         run: |
           mkdir -p build/
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/
-          mv bin/dubbo-cp* build/
-          ls -ln build/
+          cp README.md LICENSE build/cp/
+          mv bin/dubbo-cp* build/cp/
+          ls -ln build/cp/
 
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
-          mv build/dubboctl build/dubboctl.exe
+          mv build/cli/dubboctl build/cli/dubboctl.exe
 
       - name: Dubbo-CP Rename windows
         if: matrix.goos == 'windows'
         run: |
-          mv build/dubbo-cp build/dubbo-cp.exe
+          mv build/cp/dubbo-cp build/cp/dubbo-cp.exe
 
       - name: dubboctl Package files
         id: package_ctl
