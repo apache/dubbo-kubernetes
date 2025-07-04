@@ -124,13 +124,14 @@ jobs:
         run: |
           mkdir -p build/dubbo-cp
           mkdir -p build/dubboctl
+          mkdir -p build/samples
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make clone-sample GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
           mv bin/dubbo-cp* build/dubbo-cp/
           mv bin/dubboctl* build/dubboctl/
-          mv bin/samples build/
+          mv bin/samples build/samples
           ls -ln build/dubboctl/ ; ls -ln build/dubbo-cp/ ; ls -ln build/
 
       - name: Dubboctl Rename windows
@@ -153,7 +154,6 @@ jobs:
           cp build/dubboctl/dubboctl ${DIRNAME}/bin
           ls -ln ${DIRNAME}/bin
           cp build/dubboctl/README.md build/dubboctl/LICENSE ${DIRNAME}
-          cp build/samples ${DIRNAME}
           ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -r ${FILENAME}.zip ${DIRNAME}/bin
@@ -193,6 +193,7 @@ jobs:
           cp build/dubbo-cp/dubbo-cp ${DIRNAME}/bin/
           cp build/README.md build/LICENSE ${DIRNAME}
           cp build/dubbo-cp/dubbo-cp.yaml ${DIRNAME}
+          cp build/samples ${DIRNAME}
           ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -r ${FILENAME}.zip ${DIRNAME}
