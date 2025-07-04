@@ -119,12 +119,12 @@ jobs:
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
-          mv build/dubboctl build/dubboctl/dubboctl.exe
+          mv build/dubboctl/dubboctl build/dubboctl/dubboctl.exe
 
       - name: Dubbo-CP Rename windows
         if: matrix.goos == 'windows'
         run: |
-          mv build/dubbo-cp build/dubbo-cp/dubbo-cp.exe
+          mv build/dubbo-cp/dubbo-cp build/dubbo-cp/dubbo-cp.exe
 
       - name: dubboctl Package files
         id: package_ctl
