@@ -116,6 +116,21 @@ jobs:
           mv bin/dubbo-cp* build/dubbo-cp/
           ls -ln build/dubbo-cp/
 
+      - name: Dubbo Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GIT_VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p build/dubbo-cp
+          mkdir -p build/dubboctl
+          make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
+          make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
+          cp README.md LICENSE build/
+          mv bin/dubbo-cp* build/dubbo-cp/
+          mv bin/dubboctl* build/dubboctl/
+          ls -ln build/dubboctl/ ; ls -ln build/dubbo-cp/ ; ls -ln build/
+
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
@@ -164,15 +179,36 @@ jobs:
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload Dubboctl Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.package_ctl.outputs.name }}
-          asset_name: ${{ steps.package_ctl.outputs.name }}
-          asset_content_type: application/octet-stream
+      - name: dubbo Package files
+        id: package_dubbo
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          FILENAME=dubbo-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
+          DIRNAME=dubbo-${VERSION}
+          mkdir -p ${DIRNAME}/bin
+          cp build/dubboctl/dubboctl ${DIRNAME}/bin/
+          cp build/dubbo-cp/dubbo-cp ${DIRNAME}/bin/
+          cp build/README.md build/LICENSE ${DIRNAME}
+          cp build/dubbo-cp/dubbo-cp.yaml ${DIRNAME}
+          cp -r ../samples/ ${DIRNAME}/samples
+          ls -Rlh ${DIRNAME}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -r ${FILENAME}.zip ${DIRNAME}
+            echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
+          else
+            tar -czvf ${FILENAME}.tar.gz ${DIRNAME}
+            echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
+          fi
+            
+          - name: Upload Dubboctl Release Asset
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ needs.create_release.outputs.upload_url }}
+              asset_path: ${{ steps.package_ctl.outputs.name }}
+              asset_name: ${{ steps.package_ctl.outputs.name }}
+              asset_content_type: application/octet-stream
 
       - name: Upload Dubbo-CP Release Asset
         uses: actions/upload-release-asset@v1
@@ -182,4 +218,14 @@ jobs:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ${{ steps.package_cp.outputs.name }}
           asset_name: ${{ steps.package_cp.outputs.name }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload Dubbo Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.package_dubbo.outputs.name }}
+          asset_name: ${{ steps.package_dubbo.outputs.name }}
           asset_content_type: application/octet-stream

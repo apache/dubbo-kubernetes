@@ -9,8 +9,8 @@ else
   OSEXT="linux"
 fi
 
-# Package type, default to dubbo-cp
-PACKAGE_TYPE="${PACKAGE_TYPE:-dubbo-cp}"
+# Package type, default to dubbo
+PACKAGE_TYPE="${PACKAGE_TYPE:-dubbo}"
 
 # Determine the latest Dubbo version by version number ignoring alpha, beta, and rc versions.
 if [ "${DUBBO_VERSION}" = "" ] ; then
@@ -23,7 +23,7 @@ if [ "${DUBBO_VERSION}" = "" ] ; then
 fi
 
 if [ "${DUBBO_VERSION}" = "" ] ; then
-  printf "Unable to get latest Dubbo version. Set DUBBO_VERSION env var and re-run. For example: export DUBBO_VERSION=0.1.0\n"
+  printf "Unable to get latest Dubbo version.\n"
   exit 1;
 fi
 
