@@ -129,28 +129,30 @@ jobs:
       - name: dubboctl Package files
         id: package_ctl
         run: |
-          mkdir -p dubboctl-${VERSION}/bin
+          mkdir dubboctl-${VERSION}
+          cp build/dubboctl/* dubboctl-${VERSION}
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/dubboctl/*
+            zip -j ${FILENAME}.zip dubboctl-${VERSION}
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl dubboctl-${VERSION}/bin
+            tar -czvf ${FILENAME}.tar.gz -C dubboctl-${VERSION}
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
       - name: dubbo-cp Package files
         id: package_cp
         run: |
-          mkdir -p dubbo-cp-${VERSION}/bin
+          mkdir dubbo-cp-${VERSION}
+          cp build/dubbo-cp/* dubbo-cp-${VERSION}
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/dubbo-cp/*
+            zip -j ${FILENAME}.zip dubbo-cp-${VERSION}
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp dubbo-cp-${VERSION}/bin
+            tar -czvf ${FILENAME}.tar.gz -C dubbo-cp-${VERSION}
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
