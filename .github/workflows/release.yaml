@@ -132,10 +132,10 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/dubboctl
+            zip -j ${FILENAME}.zip build/dubboctl/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl/* .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
@@ -145,10 +145,10 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/dubbo-cp
+            zip -j ${FILENAME}.zip build/dubbo-cp/*
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp/* .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
