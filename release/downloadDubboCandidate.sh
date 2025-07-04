@@ -85,11 +85,10 @@ if ! with_arch; then
   fi
 fi
 
-printf "%s download complete!\n" "${filename}"
-
-# Print message.
+## Print message
+printf ""
+printf "\nDubbo %s download complete!\n" "$DUBBO_VERSION"
 printf "\n"
-printf "Add the dubbo to your path with:\n"
-# shellcheck disable=SC2059
-printf "  export PATH=$(pwd)/dubbo-${DUBBO_VERSION}/bin:$PATH \n"
-printf "\n"
+BINDIR="$(cd "$NAME/bin" && pwd)"
+printf "add the %s directory to your environment path variable with:\n" "$BINDIR"
+printf "\t export PATH=\"\$PATH:%s\"\n" "$BINDIR"
