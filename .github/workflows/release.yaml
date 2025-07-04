@@ -140,7 +140,7 @@ jobs:
             zip -j ${FILENAME}.zip dubboctl-${VERSION}/bin
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C dubboctl-${VERSION}/* dubboctl-${VERSION}
+            tar -czvf ${FILENAME}.tar.gz -C dubboctl-${VERSION} dubboctl-${VERSION}/*
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
@@ -158,7 +158,7 @@ jobs:
             zip -j ${FILENAME}.zip dubbo-cp-${VERSION}
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C dubbo-cp-${VERSION}/* dubbo-cp-${VERSION}
+            tar -czvf ${FILENAME}.tar.gz -C dubbo-cp-${VERSION} dubbo-cp-${VERSION}/*
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
