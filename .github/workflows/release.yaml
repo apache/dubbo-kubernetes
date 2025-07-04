@@ -131,16 +131,17 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
-          mkdir -p dubboctl-${VERSION}/bin
-          cp build/dubboctl/dubboctl dubboctl-${VERSION}/bin
-          ls -ln dubboctl-${VERSION}/bin
-          cp build/dubboctl/README.md build/dubboctl/LICENSE dubboctl-${VERSION}
-          ls -ln dubboctl-${VERSION}
+          DIRNAME=dubboctl-${VERSION}
+          mkdir -p ${DIRNAME}/bin
+          cp build/dubboctl/dubboctl ${DIRNAME}/bin
+          ls -ln ${DIRNAME}/bin
+          cp build/dubboctl/README.md build/dubboctl/LICENSE ${DIRNAME}
+          ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip dubboctl-${VERSION}/bin
+            zip -r ${FILENAME}.zip ${DIRNAME}/bin
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C dubboctl-${VERSION} dubboctl-${VERSION}/*
+            tar -czvf ${FILENAME}.tar.gz ${DIRNAME}
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
@@ -149,16 +150,17 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
-          mkdir dubbo-cp-${VERSION}
-          cp build/dubbo-cp/dubbo-cp dubbo-cp-${VERSION}/bin
-          ls -ln dubbo-cp-${VERSION}/bin
-          cp build/dubbo-cp/README.md build/dubbo-cp/LICENSE build/dubbo-cp/dubbo-cp.yaml dubbo-cp-${VERSION}
-          ls -ln dubbo-cp-${VERSION}
+          DIRNAME=dubbo-cp-${VERSION}
+          mkdir -p ${DIRNAME}/bin
+          cp build/dubbo-cp/dubbo-cp ${DIRNAME}/bin
+          ls -ln ${DIRNAME}/bin
+          cp build/dubbo-cp/README.md build/dubbo-cp/LICENSE build/dubbo-cp/dubbo-cp.yaml ${DIRNAME}
+          ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip dubbo-cp-${VERSION}
+            zip -r ${FILENAME}.zip dubbo-cp-${VERSION}
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C dubbo-cp-${VERSION} dubbo-cp-${VERSION}/*
+            tar -czvf ${FILENAME}.tar.gz ${DIRNAME}
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
