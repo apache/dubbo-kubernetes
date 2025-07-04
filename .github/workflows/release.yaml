@@ -98,9 +98,9 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/
+          mkdir -p build/cli
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/
+          cp README.md LICENSE build/cli/
           mv bin/dubboctl* build/cli/
           ls -ln build/cli/
 
@@ -110,7 +110,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/
+          mkdir -p build/cp
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/cp/
           mv bin/dubbo-cp* build/cp/
