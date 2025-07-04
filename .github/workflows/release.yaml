@@ -98,11 +98,11 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/cli
+          mkdir -p build/dubboctl
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/cli/
-          mv bin/dubboctl* build/cli/
-          ls -ln build/cli/
+          cp README.md LICENSE build/dubboctl
+          mv bin/dubboctl* build/dubboctl
+          ls -ln build/dubboctl
 
       - name: Dubbo-CP Build binary
         env:
@@ -110,21 +110,21 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/cp
+          mkdir -p build/dubbo-cp
           make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/cp/
-          mv bin/dubbo-cp* build/cp/
-          ls -ln build/cp/
+          cp README.md LICENSE build/dubbo-cp
+          mv bin/dubbo-cp* build/dubbo-cp
+          ls -ln build/dubbo-cp
 
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
-          mv build/cli/dubboctl build/cli/dubboctl.exe
+          mv build/dubboctl build/dubboctl/dubboctl.exe
 
       - name: Dubbo-CP Rename windows
         if: matrix.goos == 'windows'
         run: |
-          mv build/cp/dubbo-cp build/cp/dubbo-cp.exe
+          mv build/dubbo-cp build/dubbo-cp/dubbo-cp.exe
 
       - name: dubboctl Package files
         id: package_ctl
@@ -132,10 +132,10 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/*
+            zip -j ${FILENAME}.zip build/dubboctl
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubboctl .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
@@ -145,10 +145,10 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -j ${FILENAME}.zip build/*
+            zip -j ${FILENAME}.zip build/dubbo-cp
             echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
           else
-            tar -czvf ${FILENAME}.tar.gz -C build .
+            tar -czvf ${FILENAME}.tar.gz -C build/dubbo-cp .
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
