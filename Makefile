@@ -27,6 +27,7 @@ build-dubboctl:
 	-ldflags "-X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=$(GIT_VERSION)" \
     -o bin/dubboctl dubboctl/main.go
 
-.PHONY: build-sample
+.PHONY: clone-sample
 clone-sample:
+	mkdir -p bin
 	cp -r samples bin/samples
