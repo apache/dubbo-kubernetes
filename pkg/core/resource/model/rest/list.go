@@ -19,14 +19,10 @@ package rest
 
 import (
 	"encoding/json"
-)
 
-import (
 	"github.com/pkg/errors"
-)
 
-import (
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 type ResourceList struct {
@@ -37,7 +33,7 @@ type ResourceList struct {
 
 type ResourceListReceiver struct {
 	ResourceList
-	NewResource func() core_model.Resource
+	NewResource func() model.Resource
 }
 
 var _ json.Unmarshaler = &ResourceListReceiver{}

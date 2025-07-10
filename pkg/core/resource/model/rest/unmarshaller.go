@@ -23,15 +23,15 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/rest/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/core/registry"
-	"github.com/apache/dubbo-kubernetes/pkg/core/validators"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core_legacy/resources"
-
 	"github.com/pkg/errors"
 	"k8s.io/kube-openapi/pkg/validation/strfmt"
 	"k8s.io/kube-openapi/pkg/validation/validate"
 	"sigs.k8s.io/yaml"
+
+	"github.com/apache/dubbo-kubernetes/pkg/common/validators"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model/rest/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/registry"
 )
 
 var YAML = &unmarshaler{unmarshalFn: func(bytes []byte, i interface{}) error {
@@ -59,12 +59,12 @@ func (e *InvalidResourceError) Is(target error) bool {
 	return t.Reason == e.Reason || t.Reason == ""
 }
 
-func (u *unmarshaler) UnmarshalCore(bytes []byte) (core_model.Resource, error) {
+func (u *unmarshaler) UnmarshalCore(bytes []byte) (model.Resource, error) {
 	m := v1alpha1.ResourceMeta{}
 	if err := u.unmarshalFn(bytes, &m); err != nil {
 		return nil, &InvalidResourceError{Reason: fmt.Sprintf("invalid meta type: %q", err.Error())}
 	}
-	desc, err := registry.Global().DescriptorFor(core_model.ResourceType(m.Type))
+	desc, err := registry.Global().DescriptorFor(model.ResourceType(m.Type))
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (u *unmarshaler) UnmarshalCore(bytes []byte) (core_model.Resource, error) {
 	return coreRes, nil
 }
 
-func (u *unmarshaler) Unmarshal(bytes []byte, desc core_model.ResourceTypeDescriptor) (Resource, error) {
+func (u *unmarshaler) Unmarshal(bytes []byte, desc model.ResourceTypeDescriptor) (Resource, error) {
 	resource := desc.NewObject()
 	restResource := From.Resource(resource)
 	if desc.IsPluginOriginated {
@@ -100,13 +100,13 @@ func (u *unmarshaler) Unmarshal(bytes []byte, desc core_model.ResourceTypeDescri
 		return nil, &InvalidResourceError{Reason: fmt.Sprintf("invalid %s object: %q", desc.Name, err.Error())}
 	}
 
-	if err := core_model.Validate(resource); err != nil {
+	if err := model.Validate(resource); err != nil {
 		return nil, err
 	}
 	return restResource, nil
 }
 
-func (u *unmarshaler) UnmarshalListToCore(b []byte, rs core_model.ResourceList) error {
+func (u *unmarshaler) UnmarshalListToCore(b []byte, rs model.ResourceList) error {
 	rsr := &ResourceListReceiver{
 		NewResource: rs.NewItem,
 	}

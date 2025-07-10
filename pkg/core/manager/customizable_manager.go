@@ -20,7 +20,7 @@ package manager
 import (
 	"context"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 	"github.com/apache/dubbo-kubernetes/pkg/core/store"
 )
 

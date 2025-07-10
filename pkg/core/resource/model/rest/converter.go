@@ -18,17 +18,17 @@
 package rest
 
 import (
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest/unversioned"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model/rest/unversioned"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model/rest/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/registry"
 )
 
 var From = &from{}
 
 type from struct{}
 
-func (f *from) Resource(r core_model.Resource) Resource {
+func (f *from) Resource(r model.Resource) Resource {
 	if r == nil {
 		return nil
 	}
@@ -47,14 +47,14 @@ func (f *from) Resource(r core_model.Resource) Resource {
 	}
 }
 
-func (f *from) Meta(r core_model.Resource) v1alpha1.ResourceMeta {
+func (f *from) Meta(r model.Resource) v1alpha1.ResourceMeta {
 	meta := v1alpha1.ResourceMeta{}
 	if r == nil {
 		return meta
 	}
 	if r.GetMeta() != nil {
 		var meshName string
-		if r.Descriptor().Scope == core_model.ScopeMesh {
+		if r.Descriptor().Scope == model.ScopeMesh {
 			meshName = r.GetMeta().GetMesh()
 		}
 		meta = v1alpha1.ResourceMeta{
@@ -69,7 +69,7 @@ func (f *from) Meta(r core_model.Resource) v1alpha1.ResourceMeta {
 	return meta
 }
 
-func (f *from) ResourceList(rs core_model.ResourceList) *ResourceList {
+func (f *from) ResourceList(rs model.ResourceList) *ResourceList {
 	items := make([]Resource, len(rs.GetItems()))
 	for i, r := range rs.GetItems() {
 		items[i] = f.Resource(r)
@@ -84,8 +84,8 @@ var To = &to{}
 
 type to struct{}
 
-func (t *to) Core(r Resource) (core_model.Resource, error) {
-	resource, err := registry.Global().NewObject(core_model.ResourceType(r.GetMeta().Type))
+func (t *to) Core(r Resource) (model.Resource, error) {
+	resource, err := registry.Global().NewObject(model.ResourceType(r.GetMeta().Type))
 	if err != nil {
 		return nil, err
 	}

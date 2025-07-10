@@ -23,7 +23,7 @@ import (
 	"time"
 
 	meshproto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/model"
+	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 const (

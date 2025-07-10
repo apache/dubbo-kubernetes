@@ -20,7 +20,7 @@ package store
 import (
 	"context"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 // The Pagination Store is handling only the pagination functionality in the List.

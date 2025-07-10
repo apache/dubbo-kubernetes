@@ -20,7 +20,7 @@ package v1alpha1
 import (
 	"time"
 
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core_legacy/resources"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 type ResourceMeta struct {
@@ -32,14 +32,14 @@ type ResourceMeta struct {
 	Labels           map[string]string `json:"labels,omitempty"`
 }
 
-var _ coremodel.ResourceMeta = ResourceMeta{}
+var _ model.ResourceMeta = ResourceMeta{}
 
 func (r ResourceMeta) GetName() string {
 	return r.Name
 }
 
-func (r ResourceMeta) GetNameExtensions() coremodel.ResourceNameExtensions {
-	return coremodel.ResourceNameExtensionsUnsupported
+func (r ResourceMeta) GetNameExtensions() model.ResourceNameExtensions {
+	return model.ResourceNameExtensionsUnsupported
 }
 
 func (r ResourceMeta) GetVersion() string {

@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 // Protocol identifies a protocol supported by a service.
@@ -177,7 +177,7 @@ func (d *DataplaneResource) AdminPort(defaultAdminPort uint32) uint32 {
 
 func (d *DataplaneResource) Hash() []byte {
 	hasher := fnv.New128a()
-	_, _ = hasher.Write(coremodel.HashMeta(d))
+	_, _ = hasher.Write(model.HashMeta(d))
 	_, _ = hasher.Write([]byte(d.Spec.GetNetworking().GetAddress()))
 	_, _ = hasher.Write([]byte(d.Spec.GetNetworking().GetAdvertisedAddress()))
 	return hasher.Sum(nil)

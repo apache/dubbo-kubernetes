@@ -27,7 +27,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/console/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/console/context"
 	"github.com/apache/dubbo-kubernetes/pkg/console/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/store"
 )
 
@@ -70,11 +70,11 @@ func GetApplicationDetail(ctx context.Context, req *model.ApplicationDetailReq) 
 	return respItem, nil
 }
 
-func GetApplicationTabInstanceInfo(cs context.Context, req *model.ApplicationTabInstanceInfoReq) (*model.SearchPaginationResult, error) {
-	manager := cs.ResourceManager()
+func GetApplicationTabInstanceInfo(ctx context.Context, req *model.ApplicationTabInstanceInfoReq) (*model.SearchPaginationResult, error) {
+	manager := ctx.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(cs.AppContext(), dataplaneList, store.ListByApplication(req.AppName), store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
+	if err := manager.List(ctx.AppContext(), dataplaneList, store.ListByApplication(req.AppName), store.ListByPage(req.PageSize, strconv.Itoa(req.PageOffset))); err != nil {
 		return nil, err
 	}
 
@@ -86,7 +86,7 @@ func GetApplicationTabInstanceInfo(cs context.Context, req *model.ApplicationTab
 		}
 		resItem := &model.ApplicationTabInstanceInfoResp{}
 		resItem.FromDataplaneResource(dataplane)
-		resItem.GetRegistry(cs)
+		resItem.GetRegistry(ctx)
 		list = append(list, resItem)
 	}
 
@@ -96,11 +96,11 @@ func GetApplicationTabInstanceInfo(cs context.Context, req *model.ApplicationTab
 	return res, nil
 }
 
-func GetApplicationServiceFormInfo(cs context.Context, req *model.ApplicationServiceFormReq) (*model.SearchPaginationResult, error) {
-	manager := cs.ResourceManager()
+func GetApplicationServiceFormInfo(ctx context.Context, req *model.ApplicationServiceFormReq) (*model.SearchPaginationResult, error) {
+	manager := ctx.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
-	if err := manager.List(cs.AppContext(), dataplaneList, store.ListByApplication(req.AppName)); err != nil {
+	if err := manager.List(ctx.AppContext(), dataplaneList, store.ListByApplication(req.AppName)); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +118,7 @@ func GetApplicationServiceFormInfo(cs context.Context, req *model.ApplicationSer
 			metadata = &mesh.MetaDataResource{
 				Spec: &meshproto.MetaData{},
 			}
-			if err := manager.Get(cs.AppContext(), metadata, store.GetByRevision(rev), store.GetByType(dataplane.Spec.GetExtensions()["registry-type"])); err != nil {
+			if err := manager.Get(ctx.AppContext(), metadata, store.GetByRevision(rev), store.GetByType(dataplane.Spec.GetExtensions()["registry-type"])); err != nil {
 				return nil, err
 			}
 			revisions[rev] = metadata
@@ -152,16 +152,16 @@ func GetApplicationServiceFormInfo(cs context.Context, req *model.ApplicationSer
 	return pagedRes, nil
 }
 
-func GetApplicationSearchInfo(cs context.Context, req *model.ApplicationSearchReq) (*model.SearchPaginationResult, error) {
-	manager := cs.ResourceManager()
+func GetApplicationSearchInfo(ctx context.Context, req *model.ApplicationSearchReq) (*model.SearchPaginationResult, error) {
+	manager := ctx.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 
 	if req.Keywords != "" {
-		if err := manager.List(cs.AppContext(), dataplaneList, store.ListByApplicationContains(req.Keywords)); err != nil {
+		if err := manager.List(ctx.AppContext(), dataplaneList, store.ListByApplicationContains(req.Keywords)); err != nil {
 			return nil, err
 		}
 	} else {
-		if err := manager.List(cs.AppContext(), dataplaneList); err != nil {
+		if err := manager.List(ctx.AppContext(), dataplaneList); err != nil {
 			return nil, err
 		}
 	}
@@ -177,7 +177,7 @@ func GetApplicationSearchInfo(cs context.Context, req *model.ApplicationSearchRe
 			appMap[appName] = model.NewApplicationSearch(appName)
 		}
 		appMap[appName].MergeDataplane(dataplane)
-		appMap[appName].GetRegistry(cs)
+		appMap[appName].GetRegistry(ctx)
 	}
 
 	for appName, search := range appMap {
@@ -191,15 +191,15 @@ func GetApplicationSearchInfo(cs context.Context, req *model.ApplicationSearchRe
 	return pagedRes, nil
 }
 
-func BannerSearchApplications(cs context.Context, req *model.SearchReq) ([]*model.ApplicationSearchResp, error) {
-	manager := cs.ResourceManager()
+func BannerSearchApplications(ctx context.Context, req *model.SearchReq) ([]*model.ApplicationSearchResp, error) {
+	manager := ctx.ResourceManager()
 	dataplaneList := &mesh.DataplaneResourceList{}
 	if req.Keywords != "" {
-		if err := manager.List(cs.AppContext(), dataplaneList, store.ListByApplicationContains(req.Keywords)); err != nil {
+		if err := manager.List(ctx.AppContext(), dataplaneList, store.ListByApplicationContains(req.Keywords)); err != nil {
 			return nil, err
 		}
 	} else {
-		if err := manager.List(cs.AppContext(), dataplaneList); err != nil {
+		if err := manager.List(ctx.AppContext(), dataplaneList); err != nil {
 			return nil, err
 		}
 	}
@@ -212,7 +212,7 @@ func BannerSearchApplications(cs context.Context, req *model.SearchReq) ([]*mode
 			appMap[appName] = model.NewApplicationSearch(appName)
 		}
 		appMap[appName].MergeDataplane(dataplane)
-		appMap[appName].GetRegistry(cs)
+		appMap[appName].GetRegistry(ctx)
 	}
 
 	for appName, search := range appMap {

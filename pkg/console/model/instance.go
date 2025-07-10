@@ -22,8 +22,8 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	meshproto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
+	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 type SearchInstanceReq struct {

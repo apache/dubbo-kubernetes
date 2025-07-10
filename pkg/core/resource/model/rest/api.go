@@ -20,13 +20,13 @@ package rest
 import (
 	"fmt"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core_legacy/resources"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 
 	"github.com/pkg/errors"
 )
 
 type Api interface {
-	GetResourceApi(resources.ResourceType) (ResourceApi, error)
+	GetResourceApi(model.ResourceType) (ResourceApi, error)
 }
 
 type ResourceApi interface {
@@ -34,11 +34,11 @@ type ResourceApi interface {
 	Item(mesh string, name string) string
 }
 
-func NewResourceApi(scope resources.ResourceScope, path string) ResourceApi {
+func NewResourceApi(scope model.ResourceScope, path string) ResourceApi {
 	switch scope {
-	case resources.ScopeGlobal:
+	case model.ScopeGlobal:
 		return &nonMeshedApi{CollectionPath: path}
-	case resources.ScopeMesh:
+	case model.ScopeMesh:
 		return &meshedApi{CollectionPath: path}
 	default:
 		panic("Unsupported scope type")
@@ -72,10 +72,10 @@ func (r *nonMeshedApi) Item(string, name string) string {
 var _ Api = &ApiDescriptor{}
 
 type ApiDescriptor struct {
-	Resources map[resources.ResourceType]ResourceApi
+	Resources map[model.ResourceType]ResourceApi
 }
 
-func (m *ApiDescriptor) GetResourceApi(typ resources.ResourceType) (ResourceApi, error) {
+func (m *ApiDescriptor) GetResourceApi(typ model.ResourceType) (ResourceApi, error) {
 	mapping, ok := m.Resources[typ]
 	if !ok {
 		return nil, errors.Errorf("unknown resource type: %q", typ)

@@ -30,7 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/console/model"
 	"github.com/apache/dubbo-kubernetes/pkg/console/service"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
 	corestore "github.com/apache/dubbo-kubernetes/pkg/core/store"
 )
 

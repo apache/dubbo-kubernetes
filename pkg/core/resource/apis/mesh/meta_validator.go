@@ -21,7 +21,7 @@ import (
 	"regexp"
 
 	"github.com/apache/dubbo-kubernetes/pkg/common/validators"
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 var (
@@ -32,9 +32,9 @@ var (
 // ValidateMesh checks that resource's mesh matches the old regex (with '_'). Even if user creates entirely new resource,
 // we can't check resource's mesh against the new regex, because Mesh resource itself can be old and contain '_' in its name.
 // All new Mesh resources will have their name validated against new regex.
-func ValidateMesh(mesh string, scope coremodel.ResourceScope) validators.ValidationError {
+func ValidateMesh(mesh string, scope model.ResourceScope) validators.ValidationError {
 	var err validators.ValidationError
-	if scope == coremodel.ScopeMesh {
+	if scope == model.ScopeMesh {
 		err.AddError("mesh", validateIdentifier(mesh, backwardCompatRegexp, backwardCompatErrMsg))
 	}
 	return err

@@ -27,7 +27,7 @@ import (
 	consolectx "github.com/apache/dubbo-kubernetes/pkg/console/context"
 	"github.com/apache/dubbo-kubernetes/pkg/console/model"
 	coremanager "github.com/apache/dubbo-kubernetes/pkg/core/manager"
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/core/store"
 )
 

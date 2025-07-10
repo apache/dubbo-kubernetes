@@ -20,7 +20,7 @@ package store
 import (
 	"context"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 // ResourceStoreWrapper is a function that takes a ResourceStore and returns a wrapped ResourceStore.

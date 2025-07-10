@@ -25,7 +25,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 type ResourceStore interface {

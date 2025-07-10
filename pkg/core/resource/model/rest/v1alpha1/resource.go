@@ -15,29 +15,27 @@
  * limitations under the License.
  */
 
-package registry
+package v1alpha1
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
-var global = NewTypeRegistry()
-
-func Global() TypeRegistry {
-	return global
+type Resource struct {
+	ResourceMeta
+	Spec model.ResourceSpec `json:"spec,omitempty"`
 }
 
-func RegisterType(res model.ResourceTypeDescriptor) {
-	if err := global.RegisterType(res); err != nil {
-		panic(err)
+func (r *Resource) GetMeta() ResourceMeta {
+	if r == nil {
+		return ResourceMeta{}
 	}
+	return r.ResourceMeta
 }
 
-func RegisterTypeIfAbsent(res model.ResourceTypeDescriptor) {
-	for _, typ := range global.ObjectTypes() {
-		if typ == res.Name {
-			return
-		}
+func (r *Resource) GetSpec() model.ResourceSpec {
+	if r == nil {
+		return nil
 	}
-	RegisterType(res)
+	return r.Spec
 }

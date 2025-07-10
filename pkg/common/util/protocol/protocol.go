@@ -18,7 +18,7 @@
 package protocol
 
 import (
-	coremesh "github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	coremesh "github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
 )
 
 // protocolStack is a mapping between a protocol and its full protocol stack, e.g.

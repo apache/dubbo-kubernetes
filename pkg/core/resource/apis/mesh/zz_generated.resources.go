@@ -8,18 +8,18 @@ import (
 	"fmt"
 
 	meshproto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/registry"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/registry"
 )
 
 const (
-	AffinityRouteType coremodel.ResourceType = "AffinityRoute"
+	AffinityRouteType model.ResourceType = "AffinityRoute"
 )
 
-var _ coremodel.Resource = &AffinityRouteResource{}
+var _ model.Resource = &AffinityRouteResource{}
 
 type AffinityRouteResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.AffinityRoute
 }
 
@@ -29,19 +29,19 @@ func NewAffinityRouteResource() *AffinityRouteResource {
 	}
 }
 
-func (t *AffinityRouteResource) GetMeta() coremodel.ResourceMeta {
+func (t *AffinityRouteResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *AffinityRouteResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *AffinityRouteResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *AffinityRouteResource) GetSpec() coremodel.ResourceSpec {
+func (t *AffinityRouteResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *AffinityRouteResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *AffinityRouteResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.AffinityRoute)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -55,58 +55,58 @@ func (t *AffinityRouteResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *AffinityRouteResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *AffinityRouteResource) Descriptor() model.ResourceTypeDescriptor {
 	return AffinityRouteResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &AffinityRouteResourceList{}
+var _ model.ResourceList = &AffinityRouteResourceList{}
 
 type AffinityRouteResourceList struct {
 	Items      []*AffinityRouteResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *AffinityRouteResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *AffinityRouteResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *AffinityRouteResourceList) GetItemType() coremodel.ResourceType {
+func (l *AffinityRouteResourceList) GetItemType() model.ResourceType {
 	return AffinityRouteType
 }
 
-func (l *AffinityRouteResourceList) NewItem() coremodel.Resource {
+func (l *AffinityRouteResourceList) NewItem() model.Resource {
 	return NewAffinityRouteResource()
 }
 
-func (l *AffinityRouteResourceList) AddItem(r coremodel.Resource) error {
+func (l *AffinityRouteResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*AffinityRouteResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*AffinityRouteResource)(nil), r)
+		return model.ErrorInvalidItemType((*AffinityRouteResource)(nil), r)
 	}
 }
 
-func (l *AffinityRouteResourceList) GetPagination() *coremodel.Pagination {
+func (l *AffinityRouteResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *AffinityRouteResourceList) SetPagination(p coremodel.Pagination) {
+func (l *AffinityRouteResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var AffinityRouteResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var AffinityRouteResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                AffinityRouteType,
 	Resource:            NewAffinityRouteResource(),
 	ResourceList:        &AffinityRouteResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.GlobalToAllZonesFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "affinityroutes",
 	DubboctlArg:         "affinityroute",
 	DubboctlListArg:     "affinityroutes",
@@ -122,13 +122,13 @@ func init() {
 }
 
 const (
-	ConditionRouteType coremodel.ResourceType = "ConditionRoute"
+	ConditionRouteType model.ResourceType = "ConditionRoute"
 )
 
-var _ coremodel.Resource = &ConditionRouteResource{}
+var _ model.Resource = &ConditionRouteResource{}
 
 type ConditionRouteResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.ConditionRoute
 }
 
@@ -138,19 +138,19 @@ func NewConditionRouteResource() *ConditionRouteResource {
 	}
 }
 
-func (t *ConditionRouteResource) GetMeta() coremodel.ResourceMeta {
+func (t *ConditionRouteResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *ConditionRouteResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *ConditionRouteResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *ConditionRouteResource) GetSpec() coremodel.ResourceSpec {
+func (t *ConditionRouteResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *ConditionRouteResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *ConditionRouteResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.ConditionRoute)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -164,58 +164,58 @@ func (t *ConditionRouteResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *ConditionRouteResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *ConditionRouteResource) Descriptor() model.ResourceTypeDescriptor {
 	return ConditionRouteResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &ConditionRouteResourceList{}
+var _ model.ResourceList = &ConditionRouteResourceList{}
 
 type ConditionRouteResourceList struct {
 	Items      []*ConditionRouteResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *ConditionRouteResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *ConditionRouteResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *ConditionRouteResourceList) GetItemType() coremodel.ResourceType {
+func (l *ConditionRouteResourceList) GetItemType() model.ResourceType {
 	return ConditionRouteType
 }
 
-func (l *ConditionRouteResourceList) NewItem() coremodel.Resource {
+func (l *ConditionRouteResourceList) NewItem() model.Resource {
 	return NewConditionRouteResource()
 }
 
-func (l *ConditionRouteResourceList) AddItem(r coremodel.Resource) error {
+func (l *ConditionRouteResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*ConditionRouteResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*ConditionRouteResource)(nil), r)
+		return model.ErrorInvalidItemType((*ConditionRouteResource)(nil), r)
 	}
 }
 
-func (l *ConditionRouteResourceList) GetPagination() *coremodel.Pagination {
+func (l *ConditionRouteResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *ConditionRouteResourceList) SetPagination(p coremodel.Pagination) {
+func (l *ConditionRouteResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var ConditionRouteResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var ConditionRouteResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                ConditionRouteType,
 	Resource:            NewConditionRouteResource(),
 	ResourceList:        &ConditionRouteResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.GlobalToAllZonesFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "conditionroutes",
 	DubboctlArg:         "conditionroute",
 	DubboctlListArg:     "conditionroutes",
@@ -231,13 +231,13 @@ func init() {
 }
 
 const (
-	DataplaneType coremodel.ResourceType = "Dataplane"
+	DataplaneType model.ResourceType = "Dataplane"
 )
 
-var _ coremodel.Resource = &DataplaneResource{}
+var _ model.Resource = &DataplaneResource{}
 
 type DataplaneResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.Dataplane
 }
 
@@ -247,19 +247,19 @@ func NewDataplaneResource() *DataplaneResource {
 	}
 }
 
-func (t *DataplaneResource) GetMeta() coremodel.ResourceMeta {
+func (t *DataplaneResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *DataplaneResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *DataplaneResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *DataplaneResource) GetSpec() coremodel.ResourceSpec {
+func (t *DataplaneResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *DataplaneResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *DataplaneResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.Dataplane)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -273,58 +273,58 @@ func (t *DataplaneResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *DataplaneResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *DataplaneResource) Descriptor() model.ResourceTypeDescriptor {
 	return DataplaneResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &DataplaneResourceList{}
+var _ model.ResourceList = &DataplaneResourceList{}
 
 type DataplaneResourceList struct {
 	Items      []*DataplaneResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *DataplaneResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *DataplaneResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *DataplaneResourceList) GetItemType() coremodel.ResourceType {
+func (l *DataplaneResourceList) GetItemType() model.ResourceType {
 	return DataplaneType
 }
 
-func (l *DataplaneResourceList) NewItem() coremodel.Resource {
+func (l *DataplaneResourceList) NewItem() model.Resource {
 	return NewDataplaneResource()
 }
 
-func (l *DataplaneResourceList) AddItem(r coremodel.Resource) error {
+func (l *DataplaneResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*DataplaneResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*DataplaneResource)(nil), r)
+		return model.ErrorInvalidItemType((*DataplaneResource)(nil), r)
 	}
 }
 
-func (l *DataplaneResourceList) GetPagination() *coremodel.Pagination {
+func (l *DataplaneResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *DataplaneResourceList) SetPagination(p coremodel.Pagination) {
+func (l *DataplaneResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var DataplaneResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var DataplaneResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                DataplaneType,
 	Resource:            NewDataplaneResource(),
 	ResourceList:        &DataplaneResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.ZoneToGlobalFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "dataplanes",
 	DubboctlArg:         "dataplane",
 	DubboctlListArg:     "dataplanes",
@@ -340,13 +340,13 @@ func init() {
 }
 
 const (
-	DataplaneInsightType coremodel.ResourceType = "DataplaneInsight"
+	DataplaneInsightType model.ResourceType = "DataplaneInsight"
 )
 
-var _ coremodel.Resource = &DataplaneInsightResource{}
+var _ model.Resource = &DataplaneInsightResource{}
 
 type DataplaneInsightResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.DataplaneInsight
 }
 
@@ -356,19 +356,19 @@ func NewDataplaneInsightResource() *DataplaneInsightResource {
 	}
 }
 
-func (t *DataplaneInsightResource) GetMeta() coremodel.ResourceMeta {
+func (t *DataplaneInsightResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *DataplaneInsightResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *DataplaneInsightResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *DataplaneInsightResource) GetSpec() coremodel.ResourceSpec {
+func (t *DataplaneInsightResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *DataplaneInsightResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *DataplaneInsightResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.DataplaneInsight)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -382,58 +382,58 @@ func (t *DataplaneInsightResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *DataplaneInsightResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *DataplaneInsightResource) Descriptor() model.ResourceTypeDescriptor {
 	return DataplaneInsightResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &DataplaneInsightResourceList{}
+var _ model.ResourceList = &DataplaneInsightResourceList{}
 
 type DataplaneInsightResourceList struct {
 	Items      []*DataplaneInsightResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *DataplaneInsightResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *DataplaneInsightResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *DataplaneInsightResourceList) GetItemType() coremodel.ResourceType {
+func (l *DataplaneInsightResourceList) GetItemType() model.ResourceType {
 	return DataplaneInsightType
 }
 
-func (l *DataplaneInsightResourceList) NewItem() coremodel.Resource {
+func (l *DataplaneInsightResourceList) NewItem() model.Resource {
 	return NewDataplaneInsightResource()
 }
 
-func (l *DataplaneInsightResourceList) AddItem(r coremodel.Resource) error {
+func (l *DataplaneInsightResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*DataplaneInsightResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*DataplaneInsightResource)(nil), r)
+		return model.ErrorInvalidItemType((*DataplaneInsightResource)(nil), r)
 	}
 }
 
-func (l *DataplaneInsightResourceList) GetPagination() *coremodel.Pagination {
+func (l *DataplaneInsightResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *DataplaneInsightResourceList) SetPagination(p coremodel.Pagination) {
+func (l *DataplaneInsightResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var DataplaneInsightResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var DataplaneInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                DataplaneInsightType,
 	Resource:            NewDataplaneInsightResource(),
 	ResourceList:        &DataplaneInsightResourceList{},
 	ReadOnly:            true,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.ZoneToGlobalFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "dataplane-insights",
 	DubboctlArg:         "",
 	DubboctlListArg:     "",
@@ -449,13 +449,13 @@ func init() {
 }
 
 const (
-	DynamicConfigType coremodel.ResourceType = "DynamicConfig"
+	DynamicConfigType model.ResourceType = "DynamicConfig"
 )
 
-var _ coremodel.Resource = &DynamicConfigResource{}
+var _ model.Resource = &DynamicConfigResource{}
 
 type DynamicConfigResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.DynamicConfig
 }
 
@@ -465,19 +465,19 @@ func NewDynamicConfigResource() *DynamicConfigResource {
 	}
 }
 
-func (t *DynamicConfigResource) GetMeta() coremodel.ResourceMeta {
+func (t *DynamicConfigResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *DynamicConfigResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *DynamicConfigResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *DynamicConfigResource) GetSpec() coremodel.ResourceSpec {
+func (t *DynamicConfigResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *DynamicConfigResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *DynamicConfigResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.DynamicConfig)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -491,58 +491,58 @@ func (t *DynamicConfigResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *DynamicConfigResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *DynamicConfigResource) Descriptor() model.ResourceTypeDescriptor {
 	return DynamicConfigResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &DynamicConfigResourceList{}
+var _ model.ResourceList = &DynamicConfigResourceList{}
 
 type DynamicConfigResourceList struct {
 	Items      []*DynamicConfigResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *DynamicConfigResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *DynamicConfigResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *DynamicConfigResourceList) GetItemType() coremodel.ResourceType {
+func (l *DynamicConfigResourceList) GetItemType() model.ResourceType {
 	return DynamicConfigType
 }
 
-func (l *DynamicConfigResourceList) NewItem() coremodel.Resource {
+func (l *DynamicConfigResourceList) NewItem() model.Resource {
 	return NewDynamicConfigResource()
 }
 
-func (l *DynamicConfigResourceList) AddItem(r coremodel.Resource) error {
+func (l *DynamicConfigResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*DynamicConfigResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*DynamicConfigResource)(nil), r)
+		return model.ErrorInvalidItemType((*DynamicConfigResource)(nil), r)
 	}
 }
 
-func (l *DynamicConfigResourceList) GetPagination() *coremodel.Pagination {
+func (l *DynamicConfigResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *DynamicConfigResourceList) SetPagination(p coremodel.Pagination) {
+func (l *DynamicConfigResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var DynamicConfigResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var DynamicConfigResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                DynamicConfigType,
 	Resource:            NewDynamicConfigResource(),
 	ResourceList:        &DynamicConfigResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.GlobalToAllZonesFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "dynamicconfigs",
 	DubboctlArg:         "dynamicconfig",
 	DubboctlListArg:     "dynamicconfigs",
@@ -558,13 +558,13 @@ func init() {
 }
 
 const (
-	MappingType coremodel.ResourceType = "Mapping"
+	MappingType model.ResourceType = "Mapping"
 )
 
-var _ coremodel.Resource = &MappingResource{}
+var _ model.Resource = &MappingResource{}
 
 type MappingResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.Mapping
 }
 
@@ -574,19 +574,19 @@ func NewMappingResource() *MappingResource {
 	}
 }
 
-func (t *MappingResource) GetMeta() coremodel.ResourceMeta {
+func (t *MappingResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *MappingResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *MappingResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *MappingResource) GetSpec() coremodel.ResourceSpec {
+func (t *MappingResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *MappingResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *MappingResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.Mapping)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -600,58 +600,58 @@ func (t *MappingResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *MappingResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *MappingResource) Descriptor() model.ResourceTypeDescriptor {
 	return MappingResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &MappingResourceList{}
+var _ model.ResourceList = &MappingResourceList{}
 
 type MappingResourceList struct {
 	Items      []*MappingResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *MappingResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *MappingResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *MappingResourceList) GetItemType() coremodel.ResourceType {
+func (l *MappingResourceList) GetItemType() model.ResourceType {
 	return MappingType
 }
 
-func (l *MappingResourceList) NewItem() coremodel.Resource {
+func (l *MappingResourceList) NewItem() model.Resource {
 	return NewMappingResource()
 }
 
-func (l *MappingResourceList) AddItem(r coremodel.Resource) error {
+func (l *MappingResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*MappingResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*MappingResource)(nil), r)
+		return model.ErrorInvalidItemType((*MappingResource)(nil), r)
 	}
 }
 
-func (l *MappingResourceList) GetPagination() *coremodel.Pagination {
+func (l *MappingResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *MappingResourceList) SetPagination(p coremodel.Pagination) {
+func (l *MappingResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var MappingResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var MappingResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                MappingType,
 	Resource:            NewMappingResource(),
 	ResourceList:        &MappingResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.ZoneToGlobalFlag | coremodel.GlobalToAllButOriginalZoneFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag,
 	WsPath:              "mappings",
 	DubboctlArg:         "mapping",
 	DubboctlListArg:     "mappings",
@@ -667,13 +667,13 @@ func init() {
 }
 
 const (
-	MeshType coremodel.ResourceType = "Mesh"
+	MeshType model.ResourceType = "Mesh"
 )
 
-var _ coremodel.Resource = &MeshResource{}
+var _ model.Resource = &MeshResource{}
 
 type MeshResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.Mesh
 }
 
@@ -683,19 +683,19 @@ func NewMeshResource() *MeshResource {
 	}
 }
 
-func (m *MeshResource) GetMeta() coremodel.ResourceMeta {
+func (m *MeshResource) GetMeta() model.ResourceMeta {
 	return m.Meta
 }
 
-func (m *MeshResource) SetMeta(meta coremodel.ResourceMeta) {
+func (m *MeshResource) SetMeta(meta model.ResourceMeta) {
 	m.Meta = meta
 }
 
-func (m *MeshResource) GetSpec() coremodel.ResourceSpec {
+func (m *MeshResource) GetSpec() model.ResourceSpec {
 	return m.Spec
 }
 
-func (m *MeshResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (m *MeshResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.Mesh)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -709,58 +709,58 @@ func (m *MeshResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (m *MeshResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (m *MeshResource) Descriptor() model.ResourceTypeDescriptor {
 	return MeshResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &MeshResourceList{}
+var _ model.ResourceList = &MeshResourceList{}
 
 type MeshResourceList struct {
 	Items      []*MeshResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *MeshResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *MeshResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *MeshResourceList) GetItemType() coremodel.ResourceType {
+func (l *MeshResourceList) GetItemType() model.ResourceType {
 	return MeshType
 }
 
-func (l *MeshResourceList) NewItem() coremodel.Resource {
+func (l *MeshResourceList) NewItem() model.Resource {
 	return NewMeshResource()
 }
 
-func (l *MeshResourceList) AddItem(r coremodel.Resource) error {
+func (l *MeshResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*MeshResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*MeshResource)(nil), r)
+		return model.ErrorInvalidItemType((*MeshResource)(nil), r)
 	}
 }
 
-func (l *MeshResourceList) GetPagination() *coremodel.Pagination {
+func (l *MeshResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *MeshResourceList) SetPagination(p coremodel.Pagination) {
+func (l *MeshResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var MeshResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var MeshResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                MeshType,
 	Resource:            NewMeshResource(),
 	ResourceList:        &MeshResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeGlobal,
-	DDSFlags:            coremodel.GlobalToAllZonesFlag,
+	Scope:               model.ScopeGlobal,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "meshes",
 	DubboctlArg:         "mesh",
 	DubboctlListArg:     "meshes",
@@ -776,13 +776,13 @@ func init() {
 }
 
 const (
-	MeshInsightType coremodel.ResourceType = "MeshInsight"
+	MeshInsightType model.ResourceType = "MeshInsight"
 )
 
-var _ coremodel.Resource = &MeshInsightResource{}
+var _ model.Resource = &MeshInsightResource{}
 
 type MeshInsightResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.MeshInsight
 }
 
@@ -792,19 +792,19 @@ func NewMeshInsightResource() *MeshInsightResource {
 	}
 }
 
-func (t *MeshInsightResource) GetMeta() coremodel.ResourceMeta {
+func (t *MeshInsightResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *MeshInsightResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *MeshInsightResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *MeshInsightResource) GetSpec() coremodel.ResourceSpec {
+func (t *MeshInsightResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *MeshInsightResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *MeshInsightResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.MeshInsight)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -818,57 +818,57 @@ func (t *MeshInsightResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *MeshInsightResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *MeshInsightResource) Descriptor() model.ResourceTypeDescriptor {
 	return MeshInsightResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &MeshInsightResourceList{}
+var _ model.ResourceList = &MeshInsightResourceList{}
 
 type MeshInsightResourceList struct {
 	Items      []*MeshInsightResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *MeshInsightResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *MeshInsightResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *MeshInsightResourceList) GetItemType() coremodel.ResourceType {
+func (l *MeshInsightResourceList) GetItemType() model.ResourceType {
 	return MeshInsightType
 }
 
-func (l *MeshInsightResourceList) NewItem() coremodel.Resource {
+func (l *MeshInsightResourceList) NewItem() model.Resource {
 	return NewMeshInsightResource()
 }
 
-func (l *MeshInsightResourceList) AddItem(r coremodel.Resource) error {
+func (l *MeshInsightResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*MeshInsightResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*MeshInsightResource)(nil), r)
+		return model.ErrorInvalidItemType((*MeshInsightResource)(nil), r)
 	}
 }
 
-func (l *MeshInsightResourceList) GetPagination() *coremodel.Pagination {
+func (l *MeshInsightResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *MeshInsightResourceList) SetPagination(p coremodel.Pagination) {
+func (l *MeshInsightResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var MeshInsightResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var MeshInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                MeshInsightType,
 	Resource:            NewMeshInsightResource(),
 	ResourceList:        &MeshInsightResourceList{},
 	ReadOnly:            true,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeGlobal,
+	Scope:               model.ScopeGlobal,
 	WsPath:              "mesh-insights",
 	DubboctlArg:         "",
 	DubboctlListArg:     "",
@@ -884,13 +884,13 @@ func init() {
 }
 
 const (
-	MetaDataType coremodel.ResourceType = "MetaData"
+	MetaDataType model.ResourceType = "MetaData"
 )
 
-var _ coremodel.Resource = &MetaDataResource{}
+var _ model.Resource = &MetaDataResource{}
 
 type MetaDataResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.MetaData
 }
 
@@ -900,19 +900,19 @@ func NewMetaDataResource() *MetaDataResource {
 	}
 }
 
-func (t *MetaDataResource) GetMeta() coremodel.ResourceMeta {
+func (t *MetaDataResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *MetaDataResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *MetaDataResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *MetaDataResource) GetSpec() coremodel.ResourceSpec {
+func (t *MetaDataResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *MetaDataResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *MetaDataResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.MetaData)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -926,58 +926,58 @@ func (t *MetaDataResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *MetaDataResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *MetaDataResource) Descriptor() model.ResourceTypeDescriptor {
 	return MetaDataResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &MetaDataResourceList{}
+var _ model.ResourceList = &MetaDataResourceList{}
 
 type MetaDataResourceList struct {
 	Items      []*MetaDataResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *MetaDataResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *MetaDataResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *MetaDataResourceList) GetItemType() coremodel.ResourceType {
+func (l *MetaDataResourceList) GetItemType() model.ResourceType {
 	return MetaDataType
 }
 
-func (l *MetaDataResourceList) NewItem() coremodel.Resource {
+func (l *MetaDataResourceList) NewItem() model.Resource {
 	return NewMetaDataResource()
 }
 
-func (l *MetaDataResourceList) AddItem(r coremodel.Resource) error {
+func (l *MetaDataResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*MetaDataResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*MetaDataResource)(nil), r)
+		return model.ErrorInvalidItemType((*MetaDataResource)(nil), r)
 	}
 }
 
-func (l *MetaDataResourceList) GetPagination() *coremodel.Pagination {
+func (l *MetaDataResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *MetaDataResourceList) SetPagination(p coremodel.Pagination) {
+func (l *MetaDataResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var MetaDataResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var MetaDataResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                MetaDataType,
 	Resource:            NewMetaDataResource(),
 	ResourceList:        &MetaDataResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.ZoneToGlobalFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "metadatas",
 	DubboctlArg:         "metadata",
 	DubboctlListArg:     "metadatas",
@@ -993,13 +993,13 @@ func init() {
 }
 
 const (
-	TagRouteType coremodel.ResourceType = "TagRoute"
+	TagRouteType model.ResourceType = "TagRoute"
 )
 
-var _ coremodel.Resource = &TagRouteResource{}
+var _ model.Resource = &TagRouteResource{}
 
 type TagRouteResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.TagRoute
 }
 
@@ -1009,19 +1009,19 @@ func NewTagRouteResource() *TagRouteResource {
 	}
 }
 
-func (t *TagRouteResource) GetMeta() coremodel.ResourceMeta {
+func (t *TagRouteResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *TagRouteResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *TagRouteResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *TagRouteResource) GetSpec() coremodel.ResourceSpec {
+func (t *TagRouteResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *TagRouteResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *TagRouteResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.TagRoute)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -1035,58 +1035,58 @@ func (t *TagRouteResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *TagRouteResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *TagRouteResource) Descriptor() model.ResourceTypeDescriptor {
 	return TagRouteResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &TagRouteResourceList{}
+var _ model.ResourceList = &TagRouteResourceList{}
 
 type TagRouteResourceList struct {
 	Items      []*TagRouteResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *TagRouteResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *TagRouteResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *TagRouteResourceList) GetItemType() coremodel.ResourceType {
+func (l *TagRouteResourceList) GetItemType() model.ResourceType {
 	return TagRouteType
 }
 
-func (l *TagRouteResourceList) NewItem() coremodel.Resource {
+func (l *TagRouteResourceList) NewItem() model.Resource {
 	return NewTagRouteResource()
 }
 
-func (l *TagRouteResourceList) AddItem(r coremodel.Resource) error {
+func (l *TagRouteResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*TagRouteResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*TagRouteResource)(nil), r)
+		return model.ErrorInvalidItemType((*TagRouteResource)(nil), r)
 	}
 }
 
-func (l *TagRouteResourceList) GetPagination() *coremodel.Pagination {
+func (l *TagRouteResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *TagRouteResourceList) SetPagination(p coremodel.Pagination) {
+func (l *TagRouteResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var TagRouteResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var TagRouteResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                TagRouteType,
 	Resource:            NewTagRouteResource(),
 	ResourceList:        &TagRouteResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeMesh,
-	DDSFlags:            coremodel.GlobalToAllZonesFlag,
+	Scope:               model.ScopeMesh,
+	DDSFlags:            model.GlobalToAllZonesFlag,
 	WsPath:              "tagroutes",
 	DubboctlArg:         "tagroute",
 	DubboctlListArg:     "tagroutes",
@@ -1102,13 +1102,13 @@ func init() {
 }
 
 const (
-	ZoneEgressType coremodel.ResourceType = "ZoneEgress"
+	ZoneEgressType model.ResourceType = "ZoneEgress"
 )
 
-var _ coremodel.Resource = &ZoneEgressResource{}
+var _ model.Resource = &ZoneEgressResource{}
 
 type ZoneEgressResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.ZoneEgress
 }
 
@@ -1118,19 +1118,19 @@ func NewZoneEgressResource() *ZoneEgressResource {
 	}
 }
 
-func (t *ZoneEgressResource) GetMeta() coremodel.ResourceMeta {
+func (t *ZoneEgressResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *ZoneEgressResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *ZoneEgressResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *ZoneEgressResource) GetSpec() coremodel.ResourceSpec {
+func (t *ZoneEgressResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *ZoneEgressResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *ZoneEgressResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.ZoneEgress)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -1144,58 +1144,58 @@ func (t *ZoneEgressResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *ZoneEgressResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *ZoneEgressResource) Descriptor() model.ResourceTypeDescriptor {
 	return ZoneEgressResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &ZoneEgressResourceList{}
+var _ model.ResourceList = &ZoneEgressResourceList{}
 
 type ZoneEgressResourceList struct {
 	Items      []*ZoneEgressResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *ZoneEgressResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *ZoneEgressResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *ZoneEgressResourceList) GetItemType() coremodel.ResourceType {
+func (l *ZoneEgressResourceList) GetItemType() model.ResourceType {
 	return ZoneEgressType
 }
 
-func (l *ZoneEgressResourceList) NewItem() coremodel.Resource {
+func (l *ZoneEgressResourceList) NewItem() model.Resource {
 	return NewZoneEgressResource()
 }
 
-func (l *ZoneEgressResourceList) AddItem(r coremodel.Resource) error {
+func (l *ZoneEgressResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*ZoneEgressResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*ZoneEgressResource)(nil), r)
+		return model.ErrorInvalidItemType((*ZoneEgressResource)(nil), r)
 	}
 }
 
-func (l *ZoneEgressResourceList) GetPagination() *coremodel.Pagination {
+func (l *ZoneEgressResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *ZoneEgressResourceList) SetPagination(p coremodel.Pagination) {
+func (l *ZoneEgressResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var ZoneEgressResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var ZoneEgressResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                ZoneEgressType,
 	Resource:            NewZoneEgressResource(),
 	ResourceList:        &ZoneEgressResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeGlobal,
-	DDSFlags:            coremodel.ZoneToGlobalFlag | coremodel.GlobalToAllButOriginalZoneFlag,
+	Scope:               model.ScopeGlobal,
+	DDSFlags:            model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag,
 	WsPath:              "zoneegresses",
 	DubboctlArg:         "zoneegress",
 	DubboctlListArg:     "zoneegresses",
@@ -1211,13 +1211,13 @@ func init() {
 }
 
 const (
-	ZoneEgressInsightType coremodel.ResourceType = "ZoneEgressInsight"
+	ZoneEgressInsightType model.ResourceType = "ZoneEgressInsight"
 )
 
-var _ coremodel.Resource = &ZoneEgressInsightResource{}
+var _ model.Resource = &ZoneEgressInsightResource{}
 
 type ZoneEgressInsightResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.ZoneEgressInsight
 }
 
@@ -1227,19 +1227,19 @@ func NewZoneEgressInsightResource() *ZoneEgressInsightResource {
 	}
 }
 
-func (t *ZoneEgressInsightResource) GetMeta() coremodel.ResourceMeta {
+func (t *ZoneEgressInsightResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *ZoneEgressInsightResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *ZoneEgressInsightResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *ZoneEgressInsightResource) GetSpec() coremodel.ResourceSpec {
+func (t *ZoneEgressInsightResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *ZoneEgressInsightResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *ZoneEgressInsightResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.ZoneEgressInsight)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -1253,58 +1253,58 @@ func (t *ZoneEgressInsightResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *ZoneEgressInsightResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *ZoneEgressInsightResource) Descriptor() model.ResourceTypeDescriptor {
 	return ZoneEgressInsightResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &ZoneEgressInsightResourceList{}
+var _ model.ResourceList = &ZoneEgressInsightResourceList{}
 
 type ZoneEgressInsightResourceList struct {
 	Items      []*ZoneEgressInsightResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *ZoneEgressInsightResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *ZoneEgressInsightResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *ZoneEgressInsightResourceList) GetItemType() coremodel.ResourceType {
+func (l *ZoneEgressInsightResourceList) GetItemType() model.ResourceType {
 	return ZoneEgressInsightType
 }
 
-func (l *ZoneEgressInsightResourceList) NewItem() coremodel.Resource {
+func (l *ZoneEgressInsightResourceList) NewItem() model.Resource {
 	return NewZoneEgressInsightResource()
 }
 
-func (l *ZoneEgressInsightResourceList) AddItem(r coremodel.Resource) error {
+func (l *ZoneEgressInsightResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*ZoneEgressInsightResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*ZoneEgressInsightResource)(nil), r)
+		return model.ErrorInvalidItemType((*ZoneEgressInsightResource)(nil), r)
 	}
 }
 
-func (l *ZoneEgressInsightResourceList) GetPagination() *coremodel.Pagination {
+func (l *ZoneEgressInsightResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *ZoneEgressInsightResourceList) SetPagination(p coremodel.Pagination) {
+func (l *ZoneEgressInsightResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var ZoneEgressInsightResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var ZoneEgressInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                ZoneEgressInsightType,
 	Resource:            NewZoneEgressInsightResource(),
 	ResourceList:        &ZoneEgressInsightResourceList{},
 	ReadOnly:            true,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeGlobal,
-	DDSFlags:            coremodel.ZoneToGlobalFlag,
+	Scope:               model.ScopeGlobal,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "zoneegressinsights",
 	DubboctlArg:         "",
 	DubboctlListArg:     "",
@@ -1320,13 +1320,13 @@ func init() {
 }
 
 const (
-	ZoneIngressType coremodel.ResourceType = "ZoneIngress"
+	ZoneIngressType model.ResourceType = "ZoneIngress"
 )
 
-var _ coremodel.Resource = &ZoneIngressResource{}
+var _ model.Resource = &ZoneIngressResource{}
 
 type ZoneIngressResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.ZoneIngress
 }
 
@@ -1336,19 +1336,19 @@ func NewZoneIngressResource() *ZoneIngressResource {
 	}
 }
 
-func (t *ZoneIngressResource) GetMeta() coremodel.ResourceMeta {
+func (t *ZoneIngressResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *ZoneIngressResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *ZoneIngressResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *ZoneIngressResource) GetSpec() coremodel.ResourceSpec {
+func (t *ZoneIngressResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *ZoneIngressResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *ZoneIngressResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.ZoneIngress)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -1362,58 +1362,58 @@ func (t *ZoneIngressResource) SetSpec(spec coremodel.ResourceSpec) error {
 	}
 }
 
-func (t *ZoneIngressResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *ZoneIngressResource) Descriptor() model.ResourceTypeDescriptor {
 	return ZoneIngressResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &ZoneIngressResourceList{}
+var _ model.ResourceList = &ZoneIngressResourceList{}
 
 type ZoneIngressResourceList struct {
 	Items      []*ZoneIngressResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *ZoneIngressResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *ZoneIngressResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *ZoneIngressResourceList) GetItemType() coremodel.ResourceType {
+func (l *ZoneIngressResourceList) GetItemType() model.ResourceType {
 	return ZoneIngressType
 }
 
-func (l *ZoneIngressResourceList) NewItem() coremodel.Resource {
+func (l *ZoneIngressResourceList) NewItem() model.Resource {
 	return NewZoneIngressResource()
 }
 
-func (l *ZoneIngressResourceList) AddItem(r coremodel.Resource) error {
+func (l *ZoneIngressResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*ZoneIngressResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*ZoneIngressResource)(nil), r)
+		return model.ErrorInvalidItemType((*ZoneIngressResource)(nil), r)
 	}
 }
 
-func (l *ZoneIngressResourceList) GetPagination() *coremodel.Pagination {
+func (l *ZoneIngressResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *ZoneIngressResourceList) SetPagination(p coremodel.Pagination) {
+func (l *ZoneIngressResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var ZoneIngressResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var ZoneIngressResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                ZoneIngressType,
 	Resource:            NewZoneIngressResource(),
 	ResourceList:        &ZoneIngressResourceList{},
 	ReadOnly:            false,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeGlobal,
-	DDSFlags:            coremodel.ZoneToGlobalFlag | coremodel.GlobalToAllButOriginalZoneFlag,
+	Scope:               model.ScopeGlobal,
+	DDSFlags:            model.ZoneToGlobalFlag | model.GlobalToAllButOriginalZoneFlag,
 	WsPath:              "zoneingresses",
 	DubboctlArg:         "zoneingress",
 	DubboctlListArg:     "zoneingresses",
@@ -1429,13 +1429,13 @@ func init() {
 }
 
 const (
-	ZoneIngressInsightType coremodel.ResourceType = "ZoneIngressInsight"
+	ZoneIngressInsightType model.ResourceType = "ZoneIngressInsight"
 )
 
-var _ coremodel.Resource = &ZoneIngressInsightResource{}
+var _ model.Resource = &ZoneIngressInsightResource{}
 
 type ZoneIngressInsightResource struct {
-	Meta coremodel.ResourceMeta
+	Meta model.ResourceMeta
 	Spec *meshproto.ZoneIngressInsight
 }
 
@@ -1445,19 +1445,19 @@ func NewZoneIngressInsightResource() *ZoneIngressInsightResource {
 	}
 }
 
-func (t *ZoneIngressInsightResource) GetMeta() coremodel.ResourceMeta {
+func (t *ZoneIngressInsightResource) GetMeta() model.ResourceMeta {
 	return t.Meta
 }
 
-func (t *ZoneIngressInsightResource) SetMeta(m coremodel.ResourceMeta) {
+func (t *ZoneIngressInsightResource) SetMeta(m model.ResourceMeta) {
 	t.Meta = m
 }
 
-func (t *ZoneIngressInsightResource) GetSpec() coremodel.ResourceSpec {
+func (t *ZoneIngressInsightResource) GetSpec() model.ResourceSpec {
 	return t.Spec
 }
 
-func (t *ZoneIngressInsightResource) SetSpec(spec coremodel.ResourceSpec) error {
+func (t *ZoneIngressInsightResource) SetSpec(spec model.ResourceSpec) error {
 	protoType, ok := spec.(*meshproto.ZoneIngressInsight)
 	if !ok {
 		return fmt.Errorf("invalid type %T for Spec", spec)
@@ -1471,58 +1471,58 @@ func (t *ZoneIngressInsightResource) SetSpec(spec coremodel.ResourceSpec) error 
 	}
 }
 
-func (t *ZoneIngressInsightResource) Descriptor() coremodel.ResourceTypeDescriptor {
+func (t *ZoneIngressInsightResource) Descriptor() model.ResourceTypeDescriptor {
 	return ZoneIngressInsightResourceTypeDescriptor
 }
 
-var _ coremodel.ResourceList = &ZoneIngressInsightResourceList{}
+var _ model.ResourceList = &ZoneIngressInsightResourceList{}
 
 type ZoneIngressInsightResourceList struct {
 	Items      []*ZoneIngressInsightResource
-	Pagination coremodel.Pagination
+	Pagination model.Pagination
 }
 
-func (l *ZoneIngressInsightResourceList) GetItems() []coremodel.Resource {
-	res := make([]coremodel.Resource, len(l.Items))
+func (l *ZoneIngressInsightResourceList) GetItems() []model.Resource {
+	res := make([]model.Resource, len(l.Items))
 	for i, elem := range l.Items {
 		res[i] = elem
 	}
 	return res
 }
 
-func (l *ZoneIngressInsightResourceList) GetItemType() coremodel.ResourceType {
+func (l *ZoneIngressInsightResourceList) GetItemType() model.ResourceType {
 	return ZoneIngressInsightType
 }
 
-func (l *ZoneIngressInsightResourceList) NewItem() coremodel.Resource {
+func (l *ZoneIngressInsightResourceList) NewItem() model.Resource {
 	return NewZoneIngressInsightResource()
 }
 
-func (l *ZoneIngressInsightResourceList) AddItem(r coremodel.Resource) error {
+func (l *ZoneIngressInsightResourceList) AddItem(r model.Resource) error {
 	if trr, ok := r.(*ZoneIngressInsightResource); ok {
 		l.Items = append(l.Items, trr)
 		return nil
 	} else {
-		return coremodel.ErrorInvalidItemType((*ZoneIngressInsightResource)(nil), r)
+		return model.ErrorInvalidItemType((*ZoneIngressInsightResource)(nil), r)
 	}
 }
 
-func (l *ZoneIngressInsightResourceList) GetPagination() *coremodel.Pagination {
+func (l *ZoneIngressInsightResourceList) GetPagination() *model.Pagination {
 	return &l.Pagination
 }
 
-func (l *ZoneIngressInsightResourceList) SetPagination(p coremodel.Pagination) {
+func (l *ZoneIngressInsightResourceList) SetPagination(p model.Pagination) {
 	l.Pagination = p
 }
 
-var ZoneIngressInsightResourceTypeDescriptor = coremodel.ResourceTypeDescriptor{
+var ZoneIngressInsightResourceTypeDescriptor = model.ResourceTypeDescriptor{
 	Name:                ZoneIngressInsightType,
 	Resource:            NewZoneIngressInsightResource(),
 	ResourceList:        &ZoneIngressInsightResourceList{},
 	ReadOnly:            true,
 	AdminOnly:           false,
-	Scope:               coremodel.ScopeGlobal,
-	DDSFlags:            coremodel.ZoneToGlobalFlag,
+	Scope:               model.ScopeGlobal,
+	DDSFlags:            model.ZoneToGlobalFlag,
 	WsPath:              "zone-ingress-insights",
 	DubboctlArg:         "",
 	DubboctlListArg:     "",

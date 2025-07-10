@@ -5,7 +5,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/app"
 	"github.com/apache/dubbo-kubernetes/pkg/core/manager"
-	coreruntime "github.com/apache/dubbo-kubernetes/pkg/core/runtime"
+	"github.com/apache/dubbo-kubernetes/pkg/core/runtime"
 	"github.com/apache/dubbo-kubernetes/pkg/core/store"
 )
 
@@ -23,14 +23,14 @@ type Context interface {
 var _ Context = &context{}
 
 
-func NewConsoleContext(coreRt coreruntime.Runtime) Context {
+func NewConsoleContext(coreRt runtime.Runtime) Context {
 	return &context{
 		coreRt: coreRt,
 	}
 }
 
 type context struct {
-	coreRt          coreruntime.Runtime
+	coreRt runtime.Runtime
 }
 
 func (c *context) AppContext() ctx.Context {
@@ -42,12 +42,12 @@ func (c *context) Config() app.AdminConfig {
 }
 
 func (c *context) ResourceManager() manager.ResourceManager {
-	rmc, _ := c.coreRt.GetComponent(coreruntime.ResourceManager)
+	rmc, _ := c.coreRt.GetComponent(runtime.ResourceManager)
 	return rmc.(manager.ResourceManagerComponent).ResourceManager()
 }
 
 func (c *context) ResourceStore() store.ResourceStore {
-	rsc, _ := c.coreRt.GetComponent(coreruntime.ResourceStore)
+	rsc, _ := c.coreRt.GetComponent(runtime.ResourceStore)
 	return rsc.(store.BaseResourceStoreComponent).ResourceStore()
 }
 

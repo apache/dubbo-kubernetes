@@ -26,8 +26,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/console/constants"
 	consolectx "github.com/apache/dubbo-kubernetes/pkg/console/context"
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
+	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 type ApplicationDetailReq struct {

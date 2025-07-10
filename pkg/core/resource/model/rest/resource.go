@@ -15,28 +15,14 @@
  * limitations under the License.
  */
 
-package unversioned
+package rest
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/rest/v1alpha1"
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core_legacy/resources"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model/rest/v1alpha1"
 )
 
-type Resource struct {
-	Meta v1alpha1.ResourceMeta
-	Spec coremodel.ResourceSpec
-}
-
-func (r *Resource) GetMeta() v1alpha1.ResourceMeta {
-	if r == nil {
-		return v1alpha1.ResourceMeta{}
-	}
-	return r.Meta
-}
-
-func (r *Resource) GetSpec() coremodel.ResourceSpec {
-	if r == nil {
-		return nil
-	}
-	return r.Spec
+type Resource interface {
+	GetMeta() v1alpha1.ResourceMeta
+	GetSpec() model.ResourceSpec
 }

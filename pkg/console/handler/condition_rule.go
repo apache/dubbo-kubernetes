@@ -27,12 +27,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
 
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	meshproto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	consolectx "github.com/apache/dubbo-kubernetes/pkg/console/context"
 	"github.com/apache/dubbo-kubernetes/pkg/console/model"
 	"github.com/apache/dubbo-kubernetes/pkg/console/service"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
-	"github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
 )
 
 func ConditionRuleSearch(cs consolectx.Context) gin.HandlerFunc {
@@ -110,7 +110,7 @@ func PutConditionRuleWithRuleName(cs consolectx.Context) gin.HandlerFunc {
 
 		res := &mesh.ConditionRouteResource{}
 		if version := _map[consts.ConfigVersionKey]; version == consts.ConfiguratorVersionV3 {
-			v3 := new(mesh_proto.ConditionRouteV3)
+			v3 := new(meshproto.ConditionRouteV3)
 			err = mapToStructure(_map, &v3)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -122,7 +122,7 @@ func PutConditionRuleWithRuleName(cs consolectx.Context) gin.HandlerFunc {
 				return
 			}
 		} else if version == consts.ConfiguratorVersionV3x1 {
-			v3x1 := new(mesh_proto.ConditionRouteV3X1)
+			v3x1 := new(meshproto.ConditionRouteV3X1)
 			err = mapToStructure(_map, &v3x1)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -166,7 +166,7 @@ func PostConditionRuleWithRuleName(cs consolectx.Context) gin.HandlerFunc {
 
 		res := &mesh.ConditionRouteResource{}
 		if version := _map[consts.ConfigVersionKey]; version == consts.ConfiguratorVersionV3 {
-			v3 := new(mesh_proto.ConditionRouteV3)
+			v3 := new(meshproto.ConditionRouteV3)
 			err = mapToStructure(_map, &v3)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -178,7 +178,7 @@ func PostConditionRuleWithRuleName(cs consolectx.Context) gin.HandlerFunc {
 				return
 			}
 		} else if version == consts.ConfiguratorVersionV3x1 {
-			v3x1 := new(mesh_proto.ConditionRouteV3X1)
+			v3x1 := new(meshproto.ConditionRouteV3X1)
 			err = mapToStructure(_map, &v3x1)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, model.NewErrorResp(err.Error()))
@@ -207,7 +207,7 @@ func DeleteConditionRuleWithRuleName(cs consolectx.Context) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var name string
 		ruleName := c.Param("ruleName")
-		res := &mesh.ConditionRouteResource{Spec: &mesh_proto.ConditionRoute{}}
+		res := &mesh.ConditionRouteResource{Spec: &meshproto.ConditionRoute{}}
 		if strings.HasSuffix(ruleName, consts.ConditionRuleSuffix) {
 			name = ruleName[:len(ruleName)-len(consts.ConditionRuleSuffix)]
 		} else {

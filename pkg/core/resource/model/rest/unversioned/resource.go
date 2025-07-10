@@ -15,22 +15,23 @@
  * limitations under the License.
  */
 
-package v1alpha1
+package unversioned
 
 import (
-	coremodel "github.com/apache/dubbo-kubernetes/pkg/core_legacy/resources"
+	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model/rest/v1alpha1"
 )
 
 type Resource struct {
-	ResourceMeta
-	Spec coremodel.ResourceSpec `json:"spec,omitempty"`
+	Meta v1alpha1.ResourceMeta
+	Spec coremodel.ResourceSpec
 }
 
-func (r *Resource) GetMeta() ResourceMeta {
+func (r *Resource) GetMeta() v1alpha1.ResourceMeta {
 	if r == nil {
-		return ResourceMeta{}
+		return v1alpha1.ResourceMeta{}
 	}
-	return r.ResourceMeta
+	return r.Meta
 }
 
 func (r *Resource) GetSpec() coremodel.ResourceSpec {

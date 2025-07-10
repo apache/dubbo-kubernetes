@@ -23,7 +23,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/console/constants"
-	coremesh "github.com/apache/dubbo-kubernetes/pkg/core/model/apis/mesh"
+	coremesh "github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
 )
 
 type ServiceSearchReq struct {

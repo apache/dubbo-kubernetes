@@ -15,14 +15,29 @@
  * limitations under the License.
  */
 
-package rest
+package registry
 
 import (
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
-	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
-type Resource interface {
-	GetMeta() v1alpha1.ResourceMeta
-	GetSpec() core_model.ResourceSpec
+var global = NewTypeRegistry()
+
+func Global() TypeRegistry {
+	return global
+}
+
+func RegisterType(res model.ResourceTypeDescriptor) {
+	if err := global.RegisterType(res); err != nil {
+		panic(err)
+	}
+}
+
+func RegisterTypeIfAbsent(res model.ResourceTypeDescriptor) {
+	for _, typ := range global.ObjectTypes() {
+		if typ == res.Name {
+			return
+		}
+	}
+	RegisterType(res)
 }
