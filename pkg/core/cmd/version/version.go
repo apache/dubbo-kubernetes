@@ -21,13 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
-)
 
-import (
 	"github.com/spf13/cobra"
-)
 
-import (
 	dubbo_version "github.com/apache/dubbo-kubernetes/pkg/version"
 )
 

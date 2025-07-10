@@ -18,20 +18,23 @@
 package kube
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
 	diskcached "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/discovery/cached/memory"
+
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/common/lazy"
+
 	// "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	"path/filepath"
-	"regexp"
-	"strings"
-	"time"
 )
 
 // clientFactory partially implements the kubectl util.Factory, which is provides access to various k8s clients.
@@ -54,11 +57,11 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 		if err != nil {
 			return nil, err
 		}
-		// Setup cached discovery. CLIs uses disk cache, controllers use memory cache.
+		// Setup cached discoveryengine. CLIs uses disk cache, controllers use memory cache.
 		if diskCache {
 			cacheDir := filepath.Join(homedir.HomeDir(), ".kube", "cache")
 			httpCacheDir := filepath.Join(cacheDir, "http")
-			discoveryCacheDir := computeDiscoverCacheDir(filepath.Join(cacheDir, "discovery"), restConfig.Host)
+			discoveryCacheDir := computeDiscoverCacheDir(filepath.Join(cacheDir, "discoveryengine"), restConfig.Host)
 			return diskcached.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, 6*time.Hour)
 		}
 		d, err := discovery.NewDiscoveryClientForConfig(restConfig)

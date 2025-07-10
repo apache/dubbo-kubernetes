@@ -21,21 +21,21 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 )
 
-type DiagnosticsConfig struct {
+type Config struct {
 	config.BaseConfig
 
 	// Port of Diagnostic Server for checking health and readiness of the Control Plane
 	ServerPort uint32 `json:"serverPort" envconfig:"DUBBO_DIAGNOSTICS_SERVER_PORT"`
 }
 
-var _ config.Config = &DiagnosticsConfig{}
+var _ = &Config{}
 
-func (d *DiagnosticsConfig) Validate() error {
+func (d *Config) Validate() error {
 	return nil
 }
 
-func DefaultDiagnosticsConfig() *DiagnosticsConfig {
-	return &DiagnosticsConfig{
+func DefaultDiagnosticsConfig() *Config {
+	return &Config{
 		ServerPort: 5680,
 	}
 }

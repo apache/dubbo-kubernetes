@@ -32,12 +32,15 @@ package informerfactory
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"k8s.io/client-go/tools/cache"
+	"github.com/apache/dubbo-kubernetes/pkg/common/util/sets"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
+
 	"sync"
+
+	"k8s.io/client-go/tools/cache"
 )
 
 // NewInformerFunc returns a SharedIndexInformer.

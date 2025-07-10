@@ -19,9 +19,7 @@ package cmd
 
 import (
 	"context"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
 

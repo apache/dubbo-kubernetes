@@ -19,22 +19,26 @@ package kube
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
-	"github.com/apache/dubbo-kubernetes/pkg/lazy"
+
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
-	// "k8s.io/client-go/discovery"
+
+	"net/http"
+	"time"
+
+	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/common/lazy"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
+
+	// "k8s.io/client-go/discoveryengine"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"net/http"
-	"time"
 )
 
 type client struct {

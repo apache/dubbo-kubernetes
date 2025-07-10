@@ -153,17 +153,17 @@ func newRunCmd() *cobra.Command {
 						}
 
 						for {
-							nodeLog.Info("waiting for a discovery response ...")
+							nodeLog.Info("waiting for a discoveryengine response ...")
 							resp, err := stream.WaitForResources()
 							if err != nil {
-								return errors.Wrap(err, "failed to receive a discovery response")
+								return errors.Wrap(err, "failed to receive a discoveryengine response")
 							}
 							nodeLog.Info("received xDS resources", "type", resp.TypeUrl, "version", resp.VersionInfo, "nonce", resp.Nonce, "resources", len(resp.Resources))
 
 							if err := stream.ACK(resp.TypeUrl); err != nil {
-								return errors.Wrap(err, "failed to ACK a discovery response")
+								return errors.Wrap(err, "failed to ACK a discoveryengine response")
 							}
-							nodeLog.Info("ACKed discovery response", "type", resp.TypeUrl, "version", resp.VersionInfo, "nonce", resp.Nonce)
+							nodeLog.Info("ACKed discoveryengine response", "type", resp.TypeUrl, "version", resp.VersionInfo, "nonce", resp.Nonce)
 						}
 					}()
 				}(i)

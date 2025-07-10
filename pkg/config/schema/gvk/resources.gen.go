@@ -1,9 +1,10 @@
 package gvk
 
 import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (

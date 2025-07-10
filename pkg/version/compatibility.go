@@ -20,13 +20,9 @@ package version
 import (
 	"fmt"
 	"strings"
-)
 
-import (
 	"github.com/Masterminds/semver/v3"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
 

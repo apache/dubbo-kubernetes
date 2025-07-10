@@ -19,17 +19,11 @@ package config
 
 import (
 	"os"
-)
 
-import (
 	"github.com/kelseyhightower/envconfig"
-
 	"github.com/pkg/errors"
-
 	"sigs.k8s.io/yaml"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 )
 

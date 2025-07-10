@@ -21,9 +21,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
-)
 
-import (
 	"sigs.k8s.io/yaml"
 )
 
