@@ -52,31 +52,31 @@ func NewCreateOptions(fs ...CreateOptionsFunc) *CreateOptions {
 
 func CreateByApplication(app string) CreateOptionsFunc {
 	return func(opts *CreateOptions) {
-		opts.Labels[meshproto.Application] = app
+		opts.Labels[meshproto.ApplicationLabel] = app
 	}
 }
 
 func CreateByService(service string) CreateOptionsFunc {
 	return func(opts *CreateOptions) {
-		opts.Labels[meshproto.Service] = service
+		opts.Labels[meshproto.ServiceLabel] = service
 	}
 }
 
 func CreateByID(id string) CreateOptionsFunc {
 	return func(opts *CreateOptions) {
-		opts.Labels[meshproto.ID] = id
+		opts.Labels[meshproto.IDLabel] = id
 	}
 }
 
 func CreateByServiceVersion(serviceVersion string) CreateOptionsFunc {
 	return func(opts *CreateOptions) {
-		opts.Labels[meshproto.ServiceVersion] = serviceVersion
+		opts.Labels[meshproto.ServiceVersionLabel] = serviceVersion
 	}
 }
 
 func CreateByServiceGroup(serviceGroup string) CreateOptionsFunc {
 	return func(opts *CreateOptions) {
-		opts.Labels[meshproto.ServiceGroup] = serviceGroup
+		opts.Labels[meshproto.ServiceGroupLabel] = serviceGroup
 	}
 }
 
@@ -84,10 +84,6 @@ func CreateByPath(path string) CreateOptionsFunc {
 	return func(opts *CreateOptions) {
 		opts.Labels[PathLabel] = path
 	}
-}
-
-func CreateBy(key coremodel.ResourceKey) CreateOptionsFunc {
-	return CreateByKey(key.Name, key.Mesh)
 }
 
 func CreateByKey(name, mesh string) CreateOptionsFunc {
@@ -130,31 +126,31 @@ func ModifiedAt(modificationTime time.Time) UpdateOptionsFunc {
 
 func UpdateByApplication(app string) UpdateOptionsFunc {
 	return func(opts *UpdateOptions) {
-		opts.Labels[meshproto.Application] = app
+		opts.Labels[meshproto.ApplicationLabel] = app
 	}
 }
 
 func UpdateByService(service string) UpdateOptionsFunc {
 	return func(opts *UpdateOptions) {
-		opts.Labels[meshproto.Service] = service
+		opts.Labels[meshproto.ServiceLabel] = service
 	}
 }
 
 func UpdateByID(id string) UpdateOptionsFunc {
 	return func(opts *UpdateOptions) {
-		opts.Labels[meshproto.ID] = id
+		opts.Labels[meshproto.IDLabel] = id
 	}
 }
 
 func UpdateByServiceVersion(serviceVersion string) UpdateOptionsFunc {
 	return func(opts *UpdateOptions) {
-		opts.Labels[meshproto.ServiceVersion] = serviceVersion
+		opts.Labels[meshproto.ServiceVersionLabel] = serviceVersion
 	}
 }
 
 func UpdateByServiceGroup(serviceGroup string) UpdateOptionsFunc {
 	return func(opts *UpdateOptions) {
-		opts.Labels[meshproto.ServiceGroup] = serviceGroup
+		opts.Labels[meshproto.ServiceGroupLabel] = serviceGroup
 	}
 }
 
@@ -215,36 +211,32 @@ func DeleteByPath(path string) DeleteOptionsFunc {
 
 func DeleteByApplication(app string) DeleteOptionsFunc {
 	return func(opts *DeleteOptions) {
-		opts.Labels[meshproto.Application] = app
+		opts.Labels[meshproto.ApplicationLabel] = app
 	}
 }
 
 func DeleteByService(service string) DeleteOptionsFunc {
 	return func(opts *DeleteOptions) {
-		opts.Labels[meshproto.Service] = service
+		opts.Labels[meshproto.ServiceLabel] = service
 	}
 }
 
 func DeleteByID(id string) DeleteOptionsFunc {
 	return func(opts *DeleteOptions) {
-		opts.Labels[meshproto.ID] = id
+		opts.Labels[meshproto.IDLabel] = id
 	}
 }
 
 func DeleteByServiceVersion(serviceVersion string) DeleteOptionsFunc {
 	return func(opts *DeleteOptions) {
-		opts.Labels[meshproto.ServiceVersion] = serviceVersion
+		opts.Labels[meshproto.ServiceVersionLabel] = serviceVersion
 	}
 }
 
 func DeleteByServiceGroup(serviceGroup string) DeleteOptionsFunc {
 	return func(opts *DeleteOptions) {
-		opts.Labels[meshproto.ServiceGroup] = serviceGroup
+		opts.Labels[meshproto.ServiceGroupLabel] = serviceGroup
 	}
-}
-
-func DeleteBy(key coremodel.ResourceKey) DeleteOptionsFunc {
-	return DeleteByKey(key.Name, key.Mesh)
 }
 
 func DeleteByKey(name, mesh string) DeleteOptionsFunc {
@@ -307,7 +299,7 @@ func GetByPath(path string) GetOptionsFunc {
 
 func GetByRevision(revision string) GetOptionsFunc {
 	return func(opts *GetOptions) {
-		opts.Labels[meshproto.Revision] = revision
+		opts.Labels[meshproto.RevisionLabel] = revision
 	}
 }
 
@@ -319,38 +311,33 @@ func GetByType(t string) GetOptionsFunc {
 
 func GetByApplication(app string) GetOptionsFunc {
 	return func(opts *GetOptions) {
-		opts.Labels[meshproto.Application] = app
+		opts.Labels[meshproto.ApplicationLabel] = app
 	}
 }
 
 func GetByService(service string) GetOptionsFunc {
 	return func(opts *GetOptions) {
-		opts.Labels[meshproto.Service] = service
+		opts.Labels[meshproto.ServiceLabel] = service
 	}
 }
 
 func GetByID(id string) GetOptionsFunc {
 	return func(opts *GetOptions) {
-		opts.Labels[meshproto.ID] = id
+		opts.Labels[meshproto.IDLabel] = id
 	}
 }
 
 func GetByServiceVersion(serviceVersion string) GetOptionsFunc {
 	return func(opts *GetOptions) {
-		opts.Labels[meshproto.ServiceVersion] = serviceVersion
+		opts.Labels[meshproto.ServiceVersionLabel] = serviceVersion
 	}
 }
 
 func GetByServiceGroup(serviceGroup string) GetOptionsFunc {
 	return func(opts *GetOptions) {
-		opts.Labels[meshproto.ServiceGroup] = serviceGroup
+		opts.Labels[meshproto.ServiceGroupLabel] = serviceGroup
 	}
 }
-
-func GetBy(key coremodel.ResourceKey) GetOptionsFunc {
-	return GetByKey(key.Name, key.Mesh)
-}
-
 func GetByKey(name, mesh string) GetOptionsFunc {
 	return func(opts *GetOptions) {
 		opts.Name = name
@@ -372,17 +359,17 @@ func GetConsistent() GetOptionsFunc {
 }
 
 func (l *GetOptions) Predicate(r coremodel.Resource) bool {
-	if l.Mesh != "" && r.GetMeta().GetMesh() != l.Mesh {
+	if l.Mesh != "" && r.GetMesh() != l.Mesh {
 		return false
 	}
 
-	if l.Version != "" && r.GetMeta().GetVersion() != l.Version {
+	if l.Version != "" && r.GetMeta().ResourceVersion != l.Version {
 		return false
 	}
 
 	if len(l.Labels) > 0 {
 		for k, v := range l.Labels {
-			if r.GetMeta().GetLabels()[k] != v {
+			if r.GetMeta().Labels[k] != v {
 				return false
 			}
 		}
@@ -405,7 +392,7 @@ type ListOptions struct {
 	NameEquals          string
 	ApplicationContains string
 	Ordered             bool
-	ResourceKeys        map[coremodel.ResourceKey]struct{}
+	ResourceKeys        map[string]struct{}
 }
 
 type ListOptionsFunc func(*ListOptions)
@@ -413,7 +400,7 @@ type ListOptionsFunc func(*ListOptions)
 func NewListOptions(fs ...ListOptionsFunc) *ListOptions {
 	opts := &ListOptions{
 		Labels:       map[string]string{},
-		ResourceKeys: map[coremodel.ResourceKey]struct{}{},
+		ResourceKeys: map[string]struct{}{},
 	}
 	for _, f := range fs {
 		f(opts)
@@ -444,7 +431,7 @@ func ListByApplicationContains(app string) ListOptionsFunc {
 
 func ListByApplication(app string) ListOptionsFunc {
 	return func(opts *ListOptions) {
-		opts.Labels[meshproto.Application] = app
+		opts.Labels[meshproto.ApplicationLabel] = app
 	}
 }
 
@@ -485,16 +472,6 @@ func ListOrdered() ListOptionsFunc {
 	}
 }
 
-func ListByResourceKeys(rk []coremodel.ResourceKey) ListOptionsFunc {
-	return func(opts *ListOptions) {
-		resourcesKeys := map[coremodel.ResourceKey]struct{}{}
-		for _, val := range rk {
-			resourcesKeys[val] = struct{}{}
-		}
-		opts.ResourceKeys = resourcesKeys
-	}
-}
-
 func (l *ListOptions) IsCacheable() bool {
 	return l.FilterFunc == nil
 }
@@ -504,24 +481,24 @@ func (l *ListOptions) HashCode() string {
 }
 
 func (l *ListOptions) Predicate(r coremodel.Resource) bool {
-	if l.Mesh != "" && r.GetMeta().GetMesh() != l.Mesh {
+	if l.Mesh != "" && r.GetMesh() != l.Mesh {
 		return false
 	}
-	if l.NameEquals != "" && r.GetMeta().GetName() != l.NameEquals {
-		return false
-	}
-
-	if l.NameContains != "" && !strings.Contains(r.GetMeta().GetName(), l.NameContains) {
+	if l.NameEquals != "" && r.GetMeta().Name != l.NameEquals {
 		return false
 	}
 
-	if l.ApplicationContains != "" && !strings.Contains(r.GetMeta().GetLabels()[meshproto.Application], l.ApplicationContains) {
+	if l.NameContains != "" && !strings.Contains(r.GetMeta().Name, l.NameContains) {
+		return false
+	}
+
+	if l.ApplicationContains != "" && !strings.Contains(r.GetMeta().Labels[meshproto.ApplicationLabel], l.ApplicationContains) {
 		return false
 	}
 
 	if len(l.Labels) > 0 {
 		for k, v := range l.Labels {
-			if r.GetMeta().GetLabels()[k] != v {
+			if r.GetMeta().Labels[k] != v {
 				return false
 			}
 		}

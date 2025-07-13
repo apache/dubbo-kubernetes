@@ -4,17 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-)
 
-import (
+	"github.com/apache/dubbo-kubernetes/api/legacy"
+
 	"github.com/pkg/errors"
-
 	"github.com/spf13/cobra"
-
 	"golang.org/x/sync/errgroup"
-)
 
-import (
 	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
@@ -61,7 +57,7 @@ func newRunCmd() *cobra.Command {
 			ctx := context.Background()
 
 			// register mapping and metadata
-			err = client.MappingRegister(ctx, &mesh_proto.MappingRegisterRequest{
+			err = client.MappingRegister(ctx, &legacy.MappingRegisterRequest{
 				Namespace:       "dubbo-system",
 				ApplicationName: "test",
 				InterfaceNames:  []string{"a1", "a2"},
@@ -70,7 +66,7 @@ func newRunCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = client.MetadataRegister(ctx, &mesh_proto.MetaDataRegisterRequest{
+			err = client.MetadataRegister(ctx, &legacy.MetaDataRegisterRequest{
 				Namespace: "dubbo-system",
 				PodName:   os.Getenv("POD_NAME"),
 				Metadata: &mesh_proto.MetaData{
@@ -106,7 +102,7 @@ func newRunCmd() *cobra.Command {
 			}()
 
 			// mapping and metadata request
-			err = mappingStream.MappingSyncRequest(&mesh_proto.MappingSyncRequest{
+			err = mappingStream.MappingSyncRequest(&legacy.MappingSyncRequest{
 				Namespace:     "",
 				Nonce:         "",
 				InterfaceName: "",
@@ -115,7 +111,7 @@ func newRunCmd() *cobra.Command {
 				return err
 			}
 
-			err = metadataStream.MetadataSyncRequest(&mesh_proto.MetadataSyncRequest{
+			err = metadataStream.MetadataSyncRequest(&legacy.MetadataSyncRequest{
 				Namespace:       "",
 				Nonce:           "",
 				ApplicationName: "",

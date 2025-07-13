@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/apache/dubbo-kubernetes/api/legacy"
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/console/constants"
 	consolectx "github.com/apache/dubbo-kubernetes/pkg/console/context"
@@ -119,9 +120,9 @@ func (a *ApplicationDetail) MergeDataplane(dataplane *mesh.DataplaneResource) {
 	a.mergeExtensions(extensions)
 }
 
-func (a *ApplicationDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
+func (a *ApplicationDetail) mergeInbound(inbound *legacy.Dataplane_Networking_Inbound) {
 	a.DubboPorts.Add(strconv.Itoa(int(inbound.Port)))
-	a.DeployClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
+	a.DeployClusters.Add(inbound.Tags[legacy.ZoneTag])
 }
 
 func (a *ApplicationDetail) mergeExtensions(extensions map[string]string) {
@@ -187,7 +188,7 @@ func (a *ApplicationTabInstanceInfoResp) mergeMainDataplane(dataplane *mesh.Data
 	a.AppName = dataplane.GetMeta().GetLabels()[v1alpha1.Application]
 	a.CreateTime = dataplane.Meta.GetCreationTime().String()
 	a.IP = dataplane.Spec.Networking.Address
-	a.DeployClusters = dataplane.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]
+	a.DeployClusters = dataplane.Spec.Networking.Inbound[0].Tags[legacy.ZoneTag]
 	a.Labels = dataplane.GetMeta().GetLabels()
 	a.Name = dataplane.Meta.GetName()
 	a.RegisterTime = a.CreateTime
@@ -363,7 +364,7 @@ func (a *ApplicationSearch) MergeDataplane(dataplane *mesh.DataplaneResource) {
 	// merge inbounds
 	inbounds := dataplane.Spec.Networking.Inbound
 	for _, inbound := range inbounds {
-		a.DeployClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
+		a.DeployClusters.Add(inbound.Tags[legacy.ZoneTag])
 	}
 }
 

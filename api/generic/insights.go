@@ -19,9 +19,7 @@ package generic
 
 import (
 	"time"
-)
 
-import (
 	"google.golang.org/protobuf/proto"
 )
 

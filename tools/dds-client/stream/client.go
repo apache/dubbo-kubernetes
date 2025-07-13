@@ -4,36 +4,31 @@ import (
 	"context"
 	"crypto/tls"
 	url2 "net/url"
-)
 
-import (
+	"github.com/apache/dubbo-kubernetes/api/legacy"
+
 	"github.com/pkg/errors"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
-import (
-	mesh_proto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-)
-
 type Client struct {
 	conn   *grpc.ClientConn
-	client mesh_proto.MDSSyncServiceClient
+	client legacy.MDSSyncServiceClient
 }
 
 type mappingStream struct {
-	mappingStream  mesh_proto.MDSSyncService_MappingSyncClient
-	latestACKed    *mesh_proto.MappingSyncResponse
-	latestReceived *mesh_proto.MappingSyncResponse
+	mappingStream  legacy.MDSSyncService_MappingSyncClient
+	latestACKed    *legacy.MappingSyncResponse
+	latestReceived *legacy.MappingSyncResponse
 }
 
 type metadataStream struct {
-	metadataStream mesh_proto.MDSSyncService_MetadataSyncClient
-	latestACKed    *mesh_proto.MetadataSyncResponse
-	latestReceived *mesh_proto.MetadataSyncResponse
+	metadataStream legacy.MDSSyncService_MetadataSyncClient
+	latestACKed    *legacy.MetadataSyncResponse
+	latestReceived *legacy.MetadataSyncResponse
 }
 
 func New(serverURL string) (*Client, error) {
@@ -57,14 +52,14 @@ func New(serverURL string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := mesh_proto.NewMDSSyncServiceClient(conn)
+	client := legacy.NewMDSSyncServiceClient(conn)
 	return &Client{
 		conn:   conn,
 		client: client,
 	}, nil
 }
 
-func (c *Client) MappingRegister(ctx context.Context, req *mesh_proto.MappingRegisterRequest) error {
+func (c *Client) MappingRegister(ctx context.Context, req *legacy.MappingRegisterRequest) error {
 	_, err := c.client.MappingRegister(ctx, req)
 	if err != nil {
 		return err
@@ -72,7 +67,7 @@ func (c *Client) MappingRegister(ctx context.Context, req *mesh_proto.MappingReg
 	return nil
 }
 
-func (c *Client) MetadataRegister(ctx context.Context, req *mesh_proto.MetaDataRegisterRequest) error {
+func (c *Client) MetadataRegister(ctx context.Context, req *legacy.MetaDataRegisterRequest) error {
 	_, err := c.client.MetadataRegister(ctx, req)
 	if err != nil {
 		return err
@@ -88,8 +83,8 @@ func (c *Client) StartMappingStream() (*mappingStream, error) {
 	}
 	return &mappingStream{
 		mappingStream:  stream,
-		latestACKed:    &mesh_proto.MappingSyncResponse{},
-		latestReceived: &mesh_proto.MappingSyncResponse{},
+		latestACKed:    &legacy.MappingSyncResponse{},
+		latestReceived: &legacy.MappingSyncResponse{},
 	}, nil
 }
 
@@ -101,8 +96,8 @@ func (c *Client) StartMetadataSteam() (*metadataStream, error) {
 	}
 	return &metadataStream{
 		metadataStream: stream,
-		latestACKed:    &mesh_proto.MetadataSyncResponse{},
-		latestReceived: &mesh_proto.MetadataSyncResponse{},
+		latestACKed:    &legacy.MetadataSyncResponse{},
+		latestReceived: &legacy.MetadataSyncResponse{},
 	}, nil
 }
 
@@ -110,7 +105,7 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-func (s *metadataStream) MetadataSyncRequest(req *mesh_proto.MetadataSyncRequest) error {
+func (s *metadataStream) MetadataSyncRequest(req *legacy.MetadataSyncRequest) error {
 	err := s.metadataStream.Send(req)
 	if err != nil {
 		return err
@@ -118,7 +113,7 @@ func (s *metadataStream) MetadataSyncRequest(req *mesh_proto.MetadataSyncRequest
 	return nil
 }
 
-func (s *metadataStream) WaitForMetadataResource() (*mesh_proto.MetadataSyncResponse, error) {
+func (s *metadataStream) WaitForMetadataResource() (*legacy.MetadataSyncResponse, error) {
 	resp, err := s.metadataStream.Recv()
 	if err != nil {
 		return nil, err
@@ -127,7 +122,7 @@ func (s *metadataStream) WaitForMetadataResource() (*mesh_proto.MetadataSyncResp
 	return resp, err
 }
 
-func (s *mappingStream) MappingSyncRequest(req *mesh_proto.MappingSyncRequest) error {
+func (s *mappingStream) MappingSyncRequest(req *legacy.MappingSyncRequest) error {
 	err := s.mappingStream.Send(req)
 	if err != nil {
 		return err
@@ -135,7 +130,7 @@ func (s *mappingStream) MappingSyncRequest(req *mesh_proto.MappingSyncRequest) e
 	return nil
 }
 
-func (s *mappingStream) WaitForMappingResource() (*mesh_proto.MappingSyncResponse, error) {
+func (s *mappingStream) WaitForMappingResource() (*legacy.MappingSyncResponse, error) {
 	resp, err := s.mappingStream.Recv()
 	if err != nil {
 		return nil, err
@@ -157,7 +152,7 @@ func (s *mappingStream) MappingACK() error {
 	if latestReceived == nil {
 		return nil
 	}
-	err := s.mappingStream.Send(&mesh_proto.MappingSyncRequest{
+	err := s.mappingStream.Send(&legacy.MappingSyncRequest{
 		Nonce: latestReceived.Nonce,
 	})
 	if err == nil {
@@ -171,7 +166,7 @@ func (s *metadataStream) MetadataACK() error {
 	if latestReceived == nil {
 		return nil
 	}
-	err := s.metadataStream.Send(&mesh_proto.MetadataSyncRequest{
+	err := s.metadataStream.Send(&legacy.MetadataSyncRequest{
 		Nonce: latestReceived.Nonce,
 	})
 	if err == nil {

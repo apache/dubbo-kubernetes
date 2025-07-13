@@ -2,20 +2,14 @@ package genutils
 
 import (
 	"fmt"
-)
 
-import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-
 	"google.golang.org/protobuf/proto"
-
 	"google.golang.org/protobuf/reflect/protoreflect"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/api/mesh"
-	core_model "github.com/apache/dubbo-kubernetes/pkg/core/resources/model"
+	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
 )
 
 // DubboResourceForMessage fetches the Dubbo resource option out of a message.
@@ -87,7 +81,7 @@ func ToResourceInfo(desc protoreflect.MessageDescriptor) ResourceInfo {
 		ScopeNamespace:           r.ScopeNamespace,
 		AllowToInspect:           r.AllowToInspect,
 		StorageVersion:           r.StorageVersion,
-		SingularDisplayName:      core_model.DisplayName(r.Type),
+		SingularDisplayName:      coremodel.DisplayName(r.Type),
 		PluralDisplayName:        r.PluralDisplayName,
 		IsExperimental:           r.IsExperimental,
 		AdditionalPrinterColumns: r.AdditionalPrinterColumns,
@@ -112,7 +106,7 @@ func ToResourceInfo(desc protoreflect.MessageDescriptor) ResourceInfo {
 		}
 	}
 	if out.PluralDisplayName == "" {
-		out.PluralDisplayName = core_model.PluralType(core_model.DisplayName(r.Type))
+		out.PluralDisplayName = coremodel.PluralType(coremodel.DisplayName(r.Type))
 	}
 	// Working around the fact we don't really differentiate policies from the rest of resources:
 	// Anything global can't be a policy as it need to be on a mesh. Anything with locked Ws config is something internal and therefore not a policy
