@@ -19,6 +19,7 @@ go 1.23.0
 
 require (
 	dubbo.apache.org/dubbo-go/v3 v3.3.0
+	github.com/duke-git/lancet/v2 v2.3.6
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/Microsoft/go-winio v0.6.2

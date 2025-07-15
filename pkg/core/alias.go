@@ -23,25 +23,20 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-)
 
-import (
 	"github.com/google/uuid"
+	kubelog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kube_log "sigs.k8s.io/controller-runtime/pkg/log"
-)
-
-import (
-	dubbo_log "github.com/apache/dubbo-kubernetes/pkg/log"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/common/log"
 )
 
 var (
 	// TODO remove dependency on kubernetes see: https://github.com/apache/dubbo-kubernetes/issues/2798
-	Log                   = kube_log.Log
-	NewLogger             = dubbo_log.NewLogger
-	NewLoggerTo           = dubbo_log.NewLoggerTo
-	NewLoggerWithRotation = dubbo_log.NewLoggerWithRotation
-	SetLogger             = kube_log.SetLogger
+	Log                   = kubelog.Log
+	NewLogger             = dubbolog.NewLogger
+	NewLoggerTo           = dubbolog.NewLoggerTo
+	NewLoggerWithRotation = dubbolog.NewLoggerWithRotation
+	SetLogger             = kubelog.SetLogger
 	Now                   = time.Now
 
 	SetupSignalHandler = func() (context.Context, context.Context) {

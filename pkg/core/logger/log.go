@@ -18,11 +18,8 @@ package logger
 import (
 	"os"
 	"sync"
-)
 
-import (
 	grpcZap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
