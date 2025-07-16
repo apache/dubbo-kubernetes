@@ -60,7 +60,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Fix the problem that dubbo-cp service traffic has no corresponding endpoint.
+            dubboctl added version command.
           draft: false
           prerelease: false
 
