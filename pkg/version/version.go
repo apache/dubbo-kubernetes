@@ -24,26 +24,28 @@ import (
 )
 
 var (
-	buildVersion = "unknown"
+	buildVersion     = "unknown"
+	buildGitRevision = "unknown"
+	buildStatus      = "unknown"
+	buildTag         = "unknown"
 )
 
-// type BuildInfo struct {
-//	Version string `json:"version"`
-// }
-
-func (b BuildInfo) String() string {
-	return fmt.Sprintf("%v", b.Version)
+type BuildVersion struct {
+	Version       string `json:"version"`
+	GitRevision   string `json:"revision"`
+	GolangVersion string `json:"golang_version"`
+	BuildStatus   string `json:"status"`
+	GitTag        string `json:"tag"`
 }
 
-func (b BuildInfo) LongForm() string {
-	return fmt.Sprintf("%#v", b)
+func (b BuildVersion) String() string {
+	return fmt.Sprintf("%v-%v-%v",
+		b.Version,
+		b.GitRevision,
+		b.BuildStatus)
 }
 
-func init() {
-	Info = BuildInfo{
-		Version: buildVersion,
-	}
-}
+var Cobra BuildVersion
 
 var (
 	Product      = "Dubbo"
@@ -126,5 +128,13 @@ func init() {
 		GitCommit:    gitCommit,
 		BuildDate:    buildDate,
 		BasedOnDubbo: basedOndubbo,
+	}
+
+	Cobra = BuildVersion{
+		Version:       buildVersion,
+		GitRevision:   buildGitRevision,
+		GolangVersion: runtime.Version(),
+		BuildStatus:   buildStatus,
+		GitTag:        buildTag,
 	}
 }

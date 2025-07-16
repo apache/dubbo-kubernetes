@@ -18,13 +18,23 @@
 package version
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
-	dubboVersion "github.com/apache/dubbo-kubernetes/pkg/version"
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"os"
 )
 
-func NewVersionCommand(_ cli.Context) *cobra.Command {
+func NewVersionCommand() *cobra.Command {
 	var versionCmd *cobra.Command
-	versionCmd = dubboVersion.CobraCommandWithOptions()
+	versionCmd = version.CobraCommandWithOptions()
+	versionCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		if flag.Name == "short" {
+			err := flag.Value.Set("true")
+			if err != nil {
+				fmt.Fprintf(os.Stdout, "set flag %q as true failed due to error %v", flag.Name, err)
+			}
+		}
+	})
 	return versionCmd
 }
