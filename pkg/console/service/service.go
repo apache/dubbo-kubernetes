@@ -58,7 +58,7 @@ func GetServiceTabDistribution(ctx consolectx.Context, req *model.ServiceTabDist
 					metadata := &mesh.MetaDataResource{
 						Spec: &v1alpha1.MetaData{},
 					}
-					if err := manager.Get(ctx.AppContext(), metadata, store.GetByRevision(dataplane.Spec.GetExtensions()[v1alpha1.Revision]), store.GetByType(dataplane.Spec.GetExtensions()["registry-type"])); err != nil {
+					if err := manager.Get(ctx.AppContext(), metadata, store.GetByRevision(dataplane.Spec.GetExtensions()[v1alpha1.RevisionLabel]), store.GetByType(dataplane.Spec.GetExtensions()["registry-type"])); err != nil {
 						return nil, err
 					}
 					respItem := &model.ServiceTabDistributionResp{}
@@ -100,7 +100,7 @@ func GetSearchServices(ctx consolectx.Context, req *model.ServiceSearchReq) (*mo
 	// 通过dataplane extension字段获取所有revision
 	revisions := make(map[string]string, 0)
 	for _, dataplane := range dataplaneList.Items {
-		rev, ok := dataplane.Spec.GetExtensions()[v1alpha1.Revision]
+		rev, ok := dataplane.Spec.GetExtensions()[v1alpha1.RevisionLabel]
 		if ok {
 			revisions[rev] = dataplane.Spec.GetExtensions()["registry-type"]
 		}

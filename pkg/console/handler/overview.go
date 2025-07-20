@@ -136,7 +136,7 @@ func calServiceInfo(res *model.OverviewResp, list *mesh.DataplaneResourceList, c
 			discoveries[t] = newSet
 		}
 
-		rev, exists := ins.Spec.GetExtensions()[v1alpha1.Revision]
+		rev, exists := ins.Spec.GetExtensions()[v1alpha1.RevisionLabel]
 		if exists {
 			metadata, cached := revisions[rev]
 			if !cached {

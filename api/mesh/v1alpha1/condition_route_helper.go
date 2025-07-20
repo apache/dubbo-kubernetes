@@ -19,17 +19,12 @@ package v1alpha1
 
 import (
 	"strings"
-)
 
-import (
 	"github.com/pkg/errors"
-
 	"sigs.k8s.io/yaml"
-)
 
-import (
+	"github.com/apache/dubbo-kubernetes/pkg/common/util/proto"
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
-	"github.com/apache/dubbo-kubernetes/pkg/util/proto"
 )
 
 func (x *ConditionRoute) GetVersion() string {

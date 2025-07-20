@@ -19,24 +19,20 @@ package v1alpha1
 
 import (
 	"strings"
-)
 
-import (
 	"github.com/dubbogo/gost/encoding/yaml"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 )
 
 // Application 流量管控相关的基础label
 const (
-	Application    = "dubbo.io/application"
-	Service        = "dubbo.io/service"
-	ID             = "dubbo.io/id"
-	ServiceVersion = "dubbo.io/serviceVersion"
-	ServiceGroup   = "dubbo.io/serviceGroup"
-	Revision       = "dubbo.io/revision"
+	ApplicationLabel = "dubbo.io/application"
+	ServiceLabel        = "dubbo.io/service"
+	IDLabel             = "dubbo.io/id"
+	ServiceVersionLabel = "dubbo.io/serviceVersion"
+	ServiceGroupLabel = "dubbo.io/serviceGroup"
+	RevisionLabel     = "dubbo.io/revision"
 )
 
 type Base struct {

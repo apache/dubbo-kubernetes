@@ -27,10 +27,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	utilproto "github.com/apache/dubbo-kubernetes/pkg/common/util/proto"
-	"github.com/apache/dubbo-kubernetes/pkg/core_legacy/resources"
 )
 
-func ToJSON(spec resources.ResourceSpec) ([]byte, error) {
+func ToJSON(spec ResourceSpec) ([]byte, error) {
 	if msg, ok := spec.(proto.Message); ok {
 		return utilproto.ToJSON(msg)
 	} else {
@@ -38,7 +37,7 @@ func ToJSON(spec resources.ResourceSpec) ([]byte, error) {
 	}
 }
 
-func ToYAML(spec resources.ResourceSpec) ([]byte, error) {
+func ToYAML(spec ResourceSpec) ([]byte, error) {
 	if msg, ok := spec.(proto.Message); ok {
 		return utilproto.ToYAML(msg)
 	} else {
@@ -46,7 +45,7 @@ func ToYAML(spec resources.ResourceSpec) ([]byte, error) {
 	}
 }
 
-func ToAny(spec resources.ResourceSpec) (*anypb.Any, error) {
+func ToAny(spec ResourceSpec) (*anypb.Any, error) {
 	if msg, ok := spec.(proto.Message); ok {
 		return utilproto.MarshalAnyDeterministic(msg)
 	} else {
@@ -60,7 +59,7 @@ func ToAny(spec resources.ResourceSpec) (*anypb.Any, error) {
 	}
 }
 
-func FromJSON(src []byte, spec resources.ResourceSpec) error {
+func FromJSON(src []byte, spec ResourceSpec) error {
 	if msg, ok := spec.(proto.Message); ok {
 		return utilproto.FromJSON(src, msg)
 	} else {
@@ -68,7 +67,7 @@ func FromJSON(src []byte, spec resources.ResourceSpec) error {
 	}
 }
 
-func FromYAML(src []byte, spec resources.ResourceSpec) error {
+func FromYAML(src []byte, spec ResourceSpec) error {
 	if msg, ok := spec.(proto.Message); ok {
 		return utilproto.FromYAML(src, msg)
 	} else {
@@ -76,7 +75,7 @@ func FromYAML(src []byte, spec resources.ResourceSpec) error {
 	}
 }
 
-func FromAny(src *anypb.Any, spec resources.ResourceSpec) error {
+func FromAny(src *anypb.Any, spec ResourceSpec) error {
 	if msg, ok := spec.(proto.Message); ok {
 		return utilproto.UnmarshalAnyTo(src, msg)
 	} else {
@@ -84,12 +83,12 @@ func FromAny(src *anypb.Any, spec resources.ResourceSpec) error {
 	}
 }
 
-func FullName(spec resources.ResourceSpec) string {
+func FullName(spec ResourceSpec) string {
 	specType := reflect.TypeOf(spec).Elem()
 	return path.Join(specType.PkgPath(), specType.Name())
 }
 
-func Equal(x, y resources.ResourceSpec) bool {
+func Equal(x, y ResourceSpec) bool {
 	xMsg, xOk := x.(proto.Message)
 	yMsg, yOk := y.(proto.Message)
 	if xOk != yOk {
@@ -103,7 +102,7 @@ func Equal(x, y resources.ResourceSpec) bool {
 	}
 }
 
-func IsEmpty(spec resources.ResourceSpec) bool {
+func IsEmpty(spec ResourceSpec) bool {
 	if msg, ok := spec.(proto.Message); ok {
 		return proto.Size(msg) == 0
 	} else {

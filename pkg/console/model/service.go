@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/api/legacy"
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/console/constants"
 	coremesh "github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
@@ -158,7 +159,7 @@ func (r *ServiceTabDistributionResp) FromServiceDataplaneResource(dataplane *cor
 	return r
 }
 
-func (r *ServiceTabDistributionResp) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound, ip string) {
+func (r *ServiceTabDistributionResp) mergeInbound(inbound *legacy.Dataplane_Networking_Inbound, ip string) {
 	r.Endpoint = ip + ":" + strconv.Itoa(int(inbound.Port))
 }
 

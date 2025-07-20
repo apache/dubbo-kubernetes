@@ -45,7 +45,7 @@ func GetApplicationDetail(ctx context.Context, req *model.ApplicationDetailReq) 
 		if strings.Split(dataplane.GetMeta().GetName(), constant.KeySeparator)[1] == "0" {
 			continue
 		}
-		rev, ok := dataplane.Spec.GetExtensions()[meshproto.Revision]
+		rev, ok := dataplane.Spec.GetExtensions()[meshproto.RevisionLabel]
 		if ok {
 			if metadata, cached := revisions[rev]; !cached {
 				metadata = &mesh.MetaDataResource{
@@ -108,7 +108,7 @@ func GetApplicationServiceFormInfo(ctx context.Context, req *model.ApplicationSe
 	serviceMap := make(map[string]*model.ApplicationServiceForm)
 	revisions := make(map[string]*mesh.MetaDataResource, 0)
 	for _, dataplane := range dataplaneList.Items {
-		rev, ok := dataplane.Spec.GetExtensions()[meshproto.Revision]
+		rev, ok := dataplane.Spec.GetExtensions()[meshproto.RevisionLabel]
 		if !ok {
 			continue
 		}

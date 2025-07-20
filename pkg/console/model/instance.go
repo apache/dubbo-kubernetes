@@ -20,7 +20,7 @@ package model
 import (
 	gxset "github.com/dubbogo/gost/container/set"
 
-	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/apache/dubbo-kubernetes/api/legacy"
 	meshproto "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resource/apis/mesh"
 	coremodel "github.com/apache/dubbo-kubernetes/pkg/core/resource/model"
@@ -80,7 +80,7 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 	r.Name = meta.GetName()
 	r.CreateTime = meta.GetCreationTime().String()
 	r.RegisterTime = r.CreateTime // TODO: separate createTime and RegisterTime
-	cluster := dr.Spec.Networking.Inbound[0].Tags[v1alpha1.ZoneTag]
+	cluster := dr.Spec.Networking.Inbound[0].Tags[legacy.ZoneTag]
 	r.RegisterClustersSet.Add(cluster)
 	for _, c := range r.RegisterClustersSet.Values() {
 		r.RegisterClusters = append(r.RegisterClusters, c.(string))
@@ -109,7 +109,7 @@ func (r *SearchInstanceResp) FromDataplaneResource(dr *mesh.DataplaneResource) *
 		r.AppName = spec.Extensions[meshproto.Application]
 		if r.AppName == "" {
 			for _, inbound := range spec.Networking.Inbound {
-				r.AppName = inbound.Tags[v1alpha1.AppTag]
+				r.AppName = inbound.Tags[legacy.AppTag]
 			}
 		}
 	}
@@ -242,15 +242,15 @@ func (a *InstanceDetail) Merge(dataplane *mesh.DataplaneResource) {
 	}
 }
 
-func (a *InstanceDetail) mergeInbound(inbound *v1alpha1.Dataplane_Networking_Inbound) {
+func (a *InstanceDetail) mergeInbound(inbound *legacy.Dataplane_Networking_Inbound) {
 	a.RpcPort = int(inbound.Port)
-	a.RegisterClusters.Add(inbound.Tags[v1alpha1.ZoneTag])
+	a.RegisterClusters.Add(inbound.Tags[legacy.ZoneTag])
 	for _, deployCluster := range a.RegisterClusters.Values() {
 		a.DeployCluster = deployCluster // TODO: separate deployCluster and registerCluster
 	}
 	a.Tags = inbound.Tags
 	if a.AppName == "" {
-		a.AppName = inbound.Tags[v1alpha1.AppTag]
+		a.AppName = inbound.Tags[legacy.AppTag]
 	}
 }
 
@@ -273,7 +273,7 @@ func (a *InstanceDetail) mergeMeta(meta coremodel.ResourceMeta) {
 	a.Labels = meta.GetLabels()
 }
 
-func (a *InstanceDetail) mergeProbes(probes *meshproto.Dataplane_Probes) {
+func (a *InstanceDetail) mergeProbes(probes *legacy.Dataplane_Probes) {
 	if probes == nil {
 		return
 	}

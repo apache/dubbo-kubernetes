@@ -7,20 +7,14 @@ import (
 	"net"
 	"os"
 	"time"
-)
 
-import (
+	"github.com/apache/dubbo-kubernetes/api/legacy"
+
 	envoy_resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-
 	"github.com/pkg/errors"
-
 	"github.com/spf13/cobra"
-
 	"go.uber.org/multierr"
-)
 
-import (
-	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/core"
 	"github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest/unversioned"
 	rest_v1alpha1 "github.com/apache/dubbo-kubernetes/pkg/core/resources/model/rest/v1alpha1"
@@ -77,25 +71,25 @@ func newRunCmd() *cobra.Command {
 					binary.LittleEndian.PutUint32(buf, ipRand+uint32(i))
 					ip := net.IP(buf).String()
 
-					dpSpec := &v1alpha1.Dataplane{
-						Networking: &v1alpha1.Dataplane_Networking{
+					dpSpec := &legacy.Dataplane{
+						Networking: &legacy.Dataplane_Networking{
 							Address: ip,
 						},
 					}
 					for j := 0; j < args.inbounds; j++ {
 						service := fmt.Sprintf("service-%d", rand.Int()%args.services) // #nosec G404 -- that's just a test tool
-						dpSpec.Networking.Inbound = append(dpSpec.Networking.Inbound, &v1alpha1.Dataplane_Networking_Inbound{
+						dpSpec.Networking.Inbound = append(dpSpec.Networking.Inbound, &legacy.Dataplane_Networking_Inbound{
 							Port: uint32(8080 + j),
 							Tags: map[string]string{
-								v1alpha1.ServiceTag:  service,
-								v1alpha1.ProtocolTag: "http",
+								legacy.ServiceTag:  service,
+								legacy.ProtocolTag: "http",
 							},
 						})
 					}
 					for j := 0; j < args.outbounds; j++ {
 						service := fmt.Sprintf("service-%d", rand.Int()%args.services) // #nosec G404 -- that's just a test tool
-						dpSpec.Networking.Outbound = append(dpSpec.Networking.Outbound, &v1alpha1.Dataplane_Networking_Outbound{
-							Port: uint32(10080 + j), Tags: map[string]string{v1alpha1.ServiceTag: service},
+						dpSpec.Networking.Outbound = append(dpSpec.Networking.Outbound, &legacy.Dataplane_Networking_Outbound{
+							Port: uint32(10080 + j), Tags: map[string]string{legacy.ServiceTag: service},
 						})
 					}
 

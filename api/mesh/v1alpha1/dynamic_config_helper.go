@@ -19,9 +19,7 @@ package v1alpha1
 
 import (
 	"strings"
-)
 
-import (
 	"github.com/apache/dubbo-kubernetes/pkg/core/consts"
 )
 
