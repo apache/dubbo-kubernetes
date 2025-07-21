@@ -65,7 +65,8 @@ jobs:
             dubboctl deploy supports options for image information, namespace, and service port.
             dubboctl image push automatically obtain docker login credentials.
             Update README content and project tag.
-          draft: true
+            Migrate admin-cp to dubbo-admin project.
+          draft: false
           prerelease: false
 
   build_and_upload:
