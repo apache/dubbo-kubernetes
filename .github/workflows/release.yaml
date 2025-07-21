@@ -60,8 +60,12 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            dubboctl added version command.
-          draft: false
+            dubboctl add seek command.
+            dubboctl image support mirror information options.
+            dubboctl deploy supports options for image information, namespace, and service port.
+            dubboctl image push automatically obtain docker login credentials.
+            Update README content and project tag.
+          draft: true
           prerelease: false
 
   build_and_upload:
@@ -102,44 +106,24 @@ jobs:
           mv bin/dubboctl* build/dubboctl/
           ls -ln build/dubboctl/
 
-      - name: Dubbo-CP Build binary
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GIT_VERSION: ${{ github.ref_name }}
-        run: |
-          mkdir -p build/dubbo-cp
-          make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/dubbo-cp/
-          mv bin/dubbo-cp* build/dubbo-cp/
-          ls -ln build/dubbo-cp/
-
       - name: Dubbo Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/dubbo-cp
           mkdir -p build/dubboctl
-          make build-dubbo-cp GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make clone-sample GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
-          mv bin/dubbo-cp* build/dubbo-cp/
           mv bin/dubboctl* build/dubboctl/
           mv bin/samples/ build/
-          ls -ln build/dubboctl/ ; ls -ln build/dubbo-cp/ ; ls -ln build/
+          ls -ln build/dubboctl/ ; ls -ln build/
 
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
           cp build/dubboctl/dubboctl build/dubboctl/dubboctl.exe
-
-      - name: Dubbo-CP Rename windows
-        if: matrix.goos == 'windows'
-        run: |
-          cp build/dubbo-cp/dubbo-cp build/dubbo-cp/dubbo-cp.exe
 
       - name: dubboctl Package files
         id: package_ctl
@@ -160,25 +144,6 @@ jobs:
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
-      - name: dubbo-cp Package files
-        id: package_cp
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          FILENAME=dubbo-cp-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
-          DIRNAME=dubbo-cp-${VERSION}
-          mkdir -p ${DIRNAME}/bin
-          cp build/dubbo-cp/dubbo-cp ${DIRNAME}/bin
-          ls -ln ${DIRNAME}/bin
-          cp build/dubbo-cp/README.md build/dubbo-cp/LICENSE build/dubbo-cp/dubbo-cp.yaml ${DIRNAME}
-          ls -Rlh ${DIRNAME}
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip -r ${FILENAME}.zip dubbo-cp-${VERSION}
-            echo "name=${FILENAME}.zip" >> $GITHUB_OUTPUT
-          else
-            tar -czvf ${FILENAME}.tar.gz ${DIRNAME}
-            echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
-          fi
-
       - name: dubbo Package files
         id: package_dubbo
         run: |
@@ -187,9 +152,7 @@ jobs:
           DIRNAME=dubbo-${VERSION}
           mkdir -p ${DIRNAME}/bin
           cp build/dubboctl/dubboctl ${DIRNAME}/bin/
-          cp build/dubbo-cp/dubbo-cp ${DIRNAME}/bin/
           cp build/README.md build/LICENSE ${DIRNAME}
-          cp build/dubbo-cp/dubbo-cp.yaml ${DIRNAME}
           cp -r build/samples ${DIRNAME}
           ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -199,7 +162,7 @@ jobs:
             tar -czvf ${FILENAME}.tar.gz ${DIRNAME}
             echo "name=${FILENAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
-            
+
       - name: Upload Dubboctl Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -208,16 +171,6 @@ jobs:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ${{ steps.package_ctl.outputs.name }}
           asset_name: ${{ steps.package_ctl.outputs.name }}
-          asset_content_type: application/octet-stream
-
-      - name: Upload Dubbo-CP Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.package_cp.outputs.name }}
-          asset_name: ${{ steps.package_cp.outputs.name }}
           asset_content_type: application/octet-stream
 
       - name: Upload Dubbo Release Asset
