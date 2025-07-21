@@ -19,6 +19,7 @@ package prompt
 
 import (
 	"bufio"
+	"encoding/base64"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
@@ -27,6 +28,7 @@ import (
 	"golang.org/x/term"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -146,4 +148,50 @@ you can install docker credential helper https://github.com/docker/docker-creden
 
 		return resp, nil
 	}
+}
+
+func GetDockerAuth(registry string) (pusher.Credentials, error) {
+	configFile := filepath.Join(os.Getenv("HOME"), ".docker", "config.json")
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return pusher.Credentials{}, err
+	}
+
+	var config struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+
+	if err := json.Unmarshal(data, &config); err != nil {
+		return pusher.Credentials{}, err
+	}
+
+	// Define lookup order
+	lookupKeys := []string{
+		registry,
+		"https://" + registry,
+		"https://" + registry + "/v1/",
+	}
+
+	// Docker Hub special case
+	if registry == "index.docker.io" {
+		lookupKeys = append(lookupKeys, "https://index.docker.io/v1/")
+	}
+
+	for _, key := range lookupKeys {
+		if entry, ok := config.Auths[key]; ok {
+			decoded, err := base64.StdEncoding.DecodeString(entry.Auth)
+			if err != nil {
+				return pusher.Credentials{}, fmt.Errorf("failed to decode credentials: %w", err)
+			}
+			parts := strings.SplitN(string(decoded), ":", 2)
+			if len(parts) != 2 {
+				return pusher.Credentials{}, fmt.Errorf("invalid credentials format for %s", key)
+			}
+			return pusher.Credentials{Username: parts[0], Password: parts[1]}, nil
+		}
+	}
+
+	return pusher.Credentials{}, fmt.Errorf("no credentials found for registry: %s", registry)
 }
