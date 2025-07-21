@@ -38,3 +38,5 @@ github:
     - kubernetes
     - microservices
     - service-mesh
+    - proxyless
+    - ai

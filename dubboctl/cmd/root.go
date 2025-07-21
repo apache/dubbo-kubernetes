@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"flag"
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder/pack"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/credentials"
@@ -33,7 +34,6 @@ import (
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"
-	// "os"
 )
 
 const ChartFlag = "charts"
@@ -69,11 +69,20 @@ func newTransport(insecureSkipVerify bool) pusher.RoundTripCloser {
 }
 
 func newCredentialsProvider(configPath string, t http.RoundTripper) pusher.CredentialsProvider {
-	options := []credentials.Opt{
-		credentials.WithPromptForCredentials(prompt.NewPromptForCredentials(os.Stdin, os.Stdout, os.Stderr)),
-		credentials.WithPromptForCredentialStore(prompt.NewPromptForCredentialStore()),
-		credentials.WithTransport(t),
-	}
+	options := []credentials.Opt{}
+
+	options = append(options, credentials.WithPromptForCredentials(func(registry string) (pusher.Credentials, error) {
+		if creds, err := prompt.GetDockerAuth(registry); err == nil {
+			fmt.Fprintf(os.Stderr, "Using Docker credentials for registry: %s\n", registry)
+			return creds, nil
+		}
+		fmt.Fprintf(os.Stderr, "No saved Docker credentials found for %s, prompting...\n", registry)
+		return prompt.NewPromptForCredentials(os.Stdin, os.Stdout, os.Stderr)(registry)
+	}))
+
+	options = append(options, credentials.WithPromptForCredentialStore(prompt.NewPromptForCredentialStore()))
+	options = append(options, credentials.WithTransport(t))
+
 	return credentials.NewCredentialsProvider(configPath, options...)
 }
 
