@@ -43,16 +43,26 @@ type imageArgs struct {
 	output string
 	// destroy Defines the deletion of deploy yaml file.
 	destroy bool
+	// imageInfo specifies the image used for the build process.
+	imageInfo string
+	// namespace specifies the Kubernetes namespace for the deployment.
+	namespace string
+	// port defines the service port used in the Kubernetes configuration.
+	port string
 }
 
 func addHubFlags(cmd *cobra.Command, iArgs *imageArgs) {
 	cmd.PersistentFlags().BoolVarP(&iArgs.dockerfile, "file", "f", false, "Specify the file as a dockerfile")
 	cmd.PersistentFlags().BoolVarP(&iArgs.builder, "builder", "b", false, "The builder generates the image")
+	cmd.PersistentFlags().StringVar(&iArgs.imageInfo, "imageInfo", "", "Specifies the image used for building or deploying the application.")
 }
 
 func addDeployFlags(cmd *cobra.Command, iArgs *imageArgs) {
 	cmd.PersistentFlags().StringVarP(&iArgs.output, "output", "o", "dubbo-deploy.yaml", "The output generates k8s yaml file")
 	cmd.PersistentFlags().BoolVarP(&iArgs.destroy, "delete", "d", false, "deletion k8s yaml file")
+	cmd.PersistentFlags().StringVar(&iArgs.namespace, "namespace", "", "Kubernetes namespace where the resources will be deployed.")
+	cmd.PersistentFlags().StringVar(&iArgs.imageInfo, "imageInfo", "", "Container image to use for building or deploying the application.")
+	cmd.PersistentFlags().StringVar(&iArgs.port, "port", "81", "Port number exposed by the Kubernetes service.")
 }
 
 func ImageCmd(ctx cli.Context, cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command {
@@ -95,6 +105,7 @@ func newHubConfig(cmd *cobra.Command) *hubConfig {
 	hc := &hubConfig{
 		Dockerfile: viper.GetBool("file"),
 		Builder:    viper.GetBool("builder"),
+		Image:      viper.GetString("imageInfo"),
 	}
 	return hc
 }
@@ -104,6 +115,8 @@ func newDeployConfig(cmd *cobra.Command) *deployConfig {
 		hubConfig: newHubConfig(cmd),
 		Output:    viper.GetString("output"),
 		Destroy:   viper.GetBool("delete"),
+		Namespace: viper.GetString("namespace"),
+		Port:      viper.GetInt("port"),
 	}
 	return dc
 }
@@ -156,7 +169,7 @@ func imageHubCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Command
 			}
 			return nil
 		},
-		PreRunE: bindEnv("file", "builder"),
+		PreRunE: bindEnv("file", "builder", "imageInfo"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runHub(cmd, args, clientFactory)
 		},
@@ -242,7 +255,7 @@ func imageDeployCmd(cmd *cobra.Command, clientFactory ClientFactory) *cobra.Comm
   # Delete the deployed application.
   dubboctl image deploy -d
 `,
-		PreRunE: bindEnv("output", "delete"),
+		PreRunE: bindEnv("output", "delete", "namespace", "imageInfo", "port"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDeploy(cmd, args, clientFactory)
 		},
@@ -341,7 +354,7 @@ func (hc *hubConfig) hubPrompt(dc *dubbo.DubboConfig) (*hubConfig, error) {
 	if hc.Image == "" && dc.Image == "" {
 		qs := []*survey.Question{
 			{
-				Name:     "image",
+				Name:     "imageInfo",
 				Validate: survey.Required,
 				Prompt: &survey.Input{
 					Message: "Please enter the image tag ([REGISTRY]/[USERNAME]/[IMAGENAME]:tag)\n  Image: ",
