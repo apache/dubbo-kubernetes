@@ -60,12 +60,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            dubboctl add seek command.
-            dubboctl image support mirror information options.
-            dubboctl deploy supports options for image information, namespace, and service port.
-            dubboctl image push automatically obtain docker login credentials.
-            Update README content and project tag.
-            Migrate admin-cp to dubbo-admin project.
+            dubboctl seek supports chatgpt large models.
+            Remove dubbo admin migration legacy code.
           draft: false
           prerelease: false
 
