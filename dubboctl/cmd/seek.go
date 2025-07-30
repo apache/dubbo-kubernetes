@@ -82,28 +82,30 @@ func runChatGPT() {
 		EOFPrompt:       "exit",
 	})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "无法初始化命令行：", err)
+		fmt.Fprintln(os.Stderr, "Unable to initialize command line：", err)
 		os.Exit(1)
 	}
 	defer rl.Close()
 
-	typewriter(`欢迎使用 Dubboctl AI，我是你的命令行助手！
-  reset 重置对话上下文
-  exit 退出程序
+	typewriter(`Welcome to Dubboctl AI, your command-line assistant!
 
-示例：
-  1. 我要创建一个 go 的项目，项目名称是 dubbogo-application，模板库是 common。
-  2. 我要构建镜像，镜像信息是 john/testapp:latest。
-  3. 我想看看一下模板库列表。
-  4. 我想添加模板库，模板名称是 simple，模板地址是 https://example.com。
-  5. 我想删除模板库，模版名称是 simple。
-  6. 我要部署镜像，镜像名称是 john/testapp:latest，命名空间是 default，端口是 8080。
-  7. 我要删除镜像。`, 20*time.Millisecond)
+  reset Resets the conversation context
 
-	prompt := `介绍自己负责 Dubboctl 的开发命令行助手`
+  exit Exits the program
+
+Example:
+  1. I want to create a Go project named dubbogo-application and use the common template library.
+  2. I want to build an image named john/testapp:latest.
+  3. I want to view the list of template libraries.
+  4. I want to add a template library named simple and located at https://example.com.
+  5. I want to delete a template library named simple.
+  6. I want to deploy an image named john/testapp:latest, with the default namespace and port 8080.
+  7. I want to delete the image. `, 20*time.Millisecond)
+
+	prompt := `Introduce myself as the command line assistant responsible for the development of Dubboctl`
 	resp, err := llmClient.Call(context.TODO(), prompt)
 	if err != nil {
-		fmt.Printf("调用失败：%v\n", err)
+		fmt.Printf("call failed：%v\n", err)
 		return
 	}
 	typewriter(resp, 20*time.Millisecond)
@@ -111,7 +113,7 @@ func runChatGPT() {
 	for {
 		line, err := rl.Readline()
 		if err != nil {
-			fmt.Println("退出程序")
+			fmt.Println("Exit Program")
 			break
 		}
 		input := strings.TrimSpace(line)
@@ -128,10 +130,10 @@ func runChatGPT() {
 
 		switch cmd {
 		case "exit":
-			fmt.Print("确认退出？(y/N) ")
+			fmt.Print("Confirm exit？(y/N) ")
 			ans, _ := bufio.NewReader(os.Stdin).ReadString('\n')
 			if strings.ToLower(strings.TrimSpace(ans)) == "y" {
-				fmt.Println("再见！")
+				fmt.Println("goodbye！")
 				return
 			}
 
@@ -139,14 +141,14 @@ func runChatGPT() {
 			clearScreen()
 			chatMemory = memory.NewConversationBuffer()
 			chain = chains.NewConversation(llmClient, chatMemory)
-			fmt.Println("已重置对话上下文。")
+			fmt.Println("Conversation context reset.")
 
 		case "sdk", "image", "repo":
 			if args == "" {
-				fmt.Printf("请在 '%s' 后提供内容，输入 help 查看示例。\n", cmd)
+				fmt.Printf("Please provide content after '%s', or type help to see examples.\n", cmd)
 				continue
 			}
-			fmt.Print("AI 正在思考...")
+			fmt.Print("AI is thinking...")
 			time.Sleep(200 * time.Millisecond)
 
 			var result string
@@ -164,16 +166,15 @@ func runChatGPT() {
 			continue
 
 		default:
-			// 非命令，尝试自然语言处理
 			_, err := chains.Run(context.Background(), chain, input)
 			if err != nil {
-				fmt.Printf("AI 处理出错: %v\n", err)
+				fmt.Printf("AI processing errors: %v\n", err)
 				continue
 			}
 
 			intent, err := classifyIntent(input, llmClient)
 			if err != nil {
-				fmt.Printf("无法判断你的意图，请更具体一点：%v\n", err)
+				fmt.Printf("I can't tell what you meant, please be more specific：%v\n", err)
 				continue
 			}
 
@@ -186,7 +187,7 @@ func runChatGPT() {
 			case "repo":
 				result = chatGPTFromRepo(input)
 			default:
-				result = "我暂时无法理解你的请求。"
+				result = "I don't understand your request at the moment."
 			}
 
 			typewriter(result, 20*time.Millisecond)
@@ -235,10 +236,10 @@ func chatGPTFromRepo(input string) string {
 
 func classifyIntent(input string, client *llmopenai.LLM) (string, error) {
 	messages := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, `你是一个意图识别助手。用户的意图只能是三种之一："sdk", "image", "repo"。只返回其中一个，不要多说。例如：
-"我想生成一个项目" → sdk
-"我想构建镜像" → image
-"我想看模板库" → repo`),
+		llms.TextParts(llms.ChatMessageTypeSystem, `You are an intent recognition assistant. The user's intent can only be one of three: "sdk", "image", or "repo". Return only one of these, no more. For example:
+"I want to generate a project" → sdk
+"I want to build an image" → image
+"I want to view the template library" → repo`),
 		llms.TextParts(llms.ChatMessageTypeHuman, input),
 	}
 	resp, err := client.GenerateContent(context.TODO(), messages)
@@ -249,5 +250,5 @@ func classifyIntent(input string, client *llmopenai.LLM) (string, error) {
 	if intent == "sdk" || intent == "image" || intent == "repo" {
 		return intent, nil
 	}
-	return "", fmt.Errorf("意图不明确: %s", intent)
+	return "", fmt.Errorf("Unclear intentions: %s", intent)
 }

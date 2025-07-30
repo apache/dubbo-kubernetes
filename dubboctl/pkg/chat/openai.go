@@ -46,15 +46,15 @@ func SdkFunctionCall(input string, client *llmopenai.LLM) string {
 			Properties: map[string]jsonschema.Definition{
 				"language": {
 					Type:        jsonschema.String,
-					Description: "根据用户输入指定的语言，例如 go 或 java",
+					Description: "A language specified by user input, such as go or java",
 				},
 				"template": {
 					Type:        jsonschema.String,
-					Description: "根据用户输入用户指定的模板库，例如 common",
+					Description: "Based on user input, a user-specified template library, such as common",
 				},
 				"dirname": {
 					Type:        jsonschema.String,
-					Description: "根据用户输入指定的项目名称，例如 mydubbo",
+					Description: "The project name specified by the user, such as mydubbo",
 				},
 			},
 			Required: []string{"language", "template", "dirname"},
@@ -70,25 +70,26 @@ func SdkFunctionCall(input string, client *llmopenai.LLM) string {
 
 	messages := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, `
-你是一个 Dubbo SDK 项目创建助手。当用户请求你创建或生成时，请帮助补全以下参数：
-请根据以下规则进行补全：
+You are a Dubbo SDK project creation assistant. When a user requests you to create or generate a project, please help complete the following parameters:
+Please complete according to the following rules:
 
-1. 如果用户只提供语言（如 "go"），你可以：
-   - 默认使用 template 为 "common"
-   - 默认目录名为 "app"
+1. If the user only provides a language (such as "go"), you can:
+- Default template to "common"
+- Default directory name to "app"
 
-2. 如果用户提供语言和目录名，但没有指定 template：
-   - 使用 template 为 "common"
+2. If the user provides a language and directory name but does not specify a template:
+- Default template to "common"
 
-3. 如果用户什么都没说（比如只说“帮我创建或生成相关的关键字”），你可以默认：
-   - language: "go"
-   - template: "common"
-   - dirname: 你随机生成项目名称。
+3. If the user does not specify anything (for example, only "Help me create or generate related keywords"), you can default to:
+- language: "go"
+- template: "common"
+- dirname: You randomly generate a project name.
 
-无论使用哪种默认值，请在回答中清楚地告诉用户你用了哪些默认值。
-并引导用户可以通过命令 dubboctl repo list 查看模板库。
+Regardless of which default values you use, please clearly explain the defaults in your response.
 
-注意：如果用户不是在创建/生成的上下文中发问（比如问部署、镜像等），你不要回复。
+And guide the user to view the template repository using the command dubboctl repo list.
+
+Note: If the user's question is not in the context of creating or generating a project (such as regarding deployment or images), do not respond.
 `),
 		llms.TextParts(llms.ChatMessageTypeHuman, input),
 	}
@@ -97,10 +98,8 @@ func SdkFunctionCall(input string, client *llmopenai.LLM) string {
 
 	msg := resp.Choices[0].ToolCalls
 	if len(msg) != 1 {
-		return "我没有完全理解你的意思，您是想创建 go 还是 java 的 sdk 项目？"
+		return "I don't fully understand what you mean. Do you want to create a Go or Java SDK project?"
 	}
-
-	fmt.Printf("OpenAI 请求函数 %s，参数为：%s\n", msg[0].FunctionCall.Name, msg[0].FunctionCall.Arguments)
 
 	res, err := call(client, msg[0].FunctionCall.Name, msg[0].FunctionCall.Arguments)
 	if err != nil {
@@ -118,7 +117,7 @@ func ImageFunctionCall(input string, client *llmopenai.LLM) string {
 			Properties: map[string]jsonschema.Definition{
 				"image_info": {
 					Type:        jsonschema.String,
-					Description: "用户输入的镜像信息，例如 john/testapp:latest",
+					Description: "Mirror information entered by the user, such as john/testapp:latest",
 				},
 			},
 			Required: []string{"image_info"},
@@ -132,19 +131,19 @@ func ImageFunctionCall(input string, client *llmopenai.LLM) string {
 			Properties: map[string]jsonschema.Definition{
 				"deploy_type": {
 					Type:        jsonschema.String,
-					Description: "判断用户部署操作，例如 create 或 --delete",
+					Description: "Judge user deployment operations, such as create or --delete",
 				},
 				"image_info": {
 					Type:        jsonschema.String,
-					Description: "用户输入的部署镜像信息，例如 john/testapp:latest",
+					Description: "Deployment image information entered by the user, such as john/testapp:latest",
 				},
 				"namespace": {
 					Type:        jsonschema.String,
-					Description: "用户输入的部署命名空间，例如 default",
+					Description: "The deployment namespace entered by the user, such as default",
 				},
 				"port": {
 					Type:        jsonschema.String,
-					Description: "用户输入的部署端口，例如 80",
+					Description: "Deployment port entered by the user, for example 80",
 				},
 			},
 			Required: []string{"deploy_type", "image_info", "namespace", "port"},
@@ -158,26 +157,27 @@ func ImageFunctionCall(input string, client *llmopenai.LLM) string {
 
 	messages := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, `
-你是 Dubbo SDK 项目的镜像助手，可以帮助用户执行以下操作：
+You are an image assistant for the Dubbo SDK project, and can help users perform the following operations:
 
-1. 构建或推送镜像（使用 imageHubResource）
-2. 部署或删除镜像（使用 imageDeployResource）
+1. Build or push an image (using imageHubResource)
 
-根据用户的输入判断调用哪个函数：
-- 如果用户提到“构建”、“打包”、“推送”，调用 imageHubResource，参数为 image_info。
-- 如果用户提到“部署”、“上线”、“运行”，调用 imageDeployResource，参数包括：
-  - deploy_type：部署类型，create 表示部署
-  - image_info：镜像名称；
-  - namespace：部署的命名空间。
-  - port 部署的端口。
-- 如果用户提到“删除”，delete 表示删除；调用 imageDeployResource，直接删除。
+2. Deploy or delete an image (using imageDeployResource)
 
-注意：
-- 如果用户没有提供 deploy_type。
-- 如果用户没有提供 namespace，默认使用 "default"。
-- 如果用户没有提供 port，默认使用 80。
-- 如果用户没说清楚 intent，请提问澄清。
-- 请友好引导用户补充缺失的信息。
+Determine which function to call based on user input:
+- If the user mentions "build," "package," or "push," call imageHubResource with the image_info parameter.
+- If the user mentions "deploy," "launch," or "run," call imageDeployResource with the following parameters:
+- deploy_type: Deployment type, create for deployment
+- image_info: Image name
+- namespace: Deployment namespace
+- port: Deployment port.
+- If the user mentions "delete," delete for deletion; call imageDeployResource to directly delete.
+
+Note:
+- If the user does not provide a deploy_type.
+- If the user does not provide a namespace, "default" is used by default.
+- If the user does not provide a port, port 80 is used by default.
+- If the user's intent is unclear, please ask for clarification.
+- Please kindly guide users to fill in the missing information.
 `),
 		llms.TextParts(llms.ChatMessageTypeHuman, input),
 	}
@@ -190,10 +190,8 @@ func ImageFunctionCall(input string, client *llmopenai.LLM) string {
 		if resp.Choices[0].Content != "" {
 			return resp.Choices[0].Content
 		}
-		return "我没有完全理解你的意思，您是想构建或推送镜像还是部署或删除镜像？"
+		return "I don't fully understand what you mean, do you want to build or push an image or deploy or delete an image?"
 	}
-
-	fmt.Printf("OpenAI 请求函数 %s，参数为：%s\n", msg[0].FunctionCall.Name, msg[0].FunctionCall.Arguments)
 
 	res, err := call(client, msg[0].FunctionCall.Name, msg[0].FunctionCall.Arguments)
 	if err != nil {
@@ -211,15 +209,15 @@ func RepoFunctionCall(input string, client *llmopenai.LLM) string {
 			Properties: map[string]jsonschema.Definition{
 				"name": {
 					Type:        jsonschema.String,
-					Description: "用户输入的模板库名称操作",
+					Description: "User-entered template library name operation",
 				},
 				"url": {
 					Type:        jsonschema.String,
-					Description: "用户输入的模板库地址操作",
+					Description: "User-entered template library address operation",
 				},
 				"repo_type": {
 					Type:        jsonschema.String,
-					Description: "用户输入的模板库操作",
+					Description: "Template library operations for user input",
 				},
 			},
 			Required: []string{"repo_type"},
@@ -234,7 +232,7 @@ func RepoFunctionCall(input string, client *llmopenai.LLM) string {
 	}
 
 	messages := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, "你是一个帮助用户模板库管理的助手，例如：dubboctl repo add/list/remove 的操作"),
+		llms.TextParts(llms.ChatMessageTypeSystem, "You are an assistant who helps users manage template libraries, such as dubboctl repo add/list/remove operations"),
 		llms.TextParts(llms.ChatMessageTypeHuman, input),
 	}
 
@@ -245,10 +243,8 @@ func RepoFunctionCall(input string, client *llmopenai.LLM) string {
 		if resp.Choices[0].Content != "" {
 			return resp.Choices[0].Content
 		}
-		return "我没有完全理解你的意思，您是想添加、查看还是删除模板库？"
+		return "I don't fully understand what you mean. Do you want to add, view, or delete a template library?"
 	}
-
-	fmt.Printf("OpenAI 请求函数 %s，参数为：%s\n", msg[0].FunctionCall.Name, msg[0].FunctionCall.Arguments)
 
 	res, err := call(client, msg[0].FunctionCall.Name, msg[0].FunctionCall.Arguments)
 	if err != nil {
@@ -268,21 +264,20 @@ func call(client *llmopenai.LLM, name, argument string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		// 参数不完整，调用大模型生成默认值
 		if sdkParams.Language == "" || sdkParams.Template == "" || sdkParams.Dirname == "" {
 			prompt := fmt.Sprintf(
-				"用户想创建一个 Dubbo SDK 项目，但参数不全。请你用合适的默认值填补缺失字段，已有参数：language=%s, template=%s, dirname=%s。请返回完整 JSON。",
+				"The user wants to create a Dubbo SDK project, but the parameters are incomplete. Please fill in the missing fields with appropriate default values. Existing parameters: language=%s, template=%s, dirname=%s. Please return a complete JSON.",
 				sdkParams.Language, sdkParams.Template, sdkParams.Dirname,
 			)
 
 			resp, err := client.Call(context.TODO(), prompt)
 			if err != nil {
-				return "", fmt.Errorf("大模型补全失败: %v", err)
+				return "", fmt.Errorf("large model completion failed: %v", err)
 			}
 
 			err = json.Unmarshal([]byte(resp), &sdkParams)
 			if err != nil {
-				return "", fmt.Errorf("大模型生成的 JSON 无效: %v", err)
+				return "", fmt.Errorf("invalid JSON generated by large model: %v", err)
 			}
 		}
 
@@ -298,18 +293,17 @@ func call(client *llmopenai.LLM, name, argument string) (string, error) {
 		}
 		if imageParams.ImageInfo == "" {
 			prompt := fmt.Sprintf(
-				"用户想将 Dubbo SDK 项目构建成容器镜像，但参数需要交互模式，如果用户不填信息，就会发生错误，例如：Error: failed to build the application: invalid image name '': image is a required parameter。已有参数：imageInfo=%s。请返回完整 JSON。",
-				imageParams.ImageInfo,
+				"The user wants to build the Dubbo SDK project into a container image, but the parameters require interactive mode. If the user does not fill in the information, an error will occur, for example: Error: failed to build the application: invalid image name '': image is a required parameter. Existing parameter: imageInfo=%s. Please return the complete JSON.", imageParams.ImageInfo,
 			)
 
 			resp, err := client.Call(context.TODO(), prompt)
 			if err != nil {
-				return "", fmt.Errorf("大模型补全失败: %v", err)
+				return "", fmt.Errorf("large model completion failed: %v", err)
 			}
 
 			err = json.Unmarshal([]byte(resp), &imageParams)
 			if err != nil {
-				return "", fmt.Errorf("大模型生成的 JSON 无效: %v", err)
+				return "", fmt.Errorf("invalid JSON generated by large model: %v", err)
 			}
 		}
 
@@ -327,15 +321,15 @@ func call(client *llmopenai.LLM, name, argument string) (string, error) {
 			return "", err
 		}
 		if imageParams.DeployType == "" || (imageParams.DeployType == "create" && (imageParams.Port == "" || imageParams.Namespace == "" || imageParams.ImageInfo == "")) || (imageParams.DeployType == "delete") {
-			prompt := fmt.Sprintf("用户想部署镜像到集群里，create 操作补全以下字段：port=%s namespace=%s, imageInfo=%s； delete 操作直接删除，并返回 JSON 格式。",
+			prompt := fmt.Sprintf("If a user wants to deploy an image to a cluster, the create operation should complete the following fields: port=%s namespace=%s, imageInfo=%s. The delete operation will directly delete the image and return a JSON format.",
 				imageParams.Port, imageParams.Namespace, imageParams.ImageInfo)
 			resp, err := client.Call(context.TODO(), prompt)
 			if err != nil {
-				return "", fmt.Errorf("大模型补全失败: %v", err)
+				return "", fmt.Errorf("large model completion failed: %v", err)
 			}
 			err = json.Unmarshal([]byte(resp), &imageParams)
 			if err != nil {
-				return "", fmt.Errorf("大模型返回的 JSON 无效: %v", err)
+				return "", fmt.Errorf("invalid JSON generated by large model: %v", err)
 			}
 		}
 		return imageDeployResource(imageParams.DeployType, imageParams.Port, imageParams.Namespace, imageParams.ImageInfo)
@@ -348,18 +342,18 @@ func call(client *llmopenai.LLM, name, argument string) (string, error) {
 		}{}
 		err := json.Unmarshal([]byte(argument), &Params)
 		if err != nil {
-			return "", fmt.Errorf("参数解析失败: %v", err)
+			return "", fmt.Errorf("Parameter parsing failed: %v", err)
 		}
 		if Params.RepoType == "" || (Params.RepoType == "add" && (Params.Name == "" || Params.Url == "")) || (Params.RepoType == "remove" && Params.Name == "") {
-			prompt := fmt.Sprintf("用户想进行模板库操作，add 操作补全以下字段：name=%s, url=%s list 操作直接输出，remove 补全以下字段：name=%s，并返回 JSON 格式。",
+			prompt := fmt.Sprintf("The user wants to operate the template library. The add operation completes the following fields: name=%s, url=%s. The list operation directly outputs, and the remove operation completes the following fields: name=%s and returns JSON format.",
 				Params.Name, Params.Url, Params.RepoType)
 			resp, err := client.Call(context.TODO(), prompt)
 			if err != nil {
-				return "", fmt.Errorf("大模型补全失败: %v", err)
+				return "", fmt.Errorf("large model completion failed: %v", err)
 			}
 			err = json.Unmarshal([]byte(resp), &Params)
 			if err != nil {
-				return "", fmt.Errorf("大模型返回的 JSON 无效: %v", err)
+				return "", fmt.Errorf("invalid JSON generated by large model: %v", err)
 			}
 		}
 		return repoResource(Params.RepoType, Params.Name, Params.Url)
@@ -370,7 +364,7 @@ func call(client *llmopenai.LLM, name, argument string) (string, error) {
 func sdkResource(language, template, dirname string) (string, error) {
 	_, err := exec.LookPath("dubboctl")
 	if err != nil {
-		return "", errors.New("未找到 dubboctl，请确保已安装并配置在 PATH 中")
+		return "", errors.New("dubboctl not found, please make sure it is installed and configured in your PATH")
 	}
 	// 构建命令
 	cmd := exec.Command("dubboctl", "create", "sdk",
@@ -381,20 +375,20 @@ func sdkResource(language, template, dirname string) (string, error) {
 	// 获取命令输出
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("命令执行失败：%s\n错误：%v", string(output), err)
+		return "", fmt.Errorf("Command execution failed: %s\nError: %v", string(output), err)
 	}
-	fmt.Printf("命令执行成功，输出如下：\n%s", string(output))
+	fmt.Printf("The command was executed successfully, and the output is as follows:\n%s", string(output))
 
 	var client *llmopenai.LLM
 	client, err = NewOpenAIClient()
 	if err != nil {
-		return "", fmt.Errorf("创建 LLM 客户端失败: %v", err)
+		return "", fmt.Errorf("Failed to create LLM client: %v", err)
 	}
-	prompt := fmt.Sprintf(`我刚刚帮用户执行了 dubboctl 命令，以下是输出：%s 请用自然语言告诉用户项目已经创建，必要时也可以提醒他们下一步操作，例如可以执行 dubboctl repo list 查看模板列表等。`, string(output))
+	prompt := fmt.Sprintf(`I just ran the dubboctl command for the user. Here is the output: %s Please use natural language to tell the user that the project has been created. If necessary, you can also remind them of the next steps. For example, you can run dubboctl repo list to view the template list. `, string(output))
 
 	resp, err := client.Call(context.TODO(), prompt)
 	if err != nil {
-		return "", fmt.Errorf("生成自然语言描述失败: %v", err)
+		return "", fmt.Errorf("failed to generate natural language description: %v", err)
 	}
 	return resp, nil
 }
@@ -402,36 +396,35 @@ func sdkResource(language, template, dirname string) (string, error) {
 func imageHubResource(imageInfo string) (string, error) {
 	client, err := NewOpenAIClient()
 	if err != nil {
-		return "", fmt.Errorf("创建 LLM 客户端失败: %v", err)
+		return "", fmt.Errorf("failed to create LLM client: %v", err)
 	}
 	_, err = exec.LookPath("dubboctl")
 	if err != nil {
-		return "", errors.New("未找到 dubboctl，请确保已安装并配置在 PATH 中")
+		return "", errors.New("dubboctl not found, please make sure it is installed and configured in your PATH")
 	}
 
 	cmd := exec.Command("dubboctl", "image", "hub", "-b",
 		"--imageInfo", imageInfo,
 	)
 
-	prompt := fmt.Sprintf(`根据用户输入的中文或英文进行回答，发生错误根据举例告诉用户是不是没有创建或切换项目目录即可，例如：Error: does not contain an initialized sdk
-	注意：我不要你任何语气词。`)
+	prompt := fmt.Sprintf(`Answer based on the Chinese or English input from the user. If an error occurs, provide an example to indicate whether the project directory was not created or switched, e.g., "Error: does not contain an initialized sdk."
+Note: I don't want any interjections.`)
 
 	resp, err := client.Call(context.TODO(), prompt)
 	if err != nil {
-		return "", fmt.Errorf("生成自然语言描述失败: %v", err)
+		return "", fmt.Errorf("failed to generate natural language description: %v", err)
 	}
-	fmt.Println(resp)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("命令执行失败：%s\n错误：%v", string(output), err)
+		return "", fmt.Errorf("Command execution failed: %s\nError: %v", string(output), err)
 	}
-	fmt.Printf("命令执行成功，输出如下：\n%s", string(output))
+	fmt.Printf("The command was executed successfully, and the output is as follows:\n%s", string(output))
 
-	prompt = fmt.Sprintf(`我刚刚帮用户执行了 dubboctl 命令，总结一下做了什么，注意：我不要你任何语气词。以下是输出：%s`, string(output))
+	prompt = fmt.Sprintf(`I just ran the dubboctl command for a user. Here's a summary of what was done. Note: I don't want any interjections. Here's the output: %s`, string(output))
 	resp, err = client.Call(context.TODO(), prompt)
 	if err != nil {
-		return "", fmt.Errorf("生成自然语言描述失败: %v", err)
+		return "", fmt.Errorf("Failed to generate natural language description: %v", err)
 	}
 	return resp, nil
 }
@@ -439,11 +432,11 @@ func imageHubResource(imageInfo string) (string, error) {
 func imageDeployResource(deployType, port, namespace, imageInfo string) (string, error) {
 	client, err := NewOpenAIClient()
 	if err != nil {
-		return "", fmt.Errorf("创建 LLM 客户端失败: %v", err)
+		return "", fmt.Errorf("Failed to create LLM client: %v", err)
 	}
 	_, err = exec.LookPath("dubboctl")
 	if err != nil {
-		return "", errors.New("未找到 dubboctl，请确保已安装并配置在 PATH 中")
+		return "", errors.New("dubboctl not found, please make sure it is installed and configured in your PATH")
 	}
 
 	var output string
@@ -460,10 +453,10 @@ func imageDeployResource(deployType, port, namespace, imageInfo string) (string,
 		}
 	}
 
-	prompt := fmt.Sprintf(`我刚刚帮用户执行了 dubboctl 命令，总结一下做了什么，注意：我不要你任何语气词。以下是输出：%s`, string(output))
+	prompt := fmt.Sprintf(`I just ran the dubboctl command for a user. Here's a summary of what was done. Note: I don't want any interjections. Here's the output: %s`, string(output))
 	resp, err := client.Call(context.TODO(), prompt)
 	if err != nil {
-		return "", fmt.Errorf("生成自然语言描述失败: %v", err)
+		return "", fmt.Errorf("failed to generate natural language description: %v", err)
 	}
 	return resp, nil
 }
@@ -471,18 +464,18 @@ func imageDeployResource(deployType, port, namespace, imageInfo string) (string,
 func repoResource(repoType, name, url string) (string, error) {
 	client, err := NewOpenAIClient()
 	if err != nil {
-		return "", fmt.Errorf("创建 LLM 客户端失败: %v", err)
+		return "", fmt.Errorf("failed to create LLM client: %v", err)
 	}
 	_, err = exec.LookPath("dubboctl")
 	if err != nil {
-		return "", errors.New("未找到 dubboctl，请确保已安装并配置在 PATH 中")
+		return "", errors.New("dubboctl not found, please make sure it is installed and configured in your PATH")
 	}
 
 	var output string
 	switch repoType {
 	case "add":
 		if name == "" || url == "" {
-			return "", fmt.Errorf("add 操作需要提供 name 和 url")
+			return "", fmt.Errorf("The add operation requires a name and a url")
 		}
 		output, err = repoAdd(repoType, name, url)
 		if err != nil {
@@ -495,20 +488,20 @@ func repoResource(repoType, name, url string) (string, error) {
 		}
 	case "remove":
 		if name == "" {
-			return "", fmt.Errorf("remove 操作需要提供 name")
+			return "", fmt.Errorf("The remove operation requires a name")
 		}
 		output, err = repoRemove(repoType, name)
 		if err != nil {
 			return "", err
 		}
 	default:
-		return "", fmt.Errorf("未知操作类型: %s", repoType)
+		return "", fmt.Errorf("unknown operation type: %s", repoType)
 	}
 
-	prompt := fmt.Sprintf("我刚刚帮用户执行了 dubboctl repo %s 操作，总结一下做了什么，注意：我不要你任何语气词。以下是输出：%s", repoType, output)
+	prompt := fmt.Sprintf("I just ran the dubboctl repo %s operation for a user. Here's a summary of what I did. Note: I don't want any interjections. Here's the output: %s", repoType, output)
 	resp, err := client.Call(context.TODO(), prompt)
 	if err != nil {
-		return "", fmt.Errorf("生成自然语言描述失败: %v", err)
+		return "", fmt.Errorf("failed to generate natural language description: %v", err)
 	}
 	return resp, nil
 }
@@ -517,9 +510,9 @@ func repoAdd(repoType, name, url string) (string, error) {
 	cmd := exec.Command("dubboctl", "repo", repoType, name, url)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("命令执行失败：%s\n错误：%v", string(output), err)
+		return "", fmt.Errorf("Command execution failed: %s\nError: %v", string(output), err)
 	}
-	fmt.Printf("命令执行成功，输出如下：\n%s", string(output))
+	fmt.Printf("The command was executed successfully, and the output is as follows:\n%s", string(output))
 	return string(output), nil
 }
 
@@ -527,9 +520,9 @@ func repoList(repoType string) (string, error) {
 	cmd := exec.Command("dubboctl", "repo", repoType)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("命令执行失败：%s\n错误：%v", string(output), err)
+		return "", fmt.Errorf("Command execution failed: %s\nError: %v", string(output), err)
 	}
-	fmt.Printf("命令执行成功，输出如下：\n%s", string(output))
+	fmt.Printf("The command was executed successfully, and the output is as follows:\n%s", string(output))
 	return string(output), nil
 }
 
@@ -537,9 +530,9 @@ func repoRemove(repoType, name string) (string, error) {
 	cmd := exec.Command("dubboctl", "repo", repoType, name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("命令执行失败：%s\n错误：%v", string(output), err)
+		return "", fmt.Errorf("Command execution failed: %s\nError: %v", string(output), err)
 	}
-	fmt.Printf("命令执行成功，输出如下：\n%s", string(output))
+	fmt.Printf("The command was executed successfully, and the output is as follows:\n%s", string(output))
 	return string(output), nil
 }
 
@@ -550,9 +543,9 @@ func resourceCreate(port, namespace, imageInfo string) (string, error) {
 		"--port", port)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("命令执行失败：%s\n错误：%v", string(output), err)
+		return "", fmt.Errorf("Command execution failed: %s\nError: %v", string(output), err)
 	}
-	fmt.Printf("命令执行成功，输出如下：\n%s", string(output))
+	fmt.Printf("The command was executed successfully, and the output is as follows:\n%s", string(output))
 	return string(output), nil
 }
 
@@ -560,8 +553,8 @@ func resourceDelete(deployType string) (string, error) {
 	cmd := exec.Command("dubboctl", "image", "deploy", deployType)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("命令执行失败：%s\n错误：%v", string(output), err)
+		return "", fmt.Errorf("Command execution failed: %s\nError: %v", string(output), err)
 	}
-	fmt.Printf("命令执行成功，输出如下：\n%s", string(output))
+	fmt.Printf("The command was executed successfully, and the output is as follows:\n%s", string(output))
 	return string(output), nil
 }
