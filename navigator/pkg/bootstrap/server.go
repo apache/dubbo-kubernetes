@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-package main
+package bootstrap
 
-import (
-	"github.com/apache/dubbo-kubernetes/navigator/cmd/navigator-agent/app"
-	"os"
-)
+type Server struct {
+}
 
-func main() {
-	rootCmd := app.NewRootCommand()
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(-1)
-	}
+func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
+	return nil, nil
+}
+
+func (s *Server) Start(stop <-chan struct{}) error {
+	return nil
 }
