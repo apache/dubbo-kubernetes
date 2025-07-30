@@ -2,6 +2,8 @@
 The Dubbo Kubernetes Integration
 </h1>
 
+[![Build](https://github.com/apache/dubbo-kubernetes/actions/workflows/ci.yml/badge.svg)](https://github.com/apache/dubbo-kubernetes/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg)](https://codecov.io/gh/apache/dubbo-kubernetes)
 ![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 
 Provides support for building and deploying Dubbo applications in various environments, including Kubernetes and Alibaba Cloud ACK.
