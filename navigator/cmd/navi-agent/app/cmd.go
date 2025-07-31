@@ -19,66 +19,65 @@ package app
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/navigator/pkg/bootstrap"
+	"github.com/apache/dubbo-kubernetes/navigator/cmd/navi-agent/options"
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/spf13/cobra"
 )
 
 var (
-	serverArgs *bootstrap.NaviArgs
+	proxyArgs options.ProxyArgs
 )
 
 func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:          "navi-discovery",
-		Short:        "Dubbo Navigator.",
-		Long:         "Dubbo Navigator provides mesh-wide traffic management, security and policy capabilities in the Dubbo Service Mesh.",
+		Use:          "navi-agent",
+		Short:        "Dubbo Navi agent.",
+		Long:         "Dubbo Navi agent runs in the sidecar or gateway container and bootstraps Envoy.",
 		SilenceUsage: true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
 			UnknownFlags: true,
 		},
-		PreRunE: func(c *cobra.Command, args []string) error {
-			cmd.AddFlags(c)
-			return nil
-		},
 	}
-	discoveryCmd := newDiscoveryCommand()
-	addFlags(discoveryCmd)
-	rootCmd.AddCommand(discoveryCmd)
+	cmd.AddFlags(rootCmd)
+	proxyCmd := newProxyCommand()
+	addFlags(proxyCmd)
+	rootCmd.AddCommand(proxyCmd)
+	rootCmd.AddCommand(waitCmd)
+
 	return rootCmd
 }
 
-func newDiscoveryCommand() *cobra.Command {
+func newProxyCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "discovery",
-		Short: "Start Dubbo proxy discovery service.",
-		Args:  cobra.ExactArgs(0),
+		Use:   "proxy",
+		Short: "XDS proxy agent",
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
 			UnknownFlags: true,
 		},
-		PreRunE: func(c *cobra.Command, args []string) error {
-			return nil
-		},
 		RunE: func(c *cobra.Command, args []string) error {
-			// Create the stop channel for all the servers.
-			stop := make(chan struct{})
-
-			// Create the server for the discovery service.
-			discoveryServer, err := bootstrap.NewServer(serverArgs)
+			err := initProxy(args)
 			if err != nil {
-				return fmt.Errorf("failed to create discovery service: %v", err)
-			}
-
-			// Start the server
-			if err := discoveryServer.Start(stop); err != nil {
-				return fmt.Errorf("failed to start discovery service: %v", err)
+				return err
 			}
 			return nil
 		},
 	}
 }
 
-func addFlags(c *cobra.Command) {
+func initProxy(args []string) error {
+	proxyArgs.Type = model.SidecarProxy
+	if len(args) > 0 {
+		proxyArgs.Type = model.NodeType(args[0])
+		if !model.IsApplicationNodeType(proxyArgs.Type) {
+			return fmt.Errorf("invalid proxy Type: %s", string(proxyArgs.Type))
+		}
+	}
+	return nil
+}
+
+func addFlags(proxyCmd *cobra.Command) {
+	proxyArgs = options.NewProxyArgs()
 }

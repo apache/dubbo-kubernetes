@@ -15,17 +15,15 @@
  * limitations under the License.
  */
 
-package features
+package bootstrap
 
-import "github.com/apache/dubbo-kubernetes/pkg/env"
+import "istio.io/istio/pilot/pkg/serviceregistry/provider"
 
-var (
-	EnableXDSCaching = env.Register("NAVIGATOR_ENABLE_XDS_CACHE", true,
-		"If true, Navigator will cache XDS responses.").Get()
-
-	EnableCDSCaching = env.Register("NAVIGATOR_ENABLE_CDS_CACHE", true,
-		"If true, Navigator will cache CDS responses. Note: this depends on NAVIGATOR_ENABLE_XDS_CACHE.").Get()
-
-	EnableRDSCaching = env.Register("NAVIGATOR_ENABLE_RDS_CACHE", true,
-		"If true, Navigator will cache RDS responses. Note: this depends on NAVIGATOR_ENABLE_XDS_CACHE.").Get()
-)
+func hasKubeRegistry(registries []string) bool {
+	for _, r := range registries {
+		if provider.ID(r) == provider.Kubernetes {
+			return true
+		}
+	}
+	return false
+}

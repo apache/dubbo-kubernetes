@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-package features
+package main
 
-import "github.com/apache/dubbo-kubernetes/pkg/env"
-
-var (
-	EnableXDSCaching = env.Register("NAVIGATOR_ENABLE_XDS_CACHE", true,
-		"If true, Navigator will cache XDS responses.").Get()
-
-	EnableCDSCaching = env.Register("NAVIGATOR_ENABLE_CDS_CACHE", true,
-		"If true, Navigator will cache CDS responses. Note: this depends on NAVIGATOR_ENABLE_XDS_CACHE.").Get()
-
-	EnableRDSCaching = env.Register("NAVIGATOR_ENABLE_RDS_CACHE", true,
-		"If true, Navigator will cache RDS responses. Note: this depends on NAVIGATOR_ENABLE_XDS_CACHE.").Get()
+import (
+	"github.com/apache/dubbo-kubernetes/navigator/cmd/navi-agent/app"
+	"os"
 )
+
+func main() {
+	rootCmd := app.NewRootCommand()
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(-1)
+	}
+}

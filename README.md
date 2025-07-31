@@ -1,5 +1,5 @@
 <h1 align="center">
-The Dubbo Kubernetes Integration
+Dubbo Kubernetes
 </h1>
 
 [![Build](https://github.com/apache/dubbo-kubernetes/actions/workflows/ci.yml/badge.svg)](https://github.com/apache/dubbo-kubernetes/actions/workflows/ci.yml)
