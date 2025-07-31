@@ -15,25 +15,31 @@
  * limitations under the License.
  */
 
-package bootstrap
+package model
 
-import "github.com/apache/dubbo-kubernetes/navigator/pkg/model"
+import (
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
+)
 
-type Server struct {
-	environment *model.Environment
+type Environment struct {
+	Cache XdsCache
 }
 
-func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
-	e := model.NewEnvironment()
-	s := &Server{
-		environment: e,
-	}
-	for _, fn := range initFuncs {
-		fn(s)
-	}
-	return s, nil
+type XdsCacheImpl struct {
+	cds typedXdsCache[uint64]
+	eds typedXdsCache[uint64]
+	rds typedXdsCache[uint64]
+	sds typedXdsCache[string]
 }
 
-func (s *Server) Start(stop <-chan struct{}) error {
-	return nil
+func NewEnvironment() *Environment {
+	var cache XdsCache
+	if features.EnableXDSCaching {
+		cache = NewXdsCache()
+	} else {
+		cache = DisabledCache{}
+	}
+	return &Environment{
+		Cache: cache,
+	}
 }
