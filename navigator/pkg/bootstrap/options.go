@@ -17,5 +17,17 @@
 
 package bootstrap
 
+type RegistryOptions struct {
+	FileDir    string
+	Registries []string
+	KubeConfig string
+}
+
 type NaviArgs struct {
+	ServerOptions   DiscoveryServerOptions
+	RegistryOptions RegistryOptions
+	MeshConfigFile  string
+}
+
+type DiscoveryServerOptions struct {
 }

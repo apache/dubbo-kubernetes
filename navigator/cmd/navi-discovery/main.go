@@ -18,7 +18,7 @@
 package main
 
 import (
-	"github.com/apache/dubbo-kubernetes/navigator/cmd/navigator-discovery/app"
+	"github.com/apache/dubbo-kubernetes/navigator/cmd/navi-discovery/app"
 	"os"
 )
 
