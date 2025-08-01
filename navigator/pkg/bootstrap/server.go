@@ -19,19 +19,30 @@ package bootstrap
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/model"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/server"
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/xds"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/h2c"
+	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
+	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"k8s.io/client-go/rest"
 	"net"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 )
 
 type Server struct {
+	XDSServer         *xds.DiscoveryServer
+	clusterID         cluster.ID
 	environment       *model.Environment
 	server            server.Instance
 	kubeClient        kubelib.Client
@@ -43,6 +54,8 @@ type Server struct {
 	httpAddr          string
 	httpsServer       *http.Server // webhooks HTTPS Server.
 	httpsAddr         string
+	httpMux           *http.ServeMux
+	httpsMux          *http.ServeMux // webhooks
 }
 
 func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
@@ -50,10 +63,20 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 	s := &Server{
 		environment: e,
 		server:      server.New(),
+		clusterID:   getClusterID(args),
 	}
 	for _, fn := range initFuncs {
 		fn(s)
 	}
+	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases)
+	// TODO configGen
+	// TODO initReadinessProbes
+	s.initServers(args)
+
+	if err := s.serveHTTP(); err != nil {
+		return nil, fmt.Errorf("error serving http: %v", err)
+	}
+
 	if err := s.initKubeClient(args); err != nil {
 		return nil, fmt.Errorf("error initializing kube client: %v", err)
 	}
@@ -64,6 +87,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 	if err := s.server.Start(stop); err != nil {
 		return err
 	}
+	// TODO waitForCacheSync
+	// TODO XDSserver CacheSynced
+
 	if s.secureGrpcAddress != "" {
 		grpcListener, err := net.Listen("tcp", s.secureGrpcAddress)
 		if err != nil {
@@ -148,4 +174,69 @@ func (s *Server) initKubeClient(args *NaviArgs) error {
 	}
 
 	return nil
+}
+
+func (s *Server) initServers(args *NaviArgs) {
+	s.initGrpcServer(args.KeepaliveOptions)
+	multiplexGRPC := false
+	if args.ServerOptions.GRPCAddr != "" {
+		s.grpcAddress = args.ServerOptions.GRPCAddr
+	} else {
+		// This happens only if the GRPC port (15010) is disabled. We will multiplex
+		// it on the HTTP port. Does not impact the HTTPS gRPC or HTTPS.
+		fmt.Printf("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
+		multiplexGRPC = true
+	}
+	h2s := &http2.Server{
+		MaxConcurrentStreams: uint32(features.MaxConcurrentStreams),
+	}
+	multiplexHandler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If we detect gRPC, serve using grpcServer
+		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
+			s.grpcServer.ServeHTTP(w, r)
+			return
+		}
+		// Otherwise, this is meant for the standard HTTP server
+		s.httpMux.ServeHTTP(w, r)
+	}), h2s)
+	s.httpServer = &http.Server{
+		Addr:        args.ServerOptions.HTTPAddr,
+		Handler:     s.httpMux,
+		IdleTimeout: 90 * time.Second, // matches http.DefaultTransport keep-alive timeout
+		ReadTimeout: 30 * time.Second,
+	}
+	if multiplexGRPC {
+		s.httpServer.ReadTimeout = 0
+		s.httpServer.ReadHeaderTimeout = 30 * time.Second
+		s.httpServer.Handler = multiplexHandler
+	}
+}
+
+func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
+}
+
+func (s *Server) serveHTTP() error {
+	// At this point we are ready - start Http Listener so that it can respond to readiness events.
+	httpListener, err := net.Listen("tcp", s.httpServer.Addr)
+	if err != nil {
+		return err
+	}
+	go func() {
+		fmt.Printf("starting HTTP service at %s", httpListener.Addr())
+		if err := s.httpServer.Serve(httpListener); network.IsUnexpectedListenerError(err) {
+			fmt.Errorf("error serving http server: %v", err)
+		}
+	}()
+	s.httpAddr = httpListener.Addr().String()
+	return nil
+}
+
+func getClusterID(args *NaviArgs) cluster.ID {
+	clusterID := args.RegistryOptions.KubeOptions.ClusterID
+	if clusterID == "" {
+		if hasKubeRegistry(args.RegistryOptions.Registries) {
+			clusterID = cluster.ID(providers.Kubernetes)
+		}
+	}
+	return clusterID
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/spf13/cobra"
 )
 
@@ -65,6 +66,7 @@ func newDiscoveryCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
+			cmd.PrintFlags(c.Flags())
 			// Create the stop channel for all the servers.
 			stop := make(chan struct{})
 
@@ -76,13 +78,15 @@ func newDiscoveryCommand() *cobra.Command {
 			if err := discoveryServer.Start(stop); err != nil {
 				return fmt.Errorf("failed to start discovery service: %v", err)
 			}
-
 			return nil
 		},
 	}
 }
 
 func addFlags(c *cobra.Command) {
+	serverArgs = bootstrap.NewPilotArgs(func(p *bootstrap.NaviArgs) {
+		p.CtrlZOptions = ctrlz.DefaultOptions()
+	})
 	c.PersistentFlags().StringSliceVar(&serverArgs.RegistryOptions.Registries, "registries",
 		[]string{string(providers.Kubernetes)},
 		fmt.Sprintf("Comma separated list of platform service registries to read from (choose one or more from {%s})",

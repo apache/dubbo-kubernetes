@@ -20,7 +20,14 @@ package bootstrap
 import (
 	kubecontroller "github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
+	"github.com/apache/dubbo-kubernetes/pkg/keepalive"
+)
+
+var (
+	PodNamespace = env.Register("POD_NAMESPACE", constants.DubboSystemNamespace, "").Get()
+	PodName      = env.Register("POD_NAME", "", "").Get()
 )
 
 type RegistryOptions struct {
@@ -32,11 +39,13 @@ type RegistryOptions struct {
 }
 
 type NaviArgs struct {
-	ServerOptions   DiscoveryServerOptions
-	RegistryOptions RegistryOptions
-	MeshConfigFile  string
-	PodName         string
-	Namespace       string
+	ServerOptions    DiscoveryServerOptions
+	RegistryOptions  RegistryOptions
+	MeshConfigFile   string
+	PodName          string
+	Namespace        string
+	CtrlZOptions     *ctrlz.Options
+	KeepaliveOptions *keepalive.Options
 }
 
 type DiscoveryServerOptions struct {
@@ -46,13 +55,23 @@ type DiscoveryServerOptions struct {
 	SecureGRPCAddr string
 }
 
-var (
-	PodNamespace = env.Register("POD_NAMESPACE", constants.DubboSystemNamespace, "").Get()
-	PodName      = env.Register("POD_NAME", "", "").Get()
-)
+func NewPilotArgs(initFuncs ...func(*NaviArgs)) *NaviArgs {
+	p := &NaviArgs{}
+
+	// Apply Default Values.
+	p.applyDefaults()
+
+	// Apply custom initialization functions.
+	for _, fn := range initFuncs {
+		fn(p)
+	}
+
+	return p
+}
 
 func (p *NaviArgs) applyDefaults() {
 	p.Namespace = PodNamespace
 	p.PodName = PodName
+	p.KeepaliveOptions = keepalive.DefaultOption()
 	p.RegistryOptions.ClusterRegistriesNamespace = p.Namespace
 }
