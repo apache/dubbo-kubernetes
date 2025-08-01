@@ -15,22 +15,33 @@
  * limitations under the License.
  */
 
-package features
+package kubemesh
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/env"
+	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/pkg/mesh/meshwatcher"
+	v1 "k8s.io/api/core/v1"
 )
 
-var (
-	SharedMeshConfig = env.Register("SHARED_MESH_CONFIG", "",
-		"Additional config map to load for shared MeshConfig settings. The standard mesh config will take precedence.").Get()
-	EnableUnsafeAssertions = env.Register(
-		"UNSAFE_NAVIGATOR_ENABLE_RUNTIME_ASSERTIONS",
-		false,
-		"If enabled, addition runtime asserts will be performed. "+
-			"These checks are both expensive and panic on failure. As a result, this should be used only for testing.",
-	).Get()
-	ClusterName = env.Register("CLUSTER_ID", constants.DefaultClusterName,
-		"Defines the cluster and service registry that this Dubbod instance belongs to").Get()
+const (
+	MeshConfigKey   = "mesh"
+	MeshNetworksKey = "meshNetworks"
 )
+
+func NewConfigMapSource(client kube.Client, namespace, name, key string, opts krt.OptionsBuilder) meshwatcher.MeshConfigResource {
+	return meshwatcher.MeshConfigResource{}
+}
+
+func meshConfigMapData(cm *v1.ConfigMap, key string) *string {
+	if cm == nil {
+		return nil
+	}
+
+	cfgYaml, exists := cm.Data[key]
+	if !exists {
+		return nil
+	}
+
+	return &cfgYaml
+}

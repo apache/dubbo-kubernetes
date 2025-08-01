@@ -25,6 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -56,14 +57,19 @@ type Server struct {
 	httpsAddr         string
 	httpMux           *http.ServeMux
 	httpsMux          *http.ServeMux // webhooks
+	fileWatcher       filewatcher.FileWatcher
+	internalStop      chan struct{}
 }
 
 func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 	e := model.NewEnvironment()
 	s := &Server{
-		environment: e,
-		server:      server.New(),
-		clusterID:   getClusterID(args),
+		environment:  e,
+		server:       server.New(),
+		clusterID:    getClusterID(args),
+		httpMux:      http.NewServeMux(),
+		fileWatcher:  filewatcher.NewWatcher(),
+		internalStop: make(chan struct{}),
 	}
 	for _, fn := range initFuncs {
 		fn(s)
@@ -80,6 +86,8 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 	if err := s.initKubeClient(args); err != nil {
 		return nil, fmt.Errorf("error initializing kube client: %v", err)
 	}
+	s.initMeshConfiguration(args, s.fileWatcher)
+
 	return s, nil
 }
 
@@ -191,12 +199,10 @@ func (s *Server) initServers(args *NaviArgs) {
 		MaxConcurrentStreams: uint32(features.MaxConcurrentStreams),
 	}
 	multiplexHandler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If we detect gRPC, serve using grpcServer
 		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
 			s.grpcServer.ServeHTTP(w, r)
 			return
 		}
-		// Otherwise, this is meant for the standard HTTP server
 		s.httpMux.ServeHTTP(w, r)
 	}), h2s)
 	s.httpServer = &http.Server{

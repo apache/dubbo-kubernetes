@@ -21,4 +21,5 @@ const (
 	DubboSystemNamespace      = "dubbo-system"
 	DefaultClusterLocalDomain = "cluster.local"
 	DefaultClusterName        = "Kubernetes"
+	ServiceClusterName        = "dubbo-proxy"
 )

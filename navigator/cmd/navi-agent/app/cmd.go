@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/navigator/cmd/navi-agent/options"
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/spf13/cobra"
 )
@@ -58,6 +59,7 @@ func newProxyCommand() *cobra.Command {
 			UnknownFlags: true,
 		},
 		RunE: func(c *cobra.Command, args []string) error {
+			cmd.PrintFlags(c.Flags())
 			err := initProxy(args)
 			if err != nil {
 				return err
@@ -80,4 +82,10 @@ func initProxy(args []string) error {
 
 func addFlags(proxyCmd *cobra.Command) {
 	proxyArgs = options.NewProxyArgs()
+	proxyCmd.PersistentFlags().StringVar(&proxyArgs.DNSDomain, "domain", "",
+		"DNS domain suffix. If not provided uses ${POD_NAMESPACE}.svc.cluster.local")
+	proxyCmd.PersistentFlags().StringVar(&proxyArgs.MeshConfigFile, "meshConfig", "./etc/dubbo/config/mesh",
+		"File name for Dubbo mesh configuration. If not specified, a default mesh will be used. This may be overridden by "+
+			"PROXY_CONFIG environment variable or proxy.dubbo.io/config annotation.")
+	proxyCmd.PersistentFlags().StringVar(&proxyArgs.ServiceCluster, "serviceCluster", constants.ServiceClusterName, "Service cluster")
 }
