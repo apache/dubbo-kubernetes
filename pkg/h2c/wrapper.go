@@ -15,21 +15,33 @@
  * limitations under the License.
  */
 
-package cmd
+package h2c
 
 import (
-	"flag"
-	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
+	"net/http"
+	"net/textproto"
+
+	"golang.org/x/net/http/httpguts"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c" // nolint: depguard
 )
 
-func AddFlags(rootCmd *cobra.Command) {
-	rootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
+func NewHandler(h http.Handler, s *http2.Server) http.Handler {
+	return denyH2cUpgrade(h2c.NewHandler(h, s))
 }
 
-func PrintFlags(flags *pflag.FlagSet) {
-	flags.VisitAll(func(flag *pflag.Flag) {
-		fmt.Printf("FLAG: --%s=%q\n", flag.Name, flag.Value)
+func denyH2cUpgrade(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isH2CUpgrade(r.Header) {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_, _ = w.Write([]byte("h2c upgrade not allowed"))
+			return
+		}
+		h.ServeHTTP(w, r)
 	})
+}
+
+func isH2CUpgrade(h http.Header) bool {
+	return httpguts.HeaderValuesContainsToken(h[textproto.CanonicalMIMEHeaderKey("Upgrade")], "h2c") &&
+		httpguts.HeaderValuesContainsToken(h[textproto.CanonicalMIMEHeaderKey("Connection")], "HTTP2-Settings")
 }
