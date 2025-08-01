@@ -21,5 +21,6 @@ import "github.com/apache/dubbo-kubernetes/pkg/model"
 
 // Shared properties with Pilot Proxy struct.
 type Proxy struct {
-	Type model.NodeType
+	Type      model.NodeType
+	DNSDomain string
 }
