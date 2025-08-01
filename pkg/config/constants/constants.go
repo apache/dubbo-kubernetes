@@ -15,17 +15,10 @@
  * limitations under the License.
  */
 
-package bootstrap
+package constants
 
-import (
-	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
+const (
+	DubboSystemNamespace      = "dubbo-system"
+	DefaultClusterLocalDomain = "cluster.local"
+	DefaultClusterName        = "Kubernetes"
 )
-
-func hasKubeRegistry(registries []string) bool {
-	for _, r := range registries {
-		if providers.ID(r) == providers.Kubernetes {
-			return true
-		}
-	}
-	return false
-}

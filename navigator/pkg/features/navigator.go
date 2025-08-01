@@ -17,7 +17,10 @@
 
 package features
 
-import "github.com/apache/dubbo-kubernetes/pkg/env"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/env"
+)
 
 var (
 	EnableUnsafeAssertions = env.Register(
@@ -26,4 +29,6 @@ var (
 		"If enabled, addition runtime asserts will be performed. "+
 			"These checks are both expensive and panic on failure. As a result, this should be used only for testing.",
 	).Get()
+	ClusterName = env.Register("CLUSTER_ID", constants.DefaultClusterName,
+		"Defines the cluster and service registry that this Dubbod instance belongs to").Get()
 )

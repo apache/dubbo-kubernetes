@@ -15,17 +15,10 @@
  * limitations under the License.
  */
 
-package bootstrap
+package identifier
 
-import (
-	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
-)
+const Undefined = ""
 
-func hasKubeRegistry(registries []string) bool {
-	for _, r := range registries {
-		if providers.ID(r) == providers.Kubernetes {
-			return true
-		}
-	}
-	return false
+func IsSameOrEmpty(a, b string) bool {
+	return a == Undefined || b == Undefined || a == b
 }
