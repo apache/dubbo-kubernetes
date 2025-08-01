@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package bootstrap
+package cluster
 
-import (
-	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
-)
+import "github.com/apache/dubbo-kubernetes/pkg/util/identifier"
 
-func hasKubeRegistry(registries []string) bool {
-	for _, r := range registries {
-		if providers.ID(r) == providers.Kubernetes {
-			return true
-		}
-	}
-	return false
+// ID is the unique identifier for a k8s cluster.
+type ID string
+
+func (id ID) Equals(other ID) bool {
+	return identifier.IsSameOrEmpty(string(id), string(other))
+}
+
+func (id ID) String() string {
+	return string(id)
 }

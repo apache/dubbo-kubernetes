@@ -23,14 +23,26 @@ import (
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/server"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/network"
+	"google.golang.org/grpc"
 	"k8s.io/client-go/rest"
+	"net"
+	"net/http"
 	"os"
 )
 
 type Server struct {
-	environment *model.Environment
-	server      server.Instance
-	kubeClient  kubelib.Client
+	environment       *model.Environment
+	server            server.Instance
+	kubeClient        kubelib.Client
+	grpcServer        *grpc.Server
+	grpcAddress       string
+	secureGrpcServer  *grpc.Server
+	secureGrpcAddress string
+	httpServer        *http.Server // debug, monitoring and readiness Server.
+	httpAddr          string
+	httpsServer       *http.Server // webhooks HTTPS Server.
+	httpsAddr         string
 }
 
 func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
@@ -51,6 +63,45 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 func (s *Server) Start(stop <-chan struct{}) error {
 	if err := s.server.Start(stop); err != nil {
 		return err
+	}
+	if s.secureGrpcAddress != "" {
+		grpcListener, err := net.Listen("tcp", s.secureGrpcAddress)
+		if err != nil {
+			return err
+		}
+		go func() {
+			fmt.Printf("starting secure gRPC discovery service at %s", grpcListener.Addr())
+			if err := s.secureGrpcServer.Serve(grpcListener); err != nil {
+				fmt.Errorf("error serving secure GRPC server: %v", err)
+			}
+		}()
+	}
+
+	if s.grpcAddress != "" {
+		grpcListener, err := net.Listen("tcp", s.grpcAddress)
+		if err != nil {
+			return err
+		}
+		go func() {
+			fmt.Printf("starting gRPC discovery service at %s", grpcListener.Addr())
+			if err := s.grpcServer.Serve(grpcListener); err != nil {
+				fmt.Errorf("error serving GRPC server: %v", err)
+			}
+		}()
+	}
+
+	if s.httpsServer != nil {
+		httpsListener, err := net.Listen("tcp", s.httpsServer.Addr)
+		if err != nil {
+			return err
+		}
+		go func() {
+			fmt.Printf("starting webhook service at %s", httpsListener.Addr())
+			if err := s.httpsServer.ServeTLS(httpsListener, "", ""); network.IsUnexpectedListenerError(err) {
+				fmt.Errorf("error serving https server: %v", err)
+			}
+		}()
+		s.httpsAddr = httpsListener.Addr().String()
 	}
 	return nil
 }
@@ -83,6 +134,8 @@ func (s *Server) initKubeClient(args *NaviArgs) error {
 
 	if hasK8SConfigStore || hasKubeRegistry(args.RegistryOptions.Registries) {
 		kubeRestConfig, err := kubelib.DefaultRestConfig(args.RegistryOptions.KubeConfig, "", func(config *rest.Config) {
+			config.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
+			config.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
 		})
 		if err != nil {
 			return fmt.Errorf("failed creating kube config: %v", err)

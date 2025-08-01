@@ -15,17 +15,14 @@
  * limitations under the License.
  */
 
-package bootstrap
+package controller
 
-import (
-	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
-)
+import "github.com/apache/dubbo-kubernetes/pkg/cluster"
 
-func hasKubeRegistry(registries []string) bool {
-	for _, r := range registries {
-		if providers.ID(r) == providers.Kubernetes {
-			return true
-		}
-	}
-	return false
+type Options struct {
+	KubernetesAPIQPS   float32
+	KubernetesAPIBurst int
+	DomainSuffix       string
+	ClusterID          cluster.ID
+	ClusterAliases     map[string]string
 }

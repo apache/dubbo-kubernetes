@@ -20,7 +20,10 @@ package app
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/bootstrap"
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -65,22 +68,49 @@ func newDiscoveryCommand() *cobra.Command {
 			// Create the stop channel for all the servers.
 			stop := make(chan struct{})
 
-			// Create the server for the discovery service.
 			discoveryServer, err := bootstrap.NewServer(serverArgs)
 			if err != nil {
 				return fmt.Errorf("failed to create discovery service: %v", err)
 			}
 
-			// Start the server
 			if err := discoveryServer.Start(stop); err != nil {
 				return fmt.Errorf("failed to start discovery service: %v", err)
 			}
+
 			return nil
 		},
 	}
 }
 
 func addFlags(c *cobra.Command) {
+	c.PersistentFlags().StringSliceVar(&serverArgs.RegistryOptions.Registries, "registries",
+		[]string{string(providers.Kubernetes)},
+		fmt.Sprintf("Comma separated list of platform service registries to read from (choose one or more from {%s})",
+			providers.Kubernetes))
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.ClusterRegistriesNamespace, "clusterRegistriesNamespace",
+		serverArgs.RegistryOptions.ClusterRegistriesNamespace, "Namespace for ConfigMap which stores clusters configs")
 	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.KubeConfig, "kubeconfig", "",
 		"Use a Kubernetes configuration file instead of in-cluster configuration")
+	c.PersistentFlags().StringVar(&serverArgs.MeshConfigFile, "meshConfig", "./etc/dubbo/config/mesh",
+		"File name for Dubbo mesh configuration. If not specified, a default mesh will be used.")
+	c.PersistentFlags().Float32Var(&serverArgs.RegistryOptions.KubeOptions.KubernetesAPIQPS, "kubernetesApiQPS", 80.0,
+		"Maximum QPS when communicating with the kubernetes API")
+	c.PersistentFlags().IntVar(&serverArgs.RegistryOptions.KubeOptions.KubernetesAPIBurst, "kubernetesApiBurst", 160,
+		"Maximum burst for throttle when communicating with the kubernetes API")
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.HTTPAddr, "httpAddr", ":8080",
+		"Discovery service HTTP address")
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.HTTPSAddr, "httpsAddr", ":15017",
+		"Injection and validation service HTTPS address")
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GRPCAddr, "grpcAddr", ":15010",
+		"Discovery service gRPC address")
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.SecureGRPCAddr, "secureGRPCAddr", ":15012",
+		"Discovery service secured gRPC address")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.FileDir, "configDir", "",
+		"Directory to watch for updates to config yaml files. If specified, the files will be used as the source of config, rather than a CRD client.")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.KubeOptions.DomainSuffix, "domain", constants.DefaultClusterLocalDomain,
+		"DNS domain suffix")
+	c.PersistentFlags().StringVar((*string)(&serverArgs.RegistryOptions.KubeOptions.ClusterID), "clusterID", features.ClusterName,
+		"The ID of the cluster that this Dubbod instance resides")
+	c.PersistentFlags().StringToStringVar(&serverArgs.RegistryOptions.KubeOptions.ClusterAliases, "clusterAliases", map[string]string{},
+		"Alias names for clusters. Example: alias1=cluster1,alias2=cluster2")
 }

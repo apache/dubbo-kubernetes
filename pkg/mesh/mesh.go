@@ -3,11 +3,10 @@ package mesh
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
+	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/hashicorp/go-multierror"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	"istio.io/istio/pkg/config/validation/agent"
-	"istio.io/istio/pkg/util/protomarshal"
 	"os"
 	"sigs.k8s.io/yaml"
 )
@@ -89,15 +88,7 @@ func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshco
 	}
 
 	defaultConfig.TrustDomainAliases = sets.SortedList(sets.New(append(defaultConfig.TrustDomainAliases, prevTrustDomainAliases...)...))
-
-	warn, err := agent.ValidateMeshConfig(defaultConfig)
-	if err != nil {
-		return nil, err
-	}
-	if warn != nil {
-		fmt.Printf("warnings occurred during mesh validation: %v", warn)
-	}
-
+	// TODO ValidationMeshConfig
 	return defaultConfig, nil
 }
 
