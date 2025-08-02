@@ -6,7 +6,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	krtfiles "github.com/apache/dubbo-kubernetes/pkg/kube/krt/files"
 	"github.com/apache/dubbo-kubernetes/pkg/mesh"
-
 	"os"
 	"path"
 )

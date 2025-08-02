@@ -1,10 +1,11 @@
 package krt
 
+import "go.uber.org/atomic"
+
 type dependency struct {
 	id             collectionUID
 	collectionName string
-	// Filter over the collection
-	filter *filter
+	filter         *filter
 }
 
 type collectionUID uint64
@@ -23,4 +24,10 @@ func buildCollectionOptions(opts ...CollectionOption) collectionOptions {
 		c.stop = make(chan struct{})
 	}
 	return *c
+}
+
+var globalUIDCounter = atomic.NewUint64(1)
+
+func nextUID() collectionUID {
+	return collectionUID(globalUIDCounter.Inc())
 }
