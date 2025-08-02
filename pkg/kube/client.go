@@ -20,14 +20,19 @@ package kube
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
+	"github.com/apache/dubbo-kubernetes/pkg/sleep"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/metadata"
+	"k8s.io/client-go/tools/cache"
+
 	// "k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -47,15 +52,23 @@ type client struct {
 	dynamic         dynamic.Interface
 	kube            kubernetes.Interface
 	mapper          meta.ResettableRESTMapper
+	metadata        metadata.Interface
 	http            *http.Client
+	clusterID       cluster.ID
 }
 
 type Client interface {
-	// Ext returns the API extensions client.
 	Ext() kubeExtClient.Interface
 
-	// Kube returns the core kube client
 	Kube() kubernetes.Interface
+
+	ClusterID() cluster.ID
+
+	Dynamic() dynamic.Interface
+
+	Metadata() metadata.Interface
+
+	Informers() informerfactory.InformerFactory
 }
 
 type CLIClient interface {
@@ -135,6 +148,22 @@ func (c *client) Kube() kubernetes.Interface {
 	return c.kube
 }
 
+func (c *client) ClusterID() cluster.ID {
+	return c.clusterID
+}
+
+func (c *client) Dynamic() dynamic.Interface {
+	return c.dynamic
+}
+
+func (c *client) Metadata() metadata.Interface {
+	return c.metadata
+}
+
+func (c *client) Informers() informerfactory.InformerFactory {
+	return c.informerFactory
+}
+
 func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error) {
 	gvr, namespaced := c.bestEffortToGVR(gvk, obj, namespace)
 	var dr dynamic.ResourceInterface
@@ -177,5 +206,54 @@ func WithRevision(revision string) ClientOption {
 		client := cliClient.(*client)
 		client.revision = revision
 		return client
+	}
+}
+
+func WithCluster(id cluster.ID) ClientOption {
+	return func(c CLIClient) CLIClient {
+		client := c.(*client)
+		client.clusterID = id
+		return client
+	}
+}
+
+func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.InformerSynced) (r bool) {
+	_ = time.Now()
+	maximum := time.Millisecond * 100
+	delay := time.Millisecond
+	f := func() bool {
+		for _, syncFunc := range cacheSyncs {
+			if !syncFunc() {
+				return false
+			}
+		}
+		return true
+	}
+	attempt := 0
+	defer func() {
+		if r {
+		} else {
+		}
+	}()
+	for {
+		select {
+		case <-stop:
+			return false
+		default:
+		}
+		attempt++
+		res := f()
+		if res {
+			return true
+		}
+		delay *= 2
+		if delay > maximum {
+			delay = maximum
+		}
+		if attempt%50 == 0 {
+		}
+		if !sleep.Until(stop, delay) {
+			return false
+		}
 	}
 }

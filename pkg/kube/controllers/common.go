@@ -1,5 +1,10 @@
 package controllers
 
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
 type EventType int
 
 const (
@@ -26,4 +31,14 @@ func (event EventType) String() string {
 		out = "delete"
 	}
 	return out
+}
+
+type ComparableObject interface {
+	comparable
+	Object
+}
+
+type Object interface {
+	metav1.Object
+	runtime.Object
 }

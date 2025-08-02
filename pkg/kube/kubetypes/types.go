@@ -17,14 +17,54 @@
 
 package kubetypes
 
+import (
+	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+)
+
+type InformerType int
+
+const (
+	StandardInformer InformerType = iota
+	DynamicInformer
+	MetadataInformer
+)
+
+type WriteAPI[T runtime.Object] interface {
+	Create(ctx context.Context, object T, opts metav1.CreateOptions) (T, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result T, err error)
+	Update(ctx context.Context, object T, opts metav1.UpdateOptions) (T, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+}
+
+type WriteStatusAPI[T runtime.Object] interface {
+	UpdateStatus(ctx context.Context, object T, opts metav1.UpdateOptions) (T, error)
+}
+
 type InformerOptions struct {
-	// A selector to restrict the list of returned objects by their labels.
-	LabelSelector string
-	// A selector to restrict the list of returned objects by their fields.
-	FieldSelector string
-	// Namespace to watch.
-	Namespace string
-	// ObjectTransform allows arbitrarily modifying objects stored in the underlying cache.
-	// If unset, a default transform is provided to remove ManagedFields (high cost, low value)
+	LabelSelector   string
+	FieldSelector   string
+	Namespace       string
 	ObjectTransform func(obj any) (any, error)
+	Cluster         cluster.ID
+	InformerType    InformerType
+}
+
+type Filter struct {
+	LabelSelector   string
+	FieldSelector   string
+	Namespace       string
+	ObjectFilter    DynamicObjectFilter
+	ObjectTransform func(obj any) (any, error)
+}
+
+type DynamicObjectFilter interface {
+	// Filter returns true if the input object or namespace string resides in a namespace selected for discovery
+	Filter(obj any) bool
+	// AddHandler registers a handler on namespace, which will be triggered when namespace selected or deselected.
+	AddHandler(func(selected, deselected sets.String))
 }

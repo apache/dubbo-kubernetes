@@ -3,6 +3,8 @@ package files
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"go.uber.org/atomic"
+	"time"
 )
 
 type FileSingleton[T any] struct {
@@ -14,6 +16,49 @@ func NewFileSingleton[T any](
 	filename string,
 	readFile func(filename string) (T, error),
 	opts ...krt.CollectionOption,
-) {
-	return
+) (FileSingleton[T], error) {
+	cfg, err := readFile(filename)
+	if err != nil {
+		return FileSingleton[T]{}, err
+	}
+
+	stop := krt.GetStop(opts...)
+
+	cur := atomic.NewPointer(&cfg)
+	trigger := krt.NewRecomputeTrigger(true, opts...)
+	sc := krt.NewSingleton[T](func(ctx krt.HandlerContext) *T {
+		trigger.MarkDependant(ctx)
+		return cur.Load()
+	}, opts...)
+	sc.AsCollection().WaitUntilSynced(stop)
+	watchFile(fileWatcher, filename, stop, func() {
+		cfg, err := readFile(filename)
+		if err != nil {
+			log.Warnf("failed to update: %v", err)
+			return
+		}
+		cur.Store(&cfg)
+		trigger.TriggerRecomputation()
+	})
+	return FileSingleton[T]{sc}, nil
+}
+
+func watchFile(fileWatcher filewatcher.FileWatcher, file string, stop <-chan struct{}, callback func()) {
+	_ = fileWatcher.Add(file)
+	go func() {
+		var timerC <-chan time.Time
+		for {
+			select {
+			case <-stop:
+				return
+			case <-timerC:
+				timerC = nil
+				callback()
+			case <-fileWatcher.Events(file):
+				if timerC == nil {
+					timerC = time.After(100 * time.Millisecond)
+				}
+			}
+		}
+	}()
 }

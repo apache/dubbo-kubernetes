@@ -14,6 +14,10 @@ func NewOptionsBuilder(stop <-chan struct{}, namePrefix string) OptionsBuilder {
 	}
 }
 
+func (k OptionsBuilder) Stop() <-chan struct{} {
+	return k.stop
+}
+
 func (k OptionsBuilder) WithName(n string) []CollectionOption {
 	name := n
 	if k.namePrefix != "" {

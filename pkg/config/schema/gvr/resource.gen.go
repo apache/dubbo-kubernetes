@@ -18,3 +18,9 @@ var (
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 )
+
+func IsClusterScoped(g schema.GroupVersionResource) bool {
+	switch g {
+	}
+	return false
+}

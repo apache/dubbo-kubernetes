@@ -61,9 +61,9 @@ func (s *Server) getConfigurationSources(args *NaviArgs, fileWatcher filewatcher
 	if s.kubeClient == nil {
 		return nil
 	}
-	// configMapName := getMeshConfigMapName("")
-	// primary := kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, configMapName, cmKey, opts)
-	return nil
+	configMapName := getMeshConfigMapName("")
+	primary := kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, configMapName, cmKey, opts)
+	return toSources(primary, userMeshConfig)
 }
 
 func toSources(base meshwatcher.MeshConfigSource, user *meshwatcher.MeshConfigSource) []meshwatcher.MeshConfigSource {
