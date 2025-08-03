@@ -3,6 +3,7 @@ package controllers
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/cache"
 )
 
 type EventType int
@@ -41,4 +42,55 @@ type ComparableObject interface {
 type Object interface {
 	metav1.Object
 	runtime.Object
+}
+
+type EventHandler[T Object] struct {
+	AddFunc         func(obj T)
+	AddExtendedFunc func(obj T, initialSync bool)
+	UpdateFunc      func(oldObj, newObj T)
+	DeleteFunc      func(obj T)
+}
+
+func (e EventHandler[T]) OnAdd(obj interface{}, initialSync bool) {
+	if e.AddExtendedFunc != nil {
+		e.AddExtendedFunc(Extract[T](obj), initialSync)
+	} else if e.AddFunc != nil {
+		e.AddFunc(Extract[T](obj))
+	}
+}
+
+func (e EventHandler[T]) OnUpdate(oldObj, newObj interface{}) {
+	if e.UpdateFunc != nil {
+		e.UpdateFunc(Extract[T](oldObj), Extract[T](newObj))
+	}
+}
+
+func (e EventHandler[T]) OnDelete(obj interface{}) {
+	if e.DeleteFunc != nil {
+		e.DeleteFunc(Extract[T](obj))
+	}
+}
+
+func IsNil[O comparable](o O) bool {
+	var t O
+	return o == t
+}
+
+func Extract[T Object](obj any) T {
+	var empty T
+	if obj == nil {
+		return empty
+	}
+	o, ok := obj.(T)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			return empty
+		}
+		o, ok = tombstone.Obj.(T)
+		if !ok {
+			return empty
+		}
+	}
+	return o
 }

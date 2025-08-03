@@ -175,7 +175,7 @@ func (s *Server) initKubeClient(args *NaviArgs) error {
 			return fmt.Errorf("failed creating kube config: %v", err)
 		}
 
-		s.kubeClient, err = kubelib.NewCLIClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), nil)
+		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), s.clusterID)
 		if err != nil {
 			return fmt.Errorf("failed creating kube client: %v", err)
 		}

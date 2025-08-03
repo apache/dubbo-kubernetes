@@ -19,6 +19,7 @@ var (
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
+	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
@@ -47,6 +48,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Namespace, true
 	case Job:
 		return gvr.Job, true
+	case MeshConfig:
+		return gvr.MeshConfig, true
 	}
 	return schema.GroupVersionResource{}, false
 }

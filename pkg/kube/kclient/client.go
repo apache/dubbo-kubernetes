@@ -13,6 +13,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -57,8 +58,7 @@ func ToOpts(c kube.Client, gvr schema.GroupVersionResource, filter Filter) kubet
 
 type handlerRegistration struct {
 	registration cache.ResourceEventHandlerRegistration
-	// handler is the actual handler. Note this does NOT have the filtering applied.
-	handler cache.ResourceEventHandler
+	handler      cache.ResourceEventHandler
 }
 
 type informerClient[T controllers.Object] struct {
@@ -120,6 +120,21 @@ func applyDynamicFilter[T controllers.ComparableObject](filter Filter, gvr schem
 	}
 }
 
+func (n *informerClient[T]) List(namespace string, selector klabels.Selector) []T {
+	var res []T
+	err := cache.ListAllByNamespace(n.informer.GetIndexer(), namespace, selector, func(i any) {
+		cast := i.(T)
+		if n.applyFilter(cast) {
+			res = append(res, cast)
+		}
+	})
+
+	if err != nil && features.EnableUnsafeAssertions {
+		fmt.Printf("lister returned err for %v: %v", namespace, err)
+	}
+	return res
+}
+
 func (n *informerClient[T]) ListUnfiltered(namespace string, selector klabels.Selector) []T {
 	var res []T
 	err := cache.ListAllByNamespace(n.informer.GetIndexer(), namespace, selector, func(i any) {
@@ -127,7 +142,6 @@ func (n *informerClient[T]) ListUnfiltered(namespace string, selector klabels.Se
 		res = append(res, cast)
 	})
 
-	// Should never happen
 	if err != nil && features.EnableUnsafeAssertions {
 		fmt.Printf("lister returned err for %v: %v", namespace, err)
 	}
@@ -153,6 +167,83 @@ func (n *informerClient[T]) Get(name, namespace string) T {
 	return cast
 }
 
+func (n *informerClient[T]) HasSyncedIgnoringHandlers() bool {
+	return n.informer.HasSynced()
+}
+
+func (n *informerClient[T]) ShutdownHandlers() {
+	n.handlerMu.Lock()
+	defer n.handlerMu.Unlock()
+	for _, c := range n.registeredHandlers {
+		_ = n.informer.RemoveEventHandler(c.registration)
+	}
+	n.registeredHandlers = nil
+}
+
+func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.ResourceEventHandlerRegistration {
+	fh := cache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			if n.filter == nil {
+				return true
+			}
+			return n.filter(obj)
+		},
+		Handler: h,
+	}
+	n.handlerMu.Lock()
+	defer n.handlerMu.Unlock()
+	// AddEventHandler is safe to call under the lock. This will *enqueue* all existing items, but not block on processing them,
+	// so the timing is quick.
+	// If we do this outside the lock, we can hit a subtle race condition where we have started processing items before they
+	// are registered (in n.registeredHandlers); this can cause the dynamic filtering to miss events
+	reg, err := n.informer.AddEventHandler(fh)
+	if err != nil {
+		// Should only happen if its already stopped. We should exit early.
+		return neverReady{}
+	}
+	n.registeredHandlers = append(n.registeredHandlers, handlerRegistration{registration: reg, handler: h})
+	return reg
+}
+
+type neverReady struct{}
+
+func (a neverReady) HasSynced() bool {
+	return false
+}
+
+func (n *informerClient[T]) Index(name string, extract func(o T) []string) RawIndexer {
+	if _, ok := n.informer.GetIndexer().GetIndexers()[name]; !ok {
+		if err := n.informer.AddIndexers(map[string]cache.IndexFunc{
+			name: func(obj any) ([]string, error) {
+				t := controllers.Extract[T](obj)
+				return extract(t), nil
+			},
+		}); err != nil {
+		}
+	}
+	ret := internalIndex{
+		key:     name,
+		indexer: n.informer.GetIndexer(),
+		filter:  n.filter,
+	}
+	return ret
+}
+
+type internalIndex struct {
+	key     string
+	indexer cache.Indexer
+	filter  func(t any) bool
+}
+
+func (n *informerClient[T]) ShutdownHandler(registration cache.ResourceEventHandlerRegistration) {
+	n.handlerMu.Lock()
+	defer n.handlerMu.Unlock()
+	n.registeredHandlers = slices.FilterInPlace(n.registeredHandlers, func(h handlerRegistration) bool {
+		return h.registration != registration
+	})
+	_ = n.informer.RemoveEventHandler(registration)
+}
+
 func keyFunc(name, namespace string) string {
 	if len(namespace) == 0 {
 		return name
@@ -165,6 +256,15 @@ func (n *informerClient[T]) applyFilter(t T) bool {
 		return true
 	}
 	return n.filter(t)
+}
+func (i internalIndex) Lookup(key string) []any {
+	res, err := i.indexer.ByIndex(i.key, key)
+	if err != nil {
+	}
+	if i.filter != nil {
+		return slices.FilterInPlace(res, i.filter)
+	}
+	return res
 }
 
 func (n *writeClient[T]) Create(object T) (T, error) {

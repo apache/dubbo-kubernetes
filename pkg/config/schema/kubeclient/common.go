@@ -3,10 +3,12 @@ package kubeclient
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/typemap"
+	k8sioapicorev1 "k8s.io/api/core/v1"
 	kubeext "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -181,6 +183,8 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 
 func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	switch g {
+	case gvr.ConfigMap:
+		return &k8sioapicorev1.ConfigMap{}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}

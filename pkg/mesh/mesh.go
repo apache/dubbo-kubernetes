@@ -94,9 +94,6 @@ func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshco
 
 func DefaultMeshConfig() *meshconfig.MeshConfig {
 	proxyConfig := DefaultProxyConfig()
-
-	// Defaults matching the standard install
-	// order matches the generated mesh config.
 	return &meshconfig.MeshConfig{
 		DefaultConfig: proxyConfig,
 	}
