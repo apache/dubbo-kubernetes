@@ -36,4 +36,6 @@ var (
 			"Warning: only a single namespace can be set.").Get()
 	ClusterName = env.Register("CLUSTER_ID", constants.DefaultClusterName,
 		"Defines the cluster and service registry that this Dubbod instance belongs to").Get()
+	EnableVtprotobuf = env.Register("ENABLE_VTPROTOBUF", true,
+		"If true, will use optimized vtprotobuf based marshaling. Requires a build with -tags=vtprotobuf.").Get()
 )

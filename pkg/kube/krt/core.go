@@ -23,6 +23,10 @@ type Event[T any] struct {
 	Event controllers.EventType
 }
 
+type Equaler[K any] interface {
+	Equals(k K) bool
+}
+
 type indexer[T any] interface {
 	Lookup(key string) []T
 }
@@ -36,13 +40,10 @@ type EventStream[T any] interface {
 type CollectionOption func(*collectionOptions)
 
 type collectionOptions struct {
-	name          string
-	augmentation  func(o any) any
-	stop          <-chan struct{}
-	joinUnchecked bool
-
-	indexCollectionFromString func(string) any
-	metadata                  Metadata
+	name         string
+	augmentation func(o any) any
+	stop         <-chan struct{}
+	metadata     Metadata
 }
 
 type HandlerRegistration interface {
@@ -62,4 +63,19 @@ type Singleton[T any] interface {
 	Register(f func(o Event[T])) HandlerRegistration
 	AsCollection() Collection[T]
 	Metadata() Metadata
+}
+
+func (e Event[T]) Latest() T {
+	if e.New != nil {
+		return *e.New
+	}
+	return *e.Old
+}
+
+type ResourceNamer interface {
+	ResourceName() string
+}
+
+type uidable interface {
+	uid() collectionUID
 }

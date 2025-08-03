@@ -22,3 +22,13 @@ func TypeName[T any]() string {
 	var empty T
 	return fmt.Sprintf("%T", empty)
 }
+
+func Equal[T comparable](a, b *T) bool {
+	if (a == nil) != (b == nil) {
+		return false
+	}
+	if a == nil {
+		return true
+	}
+	return *a == *b
+}

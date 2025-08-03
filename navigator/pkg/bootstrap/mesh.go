@@ -24,6 +24,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/mesh/meshwatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"os"
 )
 
@@ -32,7 +33,7 @@ const (
 )
 
 func (s *Server) initMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.FileWatcher) {
-	fmt.Printf("initializing mesh configuration %v", args.MeshConfigFile)
+	fmt.Printf("\ninitializing mesh configuration %v", args.MeshConfigFile)
 	col := s.getMeshConfiguration(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
 }
@@ -50,6 +51,7 @@ func (s *Server) getConfigurationSources(args *NaviArgs, fileWatcher filewatcher
 	opts := krt.NewOptionsBuilder(s.internalStop, "")
 	var userMeshConfig *meshwatcher.MeshConfigSource
 	if features.SharedMeshConfig != "" && s.kubeClient != nil {
+		userMeshConfig = ptr.Of(kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, features.SharedMeshConfig, cmKey, opts))
 	}
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
 		fileSource, err := meshwatcher.NewFileSource(fileWatcher, file, opts)

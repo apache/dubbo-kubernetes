@@ -1,6 +1,7 @@
 package files
 
 import (
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"go.uber.org/atomic"
@@ -34,7 +35,7 @@ func NewFileSingleton[T any](
 	watchFile(fileWatcher, filename, stop, func() {
 		cfg, err := readFile(filename)
 		if err != nil {
-			log.Warnf("failed to update: %v", err)
+			fmt.Errorf("failed to update: %v", err)
 			return
 		}
 		cur.Store(&cfg)

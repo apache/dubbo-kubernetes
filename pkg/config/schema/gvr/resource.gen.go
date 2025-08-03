@@ -17,10 +17,19 @@ var (
 	Secret                         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
+	MeshConfig                     = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshconfigs"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
 	switch g {
+	case ConfigMap:
+		return false
+	case CustomResourceDefinition:
+		return true
+	case DaemonSet:
+		return false
+	case Deployment:
+		return false
 	}
 	return false
 }

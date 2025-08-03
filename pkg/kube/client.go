@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/tools/cache"
 
-	// "k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -82,6 +81,10 @@ func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLICl
 	return newInternalClient(newClientFactory(clientCfg, false), opts...)
 }
 
+func NewClient(clientConfig clientcmd.ClientConfig, cluster cluster.ID) (Client, error) {
+	return newInternalClient(newClientFactory(clientConfig, false), WithCluster(cluster))
+}
+
 func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient, error) {
 	var c client
 	var err error
@@ -102,6 +105,10 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 		return nil, err
 	}
 	c.dynamic, err = dynamic.NewForConfig(c.config)
+	if err != nil {
+		return nil, err
+	}
+	c.metadata, err = metadata.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
 	}
@@ -201,24 +208,8 @@ func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.
 	return gvr, namespaced
 }
 
-func WithRevision(revision string) ClientOption {
-	return func(cliClient CLIClient) CLIClient {
-		client := cliClient.(*client)
-		client.revision = revision
-		return client
-	}
-}
-
-func WithCluster(id cluster.ID) ClientOption {
-	return func(c CLIClient) CLIClient {
-		client := c.(*client)
-		client.clusterID = id
-		return client
-	}
-}
-
 func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.InformerSynced) (r bool) {
-	_ = time.Now()
+	t0 := time.Now()
 	maximum := time.Millisecond * 100
 	delay := time.Millisecond
 	f := func() bool {
@@ -232,7 +223,9 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 	attempt := 0
 	defer func() {
 		if r {
+			fmt.Printf("sync complete: name=%s, time=%v\n", name, time.Since(t0))
 		} else {
+			fmt.Printf("sync failed: name=%s, time=%v\n", name, time.Since(t0))
 		}
 	}()
 	for {
@@ -251,9 +244,28 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 			delay = maximum
 		}
 		if attempt%50 == 0 {
+			// Log every 50th attempt (5s) at info, to avoid too much noisy
+			fmt.Printf("waiting for sync...: name=%s, time=%v\n", name, time.Since(t0))
+
 		}
 		if !sleep.Until(stop, delay) {
 			return false
 		}
+	}
+}
+
+func WithCluster(id cluster.ID) ClientOption {
+	return func(c CLIClient) CLIClient {
+		client := c.(*client)
+		client.clusterID = id
+		return client
+	}
+}
+
+func WithRevision(revision string) ClientOption {
+	return func(cliClient CLIClient) CLIClient {
+		client := cliClient.(*client)
+		client.revision = revision
+		return client
 	}
 }

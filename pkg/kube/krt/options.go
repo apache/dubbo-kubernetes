@@ -37,3 +37,9 @@ func WithName(name string) CollectionOption {
 		c.name = name
 	}
 }
+
+func WithObjectAugmentation(fn func(o any) any) CollectionOption {
+	return func(c *collectionOptions) {
+		c.augmentation = fn
+	}
+}
