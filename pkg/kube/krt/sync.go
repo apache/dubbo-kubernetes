@@ -12,6 +12,21 @@ type pollSyncer struct {
 	f    func() bool
 }
 
+type multiSyncer struct {
+	syncers []Syncer
+}
+
+type channelSyncer struct {
+	name   string
+	synced <-chan struct{}
+}
+
+var (
+	_ Syncer = channelSyncer{}
+	_ Syncer = pollSyncer{}
+	_ Syncer = multiSyncer{}
+)
+
 func (c channelSyncer) WaitUntilSynced(stop <-chan struct{}) bool {
 	return waitForCacheSync(c.name, stop, c.synced)
 }
@@ -31,10 +46,6 @@ func (c pollSyncer) WaitUntilSynced(stop <-chan struct{}) bool {
 
 func (c pollSyncer) HasSynced() bool {
 	return c.f()
-}
-
-type multiSyncer struct {
-	syncers []Syncer
 }
 
 func (c multiSyncer) WaitUntilSynced(stop <-chan struct{}) bool {

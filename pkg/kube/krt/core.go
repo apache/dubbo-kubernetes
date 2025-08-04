@@ -6,7 +6,6 @@ type FetchOption func(*dependency)
 
 type HandlerContext interface {
 	DiscardResult()
-	_internalHandler()
 }
 
 type (
@@ -39,13 +38,6 @@ type EventStream[T any] interface {
 
 type CollectionOption func(*collectionOptions)
 
-type collectionOptions struct {
-	name         string
-	augmentation func(o any) any
-	stop         <-chan struct{}
-	metadata     Metadata
-}
-
 type HandlerRegistration interface {
 	Syncer
 	UnregisterHandler()
@@ -63,6 +55,25 @@ type Singleton[T any] interface {
 	Register(f func(o Event[T])) HandlerRegistration
 	AsCollection() Collection[T]
 	Metadata() Metadata
+}
+
+type LabelSelectorer interface {
+	GetLabelSelector() map[string]string
+}
+
+type Labeler interface {
+	GetLabels() map[string]string
+}
+
+func (e Event[T]) Items() []T {
+	res := make([]T, 0, 2)
+	if e.Old != nil {
+		res = append(res, *e.Old)
+	}
+	if e.New != nil {
+		res = append(res, *e.New)
+	}
+	return res
 }
 
 func (e Event[T]) Latest() T {

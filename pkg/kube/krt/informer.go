@@ -12,6 +12,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+var _ internalCollection[controllers.Object] = &informer[controllers.Object]{}
+
 type informer[I controllers.ComparableObject] struct {
 	inf            kclient.Informer[I]
 	collectionName string
@@ -21,11 +23,6 @@ type informer[I controllers.ComparableObject] struct {
 	synced         chan struct{}
 	baseSyncer     Syncer
 	metadata       Metadata
-}
-
-type channelSyncer struct {
-	name   string
-	synced <-chan struct{}
 }
 
 func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...CollectionOption) Collection[I] {
@@ -55,11 +52,10 @@ func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...C
 			return
 		}
 		close(h.synced)
-		fmt.Printf("\n%v synced", h.name())
+		fmt.Printf("\n%v synced\n", h.name())
 
 		<-o.stop
 	}()
-
 	return h
 }
 
@@ -69,6 +65,13 @@ func (i *informer[I]) name() string {
 
 func (i *informer[I]) WaitUntilSynced(stop <-chan struct{}) bool {
 	return i.baseSyncer.WaitUntilSynced(stop)
+}
+
+func (i *informer[I]) Synced() Syncer {
+	return channelSyncer{
+		name:   i.collectionName,
+		synced: i.synced,
+	}
 }
 
 func (i *informer[I]) HasSynced() bool {

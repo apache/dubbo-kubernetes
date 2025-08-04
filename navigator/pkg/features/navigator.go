@@ -38,4 +38,6 @@ var (
 		"Defines the cluster and service registry that this Dubbod instance belongs to").Get()
 	EnableVtprotobuf = env.Register("ENABLE_VTPROTOBUF", true,
 		"If true, will use optimized vtprotobuf based marshaling. Requires a build with -tags=vtprotobuf.").Get()
+	KubernetesClientContentType = env.Register("DUBBO_KUBE_CLIENT_CONTENT_TYPE", "protobuf",
+		"The content type to use for Kubernetes clients. Defaults to protobuf. Valid options: [protobuf, json]").Get()
 )

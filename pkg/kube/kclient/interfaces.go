@@ -14,11 +14,6 @@ type Reader[T controllers.Object] interface {
 	List(namespace string, selector klabels.Selector) []T
 }
 
-type ReadWriter[T controllers.Object] interface {
-	Reader[T]
-	Writer[T]
-}
-
 type Writer[T controllers.Object] interface {
 	Create(object T) (T, error)
 	Update(object T) (T, error)
@@ -27,6 +22,11 @@ type Writer[T controllers.Object] interface {
 	PatchStatus(name, namespace string, pt apitypes.PatchType, data []byte) (T, error)
 	ApplyStatus(name, namespace string, pt apitypes.PatchType, data []byte, fieldManager string) (T, error)
 	Delete(name, namespace string) error
+}
+
+type ReadWriter[T controllers.Object] interface {
+	Reader[T]
+	Writer[T]
 }
 
 type Informer[T controllers.Object] interface {

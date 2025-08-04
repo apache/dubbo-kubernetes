@@ -24,12 +24,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	switch g {
 	case ConfigMap:
 		return false
-	case CustomResourceDefinition:
-		return true
-	case DaemonSet:
-		return false
-	case Deployment:
-		return false
 	}
 	return false
 }

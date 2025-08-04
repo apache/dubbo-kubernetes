@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
 	dubbogvr "github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kubeclient"
 	types "github.com/apache/dubbo-kubernetes/pkg/config/schema/kubetypes"
-	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"istio.io/istio/pkg/config/schema/kubeclient"
+	"istio.io/istio/pkg/kube"
+	"istio.io/istio/pkg/kube/informerfactory"
+	"istio.io/istio/pkg/kube/kubetypes"
+	"istio.io/istio/pkg/util/sets"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -192,13 +192,8 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 	}
 	n.handlerMu.Lock()
 	defer n.handlerMu.Unlock()
-	// AddEventHandler is safe to call under the lock. This will *enqueue* all existing items, but not block on processing them,
-	// so the timing is quick.
-	// If we do this outside the lock, we can hit a subtle race condition where we have started processing items before they
-	// are registered (in n.registeredHandlers); this can cause the dynamic filtering to miss events
 	reg, err := n.informer.AddEventHandler(fh)
 	if err != nil {
-		// Should only happen if its already stopped. We should exit early.
 		return neverReady{}
 	}
 	n.registeredHandlers = append(n.registeredHandlers, handlerRegistration{registration: reg, handler: h})

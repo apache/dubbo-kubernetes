@@ -43,3 +43,9 @@ func WithObjectAugmentation(fn func(o any) any) CollectionOption {
 		c.augmentation = fn
 	}
 }
+
+func WithDebugging(handler *DebugHandler) CollectionOption {
+	return func(c *collectionOptions) {
+		c.debugger = handler
+	}
+}

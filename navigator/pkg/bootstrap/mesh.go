@@ -33,7 +33,7 @@ const (
 )
 
 func (s *Server) initMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.FileWatcher) {
-	fmt.Printf("\ninitializing mesh configuration %v", args.MeshConfigFile)
+	fmt.Printf("\ninitializing mesh configuration %v\n", args.MeshConfigFile)
 	col := s.getMeshConfiguration(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
 }
@@ -42,7 +42,7 @@ func (s *Server) getMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.Fi
 	opts := krt.NewOptionsBuilder(s.internalStop, "")
 	sources := s.getConfigurationSources(args, fileWatcher, args.MeshConfigFile, kubemesh.MeshConfigKey)
 	if len(sources) == 0 {
-		fmt.Printf("Using default mesh - missing file %s and no k8s client", args.MeshConfigFile)
+		fmt.Printf("\nUsing default mesh - missing file %s and no k8s client\n", args.MeshConfigFile)
 	}
 	return meshwatcher.NewCollection(opts, sources...)
 }

@@ -28,11 +28,12 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
-	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	cluster2 "istio.io/istio/pkg/cluster"
+	kubelib "istio.io/istio/pkg/kube"
 	"k8s.io/client-go/rest"
 	"net"
 	"net/http"
@@ -171,11 +172,12 @@ func (s *Server) initKubeClient(args *NaviArgs) error {
 			config.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
 			config.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
 		})
+
 		if err != nil {
 			return fmt.Errorf("failed creating kube config: %v", err)
 		}
 
-		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), s.clusterID)
+		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), cluster2.ID(s.clusterID))
 		if err != nil {
 			return fmt.Errorf("failed creating kube client: %v", err)
 		}

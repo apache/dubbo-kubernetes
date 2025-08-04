@@ -18,30 +18,26 @@
 package kube
 
 import (
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 )
 
-// DefaultRestConfig returns the rest.Config for the given kube config file and context.
-func DefaultRestConfig(kubeconfig, context string, fns ...func(config *rest.Config)) (*rest.Config, error) {
-	bcc, err := BuildClientConfig(kubeconfig, context)
+func DefaultRestConfig(kubeconfig, configContext string, fns ...func(config *rest.Config)) (*rest.Config, error) {
+	config, err := BuildClientConfig(kubeconfig, configContext)
 	if err != nil {
 		return nil, err
 	}
 	for _, fn := range fns {
-		fn(bcc)
+		fn(config)
 	}
-	return bcc, nil
+	return config, nil
 }
 
-// BuildClientCmd builds a client cmd config from a kubeconfig filepath and context.
-// It overrides the current context with the one provided (empty to use default).
-//
-// This is a modified version of k8s.io/client-go/tools/clientcmd/BuildConfigFromFlags with the
-// difference that it loads default configs if not running in-cluster.
 func BuildClientCmd(kubeconfig, context string, overrides ...func(configOverrides *clientcmd.ConfigOverrides)) clientcmd.ClientConfig {
 	if kubeconfig != "" {
 		info, err := os.Stat(kubeconfig)
@@ -62,21 +58,14 @@ func BuildClientCmd(kubeconfig, context string, overrides ...func(configOverride
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
 }
 
-// BuildClientConfig builds a client rest config from a kubeconfig filepath and context.
-// It overrides the current context with the one provided (empty to use default).
-//
-// This is a modified version of k8s.io/client-go/tools/clientcmd/BuildConfigFromFlags with the
-// difference that it loads default configs if not running in-cluster.
 func BuildClientConfig(kubeconfig, context string) (*rest.Config, error) {
 	c, err := BuildClientCmd(kubeconfig, context).ClientConfig()
 	if err != nil {
 		return nil, err
 	}
-	return c, nil
+	return SetRestDefaults(c), nil
 }
 
-// SetRestDefaults is a helper function that sets default values for the given rest.Config.
-// This function is idempotent.
 func SetRestDefaults(config *rest.Config) *rest.Config {
 	if config.GroupVersion == nil || config.GroupVersion.Empty() {
 		config.GroupVersion = &corev1.SchemeGroupVersion
@@ -86,6 +75,14 @@ func SetRestDefaults(config *rest.Config) *rest.Config {
 			config.APIPath = "/api"
 		} else {
 			config.APIPath = "/apis"
+		}
+	}
+	if len(config.ContentType) == 0 {
+		if features.KubernetesClientContentType == "json" {
+			config.ContentType = runtime.ContentTypeJSON
+		} else {
+			config.AcceptContentTypes = runtime.ContentTypeProtobuf + "," + runtime.ContentTypeJSON
+			config.ContentType = runtime.ContentTypeJSON
 		}
 	}
 	if config.NegotiatedSerializer == nil {

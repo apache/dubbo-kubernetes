@@ -23,6 +23,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+const (
+	contextName = "context0"
+	clusterName = "cluster0"
+)
+
+var _ clientcmd.ClientConfig = &clientConfig{}
+
 type clientConfig struct {
 	restConfig rest.Config
 }
@@ -35,13 +42,18 @@ func NewClientConfigForRestConfig(restConfig *rest.Config) clientcmd.ClientConfi
 
 func (c clientConfig) RawConfig() (api.Config, error) {
 	cfg := api.Config{
-		Kind:           "Config",
-		APIVersion:     "v1",
-		Preferences:    api.Preferences{},
-		Clusters:       map[string]*api.Cluster{},
-		AuthInfos:      map[string]*api.AuthInfo{},
-		Contexts:       map[string]*api.Context{},
-		CurrentContext: "",
+		Kind:        "Config",
+		APIVersion:  "v1",
+		Preferences: api.Preferences{},
+		Clusters: map[string]*api.Cluster{
+			clusterName: newCluster(&c.restConfig),
+		},
+		Contexts: map[string]*api.Context{
+			contextName: {
+				Cluster: clusterName,
+			},
+		},
+		CurrentContext: contextName,
 	}
 	return cfg, nil
 }
@@ -61,4 +73,14 @@ func (c clientConfig) Namespace() (string, bool, error) {
 
 func (c clientConfig) ConfigAccess() clientcmd.ConfigAccess {
 	return nil
+}
+
+func newCluster(restConfig *rest.Config) *api.Cluster {
+	return &api.Cluster{
+		Server:                   restConfig.Host,
+		TLSServerName:            restConfig.ServerName,
+		InsecureSkipTLSVerify:    restConfig.Insecure,
+		CertificateAuthority:     restConfig.CAFile,
+		CertificateAuthorityData: restConfig.CAData,
+	}
 }

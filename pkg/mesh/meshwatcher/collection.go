@@ -6,11 +6,16 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	krtfiles "github.com/apache/dubbo-kubernetes/pkg/kube/krt/files"
 	"github.com/apache/dubbo-kubernetes/pkg/mesh"
+	meshconfig "istio.io/api/mesh/v1alpha1"
 	"os"
 	"path"
 )
 
 type MeshConfigSource = krt.Singleton[string]
+
+type MeshConfigResource struct {
+	*meshconfig.MeshConfig
+}
 
 func NewFileSource(fileWatcher filewatcher.FileWatcher, filename string, opts krt.OptionsBuilder) (MeshConfigSource, error) {
 	return krtfiles.NewFileSingleton[string](fileWatcher, filename, func(filename string) (string, error) {
