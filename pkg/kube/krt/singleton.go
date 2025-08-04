@@ -221,7 +221,7 @@ var (
 )
 
 func NewSingleton[O any](hf TransformationEmpty[O], opts ...CollectionOption) Singleton[O] {
-	staticOpts := append(slices.Clone(opts), nil)
+	staticOpts := append(slices.Clone(opts), WithDebugging(nil))
 	dummyCollection := NewStatic[dummyValue](&dummyValue{}, true, staticOpts...).AsCollection()
 	col := NewCollection[dummyValue, O](dummyCollection, func(ctx HandlerContext, _ dummyValue) *O {
 		return hf(ctx)

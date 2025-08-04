@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	acmetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
@@ -89,11 +88,6 @@ func GetKey[O any](a O) string {
 // and will automatically implement the various interfaces to return the name, namespace, and a key based on these two.
 type Named struct {
 	Name, Namespace string
-}
-
-// NewNamed builds a Named object from a Kubernetes object type.
-func NewNamed(o metav1.Object) Named {
-	return Named{Name: o.GetName(), Namespace: o.GetNamespace()}
 }
 
 func (n Named) ResourceName() string {

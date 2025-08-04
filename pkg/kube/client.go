@@ -25,6 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"github.com/apache/dubbo-kubernetes/pkg/sleep"
+	cclient "istio.io/client-go/pkg/clientset/versioned"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -53,25 +54,29 @@ type client struct {
 	mapper          meta.ResettableRESTMapper
 	metadata        metadata.Interface
 	http            *http.Client
+	dubbo           cclient.Interface
 	clusterID       cluster.ID
 }
 
 type Client interface {
+	RESTConfig() *rest.Config
+
 	Ext() kubeExtClient.Interface
 
 	Kube() kubernetes.Interface
-
-	ClusterID() cluster.ID
 
 	Dynamic() dynamic.Interface
 
 	Metadata() metadata.Interface
 
 	Informers() informerfactory.InformerFactory
+
+	ClusterID() cluster.ID
 }
 
 type CLIClient interface {
 	Client
+	UtilFactory() PartialFactory
 	DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error)
 }
 
@@ -117,14 +122,25 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 		return nil, err
 	}
 	c.informerFactory = informerfactory.NewSharedInformerFactory()
+	c.kube, err = kubernetes.NewForConfig(c.config)
+	if err != nil {
+		return nil, err
+	}
 	c.http = &http.Client{
 		Timeout: time.Second * 15,
+	}
+	if c.config != nil && c.config.Timeout != 0 {
+		c.http.Timeout = c.config.Timeout
+	} else {
+		c.http.Timeout = time.Second * 15
 	}
 	var clientWithTimeout kubernetes.Interface
 	clientWithTimeout = c.kube
 	restConfig := c.RESTConfig()
 	if restConfig != nil {
-		restConfig.Timeout = time.Second * 5
+		if restConfig.Timeout == 0 {
+			restConfig.Timeout = time.Second * 5
+		}
 		kubeClient, err := kubernetes.NewForConfig(restConfig)
 		if err == nil {
 			clientWithTimeout = kubeClient
@@ -208,6 +224,10 @@ func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.
 	return gvr, namespaced
 }
 
+func (c *client) UtilFactory() PartialFactory {
+	return c.factory
+}
+
 func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.InformerSynced) (r bool) {
 	t0 := time.Now()
 	maximum := time.Millisecond * 100
@@ -252,6 +272,10 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 			return false
 		}
 	}
+}
+
+func (c *client) Shutdown() {
+	c.informerFactory.Shutdown()
 }
 
 func WithCluster(id cluster.ID) ClientOption {

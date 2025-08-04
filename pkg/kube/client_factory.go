@@ -23,6 +23,9 @@ import (
 	"k8s.io/client-go/discovery"
 	diskcached "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+
 	// "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
@@ -115,4 +118,69 @@ func computeDiscoverCacheDir(dir, host string) string {
 	schemelesshost := strings.Replace(strings.Replace(host, "https://", "", 1), "http://", "", 1)
 	safehost := overlyCautiousIllegalFileCharacters.ReplaceAllString(schemelesshost, "_")
 	return filepath.Join(dir, safehost)
+}
+
+type rESTClientGetter interface {
+	// ToRESTConfig returns restconfig
+	ToRESTConfig() (*rest.Config, error)
+	// ToDiscoveryClient returns discovery client
+	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
+	// ToRESTMapper returns a restmapper
+	ToRESTMapper() (meta.RESTMapper, error)
+	// ToRawKubeConfigLoader return kubeconfig loader as-is
+	ToRawKubeConfigLoader() clientcmd.ClientConfig
+}
+
+func (c *clientFactory) ToRESTConfig() (*rest.Config, error) {
+	restConfig, err := c.clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	return SetRestDefaults(restConfig), nil
+}
+
+func (c *clientFactory) ToRESTMapper() (meta.RESTMapper, error) {
+	return c.expander.Get()
+}
+
+func (c *clientFactory) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+	return c.clientConfig
+}
+
+func (c *clientFactory) DynamicClient() (dynamic.Interface, error) {
+	restConfig, err := c.ToRESTConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return dynamic.NewForConfig(restConfig)
+}
+
+func (c *clientFactory) KubernetesClientSet() (*kubernetes.Clientset, error) {
+	restConfig, err := c.ToRESTConfig()
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(restConfig)
+}
+
+func (c *clientFactory) RESTClient() (*rest.RESTClient, error) {
+	clientConfig, err := c.ToRESTConfig()
+	if err != nil {
+		return nil, err
+	}
+	return rest.RESTClientFor(clientConfig)
+}
+
+type PartialFactory interface {
+	rESTClientGetter
+
+	// DynamicClient returns a dynamic client ready for use
+	DynamicClient() (dynamic.Interface, error)
+
+	// KubernetesClientSet gives you back an external clientset
+	KubernetesClientSet() (*kubernetes.Clientset, error)
+
+	// Returns a RESTClient for accessing Kubernetes resources or an error.
+	RESTClient() (*rest.RESTClient, error)
 }

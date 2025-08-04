@@ -2,6 +2,7 @@ package mesh
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -27,11 +28,6 @@ func ApplyMeshConfigDefaults(yaml string) (*meshconfig.MeshConfig, error) {
 	return ApplyMeshConfig(yaml, DefaultMeshConfig())
 }
 func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshconfig.MeshConfig, error) {
-	// We want to keep semantics that all fields are overrides, except proxy config is a merge. This allows
-	// decent customization while also not requiring users to redefine the entire proxy config if they want to override
-	// Note: if we want to add more structure in the future, we will likely need to revisit this idea.
-
-	// Store the current set proxy config so we don't wipe it out, we will configure this later
 	prevProxyConfig := defaultConfig.DefaultConfig
 	prevDefaultProvider := defaultConfig.DefaultProviders
 	prevExtensionProviders := defaultConfig.ExtensionProviders
@@ -47,7 +43,6 @@ func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshco
 	if err != nil {
 		return nil, err
 	}
-	// Get just the proxy config yaml
 	pc, err := extractYamlField("defaultConfig", raw)
 	if err != nil {
 		return nil, multierror.Prefix(err, "failed to extract proxy config")
@@ -96,6 +91,7 @@ func DefaultMeshConfig() *meshconfig.MeshConfig {
 	proxyConfig := DefaultProxyConfig()
 	return &meshconfig.MeshConfig{
 		DefaultConfig: proxyConfig,
+		RootNamespace: constants.DubboSystemNamespace,
 	}
 }
 
