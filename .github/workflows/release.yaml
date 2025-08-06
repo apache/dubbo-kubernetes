@@ -60,8 +60,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            dubboctl seek supports chatgpt large models.
-            Remove dubbo admin migration legacy code.
+            add navigator control plane navi-agent and navi-discovery.
+            add dubbod registery helm charts example.
           draft: false
           prerelease: false
 
