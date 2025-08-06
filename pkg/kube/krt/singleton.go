@@ -95,6 +95,10 @@ func (d *static[T]) RegisterBatch(f func(o []Event[T]), runExistingState bool) H
 	}}
 }
 
+func (c collectionAdapter[T]) uid() collectionUID {
+	return c.c.(uidable).uid()
+}
+
 type staticHandler struct {
 	Syncer
 	remove func()

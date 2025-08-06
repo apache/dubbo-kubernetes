@@ -39,7 +39,7 @@ func (s *Server) initMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.F
 }
 
 func (s *Server) getMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
-	opts := krt.NewOptionsBuilder(s.internalStop, "")
+	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
 	sources := s.getConfigurationSources(args, fileWatcher, args.MeshConfigFile, kubemesh.MeshConfigKey)
 	if len(sources) == 0 {
 		fmt.Printf("\nUsing default mesh - missing file %s and no k8s client\n", args.MeshConfigFile)
@@ -48,7 +48,7 @@ func (s *Server) getMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.Fi
 }
 
 func (s *Server) getConfigurationSources(args *NaviArgs, fileWatcher filewatcher.FileWatcher, file string, cmKey string) []meshwatcher.MeshConfigSource {
-	opts := krt.NewOptionsBuilder(s.internalStop, "")
+	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
 	var userMeshConfig *meshwatcher.MeshConfigSource
 	if features.SharedMeshConfig != "" && s.kubeClient != nil {
 		userMeshConfig = ptr.Of(kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, features.SharedMeshConfig, cmKey, opts))

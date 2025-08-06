@@ -7,13 +7,28 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/hashicorp/go-multierror"
+	"google.golang.org/protobuf/types/known/durationpb"
+	wrappers "google.golang.org/protobuf/types/known/wrapperspb"
 	meshconfig "istio.io/api/mesh/v1alpha1"
+	"istio.io/api/networking/v1alpha3"
 	"os"
 	"sigs.k8s.io/yaml"
+	"time"
 )
 
 func DefaultProxyConfig() *meshconfig.ProxyConfig {
-	return &meshconfig.ProxyConfig{}
+	return &meshconfig.ProxyConfig{
+		ConfigPath:               constants.ConfigPathDir,
+		ClusterName:              &meshconfig.ProxyConfig_ServiceCluster{ServiceCluster: constants.ServiceClusterName},
+		DrainDuration:            durationpb.New(45 * time.Second),
+		TerminationDrainDuration: durationpb.New(5 * time.Second),
+		ProxyAdminPort:           15000,
+		// TODO authpolicy
+		DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+		BinaryPath:       constants.BinaryPathFilename,
+		StatNameLength:   189,
+		StatusPort:       15020,
+	}
 }
 
 func ReadMeshConfig(filename string) (*meshconfig.MeshConfig, error) {
@@ -90,8 +105,32 @@ func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshco
 func DefaultMeshConfig() *meshconfig.MeshConfig {
 	proxyConfig := DefaultProxyConfig()
 	return &meshconfig.MeshConfig{
+		EnableTracing:               true,
+		AccessLogFile:               "",
+		AccessLogEncoding:           meshconfig.MeshConfig_TEXT,
+		AccessLogFormat:             "",
+		EnableEnvoyAccessLogService: false,
+		ProtocolDetectionTimeout:    durationpb.New(0),
+		TrustDomain:                 constants.DefaultClusterLocalDomain,
+		TrustDomainAliases:          []string{},
+		EnableAutoMtls:              wrappers.Bool(true),
+		OutboundTrafficPolicy:       &meshconfig.MeshConfig_OutboundTrafficPolicy{Mode: meshconfig.MeshConfig_OutboundTrafficPolicy_ALLOW_ANY},
+		InboundTrafficPolicy:        &meshconfig.MeshConfig_InboundTrafficPolicy{Mode: meshconfig.MeshConfig_InboundTrafficPolicy_PASSTHROUGH},
+		LocalityLbSetting: &v1alpha3.LocalityLoadBalancerSetting{
+			Enabled: wrappers.Bool(true),
+		},
+		Certificates:  []*meshconfig.Certificate{},
 		DefaultConfig: proxyConfig,
-		RootNamespace: constants.DubboSystemNamespace,
+
+		RootNamespace:                  constants.DubboSystemNamespace,
+		ProxyListenPort:                15001,
+		ProxyInboundListenPort:         15006,
+		ConnectTimeout:                 durationpb.New(10 * time.Second),
+		DefaultServiceExportTo:         []string{"*"},
+		DefaultVirtualServiceExportTo:  []string{"*"},
+		DefaultDestinationRuleExportTo: []string{"*"},
+		DnsRefreshRate:                 durationpb.New(60 * time.Second),
+		DefaultProviders:               &meshconfig.MeshConfig_DefaultProviders{},
 	}
 }
 

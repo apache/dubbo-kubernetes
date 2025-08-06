@@ -2,19 +2,22 @@ package krt
 
 import "github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 
+type Metadata map[string]any
+
 type FetchOption func(*dependency)
 
 type HandlerContext interface {
 	DiscardResult()
+	_internalHandler()
 }
+
+type Key[O any] string
 
 type (
 	TransformationEmpty[T any]     func(ctx HandlerContext) *T
 	TransformationMulti[I, O any]  func(ctx HandlerContext, i I) []O
 	TransformationSingle[I, O any] func(ctx HandlerContext, i I) *O
 )
-
-type Metadata map[string]any
 
 type Event[T any] struct {
 	Old   *T
@@ -89,4 +92,22 @@ type ResourceNamer interface {
 
 type uidable interface {
 	uid() collectionUID
+}
+
+type internalCollection[T any] interface {
+	Collection[T]
+
+	// Name is a human facing name for this collection.
+	// Note this may not be universally unique
+	name() string
+	// Uid is an internal unique ID for this collection. MUST be globally unique
+	uid() collectionUID
+
+	dump() CollectionDump
+
+	// Augment mutates an object for use in various function calls. See WithObjectAugmentation
+	augment(any) any
+
+	// Create a new index into the collection
+	index(name string, extract func(o T) []string) indexer[T]
 }

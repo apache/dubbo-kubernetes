@@ -37,31 +37,40 @@ import (
 	"time"
 )
 
+var _ PartialFactory = &clientFactory{}
+
 // clientFactory partially implements the kubectl util.Factory, which is provides access to various k8s clients.
 // The full Factory can be built with MakeKubeFactory.
 // This split is to avoid huge dependencies.
 type clientFactory struct {
-	clientConfig    clientcmd.ClientConfig
-	expander        lazy.Lazy[meta.RESTMapper]
-	mapper          lazy.Lazy[meta.ResettableRESTMapper]
+	clientConfig clientcmd.ClientConfig
+
+	expander lazy.Lazy[meta.RESTMapper]
+	mapper   lazy.Lazy[meta.ResettableRESTMapper]
+
 	discoveryClient lazy.Lazy[discovery.CachedDiscoveryInterface]
 }
 
 // newClientFactory creates a new util.Factory from the given clientcmd.ClientConfig.
 func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clientFactory {
-	cf := &clientFactory{
+	out := &clientFactory{
 		clientConfig: clientConfig,
 	}
-	cf.discoveryClient = lazy.NewWithRetry(func() (discovery.CachedDiscoveryInterface, error) {
-		restConfig, err := cf.ToRestConfig()
+
+	out.discoveryClient = lazy.NewWithRetry(func() (discovery.CachedDiscoveryInterface, error) {
+		restConfig, err := out.ToRESTConfig()
 		if err != nil {
 			return nil, err
 		}
 		// Setup cached discovery. CLIs uses disk cache, controllers use memory cache.
 		if diskCache {
+			// From https://github.com/kubernetes/cli-runtime/blob/4fdf49ae46a0caa7fafdfe97825c6129d5153f06/pkg/genericclioptions/config_flags.go#L288
+
 			cacheDir := filepath.Join(homedir.HomeDir(), ".kube", "cache")
+
 			httpCacheDir := filepath.Join(cacheDir, "http")
 			discoveryCacheDir := computeDiscoverCacheDir(filepath.Join(cacheDir, "discovery"), restConfig.Host)
+
 			return diskcached.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, 6*time.Hour)
 		}
 		d, err := discovery.NewDiscoveryClientForConfig(restConfig)
@@ -70,65 +79,25 @@ func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clie
 		}
 		return memory.NewMemCacheClient(d), nil
 	})
-	cf.mapper = lazy.NewWithRetry(func() (meta.ResettableRESTMapper, error) {
-		discoveryClient, err := cf.ToDiscoveryClient()
+	out.mapper = lazy.NewWithRetry(func() (meta.ResettableRESTMapper, error) {
+		discoveryClient, err := out.ToDiscoveryClient()
 		if err != nil {
 			return nil, err
 		}
 		return restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient), nil
 	})
-	cf.expander = lazy.NewWithRetry(func() (meta.RESTMapper, error) {
-		discoveryClient, err := cf.discoveryClient.Get()
+	out.expander = lazy.NewWithRetry(func() (meta.RESTMapper, error) {
+		discoveryClient, err := out.discoveryClient.Get()
 		if err != nil {
 			return nil, err
 		}
-		mapper, err := cf.mapper.Get()
+		mapper, err := out.mapper.Get()
 		if err != nil {
 			return nil, err
 		}
 		return restmapper.NewShortcutExpander(mapper, discoveryClient, func(string) {}), nil
 	})
-	return cf
-}
-
-func (c *clientFactory) RestClient() (*rest.RESTClient, error) {
-	clientConfig, err := c.ToRestConfig()
-	if err != nil {
-		return nil, err
-	}
-	return rest.RESTClientFor(clientConfig)
-}
-
-func (c *clientFactory) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
-	return c.discoveryClient.Get()
-}
-
-func (c *clientFactory) ToRestConfig() (*rest.Config, error) {
-	restConfig, err := c.clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-	return SetRestDefaults(restConfig), nil
-}
-
-// overlyCautiousIllegalFileCharacters matches characters that *might* not be supported.  Windows is really restrictive, so this is really restrictive
-var overlyCautiousIllegalFileCharacters = regexp.MustCompile(`[^(\w/.)]`)
-
-func computeDiscoverCacheDir(dir, host string) string {
-	schemelesshost := strings.Replace(strings.Replace(host, "https://", "", 1), "http://", "", 1)
-	safehost := overlyCautiousIllegalFileCharacters.ReplaceAllString(schemelesshost, "_")
-	return filepath.Join(dir, safehost)
-}
-
-type rESTClientGetter interface {
-	// ToRESTConfig returns restconfig
-	ToRESTConfig() (*rest.Config, error)
-	// ToDiscoveryClient returns discovery client
-	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
-	// ToRESTMapper returns a restmapper
-	ToRESTMapper() (meta.RESTMapper, error)
-	// ToRawKubeConfigLoader return kubeconfig loader as-is
-	ToRawKubeConfigLoader() clientcmd.ClientConfig
+	return out
 }
 
 func (c *clientFactory) ToRESTConfig() (*rest.Config, error) {
@@ -137,6 +106,22 @@ func (c *clientFactory) ToRESTConfig() (*rest.Config, error) {
 		return nil, err
 	}
 	return SetRestDefaults(restConfig), nil
+}
+
+func (c *clientFactory) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
+	return c.discoveryClient.Get()
+}
+
+// overlyCautiousIllegalFileCharacters matches characters that *might* not be supported.  Windows is really restrictive, so this is really restrictive
+var overlyCautiousIllegalFileCharacters = regexp.MustCompile(`[^(\w/.)]`)
+
+// computeDiscoverCacheDir takes the parentDir and the host and comes up with a "usually non-colliding" name.
+func computeDiscoverCacheDir(parentDir, host string) string {
+	// strip the optional scheme from host if its there:
+	schemelessHost := strings.Replace(strings.Replace(host, "https://", "", 1), "http://", "", 1)
+	// now do a simple collapse of non-AZ09 characters.  Collisions are possible but unlikely.  Even if we do collide the problem is short lived
+	safeHost := overlyCautiousIllegalFileCharacters.ReplaceAllString(schemelessHost, "_")
+	return filepath.Join(parentDir, safeHost)
 }
 
 func (c *clientFactory) ToRESTMapper() (meta.RESTMapper, error) {
@@ -170,6 +155,17 @@ func (c *clientFactory) RESTClient() (*rest.RESTClient, error) {
 		return nil, err
 	}
 	return rest.RESTClientFor(clientConfig)
+}
+
+type rESTClientGetter interface {
+	// ToRESTConfig returns restconfig
+	ToRESTConfig() (*rest.Config, error)
+	// ToDiscoveryClient returns discovery client
+	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
+	// ToRESTMapper returns a restmapper
+	ToRESTMapper() (meta.RESTMapper, error)
+	// ToRawKubeConfigLoader return kubeconfig loader as-is
+	ToRawKubeConfigLoader() clientcmd.ClientConfig
 }
 
 type PartialFactory interface {

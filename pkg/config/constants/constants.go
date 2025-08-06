@@ -22,4 +22,6 @@ const (
 	DefaultClusterLocalDomain = "cluster.local"
 	DefaultClusterName        = "Kubernetes"
 	ServiceClusterName        = "dubbo-proxy"
+	ConfigPathDir             = "./etc/dubbo/proxy"
+	BinaryPathFilename        = "/usr/local/bin/envoy"
 )

@@ -28,12 +28,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
+	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
-	cluster2 "istio.io/istio/pkg/cluster"
-	kubelib "istio.io/istio/pkg/kube"
 	"k8s.io/client-go/rest"
 	"net"
 	"net/http"
@@ -93,10 +92,13 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 }
 
 func (s *Server) Start(stop <-chan struct{}) error {
+	fmt.Printf("\nStarting Dubbod Server with primary cluster %s\n", s.clusterID)
 	if err := s.server.Start(stop); err != nil {
 		return err
 	}
-	// TODO waitForCacheSync
+	if !s.waitForCacheSync(stop) {
+		return fmt.Errorf("failed to sync cache")
+	}
 	// TODO XDSserver CacheSynced
 
 	if s.secureGrpcAddress != "" {
@@ -143,6 +145,7 @@ func (s *Server) Start(stop <-chan struct{}) error {
 
 func (s *Server) initKubeClient(args *NaviArgs) error {
 	if s.kubeClient != nil {
+		// Already initialized by startup arguments
 		return nil
 	}
 	hasK8SConfigStore := false
@@ -168,16 +171,16 @@ func (s *Server) initKubeClient(args *NaviArgs) error {
 	}
 
 	if hasK8SConfigStore || hasKubeRegistry(args.RegistryOptions.Registries) {
+		// Used by validation
 		kubeRestConfig, err := kubelib.DefaultRestConfig(args.RegistryOptions.KubeConfig, "", func(config *rest.Config) {
 			config.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
 			config.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
 		})
-
 		if err != nil {
 			return fmt.Errorf("failed creating kube config: %v", err)
 		}
 
-		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), cluster2.ID(s.clusterID))
+		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), s.clusterID)
 		if err != nil {
 			return fmt.Errorf("failed creating kube client: %v", err)
 		}
@@ -247,4 +250,24 @@ func getClusterID(args *NaviArgs) cluster.ID {
 		}
 	}
 	return clusterID
+}
+
+func (s *Server) cachesSynced() bool {
+	// TODO multiclusterController HasSynced
+	// TODO ServiceController().HasSynced
+	// TODO configController.HasSynced
+	return true
+}
+
+func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
+	start := time.Now()
+	fmt.Println("\nWaiting for caches to be synced")
+	if !kubelib.WaitForCacheSync("server", stop, s.cachesSynced) {
+		fmt.Println("\nFailed waiting for cache sync")
+		return false
+	}
+	fmt.Printf("\nAll controller caches have been synced up in %v\n", time.Since(start))
+	// TODO XDSServer.InboundUpdates.Load
+	// TODO return kubelib.WaitForCacheSync("push context", stop, func() bool { return s.pushContextReady(expected) })
+	return false
 }
