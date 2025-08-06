@@ -47,20 +47,6 @@ func (p DebugCollection) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func maybeRegisterCollectionForDebugging[T any](c Collection[T], handler *DebugHandler) {
-	if handler == nil {
-		return
-	}
-	cc := c.(internalCollection[T])
-	handler.mu.Lock()
-	defer handler.mu.Unlock()
-	handler.debugCollections = append(handler.debugCollections, DebugCollection{
-		name: cc.name(),
-		dump: cc.dump,
-		uid:  cc.uid(),
-	})
-}
-
 // nolint: unused // (not true, not sure why it thinks it is!)
 func eraseMap[T any](l map[Key[T]]T) map[string]any {
 	nm := make(map[string]any, len(l))

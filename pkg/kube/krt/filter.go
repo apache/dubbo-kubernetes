@@ -2,9 +2,8 @@ package krt
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/util/smallset"
-	"istio.io/istio/pkg/config/labels"
-	"istio.io/istio/pkg/log"
 	"reflect"
 )
 
@@ -34,6 +33,8 @@ func FilterKey(k string) FetchOption {
 func getKeyExtractor(o any) []string {
 	return []string{GetKey(o)}
 }
+
+type objectKeyExtractor = func(o any) []string
 
 func (f *filter) reverseIndexKey() ([]string, indexedDependencyType, objectKeyExtractor, collectionUID, bool) {
 	if f.keys.Len() > 0 {
@@ -87,17 +88,11 @@ func (f *filter) Matches(object any, forList bool) bool {
 		// First, lookup directly by key. This is cheap
 		// an empty set will match none
 		if !f.keys.IsNil() && !f.keys.Contains(GetKey[any](object)) {
-			if log.DebugEnabled() {
-				log.Debugf("no match key: %q vs %q", f.keys, GetKey[any](object))
-			}
 			return false
 		}
 		// Index is also cheap, and often used to filter namespaces out. Make sure we do this early
 		if f.index != nil {
 			if !f.index.indexMatches(object) {
-				if log.DebugEnabled() {
-					log.Debugf("no match index")
-				}
 				return false
 			}
 		}
@@ -105,27 +100,15 @@ func (f *filter) Matches(object any, forList bool) bool {
 
 	// Rest is expensive
 	if f.selects != nil && !labels.Instance(getLabelSelector(object)).SubsetOf(f.selects) {
-		if log.DebugEnabled() {
-			log.Debugf("no match selects: %q vs %q", f.selects, getLabelSelector(object))
-		}
 		return false
 	}
 	if f.selectsNonEmpty != nil && !labels.Instance(getLabelSelector(object)).Match(f.selectsNonEmpty) {
-		if log.DebugEnabled() {
-			log.Debugf("no match selectsNonEmpty: %q vs %q", f.selectsNonEmpty, getLabelSelector(object))
-		}
 		return false
 	}
 	if f.labels != nil && !labels.Instance(f.labels).SubsetOf(getLabels(object)) {
-		if log.DebugEnabled() {
-			log.Debugf("no match labels: %q vs %q", f.labels, getLabels(object))
-		}
 		return false
 	}
 	if f.generic != nil && !f.generic(object) {
-		if log.DebugEnabled() {
-			log.Debugf("no match generic")
-		}
 		return false
 	}
 	return true

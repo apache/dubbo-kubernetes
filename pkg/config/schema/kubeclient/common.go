@@ -151,29 +151,3 @@ func stripUnusedFields(obj any) (any, error) {
 	t.GetObjectMeta().SetManagedFields(nil)
 	return obj, nil
 }
-
-func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.GroupVersionResource) informerfactory.StartableInformer {
-	var l func(options metav1.ListOptions) (runtime.Object, error)
-	var w func(options metav1.ListOptions) (watch.Interface, error)
-	return c.Informers().InformerFor(g, opts, func() cache.SharedIndexInformer {
-		inf := cache.NewSharedIndexInformer(
-			&cache.ListWatch{
-				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-					options.FieldSelector = opts.FieldSelector
-					options.LabelSelector = opts.LabelSelector
-					return l(options)
-				},
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					options.FieldSelector = opts.FieldSelector
-					options.LabelSelector = opts.LabelSelector
-					return w(options)
-				},
-			},
-			gvrToObject(g),
-			0,
-			cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
-		)
-		setupInformer(opts, inf)
-		return inf
-	})
-}

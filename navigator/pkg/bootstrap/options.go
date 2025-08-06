@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/keepalive"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 )
 
 var (
@@ -46,6 +47,7 @@ type NaviArgs struct {
 	Namespace        string
 	CtrlZOptions     *ctrlz.Options
 	KeepaliveOptions *keepalive.Options
+	KrtDebugger      *krt.DebugHandler `json:"-"`
 }
 
 type DiscoveryServerOptions struct {

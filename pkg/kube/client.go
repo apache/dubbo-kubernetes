@@ -25,18 +25,17 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"github.com/apache/dubbo-kubernetes/pkg/sleep"
-	cclient "istio.io/client-go/pkg/clientset/versioned"
+	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
-	"k8s.io/client-go/metadata"
-	"k8s.io/client-go/tools/cache"
-
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"time"
@@ -46,7 +45,7 @@ type client struct {
 	extSet          kubeExtClient.Interface
 	config          *rest.Config
 	revision        string
-	factory         *clientFactory
+	clientFactory   *clientFactory
 	version         lazy.Lazy[*kubeVersion.Info]
 	informerFactory informerfactory.InformerFactory
 	dynamic         dynamic.Interface
@@ -54,7 +53,7 @@ type client struct {
 	mapper          meta.ResettableRESTMapper
 	metadata        metadata.Interface
 	http            *http.Client
-	dubbo           cclient.Interface
+	dubbo           istioclient.Interface
 	clusterID       cluster.ID
 }
 
@@ -76,64 +75,68 @@ type Client interface {
 
 type CLIClient interface {
 	Client
-	UtilFactory() PartialFactory
 	DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error)
 }
 
 type ClientOption func(cliClient CLIClient) CLIClient
 
 func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLIClient, error) {
-	return newInternalClient(newClientFactory(clientCfg, false), opts...)
+	return newClientInternal(newClientFactory(clientCfg, false), opts...)
 }
 
-func NewClient(clientConfig clientcmd.ClientConfig, cluster cluster.ID) (Client, error) {
-	return newInternalClient(newClientFactory(clientConfig, false), WithCluster(cluster))
+func NewClient(clientCfg clientcmd.ClientConfig, cluster cluster.ID) (Client, error) {
+	return newClientInternal(newClientFactory(clientCfg, false), WithCluster(cluster))
 }
 
-func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient, error) {
+func newClientInternal(clientFactory *clientFactory, opts ...ClientOption) (*client, error) {
 	var c client
 	var err error
-	c.factory = factory
-	c.config, err = factory.ToRestConfig()
+
+	c.clientFactory = clientFactory
+
+	c.config, err = clientFactory.ToRESTConfig()
 	if err != nil {
 		return nil, err
 	}
+
 	for _, opt := range opts {
 		opt(&c)
 	}
-	c.mapper, err = factory.mapper.Get()
+
+	c.mapper, err = clientFactory.mapper.Get()
 	if err != nil {
 		return nil, err
 	}
+
+	c.informerFactory = informerfactory.NewSharedInformerFactory()
+
 	c.kube, err = kubernetes.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
 	}
-	c.dynamic, err = dynamic.NewForConfig(c.config)
-	if err != nil {
-		return nil, err
-	}
+
 	c.metadata, err = metadata.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
 	}
+
+	c.dynamic, err = dynamic.NewForConfig(c.config)
+	if err != nil {
+		return nil, err
+	}
+
 	c.extSet, err = kubeExtClient.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
 	}
-	c.informerFactory = informerfactory.NewSharedInformerFactory()
-	c.kube, err = kubernetes.NewForConfig(c.config)
-	if err != nil {
-		return nil, err
-	}
-	c.http = &http.Client{
-		Timeout: time.Second * 15,
-	}
+
+	c.http = &http.Client{}
 	if c.config != nil && c.config.Timeout != 0 {
 		c.http.Timeout = c.config.Timeout
 	} else {
 		c.http.Timeout = time.Second * 15
 	}
+
 	var clientWithTimeout kubernetes.Interface
 	clientWithTimeout = c.kube
 	restConfig := c.RESTConfig()
@@ -141,6 +144,7 @@ func newInternalClient(factory *clientFactory, opts ...ClientOption) (CLIClient,
 		if restConfig.Timeout == 0 {
 			restConfig.Timeout = time.Second * 5
 		}
+
 		kubeClient, err := kubernetes.NewForConfig(restConfig)
 		if err == nil {
 			clientWithTimeout = kubeClient
@@ -224,10 +228,6 @@ func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.
 	return gvr, namespaced
 }
 
-func (c *client) UtilFactory() PartialFactory {
-	return c.factory
-}
-
 func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.InformerSynced) (r bool) {
 	t0 := time.Now()
 	maximum := time.Millisecond * 100
@@ -243,9 +243,9 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 	attempt := 0
 	defer func() {
 		if r {
-			fmt.Printf("sync complete: name=%s, time=%v\n", name, time.Since(t0))
+			fmt.Printf("\nsync complete: name=%s, time=%v", name, time.Since(t0))
 		} else {
-			fmt.Printf("sync failed: name=%s, time=%v\n", name, time.Since(t0))
+			fmt.Printf("\nsync failed: name=%s, time=%v", name, time.Since(t0))
 		}
 	}()
 	for {

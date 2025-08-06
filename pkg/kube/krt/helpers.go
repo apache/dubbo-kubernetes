@@ -81,7 +81,8 @@ func GetKey[O any](a O) string {
 	if ack != nil {
 		return *ack
 	}
-	panic(fmt.Sprintf("Cannot get Key, got %T", a))
+	// panic(fmt.Sprintf("Cannot get Key, got %T", a))
+	return fmt.Sprintf("Cannot get Key, got %T", a)
 }
 
 // Named is a convenience struct. It is ideal to be embedded into a type that has a name and namespace,
@@ -144,9 +145,9 @@ func waitForCacheSync(name string, stop <-chan struct{}, collections ...<-chan s
 	t0 := time.Now()
 	defer func() {
 		if r {
-			fmt.Printf("sync complete: name=%s, time=%v\n", name, time.Since(t0))
+			fmt.Printf("\nsync complete: name=%s, time=%v\n", name, time.Since(t0))
 		} else {
-			fmt.Printf("sync failed: name=%s, time=%v\n", name, time.Since(t0))
+			fmt.Printf("\nsync failed: name=%s, time=%v\n", name, time.Since(t0))
 		}
 	}()
 	for _, col := range collections {
