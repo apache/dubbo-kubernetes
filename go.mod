@@ -25,9 +25,9 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/containers/image/v5 v5.34.0
 	github.com/containers/storage v1.57.1
-	github.com/docker/cli v28.1.1+incompatible
-	github.com/docker/docker v28.0.4+incompatible
-	github.com/docker/docker-credential-helpers v0.9.3
+	github.com/docker/cli v27.5.1+incompatible
+	github.com/docker/docker v27.5.1+incompatible
+	github.com/docker/docker-credential-helpers v0.8.2
 	github.com/docker/go-connections v0.5.0
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
@@ -35,7 +35,7 @@ require (
 	github.com/go-git/go-git/v5 v5.13.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.4
-	github.com/google/go-containerregistry v0.20.3
+	github.com/google/go-containerregistry v0.20.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/heroku/color v0.0.6
 	github.com/moby/term v0.5.2
@@ -56,7 +56,6 @@ require (
 	helm.sh/helm/v3 v3.18.4
 	istio.io/api v1.26.3
 	istio.io/client-go v1.26.0-alpha.0.0.20250801111706-8b4229d430b7
-	istio.io/istio v0.0.0-20250804181122-c5fdc78b0741
 	k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver v0.33.2
 	k8s.io/apimachinery v0.33.2
