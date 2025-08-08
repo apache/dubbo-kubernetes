@@ -25,9 +25,9 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/containers/image/v5 v5.34.0
 	github.com/containers/storage v1.57.1
-	github.com/docker/cli v28.1.1+incompatible
-	github.com/docker/docker v28.0.4+incompatible
-	github.com/docker/docker-credential-helpers v0.9.3
+	github.com/docker/cli v27.5.1+incompatible
+	github.com/docker/docker v27.5.1+incompatible
+	github.com/docker/docker-credential-helpers v0.8.2
 	github.com/docker/go-connections v0.5.0
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
@@ -248,8 +248,7 @@ require (
 )
 
 replace (
-	github.com/docker/cli => github.com/docker/cli v27.5.1+incompatible
+	github.com/docker/cli => github.com/docker/cli v23.0.1+incompatible
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker => github.com/docker/docker v27.5.1+incompatible
-	github.com/docker/docker-credential-helpers => github.com/docker/docker-credential-helpers v0.8.2
+	github.com/docker/docker => github.com/docker/docker v23.0.1+incompatible
 )
