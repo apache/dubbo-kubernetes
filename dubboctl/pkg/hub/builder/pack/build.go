@@ -37,8 +37,8 @@ import (
 const DefaultName = builder.Pack
 
 var (
-	DefaultGoBuilder   = "heroku/builder:24"
-	DefaultJavaBuilder = "heroku/builder:24"
+	DefaultGoBuilder   = "sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/builder:24"
+	DefaultJavaBuilder = "sca-registry.cn-hangzhou.cr.aliyuncs.com/dubbo/builder:24"
 )
 
 var (

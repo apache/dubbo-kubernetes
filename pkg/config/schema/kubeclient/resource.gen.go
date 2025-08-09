@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kubeclient
 
 import (
@@ -10,7 +27,6 @@ import (
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapicertificatesv1 "k8s.io/api/certificates/v1"
-	k8sioapicertificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	k8sioapicoordinationv1 "k8s.io/api/coordination/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
@@ -28,8 +44,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 	switch any(ptr.Empty[T]()).(type) {
 	case *k8sioapicertificatesv1.CertificateSigningRequest:
 		return c.Kube().CertificatesV1().CertificateSigningRequests().(ktypes.WriteAPI[T])
-	case *k8sioapicertificatesv1beta1.ClusterTrustBundle:
-		return c.Kube().CertificatesV1beta1().ClusterTrustBundles().(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ConfigMap:
 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
