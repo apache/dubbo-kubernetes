@@ -11,6 +11,8 @@ Provides support for building and deploying Dubbo applications in various enviro
 ## Repositories
 The main code repositories of Dubbo on Kubernetes include:
 
+- Dubbod — The Dubbo control plane. It is built on Istio to implement a proxyless service mesh and includes the following components:
+  - [navigator](navigator/) (under development): Responsible for configuring proxies at runtime.
 - [dubboctl](dubboctl/). This directory contains code for the command line utility.
 - [operator](operator/). Dubbo operator provides user friendly options to operate the Dubbo proxyless mesh
 - [helm-charts](manifests/charts). This directory contains the [Helm chart](https://github.com/apache/dubbo-helm-charts) sources, which are versioned, built, and pushed to the following Helm repositories with each Dubbo release.
