@@ -18,21 +18,16 @@
 package meshwatcher
 
 import (
-	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	krtfiles "github.com/apache/dubbo-kubernetes/pkg/kube/krt/files"
-	"github.com/apache/dubbo-kubernetes/pkg/mesh"
-	meshconfig "istio.io/api/mesh/v1alpha1"
+	"k8s.io/klog/v2"
 	"os"
 	"path"
 )
 
 type MeshConfigSource = krt.Singleton[string]
-
-type MeshConfigResource struct {
-	*meshconfig.MeshConfig
-}
 
 func NewFileSource(fileWatcher filewatcher.FileWatcher, filename string, opts krt.OptionsBuilder) (MeshConfigSource, error) {
 	return krtfiles.NewFileSingleton[string](fileWatcher, filename, func(filename string) (string, error) {
@@ -55,17 +50,17 @@ func NewCollection(opts krt.OptionsBuilder, sources ...MeshConfigSource) krt.Sin
 			for _, attempt := range sources {
 				s := krt.FetchOne(ctx, attempt.AsCollection())
 				if s == nil {
-					fmt.Println("mesh configuration source missing")
+					klog.Info("mesh configuration source missing")
 					continue
 				}
 				n, err := mesh.ApplyMeshConfig(*s, meshCfg)
 				if err != nil {
 					if len(sources) == 1 {
-						fmt.Errorf("invalid mesh config, using last known state: %v", err)
+						klog.Errorf("invalid mesh config, using last known state: %v", err)
 						ctx.DiscardResult()
 						return &MeshConfigResource{mesh.DefaultMeshConfig()}
 					}
-					fmt.Printf("invalid mesh config, ignoring: %v", err)
+					klog.Errorf("invalid mesh config, ignoring: %v", err)
 					continue
 				}
 				meshCfg = n

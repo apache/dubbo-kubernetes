@@ -18,10 +18,17 @@
 package meshwatcher
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"google.golang.org/protobuf/proto"
-
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )
+
+type WatcherCollection interface {
+	mesh.Watcher
+	krt.Singleton[MeshConfigResource]
+}
 
 // MeshConfigResource holds the current MeshConfig state
 type MeshConfigResource struct {
@@ -34,13 +41,7 @@ func (m MeshConfigResource) Equals(other MeshConfigResource) bool {
 	return proto.Equal(m.MeshConfig, other.MeshConfig)
 }
 
-// MeshNetworksResource holds the current MeshNetworks state
-type MeshNetworksResource struct {
-	*meshconfig.MeshNetworks
-}
-
-func (m MeshNetworksResource) ResourceName() string { return "MeshNetworksResource" }
-
-func (m MeshNetworksResource) Equals(other MeshNetworksResource) bool {
-	return proto.Equal(m.MeshNetworks, other.MeshNetworks)
+func PrettyFormatOfMeshConfig(meshConfig *meshconfig.MeshConfig) string {
+	meshConfigDump, _ := protomarshal.ToYAML(meshConfig)
+	return meshConfigDump
 }

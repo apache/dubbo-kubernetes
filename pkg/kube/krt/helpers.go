@@ -19,6 +19,7 @@ package krt
 
 import (
 	"fmt"
+	"k8s.io/klog/v2"
 	"reflect"
 	"strconv"
 	"strings"
@@ -148,16 +149,16 @@ func waitForCacheSync(name string, stop <-chan struct{}, collections ...<-chan s
 	t0 := time.Now()
 	defer func() {
 		if r {
-			fmt.Printf("\nsync complete: name=%s, time=%v\n", name, time.Since(t0))
+			klog.Infof("sync complete: name=%s, time=%v", name, time.Since(t0))
 		} else {
-			fmt.Printf("\nsync failed: name=%s, time=%v\n", name, time.Since(t0))
+			klog.Infof("sync failed: name=%s, time=%v", name, time.Since(t0))
 		}
 	}()
 	for _, col := range collections {
 		for {
 			select {
 			case <-t.C:
-				fmt.Printf("waiting for sync...: name=%s, time=%v\n", name, time.Since(t0))
+				klog.Infof("waiting for sync...: name=%s, time=%v\n", name, time.Since(t0))
 				continue
 			case <-stop:
 				return false

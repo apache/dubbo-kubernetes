@@ -25,15 +25,16 @@ import (
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/serviceregistry/providers"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"net"
 	"net/http"
 	"os"
@@ -92,7 +93,7 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 }
 
 func (s *Server) Start(stop <-chan struct{}) error {
-	fmt.Printf("\nStarting Dubbod Server with primary cluster %s\n", s.clusterID)
+	klog.Infof("Starting Dubbod Server with primary cluster %s", s.clusterID)
 	if err := s.server.Start(stop); err != nil {
 		return err
 	}
@@ -107,9 +108,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 			return err
 		}
 		go func() {
-			fmt.Printf("starting secure gRPC discovery service at %s", grpcListener.Addr())
+			klog.Infof("starting secure gRPC discovery service at %s", grpcListener.Addr())
 			if err := s.secureGrpcServer.Serve(grpcListener); err != nil {
-				fmt.Errorf("error serving secure GRPC server: %v", err)
+				klog.Errorf("error serving secure GRPC server: %v", err)
 			}
 		}()
 	}
@@ -120,9 +121,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 			return err
 		}
 		go func() {
-			fmt.Printf("starting gRPC discovery service at %s", grpcListener.Addr())
+			klog.Infof("starting gRPC discovery service at %s", grpcListener.Addr())
 			if err := s.grpcServer.Serve(grpcListener); err != nil {
-				fmt.Errorf("error serving GRPC server: %v", err)
+				klog.Errorf("error serving GRPC server: %v", err)
 			}
 		}()
 	}
@@ -133,9 +134,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 			return err
 		}
 		go func() {
-			fmt.Printf("starting webhook service at %s", httpsListener.Addr())
+			klog.Infof("starting webhook service at %s", httpsListener.Addr())
 			if err := s.httpsServer.ServeTLS(httpsListener, "", ""); network.IsUnexpectedListenerError(err) {
-				fmt.Errorf("error serving https server: %v", err)
+				klog.Errorf("error serving https server: %v", err)
 			}
 		}()
 		s.httpsAddr = httpsListener.Addr().String()
@@ -197,7 +198,7 @@ func (s *Server) initServers(args *NaviArgs) {
 	} else {
 		// This happens only if the GRPC port (15010) is disabled. We will multiplex
 		// it on the HTTP port. Does not impact the HTTPS gRPC or HTTPS.
-		fmt.Printf("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
+		klog.Infof("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
 		multiplexGRPC = true
 	}
 	h2s := &http2.Server{
@@ -233,9 +234,9 @@ func (s *Server) serveHTTP() error {
 		return err
 	}
 	go func() {
-		fmt.Printf("starting HTTP service at %s", httpListener.Addr())
+		klog.Infof("starting HTTP service at %s", httpListener.Addr())
 		if err := s.httpServer.Serve(httpListener); network.IsUnexpectedListenerError(err) {
-			fmt.Errorf("error serving http server: %v", err)
+			klog.Errorf("error serving http server: %v", err)
 		}
 	}()
 	s.httpAddr = httpListener.Addr().String()
@@ -261,12 +262,12 @@ func (s *Server) cachesSynced() bool {
 
 func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
 	start := time.Now()
-	fmt.Println("\nWaiting for caches to be synced")
+	klog.Info("Waiting for caches to be synced")
 	if !kubelib.WaitForCacheSync("server", stop, s.cachesSynced) {
-		fmt.Println("\nFailed waiting for cache sync")
+		klog.Info("Failed waiting for cache sync")
 		return false
 	}
-	fmt.Printf("\nAll controller caches have been synced up in %v\n", time.Since(start))
+	klog.Infof("All controller caches have been synced up in %v", time.Since(start))
 	// TODO XDSServer.InboundUpdates.Load
 	// TODO return kubelib.WaitForCacheSync("push context", stop, func() bool { return s.pushContextReady(expected) })
 	return false

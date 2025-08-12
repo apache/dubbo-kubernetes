@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/kubemesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	"github.com/apache/dubbo-kubernetes/pkg/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
+	"k8s.io/klog/v2"
 	"os"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -33,9 +35,13 @@ const (
 )
 
 func (s *Server) initMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.FileWatcher) {
-	fmt.Printf("\ninitializing mesh configuration %v\n", args.MeshConfigFile)
+	klog.Infof("initializing mesh configuration %v", args.MeshConfigFile)
 	col := s.getMeshConfiguration(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
+
+	klog.Infof("mesh configuration: %s", meshwatcher.PrettyFormatOfMeshConfig(s.environment.Mesh()))
+	argsdump, _ := yaml.Marshal(args)
+	klog.Infof("flags: \n%s", argsdump)
 }
 
 func (s *Server) getMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {

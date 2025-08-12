@@ -37,6 +37,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
 	"net/http"
 	"time"
 )
@@ -243,9 +244,9 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 	attempt := 0
 	defer func() {
 		if r {
-			fmt.Printf("\nsync complete: name=%s, time=%v", name, time.Since(t0))
+			klog.Infof("sync complete: name=%s, time=%v", name, time.Since(t0))
 		} else {
-			fmt.Printf("\nsync failed: name=%s, time=%v", name, time.Since(t0))
+			klog.Infof("sync failed: name=%s, time=%v", name, time.Since(t0))
 		}
 	}()
 	for {
