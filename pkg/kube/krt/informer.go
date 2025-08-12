@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 )
 
 var _ internalCollection[controllers.Object] = &informer[controllers.Object]{}
@@ -69,7 +70,7 @@ func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...C
 			return
 		}
 		close(h.synced)
-		fmt.Printf("\n%v synced\n", h.name())
+		klog.Infof("%v synced", h.name())
 
 		<-o.stop
 	}()

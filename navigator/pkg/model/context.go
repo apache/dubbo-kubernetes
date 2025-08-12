@@ -19,9 +19,15 @@ package model
 
 import (
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
+	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
+type Watcher = meshwatcher.WatcherCollection
+
 type Environment struct {
+	Watcher
 	Cache XdsCache
 }
 
@@ -42,4 +48,13 @@ func NewEnvironment() *Environment {
 	return &Environment{
 		Cache: cache,
 	}
+}
+
+var _ mesh.Holder = &Environment{}
+
+func (e *Environment) Mesh() *meshconfig.MeshConfig {
+	if e != nil && e.Watcher != nil {
+		return e.Watcher.Mesh()
+	}
+	return nil
 }

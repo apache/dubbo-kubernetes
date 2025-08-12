@@ -19,10 +19,10 @@ package kubemesh
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	"github.com/apache/dubbo-kubernetes/pkg/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

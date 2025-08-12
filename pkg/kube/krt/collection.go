@@ -25,6 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"k8s.io/klog/v2"
 	"sync"
 )
 
@@ -592,7 +593,7 @@ func newManyCollection[I, O any](
 
 	h.queue = queue.NewWithSync(func() {
 		close(h.synced)
-		fmt.Printf("%v synced (uid %v)\n", h.name(), h.uid())
+		klog.Infof("%v synced (uid %v)", h.name(), h.uid())
 	}, h.collectionName)
 
 	go h.runQueue()
