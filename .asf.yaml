@@ -28,7 +28,7 @@ github:
     # Enable issue management
     issues: true
     # Enable projects for project management boards
-    projects: true
+    projects: false
   protected_branches:
     master: {}
       # only disable force push

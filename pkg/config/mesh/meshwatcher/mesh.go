@@ -25,9 +25,37 @@ import (
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
+type adapter struct {
+	krt.Singleton[MeshConfigResource]
+}
+
+var _ mesh.Watcher = adapter{}
+
 type WatcherCollection interface {
 	mesh.Watcher
 	krt.Singleton[MeshConfigResource]
+}
+
+func (a adapter) Mesh() *meshconfig.MeshConfig {
+	// Just get the value; we know there is always one set due to the way the collection is setup.
+	v := a.Singleton.Get()
+	return v.MeshConfig
+}
+
+func (a adapter) AddMeshHandler(h func()) *mesh.WatcherHandlerRegistration {
+	// Do not run initial state to match existing semantics
+	colReg := a.Singleton.AsCollection().RegisterBatch(func(o []krt.Event[MeshConfigResource]) {
+		h()
+	}, false)
+	reg := mesh.NewWatcherHandlerRegistration(func() {
+		colReg.UnregisterHandler()
+	})
+	return reg
+}
+
+// DeleteMeshHandler removes a previously registered handler.
+func (a adapter) DeleteMeshHandler(registration *mesh.WatcherHandlerRegistration) {
+	registration.Remove()
 }
 
 // MeshConfigResource holds the current MeshConfig state

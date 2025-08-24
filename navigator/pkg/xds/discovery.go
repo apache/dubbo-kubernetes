@@ -19,12 +19,41 @@ package xds
 
 import (
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"go.uber.org/atomic"
+	"k8s.io/klog/v2"
+	"time"
 )
 
 type DiscoveryServer struct {
+	Env                *model.Environment
+	serverReady        atomic.Bool
+	DiscoveryStartTime time.Time
+	ClusterAliases     map[cluster.ID]cluster.ID
+	Cache              model.XdsCache
+	pushQueue          *PushQueue
+	krtDebugger        *krt.DebugHandler
 }
 
-func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string) *DiscoveryServer {
-	out := &DiscoveryServer{}
+func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string, debugger *krt.DebugHandler) *DiscoveryServer {
+	out := &DiscoveryServer{
+		Env:         env,
+		Cache:       env.Cache,
+		krtDebugger: debugger,
+	}
+	out.ClusterAliases = make(map[cluster.ID]cluster.ID)
+	for alias := range clusterAliases {
+		out.ClusterAliases[cluster.ID(alias)] = cluster.ID(clusterAliases[alias])
+	}
 	return out
+}
+
+func (s *DiscoveryServer) CachesSynced() {
+	klog.Infof("All caches have been synced up in %v, marking server ready", time.Since(s.DiscoveryStartTime))
+	s.serverReady.Store(true)
+}
+
+func (s *DiscoveryServer) Shutdown() {
+	s.pushQueue.ShutDown()
 }
