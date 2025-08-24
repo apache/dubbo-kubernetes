@@ -34,6 +34,8 @@ type DiscoveryServer struct {
 	Cache              model.XdsCache
 	pushQueue          *PushQueue
 	krtDebugger        *krt.DebugHandler
+	InboundUpdates     *atomic.Int64
+	CommittedUpdates   *atomic.Int64
 }
 
 func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string, debugger *krt.DebugHandler) *DiscoveryServer {

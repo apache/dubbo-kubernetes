@@ -38,7 +38,7 @@ func (s *Server) initMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.F
 	klog.Infof("initializing mesh configuration %v", args.MeshConfigFile)
 	col := s.getMeshConfiguration(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
-
+	s.environment.Watcher = meshwatcher.ConfigAdapter(col)
 	klog.Infof("mesh configuration: %s", meshwatcher.PrettyFormatOfMeshConfig(s.environment.Mesh()))
 	argsdump, _ := yaml.Marshal(args)
 	klog.Infof("flags: \n%s", argsdump)
