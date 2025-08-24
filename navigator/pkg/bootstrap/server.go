@@ -32,6 +32,7 @@ import (
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
+	"github.com/fsnotify/fsnotify"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"k8s.io/client-go/rest"
@@ -61,6 +62,8 @@ type Server struct {
 	httpsMux          *http.ServeMux // webhooks
 	fileWatcher       filewatcher.FileWatcher
 	internalStop      chan struct{}
+	shutdownDuration  time.Duration
+	cacertsWatcher    *fsnotify.Watcher
 }
 
 func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
@@ -326,6 +329,15 @@ func (s *Server) cachesSynced() bool {
 	return true
 }
 
+func (s *Server) pushContextReady(expected int64) bool {
+	committed := s.XDSServer.CommittedUpdates.Load()
+	if committed < expected {
+		klog.Infof("Waiting for pushcontext to process inbound updates, inbound: %v, committed : %v", expected, committed)
+		return false
+	}
+	return true
+}
+
 func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
 	start := time.Now()
 	klog.Info("Waiting for caches to be synced")
@@ -334,7 +346,6 @@ func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
 		return false
 	}
 	klog.Infof("All controller caches have been synced up in %v", time.Since(start))
-	// TODO XDSServer.InboundUpdates.Load
-	// TODO return kubelib.WaitForCacheSync("push context", stop, func() bool { return s.pushContextReady(expected) })
-	return false
+	expected := s.XDSServer.InboundUpdates.Load()
+	return kubelib.WaitForCacheSync("push context", stop, func() bool { return s.pushContextReady(expected) })
 }

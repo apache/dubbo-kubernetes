@@ -53,6 +53,10 @@ func (a adapter) AddMeshHandler(h func()) *mesh.WatcherHandlerRegistration {
 	return reg
 }
 
+func ConfigAdapter(configuration krt.Singleton[MeshConfigResource]) WatcherCollection {
+	return adapter{configuration}
+}
+
 // DeleteMeshHandler removes a previously registered handler.
 func (a adapter) DeleteMeshHandler(registration *mesh.WatcherHandlerRegistration) {
 	registration.Remove()

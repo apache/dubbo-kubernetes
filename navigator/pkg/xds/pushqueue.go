@@ -20,7 +20,7 @@ package xds
 import (
 	"sync"
 
-	"istio.io/istio/pilot/pkg/model"
+	"github.com/apache/dubbo-kubernetes/navigator/pkg/model"
 )
 
 type PushQueue struct {

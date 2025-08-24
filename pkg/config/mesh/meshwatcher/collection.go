@@ -50,7 +50,7 @@ func NewCollection(opts krt.OptionsBuilder, sources ...MeshConfigSource) krt.Sin
 			for _, attempt := range sources {
 				s := krt.FetchOne(ctx, attempt.AsCollection())
 				if s == nil {
-					klog.Info("mesh configuration source missing")
+					klog.V(2).InfoS("mesh configuration source missing")
 					continue
 				}
 				n, err := mesh.ApplyMeshConfig(*s, meshCfg)
