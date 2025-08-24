@@ -42,7 +42,6 @@ func DefaultProxyConfig() *meshconfig.ProxyConfig {
 		ProxyAdminPort:           15000,
 		// TODO authpolicy
 		DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
-		BinaryPath:       constants.BinaryPathFilename,
 		StatNameLength:   189,
 		StatusPort:       15020,
 	}

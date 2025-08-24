@@ -18,6 +18,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
 	"github.com/apache/dubbo-kubernetes/navigator/pkg/model"
@@ -75,7 +76,7 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 	for _, fn := range initFuncs {
 		fn(s)
 	}
-	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases)
+	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases, args.KrtDebugger)
 	// TODO configGen
 	// TODO initReadinessProbes
 	s.initServers(args)
@@ -97,10 +98,12 @@ func (s *Server) Start(stop <-chan struct{}) error {
 	if err := s.server.Start(stop); err != nil {
 		return err
 	}
+
 	if !s.waitForCacheSync(stop) {
 		return fmt.Errorf("failed to sync cache")
 	}
-	// TODO XDSserver CacheSynced
+
+	s.XDSServer.CachesSynced()
 
 	if s.secureGrpcAddress != "" {
 		grpcListener, err := net.Listen("tcp", s.secureGrpcAddress)
@@ -141,6 +144,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 		}()
 		s.httpsAddr = httpsListener.Addr().String()
 	}
+
+	s.waitForShutdown(stop)
+
 	return nil
 }
 
@@ -251,6 +257,66 @@ func getClusterID(args *NaviArgs) cluster.ID {
 		}
 	}
 	return clusterID
+}
+
+func (s *Server) waitForShutdown(stop <-chan struct{}) {
+	go func() {
+		<-stop
+		close(s.internalStop)
+		_ = s.fileWatcher.Close()
+
+		if s.cacertsWatcher != nil {
+			_ = s.cacertsWatcher.Close()
+		}
+		// Stop gRPC services.  If gRPC services fail to stop in the shutdown duration,
+		// force stop them. This does not happen normally.
+		stopped := make(chan struct{})
+		go func() {
+			// Some grpcServer implementations do not support GracefulStop. Unfortunately, this is not
+			// exposed; they just panic. To avoid this, we will recover and do a standard Stop when its not
+			// support.
+			defer func() {
+				if r := recover(); r != nil {
+					s.grpcServer.Stop()
+					if s.secureGrpcServer != nil {
+						s.secureGrpcServer.Stop()
+					}
+					close(stopped)
+				}
+			}()
+			s.grpcServer.GracefulStop()
+			if s.secureGrpcServer != nil {
+				s.secureGrpcServer.GracefulStop()
+			}
+			close(stopped)
+		}()
+
+		t := time.NewTimer(s.shutdownDuration)
+		select {
+		case <-t.C:
+			s.grpcServer.Stop()
+			if s.secureGrpcServer != nil {
+				s.secureGrpcServer.Stop()
+			}
+		case <-stopped:
+			t.Stop()
+		}
+
+		// Stop HTTP services.
+		ctx, cancel := context.WithTimeout(context.Background(), s.shutdownDuration)
+		defer cancel()
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			klog.Error(err)
+		}
+		if s.httpsServer != nil {
+			if err := s.httpsServer.Shutdown(ctx); err != nil {
+				klog.Error(err)
+			}
+		}
+
+		// Shutdown the DiscoveryServer.
+		s.XDSServer.Shutdown()
+	}()
 }
 
 func (s *Server) cachesSynced() bool {
