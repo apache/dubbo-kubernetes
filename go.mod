@@ -17,8 +17,6 @@ module github.com/apache/dubbo-kubernetes
 
 go 1.24.0
 
-toolchain go1.24.6
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Microsoft/go-winio v0.6.2

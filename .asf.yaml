@@ -17,14 +17,14 @@ notifications:
     commits:      commits@dubbo.apache.org
     issues:       notifications@dubbo.apache.org
     pullrequests: notifications@dubbo.apache.org
-    jira_options: link label link label
+    jira_options: link label
 
 github:
   homepage: https://dubbo.apache.org/
   description: "The Dubbo Kubernetes integration."
   features:
     # Enable wiki for documentation
-    wiki: true
+    wiki: false
     # Enable issue management
     issues: true
     # Enable projects for project management boards
