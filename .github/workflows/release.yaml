@@ -60,9 +60,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            add navigator control plane navi-agent and navi-discovery.
-            add dubbod registery helm charts example.
-            fix go mod dependency.
+            Update navi-discovery logic code.
           draft: false
           prerelease: false
 
