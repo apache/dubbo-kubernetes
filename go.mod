@@ -212,7 +212,7 @@ require (
 	github.com/spf13/cast v1.8.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/ulikunitz/xz v0.5.14 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
@@ -254,5 +254,4 @@ replace (
 	github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.20.2
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
-
 )
