@@ -73,7 +73,28 @@ func (m MeshConfigResource) Equals(other MeshConfigResource) bool {
 	return proto.Equal(m.MeshConfig, other.MeshConfig)
 }
 
+// MeshNetworksResource holds the current MeshNetworks state
+type MeshNetworksResource struct {
+	*meshconfig.MeshNetworks
+}
+
+func (m MeshNetworksResource) ResourceName() string { return "MeshNetworksResource" }
+
+func (m MeshNetworksResource) Equals(other MeshNetworksResource) bool {
+	return proto.Equal(m.MeshNetworks, other.MeshNetworks)
+}
+
+// NetworksAdapter wraps a MeshNetworks collection into a mesh.NetworksWatcher interface.
+func NetworksAdapter(configuration krt.Singleton[MeshNetworksResource]) mesh.NetworksWatcher {
+	return networksAdapter{configuration}
+}
+
 func PrettyFormatOfMeshConfig(meshConfig *meshconfig.MeshConfig) string {
 	meshConfigDump, _ := protomarshal.ToYAML(meshConfig)
 	return meshConfigDump
+}
+
+func PrettyFormatOfMeshNetworks(meshNetworks *meshconfig.MeshNetworks) string {
+	meshNetworksDump, _ := protomarshal.ToYAML(meshNetworks)
+	return meshNetworksDump
 }

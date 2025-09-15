@@ -103,6 +103,8 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 		s.kubeClient = kubelib.SetObjectFilter(s.kubeClient, filter)
 	}
 
+	s.initMeshNetworks(args, s.fileWatcher)
+
 	return s, nil
 }
 

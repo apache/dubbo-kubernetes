@@ -69,3 +69,28 @@ func NewCollection(opts krt.OptionsBuilder, sources ...MeshConfigSource) krt.Sin
 		}, opts.WithName("MeshConfig")...,
 	)
 }
+
+// NewNetworksCollection builds a new meshnetworks config built by applying the provided sources.
+// Sources are applied in order (example: default < sources[0] < sources[1]).
+func NewNetworksCollection(opts krt.OptionsBuilder, sources ...MeshConfigSource) krt.Singleton[MeshNetworksResource] {
+	if len(sources) > 2 {
+		// There is no real reason for this other than to enforce we don't accidentally put more sources
+		panic("currently only 2 sources are supported")
+	}
+	return krt.NewSingleton[MeshNetworksResource](
+		func(ctx krt.HandlerContext) *MeshNetworksResource {
+			for _, attempt := range sources {
+				if s := krt.FetchOne(ctx, attempt.AsCollection()); s != nil {
+					n, err := mesh.ParseMeshNetworks(*s)
+					if err != nil {
+						klog.Errorf("invalid mesh networks, using last known state: %v", err)
+						ctx.DiscardResult()
+						return &MeshNetworksResource{mesh.DefaultMeshNetworks()}
+					}
+					return &MeshNetworksResource{n}
+				}
+			}
+			return &MeshNetworksResource{nil}
+		}, opts.WithName("MeshNetworks")...,
+	)
+}

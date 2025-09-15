@@ -31,7 +31,8 @@ import (
 )
 
 const (
-	MeshConfigKey = "mesh"
+	MeshConfigKey   = "mesh"
+	MeshNetworksKey = "meshNetworks"
 )
 
 // NewConfigMapSource builds a MeshConfigSource reading from ConfigMap "name" with key "key".
