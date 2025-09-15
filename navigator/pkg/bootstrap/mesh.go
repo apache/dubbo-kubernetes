@@ -44,6 +44,25 @@ func (s *Server) initMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.F
 	klog.Infof("flags: \n%s", argsdump)
 }
 
+func (s *Server) initMeshNetworks(args *NaviArgs, fileWatcher filewatcher.FileWatcher) {
+	klog.Infof("initializing mesh networks configuration %v", args.NetworksConfigFile)
+	col := s.getMeshNetworks(args, fileWatcher)
+	col.AsCollection().WaitUntilSynced(s.internalStop)
+	s.environment.NetworksWatcher = meshwatcher.NetworksAdapter(col)
+	klog.Infof("mesh networks configuration: %s", meshwatcher.PrettyFormatOfMeshNetworks(s.environment.MeshNetworks()))
+}
+
+func (s *Server) getMeshNetworks(args *NaviArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshNetworksResource] {
+	// We need to get mesh networks up-front, before we start anything, so we use internalStop rather than scheduling a task to run
+	// later.
+	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
+	sources := s.getConfigurationSources(args, fileWatcher, args.NetworksConfigFile, kubemesh.MeshNetworksKey)
+	if len(sources) == 0 {
+		klog.Infof("Using default mesh networks - missing file %s and no k8s client", args.NetworksConfigFile)
+	}
+	return meshwatcher.NewNetworksCollection(opts, sources...)
+}
+
 func (s *Server) getMeshConfiguration(args *NaviArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
 	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
 	sources := s.getConfigurationSources(args, fileWatcher, args.MeshConfigFile, kubemesh.MeshConfigKey)

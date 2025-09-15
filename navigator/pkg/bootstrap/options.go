@@ -40,14 +40,15 @@ type RegistryOptions struct {
 }
 
 type NaviArgs struct {
-	ServerOptions    DiscoveryServerOptions
-	RegistryOptions  RegistryOptions
-	MeshConfigFile   string
-	PodName          string
-	Namespace        string
-	CtrlZOptions     *ctrlz.Options
-	KeepaliveOptions *keepalive.Options
-	KrtDebugger      *krt.DebugHandler `json:"-"`
+	ServerOptions      DiscoveryServerOptions
+	RegistryOptions    RegistryOptions
+	MeshConfigFile     string
+	NetworksConfigFile string
+	PodName            string
+	Namespace          string
+	CtrlZOptions       *ctrlz.Options
+	KeepaliveOptions   *keepalive.Options
+	KrtDebugger        *krt.DebugHandler `json:"-"`
 }
 
 type DiscoveryServerOptions struct {

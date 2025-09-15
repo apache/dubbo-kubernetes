@@ -20,6 +20,7 @@ package mesh
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -32,6 +33,12 @@ import (
 	"sigs.k8s.io/yaml"
 	"time"
 )
+
+// DefaultMeshNetworks returns a default meshnetworks configuration.
+// By default, it is empty.
+func DefaultMeshNetworks() *meshconfig.MeshNetworks {
+	return ptr.Of(EmptyMeshNetworks())
+}
 
 func DefaultProxyConfig() *meshconfig.ProxyConfig {
 	return &meshconfig.ProxyConfig{
@@ -116,6 +123,27 @@ func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshco
 	defaultConfig.TrustDomainAliases = sets.SortedList(sets.New(append(defaultConfig.TrustDomainAliases, prevTrustDomainAliases...)...))
 	// TODO ValidationMeshConfig
 	return defaultConfig, nil
+}
+
+// EmptyMeshNetworks configuration with no networks
+func EmptyMeshNetworks() meshconfig.MeshNetworks {
+	return meshconfig.MeshNetworks{
+		Networks: map[string]*meshconfig.Network{},
+	}
+}
+
+// ParseMeshNetworks returns a new MeshNetworks decoded from the
+// input YAML.
+func ParseMeshNetworks(yaml string) (*meshconfig.MeshNetworks, error) {
+	out := EmptyMeshNetworks()
+	if err := protomarshal.ApplyYAML(yaml, &out); err != nil {
+		return nil, multierror.Prefix(err, "failed to convert to proto.")
+	}
+
+	// if err := agent.ValidateMeshNetworks(&out); err != nil {
+	// 	return nil, err
+	// }
+	return &out, nil
 }
 
 func DefaultMeshConfig() *meshconfig.MeshConfig {

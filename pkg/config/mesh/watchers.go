@@ -21,6 +21,17 @@ import (
 	"istio.io/api/mesh/v1alpha1"
 )
 
+// NetworksWatcher watches changes to the mesh networks config.
+type NetworksWatcher interface {
+	Networks() *v1alpha1.MeshNetworks
+
+	// AddNetworksHandler registers a callback handler for changes to the networks config.
+	AddNetworksHandler(func()) *WatcherHandlerRegistration
+
+	// DeleteNetworksHandler unregisters a callback handler when remote cluster is removed.
+	DeleteNetworksHandler(registration *WatcherHandlerRegistration)
+}
+
 // Holder of a mesh configuration.
 type Holder interface {
 	Mesh() *v1alpha1.MeshConfig

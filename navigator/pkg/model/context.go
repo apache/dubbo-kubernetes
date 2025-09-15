@@ -33,9 +33,10 @@ type Watcher = meshwatcher.WatcherCollection
 
 type Environment struct {
 	Watcher
-	mutex       sync.RWMutex
-	pushContext *PushContext
-	Cache       XdsCache
+	mutex           sync.RWMutex
+	pushContext     *PushContext
+	Cache           XdsCache
+	NetworksWatcher mesh.NetworksWatcher
 }
 
 type XdsCacheImpl struct {
@@ -74,6 +75,13 @@ func (e *Environment) PushContext() *PushContext {
 func (e *Environment) Mesh() *meshconfig.MeshConfig {
 	if e != nil && e.Watcher != nil {
 		return e.Watcher.Mesh()
+	}
+	return nil
+}
+
+func (e *Environment) MeshNetworks() *meshconfig.MeshNetworks {
+	if e != nil && e.NetworksWatcher != nil {
+		return e.NetworksWatcher.Networks()
 	}
 	return nil
 }
