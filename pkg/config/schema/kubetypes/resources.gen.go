@@ -30,8 +30,9 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.ConfigMap, true
 	case *istioioapimeshv1alpha1.MeshConfig:
 		return gvk.MeshConfig, true
+	case *k8sioapicorev1.Namespace:
+		return gvk.Namespace, true
 	default:
 		return config.GroupVersionKind{}, false
 	}
-
 }

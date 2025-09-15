@@ -23,8 +23,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"github.com/apache/dubbo-kubernetes/pkg/sleep"
+	"go.uber.org/atomic"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -37,25 +39,28 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
 	"net/http"
 	"time"
 )
 
 type client struct {
-	extSet          kubeExtClient.Interface
-	config          *rest.Config
-	revision        string
-	clientFactory   *clientFactory
-	version         lazy.Lazy[*kubeVersion.Info]
-	informerFactory informerfactory.InformerFactory
-	dynamic         dynamic.Interface
-	kube            kubernetes.Interface
-	mapper          meta.ResettableRESTMapper
-	metadata        metadata.Interface
-	http            *http.Client
-	dubbo           istioclient.Interface
-	clusterID       cluster.ID
+	extSet                 kubeExtClient.Interface
+	config                 *rest.Config
+	revision               string
+	clientFactory          *clientFactory
+	version                lazy.Lazy[*kubeVersion.Info]
+	informerFactory        informerfactory.InformerFactory
+	dynamic                dynamic.Interface
+	kube                   kubernetes.Interface
+	mapper                 meta.ResettableRESTMapper
+	metadata               metadata.Interface
+	http                   *http.Client
+	objectFilter           kubetypes.DynamicObjectFilter
+	clusterID              cluster.ID
+	informerWatchesPending *atomic.Int32
+	crdWatcher             kubetypes.CrdWatcher
+	istio                  istioclient.Interface
 }
 
 type Client interface {
@@ -71,7 +76,13 @@ type Client interface {
 
 	Informers() informerfactory.InformerFactory
 
+	ObjectFilter() kubetypes.DynamicObjectFilter
+
 	ClusterID() cluster.ID
+
+	CrdWatcher() kubetypes.CrdWatcher
+
+	Shutdown()
 }
 
 type CLIClient interface {
@@ -192,6 +203,14 @@ func (c *client) Informers() informerfactory.InformerFactory {
 	return c.informerFactory
 }
 
+func (c *client) ObjectFilter() kubetypes.DynamicObjectFilter {
+	return c.objectFilter
+}
+
+func (c *client) CrdWatcher() kubetypes.CrdWatcher {
+	return c.crdWatcher
+}
+
 func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (dynamic.ResourceInterface, error) {
 	gvr, namespaced := c.bestEffortToGVR(gvk, obj, namespace)
 	var dr dynamic.ResourceInterface
@@ -277,6 +296,11 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 
 func (c *client) Shutdown() {
 	c.informerFactory.Shutdown()
+}
+
+func SetObjectFilter(c Client, filter kubetypes.DynamicObjectFilter) Client {
+	c.(*client).objectFilter = filter
+	return c
 }
 
 func WithCluster(id cluster.ID) ClientOption {

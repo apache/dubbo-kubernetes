@@ -31,12 +31,15 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
 	"net"
 	"net/http"
 	"os"
@@ -92,6 +95,13 @@ func NewServer(args *NaviArgs, initFuncs ...func(*Server)) (*Server, error) {
 		return nil, fmt.Errorf("error initializing kube client: %v", err)
 	}
 	s.initMeshConfiguration(args, s.fileWatcher)
+
+	if s.kubeClient != nil {
+		// // Build a namespace watcher. This must have no filter, since this is our input to the filter itself.
+		namespaces := kclient.New[*corev1.Namespace](s.kubeClient)
+		filter := namespace.NewDiscoveryNamespacesFilter(namespaces, s.environment.Watcher, s.internalStop)
+		s.kubeClient = kubelib.SetObjectFilter(s.kubeClient, filter)
+	}
 
 	return s, nil
 }

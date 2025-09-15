@@ -111,3 +111,7 @@ func Extract[T Object](obj any) T {
 	}
 	return o
 }
+
+func ExtractObject(obj any) Object {
+	return Extract[Object](obj)
+}
