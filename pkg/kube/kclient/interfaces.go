@@ -52,6 +52,7 @@ type Informer[T controllers.Object] interface {
 	Start(stop <-chan struct{})
 	ShutdownHandlers()
 	ShutdownHandler(registration cache.ResourceEventHandlerRegistration)
+	HasSynced() bool
 	HasSyncedIgnoringHandlers() bool
 	AddEventHandler(h cache.ResourceEventHandler) cache.ResourceEventHandlerRegistration
 	Index(name string, extract func(o T) []string) RawIndexer

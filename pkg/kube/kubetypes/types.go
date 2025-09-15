@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -67,4 +68,25 @@ type DynamicObjectFilter interface {
 	Filter(obj any) bool
 	// AddHandler registers a handler on namespace, which will be triggered when namespace selected or deselected.
 	AddHandler(func(selected, deselected sets.String))
+}
+
+type staticFilter struct {
+	f func(obj interface{}) bool
+}
+
+var _ DynamicObjectFilter = staticFilter{}
+
+func (s staticFilter) Filter(obj any) bool {
+	return s.f(obj)
+}
+
+func (s staticFilter) AddHandler(func(selected, deselected sets.String)) {
+	// Do nothing
+}
+
+type CrdWatcher interface {
+	HasSynced() bool
+	KnownOrCallback(s schema.GroupVersionResource, f func(stop <-chan struct{})) bool
+	WaitForCRD(s schema.GroupVersionResource, stop <-chan struct{}) bool
+	Run(stop <-chan struct{})
 }

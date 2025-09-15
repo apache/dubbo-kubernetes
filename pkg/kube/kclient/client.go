@@ -48,6 +48,12 @@ type writeClient[T controllers.Object] struct {
 	client kube.Client
 }
 
+func New[T controllers.ComparableObject](c kube.Client) Client[T] {
+	return NewFiltered[T](c, Filter{})
+}
+
+type Filter = kubetypes.Filter
+
 func NewFiltered[T controllers.ComparableObject](c kube.Client, filter Filter) Client[T] {
 	gvr := types.MustToGVR[T](types.MustGVKFromType[T]())
 	inf := kubeclient.GetInformerFiltered[T](c, ToOpts(c, gvr, filter), gvr)
@@ -56,8 +62,6 @@ func NewFiltered[T controllers.ComparableObject](c kube.Client, filter Filter) C
 		Informer:    newInformerClient[T](gvr, inf, filter),
 	}
 }
-
-type Filter = kubetypes.Filter
 
 func ToOpts(c kube.Client, gvr schema.GroupVersionResource, filter Filter) kubetypes.InformerOptions {
 	ns := filter.Namespace
@@ -182,6 +186,20 @@ func (n *informerClient[T]) Get(name, namespace string) T {
 		return ptr.Empty[T]()
 	}
 	return cast
+}
+
+func (n *informerClient[T]) HasSynced() bool {
+	if !n.informer.HasSynced() {
+		return false
+	}
+	n.handlerMu.RLock()
+	defer n.handlerMu.RUnlock()
+	for _, g := range n.registeredHandlers {
+		if !g.registration.HasSynced() {
+			return false
+		}
+	}
+	return true
 }
 
 func (n *informerClient[T]) HasSyncedIgnoringHandlers() bool {
