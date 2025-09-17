@@ -20,7 +20,6 @@ package kclient
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/navigator/pkg/features"
 	dubbogvr "github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kubeclient"
 	types "github.com/apache/dubbo-kubernetes/pkg/config/schema/kubetypes"
@@ -31,6 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"

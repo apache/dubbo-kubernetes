@@ -15,17 +15,13 @@
  * limitations under the License.
  */
 
-package constants
+package features
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
+import "github.com/apache/dubbo-kubernetes/pkg/env"
 
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+var (
+	CertSignerDomain          = env.Register("CERT_SIGNER_DOMAIN", "", "The cert signer domain info").Get()
+	UseCacertsForSelfSignedCA = env.Register("USE_CACERTS_FOR_SELF_SIGNED_CA", false,
+		"If enabled, dubbod will use a secret named cacerts to store its self-signed dubbo-"+
+			"generated root certificate.").Get()
 )

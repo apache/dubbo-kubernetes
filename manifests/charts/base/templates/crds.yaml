@@ -14,7 +14,7 @@
 # limitations under the License.
 
 {{- $file := .Files }}
-{{- range $path, $_ := .Files.Glob  "files/**.yaml" }}
+{{- range $path, $_ := .Files.Glob  "files/crd-all.yaml" }}
 {{- $file.Get $path }}
 {{- end -}}
 

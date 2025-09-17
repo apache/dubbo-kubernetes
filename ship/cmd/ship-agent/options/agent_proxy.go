@@ -15,17 +15,18 @@
  * limitations under the License.
  */
 
-package constants
+package options
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
+import shipagent "github.com/apache/dubbo-kubernetes/pkg/ship-agent"
 
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
+// ProxyArgs provides all of the configuration parameters for the Saku proxy.
+type ProxyArgs struct {
+	shipagent.Proxy
+	MeshConfigFile string
+	ServiceCluster string
+}
 
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
-)
+func NewProxyArgs() ProxyArgs {
+	p := ProxyArgs{}
+	return p
+}

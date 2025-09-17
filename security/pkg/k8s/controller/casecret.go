@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package constants
+package controller
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
+import corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
+type CaSecretController struct {
+	client corev1.CoreV1Interface
+}
 
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
-)
+func NewCaSecretController(core corev1.CoreV1Interface) *CaSecretController {
+	cs := &CaSecretController{
+		client: core,
+	}
+	return cs
+}

@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-package constants
+package main
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
-
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+import (
+	"github.com/apache/dubbo-kubernetes/ship/cmd/ship-discovery/app"
+	"os"
 )
+
+func main() {
+	rootCmd := app.NewRootCommand()
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(-1)
+	}
+}

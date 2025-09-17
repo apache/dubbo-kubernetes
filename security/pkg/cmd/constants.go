@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-package constants
+package cmd
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
+import "time"
 
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+var (
+	DefaultSelfSignedCACertTTL             = 3650 * 24 * time.Hour
+	DefaultMaxWorkloadCertTTL              = 90 * 24 * time.Hour
+	DefaultWorkloadCertTTL                 = 24 * time.Hour
+	DefaultRootCertGracePeriodPercentile   = 20
+	DefaultSelfSignedRootCertCheckInterval = 1 * time.Hour
+	ReadSigningCertRetryInterval           = time.Second * 5
+	ReadSigningCertRetryMax                = time.Second * 30
 )
