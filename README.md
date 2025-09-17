@@ -9,7 +9,7 @@ Dubbo Kubernetes
 Provides support for building and deploying Dubbo applications in various environments, including Kubernetes and Alibaba Cloud ACK.
 
 ## Repositories
-The main code repositories of Dubbo on Kubernetes include:
+The main repositories of Dubbo on Kubernetes include:
 
 - **dubboctl** — The command-line management tool that provides control plane management, development framework scaffolding, and application deployment.
 - **dubbod** — The dubbo control plane. It is built on Istio to implement a proxyless service mesh and includes the following components:
