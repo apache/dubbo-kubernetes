@@ -11,10 +11,12 @@ Provides support for building and deploying Dubbo applications in various enviro
 ## Repositories
 The main code repositories of Dubbo on Kubernetes include:
 
-- [dubboctl](dubboctl/): This directory contains code for the command line utility.
-- dubbod — The dubbo control plane. It is built on Istio to implement a proxyless service mesh and includes the following components:
-  - [navigator](navigator/) (under development): Responsible for configuring proxies at runtime.
-- [operator](operator/): dubbo operator provides user friendly options to operate the dubbo proxyless mesh.
+- **dubboctl** — The command-line management tool that provides control plane management, development framework scaffolding, and application deployment.
+- **dubbod** — The dubbo control plane. It is built on Istio to implement a proxyless service mesh and includes the following components:
+  - **Ship** - (under development): Runtime proxy configuration.
+  - **Aegis** - (under development): Certificate issuance and rotation.
+  - **Gear** - (under development): Validation, aggregation, transformation, and distribution of Dubbo configuration.
+- **operator**: Provides user-friendly options to operate the Dubbo proxyless service mesh.
 
 ## Quick Start
 Please refer to [official website](https://cn.dubbo.apache.org/zh-cn/overview/home/)

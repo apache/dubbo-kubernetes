@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package constants
+package bootstrap
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
-
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+import (
+	"github.com/apache/dubbo-kubernetes/ship/pkg/serviceregistry/providers"
 )
+
+func hasKubeRegistry(registries []string) bool {
+	for _, r := range registries {
+		if providers.ID(r) == providers.Kubernetes {
+			return true
+		}
+	}
+	return false
+}

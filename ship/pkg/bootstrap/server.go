@@ -1,0 +1,437 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package bootstrap
+
+import (
+	"context"
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/h2c"
+	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
+	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
+	"github.com/apache/dubbo-kubernetes/pkg/network"
+	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
+	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ra"
+	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
+	"github.com/apache/dubbo-kubernetes/ship/pkg/keycertbundle"
+	"github.com/apache/dubbo-kubernetes/ship/pkg/model"
+	"github.com/apache/dubbo-kubernetes/ship/pkg/server"
+	"github.com/apache/dubbo-kubernetes/ship/pkg/serviceregistry/providers"
+	tb "github.com/apache/dubbo-kubernetes/ship/pkg/trustbundle"
+	"github.com/apache/dubbo-kubernetes/ship/pkg/xds"
+	"github.com/fsnotify/fsnotify"
+	"golang.org/x/net/http2"
+	"google.golang.org/grpc"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
+	"net"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+)
+
+type Server struct {
+	XDSServer           *xds.DiscoveryServer
+	clusterID           cluster.ID
+	environment         *model.Environment
+	server              server.Instance
+	kubeClient          kubelib.Client
+	grpcServer          *grpc.Server
+	grpcAddress         string
+	secureGrpcServer    *grpc.Server
+	secureGrpcAddress   string
+	httpServer          *http.Server // debug, monitoring and readiness Server.
+	httpAddr            string
+	httpsServer         *http.Server // webhooks HTTPS Server.
+	httpsAddr           string
+	httpMux             *http.ServeMux
+	httpsMux            *http.ServeMux // webhooks
+	fileWatcher         filewatcher.FileWatcher
+	internalStop        chan struct{}
+	shutdownDuration    time.Duration
+	workloadTrustBundle *tb.TrustBundle
+	cacertsWatcher      *fsnotify.Watcher
+	RA                  ra.RegistrationAuthority
+	CA                  *ca.DubboCA
+	dnsNames            []string
+
+	dubbodCertBundleWatcher *keycertbundle.Watcher
+}
+
+func NewServer(args *ShipArgs, initFuncs ...func(*Server)) (*Server, error) {
+	e := model.NewEnvironment()
+	s := &Server{
+		environment:  e,
+		server:       server.New(),
+		clusterID:    getClusterID(args),
+		httpMux:      http.NewServeMux(),
+		fileWatcher:  filewatcher.NewWatcher(),
+		internalStop: make(chan struct{}),
+	}
+	for _, fn := range initFuncs {
+		fn(s)
+	}
+	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases, args.KrtDebugger)
+	// TODO configGen
+	// TODO initReadinessProbes
+	s.initServers(args)
+
+	if err := s.serveHTTP(); err != nil {
+		return nil, fmt.Errorf("error serving http: %v", err)
+	}
+
+	if err := s.initKubeClient(args); err != nil {
+		return nil, fmt.Errorf("error initializing kube client: %v", err)
+	}
+	s.initMeshConfiguration(args, s.fileWatcher)
+
+	if s.kubeClient != nil {
+		// // Build a namespace watcher. This must have no filter, since this is our input to the filter itself.
+		namespaces := kclient.New[*corev1.Namespace](s.kubeClient)
+		filter := namespace.NewDiscoveryNamespacesFilter(namespaces, s.environment.Watcher, s.internalStop)
+		s.kubeClient = kubelib.SetObjectFilter(s.kubeClient, filter)
+	}
+
+	s.initMeshNetworks(args, s.fileWatcher)
+	// TODO enovy proxy?
+	// s.initMeshHandlers(configGen.MeshConfigChanged)
+	// s.environment.Init()
+	// if err := s.environment.InitNetworksManager(s.XDSServer); err != nil {
+	// 	return nil, err
+	// }
+
+	// TODO If enabled, mesh will support certificates signed by more than one trustAnchor for DUBBO_MUTUAL mTLS
+	// if features.MultiRootMesh {
+	// 	// Initialize trust bundle after mesh config which it depends on
+	// 	s.workloadTrustBundle = tb.NewTrustBundle(nil, e.Watcher)
+	// 	e.TrustBundle = s.workloadTrustBundle
+	// }
+
+	// Options based on the current 'defaults' in dubbo.
+	caOpts := &caOptions{
+		TrustDomain:      s.environment.Mesh().TrustDomain,
+		Namespace:        args.Namespace,
+		ExternalCAType:   ra.CaExternalType(externalCaType),
+		CertSignerDomain: features.CertSignerDomain,
+	}
+
+	if caOpts.ExternalCAType == ra.ExtCAK8s {
+		// Older environment variable preserved for backward compatibility
+		caOpts.ExternalCASigner = k8sSigner
+	}
+	// CA signing certificate must be created first if needed.
+	if err := s.maybeCreateCA(caOpts); err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (s *Server) Start(stop <-chan struct{}) error {
+	klog.Infof("Starting Dubbod Server with primary cluster %s", s.clusterID)
+	if err := s.server.Start(stop); err != nil {
+		return err
+	}
+
+	if !s.waitForCacheSync(stop) {
+		return fmt.Errorf("failed to sync cache")
+	}
+
+	s.XDSServer.CachesSynced()
+
+	if s.secureGrpcAddress != "" {
+		grpcListener, err := net.Listen("tcp", s.secureGrpcAddress)
+		if err != nil {
+			return err
+		}
+		go func() {
+			klog.Infof("starting secure gRPC discovery service at %s", grpcListener.Addr())
+			if err := s.secureGrpcServer.Serve(grpcListener); err != nil {
+				klog.Errorf("error serving secure GRPC server: %v", err)
+			}
+		}()
+	}
+
+	if s.grpcAddress != "" {
+		grpcListener, err := net.Listen("tcp", s.grpcAddress)
+		if err != nil {
+			return err
+		}
+		go func() {
+			klog.Infof("starting gRPC discovery service at %s", grpcListener.Addr())
+			if err := s.grpcServer.Serve(grpcListener); err != nil {
+				klog.Errorf("error serving GRPC server: %v", err)
+			}
+		}()
+	}
+
+	if s.httpsServer != nil {
+		httpsListener, err := net.Listen("tcp", s.httpsServer.Addr)
+		if err != nil {
+			return err
+		}
+		go func() {
+			klog.Infof("starting webhook service at %s", httpsListener.Addr())
+			if err := s.httpsServer.ServeTLS(httpsListener, "", ""); network.IsUnexpectedListenerError(err) {
+				klog.Errorf("error serving https server: %v", err)
+			}
+		}()
+		s.httpsAddr = httpsListener.Addr().String()
+	}
+
+	s.waitForShutdown(stop)
+
+	return nil
+}
+
+func (s *Server) initKubeClient(args *ShipArgs) error {
+	if s.kubeClient != nil {
+		// Already initialized by startup arguments
+		return nil
+	}
+	hasK8SConfigStore := false
+	if args.RegistryOptions.FileDir == "" {
+		// If file dir is set - config controller will just use file.
+		if _, err := os.Stat(args.MeshConfigFile); !os.IsNotExist(err) {
+			meshConfig, err := mesh.ReadMeshConfig(args.MeshConfigFile)
+			if err != nil {
+				return fmt.Errorf("failed reading mesh config: %v", err)
+			}
+			if len(meshConfig.ConfigSources) == 0 && args.RegistryOptions.KubeConfig != "" {
+				hasK8SConfigStore = true
+			}
+			for _, cs := range meshConfig.ConfigSources {
+				if cs.Address == string(Kubernetes)+"://" {
+					hasK8SConfigStore = true
+					break
+				}
+			}
+		} else if args.RegistryOptions.KubeConfig != "" {
+			hasK8SConfigStore = true
+		}
+	}
+
+	if hasK8SConfigStore || hasKubeRegistry(args.RegistryOptions.Registries) {
+		// Used by validation
+		kubeRestConfig, err := kubelib.DefaultRestConfig(args.RegistryOptions.KubeConfig, "", func(config *rest.Config) {
+			config.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
+			config.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
+		})
+		if err != nil {
+			return fmt.Errorf("failed creating kube config: %v", err)
+		}
+
+		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), s.clusterID)
+		if err != nil {
+			return fmt.Errorf("failed creating kube client: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) initServers(args *ShipArgs) {
+	s.initGrpcServer(args.KeepaliveOptions)
+	multiplexGRPC := false
+	if args.ServerOptions.GRPCAddr != "" {
+		s.grpcAddress = args.ServerOptions.GRPCAddr
+	} else {
+		// This happens only if the GRPC port (15010) is disabled. We will multiplex
+		// it on the HTTP port. Does not impact the HTTPS gRPC or HTTPS.
+		klog.Infof("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
+		multiplexGRPC = true
+	}
+	h2s := &http2.Server{
+		MaxConcurrentStreams: uint32(features.MaxConcurrentStreams),
+	}
+	multiplexHandler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
+			s.grpcServer.ServeHTTP(w, r)
+			return
+		}
+		s.httpMux.ServeHTTP(w, r)
+	}), h2s)
+	s.httpServer = &http.Server{
+		Addr:        args.ServerOptions.HTTPAddr,
+		Handler:     s.httpMux,
+		IdleTimeout: 90 * time.Second, // matches http.DefaultTransport keep-alive timeout
+		ReadTimeout: 30 * time.Second,
+	}
+	if multiplexGRPC {
+		s.httpServer.ReadTimeout = 0
+		s.httpServer.ReadHeaderTimeout = 30 * time.Second
+		s.httpServer.Handler = multiplexHandler
+	}
+}
+
+func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
+}
+
+func (s *Server) serveHTTP() error {
+	// At this point we are ready - start Http Listener so that it can respond to readiness events.
+	httpListener, err := net.Listen("tcp", s.httpServer.Addr)
+	if err != nil {
+		return err
+	}
+	go func() {
+		klog.Infof("starting HTTP service at %s", httpListener.Addr())
+		if err := s.httpServer.Serve(httpListener); network.IsUnexpectedListenerError(err) {
+			klog.Errorf("error serving http server: %v", err)
+		}
+	}()
+	s.httpAddr = httpListener.Addr().String()
+	return nil
+}
+
+// maybeCreateCA creates and initializes the built-in CA if needed.
+func (s *Server) maybeCreateCA(caOpts *caOptions) error {
+	// CA signing certificate must be created only if CA is enabled.
+	if features.EnableCAServer {
+		klog.Info("creating CA and initializing public key")
+		var err error
+		if useRemoteCerts.Get() {
+			if err = s.loadCACerts(caOpts, LocalCertDir.Get()); err != nil {
+				return fmt.Errorf("failed to load remote CA certs: %v", err)
+			}
+		}
+		// May return nil, if the CA is missing required configs - This is not an error.
+		// This is currently only used for K8S signing.
+		if caOpts.ExternalCAType != "" {
+			if s.RA, err = s.createDubboRA(caOpts); err != nil {
+				return fmt.Errorf("failed to create RA: %v", err)
+			}
+		}
+		// If K8S signs - we don't need to use the built-in dubbo CA.
+		if !s.isK8SSigning() {
+			if s.CA, err = s.createDubboCA(caOpts); err != nil {
+				return fmt.Errorf("failed to create CA: %v", err)
+			}
+		}
+	}
+	return nil
+}
+
+func getClusterID(args *ShipArgs) cluster.ID {
+	clusterID := args.RegistryOptions.KubeOptions.ClusterID
+	if clusterID == "" {
+		if hasKubeRegistry(args.RegistryOptions.Registries) {
+			clusterID = cluster.ID(providers.Kubernetes)
+		}
+	}
+	return clusterID
+}
+
+// isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Istiod
+func (s *Server) isK8SSigning() bool {
+	return s.RA != nil && strings.HasPrefix(features.NaviCertProvider, constants.CertProviderKubernetesSignerPrefix)
+}
+
+func (s *Server) waitForShutdown(stop <-chan struct{}) {
+	go func() {
+		<-stop
+		close(s.internalStop)
+		_ = s.fileWatcher.Close()
+
+		if s.cacertsWatcher != nil {
+			_ = s.cacertsWatcher.Close()
+		}
+		// Stop gRPC services.  If gRPC services fail to stop in the shutdown duration,
+		// force stop them. This does not happen normally.
+		stopped := make(chan struct{})
+		go func() {
+			// Some grpcServer implementations do not support GracefulStop. Unfortunately, this is not
+			// exposed; they just panic. To avoid this, we will recover and do a standard Stop when its not
+			// support.
+			defer func() {
+				if r := recover(); r != nil {
+					s.grpcServer.Stop()
+					if s.secureGrpcServer != nil {
+						s.secureGrpcServer.Stop()
+					}
+					close(stopped)
+				}
+			}()
+			s.grpcServer.GracefulStop()
+			if s.secureGrpcServer != nil {
+				s.secureGrpcServer.GracefulStop()
+			}
+			close(stopped)
+		}()
+
+		t := time.NewTimer(s.shutdownDuration)
+		select {
+		case <-t.C:
+			s.grpcServer.Stop()
+			if s.secureGrpcServer != nil {
+				s.secureGrpcServer.Stop()
+			}
+		case <-stopped:
+			t.Stop()
+		}
+
+		// Stop HTTP services.
+		ctx, cancel := context.WithTimeout(context.Background(), s.shutdownDuration)
+		defer cancel()
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			klog.Error(err)
+		}
+		if s.httpsServer != nil {
+			if err := s.httpsServer.Shutdown(ctx); err != nil {
+				klog.Error(err)
+			}
+		}
+
+		// Shutdown the DiscoveryServer.
+		s.XDSServer.Shutdown()
+	}()
+}
+
+func (s *Server) cachesSynced() bool {
+	// TODO multiclusterController HasSynced
+	// TODO ServiceController().HasSynced
+	// TODO configController.HasSynced
+	return true
+}
+
+func (s *Server) pushContextReady(expected int64) bool {
+	committed := s.XDSServer.CommittedUpdates.Load()
+	if committed < expected {
+		klog.Infof("Waiting for pushcontext to process inbound updates, inbound: %v, committed : %v", expected, committed)
+		return false
+	}
+	return true
+}
+
+func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
+	start := time.Now()
+	klog.Info("Waiting for caches to be synced")
+	if !kubelib.WaitForCacheSync("server", stop, s.cachesSynced) {
+		klog.Info("Failed waiting for cache sync")
+		return false
+	}
+	klog.Infof("All controller caches have been synced up in %v", time.Since(start))
+	expected := s.XDSServer.InboundUpdates.Load()
+	return kubelib.WaitForCacheSync("push context", stop, func() bool { return s.pushContextReady(expected) })
+}

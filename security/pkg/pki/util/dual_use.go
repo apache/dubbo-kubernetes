@@ -15,17 +15,23 @@
  * limitations under the License.
  */
 
-package constants
+package util
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
-
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+import (
+	"fmt"
+	"strings"
 )
+
+// DualUseCommonName extracts a valid CommonName from a comma-delimited host string
+// for dual-use certificates.
+func DualUseCommonName(host string) (string, error) {
+	// cn uses one hostname, drop the rest
+	first := strings.SplitN(host, ",", 2)[0]
+
+	// cn max length is 64 (ub-common-name @ https://tools.ietf.org/html/rfc5280)
+	if l := len(first); l > 64 {
+		return "", fmt.Errorf("certificate CN upper bound exceeded (%v>64): %s", l, first)
+	}
+
+	return first, nil
+}

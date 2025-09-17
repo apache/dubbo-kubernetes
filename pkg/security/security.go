@@ -15,17 +15,37 @@
  * limitations under the License.
  */
 
-package constants
+package security
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
-
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+import (
+	"context"
+	"net/http"
 )
+
+type AuthContext struct {
+	// grpc context
+	GrpcContext context.Context
+	// http request
+	Request *http.Request
+}
+
+type Authenticator interface {
+	Authenticate(ctx AuthContext) (*Caller, error)
+	AuthenticatorType() string
+}
+
+type AuthSource int
+
+type KubernetesInfo struct {
+	PodName           string
+	PodNamespace      string
+	PodUID            string
+	PodServiceAccount string
+}
+
+type Caller struct {
+	AuthSource AuthSource
+	Identities []string
+
+	KubernetesInfo KubernetesInfo
+}

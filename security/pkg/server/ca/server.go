@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package constants
+package ca
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
-
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+import (
+	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
+	"github.com/apache/dubbo-kubernetes/security/pkg/pki/util"
 )
+
+type CertificateAuthority interface {
+	Sign(csrPEM []byte, opts ca.CertOpts) ([]byte, error)
+	SignWithCertChain(csrPEM []byte, opts ca.CertOpts) ([]string, error)
+	GetCAKeyCertBundle() *util.KeyCertBundle
+}
+
+func RecordCertsExpiry(keyCertBundle *util.KeyCertBundle) {}

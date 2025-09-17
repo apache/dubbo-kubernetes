@@ -15,17 +15,32 @@
  * limitations under the License.
  */
 
-package constants
+package model
 
-const (
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
-
-	CertProviderDubbod                 = "dubbod"
-	CertProviderKubernetesSignerPrefix = "k8s.io/"
-
-	CACertNamespaceConfigMapDataName = "root-cert.pem"
+import (
+	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
 )
+
+type XdsCache interface{}
+
+type DisabledCache struct{}
+
+func NewXdsCache() XdsCache {
+	cache := XdsCacheImpl{
+		eds: newTypedXdsCache[uint64](),
+	}
+	if features.EnableCDSCaching {
+		cache.cds = newTypedXdsCache[uint64]()
+	} else {
+		cache.cds = disabledCache[uint64]{}
+	}
+	if features.EnableRDSCaching {
+		cache.rds = newTypedXdsCache[uint64]()
+	} else {
+		cache.rds = disabledCache[uint64]{}
+	}
+
+	cache.sds = newTypedXdsCache[string]()
+
+	return cache
+}
