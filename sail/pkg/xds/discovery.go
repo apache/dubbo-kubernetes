@@ -20,7 +20,7 @@ package xds
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"go.uber.org/atomic"
 	"k8s.io/klog/v2"
 	"time"

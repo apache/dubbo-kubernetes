@@ -32,6 +32,7 @@ import (
 	apierror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/klog/v2"
 	"os"
 	"time"
 )
@@ -172,6 +173,7 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 			}
 
 			// 3. if use cacerts disabled, create `dubbo-ca-secret`, otherwise create `cacerts`.
+			klog.Infof("CASecret %s not found, will create one", caCertName)
 			options := util.CertOptions{
 				TTL:          caCertTTL,
 				Org:          org,
@@ -182,11 +184,13 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 			}
 			pemCert, pemKey, ckErr := util.GenCertKeyFromOptions(options)
 			if ckErr != nil {
+				klog.Errorf("unable to generate CA cert and key for self-signed CA (%v)", ckErr)
 				return fmt.Errorf("unable to generate CA cert and key for self-signed CA (%v)", ckErr)
 			}
 
 			rootCerts, err := util.AppendRootCerts(pemCert, rootCertFile)
 			if err != nil {
+				klog.Errorf("failed to append root certificates (%v)", err)
 				return fmt.Errorf("failed to append root certificates (%v)", err)
 			}
 			if caOpts.KeyCertBundle, err = util.NewVerifiedKeyCertBundleFromPem(
@@ -196,18 +200,22 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 				rootCerts,
 				nil,
 			); err != nil {
+				klog.Errorf("failed to create CA KeyCertBundle (%v)", err)
 				return fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
 			}
 			// Write the key/cert back to secret, so they will be persistent when CA restarts.
 			secret := BuildSecret(caCertName, namespace, nil, nil, pemCert, pemCert, pemKey, dubboCASecretType)
 			_, err = client.Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 			if err != nil {
+				klog.Errorf("Failed to create secret %s (%v)", caCertName, err)
 				return err
 			}
+			klog.Infof("Using self-generated public key: %v", string(rootCerts))
 			return nil
 		}
 		return err
 	})
+	klog.Infof("Set secret name for self-signed CA cert rotator to %s", caCertName)
 	caOpts.RotatorConfig.secretName = caCertName
 	return caOpts, err
 }
@@ -291,6 +299,7 @@ func (ca *DubboCA) signWithCertChain(csrPEM []byte, subjectIDs []string, request
 func loadSelfSignedCaSecret(client corev1.CoreV1Interface, namespace string, caCertName string, rootCertFile string, caOpts *DubboCAOptions) error {
 	caSecret, err := client.Secrets(namespace).Get(context.TODO(), caCertName, metav1.GetOptions{})
 	if err == nil {
+		klog.Infof("Load signing key and cert from existing secret %s/%s", caSecret.Namespace, caSecret.Name)
 		rootCerts, err := util.AppendRootCerts(caSecret.Data[CACertFile], rootCertFile)
 		if err != nil {
 			return fmt.Errorf("failed to append root certificates (%v)", err)
@@ -304,6 +313,7 @@ func loadSelfSignedCaSecret(client corev1.CoreV1Interface, namespace string, caC
 		); err != nil {
 			return fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
 		}
+		klog.Infof("Using existing public key: %v", string(rootCerts))
 	}
 	return err
 }
@@ -402,9 +412,7 @@ func (ca *DubboCA) minTTL(defaultCertTTL time.Duration) (time.Duration, error) {
 	return defaultCertTTL, nil
 }
 
-func NewSelfSignedDebugDubboCAOptions(rootCertFile string, caCertTTL, defaultCertTTL, maxCertTTL time.Duration,
-	org string, caRSAKeySize int,
-) (caOpts *DubboCAOptions, err error) {
+func NewSelfSignedDebugDubboCAOptions(rootCertFile string, caCertTTL, defaultCertTTL, maxCertTTL time.Duration, org string, caRSAKeySize int) (caOpts *DubboCAOptions, err error) {
 	caOpts = &DubboCAOptions{
 		CAType:         selfSignedCA,
 		DefaultCertTTL: defaultCertTTL,

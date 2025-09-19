@@ -20,7 +20,7 @@ package xds
 import (
 	"sync"
 
-	"github.com/apache/dubbo-kubernetes/ship/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 )
 
 type PushQueue struct {

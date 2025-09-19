@@ -22,7 +22,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"net"
 	"strconv"

@@ -43,7 +43,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/util/protoconv"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/util/protoconv"
 	"istio.io/api/label"
 )
 

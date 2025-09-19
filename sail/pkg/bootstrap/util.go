@@ -15,31 +15,17 @@
  * limitations under the License.
  */
 
-package xds
+package bootstrap
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/xds"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/model"
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/providers"
 )
 
-type DeltaDiscoveryStream = discovery.AggregatedDiscoveryService_DeltaAggregatedResourcesServer
-
-type Connection struct {
-	xds.Connection
-	node         *core.Node
-	proxy        *model.Proxy
-	deltaStream  DeltaDiscoveryStream
-	deltaReqChan chan *discovery.DeltaDiscoveryRequest
-	s            *DiscoveryServer
-	ids          []string
-}
-
-func (conn *Connection) XdsConnection() *xds.Connection {
-	return &conn.Connection
-}
-
-func (conn *Connection) Proxy() *model.Proxy {
-	return conn.proxy
+func hasKubeRegistry(registries []string) bool {
+	for _, r := range registries {
+		if providers.ID(r) == providers.Kubernetes {
+			return true
+		}
+	}
+	return false
 }
