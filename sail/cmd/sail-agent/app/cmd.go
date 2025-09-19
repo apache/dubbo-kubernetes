@@ -22,7 +22,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
-	"github.com/apache/dubbo-kubernetes/ship/cmd/ship-agent/options"
+	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/options"
 	"github.com/spf13/cobra"
 )
 
@@ -32,9 +32,9 @@ var (
 
 func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:          "ship-agent",
-		Short:        "Dubbo Ship agent.",
-		Long:         "Dubbo Ship agent runs in the sidecar or gateway container and bootstraps Envoy.",
+		Use:          "sail-agent",
+		Short:        "Dubbo Sail agent.",
+		Long:         "Dubbo Sail agent runs in the sidecar or gateway container and bootstraps Envoy.",
 		SilenceUsage: true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.

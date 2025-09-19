@@ -24,7 +24,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"k8s.io/klog/v2"
 	"os"
 	"sigs.k8s.io/yaml"
@@ -34,7 +34,7 @@ const (
 	defaultMeshConfigMapName = "dubbo"
 )
 
-func (s *Server) initMeshConfiguration(args *ShipArgs, fileWatcher filewatcher.FileWatcher) {
+func (s *Server) initMeshConfiguration(args *SailArgs, fileWatcher filewatcher.FileWatcher) {
 	klog.Infof("initializing mesh configuration %v", args.MeshConfigFile)
 	col := s.getMeshConfiguration(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
@@ -44,7 +44,7 @@ func (s *Server) initMeshConfiguration(args *ShipArgs, fileWatcher filewatcher.F
 	klog.Infof("flags: \n%s", argsdump)
 }
 
-func (s *Server) initMeshNetworks(args *ShipArgs, fileWatcher filewatcher.FileWatcher) {
+func (s *Server) initMeshNetworks(args *SailArgs, fileWatcher filewatcher.FileWatcher) {
 	klog.Infof("initializing mesh networks configuration %v", args.NetworksConfigFile)
 	col := s.getMeshNetworks(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
@@ -52,7 +52,7 @@ func (s *Server) initMeshNetworks(args *ShipArgs, fileWatcher filewatcher.FileWa
 	klog.Infof("mesh networks configuration: %s", meshwatcher.PrettyFormatOfMeshNetworks(s.environment.MeshNetworks()))
 }
 
-func (s *Server) getMeshNetworks(args *ShipArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshNetworksResource] {
+func (s *Server) getMeshNetworks(args *SailArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshNetworksResource] {
 	// We need to get mesh networks up-front, before we start anything, so we use internalStop rather than scheduling a task to run
 	// later.
 	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
@@ -63,7 +63,7 @@ func (s *Server) getMeshNetworks(args *ShipArgs, fileWatcher filewatcher.FileWat
 	return meshwatcher.NewNetworksCollection(opts, sources...)
 }
 
-func (s *Server) getMeshConfiguration(args *ShipArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
+func (s *Server) getMeshConfiguration(args *SailArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
 	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
 	sources := s.getConfigurationSources(args, fileWatcher, args.MeshConfigFile, kubemesh.MeshConfigKey)
 	if len(sources) == 0 {
@@ -72,7 +72,7 @@ func (s *Server) getMeshConfiguration(args *ShipArgs, fileWatcher filewatcher.Fi
 	return meshwatcher.NewCollection(opts, sources...)
 }
 
-func (s *Server) getConfigurationSources(args *ShipArgs, fileWatcher filewatcher.FileWatcher, file string, cmKey string) []meshwatcher.MeshConfigSource {
+func (s *Server) getConfigurationSources(args *SailArgs, fileWatcher filewatcher.FileWatcher, file string, cmKey string) []meshwatcher.MeshConfigSource {
 	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
 	var userMeshConfig *meshwatcher.MeshConfigSource
 	if features.SharedMeshConfig != "" && s.kubeClient != nil {

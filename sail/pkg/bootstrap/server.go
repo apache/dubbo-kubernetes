@@ -30,15 +30,15 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/providers"
+	tb "github.com/apache/dubbo-kubernetes/sail/pkg/trustbundle"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ra"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/keycertbundle"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/model"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/server"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/serviceregistry/providers"
-	tb "github.com/apache/dubbo-kubernetes/ship/pkg/trustbundle"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/xds"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
@@ -80,7 +80,7 @@ type Server struct {
 	dubbodCertBundleWatcher *keycertbundle.Watcher
 }
 
-func NewServer(args *ShipArgs, initFuncs ...func(*Server)) (*Server, error) {
+func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	e := model.NewEnvironment()
 	s := &Server{
 		environment:  e,
@@ -206,7 +206,7 @@ func (s *Server) Start(stop <-chan struct{}) error {
 	return nil
 }
 
-func (s *Server) initKubeClient(args *ShipArgs) error {
+func (s *Server) initKubeClient(args *SailArgs) error {
 	if s.kubeClient != nil {
 		// Already initialized by startup arguments
 		return nil
@@ -252,7 +252,7 @@ func (s *Server) initKubeClient(args *ShipArgs) error {
 	return nil
 }
 
-func (s *Server) initServers(args *ShipArgs) {
+func (s *Server) initServers(args *SailArgs) {
 	s.initGrpcServer(args.KeepaliveOptions)
 	multiplexGRPC := false
 	if args.ServerOptions.GRPCAddr != "" {
@@ -333,7 +333,7 @@ func (s *Server) maybeCreateCA(caOpts *caOptions) error {
 	return nil
 }
 
-func getClusterID(args *ShipArgs) cluster.ID {
+func getClusterID(args *SailArgs) cluster.ID {
 	clusterID := args.RegistryOptions.KubeOptions.ClusterID
 	if clusterID == "" {
 		if hasKubeRegistry(args.RegistryOptions.Registries) {

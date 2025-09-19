@@ -18,8 +18,8 @@
 package bootstrap
 
 import (
-	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
-	tb "github.com/apache/dubbo-kubernetes/ship/pkg/trustbundle"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	tb "github.com/apache/dubbo-kubernetes/sail/pkg/trustbundle"
 	"k8s.io/klog/v2"
 )
 

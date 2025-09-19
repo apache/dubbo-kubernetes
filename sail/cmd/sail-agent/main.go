@@ -18,7 +18,7 @@
 package main
 
 import (
-	"github.com/apache/dubbo-kubernetes/ship/cmd/ship-agent/app"
+	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/app"
 	"os"
 )
 

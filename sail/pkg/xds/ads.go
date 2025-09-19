@@ -15,16 +15,31 @@
  * limitations under the License.
  */
 
-package main
+package xds
 
 import (
-	"github.com/apache/dubbo-kubernetes/ship/cmd/ship-discovery/app"
-	"os"
+	"github.com/apache/dubbo-kubernetes/pkg/xds"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 )
 
-func main() {
-	rootCmd := app.NewRootCommand()
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(-1)
-	}
+type DeltaDiscoveryStream = discovery.AggregatedDiscoveryService_DeltaAggregatedResourcesServer
+
+type Connection struct {
+	xds.Connection
+	node         *core.Node
+	proxy        *model.Proxy
+	deltaStream  DeltaDiscoveryStream
+	deltaReqChan chan *discovery.DeltaDiscoveryRequest
+	s            *DiscoveryServer
+	ids          []string
+}
+
+func (conn *Connection) XdsConnection() *xds.Connection {
+	return &conn.Connection
+}
+
+func (conn *Connection) Proxy() *model.Proxy {
+	return conn.proxy
 }

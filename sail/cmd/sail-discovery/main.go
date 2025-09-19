@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-package bootstrap
+package main
 
 import (
-	"github.com/apache/dubbo-kubernetes/ship/pkg/serviceregistry/providers"
+	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-discovery/app"
+	"os"
 )
 
-func hasKubeRegistry(registries []string) bool {
-	for _, r := range registries {
-		if providers.ID(r) == providers.Kubernetes {
-			return true
-		}
+func main() {
+	rootCmd := app.NewRootCommand()
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(-1)
 	}
-	return false
 }

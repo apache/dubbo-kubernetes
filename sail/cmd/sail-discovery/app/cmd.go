@@ -22,21 +22,21 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/bootstrap"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
-	"github.com/apache/dubbo-kubernetes/ship/pkg/serviceregistry/providers"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/bootstrap"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/providers"
 	"github.com/spf13/cobra"
 )
 
 var (
-	serverArgs *bootstrap.ShipArgs
+	serverArgs *bootstrap.SailArgs
 )
 
 func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:          "ship-discovery",
-		Short:        "Dubbo Ship.",
-		Long:         "Dubbo Ship provides mesh-wide traffic management, security and policy capabilities in the Dubbo Service Mesh.",
+		Use:          "sail-discovery",
+		Short:        "Dubbo Sail.",
+		Long:         "Dubbo Sail provides mesh-wide traffic management, security and policy capabilities in the Dubbo Service Mesh.",
 		SilenceUsage: true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
@@ -84,7 +84,7 @@ func newDiscoveryCommand() *cobra.Command {
 }
 
 func addFlags(c *cobra.Command) {
-	serverArgs = bootstrap.NewShipArgs(func(p *bootstrap.ShipArgs) {
+	serverArgs = bootstrap.NewSailArgs(func(p *bootstrap.SailArgs) {
 		p.CtrlZOptions = ctrlz.DefaultOptions()
 	})
 	c.PersistentFlags().StringSliceVar(&serverArgs.RegistryOptions.Registries, "registries",
@@ -97,6 +97,8 @@ func addFlags(c *cobra.Command) {
 		"Use a Kubernetes configuration file instead of in-cluster configuration")
 	c.PersistentFlags().StringVar(&serverArgs.MeshConfigFile, "meshConfig", "./etc/dubbo/config/mesh",
 		"File name for Dubbo mesh configuration. If not specified, a default mesh will be used.")
+	c.PersistentFlags().StringVar(&serverArgs.NetworksConfigFile, "networksConfig", "./etc/dubbo/config/meshNetworks",
+		"File name for Dubbo mesh networks configuration. If not specified, a default mesh networks will be used.")
 	c.PersistentFlags().Float32Var(&serverArgs.RegistryOptions.KubeOptions.KubernetesAPIQPS, "kubernetesApiQPS", 80.0,
 		"Maximum QPS when communicating with the kubernetes API")
 	c.PersistentFlags().IntVar(&serverArgs.RegistryOptions.KubeOptions.KubernetesAPIBurst, "kubernetesApiBurst", 160,

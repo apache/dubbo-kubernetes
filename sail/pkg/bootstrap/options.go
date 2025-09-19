@@ -23,7 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	kubecontroller "github.com/apache/dubbo-kubernetes/ship/pkg/serviceregistry/kube/controller"
+	kubecontroller "github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/kube/controller"
 )
 
 var (
@@ -39,7 +39,7 @@ type RegistryOptions struct {
 	ClusterRegistriesNamespace string
 }
 
-type ShipArgs struct {
+type SailArgs struct {
 	ServerOptions      DiscoveryServerOptions
 	RegistryOptions    RegistryOptions
 	MeshConfigFile     string
@@ -58,8 +58,8 @@ type DiscoveryServerOptions struct {
 	SecureGRPCAddr string
 }
 
-func NewShipArgs(initFuncs ...func(*ShipArgs)) *ShipArgs {
-	p := &ShipArgs{}
+func NewSailArgs(initFuncs ...func(*SailArgs)) *SailArgs {
+	p := &SailArgs{}
 
 	// Apply Default Values.
 	p.applyDefaults()
@@ -72,7 +72,7 @@ func NewShipArgs(initFuncs ...func(*ShipArgs)) *ShipArgs {
 	return p
 }
 
-func (p *ShipArgs) applyDefaults() {
+func (p *SailArgs) applyDefaults() {
 	p.Namespace = PodNamespace
 	p.PodName = PodName
 	p.KeepaliveOptions = keepalive.DefaultOption()

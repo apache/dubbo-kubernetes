@@ -18,7 +18,7 @@
 package protoconv
 
 import (
-	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )

@@ -20,7 +20,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-ship
+    app: dubbo-sail
     chart: dubbo
     heritage: Tiller
     release: dubbo
@@ -5860,7 +5860,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-ship
+    app: dubbo-sail
     chart: dubbo
     heritage: Tiller
     dubbo: security
@@ -6625,7 +6625,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-ship
+    app: dubbo-sail
     chart: dubbo
     heritage: Tiller
     dubbo: security
@@ -6976,7 +6976,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-ship
+    app: dubbo-sail
     chart: dubbo
     heritage: Tiller
     dubbo: security
@@ -7098,7 +7098,7 @@ spec:
                         type: string
                       timeout:
                         description: The maximum amount of time that the resolver, determined
-                          by the ship_JWT_ENABLE_REMOTE_JWKS environment variable,
+                          by the sail_JWT_ENABLE_REMOTE_JWKS environment variable,
                           will spend waiting for the JWKS to be fetched.
                         type: string
                         x-kubernetes-validations:
@@ -7378,7 +7378,7 @@ spec:
                         type: string
                       timeout:
                         description: The maximum amount of time that the resolver, determined
-                          by the ship_JWT_ENABLE_REMOTE_JWKS environment variable,
+                          by the sail_JWT_ENABLE_REMOTE_JWKS environment variable,
                           will spend waiting for the JWKS to be fetched.
                         type: string
                         x-kubernetes-validations:
@@ -7563,7 +7563,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-ship
+    app: dubbo-sail
     chart: dubbo
     heritage: Tiller
     release: dubbo

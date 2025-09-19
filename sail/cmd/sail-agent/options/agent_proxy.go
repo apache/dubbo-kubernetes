@@ -15,32 +15,18 @@
  * limitations under the License.
  */
 
-package model
+package options
 
-import (
-	"github.com/apache/dubbo-kubernetes/ship/pkg/features"
-)
+import sailagent "github.com/apache/dubbo-kubernetes/pkg/sail-agent"
 
-type XdsCache interface{}
+// ProxyArgs provides all of the configuration parameters for the Saku proxy.
+type ProxyArgs struct {
+	sailagent.Proxy
+	MeshConfigFile string
+	ServiceCluster string
+}
 
-type DisabledCache struct{}
-
-func NewXdsCache() XdsCache {
-	cache := XdsCacheImpl{
-		eds: newTypedXdsCache[uint64](),
-	}
-	if features.EnableCDSCaching {
-		cache.cds = newTypedXdsCache[uint64]()
-	} else {
-		cache.cds = disabledCache[uint64]{}
-	}
-	if features.EnableRDSCaching {
-		cache.rds = newTypedXdsCache[uint64]()
-	} else {
-		cache.rds = disabledCache[uint64]{}
-	}
-
-	cache.sds = newTypedXdsCache[string]()
-
-	return cache
+func NewProxyArgs() ProxyArgs {
+	p := ProxyArgs{}
+	return p
 }
