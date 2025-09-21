@@ -313,7 +313,7 @@ func loadSelfSignedCaSecret(client corev1.CoreV1Interface, namespace string, caC
 		); err != nil {
 			return fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
 		}
-		klog.Infof("Using existing public key: %v", string(rootCerts))
+		klog.Infof("Using existing public key: \n%v", string(rootCerts))
 	}
 	return err
 }

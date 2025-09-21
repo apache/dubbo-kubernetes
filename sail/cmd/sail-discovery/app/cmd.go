@@ -24,7 +24,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/providers"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -88,9 +88,9 @@ func addFlags(c *cobra.Command) {
 		p.CtrlZOptions = ctrlz.DefaultOptions()
 	})
 	c.PersistentFlags().StringSliceVar(&serverArgs.RegistryOptions.Registries, "registries",
-		[]string{string(providers.Kubernetes)},
+		[]string{string(provider.Kubernetes)},
 		fmt.Sprintf("Comma separated list of platform service registries to read from (choose one or more from {%s})",
-			providers.Kubernetes))
+			provider.Kubernetes))
 	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.ClusterRegistriesNamespace, "clusterRegistriesNamespace",
 		serverArgs.RegistryOptions.ClusterRegistriesNamespace, "Namespace for ConfigMap which stores clusters configs")
 	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.KubeConfig, "kubeconfig", "",

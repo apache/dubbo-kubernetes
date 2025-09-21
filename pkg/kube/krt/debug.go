@@ -72,3 +72,18 @@ func eraseMap[T any](l map[Key[T]]T) map[string]any {
 	}
 	return nm
 }
+
+// maybeRegisterCollectionForDebugging registers the collection in the debugger, if one is enabled
+func maybeRegisterCollectionForDebugging[T any](c Collection[T], handler *DebugHandler) {
+	if handler == nil {
+		return
+	}
+	cc := c.(internalCollection[T])
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+	handler.debugCollections = append(handler.debugCollections, DebugCollection{
+		name: cc.name(),
+		dump: cc.dump,
+		uid:  cc.uid(),
+	})
+}

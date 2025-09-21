@@ -34,7 +34,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/providers"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	tb "github.com/apache/dubbo-kubernetes/sail/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
@@ -53,21 +53,28 @@ import (
 )
 
 type Server struct {
-	XDSServer           *xds.DiscoveryServer
-	clusterID           cluster.ID
-	environment         *model.Environment
-	server              server.Instance
-	kubeClient          kubelib.Client
-	grpcServer          *grpc.Server
-	grpcAddress         string
-	secureGrpcServer    *grpc.Server
-	secureGrpcAddress   string
-	httpServer          *http.Server // debug, monitoring and readiness Server.
-	httpAddr            string
-	httpsServer         *http.Server // webhooks HTTPS Server.
-	httpsAddr           string
-	httpMux             *http.ServeMux
-	httpsMux            *http.ServeMux // webhooks
+	XDSServer   *xds.DiscoveryServer
+	clusterID   cluster.ID
+	environment *model.Environment
+	server      server.Instance
+	kubeClient  kubelib.Client
+
+	grpcServer  *grpc.Server
+	grpcAddress string
+
+	secureGrpcServer  *grpc.Server
+	secureGrpcAddress string
+
+	httpServer  *http.Server // debug, monitoring and readiness Server.
+	httpAddr    string
+	httpsServer *http.Server // webhooks HTTPS Server.
+	httpsAddr   string
+	httpMux     *http.ServeMux
+	httpsMux    *http.ServeMux // webhooks
+
+	ConfigStores     []model.ConfigStoreController
+	configController model.ConfigStoreController
+
 	fileWatcher         filewatcher.FileWatcher
 	internalStop        chan struct{}
 	shutdownDuration    time.Duration
@@ -143,6 +150,10 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 	// CA signing certificate must be created first if needed.
 	if err := s.maybeCreateCA(caOpts); err != nil {
+		return nil, err
+	}
+
+	if err := s.initControllers(args); err != nil {
 		return nil, err
 	}
 
@@ -289,6 +300,22 @@ func (s *Server) initServers(args *SailArgs) {
 func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
 }
 
+// initControllers initializes the controllers.
+func (s *Server) initControllers(args *SailArgs) error {
+	klog.Info("initializing controllers")
+	// TODO initMulticluster
+
+	// TODO initSDSServer
+
+	if err := s.initConfigController(args); err != nil {
+		return fmt.Errorf("error initializing config controller: %v", err)
+	}
+	if err := s.initServiceControllers(args); err != nil {
+		return fmt.Errorf("error initializing service controllers: %v", err)
+	}
+	return nil
+}
+
 func (s *Server) serveHTTP() error {
 	// At this point we are ready - start Http Listener so that it can respond to readiness events.
 	httpListener, err := net.Listen("tcp", s.httpServer.Addr)
@@ -333,11 +360,17 @@ func (s *Server) maybeCreateCA(caOpts *caOptions) error {
 	return nil
 }
 
+// addStartFunc appends a function to be run. These are run synchronously in order,
+// so the function should start a go routine if it needs to do anything blocking
+func (s *Server) addStartFunc(name string, fn server.Component) {
+	s.server.RunComponent(name, fn)
+}
+
 func getClusterID(args *SailArgs) cluster.ID {
 	clusterID := args.RegistryOptions.KubeOptions.ClusterID
 	if clusterID == "" {
 		if hasKubeRegistry(args.RegistryOptions.Registries) {
-			clusterID = cluster.ID(providers.Kubernetes)
+			clusterID = cluster.ID(provider.Kubernetes)
 		}
 	}
 	return clusterID

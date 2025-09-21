@@ -46,3 +46,6 @@ func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
 	merged := &PushRequest{}
 	return merged
 }
+
+type XDSUpdater interface {
+}

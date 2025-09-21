@@ -82,3 +82,13 @@ func (c multiSyncer) HasSynced() bool {
 	}
 	return true
 }
+
+type alwaysSynced struct{}
+
+func (c alwaysSynced) WaitUntilSynced(stop <-chan struct{}) bool {
+	return true
+}
+
+func (c alwaysSynced) HasSynced() bool {
+	return true
+}

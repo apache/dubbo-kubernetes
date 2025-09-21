@@ -32,7 +32,9 @@ import (
 type Watcher = meshwatcher.WatcherCollection
 
 type Environment struct {
+	ServiceDiscovery
 	Watcher
+	ConfigStore
 	mutex           sync.RWMutex
 	pushContext     *PushContext
 	Cache           XdsCache
@@ -107,5 +109,4 @@ func (e *Environment) GetDiscoveryAddress() (host.Name, string, error) {
 	return host.Name(hostname), port, nil
 }
 
-type Proxy struct {
-}
+type Proxy struct{}
