@@ -17,8 +17,21 @@
 
 package validation
 
-import "github.com/apache/dubbo-kubernetes/pkg/config/validation/agent"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/validation/agent"
+)
+
+var (
+	// EmptyValidate is a Validate that does nothing and returns no error.
+	EmptyValidate = func(config.Config) (Warning, error) {
+		return nil, nil
+	}
+)
 
 type (
 	Warning = agent.Warning
 )
+
+// ValidateFunc defines a validation func for an API proto.
+type ValidateFunc func(config config.Config) (Warning, error)

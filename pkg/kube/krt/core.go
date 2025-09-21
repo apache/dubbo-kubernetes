@@ -128,3 +128,9 @@ type internalCollection[T any] interface {
 	// Create a new index into the collection
 	index(name string, extract func(o T) []string) indexer[T]
 }
+
+// Namespacer is an optional interface that can be implemented by collection types.
+// If implemented, this will be used to determine an objects' Namespace.
+type Namespacer interface {
+	GetNamespace() string
+}

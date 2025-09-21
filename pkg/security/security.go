@@ -20,6 +20,15 @@ package security
 import (
 	"context"
 	"net/http"
+	"time"
+)
+
+const (
+	// RootCertReqResourceName is resource name of discovery request for root certificate.
+	RootCertReqResourceName = "ROOTCA"
+	// WorkloadKeyCertResourceName is the resource name of the discovery request for workload
+	// identity.
+	WorkloadKeyCertResourceName = "default"
 )
 
 type AuthContext struct {
@@ -32,6 +41,33 @@ type AuthContext struct {
 type Authenticator interface {
 	Authenticate(ctx AuthContext) (*Caller, error)
 	AuthenticatorType() string
+}
+
+// SecretItem is the cached item in in-memory secret store.
+type SecretItem struct {
+	CertificateChain []byte
+	PrivateKey       []byte
+
+	RootCert []byte
+
+	// ResourceName passed from envoy SDS discovery request.
+	// "ROOTCA" for root cert request, "default" for key/cert request.
+	ResourceName string
+
+	CreatedTime time.Time
+
+	ExpireTime time.Time
+}
+
+// SecretManager defines secrets management interface which is used by SDS.
+type SecretManager interface {
+	// GenerateSecret generates new secret for the given resource.
+	//
+	// The current implementation also watched the generated secret and trigger a callback when it is
+	// near expiry. It will constructs the SAN based on the token's 'sub' claim, expected to be in
+	// the K8S format. No other JWTs are currently supported due to client logic. If JWT is
+	// missing/invalid, the resourceName is used.
+	GenerateSecret(resourceName string) (*SecretItem, error)
 }
 
 type AuthSource int

@@ -17,12 +17,28 @@
 
 package controller
 
-import "github.com/apache/dubbo-kubernetes/pkg/cluster"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
+)
 
 type Options struct {
 	KubernetesAPIQPS   float32
 	KubernetesAPIBurst int
 	DomainSuffix       string
-	ClusterID          cluster.ID
-	ClusterAliases     map[string]string
+	// XDSUpdater will push changes to the xDS server.
+	XDSUpdater model.XDSUpdater
+	// MeshNetworksWatcher observes changes to the mesh networks config.
+	MeshNetworksWatcher mesh.NetworksWatcher
+	// MeshWatcher observes changes to the mesh config
+	MeshWatcher           meshwatcher.WatcherCollection
+	ClusterID             cluster.ID
+	ClusterAliases        map[string]string
+	SystemNamespace       string
+	MeshServiceController *aggregate.Controller
+	KrtDebugger           *krt.DebugHandler
 }

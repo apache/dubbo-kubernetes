@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package providers
+package provider
 
 // ID defines underlying platform supporting service registry
 type ID string

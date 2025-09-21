@@ -18,12 +18,12 @@
 package bootstrap
 
 import (
-	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/providers"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 )
 
 func hasKubeRegistry(registries []string) bool {
 	for _, r := range registries {
-		if providers.ID(r) == providers.Kubernetes {
+		if provider.ID(r) == provider.Kubernetes {
 			return true
 		}
 	}

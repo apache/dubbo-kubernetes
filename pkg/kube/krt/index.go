@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"k8s.io/client-go/tools/cache"
 )
 
 type Index[K comparable, O any] interface {
@@ -40,6 +41,13 @@ type IndexObject[K comparable, O any] struct {
 
 func (i IndexObject[K, O]) ResourceName() string {
 	return toString(i.Key)
+}
+
+// NewNamespaceIndex is a small helper to index a collection by namespace
+func NewNamespaceIndex[O Namespacer](c Collection[O]) Index[string, O] {
+	return NewIndex(c, cache.NamespaceIndex, func(o O) []string {
+		return []string{o.GetNamespace()}
+	})
 }
 
 func NewIndex[K comparable, O any](
