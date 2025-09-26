@@ -18,11 +18,33 @@
 package xds
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"k8s.io/klog/v2"
 	"time"
 )
 
 type DiscoveryStream = discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer
+
+type Resources = []*discovery.Resource
+
+type WatchedResource struct {
+	TypeUrl       string
+	ResourceNames sets.String
+	Wildcard      bool
+	NonceSent     string
+	NonceAcked    string
+	AlwaysRespond bool
+	LastSendTime  time.Time
+	LastError     string
+	LastResources Resources
+}
 
 type Connection struct {
 	peerAddr    string
@@ -36,6 +58,28 @@ type Connection struct {
 	errorChan   chan error
 }
 
+type Watcher interface {
+	DeleteWatchedResource(url string)
+	GetWatchedResource(url string) *WatchedResource
+	NewWatchedResource(url string, names []string)
+	UpdateWatchedResource(string, func(*WatchedResource) *WatchedResource)
+	// GetID identifies an xDS client. This is different from a connection ID.
+	GetID() string
+}
+
+type ConnectionContext interface {
+	XdsConnection() *Connection
+	Watcher() Watcher
+	// Initialize checks the first request.
+	Initialize(node *core.Node) error
+	// Close discards the connection.
+	Close()
+	// Process responds to a discovery request.
+	Process(req *discovery.DiscoveryRequest) error
+	// Push responds to a push event queue
+	Push(ev any) error
+}
+
 func NewConnection(peerAddr string, stream DiscoveryStream) Connection {
 	return Connection{
 		pushChannel: make(chan any),
@@ -47,4 +91,272 @@ func NewConnection(peerAddr string, stream DiscoveryStream) Connection {
 		connectedAt: time.Now(),
 		stream:      stream,
 	}
+}
+
+func Stream(ctx ConnectionContext) error {
+	con := ctx.XdsConnection()
+	// Do not call: defer close(con.pushChannel). The push channel will be garbage collected
+	// when the connection is no longer used. Closing the channel can cause subtle race conditions
+	// with push. According to the spec: "It's only necessary to close a channel when it is important
+	// to tell the receiving goroutines that all data have been sent."
+
+	// Block until either a request is received or a push is triggered.
+	// We need 2 go routines because 'read' blocks in Recv().
+	go Receive(ctx)
+
+	// Wait for the proxy to be fully initialized before we start serving traffic. Because
+	// initialization doesn't have dependencies that will block, there is no need to add any timeout
+	// here. Prior to this explicit wait, we were implicitly waiting by receive() not sending to
+	// reqChannel and the connection not being enqueued for pushes to pushChannel until the
+	// initialization is complete.
+	<-con.initialized
+
+	for {
+		// Go select{} statements are not ordered; the same channel can be chosen many times.
+		// For requests, these are higher priority (client may be blocked on startup until these are done)
+		// and often very cheap to handle (simple ACK), so we check it first.
+		select {
+		case req, ok := <-con.reqChan:
+			if ok {
+				if err := ctx.Process(req); err != nil {
+					return err
+				}
+			} else {
+				// Remote side closed connection or error processing the request.
+				return <-con.errorChan
+			}
+		case <-con.stop:
+			return nil
+		default:
+		}
+		// If there wasn't already a request, poll for requests and pushes. Note: if we have a huge
+		// amount of incoming requests, we may still send some pushes, as we do not `continue` above;
+		// however, requests will be handled ~2x as much as pushes. This ensures a wave of requests
+		// cannot completely starve pushes. However, this scenario is unlikely.
+		select {
+		case req, ok := <-con.reqChan:
+			if ok {
+				if err := ctx.Process(req); err != nil {
+					return err
+				}
+			} else {
+				// Remote side closed connection or error processing the request.
+				return <-con.errorChan
+			}
+		case pushEv := <-con.pushChannel:
+			err := ctx.Push(pushEv)
+			if err != nil {
+				return err
+			}
+		case <-con.stop:
+			return nil
+		}
+	}
+}
+
+func Receive(ctx ConnectionContext) {
+	con := ctx.XdsConnection()
+	defer func() {
+		close(con.errorChan)
+		close(con.reqChan)
+		// Close the initialized channel, if its not already closed, to prevent blocking the stream.
+		select {
+		case <-con.initialized:
+		default:
+			close(con.initialized)
+		}
+	}()
+
+	firstRequest := true
+	for {
+		req, err := con.stream.Recv()
+		if err != nil {
+			if dubbogrpc.GRPCErrorType(err) != dubbogrpc.UnexpectedError {
+				klog.Infof("ADS: %q %s terminated", con.peerAddr, con.conID)
+				return
+			}
+			con.errorChan <- err
+			klog.Errorf("ADS: %q %s terminated with error: %v", con.peerAddr, con.conID, err)
+			return
+		}
+		// This should be only set for the first request. The node id may not be set - for example malicious clients.
+		if firstRequest {
+			// probe happens before envoy sends first xDS request
+			if req.TypeUrl == model.HealthInfoType {
+				klog.Warningf("ADS: %q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
+				continue
+			}
+			firstRequest = false
+			if req.Node == nil || req.Node.Id == "" {
+				con.errorChan <- status.New(codes.InvalidArgument, "missing node information").Err()
+				return
+			}
+			if err := ctx.Initialize(req.Node); err != nil {
+				con.errorChan <- err
+				return
+			}
+			defer ctx.Close()
+			klog.Infof("ADS: new connection for node:%s", con.conID)
+		}
+
+		select {
+		case con.reqChan <- req:
+		case <-con.stream.Context().Done():
+			klog.Infof("ADS: %q %s terminated with stream closed", con.peerAddr, con.conID)
+			return
+		}
+	}
+}
+
+func (conn *Connection) ID() string {
+	return conn.conID
+}
+
+func (conn *Connection) Peer() string {
+	return conn.peerAddr
+}
+
+func (conn *Connection) SetID(id string) {
+	conn.conID = id
+}
+
+func (conn *Connection) MarkInitialized() {
+	close(conn.initialized)
+}
+
+func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (bool, ResourceDelta) {
+	stype := model.GetShortType(request.TypeUrl)
+
+	// If there is an error in request that means previous response is erroneous.
+	// We do not have to respond in that case. In this case request's version info
+	// will be different from the version sent. But it is fragile to rely on that.
+	if request.ErrorDetail != nil {
+		errCode := codes.Code(request.ErrorDetail.Code)
+		klog.Warningf("ADS:%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
+		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
+			wr.LastError = request.ErrorDetail.GetMessage()
+			return wr
+		})
+		return false, emptyResourceDelta
+	}
+
+	if shouldUnsubscribe(request) {
+		klog.V(2).Infof("ADS:%s: UNSUBSCRIBE %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+		w.DeleteWatchedResource(request.TypeUrl)
+		return false, emptyResourceDelta
+	}
+
+	previousInfo := w.GetWatchedResource(request.TypeUrl)
+	// This can happen in two cases:
+	// 1. When Envoy starts for the first time, it sends an initial Discovery request to Istiod.
+	// 2. When Envoy reconnects to a new Istiod that does not have information about this typeUrl
+	// i.e. non empty response nonce.
+	// We should always respond with the current resource names.
+	if request.ResponseNonce == "" || previousInfo == nil {
+		klog.V(2).Infof("ADS:%s: INIT/RECONNECT %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+		w.NewWatchedResource(request.TypeUrl, request.ResourceNames)
+		return true, emptyResourceDelta
+	}
+
+	// If there is mismatch in the nonce, that is a case of expired/stale nonce.
+	// A nonce becomes stale following a newer nonce being sent to Envoy.
+	// previousInfo.NonceSent can be empty if we previously had shouldRespond=true but didn't send any resources.
+	if request.ResponseNonce != previousInfo.NonceSent {
+		if features.EnableUnsafeAssertions && previousInfo.NonceSent == "" {
+			// Assert we do not end up in an invalid state
+			klog.V(2).Infof("ADS:%s: REQ %s Expired nonce received %s, but we never sent any nonce", stype,
+				id, request.ResponseNonce)
+		}
+		klog.V(2).Infof("ADS:%s: REQ %s Expired nonce received %s, sent %s", stype,
+			id, request.ResponseNonce, previousInfo.NonceSent)
+		return false, emptyResourceDelta
+	}
+
+	// If it comes here, that means nonce match.
+	var previousResources sets.String
+	var cur sets.String
+	var alwaysRespond bool
+	w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
+		// Clear last error, we got an ACK.
+		wr.LastError = ""
+		previousResources = wr.ResourceNames
+		wr.NonceAcked = request.ResponseNonce
+		wr.ResourceNames = sets.New(request.ResourceNames...)
+		cur = wr.ResourceNames
+		alwaysRespond = wr.AlwaysRespond
+		wr.AlwaysRespond = false
+		return wr
+	})
+
+	// Envoy can send two DiscoveryRequests with same version and nonce.
+	// when it detects a new resource. We should respond if they change.
+	removed := previousResources.Difference(cur)
+	added := cur.Difference(previousResources)
+
+	// We should always respond "alwaysRespond" marked requests to let Envoy finish warming
+	// even though Nonce match and it looks like an ACK.
+	if alwaysRespond {
+		klog.Infof("ADS:%s: FORCE RESPONSE %s for warming.", stype, id)
+		return true, emptyResourceDelta
+	}
+
+	if len(removed) == 0 && len(added) == 0 {
+		klog.V(2).Infof("ADS:%s: ACK %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+		return false, emptyResourceDelta
+	}
+	klog.V(2).Infof("ADS:%s: RESOURCE CHANGE added %v removed %v %s %s %s", stype,
+		added, removed, id, request.VersionInfo, request.ResponseNonce)
+
+	// For non wildcard resource, if no new resources are subscribed, it means we do not need to push.
+	if !IsWildcardTypeURL(request.TypeUrl) && len(added) == 0 {
+		return false, emptyResourceDelta
+	}
+
+	return true, ResourceDelta{
+		Subscribed: added,
+		// we do not need to set unsubscribed for StoW
+	}
+}
+
+func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
+	return nil
+}
+
+type ResourceDelta struct {
+	// Subscribed indicates the client requested these additional resources
+	Subscribed sets.String
+	// Unsubscribed indicates the client no longer requires these resources
+	Unsubscribed sets.String
+}
+
+var emptyResourceDelta = ResourceDelta{}
+
+func (rd ResourceDelta) IsEmpty() bool {
+	return len(rd.Subscribed) == 0 && len(rd.Unsubscribed) == 0
+}
+
+func shouldUnsubscribe(request *discovery.DiscoveryRequest) bool {
+	return len(request.ResourceNames) == 0 && !IsWildcardTypeURL(request.TypeUrl)
+}
+
+func IsWildcardTypeURL(typeURL string) bool {
+	switch typeURL {
+	case model.SecretType, model.EndpointType, model.RouteType, model.ExtensionConfigurationType:
+		// By XDS spec, these are not wildcard
+		return false
+	case model.ClusterType, model.ListenerType:
+		// By XDS spec, these are wildcard
+		return true
+	default:
+		// All of our internal types use wildcard semantics
+		return true
+	}
+}
+
+func (conn *Connection) PushCh() chan any {
+	return conn.pushChannel
+}
+
+func (conn *Connection) StreamDone() <-chan struct{} {
+	return conn.stream.Context().Done()
 }

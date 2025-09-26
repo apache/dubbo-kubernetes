@@ -18,10 +18,14 @@
 package cmd
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func AddFlags(rootCmd *cobra.Command) {
@@ -32,4 +36,11 @@ func PrintFlags(flags *pflag.FlagSet) {
 	flags.VisitAll(func(flag *pflag.Flag) {
 		fmt.Printf("FLAG: --%s=%q\n", flag.Name, flag.Value)
 	})
+}
+
+func WaitSignalFunc(cancel context.CancelCauseFunc) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-sigs
+	cancel(fmt.Errorf("received signal: %v", sig.String()))
 }

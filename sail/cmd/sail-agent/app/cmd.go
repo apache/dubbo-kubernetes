@@ -18,19 +18,25 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubbo-agent"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/config"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/options"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 var (
 	proxyArgs options.ProxyArgs
 )
 
-func NewRootCommand() *cobra.Command {
+func NewRootCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:          "sail-agent",
 		Short:        "Dubbo Sail agent.",
@@ -42,7 +48,7 @@ func NewRootCommand() *cobra.Command {
 		},
 	}
 	cmd.AddFlags(rootCmd)
-	proxyCmd := newProxyCommand()
+	proxyCmd := newProxyCommand(sds)
 	addFlags(proxyCmd)
 	rootCmd.AddCommand(proxyCmd)
 	rootCmd.AddCommand(waitCmd)
@@ -50,7 +56,7 @@ func NewRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func newProxyCommand() *cobra.Command {
+func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "proxy",
 		Short: "XDS proxy agent",
@@ -64,6 +70,37 @@ func newProxyCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			proxyConfig, err := config.ConstructProxyConfig(proxyArgs.MeshConfigFile, proxyArgs.ServiceCluster, options.ProxyConfigEnv, proxyArgs.Concurrency)
+			if err != nil {
+				return fmt.Errorf("failed to get proxy config: %v", err)
+			}
+			if out, err := protomarshal.ToYAML(proxyConfig); err != nil {
+				klog.Infof("Failed to serialize to YAML: %v", err)
+			} else {
+				klog.Infof("Effective config: \n%s", out)
+			}
+
+			secOpts, err := options.NewSecurityOptions(proxyConfig, proxyArgs.StsPort, proxyArgs.TokenManagerPlugin)
+			if err != nil {
+				return err
+			}
+
+			agentOptions := options.NewAgentOptions(&proxyArgs, proxyConfig, sds)
+			agent := dubboagent.NewAgent(proxyConfig, agentOptions, secOpts)
+			ctx, cancel := context.WithCancelCause(context.Background())
+			defer cancel(errors.New("application shutdown"))
+			defer agent.Close()
+
+			// On SIGINT or SIGTERM, cancel the context, triggering a graceful shutdown
+			go cmd.WaitSignalFunc(cancel)
+
+			wait, err := agent.Run(ctx)
+			if err != nil {
+				return err
+			}
+			wait()
+
 			return nil
 		},
 	}
