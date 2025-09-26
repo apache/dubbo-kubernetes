@@ -20,6 +20,8 @@ package constants
 const (
 	DubboSystemNamespace      = "dubbo-system"
 	DefaultClusterLocalDomain = "cluster.local"
+	KeyFilename               = "key.pem"
+	CertChainFilename         = "cert-chain.pem"
 	DefaultClusterName        = "Kubernetes"
 	ServiceClusterName        = "dubbo-proxy"
 	ConfigPathDir             = "./etc/dubbo/proxy"
@@ -28,4 +30,10 @@ const (
 	CertProviderKubernetesSignerPrefix = "k8s.io/"
 
 	CACertNamespaceConfigMapDataName = "root-cert.pem"
+
+	PodInfoAnnotationsPath = "./etc/dubbo/pod/annotations"
+	CertProviderNone       = "none"
+	CertProviderCustom     = "custom"
+
+	ThirdPartyJwtPath = "./var/run/secrets/tokens/dubbo-token"
 )

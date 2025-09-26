@@ -20,15 +20,29 @@ package security
 import (
 	"context"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 const (
-	// RootCertReqResourceName is resource name of discovery request for root certificate.
-	RootCertReqResourceName = "ROOTCA"
-	// WorkloadKeyCertResourceName is the resource name of the discovery request for workload
-	// identity.
-	WorkloadKeyCertResourceName = "default"
+	RootCertReqResourceName           = "ROOTCA"
+	WorkloadKeyCertResourceName       = "default"
+	WorkloadIdentityPath              = "./var/run/secrets/workload-spiffe-uds"
+	DefaultWorkloadIdentitySocketFile = "socket"
+	SystemRootCerts                   = "SYSTEM"
+	DefaultRootCertFilePath           = "./etc/certs/root-cert.pem"
+	CredentialNameSocketPath          = "./var/run/secrets/credential-uds/socket"
+	WorkloadIdentityCredentialsPath   = "./var/run/secrets/workload-spiffe-credentials"
+	WorkloadIdentityCertChainPath     = WorkloadIdentityCredentialsPath + "/cert-chain.pem"
+	WorkloadIdentityRootCertPath      = WorkloadIdentityCredentialsPath + "/root-cert.pem"
+	WorkloadIdentityKeyPath           = WorkloadIdentityCredentialsPath + "/key.pem"
+	FileCredentialNameSocketPath      = "./var/run/secrets/credential-uds/files-socket"
+	JWT                               = "JWT"
+)
+
+const (
+	CertSigner = "CertSigner"
 )
 
 type AuthContext struct {
@@ -47,27 +61,21 @@ type Authenticator interface {
 type SecretItem struct {
 	CertificateChain []byte
 	PrivateKey       []byte
-
-	RootCert []byte
-
-	// ResourceName passed from envoy SDS discovery request.
-	// "ROOTCA" for root cert request, "default" for key/cert request.
-	ResourceName string
-
-	CreatedTime time.Time
-
-	ExpireTime time.Time
+	RootCert         []byte
+	ResourceName     string
+	CreatedTime      time.Time
+	ExpireTime       time.Time
 }
 
 // SecretManager defines secrets management interface which is used by SDS.
 type SecretManager interface {
-	// GenerateSecret generates new secret for the given resource.
-	//
-	// The current implementation also watched the generated secret and trigger a callback when it is
-	// near expiry. It will constructs the SAN based on the token's 'sub' claim, expected to be in
-	// the K8S format. No other JWTs are currently supported due to client logic. If JWT is
-	// missing/invalid, the resourceName is used.
 	GenerateSecret(resourceName string) (*SecretItem, error)
+}
+
+type SdsCertificateConfig struct {
+	CertificatePath   string
+	PrivateKeyPath    string
+	CaCertificatePath string
 }
 
 type AuthSource int
@@ -84,4 +92,58 @@ type Caller struct {
 	Identities []string
 
 	KubernetesInfo KubernetesInfo
+}
+
+type Options struct {
+	ServeOnlyFiles       bool
+	ProvCert             string
+	FileMountedCerts     bool
+	SailCertProvider     string
+	OutputKeyCertToDir   string
+	CertChainFilePath    string
+	KeyFilePath          string
+	RootCertFilePath     string
+	CARootPath           string
+	CAEndpoint           string
+	CAProviderName       string
+	CredFetcher          CredFetcher
+	CAHeaders            map[string]string
+	CAEndpointSAN        string
+	CertSigner           string
+	ClusterID            string
+	CredIdentityProvider string
+	TrustDomain          string
+}
+
+type CredFetcher interface {
+	GetPlatformCredential() (string, error)
+	GetIdentityProvider() string
+	Stop()
+}
+
+type Client interface {
+	CSRSign(csrPEM []byte, certValidTTLInSec int64) ([]string, error)
+	Close()
+	GetRootCertBundle() ([]string, error)
+}
+
+func GetWorkloadSDSSocketListenPath(sockfile string) string {
+	return filepath.Join(WorkloadIdentityPath, sockfile)
+}
+
+func GetDubboSDSServerSocketPath() string {
+	return filepath.Join(WorkloadIdentityPath, DefaultWorkloadIdentitySocketFile)
+}
+
+func CheckWorkloadCertificate(certChainFilePath, keyFilePath, rootCertFilePath string) bool {
+	if _, err := os.Stat(certChainFilePath); err != nil {
+		return false
+	}
+	if _, err := os.Stat(keyFilePath); err != nil {
+		return false
+	}
+	if _, err := os.Stat(rootCertFilePath); err != nil {
+		return false
+	}
+	return true
 }

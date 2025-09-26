@@ -18,12 +18,18 @@
 package main
 
 import (
+	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubbo-agent"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/app"
+	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/sds"
+	meshconfig "istio.io/api/mesh/v1alpha1"
 	"os"
 )
 
 func main() {
-	rootCmd := app.NewRootCommand()
+	rootCmd := app.NewRootCommand(func(options *security.Options, workloadSecretCache security.SecretManager, pkpConf *meshconfig.PrivateKeyProvider) dubboagent.SDSService {
+		return sds.NewServer(options, workloadSecretCache, pkpConf)
+	})
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(-1)
 	}

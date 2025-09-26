@@ -48,9 +48,10 @@ func DefaultProxyConfig() *meshconfig.ProxyConfig {
 		TerminationDrainDuration: durationpb.New(5 * time.Second),
 		ProxyAdminPort:           15000,
 		// TODO authpolicy
-		DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
-		StatNameLength:   189,
-		StatusPort:       15020,
+		DiscoveryAddress:       "dubbod.dubbo-system.svc:15012",
+		ControlPlaneAuthPolicy: meshconfig.AuthenticationPolicy_MUTUAL_TLS,
+		StatNameLength:         189,
+		StatusPort:             15020,
 	}
 }
 
@@ -123,6 +124,16 @@ func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshco
 	defaultConfig.TrustDomainAliases = sets.SortedList(sets.New(append(defaultConfig.TrustDomainAliases, prevTrustDomainAliases...)...))
 	// TODO ValidationMeshConfig
 	return defaultConfig, nil
+}
+
+func ApplyProxyConfig(yaml string, meshConfig *meshconfig.MeshConfig) (*meshconfig.MeshConfig, error) {
+	mc := protomarshal.Clone(meshConfig)
+	pc, err := MergeProxyConfig(yaml, mc.DefaultConfig)
+	if err != nil {
+		return nil, err
+	}
+	mc.DefaultConfig = pc
+	return mc, nil
 }
 
 // EmptyMeshNetworks configuration with no networks

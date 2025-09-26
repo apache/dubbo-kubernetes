@@ -1,0 +1,149 @@
+package aegis
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
+	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
+	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/caclient"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/structpb"
+	pb "istio.io/api/security/v1alpha1"
+	"k8s.io/klog/v2"
+)
+
+type AegisClient struct {
+	// It means enable tls connection to Citadel if this is not nil.
+	tlsOpts  *TLSOptions
+	client   pb.IstioCertificateServiceClient
+	conn     *grpc.ClientConn
+	provider credentials.PerRPCCredentials
+	opts     *security.Options
+}
+
+type TLSOptions struct {
+	RootCert string
+	Key      string
+	Cert     string
+}
+
+func NewAegisClient(opts *security.Options, tlsOpts *TLSOptions) (*AegisClient, error) {
+	c := &AegisClient{
+		tlsOpts:  tlsOpts,
+		opts:     opts,
+		provider: caclient.NewDefaultTokenProvider(opts),
+	}
+
+	conn, err := c.buildConnection()
+	if err != nil {
+		klog.Errorf("Failed to connect to endpoint %s: %v", opts.CAEndpoint, err)
+		return nil, fmt.Errorf("failed to connect to endpoint %s", opts.CAEndpoint)
+	}
+	c.conn = conn
+	c.client = pb.NewIstioCertificateServiceClient(conn)
+	return c, nil
+}
+
+func (c *AegisClient) Close() {
+	if c.conn != nil {
+		c.conn.Close()
+	}
+}
+
+func (c *AegisClient) getTLSOptions() *dubbogrpc.TLSOptions {
+	if c.tlsOpts != nil {
+		return &dubbogrpc.TLSOptions{
+			RootCert:      c.tlsOpts.RootCert,
+			Key:           c.tlsOpts.Key,
+			Cert:          c.tlsOpts.Cert,
+			ServerAddress: c.opts.CAEndpoint,
+			SAN:           c.opts.CAEndpointSAN,
+		}
+	}
+	return nil
+}
+
+func (c *AegisClient) CSRSign(csrPEM []byte, certValidTTLInSec int64) (res []string, err error) {
+	crMetaStruct := &structpb.Struct{
+		Fields: map[string]*structpb.Value{
+			security.CertSigner: {
+				Kind: &structpb.Value_StringValue{StringValue: c.opts.CertSigner},
+			},
+		},
+	}
+	req := &pb.IstioCertificateRequest{
+		Csr:              string(csrPEM),
+		ValidityDuration: certValidTTLInSec,
+		Metadata:         crMetaStruct,
+	}
+	// TODO(hzxuzhonghu): notify caclient rebuilding only when root cert is updated.
+	// It can happen when the istiod dns certs is resigned after root cert is updated,
+	// in this case, the ca grpc client can not automatically connect to istiod after the underlying network connection closed.
+	// Becase that the grpc client still use the old tls configuration to reconnect to istiod.
+	// So here we need to rebuild the caClient in order to use the new root cert.
+	defer func() {
+		if err != nil {
+			klog.Errorf("failed to sign CSR: %v", err)
+			if err := c.reconnect(); err != nil {
+				klog.Errorf("failed reconnect: %v", err)
+			}
+		}
+	}()
+
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("ClusterID", c.opts.ClusterID))
+	for k, v := range c.opts.CAHeaders {
+		ctx = metadata.AppendToOutgoingContext(ctx, k, v)
+	}
+
+	resp, err := c.client.CreateCertificate(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("create certificate: %v", err)
+	}
+
+	if len(resp.CertChain) <= 1 {
+		return nil, errors.New("invalid empty CertChain")
+	}
+
+	return resp.CertChain, nil
+}
+
+func (c *AegisClient) GetRootCertBundle() ([]string, error) {
+	return []string{}, nil
+}
+
+func (c *AegisClient) buildConnection() (*grpc.ClientConn, error) {
+	tlsOpts := c.getTLSOptions()
+	opts, err := dubbogrpc.ClientOptions(nil, tlsOpts)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts,
+		grpc.WithPerRPCCredentials(c.provider),
+		security.CARetryInterceptor(),
+	)
+	conn, err := grpc.Dial(c.opts.CAEndpoint, opts...)
+	if err != nil {
+		klog.Errorf("Failed to connect to endpoint %s: %v", c.opts.CAEndpoint, err)
+		return nil, fmt.Errorf("failed to connect to endpoint %s", c.opts.CAEndpoint)
+	}
+
+	return conn, nil
+}
+
+func (c *AegisClient) reconnect() error {
+	if err := c.conn.Close(); err != nil {
+		return fmt.Errorf("failed to close connection: %v", err)
+	}
+
+	conn, err := c.buildConnection()
+	if err != nil {
+		return err
+	}
+	c.conn = conn
+	c.client = pb.NewIstioCertificateServiceClient(conn)
+	klog.Info("recreated connection")
+	return nil
+}
