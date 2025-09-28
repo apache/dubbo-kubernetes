@@ -20,7 +20,7 @@ package smallset
 import (
 	"cmp"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 )
 
 // Set is an immutable set optimized for *small number of items*. For general purposes, Sets is likely better

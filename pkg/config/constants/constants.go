@@ -36,4 +36,14 @@ const (
 	CertProviderCustom     = "custom"
 
 	ThirdPartyJwtPath = "./var/run/secrets/tokens/dubbo-token"
+
+	CertProviderKubernetes = "kubernetes"
+
+	SailWellKnownDNSCertPath   = "./var/run/secrets/dubbod/tls/"
+	SailWellKnownDNSCaCertPath = "./var/run/secrets/dubbod/ca/"
+
+	DefaultSailTLSCert                = SailWellKnownDNSCertPath + "tls.crt"
+	DefaultSailTLSKey                 = SailWellKnownDNSCertPath + "tls.key"
+	DefaultSailTLSCaCert              = SailWellKnownDNSCaCertPath + "root-cert.pem"
+	DefaultSailTLSCaCertAlternatePath = SailWellKnownDNSCertPath + "ca.crt"
 )

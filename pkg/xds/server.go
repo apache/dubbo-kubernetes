@@ -360,3 +360,15 @@ func (conn *Connection) PushCh() chan any {
 func (conn *Connection) StreamDone() <-chan struct{} {
 	return conn.stream.Context().Done()
 }
+
+func (conn *Connection) InitializedCh() chan struct{} {
+	return conn.initialized
+}
+
+func (conn *Connection) ErrorCh() chan error {
+	return conn.errorChan
+}
+
+func (conn *Connection) StopCh() chan struct{} {
+	return conn.stop
+}

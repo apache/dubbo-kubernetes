@@ -22,6 +22,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"net"
@@ -31,14 +32,19 @@ import (
 
 type Watcher = meshwatcher.WatcherCollection
 
+type WatchedResource = xds.WatchedResource
+
 type Environment struct {
 	ServiceDiscovery
 	Watcher
 	ConfigStore
-	mutex           sync.RWMutex
-	pushContext     *PushContext
-	Cache           XdsCache
-	NetworksWatcher mesh.NetworksWatcher
+	mutex                sync.RWMutex
+	pushContext          *PushContext
+	Cache                XdsCache
+	NetworksWatcher      mesh.NetworksWatcher
+	NetworkManager       *NetworkManager
+	clusterLocalServices ClusterLocalProvider
+	DomainSuffix         string
 }
 
 type XdsCacheImpl struct {
@@ -56,22 +62,23 @@ func NewEnvironment() *Environment {
 		cache = DisabledCache{}
 	}
 	return &Environment{
-		Cache: cache,
+		pushContext: NewPushContext(),
+		Cache:       cache,
 	}
 }
 
 var _ mesh.Holder = &Environment{}
 
-func (e *Environment) SetPushContext(pc *PushContext) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	e.pushContext = pc
-}
-
 func (e *Environment) PushContext() *PushContext {
 	e.mutex.RLock()
 	defer e.mutex.RUnlock()
 	return e.pushContext
+}
+
+func (e *Environment) SetPushContext(pc *PushContext) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.pushContext = pc
 }
 
 func (e *Environment) Mesh() *meshconfig.MeshConfig {
@@ -107,6 +114,10 @@ func (e *Environment) GetDiscoveryAddress() (host.Name, string, error) {
 		return "", "", fmt.Errorf("invalid Dubbod Port: %s, %s, %v", port, proxyConfig.DiscoveryAddress, err)
 	}
 	return host.Name(hostname), port, nil
+}
+
+func (e *Environment) ClusterLocal() ClusterLocalProvider {
+	return e.clusterLocalServices
 }
 
 type Proxy struct{}

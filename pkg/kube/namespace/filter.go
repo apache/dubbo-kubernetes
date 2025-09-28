@@ -19,6 +19,7 @@ package namespace
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"k8s.io/klog/v2"
 	"sync"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	meshapi "istio.io/api/mesh/v1alpha1"
 )
 

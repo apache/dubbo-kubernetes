@@ -56,6 +56,16 @@ type DiscoveryServerOptions struct {
 	HTTPSAddr      string
 	GRPCAddr       string
 	SecureGRPCAddr string
+	TLSOptions     TLSOptions
+}
+
+type TLSOptions struct {
+	// CaCertFile and related are set using CLI flags.
+	CaCertFile      string
+	CertFile        string
+	KeyFile         string
+	TLSCipherSuites []string
+	CipherSuits     []uint16 // This is the parsed cipher suites
 }
 
 func NewSailArgs(initFuncs ...func(*SailArgs)) *SailArgs {

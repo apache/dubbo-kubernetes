@@ -21,7 +21,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"go.uber.org/atomic"
+	"golang.org/x/time/rate"
+	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	"time"
 )
@@ -36,6 +39,8 @@ type DiscoveryServer struct {
 	krtDebugger        *krt.DebugHandler
 	InboundUpdates     *atomic.Int64
 	CommittedUpdates   *atomic.Int64
+	RequestRateLimit   *rate.Limiter
+	ProxyNeedsPush     func(proxy *model.Proxy, req *model.PushRequest) (*model.PushRequest, bool)
 }
 
 func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string, debugger *krt.DebugHandler) *DiscoveryServer {
@@ -51,6 +56,11 @@ func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string
 	return out
 }
 
+func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
+	// Register v3 server
+	discovery.RegisterAggregatedDiscoveryServiceServer(rpcs, s)
+}
+
 func (s *DiscoveryServer) CachesSynced() {
 	klog.Infof("All caches have been synced up in %v, marking server ready", time.Since(s.DiscoveryStartTime))
 	s.serverReady.Store(true)
@@ -58,4 +68,8 @@ func (s *DiscoveryServer) CachesSynced() {
 
 func (s *DiscoveryServer) Shutdown() {
 	s.pushQueue.ShutDown()
+}
+
+func (s *DiscoveryServer) globalPushContext() *model.PushContext {
+	return s.Env.PushContext()
 }

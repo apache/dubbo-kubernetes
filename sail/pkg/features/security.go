@@ -24,4 +24,9 @@ var (
 	UseCacertsForSelfSignedCA = env.Register("USE_CACERTS_FOR_SELF_SIGNED_CA", false,
 		"If enabled, dubbod will use a secret named cacerts to store its self-signed dubbo-"+
 			"generated root certificate.").Get()
+	EnableXDSIdentityCheck = env.Register(
+		"SAIL_ENABLE_XDS_IDENTITY_CHECK",
+		true,
+		"If enabled, sail will authorize XDS clients, to ensure they are acting only as namespaces they have permissions for.",
+	).Get()
 )

@@ -55,4 +55,11 @@ var (
 		"If set to false, Dubbo will not watch for the ca-crl.pem file in the /etc/cacerts directory "+
 			"and will not distribute CRL data to namespaces for proxies to consume.",
 	).Get()
+	SailCertProvider = env.Register("SAIL_CERT_PROVIDER", constants.CertProviderDubbod,
+		"The provider of Pilot DNS certificate. K8S RA will be used for k8s.io/NAME. 'dubbod' value will sign"+
+			" using Dubbo build in CA. Other values will not not generate TLS certs, but still "+
+			" distribute ./etc/certs/root-cert.pem. Only used if custom certificates are not mounted.").Get()
+	DubbodServiceCustomHost = env.Register("DUBBOD_CUSTOM_HOST", "",
+		"Custom host name of dubbod that dubbod signs the server cert. "+
+			"Multiple custom host names are supported, and multiple values are separated by commas.").Get()
 )

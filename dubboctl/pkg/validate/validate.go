@@ -25,7 +25,7 @@ import (
 	operator "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	operatorvalidate "github.com/apache/dubbo-kubernetes/operator/pkg/apis/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"io"

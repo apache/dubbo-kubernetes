@@ -18,7 +18,7 @@
 package krt
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"sync"
 	"sync/atomic"
 

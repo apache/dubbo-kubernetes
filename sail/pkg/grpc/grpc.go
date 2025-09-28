@@ -3,6 +3,8 @@ package grpc
 import (
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -56,6 +58,30 @@ func ClientOptions(options *dubbokeepalive.Options, tlsOpts *TLSOptions) ([]grpc
 		tlsDialOpts = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 	return []grpc.DialOption{keepaliveOption, initialWindowSizeOption, initialConnWindowSizeOption, msgSizeOption, tlsDialOpts}, nil
+}
+
+func ServerOptions(options *dubbokeepalive.Options, interceptors ...grpc.UnaryServerInterceptor) []grpc.ServerOption {
+	maxStreams := features.MaxConcurrentStreams
+	maxRecvMsgSize := features.MaxRecvMsgSize
+
+	grpcOptions := []grpc.ServerOption{
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(interceptors...)),
+		grpc.MaxConcurrentStreams(uint32(maxStreams)),
+		grpc.MaxRecvMsgSize(maxRecvMsgSize),
+		// Ensure we allow clients sufficient ability to send keep alives. If this is higher than client
+		// keep alive setting, it will prematurely get a GOAWAY sent.
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime: options.Time / 2,
+		}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:                  options.Time,
+			Timeout:               options.Timeout,
+			MaxConnectionAge:      options.MaxServerConnectionAge,
+			MaxConnectionAgeGrace: options.MaxServerConnectionAgeGrace,
+		}),
+	}
+
+	return grpcOptions
 }
 
 func GRPCErrorType(err error) ErrorType {

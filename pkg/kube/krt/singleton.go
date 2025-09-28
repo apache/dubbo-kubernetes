@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
-
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"sync/atomic"
 )
 

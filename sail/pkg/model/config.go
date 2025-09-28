@@ -1,8 +1,14 @@
 package model
 
 import (
+	"cmp"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
+	"sort"
+)
+
+const (
+	NamespaceAll = ""
 )
 
 type ConfigStore interface {
@@ -23,4 +29,17 @@ type ConfigStoreController interface {
 	RegisterEventHandler(kind config.GroupVersionKind, handler EventHandler)
 	Run(stop <-chan struct{})
 	HasSynced() bool
+}
+
+func sortConfigByCreationTime(configs []config.Config) []config.Config {
+	sort.Slice(configs, func(i, j int) bool {
+		if r := configs[i].CreationTimestamp.Compare(configs[j].CreationTimestamp); r != 0 {
+			return r == -1 // -1 means i is less than j, so return true
+		}
+		if r := cmp.Compare(configs[i].Name, configs[j].Name); r != 0 {
+			return r == -1
+		}
+		return cmp.Compare(configs[i].Namespace, configs[j].Namespace) == -1
+	})
+	return configs
 }
