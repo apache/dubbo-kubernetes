@@ -2,6 +2,7 @@ package collection
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
@@ -10,7 +11,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 )
 
 // Schemas contains metadata about configuration resources.

@@ -1,8 +1,12 @@
 package model
 
 type Controller interface {
-	// Run until a signal is received
 	Run(stop <-chan struct{})
+	HasSynced() bool
+}
+
+type AggregateController interface {
+	Controller
 }
 
 type Event int

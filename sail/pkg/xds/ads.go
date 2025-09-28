@@ -18,13 +18,19 @@
 package xds
 
 import (
+	"context"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"time"
 )
 
-type DeltaDiscoveryStream = discovery.AggregatedDiscoveryService_DeltaAggregatedResourcesServer
+type (
+	DiscoveryStream      = xds.DiscoveryStream
+	DeltaDiscoveryStream = discovery.AggregatedDiscoveryService_DeltaAggregatedResourcesServer
+	DeltaDiscoveryClient = discovery.AggregatedDiscoveryService_DeltaAggregatedResourcesClient
+)
 
 type Connection struct {
 	xds.Connection
@@ -36,10 +42,63 @@ type Connection struct {
 	ids          []string
 }
 
+type Event struct {
+	pushRequest *model.PushRequest
+	done        func()
+}
+
 func (conn *Connection) XdsConnection() *xds.Connection {
 	return &conn.Connection
 }
 
 func (conn *Connection) Proxy() *model.Proxy {
 	return conn.proxy
+}
+
+func (s *DiscoveryServer) DeltaAggregatedResources(stream discovery.AggregatedDiscoveryService_DeltaAggregatedResourcesServer) error {
+	return s.StreamDeltas(stream)
+}
+
+func (s *DiscoveryServer) StreamAggregatedResources(stream DiscoveryStream) error {
+	return s.Stream(stream)
+}
+
+func (s *DiscoveryServer) initProxyMetadata(node *core.Node) (*model.Proxy, error) {
+	return nil, nil
+}
+
+func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, identities []string) error {
+	return nil
+}
+
+func (s *DiscoveryServer) closeConnection(con *Connection) {
+	if con.ID() == "" {
+		return
+	}
+}
+
+func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
+	return nil
+}
+
+func (s *DiscoveryServer) WaitForRequestLimit(ctx context.Context) error {
+	if s.RequestRateLimit.Limit() == 0 {
+		// Allow opt out when rate limiting is set to 0qps
+		return nil
+	}
+	// Give a bit of time for queue to clear out, but if not fail fast. Client will connect to another
+	// instance in best case, or retry with backoff.
+	wait, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	return s.RequestRateLimit.Wait(wait)
+}
+
+func newConnection(peerAddr string, stream DiscoveryStream) *Connection {
+	return &Connection{
+		Connection: xds.NewConnection(peerAddr, stream),
+	}
+}
+
+func (conn *Connection) watchedResourcesByOrder() []*model.WatchedResource {
+	return nil
 }

@@ -16,8 +16,6 @@ func (s *Server) ServiceController() *aggregate.Controller {
 func (s *Server) initServiceControllers(args *SailArgs) error {
 	serviceControllers := s.ServiceController()
 
-	// TODO service entry controller
-
 	registered := sets.New[provider.ID]()
 	for _, r := range args.RegistryOptions.Registries {
 		serviceRegistry := provider.ID(r)

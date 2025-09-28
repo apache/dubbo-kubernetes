@@ -18,7 +18,7 @@
 package krt
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 )
 
 func FetchOne[T any](ctx HandlerContext, c Collection[T], opts ...FetchOption) *T {

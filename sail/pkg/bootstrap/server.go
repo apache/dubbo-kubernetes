@@ -19,6 +19,8 @@ package bootstrap
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
@@ -29,19 +31,27 @@ import (
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
+	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
+	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	tb "github.com/apache/dubbo-kubernetes/sail/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ra"
 	"github.com/fsnotify/fsnotify"
+	grpcprom "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/reflection"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
@@ -49,7 +59,13 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
+)
+
+const (
+	// debounce file watcher events to minimize noise in logs
+	watchDebounceDelay = 100 * time.Millisecond
 )
 
 type Server struct {
@@ -84,18 +100,30 @@ type Server struct {
 	CA                  *ca.DubboCA
 	dnsNames            []string
 
+	certMu     sync.RWMutex
+	dubbodCert *tls.Certificate
+
 	dubbodCertBundleWatcher *keycertbundle.Watcher
 }
 
 func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	e := model.NewEnvironment()
+	e.DomainSuffix = args.RegistryOptions.KubeOptions.DomainSuffix
+
+	ac := aggregate.NewController(aggregate.Options{
+		MeshHolder:      e,
+		ConfigClusterID: getClusterID(args),
+	})
+	e.ServiceDiscovery = ac
+
 	s := &Server{
-		environment:  e,
-		server:       server.New(),
-		clusterID:    getClusterID(args),
-		httpMux:      http.NewServeMux(),
-		fileWatcher:  filewatcher.NewWatcher(),
-		internalStop: make(chan struct{}),
+		environment:             e,
+		server:                  server.New(),
+		clusterID:               getClusterID(args),
+		httpMux:                 http.NewServeMux(),
+		dubbodCertBundleWatcher: keycertbundle.NewWatcher(),
+		fileWatcher:             filewatcher.NewWatcher(),
+		internalStop:            make(chan struct{}),
 	}
 	for _, fn := range initFuncs {
 		fn(s)
@@ -155,6 +183,20 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	if err := s.initControllers(args); err != nil {
 		return nil, err
+	}
+
+	dubbodHost, _, err := e.GetDiscoveryAddress()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.initDubbodCerts(args, string(dubbodHost)); err != nil {
+		return nil, err
+	}
+
+	// Secure gRPC Server must be initialized after CA is created as may use a Aegis generated cert.
+	if err := s.initSecureDiscoveryService(args, s.environment.Mesh().GetTrustDomain()); err != nil {
+		return nil, fmt.Errorf("error initializing secure gRPC Listener: %v", err)
 	}
 
 	return s, nil
@@ -298,14 +340,21 @@ func (s *Server) initServers(args *SailArgs) {
 }
 
 func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
+	interceptors := []grpc.UnaryServerInterceptor{
+		// setup server prometheus monitoring (as final interceptor in chain)
+		grpcprom.UnaryServerInterceptor,
+	}
+	grpcOptions := dubbogrpc.ServerOptions(options, interceptors...)
+	s.grpcServer = grpc.NewServer(grpcOptions...)
+	s.XDSServer.Register(s.grpcServer)
+	reflection.Register(s.grpcServer)
 }
 
-// initControllers initializes the controllers.
 func (s *Server) initControllers(args *SailArgs) error {
 	klog.Info("initializing controllers")
 	// TODO initMulticluster
 
-	// TODO initSDSServer
+	s.initSDSServer()
 
 	if err := s.initConfigController(args); err != nil {
 		return fmt.Errorf("error initializing config controller: %v", err)
@@ -314,6 +363,114 @@ func (s *Server) initControllers(args *SailArgs) error {
 		return fmt.Errorf("error initializing service controllers: %v", err)
 	}
 	return nil
+}
+
+func (s *Server) initSecureDiscoveryService(args *SailArgs, trustDomain string) error {
+	if args.ServerOptions.SecureGRPCAddr == "" {
+		klog.Info("The secure discovery port is disabled, multiplexing on httpAddr ")
+		return nil
+	}
+
+	peerCertVerifier, err := s.createPeerCertVerifier(args.ServerOptions.TLSOptions, trustDomain)
+	if err != nil {
+		return err
+	}
+	if peerCertVerifier == nil {
+		// Running locally without configured certs - no TLS mode
+		klog.Warningf("The secure discovery service is disabled")
+		return nil
+	}
+	klog.Info("initializing secure discovery service")
+
+	cfg := &tls.Config{
+		GetCertificate: s.getDubbodCertificate,
+		ClientAuth:     tls.VerifyClientCertIfGiven,
+		ClientCAs:      peerCertVerifier.GetGeneralCertPool(),
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			err := peerCertVerifier.VerifyPeerCert(rawCerts, verifiedChains)
+			if err != nil {
+				klog.Infof("Could not verify certificate: %v", err)
+			}
+			return err
+		},
+		MinVersion:   tls.VersionTLS12,
+		CipherSuites: args.ServerOptions.TLSOptions.CipherSuits,
+	}
+	// Compliance for xDS server TLS.
+	sec_model.EnforceGoCompliance(cfg)
+
+	tlsCreds := credentials.NewTLS(cfg)
+
+	s.secureGrpcAddress = args.ServerOptions.SecureGRPCAddr
+
+	interceptors := []grpc.UnaryServerInterceptor{
+		// setup server prometheus monitoring (as final interceptor in chain)
+		grpcprom.UnaryServerInterceptor,
+	}
+	opts := dubbogrpc.ServerOptions(args.KeepaliveOptions, interceptors...)
+	opts = append(opts, grpc.Creds(tlsCreds))
+
+	s.secureGrpcServer = grpc.NewServer(opts...)
+	s.XDSServer.Register(s.secureGrpcServer)
+	reflection.Register(s.secureGrpcServer)
+
+	s.addStartFunc("secure gRPC", func(stop <-chan struct{}) error {
+		go func() {
+			<-stop
+			s.secureGrpcServer.Stop()
+		}()
+		return nil
+	})
+
+	return nil
+}
+
+func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain string) (*spiffe.PeerCertVerifier, error) {
+	customTLSCertsExists, _, _, caCertPath := hasCustomTLSCerts(tlsOptions)
+	if !customTLSCertsExists && s.CA == nil && !s.isK8SSigning() {
+		// Running locally without configured certs - no TLS mode
+		return nil, nil
+	}
+	peerCertVerifier := spiffe.NewPeerCertVerifier()
+	var rootCertBytes []byte
+	var err error
+	if caCertPath != "" {
+		if rootCertBytes, err = os.ReadFile(caCertPath); err != nil {
+			return nil, err
+		}
+	} else {
+		if s.RA != nil {
+			if strings.HasPrefix(features.SailCertProvider, constants.CertProviderKubernetesSignerPrefix) {
+				signerName := strings.TrimPrefix(features.SailCertProvider, constants.CertProviderKubernetesSignerPrefix)
+				caBundle, _ := s.RA.GetRootCertFromMeshConfig(signerName)
+				rootCertBytes = append(rootCertBytes, caBundle...)
+			} else {
+				rootCertBytes = append(rootCertBytes, s.RA.GetCAKeyCertBundle().GetRootCertPem()...)
+			}
+		}
+		if s.CA != nil {
+			rootCertBytes = append(rootCertBytes, s.CA.GetCAKeyCertBundle().GetRootCertPem()...)
+		}
+	}
+
+	if len(rootCertBytes) != 0 {
+		// TODO: trustDomain here is static and will not update if it dynamically changes in mesh config
+		err := peerCertVerifier.AddMappingFromPEM(trustDomain, rootCertBytes)
+		if err != nil {
+			return nil, fmt.Errorf("add root CAs into peerCertVerifier failed: %v", err)
+		}
+	}
+
+	return peerCertVerifier, nil
+}
+
+func (s *Server) getDubbodCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+	s.certMu.RLock()
+	defer s.certMu.RUnlock()
+	if s.dubbodCert != nil {
+		return s.dubbodCert, nil
+	}
+	return nil, fmt.Errorf("cert not initialized")
 }
 
 func (s *Server) serveHTTP() error {
@@ -376,7 +533,17 @@ func getClusterID(args *SailArgs) cluster.ID {
 	return clusterID
 }
 
-// isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Istiod
+func (s *Server) initSDSServer() {
+	if s.kubeClient == nil {
+		return
+	}
+	if !features.EnableXDSIdentityCheck {
+		// Make sure we have security
+		klog.Warningf("skipping Kubernetes credential reader; SAIL_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
+	}
+}
+
+// isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Dubbod
 func (s *Server) isK8SSigning() bool {
 	return s.RA != nil && strings.HasPrefix(features.NaviCertProvider, constants.CertProviderKubernetesSignerPrefix)
 }
@@ -443,8 +610,12 @@ func (s *Server) waitForShutdown(stop <-chan struct{}) {
 
 func (s *Server) cachesSynced() bool {
 	// TODO multiclusterController HasSynced
-	// TODO ServiceController().HasSynced
-	// TODO configController.HasSynced
+	if !s.ServiceController().HasSynced() {
+		return false
+	}
+	if !s.configController.HasSynced() {
+		return false
+	}
 	return true
 }
 
@@ -467,4 +638,145 @@ func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
 	klog.Infof("All controller caches have been synced up in %v", time.Since(start))
 	expected := s.XDSServer.InboundUpdates.Load()
 	return kubelib.WaitForCacheSync("push context", stop, func() bool { return s.pushContextReady(expected) })
+}
+
+func (s *Server) initDubbodCerts(args *SailArgs, host string) error {
+	// Skip all certificates
+	var err error
+
+	s.dnsNames = getDNSNames(args, host)
+	if hasCustomCertArgsOrWellKnown, tlsCertPath, tlsKeyPath, caCertPath := hasCustomTLSCerts(args.ServerOptions.TLSOptions); hasCustomCertArgsOrWellKnown {
+		// Use the DNS certificate provided via args or in well known location.
+		err = s.initFileCertificateWatches(TLSOptions{
+			CaCertFile: caCertPath,
+			KeyFile:    tlsKeyPath,
+			CertFile:   tlsCertPath,
+		})
+		if err != nil {
+			// Not crashing dubbod - This typically happens if certs are missing and in tests.
+			klog.Errorf("error initializing certificate watches: %v", err)
+			return nil
+		}
+	} else if features.EnableCAServer && features.SailCertProvider == constants.CertProviderDubbod {
+		klog.Infof("initializing Dubbod DNS certificates host: %s, custom host: %s", host, features.DubbodServiceCustomHost)
+		err = s.initDNSCertsDubbod()
+	} else if features.SailCertProvider == constants.CertProviderKubernetes {
+		klog.Warningf("SAIL_CERT_PROVIDER=kubernetes is no longer supported by upstream K8S")
+	} else if strings.HasPrefix(features.SailCertProvider, constants.CertProviderKubernetesSignerPrefix) {
+		klog.Infof("initializing Dubbod DNS certificates using K8S RA:%s  host: %s, custom host: %s", features.SailCertProvider,
+			host, features.DubbodServiceCustomHost)
+		err = s.initDNSCertsK8SRA()
+	} else {
+		klog.Warningf("SAIL_CERT_PROVIDER=%s is not implemented", features.SailCertProvider)
+	}
+
+	if err == nil {
+		err = s.initDubbodCertLoader()
+	}
+
+	return err
+}
+
+func getDNSNames(args *SailArgs, host string) []string {
+	// Append custom hostname if there is any
+	customHost := features.DubbodServiceCustomHost
+	var cHosts []string
+
+	if customHost != "" {
+		cHosts = strings.Split(customHost, ",")
+	}
+	sans := sets.New(cHosts...)
+	sans.Insert(host)
+	dnsNames := sets.SortedList(sans)
+	klog.Infof("Discover server subject alt names: %v", dnsNames)
+	return dnsNames
+}
+
+func hasCustomTLSCerts(tlsOptions TLSOptions) (ok bool, tlsCertPath, tlsKeyPath, caCertPath string) {
+	// load from tls args as priority
+	if hasCustomTLSCertArgs(tlsOptions) {
+		return true, tlsOptions.CertFile, tlsOptions.KeyFile, tlsOptions.CaCertFile
+	}
+
+	if ok = checkPathsExist(constants.DefaultSailTLSCert, constants.DefaultSailTLSKey, constants.DefaultSailTLSCaCert); ok {
+		tlsCertPath = constants.DefaultSailTLSCert
+		tlsKeyPath = constants.DefaultSailTLSKey
+		caCertPath = constants.DefaultSailTLSCaCert
+		return
+	}
+
+	if ok = checkPathsExist(constants.DefaultSailTLSCert, constants.DefaultSailTLSKey, constants.DefaultSailTLSCaCertAlternatePath); ok {
+		tlsCertPath = constants.DefaultSailTLSCert
+		tlsKeyPath = constants.DefaultSailTLSKey
+		caCertPath = constants.DefaultSailTLSCaCertAlternatePath
+		return
+	}
+
+	return
+}
+
+func checkPathsExist(paths ...string) bool {
+	for _, path := range paths {
+		fInfo, err := os.Stat(path)
+
+		if err != nil || fInfo.IsDir() {
+			return false
+		}
+	}
+	return true
+}
+
+func hasCustomTLSCertArgs(tlsOptions TLSOptions) bool {
+	return tlsOptions.CaCertFile != "" && tlsOptions.CertFile != "" && tlsOptions.KeyFile != ""
+}
+
+func (s *Server) initDubbodCertLoader() error {
+	if err := s.loadDubbodCert(); err != nil {
+		return fmt.Errorf("first time load DubbodCert failed: %v", err)
+	}
+	_, watchCh := s.dubbodCertBundleWatcher.AddWatcher()
+	s.addStartFunc("reload certs", func(stop <-chan struct{}) error {
+		go s.reloadDubbodCert(watchCh, stop)
+		return nil
+	})
+	return nil
+}
+
+func (s *Server) loadDubbodCert() error {
+	keyCertBundle := s.dubbodCertBundleWatcher.GetKeyCertBundle()
+	keyPair, err := tls.X509KeyPair(keyCertBundle.CertPem, keyCertBundle.KeyPem)
+	if err != nil {
+		return fmt.Errorf("dubbod loading x509 key pairs failed: %v", err)
+	}
+	for _, c := range keyPair.Certificate {
+		x509Cert, err := x509.ParseCertificates(c)
+		if err != nil {
+			// This can rarely happen, just in case.
+			return fmt.Errorf("x509 cert - ParseCertificates() error: %v", err)
+		}
+		for _, c := range x509Cert {
+			klog.Infof("x509 cert - Issuer: %q, Subject: %q, SN: %x, NotBefore: %q, NotAfter: %q",
+				c.Issuer, c.Subject, c.SerialNumber,
+				c.NotBefore.Format(time.RFC3339), c.NotAfter.Format(time.RFC3339))
+		}
+	}
+
+	klog.Info("Dubbod certificates are reloaded")
+	s.certMu.Lock()
+	s.dubbodCert = &keyPair
+	s.certMu.Unlock()
+	return nil
+}
+
+func (s *Server) reloadDubbodCert(watchCh <-chan struct{}, stopCh <-chan struct{}) {
+	for {
+		select {
+		case <-stopCh:
+			return
+		case <-watchCh:
+			if err := s.loadDubbodCert(); err != nil {
+				klog.Errorf("reload dubbod cert failed: %v", err)
+			}
+		}
+	}
 }

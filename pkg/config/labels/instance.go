@@ -19,13 +19,13 @@ package labels
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"regexp"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 )
 
 const (

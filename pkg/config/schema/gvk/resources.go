@@ -18,7 +18,7 @@
 package gvk
 
 import (
-	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -37,6 +37,9 @@ var (
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
 	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
+	RequestAuthentication          = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "RequestAuthentication"}
+	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "PeerAuthentication"}
+	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "AuthorizationPolicy"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
@@ -67,6 +70,12 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Job, true
 	case MeshConfig:
 		return gvr.MeshConfig, true
+	case RequestAuthentication:
+		return gvr.RequestAuthentication, true
+	case PeerAuthentication:
+		return gvr.PeerAuthentication, true
+	case AuthorizationPolicy:
+		return gvr.AuthorizationPolicy, true
 	}
 	return schema.GroupVersionResource{}, false
 }
@@ -92,6 +101,10 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return DaemonSet, true
 	case gvr.Job:
 		return Job, true
+	case gvr.PeerAuthentication:
+		return PeerAuthentication, true
+	case gvr.RequestAuthentication:
+		return RequestAuthentication, true
 	}
 	return config.GroupVersionKind{}, false
 }

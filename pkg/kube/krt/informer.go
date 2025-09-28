@@ -23,7 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"

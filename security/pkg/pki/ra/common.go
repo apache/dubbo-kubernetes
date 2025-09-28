@@ -22,7 +22,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
 	raerror "github.com/apache/dubbo-kubernetes/security/pkg/pki/error"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/util"

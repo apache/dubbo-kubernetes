@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"reflect"
 	"time"
 
@@ -42,7 +43,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/gogoprotomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/util/protoconv"
 	"istio.io/api/label"
 )

@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"k8s.io/klog/v2"
 	"sort"
 	"strings"
@@ -30,7 +31,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/pkg/util/slices"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 

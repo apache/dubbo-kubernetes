@@ -18,7 +18,7 @@
 package kubetypes
 
 import (
-	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	istioioapimeshv1alpha1 "istio.io/api/mesh/v1alpha1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
