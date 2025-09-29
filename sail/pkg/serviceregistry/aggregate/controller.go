@@ -108,10 +108,16 @@ func (c *Controller) Services() []*model.Service {
 	// Locking Registries list while walking it to prevent inconsistent results
 	for _, r := range c.GetRegistries() {
 		svcs := r.Services()
-		if r.Provider() != provider.Kubernetes {
+		// Handle different provider types
+		switch r.Provider() {
+		case provider.KubernetesNative:
+			// k8s native services are treated similar to non-Kubernetes providers
+			// but with special handling for Dubbo service discovery
 			index += len(svcs)
 			services = append(services, svcs...)
-		} else {
+			klog.V(4).Infof("Added %d k8s native services from provider %s", len(svcs), r.Provider())
+		case provider.Kubernetes:
+			// Original Kubernetes provider logic
 			for _, s := range svcs {
 				previous, ok := smap[s.Hostname]
 				if !ok {
@@ -134,6 +140,10 @@ func (c *Controller) Services() []*model.Service {
 					mergeService(services[previous], s, r)
 				}
 			}
+		default:
+			// Other providers (Nacos, Zookeeper, etc.)
+			index += len(svcs)
+			services = append(services, svcs...)
 		}
 	}
 	return services
@@ -146,14 +156,23 @@ func (c *Controller) GetService(hostname host.Name) *model.Service {
 		if service == nil {
 			continue
 		}
-		if r.Provider() != provider.Kubernetes {
+
+		// Handle different provider types
+		switch r.Provider() {
+		case provider.KubernetesNative:
+			// k8s native services have priority and are returned immediately
 			return service
-		}
-		if out == nil {
-			out = service.DeepCopy()
-		} else {
-			// If we are seeing the service for the second time, it means it is available in multiple clusters.
-			mergeService(out, service, r)
+		case provider.Kubernetes:
+			// Traditional Kubernetes provider logic
+			if out == nil {
+				out = service.DeepCopy()
+			} else {
+				// If we are seeing the service for the second time, it means it is available in multiple clusters.
+				mergeService(out, service, r)
+			}
+		default:
+			// Other providers (Nacos, Zookeeper, etc.) - return immediately
+			return service
 		}
 	}
 	return out

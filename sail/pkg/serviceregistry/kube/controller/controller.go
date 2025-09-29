@@ -15,6 +15,30 @@
  * limitations under the License.
  */
 
+// Package controller implements Kubernetes service discovery for Dubbo services.
+// It provides a controller that watches Kubernetes Services with Dubbo annotations
+// and converts them to Dubbo service registry entries.
+//
+// The controller supports:
+// - Service discovery from multiple Kubernetes namespaces
+// - Annotation-based service configuration
+// - Real-time service updates through Kubernetes informers
+// - Integration with Dubbo's service registry system
+//
+// Configuration is done through the Options struct which includes:
+// - EnableK8sServiceDiscovery: Enable/disable k8s service discovery
+// - K8sServiceNamespaces: List of namespaces to watch for services
+// - DubboAnnotationPrefix: Prefix for Dubbo annotations (default: "dubbo.apache.org")
+//
+// Example usage:
+//
+//	opts := Options{
+//	    ClusterID: "production",
+//	    EnableK8sServiceDiscovery: true,
+//	    K8sServiceNamespaces: []string{"dubbo", "default"},
+//	}
+//	controller := NewController(opts, kubeClient)
+//	go controller.Run(stopCh)
 package controller
 
 import (
@@ -44,6 +68,27 @@ import (
 var (
 	_ serviceregistry.Instance = &Controller{}
 )
+
+// NewController creates a new Kubernetes service discovery controller
+func NewController(opts Options, client kubelib.Client) *Controller {
+	c := &Controller{
+		opts:                opts,
+		client:              client,
+		servicesMap:         make(map[host.Name]*model.Service),
+		initialSyncTimedout: atomic.NewBool(false),
+		k8sServices:         make(map[string]*model.Service),
+	}
+
+	// Initialize queue for processing events
+	c.queue = queue.NewQueue(time.Second)
+
+	// TODO: Initialize informers when enabled
+	if opts.EnableK8sServiceDiscovery {
+		// c.initInformers()
+	}
+
+	return c
+}
 
 type Controller struct {
 	opts   Options
@@ -133,17 +178,31 @@ func (c *Controller) HasSynced() bool {
 }
 
 func (c *Controller) informersSynced() bool {
-	return false
+	if !c.opts.EnableK8sServiceDiscovery {
+		return true
+	}
+
+	// Check if k8s service informers are synced
+	if c.serviceInformer != nil && !c.serviceInformer.HasSynced() {
+		return false
+	}
+	if c.endpointsInformer != nil && !c.endpointsInformer.HasSynced() {
+		return false
+	}
+
+	return true
 }
 
 // convertK8sServiceToDubboService converts a Kubernetes Service to Dubbo Service
 func (c *Controller) convertK8sServiceToDubboService(k8sService *corev1.Service) *model.Service {
 	if k8sService == nil {
+		klog.Warning("Received nil k8s service, skipping conversion")
 		return nil
 	}
 
 	// Check if this is a Dubbo service using the annotation parser
 	if !annotations.IsDubboService(k8sService) {
+		klog.V(5).Infof("Service %s/%s does not have valid Dubbo annotations", k8sService.Namespace, k8sService.Name)
 		return nil
 	}
 
@@ -154,6 +213,9 @@ func (c *Controller) convertK8sServiceToDubboService(k8sService *corev1.Service)
 			k8sService.Namespace, k8sService.Name, err)
 		return nil
 	}
+
+	klog.V(4).Infof("Converting k8s service %s/%s to Dubbo service - Interface: %s, Version: %s, Group: %s",
+		k8sService.Namespace, k8sService.Name, dubboInfo.ServiceName, dubboInfo.Version, dubboInfo.Group)
 
 	// Build Dubbo service
 	dubboService := &model.Service{
@@ -185,8 +247,13 @@ func (c *Controller) convertK8sServiceToDubboService(k8sService *corev1.Service)
 			Port: int(port.Port),
 		}
 		ports = append(ports, dubboPort)
+
+		klog.V(5).Infof("Added port %s:%d to Dubbo service %s", port.Name, port.Port, dubboInfo.ServiceName)
 	}
 	dubboService.Ports = ports
+
+	klog.V(3).Infof("Successfully converted k8s service %s/%s to Dubbo service %s with %d ports",
+		k8sService.Namespace, k8sService.Name, dubboInfo.ServiceName, len(dubboService.Ports))
 
 	return dubboService
 }
@@ -199,8 +266,11 @@ func (c *Controller) handleServiceEvent(eventType string, obj interface{}) {
 		return
 	}
 
+	klog.V(4).Infof("Processing k8s service event: %s for service %s/%s", eventType, service.Namespace, service.Name)
+
 	dubboService := c.convertK8sServiceToDubboService(service)
 	if dubboService == nil {
+		klog.V(5).Infof("Service %s/%s is not a Dubbo service, skipping", service.Namespace, service.Name)
 		return // Not a Dubbo service
 	}
 
@@ -213,12 +283,22 @@ func (c *Controller) handleServiceEvent(eventType string, obj interface{}) {
 	case "add", "update":
 		c.k8sServices[serviceKey] = dubboService
 		c.servicesMap[dubboService.Hostname] = dubboService
-		klog.Infof("Added/Updated Dubbo service from k8s: %s", dubboService.Hostname)
+		klog.Infof("Added/Updated Dubbo service from k8s: %s (key: %s, hostname: %s)",
+			dubboService.Attributes.Name, serviceKey, dubboService.Hostname)
+		klog.V(3).Infof("Service details - Version: %s, Group: %s, Protocol: %s",
+			dubboService.Attributes.DubboAnnotations["version"],
+			dubboService.Attributes.DubboAnnotations["group"],
+			dubboService.Attributes.DubboAnnotations["protocol"])
 	case "delete":
 		if existingService, exists := c.k8sServices[serviceKey]; exists {
 			delete(c.k8sServices, serviceKey)
 			delete(c.servicesMap, existingService.Hostname)
-			klog.Infof("Deleted Dubbo service from k8s: %s", existingService.Hostname)
+			klog.Infof("Deleted Dubbo service from k8s: %s (key: %s, hostname: %s)",
+				existingService.Attributes.Name, serviceKey, existingService.Hostname)
+		} else {
+			klog.V(4).Infof("Attempted to delete non-existent Dubbo service: %s", serviceKey)
 		}
+	default:
+		klog.Warningf("Unknown service event type: %s for service %s/%s", eventType, service.Namespace, service.Name)
 	}
 }

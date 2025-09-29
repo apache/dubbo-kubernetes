@@ -174,4 +174,12 @@ func addFlags(c *cobra.Command) {
 		"Username for Zookeeper authentication")
 	c.PersistentFlags().StringVar(&zookeeperPassword, "zookeeperPassword", "",
 		"Password for Zookeeper authentication")
+
+	// Kubernetes native service discovery flags
+	c.PersistentFlags().BoolVar(&serverArgs.RegistryOptions.EnableK8sServiceDiscovery, "enable-k8s-service-discovery", false,
+		"Enable Kubernetes native service discovery for Dubbo services")
+	c.PersistentFlags().StringSliceVar(&serverArgs.RegistryOptions.K8sServiceNamespaces, "k8s-service-namespaces", []string{"default"},
+		"Namespaces to watch for Kubernetes services with Dubbo annotations")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.DubboAnnotationPrefix, "dubbo-annotation-prefix", "dubbo.apache.org",
+		"Prefix for Dubbo service annotations on Kubernetes services")
 }

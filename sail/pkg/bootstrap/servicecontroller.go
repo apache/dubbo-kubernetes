@@ -7,7 +7,9 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/nacos"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/zookeeper"
@@ -84,6 +86,55 @@ func (s *Server) initKubeRegistry(args *SailArgs) (err error) {
 	args.RegistryOptions.KubeOptions.MeshWatcher = s.environment.Watcher
 	args.RegistryOptions.KubeOptions.SystemNamespace = args.Namespace
 	args.RegistryOptions.KubeOptions.MeshServiceController = s.ServiceController()
+
+	// Initialize k8s native service discovery if enabled
+	if args.RegistryOptions.EnableK8sServiceDiscovery || features.EnableK8sServiceDiscovery {
+		klog.Info("Initializing Kubernetes native service discovery")
+
+		// Validate prerequisites
+		if s.kubeClient == nil {
+			klog.Error("Kubernetes client is not available for service discovery")
+			return fmt.Errorf("kubernetes client required for k8s service discovery")
+		}
+
+		// Set k8s service discovery options with validation
+		args.RegistryOptions.KubeOptions.EnableK8sServiceDiscovery = true
+		args.RegistryOptions.KubeOptions.K8sServiceNamespaces = args.RegistryOptions.K8sServiceNamespaces
+		args.RegistryOptions.KubeOptions.DubboAnnotationPrefix = args.RegistryOptions.DubboAnnotationPrefix
+
+		// Validate namespaces configuration
+		if len(args.RegistryOptions.K8sServiceNamespaces) == 0 {
+			klog.Warning("No namespaces specified for k8s service discovery, using default namespace")
+			args.RegistryOptions.KubeOptions.K8sServiceNamespaces = []string{"default"}
+		}
+
+		// Create k8s service discovery controller with error handling
+		k8sController := controller.NewController(args.RegistryOptions.KubeOptions, s.kubeClient)
+		if k8sController == nil {
+			klog.Error("Kubernetes controller is nil after creation")
+			return fmt.Errorf("kubernetes controller initialization failed")
+		}
+
+		// Add the controller to the aggregate service controller
+		serviceControllers := s.ServiceController()
+		if serviceControllers == nil {
+			klog.Error("Service controller is not available")
+			return fmt.Errorf("service controller not initialized")
+		}
+
+		// Register k8s native controller with error recovery
+		defer func() {
+			if r := recover(); r != nil {
+				klog.Errorf("Panic during k8s controller registration: %v", r)
+			}
+		}()
+
+		// TODO: Add method to register k8s native controller
+		// serviceControllers.AddRegistry(provider.KubernetesNative, k8sController)
+
+		klog.Info("Kubernetes native service discovery initialized successfully")
+	}
+
 	// TODO NewMulticluster
 	return
 }

@@ -15,6 +15,26 @@
  * limitations under the License.
  */
 
+// Package annotations provides utilities for parsing Dubbo service annotations
+// from Kubernetes Service objects. It supports standard Dubbo service discovery
+// annotations that enable Kubernetes Services to be discovered as Dubbo services.
+//
+// The parser supports the following annotations:
+// - dubbo.apache.org/service-name: The interface name of the Dubbo service
+// - dubbo.apache.org/version: The version of the Dubbo service (optional)
+// - dubbo.apache.org/group: The group of the Dubbo service (optional)
+// - dubbo.apache.org/protocol: The protocol used by the Dubbo service (optional)
+// - dubbo.apache.org/port: The port number for the Dubbo service (optional)
+//
+// Example usage:
+//
+//	k8sService := &corev1.Service{...}
+//	if IsDubboService(k8sService) {
+//	    dubboInfo, err := ParseDubboAnnotations(k8sService)
+//	    if err == nil {
+//	        // Process dubbo service
+//	    }
+//	}
 package annotations
 
 import (

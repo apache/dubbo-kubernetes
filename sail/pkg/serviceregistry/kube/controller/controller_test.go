@@ -3,14 +3,49 @@ package controller
 import (
 	"testing"
 
-	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/apache/dubbo-kubernetes/pkg/config/host"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 )
 
+// TestControllerInitialization tests that the controller can be initialized properly
+func TestControllerInitialization(t *testing.T) {
+	// Create controller options
+	opts := Options{
+		ClusterID:                 "test-cluster",
+		EnableK8sServiceDiscovery: true,
+		K8sServiceNamespaces:      []string{"default", "kube-system"},
+		DubboAnnotationPrefix:     "dubbo.apache.org",
+	}
+
+	// Test controller creation with nil client (for testing)
+	controller := NewController(opts, nil)
+	if controller == nil {
+		t.Fatal("Expected controller to be created, got nil")
+	}
+
+	// Verify controller properties
+	if controller.opts.ClusterID != "test-cluster" {
+		t.Errorf("Expected cluster ID 'test-cluster', got '%s'", controller.opts.ClusterID)
+	}
+
+	if !controller.opts.EnableK8sServiceDiscovery {
+		t.Error("Expected k8s service discovery to be enabled")
+	}
+}
+
 func TestConvertK8sServiceToDubboService(t *testing.T) {
-	controller := &Controller{}
+	// Create controller with nil client for testing
+	opts := Options{
+		ClusterID:                 "test-cluster",
+		EnableK8sServiceDiscovery: true,
+		K8sServiceNamespaces:      []string{"default"},
+		DubboAnnotationPrefix:     "dubbo.apache.org",
+	}
+	controller := NewController(opts, nil)
 
 	tests := []struct {
 		name         string
@@ -43,6 +78,17 @@ func TestConvertK8sServiceToDubboService(t *testing.T) {
 						"dubbo.apache.org/service-name": "com.example.UserService",
 						"dubbo.apache.org/version":      "1.0.0",
 						"dubbo.apache.org/group":        "test",
+					},
+					CreationTimestamp: metav1.Now(),
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "dubbo",
+							Port:       20880,
+							TargetPort: intstr.FromInt(20880),
+							Protocol:   corev1.ProtocolTCP,
+						},
 					},
 				},
 			},
