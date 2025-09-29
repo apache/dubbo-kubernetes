@@ -70,18 +70,48 @@ func (c *Controller) Run(stop <-chan struct{}) {
 
 	c.running = true
 	defer func() {
+		if r := recover(); r != nil {
+			klog.Errorf("Nacos controller for cluster %s panicked: %v", c.clusterID, r)
+		}
 		c.running = false
 		klog.Infof("Nacos service registry controller for cluster %s stopped", c.clusterID)
 	}()
 
-	// Initialize Nacos client connection
-	if err := c.initNacosClient(); err != nil {
-		klog.Errorf("Failed to initialize Nacos client: %v", err)
+	// Initialize Nacos client connection with retry
+	const maxRetries = 3
+	var initErr error
+	for retry := 0; retry < maxRetries; retry++ {
+		if initErr = c.initNacosClient(); initErr == nil {
+			break
+		}
+		klog.Warningf("Failed to initialize Nacos client (attempt %d/%d): %v", retry+1, maxRetries, initErr)
+		if retry < maxRetries-1 {
+			select {
+			case <-time.After(time.Duration(retry+1) * 2 * time.Second):
+				continue
+			case <-stop:
+				klog.Info("Nacos controller stopped during initialization retry")
+				return
+			}
+		}
+	}
+
+	if initErr != nil {
+		klog.Errorf("Failed to initialize Nacos client after %d retries: %v", maxRetries, initErr)
 		return
 	}
 
-	// Start service discovery
-	c.startServiceDiscovery(stop)
+	klog.Infof("Successfully initialized Nacos client for cluster %s", c.clusterID)
+
+	// Start service discovery with error recovery
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				klog.Errorf("Nacos service discovery for cluster %s panicked: %v", c.clusterID, r)
+			}
+		}()
+		c.startServiceDiscovery(stop)
+	}()
 
 	<-stop
 }

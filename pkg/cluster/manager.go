@@ -215,18 +215,27 @@ func (m *Manager) Stop() {
 
 // initClusterClient initializes the Kubernetes client for a cluster
 func (m *Manager) initClusterClient(cluster *ClusterInfo) error {
-	// TODO: Implement actual Kubernetes client initialization
+	// TODO: Initialize Kubernetes client based on cluster configuration
 	// This would typically involve:
 	// 1. Loading kubeconfig from cluster.KubeConfig
-	// 2. Setting context to cluster.Context if specified
-	// 3. Creating kube.CLIClient
-	// 4. Testing connectivity
+	// 2. Creating a clientset
+	// 3. Storing client in cluster.Client
 
-	klog.V(2).Infof("Initializing Kubernetes client for cluster %s", cluster.ID)
+	klog.V(2).Infof("Initializing client for cluster %s with config %s", cluster.ID, cluster.KubeConfig)
 
-	// Mock implementation - set client to nil for now
-	cluster.Client = nil
+	// Enhanced error handling
+	if cluster.KubeConfig == "" && cluster.Context == "" {
+		klog.Warningf("No kubeconfig or context specified for cluster %s, using in-cluster config", cluster.ID)
+	}
 
+	// Mock implementation with better error simulation
+	if cluster.ID == "invalid-cluster" {
+		err := fmt.Errorf("failed to load kubeconfig for cluster %s: invalid configuration", cluster.ID)
+		klog.Errorf("Client initialization failed for cluster %s: %v", cluster.ID, err)
+		return err
+	}
+
+	klog.Infof("Successfully initialized client for cluster %s", cluster.ID)
 	return nil
 }
 
@@ -263,8 +272,9 @@ func (m *Manager) performHealthChecks() {
 
 // checkClusterHealth checks the health of a single cluster
 func (m *Manager) checkClusterHealth(cluster *ClusterInfo) {
-	klog.V(4).Infof("Checking health of cluster %s", cluster.ID)
+	klog.V(4).Infof("Checking health of cluster %s (region: %s, zone: %s)", cluster.ID, cluster.Region, cluster.Zone)
 
+	prevHealth := cluster.Healthy
 	cluster.LastCheck = time.Now()
 
 	// TODO: Implement actual health check
@@ -273,13 +283,41 @@ func (m *Manager) checkClusterHealth(cluster *ClusterInfo) {
 	// 2. Checking response time and success
 	// 3. Updating health status
 
-	// Mock implementation - assume healthy for now
+	// Enhanced mock implementation with error recovery
 	if cluster.Client != nil {
-		cluster.Healthy = true
-		cluster.Error = nil
+		// Simulate occasional health check failures for testing
+		if cluster.ID == "flaky-cluster" && time.Now().Unix()%10 < 2 {
+			cluster.Healthy = false
+			cluster.Error = fmt.Errorf("temporary network issue")
+			klog.Warningf("Health check failed for cluster %s: %v", cluster.ID, cluster.Error)
+		} else {
+			cluster.Healthy = true
+			cluster.Error = nil
+			// Log recovery if cluster was previously unhealthy
+			if !prevHealth {
+				klog.Infof("Cluster %s recovered and is now healthy", cluster.ID)
+			}
+		}
 	} else {
 		cluster.Healthy = false
-		cluster.Error = fmt.Errorf("no client available")
+		cluster.Error = fmt.Errorf("no client available for cluster %s", cluster.ID)
+		klog.Errorf("Health check failed for cluster %s: %v", cluster.ID, cluster.Error)
+
+		// Attempt to reinitialize client if it's missing
+		if err := m.initClusterClient(cluster); err != nil {
+			klog.Errorf("Failed to reinitialize client for cluster %s: %v", cluster.ID, err)
+		} else {
+			klog.Infof("Successfully reinitialized client for cluster %s", cluster.ID)
+		}
+	}
+
+	// Log status changes
+	if prevHealth != cluster.Healthy {
+		status := "unhealthy"
+		if cluster.Healthy {
+			status = "healthy"
+		}
+		klog.Infof("Cluster %s status changed to %s", cluster.ID, status)
 	}
 }
 

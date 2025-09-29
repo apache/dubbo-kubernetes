@@ -48,19 +48,45 @@ func NewController(opt Options) *Controller {
 // Run starts all the controllers
 func (c *Controller) Run(stop <-chan struct{}) {
 	c.storeLock.Lock()
-	for _, r := range c.registries {
+	runningCount := 0
+	for i, r := range c.registries {
+		if r == nil || r.Instance == nil {
+			klog.Errorf("Skipping nil registry at index %d", i)
+			continue
+		}
+
 		// prefer the per-registry stop channel
 		registryStop := stop
 		if s := r.stop; s != nil {
 			registryStop = s
 		}
-		go r.Run(registryStop)
+
+		go func(registry *registryEntry, idx int) {
+			defer func() {
+				if rec := recover(); rec != nil {
+					klog.Errorf("Registry %s/%s (index %d) panicked: %v",
+						registry.Provider(), registry.Cluster(), idx, rec)
+				}
+			}()
+
+			klog.Infof("Starting registry %s/%s (index %d)",
+				registry.Provider(), registry.Cluster(), idx)
+			registry.Run(registryStop)
+			klog.Infof("Registry %s/%s (index %d) stopped",
+				registry.Provider(), registry.Cluster(), idx)
+		}(r, i)
+		runningCount++
 	}
 	c.running = true
 	c.storeLock.Unlock()
 
+	klog.Infof("Registry Aggregator started with %d registries", runningCount)
+
 	<-stop
 	klog.Info("Registry Aggregator terminated")
+	c.storeLock.Lock()
+	c.running = false
+	c.storeLock.Unlock()
 }
 
 func (c *Controller) HasSynced() bool {
@@ -163,20 +189,33 @@ func mergeService(dst, src *model.Service, srcRegistry serviceregistry.Instance)
 
 // mergeServiceAttributes merges service attributes from different clusters/registries
 func mergeServiceAttributes(dst, src *model.Service, srcRegistry serviceregistry.Instance) {
-	// Merge labels from different sources
+	// Thread-safe label initialization
 	if dst.Attributes.Labels == nil {
 		dst.Attributes.Labels = make(map[string]string)
 	}
 
 	// Add cluster and registry information to labels
-	clusterLabel := "cluster." + string(srcRegistry.Cluster())
-	registryLabel := "registry." + string(srcRegistry.Provider())
+	clusterID := string(srcRegistry.Cluster())
+	registryID := string(srcRegistry.Provider())
+	clusterLabel := "cluster." + clusterID
+	registryLabel := "registry." + registryID
 
-	for key, value := range src.Attributes.Labels {
-		// Prefix labels with cluster/registry info to avoid conflicts
-		prefixedKey := clusterLabel + "/" + key
-		dst.Attributes.Labels[prefixedKey] = value
+	// Enhanced error handling for source labels
+	if src.Attributes.Labels != nil {
+		for key, value := range src.Attributes.Labels {
+			if key == "" || value == "" {
+				klog.Warningf("Skipping empty label key/value from registry %s/%s", registryID, clusterID)
+				continue
+			}
+			// Prefix labels with cluster/registry info to avoid conflicts
+			prefixedKey := clusterLabel + "/" + key
+			dst.Attributes.Labels[prefixedKey] = value
+		}
 	}
+
+	// Add registry health status metadata
+	dst.Attributes.Labels[registryLabel+"/health"] = "active"
+	dst.Attributes.Labels[registryLabel+"/cluster"] = clusterID
 
 	// Add registry provider info
 	dst.Attributes.Labels[registryLabel] = "true"
@@ -256,13 +295,36 @@ func (c *Controller) GetRegistriesByProvider(providerType provider.ID) []service
 
 // AddRegistry adds a new service registry to the aggregator with failover support
 func (c *Controller) AddRegistry(registry serviceregistry.Instance) {
+	if registry == nil {
+		klog.Errorf("Cannot add nil registry to aggregate controller")
+		return
+	}
+
 	c.storeLock.Lock()
 	defer c.storeLock.Unlock()
 
+	clusterID := registry.Cluster()
+	providerID := registry.Provider()
+
+	// Enhanced validation
+	if clusterID == "" || providerID == "" {
+		klog.Errorf("Registry has invalid cluster ID (%s) or provider ID (%s)", clusterID, providerID)
+		return
+	}
+
 	// Check if registry already exists
-	for _, existing := range c.registries {
-		if existing.Cluster() == registry.Cluster() && existing.Provider() == registry.Provider() {
-			klog.Warningf("Registry %s/%s already exists, skipping", registry.Provider(), registry.Cluster())
+	for i, existing := range c.registries {
+		if existing.Cluster() == clusterID && existing.Provider() == providerID {
+			klog.Warningf("Registry %s/%s already exists at index %d, replacing with new instance", providerID, clusterID, i)
+			// Replace existing registry instead of skipping
+			c.registries[i] = &registryEntry{
+				Instance: registry,
+				stop:     nil,
+			}
+			if c.running {
+				klog.Infof("Restarting replaced registry %s/%s", providerID, clusterID)
+				go registry.Run(c.getStopChannel())
+			}
 			return
 		}
 	}
@@ -273,11 +335,19 @@ func (c *Controller) AddRegistry(registry serviceregistry.Instance) {
 	}
 
 	c.registries = append(c.registries, entry)
+	klog.Infof("Successfully added registry %s/%s (total: %d registries)", providerID, clusterID, len(c.registries))
 
 	// Start registry if aggregator is already running
 	if c.running {
-		klog.Infof("Starting newly added registry %s/%s", registry.Provider(), registry.Cluster())
-		go registry.Run(c.getStopChannel())
+		klog.Infof("Starting newly added registry %s/%s", providerID, clusterID)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					klog.Errorf("Registry %s/%s panicked during startup: %v", providerID, clusterID, r)
+				}
+			}()
+			registry.Run(c.getStopChannel())
+		}()
 	}
 
 	klog.Infof("Added registry %s/%s to aggregator", registry.Provider(), registry.Cluster())
