@@ -78,6 +78,9 @@ func newDiscoveryCommand() *cobra.Command {
 			if err := discoveryServer.Start(stop); err != nil {
 				return fmt.Errorf("failed to start discovery service: %v", err)
 			}
+
+			cmd.WaitSignal(stop)
+
 			return nil
 		},
 	}

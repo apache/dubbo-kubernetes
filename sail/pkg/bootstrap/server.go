@@ -46,6 +46,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ra"
+	caserver "github.com/apache/dubbo-kubernetes/security/pkg/server/ca"
 	"github.com/fsnotify/fsnotify"
 	grpcprom "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"golang.org/x/net/http2"
@@ -100,11 +101,17 @@ type Server struct {
 	CA                  *ca.DubboCA
 	dnsNames            []string
 
+	caServer *caserver.Server
+
 	certMu     sync.RWMutex
 	dubbodCert *tls.Certificate
 
 	dubbodCertBundleWatcher *keycertbundle.Watcher
+
+	readinessProbes map[string]readinessProbe
 }
+
+type readinessProbe func() bool
 
 func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	e := model.NewEnvironment()
@@ -199,6 +206,26 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 		return nil, fmt.Errorf("error initializing secure gRPC Listener: %v", err)
 	}
 
+	if s.kubeClient != nil {
+		s.initSecureWebhookServer(args)
+		if err := s.initConfigValidation(args); err != nil {
+			return nil, fmt.Errorf("error initializing config validator: %v", err)
+		}
+	}
+
+	// TODO initRegistryEventHandlers？
+
+	// TODO initDiscoveryService？
+
+	s.startCA(caOpts)
+
+	if s.kubeClient != nil {
+		s.addStartFunc("kube client", func(stop <-chan struct{}) error {
+			s.kubeClient.RunAndWait(stop)
+			return nil
+		})
+	}
+
 	return s, nil
 }
 
@@ -257,6 +284,29 @@ func (s *Server) Start(stop <-chan struct{}) error {
 	s.waitForShutdown(stop)
 
 	return nil
+}
+
+func (s *Server) startCA(caOpts *caOptions) {
+	if s.CA == nil && s.RA == nil {
+		return
+	}
+	// init the RA server if configured, else start init CA server
+	if s.RA != nil {
+		klog.Infof("initializing CA server with RA")
+		s.initCAServer(s.RA, caOpts)
+	} else if s.CA != nil {
+		klog.Infof("initializing CA server with Dubbod CA")
+		s.initCAServer(s.CA, caOpts)
+	}
+	s.addStartFunc("ca", func(stop <-chan struct{}) error {
+		grpcServer := s.secureGrpcServer
+		if s.secureGrpcServer == nil {
+			grpcServer = s.grpcServer
+		}
+		klog.Infof("starting CA server")
+		s.RunCA(grpcServer)
+		return nil
+	})
 }
 
 func (s *Server) initKubeClient(args *SailArgs) error {
@@ -675,6 +725,17 @@ func (s *Server) initDubbodCerts(args *SailArgs, host string) error {
 	}
 
 	return err
+}
+
+func (s *Server) dubbodReadyHandler(w http.ResponseWriter, _ *http.Request) {
+	for name, fn := range s.readinessProbes {
+		if ready := fn(); !ready {
+			klog.Warningf("%s is not ready", name)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func getDNSNames(args *SailArgs, host string) []string {

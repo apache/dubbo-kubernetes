@@ -20,21 +20,28 @@ package bootstrap
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	securityModel "github.com/apache/dubbo-kubernetes/sail/pkg/security/model"
 	"github.com/apache/dubbo-kubernetes/security/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ra"
 	caserver "github.com/apache/dubbo-kubernetes/security/pkg/server/ca"
+	"github.com/apache/dubbo-kubernetes/security/pkg/server/ca/authenticate"
+	"github.com/apache/dubbo-kubernetes/security/pkg/util"
 	"github.com/fsnotify/fsnotify"
+	"google.golang.org/grpc"
+	"istio.io/api/security/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"os"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -49,6 +56,10 @@ type caOptions struct {
 }
 
 var (
+	trustedIssuer = env.Register("TOKEN_ISSUER", "",
+		"OIDC token issuer. If set, will be used to check the tokens.")
+	audience = env.Register("AUDIENCE", "",
+		"Expected audience in the tokens. ")
 	LocalCertDir = env.Register("ROOT_CA_DIR", "./etc/cacerts",
 		"Location of a local or mounted CA root")
 	useRemoteCerts = env.Register("USE_REMOTE_CERTS", false,
@@ -59,6 +70,8 @@ var (
 	// TODO: Likely to be removed and added to mesh config
 	k8sSigner = env.Register("K8S_SIGNER", "",
 		"Kubernetes CA Signer type. Valid from Kubernetes 1.18").Get()
+	k8sInCluster = env.Register("KUBERNETES_SERVICE_HOST", "",
+		"Kubernetes service host, set automatically when running in-cluster")
 	workloadCertTTL = env.Register("DEFAULT_WORKLOAD_CERT_TTL",
 		cmd.DefaultWorkloadCertTTL,
 		"The default TTL of issued workload certificates. Applied when the client sets a "+
@@ -87,6 +100,55 @@ var (
 			"to zero or a negative value disables automated root cert check and "+
 			"rotation. This interval is suggested to be larger than 10 minutes.")
 )
+
+func (s *Server) initCAServer(ca caserver.CertificateAuthority, opts *caOptions) {
+	caServer, startErr := caserver.New(ca, maxWorkloadCertTTL.Get(), opts.Authenticators)
+	if startErr != nil {
+		klog.Errorf("failed to create dubbo ca server: %v", startErr)
+	}
+	s.caServer = caServer
+}
+
+func (s *Server) RunCA(grpc *grpc.Server) {
+	iss := trustedIssuer.Get()
+	aud := audience.Get()
+
+	token, err := os.ReadFile(securityModel.ThirdPartyJwtPath)
+	if err == nil {
+		tok, err := detectAuthEnv(string(token))
+		if err != nil {
+			klog.Warningf("Starting with invalid K8S JWT token: %v", err)
+		} else {
+			if iss == "" {
+				iss = tok.Iss
+			}
+			if len(tok.Aud) > 0 && len(aud) == 0 {
+				aud = tok.Aud[0]
+			}
+		}
+	}
+
+	// TODO: if not set, parse Istiod's own token (if present) and get the issuer. The same issuer is used
+	// for all tokens - no need to configure twice. The token may also include cluster info to auto-configure
+	// networking properties.
+	if iss != "" && // issuer set explicitly or extracted from our own JWT
+		k8sInCluster.Get() == "" { // not running in cluster - in cluster use direct call to apiserver
+		// Add a custom authenticator using standard JWT validation, if not running in K8S
+		// When running inside K8S - we can use the built-in validator, which also check pod removal (invalidation).
+		jwtRule := v1beta1.JWTRule{Issuer: iss, Audiences: []string{aud}}
+		oidcAuth, err := authenticate.NewJwtAuthenticator(&jwtRule, nil)
+		if err == nil {
+			s.caServer.Authenticators = append(s.caServer.Authenticators, oidcAuth)
+			klog.Info("Using out-of-cluster JWT authentication")
+		} else {
+			klog.Info("K8S token doesn't support OIDC, using only in-cluster auth")
+		}
+	}
+
+	s.caServer.Register(grpc)
+
+	klog.Info("Dubbod CA has started")
+}
 
 func (s *Server) loadCACerts(caOpts *caOptions, dir string) error {
 	if s.kubeClient == nil {
@@ -311,6 +373,27 @@ func (s *Server) handleCACertsFileWatch() {
 			return
 		}
 	}
+}
+
+func detectAuthEnv(jwt string) (*authenticate.JwtPayload, error) {
+	jwtSplit := strings.Split(jwt, ".")
+	if len(jwtSplit) != 3 {
+		return nil, fmt.Errorf("invalid JWT parts: %s", jwt)
+	}
+	payload := jwtSplit[1]
+
+	payloadBytes, err := util.DecodeJwtPart(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode jwt: %v", err.Error())
+	}
+
+	structuredPayload := &authenticate.JwtPayload{}
+	err = json.Unmarshal(payloadBytes, &structuredPayload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal jwt: %v", err.Error())
+	}
+
+	return structuredPayload, nil
 }
 
 func handleEvent(s *Server) {

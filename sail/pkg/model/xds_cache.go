@@ -21,7 +21,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 )
 
-type XdsCache interface{}
+type XdsCache interface {
+	Run(stop <-chan struct{})
+}
 
 type DisabledCache struct{}
 
@@ -43,4 +45,9 @@ func NewXdsCache() XdsCache {
 	cache.sds = newTypedXdsCache[string]()
 
 	return cache
+}
+
+func (x XdsCacheImpl) Run(stop <-chan struct{}) {}
+
+func (d DisabledCache) Run(stop <-chan struct{}) {
 }

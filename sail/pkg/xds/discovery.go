@@ -29,25 +29,36 @@ import (
 	"time"
 )
 
+type DebounceOptions struct {
+	DebounceAfter     time.Duration
+	debounceMax       time.Duration
+	enableEDSDebounce bool
+}
+
 type DiscoveryServer struct {
-	Env                *model.Environment
-	serverReady        atomic.Bool
-	DiscoveryStartTime time.Time
-	ClusterAliases     map[cluster.ID]cluster.ID
-	Cache              model.XdsCache
-	pushQueue          *PushQueue
-	krtDebugger        *krt.DebugHandler
-	InboundUpdates     *atomic.Int64
-	CommittedUpdates   *atomic.Int64
-	RequestRateLimit   *rate.Limiter
-	ProxyNeedsPush     func(proxy *model.Proxy, req *model.PushRequest) (*model.PushRequest, bool)
+	Env                 *model.Environment
+	serverReady         atomic.Bool
+	DiscoveryStartTime  time.Time
+	ClusterAliases      map[cluster.ID]cluster.ID
+	Cache               model.XdsCache
+	pushQueue           *PushQueue
+	krtDebugger         *krt.DebugHandler
+	InboundUpdates      *atomic.Int64
+	CommittedUpdates    *atomic.Int64
+	RequestRateLimit    *rate.Limiter
+	ProxyNeedsPush      func(proxy *model.Proxy, req *model.PushRequest) (*model.PushRequest, bool)
+	pushChannel         chan *model.PushRequest
+	DebounceOptions     DebounceOptions
+	concurrentPushLimit chan struct{}
 }
 
 func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string, debugger *krt.DebugHandler) *DiscoveryServer {
 	out := &DiscoveryServer{
-		Env:         env,
-		Cache:       env.Cache,
-		krtDebugger: debugger,
+		Env:              env,
+		Cache:            env.Cache,
+		krtDebugger:      debugger,
+		InboundUpdates:   atomic.NewInt64(0),
+		CommittedUpdates: atomic.NewInt64(0),
 	}
 	out.ClusterAliases = make(map[cluster.ID]cluster.ID)
 	for alias := range clusterAliases {
@@ -61,6 +72,12 @@ func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
 	discovery.RegisterAggregatedDiscoveryServiceServer(rpcs, s)
 }
 
+func (s *DiscoveryServer) Start(stopCh <-chan struct{}) {
+	go s.handleUpdates(stopCh)
+	go s.sendPushes(stopCh)
+	go s.Cache.Run(stopCh)
+}
+
 func (s *DiscoveryServer) CachesSynced() {
 	klog.Infof("All caches have been synced up in %v, marking server ready", time.Since(s.DiscoveryStartTime))
 	s.serverReady.Store(true)
@@ -70,6 +87,21 @@ func (s *DiscoveryServer) Shutdown() {
 	s.pushQueue.ShutDown()
 }
 
+func (s *DiscoveryServer) Push(req *model.PushRequest) {}
+
 func (s *DiscoveryServer) globalPushContext() *model.PushContext {
 	return s.Env.PushContext()
 }
+
+func (s *DiscoveryServer) handleUpdates(stopCh <-chan struct{}) {
+	debounce(s.pushChannel, stopCh, s.DebounceOptions, s.Push, s.CommittedUpdates)
+}
+
+func (s *DiscoveryServer) sendPushes(stopCh <-chan struct{}) {
+	doSendPushes(stopCh, s.concurrentPushLimit, s.pushQueue)
+}
+
+func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceOptions, pushFn func(req *model.PushRequest), updateSent *atomic.Int64) {
+}
+
+func doSendPushes(stopCh <-chan struct{}, semaphore chan struct{}, queue *PushQueue) {}
