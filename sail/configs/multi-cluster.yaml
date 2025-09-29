@@ -1,0 +1,165 @@
+# Multi-Cluster Configuration for Dubbo Admin
+# This file defines multiple Kubernetes clusters that Dubbo Admin can manage
+
+apiVersion: v1
+kind: Config
+metadata:
+  name: multi-cluster-config
+  namespace: dubbo-system
+
+# Multi-cluster configuration
+multiCluster:
+  enabled: true
+  clusters:
+    # Primary cluster (local)
+    - id: "primary"
+      name: "Primary Cluster"
+      kubeConfig: "" # Empty means in-cluster config
+      context: "" # Empty means current context
+      enabled: true
+      priority: 100
+      region: "us-west-1"
+      zone: "us-west-1a"
+
+    # Remote cluster 1
+    - id: "remote-1"
+      name: "Remote Cluster East"
+      kubeConfig: "/etc/kubeconfig/remote-1.yaml"
+      context: "remote-1-context"
+      enabled: true
+      priority: 90
+      region: "us-east-1"
+      zone: "us-east-1a"
+
+    # Remote cluster 2
+    - id: "remote-2"
+      name: "Remote Cluster Europe"
+      kubeConfig: "/etc/kubeconfig/remote-2.yaml"
+      context: "remote-2-context"
+      enabled: true
+      priority: 80
+      region: "eu-west-1"
+      zone: "eu-west-1a"
+
+    # Disaster recovery cluster
+    - id: "dr-cluster"
+      name: "Disaster Recovery Cluster"
+      kubeConfig: "/etc/kubeconfig/dr-cluster.yaml"
+      context: "dr-context"
+      enabled: false # Only enabled during DR scenarios
+      priority: 50
+      region: "us-west-2"
+      zone: "us-west-2b"
+
+# Cluster-specific configurations
+clusterDefaults:
+  # Default namespace to watch
+  namespace: "dubbo-system"
+
+  # Kubernetes API client configuration
+  kubernetesAPI:
+    qps: 80.0
+    burst: 160
+    timeout: "30s"
+
+  # Service discovery configuration per cluster
+  serviceDiscovery:
+    syncInterval: "30s"
+    resyncPeriod: "10m"
+
+# Cross-cluster networking configuration
+crossClusterNetworking:
+  # Enable cross-cluster service discovery
+  enabled: true
+
+  # Network topology
+  networks:
+    - name: "network-1"
+      clusters: ["primary", "remote-1"]
+      gateways:
+        - address: "gateway-1.dubbo-system.svc.cluster.local"
+          port: 15443
+
+    - name: "network-2"
+      clusters: ["remote-2"]
+      gateways:
+        - address: "gateway-2.dubbo-system.svc.cluster.local"
+          port: 15443
+
+# Multi-cluster service mesh configuration
+serviceMesh:
+  # Enable service mesh across clusters
+  enabled: true
+
+  # Trust domain for cross-cluster communication
+  trustDomain: "cluster.local"
+
+  # Certificate management
+  certificates:
+    # Auto-rotation interval
+    rotationInterval: "24h"
+
+    # Certificate authority configuration
+    ca:
+      # Use shared CA across clusters
+      shared: true
+      secretName: "cacerts"
+      secretNamespace: "dubbo-system"
+
+# Failover and disaster recovery configuration
+failover:
+  # Enable automatic failover between clusters
+  enabled: true
+
+  # Failover strategy
+  strategy: "priority" # Options: "priority", "region-aware", "custom"
+
+  # Health check configuration
+  healthCheck:
+    enabled: true
+    interval: "10s"
+    timeout: "5s"
+    unhealthyThreshold: 3
+    healthyThreshold: 2
+
+  # Disaster recovery configuration
+  disasterRecovery:
+    # Enable automatic DR cluster activation
+    autoActivation: false
+
+    # RTO (Recovery Time Objective) in seconds
+    rto: 300
+
+    # RPO (Recovery Point Objective) in seconds
+    rpo: 60
+
+# Load balancing configuration
+loadBalancing:
+  # Cross-cluster load balancing strategy
+  strategy: "locality-aware" # Options: "round-robin", "priority-based", "locality-aware"
+
+  # Locality preferences
+  locality:
+    # Prefer services in same region
+    regionWeight: 80
+
+    # Prefer services in same zone
+    zoneWeight: 90
+
+    # Failover to other regions if local unavailable
+    crossRegionFailover: true
+
+# Monitoring and observability
+monitoring:
+  # Enable cluster health monitoring
+  enabled: true
+
+  # Metrics collection interval
+  metricsInterval: "15s"
+
+  # Health check endpoints
+  healthEndpoints:
+    - path: "/healthz"
+      port: 8080
+    - path: "/ready"
+      port: 8080

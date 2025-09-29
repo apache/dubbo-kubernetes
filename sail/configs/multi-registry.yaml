@@ -1,0 +1,103 @@
+# Multi-Registry Configuration for Dubbo Admin
+# This file defines multiple service registries that Dubbo Admin can connect to
+
+apiVersion: v1
+kind: Config
+metadata:
+  name: multi-registry-config
+  namespace: dubbo-system
+
+# Multi-registry configuration
+multiRegistry:
+  enabled: true
+  registries:
+    # Kubernetes Registry
+    - id: "kubernetes-primary"
+      name: "Primary Kubernetes Cluster"
+      type: "Kubernetes"
+      address: "https://kubernetes.default.svc"
+      enabled: true
+      priority: 100
+      config:
+        kubeconfig: ""
+        namespace: "dubbo-system"
+
+    # Nacos Registry
+    - id: "nacos-primary"
+      name: "Primary Nacos Registry"
+      type: "Nacos"
+      address: "nacos.dubbo-system.svc.cluster.local:8848"
+      enabled: true
+      priority: 90
+      config:
+        serverAddrs:
+          - "nacos.dubbo-system.svc.cluster.local:8848"
+        namespace: "public"
+        group: "DEFAULT_GROUP"
+        username: ""
+        password: ""
+        timeout: "5s"
+        retryInterval: "30s"
+        maxRetries: 3
+
+    # Zookeeper Registry
+    - id: "zookeeper-primary"
+      name: "Primary Zookeeper Registry"
+      type: "Zookeeper"
+      address: "zookeeper.dubbo-system.svc.cluster.local:2181"
+      enabled: false
+      priority: 80
+      config:
+        servers:
+          - "zookeeper.dubbo-system.svc.cluster.local:2181"
+        root: "/dubbo"
+        timeout: "5s"
+        sessionTimeout: "60s"
+        retryInterval: "30s"
+        maxRetries: 3
+        username: ""
+        password: ""
+
+# Registry-specific configurations
+registryDefaults:
+  # Connection timeout for all registries
+  connectionTimeout: "5s"
+
+  # Health check interval
+  healthCheckInterval: "30s"
+
+  # Maximum number of retry attempts
+  maxRetries: 3
+
+  # Retry backoff configuration
+  retryBackoff:
+    initialInterval: "1s"
+    maxInterval: "60s"
+    multiplier: 2.0
+
+# Failover configuration
+failover:
+  # Enable automatic failover between registries
+  enabled: true
+
+  # Failover strategy: "priority" or "roundrobin"
+  strategy: "priority"
+
+  # Health check configuration
+  healthCheck:
+    enabled: true
+    interval: "10s"
+    timeout: "5s"
+    unhealthyThreshold: 3
+    healthyThreshold: 2
+
+# Service discovery configuration
+serviceDiscovery:
+  # Sync interval for service discovery
+  syncInterval: "30s"
+
+  # Enable cross-registry service deduplication
+  deduplication: true
+
+  # Service merging strategy for services found in multiple registries
+  mergingStrategy: "kubernetes-first" # Options: "kubernetes-first", "priority-based", "merge-all"

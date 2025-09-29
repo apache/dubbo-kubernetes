@@ -19,6 +19,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
@@ -30,6 +31,25 @@ import (
 
 var (
 	serverArgs *bootstrap.SailArgs
+
+	// Multi-cluster configuration variables
+	multiClusterConfigFile string
+
+	// Multi-registry configuration variables
+	multiRegistryConfigFile string
+
+	// Nacos configuration variables
+	nacosServerAddrs string
+	nacosNamespace   string
+	nacosGroup       string
+	nacosUsername    string
+	nacosPassword    string
+
+	// Zookeeper configuration variables
+	zookeeperServers  string
+	zookeeperRoot     string
+	zookeeperUsername string
+	zookeeperPassword string
 )
 
 func NewRootCommand() *cobra.Command {
@@ -121,4 +141,37 @@ func addFlags(c *cobra.Command) {
 		"The ID of the cluster that this Dubbod instance resides")
 	c.PersistentFlags().StringToStringVar(&serverArgs.RegistryOptions.KubeOptions.ClusterAliases, "clusterAliases", map[string]string{},
 		"Alias names for clusters. Example: alias1=cluster1,alias2=cluster2")
+
+	// Multi-cluster configuration flags
+	c.PersistentFlags().BoolVar(&serverArgs.RegistryOptions.MultiCluster.Enabled, "multiClusterEnabled", false,
+		"Enable multi-cluster support")
+	c.PersistentFlags().StringVar(&multiClusterConfigFile, "multiClusterConfig", "",
+		"Path to multi-cluster configuration file")
+
+	// Multi-registry configuration flags
+	c.PersistentFlags().BoolVar(&serverArgs.RegistryOptions.MultiRegistry.Enabled, "multiRegistryEnabled", false,
+		"Enable multi-registry support")
+	c.PersistentFlags().StringVar(&multiRegistryConfigFile, "multiRegistryConfig", "",
+		"Path to multi-registry configuration file")
+
+	// Individual registry configuration flags
+	c.PersistentFlags().StringVar(&nacosServerAddrs, "nacosServers", "",
+		"Comma separated list of Nacos server addresses (host:port)")
+	c.PersistentFlags().StringVar(&nacosNamespace, "nacosNamespace", "public",
+		"Nacos namespace to use")
+	c.PersistentFlags().StringVar(&nacosGroup, "nacosGroup", "DEFAULT_GROUP",
+		"Nacos group to use")
+	c.PersistentFlags().StringVar(&nacosUsername, "nacosUsername", "",
+		"Username for Nacos authentication")
+	c.PersistentFlags().StringVar(&nacosPassword, "nacosPassword", "",
+		"Password for Nacos authentication")
+
+	c.PersistentFlags().StringVar(&zookeeperServers, "zookeeperServers", "",
+		"Comma separated list of Zookeeper server addresses (host:port)")
+	c.PersistentFlags().StringVar(&zookeeperRoot, "zookeeperRoot", "/dubbo",
+		"Root path for Dubbo services in Zookeeper")
+	c.PersistentFlags().StringVar(&zookeeperUsername, "zookeeperUsername", "",
+		"Username for Zookeeper authentication")
+	c.PersistentFlags().StringVar(&zookeeperPassword, "zookeeperPassword", "",
+		"Password for Zookeeper authentication")
 }

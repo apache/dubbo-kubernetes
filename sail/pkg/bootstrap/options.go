@@ -37,6 +37,64 @@ type RegistryOptions struct {
 	KubeConfig                 string
 	KubeOptions                kubecontroller.Options
 	ClusterRegistriesNamespace string
+	// Multi-cluster configuration
+	MultiCluster MultiClusterOptions `json:"multiCluster" yaml:"multiCluster"`
+	// Multi-registry configuration
+	MultiRegistry MultiRegistryOptions `json:"multiRegistry" yaml:"multiRegistry"`
+}
+
+// MultiClusterOptions holds configuration for managing multiple Kubernetes clusters
+type MultiClusterOptions struct {
+	// Enabled indicates if multi-cluster support is enabled
+	Enabled bool `json:"enabled" yaml:"enabled"`
+	// Clusters is a list of cluster configurations
+	Clusters []ClusterConfig `json:"clusters" yaml:"clusters"`
+}
+
+// ClusterConfig holds configuration for a single Kubernetes cluster
+type ClusterConfig struct {
+	// ID is the unique identifier for this cluster
+	ID string `json:"id" yaml:"id"`
+	// Name is a human-readable name for this cluster
+	Name string `json:"name" yaml:"name"`
+	// KubeConfig is the path to kubeconfig file for this cluster
+	KubeConfig string `json:"kubeConfig" yaml:"kubeConfig"`
+	// Context is the context name to use from kubeconfig
+	Context string `json:"context" yaml:"context"`
+	// Enabled indicates if this cluster is enabled
+	Enabled bool `json:"enabled" yaml:"enabled"`
+	// Priority determines the priority of this cluster (higher value = higher priority)
+	Priority int `json:"priority" yaml:"priority"`
+	// Region specifies the region this cluster is located in
+	Region string `json:"region" yaml:"region"`
+	// Zone specifies the zone this cluster is located in
+	Zone string `json:"zone" yaml:"zone"`
+}
+
+// MultiRegistryOptions holds configuration for managing multiple service registries
+type MultiRegistryOptions struct {
+	// Enabled indicates if multi-registry support is enabled
+	Enabled bool `json:"enabled" yaml:"enabled"`
+	// Registries is a list of registry configurations
+	Registries []RegistryConfig `json:"registries" yaml:"registries"`
+}
+
+// RegistryConfig holds configuration for a single service registry
+type RegistryConfig struct {
+	// ID is the unique identifier for this registry
+	ID string `json:"id" yaml:"id"`
+	// Name is a human-readable name for this registry
+	Name string `json:"name" yaml:"name"`
+	// Type specifies the registry type (Kubernetes, Nacos, Zookeeper)
+	Type string `json:"type" yaml:"type"`
+	// Address is the registry server address
+	Address string `json:"address" yaml:"address"`
+	// Enabled indicates if this registry is enabled
+	Enabled bool `json:"enabled" yaml:"enabled"`
+	// Priority determines the priority of this registry (higher value = higher priority)
+	Priority int `json:"priority" yaml:"priority"`
+	// Config holds registry-specific configuration
+	Config map[string]interface{} `json:"config" yaml:"config"`
 }
 
 type SailArgs struct {

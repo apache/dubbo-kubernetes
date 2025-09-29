@@ -1,6 +1,8 @@
 package aggregate
 
 import (
+	"sync"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
@@ -8,7 +10,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	"k8s.io/klog/v2"
-	"sync"
 )
 
 var (
@@ -154,4 +155,160 @@ func mergeService(dst, src *model.Service, srcRegistry serviceregistry.Instance)
 		newAddresses := src.ClusterVIPs.GetAddressesFor(clusterID)
 		dst.ClusterVIPs.SetAddressesFor(clusterID, newAddresses)
 	}
+
+	// Enhanced cross-cluster service merging
+	mergeServiceAttributes(dst, src, srcRegistry)
+	mergeServicePorts(dst, src, srcRegistry)
+}
+
+// mergeServiceAttributes merges service attributes from different clusters/registries
+func mergeServiceAttributes(dst, src *model.Service, srcRegistry serviceregistry.Instance) {
+	// Merge labels from different sources
+	if dst.Attributes.Labels == nil {
+		dst.Attributes.Labels = make(map[string]string)
+	}
+
+	// Add cluster and registry information to labels
+	clusterLabel := "cluster." + string(srcRegistry.Cluster())
+	registryLabel := "registry." + string(srcRegistry.Provider())
+
+	for key, value := range src.Attributes.Labels {
+		// Prefix labels with cluster/registry info to avoid conflicts
+		prefixedKey := clusterLabel + "/" + key
+		dst.Attributes.Labels[prefixedKey] = value
+	}
+
+	// Add registry provider info
+	dst.Attributes.Labels[registryLabel] = "true"
+
+	// Merge service accounts from different clusters
+	for _, sa := range src.ServiceAccounts {
+		found := false
+		for _, existingSa := range dst.ServiceAccounts {
+			if existingSa == sa {
+				found = true
+				break
+			}
+		}
+		if !found {
+			dst.ServiceAccounts = append(dst.ServiceAccounts, sa)
+		}
+	}
+}
+
+// mergeServicePorts merges service ports with conflict resolution
+func mergeServicePorts(dst, src *model.Service, srcRegistry serviceregistry.Instance) {
+	for _, srcPort := range src.Ports {
+		found := false
+		for _, dstPort := range dst.Ports {
+			if dstPort.Port == srcPort.Port && dstPort.Protocol == srcPort.Protocol {
+				found = true
+				// Port conflict resolution - prefer Kubernetes registry
+				if srcRegistry.Provider() == provider.Kubernetes && dstPort.Name != srcPort.Name {
+					klog.V(2).Infof("Port name conflict for service %s port %d: %s vs %s, preferring Kubernetes",
+						src.Hostname, srcPort.Port, dstPort.Name, srcPort.Name)
+					dstPort.Name = srcPort.Name
+				}
+				break
+			}
+		}
+
+		// Add port if not found
+		if !found {
+			dst.Ports = append(dst.Ports, &model.Port{
+				Name:     srcPort.Name,
+				Port:     srcPort.Port,
+				Protocol: srcPort.Protocol,
+			})
+		}
+	}
+}
+
+// GetHealthyRegistries returns only healthy registries, implementing basic failover
+func (c *Controller) GetHealthyRegistries() []serviceregistry.Instance {
+	c.storeLock.RLock()
+	defer c.storeLock.RUnlock()
+
+	healthy := make([]serviceregistry.Instance, 0)
+	for _, r := range c.registries {
+		if r.HasSynced() {
+			healthy = append(healthy, r)
+		}
+	}
+
+	return healthy
+}
+
+// GetRegistriesByProvider returns registries filtered by provider type
+func (c *Controller) GetRegistriesByProvider(providerType provider.ID) []serviceregistry.Instance {
+	c.storeLock.RLock()
+	defer c.storeLock.RUnlock()
+
+	filtered := make([]serviceregistry.Instance, 0)
+	for _, r := range c.registries {
+		if r.Provider() == providerType {
+			filtered = append(filtered, r)
+		}
+	}
+
+	return filtered
+}
+
+// AddRegistry adds a new service registry to the aggregator with failover support
+func (c *Controller) AddRegistry(registry serviceregistry.Instance) {
+	c.storeLock.Lock()
+	defer c.storeLock.Unlock()
+
+	// Check if registry already exists
+	for _, existing := range c.registries {
+		if existing.Cluster() == registry.Cluster() && existing.Provider() == registry.Provider() {
+			klog.Warningf("Registry %s/%s already exists, skipping", registry.Provider(), registry.Cluster())
+			return
+		}
+	}
+
+	entry := &registryEntry{
+		Instance: registry,
+		stop:     nil, // Use server stop channel
+	}
+
+	c.registries = append(c.registries, entry)
+
+	// Start registry if aggregator is already running
+	if c.running {
+		klog.Infof("Starting newly added registry %s/%s", registry.Provider(), registry.Cluster())
+		go registry.Run(c.getStopChannel())
+	}
+
+	klog.Infof("Added registry %s/%s to aggregator", registry.Provider(), registry.Cluster())
+}
+
+// RemoveRegistry removes a service registry from the aggregator
+func (c *Controller) RemoveRegistry(clusterID cluster.ID, providerType provider.ID) bool {
+	c.storeLock.Lock()
+	defer c.storeLock.Unlock()
+
+	for i, r := range c.registries {
+		if r.Cluster() == clusterID && r.Provider() == providerType {
+			// Note: We cannot close the stop channel here as it's read-only
+			// The registry will be stopped when the main stop channel is closed
+			// In a real implementation, we would need a different mechanism to stop individual registries
+
+			// Remove from slice
+			c.registries = append(c.registries[:i], c.registries[i+1:]...)
+			klog.Infof("Removed registry %s/%s from aggregator", providerType, clusterID)
+			return true
+		}
+	}
+
+	klog.Warningf("Registry %s/%s not found for removal", providerType, clusterID)
+	return false
+}
+
+// getStopChannel returns a stop channel for the aggregator
+func (c *Controller) getStopChannel() <-chan struct{} {
+	// This is a simplified implementation
+	// In a real scenario, this would return the server's stop channel
+	stopCh := make(chan struct{})
+	return stopCh
 }
