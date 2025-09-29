@@ -182,4 +182,26 @@ func addFlags(c *cobra.Command) {
 		"Namespaces to watch for Kubernetes services with Dubbo annotations")
 	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.DubboAnnotationPrefix, "dubbo-annotation-prefix", "dubbo.apache.org",
 		"Prefix for Dubbo service annotations on Kubernetes services")
+
+	// Istio service mesh integration flags
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.IstioOptions.PilotAddress, "istio-pilot-address", "istiod.istio-system.svc.cluster.local:15010",
+		"Address of Istio Pilot discovery service")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.IstioOptions.Namespace, "istio-namespace", "istio-system",
+		"Namespace for Istio service discovery")
+	c.PersistentFlags().BoolVar(&serverArgs.RegistryOptions.IstioOptions.TLSEnabled, "istio-tls-enabled", true,
+		"Enable TLS for Istio Pilot connection")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.IstioOptions.CertPath, "istio-cert-path", "",
+		"Path to TLS certificate for Istio Pilot connection")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.IstioOptions.KeyPath, "istio-key-path", "",
+		"Path to TLS private key for Istio Pilot connection")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.IstioOptions.CACertPath, "istio-ca-cert-path", "",
+		"Path to CA certificate for Istio Pilot connection")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.IstioOptions.ServiceName, "istio-service-name", "dubbo-control-plane",
+		"Service name for Istio registration")
+	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.IstioOptions.ServiceVersion, "istio-service-version", "v1",
+		"Service version for Istio registration")
+	c.PersistentFlags().IntVar(&serverArgs.RegistryOptions.IstioOptions.ConnectionTimeout, "istio-connection-timeout", 30,
+		"Connection timeout in seconds for Istio Pilot")
+	c.PersistentFlags().IntVar(&serverArgs.RegistryOptions.IstioOptions.RequestTimeout, "istio-request-timeout", 10,
+		"Request timeout in seconds for Istio xDS requests")
 }

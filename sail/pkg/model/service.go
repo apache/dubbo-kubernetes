@@ -38,6 +38,14 @@ type ServiceAttributes struct {
 	KubernetesService   *corev1.Service   `json:"kubernetesService,omitempty"`
 	KubernetesNamespace string            `json:"kubernetesNamespace,omitempty"`
 	DubboAnnotations    map[string]string `json:"dubboAnnotations,omitempty"`
+
+	// istio specific fields
+	IstioDestinationRule map[string]interface{} `json:"istioDestinationRule,omitempty"`
+	IstioVirtualService  map[string]interface{} `json:"istioVirtualService,omitempty"`
+	IstioWorkloadEntry   map[string]interface{} `json:"istioWorkloadEntry,omitempty"`
+	IstioServiceEntry    map[string]interface{} `json:"istioServiceEntry,omitempty"`
+	IstioGateway         map[string]interface{} `json:"istioGateway,omitempty"`
+	IstioSidecar         map[string]interface{} `json:"istioSidecar,omitempty"`
 }
 
 type AddressMap struct {
@@ -154,6 +162,26 @@ func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 		out.KubernetesService = s.KubernetesService.DeepCopy()
 	}
 	out.DubboAnnotations = maps.Clone(s.DubboAnnotations)
+
+	// Clone istio specific fields
+	if s.IstioDestinationRule != nil {
+		out.IstioDestinationRule = maps.Clone(s.IstioDestinationRule)
+	}
+	if s.IstioVirtualService != nil {
+		out.IstioVirtualService = maps.Clone(s.IstioVirtualService)
+	}
+	if s.IstioWorkloadEntry != nil {
+		out.IstioWorkloadEntry = maps.Clone(s.IstioWorkloadEntry)
+	}
+	if s.IstioServiceEntry != nil {
+		out.IstioServiceEntry = maps.Clone(s.IstioServiceEntry)
+	}
+	if s.IstioGateway != nil {
+		out.IstioGateway = maps.Clone(s.IstioGateway)
+	}
+	if s.IstioSidecar != nil {
+		out.IstioSidecar = maps.Clone(s.IstioSidecar)
+	}
 
 	// AddressMap contains a mutex, which is safe to return a copy in this case.
 	// nolint: govet

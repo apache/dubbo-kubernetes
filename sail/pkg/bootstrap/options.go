@@ -45,6 +45,8 @@ type RegistryOptions struct {
 	EnableK8sServiceDiscovery bool     `json:"enableK8sServiceDiscovery" yaml:"enableK8sServiceDiscovery"`
 	K8sServiceNamespaces      []string `json:"k8sServiceNamespaces" yaml:"k8sServiceNamespaces"`
 	DubboAnnotationPrefix     string   `json:"dubboAnnotationPrefix" yaml:"dubboAnnotationPrefix"`
+	// Istio configuration options
+	IstioOptions IstioOptions `json:"istioOptions" yaml:"istioOptions"`
 }
 
 // MultiClusterOptions holds configuration for managing multiple Kubernetes clusters
@@ -81,6 +83,32 @@ type MultiRegistryOptions struct {
 	Enabled bool `json:"enabled" yaml:"enabled"`
 	// Registries is a list of registry configurations
 	Registries []RegistryConfig `json:"registries" yaml:"registries"`
+}
+
+// IstioOptions holds configuration for Istio service mesh integration
+type IstioOptions struct {
+	// PilotAddress is the Istio Pilot discovery service address
+	PilotAddress string `json:"pilotAddress" yaml:"pilotAddress"`
+	// Namespace is the Istio service namespace
+	Namespace string `json:"namespace" yaml:"namespace"`
+	// TLSEnabled enables TLS for Pilot connection
+	TLSEnabled bool `json:"tlsEnabled" yaml:"tlsEnabled"`
+	// CertPath is the path to TLS certificate
+	CertPath string `json:"certPath" yaml:"certPath"`
+	// KeyPath is the path to TLS private key
+	KeyPath string `json:"keyPath" yaml:"keyPath"`
+	// CACertPath is the path to CA certificate
+	CACertPath string `json:"caCertPath" yaml:"caCertPath"`
+	// ServiceName is the Istio service name
+	ServiceName string `json:"serviceName" yaml:"serviceName"`
+	// ServiceVersion is the Istio service version
+	ServiceVersion string `json:"serviceVersion" yaml:"serviceVersion"`
+	// ServiceLabels contains additional service labels
+	ServiceLabels map[string]string `json:"serviceLabels" yaml:"serviceLabels"`
+	// ConnectionTimeout for Pilot connection
+	ConnectionTimeout int `json:"connectionTimeout" yaml:"connectionTimeout"`
+	// RequestTimeout for xDS requests
+	RequestTimeout int `json:"requestTimeout" yaml:"requestTimeout"`
 }
 
 // RegistryConfig holds configuration for a single service registry

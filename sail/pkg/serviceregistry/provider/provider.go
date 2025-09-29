@@ -29,6 +29,8 @@ const (
 	Nacos ID = "Nacos"
 	// Zookeeper is a service registry backed by Zookeeper server
 	Zookeeper ID = "Zookeeper"
+	// Istio is a service registry backed by Istio service mesh
+	Istio ID = "Istio"
 )
 
 func (id ID) String() string {

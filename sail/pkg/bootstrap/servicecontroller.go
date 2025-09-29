@@ -9,6 +9,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/istio"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/nacos"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
@@ -45,6 +46,10 @@ func (s *Server) initServiceControllers(args *SailArgs) error {
 			}
 		case provider.Zookeeper:
 			if err := s.initZookeeperRegistry(args); err != nil {
+				return err
+			}
+		case provider.Istio:
+			if err := s.initIstioRegistry(args); err != nil {
 				return err
 			}
 		default:
@@ -182,6 +187,46 @@ func (s *Server) initZookeeperRegistry(args *SailArgs) error {
 	s.ServiceController().AddRegistry(zkController)
 
 	klog.Info("Zookeeper service registry initialized successfully")
+	return nil
+}
+
+// initIstioRegistry initializes Istio service registry
+func (s *Server) initIstioRegistry(args *SailArgs) error {
+	klog.Info("Initializing Istio service registry")
+
+	// Create Istio configuration from command line args
+	config := &istio.IstioConfig{
+		PilotAddress:    args.RegistryOptions.IstioOptions.PilotAddress,
+		Namespace:       args.RegistryOptions.IstioOptions.Namespace,
+		TLSEnabled:      args.RegistryOptions.IstioOptions.TLSEnabled,
+		CertPath:        args.RegistryOptions.IstioOptions.CertPath,
+		KeyPath:         args.RegistryOptions.IstioOptions.KeyPath,
+		CAPath:          args.RegistryOptions.IstioOptions.CACertPath,
+		EnableDiscovery: true,
+		SyncTimeout:     time.Duration(args.RegistryOptions.IstioOptions.ConnectionTimeout) * time.Second,
+	}
+
+	// Use defaults if no configuration provided
+	if config.PilotAddress == "" {
+		config = istio.DefaultConfig()
+	}
+
+	// Validate Istio configuration
+	configManager := istio.NewConfigManager()
+	if err := configManager.LoadFromConfig(config); err != nil {
+		return fmt.Errorf("invalid Istio configuration: %v", err)
+	}
+
+	// Create Istio controller
+	istioController := istio.NewController(config, s.clusterID)
+	if istioController == nil {
+		return fmt.Errorf("failed to create Istio controller")
+	}
+
+	// Add to service controllers
+	s.ServiceController().AddRegistry(istioController)
+
+	klog.Info("Istio service registry initialized successfully")
 	return nil
 }
 
