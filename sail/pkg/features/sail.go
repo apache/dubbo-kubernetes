@@ -62,4 +62,7 @@ var (
 	DubbodServiceCustomHost = env.Register("DUBBOD_CUSTOM_HOST", "",
 		"Custom host name of dubbod that dubbod signs the server cert. "+
 			"Multiple custom host names are supported, and multiple values are separated by commas.").Get()
+	// EnableK8sServiceDiscovery enables Kubernetes native service discovery for Dubbo services
+	EnableK8sServiceDiscovery = env.Register("ENABLE_K8S_SERVICE_DISCOVERY", false,
+		"If true, enable Kubernetes native service discovery for Dubbo services.").Get()
 )

@@ -18,15 +18,18 @@
 package xds
 
 import (
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"go.uber.org/atomic"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/klog/v2"
-	"time"
 )
 
 type DiscoveryServer struct {
@@ -72,4 +75,73 @@ func (s *DiscoveryServer) Shutdown() {
 
 func (s *DiscoveryServer) globalPushContext() *model.PushContext {
 	return s.Env.PushContext()
+}
+
+// Istio xDS support methods
+
+// HandleIstioServiceDiscovery processes Istio service discovery requests
+func (s *DiscoveryServer) HandleIstioServiceDiscovery(req *discovery.DiscoveryRequest) (*discovery.DiscoveryResponse, error) {
+	klog.V(4).Infof("Handling Istio service discovery request for type: %s", req.TypeUrl)
+
+	// Get services from all registries including Istio
+	services := s.Env.ServiceDiscovery.Services()
+
+	// Filter services from Istio registry
+	istioServices := make([]*model.Service, 0)
+	for _, service := range services {
+		if service.Attributes.ServiceRegistry == provider.Istio {
+			istioServices = append(istioServices, service)
+		}
+	}
+
+	// Convert to xDS resources - for now, return empty resources
+	// TODO: Convert Dubbo service to xDS resource format
+	// This would involve creating proper Envoy resources
+	for _, service := range istioServices {
+		klog.V(4).Infof("Processing Istio service: %s", service.Hostname)
+	}
+
+	return &discovery.DiscoveryResponse{
+		VersionInfo: "1.0",
+		Resources:   make([]*anypb.Any, 0),
+		TypeUrl:     req.TypeUrl,
+		Nonce:       req.ResponseNonce,
+	}, nil
+}
+
+// GetIstioServices returns all services from Istio service registry
+func (s *DiscoveryServer) GetIstioServices() []*model.Service {
+	services := s.Env.ServiceDiscovery.Services()
+	istioServices := make([]*model.Service, 0)
+
+	for _, service := range services {
+		if service.Attributes.ServiceRegistry == provider.Istio {
+			istioServices = append(istioServices, service)
+		}
+	}
+
+	return istioServices
+}
+
+// PushIstioConfiguration pushes Istio configuration updates to connected clients
+func (s *DiscoveryServer) PushIstioConfiguration(event *model.PushRequest) {
+	if event == nil {
+		klog.V(4).Info("Received nil push request for Istio configuration")
+		return
+	}
+
+	klog.V(4).Infof("Pushing Istio configuration update: %v", event.Reason)
+
+	// Add to push queue directly
+	if s.pushQueue != nil {
+		s.pushQueue.Enqueue(nil, event)
+	}
+}
+
+// ValidateIstioConfig validates Istio configuration resources
+func (s *DiscoveryServer) ValidateIstioConfig(config interface{}) error {
+	// TODO: Implement Istio configuration validation
+	// This would validate VirtualService, DestinationRule, etc.
+	klog.V(4).Info("Validating Istio configuration")
+	return nil
 }

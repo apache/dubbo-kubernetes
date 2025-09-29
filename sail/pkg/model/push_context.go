@@ -18,6 +18,8 @@
 package model
 
 import (
+	"sync"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
@@ -26,7 +28,6 @@ import (
 	"go.uber.org/atomic"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
-	"sync"
 )
 
 type PushContext struct {
