@@ -18,9 +18,35 @@
 package ca
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/util"
+	"google.golang.org/grpc"
+	pb "istio.io/api/security/v1alpha1"
+	"time"
 )
+
+type Server struct {
+	pb.UnimplementedIstioCertificateServiceServer
+	Authenticators []security.Authenticator
+	serverCertTTL  time.Duration
+	ca             CertificateAuthority
+}
+
+func New(ca CertificateAuthority, ttl time.Duration, authenticators []security.Authenticator) (*Server, error) {
+	certBundle := ca.GetCAKeyCertBundle()
+	if len(certBundle.GetRootCertPem()) != 0 {
+		RecordCertsExpiry(certBundle)
+	}
+
+	server := &Server{
+		Authenticators: authenticators,
+		serverCertTTL:  ttl,
+		ca:             ca,
+	}
+
+	return server, nil
+}
 
 type CertificateAuthority interface {
 	Sign(csrPEM []byte, opts ca.CertOpts) ([]byte, error)
@@ -29,3 +55,7 @@ type CertificateAuthority interface {
 }
 
 func RecordCertsExpiry(keyCertBundle *util.KeyCertBundle) {}
+
+func (s *Server) Register(grpcServer *grpc.Server) {
+	pb.RegisterIstioCertificateServiceServer(grpcServer, s)
+}

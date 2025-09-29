@@ -26,6 +26,7 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/containers/image/v5 v5.34.0
 	github.com/containers/storage v1.57.1
+	github.com/coreos/go-oidc/v3 v3.12.0
 	github.com/docker/cli v28.3.3+incompatible
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/docker-credential-helpers v0.9.3
@@ -58,12 +59,12 @@ require (
 	golang.org/x/net v0.43.0
 	golang.org/x/sys v0.35.0
 	golang.org/x/term v0.34.0
+	golang.org/x/time v0.12.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.7
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.6
 	istio.io/api v1.26.0-alpha.0.0.20250908200844-f7a34ed800ee
-	istio.io/client-go v1.26.0-alpha.0.0.20250908201345-99e026bfe54f
 	k8s.io/api v0.33.4
 	k8s.io/apiextensions-apiserver v0.33.4
 	k8s.io/apimachinery v0.33.4
@@ -239,7 +240,6 @@ require (
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect

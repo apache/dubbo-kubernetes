@@ -18,6 +18,7 @@
 package kube
 
 import (
+	"context"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
@@ -27,11 +28,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"github.com/apache/dubbo-kubernetes/pkg/sleep"
 	"go.uber.org/atomic"
-	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	kubeVersion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -59,8 +60,9 @@ type client struct {
 	objectFilter           kubetypes.DynamicObjectFilter
 	clusterID              cluster.ID
 	informerWatchesPending *atomic.Int32
+	started                atomic.Bool
 	crdWatcher             kubetypes.CrdWatcher
-	istio                  istioclient.Interface
+	fastSync               bool
 }
 
 type Client interface {
@@ -81,6 +83,10 @@ type Client interface {
 	ClusterID() cluster.ID
 
 	CrdWatcher() kubetypes.CrdWatcher
+
+	RunAndWait(stop <-chan struct{}) bool
+
+	WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.InformerSynced) bool
 
 	Shutdown()
 }
@@ -231,6 +237,64 @@ func (c *client) DynamicClientFor(gvk schema.GroupVersionKind, obj *unstructured
 	return dr, nil
 }
 
+func (c *client) WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.InformerSynced) bool {
+	if c.informerWatchesPending == nil {
+		return WaitForCacheSync(name, stop, cacheSyncs...)
+	}
+	syncFns := append(cacheSyncs, func() bool {
+		return c.informerWatchesPending.Load() == 0
+	})
+	return WaitForCacheSync(name, stop, syncFns...)
+}
+
+func (c *client) Run(stop <-chan struct{}) {
+	c.informerFactory.Start(stop)
+	if c.crdWatcher != nil {
+		go c.crdWatcher.Run(stop)
+	}
+	alreadyStarted := c.started.Swap(true)
+	if alreadyStarted {
+		klog.V(2).Infof("cluster %q kube client started again", c.clusterID)
+	} else {
+		klog.Infof("cluster %q kube client started", c.clusterID)
+	}
+}
+
+func (c *client) RunAndWait(stop <-chan struct{}) bool {
+	c.Run(stop)
+	if c.fastSync {
+		if c.crdWatcher != nil {
+			if !c.WaitForCacheSync("crd watcher", stop, c.crdWatcher.HasSynced) {
+				return false
+			}
+		}
+		// WaitForCacheSync will virtually never be synced on the first call, as its called immediately after Start()
+		// This triggers a 100ms delay per call, which is often called 2-3 times in a test, delaying tests.
+		// Instead, we add an aggressive sync polling
+		if !fastWaitForCacheSync(stop, c.informerFactory) {
+			return false
+		}
+		err := wait.PollUntilContextTimeout(context.Background(), time.Microsecond*100, wait.ForeverTestTimeout, true, func(ctx context.Context) (bool, error) {
+			select {
+			case <-stop:
+				return false, fmt.Errorf("channel closed")
+			default:
+			}
+			if c.informerWatchesPending.Load() == 0 {
+				return true, nil
+			}
+			return false, nil
+		})
+		return err == nil
+	}
+	if c.crdWatcher != nil {
+		if !c.WaitForCacheSync("crd watcher", stop, c.crdWatcher.HasSynced) {
+			return false
+		}
+	}
+	return c.informerFactory.WaitForCacheSync(stop)
+}
+
 func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (schema.GroupVersionResource, bool) {
 	if s, f := collections.All.FindByGroupVersionAliasesKind(config.FromKubernetesGVK(gvk)); f {
 		gvr := s.GroupVersionResource()
@@ -292,6 +356,20 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 			return false
 		}
 	}
+}
+
+func fastWaitForCacheSync(stop <-chan struct{}, informerFactory informerfactory.InformerFactory) bool {
+	returnImmediately := make(chan struct{})
+	close(returnImmediately)
+	err := wait.PollUntilContextTimeout(context.Background(), time.Microsecond*100, wait.ForeverTestTimeout, true, func(context.Context) (bool, error) {
+		select {
+		case <-stop:
+			return false, fmt.Errorf("channel closed")
+		default:
+		}
+		return informerFactory.WaitForCacheSync(returnImmediately), nil
+	})
+	return err == nil
 }
 
 func (c *client) Shutdown() {

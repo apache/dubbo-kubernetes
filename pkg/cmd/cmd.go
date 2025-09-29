@@ -38,6 +38,13 @@ func PrintFlags(flags *pflag.FlagSet) {
 	})
 }
 
+func WaitSignal(stop chan struct{}) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	<-sigs
+	close(stop)
+}
+
 func WaitSignalFunc(cancel context.CancelCauseFunc) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
