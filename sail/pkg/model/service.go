@@ -1,6 +1,9 @@
 package model
 
 import (
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
@@ -9,8 +12,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
-	"sync"
-	"time"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type NamespacedHostname struct {
@@ -31,6 +33,11 @@ type ServiceAttributes struct {
 	// Namespace is "destination.service.namespace" attribute
 	Namespace       string
 	ServiceRegistry provider.ID
+
+	// k8s specific fields
+	KubernetesService   *corev1.Service   `json:"kubernetesService,omitempty"`
+	KubernetesNamespace string            `json:"kubernetesNamespace,omitempty"`
+	DubboAnnotations    map[string]string `json:"dubboAnnotations,omitempty"`
 }
 
 type AddressMap struct {
@@ -141,6 +148,12 @@ func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 
 	out.Aliases = slices.Clone(s.Aliases)
 	out.PassthroughTargetPorts = maps.Clone(out.PassthroughTargetPorts)
+
+	// Clone k8s specific fields
+	if s.KubernetesService != nil {
+		out.KubernetesService = s.KubernetesService.DeepCopy()
+	}
+	out.DubboAnnotations = maps.Clone(s.DubboAnnotations)
 
 	// AddressMap contains a mutex, which is safe to return a copy in this case.
 	// nolint: govet

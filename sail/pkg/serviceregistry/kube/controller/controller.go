@@ -18,6 +18,11 @@
 package controller
 
 import (
+	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
@@ -28,12 +33,12 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/kube/annotations"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	"go.uber.org/atomic"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
-	"sort"
-	"sync"
-	"time"
 )
 
 var (
@@ -47,6 +52,11 @@ type Controller struct {
 	servicesMap         map[host.Name]*model.Service
 	queue               queue.Instance
 	initialSyncTimedout *atomic.Bool
+
+	// k8s Service discovery fields
+	serviceInformer   cache.SharedIndexInformer
+	endpointsInformer cache.SharedIndexInformer
+	k8sServices       map[string]*model.Service
 }
 
 type Options struct {
@@ -62,6 +72,11 @@ type Options struct {
 	MeshServiceController *aggregate.Controller
 	KrtDebugger           *krt.DebugHandler
 	SyncTimeout           time.Duration
+
+	// k8s Service discovery options
+	EnableK8sServiceDiscovery bool
+	K8sServiceNamespaces      []string
+	DubboAnnotationPrefix     string
 }
 
 func (c *Controller) Services() []*model.Service {
@@ -119,4 +134,91 @@ func (c *Controller) HasSynced() bool {
 
 func (c *Controller) informersSynced() bool {
 	return false
+}
+
+// convertK8sServiceToDubboService converts a Kubernetes Service to Dubbo Service
+func (c *Controller) convertK8sServiceToDubboService(k8sService *corev1.Service) *model.Service {
+	if k8sService == nil {
+		return nil
+	}
+
+	// Check if this is a Dubbo service using the annotation parser
+	if !annotations.IsDubboService(k8sService) {
+		return nil
+	}
+
+	// Parse Dubbo annotations
+	dubboInfo, err := annotations.ParseDubboAnnotations(k8sService)
+	if err != nil {
+		klog.Warningf("Failed to parse Dubbo annotations for service %s/%s: %v",
+			k8sService.Namespace, k8sService.Name, err)
+		return nil
+	}
+
+	// Build Dubbo service
+	dubboService := &model.Service{
+		Hostname:     host.Name(dubboInfo.ServiceName),
+		CreationTime: k8sService.CreationTimestamp.Time,
+		Attributes: model.ServiceAttributes{
+			Name:                dubboInfo.ServiceName,
+			Namespace:           k8sService.Namespace,
+			ServiceRegistry:     provider.Kubernetes,
+			KubernetesService:   k8sService,
+			KubernetesNamespace: k8sService.Namespace,
+			DubboAnnotations:    make(map[string]string),
+		},
+	}
+
+	// Set Dubbo-specific annotations
+	dubboService.Attributes.DubboAnnotations["version"] = dubboInfo.Version
+	dubboService.Attributes.DubboAnnotations["group"] = dubboInfo.Group
+	dubboService.Attributes.DubboAnnotations["protocol"] = dubboInfo.Protocol
+	if dubboInfo.Port > 0 {
+		dubboService.Attributes.DubboAnnotations["port"] = fmt.Sprintf("%d", dubboInfo.Port)
+	}
+
+	// Convert service ports
+	ports := make(model.PortList, 0, len(k8sService.Spec.Ports))
+	for _, port := range k8sService.Spec.Ports {
+		dubboPort := &model.Port{
+			Name: port.Name,
+			Port: int(port.Port),
+		}
+		ports = append(ports, dubboPort)
+	}
+	dubboService.Ports = ports
+
+	return dubboService
+}
+
+// handleServiceEvent handles Kubernetes Service events
+func (c *Controller) handleServiceEvent(eventType string, obj interface{}) {
+	service, ok := obj.(*corev1.Service)
+	if !ok {
+		klog.Warningf("Expected Service object, got %T", obj)
+		return
+	}
+
+	dubboService := c.convertK8sServiceToDubboService(service)
+	if dubboService == nil {
+		return // Not a Dubbo service
+	}
+
+	c.Lock()
+	defer c.Unlock()
+
+	serviceKey := service.Namespace + "/" + service.Name
+
+	switch eventType {
+	case "add", "update":
+		c.k8sServices[serviceKey] = dubboService
+		c.servicesMap[dubboService.Hostname] = dubboService
+		klog.Infof("Added/Updated Dubbo service from k8s: %s", dubboService.Hostname)
+	case "delete":
+		if existingService, exists := c.k8sServices[serviceKey]; exists {
+			delete(c.k8sServices, serviceKey)
+			delete(c.servicesMap, existingService.Hostname)
+			klog.Infof("Deleted Dubbo service from k8s: %s", existingService.Hostname)
+		}
+	}
 }

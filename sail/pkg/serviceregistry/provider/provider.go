@@ -23,6 +23,8 @@ type ID string
 const (
 	// Kubernetes is a service registry backed by k8s API server
 	Kubernetes ID = "Kubernetes"
+	// KubernetesNative is a service registry for k8s native service discovery
+	KubernetesNative ID = "KubernetesNative"
 	// Nacos is a service registry backed by Nacos server
 	Nacos ID = "Nacos"
 	// Zookeeper is a service registry backed by Zookeeper server

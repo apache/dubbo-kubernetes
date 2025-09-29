@@ -41,6 +41,10 @@ type RegistryOptions struct {
 	MultiCluster MultiClusterOptions `json:"multiCluster" yaml:"multiCluster"`
 	// Multi-registry configuration
 	MultiRegistry MultiRegistryOptions `json:"multiRegistry" yaml:"multiRegistry"`
+	// k8s Service discovery options
+	EnableK8sServiceDiscovery bool     `json:"enableK8sServiceDiscovery" yaml:"enableK8sServiceDiscovery"`
+	K8sServiceNamespaces      []string `json:"k8sServiceNamespaces" yaml:"k8sServiceNamespaces"`
+	DubboAnnotationPrefix     string   `json:"dubboAnnotationPrefix" yaml:"dubboAnnotationPrefix"`
 }
 
 // MultiClusterOptions holds configuration for managing multiple Kubernetes clusters
