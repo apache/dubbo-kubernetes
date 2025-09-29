@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 package v3
 
 import "github.com/apache/dubbo-kubernetes/pkg/model"
