@@ -70,18 +70,48 @@ func (c *Controller) Run(stop <-chan struct{}) {
 
 	c.running = true
 	defer func() {
+		if r := recover(); r != nil {
+			klog.Errorf("Zookeeper controller for cluster %s panicked: %v", c.clusterID, r)
+		}
 		c.running = false
 		klog.Infof("Zookeeper service registry controller for cluster %s stopped", c.clusterID)
 	}()
 
-	// Initialize Zookeeper client connection
-	if err := c.initZookeeperClient(); err != nil {
-		klog.Errorf("Failed to initialize Zookeeper client: %v", err)
+	// Initialize Zookeeper client connection with retry
+	const maxRetries = 3
+	var initErr error
+	for retry := 0; retry < maxRetries; retry++ {
+		if initErr = c.initZookeeperClient(); initErr == nil {
+			break
+		}
+		klog.Warningf("Failed to initialize Zookeeper client (attempt %d/%d): %v", retry+1, maxRetries, initErr)
+		if retry < maxRetries-1 {
+			select {
+			case <-time.After(time.Duration(retry+1) * 2 * time.Second):
+				continue
+			case <-stop:
+				klog.Info("Zookeeper controller stopped during initialization retry")
+				return
+			}
+		}
+	}
+
+	if initErr != nil {
+		klog.Errorf("Failed to initialize Zookeeper client after %d retries: %v", maxRetries, initErr)
 		return
 	}
 
-	// Start service discovery
-	c.startServiceDiscovery(stop)
+	klog.Infof("Successfully initialized Zookeeper client for cluster %s", c.clusterID)
+
+	// Start service discovery with error recovery
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				klog.Errorf("Zookeeper service discovery for cluster %s panicked: %v", c.clusterID, r)
+			}
+		}()
+		c.startServiceDiscovery(stop)
+	}()
 
 	<-stop
 }
