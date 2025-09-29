@@ -74,9 +74,14 @@ type Service struct {
 }
 
 func (s *Service) DeepCopy() *Service {
-	// nolint: govet
-	out := *s
-	out.Attributes = s.Attributes.DeepCopy()
+	if s == nil {
+		return nil
+	}
+	out := &Service{
+		Attributes:      s.Attributes.DeepCopy(),
+		Hostname:        s.Hostname,
+		CreationTime:    s.CreationTime,
+	}
 	if s.Ports != nil {
 		out.Ports = make(PortList, len(s.Ports))
 		for i, port := range s.Ports {
@@ -91,10 +96,13 @@ func (s *Service) DeepCopy() *Service {
 			}
 		}
 	}
-
 	out.ServiceAccounts = slices.Clone(s.ServiceAccounts)
-	out.ClusterVIPs = *s.ClusterVIPs.DeepCopy()
-	return &out
+	if s.ClusterVIPs.Addresses != nil {
+		out.ClusterVIPs = *s.ClusterVIPs.DeepCopy()
+	} else {
+		out.ClusterVIPs = AddressMap{}
+	}
+	return out
 }
 
 func (s *Service) Key() string {
