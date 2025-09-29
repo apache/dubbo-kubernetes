@@ -2,9 +2,15 @@ package bootstrap
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/nacos"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/zookeeper"
 	"k8s.io/klog/v2"
 )
 
@@ -16,6 +22,7 @@ func (s *Server) ServiceController() *aggregate.Controller {
 func (s *Server) initServiceControllers(args *SailArgs) error {
 	serviceControllers := s.ServiceController()
 
+	// Initialize standard registries from command line
 	registered := sets.New[provider.ID]()
 	for _, r := range args.RegistryOptions.Registries {
 		serviceRegistry := provider.ID(r)
@@ -30,8 +37,30 @@ func (s *Server) initServiceControllers(args *SailArgs) error {
 			if err := s.initKubeRegistry(args); err != nil {
 				return err
 			}
+		case provider.Nacos:
+			if err := s.initNacosRegistry(args); err != nil {
+				return err
+			}
+		case provider.Zookeeper:
+			if err := s.initZookeeperRegistry(args); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("service registry %s is not supported", r)
+		}
+	}
+
+	// Initialize multi-registry configuration if enabled
+	if args.RegistryOptions.MultiRegistry.Enabled {
+		if err := s.initMultiRegistryControllers(args); err != nil {
+			return fmt.Errorf("failed to initialize multi-registry controllers: %v", err)
+		}
+	}
+
+	// Initialize multi-cluster configuration if enabled
+	if args.RegistryOptions.MultiCluster.Enabled {
+		if err := s.initMultiClusterControllers(args); err != nil {
+			return fmt.Errorf("failed to initialize multi-cluster controllers: %v", err)
 		}
 	}
 
@@ -57,4 +86,226 @@ func (s *Server) initKubeRegistry(args *SailArgs) (err error) {
 	args.RegistryOptions.KubeOptions.MeshServiceController = s.ServiceController()
 	// TODO NewMulticluster
 	return
+}
+
+// initNacosRegistry initializes Nacos service registry
+func (s *Server) initNacosRegistry(args *SailArgs) error {
+	klog.Info("Initializing Nacos service registry")
+
+	// Create Nacos configuration from command line args or config file
+	config := nacos.DefaultConfig()
+
+	// TODO: Parse Nacos configuration from args or config file
+	// For now, use default configuration
+
+	// Create Nacos controller
+	nacosController := nacos.NewController(config, s.clusterID)
+	if nacosController == nil {
+		return fmt.Errorf("failed to create Nacos controller")
+	}
+
+	// Add to service controllers
+	s.ServiceController().AddRegistry(nacosController)
+
+	klog.Info("Nacos service registry initialized successfully")
+	return nil
+}
+
+// initZookeeperRegistry initializes Zookeeper service registry
+func (s *Server) initZookeeperRegistry(args *SailArgs) error {
+	klog.Info("Initializing Zookeeper service registry")
+
+	// Create Zookeeper configuration from command line args or config file
+	config := zookeeper.DefaultConfig()
+
+	// TODO: Parse Zookeeper configuration from args or config file
+	// For now, use default configuration
+
+	// Create Zookeeper controller
+	zkController := zookeeper.NewController(config, s.clusterID)
+	if zkController == nil {
+		return fmt.Errorf("failed to create Zookeeper controller")
+	}
+
+	// Add to service controllers
+	s.ServiceController().AddRegistry(zkController)
+
+	klog.Info("Zookeeper service registry initialized successfully")
+	return nil
+}
+
+// initMultiRegistryControllers initializes multiple service registries from configuration
+func (s *Server) initMultiRegistryControllers(args *SailArgs) error {
+	klog.Info("Initializing multi-registry controllers")
+
+	for _, regConfig := range args.RegistryOptions.MultiRegistry.Registries {
+		if !regConfig.Enabled {
+			klog.V(2).Infof("Skipping disabled registry: %s", regConfig.ID)
+			continue
+		}
+
+		klog.Infof("Initializing registry: %s (%s)", regConfig.Name, regConfig.Type)
+
+		switch strings.ToLower(regConfig.Type) {
+		case "kubernetes":
+			if err := s.initKubeRegistryFromConfig(regConfig); err != nil {
+				return fmt.Errorf("failed to initialize Kubernetes registry %s: %v", regConfig.ID, err)
+			}
+		case "nacos":
+			if err := s.initNacosRegistryFromConfig(regConfig); err != nil {
+				return fmt.Errorf("failed to initialize Nacos registry %s: %v", regConfig.ID, err)
+			}
+		case "zookeeper":
+			if err := s.initZookeeperRegistryFromConfig(regConfig); err != nil {
+				return fmt.Errorf("failed to initialize Zookeeper registry %s: %v", regConfig.ID, err)
+			}
+		default:
+			klog.Warningf("Unknown registry type: %s for registry %s", regConfig.Type, regConfig.ID)
+		}
+	}
+
+	klog.Info("Multi-registry controllers initialized successfully")
+	return nil
+}
+
+// initMultiClusterControllers initializes multiple cluster configurations
+func (s *Server) initMultiClusterControllers(args *SailArgs) error {
+	klog.Info("Initializing multi-cluster controllers")
+
+	// Create cluster manager
+	clusterManager := cluster.NewManager(s.clusterID)
+
+	// Add clusters from configuration
+	for _, clusterConfig := range args.RegistryOptions.MultiCluster.Clusters {
+		if !clusterConfig.Enabled {
+			klog.V(2).Infof("Skipping disabled cluster: %s", clusterConfig.ID)
+			continue
+		}
+
+		klog.Infof("Adding cluster: %s (%s)", clusterConfig.Name, clusterConfig.ID)
+
+		if err := clusterManager.AddCluster(cluster.ClusterConfig{
+			ID:         clusterConfig.ID,
+			Name:       clusterConfig.Name,
+			KubeConfig: clusterConfig.KubeConfig,
+			Context:    clusterConfig.Context,
+			Enabled:    clusterConfig.Enabled,
+			Priority:   clusterConfig.Priority,
+			Region:     clusterConfig.Region,
+			Zone:       clusterConfig.Zone,
+		}); err != nil {
+			return fmt.Errorf("failed to add cluster %s: %v", clusterConfig.ID, err)
+		}
+	}
+
+	// TODO: Store cluster manager in server context for later use
+
+	klog.Info("Multi-cluster controllers initialized successfully")
+	return nil
+}
+
+// Helper methods for initializing registries from configuration
+
+func (s *Server) initKubeRegistryFromConfig(regConfig RegistryConfig) error {
+	// TODO: Initialize Kubernetes registry from specific configuration
+	klog.V(2).Infof("Initializing Kubernetes registry from config: %s", regConfig.ID)
+	return nil
+}
+
+func (s *Server) initNacosRegistryFromConfig(regConfig RegistryConfig) error {
+	config := nacos.DefaultConfig()
+
+	// Parse Nacos-specific configuration
+	if servers, ok := regConfig.Config["serverAddrs"].([]interface{}); ok {
+		config.ServerAddrs = make([]string, len(servers))
+		for i, server := range servers {
+			if serverStr, ok := server.(string); ok {
+				config.ServerAddrs[i] = serverStr
+			}
+		}
+	}
+
+	if namespace, ok := regConfig.Config["namespace"].(string); ok {
+		config.Namespace = namespace
+	}
+
+	if group, ok := regConfig.Config["group"].(string); ok {
+		config.Group = group
+	}
+
+	if username, ok := regConfig.Config["username"].(string); ok {
+		config.Username = username
+	}
+
+	if password, ok := regConfig.Config["password"].(string); ok {
+		config.Password = password
+	}
+
+	if timeoutStr, ok := regConfig.Config["timeout"].(string); ok {
+		if timeout, err := time.ParseDuration(timeoutStr); err == nil {
+			config.Timeout = timeout
+		}
+	}
+
+	// Create controller with custom cluster ID
+	clusterID := cluster.ID(regConfig.ID)
+	nacosController := nacos.NewController(config, clusterID)
+	if nacosController == nil {
+		return fmt.Errorf("failed to create Nacos controller")
+	}
+
+	// Add to service controllers
+	s.ServiceController().AddRegistry(nacosController)
+
+	return nil
+}
+
+func (s *Server) initZookeeperRegistryFromConfig(regConfig RegistryConfig) error {
+	config := zookeeper.DefaultConfig()
+
+	// Parse Zookeeper-specific configuration
+	if servers, ok := regConfig.Config["servers"].([]interface{}); ok {
+		config.Servers = make([]string, len(servers))
+		for i, server := range servers {
+			if serverStr, ok := server.(string); ok {
+				config.Servers[i] = serverStr
+			}
+		}
+	}
+
+	if root, ok := regConfig.Config["root"].(string); ok {
+		config.Root = root
+	}
+
+	if username, ok := regConfig.Config["username"].(string); ok {
+		config.Username = username
+	}
+
+	if password, ok := regConfig.Config["password"].(string); ok {
+		config.Password = password
+	}
+
+	if timeoutStr, ok := regConfig.Config["timeout"].(string); ok {
+		if timeout, err := time.ParseDuration(timeoutStr); err == nil {
+			config.Timeout = timeout
+		}
+	}
+
+	if sessionTimeoutStr, ok := regConfig.Config["sessionTimeout"].(string); ok {
+		if sessionTimeout, err := time.ParseDuration(sessionTimeoutStr); err == nil {
+			config.SessionTimeout = sessionTimeout
+		}
+	}
+
+	// Create controller with custom cluster ID
+	clusterID := cluster.ID(regConfig.ID)
+	zkController := zookeeper.NewController(config, clusterID)
+	if zkController == nil {
+		return fmt.Errorf("failed to create Zookeeper controller")
+	}
+
+	// Add to service controllers
+	s.ServiceController().AddRegistry(zkController)
+
+	return nil
 }

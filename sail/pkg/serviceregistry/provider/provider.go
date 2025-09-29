@@ -23,6 +23,10 @@ type ID string
 const (
 	// Kubernetes is a service registry backed by k8s API server
 	Kubernetes ID = "Kubernetes"
+	// Nacos is a service registry backed by Nacos server
+	Nacos ID = "Nacos"
+	// Zookeeper is a service registry backed by Zookeeper server
+	Zookeeper ID = "Zookeeper"
 )
 
 func (id ID) String() string {
