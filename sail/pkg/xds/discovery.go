@@ -18,6 +18,7 @@
 package xds
 
 import (
+	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
@@ -26,6 +27,8 @@ import (
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
+	"strconv"
+	"sync"
 	"time"
 )
 
@@ -40,7 +43,6 @@ type DiscoveryServer struct {
 	serverReady         atomic.Bool
 	DiscoveryStartTime  time.Time
 	ClusterAliases      map[cluster.ID]cluster.ID
-	Cache               model.XdsCache
 	pushQueue           *PushQueue
 	krtDebugger         *krt.DebugHandler
 	InboundUpdates      *atomic.Int64
@@ -50,12 +52,13 @@ type DiscoveryServer struct {
 	pushChannel         chan *model.PushRequest
 	DebounceOptions     DebounceOptions
 	concurrentPushLimit chan struct{}
+	adsClientsMutex     sync.RWMutex
+	adsClients          map[string]*Connection
 }
 
 func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string, debugger *krt.DebugHandler) *DiscoveryServer {
 	out := &DiscoveryServer{
 		Env:              env,
-		Cache:            env.Cache,
 		krtDebugger:      debugger,
 		InboundUpdates:   atomic.NewInt64(0),
 		CommittedUpdates: atomic.NewInt64(0),
@@ -75,7 +78,6 @@ func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
 func (s *DiscoveryServer) Start(stopCh <-chan struct{}) {
 	go s.handleUpdates(stopCh)
 	go s.sendPushes(stopCh)
-	go s.Cache.Run(stopCh)
 }
 
 func (s *DiscoveryServer) CachesSynced() {
@@ -87,7 +89,13 @@ func (s *DiscoveryServer) Shutdown() {
 	s.pushQueue.ShutDown()
 }
 
-func (s *DiscoveryServer) Push(req *model.PushRequest) {}
+func (s *DiscoveryServer) Push(req *model.PushRequest) {
+	if !req.Full {
+		req.Push = s.globalPushContext()
+		s.AdsPushAll(req)
+		return
+	}
+}
 
 func (s *DiscoveryServer) globalPushContext() *model.PushContext {
 	return s.Env.PushContext()
@@ -102,6 +110,167 @@ func (s *DiscoveryServer) sendPushes(stopCh <-chan struct{}) {
 }
 
 func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceOptions, pushFn func(req *model.PushRequest), updateSent *atomic.Int64) {
+	var timeChan <-chan time.Time
+	var startDebounce time.Time
+	var lastConfigUpdateTime time.Time
+
+	pushCounter := 0
+	debouncedEvents := 0
+
+	var req *model.PushRequest
+
+	free := true
+	freeCh := make(chan struct{}, 1)
+
+	push := func(req *model.PushRequest, debouncedEvents int, startDebounce time.Time) {
+		pushFn(req)
+		updateSent.Add(int64(debouncedEvents))
+		freeCh <- struct{}{}
+	}
+
+	pushWorker := func() {
+		eventDelay := time.Since(startDebounce)
+		quietTime := time.Since(lastConfigUpdateTime)
+		// it has been too long or quiet enough
+		if eventDelay >= opts.debounceMax || quietTime >= opts.DebounceAfter {
+			if req != nil {
+				pushCounter++
+				if req.ConfigsUpdated == nil {
+					klog.Infof("Push debounce stable[%d] %d for reason %s: %v since last change, %v since last push, full=%v",
+						pushCounter, debouncedEvents, reasonsUpdated(req),
+						quietTime, eventDelay, req.Full)
+				} else {
+					klog.Infof("Push debounce stable[%d] %d for config %s: %v since last change, %v since last push, full=%v",
+						pushCounter, debouncedEvents, configsUpdated(req),
+						quietTime, eventDelay, req.Full)
+				}
+				free = false
+				go push(req, debouncedEvents, startDebounce)
+				req = nil
+				debouncedEvents = 0
+			}
+		} else {
+			timeChan = time.After(opts.DebounceAfter - quietTime)
+		}
+	}
+
+	for {
+		select {
+		case <-freeCh:
+			free = true
+			pushWorker()
+		case r := <-ch:
+			// If reason is not set, record it as an unknown reason
+			if len(r.Reason) == 0 {
+				r.Reason = model.NewReasonStats(model.UnknownTrigger)
+			}
+			if !opts.enableEDSDebounce && !r.Full {
+				// trigger push now, just for EDS
+				go func(req *model.PushRequest) {
+					pushFn(req)
+					updateSent.Inc()
+				}(r)
+				continue
+			}
+
+			lastConfigUpdateTime = time.Now()
+			if debouncedEvents == 0 {
+				timeChan = time.After(opts.DebounceAfter)
+				startDebounce = lastConfigUpdateTime
+			}
+			debouncedEvents++
+
+			req = req.Merge(r)
+		case <-timeChan:
+			if free {
+				pushWorker()
+			}
+		case <-stopCh:
+			return
+		}
+	}
 }
 
-func doSendPushes(stopCh <-chan struct{}, semaphore chan struct{}, queue *PushQueue) {}
+func reasonsUpdated(req *model.PushRequest) string {
+	var (
+		reason0, reason1            model.TriggerReason
+		reason0Cnt, reason1Cnt, idx int
+	)
+	for r, cnt := range req.Reason {
+		if idx == 0 {
+			reason0, reason0Cnt = r, cnt
+		} else if idx == 1 {
+			reason1, reason1Cnt = r, cnt
+		} else {
+			break
+		}
+		idx++
+	}
+
+	switch len(req.Reason) {
+	case 0:
+		return "unknown"
+	case 1:
+		return fmt.Sprintf("%s:%d", reason0, reason0Cnt)
+	case 2:
+		return fmt.Sprintf("%s:%d and %s:%d", reason0, reason0Cnt, reason1, reason1Cnt)
+	default:
+		return fmt.Sprintf("%s:%d and %d(%d) more reasons", reason0, reason0Cnt, len(req.Reason)-1,
+			req.Reason.Count()-reason0Cnt)
+	}
+}
+
+func configsUpdated(req *model.PushRequest) string {
+	configs := ""
+	for key := range req.ConfigsUpdated {
+		configs += key.String()
+		break
+	}
+	if len(req.ConfigsUpdated) > 1 {
+		more := " and " + strconv.Itoa(len(req.ConfigsUpdated)-1) + " more configs"
+		configs += more
+	}
+	return configs
+}
+
+func doSendPushes(stopCh <-chan struct{}, semaphore chan struct{}, queue *PushQueue) {
+	for {
+		select {
+		case <-stopCh:
+			return
+		default:
+			semaphore <- struct{}{}
+
+			// Get the next proxy to push. This will block if there are no updates required.
+			client, push, shuttingdown := queue.Dequeue()
+			if shuttingdown {
+				return
+			}
+			doneFunc := func() {
+				queue.MarkDone(client)
+				<-semaphore
+			}
+
+			var closed <-chan struct{}
+			if client.deltaStream != nil {
+				closed = client.deltaStream.Context().Done()
+			} else {
+				closed = client.StreamDone()
+			}
+			go func() {
+				pushEv := &Event{
+					pushRequest: push,
+					done:        doneFunc,
+				}
+
+				select {
+				case client.PushCh() <- pushEv:
+					return
+				case <-closed: // grpc stream was closed
+					doneFunc()
+					klog.Infof("Client closed connection %v", client.ID())
+				}
+			}()
+		}
+	}
+}

@@ -27,6 +27,13 @@ import (
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	"sync"
+	"time"
+)
+
+type TriggerReason string
+
+const (
+	UnknownTrigger TriggerReason = "unknown"
 )
 
 type PushContext struct {
@@ -51,26 +58,9 @@ type serviceAccountKey struct {
 }
 
 type virtualServiceIndex struct {
-	exportedToNamespaceByGateway map[types.NamespacedName][]config.Config
-	// this contains all the virtual services with exportTo "." and current namespace. The keys are namespace,gateway.
-	privateByNamespaceAndGateway map[types.NamespacedName][]config.Config
-	// This contains all virtual services whose exportTo is "*", keyed by gateway
-	publicByGateway map[string][]config.Config
-	// root vs namespace/name ->delegate vs virtualservice gvk/namespace/name
-	delegates map[ConfigKey][]ConfigKey
-
-	// This contains destination hosts of virtual services, keyed by gateway's namespace/name,
-	// only used when PILOT_FILTER_GATEWAY_CLUSTER_CONFIG is enabled
-	destinationsByGateway map[string]sets.String
-
-	// Map of VS hostname -> referenced hostnames
-	referencedDestinations map[string]sets.String
 }
 
 type destinationRuleIndex struct {
-	namespaceLocal      map[string]*consolidatedDestRules
-	exportedByNamespace map[string]*consolidatedDestRules
-	rootNamespaceLocal  *consolidatedDestRules
 }
 
 type consolidatedDestRules struct {
@@ -91,17 +81,17 @@ type ConsolidatedDestRule struct {
 	from     []types.NamespacedName
 }
 
-type TriggerReason string
-
 type ReasonStats map[TriggerReason]int
 
 type PushRequest struct {
-	Reason          ReasonStats
-	ConfigsUpdated  sets.Set[ConfigKey]
-	Forced          bool
-	Full            bool
-	Push            *PushContext
-	LastPushContext *PushContext
+	Reason           ReasonStats
+	ConfigsUpdated   sets.Set[ConfigKey]
+	Forced           bool
+	Full             bool
+	Push             *PushContext
+	LastPushContext  *PushContext
+	AddressesUpdated sets.Set[string]
+	Start            time.Time
 }
 
 func NewPushContext() *PushContext {
@@ -132,8 +122,7 @@ func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
 	return merged
 }
 
-type XDSUpdater interface {
-}
+type XDSUpdater interface{}
 
 func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
 	ps.initializeMutex.Lock()
@@ -270,4 +259,100 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	} else {
 		ps.AuthzPolicies = oldPushContext.AuthzPolicies
 	}
+}
+
+func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
+	if pr == nil {
+		return other
+	}
+	if other == nil {
+		return pr
+	}
+
+	// Keep the first (older) start time
+
+	// Merge the two reasons. Note that we shouldn't deduplicate here, or we would under count
+	if len(other.Reason) > 0 {
+		if pr.Reason == nil {
+			pr.Reason = make(map[TriggerReason]int)
+		}
+		pr.Reason.Merge(other.Reason)
+	}
+
+	// If either is full we need a full push
+	pr.Full = pr.Full || other.Full
+
+	// If either is forced we need a forced push
+	pr.Forced = pr.Forced || other.Forced
+
+	// The other push context is presumed to be later and more up to date
+	if other.Push != nil {
+		pr.Push = other.Push
+	}
+
+	if pr.ConfigsUpdated == nil {
+		pr.ConfigsUpdated = other.ConfigsUpdated
+	} else {
+		pr.ConfigsUpdated.Merge(other.ConfigsUpdated)
+	}
+
+	if pr.AddressesUpdated == nil {
+		pr.AddressesUpdated = other.AddressesUpdated
+	} else {
+		pr.AddressesUpdated.Merge(other.AddressesUpdated)
+	}
+
+	return pr
+}
+
+func NewReasonStats(reasons ...TriggerReason) ReasonStats {
+	ret := make(ReasonStats)
+	for _, reason := range reasons {
+		ret.Add(reason)
+	}
+	return ret
+}
+
+func (r ReasonStats) Add(reason TriggerReason) {
+	r[reason]++
+}
+
+func (r ReasonStats) Merge(other ReasonStats) {
+	for reason, count := range other {
+		r[reason] += count
+	}
+}
+
+func (r ReasonStats) Count() int {
+	var ret int
+	for _, count := range r {
+		ret += count
+	}
+	return ret
+}
+
+func (ps *PushContext) GetAllServices() []*Service {
+	return ps.servicesExportedToNamespace(NamespaceAll)
+}
+
+func (ps *PushContext) servicesExportedToNamespace(ns string) []*Service {
+	var out []*Service
+
+	// First add private services and explicitly exportedTo services
+	if ns == NamespaceAll {
+		out = make([]*Service, 0, len(ps.ServiceIndex.privateByNamespace)+len(ps.ServiceIndex.public))
+		for _, privateServices := range ps.ServiceIndex.privateByNamespace {
+			out = append(out, privateServices...)
+		}
+	} else {
+		out = make([]*Service, 0, len(ps.ServiceIndex.privateByNamespace[ns])+
+			len(ps.ServiceIndex.exportedToNamespace[ns])+len(ps.ServiceIndex.public))
+		out = append(out, ps.ServiceIndex.privateByNamespace[ns]...)
+		out = append(out, ps.ServiceIndex.exportedToNamespace[ns]...)
+	}
+
+	// Second add public services
+	out = append(out, ps.ServiceIndex.public...)
+
+	return out
 }

@@ -19,10 +19,13 @@ package xds
 
 import (
 	"context"
+	"github.com/apache/dubbo-kubernetes/pkg/maps"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"k8s.io/klog/v2"
 	"time"
 )
 
@@ -61,6 +64,41 @@ func (s *DiscoveryServer) DeltaAggregatedResources(stream discovery.AggregatedDi
 
 func (s *DiscoveryServer) StreamAggregatedResources(stream DiscoveryStream) error {
 	return s.Stream(stream)
+}
+
+func (s *DiscoveryServer) StartPush(req *model.PushRequest) {
+	req.Start = time.Now()
+	for _, p := range s.AllClients() {
+		s.pushQueue.Enqueue(p, req)
+	}
+}
+
+func (s *DiscoveryServer) AllClients() []*Connection {
+	s.adsClientsMutex.RLock()
+	defer s.adsClientsMutex.RUnlock()
+	return maps.Values(s.adsClients)
+}
+
+func (s *DiscoveryServer) AdsPushAll(req *model.PushRequest) {
+	if !req.Full {
+		klog.Infof("XDS: Incremental Pushing ConnectedEndpoints:%d", s.adsClientCount())
+	} else {
+		totalService := len(req.Push.GetAllServices())
+		klog.Infof("XDS: Pushing Services:%d ConnectedEndpoints:%d", totalService, s.adsClientCount())
+
+		// Make sure the ConfigsUpdated map exists
+		if req.ConfigsUpdated == nil {
+			req.ConfigsUpdated = make(sets.Set[model.ConfigKey])
+		}
+	}
+
+	s.StartPush(req)
+}
+
+func (s *DiscoveryServer) adsClientCount() int {
+	s.adsClientsMutex.RLock()
+	defer s.adsClientsMutex.RUnlock()
+	return len(s.adsClients)
 }
 
 func (s *DiscoveryServer) initProxyMetadata(node *core.Node) (*model.Proxy, error) {
