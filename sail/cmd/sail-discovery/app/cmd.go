@@ -89,6 +89,9 @@ func newDiscoveryCommand() *cobra.Command {
 func addFlags(c *cobra.Command) {
 	serverArgs = bootstrap.NewSailArgs(func(p *bootstrap.SailArgs) {
 		p.CtrlZOptions = ctrlz.DefaultOptions()
+		p.InjectionOptions = bootstrap.InjectionOptions{
+			InjectionDirectory: "./var/lib/dubbo/inject",
+		}
 	})
 	c.PersistentFlags().StringSliceVar(&serverArgs.RegistryOptions.Registries, "registries",
 		[]string{string(provider.Kubernetes)},

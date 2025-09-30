@@ -62,4 +62,6 @@ var (
 	DubbodServiceCustomHost = env.Register("DUBBOD_CUSTOM_HOST", "",
 		"Custom host name of dubbod that dubbod signs the server cert. "+
 			"Multiple custom host names are supported, and multiple values are separated by commas.").Get()
+	InjectionWebhookConfigName = env.Register("INJECTION_WEBHOOK_CONFIG_NAME", "istio-sidecar-injector",
+		"Name of the mutatingwebhookconfiguration to patch, if istioctl is not used.").Get()
 )

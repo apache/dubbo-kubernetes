@@ -100,6 +100,10 @@ func (e *Environment) GetDiscoveryAddress() (host.Name, string, error) {
 	return host.Name(hostname), port, nil
 }
 
+func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map[string]string, meshConfig *meshconfig.MeshConfig) *meshconfig.ProxyConfig {
+	return mesh.DefaultProxyConfig()
+}
+
 func (e *Environment) ClusterLocal() ClusterLocalProvider {
 	return e.clusterLocalServices
 }

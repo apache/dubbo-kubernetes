@@ -115,3 +115,64 @@ func Extract[T Object](obj any) T {
 func ExtractObject(obj any) Object {
 	return Extract[Object](obj)
 }
+
+func FilteredObjectSpecHandler(handler func(o Object), filter func(o Object) bool) cache.ResourceEventHandler {
+	return filteredObjectHandler(handler, true, filter)
+}
+
+func filteredObjectHandler(handler func(o Object), onlyIncludeSpecChanges bool, filter func(o Object) bool) cache.ResourceEventHandler {
+	single := func(obj any) {
+		o := ExtractObject(obj)
+		if o == nil {
+			return
+		}
+		if !filter(o) {
+			return
+		}
+		handler(o)
+	}
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: single,
+		UpdateFunc: func(oldInterface, newInterface any) {
+			oldObj := ExtractObject(oldInterface)
+			if oldObj == nil {
+				return
+			}
+			newObj := ExtractObject(newInterface)
+			if newObj == nil {
+				return
+			}
+			if onlyIncludeSpecChanges && oldObj.GetResourceVersion() == newObj.GetResourceVersion() {
+				return
+			}
+			newer := filter(newObj)
+			older := filter(oldObj)
+			if !newer && !older {
+				return
+			}
+			handler(newObj)
+		},
+		DeleteFunc: single,
+	}
+}
+
+func ObjectHandler(handler func(o Object)) cache.ResourceEventHandler {
+	return TypedObjectHandler[Object](handler)
+}
+
+func TypedObjectHandler[T ComparableObject](handler func(o T)) cache.ResourceEventHandler {
+	h := func(obj any) {
+		o := Extract[T](obj)
+		if IsNil(o) {
+			return
+		}
+		handler(o)
+	}
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: h,
+		UpdateFunc: func(oldObj, newObj any) {
+			h(newObj)
+		},
+		DeleteFunc: h,
+	}
+}
