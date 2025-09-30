@@ -50,6 +50,7 @@ import (
 	caserver "github.com/apache/dubbo-kubernetes/security/pkg/server/ca"
 	"github.com/fsnotify/fsnotify"
 	grpcprom "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"go.uber.org/atomic"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -111,7 +112,14 @@ type Server struct {
 
 	readinessProbes map[string]readinessProbe
 
+	readinessFlags *readinessFlags
+
 	webhookInfo *webhookInfo
+}
+
+type readinessFlags struct {
+	proxylessInjectorReady atomic.Bool
+	configValidationReady  atomic.Bool
 }
 
 type webhookInfo struct {
@@ -139,6 +147,8 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 		dubbodCertBundleWatcher: keycertbundle.NewWatcher(),
 		fileWatcher:             filewatcher.NewWatcher(),
 		internalStop:            make(chan struct{}),
+		readinessFlags:          &readinessFlags{},
+		webhookInfo:             &webhookInfo{},
 	}
 	for _, fn := range initFuncs {
 		fn(s)
@@ -216,6 +226,15 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	if s.kubeClient != nil {
 		s.initSecureWebhookServer(args)
+		wh, err := s.initProxylessInjector(args)
+		if err != nil {
+			return nil, fmt.Errorf("error initializing proxyless injector: %v", err)
+		}
+		s.readinessFlags.proxylessInjectorReady.Store(true)
+		s.webhookInfo.mu.Lock()
+		s.webhookInfo.wh = wh
+		s.webhookInfo.mu.Unlock()
+
 		if err := s.initConfigValidation(args); err != nil {
 			return nil, fmt.Errorf("error initializing config validator: %v", err)
 		}

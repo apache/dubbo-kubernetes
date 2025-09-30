@@ -39,9 +39,15 @@ type RegistryOptions struct {
 	ClusterRegistriesNamespace string
 }
 
+type InjectionOptions struct {
+	// Directory of injection related config files.
+	InjectionDirectory string
+}
+
 type SailArgs struct {
 	ServerOptions      DiscoveryServerOptions
 	RegistryOptions    RegistryOptions
+	InjectionOptions   InjectionOptions
 	MeshConfigFile     string
 	NetworksConfigFile string
 	PodName            string
