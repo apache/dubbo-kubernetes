@@ -95,26 +95,10 @@ func NewConnection(peerAddr string, stream DiscoveryStream) Connection {
 
 func Stream(ctx ConnectionContext) error {
 	con := ctx.XdsConnection()
-	// Do not call: defer close(con.pushChannel). The push channel will be garbage collected
-	// when the connection is no longer used. Closing the channel can cause subtle race conditions
-	// with push. According to the spec: "It's only necessary to close a channel when it is important
-	// to tell the receiving goroutines that all data have been sent."
-
-	// Block until either a request is received or a push is triggered.
-	// We need 2 go routines because 'read' blocks in Recv().
 	go Receive(ctx)
-
-	// Wait for the proxy to be fully initialized before we start serving traffic. Because
-	// initialization doesn't have dependencies that will block, there is no need to add any timeout
-	// here. Prior to this explicit wait, we were implicitly waiting by receive() not sending to
-	// reqChannel and the connection not being enqueued for pushes to pushChannel until the
-	// initialization is complete.
 	<-con.initialized
 
 	for {
-		// Go select{} statements are not ordered; the same channel can be chosen many times.
-		// For requests, these are higher priority (client may be blocked on startup until these are done)
-		// and often very cheap to handle (simple ACK), so we check it first.
 		select {
 		case req, ok := <-con.reqChan:
 			if ok {
@@ -129,10 +113,6 @@ func Stream(ctx ConnectionContext) error {
 			return nil
 		default:
 		}
-		// If there wasn't already a request, poll for requests and pushes. Note: if we have a huge
-		// amount of incoming requests, we may still send some pushes, as we do not `continue` above;
-		// however, requests will be handled ~2x as much as pushes. This ensures a wave of requests
-		// cannot completely starve pushes. However, this scenario is unlikely.
 		select {
 		case req, ok := <-con.reqChan:
 			if ok {
@@ -140,7 +120,6 @@ func Stream(ctx ConnectionContext) error {
 					return err
 				}
 			} else {
-				// Remote side closed connection or error processing the request.
 				return <-con.errorChan
 			}
 		case pushEv := <-con.pushChannel:
@@ -159,7 +138,6 @@ func Receive(ctx ConnectionContext) {
 	defer func() {
 		close(con.errorChan)
 		close(con.reqChan)
-		// Close the initialized channel, if its not already closed, to prevent blocking the stream.
 		select {
 		case <-con.initialized:
 		default:
@@ -179,9 +157,7 @@ func Receive(ctx ConnectionContext) {
 			klog.Errorf("ADS: %q %s terminated with error: %v", con.peerAddr, con.conID, err)
 			return
 		}
-		// This should be only set for the first request. The node id may not be set - for example malicious clients.
 		if firstRequest {
-			// probe happens before envoy sends first xDS request
 			if req.TypeUrl == model.HealthInfoType {
 				klog.Warningf("ADS: %q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
 				continue
@@ -227,9 +203,6 @@ func (conn *Connection) MarkInitialized() {
 func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (bool, ResourceDelta) {
 	stype := model.GetShortType(request.TypeUrl)
 
-	// If there is an error in request that means previous response is erroneous.
-	// We do not have to respond in that case. In this case request's version info
-	// will be different from the version sent. But it is fragile to rely on that.
 	if request.ErrorDetail != nil {
 		errCode := codes.Code(request.ErrorDetail.Code)
 		klog.Warningf("ADS:%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())

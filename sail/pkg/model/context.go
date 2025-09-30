@@ -23,7 +23,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"net"
 	"strconv"
@@ -40,30 +39,15 @@ type Environment struct {
 	ConfigStore
 	mutex                sync.RWMutex
 	pushContext          *PushContext
-	Cache                XdsCache
 	NetworksWatcher      mesh.NetworksWatcher
 	NetworkManager       *NetworkManager
 	clusterLocalServices ClusterLocalProvider
 	DomainSuffix         string
 }
 
-type XdsCacheImpl struct {
-	cds typedXdsCache[uint64]
-	eds typedXdsCache[uint64]
-	rds typedXdsCache[uint64]
-	sds typedXdsCache[string]
-}
-
 func NewEnvironment() *Environment {
-	var cache XdsCache
-	if features.EnableXDSCaching {
-		cache = NewXdsCache()
-	} else {
-		cache = DisabledCache{}
-	}
 	return &Environment{
 		pushContext: NewPushContext(),
-		Cache:       cache,
 	}
 }
 

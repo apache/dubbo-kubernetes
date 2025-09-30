@@ -17,7 +17,10 @@
 
 package features
 
-import "github.com/apache/dubbo-kubernetes/pkg/env"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/env"
+	"time"
+)
 
 var (
 	MaxConcurrentStreams = env.Register(
@@ -32,4 +35,9 @@ var (
 		4*1024*1024,
 		"Sets the max receive buffer size of gRPC stream in bytes.",
 	).Get()
+
+	XDSCacheMaxSize = env.Register("SAIL_XDS_CACHE_SIZE", 60000,
+		"The maximum number of cache entries for the XDS cache.").Get()
+	XDSCacheIndexClearInterval = env.Register("SAIL_XDS_CACHE_INDEX_CLEAR_INTERVAL", 5*time.Second,
+		"The interval for xds cache index clearing.").Get()
 )

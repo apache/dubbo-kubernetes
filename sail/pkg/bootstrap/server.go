@@ -29,6 +29,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
 	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
@@ -109,6 +110,13 @@ type Server struct {
 	dubbodCertBundleWatcher *keycertbundle.Watcher
 
 	readinessProbes map[string]readinessProbe
+
+	webhookInfo *webhookInfo
+}
+
+type webhookInfo struct {
+	mu sync.RWMutex
+	wh *inject.Webhook
 }
 
 type readinessProbe func() bool
@@ -215,7 +223,7 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	// TODO initRegistryEventHandlers？
 
-	// TODO initDiscoveryService？
+	s.initDiscoveryService()
 
 	s.startCA(caOpts)
 
@@ -284,6 +292,15 @@ func (s *Server) Start(stop <-chan struct{}) error {
 	s.waitForShutdown(stop)
 
 	return nil
+}
+
+func (s *Server) initDiscoveryService() {
+	klog.Infof("starting discovery service")
+	s.addStartFunc("xds server", func(stop <-chan struct{}) error {
+		klog.Infof("Starting ADS server")
+		s.XDSServer.Start(stop)
+		return nil
+	})
 }
 
 func (s *Server) startCA(caOpts *caOptions) {
