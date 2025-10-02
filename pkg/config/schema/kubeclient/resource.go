@@ -24,6 +24,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
+	apiistioioapinetworkingv1 "istio.io/client-go/pkg/apis/networking/v1"
+	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapicertificatesv1 "k8s.io/api/certificates/v1"
@@ -78,6 +80,15 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Services(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
+	case *apiistioioapisecurityv1.RequestAuthentication:
+		return c.Dubbo().SecurityV1().RequestAuthentications(namespace).(ktypes.WriteAPI[T])
+	case *apiistioioapisecurityv1.PeerAuthentication:
+		return c.Dubbo().SecurityV1().PeerAuthentications(namespace).(ktypes.WriteAPI[T])
+	case *apiistioioapinetworkingv1.VirtualService:
+		return c.Dubbo().NetworkingV1().VirtualServices(namespace).(ktypes.WriteAPI[T])
+	case *apiistioioapinetworkingv1.DestinationRule:
+		return c.Dubbo().NetworkingV1().DestinationRules(namespace).(ktypes.WriteAPI[T])
+
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
 	}
@@ -107,6 +118,14 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapiappsv1.StatefulSet{}
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
+	case gvr.RequestAuthentication:
+		return &apiistioioapisecurityv1.RequestAuthentication{}
+	case gvr.PeerAuthentication:
+		return &apiistioioapisecurityv1.PeerAuthentication{}
+	case gvr.VirtualService:
+		return &apiistioioapinetworkingv1.VirtualService{}
+	case gvr.DestinationRule:
+		return &apiistioioapinetworkingv1.DestinationRule{}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}

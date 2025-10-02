@@ -40,6 +40,8 @@ var (
 	RequestAuthentication          = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "RequestAuthentication"}
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "PeerAuthentication"}
 	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "AuthorizationPolicy"}
+	DestinationRule                = config.GroupVersionKind{Group: "networking.dubbo.io", Version: "v1", Kind: "DestinationRule"}
+	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.io", Version: "v1", Kind: "VirtualService"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
@@ -76,6 +78,10 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.PeerAuthentication, true
 	case AuthorizationPolicy:
 		return gvr.AuthorizationPolicy, true
+	case DestinationRule:
+		return gvr.DestinationRule, true
+	case VirtualService:
+		return gvr.VirtualService, true
 	}
 	return schema.GroupVersionResource{}, false
 }
@@ -105,6 +111,12 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return PeerAuthentication, true
 	case gvr.RequestAuthentication:
 		return RequestAuthentication, true
+	case gvr.AuthorizationPolicy:
+		return AuthorizationPolicy, true
+	case gvr.VirtualService:
+		return VirtualService, true
+	case gvr.DestinationRule:
+		return DestinationRule, true
 	}
 	return config.GroupVersionKind{}, false
 }

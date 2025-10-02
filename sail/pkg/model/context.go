@@ -19,6 +19,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
@@ -106,6 +107,20 @@ func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map
 
 func (e *Environment) ClusterLocal() ClusterLocalProvider {
 	return e.clusterLocalServices
+}
+
+func (e *Environment) Init() {
+	// Use a default DomainSuffix, if none was provided.
+	if len(e.DomainSuffix) == 0 {
+		e.DomainSuffix = constants.DefaultClusterLocalDomain
+	}
+
+	e.clusterLocalServices = NewClusterLocalProvider(e)
+}
+
+func (e *Environment) InitNetworksManager(updater XDSUpdater) (err error) {
+	e.NetworkManager, err = NewNetworkManager(e, updater)
+	return
 }
 
 type Proxy struct{}

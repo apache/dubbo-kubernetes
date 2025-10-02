@@ -26,7 +26,6 @@ type ProxyArgs struct {
 	StsPort            int
 	TokenManagerPlugin string
 	MeshConfigFile     string
-	ServiceCluster     string
 }
 
 func NewProxyArgs() ProxyArgs {

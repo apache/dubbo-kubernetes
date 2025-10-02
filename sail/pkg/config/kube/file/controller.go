@@ -45,12 +45,7 @@ func (c ConfigKind) Equals(other ConfigKind) bool {
 	return c.Config.Equals(other.Config)
 }
 
-func NewController(
-	fileDir string,
-	domainSuffix string,
-	schemas collection.Schemas,
-	options kubecontroller.Options,
-) (*Controller, error) {
+func NewController(fileDir string, domainSuffix string, schemas collection.Schemas, options kubecontroller.Options) (*Controller, error) {
 	stop := make(chan struct{})
 	opts := krt.NewOptionsBuilder(stop, "file-monitor", options.KrtDebugger)
 	watch, err := krtfiles.NewFolderWatch(fileDir, func(b []byte) ([]*config.Config, error) {

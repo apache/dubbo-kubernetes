@@ -36,7 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 	"sync"
+	"sync/atomic"
 )
 
 type fullClient[T controllers.Object] struct {
@@ -50,6 +52,65 @@ type writeClient[T controllers.Object] struct {
 
 func New[T controllers.ComparableObject](c kube.Client) Client[T] {
 	return NewFiltered[T](c, Filter{})
+}
+
+func NewUntypedInformer(c kube.Client, gvr schema.GroupVersionResource, filter Filter) Untyped {
+	inf := kubeclient.GetInformerFilteredFromGVR(c, ToOpts(c, gvr, filter), gvr)
+	return newInformerClient[controllers.Object](gvr, inf, filter)
+}
+
+func NewDelayedInformer[T controllers.ComparableObject](
+	c kube.Client,
+	gvr schema.GroupVersionResource,
+	informerType kubetypes.InformerType,
+	filter Filter,
+) Informer[T] {
+	watcher := c.CrdWatcher()
+	if watcher == nil {
+		klog.Info("NewDelayedInformer called without a CrdWatcher enabled")
+	}
+	delay := newDelayedFilter(gvr, watcher)
+	inf := func() informerfactory.StartableInformer {
+		opts := ToOpts(c, gvr, filter)
+		opts.InformerType = informerType
+		return kubeclient.GetInformerFiltered[T](c, opts, gvr)
+	}
+	return newDelayedInformer[T](gvr, inf, delay, filter)
+}
+
+func newDelayedInformer[T controllers.ComparableObject](
+	gvr schema.GroupVersionResource,
+	getInf func() informerfactory.StartableInformer,
+	delay kubetypes.DelayedFilter,
+	filter Filter,
+) Informer[T] {
+	delayedClient := &delayedClient[T]{
+		inf:     new(atomic.Pointer[Informer[T]]),
+		delayed: delay,
+	}
+
+	// If resource is not yet known, we will use the delayedClient.
+	// When the resource is later loaded, the callback will trigger and swap our dummy delayedClient
+	// with a full client
+	readyNow := delay.KnownOrCallback(func(stop <-chan struct{}) {
+		// The inf() call is responsible for starting the informer
+		inf := getInf()
+		fc := &informerClient[T]{
+			informer:      inf.Informer,
+			startInformer: inf.Start,
+		}
+		applyDynamicFilter(filter, gvr, fc)
+		inf.Start(stop)
+		klog.Infof("%v is now ready, building client", gvr.GroupResource())
+		// Swap out the dummy client with the full one
+		delayedClient.set(fc)
+	})
+	if !readyNow {
+		klog.V(2).Infof("%v is not ready now, building delayed client", gvr.GroupResource())
+		return delayedClient
+	}
+	klog.V(2).Infof("%v ready now, building client", gvr.GroupResource())
+	return newInformerClient[T](gvr, getInf(), filter)
 }
 
 type Filter = kubetypes.Filter
@@ -150,7 +211,7 @@ func (n *informerClient[T]) List(namespace string, selector klabels.Selector) []
 		}
 	})
 
-	if err != nil && features.EnableUnsafeAssertions {
+	if err != nil {
 		fmt.Printf("lister returned err for %v: %v", namespace, err)
 	}
 	return res
@@ -163,7 +224,7 @@ func (n *informerClient[T]) ListUnfiltered(namespace string, selector klabels.Se
 		res = append(res, cast)
 	})
 
-	if err != nil && features.EnableUnsafeAssertions {
+	if err != nil {
 		fmt.Printf("lister returned err for %v: %v", namespace, err)
 	}
 	return res
@@ -336,4 +397,11 @@ func (n *writeClient[T]) UpdateStatus(object T) (T, error) {
 func (n *writeClient[T]) Delete(name, namespace string) error {
 	api := kubeclient.GetWriteClient[T](n.client, namespace)
 	return api.Delete(context.Background(), name, metav1.DeleteOptions{})
+}
+
+func NewMetadata(c kube.Client, gvr schema.GroupVersionResource, filter Filter) Informer[*metav1.PartialObjectMetadata] {
+	opts := ToOpts(c, gvr, filter)
+	opts.InformerType = kubetypes.MetadataInformer
+	inf := kubeclient.GetInformerFilteredFromGVR(c, opts, gvr)
+	return newInformerClient[*metav1.PartialObjectMetadata](gvr, inf, filter)
 }

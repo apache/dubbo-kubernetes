@@ -2,20 +2,17 @@ package crd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"io"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/klog/v2"
 	"reflect"
 )
 
 type ConversionFunc = func(s resource.Schema, js string) (config.Spec, error)
-
-// TODO - add special cases for type-to-kind and kind-to-type
-// conversions with initial-isms. Consider adding additional type
-// information to the abstract model and/or elevating k8s
-// representation to first-class type to avoid extra conversions.
 
 func parseInputsImpl(inputs string, withValidate bool) ([]config.Config, []DubboKind, error) {
 	var varr []config.Config
@@ -44,14 +41,71 @@ func parseInputsImpl(inputs string, withValidate bool) ([]config.Config, []Dubbo
 	return varr, others, nil
 }
 
-// ParseInputs reads multiple documents from `kubectl` output and checks with
-// the schema. It also returns the list of unrecognized kinds as the second
-// response.
-//
-// NOTE: This function only decodes a subset of the complete k8s
-// ObjectMeta as identified by the fields in model.Meta. This
-// would typically only be a problem if a user dumps an configuration
-// object with kubectl and then re-ingests it.
 func ParseInputs(inputs string) ([]config.Config, []DubboKind, error) {
 	return parseInputsImpl(inputs, true)
+}
+
+func FromJSON(s resource.Schema, js string) (config.Spec, error) {
+	c, err := s.NewInstance()
+	if err != nil {
+		return nil, err
+	}
+	if err = config.ApplyJSON(c, js); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func ConvertObject(schema resource.Schema, object DubboObject, domain string) (*config.Config, error) {
+	return ConvertObjectInternal(schema, object, domain, FromJSON)
+}
+
+func StatusJSONFromMap(schema resource.Schema, jsonMap *json.RawMessage) (config.Status, error) {
+	if jsonMap == nil {
+		return nil, nil
+	}
+	js, err := json.Marshal(jsonMap)
+	if err != nil {
+		return nil, err
+	}
+	status, err := schema.Status()
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(js, status)
+	if err != nil {
+		return nil, err
+	}
+	return status, nil
+}
+
+func ConvertObjectInternal(schema resource.Schema, object DubboObject, domain string, convert ConversionFunc) (*config.Config, error) {
+	js, err := json.Marshal(object.GetSpec())
+	if err != nil {
+		return nil, err
+	}
+	spec, err := convert(schema, string(js))
+	if err != nil {
+		return nil, err
+	}
+	status, err := StatusJSONFromMap(schema, object.GetStatus())
+	if err != nil {
+		klog.Errorf("could not get istio status from map %v, err %v", object.GetStatus(), err)
+	}
+	meta := object.GetObjectMeta()
+
+	return &config.Config{
+		Meta: config.Meta{
+			GroupVersionKind:  schema.GroupVersionKind(),
+			Name:              meta.Name,
+			Namespace:         meta.Namespace,
+			Domain:            domain,
+			Labels:            meta.Labels,
+			Annotations:       meta.Annotations,
+			ResourceVersion:   meta.ResourceVersion,
+			CreationTimestamp: meta.CreationTimestamp.Time,
+		},
+		Spec:   spec,
+		Status: status,
+	}, nil
 }

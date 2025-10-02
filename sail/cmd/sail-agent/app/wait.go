@@ -21,39 +21,36 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"io"
+	"k8s.io/klog/v2"
 	"net/http"
 	"time"
 )
 
 var (
-	timeoutSeconds       int
 	requestTimeoutMillis int
 	periodMillis         int
 	url                  string
 
 	waitCmd = &cobra.Command{
 		Use:   "wait",
-		Short: "Waits until the Envoy proxy is ready",
+		Short: "Waits until the Proxy XDS is ready",
 		RunE: func(c *cobra.Command, args []string) error {
 			client := &http.Client{
 				Timeout: time.Duration(requestTimeoutMillis) * time.Millisecond,
 			}
-			fmt.Printf("Waiting for Envoy proxy to be ready (timeout: %d seconds)...", timeoutSeconds)
+			klog.Infof("Waiting for Proxy XDS to be ready")
 
 			var err error
-			timeout := time.After(time.Duration(timeoutSeconds) * time.Second)
 
 			for {
 				select {
-				case <-timeout:
-					return fmt.Errorf("timeout waiting for Envoy proxy to become ready. Last error: %v", err)
 				case <-time.After(time.Duration(periodMillis) * time.Millisecond):
 					err = checkIfReady(client, url)
 					if err == nil {
-						fmt.Println("Envoy is ready!")
+						klog.Info("Proxy XDS is ready")
 						return nil
 					}
-					fmt.Printf("Not ready yet: %v", err)
+					klog.Errorf("Not ready yet: %v\n", err)
 				}
 			}
 		},
@@ -78,4 +75,10 @@ func checkIfReady(client *http.Client, url string) error {
 		return fmt.Errorf("HTTP status code %v", resp.StatusCode)
 	}
 	return nil
+}
+
+func init() {
+	waitCmd.PersistentFlags().IntVar(&requestTimeoutMillis, "requestTimeoutMillis", 500, "number of milliseconds to wait for response")
+	waitCmd.PersistentFlags().IntVar(&periodMillis, "periodMillis", 500, "number of milliseconds to wait between attempts")
+	waitCmd.PersistentFlags().StringVar(&url, "url", "http://localhost:15020/healthz/ready", "URL to use in requests")
 }

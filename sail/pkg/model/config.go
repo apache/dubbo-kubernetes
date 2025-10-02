@@ -4,9 +4,7 @@ import (
 	"cmp"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/util/hash"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"sort"
 )
 
@@ -51,15 +49,6 @@ func sortConfigByCreationTime(configs []config.Config) []config.Config {
 
 func (key ConfigKey) String() string {
 	return key.Kind.String() + "/" + key.Namespace + "/" + key.Name
-}
-
-func HasConfigsOfKind(configs sets.Set[ConfigKey], kind kind.Kind) bool {
-	for c := range configs {
-		if c.Kind == kind {
-			return true
-		}
-	}
-	return false
 }
 
 func (key ConfigKey) HashCode() ConfigHash {

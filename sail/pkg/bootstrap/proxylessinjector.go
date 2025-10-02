@@ -39,7 +39,7 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 			return nil, err
 		}
 	} else if s.kubeClient != nil {
-		configMapName := getInjectorConfigMapName("")
+		configMapName := getInjectorConfigMapName()
 		cms := s.kubeClient.Kube().CoreV1().ConfigMaps(args.Namespace)
 		if _, err := cms.Get(context.TODO(), configMapName, metav1.GetOptions{}); err != nil {
 			if errors.IsNotFound(err) {
@@ -66,13 +66,9 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create injection webhook: %v", err)
 	}
-	// Patch cert if a webhook config name is provided.
-	// This requires RBAC permissions - a low-priv Istiod should not attempt to patch but rely on
-	// operator or CI/CD
+
 	if features.InjectionWebhookConfigName != "" {
 		s.addStartFunc("injection patcher", func(stop <-chan struct{}) error {
-			// No leader election - different istiod revisions will patch their own cert.
-			// update webhook configuration by watching the cabundle
 			patcher, err := webhooks.NewWebhookCertPatcher(s.kubeClient, webhookName, s.dubbodCertBundleWatcher)
 			if err != nil {
 				klog.Errorf("failed to create webhook cert patcher: %v", err)
@@ -91,10 +87,7 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 	return wh, nil
 }
 
-func getInjectorConfigMapName(revision string) string {
+func getInjectorConfigMapName() string {
 	name := defaultInjectorConfigMapName
-	if revision == "" || revision == "default" {
-		return name
-	}
-	return name + "-" + revision
+	return name
 }

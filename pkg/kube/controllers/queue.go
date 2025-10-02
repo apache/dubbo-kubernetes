@@ -45,6 +45,10 @@ func (q Queue) AddObject(obj Object) {
 	q.queue.Add(config.NamespacedName(obj))
 }
 
+func (q Queue) HasSynced() bool {
+	return q.initialSync.Load()
+}
+
 func WithRateLimiter(r workqueue.TypedRateLimiter[any]) func(q *Queue) {
 	return func(q *Queue) {
 		q.queue = workqueue.NewTypedRateLimitingQueue[any](r)
