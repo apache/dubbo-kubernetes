@@ -22,10 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubbo-agent"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/config"
-	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/options"
 	"github.com/spf13/cobra"
@@ -40,7 +38,7 @@ func NewRootCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:          "sail-agent",
 		Short:        "Dubbo Sail agent.",
-		Long:         "Dubbo Sail agent runs in the sidecar or gateway container and bootstraps Envoy.",
+		Long:         "Dubbo Sail agent bootstraps via gRPC xDS.",
 		SilenceUsage: true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
@@ -66,12 +64,8 @@ func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 		},
 		RunE: func(c *cobra.Command, args []string) error {
 			cmd.PrintFlags(c.Flags())
-			err := initProxy(args)
-			if err != nil {
-				return err
-			}
 
-			proxyConfig, err := config.ConstructProxyConfig(proxyArgs.MeshConfigFile, proxyArgs.ServiceCluster, options.ProxyConfigEnv, proxyArgs.Concurrency)
+			proxyConfig, err := config.ConstructProxyConfig(proxyArgs.MeshConfigFile, options.ProxyConfigEnv)
 			if err != nil {
 				return fmt.Errorf("failed to get proxy config: %v", err)
 			}
@@ -106,17 +100,6 @@ func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 	}
 }
 
-func initProxy(args []string) error {
-	proxyArgs.Type = model.SidecarProxy
-	if len(args) > 0 {
-		proxyArgs.Type = model.NodeType(args[0])
-		if !model.IsApplicationNodeType(proxyArgs.Type) {
-			return fmt.Errorf("invalid proxy Type: %s", string(proxyArgs.Type))
-		}
-	}
-	return nil
-}
-
 func addFlags(proxyCmd *cobra.Command) {
 	proxyArgs = options.NewProxyArgs()
 	proxyCmd.PersistentFlags().StringVar(&proxyArgs.DNSDomain, "domain", "",
@@ -124,5 +107,4 @@ func addFlags(proxyCmd *cobra.Command) {
 	proxyCmd.PersistentFlags().StringVar(&proxyArgs.MeshConfigFile, "meshConfig", "./etc/dubbo/config/mesh",
 		"File name for Dubbo mesh configuration. If not specified, a default mesh will be used. This may be overridden by "+
 			"PROXY_CONFIG environment variable or proxy.dubbo.io/config annotation.")
-	proxyCmd.PersistentFlags().StringVar(&proxyArgs.ServiceCluster, "serviceCluster", constants.ServiceClusterName, "Service cluster")
 }

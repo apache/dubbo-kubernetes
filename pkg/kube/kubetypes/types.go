@@ -20,6 +20,7 @@ package kubetypes
 import (
 	"context"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -89,4 +90,45 @@ type CrdWatcher interface {
 	KnownOrCallback(s schema.GroupVersionResource, f func(stop <-chan struct{})) bool
 	WaitForCRD(s schema.GroupVersionResource, stop <-chan struct{}) bool
 	Run(stop <-chan struct{})
+}
+
+type composedFilter struct {
+	filter DynamicObjectFilter
+	extra  []func(obj any) bool
+}
+
+func (f composedFilter) Filter(obj any) bool {
+	for _, filter := range f.extra {
+		if !filter(obj) {
+			return false
+		}
+	}
+	if f.filter != nil {
+		return f.filter.Filter(obj)
+	}
+	return true
+}
+
+func (f composedFilter) AddHandler(fn func(selected, deselected sets.String)) {
+	if f.filter != nil {
+		f.filter.AddHandler(fn)
+	}
+}
+
+func ComposeFilters(filter DynamicObjectFilter, extra ...func(obj any) bool) DynamicObjectFilter {
+	return composedFilter{
+		filter: filter,
+		extra: slices.FilterInPlace(extra, func(f func(obj any) bool) bool {
+			return f != nil
+		}),
+	}
+}
+
+func NewStaticObjectFilter(f func(obj any) bool) DynamicObjectFilter {
+	return staticFilter{f}
+}
+
+type DelayedFilter interface {
+	HasSynced() bool
+	KnownOrCallback(f func(stop <-chan struct{})) bool
 }

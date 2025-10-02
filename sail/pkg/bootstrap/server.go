@@ -147,15 +147,18 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 		dubbodCertBundleWatcher: keycertbundle.NewWatcher(),
 		fileWatcher:             filewatcher.NewWatcher(),
 		internalStop:            make(chan struct{}),
+		readinessProbes:         make(map[string]readinessProbe),
 		readinessFlags:          &readinessFlags{},
 		webhookInfo:             &webhookInfo{},
 	}
 	for _, fn := range initFuncs {
 		fn(s)
 	}
+
 	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases, args.KrtDebugger)
-	// TODO configGen
+	// TODO xds cache
 	// TODO initReadinessProbes
+
 	s.initServers(args)
 
 	if err := s.serveHTTP(); err != nil {
@@ -165,29 +168,25 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	if err := s.initKubeClient(args); err != nil {
 		return nil, fmt.Errorf("error initializing kube client: %v", err)
 	}
+
 	s.initMeshConfiguration(args, s.fileWatcher)
 
 	if s.kubeClient != nil {
-		// // Build a namespace watcher. This must have no filter, since this is our input to the filter itself.
+		// Build a namespace watcher. This must have no filter, since this is our input to the filter itself.
 		namespaces := kclient.New[*corev1.Namespace](s.kubeClient)
 		filter := namespace.NewDiscoveryNamespacesFilter(namespaces, s.environment.Watcher, s.internalStop)
 		s.kubeClient = kubelib.SetObjectFilter(s.kubeClient, filter)
 	}
 
 	s.initMeshNetworks(args, s.fileWatcher)
-	// TODO enovy proxy?
-	// s.initMeshHandlers(configGen.MeshConfigChanged)
-	// s.environment.Init()
-	// if err := s.environment.InitNetworksManager(s.XDSServer); err != nil {
-	// 	return nil, err
-	// }
+	// TODO initMeshHandlers
 
-	// TODO If enabled, mesh will support certificates signed by more than one trustAnchor for DUBBO_MUTUAL mTLS
-	// if features.MultiRootMesh {
-	// 	// Initialize trust bundle after mesh config which it depends on
-	// 	s.workloadTrustBundle = tb.NewTrustBundle(nil, e.Watcher)
-	// 	e.TrustBundle = s.workloadTrustBundle
-	// }
+	s.environment.Init()
+	if err := s.environment.InitNetworksManager(s.XDSServer); err != nil {
+		return nil, err
+	}
+
+	// TODO MultiRootMesh
 
 	// Options based on the current 'defaults' in dubbo.
 	caOpts := &caOptions{
@@ -339,7 +338,7 @@ func (s *Server) startCA(caOpts *caOptions) {
 		if s.secureGrpcServer == nil {
 			grpcServer = s.grpcServer
 		}
-		klog.Infof("starting CA server")
+		klog.Infof("Starting CA server")
 		s.RunCA(grpcServer)
 		return nil
 	})
@@ -386,6 +385,7 @@ func (s *Server) initKubeClient(args *SailArgs) error {
 		if err != nil {
 			return fmt.Errorf("failed creating kube client: %v", err)
 		}
+		s.kubeClient = kubelib.EnableCrdWatcher(s.kubeClient)
 	}
 
 	return nil
@@ -631,7 +631,7 @@ func (s *Server) initSDSServer() {
 
 // isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Dubbod
 func (s *Server) isK8SSigning() bool {
-	return s.RA != nil && strings.HasPrefix(features.NaviCertProvider, constants.CertProviderKubernetesSignerPrefix)
+	return s.RA != nil && strings.HasPrefix(features.SailCertProvider, constants.CertProviderKubernetesSignerPrefix)
 }
 
 func (s *Server) waitForShutdown(stop <-chan struct{}) {

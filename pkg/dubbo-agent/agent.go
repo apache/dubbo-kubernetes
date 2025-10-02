@@ -24,7 +24,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
-	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/cache"
 	"google.golang.org/grpc"
@@ -51,7 +50,6 @@ const (
 type SDSServiceFactory = func(_ *security.Options, _ security.SecretManager, _ *mesh.PrivateKeyProvider) SDSService
 
 type Proxy struct {
-	Type      model.NodeType
 	DNSDomain string
 }
 
@@ -75,6 +73,7 @@ type AgentOptions struct {
 	XDSRootCerts               string
 	MetadataDiscovery          *bool
 	CARootCerts                string
+	SDSFactory                 func(options *security.Options, workloadSecretCache security.SecretManager, pkpConf *mesh.PrivateKeyProvider) SDSService
 }
 
 func NewAgent(proxyConfig *mesh.ProxyConfig, agentOpts *AgentOptions, sopts *security.Options) *Agent {

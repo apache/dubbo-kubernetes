@@ -26,6 +26,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/adsc"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	configaggregate "github.com/apache/dubbo-kubernetes/sail/pkg/config/aggregate"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/crdclient"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/file"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/config/memory"
 	dubboCredentials "github.com/apache/dubbo-kubernetes/sail/pkg/credentials"
@@ -174,11 +175,24 @@ func (s *Server) initConfigSources(args *SailArgs) (err error) {
 	return nil
 }
 
+func (s *Server) makeKubeConfigController(args *SailArgs) *crdclient.Client {
+	opts := crdclient.Option{
+		DomainSuffix: args.RegistryOptions.KubeOptions.DomainSuffix,
+		Identifier:   "crd-controller",
+		KrtDebugger:  args.KrtDebugger,
+	}
+
+	schemas := collections.Sail
+
+	return crdclient.NewForSchemas(s.kubeClient, opts, schemas)
+}
+
 func (s *Server) initK8SConfigStore(args *SailArgs) error {
 	if s.kubeClient == nil {
 		return nil
 	}
-	// TODO
+	configController := s.makeKubeConfigController(args)
+	s.ConfigStores = append(s.ConfigStores, configController)
 	return nil
 }
 

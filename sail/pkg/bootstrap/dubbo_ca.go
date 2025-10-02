@@ -275,12 +275,6 @@ func (s *Server) createDubboCA(opts *caOptions) (*ca.DubboCA, error) {
 	if useSelfSignedCA {
 		if features.UseCacertsForSelfSignedCA && dubboGenerated {
 			klog.Infof("DubboGenerated %s secret found, use it as the CA certificate", ca.CACertsSecret)
-
-			// TODO(jaellio): Currently, when the USE_CACERTS_FOR_SELF_SIGNED_CA flag is true dubbod
-			// handles loading and updating the "cacerts" secret with the "dubbo-generated" key the
-			// same way it handles the "dubbo-ca-secret" secret. Isitod utilizes a secret watch instead
-			// of file watch to check for secret updates. This may change in the future, and dubbod
-			// will watch the file mount instead.
 		}
 
 		// Either the secret is not mounted because it is named `dubbo-ca-secret`,

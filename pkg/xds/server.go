@@ -20,7 +20,6 @@ package xds
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -235,7 +234,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// A nonce becomes stale following a newer nonce being sent to Envoy.
 	// previousInfo.NonceSent can be empty if we previously had shouldRespond=true but didn't send any resources.
 	if request.ResponseNonce != previousInfo.NonceSent {
-		if features.EnableUnsafeAssertions && previousInfo.NonceSent == "" {
+		if previousInfo.NonceSent == "" {
 			// Assert we do not end up in an invalid state
 			klog.V(2).Infof("ADS:%s: REQ %s Expired nonce received %s, but we never sent any nonce", stype,
 				id, request.ResponseNonce)

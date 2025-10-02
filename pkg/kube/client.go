@@ -28,6 +28,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"github.com/apache/dubbo-kubernetes/pkg/sleep"
 	"go.uber.org/atomic"
+	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -61,6 +62,7 @@ type client struct {
 	clusterID              cluster.ID
 	informerWatchesPending *atomic.Int32
 	started                atomic.Bool
+	dubbo                  istioclient.Interface
 	crdWatcher             kubetypes.CrdWatcher
 	fastSync               bool
 }
@@ -77,6 +79,8 @@ type Client interface {
 	Metadata() metadata.Interface
 
 	Informers() informerfactory.InformerFactory
+
+	Dubbo() istioclient.Interface
 
 	ObjectFilter() kubetypes.DynamicObjectFilter
 
@@ -143,6 +147,11 @@ func newClientInternal(clientFactory *clientFactory, opts ...ClientOption) (*cli
 		return nil, err
 	}
 
+	c.dubbo, err = istioclient.NewForConfig(c.config)
+	if err != nil {
+		return nil, err
+	}
+
 	c.extSet, err = kubeExtClient.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
@@ -185,6 +194,19 @@ var (
 	_ CLIClient = &client{}
 )
 
+func EnableCrdWatcher(c Client) Client {
+	if NewCrdWatcher == nil {
+		panic("NewCrdWatcher is unset. Likely the crd watcher library is not imported anywhere")
+	}
+	if c.(*client).crdWatcher != nil {
+		panic("EnableCrdWatcher called twice for the same client")
+	}
+	c.(*client).crdWatcher = NewCrdWatcher(c)
+	return c
+}
+
+var NewCrdWatcher func(Client) kubetypes.CrdWatcher
+
 func (c *client) Ext() kubeExtClient.Interface {
 	return c.extSet
 }
@@ -207,6 +229,10 @@ func (c *client) Metadata() metadata.Interface {
 
 func (c *client) Informers() informerfactory.InformerFactory {
 	return c.informerFactory
+}
+
+func (c *client) Dubbo() istioclient.Interface {
+	return c.dubbo
 }
 
 func (c *client) ObjectFilter() kubetypes.DynamicObjectFilter {

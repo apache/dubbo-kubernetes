@@ -105,24 +105,23 @@ type Caller struct {
 }
 
 type Options struct {
-	ServeOnlyFiles       bool
-	ProvCert             string
-	FileMountedCerts     bool
-	SailCertProvider     string
-	OutputKeyCertToDir   string
-	CertChainFilePath    string
-	KeyFilePath          string
-	RootCertFilePath     string
-	CARootPath           string
-	CAEndpoint           string
-	CAProviderName       string
-	CredFetcher          CredFetcher
-	CAHeaders            map[string]string
-	CAEndpointSAN        string
-	CertSigner           string
-	ClusterID            string
-	CredIdentityProvider string
-	TrustDomain          string
+	ServeOnlyFiles     bool
+	ProvCert           string
+	FileMountedCerts   bool
+	SailCertProvider   string
+	OutputKeyCertToDir string
+	CertChainFilePath  string
+	KeyFilePath        string
+	RootCertFilePath   string
+	CARootPath         string
+	CAEndpoint         string
+	CAProviderName     string
+	CredFetcher        CredFetcher
+	CAHeaders          map[string]string
+	CAEndpointSAN      string
+	CertSigner         string
+	ClusterID          string
+	TrustDomain        string
 }
 
 type CredFetcher interface {

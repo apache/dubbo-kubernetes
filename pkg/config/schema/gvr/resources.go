@@ -38,6 +38,8 @@ var (
 	RequestAuthentication          = schema.GroupVersionResource{Group: "security.dubbo.io", Version: "v1", Resource: "requestauthentications"}
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.io", Version: "v1", Resource: "peerauthentications"}
 	AuthorizationPolicy            = schema.GroupVersionResource{Group: "security.dubbo.io", Version: "v1", Resource: "authorizationpolicies"}
+	DestinationRule                = schema.GroupVersionResource{Group: "networking.dubbo.io", Version: "v1", Resource: "destinationrules"}
+	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.io", Version: "v1", Resource: "virtualservices"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
@@ -63,6 +65,10 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case PeerAuthentication:
 		return false
 	case AuthorizationPolicy:
+		return false
+	case DestinationRule:
+		return false
+	case VirtualService:
 		return false
 	}
 	return false

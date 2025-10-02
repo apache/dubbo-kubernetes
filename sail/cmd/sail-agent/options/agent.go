@@ -11,6 +11,9 @@ const xdsHeaderPrefix = "XDS_HEADER_"
 
 func NewAgentOptions(proxy *ProxyArgs, cfg *meshconfig.ProxyConfig, sds dubboagent.SDSServiceFactory) *dubboagent.AgentOptions {
 	o := &dubboagent.AgentOptions{
+		XDSHeaders:                 map[string]string{},
+		GRPCBootstrapPath:          grpcBootstrapEnv,
+		SDSFactory:                 sds,
 		WorkloadIdentitySocketFile: workloadIdentitySocketFile,
 	}
 	extractXDSHeadersFromEnv(o)

@@ -86,7 +86,7 @@ func (rotator *SelfSignedCARootCertRotator) Run(stopCh chan struct{}) {
 		select {
 		case <-ticker.C:
 			klog.Info("Check and rotate root cert.")
-			// rotator.checkAndRotateRootCert()
+			// TODO rotator.checkAndRotateRootCert()
 		case _, ok := <-stopCh:
 			if !ok {
 				klog.Info("Received stop signal, so stop the root cert rotator.")
