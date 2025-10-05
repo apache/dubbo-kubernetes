@@ -26,7 +26,7 @@ func (s *Server) initConfigValidation(args *SailArgs) error {
 		s.addStartFunc("validation controller", func(stop <-chan struct{}) error {
 			klog.Infof("Starting validation controller")
 			go controller.NewValidatingWebhookController(
-				s.kubeClient, args.Namespace, s.dubbodCertBundleWatcher).Run(stop)
+				s.kubeClient, args.Revision, args.Namespace, s.dubbodCertBundleWatcher).Run(stop)
 			return nil
 		})
 	}

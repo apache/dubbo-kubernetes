@@ -43,8 +43,9 @@ type Controller struct {
 	webhooks                      kclient.Client[*kubeApiAdmission.ValidatingWebhookConfiguration]
 }
 
-func NewValidatingWebhookController(client kube.Client, ns string, caBundleWatcher *keycertbundle.Watcher) *Controller {
+func NewValidatingWebhookController(client kube.Client, revision, ns string, caBundleWatcher *keycertbundle.Watcher) *Controller {
 	o := Options{
+		Revision:         revision,
 		WatchedNamespace: ns,
 		CABundleWatcher:  caBundleWatcher,
 		ServiceName:      "dubbod",

@@ -50,6 +50,7 @@ type Webhook struct {
 	env          *model.Environment
 	Config       *Config
 	valuesConfig ValuesConfig
+	revision     string
 }
 
 func NewWebhook(p WebhookParameters) (*Webhook, error) {
@@ -61,13 +62,14 @@ func NewWebhook(p WebhookParameters) (*Webhook, error) {
 		watcher:    p.Watcher,
 		meshConfig: p.Env.Mesh(),
 		env:        p.Env,
+		revision:   p.Revision,
 	}
 
-	sidecarConfig, valuesConfig, err := p.Watcher.Get()
+	proxylessConfig, valuesConfig, err := p.Watcher.Get()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get initial configuration: %v", err)
 	}
-	if err := wh.updateConfig(sidecarConfig, valuesConfig); err != nil {
+	if err := wh.updateConfig(proxylessConfig, valuesConfig); err != nil {
 		return nil, fmt.Errorf("failed to process webhook config: %v", err)
 	}
 
@@ -84,10 +86,11 @@ func NewWebhook(p WebhookParameters) (*Webhook, error) {
 }
 
 type WebhookParameters struct {
-	Watcher Watcher
-	Port    int
-	Env     *model.Environment
-	Mux     *http.ServeMux
+	Watcher  Watcher
+	Port     int
+	Env      *model.Environment
+	Mux      *http.ServeMux
+	Revision string
 }
 
 type ValuesConfig struct {
@@ -221,7 +224,6 @@ type InjectionParameters struct {
 	pod                 *corev1.Pod
 	deployMeta          types.NamespacedName
 	namespace           *corev1.Namespace
-	nativeSidecar       bool
 	typeMeta            metav1.TypeMeta
 	templates           map[string]*template.Template
 	defaultTemplate     []string
@@ -346,6 +348,11 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 
 	pod.ManagedFields = nil
 
+	potentialPodName(pod.ObjectMeta)
+	if pod.ObjectMeta.Namespace == "" {
+		pod.ObjectMeta.Namespace = req.Namespace
+	}
+
 	klog.Infof("Process proxyless injection request")
 
 	proxyConfig := wh.env.GetProxyConfigOrDefault(pod.Namespace, pod.Labels, pod.Annotations, wh.meshConfig)
@@ -362,6 +369,7 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 		valuesConfig:        wh.valuesConfig,
 		injectedAnnotations: wh.Config.InjectedAnnotations,
 		proxyEnvs:           parseInjectEnvs(path),
+		revision:            wh.revision,
 	}
 
 	patchBytes, err := injectPod(params)

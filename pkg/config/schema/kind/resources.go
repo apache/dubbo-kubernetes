@@ -2,46 +2,38 @@ package kind
 
 const (
 	Unknown Kind = iota
-	AuthorizationPolicy
+	Address
 	CustomResourceDefinition
-	DestinationRule
 	MeshConfig
 	MeshNetworks
-	MutatingWebhookConfiguration
 	Namespace
-	PeerAuthentication
 	Pod
-	RequestAuthentication
 	Secret
 	Service
 	ServiceAccount
 	StatefulSet
 	ValidatingWebhookConfiguration
+	MutatingWebhookConfiguration
+	PeerAuthentication
+	RequestAuthentication
 	VirtualService
+	DestinationRule
 )
 
 func (k Kind) String() string {
 	switch k {
-	case AuthorizationPolicy:
-		return "AuthorizationPolicy"
+	case Address:
+		return "Address"
 	case CustomResourceDefinition:
 		return "CustomResourceDefinition"
-	case DestinationRule:
-		return "DestinationRule"
 	case MeshConfig:
 		return "MeshConfig"
 	case MeshNetworks:
 		return "MeshNetworks"
-	case MutatingWebhookConfiguration:
-		return "MutatingWebhookConfiguration"
 	case Namespace:
 		return "Namespace"
-	case PeerAuthentication:
-		return "PeerAuthentication"
 	case Pod:
 		return "Pod"
-	case RequestAuthentication:
-		return "RequestAuthentication"
 	case Secret:
 		return "Secret"
 	case Service:
@@ -52,8 +44,16 @@ func (k Kind) String() string {
 		return "StatefulSet"
 	case ValidatingWebhookConfiguration:
 		return "ValidatingWebhookConfiguration"
+	case MutatingWebhookConfiguration:
+		return "MutatingWebhookConfiguration"
+	case PeerAuthentication:
+		return "PeerAuthentication"
+	case RequestAuthentication:
+		return "RequestAuthentication"
 	case VirtualService:
 		return "VirtualService"
+	case DestinationRule:
+		return "DestinationRule"
 	default:
 		return "Unknown"
 	}

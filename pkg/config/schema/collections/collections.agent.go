@@ -1,5 +1,5 @@
-//go:build !agent
-// +build !agent
+//go:build agent
+// +build agent
 
 package collections
 

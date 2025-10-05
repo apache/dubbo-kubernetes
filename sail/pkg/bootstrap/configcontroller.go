@@ -31,6 +31,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/config/memory"
 	dubboCredentials "github.com/apache/dubbo-kubernetes/sail/pkg/credentials"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/credentials/kube"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -193,6 +194,11 @@ func (s *Server) initK8SConfigStore(args *SailArgs) error {
 	}
 	configController := s.makeKubeConfigController(args)
 	s.ConfigStores = append(s.ConfigStores, configController)
+	s.XDSServer.ConfigUpdate(&model.PushRequest{
+		Full:   true,
+		Reason: model.NewReasonStats(model.GlobalUpdate),
+		Forced: true,
+	})
 	return nil
 }
 

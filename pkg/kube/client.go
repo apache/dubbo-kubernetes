@@ -20,9 +20,9 @@ package kube
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/operator/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"

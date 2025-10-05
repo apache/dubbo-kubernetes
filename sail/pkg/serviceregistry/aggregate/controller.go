@@ -4,6 +4,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
@@ -142,6 +143,36 @@ func (c *Controller) GetRegistries() []serviceregistry.Instance {
 		out[i] = c.registries[i]
 	}
 	return out
+}
+
+func (c *Controller) AddRegistryAndRun(registry serviceregistry.Instance, stop <-chan struct{}) {
+	if stop == nil {
+		klog.Warningf("nil stop channel passed to AddRegistryAndRun for registry %s/%s", registry.Provider(), registry.Cluster())
+	}
+	c.storeLock.Lock()
+	defer c.storeLock.Unlock()
+	c.addRegistry(registry, stop)
+	if c.running {
+		go registry.Run(stop)
+	}
+}
+
+func (c *Controller) addRegistry(registry serviceregistry.Instance, stop <-chan struct{}) {
+	added := false
+	if registry.Provider() == provider.Kubernetes {
+		for i, r := range c.registries {
+			if r.Provider() != provider.Kubernetes {
+				// insert the registry in the position of the first non kubernetes registry
+				c.registries = slices.Insert(c.registries, i, &registryEntry{Instance: registry, stop: stop})
+				added = true
+				break
+			}
+		}
+	}
+	if !added {
+		c.registries = append(c.registries, &registryEntry{Instance: registry, stop: stop})
+	}
+
 }
 
 func mergeService(dst, src *model.Service, srcRegistry serviceregistry.Instance) {

@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"go.uber.org/atomic"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,26 +31,40 @@ import (
 	"time"
 )
 
+var (
+	LastPushStatus *PushContext
+	// LastPushMutex will protect the LastPushStatus
+	LastPushMutex sync.Mutex
+)
+
 type TriggerReason string
 
 const (
+	EndpointUpdate TriggerReason = "endpoint"
 	UnknownTrigger TriggerReason = "unknown"
+	ProxyRequest   TriggerReason = "proxyrequest"
+	GlobalUpdate   TriggerReason = "global"
+	SecretTrigger  TriggerReason = "secret"
 )
 
+type ProxyPushStatus struct {
+	Proxy   string `json:"proxy,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
 type PushContext struct {
-	Mesh                 *meshconfig.MeshConfig `json:"-"`
-	initializeMutex      sync.Mutex
-	InitDone             atomic.Bool
-	Networks             *meshconfig.MeshNetworks
-	networkMgr           *NetworkManager
-	clusterLocalHosts    ClusterLocalHosts
-	exportToDefaults     exportToDefaults
-	AuthnPolicies        *AuthenticationPolicies `json:"-"`
-	AuthzPolicies        *AuthorizationPolicies  `json:"-"`
-	virtualServiceIndex  virtualServiceIndex
-	destinationRuleIndex destinationRuleIndex
-	ServiceIndex         serviceIndex
-	serviceAccounts      map[serviceAccountKey][]string
+	Mesh              *meshconfig.MeshConfig `json:"-"`
+	initializeMutex   sync.Mutex
+	InitDone          atomic.Bool
+	Networks          *meshconfig.MeshNetworks
+	networkMgr        *NetworkManager
+	clusterLocalHosts ClusterLocalHosts
+	exportToDefaults  exportToDefaults
+	ServiceIndex      serviceIndex
+	serviceAccounts   map[serviceAccountKey][]string
+	PushVersion       string
+	ProxyStatus       map[string]map[string]ProxyPushStatus
+	proxyStatusMutex  sync.RWMutex
 }
 
 type serviceAccountKey struct {
@@ -57,22 +72,12 @@ type serviceAccountKey struct {
 	namespace string
 }
 
-type virtualServiceIndex struct {
-}
-
-type destinationRuleIndex struct {
-}
-
-type consolidatedDestRules struct {
-	specificDestRules map[host.Name][]*ConsolidatedDestRule
-	wildcardDestRules map[host.Name][]*ConsolidatedDestRule
-}
-
 type serviceIndex struct {
 	privateByNamespace   map[string][]*Service
 	public               []*Service
 	exportedToNamespace  map[string][]*Service
 	HostnameAndNamespace map[host.Name]map[string]*Service `json:"-"`
+	instancesByPort      map[string]map[int][]*DubboEndpoint
 }
 
 type ConsolidatedDestRule struct {
@@ -86,16 +91,32 @@ type ReasonStats map[TriggerReason]int
 type PushRequest struct {
 	Reason           ReasonStats
 	ConfigsUpdated   sets.Set[ConfigKey]
+	AddressesUpdated sets.Set[string]
 	Forced           bool
 	Full             bool
 	Push             *PushContext
-	LastPushContext  *PushContext
-	AddressesUpdated sets.Set[string]
 	Start            time.Time
+	Delta            ResourceDelta
 }
 
+type ResourceDelta = xds.ResourceDelta
+
 func NewPushContext() *PushContext {
-	return &PushContext{}
+	return &PushContext{
+		// ServiceIndex:    serviceIndex{},
+		// ProxyStatus: map[string]map[string]ProxyPushStatus{},
+		// serviceAccounts: map[serviceAccountKey][]string{},
+	}
+}
+
+func newServiceIndex() serviceIndex {
+	return serviceIndex{
+		public:               []*Service{},
+		privateByNamespace:   map[string][]*Service{},
+		exportedToNamespace:  map[string][]*Service{},
+		HostnameAndNamespace: map[host.Name]map[string]*Service{},
+		instancesByPort:      map[string]map[int][]*DubboEndpoint{},
+	}
 }
 
 type ConfigKey struct {
@@ -122,7 +143,10 @@ func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
 	return merged
 }
 
-type XDSUpdater interface{}
+type XDSUpdater interface {
+	EDSUpdate(shard ShardKey, hostname string, namespace string, entry []*DubboEndpoint)
+	ConfigUpdate(req *PushRequest)
+}
 
 func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
 	ps.initializeMutex.Lock()
@@ -179,86 +203,9 @@ func (ps *PushContext) initDefaultExportMaps() {
 	}
 }
 
-func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.Set[ConfigKey]) {
-
-}
-
-func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {
-}
-
-func (ps *PushContext) initVirtualServices(env *Environment) {
-}
-
-func (ps *PushContext) initDestinationRules(env *Environment) {
-}
-
-func (ps *PushContext) initAuthnPolicies(env *Environment) {
-	ps.AuthnPolicies = initAuthenticationPolicies(env)
-}
-
-func (ps *PushContext) initAuthorizationPolicies(env *Environment) {
-	ps.AuthzPolicies = GetAuthorizationPolicies(env)
-}
-
-func (ps *PushContext) createNewContext(env *Environment) {
-	ps.initServiceRegistry(env, nil)
-	ps.initVirtualServices(env)
-	ps.initDestinationRules(env)
-	ps.initAuthnPolicies(env)
-	ps.initAuthorizationPolicies(env)
-}
+func (ps *PushContext) createNewContext(env *Environment) {}
 
 func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
-	var servicesChanged, virtualServicesChanged, destinationRulesChanged, authnChanged, authzChanged bool
-
-	// We do not need to watch Ingress or Gateway API changes. Both of these have their own controllers which will send
-	// events for Istio types (Gateway and VirtualService).
-	for conf := range pushReq.ConfigsUpdated {
-		switch conf.Kind {
-		case kind.DestinationRule:
-			destinationRulesChanged = true
-		case kind.VirtualService:
-			virtualServicesChanged = true
-		case kind.AuthorizationPolicy:
-			authzChanged = true
-		case kind.RequestAuthentication,
-			kind.PeerAuthentication:
-			authnChanged = true
-		}
-	}
-
-	if servicesChanged {
-		// Services have changed. initialize service registry
-		ps.initServiceRegistry(env, pushReq.ConfigsUpdated)
-	} else {
-		// make sure we copy over things that would be generated in initServiceRegistry
-		ps.ServiceIndex = oldPushContext.ServiceIndex
-		ps.serviceAccounts = oldPushContext.serviceAccounts
-	}
-
-	if virtualServicesChanged {
-		ps.initVirtualServices(env)
-	} else {
-		ps.virtualServiceIndex = oldPushContext.virtualServiceIndex
-	}
-
-	if destinationRulesChanged {
-		ps.initDestinationRules(env)
-	} else {
-		ps.destinationRuleIndex = oldPushContext.destinationRuleIndex
-	}
-
-	if authnChanged {
-		ps.initAuthnPolicies(env)
-	} else {
-		ps.AuthnPolicies = oldPushContext.AuthnPolicies
-	}
-
-	if authzChanged {
-		ps.initAuthorizationPolicies(env)
-	} else {
-		ps.AuthzPolicies = oldPushContext.AuthzPolicies
-	}
 }
 
 func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
@@ -303,6 +250,33 @@ func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
 	}
 
 	return pr
+}
+
+func (r ReasonStats) Has(reason TriggerReason) bool {
+	return r[reason] > 0
+}
+
+func (pr *PushRequest) IsRequest() bool {
+	return len(pr.Reason) == 1 && pr.Reason.Has(ProxyRequest)
+}
+
+func (pr *PushRequest) PushReason() string {
+	if pr.IsRequest() {
+		return " request"
+	}
+	return ""
+}
+
+func (ps *PushContext) OnConfigChange() {
+	LastPushMutex.Lock()
+	LastPushStatus = ps
+	LastPushMutex.Unlock()
+	ps.UpdateMetrics()
+}
+
+func (ps *PushContext) UpdateMetrics() {
+	ps.proxyStatusMutex.RLock()
+	defer ps.proxyStatusMutex.RUnlock()
 }
 
 func NewReasonStats(reasons ...TriggerReason) ReasonStats {

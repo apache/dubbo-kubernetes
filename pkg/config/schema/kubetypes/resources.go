@@ -45,6 +45,8 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.MeshConfig, true
 	case *k8sioapicorev1.Namespace:
 		return gvk.Namespace, true
+	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
+		return gvk.MutatingWebhookConfiguration, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
 	default:

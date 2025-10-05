@@ -40,8 +40,9 @@ type WebhookCertPatcher struct {
 	webhooks kclient.Client[*v1.MutatingWebhookConfiguration]
 }
 
-func NewWebhookCertPatcher(client kubelib.Client, webhookName string, caBundleWatcher *keycertbundle.Watcher) (*WebhookCertPatcher, error) {
+func NewWebhookCertPatcher(client kubelib.Client, webhookName, revision string, caBundleWatcher *keycertbundle.Watcher) (*WebhookCertPatcher, error) {
 	p := &WebhookCertPatcher{
+		revision:        revision,
 		webhookName:     webhookName,
 		CABundleWatcher: caBundleWatcher,
 	}
@@ -119,13 +120,6 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 	return err
 }
 
-func (w *WebhookCertPatcher) Run(stopChan <-chan struct{}) {
-	go w.startCaBundleWatcher(stopChan)
-	w.webhooks.Start(stopChan)
-	kubelib.WaitForCacheSync("webhook patcher", stopChan, w.webhooks.HasSynced)
-	w.queue.Run(stopChan)
-}
-
 func (w *WebhookCertPatcher) startCaBundleWatcher(stop <-chan struct{}) {
 	id, watchCh := w.CABundleWatcher.AddWatcher()
 	defer w.CABundleWatcher.RemoveWatcher(id)
@@ -139,4 +133,15 @@ func (w *WebhookCertPatcher) startCaBundleWatcher(stop <-chan struct{}) {
 			return
 		}
 	}
+}
+
+func (w *WebhookCertPatcher) Run(stopChan <-chan struct{}) {
+	go w.startCaBundleWatcher(stopChan)
+	w.webhooks.Start(stopChan)
+	kubelib.WaitForCacheSync("webhook patcher", stopChan, w.webhooks.HasSynced)
+	w.queue.Run(stopChan)
+}
+
+func (w *WebhookCertPatcher) HasSynced() bool {
+	return w.queue.HasSynced()
 }

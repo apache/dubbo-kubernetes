@@ -22,11 +22,6 @@ import (
 
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
-	case gvk.AuthorizationPolicy:
-		return c.Dubbo().SecurityV1().AuthorizationPolicies(cfg.Namespace).Create(context.TODO(), &apiistioioapisecurityv1.AuthorizationPolicy{
-			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.AuthorizationPolicy)),
-		}, metav1.CreateOptions{})
 	case gvk.DestinationRule:
 		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Create(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
@@ -54,11 +49,6 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 
 func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
-	case gvk.AuthorizationPolicy:
-		return c.Dubbo().SecurityV1().AuthorizationPolicies(cfg.Namespace).Update(context.TODO(), &apiistioioapisecurityv1.AuthorizationPolicy{
-			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.AuthorizationPolicy)),
-		}, metav1.UpdateOptions{})
 	case gvk.DestinationRule:
 		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Update(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
@@ -86,11 +76,6 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 
 func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
-	case gvk.AuthorizationPolicy:
-		return c.Dubbo().SecurityV1().AuthorizationPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapisecurityv1.AuthorizationPolicy{
-			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
-		}, metav1.UpdateOptions{})
 	case gvk.DestinationRule:
 		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
@@ -121,21 +106,6 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return nil, fmt.Errorf("gvk mismatch: %v, modified: %v", orig.GroupVersionKind, mod.GroupVersionKind)
 	}
 	switch orig.GroupVersionKind {
-	case gvk.AuthorizationPolicy:
-		oldRes := &apiistioioapisecurityv1.AuthorizationPolicy{
-			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapisecurityv1beta1.AuthorizationPolicy)),
-		}
-		modRes := &apiistioioapisecurityv1.AuthorizationPolicy{
-			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapisecurityv1beta1.AuthorizationPolicy)),
-		}
-		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
-		if err != nil {
-			return nil, err
-		}
-		return c.Dubbo().SecurityV1().AuthorizationPolicies(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.DestinationRule:
 		oldRes := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: origMeta,
@@ -150,7 +120,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().NetworkingV1().DestinationRules(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "sail-discovery"})
 	case gvk.PeerAuthentication:
 		oldRes := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: origMeta,
@@ -165,7 +135,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().SecurityV1().PeerAuthentications(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "sail-discovery"})
 	case gvk.RequestAuthentication:
 		oldRes := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: origMeta,
@@ -180,7 +150,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().SecurityV1().RequestAuthentications(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "sail-discovery"})
 	case gvk.VirtualService:
 		oldRes := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: origMeta,
@@ -195,7 +165,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().NetworkingV1().VirtualServices(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "sail-discovery"})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", orig.GroupVersionKind)
 	}
@@ -207,8 +177,6 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		deleteOptions.Preconditions = &metav1.Preconditions{ResourceVersion: resourceVersion}
 	}
 	switch typ {
-	case gvk.AuthorizationPolicy:
-		return c.Dubbo().SecurityV1().AuthorizationPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.DestinationRule:
 		return c.Dubbo().NetworkingV1().DestinationRules(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.PeerAuthentication:
@@ -223,25 +191,6 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 }
 
 var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.Config{
-	gvk.AuthorizationPolicy: func(r runtime.Object) config.Config {
-		obj := r.(*apiistioioapisecurityv1.AuthorizationPolicy)
-		return config.Config{
-			Meta: config.Meta{
-				GroupVersionKind:  gvk.AuthorizationPolicy,
-				Name:              obj.Name,
-				Namespace:         obj.Namespace,
-				Labels:            obj.Labels,
-				Annotations:       obj.Annotations,
-				ResourceVersion:   obj.ResourceVersion,
-				CreationTimestamp: obj.CreationTimestamp.Time,
-				OwnerReferences:   obj.OwnerReferences,
-				UID:               string(obj.UID),
-				Generation:        obj.Generation,
-			},
-			Spec:   &obj.Spec,
-			Status: &obj.Status,
-		}
-	},
 	gvk.ConfigMap: func(r runtime.Object) config.Config {
 		obj := r.(*k8sioapicorev1.ConfigMap)
 		return config.Config{
@@ -331,24 +280,6 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 			},
 			Spec:   &obj.Spec,
 			Status: &obj.Status,
-		}
-	},
-	gvk.MutatingWebhookConfiguration: func(r runtime.Object) config.Config {
-		obj := r.(*k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration)
-		return config.Config{
-			Meta: config.Meta{
-				GroupVersionKind:  gvk.MutatingWebhookConfiguration,
-				Name:              obj.Name,
-				Namespace:         obj.Namespace,
-				Labels:            obj.Labels,
-				Annotations:       obj.Annotations,
-				ResourceVersion:   obj.ResourceVersion,
-				CreationTimestamp: obj.CreationTimestamp.Time,
-				OwnerReferences:   obj.OwnerReferences,
-				UID:               string(obj.UID),
-				Generation:        obj.Generation,
-			},
-			Spec: obj,
 		}
 	},
 	gvk.Namespace: func(r runtime.Object) config.Config {
@@ -478,6 +409,24 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				Generation:        obj.Generation,
 			},
 			Spec: &obj.Spec,
+		}
+	},
+	gvk.MutatingWebhookConfiguration: func(r runtime.Object) config.Config {
+		obj := r.(*k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.MutatingWebhookConfiguration,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec: obj,
 		}
 	},
 	gvk.ValidatingWebhookConfiguration: func(r runtime.Object) config.Config {

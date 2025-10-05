@@ -19,6 +19,7 @@ package server
 
 import (
 	"k8s.io/klog/v2"
+	"sync"
 	"time"
 )
 
@@ -32,11 +33,13 @@ type task struct {
 type Instance interface {
 	Start(stop <-chan struct{}) error
 	RunComponent(name string, t Component)
+	Wait()
 }
 
 type instance struct {
-	components chan task
-	done       chan struct{}
+	components           chan task
+	done                 chan struct{}
+	requiredTerminations sync.WaitGroup
 }
 
 var _ Instance = &instance{}
@@ -64,6 +67,7 @@ func (i *instance) Start(stop <-chan struct{}) error {
 			}
 			runtime := time.Since(t0)
 			if runtime > time.Second {
+				klog.Warningf("slow startup task")
 			}
 		default:
 			startupDone = true
@@ -74,6 +78,7 @@ func (i *instance) Start(stop <-chan struct{}) error {
 		for {
 			select {
 			case <-stop:
+				i.requiredTerminations.Wait()
 				shutdown()
 				return
 			case next := <-i.components:
@@ -82,6 +87,8 @@ func (i *instance) Start(stop <-chan struct{}) error {
 				}
 				runtime := time.Since(t0)
 				if runtime > time.Second {
+					klog.Warningf("slow post-start task")
+
 				}
 			}
 		}
@@ -93,8 +100,12 @@ func (i *instance) Start(stop <-chan struct{}) error {
 func (i *instance) RunComponent(name string, t Component) {
 	select {
 	case <-i.done:
-		klog.Infof("attempting to run a new component %q after the server was shutdown", name)
+		klog.Warningf("attempting to run a new component %q after the server was shutdown", name)
 	default:
 		i.components <- task{name, t}
 	}
+}
+
+func (i *instance) Wait() {
+	<-i.done
 }

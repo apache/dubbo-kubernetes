@@ -1,6 +1,7 @@
 package xds
 
 import (
+	"errors"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
@@ -13,6 +14,10 @@ import (
 )
 
 func (s *DiscoveryServer) StreamDeltas(stream DeltaDiscoveryStream) error {
+	if !s.IsServerReady() {
+		return errors.New("server is not ready to serve discovery information")
+	}
+
 	ctx := stream.Context()
 	peerAddr := "0.0.0.0"
 	if peerInfo, ok := peer.FromContext(ctx); ok {

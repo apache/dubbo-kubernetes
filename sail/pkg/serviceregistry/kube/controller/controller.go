@@ -62,6 +62,7 @@ type Options struct {
 	MeshServiceController *aggregate.Controller
 	KrtDebugger           *krt.DebugHandler
 	SyncTimeout           time.Duration
+	Revision              string
 }
 
 func (c *Controller) Services() []*model.Service {
@@ -118,5 +119,5 @@ func (c *Controller) HasSynced() bool {
 }
 
 func (c *Controller) informersSynced() bool {
-	return false
+	return true
 }

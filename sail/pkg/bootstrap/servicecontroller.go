@@ -47,7 +47,7 @@ func (s *Server) initServiceControllers(args *SailArgs) error {
 // initKubeRegistry creates all the k8s service controllers under this pilot
 func (s *Server) initKubeRegistry(args *SailArgs) (err error) {
 	args.RegistryOptions.KubeOptions.ClusterID = s.clusterID
-	// TODO reversion
+	args.RegistryOptions.KubeOptions.Revision = args.Revision
 	args.RegistryOptions.KubeOptions.KrtDebugger = args.KrtDebugger
 	// TODO metrics
 	args.RegistryOptions.KubeOptions.XDSUpdater = s.XDSServer
@@ -55,6 +55,5 @@ func (s *Server) initKubeRegistry(args *SailArgs) (err error) {
 	args.RegistryOptions.KubeOptions.MeshWatcher = s.environment.Watcher
 	args.RegistryOptions.KubeOptions.SystemNamespace = args.Namespace
 	args.RegistryOptions.KubeOptions.MeshServiceController = s.ServiceController()
-	// TODO NewMulticluster
 	return
 }
