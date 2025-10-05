@@ -42,8 +42,6 @@ const (
 	SourceMeshConfig
 	SourceDubboRA
 	sourceSpiffeEndpoints
-
-	RemoteDefaultPollPeriod = 30 * time.Minute
 )
 
 func (s Source) String() string {

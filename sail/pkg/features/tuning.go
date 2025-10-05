@@ -19,6 +19,7 @@ package features
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/env"
+	"runtime"
 	"time"
 )
 
@@ -36,8 +37,63 @@ var (
 		"Sets the max receive buffer size of gRPC stream in bytes.",
 	).Get()
 
-	XDSCacheMaxSize = env.Register("SAIL_XDS_CACHE_SIZE", 60000,
-		"The maximum number of cache entries for the XDS cache.").Get()
-	XDSCacheIndexClearInterval = env.Register("SAIL_XDS_CACHE_INDEX_CLEAR_INTERVAL", 5*time.Second,
-		"The interval for xds cache index clearing.").Get()
+	RequestLimit = func() float64 {
+		v := env.Register(
+			"SAIL_MAX_REQUESTS_PER_SECOND",
+			0.0,
+			"Limits the number of incoming XDS requests per second. On larger machines this can be increased to handle more proxies concurrently. "+
+				"If set to 0 or unset, the max will be automatically determined based on the machine size",
+		).Get()
+		if v > 0 {
+			return v
+		}
+		procs := runtime.GOMAXPROCS(0)
+		// Heuristic to scale with cores. We end up with...
+		// 1: 20
+		// 2: 25
+		// 4: 35
+		// 32: 100
+		return min(float64(15+5*procs), 100.0)
+	}()
+
+	DebounceAfter = env.Register(
+		"SAIL_DEBOUNCE_AFTER",
+		100*time.Millisecond,
+		"The delay added to config/registry events for debouncing. This will delay the push by "+
+			"at least this interval. If no change is detected within this period, the push will happen, "+
+			" otherwise we'll keep delaying until things settle, up to a max of PILOT_DEBOUNCE_MAX.",
+	).Get()
+
+	DebounceMax = env.Register(
+		"SAIL_DEBOUNCE_MAX",
+		10*time.Second,
+		"The maximum amount of time to wait for events while debouncing. If events keep showing up with no breaks "+
+			"for this time, we'll trigger a push.",
+	).Get()
+
+	EnableEDSDebounce = env.Register(
+		"SAIL_ENABLE_EDS_DEBOUNCE",
+		true,
+		"If enabled, Sail will include EDS pushes in the push debouncing, configured by PILOT_DEBOUNCE_AFTER and PILOT_DEBOUNCE_MAX."+
+			" EDS pushes may be delayed, but there will be fewer pushes. By default this is enabled",
+	).Get()
+
+	PushThrottle = func() int {
+		v := env.Register(
+			"PILOT_PUSH_THROTTLE",
+			0,
+			"Limits the number of concurrent pushes allowed. On larger machines this can be increased for faster pushes. "+
+				"If set to 0 or unset, the max will be automatically determined based on the machine size",
+		).Get()
+		if v > 0 {
+			return v
+		}
+		procs := runtime.GOMAXPROCS(0)
+		// Heuristic to scale with cores. We end up with...
+		// 1: 20
+		// 2: 25
+		// 4: 35
+		// 32: 100
+		return min(15+5*procs, 100)
+	}()
 )

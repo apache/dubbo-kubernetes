@@ -25,7 +25,9 @@ import (
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/klog/v2"
+	"strings"
 	"time"
 )
 
@@ -69,13 +71,9 @@ type Watcher interface {
 type ConnectionContext interface {
 	XdsConnection() *Connection
 	Watcher() Watcher
-	// Initialize checks the first request.
 	Initialize(node *core.Node) error
-	// Close discards the connection.
 	Close()
-	// Process responds to a discovery request.
 	Process(req *discovery.DiscoveryRequest) error
-	// Push responds to a push event queue
 	Push(ev any) error
 }
 
@@ -290,8 +288,35 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	}
 }
 
+func ResourcesToAny(r Resources) []*anypb.Any {
+	a := make([]*anypb.Any, 0, len(r))
+	for _, rr := range r {
+		a = append(a, rr.Resource)
+	}
+	return a
+}
+
 func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
-	return nil
+	conn := ctx.XdsConnection()
+	sendResponse := func() error {
+		return conn.stream.Send(res)
+	}
+	err := sendResponse()
+	if err == nil {
+		if res.Nonce != "" && !strings.HasPrefix(res.TypeUrl, model.DebugType) {
+			ctx.Watcher().UpdateWatchedResource(res.TypeUrl, func(wr *WatchedResource) *WatchedResource {
+				if wr == nil {
+					wr = &WatchedResource{TypeUrl: res.TypeUrl}
+				}
+				wr.NonceSent = res.Nonce
+				wr.LastSendTime = time.Now()
+				return wr
+			})
+		}
+	} else if status.Convert(err).Code() == codes.DeadlineExceeded {
+		klog.Infof("Timeout writing %s: %v", conn.conID, model.GetShortType(res.TypeUrl))
+	}
+	return err
 }
 
 type ResourceDelta struct {

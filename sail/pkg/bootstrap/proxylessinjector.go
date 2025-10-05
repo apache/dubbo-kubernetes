@@ -39,7 +39,7 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 			return nil, err
 		}
 	} else if s.kubeClient != nil {
-		configMapName := getInjectorConfigMapName()
+		configMapName := getInjectorConfigMapName(args.Revision)
 		cms := s.kubeClient.Kube().CoreV1().ConfigMaps(args.Namespace)
 		if _, err := cms.Get(context.TODO(), configMapName, metav1.GetOptions{}); err != nil {
 			if errors.IsNotFound(err) {
@@ -57,9 +57,10 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 	klog.Info("initializing proxyless injector")
 
 	parameters := inject.WebhookParameters{
-		Watcher: watcher,
-		Env:     s.environment,
-		Mux:     s.httpsMux,
+		Watcher:  watcher,
+		Env:      s.environment,
+		Mux:      s.httpsMux,
+		Revision: args.Revision,
 	}
 
 	wh, err := inject.NewWebhook(parameters)
@@ -69,7 +70,7 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 
 	if features.InjectionWebhookConfigName != "" {
 		s.addStartFunc("injection patcher", func(stop <-chan struct{}) error {
-			patcher, err := webhooks.NewWebhookCertPatcher(s.kubeClient, webhookName, s.dubbodCertBundleWatcher)
+			patcher, err := webhooks.NewWebhookCertPatcher(s.kubeClient, webhookName, args.Revision, s.dubbodCertBundleWatcher)
 			if err != nil {
 				klog.Errorf("failed to create webhook cert patcher: %v", err)
 				return nil
@@ -87,7 +88,10 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 	return wh, nil
 }
 
-func getInjectorConfigMapName() string {
+func getInjectorConfigMapName(revision string) string {
 	name := defaultInjectorConfigMapName
-	return name
+	if revision == "" || revision == "default" {
+		return name
+	}
+	return name + "-" + revision
 }

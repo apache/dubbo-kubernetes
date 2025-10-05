@@ -23,8 +23,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
@@ -157,7 +160,8 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases, args.KrtDebugger)
 	// TODO xds cache
-	// TODO initReadinessProbes
+
+	s.initReadinessProbes()
 
 	s.initServers(args)
 
@@ -239,11 +243,15 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 		}
 	}
 
-	// TODO initRegistryEventHandlers？
+	s.initRegistryEventHandlers()
 
 	s.initDiscoveryService()
 
 	s.startCA(caOpts)
+
+	if args.CtrlZOptions != nil {
+		_, _ = ctrlz.Run(args.CtrlZOptions)
+	}
 
 	if s.kubeClient != nil {
 		s.addStartFunc("kube client", func(stop <-chan struct{}) error {
@@ -319,6 +327,39 @@ func (s *Server) initDiscoveryService() {
 		s.XDSServer.Start(stop)
 		return nil
 	})
+}
+
+func (s *Server) initRegistryEventHandlers() {
+	klog.Info("initializing registry event handlers")
+
+	if s.configController != nil {
+		configHandler := func(prev config.Config, curr config.Config, event model.Event) {}
+		schemas := collections.Sail.All()
+		for _, schema := range schemas {
+			s.configController.RegisterEventHandler(schema.GroupVersionKind(), configHandler)
+		}
+	}
+}
+
+func (s *Server) initReadinessProbes() {
+	probes := map[string]readinessProbe{
+		"discovery": func() bool {
+			return s.XDSServer.IsServerReady()
+		},
+		"proxyless injector": func() bool {
+			return s.readinessFlags.proxylessInjectorReady.Load()
+		},
+		"config validation": func() bool {
+			return s.readinessFlags.configValidationReady.Load()
+		},
+	}
+	for name, probe := range probes {
+		s.addReadinessProbe(name, probe)
+	}
+}
+
+func (s *Server) addReadinessProbe(name string, fn readinessProbe) {
+	s.readinessProbes[name] = fn
 }
 
 func (s *Server) startCA(caOpts *caOptions) {
@@ -559,6 +600,10 @@ func (s *Server) getDubbodCertificate(*tls.ClientHelloInfo) (*tls.Certificate, e
 	return nil, fmt.Errorf("cert not initialized")
 }
 
+func (s *Server) WaitUntilCompletion() {
+	s.server.Wait()
+}
+
 func (s *Server) serveHTTP() error {
 	// At this point we are ready - start Http Listener so that it can respond to readiness events.
 	httpListener, err := net.Listen("tcp", s.httpServer.Addr)
@@ -626,6 +671,12 @@ func (s *Server) initSDSServer() {
 	if !features.EnableXDSIdentityCheck {
 		// Make sure we have security
 		klog.Warningf("skipping Kubernetes credential reader; SAIL_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
+	} else {
+		// s.XDSServer.ConfigUpdate(&model.PushRequest{
+		// 	Full:           false,
+		// 	ConfigsUpdated: sets.New(model.ConfigKey{Kind: k, Name: name, Namespace: namespace}),
+		// 	Reason:         model.NewReasonStats(model.SecretTrigger),
+		// })
 	}
 }
 
@@ -718,7 +769,7 @@ func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
 	start := time.Now()
 	klog.Info("Waiting for caches to be synced")
 	if !kubelib.WaitForCacheSync("server", stop, s.cachesSynced) {
-		klog.Info("Failed waiting for cache sync")
+		klog.Errorf("Failed waiting for cache sync")
 		return false
 	}
 	klog.Infof("All controller caches have been synced up in %v", time.Since(start))

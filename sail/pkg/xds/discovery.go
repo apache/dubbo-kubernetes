@@ -20,7 +20,9 @@ package xds
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"go.uber.org/atomic"
@@ -54,15 +56,32 @@ type DiscoveryServer struct {
 	concurrentPushLimit chan struct{}
 	adsClientsMutex     sync.RWMutex
 	adsClients          map[string]*Connection
+	Generators          map[string]model.XdsResourceGenerator
+	pushVersion         atomic.Uint64
 }
+
+var processStartTime = time.Now()
 
 func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string, debugger *krt.DebugHandler) *DiscoveryServer {
 	out := &DiscoveryServer{
-		Env:              env,
-		krtDebugger:      debugger,
-		InboundUpdates:   atomic.NewInt64(0),
-		CommittedUpdates: atomic.NewInt64(0),
+		Env:                 env,
+		Generators:          map[string]model.XdsResourceGenerator{},
+		krtDebugger:         debugger,
+		InboundUpdates:      atomic.NewInt64(0),
+		CommittedUpdates:    atomic.NewInt64(0),
+		concurrentPushLimit: make(chan struct{}, features.PushThrottle),
+		RequestRateLimit:    rate.NewLimiter(rate.Limit(features.RequestLimit), 1),
+		pushChannel:         make(chan *model.PushRequest, 10),
+		pushQueue:           NewPushQueue(),
+		DebounceOptions: DebounceOptions{
+			DebounceAfter:     features.DebounceAfter,
+			debounceMax:       features.DebounceMax,
+			enableEDSDebounce: features.EnableEDSDebounce,
+		},
+		adsClients:         map[string]*Connection{},
+		DiscoveryStartTime: processStartTime,
 	}
+
 	out.ClusterAliases = make(map[cluster.ID]cluster.ID)
 	for alias := range clusterAliases {
 		out.ClusterAliases[cluster.ID(alias)] = cluster.ID(clusterAliases[alias])
@@ -92,9 +111,32 @@ func (s *DiscoveryServer) Shutdown() {
 func (s *DiscoveryServer) Push(req *model.PushRequest) {
 	if !req.Full {
 		req.Push = s.globalPushContext()
-		s.AdsPushAll(req)
+		// s.AdsPushAll(req)
 		return
 	}
+
+	// Reset the status during the push.
+	oldPushContext := s.globalPushContext()
+	if oldPushContext != nil {
+		oldPushContext.OnConfigChange()
+	}
+	// PushContext is reset after a config change. Previous status is
+	// saved.
+	versionLocal := s.NextVersion()
+	push := s.initPushContext(req, oldPushContext, versionLocal)
+	req.Push = push
+	// s.AdsPushAll(req)
+}
+
+func (s *DiscoveryServer) initPushContext(req *model.PushRequest, oldPushContext *model.PushContext, version string) *model.PushContext {
+	push := model.NewPushContext()
+	push.InitContext(s.Env, oldPushContext, req)
+	s.Env.SetPushContext(push)
+	return push
+}
+
+func (s *DiscoveryServer) NextVersion() string {
+	return time.Now().Format(time.RFC3339) + "/" + strconv.FormatUint(s.pushVersion.Inc(), 10)
 }
 
 func (s *DiscoveryServer) globalPushContext() *model.PushContext {
@@ -109,6 +151,64 @@ func (s *DiscoveryServer) sendPushes(stopCh <-chan struct{}) {
 	doSendPushes(stopCh, s.concurrentPushLimit, s.pushQueue)
 }
 
+func (s *DiscoveryServer) ConfigUpdate(req *model.PushRequest) {
+	if model.HasConfigsOfKind(req.ConfigsUpdated, kind.Address) {
+		// TODO ClearAll
+	}
+	s.InboundUpdates.Inc()
+
+	klog.Infof("this is req: %v", req)
+
+	s.pushChannel <- req
+}
+
+func (s *DiscoveryServer) IsServerReady() bool {
+	return s.serverReady.Load()
+}
+
+func reasonsUpdated(req *model.PushRequest) string {
+	var (
+		reason0, reason1            model.TriggerReason
+		reason0Cnt, reason1Cnt, idx int
+	)
+	for r, cnt := range req.Reason {
+		if idx == 0 {
+			reason0, reason0Cnt = r, cnt
+		} else if idx == 1 {
+			reason1, reason1Cnt = r, cnt
+		} else {
+			break
+		}
+		idx++
+	}
+
+	switch len(req.Reason) {
+	case 0:
+		return "unknown"
+	case 1:
+		return fmt.Sprintf("%s:%d", reason0, reason0Cnt)
+	case 2:
+		return fmt.Sprintf("%s:%d and %s:%d", reason0, reason0Cnt, reason1, reason1Cnt)
+	default:
+		return fmt.Sprintf("%s:%d and %d(%d) more reasons", reason0, reason0Cnt, len(req.Reason)-1,
+			req.Reason.Count()-reason0Cnt)
+	}
+}
+
+func configsUpdated(req *model.PushRequest) string {
+	configs := ""
+	for key := range req.ConfigsUpdated {
+		configs += key.String()
+		break
+	}
+	if len(req.ConfigsUpdated) > 1 {
+		more := " and " + strconv.Itoa(len(req.ConfigsUpdated)-1) + " more configs"
+		configs += more
+	}
+
+	return configs
+}
+
 func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceOptions, pushFn func(req *model.PushRequest), updateSent *atomic.Int64) {
 	var timeChan <-chan time.Time
 	var startDebounce time.Time
@@ -118,17 +218,18 @@ func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceO
 	debouncedEvents := 0
 
 	var req *model.PushRequest
-
 	free := true
 	freeCh := make(chan struct{}, 1)
 
 	push := func(req *model.PushRequest, debouncedEvents int, startDebounce time.Time) {
+		klog.Info("This is push func")
 		pushFn(req)
 		updateSent.Add(int64(debouncedEvents))
 		freeCh <- struct{}{}
 	}
 
 	pushWorker := func() {
+		klog.Info("This is pushWorker func")
 		eventDelay := time.Since(startDebounce)
 		quietTime := time.Since(lastConfigUpdateTime)
 		// it has been too long or quiet enough
@@ -189,48 +290,6 @@ func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceO
 			return
 		}
 	}
-}
-
-func reasonsUpdated(req *model.PushRequest) string {
-	var (
-		reason0, reason1            model.TriggerReason
-		reason0Cnt, reason1Cnt, idx int
-	)
-	for r, cnt := range req.Reason {
-		if idx == 0 {
-			reason0, reason0Cnt = r, cnt
-		} else if idx == 1 {
-			reason1, reason1Cnt = r, cnt
-		} else {
-			break
-		}
-		idx++
-	}
-
-	switch len(req.Reason) {
-	case 0:
-		return "unknown"
-	case 1:
-		return fmt.Sprintf("%s:%d", reason0, reason0Cnt)
-	case 2:
-		return fmt.Sprintf("%s:%d and %s:%d", reason0, reason0Cnt, reason1, reason1Cnt)
-	default:
-		return fmt.Sprintf("%s:%d and %d(%d) more reasons", reason0, reason0Cnt, len(req.Reason)-1,
-			req.Reason.Count()-reason0Cnt)
-	}
-}
-
-func configsUpdated(req *model.PushRequest) string {
-	configs := ""
-	for key := range req.ConfigsUpdated {
-		configs += key.String()
-		break
-	}
-	if len(req.ConfigsUpdated) > 1 {
-		more := " and " + strconv.Itoa(len(req.ConfigsUpdated)-1) + " more configs"
-		configs += more
-	}
-	return configs
 }
 
 func doSendPushes(stopCh <-chan struct{}, semaphore chan struct{}, queue *PushQueue) {

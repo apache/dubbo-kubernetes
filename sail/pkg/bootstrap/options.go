@@ -56,6 +56,7 @@ type SailArgs struct {
 	KeepaliveOptions   *keepalive.Options
 	KrtDebugger        *krt.DebugHandler `json:"-"`
 	JwtRule            string
+	Revision           string
 }
 
 type DiscoveryServerOptions struct {
@@ -89,9 +90,12 @@ func NewSailArgs(initFuncs ...func(*SailArgs)) *SailArgs {
 	return p
 }
 
+var Revision = env.Register("REVISION", "", "").Get()
+
 func (p *SailArgs) applyDefaults() {
 	p.Namespace = PodNamespace
 	p.PodName = PodName
+	p.Revision = Revision
 	p.KeepaliveOptions = keepalive.DefaultOption()
 	p.RegistryOptions.ClusterRegistriesNamespace = p.Namespace
 }

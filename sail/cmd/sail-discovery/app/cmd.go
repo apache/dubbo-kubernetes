@@ -81,6 +81,7 @@ func newDiscoveryCommand() *cobra.Command {
 
 			cmd.WaitSignal(stop)
 
+			discoveryServer.WaitUntilCompletion()
 			return nil
 		},
 	}

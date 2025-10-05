@@ -23,13 +23,20 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
+	pm "github.com/apache/dubbo-kubernetes/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"net"
 	"strconv"
 	"sync"
+	"time"
 )
 
+type (
+	NodeMetadata = pm.NodeMetadata
+)
 type Watcher = meshwatcher.WatcherCollection
 
 type WatchedResource = xds.WatchedResource
@@ -44,11 +51,19 @@ type Environment struct {
 	NetworkManager       *NetworkManager
 	clusterLocalServices ClusterLocalProvider
 	DomainSuffix         string
+	EndpointIndex        *EndpointIndex
 }
 
 func NewEnvironment() *Environment {
 	return &Environment{
-		pushContext: NewPushContext(),
+		pushContext:   NewPushContext(),
+		EndpointIndex: NewEndpointIndex(),
+	}
+}
+
+func NewEndpointIndex() *EndpointIndex {
+	return &EndpointIndex{
+		shardsBySvc: make(map[string]map[string]*EndpointShards),
 	}
 }
 
@@ -123,4 +138,69 @@ func (e *Environment) InitNetworksManager(updater XDSUpdater) (err error) {
 	return
 }
 
-type Proxy struct{}
+type Proxy struct {
+	sync.RWMutex
+	XdsResourceGenerator XdsResourceGenerator
+	LastPushContext      *PushContext
+	LastPushTime         time.Time
+	WatchedResources     map[string]*WatchedResource
+	ID                   string
+	Metadata             *NodeMetadata
+	IPAddresses          []string
+}
+
+func (node *Proxy) GetWatchedResource(typeURL string) *WatchedResource {
+	node.RLock()
+	defer node.RUnlock()
+
+	return node.WatchedResources[typeURL]
+}
+
+func (node *Proxy) DeleteWatchedResource(typeURL string) {
+	node.Lock()
+	defer node.Unlock()
+
+	delete(node.WatchedResources, typeURL)
+}
+
+func (node *Proxy) NewWatchedResource(typeURL string, names []string) {
+	node.Lock()
+	defer node.Unlock()
+
+	node.WatchedResources[typeURL] = &WatchedResource{TypeUrl: typeURL, ResourceNames: sets.New(names...)}
+}
+
+func (node *Proxy) GetID() string {
+	if node == nil {
+		return ""
+	}
+	return node.ID
+}
+
+func (node *Proxy) UpdateWatchedResource(typeURL string, updateFn func(*WatchedResource) *WatchedResource) {
+	node.Lock()
+	defer node.Unlock()
+	r := node.WatchedResources[typeURL]
+	r = updateFn(r)
+	if r != nil {
+		node.WatchedResources[typeURL] = r
+	} else {
+		delete(node.WatchedResources, typeURL)
+	}
+}
+
+func (node *Proxy) IsProxylessGrpc() bool {
+	return node.Metadata != nil && node.Metadata.Generator == "grpc"
+}
+
+type XdsLogDetails struct {
+	Incremental    bool
+	AdditionalInfo string
+}
+
+type Resources = []*discovery.Resource
+
+type XdsResourceGenerator interface {
+	// Generate generates the Sotw resources for Xds.
+	Generate(proxy *Proxy, w *WatchedResource, req *PushRequest) (Resources, XdsLogDetails, error)
+}
