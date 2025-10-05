@@ -111,7 +111,7 @@ func (s *DiscoveryServer) Shutdown() {
 func (s *DiscoveryServer) Push(req *model.PushRequest) {
 	if !req.Full {
 		req.Push = s.globalPushContext()
-		// s.AdsPushAll(req)
+		s.AdsPushAll(req)
 		return
 	}
 
@@ -125,7 +125,7 @@ func (s *DiscoveryServer) Push(req *model.PushRequest) {
 	versionLocal := s.NextVersion()
 	push := s.initPushContext(req, oldPushContext, versionLocal)
 	req.Push = push
-	// s.AdsPushAll(req)
+	s.AdsPushAll(req)
 }
 
 func (s *DiscoveryServer) initPushContext(req *model.PushRequest, oldPushContext *model.PushContext, version string) *model.PushContext {
@@ -156,8 +156,6 @@ func (s *DiscoveryServer) ConfigUpdate(req *model.PushRequest) {
 		// TODO ClearAll
 	}
 	s.InboundUpdates.Inc()
-
-	klog.Infof("this is req: %v", req)
 
 	s.pushChannel <- req
 }
@@ -222,14 +220,12 @@ func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceO
 	freeCh := make(chan struct{}, 1)
 
 	push := func(req *model.PushRequest, debouncedEvents int, startDebounce time.Time) {
-		klog.Info("This is push func")
 		pushFn(req)
 		updateSent.Add(int64(debouncedEvents))
 		freeCh <- struct{}{}
 	}
 
 	pushWorker := func() {
-		klog.Info("This is pushWorker func")
 		eventDelay := time.Since(startDebounce)
 		quietTime := time.Since(lastConfigUpdateTime)
 		// it has been too long or quiet enough

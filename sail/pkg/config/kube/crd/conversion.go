@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"io"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/klog/v2"
 	"reflect"
 )
 
-type ConversionFunc = func(s resource.Schema, js string) (config.Spec, error)
+type ConversionFunc = func(s collection.Schema, js string) (config.Spec, error)
 
 func parseInputsImpl(inputs string, withValidate bool) ([]config.Config, []DubboKind, error) {
 	var varr []config.Config
@@ -45,7 +45,7 @@ func ParseInputs(inputs string) ([]config.Config, []DubboKind, error) {
 	return parseInputsImpl(inputs, true)
 }
 
-func FromJSON(s resource.Schema, js string) (config.Spec, error) {
+func FromJSON(s collection.Schema, js string) (config.Spec, error) {
 	c, err := s.NewInstance()
 	if err != nil {
 		return nil, err
@@ -56,11 +56,11 @@ func FromJSON(s resource.Schema, js string) (config.Spec, error) {
 	return c, nil
 }
 
-func ConvertObject(schema resource.Schema, object DubboObject, domain string) (*config.Config, error) {
+func ConvertObject(schema collection.Schema, object DubboObject, domain string) (*config.Config, error) {
 	return ConvertObjectInternal(schema, object, domain, FromJSON)
 }
 
-func StatusJSONFromMap(schema resource.Schema, jsonMap *json.RawMessage) (config.Status, error) {
+func StatusJSONFromMap(schema collection.Schema, jsonMap *json.RawMessage) (config.Status, error) {
 	if jsonMap == nil {
 		return nil, nil
 	}
@@ -79,7 +79,7 @@ func StatusJSONFromMap(schema resource.Schema, jsonMap *json.RawMessage) (config
 	return status, nil
 }
 
-func ConvertObjectInternal(schema resource.Schema, object DubboObject, domain string, convert ConversionFunc) (*config.Config, error) {
+func ConvertObjectInternal(schema collection.Schema, object DubboObject, domain string, convert ConversionFunc) (*config.Config, error) {
 	js, err := json.Marshal(object.GetSpec())
 	if err != nil {
 		return nil, err

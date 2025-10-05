@@ -5,7 +5,6 @@ package collections
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	istioioapimetav1alpha1 "istio.io/api/meta/v1alpha1"
 	istioioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
@@ -14,7 +13,7 @@ import (
 )
 
 var (
-	PeerAuthentication = resource.Builder{
+	PeerAuthentication = collection.Builder{
 		Identifier: "PeerAuthentication",
 		Group:      "security.istio.io",
 		Kind:       "PeerAuthentication",
@@ -30,7 +29,7 @@ var (
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	RequestAuthentication = resource.Builder{
+	RequestAuthentication = collection.Builder{
 		Identifier: "RequestAuthentication",
 		Group:      "security.istio.io",
 		Kind:       "RequestAuthentication",
@@ -46,7 +45,7 @@ var (
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	DestinationRule = resource.Builder{
+	DestinationRule = collection.Builder{
 		Identifier: "DestinationRule",
 		Group:      "networking.istio.io",
 		Kind:       "DestinationRule",
@@ -63,7 +62,7 @@ var (
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	VirtualService = resource.Builder{
+	VirtualService = collection.Builder{
 		Identifier: "VirtualService",
 		Group:      "networking.istio.io",
 		Kind:       "VirtualService",
@@ -80,7 +79,7 @@ var (
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	ValidatingWebhookConfiguration = resource.Builder{
+	ValidatingWebhookConfiguration = collection.Builder{
 		Identifier:    "ValidatingWebhookConfiguration",
 		Group:         "admissionregistration.k8s.io",
 		Kind:          "ValidatingWebhookConfiguration",
@@ -93,7 +92,7 @@ var (
 		Synthetic:     false,
 		Builtin:       true,
 	}.MustBuild()
-	MutatingWebhookConfiguration = resource.Builder{
+	MutatingWebhookConfiguration = collection.Builder{
 		Identifier:    "MutatingWebhookConfiguration",
 		Group:         "admissionregistration.k8s.io",
 		Kind:          "MutatingWebhookConfiguration",

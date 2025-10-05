@@ -87,6 +87,8 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 	if !ok {
 		return nil
 	}
+	klog.Infof("This is webhook label: %v", v)
+
 	if v != w.revision {
 		return errWrongRevision
 	}

@@ -37,11 +37,11 @@ var (
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
 	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
-	RequestAuthentication          = config.GroupVersionKind{Group: "security.istio.io", Version: "v1", Kind: "RequestAuthentication"}
-	PeerAuthentication             = config.GroupVersionKind{Group: "security.istio.io", Version: "v1", Kind: "PeerAuthentication"}
-	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.istio.io", Version: "v1", Kind: "AuthorizationPolicy"}
-	DestinationRule                = config.GroupVersionKind{Group: "networking.istio.io", Version: "v1", Kind: "DestinationRule"}
-	VirtualService                 = config.GroupVersionKind{Group: "networking.istio.io", Version: "v1", Kind: "VirtualService"}
+	RequestAuthentication          = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "RequestAuthentication"}
+	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "PeerAuthentication"}
+	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "AuthorizationPolicy"}
+	DestinationRule                = config.GroupVersionKind{Group: "networking.dubbo.io", Version: "v1", Kind: "DestinationRule"}
+	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.io", Version: "v1", Kind: "VirtualService"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
@@ -97,10 +97,10 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 	switch g {
 	case gvr.CustomResourceDefinition:
 		return CustomResourceDefinition, true
-	// case gvr.MutatingWebhookConfiguration:
-	// 	return MutatingWebhookConfiguration, true
-	// case gvr.ValidatingWebhookConfiguration:
-	// 	return ValidatingWebhookConfiguration, true
+	case gvr.MutatingWebhookConfiguration:
+		return MutatingWebhookConfiguration, true
+	case gvr.ValidatingWebhookConfiguration:
+		return ValidatingWebhookConfiguration, true
 	case gvr.Namespace:
 		return Namespace, true
 	case gvr.Deployment:

@@ -672,11 +672,13 @@ func (s *Server) initSDSServer() {
 		// Make sure we have security
 		klog.Warningf("skipping Kubernetes credential reader; SAIL_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
 	} else {
-		// s.XDSServer.ConfigUpdate(&model.PushRequest{
-		// 	Full:           false,
-		// 	ConfigsUpdated: sets.New(model.ConfigKey{Kind: k, Name: name, Namespace: namespace}),
-		// 	Reason:         model.NewReasonStats(model.SecretTrigger),
-		// })
+		// TODO ConfigUpdated Multicluster get secret and configmap
+		s.XDSServer.ConfigUpdate(&model.PushRequest{
+			Full:           false,
+			ConfigsUpdated: nil,
+			Reason:         model.NewReasonStats(model.SecretTrigger),
+		})
+
 	}
 }
 
@@ -759,7 +761,7 @@ func (s *Server) cachesSynced() bool {
 func (s *Server) pushContextReady(expected int64) bool {
 	committed := s.XDSServer.CommittedUpdates.Load()
 	if committed < expected {
-		klog.Infof("Waiting for pushcontext to process inbound updates, inbound: %v, committed : %v", expected, committed)
+		klog.V(2).Infof("Waiting for pushcontext to process inbound updates, inbound: %v, committed : %v", expected, committed)
 		return false
 	}
 	return true

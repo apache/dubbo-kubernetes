@@ -11,6 +11,7 @@ const (
 	Secret
 	Service
 	ServiceAccount
+	ServiceEntry
 	StatefulSet
 	ValidatingWebhookConfiguration
 	MutatingWebhookConfiguration
@@ -40,6 +41,8 @@ func (k Kind) String() string {
 		return "Service"
 	case ServiceAccount:
 		return "ServiceAccount"
+	case ServiceEntry:
+		return "ServiceEntry"
 	case StatefulSet:
 		return "StatefulSet"
 	case ValidatingWebhookConfiguration:

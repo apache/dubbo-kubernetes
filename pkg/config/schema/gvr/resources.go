@@ -35,11 +35,11 @@ var (
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 	MeshConfig                     = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshconfigs"}
-	RequestAuthentication          = schema.GroupVersionResource{Group: "security.istio.io", Version: "v1", Resource: "requestauthentications"}
-	PeerAuthentication             = schema.GroupVersionResource{Group: "security.istio.io", Version: "v1", Resource: "peerauthentications"}
-	AuthorizationPolicy            = schema.GroupVersionResource{Group: "security.istio.io", Version: "v1", Resource: "authorizationpolicies"}
-	DestinationRule                = schema.GroupVersionResource{Group: "networking.istio.io", Version: "v1", Resource: "destinationrules"}
-	VirtualService                 = schema.GroupVersionResource{Group: "networking.istio.io", Version: "v1", Resource: "virtualservices"}
+	RequestAuthentication          = schema.GroupVersionResource{Group: "security.dubbo.io", Version: "v1", Resource: "requestauthentications"}
+	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.io", Version: "v1", Resource: "peerauthentications"}
+	AuthorizationPolicy            = schema.GroupVersionResource{Group: "security.dubbo.io", Version: "v1", Resource: "authorizationpolicies"}
+	DestinationRule                = schema.GroupVersionResource{Group: "networking.dubbo.io", Version: "v1", Resource: "destinationrules"}
+	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.io", Version: "v1", Resource: "virtualservices"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
