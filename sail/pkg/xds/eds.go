@@ -1,9 +1,12 @@
 package xds
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 )
 
+// TODO EDS
 func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, namespace string,
 	dubboEndpoints []*model.DubboEndpoint,
 ) {
@@ -13,7 +16,7 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 		// Trigger a push
 		s.ConfigUpdate(&model.PushRequest{
 			Full:           pushType == model.FullPush,
-			ConfigsUpdated: nil,
+			ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
 			Reason:         model.NewReasonStats(model.EndpointUpdate),
 		})
 	}

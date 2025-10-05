@@ -73,8 +73,7 @@ func failurePolicyIsIgnore(current *kubeApiAdmission.ValidatingWebhookConfigurat
 
 func (c *Controller) readyForFailClose() bool {
 	if !c.dryRunOfInvalidConfigRejected {
-		klog.Info("Endpoint successfully rejected invalid config. Switching to fail-close.")
-		c.dryRunOfInvalidConfigRejected = true
+
 		// Sync all webhooks; this ensures if we have multiple webhooks all of them are updated
 		c.syncAll()
 	}

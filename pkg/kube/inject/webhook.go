@@ -290,6 +290,7 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	if pod.Labels == nil {
 		pod.Labels = map[string]string{}
 	}
+
 	return nil
 }
 
@@ -348,13 +349,14 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 
 	pod.ManagedFields = nil
 
-	potentialPodName(pod.ObjectMeta)
+	podName := potentialPodName(pod.ObjectMeta)
 	if pod.ObjectMeta.Namespace == "" {
 		pod.ObjectMeta.Namespace = req.Namespace
 	}
-
+	klog.Infof("Namespace: %v podName: %s", pod.Namespace+"/"+podName)
 	klog.Infof("Process proxyless injection request")
 
+	wh.mu.RLock()
 	proxyConfig := wh.env.GetProxyConfigOrDefault(pod.Namespace, pod.Labels, pod.Annotations, wh.meshConfig)
 	deploy, typeMeta := kube.GetDeployMetaFromPod(&pod)
 	params := InjectionParameters{
@@ -372,10 +374,14 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 		revision:            wh.revision,
 	}
 
+	wh.mu.RUnlock()
+
 	patchBytes, err := injectPod(params)
 	if err != nil {
+		klog.Errorf("Pod injection failed: %v", err)
 		return toAdmissionResponse(err)
 	}
+
 	reviewResponse := kube.AdmissionResponse{
 		Allowed: true,
 		Patch:   patchBytes,

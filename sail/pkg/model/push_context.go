@@ -102,21 +102,7 @@ type PushRequest struct {
 type ResourceDelta = xds.ResourceDelta
 
 func NewPushContext() *PushContext {
-	return &PushContext{
-		// ServiceIndex:    serviceIndex{},
-		// ProxyStatus: map[string]map[string]ProxyPushStatus{},
-		// serviceAccounts: map[serviceAccountKey][]string{},
-	}
-}
-
-func newServiceIndex() serviceIndex {
-	return serviceIndex{
-		public:               []*Service{},
-		privateByNamespace:   map[string][]*Service{},
-		exportedToNamespace:  map[string][]*Service{},
-		HostnameAndNamespace: map[host.Name]map[string]*Service{},
-		instancesByPort:      map[string]map[int][]*DubboEndpoint{},
-	}
+	return &PushContext{}
 }
 
 type ConfigKey struct {
@@ -252,10 +238,6 @@ func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
 	return pr
 }
 
-func (r ReasonStats) Has(reason TriggerReason) bool {
-	return r[reason] > 0
-}
-
 func (pr *PushRequest) IsRequest() bool {
 	return len(pr.Reason) == 1 && pr.Reason.Has(ProxyRequest)
 }
@@ -277,32 +259,6 @@ func (ps *PushContext) OnConfigChange() {
 func (ps *PushContext) UpdateMetrics() {
 	ps.proxyStatusMutex.RLock()
 	defer ps.proxyStatusMutex.RUnlock()
-}
-
-func NewReasonStats(reasons ...TriggerReason) ReasonStats {
-	ret := make(ReasonStats)
-	for _, reason := range reasons {
-		ret.Add(reason)
-	}
-	return ret
-}
-
-func (r ReasonStats) Add(reason TriggerReason) {
-	r[reason]++
-}
-
-func (r ReasonStats) Merge(other ReasonStats) {
-	for reason, count := range other {
-		r[reason] += count
-	}
-}
-
-func (r ReasonStats) Count() int {
-	var ret int
-	for _, count := range r {
-		ret += count
-	}
-	return ret
 }
 
 func (ps *PushContext) GetAllServices() []*Service {
@@ -329,4 +285,34 @@ func (ps *PushContext) servicesExportedToNamespace(ns string) []*Service {
 	out = append(out, ps.ServiceIndex.public...)
 
 	return out
+}
+
+func NewReasonStats(reasons ...TriggerReason) ReasonStats {
+	ret := make(ReasonStats)
+	for _, reason := range reasons {
+		ret.Add(reason)
+	}
+	return ret
+}
+
+func (r ReasonStats) Has(reason TriggerReason) bool {
+	return r[reason] > 0
+}
+
+func (r ReasonStats) Add(reason TriggerReason) {
+	r[reason]++
+}
+
+func (r ReasonStats) Merge(other ReasonStats) {
+	for reason, count := range other {
+		r[reason] += count
+	}
+}
+
+func (r ReasonStats) Count() int {
+	var ret int
+	for _, count := range r {
+		ret += count
+	}
+	return ret
 }

@@ -134,7 +134,7 @@ func (s *Server) initConfigSources(args *SailArgs) (err error) {
 				Config: adsc.Config{
 					Namespace: args.Namespace,
 					Workload:  args.PodName,
-					Revision:  "", // TODO
+					Revision:  args.Revision,
 					Meta:      nil,
 					GrpcOpts: []grpc.DialOption{
 						args.KeepaliveOptions.ConvertToClientOption(),

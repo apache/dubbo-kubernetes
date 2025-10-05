@@ -9,18 +9,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
 // Schemas contains metadata about configuration resources.
 type Schemas struct {
-	byCollection map[config.GroupVersionKind]resource.Schema
-	byAddOrder   []resource.Schema
+	byCollection map[config.GroupVersionKind]Schema
+	byAddOrder   []Schema
 }
 
 // SchemasFor is a shortcut for creating Schemas. It uses MustAdd for each element.
-func SchemasFor(schemas ...resource.Schema) Schemas {
+func SchemasFor(schemas ...Schema) Schemas {
 	b := NewSchemasBuilder()
 	for _, s := range schemas {
 		b.MustAdd(s)
@@ -36,7 +35,7 @@ type SchemasBuilder struct {
 // NewSchemasBuilder returns a new instance of SchemasBuilder.
 func NewSchemasBuilder() *SchemasBuilder {
 	s := Schemas{
-		byCollection: make(map[config.GroupVersionKind]resource.Schema),
+		byCollection: make(map[config.GroupVersionKind]Schema),
 	}
 
 	return &SchemasBuilder{
@@ -45,7 +44,7 @@ func NewSchemasBuilder() *SchemasBuilder {
 }
 
 // Add a new collection to the schemas.
-func (b *SchemasBuilder) Add(s resource.Schema) error {
+func (b *SchemasBuilder) Add(s Schema) error {
 	if _, found := b.schemas.byCollection[s.GroupVersionKind()]; found {
 		return fmt.Errorf("collection already exists: %v", s.GroupVersionKind())
 	}
@@ -56,7 +55,7 @@ func (b *SchemasBuilder) Add(s resource.Schema) error {
 }
 
 // MustAdd calls Add and panics if it fails.
-func (b *SchemasBuilder) MustAdd(s resource.Schema) *SchemasBuilder {
+func (b *SchemasBuilder) MustAdd(s Schema) *SchemasBuilder {
 	if err := b.Add(s); err != nil {
 		panic(fmt.Sprintf("SchemasBuilder.MustAdd: %v", err))
 	}
@@ -74,7 +73,7 @@ func (b *SchemasBuilder) Build() Schemas {
 }
 
 // ForEach executes the given function on each contained schema, until the function returns true.
-func (s Schemas) ForEach(handleSchema func(resource.Schema) (done bool)) {
+func (s Schemas) ForEach(handleSchema func(Schema) (done bool)) {
 	for _, schema := range s.byAddOrder {
 		if handleSchema(schema) {
 			return
@@ -113,7 +112,7 @@ func (s Schemas) Intersect(otherSchemas Schemas) Schemas {
 }
 
 // FindByGroupVersionKind searches and returns the first schema with the given GVK
-func (s Schemas) FindByGroupVersionKind(gvk config.GroupVersionKind) (resource.Schema, bool) {
+func (s Schemas) FindByGroupVersionKind(gvk config.GroupVersionKind) (Schema, bool) {
 	for _, rs := range s.byAddOrder {
 		if rs.GroupVersionKind() == gvk {
 			return rs, true
@@ -125,7 +124,7 @@ func (s Schemas) FindByGroupVersionKind(gvk config.GroupVersionKind) (resource.S
 
 // FindByGroupVersionAliasesKind searches and returns the first schema with the given GVK,
 // if not found, it will search for version aliases for the schema to see if there is a match.
-func (s Schemas) FindByGroupVersionAliasesKind(gvk config.GroupVersionKind) (resource.Schema, bool) {
+func (s Schemas) FindByGroupVersionAliasesKind(gvk config.GroupVersionKind) (Schema, bool) {
 	for _, rs := range s.byAddOrder {
 		for _, va := range rs.GroupVersionAliasKinds() {
 			if va == gvk {
@@ -139,7 +138,7 @@ func (s Schemas) FindByGroupVersionAliasesKind(gvk config.GroupVersionKind) (res
 // FindByGroupKind searches and returns the first schema with the given GVK, ignoring versions.
 // Generally it's a good idea to use FindByGroupVersionAliasesKind, which validates the version as well.
 // FindByGroupKind provides future proofing against versions we don't yet know about; given we don't know them, its risky.
-func (s Schemas) FindByGroupKind(gvk config.GroupVersionKind) (resource.Schema, bool) {
+func (s Schemas) FindByGroupKind(gvk config.GroupVersionKind) (Schema, bool) {
 	for _, rs := range s.byAddOrder {
 		if rs.Group() == gvk.Group && rs.Kind() == gvk.Kind {
 			return rs, true
@@ -149,7 +148,7 @@ func (s Schemas) FindByGroupKind(gvk config.GroupVersionKind) (resource.Schema, 
 }
 
 // FindByGroupVersionResource searches and returns the first schema with the given GVR
-func (s Schemas) FindByGroupVersionResource(gvr schema.GroupVersionResource) (resource.Schema, bool) {
+func (s Schemas) FindByGroupVersionResource(gvr schema.GroupVersionResource) (Schema, bool) {
 	for _, rs := range s.byAddOrder {
 		if rs.GroupVersionResource() == gvr {
 			return rs, true
@@ -160,7 +159,7 @@ func (s Schemas) FindByGroupVersionResource(gvr schema.GroupVersionResource) (re
 }
 
 // All returns all known Schemas
-func (s Schemas) All() []resource.Schema {
+func (s Schemas) All() []Schema {
 	return slices.Clone(s.byAddOrder)
 }
 
@@ -174,7 +173,7 @@ func (s Schemas) GroupVersionKinds() []config.GroupVersionKind {
 }
 
 // Add creates a copy of this Schemas with the given schemas added.
-func (s Schemas) Add(toAdd ...resource.Schema) Schemas {
+func (s Schemas) Add(toAdd ...Schema) Schemas {
 	b := NewSchemasBuilder()
 
 	for _, s := range s.byAddOrder {
@@ -189,7 +188,7 @@ func (s Schemas) Add(toAdd ...resource.Schema) Schemas {
 }
 
 // Remove creates a copy of this Schemas with the given schemas removed.
-func (s Schemas) Remove(toRemove ...resource.Schema) Schemas {
+func (s Schemas) Remove(toRemove ...Schema) Schemas {
 	b := NewSchemasBuilder()
 
 	for _, s := range s.byAddOrder {

@@ -3,12 +3,12 @@ package aggregate
 
 import (
 	"errors"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 )

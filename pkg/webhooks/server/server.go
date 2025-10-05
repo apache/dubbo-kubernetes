@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/crd"
@@ -113,7 +112,7 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 
 	// "Version" is not relevant for Istio types; each version has the same schema. So do a lookup that does not consider
 	// version. This ensures if a new version comes out and Istiod is not updated, we won't reject it.
-	s, exists := wh.schemas.FindByGroupKind(resource.FromKubernetesGVK(&gvk))
+	s, exists := wh.schemas.FindByGroupKind(collection.FromKubernetesGVK(&gvk))
 	if !exists {
 		klog.Infof("unrecognized type %v", addDryRunMessageIfNeeded(obj.GroupVersionKind().String()))
 		return toAdmissionResponse(fmt.Errorf("unrecognized type %v", obj.GroupVersionKind()))

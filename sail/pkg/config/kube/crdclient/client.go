@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
@@ -30,7 +29,7 @@ type Client struct {
 	kinds            map[config.GroupVersionKind]nsStore
 	kindsMu          sync.RWMutex
 	domainSuffix     string
-	schemasByCRDName map[string]resource.Schema
+	schemasByCRDName map[string]collection.Schema
 	schemas          collection.Schemas
 	client           kube.Client
 	filtersByGVK     map[config.GroupVersionKind]kubetypes.Filter
@@ -52,7 +51,7 @@ type Option struct {
 }
 
 func NewForSchemas(client kube.Client, opts Option, schemas collection.Schemas) *Client {
-	schemasByCRDName := map[string]resource.Schema{}
+	schemasByCRDName := map[string]collection.Schema{}
 	for _, s := range schemas.All() {
 		// From the spec: "Its name MUST be in the format <.spec.name>.<.spec.group>."
 		name := fmt.Sprintf("%s.%s", s.Plural(), s.Group())
