@@ -34,7 +34,7 @@ _internal_default_values_not_set:
       memory: "512Mi"
 
   # Support multi deploy status, see https://github.com/apache/dubbo-kubernetes/blob/master/README.md
-  # Available options: k8s(not supported yet), half, universal
+  # Available options: k8s, half, universal
   deployMode: half
 
   # Support multi-cluster
@@ -53,3 +53,9 @@ _internal_default_values_not_set:
   grafanaAddress: http://grafana.dubbo-system:3000
 
   prometheusAddress: http://prometheus.dubbo-system:9090
+
+  # k8s Service discovery configuration
+  k8sServiceDiscovery:
+    enabled: true
+    namespaces: ["default", "dubbo-system"]
+    annotationPrefix: "dubbo.apache.org"

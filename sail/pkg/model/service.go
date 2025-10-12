@@ -1,6 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package model
 
 import (
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
@@ -9,8 +29,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
-	"sync"
-	"time"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type NamespacedHostname struct {
@@ -31,6 +50,19 @@ type ServiceAttributes struct {
 	// Namespace is "destination.service.namespace" attribute
 	Namespace       string
 	ServiceRegistry provider.ID
+
+	// k8s specific fields
+	KubernetesService   *corev1.Service   `json:"kubernetesService,omitempty"`
+	KubernetesNamespace string            `json:"kubernetesNamespace,omitempty"`
+	DubboAnnotations    map[string]string `json:"dubboAnnotations,omitempty"`
+
+	// istio specific fields
+	IstioDestinationRule map[string]interface{} `json:"istioDestinationRule,omitempty"`
+	IstioVirtualService  map[string]interface{} `json:"istioVirtualService,omitempty"`
+	IstioWorkloadEntry   map[string]interface{} `json:"istioWorkloadEntry,omitempty"`
+	IstioServiceEntry    map[string]interface{} `json:"istioServiceEntry,omitempty"`
+	IstioGateway         map[string]interface{} `json:"istioGateway,omitempty"`
+	IstioSidecar         map[string]interface{} `json:"istioSidecar,omitempty"`
 }
 
 type AddressMap struct {
@@ -59,9 +91,14 @@ type Service struct {
 }
 
 func (s *Service) DeepCopy() *Service {
-	// nolint: govet
-	out := *s
-	out.Attributes = s.Attributes.DeepCopy()
+	if s == nil {
+		return nil
+	}
+	out := &Service{
+		Attributes:   s.Attributes.DeepCopy(),
+		Hostname:     s.Hostname,
+		CreationTime: s.CreationTime,
+	}
 	if s.Ports != nil {
 		out.Ports = make(PortList, len(s.Ports))
 		for i, port := range s.Ports {
@@ -76,10 +113,13 @@ func (s *Service) DeepCopy() *Service {
 			}
 		}
 	}
-
 	out.ServiceAccounts = slices.Clone(s.ServiceAccounts)
-	out.ClusterVIPs = *s.ClusterVIPs.DeepCopy()
-	return &out
+	if s.ClusterVIPs.Addresses != nil {
+		out.ClusterVIPs = *s.ClusterVIPs.DeepCopy()
+	} else {
+		out.ClusterVIPs = AddressMap{}
+	}
+	return out
 }
 
 func (s *Service) Key() string {
@@ -141,6 +181,32 @@ func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 
 	out.Aliases = slices.Clone(s.Aliases)
 	out.PassthroughTargetPorts = maps.Clone(out.PassthroughTargetPorts)
+
+	// Clone k8s specific fields
+	if s.KubernetesService != nil {
+		out.KubernetesService = s.KubernetesService.DeepCopy()
+	}
+	out.DubboAnnotations = maps.Clone(s.DubboAnnotations)
+
+	// Clone istio specific fields
+	if s.IstioDestinationRule != nil {
+		out.IstioDestinationRule = maps.Clone(s.IstioDestinationRule)
+	}
+	if s.IstioVirtualService != nil {
+		out.IstioVirtualService = maps.Clone(s.IstioVirtualService)
+	}
+	if s.IstioWorkloadEntry != nil {
+		out.IstioWorkloadEntry = maps.Clone(s.IstioWorkloadEntry)
+	}
+	if s.IstioServiceEntry != nil {
+		out.IstioServiceEntry = maps.Clone(s.IstioServiceEntry)
+	}
+	if s.IstioGateway != nil {
+		out.IstioGateway = maps.Clone(s.IstioGateway)
+	}
+	if s.IstioSidecar != nil {
+		out.IstioSidecar = maps.Clone(s.IstioSidecar)
+	}
 
 	// AddressMap contains a mutex, which is safe to return a copy in this case.
 	// nolint: govet
