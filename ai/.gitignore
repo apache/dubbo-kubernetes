@@ -1,0 +1,9 @@
+.idea
+.vscode
+.genkit
+.DS_Store
+
+.env
+
+reference
+.qoder

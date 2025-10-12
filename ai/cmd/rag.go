@@ -14,24 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-//go:build linux
-package file
+
+package main
 
 import (
-	"fmt"
-	"os"
-
-	"golang.org/x/sys/unix"
+	"dubbo-admin-ai/config"
+	"dubbo-admin-ai/manager"
+	"dubbo-admin-ai/plugins/dashscope"
+	"dubbo-admin-ai/utils"
 )
 
-// markNotNeeded marks a function as 'not needed'.
-// Interactions with large files can end up with a large page cache. This isn't really a big deal as the OS can reclaim
-// this under memory pressure. However, Kubernetes counts page cache usage against the container memory usage.
-// This leads to bloating up memory usage if we are just copying large files around.
-func markNotNeeded(in *os.File) error {
-	err := unix.Fadvise(int(in.Fd()), 0, 0, unix.FADV_DONTNEED)
+func main() {
+	mdDir := "./reference/k8s_docs/concepts"
+	chunks, err := utils.ProcessMarkdownDirectory(mdDir)
 	if err != nil {
-		return fmt.Errorf("failed to mark file FADV_DONTNEED: %v", err)
+		panic(err)
 	}
-	return nil
+	g := manager.Registry(dashscope.Qwen3.Key(), config.PROJECT_ROOT+"/.env", manager.ProductionLogger())
+	err = utils.IndexInPinecone(g, "kube-docs", "concepts", dashscope.Qwen3_embedding.Key(), nil, chunks)
+	if err != nil {
+		panic(err)
+	}
 }
