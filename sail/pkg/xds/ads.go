@@ -19,11 +19,12 @@ package xds
 
 import (
 	"context"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	"time"
 )
 
 type (
@@ -34,12 +35,12 @@ type (
 
 type Connection struct {
 	xds.Connection
-	node         *core.Node
+	// node         *core.Node
 	proxy        *model.Proxy
 	deltaStream  DeltaDiscoveryStream
 	deltaReqChan chan *discovery.DeltaDiscoveryRequest
-	s            *DiscoveryServer
-	ids          []string
+	// s            *DiscoveryServer
+	// ids          []string
 }
 
 type Event struct {
