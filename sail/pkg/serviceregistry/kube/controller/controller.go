@@ -22,14 +22,22 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/kube"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	"go.uber.org/atomic"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sort"
 	"sync"
@@ -47,6 +55,28 @@ type Controller struct {
 	servicesMap         map[host.Name]*model.Service
 	queue               queue.Instance
 	initialSyncTimedout *atomic.Bool
+	configCluster       bool
+	services            kclient.Client[*v1.Service]
+	endpoints           *endpointSliceController
+	meshWatcher         mesh.Watcher
+	handlers            model.ControllerHandlers
+}
+
+func NewController(kubeClient kubelib.Client, options Options) *Controller {
+	c := &Controller{
+		opts:                options,
+		client:              kubeClient,
+		queue:               queue.NewQueueWithID(1*time.Second, string(options.ClusterID)),
+		servicesMap:         make(map[host.Name]*model.Service),
+		initialSyncTimedout: atomic.NewBool(false),
+
+		configCluster: options.ConfigCluster,
+	}
+	c.services = kclient.NewFiltered[*v1.Service](kubeClient, kclient.Filter{ObjectFilter: kubeClient.ObjectFilter()})
+	registerHandlers(c, c.services, "Services", c.onServiceEvent, nil)
+	c.endpoints = newEndpointSliceController(c)
+	c.meshWatcher = options.MeshWatcher
+	return c
 }
 
 type Options struct {
@@ -63,6 +93,7 @@ type Options struct {
 	KrtDebugger           *krt.DebugHandler
 	SyncTimeout           time.Duration
 	Revision              string
+	ConfigCluster         bool
 }
 
 func (c *Controller) Services() []*model.Service {
@@ -82,6 +113,79 @@ func (c *Controller) GetService(hostname host.Name) *model.Service {
 	svc := c.servicesMap[hostname]
 	c.RUnlock()
 	return svc
+}
+
+func (c *Controller) onServiceEvent(pre, curr *v1.Service, event model.Event) error {
+	klog.V(2).Infof("Handle event %s for service %s in namespace %s", event, curr.Name, curr.Namespace)
+
+	// Create the standard (cluster.local) service.
+	svcConv := kube.ConvertService(*curr, c.opts.DomainSuffix, c.Cluster(), c.meshWatcher.Mesh())
+
+	switch event {
+	case model.EventDelete:
+		c.deleteService(svcConv)
+	default:
+		c.addOrUpdateService(pre, curr, svcConv, event, false)
+	}
+
+	return nil
+}
+
+func (c *Controller) deleteService(svc *model.Service) {
+	c.Lock()
+	delete(c.servicesMap, svc.Hostname)
+	c.Unlock()
+
+	shard := model.ShardKeyFromRegistry(c)
+	event := model.EventDelete
+	c.opts.XDSUpdater.SvcUpdate(shard, string(svc.Hostname), svc.Attributes.Namespace, event)
+	if !svc.Attributes.ExportTo.Contains(visibility.None) {
+		c.handlers.NotifyServiceHandlers(nil, svc, event)
+	}
+}
+
+func (c *Controller) addOrUpdateService(pre, curr *v1.Service, currConv *model.Service, event model.Event, updateEDSCache bool) {
+	c.Lock()
+	prevConv := c.servicesMap[currConv.Hostname]
+	c.servicesMap[currConv.Hostname] = currConv
+	c.Unlock()
+	// This full push needed to update all endpoints, even though we do a full push on service add/update
+	// as that full push is only triggered for the specific service.
+
+	shard := model.ShardKeyFromRegistry(c)
+	ns := currConv.Attributes.Namespace
+
+	c.opts.XDSUpdater.SvcUpdate(shard, string(currConv.Hostname), ns, event)
+	if serviceUpdateNeedsPush(pre, curr, prevConv, currConv) {
+		klog.V(2).Infof("Service %s in namespace %s updated and needs push", currConv.Hostname, ns)
+		c.handlers.NotifyServiceHandlers(prevConv, currConv, event)
+	}
+}
+
+func serviceUpdateNeedsPush(prev, curr *v1.Service, preConv, currConv *model.Service) bool {
+	// New Service - If it is not exported, no need to push.
+	if preConv == nil {
+		return !currConv.Attributes.ExportTo.Contains(visibility.None)
+	}
+	// if service Visibility is None and has not changed in the update/delete, no need to push.
+	if preConv.Attributes.ExportTo.Contains(visibility.None) &&
+		currConv.Attributes.ExportTo.Contains(visibility.None) {
+		return false
+	}
+	// Check if there are any changes we care about by comparing `model.Service`s
+	if !preConv.Equals(currConv) {
+		return true
+	}
+	// Also check if target ports are changed since they are not included in `model.Service`
+	// `preConv.Equals(currConv)` already makes sure the length of ports is not changed
+	if prev != nil && curr != nil {
+		if !slices.EqualFunc(prev.Spec.Ports, curr.Spec.Ports, func(a, b v1.ServicePort) bool {
+			return a.TargetPort == b.TargetPort
+		}) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Controller) Provider() provider.ID {
@@ -120,4 +224,52 @@ func (c *Controller) HasSynced() bool {
 
 func (c *Controller) informersSynced() bool {
 	return true
+}
+
+type FilterOutFunc[T controllers.Object] func(old, cur T) bool
+
+func registerHandlers[T controllers.ComparableObject](c *Controller,
+	informer kclient.Informer[T], otype string,
+	handler func(T, T, model.Event) error, filter FilterOutFunc[T],
+) {
+	wrappedHandler := func(prev, curr T, event model.Event) error {
+		curr = informer.Get(curr.GetName(), curr.GetNamespace())
+		if controllers.IsNil(curr) {
+			// this can happen when an immediate delete after update
+			// the delete event can be handled later
+			return nil
+		}
+		return handler(prev, curr, event)
+	}
+
+	informer.AddEventHandler(
+		controllers.EventHandler[T]{
+			AddFunc: func(obj T) {
+				c.queue.Push(func() error {
+					return wrappedHandler(ptr.Empty[T](), obj, model.EventAdd)
+				})
+			},
+			UpdateFunc: func(old, cur T) {
+				if filter != nil {
+					if filter(old, cur) {
+						return
+					}
+				}
+				c.queue.Push(func() error {
+					return wrappedHandler(old, cur, model.EventUpdate)
+				})
+			},
+			DeleteFunc: func(obj T) {
+				c.queue.Push(func() error {
+					return handler(ptr.Empty[T](), obj, model.EventDelete)
+				})
+			},
+		})
+}
+
+func (c *Controller) servicesForNamespacedName(name types.NamespacedName) []*model.Service {
+	if svc := c.GetService(kube.ServiceHostname(name.Name, name.Namespace, c.opts.DomainSuffix)); svc != nil {
+		return []*model.Service{svc}
+	}
+	return nil
 }

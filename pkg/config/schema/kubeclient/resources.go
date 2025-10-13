@@ -30,6 +30,7 @@ import (
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapicertificatesv1 "k8s.io/api/certificates/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
+	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
 	k8sioapipolicyv1 "k8s.io/api/policy/v1"
 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,6 +98,10 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapicorev1.Namespace{}
 	case gvr.Secret:
 		return &k8sioapicorev1.Secret{}
+	case gvr.EndpointSlice:
+		return &k8sioapidiscoveryv1.EndpointSlice{}
+	case gvr.Endpoints:
+		return &k8sioapicorev1.Endpoints{}
 	case gvr.Service:
 		return &k8sioapicorev1.Service{}
 	case gvr.ServiceAccount:
@@ -166,6 +171,20 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoreV1().Secrets(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.EndpointSlice:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Kube().DiscoveryV1().EndpointSlices(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Kube().DiscoveryV1().EndpointSlices(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.Endpoints:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Kube().CoreV1().Endpoints(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Kube().CoreV1().Endpoints(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.Service:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

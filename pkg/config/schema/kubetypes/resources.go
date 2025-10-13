@@ -25,6 +25,7 @@ import (
 	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
+	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
 )
 
 func getGvk(obj any) (config.GroupVersionKind, bool) {
@@ -49,6 +50,12 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.MutatingWebhookConfiguration, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
+	case *k8sioapidiscoveryv1.EndpointSlice:
+		return gvk.EndpointSlice, true
+	case *k8sioapicorev1.Endpoints:
+		return gvk.Endpoints, true
+	case *k8sioapicorev1.Service:
+		return gvk.Service, true
 	default:
 		return config.GroupVersionKind{}, false
 	}

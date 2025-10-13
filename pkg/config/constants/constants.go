@@ -18,6 +18,8 @@
 package constants
 
 const (
+	UnspecifiedIP = "0.0.0.0"
+
 	DubboSystemNamespace      = "dubbo-system"
 	DefaultClusterLocalDomain = "cluster.local"
 	DefaultClusterName        = "Kubernetes"

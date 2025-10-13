@@ -40,6 +40,8 @@ var (
 	AuthorizationPolicy            = schema.GroupVersionResource{Group: "security.dubbo.io", Version: "v1", Resource: "authorizationpolicies"}
 	DestinationRule                = schema.GroupVersionResource{Group: "networking.dubbo.io", Version: "v1", Resource: "destinationrules"}
 	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.io", Version: "v1", Resource: "virtualservices"}
+	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
+	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
@@ -74,6 +76,10 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 		return true
 	case ValidatingWebhookConfiguration:
 		return true
+	case EndpointSlice:
+		return false
+	case Endpoints:
+		return false
 	}
 	return false
 }

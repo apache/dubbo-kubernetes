@@ -42,6 +42,8 @@ var (
 	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "AuthorizationPolicy"}
 	DestinationRule                = config.GroupVersionKind{Group: "networking.dubbo.io", Version: "v1", Kind: "DestinationRule"}
 	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.io", Version: "v1", Kind: "VirtualService"}
+	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
+	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
@@ -82,6 +84,10 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.DestinationRule, true
 	case VirtualService:
 		return gvr.VirtualService, true
+	case EndpointSlice:
+		return gvr.EndpointSlice, true
+	case Endpoints:
+		return gvr.Endpoints, true
 	}
 	return schema.GroupVersionResource{}, false
 }
@@ -121,6 +127,12 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return VirtualService, true
 	case gvr.DestinationRule:
 		return DestinationRule, true
+	case gvr.EndpointSlice:
+		return EndpointSlice, true
+	case gvr.Endpoints:
+		return Endpoints, true
+	case gvr.Service:
+		return Service, true
 	}
 	return config.GroupVersionKind{}, false
 }

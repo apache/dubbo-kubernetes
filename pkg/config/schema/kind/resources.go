@@ -19,6 +19,7 @@ const (
 	RequestAuthentication
 	VirtualService
 	DestinationRule
+	DNSName
 )
 
 func (k Kind) String() string {
@@ -57,6 +58,8 @@ func (k Kind) String() string {
 		return "VirtualService"
 	case DestinationRule:
 		return "DestinationRule"
+	case DNSName:
+		return "DNSName"
 	default:
 		return "Unknown"
 	}

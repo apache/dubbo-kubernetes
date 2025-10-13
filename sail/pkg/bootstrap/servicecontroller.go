@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
+	kubecontroller "github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	"k8s.io/klog/v2"
 )
@@ -55,5 +56,13 @@ func (s *Server) initKubeRegistry(args *SailArgs) (err error) {
 	args.RegistryOptions.KubeOptions.MeshWatcher = s.environment.Watcher
 	args.RegistryOptions.KubeOptions.SystemNamespace = args.Namespace
 	args.RegistryOptions.KubeOptions.MeshServiceController = s.ServiceController()
-	return
+	kubecontroller.NewMulticluster(args.PodName,
+		args.RegistryOptions.KubeOptions,
+		s.dubbodCertBundleWatcher,
+		args.Revision,
+		s.shouldStartNsController(),
+		s.environment.ClusterLocal(),
+		s.server,
+		s.multiclusterController)
+	return err
 }

@@ -34,6 +34,7 @@ import (
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
 	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
@@ -46,6 +47,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/serviceentry"
 	tb "github.com/apache/dubbo-kubernetes/sail/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
@@ -94,8 +96,10 @@ type Server struct {
 	httpMux     *http.ServeMux
 	httpsMux    *http.ServeMux // webhooks
 
-	ConfigStores     []model.ConfigStoreController
-	configController model.ConfigStoreController
+	ConfigStores           []model.ConfigStoreController
+	configController       model.ConfigStoreController
+	multiclusterController *multicluster.Controller
+	serviceEntryController *serviceentry.Controller
 
 	fileWatcher         filewatcher.FileWatcher
 	internalStop        chan struct{}
@@ -385,6 +389,19 @@ func (s *Server) startCA(caOpts *caOptions) {
 	})
 }
 
+func (s *Server) initMulticluster(args *SailArgs) {
+	if s.kubeClient == nil {
+		return
+	}
+	s.multiclusterController = multicluster.NewController(s.kubeClient, args.Namespace, s.clusterID, s.environment.Watcher, func(r *rest.Config) {
+		r.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
+		r.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
+	})
+	s.addStartFunc("multicluster controller", func(stop <-chan struct{}) error {
+		return s.multiclusterController.Run(stop)
+	})
+}
+
 func (s *Server) initKubeClient(args *SailArgs) error {
 	if s.kubeClient != nil {
 		// Already initialized by startup arguments
@@ -479,7 +496,8 @@ func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
 
 func (s *Server) initControllers(args *SailArgs) error {
 	klog.Info("initializing controllers")
-	// TODO initMulticluster
+
+	s.initMulticluster(args)
 
 	s.initSDSServer()
 
@@ -673,12 +691,6 @@ func (s *Server) initSDSServer() {
 		klog.Warningf("skipping Kubernetes credential reader; SAIL_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
 	} else {
 		// TODO ConfigUpdated Multicluster get secret and configmap
-		s.XDSServer.ConfigUpdate(&model.PushRequest{
-			Full:           false,
-			ConfigsUpdated: nil,
-			Reason:         model.NewReasonStats(model.SecretTrigger),
-		})
-
 	}
 }
 
@@ -825,6 +837,23 @@ func (s *Server) dubbodReadyHandler(w http.ResponseWriter, _ *http.Request) {
 		}
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) shouldStartNsController() bool {
+	if s.isK8SSigning() {
+		// Need to distribute the roots from MeshConfig
+		return true
+	}
+	if s.CA == nil {
+		return false
+	}
+
+	// For no CA we don't distribute it either, as there is no cert
+	if features.SailCertProvider == constants.CertProviderNone {
+		return false
+	}
+
+	return true
 }
 
 func getDNSNames(args *SailArgs, host string) []string {
