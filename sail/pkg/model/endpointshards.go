@@ -88,6 +88,44 @@ func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndp
 	return newDubboEndpoints, needPush
 }
 
+func (e *EndpointIndex) ShardsForService(serviceName, namespace string) (*EndpointShards, bool) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	byNs, ok := e.shardsBySvc[serviceName]
+	if !ok {
+		return nil, false
+	}
+	shards, ok := byNs[namespace]
+	return shards, ok
+}
+
+func (es *EndpointShards) CopyEndpoints(portMap map[string]int, ports sets.Set[int]) map[int][]*DubboEndpoint {
+	es.RLock()
+	defer es.RUnlock()
+	res := map[int][]*DubboEndpoint{}
+	for _, v := range es.Shards {
+		for _, ep := range v {
+			// use the port name as the key, unless LegacyClusterPortKey is set and takes precedence
+			// In EDS we match on port *name*. But for historical reasons, we match on port number for CDS.
+			var portNum int
+			if ep.LegacyClusterPortKey != 0 {
+				if !ports.Contains(ep.LegacyClusterPortKey) {
+					continue
+				}
+				portNum = ep.LegacyClusterPortKey
+			} else {
+				pn, f := portMap[ep.ServicePortName]
+				if !f {
+					continue
+				}
+				portNum = pn
+			}
+			res[portNum] = append(res[portNum], ep)
+		}
+	}
+	return res
+}
+
 func (e *EndpointIndex) UpdateServiceEndpoints(
 	shard ShardKey,
 	hostname string,
@@ -215,4 +253,13 @@ func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespac
 		}
 	}
 	epShards.Unlock()
+}
+
+type shardRegistry interface {
+	Cluster() cluster.ID
+	Provider() provider.ID
+}
+
+func ShardKeyFromRegistry(instance shardRegistry) ShardKey {
+	return ShardKey{Cluster: instance.Cluster(), Provider: instance.Provider()}
 }
