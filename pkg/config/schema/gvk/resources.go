@@ -35,6 +35,7 @@ var (
 	ConfigMap                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
+	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
 	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
 	RequestAuthentication          = config.GroupVersionKind{Group: "security.dubbo.io", Version: "v1", Kind: "RequestAuthentication"}
@@ -88,6 +89,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.EndpointSlice, true
 	case Endpoints:
 		return gvr.Endpoints, true
+	case Pod:
+		return gvr.Pod, true
 	}
 	return schema.GroupVersionResource{}, false
 }

@@ -164,6 +164,46 @@ func (s *DiscoveryServer) IsServerReady() bool {
 	return s.serverReady.Load()
 }
 
+func (s *DiscoveryServer) ProxyUpdate(clusterID cluster.ID, ip string) {
+	var connection *Connection
+
+	for _, v := range s.Clients() {
+		if v.proxy.Metadata.ClusterID == clusterID && v.proxy.IPAddresses[0] == ip {
+			connection = v
+			break
+		}
+	}
+
+	// It is possible that the envoy has not connected to this pilot, maybe connected to another pilot
+	if connection == nil {
+		return
+	}
+
+	s.pushQueue.Enqueue(connection, &model.PushRequest{
+		Full:   true,
+		Push:   s.globalPushContext(),
+		Start:  time.Now(),
+		Reason: model.NewReasonStats(model.ProxyUpdate),
+		Forced: true,
+	})
+}
+
+func (s *DiscoveryServer) Clients() []*Connection {
+	s.adsClientsMutex.RLock()
+	defer s.adsClientsMutex.RUnlock()
+	clients := make([]*Connection, 0, len(s.adsClients))
+	for _, con := range s.adsClients {
+		select {
+		case <-con.InitializedCh():
+		default:
+			// Initialization not complete, skip
+			continue
+		}
+		clients = append(clients, con)
+	}
+	return clients
+}
+
 func reasonsUpdated(req *model.PushRequest) string {
 	var (
 		reason0, reason1            model.TriggerReason

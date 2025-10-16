@@ -9,7 +9,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/util"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
-	"istio.io/api/label"
 	kubeApiAdmission "k8s.io/api/admissionregistration/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -152,7 +151,7 @@ func newController(o Options, client kube.Client) *Controller {
 		controllers.WithRateLimiter(workqueue.NewTypedItemExponentialFailureRateLimiter[any](100*time.Millisecond, 1*time.Minute)))
 
 	c.webhooks = kclient.NewFiltered[*kubeApiAdmission.ValidatingWebhookConfiguration](client, kclient.Filter{
-		LabelSelector: fmt.Sprintf("%s=%s", label.IoIstioRev.Name, o.Revision),
+		LabelSelector: fmt.Sprintf("%s=%s", "dubbo.io/rev", o.Revision),
 	})
 	c.webhooks.AddEventHandler(controllers.ObjectHandler(c.queue.AddObject))
 

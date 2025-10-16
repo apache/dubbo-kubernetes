@@ -7,15 +7,13 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/serviceentry"
 	"k8s.io/klog/v2"
 )
 
 type kubeController struct {
 	MeshServiceController *aggregate.Controller
 	*Controller
-	workloadEntryController *serviceentry.Controller
-	stop                    chan struct{}
+	stop chan struct{}
 }
 
 func (k *kubeController) Close() {

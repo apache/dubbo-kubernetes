@@ -61,13 +61,13 @@ func (w *fileWatcher) Run(stop <-chan struct{}) {
 		select {
 		case <-timerC:
 			timerC = nil
-			sidecarConfig, valuesConfig, err := w.Get()
+			proxylessconfig, valuesConfig, err := w.Get()
 			if err != nil {
 				klog.Errorf("update error: %v", err)
 				break
 			}
 			if w.handler != nil {
-				if err := w.handler(sidecarConfig, valuesConfig); err != nil {
+				if err := w.handler(proxylessconfig, valuesConfig); err != nil {
 					klog.Errorf("update error: %v", err)
 				}
 			}
@@ -108,12 +108,12 @@ func (w *configMapWatcher) Run(stop <-chan struct{}) {
 }
 
 func (w *configMapWatcher) Get() (*Config, string, error) {
-	cms := w.client.Kube().CoreV1().ConfigMaps(w.namespace)
-	cm, err := cms.Get(context.TODO(), w.name, metav1.GetOptions{})
+	configmaps := w.client.Kube().CoreV1().ConfigMaps(w.namespace)
+	configmap, err := configmaps.Get(context.TODO(), w.name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
-	return readConfigMap(cm, w.configKey, w.valuesKey)
+	return readConfigMap(configmap, w.configKey, w.valuesKey)
 }
 
 func NewConfigMapWatcher(client kube.Client, namespace, name, configKey, valuesKey string) Watcher {
@@ -125,13 +125,13 @@ func NewConfigMapWatcher(client kube.Client, namespace, name, configKey, valuesK
 		valuesKey: valuesKey,
 	}
 	w.c = configmapwatcher.NewController(client, namespace, name, func(cm *v1.ConfigMap) {
-		sidecarConfig, valuesConfig, err := readConfigMap(cm, configKey, valuesKey)
+		proxylessConfig, valuesConfig, err := readConfigMap(cm, configKey, valuesKey)
 		if err != nil {
 			klog.Warningf("failed to read injection config from ConfigMap: %v", err)
 			return
 		}
 		if w.handler != nil {
-			if err := w.handler(sidecarConfig, valuesConfig); err != nil {
+			if err := w.handler(proxylessConfig, valuesConfig); err != nil {
 				klog.Errorf("update error: %v", err)
 			}
 		}

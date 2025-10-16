@@ -42,6 +42,7 @@ var (
 	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.io", Version: "v1", Resource: "virtualservices"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
+	Pod                            = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
@@ -79,6 +80,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case EndpointSlice:
 		return false
 	case Endpoints:
+		return false
+	case Pod:
 		return false
 	}
 	return false

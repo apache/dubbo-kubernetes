@@ -78,7 +78,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Dubbo().NetworkingV1().VirtualServices(namespace).(ktypes.WriteAPI[T])
 	case *apiistioioapinetworkingv1.DestinationRule:
 		return c.Dubbo().NetworkingV1().DestinationRules(namespace).(ktypes.WriteAPI[T])
-
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
 	}
@@ -108,6 +107,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapicorev1.ServiceAccount{}
 	case gvr.StatefulSet:
 		return &k8sioapiappsv1.StatefulSet{}
+	case gvr.Pod:
+		return &k8sioapicorev1.Pod{}
 	case gvr.MutatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration{}
 	case gvr.ValidatingWebhookConfiguration:
@@ -120,6 +121,7 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &apiistioioapinetworkingv1.VirtualService{}
 	case gvr.DestinationRule:
 		return &apiistioioapinetworkingv1.DestinationRule{}
+
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}
@@ -248,6 +250,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Dubbo().SecurityV1().RequestAuthentications(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.Pod:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Kube().CoreV1().Pods(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Kube().CoreV1().Pods(opts.Namespace).Watch(context.Background(), options)
 		}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))

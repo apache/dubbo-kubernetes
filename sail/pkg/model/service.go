@@ -7,6 +7,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
+	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
@@ -58,29 +59,30 @@ func (p *endpointDiscoverabilityPolicyImpl) CmpOpts() []cmp.Option {
 type HealthStatus int32
 
 const (
-	// Healthy indicates an endpoint is ready to accept traffic
-	Healthy HealthStatus = 1
-	// UnHealthy indicates an endpoint is not ready to accept traffic
-	UnHealthy HealthStatus = 2
-	// Draining is a special case, which is used only when persistent sessions are enabled. This indicates an endpoint
-	// was previously healthy, but is now shutting down.
-	// Without persistent sessions, an endpoint that is shutting down will be marked as Terminating.
-	Draining HealthStatus = 3
-	// Terminating marks an endpoint as shutting down. Similar to "unhealthy", this means we should not send it traffic.
-	// But unlike "unhealthy", this means we do not consider it when calculating failover.
+	Healthy     HealthStatus = 1
+	UnHealthy   HealthStatus = 2
+	Draining    HealthStatus = 3
 	Terminating HealthStatus = 4
 )
 
 type DubboEndpoint struct {
 	ServiceAccount         string
 	Addresses              []string
-	WorkloadName           string
 	ServicePortName        string
 	Labels                 labels.Instance
 	HealthStatus           HealthStatus
 	SendUnhealthyEndpoints bool
 	DiscoverabilityPolicy  EndpointDiscoverabilityPolicy `json:"-"`
 	LegacyClusterPortKey   int
+	EndpointPort           uint32
+	WorkloadName           string
+	Network                network.ID
+	Namespace              string
+	// Specifies the hostname of the Pod, empty for vm workload.
+	HostName string
+	// If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
+	SubDomain string
+	NodeName  string
 }
 
 func (ep *DubboEndpoint) FirstAddressOrNil() string {
@@ -412,4 +414,8 @@ func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
 	}
 	return s.Name == other.Name && s.Namespace == other.Namespace &&
 		s.ServiceRegistry == other.ServiceRegistry && s.K8sAttributes == other.K8sAttributes
+}
+
+func (s *Service) SupportsUnhealthyEndpoints() bool {
+	return false
 }

@@ -31,6 +31,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			ResourceNames: req.Delta.Subscribed,
 		}
 	}
+
 	res, logdata, err := gen.Generate(con.proxy, w, req)
 	info := ""
 	if len(logdata.AdditionalInfo) > 0 {
