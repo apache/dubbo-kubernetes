@@ -19,6 +19,7 @@ package model
 
 import (
 	"cmp"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
@@ -49,6 +50,8 @@ const (
 	ProxyRequest           TriggerReason = "proxyrequest"
 	GlobalUpdate           TriggerReason = "global"
 	HeadlessEndpointUpdate TriggerReason = "headlessendpoint"
+	EndpointUpdate         TriggerReason = "endpoint"
+	ProxyUpdate            TriggerReason = "proxy"
 )
 
 type ProxyPushStatus struct {
@@ -148,7 +151,10 @@ func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
 
 type XDSUpdater interface {
 	ConfigUpdate(req *PushRequest)
-	SvcUpdate(shard ShardKey, hostname string, namespace string, event Event)
+	ServiceUpdate(shard ShardKey, hostname string, namespace string, event Event)
+	EDSUpdate(shard ShardKey, hostname string, namespace string, entry []*DubboEndpoint)
+	EDSCacheUpdate(shard ShardKey, hostname string, namespace string, entry []*DubboEndpoint)
+	ProxyUpdate(clusterID cluster.ID, ip string)
 }
 
 func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {

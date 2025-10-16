@@ -105,11 +105,8 @@ func (s *DiscoveryServer) adsClientCount() int {
 	return len(s.adsClients)
 }
 
-func (s *DiscoveryServer) initProxyMetadata(node *core.Node) (*model.Proxy, error) {
-	return nil, nil
-}
-
 func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, identities []string) error {
+
 	return nil
 }
 
@@ -129,6 +126,7 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 	if peerInfo, ok := peer.FromContext(ctx); ok {
 		peerAddr = peerInfo.Addr.String()
 	}
+
 	// TODO WaitForRequestLimit?
 
 	if err := s.WaitForRequestLimit(stream.Context()); err != nil {

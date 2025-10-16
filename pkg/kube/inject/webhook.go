@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/mergepatch"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/klog/v2"
 	"net/http"
 	"os"
@@ -254,11 +256,6 @@ func injectPod(req InjectionParameters) ([]byte, error) {
 		return nil, fmt.Errorf("failed to re apply container: %v", err)
 	}
 
-	// Apply some additional transformations to the pod
-	if err := postProcessPod(mergedPod, *injectedPodData, req); err != nil {
-		return nil, fmt.Errorf("failed to process pod: %v", err)
-	}
-
 	patch, err := createPatch(mergedPod, originalPodSpec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create patch: %v", err)
@@ -267,7 +264,9 @@ func injectPod(req InjectionParameters) ([]byte, error) {
 	return patch, nil
 }
 
-func reapplyOverwrittenContainers(finalPod *corev1.Pod, originalPod *corev1.Pod, templatePod *corev1.Pod, proxyConfig *meshconfig.ProxyConfig) (*corev1.Pod, error) {
+func reapplyOverwrittenContainers(finalPod *corev1.Pod, originalPod *corev1.Pod, templatePod *corev1.Pod,
+	proxyConfig *meshconfig.ProxyConfig,
+) (*corev1.Pod, error) {
 	return finalPod, nil
 }
 
@@ -283,15 +282,61 @@ func createPatch(pod *corev1.Pod, original []byte) ([]byte, error) {
 	return json.Marshal(p)
 }
 
-func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParameters) error {
-	if pod.Annotations == nil {
-		pod.Annotations = map[string]string{}
-	}
-	if pod.Labels == nil {
-		pod.Labels = map[string]string{}
+func applyOverlayYAML(target *corev1.Pod, overlayYAML []byte) (*corev1.Pod, error) {
+	currentJSON, err := json.Marshal(target)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	pod := corev1.Pod{}
+	// Overlay the injected template onto the original podSpec
+	patched, err := StrategicMergePatchYAML(currentJSON, overlayYAML, pod)
+	if err != nil {
+		return nil, fmt.Errorf("strategic merge: %v", err)
+	}
+
+	if err := json.Unmarshal(patched, &pod); err != nil {
+		return nil, fmt.Errorf("unmarshal patched pod: %v", err)
+	}
+	return &pod, nil
+}
+
+func StrategicMergePatchYAML(originalJSON []byte, patchYAML []byte, dataStruct any) ([]byte, error) {
+	schema, err := strategicpatch.NewPatchMetaFromStruct(dataStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	originalMap, err := patchHandleUnmarshal(originalJSON, json.Unmarshal)
+	if err != nil {
+		return nil, err
+	}
+	patchMap, err := patchHandleUnmarshal(patchYAML, func(data []byte, v any) error {
+		return yaml.Unmarshal(data, v)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := strategicpatch.StrategicMergeMapPatchUsingLookupPatchMeta(originalMap, patchMap, schema)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(result)
+}
+
+func patchHandleUnmarshal(j []byte, unmarshal func(data []byte, v any) error) (map[string]any, error) {
+	if j == nil {
+		j = []byte("{}")
+	}
+
+	m := map[string]any{}
+	err := unmarshal(j, &m)
+	if err != nil {
+		return nil, mergepatch.ErrBadJSONDoc
+	}
+	return m, nil
 }
 
 func parseInjectEnvs(path string) map[string]string {
@@ -353,8 +398,8 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 	if pod.ObjectMeta.Namespace == "" {
 		pod.ObjectMeta.Namespace = req.Namespace
 	}
-	klog.Infof("Namespace: %v podName: %s", pod.Namespace+"/"+podName)
-	klog.Infof("Process proxyless injection request")
+	klog.Info(pod.Namespace + "/" + podName)
+	klog.Infof("path=%s Process proxyless injection request", path)
 
 	wh.mu.RLock()
 	proxyConfig := wh.env.GetProxyConfigOrDefault(pod.Namespace, pod.Labels, pod.Annotations, wh.meshConfig)

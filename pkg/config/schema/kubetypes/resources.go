@@ -56,6 +56,8 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Endpoints, true
 	case *k8sioapicorev1.Service:
 		return gvk.Service, true
+	case *k8sioapicorev1.Pod:
+		return gvk.Pod, true
 	default:
 		return config.GroupVersionKind{}, false
 	}

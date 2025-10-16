@@ -8,7 +8,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/util"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
-	"istio.io/api/label"
 	v1 "k8s.io/api/admissionregistration/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	klabels "k8s.io/apimachinery/pkg/labels"
@@ -83,7 +82,7 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 		return errNotFound
 	}
 	// prevents a race condition between multiple istiods when the revision is changed or modified
-	v, ok := config.Labels[label.IoIstioRev.Name]
+	v, ok := config.Labels["dubbo.io/rev"]
 	if !ok {
 		return nil
 	}

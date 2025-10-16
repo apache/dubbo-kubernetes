@@ -47,7 +47,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/serviceentry"
 	tb "github.com/apache/dubbo-kubernetes/sail/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
@@ -99,7 +98,6 @@ type Server struct {
 	ConfigStores           []model.ConfigStoreController
 	configController       model.ConfigStoreController
 	multiclusterController *multicluster.Controller
-	serviceEntryController *serviceentry.Controller
 
 	fileWatcher         filewatcher.FileWatcher
 	internalStop        chan struct{}

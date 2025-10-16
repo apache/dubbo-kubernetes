@@ -150,3 +150,7 @@ func convertPort(port corev1.ServicePort) *model.Port {
 func kubeToDubboServiceAccount(saname string, ns string, mesh *meshconfig.MeshConfig) string {
 	return spiffe.MustGenSpiffeURI(mesh, ns, saname)
 }
+
+func SecureNamingSAN(pod *corev1.Pod, mesh *meshconfig.MeshConfig) string {
+	return spiffe.MustGenSpiffeURI(mesh, pod.Namespace, pod.Spec.ServiceAccountName)
+}

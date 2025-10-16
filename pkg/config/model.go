@@ -44,7 +44,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/util/protoconv"
-	"istio.io/api/label"
 )
 
 // Meta is metadata attached to each configuration unit.
@@ -132,7 +131,7 @@ func (o ObjectWithCluster[T]) GetObjectKeyable() any {
 }
 
 func LabelsInRevision(lbls map[string]string, rev string) bool {
-	configEnv, f := lbls[label.IoIstioRev.Name]
+	configEnv, f := lbls["dubbo.io/rev"]
 	if !f {
 		// This is a global object, and always included
 		return true
@@ -150,7 +149,7 @@ func LabelsInRevisionOrTags(lbls map[string]string, rev string, tags sets.Set[st
 	if LabelsInRevision(lbls, rev) {
 		return true
 	}
-	configEnv := lbls[label.IoIstioRev.Name]
+	configEnv := lbls["dubbo.io/rev"]
 	// Otherwise, only return true if revisions equal
 	return tags.Contains(configEnv)
 }
