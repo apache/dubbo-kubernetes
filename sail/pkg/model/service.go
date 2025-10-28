@@ -279,6 +279,19 @@ func (s *Service) Key() string {
 	return s.Attributes.Namespace + "/" + string(s.Hostname)
 }
 
+type (
+	ServicePort         = *Port
+	ServiceInstancePort struct {
+		ServicePort
+		TargetPort uint32
+	}
+)
+
+type ServiceTarget struct {
+	Service *Service
+	Port    ServiceInstancePort
+}
+
 type Port struct {
 	Name     string            `json:"name,omitempty"`
 	Port     int               `json:"port"`
@@ -306,6 +319,7 @@ func (ports PortList) Equals(other PortList) bool {
 type ServiceDiscovery interface {
 	Services() []*Service
 	GetService(hostname host.Name) *Service
+	GetProxyServiceTargets(*Proxy) []ServiceTarget
 }
 
 func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
@@ -331,7 +345,6 @@ func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 	out.Aliases = slices.Clone(s.Aliases)
 	out.PassthroughTargetPorts = maps.Clone(out.PassthroughTargetPorts)
 
-	// AddressMap contains a mutex, which is safe to return a copy in this case.
 	// nolint: govet
 	return out
 }

@@ -54,7 +54,11 @@ var (
 	gitTag       = "unknown"
 	gitCommit    = "unknown"
 	buildDate    = "unknown"
-	Envoy        = "unknown"
+)
+
+var (
+	// Info exports the build version information.
+	Info BuildInfo
 )
 
 type BuildInfo struct {

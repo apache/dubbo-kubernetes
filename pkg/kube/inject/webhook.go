@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"gomodules.xyz/jsonpatch/v2"
+	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
 	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -170,7 +172,6 @@ func (wh *Webhook) serveInject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// verify the content type is accurate
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		http.Error(w, "invalid Content-Type, want `application/json`", http.StatusUnsupportedMediaType)
@@ -239,13 +240,11 @@ type InjectionParameters struct {
 }
 
 func injectPod(req InjectionParameters) ([]byte, error) {
-	// The patch will be built relative to the initial pod, capture its current state
 	originalPodSpec, err := json.Marshal(req.pod)
 	if err != nil {
 		return nil, err
 	}
 
-	// Run the injection template, giving us a partial pod spec
 	mergedPod, injectedPodData, err := RunTemplate(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run injection template: %v", err)
@@ -256,12 +255,79 @@ func injectPod(req InjectionParameters) ([]byte, error) {
 		return nil, fmt.Errorf("failed to re apply container: %v", err)
 	}
 
+	if err := postProcessPod(mergedPod, *injectedPodData, req); err != nil {
+		return nil, fmt.Errorf("failed to process pod: %v", err)
+	}
+
 	patch, err := createPatch(mergedPod, originalPodSpec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create patch: %v", err)
 	}
 
 	return patch, nil
+}
+
+func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParameters) error {
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	if pod.Labels == nil {
+		pod.Labels = map[string]string{}
+	}
+
+	overwriteClusterInfo(pod, req)
+
+	if err := reorderPod(pod, req); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
+	var merr error
+	mc := req.meshConfig
+	// Get copy of pod proxyconfig, to determine container ordering
+	if pca, f := req.pod.ObjectMeta.GetAnnotations()[annotation.ProxyConfig.Name]; f {
+		mc, merr = mesh.ApplyProxyConfig(pca, req.meshConfig)
+		if merr != nil {
+			return merr
+		}
+	}
+
+	// nolint: staticcheck
+	holdPod := mc.GetDefaultConfig().GetHoldApplicationUntilProxyStarts().GetValue()
+
+	proxyLocation := MoveLast
+	// If HoldApplicationUntilProxyStarts is set, reorder the proxy location
+	if holdPod {
+		proxyLocation = MoveFirst
+	}
+
+	// Proxy container should be last, unless HoldApplicationUntilProxyStarts is set
+	// This is to ensure `kubectl exec` and similar commands continue to default to the user's container
+	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, proxyLocation)
+	if hasContainer(pod.Spec.InitContainers, ProxyContainerName) {
+		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, EnableCoreDumpName, MoveFirst)
+		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, ProxyContainerName, MoveFirst)
+		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, ValidationContainerName, MoveFirst)
+		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, InitContainerName, MoveFirst)
+	} else {
+		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, ValidationContainerName, MoveFirst)
+		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, InitContainerName, MoveLast)
+		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, EnableCoreDumpName, MoveLast)
+	}
+
+	return nil
+}
+
+func hasContainer(cl []corev1.Container, name string) bool {
+	for _, c := range cl {
+		if c.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func reapplyOverwrittenContainers(finalPod *corev1.Pod, originalPod *corev1.Pod, templatePod *corev1.Pod,

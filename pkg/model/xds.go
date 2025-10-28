@@ -8,6 +8,7 @@ const (
 	RouteType                  = APITypePrefix + "envoy.config.route.v3.RouteConfiguration"
 	SecretType                 = APITypePrefix + "envoy.extensions.transport_sockets.tls.v3.Secret"
 	ExtensionConfigurationType = APITypePrefix + "envoy.config.core.v3.TypedExtensionConfig"
+	AddressType                = APITypePrefix + "dubbo.workload.Address"
 
 	HealthInfoType = APITypePrefix + "dubbo.v1.HealthInformation"
 	DebugType      = "dubbo.io/debug"

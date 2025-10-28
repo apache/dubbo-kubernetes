@@ -30,9 +30,13 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
+
+var connectionNumber = int64(0)
 
 type (
 	DiscoveryStream      = xds.DiscoveryStream
@@ -91,7 +95,6 @@ func (s *DiscoveryServer) AdsPushAll(req *model.PushRequest) {
 		totalService := len(req.Push.GetAllServices())
 		klog.Infof("XDS: Pushing Services:%d ConnectedEndpoints:%d", totalService, s.adsClientCount())
 
-		// Make sure the ConfigsUpdated map exists
 		if req.ConfigsUpdated == nil {
 			req.ConfigsUpdated = make(sets.Set[model.ConfigKey])
 		}
@@ -105,7 +108,67 @@ func (s *DiscoveryServer) adsClientCount() int {
 	return len(s.adsClients)
 }
 
+func (s *DiscoveryServer) computeProxyState(proxy *model.Proxy, request *model.PushRequest) {
+	proxy.Lock()
+	defer proxy.Unlock()
+	// 1. If request == nil(initiation phase) or request.ConfigsUpdated == nil(global push), set proxy serviceTargets.
+	// 2. otherwise only set when svc update, this is for the case that a service may select the proxy
+	if request == nil || request.Forced ||
+		proxy.ShouldUpdateServiceTargets(request.ConfigsUpdated) {
+		proxy.SetServiceTargets(s.Env.ServiceDiscovery)
+	}
+
+	recomputeLabels := request == nil || request.IsProxyUpdate()
+	if recomputeLabels {
+	}
+
+	push := proxy.LastPushContext
+	if request == nil {
+	} else {
+		push = request.Push
+		if request.Forced {
+		}
+		for conf := range request.ConfigsUpdated {
+			switch conf.Kind {
+			}
+		}
+	}
+	proxy.LastPushContext = push
+	if request != nil {
+		proxy.LastPushTime = request.Start
+	}
+}
+
+func connectionID(node string) string {
+	id := atomic.AddInt64(&connectionNumber, 1)
+	return node + "-" + strconv.FormatInt(id, 10)
+}
+
 func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, identities []string) error {
+	proxy, err := s.initProxyMetadata(node)
+	if err != nil {
+		return err
+	}
+
+	if alias, exists := s.ClusterAliases[proxy.Metadata.ClusterID]; exists {
+		proxy.Metadata.ClusterID = alias
+	}
+
+	proxy.LastPushContext = s.globalPushContext()
+	con.SetID(connectionID(proxy.ID))
+	con.node = node
+	con.proxy = proxy
+
+	if err := s.authorize(con, identities); err != nil {
+		return err
+	}
+	s.addCon(con.ID(), con)
+
+	defer con.MarkInitialized()
+	if err := s.initializeProxy(con); err != nil {
+		s.closeConnection(con)
+		return err
+	}
 
 	return nil
 }
@@ -113,6 +176,51 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 func (s *DiscoveryServer) closeConnection(con *Connection) {
 	if con.ID() == "" {
 		return
+	}
+	s.removeCon(con.ID())
+}
+
+func (s *DiscoveryServer) initializeProxy(con *Connection) error {
+	proxy := con.proxy
+	s.computeProxyState(proxy, nil)
+	proxy.WatchedResources = map[string]*model.WatchedResource{}
+	// Based on node metadata and version, we can associate a different generator.
+	if proxy.Metadata.Generator != "" {
+		proxy.XdsResourceGenerator = s.Generators[proxy.Metadata.Generator]
+	}
+
+	return nil
+}
+
+func (s *DiscoveryServer) initProxyMetadata(node *core.Node) (*model.Proxy, error) {
+	meta, err := model.ParseMetadata(node.Metadata)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	}
+	proxy, err := model.ParseServiceNodeWithMetadata(node.Id, meta)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	}
+	// Update the config namespace associated with this proxy
+	proxy.ConfigNamespace = model.GetProxyConfigNamespace(proxy)
+	proxy.XdsNode = node
+	return proxy, nil
+}
+
+func (s *DiscoveryServer) addCon(conID string, con *Connection) {
+	s.adsClientsMutex.Lock()
+	defer s.adsClientsMutex.Unlock()
+	s.adsClients[conID] = con
+}
+
+func (s *DiscoveryServer) removeCon(conID string) {
+	s.adsClientsMutex.Lock()
+	defer s.adsClientsMutex.Unlock()
+
+	if _, exist := s.adsClients[conID]; !exist {
+		klog.Errorf("ADS: Removing connection for non-existing node:%v.", conID)
+	} else {
+		delete(s.adsClients, conID)
 	}
 }
 
@@ -153,11 +261,8 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 
 func (s *DiscoveryServer) WaitForRequestLimit(ctx context.Context) error {
 	if s.RequestRateLimit.Limit() == 0 {
-		// Allow opt out when rate limiting is set to 0qps
 		return nil
 	}
-	// Give a bit of time for queue to clear out, but if not fail fast. Client will connect to another
-	// instance in best case, or retry with backoff.
 	wait, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	return s.RequestRateLimit.Wait(wait)
@@ -169,8 +274,32 @@ func newConnection(peerAddr string, stream DiscoveryStream) *Connection {
 	}
 }
 
+var PushOrder = []string{
+	v3.ClusterType,
+	v3.EndpointType,
+	v3.ListenerType,
+	v3.RouteType,
+	v3.AddressType,
+}
+
+var KnownOrderedTypeUrls = sets.New(PushOrder...)
+
 func (conn *Connection) watchedResourcesByOrder() []*model.WatchedResource {
-	return nil
+	allWatched := conn.proxy.ShallowCloneWatchedResources()
+	ordered := make([]*model.WatchedResource, 0, len(allWatched))
+	// first add all known types, in order
+	for _, tp := range PushOrder {
+		if allWatched[tp] != nil {
+			ordered = append(ordered, allWatched[tp])
+		}
+	}
+	// Then add any undeclared types
+	for tp, res := range allWatched {
+		if !KnownOrderedTypeUrls.Contains(tp) {
+			ordered = append(ordered, res)
+		}
+	}
+	return ordered
 }
 
 func (conn *Connection) Initialize(node *core.Node) error {
@@ -214,7 +343,6 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		return nil
 	}
 
-	// For now, don't let xDS piggyback debug requests start watchers.
 	if strings.HasPrefix(req.TypeUrl, v3.DebugType) {
 		return s.pushXds(con,
 			&model.WatchedResource{TypeUrl: req.TypeUrl, ResourceNames: sets.New(req.ResourceNames...)},
@@ -230,10 +358,6 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		Full:   true,
 		Push:   con.proxy.LastPushContext,
 		Reason: model.NewReasonStats(model.ProxyRequest),
-
-		// The usage of LastPushTime (rather than time.Now()), is critical here for correctness; This time
-		// is used by the XDS cache to determine if a entry is stale. If we use Now() with an old push context,
-		// we may end up overriding active cache entries with stale ones.
 		Start:  con.proxy.LastPushTime,
 		Delta:  delta,
 		Forced: true,

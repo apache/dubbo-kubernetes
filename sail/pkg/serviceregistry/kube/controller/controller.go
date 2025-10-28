@@ -187,6 +187,19 @@ func (c *Controller) Services() []*model.Service {
 	return out
 }
 
+func (c *Controller) isControllerForProxy(proxy *model.Proxy) bool {
+	return proxy.Metadata.ClusterID == "" || proxy.Metadata.ClusterID == c.Cluster()
+}
+
+func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceTarget {
+	if !c.isControllerForProxy(proxy) {
+		klog.Errorf("proxy is in cluster %v, but controller is for cluster %v", proxy.Metadata.ClusterID, c.Cluster())
+		return nil
+	}
+	// TODO
+	return nil
+}
+
 // GetService implements a service catalog operation by hostname specified.
 func (c *Controller) GetService(hostname host.Name) *model.Service {
 	c.RLock()
