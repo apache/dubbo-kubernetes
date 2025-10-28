@@ -1,13 +1,47 @@
 package xds
 
 import (
-	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
-	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	"strings"
-
+	"encoding/json"
+	"github.com/apache/dubbo-kubernetes/pkg/env"
+	"github.com/apache/dubbo-kubernetes/pkg/lazy"
+	dubboversion "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"k8s.io/klog/v2"
 	"strconv"
+	"strings"
 )
+
+type IstioControlPlaneInstance struct {
+	// The Istio component type (e.g. "istiod")
+	Component string
+	// The ID of the component instance
+	ID string
+	// The Istio version
+	Info dubboversion.BuildInfo
+}
+
+var controlPlane = lazy.New(func() (*core.ControlPlane, error) {
+	// The Pod Name (instance identity) is in PilotArgs, but not reachable globally nor from DiscoveryServer
+	podName := env.Register("POD_NAME", "", "").Get()
+	byVersion, err := json.Marshal(IstioControlPlaneInstance{
+		Component: "dubbod",
+		ID:        podName,
+		Info:      dubboversion.Info,
+	})
+	if err != nil {
+		klog.Warningf("XDS: Could not serialize control plane id: %v", err)
+	}
+	return &core.ControlPlane{Identifier: string(byVersion)}, nil
+})
+
+func ControlPlane(typ string) *core.ControlPlane {
+	// Error will never happen because the getter of lazy does not return error.
+	cp, _ := controlPlane.Get()
+	return cp
+}
 
 func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req *model.PushRequest) error {
 	if w == nil {

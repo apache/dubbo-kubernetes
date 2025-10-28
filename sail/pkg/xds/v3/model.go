@@ -9,6 +9,7 @@ const (
 	RouteType      = model.RouteType
 	DebugType      = model.DebugType
 	HealthInfoType = model.HealthInfoType
+	AddressType    = model.AddressType
 )
 
 func GetShortType(typeURL string) string {

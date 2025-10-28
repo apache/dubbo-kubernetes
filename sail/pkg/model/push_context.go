@@ -52,6 +52,7 @@ const (
 	HeadlessEndpointUpdate TriggerReason = "headlessendpoint"
 	EndpointUpdate         TriggerReason = "endpoint"
 	ProxyUpdate            TriggerReason = "proxy"
+	DependentResource      TriggerReason = "depdendentresource"
 )
 
 type ProxyPushStatus struct {
@@ -147,6 +148,10 @@ func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
 
 	merged := &PushRequest{}
 	return merged
+}
+
+func (pr *PushRequest) IsProxyUpdate() bool {
+	return pr.Reason.Has(ProxyUpdate)
 }
 
 type XDSUpdater interface {

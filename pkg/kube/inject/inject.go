@@ -15,8 +15,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
+	"sort"
 	"strings"
 	"text/template"
+)
+
+const (
+	ProxyContainerName      = "dubbo-proxy"
+	ValidationContainerName = "dubbo-validation"
+	InitContainerName       = "dubbo-init"
+	EnableCoreDumpName      = "enable-core-dump"
 )
 
 type (
@@ -93,7 +101,13 @@ func potentialPodName(metadata metav1.ObjectMeta) string {
 }
 
 func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod *corev1.Pod, err error) {
+	metadata := &params.pod.ObjectMeta
 	meshConfig := params.meshConfig
+
+	if err := validateAnnotations(metadata.GetAnnotations()); err != nil {
+		klog.Errorf("Injection failed due to invalid annotations: %v", err)
+		return nil, nil, err
+	}
 
 	strippedPod, err := reinsertOverrides(stripPod(params))
 	if err != nil {
@@ -137,6 +151,37 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 	}
 
 	return mergedPod, templatePod, nil
+}
+
+func overwriteClusterInfo(pod *corev1.Pod, params InjectionParameters) {
+	c := FindProxy(pod)
+	if c == nil {
+		return
+	}
+	if len(params.proxyEnvs) > 0 {
+		updateClusterEnvs(c, params.proxyEnvs)
+	}
+}
+
+func updateClusterEnvs(container *corev1.Container, newKVs map[string]string) {
+	envVars := make([]corev1.EnvVar, 0)
+
+	for _, env := range container.Env {
+		if _, found := newKVs[env.Name]; !found {
+			envVars = append(envVars, env)
+		}
+	}
+
+	keys := make([]string, 0, len(newKVs))
+	for key := range newKVs {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		val := newKVs[key]
+		envVars = append(envVars, corev1.EnvVar{Name: key, Value: val, ValueFrom: nil})
+	}
+	container.Env = envVars
 }
 
 func knownTemplates(t Templates) []string {

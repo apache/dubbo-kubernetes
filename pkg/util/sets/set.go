@@ -292,3 +292,11 @@ func DeleteCleanupLast[K comparable, T comparable](m map[K]Set[T], k K, v T) {
 		delete(m, k)
 	}
 }
+
+func (s Set[T]) DeleteContains(item T) bool {
+	if !s.Contains(item) {
+		return false
+	}
+	delete(s, item)
+	return true
+}

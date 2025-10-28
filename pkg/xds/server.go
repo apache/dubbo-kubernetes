@@ -64,7 +64,6 @@ type Watcher interface {
 	GetWatchedResource(url string) *WatchedResource
 	NewWatchedResource(url string, names []string)
 	UpdateWatchedResource(string, func(*WatchedResource) *WatchedResource)
-	// GetID identifies an xDS client. This is different from a connection ID.
 	GetID() string
 }
 

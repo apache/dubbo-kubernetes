@@ -27,7 +27,6 @@ type Controller struct {
 
 type registryEntry struct {
 	serviceregistry.Instance
-	// stop if not nil is the per-registry stop chan. If null, the server stop chan should be used to Run the registry.
 	stop <-chan struct{}
 }
 
@@ -45,11 +44,9 @@ func NewController(opt Options) *Controller {
 	}
 }
 
-// Run starts all the controllers
 func (c *Controller) Run(stop <-chan struct{}) {
 	c.storeLock.Lock()
 	for _, r := range c.registries {
-		// prefer the per-registry stop channel
 		registryStop := stop
 		if s := r.stop; s != nil {
 			registryStop = s
@@ -185,4 +182,43 @@ func mergeService(dst, src *model.Service, srcRegistry serviceregistry.Instance)
 		newAddresses := src.ClusterVIPs.GetAddressesFor(clusterID)
 		dst.ClusterVIPs.SetAddressesFor(clusterID, newAddresses)
 	}
+}
+
+func (c *Controller) GetProxyServiceTargets(node *model.Proxy) []model.ServiceTarget {
+	out := make([]model.ServiceTarget, 0)
+	nodeClusterID := nodeClusterID(node)
+	for _, r := range c.GetRegistries() {
+		if skipSearchingRegistryForProxy(nodeClusterID, r) {
+			klog.Infof("GetProxyServiceTargets(): not searching registry %v: proxy %v CLUSTER_ID is %v",
+				r.Cluster(), node.ID, nodeClusterID)
+			continue
+		}
+
+		instances := r.GetProxyServiceTargets(node)
+		if len(instances) > 0 {
+			out = append(out, instances...)
+		}
+	}
+
+	if len(out) == 0 {
+		klog.Infof("GetProxyServiceTargets(): no service targets found for proxy %s with clusterID %s",
+			node.ID, nodeClusterID.String())
+	}
+
+	return out
+}
+
+func nodeClusterID(node *model.Proxy) cluster.ID {
+	if node.Metadata == nil || node.Metadata.ClusterID == "" {
+		return ""
+	}
+	return node.Metadata.ClusterID
+}
+
+func skipSearchingRegistryForProxy(nodeClusterID cluster.ID, r serviceregistry.Instance) bool {
+	if r.Provider() != provider.Kubernetes || nodeClusterID == "" {
+		return false
+	}
+
+	return !r.Cluster().Equals(nodeClusterID)
 }
