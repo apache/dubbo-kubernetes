@@ -49,6 +49,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/heroku/color v0.0.6
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5

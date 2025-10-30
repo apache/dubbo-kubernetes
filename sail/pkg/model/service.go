@@ -15,6 +15,7 @@ import (
 	"istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -300,6 +301,15 @@ type Port struct {
 
 type PortList []*Port
 
+type TrafficDirection string
+
+const (
+	TrafficDirectionInbound           TrafficDirection = "inbound"
+	TrafficDirectionOutbound          TrafficDirection = "outbound"
+	trafficDirectionOutboundSrvPrefix                  = string(TrafficDirectionOutbound) + "_"
+	trafficDirectionInboundSrvPrefix                   = string(TrafficDirectionInbound) + "_"
+)
+
 func (p *Port) Equals(other *Port) bool {
 	if p == nil {
 		return other == nil
@@ -382,6 +392,15 @@ func (s *Service) Equals(other *Service) bool {
 		s.Resolution == other.Resolution && s.MeshExternal == other.MeshExternal
 }
 
+func (ports PortList) GetByPort(num int) (*Port, bool) {
+	for _, port := range ports {
+		if port.Port == num && port.Protocol != protocol.UDP {
+			return port, true
+		}
+	}
+	return nil, false
+}
+
 func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
 	if s == nil {
 		return other == nil
@@ -431,4 +450,87 @@ func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
 
 func (s *Service) SupportsUnhealthyEndpoints() bool {
 	return false
+}
+
+func (s *Service) SupportsDrainingEndpoints() bool {
+	return false
+}
+
+func (s *Service) GetExtraAddressesForProxy(node *Proxy) []string {
+	addresses := s.getAllAddressesForProxy(node)
+	if len(addresses) > 1 {
+		return addresses[1:]
+	}
+	return nil
+}
+
+func (s *Service) getAllAddressesForProxy(node *Proxy) []string {
+	addresses := []string{}
+	if node.Metadata != nil && node.Metadata.ClusterID != "" {
+		addresses = s.ClusterVIPs.GetAddressesFor(node.Metadata.ClusterID)
+	}
+	if len(addresses) == 0 && nodeUsesAutoallocatedIPs(node) {
+		// The criteria to use AutoAllocated addresses is met so we should go ahead and use them if they are populated
+		if s.AutoAllocatedIPv4Address != "" {
+			addresses = append(addresses, s.AutoAllocatedIPv4Address)
+		}
+		if s.AutoAllocatedIPv6Address != "" {
+			addresses = append(addresses, s.AutoAllocatedIPv6Address)
+		}
+	}
+	if len(addresses) > 0 {
+		return addresses
+	}
+	if a := s.DefaultAddress; len(a) > 0 {
+		return []string{a}
+	}
+	return nil
+}
+
+func nodeUsesAutoallocatedIPs(node *Proxy) bool {
+	if node == nil {
+		return false
+	}
+	return false
+}
+
+func BuildSubsetKey(direction TrafficDirection, subsetName string, hostname host.Name, port int) string {
+	return string(direction) + "|" + strconv.Itoa(port) + "|" + subsetName + "|" + string(hostname)
+}
+
+func ParseSubsetKey(s string) (direction TrafficDirection, subsetName string, hostname host.Name, port int) {
+	sep := "|"
+	// This could be the DNS srv form of the cluster that uses outbound_.port_.subset_.hostname
+	// Since we do not want every callsite to implement the logic to differentiate between the two forms
+	// we add an alternate parser here.
+	if strings.HasPrefix(s, trafficDirectionOutboundSrvPrefix) ||
+		strings.HasPrefix(s, trafficDirectionInboundSrvPrefix) {
+		sep = "_."
+	}
+
+	// Format: dir|port|subset|hostname
+	dir, s, ok := strings.Cut(s, sep)
+	if !ok {
+		return
+	}
+	direction = TrafficDirection(dir)
+
+	p, s, ok := strings.Cut(s, sep)
+	if !ok {
+		return
+	}
+	port, _ = strconv.Atoi(p)
+
+	ss, s, ok := strings.Cut(s, sep)
+	if !ok {
+		return
+	}
+	subsetName = ss
+
+	// last part. No | remains -- verify this
+	if strings.Contains(s, sep) {
+		return
+	}
+	hostname = host.Name(s)
+	return
 }

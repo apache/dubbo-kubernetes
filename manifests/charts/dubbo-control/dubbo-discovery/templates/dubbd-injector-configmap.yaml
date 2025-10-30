@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dubbo-proxyless-injector
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+    dubbo.io/rev: default
+data:
+  config: |-
+    defaultTemplates: [grpc-agent]
+    policy: enabled
+    templates:
+      grpc-agent: |
+{{ .Files.Get "files/grpc-agent.yaml" | trim | indent 8 }}
+  values: |-
+

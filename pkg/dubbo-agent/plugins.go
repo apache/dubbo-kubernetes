@@ -2,10 +2,11 @@ package dubboagent
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/caclient/providers/aegis"
 	"k8s.io/klog/v2"
-	"strings"
 )
 
 type RootCertProvider interface {
@@ -22,7 +23,7 @@ func init() {
 func createAegis(opts *security.Options, a RootCertProvider) (security.Client, error) {
 	var tlsOpts *aegis.TLSOptions
 	var err error
-	// TODO: may add extra cases or explicit settings - but this is a rare use cases, mostly debugging
+
 	if strings.HasSuffix(opts.CAEndpoint, ":15010") {
 		klog.Warning("Debug mode or IP-secure network")
 	} else {
@@ -42,6 +43,8 @@ func createAegis(opts *security.Options, a RootCertProvider) (security.Client, e
 
 		tlsOpts.Key, tlsOpts.Cert = a.GetKeyCertsForCA()
 	}
+
+	tlsOpts.Key, tlsOpts.Cert = a.GetKeyCertsForCA()
 
 	return aegis.NewAegisClient(opts, tlsOpts)
 }

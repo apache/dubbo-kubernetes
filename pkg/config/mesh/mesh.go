@@ -46,8 +46,11 @@ func DefaultProxyConfig() *meshconfig.ProxyConfig {
 		ClusterName:              &meshconfig.ProxyConfig_ServiceCluster{ServiceCluster: constants.ServiceClusterName},
 		DrainDuration:            durationpb.New(45 * time.Second),
 		TerminationDrainDuration: durationpb.New(5 * time.Second),
+		ProxyAdminPort:           15000,
 		DiscoveryAddress:         "dubbod.dubbo-system.svc:15012",
 		ControlPlaneAuthPolicy:   meshconfig.AuthenticationPolicy_MUTUAL_TLS,
+		StatusPort:               15020,
+		BinaryPath:               constants.BinaryPathFilename,
 	}
 }
 

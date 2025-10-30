@@ -1,0 +1,27 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: dubbo-validator-dubbo-system
+  namespace: default
+webhooks:
+  - name: validation.dubbo.io
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: "/validate"
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - security.dubbo.io
+          - networking.dubbo.io
+        apiVersions:
+          - "*"
+        resources:
+          - "*"
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
+

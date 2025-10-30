@@ -11,6 +11,18 @@ import (
 	"path/filepath"
 )
 
+func DirEquals(a, b string) (bool, error) {
+	aa, err := filepath.Abs(a)
+	if err != nil {
+		return false, err
+	}
+	bb, err := filepath.Abs(b)
+	if err != nil {
+		return false, err
+	}
+	return aa == bb, nil
+}
+
 func AtomicWrite(path string, data []byte, mode os.FileMode) error {
 	return AtomicWriteReader(path, bytes.NewReader(data), mode)
 }

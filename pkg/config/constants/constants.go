@@ -20,12 +20,12 @@ package constants
 const (
 	UnspecifiedIP = "0.0.0.0"
 
-	DubboSystemNamespace      = "dubbo-system"
-	DefaultClusterLocalDomain = "cluster.local"
-	DefaultClusterName        = "Kubernetes"
-	ServiceClusterName        = "dubbo-proxy"
-	ConfigPathDir             = "./etc/dubbo/proxy"
-
+	DubboSystemNamespace               = "dubbo-system"
+	DefaultClusterLocalDomain          = "cluster.local"
+	DefaultClusterName                 = "Kubernetes"
+	ServiceClusterName                 = "dubbo-proxy"
+	ConfigPathDir                      = "./etc/dubbo/proxy"
+	BinaryPathFilename                 = "/usr/local/bin/sail-agent"
 	KeyFilename                        = "key.pem"
 	CertChainFilename                  = "cert-chain.pem"
 	CertProviderDubbod                 = "dubbod"
@@ -37,6 +37,8 @@ const (
 
 	PodInfoAnnotationsPath = "./etc/dubbo/pod/annotations"
 
+	StatPrefixDelimiter = ";"
+
 	SailWellKnownDNSCertPath   = "./var/run/secrets/dubbod/tls/"
 	SailWellKnownDNSCaCertPath = "./var/run/secrets/dubbod/ca/"
 
@@ -46,4 +48,8 @@ const (
 	DefaultSailTLSCaCertAlternatePath = SailWellKnownDNSCertPath + "ca.crt"
 
 	AlwaysReject = "internal.dubbo.io/webhook-always-reject"
+
+	KubeSystemNamespace string = "kube-system"
+
+	ThirdPartyJwtPath = "./var/run/secrets/tokens/istio-token"
 )

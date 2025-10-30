@@ -57,4 +57,10 @@ var (
 			"Multiple custom host names are supported, and multiple values are separated by commas.").Get()
 	InjectionWebhookConfigName = env.Register("INJECTION_WEBHOOK_CONFIG_NAME", "dubbo-proxyless-injector",
 		"Name of the mutatingwebhookconfiguration to patch, if dubboctl is not used.").Get()
+	EnableUnsafeAssertions = env.Register(
+		"UNSAFE_SAIL_ENABLE_RUNTIME_ASSERTIONS",
+		false,
+		"If enabled, addition runtime asserts will be performed. "+
+			"These checks are both expensive and panic on failure. As a result, this should be used only for testing.",
+	).Get()
 )

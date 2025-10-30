@@ -56,6 +56,7 @@ type DiscoveryServer struct {
 	concurrentPushLimit chan struct{}
 	adsClientsMutex     sync.RWMutex
 	adsClients          map[string]*Connection
+	Cache               model.XdsCache
 	Generators          map[string]model.XdsResourceGenerator
 	pushVersion         atomic.Uint64
 }

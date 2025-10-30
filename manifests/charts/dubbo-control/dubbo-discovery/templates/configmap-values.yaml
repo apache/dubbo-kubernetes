@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: values
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+    dubbo.io/rev: default
+data:
+  merged-values: |-
+  original-values: |-

@@ -2,15 +2,16 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"k8s.io/klog/v2"
-	"os"
-	"strconv"
-	"strings"
 )
 
 // ConstructProxyConfig returns proxyConfig
@@ -31,7 +32,7 @@ func ConstructProxyConfig(meshConfigFile, proxyConfigEnv string) (*meshconfig.Pr
 		}
 		fileMeshContents = string(contents)
 	}
-	meshConfig, err := getMeshConfig(fileMeshContents, annotations[annotation.ProxyConfig.Name], proxyConfigEnv)
+	meshConfig, err := getMeshConfig(fileMeshContents, annotations["proxy.dubbo.io/config"], proxyConfigEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +56,7 @@ func getMeshConfig(fileOverride, annotationOverride, proxyConfigEnv string) (*me
 		mc = fileMesh
 	}
 
+	// Original order: env first, then annotation
 	if proxyConfigEnv != "" {
 		klog.Infof("Apply proxy config from env %v", proxyConfigEnv)
 		envMesh, err := mesh.ApplyProxyConfig(proxyConfigEnv, mc)

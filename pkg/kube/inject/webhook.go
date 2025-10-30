@@ -4,9 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+	"sync"
+	"text/template"
+	"time"
+
 	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"gomodules.xyz/jsonpatch/v2"
@@ -22,13 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/klog/v2"
-	"net/http"
-	"os"
 	"sigs.k8s.io/yaml"
-	"strings"
-	"sync"
-	"text/template"
-	"time"
 )
 
 var (
@@ -90,11 +92,12 @@ func NewWebhook(p WebhookParameters) (*Webhook, error) {
 }
 
 type WebhookParameters struct {
-	Watcher  Watcher
-	Port     int
-	Env      *model.Environment
-	Mux      *http.ServeMux
-	Revision string
+	Watcher      Watcher
+	Port         int
+	Env          *model.Environment
+	Mux          *http.ServeMux
+	Revision     string
+	MultiCluster multicluster.ComponentBuilder
 }
 
 type ValuesConfig struct {
@@ -250,11 +253,6 @@ func injectPod(req InjectionParameters) ([]byte, error) {
 		return nil, fmt.Errorf("failed to run injection template: %v", err)
 	}
 
-	mergedPod, err = reapplyOverwrittenContainers(mergedPod, req.pod, injectedPodData, req.proxyConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to re apply container: %v", err)
-	}
-
 	if err := postProcessPod(mergedPod, *injectedPodData, req); err != nil {
 		return nil, fmt.Errorf("failed to process pod: %v", err)
 	}
@@ -307,16 +305,6 @@ func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
 	// Proxy container should be last, unless HoldApplicationUntilProxyStarts is set
 	// This is to ensure `kubectl exec` and similar commands continue to default to the user's container
 	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, proxyLocation)
-	if hasContainer(pod.Spec.InitContainers, ProxyContainerName) {
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, EnableCoreDumpName, MoveFirst)
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, ProxyContainerName, MoveFirst)
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, ValidationContainerName, MoveFirst)
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, InitContainerName, MoveFirst)
-	} else {
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, ValidationContainerName, MoveFirst)
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, InitContainerName, MoveLast)
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, EnableCoreDumpName, MoveLast)
-	}
 
 	return nil
 }
@@ -328,12 +316,6 @@ func hasContainer(cl []corev1.Container, name string) bool {
 		}
 	}
 	return false
-}
-
-func reapplyOverwrittenContainers(finalPod *corev1.Pod, originalPod *corev1.Pod, templatePod *corev1.Pod,
-	proxyConfig *meshconfig.ProxyConfig,
-) (*corev1.Pod, error) {
-	return finalPod, nil
 }
 
 func createPatch(pod *corev1.Pod, original []byte) ([]byte, error) {
@@ -455,6 +437,7 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 	req := ar.Request
 	var pod corev1.Pod
 	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Could not unmarshal raw object: %v %s", err, string(req.Object.Raw))
 		return toAdmissionResponse(err)
 	}
 
@@ -468,6 +451,13 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 	klog.Infof("path=%s Process proxyless injection request", path)
 
 	wh.mu.RLock()
+	if !injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &pod.Spec, pod.ObjectMeta) {
+		klog.Infof("Skipping due to policy check")
+		wh.mu.RUnlock()
+		return &kube.AdmissionResponse{
+			Allowed: true,
+		}
+	}
 	proxyConfig := wh.env.GetProxyConfigOrDefault(pod.Namespace, pod.Labels, pod.Annotations, wh.meshConfig)
 	deploy, typeMeta := kube.GetDeployMetaFromPod(&pod)
 	params := InjectionParameters{
@@ -487,12 +477,15 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 
 	wh.mu.RUnlock()
 
+	klog.Infof("Injecting pod with templates: %v, defaultTemplate: %v", len(params.templates), params.defaultTemplate)
+	klog.Infof("Pod labels: %v, annotations: %v", params.pod.Labels, params.pod.Annotations)
 	patchBytes, err := injectPod(params)
 	if err != nil {
 		klog.Errorf("Pod injection failed: %v", err)
 		return toAdmissionResponse(err)
 	}
 
+	klog.Infof("Injection successful, patch size: %d bytes", len(patchBytes))
 	reviewResponse := kube.AdmissionResponse{
 		Allowed: true,
 		Patch:   patchBytes,

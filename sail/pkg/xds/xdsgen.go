@@ -14,19 +14,15 @@ import (
 	"strings"
 )
 
-type IstioControlPlaneInstance struct {
-	// The Istio component type (e.g. "istiod")
+type DubboControlPlaneInstance struct {
 	Component string
-	// The ID of the component instance
-	ID string
-	// The Istio version
-	Info dubboversion.BuildInfo
+	ID        string
+	Info      dubboversion.BuildInfo
 }
 
 var controlPlane = lazy.New(func() (*core.ControlPlane, error) {
-	// The Pod Name (instance identity) is in PilotArgs, but not reachable globally nor from DiscoveryServer
 	podName := env.Register("POD_NAME", "", "").Get()
-	byVersion, err := json.Marshal(IstioControlPlaneInstance{
+	byVersion, err := json.Marshal(DubboControlPlaneInstance{
 		Component: "dubbod",
 		ID:        podName,
 		Info:      dubboversion.Info,
@@ -38,11 +34,19 @@ var controlPlane = lazy.New(func() (*core.ControlPlane, error) {
 })
 
 func ControlPlane(typ string) *core.ControlPlane {
-	// Error will never happen because the getter of lazy does not return error.
 	cp, _ := controlPlane.Get()
 	return cp
 }
 
+func xdsNeedsPush(req *model.PushRequest, _ *model.Proxy) (needsPush, definitive bool) {
+	if req == nil {
+		return true, true
+	}
+	if req.Forced {
+		return true, true
+	}
+	return false, false
+}
 func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req *model.PushRequest) error {
 	if w == nil {
 		return nil

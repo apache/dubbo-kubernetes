@@ -55,14 +55,9 @@ func newSDSService(st security.SecretManager, options *security.Options, pkpConf
 		return ret
 	}
 
-	// Pre-generate workload certificates to improve startup latency and ensure that for OUTPUT_CERTS
-	// case we always write a certificate. A workload can technically run without any mTLS/CA
-	// configured, in which case this will fail; if it becomes noisy we should disable the entire SDS
-	// server in these cases.
 	go func() {
 		// TODO: do we need max timeout for retry, seems meaningless to retry forever if it never succeed
 		b := backoff.NewExponentialBackOff(backoff.DefaultOption())
-		// context for both timeout and channel, whichever stops first, the context will be done
 		ctx, cancel := context.WithCancel(context.Background())
 		go func() {
 			select {

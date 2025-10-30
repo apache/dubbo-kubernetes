@@ -19,6 +19,11 @@ package xds
 
 import (
 	"context"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
@@ -30,10 +35,6 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
-	"strconv"
-	"strings"
-	"sync/atomic"
-	"time"
 )
 
 var connectionNumber = int64(0)
@@ -162,9 +163,17 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 	if err := s.authorize(con, identities); err != nil {
 		return err
 	}
+	// Register the connection. this allows pushes to be triggered for the proxy. Note: the timing of
+	// this and initializeProxy important. While registering for pushes *after* initialization is complete seems like
+	// a better choice, it introduces a race condition; If we complete initialization of a new push
+	// context between initializeProxy and addCon, we would not get any pushes triggered for the new
+	// push context, leading the proxy to have a stale state until the next full push.
 	s.addCon(con.ID(), con)
-
+	// Register that initialization is complete. This triggers to calls that it is safe to access the
+	// proxy
 	defer con.MarkInitialized()
+
+	// Complete full initialization of the proxy
 	if err := s.initializeProxy(con); err != nil {
 		s.closeConnection(con)
 		return err

@@ -80,7 +80,7 @@ var (
 
 	PushThrottle = func() int {
 		v := env.Register(
-			"PILOT_PUSH_THROTTLE",
+			"SAIL_PUSH_THROTTLE",
 			0,
 			"Limits the number of concurrent pushes allowed. On larger machines this can be increased for faster pushes. "+
 				"If set to 0 or unset, the max will be automatically determined based on the machine size",
@@ -96,4 +96,8 @@ var (
 		// 32: 100
 		return min(15+5*procs, 100)
 	}()
+	XDSCacheMaxSize = env.Register("SAIL_XDS_CACHE_SIZE", 60000,
+		"The maximum number of cache entries for the XDS cache.").Get()
+	XDSCacheIndexClearInterval = env.Register("SAIL_XDS_CACHE_INDEX_CLEAR_INTERVAL", 5*time.Second,
+		"The interval for xds cache index clearing.").Get()
 )

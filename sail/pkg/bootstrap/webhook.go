@@ -22,7 +22,6 @@ func (*httpServerErrorLogWriter) Write(p []byte) (int, error) {
 }
 
 func (s *Server) initSecureWebhookServer(args *SailArgs) {
-	// create the https server for hosting the k8s injectionWebhook handlers.
 	if args.ServerOptions.HTTPSAddr == "" {
 		s.httpsMux = s.httpMux
 		klog.Infof("HTTPS port is disabled, multiplexing webhooks on the httpAddr %v", args.ServerOptions.HTTPAddr)
