@@ -4,20 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
+	"text/template"
+
 	"github.com/Masterminds/sprig/v3"
-	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
 	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	proxyConfig "istio.io/api/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
-	"sort"
-	"strings"
-	"text/template"
 )
 
 const (
@@ -33,12 +32,20 @@ type (
 	Templates    map[string]*template.Template
 )
 
+type InjectionPolicy string
+
+const (
+	InjectionPolicyDisabled InjectionPolicy = "disabled"
+	InjectionPolicyEnabled  InjectionPolicy = "enabled"
+)
+
 type Config struct {
 	Templates           Templates           `json:"-"`
 	RawTemplates        RawTemplates        `json:"templates"`
 	InjectedAnnotations map[string]string   `json:"injectedAnnotations"`
 	DefaultTemplates    []string            `json:"defaultTemplates"`
 	Aliases             map[string][]string `json:"aliases"`
+	Policy              InjectionPolicy     `json:"policy"`
 }
 
 type ProxylessTemplateData struct {
@@ -100,6 +107,74 @@ func potentialPodName(metadata metav1.ObjectMeta) string {
 	return ""
 }
 
+func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, metadata metav1.ObjectMeta) bool { // nolint: lll
+	if podSpec.HostNetwork {
+		return false
+	}
+
+	// skip special kubernetes system namespaces
+	for _, namespace := range ignored {
+		if metadata.Namespace == namespace {
+			return false
+		}
+	}
+
+	annos := metadata.GetAnnotations()
+
+	var useDefault bool
+	var inject bool
+
+	objectSelector := annos["proxyless.dubbo.io/inject"]
+	if lbl, labelPresent := metadata.GetLabels()["proxyless.dubbo.io/inject"]; labelPresent {
+		// The label is the new API; if both are present we prefer the label
+		objectSelector = lbl
+	}
+	switch objectSelector {
+	case "true":
+		inject = true
+	case "false":
+		inject = false
+	case "":
+		useDefault = true
+	default:
+		klog.Warningf("Invalid value for %s: %q. Only 'true' and 'false' are accepted. Falling back to default injection policy.",
+			"proxyless.dubbo.io/inject", objectSelector)
+		useDefault = true
+	}
+
+	var required bool
+	switch config.Policy {
+	default: // InjectionPolicyOff
+		klog.Errorf("Illegal value for autoInject:%s, must be one of [%s,%s]. Auto injection disabled!",
+			config.Policy, InjectionPolicyDisabled, InjectionPolicyEnabled)
+		required = false
+	case InjectionPolicyDisabled:
+		if useDefault {
+			required = false
+		} else {
+			required = inject
+		}
+	case InjectionPolicyEnabled:
+		if useDefault {
+			required = true
+		} else {
+			required = inject
+		}
+	}
+
+	return required
+}
+
+func InboundTrafficPolicyMode(meshConfig *meshconfig.MeshConfig) string {
+	switch meshConfig.GetInboundTrafficPolicy().GetMode() {
+	case meshconfig.MeshConfig_InboundTrafficPolicy_LOCALHOST:
+		return "localhost"
+	case meshconfig.MeshConfig_InboundTrafficPolicy_PASSTHROUGH:
+		return "passthrough"
+	}
+	return "passthrough"
+}
+
 func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod *corev1.Pod, err error) {
 	metadata := &params.pod.ObjectMeta
 	meshConfig := params.meshConfig
@@ -115,16 +190,21 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 	}
 
 	data := ProxylessTemplateData{
-		TypeMeta:         params.typeMeta,
-		DeploymentMeta:   params.deployMeta,
-		ObjectMeta:       strippedPod.ObjectMeta,
-		Spec:             strippedPod.Spec,
-		ProxyConfig:      params.proxyConfig,
-		MeshConfig:       meshConfig,
-		Values:           params.valuesConfig.asMap,
-		Revision:         params.revision,
-		ProxyImage:       ProxyImage(params.valuesConfig.asStruct, params.proxyConfig.Image, strippedPod.Annotations),
-		CompliancePolicy: common_features.CompliancePolicy,
+		TypeMeta:                 params.typeMeta,
+		DeploymentMeta:           params.deployMeta,
+		ObjectMeta:               strippedPod.ObjectMeta,
+		Spec:                     strippedPod.Spec,
+		ProxyConfig:              params.proxyConfig,
+		MeshConfig:               meshConfig,
+		Values:                   params.valuesConfig.asMap,
+		Revision:                 params.revision,
+		ProxyImage:               "mfordjody/proxyadapter:test",
+		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
+		CompliancePolicy:         common_features.CompliancePolicy,
+	}
+
+	if params.valuesConfig.asMap == nil {
+		return nil, nil, fmt.Errorf("failed to parse values.yaml; check Dubbod logs for errors")
 	}
 
 	mergedPod = params.pod
@@ -209,8 +289,10 @@ func selectTemplates(params InjectionParameters) []string {
 			name := strings.TrimSpace(tmplName)
 			names = append(names, name)
 		}
+		klog.Infof("Using templates from annotation: %v", names)
 		return resolveAliases(params, names)
 	}
+	klog.Infof("Using default templates: %v", params.defaultTemplate)
 	return resolveAliases(params, params.defaultTemplate)
 }
 
@@ -338,9 +420,4 @@ func FindContainer(name string, containers []corev1.Container) *corev1.Container
 		}
 	}
 	return nil
-}
-
-func ProxyImage(values *opconfig.Values, image *proxyConfig.ProxyImage, annotations map[string]string) string {
-	imageName := "proxyxds"
-	return imageName
 }

@@ -1,0 +1,67 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dubbod
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+    dubbo.io/rev: default
+spec:
+  selector:
+    matchLabels:
+      app: dubbod
+  template:
+    metadata:
+      labels:
+        app: dubbod
+    spec:
+      serviceAccountName: dubbod
+      containers:
+        - name: discovery
+          image: "mfordjody/sail-discovery:test"
+          imagePullPolicy: Always
+          args:
+            - "discovery"
+            - --domain
+            - cluster.local
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: http-debug
+            - containerPort: 15010
+              protocol: TCP
+              name: grpc-xds
+            - containerPort: 15012
+              protocol: TCP
+              name: tls-xds
+            - containerPort: 15017
+              protocol: TCP
+              name: https-webhooks
+          env:
+            - name: REVISION
+              value: default
+            - name: SAIL_CERT_PROVIDER
+              value: dubbod
+            - name: CLUSTER_ID
+              value: "Kubernetes"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: SERVICE_ACCOUNT
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.serviceAccountName
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2048Mi
+

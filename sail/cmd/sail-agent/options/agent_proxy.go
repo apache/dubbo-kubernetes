@@ -22,13 +22,25 @@ import sailagent "github.com/apache/dubbo-kubernetes/pkg/dubbo-agent"
 // ProxyArgs provides all of the configuration parameters for the Saku proxy.
 type ProxyArgs struct {
 	sailagent.Proxy
-	Concurrency        int
-	StsPort            int
+	Concurrency int
+	StsPort     int
+
 	TokenManagerPlugin string
-	MeshConfigFile     string
+
+	MeshConfigFile string
+	TemplateFile   string
+
+	PodName      string
+	PodNamespace string
 }
 
 func NewProxyArgs() ProxyArgs {
 	p := ProxyArgs{}
+	p.applyDefaults()
 	return p
+}
+
+func (node *ProxyArgs) applyDefaults() {
+	node.PodName = PodNameVar.Get()
+	node.PodNamespace = PodNamespaceVar.Get()
 }

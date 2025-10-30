@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/grpc/metadata"
+	"k8s.io/klog/v2"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -33,15 +34,21 @@ const (
 	WorkloadKeyCertResourceName       = "default"
 	WorkloadIdentityPath              = "./var/run/secrets/workload-spiffe-uds"
 	DefaultWorkloadIdentitySocketFile = "socket"
-	SystemRootCerts                   = "SYSTEM"
-	DefaultRootCertFilePath           = "./etc/certs/root-cert.pem"
-	CredentialNameSocketPath          = "./var/run/secrets/credential-uds/socket"
-	WorkloadIdentityCredentialsPath   = "./var/run/secrets/workload-spiffe-credentials"
-	WorkloadIdentityCertChainPath     = WorkloadIdentityCredentialsPath + "/cert-chain.pem"
-	WorkloadIdentityRootCertPath      = WorkloadIdentityCredentialsPath + "/root-cert.pem"
-	WorkloadIdentityKeyPath           = WorkloadIdentityCredentialsPath + "/key.pem"
-	FileCredentialNameSocketPath      = "./var/run/secrets/credential-uds/files-socket"
-	JWT                               = "JWT"
+	DefaultCertChainFilePath          = "./etc/certs/cert-chain.pem"
+	DefaultKeyFilePath                = "./etc/certs/key.pem"
+
+	SystemRootCerts                 = "SYSTEM"
+	DefaultRootCertFilePath         = "./etc/certs/root-cert.pem"
+	CredentialNameSocketPath        = "./var/run/secrets/credential-uds/socket"
+	WorkloadIdentityCredentialsPath = "./var/run/secrets/workload-spiffe-credentials"
+	WorkloadIdentityCertChainPath   = WorkloadIdentityCredentialsPath + "/cert-chain.pem"
+	WorkloadIdentityRootCertPath    = WorkloadIdentityCredentialsPath + "/root-cert.pem"
+	WorkloadIdentityKeyPath         = WorkloadIdentityCredentialsPath + "/key.pem"
+	FileCredentialNameSocketPath    = "./var/run/secrets/credential-uds/files-socket"
+	JWT                             = "JWT"
+
+	CredentialMetaDataName = "credential"
+	FileRootSystemCACert   = "file-root:system"
 )
 
 const (
@@ -105,23 +112,34 @@ type Caller struct {
 }
 
 type Options struct {
-	ServeOnlyFiles     bool
-	ProvCert           string
-	FileMountedCerts   bool
-	SailCertProvider   string
-	OutputKeyCertToDir string
-	CertChainFilePath  string
-	KeyFilePath        string
-	RootCertFilePath   string
-	CARootPath         string
-	CAEndpoint         string
-	CAProviderName     string
-	CredFetcher        CredFetcher
-	CAHeaders          map[string]string
-	CAEndpointSAN      string
-	CertSigner         string
-	ClusterID          string
-	TrustDomain        string
+	ServeOnlyFiles       bool
+	ProvCert             string
+	FileMountedCerts     bool
+	SailCertProvider     string
+	OutputKeyCertToDir   string
+	CertChainFilePath    string
+	KeyFilePath          string
+	RootCertFilePath     string
+	CARootPath           string
+	CAEndpoint           string
+	CAProviderName       string
+	CredFetcher          CredFetcher
+	CAHeaders            map[string]string
+	CAEndpointSAN        string
+	CertSigner           string
+	ClusterID            string
+	TrustDomain          string
+	STSPort              int
+	CredIdentityProvider string
+	XdsAuthProvider      string
+	WorkloadRSAKeySize   int
+	Pkcs8Keys            bool
+	ECCSigAlg            string
+	ECCCurve             string
+	SecretTTL            time.Duration
+	FileDebounceDuration time.Duration
+	WorkloadNamespace    string
+	ServiceAccount       string
 }
 
 type CredFetcher interface {
@@ -136,12 +154,68 @@ type Client interface {
 	GetRootCertBundle() ([]string, error)
 }
 
+func (s SdsCertificateConfig) IsRootCertificate() bool {
+	return s.CaCertificatePath != ""
+}
+
+func (s SdsCertificateConfig) IsKeyCertificate() bool {
+	return s.CertificatePath != "" && s.PrivateKeyPath != ""
+}
+
+const (
+	ResourceSeparator = "~"
+)
+
+func SdsCertificateConfigFromResourceName(resource string) (SdsCertificateConfig, bool) {
+	if strings.HasPrefix(resource, "file-cert:") {
+		filesString := strings.TrimPrefix(resource, "file-cert:")
+		split := strings.Split(filesString, ResourceSeparator)
+		if len(split) != 2 {
+			return SdsCertificateConfig{}, false
+		}
+		return SdsCertificateConfig{split[0], split[1], ""}, true
+	} else if strings.HasPrefix(resource, "file-root:") {
+		filesString := strings.TrimPrefix(resource, "file-root:")
+		split := strings.Split(filesString, ResourceSeparator)
+
+		if len(split) != 1 {
+			return SdsCertificateConfig{}, false
+		}
+		return SdsCertificateConfig{"", "", split[0]}, true
+	}
+	return SdsCertificateConfig{}, false
+}
+
 func GetWorkloadSDSSocketListenPath(sockfile string) string {
 	return filepath.Join(WorkloadIdentityPath, sockfile)
 }
 
 func GetDubboSDSServerSocketPath() string {
 	return filepath.Join(WorkloadIdentityPath, DefaultWorkloadIdentitySocketFile)
+}
+
+func GetOSRootFilePath() string {
+	// Get and store the OS CA certificate path for Linux systems
+	// Source of CA File Paths: https://golang.org/src/crypto/x509/root_linux.go
+	certFiles := []string{
+		"/etc/ssl/certs/ca-certificates.crt",                // Debian/Ubuntu/Gentoo etc.
+		"/etc/pki/tls/certs/ca-bundle.crt",                  // Fedora/RHEL 6
+		"/etc/ssl/ca-bundle.pem",                            // OpenSUSE
+		"/etc/pki/tls/cacert.pem",                           // OpenELEC
+		"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", // CentOS/RHEL 7
+		"/etc/ssl/cert.pem",                                 // Alpine Linux
+		"/usr/local/etc/ssl/cert.pem",                       // FreeBSD
+		"/etc/ssl/certs/ca-certificates",                    // Talos Linux
+	}
+
+	for _, cert := range certFiles {
+		if _, err := os.Stat(cert); err == nil {
+			klog.Infof("Using OS CA certificate for proxy: %s", cert)
+			return cert
+		}
+	}
+	klog.Info("OS CA Cert could not be found for agent")
+	return ""
 }
 
 func CheckWorkloadCertificate(certChainFilePath, keyFilePath, rootCertFilePath string) bool {

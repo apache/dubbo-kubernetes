@@ -27,9 +27,10 @@ import (
 )
 
 func main() {
-	rootCmd := app.NewRootCommand(func(options *security.Options, workloadSecretCache security.SecretManager, pkpConf *meshconfig.PrivateKeyProvider) dubboagent.SDSService {
-		return sds.NewServer(options, workloadSecretCache, pkpConf)
-	})
+	rootCmd := app.NewRootCommand(
+		func(options *security.Options, workloadSecretCache security.SecretManager, pkpConf *meshconfig.PrivateKeyProvider) dubboagent.SDSService {
+			return sds.NewServer(options, workloadSecretCache, pkpConf)
+		})
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(-1)
 	}

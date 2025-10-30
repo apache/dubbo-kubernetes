@@ -18,6 +18,9 @@
 package xds
 
 import (
+	"strings"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
@@ -27,8 +30,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/klog/v2"
-	"strings"
-	"time"
 )
 
 type DiscoveryStream = discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer
@@ -91,10 +92,15 @@ func NewConnection(peerAddr string, stream DiscoveryStream) Connection {
 
 func Stream(ctx ConnectionContext) error {
 	con := ctx.XdsConnection()
+	klog.Infof("ADS: Stream starting for connection: %v", con.ID())
 	go Receive(ctx)
 	<-con.initialized
+	klog.Infof("ADS: Connection initialized: %v", con.ID())
 
 	for {
+		// Go select{} statements are not ordered; the same channel can be chosen many times.
+		// For requests, these are higher priority (client may be blocked on startup until these are done)
+		// and often very cheap to handle (simple ACK), so we check it first.
 		select {
 		case req, ok := <-con.reqChan:
 			if ok {
@@ -109,6 +115,10 @@ func Stream(ctx ConnectionContext) error {
 			return nil
 		default:
 		}
+		// If there wasn't already a request, poll for requests and pushes. Note: if we have a huge
+		// amount of incoming requests, we may still send some pushes, as we do not `continue` above;
+		// however, requests will be handled ~2x as much as pushes. This ensures a wave of requests
+		// cannot completely starve pushes. However, this scenario is unlikely.
 		select {
 		case req, ok := <-con.reqChan:
 			if ok {

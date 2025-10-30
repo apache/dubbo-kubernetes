@@ -47,18 +47,16 @@ const (
 )
 
 type XdsResourceGenerator interface {
-	// Generate generates the Sotw resources for Xds.
 	Generate(proxy *Proxy, w *WatchedResource, req *PushRequest) (Resources, XdsLogDetails, error)
 }
 
-// XdsDeltaResourceGenerator generates Sotw and delta resources.
 type XdsDeltaResourceGenerator interface {
 	XdsResourceGenerator
-	// GenerateDeltas returns the changed and removed resources, along with whether or not delta was actually used.
 	GenerateDeltas(proxy *Proxy, req *PushRequest, w *WatchedResource) (Resources, DeletedResources, XdsLogDetails, bool, error)
 }
 
 type (
+	Node                  = pm.Node
 	NodeMetadata          = pm.NodeMetadata
 	BootstrapNodeMetadata = pm.BootstrapNodeMetadata
 )
@@ -91,6 +89,15 @@ func NewEndpointIndex() *EndpointIndex {
 		shardsBySvc: make(map[string]map[string]*EndpointShards),
 	}
 }
+
+type XdsLogDetails struct {
+	Incremental    bool
+	AdditionalInfo string
+}
+
+var DefaultXdsLogDetails = XdsLogDetails{}
+
+type DeletedResources = []string
 
 var _ mesh.Holder = &Environment{}
 
@@ -255,13 +262,6 @@ func (node *Proxy) ShallowCloneWatchedResources() map[string]*WatchedResource {
 	node.RLock()
 	defer node.RUnlock()
 	return maps.Clone(node.WatchedResources)
-}
-
-type DeletedResources = []string
-
-type XdsLogDetails struct {
-	Incremental    bool
-	AdditionalInfo string
 }
 
 type Resources = []*discovery.Resource

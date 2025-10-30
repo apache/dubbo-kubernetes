@@ -44,6 +44,7 @@ import (
 	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/networking/core"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
@@ -59,6 +60,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+	meshconfig "istio.io/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
@@ -107,6 +109,7 @@ type Server struct {
 	RA                  ra.RegistrationAuthority
 	CA                  *ca.DubboCA
 	dnsNames            []string
+	internalDebugMux    *http.ServeMux
 
 	caServer *caserver.Server
 
@@ -161,7 +164,7 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	s.XDSServer = xds.NewDiscoveryServer(e, args.RegistryOptions.KubeOptions.ClusterAliases, args.KrtDebugger)
-	// TODO xds cache
+	configGen := core.NewConfigGenerator(s.XDSServer.Cache)
 
 	s.initReadinessProbes()
 
@@ -185,7 +188,7 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	s.initMeshNetworks(args, s.fileWatcher)
-	// TODO initMeshHandlers
+	s.initMeshHandlers(nil)
 
 	s.environment.Init()
 	if err := s.environment.InitNetworksManager(s.XDSServer); err != nil {
@@ -214,6 +217,8 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	if err := s.initControllers(args); err != nil {
 		return nil, err
 	}
+
+	InitGenerators(s.XDSServer, configGen, args.Namespace, s.clusterID, s.internalDebugMux)
 
 	dubbodHost, _, err := e.GetDiscoveryAddress()
 	if err != nil {
@@ -445,6 +450,19 @@ func (s *Server) initKubeClient(args *SailArgs) error {
 	}
 
 	return nil
+}
+
+func (s *Server) initMeshHandlers(changeHandler func(_ *meshconfig.MeshConfig)) {
+	klog.Info("initializing mesh handlers")
+	// When the mesh config or networks change, do a full push.
+	s.environment.AddMeshHandler(func() {
+		changeHandler(s.environment.Mesh())
+		s.XDSServer.ConfigUpdate(&model.PushRequest{
+			Full:   true,
+			Reason: model.NewReasonStats(model.GlobalUpdate),
+			Forced: true,
+		})
+	})
 }
 
 func (s *Server) initServers(args *SailArgs) {

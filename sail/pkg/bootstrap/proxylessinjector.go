@@ -57,10 +57,11 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 	klog.Info("initializing proxyless injector")
 
 	parameters := inject.WebhookParameters{
-		Watcher:  watcher,
-		Env:      s.environment,
-		Mux:      s.httpsMux,
-		Revision: args.Revision,
+		Watcher:      watcher,
+		Env:          s.environment,
+		Mux:          s.httpsMux,
+		Revision:     args.Revision,
+		MultiCluster: s.multiclusterController,
 	}
 
 	wh, err := inject.NewWebhook(parameters)

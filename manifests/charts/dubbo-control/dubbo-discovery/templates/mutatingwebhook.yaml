@@ -1,0 +1,144 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: dubbo-proxyless-injector
+  namespace: default
+  labels:
+    app: dubbod
+    dubbo.io/rev: default
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    failurePolicy: Fail
+    name: rev.namespace.sidecar-injector.dubbo.io
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo.io/rev
+          operator: In
+          values:
+            - default
+        - key: dubbo-injection
+          operator: DoesNotExist
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.io/inject
+          operator: NotIn
+          values:
+            - "false"
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    failurePolicy: Fail
+    name: rev.object.proxyless-injector.dubbo.io
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo.io/rev
+          operator: DoesNotExist
+        - key: dubbo-injection
+          operator: DoesNotExist
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.io/inject
+          operator: NotIn
+          values:
+            - "false"
+        - key: dubbo.io/rev
+          operator: In
+          values:
+            - default
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    name: namespace.proxyless-injector.dubbo.io
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo-injection
+          operator: In
+          values:
+            - enabled
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.io/inject
+          operator: NotIn
+          values:
+            - "false"
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    name: object.proxyless-injector.dubbo.io
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo-injection
+          operator: DoesNotExist
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.io/inject
+          operator: In
+          values:
+            - "true"
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None

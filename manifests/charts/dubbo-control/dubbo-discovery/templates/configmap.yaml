@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dubbo
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+    dubbo.io/rev: default
+data:
+  mesh: |-
+    defaultConfig:
+      discoveryAddress: dubbod.dubbo-system.svc:15012
+    rootNamespace: dubbo-system
+    trustDomain: cluster.local
+  meshNetworks: 'networks: {}'

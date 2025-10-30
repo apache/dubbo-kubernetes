@@ -20,6 +20,17 @@ package dubboagent
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/config"
+
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/grpcxds"
@@ -30,11 +41,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	mesh "istio.io/api/mesh/v1alpha1"
 	"k8s.io/klog/v2"
-	"os"
-	"path"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 const (
@@ -50,18 +56,25 @@ const (
 type SDSServiceFactory = func(_ *security.Options, _ security.SecretManager, _ *mesh.PrivateKeyProvider) SDSService
 
 type Proxy struct {
-	DNSDomain string
+	ID          string
+	DNSDomain   string
+	IPAddresses []string
+	Type        model.NodeType
+	ipMode      model.IPMode
 }
 
 type Agent struct {
-	proxyConfig *mesh.ProxyConfig
-	cfg         *AgentOptions
-	secOpts     *security.Options
-	sdsServer   SDSService
-	secretCache *cache.SecretManagerClient
+	proxyConfig              *mesh.ProxyConfig
+	cfg                      *AgentOptions
+	EnableDynamicProxyConfig bool
+	secOpts                  *security.Options
+	sdsServer                SDSService
+	secretCache              *cache.SecretManagerClient
+	sdsMu                    sync.Mutex
 
 	xdsProxy    *XdsProxy
 	fileWatcher filewatcher.FileWatcher
+	statusSrv   *http.Server
 
 	wg sync.WaitGroup
 }
@@ -70,9 +83,17 @@ type AgentOptions struct {
 	WorkloadIdentitySocketFile string
 	GRPCBootstrapPath          string
 	XDSHeaders                 map[string]string
+	XdsUdsPath                 string
 	XDSRootCerts               string
+	ProxyIPAddresses           []string
+	ProxyDomain                string
+	EnableDynamicProxyConfig   bool
+	ServiceNode                string
 	MetadataDiscovery          *bool
 	CARootCerts                string
+	DubbodSAN                  string
+	DownstreamGrpcOptions      []grpc.ServerOption
+	ProxyType                  model.NodeType
 	SDSFactory                 func(options *security.Options, workloadSecretCache security.SecretManager, pkpConf *mesh.PrivateKeyProvider) SDSService
 }
 
@@ -112,6 +133,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to start default Dubbo SDS server: %v", err)
 	}
+	klog.Infof("Starting sail-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
 	a.xdsProxy, err = initXdsProxy(a)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start xds proxy: %v", err)
@@ -132,7 +154,31 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 				klog.InfoS("Failed to init xds proxy dial options")
 			}
 		})
+
+		// also watch CA root for CA client; rebuild SDS/CA client when it changes
+		if caRoot, err := a.FindRootCAForCA(); err == nil && caRoot != "" {
+			go a.startFileWatcher(ctx, caRoot, func() {
+				klog.Info("CA root changed, rebuilding CA client and SDS server")
+				a.rebuildSDSWithNewCAClient()
+			})
+		}
 	}
+
+	// start status HTTP server for health checks
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	a.statusSrv = &http.Server{Addr: fmt.Sprintf(":%d", a.proxyConfig.StatusPort), Handler: mux}
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		klog.Infof("Opening status port %d", a.proxyConfig.StatusPort)
+		if err := a.statusSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			klog.Errorf("status server error: %v", err)
+		}
+	}()
 
 	return a.wg.Wait, nil
 }
@@ -150,6 +196,13 @@ func (a *Agent) Close() {
 	if a.fileWatcher != nil {
 		_ = a.fileWatcher.Close()
 	}
+	if a.statusSrv != nil {
+		_ = a.statusSrv.Shutdown(context.Background())
+	}
+}
+
+func (node *Proxy) DiscoverIPMode() {
+	node.ipMode = model.DiscoverIPMode(node.IPAddresses)
 }
 
 func (a *Agent) FindRootCAForXDS() (string, error) {
@@ -272,26 +325,62 @@ func (a *Agent) initSdsServer() error {
 		return fmt.Errorf("failed to start workload secret manager %v", err)
 	}
 
+	pkpConf := a.proxyConfig.GetPrivateKeyProvider()
+	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache, pkpConf)
+	a.secretCache.RegisterSecretHandler(a.sdsServer.OnSecretUpdate)
+
 	return nil
 }
 
+func (a *Agent) rebuildSDSWithNewCAClient() {
+	a.sdsMu.Lock()
+	defer a.sdsMu.Unlock()
+	if a.sdsServer != nil {
+		klog.Info("Stopping existing SDS server for CA client rebuild")
+		a.sdsServer.Stop()
+	}
+	if a.secretCache != nil {
+		klog.Info("Closing existing SecretManagerClient")
+		a.secretCache.Close()
+	}
+	// recreate secret manager with CA client enabled
+	sc, err := a.newSecretManager(true)
+	if err != nil {
+		klog.Errorf("failed to recreate secret manager with new CA client: %v", err)
+		return
+	}
+	a.secretCache = sc
+	pkpConf := a.proxyConfig.GetPrivateKeyProvider()
+	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache, pkpConf)
+	a.secretCache.RegisterSecretHandler(a.sdsServer.OnSecretUpdate)
+	klog.Info("SDS server and CA client rebuilt successfully")
+}
+
 func (a *Agent) generateGRPCBootstrap() error {
+	klog.Infof("Generating gRPC bootstrap file at: %s", a.cfg.GRPCBootstrapPath)
 	// generate metadata
-	err := a.generateNodeMetadata()
+	node, err := a.generateNodeMetadata()
 	if err != nil {
 		return fmt.Errorf("failed generating node metadata: %v", err)
 	}
+
+	// GRPC bootstrap requires this. Original implementation injected this via env variable, but
+	// this interfere with envoy, we should be able to use both envoy for TCP/HTTP and proxyless.
+	node.Metadata.Generator = "grpc"
+
 	if err := os.MkdirAll(filepath.Dir(a.cfg.GRPCBootstrapPath), 0o700); err != nil {
 		return err
 	}
 
 	_, err = grpcxds.GenerateBootstrapFile(grpcxds.GenerateBootstrapOptions{
+		Node:             node,
 		DiscoveryAddress: a.proxyConfig.DiscoveryAddress,
 		CertDir:          a.secOpts.OutputKeyCertToDir,
 	}, a.cfg.GRPCBootstrapPath)
 	if err != nil {
 		return err
 	}
+	klog.Infof("gRPC bootstrap file generated successfully")
 	return nil
 }
 
@@ -309,21 +398,50 @@ func (a *Agent) newSecretManager(createCaClient bool) (*cache.SecretManagerClien
 	return cache.NewSecretManagerClient(caClient, a.secOpts)
 }
 
-func (a *Agent) generateNodeMetadata() error {
+func (a *Agent) generateNodeMetadata() (*model.Node, error) {
+	var sailSAN []string
+	if a.proxyConfig.ControlPlaneAuthPolicy == mesh.AuthenticationPolicy_MUTUAL_TLS {
+		sailSAN = []string{config.GetSailSan(a.proxyConfig.DiscoveryAddress)}
+	}
+
 	credentialSocketExists, err := checkSocket(context.TODO(), security.CredentialNameSocketPath)
 	if err != nil {
-		return fmt.Errorf("failed to check credential SDS socket: %v", err)
+		return nil, fmt.Errorf("failed to check credential SDS socket: %v", err)
 	}
 	if credentialSocketExists {
 		klog.Info("Credential SDS socket found")
 	}
 
-	return bootstrap.GetNodeMetaData(bootstrap.MetadataOptions{})
+	return bootstrap.GetNodeMetaData(bootstrap.MetadataOptions{
+		ID:                     a.cfg.ServiceNode,
+		Envs:                   os.Environ(),
+		InstanceIPs:            a.cfg.ProxyIPAddresses,
+		StsPort:                a.secOpts.STSPort,
+		ProxyConfig:            a.proxyConfig,
+		SailSubjectAltName:     sailSAN,
+		CredentialSocketExists: credentialSocketExists,
+		XDSRootCert:            a.cfg.XDSRootCerts,
+		MetadataDiscovery:      a.cfg.MetadataDiscovery,
+	})
 }
 
 type SDSService interface {
 	OnSecretUpdate(resourceName string)
 	Stop()
+}
+
+const (
+	serviceNodeSeparator = "~"
+)
+
+func (node *Proxy) ServiceNode() string {
+	ip := ""
+	if len(node.IPAddresses) > 0 {
+		ip = node.IPAddresses[0]
+	}
+	return strings.Join([]string{
+		string(node.Type), ip, node.ID, node.DNSDomain,
+	}, serviceNodeSeparator)
 }
 
 func checkSocket(ctx context.Context, socketPath string) (bool, error) {

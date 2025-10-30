@@ -10,9 +10,9 @@ type KubernetesTokenPlugin struct {
 	path string
 }
 
-func CreateTokenPlugin(path string) *KubernetesTokenPlugin {
+func CreateTokenPlugin() *KubernetesTokenPlugin {
 	return &KubernetesTokenPlugin{
-		path: path,
+		path: "",
 	}
 }
 
