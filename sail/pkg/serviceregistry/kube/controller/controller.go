@@ -18,12 +18,15 @@
 package controller
 
 import (
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
@@ -33,7 +36,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
@@ -47,9 +49,6 @@ import (
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-	"sort"
-	"sync"
-	"time"
 )
 
 type controllerInterface interface {
@@ -196,8 +195,64 @@ func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceT
 		klog.Errorf("proxy is in cluster %v, but controller is for cluster %v", proxy.Metadata.ClusterID, c.Cluster())
 		return nil
 	}
-	// TODO
-	return nil
+
+	proxyNamespace := model.GetProxyConfigNamespace(proxy)
+	if proxyNamespace == "" && proxy.Metadata != nil {
+		proxyNamespace = proxy.Metadata.Namespace
+	}
+
+	out := make([]model.ServiceTarget, 0)
+	c.RLock()
+	defer c.RUnlock()
+
+	for _, svc := range c.servicesMap {
+		// Check if service is visible to the proxy
+		// 1. Service in the same namespace is always visible
+		// 2. Service with ExportTo containing the namespace is visible
+		// 3. Service with empty ExportTo is visible to all (default behavior)
+		// 4. Service not exported (ExportTo contains None) is not visible
+		visible := false
+
+		// Check if service is exported at all
+		if svc.Attributes.ExportTo != nil && svc.Attributes.ExportTo.Contains(visibility.None) {
+			// Service is not exported, skip
+			continue
+		}
+
+		if svc.Attributes.Namespace == proxyNamespace {
+			// Service in the same namespace is always visible
+			visible = true
+		} else if len(svc.Attributes.ExportTo) == 0 {
+			// Empty ExportTo means visible to all
+			visible = true
+		} else if proxyNamespace != "" {
+			// Check if service is exported to this namespace
+			if svc.Attributes.ExportTo.Contains(visibility.Instance(proxyNamespace)) {
+				visible = true
+			}
+		}
+
+		if !visible {
+			continue
+		}
+
+		// Create a ServiceTarget for each port
+		for _, port := range svc.Ports {
+			if port == nil {
+				continue
+			}
+			target := model.ServiceTarget{
+				Service: svc,
+				Port: model.ServiceInstancePort{
+					ServicePort: port,
+					TargetPort:  uint32(port.Port),
+				},
+			}
+			out = append(out, target)
+		}
+	}
+
+	return out
 }
 
 // GetService implements a service catalog operation by hostname specified.
@@ -249,6 +304,12 @@ func (c *Controller) addOrUpdateService(pre, curr *v1.Service, currConv *model.S
 	ns := currConv.Attributes.Namespace
 
 	c.opts.XDSUpdater.ServiceUpdate(shard, string(currConv.Hostname), ns, event)
+
+	// Note: Endpoint updates are handled separately by EndpointSlice events, not here.
+	// This matches Istio's behavior where service changes don't immediately update endpoints.
+	// EndpointSlice events will trigger EDSUpdate (with logPushType=true) which will properly
+	// log "Full push, new service" when a new endpoint shard is created.
+
 	if serviceUpdateNeedsPush(pre, curr, prevConv, currConv) {
 		klog.V(2).Infof("Service %s in namespace %s updated and needs push", currConv.Hostname, ns)
 		c.handlers.NotifyServiceHandlers(prevConv, currConv, event)
@@ -257,7 +318,6 @@ func (c *Controller) addOrUpdateService(pre, curr *v1.Service, currConv *model.S
 
 func (c *Controller) recomputeServiceForPod(pod *v1.Pod) {
 	allServices := c.services.List(pod.Namespace, klabels.Everything())
-	cu := sets.New[model.ConfigKey]()
 	services := getPodServices(allServices, pod)
 	for _, svc := range services {
 		hostname := kube.ServiceHostname(svc.Name, svc.Namespace, c.opts.DomainSuffix)
@@ -265,25 +325,13 @@ func (c *Controller) recomputeServiceForPod(pod *v1.Pod) {
 		conv, f := c.servicesMap[hostname]
 		c.Unlock()
 		if !f {
-			return
+			continue
 		}
 		shard := model.ShardKeyFromRegistry(c)
 		endpoints := c.buildEndpointsForService(conv, true)
-		if len(endpoints) > 0 {
-			c.opts.XDSUpdater.EDSCacheUpdate(shard, string(hostname), svc.Namespace, endpoints)
-		}
-		cu.Insert(model.ConfigKey{
-			Kind:      kind.ServiceEntry,
-			Name:      string(hostname),
-			Namespace: svc.Namespace,
-		})
-	}
-	if len(cu) > 0 {
-		c.opts.XDSUpdater.ConfigUpdate(&model.PushRequest{
-			Full:           false,
-			ConfigsUpdated: cu,
-			Reason:         model.NewReasonStats(model.EndpointUpdate),
-		})
+		// Use EDSUpdate instead of EDSCacheUpdate to trigger push notifications
+		// This ensures that endpoint changes trigger XDS: Incremental Pushing logs
+		c.opts.XDSUpdater.EDSUpdate(shard, string(hostname), svc.Namespace, endpoints)
 	}
 }
 

@@ -5,15 +5,16 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/backoff"
-	"github.com/apache/dubbo-kubernetes/pkg/file"
-	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/backoff"
+	"github.com/apache/dubbo-kubernetes/pkg/file"
+	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
@@ -100,7 +101,7 @@ func NewSecretManagerClient(caClient security.Client, options *security.Options)
 }
 
 func (sc *SecretManagerClient) GenerateSecret(resourceName string) (secret *security.SecretItem, err error) {
-	klog.Infof("generate secret %q", resourceName)
+	klog.V(2).InfoS("generate secret %q", resourceName)
 	defer func() {
 		if secret == nil || err != nil {
 			return
@@ -143,6 +144,27 @@ func (sc *SecretManagerClient) GenerateSecret(resourceName string) (secret *secu
 		klog.Warningf("slow generate secret lock: %v", ts)
 	}
 
+	if resourceName == security.RootCertReqResourceName {
+		// For ROOTCA, directly get root cert bundle from CA client without generating CSR
+		if sc.caClient == nil {
+			return nil, fmt.Errorf("attempted to fetch root cert, but ca client is nil")
+		}
+		trustBundlePEM, err := sc.caClient.GetRootCertBundle()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get root cert bundle: %v", err)
+		}
+		var rootCertPEM []byte
+		if len(trustBundlePEM) > 0 {
+			rootCertPEM = concatCerts(trustBundlePEM)
+		}
+		ns = &security.SecretItem{
+			ResourceName: resourceName,
+			RootCert:     rootCertPEM,
+		}
+		ns.RootCert = sc.mergeTrustAnchorBytes(ns.RootCert)
+		return ns, nil
+	}
+
 	// send request to CA to get new workload certificate
 	ns, err = sc.generateNewSecret(resourceName)
 	if err != nil {
@@ -152,17 +174,13 @@ func (sc *SecretManagerClient) GenerateSecret(resourceName string) (secret *secu
 	// Store the new secret in the secretCache and trigger the periodic rotation for workload certificate
 	sc.registerSecret(*ns)
 
-	if resourceName == security.RootCertReqResourceName {
-		ns.RootCert = sc.mergeTrustAnchorBytes(ns.RootCert)
-	} else {
-		// If periodic cert refresh resulted in discovery of a new root, trigger a ROOTCA request to refresh trust anchor
-		oldRoot := sc.cache.GetRoot()
-		if !bytes.Equal(oldRoot, ns.RootCert) {
-			klog.Info("Root cert has changed, start rotating root cert")
-			// We store the oldRoot only for comparison and not for serving
-			sc.cache.SetRoot(ns.RootCert)
-			sc.OnSecretUpdate(security.RootCertReqResourceName)
-		}
+	// If periodic cert refresh resulted in discovery of a new root, trigger a ROOTCA request to refresh trust anchor
+	oldRoot := sc.cache.GetRoot()
+	if !bytes.Equal(oldRoot, ns.RootCert) {
+		klog.Info("Root cert has changed, start rotating root cert")
+		// We store the oldRoot only for comparison and not for serving
+		sc.cache.SetRoot(ns.RootCert)
+		sc.OnSecretUpdate(security.RootCertReqResourceName)
 	}
 
 	return ns, nil
@@ -179,10 +197,7 @@ func (sc *SecretManagerClient) getCachedSecret(resourceName string) (secret *sec
 				ResourceName: resourceName,
 				RootCert:     rootCertBundle,
 			}
-			klog.V(2).InfoS(
-				"Returned workload trust anchor from cache",
-				"ttl", time.Until(c.ExpireTime),
-			)
+			klog.Infof("returned workload trust anchor from cache (ttl=%v)", time.Until(c.ExpireTime))
 		} else {
 			ns = &security.SecretItem{
 				ResourceName:     resourceName,
@@ -191,14 +206,12 @@ func (sc *SecretManagerClient) getCachedSecret(resourceName string) (secret *sec
 				ExpireTime:       c.ExpireTime,
 				CreatedTime:      c.CreatedTime,
 			}
-			klog.V(2).InfoS(
-				"Returned workload certificate from cache",
-				"ttl", time.Until(c.ExpireTime),
-			)
+			klog.Infof("returned workload certificate from cache (ttl=%v)", time.Until(c.ExpireTime))
 		}
 
 		return ns
 	}
+
 	return nil
 }
 

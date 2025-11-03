@@ -36,18 +36,6 @@ type DiscoveryStream = discovery.AggregatedDiscoveryService_StreamAggregatedReso
 
 type Resources = []*discovery.Resource
 
-type WatchedResource struct {
-	TypeUrl       string
-	ResourceNames sets.String
-	Wildcard      bool
-	NonceSent     string
-	NonceAcked    string
-	AlwaysRespond bool
-	LastSendTime  time.Time
-	LastError     string
-	LastResources Resources
-}
-
 type Connection struct {
 	peerAddr    string
 	connectedAt time.Time
@@ -60,14 +48,6 @@ type Connection struct {
 	errorChan   chan error
 }
 
-type Watcher interface {
-	DeleteWatchedResource(url string)
-	GetWatchedResource(url string) *WatchedResource
-	NewWatchedResource(url string, names []string)
-	UpdateWatchedResource(string, func(*WatchedResource) *WatchedResource)
-	GetID() string
-}
-
 type ConnectionContext interface {
 	XdsConnection() *Connection
 	Watcher() Watcher
@@ -76,6 +56,35 @@ type ConnectionContext interface {
 	Process(req *discovery.DiscoveryRequest) error
 	Push(ev any) error
 }
+
+type Watcher interface {
+	DeleteWatchedResource(url string)
+	GetWatchedResource(url string) *WatchedResource
+	NewWatchedResource(url string, names []string)
+	UpdateWatchedResource(string, func(*WatchedResource) *WatchedResource)
+	GetID() string
+}
+
+type WatchedResource struct {
+	TypeUrl       string
+	ResourceNames sets.String
+	Wildcard      bool
+	NonceSent     string
+	NonceAcked    string
+	AlwaysRespond bool
+	LastSendTime  time.Time
+	LastError     string
+	LastResources Resources
+}
+
+type ResourceDelta struct {
+	// Subscribed indicates the client requested these additional resources
+	Subscribed sets.String
+	// Unsubscribed indicates the client no longer requires these resources
+	Unsubscribed sets.String
+}
+
+var emptyResourceDelta = ResourceDelta{}
 
 func NewConnection(peerAddr string, stream DiscoveryStream) Connection {
 	return Connection{
@@ -92,10 +101,8 @@ func NewConnection(peerAddr string, stream DiscoveryStream) Connection {
 
 func Stream(ctx ConnectionContext) error {
 	con := ctx.XdsConnection()
-	klog.Infof("ADS: Stream starting for connection: %v", con.ID())
 	go Receive(ctx)
 	<-con.initialized
-	klog.Infof("ADS: Connection initialized: %v", con.ID())
 
 	for {
 		// Go select{} statements are not ordered; the same channel can be chosen many times.
@@ -178,7 +185,7 @@ func Receive(ctx ConnectionContext) {
 				return
 			}
 			defer ctx.Close()
-			klog.Infof("ADS: new connection for node:%s", con.conID)
+			// Connection logged in initConnection() after addCon() to ensure accurate counting
 		}
 
 		select {
@@ -188,6 +195,29 @@ func Receive(ctx ConnectionContext) {
 			return
 		}
 	}
+}
+
+func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
+	conn := ctx.XdsConnection()
+	sendResponse := func() error {
+		return conn.stream.Send(res)
+	}
+	err := sendResponse()
+	if err == nil {
+		if res.Nonce != "" && !strings.HasPrefix(res.TypeUrl, model.DebugType) {
+			ctx.Watcher().UpdateWatchedResource(res.TypeUrl, func(wr *WatchedResource) *WatchedResource {
+				if wr == nil {
+					wr = &WatchedResource{TypeUrl: res.TypeUrl}
+				}
+				wr.NonceSent = res.Nonce
+				wr.LastSendTime = time.Now()
+				return wr
+			})
+		}
+	} else if status.Convert(err).Code() == codes.DeadlineExceeded {
+		klog.Infof("Timeout writing %s: %v", conn.conID, model.GetShortType(res.TypeUrl))
+	}
+	return err
 }
 
 func (conn *Connection) ID() string {
@@ -204,6 +234,26 @@ func (conn *Connection) SetID(id string) {
 
 func (conn *Connection) MarkInitialized() {
 	close(conn.initialized)
+}
+
+func (conn *Connection) PushCh() chan any {
+	return conn.pushChannel
+}
+
+func (conn *Connection) StreamDone() <-chan struct{} {
+	return conn.stream.Context().Done()
+}
+
+func (conn *Connection) InitializedCh() chan struct{} {
+	return conn.initialized
+}
+
+func (conn *Connection) ErrorCh() chan error {
+	return conn.errorChan
+}
+
+func (conn *Connection) StopCh() chan struct{} {
+	return conn.stop
 }
 
 func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (bool, ResourceDelta) {
@@ -297,50 +347,6 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	}
 }
 
-func ResourcesToAny(r Resources) []*anypb.Any {
-	a := make([]*anypb.Any, 0, len(r))
-	for _, rr := range r {
-		a = append(a, rr.Resource)
-	}
-	return a
-}
-
-func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
-	conn := ctx.XdsConnection()
-	sendResponse := func() error {
-		return conn.stream.Send(res)
-	}
-	err := sendResponse()
-	if err == nil {
-		if res.Nonce != "" && !strings.HasPrefix(res.TypeUrl, model.DebugType) {
-			ctx.Watcher().UpdateWatchedResource(res.TypeUrl, func(wr *WatchedResource) *WatchedResource {
-				if wr == nil {
-					wr = &WatchedResource{TypeUrl: res.TypeUrl}
-				}
-				wr.NonceSent = res.Nonce
-				wr.LastSendTime = time.Now()
-				return wr
-			})
-		}
-	} else if status.Convert(err).Code() == codes.DeadlineExceeded {
-		klog.Infof("Timeout writing %s: %v", conn.conID, model.GetShortType(res.TypeUrl))
-	}
-	return err
-}
-
-type ResourceDelta struct {
-	// Subscribed indicates the client requested these additional resources
-	Subscribed sets.String
-	// Unsubscribed indicates the client no longer requires these resources
-	Unsubscribed sets.String
-}
-
-var emptyResourceDelta = ResourceDelta{}
-
-func (rd ResourceDelta) IsEmpty() bool {
-	return len(rd.Subscribed) == 0 && len(rd.Unsubscribed) == 0
-}
-
 func shouldUnsubscribe(request *discovery.DiscoveryRequest) bool {
 	return len(request.ResourceNames) == 0 && !IsWildcardTypeURL(request.TypeUrl)
 }
@@ -359,22 +365,14 @@ func IsWildcardTypeURL(typeURL string) bool {
 	}
 }
 
-func (conn *Connection) PushCh() chan any {
-	return conn.pushChannel
+func ResourcesToAny(r Resources) []*anypb.Any {
+	a := make([]*anypb.Any, 0, len(r))
+	for _, rr := range r {
+		a = append(a, rr.Resource)
+	}
+	return a
 }
 
-func (conn *Connection) StreamDone() <-chan struct{} {
-	return conn.stream.Context().Done()
-}
-
-func (conn *Connection) InitializedCh() chan struct{} {
-	return conn.initialized
-}
-
-func (conn *Connection) ErrorCh() chan error {
-	return conn.errorChan
-}
-
-func (conn *Connection) StopCh() chan struct{} {
-	return conn.stop
+func (rd ResourceDelta) IsEmpty() bool {
+	return len(rd.Subscribed) == 0 && len(rd.Unsubscribed) == 0
 }

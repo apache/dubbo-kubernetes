@@ -18,13 +18,11 @@
 package xds
 
 import (
-	"context"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
@@ -83,18 +81,14 @@ func (s *DiscoveryServer) StartPush(req *model.PushRequest) {
 	}
 }
 
-func (s *DiscoveryServer) AllClients() []*Connection {
-	s.adsClientsMutex.RLock()
-	defer s.adsClientsMutex.RUnlock()
-	return maps.Values(s.adsClients)
-}
-
 func (s *DiscoveryServer) AdsPushAll(req *model.PushRequest) {
 	if !req.Full {
-		klog.Infof("XDS: Incremental Pushing ConnectedEndpoints:%d", s.adsClientCount())
+		klog.Infof("XDS: :%d Version:%s",
+			s.adsClientCount(), req.Push.PushVersion)
 	} else {
 		totalService := len(req.Push.GetAllServices())
-		klog.Infof("XDS: Pushing Services:%d ConnectedEndpoints:%d", totalService, s.adsClientCount())
+		klog.Infof("XDS: Pushing Services:%d ConnectedEndpoints:%d Version:%s",
+			totalService, s.adsClientCount(), req.Push.PushVersion)
 
 		if req.ConfigsUpdated == nil {
 			req.ConfigsUpdated = make(sets.Set[model.ConfigKey])
@@ -134,6 +128,7 @@ func (s *DiscoveryServer) computeProxyState(proxy *model.Proxy, request *model.P
 			}
 		}
 	}
+
 	proxy.LastPushContext = push
 	if request != nil {
 		proxy.LastPushTime = request.Start
@@ -163,21 +158,25 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 	if err := s.authorize(con, identities); err != nil {
 		return err
 	}
-	// Register the connection. this allows pushes to be triggered for the proxy. Note: the timing of
-	// this and initializeProxy important. While registering for pushes *after* initialization is complete seems like
-	// a better choice, it introduces a race condition; If we complete initialization of a new push
-	// context between initializeProxy and addCon, we would not get any pushes triggered for the new
-	// push context, leading the proxy to have a stale state until the next full push.
+
 	s.addCon(con.ID(), con)
-	// Register that initialization is complete. This triggers to calls that it is safe to access the
-	// proxy
+	currentCount := s.adsClientCount()
+	klog.Infof("ADS: new connection for node:%s (total connections: %d)", con.ID(), currentCount)
 	defer con.MarkInitialized()
 
-	// Complete full initialization of the proxy
 	if err := s.initializeProxy(con); err != nil {
 		s.closeConnection(con)
 		return err
 	}
+
+	// Trigger a ConfigUpdate to ensure ConnectedEndpoints count is updated in subsequent XDS: Pushing logs.
+	// This ensures that when the next global push happens, the count reflects the newly established connection.
+	// The push will be debounced, so this is safe to call.
+	s.ConfigUpdate(&model.PushRequest{
+		Full:   true,
+		Forced: false,
+		Reason: model.NewReasonStats(model.ProxyUpdate),
+	})
 
 	return nil
 }
@@ -192,7 +191,11 @@ func (s *DiscoveryServer) closeConnection(con *Connection) {
 func (s *DiscoveryServer) initializeProxy(con *Connection) error {
 	proxy := con.proxy
 	s.computeProxyState(proxy, nil)
+
+	proxy.DiscoverIPMode()
+
 	proxy.WatchedResources = map[string]*model.WatchedResource{}
+
 	// Based on node metadata and version, we can associate a different generator.
 	if proxy.Metadata.Generator != "" {
 		proxy.XdsResourceGenerator = s.Generators[proxy.Metadata.Generator]
@@ -246,11 +249,6 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 
 	// TODO WaitForRequestLimit?
 
-	if err := s.WaitForRequestLimit(stream.Context()); err != nil {
-		klog.Warningf("ADS: %q exceeded rate limit: %v", peerAddr, err)
-		return status.Errorf(codes.ResourceExhausted, "request rate limit exceeded: %v", err)
-	}
-
 	ids, err := s.authenticate(ctx)
 	if err != nil {
 		return status.Error(codes.Unauthenticated, err.Error())
@@ -261,6 +259,7 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 	} else {
 		klog.V(2).Infof("Unauthenticated XDS: %s", peerAddr)
 	}
+
 	s.globalPushContext().InitContext(s.Env, nil, nil)
 	con := newConnection(peerAddr, stream)
 	con.ids = ids
@@ -268,13 +267,85 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 	return xds.Stream(con)
 }
 
-func (s *DiscoveryServer) WaitForRequestLimit(ctx context.Context) error {
-	if s.RequestRateLimit.Limit() == 0 {
+func (s *DiscoveryServer) pushConnection(con *Connection, pushEv *Event) error {
+	// Check if connection is initialized - proxy must be set before we can push
+	if con.proxy == nil {
+		// Connection is not yet initialized, skip this push
+		// The push will happen after initialization completes
+		klog.V(2).Infof("Skipping push to %v, connection not yet initialized", con.ID())
 		return nil
 	}
-	wait, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	return s.RequestRateLimit.Wait(wait)
+
+	pushRequest := pushEv.pushRequest
+	if pushRequest == nil {
+		klog.Warningf("Skipping push to %v, pushRequest is nil", con.ID())
+		return nil
+	}
+
+	if pushRequest.Full {
+		// Update Proxy with current information.
+		s.computeProxyState(con.proxy, pushRequest)
+	}
+
+	// Check if ProxyNeedsPush function is set, otherwise default to always push
+	var needsPush bool
+	if s.ProxyNeedsPush != nil {
+		pushRequest, needsPush = s.ProxyNeedsPush(con.proxy, pushRequest)
+	} else {
+		// Default behavior: always push if ProxyNeedsPush is not set
+		needsPush = true
+	}
+	if !needsPush {
+		klog.V(2).Infof("Skipping push to %v, no updates required", con.ID())
+		return nil
+	}
+
+	// Send pushes to all generators
+	// Each Generator is responsible for determining if the push event requires a push
+	wrl := con.watchedResourcesByOrder()
+	for _, w := range wrl {
+		if err := s.pushXds(con, w, pushRequest); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *Connection) error {
+	stype := v3.GetShortType(req.TypeUrl)
+	klog.V(2).Infof("ADS:%s: REQ %s resources:%d nonce:%s ", stype,
+		con.ID(), len(req.ResourceNames), req.ResponseNonce)
+	if req.TypeUrl == v3.HealthInfoType {
+		return nil
+	}
+
+	if strings.HasPrefix(req.TypeUrl, v3.DebugType) {
+		return s.pushXds(con,
+			&model.WatchedResource{TypeUrl: req.TypeUrl, ResourceNames: sets.New(req.ResourceNames...)},
+			&model.PushRequest{Full: true, Push: con.proxy.LastPushContext, Forced: true})
+	}
+
+	shouldRespond, delta := xds.ShouldRespond(con.proxy, con.ID(), req)
+	if !shouldRespond {
+		return nil
+	}
+
+	// Log PUSH request BEFORE calling pushXds
+	if len(req.ResourceNames) > 0 {
+		klog.Infof("%s: PUSH request for node:%s resources:%d", stype, con.ID(), len(req.ResourceNames))
+	} else {
+		klog.Infof("%s: PUSH request for node:%s", stype, con.ID())
+	}
+
+	request := &model.PushRequest{
+		Full:   true,
+		Push:   con.proxy.LastPushContext,
+		Reason: model.NewReasonStats(model.ProxyRequest),
+		Start:  con.proxy.LastPushTime,
+		Delta:  delta,
+		Forced: true,
+	}
+	return s.pushXds(con, con.proxy.GetWatchedResource(req.TypeUrl), request)
 }
 
 func newConnection(peerAddr string, stream DiscoveryStream) *Connection {
@@ -317,61 +388,6 @@ func (conn *Connection) Initialize(node *core.Node) error {
 
 func (conn *Connection) Close() {
 	conn.s.closeConnection(conn)
-}
-
-func (s *DiscoveryServer) pushConnection(con *Connection, pushEv *Event) error {
-	pushRequest := pushEv.pushRequest
-
-	if pushRequest.Full {
-		// Update Proxy with current information.
-		s.computeProxyState(con.proxy, pushRequest)
-	}
-
-	pushRequest, needsPush := s.ProxyNeedsPush(con.proxy, pushRequest)
-	if !needsPush {
-		klog.V(2).Infof("Skipping push to %v, no updates required", con.ID())
-		return nil
-	}
-
-	// Send pushes to all generators
-	// Each Generator is responsible for determining if the push event requires a push
-	wrl := con.watchedResourcesByOrder()
-	for _, w := range wrl {
-		if err := s.pushXds(con, w, pushRequest); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *Connection) error {
-	stype := v3.GetShortType(req.TypeUrl)
-	klog.V(2).Infof("ADS:%s: REQ %s resources:%d nonce:%s ", stype,
-		con.ID(), len(req.ResourceNames), req.ResponseNonce)
-	if req.TypeUrl == v3.HealthInfoType {
-		return nil
-	}
-
-	if strings.HasPrefix(req.TypeUrl, v3.DebugType) {
-		return s.pushXds(con,
-			&model.WatchedResource{TypeUrl: req.TypeUrl, ResourceNames: sets.New(req.ResourceNames...)},
-			&model.PushRequest{Full: true, Push: con.proxy.LastPushContext, Forced: true})
-	}
-
-	shouldRespond, delta := xds.ShouldRespond(con.proxy, con.ID(), req)
-	if !shouldRespond {
-		return nil
-	}
-
-	request := &model.PushRequest{
-		Full:   true,
-		Push:   con.proxy.LastPushContext,
-		Reason: model.NewReasonStats(model.ProxyRequest),
-		Start:  con.proxy.LastPushTime,
-		Delta:  delta,
-		Forced: true,
-	}
-	return s.pushXds(con, con.proxy.GetWatchedResource(req.TypeUrl), request)
 }
 
 func (conn *Connection) Push(ev any) error {

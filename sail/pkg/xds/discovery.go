@@ -18,7 +18,15 @@
 package xds
 
 import (
+	"context"
 	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/maps"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
@@ -29,9 +37,6 @@ import (
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
-	"strconv"
-	"sync"
-	"time"
 )
 
 type DebounceOptions struct {
@@ -59,6 +64,7 @@ type DiscoveryServer struct {
 	Cache               model.XdsCache
 	Generators          map[string]model.XdsResourceGenerator
 	pushVersion         atomic.Uint64
+	Authenticators      []security.Authenticator
 }
 
 var processStartTime = time.Now()
@@ -80,6 +86,7 @@ func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string
 			enableEDSDebounce: features.EnableEDSDebounce,
 		},
 		adsClients:         map[string]*Connection{},
+		Cache:              env.Cache,
 		DiscoveryStartTime: processStartTime,
 	}
 
@@ -87,6 +94,7 @@ func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string
 	for alias := range clusterAliases {
 		out.ClusterAliases[cluster.ID(alias)] = cluster.ID(clusterAliases[alias])
 	}
+
 	return out
 }
 
@@ -98,6 +106,7 @@ func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
 func (s *DiscoveryServer) Start(stopCh <-chan struct{}) {
 	go s.handleUpdates(stopCh)
 	go s.sendPushes(stopCh)
+	go s.Cache.Run(stopCh)
 }
 
 func (s *DiscoveryServer) CachesSynced() {
@@ -112,6 +121,7 @@ func (s *DiscoveryServer) Shutdown() {
 func (s *DiscoveryServer) Push(req *model.PushRequest) {
 	if !req.Full {
 		req.Push = s.globalPushContext()
+		s.dropCacheForRequest(req)
 		s.AdsPushAll(req)
 		return
 	}
@@ -129,9 +139,23 @@ func (s *DiscoveryServer) Push(req *model.PushRequest) {
 	s.AdsPushAll(req)
 }
 
+func (s *DiscoveryServer) WaitForRequestLimit(ctx context.Context) error {
+	if s.RequestRateLimit.Limit() == 0 {
+		// Allow opt out when rate limiting is set to 0qps
+		return nil
+	}
+	// Give a bit of time for queue to clear out, but if not fail fast. Client will connect to another
+	// instance in best case, or retry with backoff.
+	wait, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	return s.RequestRateLimit.Wait(wait)
+}
+
 func (s *DiscoveryServer) initPushContext(req *model.PushRequest, oldPushContext *model.PushContext, version string) *model.PushContext {
 	push := model.NewPushContext()
+	push.PushVersion = version
 	push.InitContext(s.Env, oldPushContext, req)
+	s.dropCacheForRequest(req)
 	s.Env.SetPushContext(push)
 	return push
 }
@@ -144,6 +168,12 @@ func (s *DiscoveryServer) globalPushContext() *model.PushContext {
 	return s.Env.PushContext()
 }
 
+func (s *DiscoveryServer) AllClients() []*Connection {
+	s.adsClientsMutex.RLock()
+	defer s.adsClientsMutex.RUnlock()
+	return maps.Values(s.adsClients)
+}
+
 func (s *DiscoveryServer) handleUpdates(stopCh <-chan struct{}) {
 	debounce(s.pushChannel, stopCh, s.DebounceOptions, s.Push, s.CommittedUpdates)
 }
@@ -154,7 +184,7 @@ func (s *DiscoveryServer) sendPushes(stopCh <-chan struct{}) {
 
 func (s *DiscoveryServer) ConfigUpdate(req *model.PushRequest) {
 	if model.HasConfigsOfKind(req.ConfigsUpdated, kind.Address) {
-		// TODO ClearAll
+		s.Cache.ClearAll()
 	}
 	s.InboundUpdates.Inc()
 
@@ -169,7 +199,8 @@ func (s *DiscoveryServer) ProxyUpdate(clusterID cluster.ID, ip string) {
 	var connection *Connection
 
 	for _, v := range s.Clients() {
-		if v.proxy.Metadata.ClusterID == clusterID && v.proxy.IPAddresses[0] == ip {
+		// Check IPAddresses is not empty before accessing index 0
+		if len(v.proxy.IPAddresses) > 0 && v.proxy.Metadata.ClusterID == clusterID && v.proxy.IPAddresses[0] == ip {
 			connection = v
 			break
 		}
@@ -194,15 +225,28 @@ func (s *DiscoveryServer) Clients() []*Connection {
 	defer s.adsClientsMutex.RUnlock()
 	clients := make([]*Connection, 0, len(s.adsClients))
 	for _, con := range s.adsClients {
+		// Check if connection is initialized by checking if the channel is closed
+		// A closed channel returns immediately when read, indicating initialization is complete
 		select {
 		case <-con.InitializedCh():
+			// Channel is closed (initialized), include this connection
+			clients = append(clients, con)
 		default:
-			// Initialization not complete, skip
+			// Channel is still open (not initialized yet), skip
 			continue
 		}
-		clients = append(clients, con)
 	}
 	return clients
+}
+
+func (s *DiscoveryServer) dropCacheForRequest(req *model.PushRequest) {
+	// If we don't know what updated, cannot safely cache. Clear the whole cache
+	if req.Forced {
+		s.Cache.ClearAll()
+	} else {
+		// Otherwise, just clear the updated configs
+		s.Cache.Clear(req.ConfigsUpdated)
+	}
 }
 
 func reasonsUpdated(req *model.PushRequest) string {
@@ -312,11 +356,32 @@ func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceO
 			}
 
 			lastConfigUpdateTime = time.Now()
-			if debouncedEvents == 0 {
+			wasNewDebounceWindow := debouncedEvents == 0
+			if wasNewDebounceWindow {
 				timeChan = time.After(opts.DebounceAfter)
 				startDebounce = lastConfigUpdateTime
 			}
 			debouncedEvents++
+
+			// Log each event that arrives, showing if it's the start of a new debounce window or merged
+			if wasNewDebounceWindow {
+				// First event in a new debounce window
+				if len(r.ConfigsUpdated) > 0 {
+					klog.V(2).Infof("Push debounce: new window started, event[1] for config %s (reason: %s)",
+						configsUpdated(r), reasonsUpdated(r))
+				} else {
+					klog.V(2).Infof("Push debounce: new window started, event[1] for reason %s", reasonsUpdated(r))
+				}
+			} else {
+				// Event merged into existing debounce window
+				if len(r.ConfigsUpdated) > 0 {
+					klog.V(2).Infof("Push debounce: event[%d] merged into window for config %s (reason: %s, total events: %d)",
+						debouncedEvents, configsUpdated(r), reasonsUpdated(r), debouncedEvents)
+				} else {
+					klog.V(2).Infof("Push debounce: event[%d] merged into window for reason %s (total events: %d)",
+						debouncedEvents, reasonsUpdated(r), debouncedEvents)
+				}
+			}
 
 			req = req.Merge(r)
 		case <-timeChan:

@@ -21,24 +21,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"net/netip"
-	"strings"
-
-	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubbo-agent"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/config"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
-	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/options"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/util/network"
 	"github.com/spf13/cobra"
-	"istio.io/api/annotation"
 	"k8s.io/klog/v2"
+	"net/netip"
 )
 
 const (
@@ -125,6 +118,7 @@ func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 }
 
 func initProxy(args []string) error {
+	proxyArgs.Type = model.Proxyless
 	if len(args) > 0 {
 		proxyArgs.Type = model.NodeType(args[0])
 		if !model.IsApplicationNodeType(proxyArgs.Type) {
@@ -146,22 +140,12 @@ func initProxy(args []string) error {
 		proxyAddrs = append(proxyAddrs, localHostIPv4, localHostIPv6)
 	}
 
-	excludeAddrs := getExcludeInterfaces()
-	excludeAddrs.InsertAll(proxyArgs.IPAddresses...)
-	proxyAddrs = slices.FilterInPlace(proxyAddrs, func(s string) bool {
-		return !excludeAddrs.Contains(s)
-	})
-
 	proxyArgs.IPAddresses = append(proxyArgs.IPAddresses, proxyAddrs...)
 	klog.Infof("proxy IPAddresses: %v", proxyArgs.IPAddresses)
 
 	proxyArgs.DiscoverIPMode()
 
-	if proxyArgs.ID == "" {
-		if len(proxyArgs.IPAddresses) > 0 {
-			proxyArgs.ID = proxyArgs.IPAddresses[0]
-		}
-	}
+	proxyArgs.ID = proxyArgs.PodName + "." + proxyArgs.PodNamespace
 
 	proxyArgs.DNSDomain = getDNSDomain(proxyArgs.PodNamespace, proxyArgs.DNSDomain)
 	klog.Infof(
@@ -179,61 +163,6 @@ func getDNSDomain(podNamespace, domain string) string {
 		domain = podNamespace + ".svc." + constants.DefaultClusterLocalDomain
 	}
 	return domain
-}
-
-func getExcludeInterfaces() sets.String {
-	excludeAddrs := sets.New[string]()
-
-	annotations, err := bootstrap.ReadPodAnnotations("")
-	if err != nil {
-		klog.V(2).InfoS("Reading podInfoAnnotations file to get excludeInterfaces was unsuccessful. Continuing without exclusions. msg: %v", err)
-		return excludeAddrs
-	}
-	value, ok := annotations["traffic.proxyless.dubbo.io/excludeInterfaces"]
-	if !ok {
-		klog.V(2).InfoS("%s annotation is not present", "traffic.proxyless.dubbo.io/excludeInterfaces")
-		return excludeAddrs
-	}
-	exclusions := strings.Split(value, ",")
-
-	for _, ifaceName := range exclusions {
-		iface, err := net.InterfaceByName(ifaceName)
-		if err != nil {
-			klog.Warningf("Unable to get interface %s: %v", ifaceName, err)
-			continue
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			klog.Warningf("Unable to get IP addr(s) of interface %s: %v", ifaceName, err)
-			continue
-		}
-
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			default:
-				continue
-			}
-
-			ipAddr, okay := netip.AddrFromSlice(ip)
-			if !okay {
-				continue
-			}
-			unwrapAddr := ipAddr.Unmap()
-			if !unwrapAddr.IsValid() || unwrapAddr.IsLoopback() || unwrapAddr.IsLinkLocalUnicast() || unwrapAddr.IsLinkLocalMulticast() || unwrapAddr.IsUnspecified() {
-				continue
-			}
-
-			excludeAddrs.Insert(unwrapAddr.String())
-		}
-	}
-
-	klog.Infof("Exclude IPs %v based on %s annotation", excludeAddrs, annotation.SidecarTrafficExcludeInterfaces.Name)
-	return excludeAddrs
 }
 
 func addFlags(proxyCmd *cobra.Command) {

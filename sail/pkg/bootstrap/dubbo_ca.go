@@ -128,13 +128,8 @@ func (s *Server) RunCA(grpc *grpc.Server) {
 		}
 	}
 
-	// TODO: if not set, parse Istiod's own token (if present) and get the issuer. The same issuer is used
-	// for all tokens - no need to configure twice. The token may also include cluster info to auto-configure
-	// networking properties.
 	if iss != "" && // issuer set explicitly or extracted from our own JWT
 		k8sInCluster.Get() == "" { // not running in cluster - in cluster use direct call to apiserver
-		// Add a custom authenticator using standard JWT validation, if not running in K8S
-		// When running inside K8S - we can use the built-in validator, which also check pod removal (invalidation).
 		jwtRule := v1beta1.JWTRule{Issuer: iss, Audiences: []string{aud}}
 		oidcAuth, err := authenticate.NewJwtAuthenticator(&jwtRule, nil)
 		if err == nil {
@@ -217,6 +212,7 @@ func (s *Server) createDubboRA(opts *caOptions) (ra.RegistrationAuthority, error
 	if s.kubeClient == nil {
 		return nil, fmt.Errorf("kubeClient is nil")
 	}
+
 	raOpts := &ra.DubboRAOptions{
 		ExternalCAType:   opts.ExternalCAType,
 		DefaultCertTTL:   workloadCertTTL.Get(),

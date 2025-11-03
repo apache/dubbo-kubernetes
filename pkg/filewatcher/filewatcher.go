@@ -159,6 +159,7 @@ func (fw *fileWatcher) getWorker(path string) (*workerState, string, string, err
 
 	cleanedPath := filepath.Clean(path)
 	parentPath, _ := filepath.Split(cleanedPath)
+	parentPath = filepath.Clean(parentPath)
 
 	ws, workerExists := fw.workers[parentPath]
 	if !workerExists {

@@ -20,6 +20,9 @@ package kube
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
@@ -42,8 +45,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
-	"net/http"
-	"time"
 )
 
 type client struct {
@@ -300,10 +301,18 @@ func (c *client) RunAndWait(stop <-chan struct{}) bool {
 		if !fastWaitForCacheSync(stop, c.informerFactory) {
 			return false
 		}
-		err := wait.PollUntilContextTimeout(context.Background(), time.Microsecond*100, wait.ForeverTestTimeout, true, func(ctx context.Context) (bool, error) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			<-stop
+			cancel()
+		}()
+		err := wait.PollUntilContextTimeout(ctx, time.Microsecond*100, wait.ForeverTestTimeout, true, func(ctx context.Context) (bool, error) {
 			select {
 			case <-stop:
 				return false, fmt.Errorf("channel closed")
+			case <-ctx.Done():
+				return false, ctx.Err()
 			default:
 			}
 			if c.informerWatchesPending.Load() == 0 {
@@ -387,10 +396,18 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 func fastWaitForCacheSync(stop <-chan struct{}, informerFactory informerfactory.InformerFactory) bool {
 	returnImmediately := make(chan struct{})
 	close(returnImmediately)
-	err := wait.PollUntilContextTimeout(context.Background(), time.Microsecond*100, wait.ForeverTestTimeout, true, func(context.Context) (bool, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		<-stop
+		cancel()
+	}()
+	err := wait.PollUntilContextTimeout(ctx, time.Microsecond*100, wait.ForeverTestTimeout, true, func(pollCtx context.Context) (bool, error) {
 		select {
 		case <-stop:
 			return false, fmt.Errorf("channel closed")
+		case <-pollCtx.Done():
+			return false, pollCtx.Err()
 		default:
 		}
 		return informerFactory.WaitForCacheSync(returnImmediately), nil

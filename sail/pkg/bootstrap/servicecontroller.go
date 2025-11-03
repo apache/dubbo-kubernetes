@@ -64,5 +64,5 @@ func (s *Server) initKubeRegistry(args *SailArgs) (err error) {
 		s.environment.ClusterLocal(),
 		s.server,
 		s.multiclusterController)
-	return err
+	return
 }

@@ -275,11 +275,85 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 
 	overwriteClusterInfo(pod, req)
 
+	// Add GRPC_XDS_BOOTSTRAP env and volume mount to all application containers (non-proxy containers)
+	addApplicationContainerConfig(pod)
+
 	if err := reorderPod(pod, req); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// addApplicationContainerConfig adds GRPC_XDS_BOOTSTRAP environment variable and
+// /etc/dubbo/proxy volume mount to all application containers (non-proxy containers)
+// to enable them to connect to the XDS proxy via UDS socket
+func addApplicationContainerConfig(pod *corev1.Pod) {
+	const grpcBootstrapPath = "/etc/dubbo/proxy/grpc-bootstrap.json"
+	const proxyVolumeMountPath = "/etc/dubbo/proxy"
+	const proxyVolumeName = "dubbo-xds"
+
+	// Ensure the volume exists in pod spec
+	hasProxyVolume := false
+	for _, vol := range pod.Spec.Volumes {
+		if vol.Name == proxyVolumeName {
+			hasProxyVolume = true
+			break
+		}
+	}
+	if !hasProxyVolume {
+		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
+			Name: proxyVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory,
+				},
+			},
+		})
+	}
+
+	// Add env and volume mount to all non-proxy containers
+	for i := range pod.Spec.Containers {
+		container := &pod.Spec.Containers[i]
+		// Skip proxy container and validation container
+		// Note: Using string literal to avoid import cycle - ProxyContainerName is defined in inject.go
+		if container.Name == "dubbo-proxy" || container.Name == "dubbo-validation" {
+			continue
+		}
+
+		// Add GRPC_XDS_BOOTSTRAP environment variable if not already present
+		hasGRPCBootstrapEnv := false
+		for _, env := range container.Env {
+			if env.Name == "GRPC_XDS_BOOTSTRAP" {
+				hasGRPCBootstrapEnv = true
+				break
+			}
+		}
+		if !hasGRPCBootstrapEnv {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  "GRPC_XDS_BOOTSTRAP",
+				Value: grpcBootstrapPath,
+			})
+			klog.Infof("Injection: Added GRPC_XDS_BOOTSTRAP=%s env to application container %s", grpcBootstrapPath, container.Name)
+		}
+
+		// Add volume mount for /etc/dubbo/proxy if not already present
+		hasProxyVolumeMount := false
+		for _, vm := range container.VolumeMounts {
+			if vm.Name == proxyVolumeName {
+				hasProxyVolumeMount = true
+				break
+			}
+		}
+		if !hasProxyVolumeMount {
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      proxyVolumeName,
+				MountPath: proxyVolumeMountPath,
+				ReadOnly:  false,
+			})
+			klog.Infof("Injection: Added /etc/dubbo/proxy volume mount to application container %s", container.Name)
+		}
+	}
 }
 
 func reorderPod(pod *corev1.Pod, req InjectionParameters) error {

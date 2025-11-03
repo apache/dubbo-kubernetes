@@ -1,0 +1,80 @@
+package k8s
+
+import (
+	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
+)
+
+func InsertDataToConfigMap(
+	client kclient.Client[*v1.ConfigMap],
+	meta metav1.ObjectMeta,
+	dataKeyName string,
+	data []byte,
+) error {
+	configmap := client.Get(meta.Name, meta.Namespace)
+	if configmap == nil {
+		// Create a new ConfigMap.
+		configmap = &v1.ConfigMap{
+			ObjectMeta: meta,
+			Data: map[string]string{
+				dataKeyName: string(data),
+			},
+		}
+		if _, err := client.Create(configmap); err != nil {
+			// Namespace may be deleted between now... and our previous check. Just skip this, we cannot create into deleted ns
+			// And don't retry a create if the namespace is terminating or already deleted (not found)
+			if errors.IsAlreadyExists(err) || errors.HasStatusCause(err, v1.NamespaceTerminatingCause) || errors.IsNotFound(err) {
+				return nil
+			}
+			if errors.IsForbidden(err) {
+				klog.Infof("skip writing ConfigMap %v/%v as we do not have permissions to do so", meta.Namespace, meta.Name)
+				return nil
+			}
+			return fmt.Errorf("error when creating configmap %v: %v", meta.Name, err)
+		}
+	} else {
+		// Otherwise, update the config map if changes are required
+		err := updateDataInConfigMap(client, configmap, dataKeyName, data)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func updateDataInConfigMap(c kclient.Client[*v1.ConfigMap], cm *v1.ConfigMap, dataKeyName string, data []byte) error {
+	if cm == nil {
+		return fmt.Errorf("cannot update nil configmap")
+	}
+	newCm := cm.DeepCopy()
+	cmData := map[string]string{
+		dataKeyName: string(data),
+	}
+	if needsUpdate := insertData(newCm, cmData); !needsUpdate {
+		klog.V(2).InfoS("ConfigMap %s/%s is already up to date", cm.Namespace, cm.Name)
+		return nil
+	}
+	if _, err := c.Update(newCm); err != nil {
+		return fmt.Errorf("error when updating configmap %v: %v", cm.Name, err)
+	}
+	return nil
+}
+
+func insertData(cm *v1.ConfigMap, data map[string]string) bool {
+	if cm.Data == nil {
+		cm.Data = data
+		return true
+	}
+	needsUpdate := false
+	for k, v := range data {
+		if cm.Data[k] != v {
+			needsUpdate = true
+		}
+		cm.Data[k] = v
+	}
+	return needsUpdate
+}

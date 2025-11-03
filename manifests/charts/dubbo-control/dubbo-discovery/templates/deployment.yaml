@@ -64,4 +64,14 @@ spec:
             requests:
               cpu: 500m
               memory: 2048Mi
+          volumeMounts:
+          - mountPath: /var/run/secrets/dubbod/ca
+            name: dubbo-csr-ca-configmap
+            readOnly: true
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: dubbo-ca-root-cert
+          optional: true
+        name: dubbo-csr-ca-configmap
 

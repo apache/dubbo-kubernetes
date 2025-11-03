@@ -51,5 +51,5 @@ const (
 
 	KubeSystemNamespace string = "kube-system"
 
-	ThirdPartyJwtPath = "./var/run/secrets/tokens/istio-token"
+	CACRLNamespaceConfigMapDataName = "ca-crl.pem"
 )

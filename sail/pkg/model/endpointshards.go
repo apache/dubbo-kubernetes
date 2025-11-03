@@ -1,11 +1,13 @@
 package model
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
+	"sync"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
 	"k8s.io/klog/v2"
-	"sync"
 )
 
 type ShardKey struct {
@@ -22,18 +24,24 @@ type EndpointShards struct {
 type EndpointIndex struct {
 	mu          sync.RWMutex
 	shardsBySvc map[string]map[string]*EndpointShards
+	cache       XdsCache
 }
 
 type PushType int
 
 const (
-	// NoPush does not push any thing.
 	NoPush PushType = iota
-	// IncrementalPush just pushes endpoints.
 	IncrementalPush
-	// FullPush triggers full push - typically used for new services.
 	FullPush
 )
+
+func (e *EndpointIndex) clearCacheForService(svc, ns string) {
+	e.cache.Clear(sets.Set[ConfigKey]{{
+		Kind:      kind.ServiceEntry,
+		Name:      svc,
+		Namespace: ns,
+	}: {}})
+}
 
 func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndpoints []*DubboEndpoint) ([]*DubboEndpoint, bool) {
 	if oldDubboEndpoints == nil {
@@ -42,13 +50,8 @@ func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndp
 	}
 	needPush := false
 	newDubboEndpoints := make([]*DubboEndpoint, 0, len(incomingEndpoints))
-	// Check if new Endpoints are ready to be pushed. This check
-	// will ensure that if a new pod comes with a non ready endpoint,
-	// we do not unnecessarily push that config to Envoy.
 	omap := make(map[string]*DubboEndpoint, len(oldDubboEndpoints))
 	nmap := make(map[string]*DubboEndpoint, len(newDubboEndpoints))
-	// Add new endpoints only if they are ever ready once to shards
-	// so that full push does not send them from shards.
 	for _, oie := range oldDubboEndpoints {
 		omap[oie.Key()] = oie
 	}
@@ -57,25 +60,17 @@ func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndp
 	}
 	for _, nie := range incomingEndpoints {
 		if oie, exists := omap[nie.Key()]; exists {
-			// If endpoint exists already, we should push if it's changed.
-			// Skip this check if we already decide we need to push to avoid expensive checks
 			if !needPush && !oie.Equals(nie) {
 				needPush = true
 			}
 			newDubboEndpoints = append(newDubboEndpoints, nie)
 		} else {
-			// If the endpoint does not exist in shards that means it is a
-			// new endpoint. Always send new healthy endpoints.
-			// Also send new unhealthy endpoints when SendUnhealthyEndpoints is enabled.
-			// This is OK since we disable panic threshold when SendUnhealthyEndpoints is enabled.
 			if nie.HealthStatus != UnHealthy || nie.SendUnhealthyEndpoints {
 				needPush = true
 			}
 			newDubboEndpoints = append(newDubboEndpoints, nie)
 		}
 	}
-	// Next, check for endpoints that were in old but no longer exist. If there are any, there is a
-	// removal so we need to push an update.
 	if !needPush {
 		for _, oie := range oldDubboEndpoints {
 			if _, f := nmap[oie.Key()]; !f {
@@ -185,6 +180,7 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 		}
 		pushType = FullPush
 	}
+	e.clearCacheForService(hostname, namespace)
 	return pushType
 }
 
@@ -204,7 +200,7 @@ func (e *EndpointIndex) GetOrCreateEndpointShard(serviceName, namespace string) 
 		ServiceAccounts: sets.String{},
 	}
 	e.shardsBySvc[serviceName][namespace] = ep
-	// TODO clearCacheForService
+	e.clearCacheForService(serviceName, namespace)
 	return ep, true
 }
 
@@ -243,7 +239,7 @@ func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespac
 	epShards := e.shardsBySvc[serviceName][namespace]
 	epShards.Lock()
 	delete(epShards.Shards, shard)
-	// TODO clearCacheForService
+	e.clearCacheForService(serviceName, namespace)
 	if !preserveKeys {
 		if len(epShards.Shards) == 0 {
 			delete(e.shardsBySvc[serviceName], namespace)

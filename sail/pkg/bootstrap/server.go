@@ -34,6 +34,7 @@ import (
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
 	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
@@ -101,28 +102,30 @@ type Server struct {
 	configController       model.ConfigStoreController
 	multiclusterController *multicluster.Controller
 
-	fileWatcher         filewatcher.FileWatcher
-	internalStop        chan struct{}
-	shutdownDuration    time.Duration
-	workloadTrustBundle *tb.TrustBundle
-	cacertsWatcher      *fsnotify.Watcher
-	RA                  ra.RegistrationAuthority
-	CA                  *ca.DubboCA
-	dnsNames            []string
-	internalDebugMux    *http.ServeMux
+	fileWatcher      filewatcher.FileWatcher
+	internalStop     chan struct{}
+	shutdownDuration time.Duration
+
+	workloadTrustBundle     *tb.TrustBundle
+	cacertsWatcher          *fsnotify.Watcher
+	dubbodCertBundleWatcher *keycertbundle.Watcher
+	RA                      ra.RegistrationAuthority
+	CA                      *ca.DubboCA
+
+	dnsNames []string
 
 	caServer *caserver.Server
 
-	certMu     sync.RWMutex
-	dubbodCert *tls.Certificate
-
-	dubbodCertBundleWatcher *keycertbundle.Watcher
+	certMu           sync.RWMutex
+	dubbodCert       *tls.Certificate
+	internalDebugMux *http.ServeMux
 
 	readinessProbes map[string]readinessProbe
-
-	readinessFlags *readinessFlags
+	readinessFlags  *readinessFlags
 
 	webhookInfo *webhookInfo
+
+	krtDebugger *krt.DebugHandler
 }
 
 type readinessFlags struct {
@@ -400,6 +403,7 @@ func (s *Server) initMulticluster(args *SailArgs) {
 		r.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
 		r.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
 	})
+	// TODO ListRemoteClusters
 	s.addStartFunc("multicluster controller", func(stop <-chan struct{}) error {
 		return s.multiclusterController.Run(stop)
 	})

@@ -176,3 +176,14 @@ func TypedObjectHandler[T ComparableObject](handler func(o T)) cache.ResourceEve
 		DeleteFunc: h,
 	}
 }
+
+type Shutdowner interface {
+	ShutdownHandlers()
+}
+
+// ShutdownAll is a simple helper to shutdown all informers
+func ShutdownAll(s ...Shutdowner) {
+	for _, h := range s {
+		h.ShutdownHandlers()
+	}
+}

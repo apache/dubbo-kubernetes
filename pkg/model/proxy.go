@@ -1,17 +1,67 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	networkutil "github.com/apache/dubbo-kubernetes/sail/pkg/util/network"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	"strconv"
 )
 
 type NodeType string
 
+const (
+	Proxyless NodeType = "proxyless"
+)
+
 type NodeMetaProxyConfig meshconfig.ProxyConfig
+
+// MarshalJSON customizes JSON serialization to handle oneof ClusterName field
+func (n *NodeMetaProxyConfig) MarshalJSON() ([]byte, error) {
+	// Convert to base type
+	base := (*meshconfig.ProxyConfig)(n)
+
+	// Use protomarshal to handle protobuf message serialization correctly
+	return protomarshal.Marshal(base)
+}
+
+// UnmarshalJSON customizes JSON deserialization to handle oneof ClusterName field
+func (n *NodeMetaProxyConfig) UnmarshalJSON(data []byte) error {
+	if n == nil {
+		return fmt.Errorf("cannot unmarshal into nil NodeMetaProxyConfig")
+	}
+
+	// Parse JSON into a map to handle ClusterName conversion
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	// Convert ClusterName from string to oneof object if needed
+	if clusterNameStr, ok := raw["ClusterName"].(string); ok {
+		// Convert string "dubbo-proxy" to oneof object {"ServiceCluster": "dubbo-proxy"}
+		raw["ClusterName"] = map[string]any{"ServiceCluster": clusterNameStr}
+	}
+
+	// Re-marshal to JSON and then use protomarshal to unmarshal into protobuf message
+	convertedData, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+
+	// Use protomarshal to handle protobuf message deserialization correctly
+	// Convert to base type pointer for unmarshaling
+	base := (*meshconfig.ProxyConfig)(n)
+	if err := protomarshal.Unmarshal(convertedData, base); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 type NodeMetadata struct {
 	Generator          string               `json:"GENERATOR,omitempty"`
@@ -39,8 +89,10 @@ type BootstrapNodeMetadata struct {
 
 func IsApplicationNodeType(nType NodeType) bool {
 	switch nType {
-	default:
+	case Proxyless:
 		return true
+	default:
+		return false
 	}
 }
 
