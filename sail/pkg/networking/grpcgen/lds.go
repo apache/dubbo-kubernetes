@@ -2,6 +2,10 @@ package grpcgen
 
 import (
 	"fmt"
+	"net"
+	"strconv"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
@@ -11,9 +15,6 @@ import (
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"k8s.io/klog/v2"
-	"net"
-	"strconv"
-	"strings"
 )
 
 type listenerNames map[string]listenerName
@@ -69,6 +70,19 @@ func newListenerNameFilter(names []string, node *model.Proxy) listenerNames {
 }
 
 func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
+	// If no specific names requested, generate listeners for all ServiceTargets
+	if len(names) == 0 && len(node.ServiceTargets) > 0 {
+		// Build listener names from ServiceTargets for initial request
+		names = make([]string, 0, len(node.ServiceTargets))
+		for _, st := range node.ServiceTargets {
+			if st.Service != nil && st.Port.ServicePort != nil {
+				// Generate inbound listener name for each service target port
+				listenerName := fmt.Sprintf("%s0.0.0.0:%d", grpcxds.ServerListenerNamePrefix, st.Port.TargetPort)
+				names = append(names, listenerName)
+			}
+		}
+	}
+
 	filter := newListenerNameFilter(names, node)
 	resp := make(model.Resources, 0, len(filter))
 	resp = append(resp, buildOutboundListeners(node, push, filter)...)
@@ -94,17 +108,26 @@ func (f listenerNames) inboundNames() []string {
 }
 
 func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
-	if len(names) == 0 {
-		return nil
-	}
 	var out model.Resources
 	// TODO NewMtlsPolicy
 	serviceInstancesByPort := map[uint32]model.ServiceTarget{}
 	for _, si := range node.ServiceTargets {
-		serviceInstancesByPort[si.Port.TargetPort] = si
+		if si.Port.ServicePort != nil {
+			serviceInstancesByPort[si.Port.TargetPort] = si
+		}
 	}
 
-	for _, name := range names {
+	// If names are provided, use them; otherwise, generate listeners for all ServiceTargets
+	listenerNames := names
+	if len(listenerNames) == 0 {
+		// Generate listener names from ServiceTargets
+		for port := range serviceInstancesByPort {
+			listenerName := fmt.Sprintf("%s0.0.0.0:%d", grpcxds.ServerListenerNamePrefix, port)
+			listenerNames = append(listenerNames, listenerName)
+		}
+	}
+
+	for _, name := range listenerNames {
 		listenAddress := strings.TrimPrefix(name, grpcxds.ServerListenerNamePrefix)
 		listenHost, listenPortStr, err := net.SplitHostPort(listenAddress)
 		if err != nil {
@@ -118,7 +141,27 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		}
 		si, ok := serviceInstancesByPort[uint32(listenPort)]
 		if !ok {
-			klog.Warningf("%s has no service instance for port %s", node.ID, listenPortStr)
+			// If no service target found for this port, still create a minimal listener
+			// This ensures we respond with at least one listener for connection initialization
+			klog.V(2).Infof("%s has no service instance for port %s, creating minimal listener", node.ID, listenPortStr)
+			ll := &listener.Listener{
+				Name: name,
+				Address: &core.Address{Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address: listenHost,
+						PortSpecifier: &core.SocketAddress_PortValue{
+							PortValue: uint32(listenPort),
+						},
+					},
+				}},
+				FilterChains:    nil,
+				ListenerFilters: nil,
+				UseOriginalDst:  nil,
+			}
+			out = append(out, &discovery.Resource{
+				Name:     ll.Name,
+				Resource: protoconv.MessageToAny(ll),
+			})
 			continue
 		}
 

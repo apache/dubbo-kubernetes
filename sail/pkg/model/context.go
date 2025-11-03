@@ -20,6 +20,13 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
@@ -30,16 +37,12 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
+	networkutil "github.com/apache/dubbo-kubernetes/sail/pkg/util/network"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/protobuf/types/known/structpb"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	"net"
-	"sort"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -59,7 +62,18 @@ type (
 	Node                  = pm.Node
 	NodeMetadata          = pm.NodeMetadata
 	BootstrapNodeMetadata = pm.BootstrapNodeMetadata
+	NodeType              = pm.NodeType
+	IPMode                = pm.IPMode
 )
+
+const (
+	Proxyless = pm.Proxyless
+
+	IPv4 = pm.IPv4
+	IPv6 = pm.IPv6
+	Dual = pm.Dual
+)
+
 type Watcher = meshwatcher.WatcherCollection
 
 type WatchedResource = xds.WatchedResource
@@ -75,18 +89,27 @@ type Environment struct {
 	clusterLocalServices ClusterLocalProvider
 	DomainSuffix         string
 	EndpointIndex        *EndpointIndex
+	Cache                XdsCache
 }
 
 func NewEnvironment() *Environment {
+	var cache XdsCache
+	if features.EnableXDSCaching {
+		cache = NewXdsCache()
+	} else {
+		cache = DisabledCache{}
+	}
 	return &Environment{
 		pushContext:   NewPushContext(),
-		EndpointIndex: NewEndpointIndex(),
+		Cache:         cache,
+		EndpointIndex: NewEndpointIndex(cache),
 	}
 }
 
-func NewEndpointIndex() *EndpointIndex {
+func NewEndpointIndex(cache XdsCache) *EndpointIndex {
 	return &EndpointIndex{
 		shardsBySvc: make(map[string]map[string]*EndpointShards),
+		cache:       cache,
 	}
 }
 
@@ -183,6 +206,8 @@ type Proxy struct {
 	XdsNode              *core.Node
 	ConfigNamespace      string
 	ServiceTargets       []ServiceTarget
+	ipMode               IPMode
+	GlobalUnicastIP      string
 }
 
 func (node *Proxy) GetWatchedResource(typeURL string) *WatchedResource {
@@ -303,7 +328,15 @@ func ParseServiceNodeWithMetadata(nodeID string, metadata *NodeMetadata) (*Proxy
 	if len(parts) != 4 {
 		return out, fmt.Errorf("missing parts in the service node %q", nodeID)
 	}
-	// TODO ？
+
+	// Extract IP address from parts[1] (format: type~ip~id~domain)
+	// Validate and set IP address
+	if len(parts[1]) > 0 {
+		ip := net.ParseIP(parts[1])
+		if ip != nil {
+			out.IPAddresses = []string{parts[1]}
+		}
+	}
 
 	// Does query from ingress or router have to carry valid IP address?
 	if len(out.IPAddresses) == 0 {
@@ -334,4 +367,9 @@ func GetProxyConfigNamespace(proxy *Proxy) string {
 	}
 
 	return ""
+}
+
+func (node *Proxy) DiscoverIPMode() {
+	node.ipMode = pm.DiscoverIPMode(node.IPAddresses)
+	node.GlobalUnicastIP = networkutil.GlobalUnicastIP(node.IPAddresses)
 }

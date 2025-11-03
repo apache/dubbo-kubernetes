@@ -3,10 +3,12 @@ package grpcxds
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/model"
 
 	"github.com/apache/dubbo-kubernetes/pkg/file"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
@@ -136,7 +138,15 @@ func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
 	//	// TODO direct to CP should use secure channel (most likely JWT + TLS, but possibly allow mTLS)
 	serverURI := opts.DiscoveryAddress
 	if opts.XdsUdsPath != "" {
-		serverURI = fmt.Sprintf("unix:///%s", opts.XdsUdsPath)
+		// Convert to absolute path for unix socket
+		absPath, err := filepath.Abs(opts.XdsUdsPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve absolute path for XdsUdsPath: %v", err)
+		}
+		// Use absolute path format for unix socket
+		// gRPC client library expects unix://path format (two slashes) for absolute paths
+		// Note: unix:///path (three slashes) is also valid but unix://path is more standard
+		serverURI = fmt.Sprintf("unix://%s", absPath)
 	}
 
 	bootstrap := Bootstrap{
@@ -186,6 +196,18 @@ func extractMeta(node *model.Node) (*structpb.Struct, error) {
 	if err := json.Unmarshal(bytes, &rawMeta); err != nil {
 		return nil, err
 	}
+
+	// Fix ClusterName oneof field in PROXY_CONFIG to be a string instead of object
+	// This is needed because sail-discovery expects ClusterName as a string, not a oneof object
+	if proxyConfigRaw, ok := rawMeta["PROXY_CONFIG"].(map[string]any); ok {
+		if clusterNameRaw, ok := proxyConfigRaw["ClusterName"].(map[string]any); ok {
+			// Convert {"ServiceCluster": "dubbo-proxy"} to just "dubbo-proxy"
+			if serviceCluster, ok := clusterNameRaw["ServiceCluster"].(string); ok {
+				proxyConfigRaw["ClusterName"] = serviceCluster
+			}
+		}
+	}
+
 	xdsMeta, err := structpb.NewStruct(rawMeta)
 	if err != nil {
 		return nil, err

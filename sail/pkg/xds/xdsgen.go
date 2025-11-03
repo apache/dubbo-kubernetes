@@ -2,16 +2,20 @@ package xds
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	dubboversion "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/networking/util"
+	v3 "github.com/apache/dubbo-kubernetes/sail/pkg/xds/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"k8s.io/klog/v2"
-	"strconv"
-	"strings"
 )
 
 type DubboControlPlaneInstance struct {
@@ -34,6 +38,10 @@ var controlPlane = lazy.New(func() (*core.ControlPlane, error) {
 })
 
 func ControlPlane(typ string) *core.ControlPlane {
+	if typ != TypeDebugSyncronization {
+		// Currently only TypeDebugSyncronization utilizes this so don't both sending otherwise
+		return nil
+	}
 	cp, _ := controlPlane.Get()
 	return cp
 }
@@ -83,22 +91,45 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	}
 
 	resp := &discovery.DiscoveryResponse{
-		TypeUrl:   w.TypeUrl,
-		Resources: xds.ResourcesToAny(res),
+		ControlPlane: ControlPlane(w.TypeUrl),
+		TypeUrl:      w.TypeUrl,
+		VersionInfo:  req.Push.PushVersion,
+		Nonce:        nonce(req.Push.PushVersion),
+		Resources:    xds.ResourcesToAny(res),
+	}
+
+	ptype := "PUSH"
+	if logdata.Incremental {
+		ptype = "PUSH INC"
 	}
 
 	if err := xds.Send(con, resp); err != nil {
 		return err
 	}
 
+	switch {
+	case !req.Full:
+	default:
+		// Log format matches Istio: "LDS: PUSH for node:xxx resources:1 size:342B"
+		klog.Infof("%s: %s for node:%s resources:%d size:%s", v3.GetShortType(w.TypeUrl), ptype, con.proxy.ID, len(res),
+			util.ByteCount(ResourceSize(res)))
+	}
+
 	return nil
+}
+
+func ResourceSize(r model.Resources) int {
+	size := 0
+	for _, r := range r {
+		size += len(r.Resource.Value)
+	}
+	return size
 }
 
 func (s *DiscoveryServer) findGenerator(typeURL string, con *Connection) model.XdsResourceGenerator {
 	if g, f := s.Generators[con.proxy.Metadata.Generator+"/"+typeURL]; f {
 		return g
 	}
-
 	if g, f := s.Generators[typeURL]; f {
 		return g
 	}
@@ -115,4 +146,19 @@ func (s *DiscoveryServer) findGenerator(typeURL string, con *Connection) model.X
 		}
 	}
 	return g
+}
+
+// atMostNJoin joins up to N items from data, appending "and X others" if more exist
+func atMostNJoin(data []string, limit int) string {
+	if limit == 0 || limit == 1 {
+		// Assume limit >1, but make sure we don't crash if someone does pass those
+		return strings.Join(data, ", ")
+	}
+	if len(data) == 0 {
+		return ""
+	}
+	if len(data) < limit {
+		return strings.Join(data, ", ")
+	}
+	return strings.Join(data[:limit-1], ", ") + fmt.Sprintf(", and %d others", len(data)-limit+1)
 }

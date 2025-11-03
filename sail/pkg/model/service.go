@@ -1,6 +1,11 @@
 package model
 
 import (
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
@@ -15,10 +20,6 @@ import (
 	"istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Resolution int
@@ -35,6 +36,26 @@ const (
 	// Alias defines a Service that is an alias for another.
 	Alias
 )
+
+type workloadKind int
+
+const (
+	// PodKind indicates the workload is from pod
+	PodKind workloadKind = iota
+	// WorkloadEntryKind indicates the workload is from workloadentry
+	WorkloadEntryKind
+)
+
+type WorkloadInstance struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	// Where the workloadInstance come from, valid values are`Pod` or `WorkloadEntry`
+	Kind     workloadKind      `json:"kind"`
+	Endpoint *DubboEndpoint    `json:"endpoint,omitempty"`
+	PortMap  map[string]uint32 `json:"portMap,omitempty"`
+	// Can only be selected by service entry of DNS type.
+	DNSServiceEntryOnly bool `json:"dnsServiceEntryOnly,omitempty"`
+}
 
 type EndpointDiscoverabilityPolicy interface {
 	String() string
@@ -533,4 +554,18 @@ func ParseSubsetKey(s string) (direction TrafficDirection, subsetName string, ho
 	}
 	hostname = host.Name(s)
 	return
+}
+
+// ParseSubsetKeyHostname is an optimized specialization of ParseSubsetKey that only returns the hostname.
+// This is created as this is used in some hot paths and is about 2x faster than ParseSubsetKey; for typical use ParseSubsetKey is sufficient (and zero-alloc).
+func ParseSubsetKeyHostname(s string) (hostname string) {
+	idx := strings.LastIndex(s, "|")
+	if idx == -1 {
+		// Could be DNS SRV format.
+		// Do not do LastIndex("_."), as those are valid characters in the hostname (unlike |)
+		// Fallback to the full parser.
+		_, _, hn, _ := ParseSubsetKey(s)
+		return string(hn)
+	}
+	return s[idx+1:]
 }

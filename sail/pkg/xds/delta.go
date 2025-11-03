@@ -2,6 +2,9 @@ package xds
 
 import (
 	"errors"
+	"strings"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
@@ -13,8 +16,6 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
-	"strings"
-	"time"
 )
 
 func (s *DiscoveryServer) processDeltaRequest(req *discovery.DeltaDiscoveryRequest, con *Connection) error {
@@ -195,14 +196,33 @@ func (s *DiscoveryServer) receiveDelta(con *Connection, identities []string) {
 }
 
 func (s *DiscoveryServer) pushConnectionDelta(con *Connection, pushEv *Event) error {
+	// Check if connection is initialized - proxy must be set before we can push
+	if con.proxy == nil {
+		// Connection is not yet initialized, skip this push
+		// The push will happen after initialization completes
+		klog.V(2).Infof("Skipping push to %v, connection not yet initialized", con.ID())
+		return nil
+	}
+
 	pushRequest := pushEv.pushRequest
+	if pushRequest == nil {
+		klog.Warningf("Skipping push to %v, pushRequest is nil", con.ID())
+		return nil
+	}
 
 	if pushRequest.Full {
 		// Update Proxy with current information.
 		s.computeProxyState(con.proxy, pushRequest)
 	}
 
-	pushRequest, needsPush := s.ProxyNeedsPush(con.proxy, pushRequest)
+	// Check if ProxyNeedsPush function is set, otherwise default to always push
+	var needsPush bool
+	if s.ProxyNeedsPush != nil {
+		pushRequest, needsPush = s.ProxyNeedsPush(con.proxy, pushRequest)
+	} else {
+		// Default behavior: always push if ProxyNeedsPush is not set
+		needsPush = true
+	}
 	if !needsPush {
 		klog.V(2).Infof("Skipping push to %v, no updates required", con.ID())
 		return nil
@@ -287,8 +307,8 @@ func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource
 	switch {
 	case !req.Full:
 	default:
-		klog.Infof("%s: %s%s for node:%s resources:%d removed:%d size:%v%s%s",
-			v3.GetShortType(w.TypeUrl), ptype, req.PushReason(), con.proxy.ID, len(res), len(resp.RemovedResources))
+		klog.Infof("%s: %s%s for node:%s resources:%d removed:%d%s",
+			v3.GetShortType(w.TypeUrl), ptype, req.PushReason(), con.proxy.ID, len(res), len(resp.RemovedResources), info)
 	}
 
 	return nil

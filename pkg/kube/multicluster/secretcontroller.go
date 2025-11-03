@@ -6,16 +6,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
-	"sync"
 )
-
-type ClusterStore struct {
-	sync.RWMutex
-	clusters sets.String
-}
 
 type Controller struct {
 	namespace            string
@@ -51,8 +44,20 @@ func (c *Controller) Run(stopCh <-chan struct{}) error {
 	// run handlers for the config cluster; do not store this *Cluster in the ClusterStore or give it a SyncTimeout
 	// this is done outside the goroutine, we should block other Run/startFuncs until this is registered
 	c.configClusterSyncers = c.handleAdd(c.configCluster)
-
 	return nil
+}
+
+func (c *Controller) HasSynced() bool {
+	if !c.queue.HasSynced() {
+		return false
+	}
+	// Check all config cluster components are synced
+	// c.ConfigClusterHandler.HasSynced does not work; config cluster is handle specially
+	if !kube.AllSynced(c.configClusterSyncers) {
+		return false
+	}
+	// Check all remote clusters are synced (or timed out)
+	return c.cs.HasSynced()
 }
 
 func (c *Controller) handleAdd(cluster *Cluster) []ComponentConstraint {

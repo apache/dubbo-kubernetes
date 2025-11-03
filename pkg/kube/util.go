@@ -227,3 +227,16 @@ func GetDeployMetaFromPod(pod *corev1.Pod) (types.NamespacedName, metav1.TypeMet
 
 	return deployMeta, typeMetadata
 }
+
+type Syncer interface {
+	HasSynced() bool
+}
+
+func AllSynced[T Syncer](syncers []T) bool {
+	for _, h := range syncers {
+		if !h.HasSynced() {
+			return false
+		}
+	}
+	return true
+}

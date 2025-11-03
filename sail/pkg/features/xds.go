@@ -8,4 +8,7 @@ var (
 
 	EnableRDSCaching = env.Register("SAIL_ENABLE_RDS_CACHE", true,
 		"If true, SAIL will cache RDS responses. Note: this depends on SAIL_ENABLE_XDS_CACHE.").Get()
+
+	EnableXDSCaching = env.Register("SAIL_ENABLE_XDS_CACHE", true,
+		"If true, Sail will cache XDS responses.").Get()
 )

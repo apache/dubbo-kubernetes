@@ -1,9 +1,11 @@
 package controller
 
 import (
-	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/clustertrustbundle"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
+	"github.com/apache/dubbo-kubernetes/sail/pkg/leaderelection"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/server"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
@@ -82,11 +84,68 @@ func NewMulticluster(
 func (m *Multicluster) initializeCluster(cluster *multicluster.Cluster, kubeController *kubeController, kubeRegistry *Controller,
 	options Options, configCluster bool, clusterStopCh <-chan struct{},
 ) {
+	client := cluster.Client
+
 	// run after WorkloadHandler is added
 	m.opts.MeshServiceController.AddRegistryAndRun(kubeRegistry, clusterStopCh)
+
+	go func() {
+		var shouldLead bool
+		if !configCluster {
+			shouldLead = m.checkShouldLead()
+			klog.Infof("should join leader-election for cluster %s: %t", cluster.ID, shouldLead)
+		}
+
+		if m.distributeCACert && (shouldLead || configCluster) {
+			if features.EnableClusterTrustBundles {
+				// Block server exit on graceful termination of the leader controller.
+				m.s.RunComponentAsyncAndWait("clustertrustbundle controller", func(_ <-chan struct{}) error {
+					election := leaderelection.
+						NewLeaderElectionMulticluster(options.SystemNamespace, m.serverID, leaderelection.NamespaceController, m.revision, !configCluster, client)
+					// For config cluster (single-node deployment), disable leader election even if globally enabled
+					// because there's only one instance and no need for election.
+					if configCluster {
+						election.SetEnabled(false)
+					}
+					election.AddRunFunction(func(leaderStop <-chan struct{}) {
+						klog.Infof("starting clustertrustbundle controller for cluster %s", cluster.ID)
+						c := clustertrustbundle.NewController(client, m.caBundleWatcher)
+						client.RunAndWait(clusterStopCh)
+						c.Run(leaderStop)
+					})
+					election.Run(clusterStopCh)
+					return nil
+				})
+			} else {
+				// Block server exit on graceful termination of the leader controller.
+				m.s.RunComponentAsyncAndWait("namespace controller", func(_ <-chan struct{}) error {
+					election := leaderelection.
+						NewLeaderElectionMulticluster(options.SystemNamespace, m.serverID, leaderelection.NamespaceController, m.revision, !configCluster, client)
+					// For config cluster (single-node deployment), disable leader election even if globally enabled
+					// because there's only one instance and no need for election.
+					if configCluster {
+						election.SetEnabled(false)
+					}
+					election.AddRunFunction(func(leaderStop <-chan struct{}) {
+						klog.Infof("starting namespace controller for cluster %s", cluster.ID)
+						nc := NewNamespaceController(client, m.caBundleWatcher)
+						// Start informers again. This fixes the case where informers for namespace do not start,
+						// as we create them only after acquiring the leader lock
+						// Note: stop here should be the overall pilot stop, NOT the leader election stop. We are
+						// basically lazy loading the informer, if we stop it when we lose the lock we will never
+						// recreate it again.
+						client.RunAndWait(clusterStopCh)
+						nc.Run(leaderStop)
+					})
+					election.Run(clusterStopCh)
+					return nil
+				})
+			}
+		}
+	}()
 }
 
-func (m *Multicluster) checkShouldLead(client kubelib.Client, systemNamespace string, stop <-chan struct{}) bool {
+func (m *Multicluster) checkShouldLead() bool {
 	var res bool
 	return res
 }

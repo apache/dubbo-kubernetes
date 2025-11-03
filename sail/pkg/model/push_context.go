@@ -19,6 +19,9 @@ package model
 
 import (
 	"cmp"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -33,8 +36,6 @@ import (
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-	"sync"
-	"time"
 )
 
 var (
@@ -222,7 +223,28 @@ func (ps *PushContext) createNewContext(env *Environment) {
 }
 
 func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
-	var servicesChanged bool
+	// Check if services have changed based on:
+	// 1. ServiceEntry updates in ConfigsUpdated
+	// 2. Address changes
+	// 3. Actual service count changes from environment (for Kubernetes Service changes)
+	servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
+		len(pushReq.AddressesUpdated) > 0)
+
+	// Also check if the actual number of services has changed
+	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
+	if !servicesChanged && oldPushContext != nil {
+		currentServices := env.Services()
+		// Count services in old ServiceIndex
+		oldServiceCount := 0
+		for _, namespaces := range oldPushContext.ServiceIndex.HostnameAndNamespace {
+			oldServiceCount += len(namespaces)
+		}
+		// If service count differs, services have changed
+		if len(currentServices) != oldServiceCount {
+			servicesChanged = true
+		}
+	}
+
 	if servicesChanged {
 		// Services have changed. initialize service registry
 		ps.initServiceRegistry(env, pushReq.ConfigsUpdated)
@@ -544,5 +566,18 @@ func (r ReasonStats) Count() int {
 	for _, count := range r {
 		ret += count
 	}
+	return ret
+}
+
+// ConfigNamesOfKind extracts config names of the specified kind.
+func ConfigNamesOfKind(configs sets.Set[ConfigKey], k kind.Kind) sets.String {
+	ret := sets.New[string]()
+
+	for conf := range configs {
+		if conf.Kind == k {
+			ret.Insert(conf.Name)
+		}
+	}
+
 	return ret
 }

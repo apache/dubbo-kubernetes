@@ -19,6 +19,7 @@ package dubboagent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -37,8 +38,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/cache"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/structpb"
 	mesh "istio.io/api/mesh/v1alpha1"
 	"k8s.io/klog/v2"
 )
@@ -133,17 +136,42 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to start default Dubbo SDS server: %v", err)
 	}
-	klog.Infof("Starting sail-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
 	a.xdsProxy, err = initXdsProxy(a)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start xds proxy: %v", err)
 	}
 
+	// Generate bootstrap file must happen after xdsProxy is initialized
+	// because we need the UDS path to be converted to absolute path
+	var bootstrapNode *core.Node
 	if a.cfg.GRPCBootstrapPath != "" {
-		if err := a.generateGRPCBootstrap(); err != nil {
+		klog.Infof("Starting sail-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
+		node, err := a.generateGRPCBootstrapWithNode()
+		if err != nil {
 			return nil, fmt.Errorf("failed generating gRPC XDS bootstrap: %v", err)
 		}
+		// Prepare Node for preemptive connection, but don't set it yet
+		// We'll set it after status port starts and certificates are generated
+		if node != nil && a.xdsProxy != nil {
+			bootstrapNode = &core.Node{
+				Id:       node.ID,
+				Locality: node.Locality,
+			}
+			if node.Metadata != nil {
+				bytes, _ := json.Marshal(node.Metadata)
+				rawMeta := map[string]any{}
+				if err := json.Unmarshal(bytes, &rawMeta); err == nil {
+					if metaStruct, err := structpb.NewStruct(rawMeta); err == nil {
+						bootstrapNode.Metadata = metaStruct
+					}
+				}
+			}
+		}
+	} else {
+		klog.Warning("GRPC_XDS_BOOTSTRAP not set, bootstrap file will not be generated")
 	}
+	// Watch for certificate changes to update dial options
+	// Note: dial options are already initialized in initXdsProxy, this is only for updates
 	if a.proxyConfig.ControlPlaneAuthPolicy != mesh.AuthenticationPolicy_NONE {
 		rootCAForXDS, err := a.FindRootCAForXDS()
 		if err != nil {
@@ -151,7 +179,9 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		}
 		go a.startFileWatcher(ctx, rootCAForXDS, func() {
 			if err := a.xdsProxy.initDubbodDialOptions(a); err != nil {
-				klog.InfoS("Failed to init xds proxy dial options")
+				klog.Warningf("Failed to update xds proxy dial options: %v", err)
+			} else {
+				klog.Info("Updated xds proxy dial options after certificate change")
 			}
 		})
 
@@ -179,6 +209,25 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 			klog.Errorf("status server error: %v", err)
 		}
 	}()
+
+	// Wait for certificate generation to complete before establishing preemptive connection.
+	// This ensures certificate logs appear after "Opening status port" but before "Establishing preemptive connection".
+	// The SDS service generates certificates asynchronously in newSDSService.
+	// We wait a short time for the SDS service's async generation to complete and log.
+	// This avoids calling GenerateSecret ourselves, which would cause duplicate generation and logs.
+	if a.secretCache != nil && !a.secOpts.FileMountedCerts && !a.secOpts.ServeOnlyFiles {
+		// Give SDS service's async certificate generation goroutine a chance to complete.
+		// The SDS service starts generating certificates immediately after initSdsServer,
+		// so a short wait is usually sufficient for the certificates to be generated and logged.
+		// This avoids the need to call GenerateSecret ourselves, which would cause duplicate logs.
+		time.Sleep(300 * time.Millisecond)
+	}
+
+	// Now set bootstrap node to trigger preemptive connection.
+	// This ensures preemptive connection logs appear after certificate logs.
+	if bootstrapNode != nil && a.xdsProxy != nil {
+		a.xdsProxy.SetBootstrapNode(bootstrapNode)
+	}
 
 	return a.wg.Wait, nil
 }
@@ -290,19 +339,39 @@ func (a *Agent) FindRootCAForCA() (string, error) {
 }
 
 func (a *Agent) startFileWatcher(ctx context.Context, filePath string, handler func()) {
-	if err := a.fileWatcher.Add(filePath); err != nil {
-		klog.Warningf("Failed to add file watcher %s", filePath)
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		klog.Warningf("Failed to get absolute path for %s: %v", filePath, err)
+		return
+	}
+	// Ensure parent directory exists for filewatcher
+	parentDir := filepath.Dir(absPath)
+	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(parentDir, 0755); err != nil {
+			klog.Warningf("Failed to create parent directory %s for file watcher: %v", parentDir, err)
+			return
+		}
+	}
+	// Filewatcher watches the parent directory, so the file doesn't need to exist yet
+	if err := a.fileWatcher.Add(absPath); err != nil {
+		// If the file is already being watched, this is expected and should be silently skipped
+		// Only log as warning if it's a different error
+		if strings.Contains(err.Error(), "is already being watched") {
+			klog.V(2).Infof("File watcher already exists for %s, skipping", absPath)
+			return
+		}
+		klog.Warningf("Failed to add file watcher %s: %v", absPath, err)
 		return
 	}
 
-	klog.V(2).Infof("Add file %s watcher", filePath)
+	klog.V(2).Infof("Add file %s watcher", absPath)
 	for {
 		select {
-		case gotEvent := <-a.fileWatcher.Events(filePath):
-			klog.V(2).Infof("Receive file %s event %v", filePath, gotEvent)
+		case gotEvent := <-a.fileWatcher.Events(absPath):
+			klog.V(2).Infof("Receive file %s event %v", absPath, gotEvent)
 			handler()
-		case err := <-a.fileWatcher.Errors(filePath):
-			klog.Warningf("Watch file %s error: %v", filePath, err)
+		case err := <-a.fileWatcher.Errors(absPath):
+			klog.Warningf("Watch file %s error: %v", absPath, err)
 		case <-ctx.Done():
 			return
 		}
@@ -356,32 +425,48 @@ func (a *Agent) rebuildSDSWithNewCAClient() {
 	klog.Info("SDS server and CA client rebuilt successfully")
 }
 
-func (a *Agent) generateGRPCBootstrap() error {
-	klog.Infof("Generating gRPC bootstrap file at: %s", a.cfg.GRPCBootstrapPath)
+func (a *Agent) generateGRPCBootstrapWithNode() (*model.Node, error) {
+	// Convert relative path to absolute path for bootstrap file
+	bootstrapPath := a.cfg.GRPCBootstrapPath
+	absBootstrapPath, err := filepath.Abs(bootstrapPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve absolute path for bootstrap file: %v", err)
+	}
+	klog.Infof("Generating gRPC bootstrap file at: %s (absolute: %s)", bootstrapPath, absBootstrapPath)
+
 	// generate metadata
 	node, err := a.generateNodeMetadata()
 	if err != nil {
-		return fmt.Errorf("failed generating node metadata: %v", err)
+		return nil, fmt.Errorf("failed generating node metadata: %v", err)
 	}
 
 	// GRPC bootstrap requires this. Original implementation injected this via env variable, but
 	// this interfere with envoy, we should be able to use both envoy for TCP/HTTP and proxyless.
 	node.Metadata.Generator = "grpc"
 
-	if err := os.MkdirAll(filepath.Dir(a.cfg.GRPCBootstrapPath), 0o700); err != nil {
-		return err
+	if err := os.MkdirAll(filepath.Dir(absBootstrapPath), 0o700); err != nil {
+		return nil, err
 	}
+
+	// Use absolute XdsUdsPath from xdsProxy (already converted in initXdsProxy)
+	absUdsPath := a.xdsProxy.xdsUdsPath
 
 	_, err = grpcxds.GenerateBootstrapFile(grpcxds.GenerateBootstrapOptions{
 		Node:             node,
+		XdsUdsPath:       absUdsPath,
 		DiscoveryAddress: a.proxyConfig.DiscoveryAddress,
 		CertDir:          a.secOpts.OutputKeyCertToDir,
-	}, a.cfg.GRPCBootstrapPath)
+	}, absBootstrapPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	klog.Infof("gRPC bootstrap file generated successfully")
-	return nil
+	klog.Infof("gRPC bootstrap file generated successfully at: %s", absBootstrapPath)
+	return node, nil
+}
+
+func (a *Agent) generateGRPCBootstrap() error {
+	_, err := a.generateGRPCBootstrapWithNode()
+	return err
 }
 
 func (a *Agent) newSecretManager(createCaClient bool) (*cache.SecretManagerClient, error) {

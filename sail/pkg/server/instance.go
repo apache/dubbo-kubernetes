@@ -33,6 +33,7 @@ type task struct {
 type Instance interface {
 	Start(stop <-chan struct{}) error
 	RunComponent(name string, t Component)
+	RunComponentAsyncAndWait(name string, t Component)
 	Wait()
 }
 
@@ -106,6 +107,24 @@ func (i *instance) RunComponent(name string, t Component) {
 	}
 }
 
+func (i *instance) RunComponentAsyncAndWait(name string, task Component) {
+	i.RunComponent(name, func(stop <-chan struct{}) error {
+		i.requiredTerminations.Add(1)
+		go func() {
+			err := task(stop)
+			if err != nil {
+				logComponentError(name, err)
+			}
+			i.requiredTerminations.Done()
+		}()
+		return nil
+	})
+}
+
 func (i *instance) Wait() {
 	<-i.done
+}
+
+func logComponentError(name string, err error) {
+	klog.Errorf("failure in server component %q: %v", name, err)
 }

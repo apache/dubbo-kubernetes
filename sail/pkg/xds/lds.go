@@ -17,8 +17,9 @@ func ldsNeedsPush(proxy *model.Proxy, req *model.PushRequest) bool {
 	if res, ok := xdsNeedsPush(req, proxy); ok {
 		return res
 	}
-	if !req.Full {
-		return false
+	// For full pushes, always push LDS to ensure listeners are generated
+	if req.Full {
+		return true
 	}
 	return false
 }

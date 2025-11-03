@@ -5,6 +5,7 @@ import (
 	"go.uber.org/atomic"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 )
 
 type ReconcilerFn func(key types.NamespacedName) error
@@ -38,7 +39,12 @@ func NewQueue(name string, options ...func(*Queue)) Queue {
 			},
 		)
 	}
+	klog.Infof("controller=%v", q.name)
 	return q
+}
+
+func (q Queue) Add(item any) {
+	q.queue.Add(item)
 }
 
 func (q Queue) AddObject(obj Object) {
@@ -110,6 +116,7 @@ func (q Queue) processNextItem() bool {
 
 func (q Queue) Run(stop <-chan struct{}) {
 	defer q.queue.ShutDown()
+	klog.Infof("starting")
 	q.queue.Add(defaultSyncSignal)
 	go func() {
 		// Process updates until we return false, which indicates the queue is terminated
@@ -121,4 +128,9 @@ func (q Queue) Run(stop <-chan struct{}) {
 	case <-stop:
 	case <-q.closed:
 	}
+	klog.Info("stopped")
+}
+
+func (q Queue) Closed() <-chan struct{} {
+	return q.closed
 }

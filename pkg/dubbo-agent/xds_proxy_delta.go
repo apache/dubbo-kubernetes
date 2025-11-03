@@ -3,8 +3,11 @@ package dubboagent
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/channels"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"go.uber.org/atomic"
 	google_rpc "google.golang.org/genproto/googleapis/rpc/status"
@@ -12,12 +15,13 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"k8s.io/klog/v2"
-	"time"
 )
 
 func (p *XdsProxy) DeltaAggregatedResources(downstream DeltaDiscoveryStream) error {
+	conID := connectionNumber.Inc()
+	klog.Infof("XDS proxy: new delta downstream connection #%d", conID)
 	con := &ProxyConnection{
-		conID:             connectionNumber.Inc(),
+		conID:             conID,
 		upstreamError:     make(chan error), // can be produced by recv and send
 		downstreamError:   make(chan error), // can be produced by recv and send
 		deltaRequestsChan: channels.NewUnbounded[*discovery.DeltaDiscoveryRequest](),
@@ -28,15 +32,18 @@ func (p *XdsProxy) DeltaAggregatedResources(downstream DeltaDiscoveryStream) err
 	}
 	p.registerStream(con)
 	defer p.unregisterStream(con)
+	defer klog.Infof("XDS proxy: delta downstream connection #%d closed", conID)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
+	klog.Infof("XDS proxy: delta connection #%d building upstream connection to %s", conID, p.dubbodAddress)
 	upstreamConn, err := p.buildUpstreamConn(ctx)
 	if err != nil {
-		klog.Errorf("failed to connect to upstream %s: %v", p.dubbodAddress, err)
+		klog.Errorf("XDS proxy: delta connection #%d failed to connect to upstream %s: %v", conID, p.dubbodAddress, err)
 		return err
 	}
+	klog.Infof("XDS proxy: delta connection #%d successfully built upstream connection", conID)
 	defer upstreamConn.Close()
 
 	xds := discovery.NewAggregatedDiscoveryServiceClient(upstreamConn)
@@ -49,15 +56,15 @@ func (p *XdsProxy) DeltaAggregatedResources(downstream DeltaDiscoveryStream) err
 }
 
 func (p *XdsProxy) handleDeltaUpstream(ctx context.Context, con *ProxyConnection, xds discovery.AggregatedDiscoveryServiceClient) error {
+	klog.Infof("XDS proxy: delta connection #%d connecting to upstream: %s", con.conID, p.dubbodAddress)
 	deltaUpstream, err := xds.DeltaAggregatedResources(ctx,
 		grpc.MaxCallRecvMsgSize(defaultClientMaxReceiveMessageSize))
 	if err != nil {
-		// Envoy logs errors again, so no need to log beyond debug level
-		klog.Errorf("failed to create delta upstream grpc client: %v", err)
+		klog.Errorf("XDS proxy: delta connection #%d failed to create stream to upstream %s: %v", con.conID, p.dubbodAddress, err)
 		return err
 	}
-	klog.Infof("connected to delta upstream XDS server: %s", p.dubbodAddress)
-	defer klog.Infof("disconnected from delta XDS server: %s", p.dubbodAddress)
+	klog.Infof("xdsproxy connected to delta upstream XDS server: %s id=%d", p.dubbodAddress, con.conID)
+	defer klog.Infof("xdsproxy disconnected from delta XDS server: %s id=%d", p.dubbodAddress, con.conID)
 
 	con.upstreamDeltas = deltaUpstream
 
@@ -91,12 +98,9 @@ func (p *XdsProxy) handleDeltaUpstream(ctx context.Context, con *ProxyConnection
 	}
 }
 
-func (con *ProxyConnection) sendDeltaRequest(req *discovery.DeltaDiscoveryRequest) {
-	con.deltaRequestsChan.Put(req)
-}
-
 func (p *XdsProxy) handleUpstreamDeltaRequest(con *ProxyConnection) {
 	initialRequestsSent := atomic.NewBool(false)
+	nodeReceived := atomic.NewBool(false)
 	go func() {
 		for {
 			// recv delta xds requests from envoy
@@ -106,20 +110,83 @@ func (p *XdsProxy) handleUpstreamDeltaRequest(con *ProxyConnection) {
 				return
 			}
 
+			// Save Node from first request that contains it
+			if req.Node != nil && req.Node.Id != "" {
+				con.nodeMutex.Lock()
+				if con.node == nil {
+					// Deep copy to preserve the Node information
+					con.node = &core.Node{
+						Id:       req.Node.Id,
+						Cluster:  req.Node.Cluster,
+						Locality: req.Node.Locality,
+						Metadata: req.Node.Metadata,
+					}
+					klog.V(2).Infof("XDS proxy: delta connection #%d saved Node: %s", con.conID, req.Node.Id)
+					nodeReceived.Store(true)
+				}
+				con.nodeMutex.Unlock()
+			}
+
+			// Skip health check probes that don't have Node information (before we've received any Node)
+			if req.TypeUrl == model.HealthInfoType && !nodeReceived.Load() {
+				klog.V(2).Infof("XDS proxy: delta connection #%d skipping health check probe without Node", con.conID)
+				continue
+			}
+
+			// For LDS requests (typically the first request), we must have Node for connection initialization
+			// For other requests, if we already have Node saved, we can inject it
+			con.nodeMutex.RLock()
+			hasNode := con.node != nil
+			con.nodeMutex.RUnlock()
+
+			// For Delta XDS, any first request (not just LDS) without Node should wait
+			// because sail-discovery needs Node in the first request to initialize connection
+			if !nodeReceived.Load() && req.Node == nil && req.TypeUrl != model.HealthInfoType {
+				klog.V(2).Infof("XDS proxy: delta connection #%d received first request without Node (TypeUrl=%s), waiting for Node information", con.conID, model.GetShortType(req.TypeUrl))
+				continue
+			}
+
+			// Ensure Node is set in request before forwarding
+			con.nodeMutex.RLock()
+			if con.node != nil && req.Node == nil {
+				req.Node = con.node
+			}
+			con.nodeMutex.RUnlock()
+
+			// Final check: for initialization, we must have Node
+			if !hasNode && req.Node == nil && req.TypeUrl != model.HealthInfoType {
+				klog.Warningf("XDS proxy: delta connection #%d cannot forward request without Node: TypeUrl=%s", con.conID, model.GetShortType(req.TypeUrl))
+				continue
+			}
+
 			// forward to istiod
 			con.sendDeltaRequest(req)
 			if !initialRequestsSent.Load() && req.TypeUrl == model.ListenerType {
 				// fire off an initial NDS request
 				if _, f := p.handlers[model.NameTableType]; f {
-					con.sendDeltaRequest(&discovery.DeltaDiscoveryRequest{
+					ndsReq := &discovery.DeltaDiscoveryRequest{
 						TypeUrl: model.NameTableType,
-					})
+					}
+					// Include Node in internal requests
+					con.nodeMutex.RLock()
+					if con.node != nil {
+						ndsReq.Node = con.node
+					}
+					con.nodeMutex.RUnlock()
+					con.sendDeltaRequest(ndsReq)
 				}
 				// fire off an initial PCDS request
 				if _, f := p.handlers[model.ProxyConfigType]; f {
-					con.sendDeltaRequest(&discovery.DeltaDiscoveryRequest{
+					pcdsReq := &discovery.DeltaDiscoveryRequest{
 						TypeUrl: model.ProxyConfigType,
-					})
+					}
+					// Include Node in internal requests
+					con.nodeMutex.RLock()
+					if con.node != nil {
+						pcdsReq.Node = con.node
+					}
+					con.nodeMutex.RUnlock()
+					con.sendDeltaRequest(pcdsReq)
 				}
 				// set flag before sending the initial request to prevent race.
 				initialRequestsSent.Store(true)
@@ -127,6 +194,12 @@ func (p *XdsProxy) handleUpstreamDeltaRequest(con *ProxyConnection) {
 				p.connectedMutex.RLock()
 				initialRequest := p.initialDeltaHealthRequest
 				if initialRequest != nil {
+					// Ensure Node is set in initial health request
+					con.nodeMutex.RLock()
+					if con.node != nil && initialRequest.Node == nil {
+						initialRequest.Node = con.node
+					}
+					con.nodeMutex.RUnlock()
 					con.sendDeltaRequest(initialRequest)
 				}
 				p.connectedMutex.RUnlock()
@@ -145,6 +218,20 @@ func (p *XdsProxy) handleUpstreamDeltaRequest(con *ProxyConnection) {
 				// only send healthcheck probe after LDS request has been sent
 				continue
 			}
+
+			// Ensure Node is set before sending to upstream
+			con.nodeMutex.RLock()
+			if con.node != nil && req.Node == nil {
+				req.Node = con.node
+			}
+			con.nodeMutex.RUnlock()
+
+			// Final safety check: don't send if still no Node
+			if req.Node == nil || req.Node.Id == "" {
+				klog.Warningf("XDS proxy: delta connection #%d cannot send request without Node: TypeUrl=%s", con.conID, model.GetShortType(req.TypeUrl))
+				continue
+			}
+
 			klog.V(2).InfoS(
 				"Delta request",
 				"type", model.GetShortType(req.TypeUrl),
@@ -174,37 +261,71 @@ func (p *XdsProxy) handleUpstreamDeltaResponse(con *ProxyConnection) {
 		case resp := <-con.deltaResponsesChan:
 			// TODO: separate upstream response handling from requests sending, which are both time costly
 			klog.V(2).Infof(
-				"Upstream response id=%s type=%s nonce=%s resources=%d removes=%d",
+				"Upstream delta response id=%d type=%s nonce=%s resources=%d removes=%d",
 				con.conID,
 				model.GetShortType(resp.TypeUrl),
 				resp.Nonce,
 				len(resp.Resources),
 				len(resp.RemovedResources),
 			)
+			// Handle internal types (e.g., ProxyConfig) that need special processing
 			if h, f := p.handlers[resp.TypeUrl]; f {
-				if len(resp.Resources) == 0 {
-					// Empty response, nothing to do
-					// This assumes internal types are always singleton
-					break
-				}
-				err := h(resp.Resources[0].Resource)
-				var errorResp *google_rpc.Status
-				if err != nil {
-					errorResp = &google_rpc.Status{
-						Code:    int32(codes.Internal),
-						Message: err.Error(),
+				if len(resp.Resources) > 0 {
+					// Process the resource with the handler
+					err := h(resp.Resources[0].Resource)
+					var errorResp *google_rpc.Status
+					if err != nil {
+						errorResp = &google_rpc.Status{
+							Code:    int32(codes.Internal),
+							Message: err.Error(),
+						}
 					}
+					// Send ACK/NACK
+					ackReq := &discovery.DeltaDiscoveryRequest{
+						TypeUrl:       resp.TypeUrl,
+						ResponseNonce: resp.Nonce,
+						ErrorDetail:   errorResp,
+					}
+					// Ensure Node is set in ACK requests
+					con.nodeMutex.RLock()
+					if con.node != nil {
+						ackReq.Node = con.node
+					}
+					con.nodeMutex.RUnlock()
+					con.sendDeltaRequest(ackReq)
 				}
-				// Send ACK/NACK
-				con.sendDeltaRequest(&discovery.DeltaDiscoveryRequest{
+				// Continue to forward to downstream for transparency
+			}
+
+			// Forward all delta responses to downstream (gRPC client)
+			// This is critical for proxyless gRPC clients to receive XDS configuration
+			if err := con.downstreamDeltas.Send(resp); err != nil {
+				klog.Errorf("XDS proxy: delta connection #%d failed to send response to downstream: %v", con.conID, err)
+				downstreamErr(con, err)
+				return
+			}
+
+			// If there's no handler, we still need to send ACK for normal XDS types
+			if _, hasHandler := p.handlers[resp.TypeUrl]; !hasHandler {
+				// Send ACK for normal XDS delta responses
+				ackReq := &discovery.DeltaDiscoveryRequest{
 					TypeUrl:       resp.TypeUrl,
 					ResponseNonce: resp.Nonce,
-					ErrorDetail:   errorResp,
-				})
-				continue
+				}
+				// Ensure Node is set in ACK requests
+				con.nodeMutex.RLock()
+				if con.node != nil {
+					ackReq.Node = con.node
+				}
+				con.nodeMutex.RUnlock()
+				con.sendDeltaRequest(ackReq)
 			}
 		case <-con.stopChan:
 			return
 		}
 	}
+}
+
+func (con *ProxyConnection) sendDeltaRequest(req *discovery.DeltaDiscoveryRequest) {
+	con.deltaRequestsChan.Put(req)
 }

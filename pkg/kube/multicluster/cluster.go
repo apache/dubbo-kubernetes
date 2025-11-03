@@ -8,16 +8,32 @@ import (
 )
 
 type Cluster struct {
-	// ID of the cluster.
-	ID cluster.ID
-	// Client for accessing the cluster.
+	ID     cluster.ID
 	Client kube.Client
 
 	kubeConfigSha [sha256.Size]byte
 
 	stop chan struct{}
-	// initialSync is marked when RunAndWait completes
-	initialSync *atomic.Bool
-	// initialSyncTimeout is set when RunAndWait timed out
+
+	initialSync        *atomic.Bool
 	initialSyncTimeout *atomic.Bool
+}
+
+func (c *Cluster) HasSynced() bool {
+	// It could happen when a wrong credential provide, this cluster has no chance to run.
+	// In this case, the `initialSyncTimeout` will never be set
+	// In order not block istiod start up, check close as well.
+	if c.Closed() {
+		return true
+	}
+	return c.initialSync.Load() || c.initialSyncTimeout.Load()
+}
+
+func (c *Cluster) Closed() bool {
+	select {
+	case <-c.stop:
+		return true
+	default:
+		return false
+	}
 }

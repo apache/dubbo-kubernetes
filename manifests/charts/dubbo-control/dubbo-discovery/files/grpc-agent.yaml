@@ -36,6 +36,8 @@ spec:
     env:
     - name: DUBBO_META_GENERATOR
       value: grpc
+    - name: GRPC_XDS_BOOTSTRAP
+      value: /etc/dubbo/proxy/grpc-bootstrap.json
     - name: OUTPUT_CERTS
       value: /var/lib/dubbo/data
     - name: SAIL_CERT_PROVIDER
@@ -108,6 +110,6 @@ spec:
     name: dubbo-podinfo
   - configMap:
       defaultMode: 420
-      name: istio-ca-root-cert
+      name: dubbo-ca-root-cert
     name: dubbod-ca-cert
 
