@@ -243,8 +243,17 @@ func (s *DiscoveryServer) dropCacheForRequest(req *model.PushRequest) {
 	// If we don't know what updated, cannot safely cache. Clear the whole cache
 	if req.Forced {
 		s.Cache.ClearAll()
+		klog.V(2).Infof("dropCacheForRequest: cleared all cache (Forced=true)")
 	} else {
 		// Otherwise, just clear the updated configs
+		// CRITICAL: Log cache clear for debugging
+		if len(req.ConfigsUpdated) > 0 {
+			configs := make([]string, 0, len(req.ConfigsUpdated))
+			for ckey := range req.ConfigsUpdated {
+				configs = append(configs, ckey.String())
+			}
+			klog.V(3).Infof("dropCacheForRequest: clearing cache for configs: %v", configs)
+		}
 		s.Cache.Clear(req.ConfigsUpdated)
 	}
 }

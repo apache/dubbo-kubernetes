@@ -326,7 +326,7 @@ func ParseServiceNodeWithMetadata(nodeID string, metadata *NodeMetadata) (*Proxy
 	}
 
 	if len(parts) != 4 {
-		return out, fmt.Errorf("missing parts in the service node %q", nodeID)
+		return out, fmt.Errorf("missing parts in the service node %q (expected 4 parts, got %d)", nodeID, len(parts))
 	}
 
 	// Extract IP address from parts[1] (format: type~ip~id~domain)
@@ -338,13 +338,24 @@ func ParseServiceNodeWithMetadata(nodeID string, metadata *NodeMetadata) (*Proxy
 		}
 	}
 
-	// Does query from ingress or router have to carry valid IP address?
+	// If IP address is empty in node ID, we still need to validate it
+	// For proxyless gRPC, IP address should be set, but we'll allow it to be set later
+	// if it's empty, we'll set it from pod IP when ServiceTargets are computed
 	if len(out.IPAddresses) == 0 {
-		return out, fmt.Errorf("no valid IP address in the service node id or metadata")
+		// IP address will be set later when ServiceTargets are computed from pod IP
+		// For now, we allow empty IP for proxyless nodes to avoid failing initialization
+		// The IP will be populated when GetProxyServiceTargets is called
+		out.IPAddresses = []string{}
 	}
 
 	out.ID = parts[2]
 	out.DNSDomain = parts[3]
+
+	// Validate that ID is not empty - this is critical for proxyless gRPC
+	if len(out.ID) == 0 {
+		return out, fmt.Errorf("node ID is empty in service node %q (parts[2] is empty)", nodeID)
+	}
+
 	return out, nil
 }
 

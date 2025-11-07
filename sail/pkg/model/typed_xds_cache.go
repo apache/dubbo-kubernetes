@@ -2,6 +2,9 @@ package model
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
@@ -9,8 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"google.golang.org/protobuf/testing/protocmp"
-	"sync"
-	"time"
+	"k8s.io/klog/v2"
 )
 
 type CacheToken uint64
@@ -186,13 +188,20 @@ func (l *lruCache[K]) Clear(configs sets.Set[ConfigKey]) {
 	defer func() {
 		l.evictedOnClear = false
 	}()
+	clearedCount := 0
 	for ckey := range configs {
 		hc := ckey.HashCode()
 		referenced := l.configIndex[hc]
-		delete(l.configIndex, hc)
-		for key := range referenced {
-			l.store.Remove(key)
+		if len(referenced) > 0 {
+			clearedCount += len(referenced)
+			for key := range referenced {
+				l.store.Remove(key)
+			}
 		}
+		delete(l.configIndex, hc)
+	}
+	if clearedCount > 0 {
+		klog.V(3).Infof("lruCache.Clear: cleared %d cache entries for %d configs", clearedCount, len(configs))
 	}
 }
 

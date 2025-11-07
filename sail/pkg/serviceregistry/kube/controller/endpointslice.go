@@ -1,6 +1,10 @@
 package controller
 
 import (
+	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
@@ -16,9 +20,9 @@ import (
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/klog/v2"
 	mcs "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
-	"strings"
-	"sync"
 )
 
 var (
@@ -180,6 +184,21 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 		// Draining tracking is only enabled if persistent sessions is enabled.
 		// If we start using them for other features, this can be adjusted.
 		healthStatus := endpointHealthStatus(svc, e)
+
+		// CRITICAL: Log health status for debugging (use Warningf to ensure visibility)
+		if len(e.Addresses) > 0 {
+			ready := "nil"
+			terminating := "nil"
+			if e.Conditions.Ready != nil {
+				ready = fmt.Sprintf("%v", *e.Conditions.Ready)
+			}
+			if e.Conditions.Terminating != nil {
+				terminating = fmt.Sprintf("%v", *e.Conditions.Terminating)
+			}
+			klog.Warningf("endpointHealthStatus: address=%s, Ready=%s, Terminating=%s, HealthStatus=%v, svc=%v",
+				e.Addresses[0], ready, terminating, healthStatus, svc != nil)
+		}
+
 		for _, a := range e.Addresses {
 			pod, expectedPod := getPod(esc.c, a, &metav1.ObjectMeta{Name: epSlice.Name, Namespace: epSlice.Namespace}, e.TargetRef, hostName)
 			if pod == nil && expectedPod {
@@ -189,17 +208,162 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 			var overrideAddresses []string
 			builder := esc.c.NewEndpointBuilder(pod)
 			// EDS and ServiceEntry use name for service port - ADS will need to map to numbers.
+			// CRITICAL FIX: Always use Service.Port.Name as source of truth for ServicePortName
+			// - Use EndpointSlice.Port.Port (service port number) as endpointPort
+			// - Always resolve portName from Service by matching port number (Service is source of truth)
+			// - This ensures ep.ServicePortName matches svcPort.Name in BuildClusterLoadAssignment
+			kubeSvc := esc.c.services.Get(svcNamespacedName.Name, svcNamespacedName.Namespace)
 			for _, port := range epSlice.Ports {
-				var portNum int32
+				var epSlicePortNum int32
 				if port.Port != nil {
-					portNum = *port.Port
+					epSlicePortNum = *port.Port
 				}
-				var portName string
+				var epSlicePortName string
 				if port.Name != nil {
-					portName = *port.Name
+					epSlicePortName = *port.Name
 				}
 
-				dubboEndpoint := builder.buildDubboEndpoint(a, portNum, portName, nil, healthStatus, svc.SupportsUnhealthyEndpoints())
+				var servicePortNum int32
+				var targetPortNum int32
+				var portName string
+
+				// CRITICAL FIX: EndpointSlice.Port.Port might be targetPort or service port
+				// We need to find the matching ServicePort and resolve:
+				// 1. servicePortNum (Service.Port) - used for matching in BuildClusterLoadAssignment
+				// 2. targetPortNum (Service.TargetPort) - used as EndpointPort
+				// 3. portName (Service.Port.Name) - used as ServicePortName for filtering
+				if kubeSvc != nil {
+					matched := false
+					for _, kubePort := range kubeSvc.Spec.Ports {
+						// Try matching by port number (service port or targetPort)
+						portMatches := int32(kubePort.Port) == epSlicePortNum
+
+						// Also try matching by targetPort
+						var kubeTargetPort int32
+						if kubePort.TargetPort.Type == intstr.Int {
+							kubeTargetPort = kubePort.TargetPort.IntVal
+						} else if kubePort.TargetPort.Type == intstr.String && pod != nil {
+							// Resolve targetPort name from Pod
+							for _, container := range pod.Spec.Containers {
+								for _, containerPort := range container.Ports {
+									if containerPort.Name == kubePort.TargetPort.StrVal {
+										kubeTargetPort = containerPort.ContainerPort
+										break
+									}
+								}
+								if kubeTargetPort != 0 {
+									break
+								}
+							}
+						}
+						targetPortMatches := kubeTargetPort == epSlicePortNum
+
+						// Match by port name if available
+						nameMatches := epSlicePortName == "" || kubePort.Name == epSlicePortName
+
+						if (portMatches || targetPortMatches) && (epSlicePortName == "" || nameMatches) {
+							// Found matching ServicePort
+							servicePortNum = int32(kubePort.Port)
+							portName = kubePort.Name
+
+							// Resolve targetPortNum
+							if kubePort.TargetPort.Type == intstr.Int {
+								targetPortNum = kubePort.TargetPort.IntVal
+							} else if kubePort.TargetPort.Type == intstr.String && pod != nil {
+								// Resolve targetPort name from Pod container ports
+								for _, container := range pod.Spec.Containers {
+									for _, containerPort := range container.Ports {
+										if containerPort.Name == kubePort.TargetPort.StrVal {
+											targetPortNum = containerPort.ContainerPort
+											break
+										}
+									}
+									if targetPortNum != 0 {
+										break
+									}
+								}
+							} else {
+								// If targetPort is string but pod not found, use service port as fallback
+								targetPortNum = servicePortNum
+							}
+
+							// If targetPortNum is still 0, use service port
+							if targetPortNum == 0 {
+								targetPortNum = servicePortNum
+							}
+
+							matched = true
+							klog.V(2).InfoS("updateEndpointCacheForSlice: matched ServicePort (servicePort=%d, targetPort=%d, portName='%s') for EndpointSlice.Port (portNum=%d, portName='%s')",
+								servicePortNum, targetPortNum, portName, epSlicePortNum, epSlicePortName)
+							break
+						}
+					}
+
+					if !matched {
+						klog.V(2).InfoS("updateEndpointCacheForSlice: failed to match EndpointSlice.Port (portNum=%d, portName='%s') with Service %s, using EndpointSlice values",
+							epSlicePortNum, epSlicePortName, svcNamespacedName.Name)
+						// Fallback: use EndpointSlice values
+						servicePortNum = epSlicePortNum
+						targetPortNum = epSlicePortNum
+						if epSlicePortName != "" {
+							portName = epSlicePortName
+						}
+					}
+				} else {
+					// Service not found, use EndpointSlice values
+					servicePortNum = epSlicePortNum
+					targetPortNum = epSlicePortNum
+					if epSlicePortName != "" {
+						portName = epSlicePortName
+					}
+					klog.V(2).InfoS("updateEndpointCacheForSlice: Service not found for %s, using EndpointSlice values (portNum=%d, portName='%s')",
+						svcNamespacedName.Name, epSlicePortNum, epSlicePortName)
+				}
+
+				// CRITICAL: Log endpoint creation with actual values for debugging
+				klog.V(2).InfoS("updateEndpointCacheForSlice: creating endpoint for service %s (address=%s, servicePortNum=%d, targetPortNum=%d, portName='%s', hostname=%s, kubeSvc=%v)",
+					svcNamespacedName.Name, a, servicePortNum, targetPortNum, portName, hostName, kubeSvc != nil)
+
+				// CRITICAL FIX: According to Istio's implementation and Kubernetes EndpointSlice spec:
+				// - EndpointSlice.Port.Port should be the Service Port (not targetPort)
+				// - But IstioEndpoint.EndpointPort should be the targetPort (container port)
+				// - ServicePortName should match Service.Port.Name for filtering in BuildClusterLoadAssignment
+				//
+				// We use targetPortNum as EndpointPort because that's what the container actually listens on.
+				// The servicePortNum is used for matching in BuildClusterLoadAssignment via portName.
+				//
+				// CRITICAL: svc.SupportsUnhealthyEndpoints() returns true if Service has publishNotReadyAddresses=true
+				// This allows endpoints with Ready=false to be included in EDS, which is useful for services
+				// that need to receive traffic even before they are fully ready (e.g., during startup).
+				// CRITICAL FIX: Check if svc is nil before calling SupportsUnhealthyEndpoints
+				var supportsUnhealthy bool
+				if svc != nil {
+					supportsUnhealthy = svc.SupportsUnhealthyEndpoints()
+				} else {
+					// If service is nil, default to false (don't support unhealthy endpoints)
+					supportsUnhealthy = false
+				}
+				dubboEndpoint := builder.buildDubboEndpoint(a, targetPortNum, portName, nil, healthStatus, supportsUnhealthy)
+
+				// CRITICAL: Log if endpoint is unhealthy and service doesn't support it
+				if healthStatus == model.UnHealthy && !supportsUnhealthy {
+					if svc != nil {
+						klog.V(2).InfoS("updateEndpointCacheForSlice: endpoint %s is unhealthy (HealthStatus=%v) but service %s does not support unhealthy endpoints (PublishNotReadyAddresses=%v). Endpoint will be filtered in EDS.",
+							a, healthStatus, svcNamespacedName.Name, svc.Attributes.PublishNotReadyAddresses)
+					} else {
+						klog.V(2).InfoS("updateEndpointCacheForSlice: endpoint %s is unhealthy (HealthStatus=%v) but service %s is nil. Endpoint will be filtered in EDS.",
+							a, healthStatus, svcNamespacedName.Name)
+					}
+				}
+
+				// CRITICAL: Verify the endpoint was created with correct ServicePortName
+				if dubboEndpoint != nil {
+					klog.V(2).InfoS("updateEndpointCacheForSlice: created endpoint with ServicePortName='%s', EndpointPort=%d, address=%s",
+						dubboEndpoint.ServicePortName, dubboEndpoint.EndpointPort, dubboEndpoint.FirstAddressOrNil())
+				} else {
+					klog.Errorf("updateEndpointCacheForSlice: buildDubboEndpoint returned nil for address=%s, targetPortNum=%d, portName='%s'",
+						a, targetPortNum, portName)
+				}
 				if len(overrideAddresses) > 1 {
 					dubboEndpoint.Addresses = overrideAddresses
 				}
@@ -233,16 +397,25 @@ func (e *endpointSliceCache) update(hostname host.Name, slice string, endpoints 
 }
 
 func endpointHealthStatus(svc *model.Service, e v1.Endpoint) model.HealthStatus {
+	// CRITICAL FIX: Correct health status logic
+	// 1. If Ready is nil or true, endpoint is healthy
+	// 2. If Ready is false, check if it's terminating
+	// 3. If terminating, mark as Terminating
+	// 4. Otherwise, mark as UnHealthy
+
+	// Check Ready condition
 	if e.Conditions.Ready == nil || *e.Conditions.Ready {
 		return model.Healthy
 	}
 
-	// If it is shutting down, mark it as terminating. This occurs regardless of whether it was previously healthy or not.
-	if svc != nil &&
-		(e.Conditions.Terminating == nil || *e.Conditions.Terminating) {
+	// Ready is false, check if it's terminating
+	// CRITICAL FIX: Terminating should be checked only if it's not nil AND true
+	// If Terminating is nil, it means the endpoint is not terminating (it's just not ready)
+	if e.Conditions.Terminating != nil && *e.Conditions.Terminating {
 		return model.Terminating
 	}
 
+	// Ready is false and not terminating, mark as unhealthy
 	return model.UnHealthy
 }
 

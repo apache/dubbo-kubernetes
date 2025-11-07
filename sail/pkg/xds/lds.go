@@ -24,13 +24,21 @@ func ldsNeedsPush(proxy *model.Proxy, req *model.PushRequest) bool {
 	return false
 }
 
-func (l LdsGenerator) Generate(proxy *model.Proxy, _ *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
+func (l LdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
 	if !ldsNeedsPush(proxy, req) {
 		return nil, model.DefaultXdsLogDetails, nil
 	}
+	// For standard ConfigGenerator (Envoy), BuildListeners doesn't take names parameter
+	// The names filtering is handled by the resource filtering logic in pushXds
 	listeners := l.ConfigGenerator.BuildListeners(proxy, req.Push)
 	resources := model.Resources{}
 	for _, c := range listeners {
+		// Filter resources based on WatchedResource.ResourceNames if specified
+		if w != nil && w.ResourceNames != nil && len(w.ResourceNames) > 0 {
+			if !w.ResourceNames.Contains(c.Name) {
+				continue
+			}
+		}
 		resources = append(resources, &discovery.Resource{
 			Name:     c.Name,
 			Resource: protoconv.MessageToAny(c),

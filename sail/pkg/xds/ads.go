@@ -18,6 +18,7 @@
 package xds
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -247,7 +248,10 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 		peerAddr = peerInfo.Addr.String()
 	}
 
-	// TODO WaitForRequestLimit?
+	if err := s.WaitForRequestLimit(stream.Context()); err != nil {
+		klog.Warningf("ADS: %q exceeded rate limit: %v", peerAddr, err)
+		return status.Errorf(codes.ResourceExhausted, "request rate limit exceeded: %v", err)
+	}
 
 	ids, err := s.authenticate(ctx)
 	if err != nil {
@@ -313,8 +317,13 @@ func (s *DiscoveryServer) pushConnection(con *Connection, pushEv *Event) error {
 
 func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *Connection) error {
 	stype := v3.GetShortType(req.TypeUrl)
-	klog.V(2).Infof("ADS:%s: REQ %s resources:%d nonce:%s ", stype,
-		con.ID(), len(req.ResourceNames), req.ResponseNonce)
+	// Log requested resource names
+	resourceNamesStr := ""
+	if len(req.ResourceNames) > 0 {
+		resourceNamesStr = fmt.Sprintf(" [%s]", strings.Join(req.ResourceNames, ", "))
+	}
+	klog.Infof("ADS:%s: REQ %s resources:%d nonce:%s%s", stype,
+		con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
 	if req.TypeUrl == v3.HealthInfoType {
 		return nil
 	}
@@ -330,6 +339,20 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		return nil
 	}
 
+	// CRITICAL FIX: For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
+	// this is likely an ACK and we should NOT push all resources again
+	// Check if this is a wildcard request after specific resources were sent
+	watchedResource := con.proxy.GetWatchedResource(req.TypeUrl)
+	if con.proxy.IsProxylessGrpc() && len(req.ResourceNames) == 0 && watchedResource != nil && len(watchedResource.ResourceNames) > 0 && watchedResource.NonceSent != "" {
+		// This is a wildcard ACK after specific resources were sent
+		// ShouldRespond should have returned false, but we check here as safety net
+		// Update the WatchedResource to reflect the ACK, but don't push
+		klog.V(2).Infof("%s: proxyless gRPC wildcard ACK after specific resources (prev: %d resources, nonce: %s), skipping push",
+			stype, len(watchedResource.ResourceNames), watchedResource.NonceSent)
+		// ShouldRespond should have already handled this, but we ensure no push happens
+		return nil
+	}
+
 	// Log PUSH request BEFORE calling pushXds
 	if len(req.ResourceNames) > 0 {
 		klog.Infof("%s: PUSH request for node:%s resources:%d", stype, con.ID(), len(req.ResourceNames))
@@ -337,15 +360,30 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		klog.Infof("%s: PUSH request for node:%s", stype, con.ID())
 	}
 
+	// Don't set Forced=true for regular proxy requests to avoid unnecessary ServiceTargets recomputation
+	// Only set Forced for debug requests or when explicitly needed
+	// This prevents ServiceTargets from being recomputed on every request, which can cause
+	// inconsistent listener generation and push loops
 	request := &model.PushRequest{
 		Full:   true,
 		Push:   con.proxy.LastPushContext,
 		Reason: model.NewReasonStats(model.ProxyRequest),
 		Start:  con.proxy.LastPushTime,
 		Delta:  delta,
-		Forced: true,
+		Forced: false, // Only recompute ServiceTargets when ConfigsUpdated indicates service changes
 	}
-	return s.pushXds(con, con.proxy.GetWatchedResource(req.TypeUrl), request)
+
+	// CRITICAL FIX: Get WatchedResource after ShouldRespond has created it
+	// ShouldRespond may have created a new WatchedResource for first-time requests
+	w := con.proxy.GetWatchedResource(req.TypeUrl)
+	if w == nil {
+		// This should not happen if ShouldRespond returned true, but handle it gracefully
+		klog.Warningf("%s: WatchedResource is nil for %s after ShouldRespond returned true, creating it", stype, con.ID())
+		con.proxy.NewWatchedResource(req.TypeUrl, req.ResourceNames)
+		w = con.proxy.GetWatchedResource(req.TypeUrl)
+	}
+
+	return s.pushXds(con, w, request)
 }
 
 func newConnection(peerAddr string, stream DiscoveryStream) *Connection {

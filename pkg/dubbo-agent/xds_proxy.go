@@ -163,6 +163,9 @@ func (p *XdsProxy) handleUpstream(ctx context.Context, con *ProxyConnection, xds
 				klog.Infof("XDS proxy: connection #%d received first response from upstream: TypeUrl=%s, Resources=%d",
 					con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources))
 				firstResponse = false
+			} else {
+				klog.V(3).Infof("XDS proxy: connection #%d received response from upstream: TypeUrl=%s, Resources=%d, VersionInfo=%s",
+					con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources), resp.VersionInfo)
 			}
 			select {
 			case con.responsesChan <- resp:
@@ -202,7 +205,7 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 				return
 			}
 
-			klog.V(2).Infof("XDS proxy: connection #%d received request: TypeUrl=%s, Node=%v, ResourceNames=%d",
+			klog.V(3).Infof("XDS proxy: connection #%d received request: TypeUrl=%s, Node=%v, ResourceNames=%d",
 				con.conID, model.GetShortType(req.TypeUrl), req.Node != nil, len(req.ResourceNames))
 
 			// Save Node from first request that contains it
@@ -242,10 +245,26 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 			}
 
 			// Ensure Node is set in request before forwarding
+			// For proxyless gRPC, we must ensure Node is always set in every request
 			con.nodeMutex.RLock()
-			if con.node != nil && req.Node == nil {
-				req.Node = con.node
-				klog.V(2).Infof("XDS proxy: connection #%d added saved Node to request", con.conID)
+			if con.node != nil {
+				if req.Node == nil {
+					// Deep copy Node to avoid race conditions
+					req.Node = &core.Node{
+						Id:       con.node.Id,
+						Cluster:  con.node.Cluster,
+						Locality: con.node.Locality,
+						Metadata: con.node.Metadata,
+					}
+					klog.V(2).Infof("XDS proxy: connection #%d added saved Node to request", con.conID)
+				} else if req.Node.Id == "" {
+					// If Node exists but Id is empty, copy from saved node
+					req.Node.Id = con.node.Id
+					if req.Node.Metadata == nil {
+						req.Node.Metadata = con.node.Metadata
+					}
+					klog.V(2).Infof("XDS proxy: connection #%d filled empty Node.Id in request", con.conID)
+				}
 			}
 			con.nodeMutex.RUnlock()
 
@@ -314,9 +333,24 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 			}
 
 			// Ensure Node is set before sending to upstream
+			// For proxyless gRPC, we must ensure Node is always set in every request
 			con.nodeMutex.RLock()
-			if con.node != nil && req.Node == nil {
-				req.Node = con.node
+			if con.node != nil {
+				if req.Node == nil {
+					// Deep copy Node to avoid race conditions
+					req.Node = &core.Node{
+						Id:       con.node.Id,
+						Cluster:  con.node.Cluster,
+						Locality: con.node.Locality,
+						Metadata: con.node.Metadata,
+					}
+				} else if req.Node.Id == "" {
+					// If Node exists but Id is empty, copy from saved node
+					req.Node.Id = con.node.Id
+					if req.Node.Metadata == nil {
+						req.Node.Metadata = con.node.Metadata
+					}
+				}
 			}
 			con.nodeMutex.RUnlock()
 
@@ -412,12 +446,15 @@ func (p *XdsProxy) handleUpstreamResponse(con *ProxyConnection) {
 			}
 
 			// Forward all non-internal responses to downstream (gRPC client)
-			// This is critical for proxyless gRPC clients to receive XDS configuration
+			klog.V(3).Infof("XDS proxy: connection #%d forwarding response to downstream: TypeUrl=%s, Resources=%d, VersionInfo=%s",
+				con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources), resp.VersionInfo)
 			if err := con.downstream.Send(resp); err != nil {
 				klog.Errorf("XDS proxy: connection #%d failed to send response to downstream: %v", con.conID, err)
 				downstreamErr(con, err)
 				return
 			}
+			klog.V(3).Infof("XDS proxy: connection #%d successfully forwarded response to downstream: TypeUrl=%s, Resources=%d",
+				con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources))
 
 			// Send ACK for normal XDS responses (if not already sent by handler)
 			if !hasHandler {

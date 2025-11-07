@@ -2,6 +2,7 @@ package grpcgen
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
@@ -98,12 +99,24 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	var defaultCluster *cluster.Cluster
 	if b.filter.Contains(b.defaultClusterName) {
 		defaultCluster = b.edsCluster(b.defaultClusterName)
+		// CRITICAL: For gRPC proxyless, we need to set CommonLbConfig to handle endpoint health status
+		// This ensures that the cluster can use healthy endpoints for load balancing
+		if defaultCluster.CommonLbConfig == nil {
+			defaultCluster.CommonLbConfig = &cluster.Cluster_CommonLbConfig{}
+		}
 		if b.svc.SupportsDrainingEndpoints() {
 			// see core/v1alpha3/cluster.go
 			defaultCluster.CommonLbConfig.OverrideHostStatus = &core.HealthStatusSet{
 				Statuses: []core.HealthStatus{
 					core.HealthStatus_HEALTHY,
 					core.HealthStatus_DRAINING, core.HealthStatus_UNKNOWN, core.HealthStatus_DEGRADED,
+				},
+			}
+		} else {
+			// For gRPC proxyless, only use HEALTHY endpoints by default
+			defaultCluster.CommonLbConfig.OverrideHostStatus = &core.HealthStatusSet{
+				Statuses: []core.HealthStatus{
+					core.HealthStatus_HEALTHY,
 				},
 			}
 		}
@@ -130,6 +143,9 @@ func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
 				},
 			},
 		},
+		// CRITICAL: For gRPC proxyless, we need to set LbPolicy to ROUND_ROBIN
+		// This is the default load balancing policy for gRPC xDS clients
+		LbPolicy: cluster.Cluster_ROUND_ROBIN,
 	}
 }
 

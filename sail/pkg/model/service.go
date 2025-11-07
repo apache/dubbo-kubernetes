@@ -155,6 +155,17 @@ func (ep *DubboEndpoint) Equals(other *DubboEndpoint) bool {
 		return false
 	}
 
+	// CRITICAL FIX: Compare HealthStatus to detect health status changes
+	// This is necessary to trigger EDS push when endpoints become healthy/unhealthy
+	if ep.HealthStatus != other.HealthStatus {
+		return false
+	}
+
+	// CRITICAL FIX: Compare EndpointPort to detect port changes
+	if ep.EndpointPort != other.EndpointPort {
+		return false
+	}
+
 	return true
 }
 
@@ -470,11 +481,30 @@ func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
 }
 
 func (s *Service) SupportsUnhealthyEndpoints() bool {
-	return false
+	// CRITICAL FIX: Return PublishNotReadyAddresses to support publishing not-ready endpoints
+	// This allows endpoints with Ready=false to be included in EDS if the service has
+	// publishNotReadyAddresses=true, which is useful for services that need to receive
+	// traffic even before they are fully ready (e.g., during startup).
+	// CRITICAL FIX: Check if s is nil before accessing Attributes
+	if s == nil {
+		return false
+	}
+	return s.Attributes.PublishNotReadyAddresses
 }
 
 func (s *Service) SupportsDrainingEndpoints() bool {
 	return false
+}
+
+// GetAddressForProxy returns the primary address for a service from the proxy's perspective.
+// This is used for outbound listener addresses in gRPC proxyless mode.
+func (s *Service) GetAddressForProxy(node *Proxy) string {
+	addresses := s.getAllAddressesForProxy(node)
+	if len(addresses) > 0 {
+		return addresses[0]
+	}
+	// Default to 0.0.0.0 if no address found, which matches outbound listener behavior
+	return "0.0.0.0"
 }
 
 func (s *Service) GetExtraAddressesForProxy(node *Proxy) []string {
