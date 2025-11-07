@@ -6,13 +6,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	dubboversion "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/networking/util"
 	v3 "github.com/apache/dubbo-kubernetes/sail/pkg/xds/v3"
+	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"k8s.io/klog/v2"
@@ -64,6 +67,91 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return nil
 	}
 
+	// CRITICAL FIX: For proxyless gRPC, handle wildcard (empty ResourceNames) requests correctly
+	// When client sends empty ResourceNames after receiving specific resources, it's likely an ACK
+	// We should NOT generate all resources, but instead return the last sent resources
+	// However, for initial wildcard requests, we need to extract resource names from parent resources
+	var requestedResourceNames sets.String
+	var useLastSentResources bool
+	if con.proxy.IsProxylessGrpc() {
+		// Check if this is a wildcard request (empty ResourceNames) but we have previously sent resources
+		if len(w.ResourceNames) == 0 && w.NonceSent != "" {
+			// This is likely an ACK after receiving specific resources
+			// Use the last sent resources instead of generating all
+			useLastSentResources = true
+			// Get the last sent resource names from WatchedResource
+			// We'll populate this from the last sent resources after generation
+			klog.V(2).Infof("pushXds: proxyless gRPC wildcard request with NonceSent=%s, will use last sent resources", w.NonceSent)
+		} else if len(w.ResourceNames) == 0 && w.NonceSent == "" {
+			// CRITICAL FIX: Initial wildcard request - need to extract resource names from parent resources
+			// For CDS: extract cluster names from LDS
+			// For EDS: extract cluster names from CDS
+			if w.TypeUrl == v3.ClusterType {
+				// Extract cluster names from LDS response
+				ldsWatched := con.proxy.GetWatchedResource(v3.ListenerType)
+				if ldsWatched != nil && ldsWatched.NonceSent != "" {
+					// LDS has been sent, extract cluster names from it
+					// We need to regenerate LDS to extract cluster names, or store them
+					// For now, let's extract from the proxy's ServiceTargets or from LDS generation
+					klog.V(2).Infof("pushXds: CDS wildcard request, extracting cluster names from LDS")
+					// Create a temporary request to generate LDS and extract cluster names
+					ldsReq := &model.PushRequest{
+						Full:   true,
+						Push:   req.Push,
+						Reason: model.NewReasonStats(model.DependentResource),
+						Start:  con.proxy.LastPushTime,
+						Forced: false,
+					}
+					ldsGen := s.findGenerator(v3.ListenerType, con)
+					if ldsGen != nil {
+						ldsRes, _, _ := ldsGen.Generate(con.proxy, ldsWatched, ldsReq)
+						if len(ldsRes) > 0 {
+							clusterNames := extractClusterNamesFromLDS(ldsRes)
+							if len(clusterNames) > 0 {
+								w.ResourceNames = sets.New(clusterNames...)
+								requestedResourceNames = sets.New[string]()
+								requestedResourceNames.InsertAll(clusterNames...)
+								klog.V(2).Infof("pushXds: extracted %d cluster names from LDS: %v", len(clusterNames), clusterNames)
+							}
+						}
+					}
+				}
+			} else if w.TypeUrl == v3.EndpointType {
+				// Extract cluster names from CDS response
+				cdsWatched := con.proxy.GetWatchedResource(v3.ClusterType)
+				if cdsWatched != nil && cdsWatched.NonceSent != "" {
+					// CDS has been sent, extract EDS cluster names from it
+					klog.V(2).Infof("pushXds: EDS wildcard request, extracting cluster names from CDS")
+					// Create a temporary request to generate CDS and extract EDS cluster names
+					cdsReq := &model.PushRequest{
+						Full:   true,
+						Push:   req.Push,
+						Reason: model.NewReasonStats(model.DependentResource),
+						Start:  con.proxy.LastPushTime,
+						Forced: false,
+					}
+					cdsGen := s.findGenerator(v3.ClusterType, con)
+					if cdsGen != nil {
+						cdsRes, _, _ := cdsGen.Generate(con.proxy, cdsWatched, cdsReq)
+						if len(cdsRes) > 0 {
+							edsClusterNames := extractEDSClusterNamesFromCDS(cdsRes)
+							if len(edsClusterNames) > 0 {
+								w.ResourceNames = sets.New(edsClusterNames...)
+								requestedResourceNames = sets.New[string]()
+								requestedResourceNames.InsertAll(edsClusterNames...)
+								klog.V(2).Infof("pushXds: extracted %d EDS cluster names from CDS: %v", len(edsClusterNames), edsClusterNames)
+							}
+						}
+					}
+				}
+			}
+		} else if len(w.ResourceNames) > 0 {
+			// Specific resource request
+			requestedResourceNames = sets.New[string]()
+			requestedResourceNames.InsertAll(w.ResourceNames.UnsortedList()...)
+		}
+	}
+
 	// If delta is set, client is requesting new resources or removing old ones. We should just generate the
 	// new resources it needs, rather than the entire set of known resources.
 	// Note: we do not need to account for unsubscribed resources as these are handled by parent removal;
@@ -78,7 +166,19 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		}
 	}
 
-	res, logdata, err := gen.Generate(con.proxy, w, req)
+	// For proxyless gRPC wildcard requests with previous NonceSent, use last sent resources
+	var res model.Resources
+	var logdata model.XdsLogDetails
+	var err error
+	if useLastSentResources {
+		// Don't generate new resources, return empty and we'll handle it below
+		res = nil
+		logdata = model.DefaultXdsLogDetails
+		err = nil
+	} else {
+		res, logdata, err = gen.Generate(con.proxy, w, req)
+	}
+
 	info := ""
 	if len(logdata.AdditionalInfo) > 0 {
 		info = " " + logdata.AdditionalInfo
@@ -86,15 +186,69 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	if len(logFiltered) > 0 {
 		info += logFiltered
 	}
-	if err != nil || res == nil {
+	if err != nil {
 		return err
 	}
 
+	// CRITICAL FIX: For proxyless gRPC wildcard requests with previous NonceSent, return last sent resources
+	if useLastSentResources && res == nil {
+		// This is a wildcard ACK - client is acknowledging previous push
+		// We should NOT push again, as the client already has the resources
+		// The ShouldRespond logic should have prevented this, but we handle it here as safety
+		klog.V(2).Infof("pushXds: proxyless gRPC wildcard ACK with NonceSent=%s, skipping push (client already has resources from previous push)", w.NonceSent)
+		return nil
+	}
+
+	if res == nil {
+		return nil
+	}
+
+	// CRITICAL FIX: For proxyless gRPC, filter resources to only include requested ones
+	// This prevents the push loop where client requests 1 resource but receives 13/14
+	var filteredRes model.Resources
+	if con.proxy.IsProxylessGrpc() {
+		if len(requestedResourceNames) > 0 {
+			// Filter to only requested resources
+			filteredRes = make(model.Resources, 0, len(res))
+			for _, r := range res {
+				if requestedResourceNames.Contains(r.Name) {
+					filteredRes = append(filteredRes, r)
+				} else {
+					klog.V(2).Infof("pushXds: filtering out unrequested resource %s for proxyless gRPC (requested: %v)", r.Name, requestedResourceNames.UnsortedList())
+				}
+			}
+			if len(filteredRes) != len(res) {
+				info += " filtered:" + strconv.Itoa(len(res)-len(filteredRes))
+				res = filteredRes
+			}
+			// CRITICAL: If filtering resulted in 0 resources but client requested specific resources,
+			// this means the requested resources don't exist. Don't send empty response to avoid loop.
+			// Instead, log and return nil to prevent push.
+			if len(res) == 0 && len(requestedResourceNames) > 0 {
+				klog.Warningf("pushXds: proxyless gRPC requested %d resources but none matched after filtering (requested: %v, generated before filter: %d). Skipping push to avoid loop.",
+					len(requestedResourceNames), requestedResourceNames.UnsortedList(), len(filteredRes)+len(res))
+				return nil
+			}
+		} else if len(w.ResourceNames) == 0 {
+			// Wildcard request without previous NonceSent - this is initial request
+			// Allow generating all resources for initial connection
+			klog.V(2).Infof("pushXds: proxyless gRPC initial wildcard request, generating all resources")
+		}
+	}
+
+	// CRITICAL: Never send empty response for proxyless gRPC - this causes push loops
+	// If we have no resources to send, return nil instead of sending empty response
+	if len(res) == 0 {
+		klog.V(2).Infof("pushXds: no resources to send for %s (proxy: %s), skipping push", w.TypeUrl, con.proxy.ID)
+		return nil
+	}
+
+	nonceValue := nonce(req.Push.PushVersion)
 	resp := &discovery.DiscoveryResponse{
 		ControlPlane: ControlPlane(w.TypeUrl),
 		TypeUrl:      w.TypeUrl,
 		VersionInfo:  req.Push.PushVersion,
-		Nonce:        nonce(req.Push.PushVersion),
+		Nonce:        nonceValue,
 		Resources:    xds.ResourcesToAny(res),
 	}
 
@@ -107,15 +261,214 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return err
 	}
 
+	// CRITICAL FIX: Update NonceSent after successfully sending the response
+	// This is essential for tracking which nonce was sent and preventing push loops
+	con.proxy.UpdateWatchedResource(w.TypeUrl, func(wr *model.WatchedResource) *model.WatchedResource {
+		if wr == nil {
+			return nil
+		}
+		wr.NonceSent = nonceValue
+		// Also update ResourceNames to match what we actually sent (for proxyless gRPC)
+		if con.proxy.IsProxylessGrpc() && res != nil {
+			sentNames := sets.New[string]()
+			for _, r := range res {
+				sentNames.Insert(r.Name)
+			}
+			// Only update if we sent different resources than requested
+			if requestedResourceNames != nil {
+				// Compare sets by checking if they have the same size and all elements match
+				if sentNames.Len() != requestedResourceNames.Len() {
+					wr.ResourceNames = sentNames
+				} else {
+					// Check if all sent names are in requested names
+					allMatch := true
+					for name := range sentNames {
+						if !requestedResourceNames.Contains(name) {
+							allMatch = false
+							break
+						}
+					}
+					if !allMatch {
+						wr.ResourceNames = sentNames
+					}
+				}
+			}
+		}
+		return wr
+	})
+
 	switch {
 	case !req.Full:
 	default:
 		// Log format matches Istio: "LDS: PUSH for node:xxx resources:1 size:342B"
-		klog.Infof("%s: %s for node:%s resources:%d size:%s", v3.GetShortType(w.TypeUrl), ptype, con.proxy.ID, len(res),
-			util.ByteCount(ResourceSize(res)))
+		resourceNamesStr := ""
+		if len(res) > 0 && len(res) <= 5 {
+			// Log resource names if there are few resources (for debugging)
+			names := make([]string, 0, len(res))
+			for _, r := range res {
+				names = append(names, r.Name)
+			}
+			resourceNamesStr = fmt.Sprintf(" [%s]", strings.Join(names, ", "))
+		}
+		klog.Infof("%s: %s for node:%s resources:%d size:%s%s%s", v3.GetShortType(w.TypeUrl), ptype, con.proxy.ID, len(res),
+			util.ByteCount(ResourceSize(res)), info, resourceNamesStr)
+	}
+
+	// CRITICAL FIX: For proxyless gRPC, after pushing LDS with outbound listeners,
+	// automatically trigger CDS push for the referenced clusters ONLY if this is a direct request push
+	// (not a push from pushConnection which would cause loops)
+	// Only auto-push if CDS is not already being watched by the client (client will request it naturally)
+	if w.TypeUrl == v3.ListenerType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
+		// Only auto-push CDS if this is a direct request (not a full push from pushConnection)
+		// Check if this push was triggered by a direct client request using IsRequest()
+		isDirectRequest := req.IsRequest()
+		if isDirectRequest {
+			clusterNames := extractClusterNamesFromLDS(res)
+			if len(clusterNames) > 0 {
+				cdsWatched := con.proxy.GetWatchedResource(v3.ClusterType)
+				// Only auto-push CDS if client hasn't already requested it
+				// If client has already requested CDS (WatchedResource exists with ResourceNames),
+				// the client's request will handle it, so we don't need to auto-push
+				if cdsWatched == nil || cdsWatched.ResourceNames == nil || len(cdsWatched.ResourceNames) == 0 {
+					// Client hasn't requested CDS yet, auto-push to ensure client gets the cluster config
+					con.proxy.NewWatchedResource(v3.ClusterType, clusterNames)
+					klog.V(2).Infof("pushXds: LDS push completed, auto-pushing CDS for clusters: %v", clusterNames)
+					// Trigger CDS push directly without going through pushConnection to avoid loops
+					cdsReq := &model.PushRequest{
+						Full:   true,
+						Push:   req.Push,
+						Reason: model.NewReasonStats(model.ProxyRequest),
+						Start:  con.proxy.LastPushTime,
+						Forced: false,
+					}
+					if err := s.pushXds(con, con.proxy.GetWatchedResource(v3.ClusterType), cdsReq); err != nil {
+						klog.Warningf("pushXds: failed to push CDS after LDS: %v", err)
+					}
+				} else {
+					// Client has already requested CDS, let the client's request handle it
+					klog.V(2).Infof("pushXds: LDS push completed, client already requested CDS, skipping auto-push")
+				}
+			}
+		}
+	}
+
+	// CRITICAL FIX: For proxyless gRPC, after pushing CDS with EDS clusters,
+	// automatically trigger EDS push for the referenced endpoints
+	// This is necessary for load balancing - client needs EDS to discover all available endpoints
+	if w.TypeUrl == v3.ClusterType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
+		// Extract EDS cluster names from CDS resources
+		edsClusterNames := extractEDSClusterNamesFromCDS(res)
+		if len(edsClusterNames) > 0 {
+			edsWatched := con.proxy.GetWatchedResource(v3.EndpointType)
+			shouldPushEDS := false
+			if edsWatched == nil {
+				// EDS not watched yet, create watched resource
+				con.proxy.NewWatchedResource(v3.EndpointType, edsClusterNames)
+				shouldPushEDS = true
+				klog.V(2).Infof("pushXds: CDS push completed, auto-pushing EDS for clusters: %v", edsClusterNames)
+			} else {
+				// Check if any cluster names are missing from the watched set
+				existingNames := edsWatched.ResourceNames
+				if existingNames == nil {
+					existingNames = sets.New[string]()
+				}
+				hasNewClusters := false
+				for _, cn := range edsClusterNames {
+					if !existingNames.Contains(cn) {
+						hasNewClusters = true
+						break
+					}
+				}
+				if hasNewClusters {
+					// Update EDS watched resource to include the new cluster names
+					con.proxy.UpdateWatchedResource(v3.EndpointType, func(wr *model.WatchedResource) *model.WatchedResource {
+						if wr == nil {
+							wr = &model.WatchedResource{TypeUrl: v3.EndpointType, ResourceNames: sets.New[string]()}
+						}
+						existingNames := wr.ResourceNames
+						if existingNames == nil {
+							existingNames = sets.New[string]()
+						}
+						for _, cn := range edsClusterNames {
+							existingNames.Insert(cn)
+						}
+						wr.ResourceNames = existingNames
+						return wr
+					})
+					shouldPushEDS = true
+					klog.V(2).Infof("pushXds: CDS push completed, updating EDS watched resource with new clusters: %v", edsClusterNames)
+				} else {
+					klog.V(2).Infof("pushXds: CDS push completed, EDS clusters already watched: %v", edsClusterNames)
+				}
+			}
+
+			// Only push EDS if we have new clusters to push
+			if shouldPushEDS {
+				// Trigger EDS push directly without going through pushConnection to avoid loops
+				edsReq := &model.PushRequest{
+					Full:   true,
+					Push:   req.Push,
+					Reason: model.NewReasonStats(model.DependentResource),
+					Start:  con.proxy.LastPushTime,
+					Forced: true, // Force EDS push to ensure endpoints are available for load balancing
+				}
+				if err := s.pushXds(con, con.proxy.GetWatchedResource(v3.EndpointType), edsReq); err != nil {
+					klog.Warningf("pushXds: failed to push EDS after CDS: %v", err)
+				}
+			}
+		}
 	}
 
 	return nil
+}
+
+// extractEDSClusterNamesFromCDS extracts EDS cluster names from CDS cluster resources
+// Only clusters with ClusterDiscoveryType=EDS are returned
+func extractEDSClusterNamesFromCDS(clusters model.Resources) []string {
+	clusterNames := sets.New[string]()
+	for _, r := range clusters {
+		// Unmarshal the cluster resource to check its type
+		cl := &cluster.Cluster{}
+		if err := r.Resource.UnmarshalTo(cl); err != nil {
+			klog.V(2).Infof("extractEDSClusterNamesFromCDS: failed to unmarshal cluster %s: %v", r.Name, err)
+			continue
+		}
+		// Check if this is an EDS cluster
+		if cl.ClusterDiscoveryType != nil {
+			if edsType, ok := cl.ClusterDiscoveryType.(*cluster.Cluster_Type); ok && edsType.Type == cluster.Cluster_EDS {
+				// This is an EDS cluster, add to the list
+				clusterNames.Insert(cl.Name)
+			}
+		}
+	}
+	return clusterNames.UnsortedList()
+}
+
+// extractClusterNamesFromLDS extracts cluster names referenced in LDS listener resources
+// For outbound listeners with name format "hostname:port", the cluster name is "outbound|port||hostname"
+func extractClusterNamesFromLDS(listeners model.Resources) []string {
+	clusterNames := sets.New[string]()
+	for _, r := range listeners {
+		// Parse listener name to extract cluster name
+		// Outbound listener format: "hostname:port" -> cluster: "outbound|port||hostname"
+		// Inbound listener format: "xds.dubbo.io/grpc/lds/inbound/[::]:port" -> no cluster
+		listenerName := r.Name
+		if strings.Contains(listenerName, ":") && !strings.HasPrefix(listenerName, "xds.dubbo.io/grpc/lds/inbound/") {
+			// This is an outbound listener
+			parts := strings.Split(listenerName, ":")
+			if len(parts) == 2 {
+				hostname := parts[0]
+				portStr := parts[1]
+				port, err := strconv.Atoi(portStr)
+				if err == nil {
+					// Build cluster name: outbound|port||hostname
+					clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", host.Name(hostname), port)
+					clusterNames.Insert(clusterName)
+				}
+			}
+		}
+	}
+	return clusterNames.UnsortedList()
 }
 
 func ResourceSize(r model.Resources) int {

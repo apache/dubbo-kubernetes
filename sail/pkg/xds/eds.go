@@ -8,7 +8,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/util/protoconv"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/xds/endpoints"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"k8s.io/klog/v2"
 )
 
 var _ model.XdsDeltaResourceGenerator = &EdsGenerator{}
@@ -105,17 +107,45 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 	// see https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#grouping-resources-into-responses
 	if !req.Full || canSendPartialFullPushes(req) {
 		edsUpdatedServices = model.ConfigNamesOfKind(req.ConfigsUpdated, kind.ServiceEntry)
+		if len(edsUpdatedServices) > 0 {
+			klog.V(3).Infof("buildEndpoints: edsUpdatedServices count=%d (Full=%v)", len(edsUpdatedServices), req.Full)
+		}
 	}
 	var resources model.Resources
 	empty := 0
 	cached := 0
 	regenerated := 0
 	for clusterName := range w.ResourceNames {
+		hostname := model.ParseSubsetKeyHostname(clusterName)
+		// CRITICAL FIX: Always check if this service was updated, even if edsUpdatedServices is nil
+		// For incremental pushes, we need to check ConfigsUpdated directly to ensure cache is cleared
+		serviceWasUpdated := false
+		if req.ConfigsUpdated != nil {
+			// CRITICAL: Log all ConfigsUpdated entries for debugging hostname matching
+			configKeys := make([]string, 0, len(req.ConfigsUpdated))
+			for ckey := range req.ConfigsUpdated {
+				configKeys = append(configKeys, fmt.Sprintf("%s/%s/%s", ckey.Kind, ckey.Namespace, ckey.Name))
+				if ckey.Kind == kind.ServiceEntry {
+					// CRITICAL: Match ConfigsUpdated.Name with hostname
+					// Both should be FQDN (e.g., "consumer.grpc-proxyless.svc.cluster.local")
+					if ckey.Name == hostname {
+						serviceWasUpdated = true
+						klog.V(2).Infof("buildEndpoints: service %s was updated, forcing regeneration", hostname)
+						break
+					}
+				}
+			}
+		}
+
 		if edsUpdatedServices != nil {
-			if _, ok := edsUpdatedServices[model.ParseSubsetKeyHostname(clusterName)]; !ok {
+			if _, ok := edsUpdatedServices[hostname]; !ok {
 				// Cluster was not updated, skip recomputing. This happens when we get an incremental update for a
 				// specific Hostname. On connect or for full push edsUpdatedServices will be empty.
-				continue
+				if !serviceWasUpdated {
+					continue
+				}
+			} else {
+				serviceWasUpdated = true
 			}
 		}
 		builder := endpoints.NewEndpointBuilder(clusterName, proxy, req.Push)
@@ -123,8 +153,25 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 			continue
 		}
 
-		// Try to get from cache
-		if eds.Cache != nil {
+		// CRITICAL FIX: For incremental pushes (Full=false), we must always regenerate EDS
+		// if ConfigsUpdated contains this service, because endpoint health status may have changed.
+		// The cache may contain stale empty endpoints from when the endpoint was unhealthy.
+		// For full pushes, we can use cache if the service was not updated.
+		// CRITICAL: If this is an incremental push and ConfigsUpdated contains any ServiceEntry,
+		// we must check if it matches this hostname. If it does, force regeneration.
+		shouldRegenerate := serviceWasUpdated
+		if !shouldRegenerate && !req.Full && req.ConfigsUpdated != nil {
+			// For incremental pushes, check if any ServiceEntry in ConfigsUpdated matches this hostname
+			for ckey := range req.ConfigsUpdated {
+				if ckey.Kind == kind.ServiceEntry && ckey.Name == hostname {
+					shouldRegenerate = true
+					break
+				}
+			}
+		}
+
+		// Try to get from cache only if we don't need to regenerate
+		if !shouldRegenerate && eds.Cache != nil {
 			cachedEndpoint := eds.Cache.Get(builder)
 			if cachedEndpoint != nil {
 				resources = append(resources, cachedEndpoint)
@@ -135,8 +182,17 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 
 		// generate eds from beginning
 		l := builder.BuildClusterLoadAssignment(eds.EndpointIndex)
+		// CRITICAL FIX: Even if endpoints are empty (l == nil), we should still create an empty ClusterLoadAssignment
+		// to ensure the client receives the EDS response. This is necessary for proxyless gRPC clients
+		// to know the endpoint state, even if it's empty initially.
+		// Note: BuildClusterLoadAssignment returns nil when no endpoints are found,
+		// but we still need to send an empty ClusterLoadAssignment to the client.
 		if l == nil {
-			continue
+			// Build an empty ClusterLoadAssignment for this cluster
+			// Use the same logic as endpoint_builder.go:buildEmptyClusterLoadAssignment
+			l = &endpoint.ClusterLoadAssignment{
+				ClusterName: clusterName,
+			}
 		}
 		regenerated++
 

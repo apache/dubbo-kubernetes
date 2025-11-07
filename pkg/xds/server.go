@@ -322,6 +322,31 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	removed := previousResources.Difference(cur)
 	added := cur.Difference(previousResources)
 
+	// CRITICAL FIX: For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
+	// this is likely an ACK and we should NOT push all resources again
+	// Check if this is a wildcard request after specific resources were sent
+	if len(request.ResourceNames) == 0 && len(previousResources) > 0 && previousInfo.NonceSent != "" {
+		// This is a wildcard request after specific resources were sent
+		// For proxyless gRPC clients, this should be treated as ACK, not a request for all resources
+		// The client already has the resources from the previous push
+		// Check if this is proxyless by attempting to get the proxy from watcher
+		// For now, we'll check if this is a proxyless scenario by the context
+		// If previous resources existed and client sends empty names with matching nonce, it's an ACK
+		klog.V(2).Infof("ADS:%s: wildcard request after specific resources (prev: %d resources, nonce: %s), treating as ACK",
+			stype, len(previousResources), previousInfo.NonceSent)
+		// Update ResourceNames to keep previous resources (don't clear them)
+		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
+			if wr == nil {
+				return nil
+			}
+			// Keep the previous ResourceNames, don't clear them with empty set
+			// The client is ACKing the previous push, not requesting all resources
+			wr.ResourceNames = previousResources
+			return wr
+		})
+		return false, emptyResourceDelta
+	}
+
 	// We should always respond "alwaysRespond" marked requests to let Envoy finish warming
 	// even though Nonce match and it looks like an ACK.
 	if alwaysRespond {

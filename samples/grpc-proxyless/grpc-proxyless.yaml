@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: consumer
+  name: consumer
+  namespace: grpc-proxyless
+spec:
+  selector:
+    app: consumer
+  type: ClusterIP
+  ports:
+    - name: grpc
+      port: 7070
+      targetPort: 17070
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer
+  namespace: grpc-proxyless
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: consumer
+  template:
+    metadata:
+      annotations:
+        proxyless.dubbo.io/inject: "true"
+        inject.dubbo.io/templates: grpc-agent
+        proxy.dubbo.io/config: '{"holdApplicationUntilProxyStarts": true}'
+      labels:
+        app: consumer
+    spec:
+      containers:
+        - name: app
+          image: mfordjody/grpc-consumer:latest
+          imagePullPolicy: Always
+          args:
+            - --port=17070
+          ports:
+            - containerPort: 17070
+              protocol: TCP
+              name: grpc
+          env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+          readinessProbe:
+            tcpSocket:
+              port: 17070
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 17070
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer
+  namespace: grpc-proxyless
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      annotations:
+        proxyless.dubbo.io/inject: "true"
+        inject.dubbo.io/templates: grpc-agent
+        proxy.dubbo.io/config: '{"holdApplicationUntilProxyStarts": true}'
+      labels:
+        app: producer
+    spec:
+      containers:
+        - name: app
+          # Replace with your own image containing the producer binary
+          image: mfordjody/grpc-producer:latest
+          imagePullPolicy: Always
+          args:
+            - --port=17171
+          # Optional: uncomment to test direct connection
+          # - --target=xds:///consumer.grpc-proxyless.svc.cluster.local:7070
+          # - --count=10
+          ports:
+            - containerPort: 17171
+              protocol: TCP
+              name: grpc-test
+          env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP

@@ -1,0 +1,6 @@
+*.md
+bin/
+*.pb.go
+.git/
+.gitignore
+README.md

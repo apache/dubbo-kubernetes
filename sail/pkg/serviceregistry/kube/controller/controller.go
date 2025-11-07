@@ -19,6 +19,7 @@ package controller
 
 import (
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,6 +49,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
 )
 
@@ -201,6 +203,41 @@ func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceT
 		proxyNamespace = proxy.Metadata.Namespace
 	}
 
+	// Get pod by proxy IP address to check if service selector matches pod labels
+	// Also get pod to resolve targetPort from container ports
+	// If IP is empty, try to find pod by node ID (format: podname.namespace)
+	var podLabels labels.Instance
+	var pod *v1.Pod
+	if len(proxy.IPAddresses) > 0 {
+		pods := c.pods.getPodsByIP(proxy.IPAddresses[0])
+		if len(pods) > 0 {
+			// Use the first pod's labels (in most cases there should be only one pod per IP)
+			pod = pods[0]
+			podLabels = labels.Instance(pod.Labels)
+		}
+	} else if proxy.ID != "" {
+		// If IP address is empty, try to find pod by node ID
+		// Node ID format for proxyless is: podname.namespace
+		parts := strings.Split(proxy.ID, ".")
+		if len(parts) >= 2 {
+			podName := parts[0]
+			podNamespace := parts[1]
+			// Try to get pod by name and namespace
+			podKey := types.NamespacedName{Name: podName, Namespace: podNamespace}
+			pod = c.pods.getPodByKey(podKey)
+			if pod != nil {
+				// Extract IP from pod and set it to proxy
+				if pod.Status.PodIP != "" {
+					proxy.IPAddresses = []string{pod.Status.PodIP}
+					klog.V(2).Infof("GetProxyServiceTargets: set proxy IP from pod %s/%s: %s", podNamespace, podName, pod.Status.PodIP)
+				}
+				podLabels = labels.Instance(pod.Labels)
+			} else {
+				klog.V(2).Infof("GetProxyServiceTargets: pod %s/%s not found by node ID", podNamespace, podName)
+			}
+		}
+	}
+
 	out := make([]model.ServiceTarget, 0)
 	c.RLock()
 	defer c.RUnlock()
@@ -236,16 +273,65 @@ func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceT
 			continue
 		}
 
+		// For services in the same namespace, check if the service selector matches pod labels
+		// This ensures we only return services that actually select this pod
+		if svc.Attributes.Namespace == proxyNamespace && podLabels != nil {
+			serviceSelector := labels.Instance(svc.Attributes.LabelSelectors)
+			if len(serviceSelector) > 0 {
+				// If service has a selector, check if it matches pod labels
+				if !serviceSelector.Match(podLabels) {
+					// Service selector doesn't match pod labels, skip this service
+					continue
+				}
+			}
+		}
+
+		// Get the original Kubernetes Service to resolve targetPort
+		var kubeSvc *v1.Service
+		if c.services != nil {
+			kubeSvc = c.services.Get(svc.Attributes.Name, svc.Attributes.Namespace)
+		}
+
 		// Create a ServiceTarget for each port
 		for _, port := range svc.Ports {
 			if port == nil {
 				continue
 			}
+			targetPort := uint32(port.Port) // Default to service port
+
+			// Try to resolve actual targetPort from Kubernetes Service and Pod
+			if kubeSvc != nil {
+				// Find the matching ServicePort in Kubernetes Service
+				for _, kubePort := range kubeSvc.Spec.Ports {
+					if kubePort.Name == port.Name && int32(kubePort.Port) == int32(port.Port) {
+						// Resolve targetPort from ServicePort.TargetPort
+						if kubePort.TargetPort.Type == intstr.Int {
+							// TargetPort is a number
+							targetPort = uint32(kubePort.TargetPort.IntVal)
+						} else if kubePort.TargetPort.Type == intstr.String && pod != nil {
+							// TargetPort is a string (port name), resolve from Pod container ports
+							for _, container := range pod.Spec.Containers {
+								for _, containerPort := range container.Ports {
+									if containerPort.Name == kubePort.TargetPort.StrVal {
+										targetPort = uint32(containerPort.ContainerPort)
+										break
+									}
+								}
+								if targetPort != uint32(port.Port) {
+									break
+								}
+							}
+						}
+						break
+					}
+				}
+			}
+
 			target := model.ServiceTarget{
 				Service: svc,
 				Port: model.ServiceInstancePort{
 					ServicePort: port,
-					TargetPort:  uint32(port.Port),
+					TargetPort:  targetPort,
 				},
 			}
 			out = append(out, target)

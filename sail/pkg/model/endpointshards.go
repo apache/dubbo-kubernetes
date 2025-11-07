@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"sync"
+
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -160,8 +161,32 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 	oldDubboEndpoints := ep.Shards[shard]
 	newDubboEndpoints, needPush := endpointUpdateRequiresPush(oldDubboEndpoints, dubboEndpoints)
 
+	// CRITICAL: Log endpoint update details for debugging
+	if logPushType {
+		oldHealthyCount := 0
+		oldUnhealthyCount := 0
+		newHealthyCount := 0
+		newUnhealthyCount := 0
+		for _, ep := range oldDubboEndpoints {
+			if ep.HealthStatus == Healthy {
+				oldHealthyCount++
+			} else {
+				oldUnhealthyCount++
+			}
+		}
+		for _, ep := range newDubboEndpoints {
+			if ep.HealthStatus == Healthy {
+				newHealthyCount++
+			} else {
+				newUnhealthyCount++
+			}
+		}
+		klog.Warningf("UpdateServiceEndpoints: service=%s, shard=%v, oldEndpoints=%d (healthy=%d, unhealthy=%d), newEndpoints=%d (healthy=%d, unhealthy=%d), needPush=%v, pushType=%v",
+			hostname, shard, len(oldDubboEndpoints), oldHealthyCount, oldUnhealthyCount, len(newDubboEndpoints), newHealthyCount, newUnhealthyCount, needPush, pushType)
+	}
+
 	if pushType != FullPush && !needPush {
-		klog.V(2).Infof("No push, either old endpoint health status did not change or new endpoint came with unhealthy status, %v", hostname)
+		klog.Warningf("No push, either old endpoint health status did not change or new endpoint came with unhealthy status, %v (oldEndpoints=%d, newEndpoints=%d)", hostname, len(oldDubboEndpoints), len(newDubboEndpoints))
 		pushType = NoPush
 	}
 

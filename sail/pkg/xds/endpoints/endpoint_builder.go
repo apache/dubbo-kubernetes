@@ -20,11 +20,14 @@ package endpoints
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/networking/util"
+	"github.com/cespare/xxhash/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/klog/v2"
 )
 
 var _ model.XdsCacheEntry = &EndpointBuilder{}
@@ -80,8 +83,21 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	// Get endpoints from the endpoint index
 	shards, ok := endpointIndex.ShardsForService(string(b.hostname), b.service.Attributes.Namespace)
 	if !ok {
+		klog.Warningf("BuildClusterLoadAssignment: no shards found for service %s in namespace %s (cluster=%s, port=%d, svcPort.Name='%s', svcPort.Port=%d)",
+			b.hostname, b.service.Attributes.Namespace, b.clusterName, b.port, svcPort.Name, svcPort.Port)
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
+
+	// CRITICAL: Log shards info before processing
+	shards.RLock()
+	shardCount := len(shards.Shards)
+	totalEndpointsInShards := 0
+	for _, eps := range shards.Shards {
+		totalEndpointsInShards += len(eps)
+	}
+	shards.RUnlock()
+	klog.V(3).Infof("BuildClusterLoadAssignment: found shards for service %s (cluster=%s, port=%d, shardCount=%d, totalEndpointsInShards=%d)",
+		b.hostname, b.clusterName, b.port, shardCount, totalEndpointsInShards)
 
 	// Build port map for filtering
 	portMap := map[string]int{}
@@ -99,10 +115,17 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 
 	// Filter and convert endpoints
 	var lbEndpoints []*endpoint.LbEndpoint
+	var filteredCount int
+	var totalEndpoints int
+
 	for _, eps := range shards.Shards {
 		for _, ep := range eps {
+			totalEndpoints++
 			// Filter by port name
 			if ep.ServicePortName != svcPort.Name {
+				filteredCount++
+				klog.V(3).Infof("BuildClusterLoadAssignment: filtering out endpoint %s (port name mismatch: '%s' != '%s')",
+					ep.FirstAddressOrNil(), ep.ServicePortName, svcPort.Name)
 				continue
 			}
 
@@ -112,19 +135,33 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 			}
 
 			// Filter out unhealthy endpoints unless service supports them
+			// CRITICAL: Even if endpoint is unhealthy, we should include it if:
+			// 1. Service has publishNotReadyAddresses=true (SupportsUnhealthyEndpoints returns true)
+			// 2. Or if the endpoint is actually healthy (HealthStatus=Healthy)
+			//
+			// For gRPC proxyless, we may want to include endpoints even if they're not ready initially,
+			// as the client will handle connection failures. However, this is controlled by the service
+			// configuration (publishNotReadyAddresses).
 			if !b.service.SupportsUnhealthyEndpoints() && ep.HealthStatus == model.UnHealthy {
+				klog.V(3).Infof("BuildClusterLoadAssignment: filtering out unhealthy endpoint %s", ep.FirstAddressOrNil())
+				filteredCount++
 				continue
 			}
 
 			// Build LbEndpoint
 			lbEp := b.buildLbEndpoint(ep)
-			if lbEp != nil {
-				lbEndpoints = append(lbEndpoints, lbEp)
+			if lbEp == nil {
+				klog.V(3).Infof("BuildClusterLoadAssignment: buildLbEndpoint returned nil for endpoint %s", ep.FirstAddressOrNil())
+				filteredCount++
+				continue
 			}
+			lbEndpoints = append(lbEndpoints, lbEp)
 		}
 	}
 
 	if len(lbEndpoints) == 0 {
+		klog.V(2).Infof("BuildClusterLoadAssignment: no endpoints found for cluster %s (hostname=%s, port=%d, totalEndpoints=%d, filteredCount=%d)",
+			b.clusterName, b.hostname, b.port, totalEndpoints, filteredCount)
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
 
@@ -216,18 +253,28 @@ func (b *EndpointBuilder) Cacheable() bool {
 
 // Key implements model.XdsCacheEntry
 func (b *EndpointBuilder) Key() any {
-	// Simple key based on cluster name for now
-	// TODO: implement proper hashing if needed for cache optimization
-	return b.clusterName
+	// CRITICAL FIX: EDS cache expects uint64 key, not string
+	// Hash the cluster name to uint64 to match the cache type
+	return xxhash.Sum64String(b.clusterName)
 }
 
 // Type implements model.XdsCacheEntry
 func (b *EndpointBuilder) Type() string {
-	return "EDS"
+	return "eds" // Must match model.EDSType constant ("eds", not "EDS")
 }
 
 // DependentConfigs implements model.XdsCacheEntry
 func (b *EndpointBuilder) DependentConfigs() []model.ConfigHash {
-	// Return empty slice for now - can be enhanced to return ServiceEntry config hash if needed
-	return nil
+	// CRITICAL FIX: Return ServiceEntry ConfigHash so that EDS cache can be properly cleared
+	// when endpoints are updated. Without this, cache.Clear() cannot find and remove stale EDS entries.
+	if b.service == nil {
+		return nil
+	}
+	// Create ConfigKey for ServiceEntry and return its hash
+	configKey := model.ConfigKey{
+		Kind:      kind.ServiceEntry,
+		Name:      string(b.hostname),
+		Namespace: b.service.Attributes.Namespace,
+	}
+	return []model.ConfigHash{configKey.HashCode()}
 }

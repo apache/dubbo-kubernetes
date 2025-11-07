@@ -2,12 +2,13 @@ package util
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	dubbonetworking "github.com/apache/dubbo-kubernetes/sail/pkg/networking"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	"strings"
 )
 
 const (

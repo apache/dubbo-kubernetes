@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package echo;
+
+option go_package = "github.com/apache/dubbo-kubernetes/test/grpc-proxyless/proto";
+
+// Echo service for testing gRPC proxyless
+service EchoService {
+  // Echo returns the same message sent
+  rpc Echo(EchoRequest) returns (EchoResponse);
+  
+  // StreamEcho streams back the same message
+  rpc StreamEcho(EchoRequest) returns (stream EchoResponse);
+}
+
+// EchoTestService for grpcurl testing (similar to Istio's echo service)
+service EchoTestService {
+  // ForwardEcho forwards a request to another service and returns the response
+  rpc ForwardEcho(ForwardEchoRequest) returns (ForwardEchoResponse);
+}
+
+message EchoRequest {
+  string message = 1;
+}
+
+message EchoResponse {
+  string message = 1;
+  string hostname = 2;
+}
+
+message ForwardEchoRequest {
+  string url = 1;  // Target URL (e.g., "xds:///consumer.grpc-proxyless.svc.cluster.local:7070")
+  int32 count = 2; // Number of requests to send
+  map<string, string> headers = 3;
+  int32 timeout = 4; // Timeout in seconds
+  bool h2 = 5; // Use HTTP/2
+  bool insecure = 6; // Use insecure connection
+}
+
+message ForwardEchoResponse {
+  repeated string output = 1; // Output lines from the requests
+}
