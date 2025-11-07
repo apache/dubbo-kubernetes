@@ -95,8 +95,6 @@ type Config struct {
 	BackoffPolicy backoff.BackOff
 }
 
-// ADSC implements a basic client for ADS, for use in stress tests and tools
-// or libraries that need to connect to Istio pilot or other ADS servers.
 type ADSC struct {
 	// Stream is the GRPC connection stream, allowing direct GRPC send operations.
 	// Set after Dial is called.
@@ -762,7 +760,7 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 			lt[l.Name] = l
 			config, _ := protomarshal.MessageToStructSlow(filter.GetTypedConfig())
 			c := config.Fields["cluster"].GetStringValue()
-			klog.V(2).Infof("TCP: %s -> %s", l.Name, c)
+			klog.V(2).InfoS("TCP: %s -> %s", l.Name, c)
 		case wellknown.HTTPConnectionManager:
 			lh[l.Name] = l
 
@@ -774,7 +772,7 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 				routes = append(routes, fmt.Sprintf("%d", port))
 			}
 		default:
-			klog.Infof(protomarshal.ToJSONWithIndent(l, "  "))
+			klog.Info(protomarshal.ToJSONWithIndent(l, "  "))
 		}
 	}
 

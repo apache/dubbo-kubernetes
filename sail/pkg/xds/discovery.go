@@ -206,7 +206,7 @@ func (s *DiscoveryServer) ProxyUpdate(clusterID cluster.ID, ip string) {
 		}
 	}
 
-	// It is possible that the envoy has not connected to this pilot, maybe connected to another pilot
+	// It is possible that the envoy has not connected to this sail, maybe connected to another sail
 	if connection == nil {
 		return
 	}

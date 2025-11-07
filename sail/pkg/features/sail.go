@@ -49,7 +49,7 @@ var (
 			"and will not distribute CRL data to namespaces for proxies to consume.",
 	).Get()
 	SailCertProvider = env.Register("SAIL_CERT_PROVIDER", constants.CertProviderDubbod,
-		"The provider of Pilot DNS certificate. K8S RA will be used for k8s.io/NAME. 'dubbod' value will sign"+
+		"The provider of Sail DNS certificate. K8S RA will be used for k8s.io/NAME. 'dubbod' value will sign"+
 			" using Dubbo build in CA. Other values will not not generate TLS certs, but still "+
 			" distribute ./etc/certs/root-cert.pem. Only used if custom certificates are not mounted.").Get()
 	DubbodServiceCustomHost = env.Register("DUBBOD_CUSTOM_HOST", "",

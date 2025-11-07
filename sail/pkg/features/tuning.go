@@ -30,7 +30,7 @@ var (
 		"Sets the maximum number of concurrent grpc streams.",
 	).Get()
 
-	// MaxRecvMsgSize The max receive buffer size of gRPC received channel of Pilot in bytes.
+	// MaxRecvMsgSize The max receive buffer size of gRPC received channel of Sail in bytes.
 	MaxRecvMsgSize = env.Register(
 		"DUBBO_GPRC_MAXRECVMSGSIZE",
 		4*1024*1024,
@@ -61,7 +61,7 @@ var (
 		100*time.Millisecond,
 		"The delay added to config/registry events for debouncing. This will delay the push by "+
 			"at least this interval. If no change is detected within this period, the push will happen, "+
-			" otherwise we'll keep delaying until things settle, up to a max of PILOT_DEBOUNCE_MAX.",
+			" otherwise we'll keep delaying until things settle, up to a max of SAIL_DEBOUNCE_MAX.",
 	).Get()
 
 	DebounceMax = env.Register(
@@ -74,7 +74,7 @@ var (
 	EnableEDSDebounce = env.Register(
 		"SAIL_ENABLE_EDS_DEBOUNCE",
 		true,
-		"If enabled, Sail will include EDS pushes in the push debouncing, configured by PILOT_DEBOUNCE_AFTER and PILOT_DEBOUNCE_MAX."+
+		"If enabled, Sail will include EDS pushes in the push debouncing, configured by SAIL_DEBOUNCE_AFTER and SAIL_DEBOUNCE_MAX."+
 			" EDS pushes may be delayed, but there will be fewer pushes. By default this is enabled",
 	).Get()
 

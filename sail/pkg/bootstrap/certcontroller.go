@@ -132,9 +132,9 @@ func (s *Server) RotateDNSCertForK8sCA(stop <-chan struct{},
 func (s *Server) initDNSCertsK8SRA() error {
 	var certChain, keyPEM, caBundle []byte
 	var err error
-	pilotCertProviderName := features.SailCertProvider
+	sailCertProviderName := features.SailCertProvider
 
-	signerName := strings.TrimPrefix(pilotCertProviderName, constants.CertProviderKubernetesSignerPrefix)
+	signerName := strings.TrimPrefix(sailCertProviderName, constants.CertProviderKubernetesSignerPrefix)
 	klog.Infof("Generating K8S-signed cert for %v using signer %v", s.dnsNames, signerName)
 	certChain, keyPEM, _, err = chiron.GenKeyCertK8sCA(s.kubeClient.Kube(),
 		strings.Join(s.dnsNames, ","), "", signerName, true, SelfSignedCACertTTL.Get())
