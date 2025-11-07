@@ -19,6 +19,7 @@ package controller
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"strings"
 	"sync"
 
@@ -38,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/klog/v2"
 	mcs "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
@@ -212,7 +212,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 			if e.Conditions.Terminating != nil {
 				terminating = fmt.Sprintf("%v", *e.Conditions.Terminating)
 			}
-			klog.Warningf("endpointHealthStatus: address=%s, Ready=%s, Terminating=%s, HealthStatus=%v, svc=%v",
+			log.Debugf("endpointHealthStatus: address=%s, Ready=%s, Terminating=%s, HealthStatus=%v, svc=%v",
 				e.Addresses[0], ready, terminating, healthStatus, svc != nil)
 		}
 
@@ -310,14 +310,14 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 							}
 
 							matched = true
-							klog.V(2).InfoS("updateEndpointCacheForSlice: matched ServicePort (servicePort=%d, targetPort=%d, portName='%s') for EndpointSlice.Port (portNum=%d, portName='%s')",
+							log.Debugf("updateEndpointCacheForSlice: matched ServicePort (servicePort=%d, targetPort=%d, portName='%s') for EndpointSlice.Port (portNum=%d, portName='%s')",
 								servicePortNum, targetPortNum, portName, epSlicePortNum, epSlicePortName)
 							break
 						}
 					}
 
 					if !matched {
-						klog.V(2).InfoS("updateEndpointCacheForSlice: failed to match EndpointSlice.Port (portNum=%d, portName='%s') with Service %s, using EndpointSlice values",
+						log.Debugf("updateEndpointCacheForSlice: failed to match EndpointSlice.Port (portNum=%d, portName='%s') with Service %s, using EndpointSlice values",
 							epSlicePortNum, epSlicePortName, svcNamespacedName.Name)
 						// Fallback: use EndpointSlice values
 						servicePortNum = epSlicePortNum
@@ -333,12 +333,12 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 					if epSlicePortName != "" {
 						portName = epSlicePortName
 					}
-					klog.V(2).InfoS("updateEndpointCacheForSlice: Service not found for %s, using EndpointSlice values (portNum=%d, portName='%s')",
+					log.Debugf("updateEndpointCacheForSlice: Service not found for %s, using EndpointSlice values (portNum=%d, portName='%s')",
 						svcNamespacedName.Name, epSlicePortNum, epSlicePortName)
 				}
 
 				// CRITICAL: Log endpoint creation with actual values for debugging
-				klog.V(2).InfoS("updateEndpointCacheForSlice: creating endpoint for service %s (address=%s, servicePortNum=%d, targetPortNum=%d, portName='%s', hostname=%s, kubeSvc=%v)",
+				log.Debugf("updateEndpointCacheForSlice: creating endpoint for service %s (address=%s, servicePortNum=%d, targetPortNum=%d, portName='%s', hostname=%s, kubeSvc=%v)",
 					svcNamespacedName.Name, a, servicePortNum, targetPortNum, portName, hostName, kubeSvc != nil)
 
 				// CRITICAL FIX: According to Istio's implementation and Kubernetes EndpointSlice spec:
@@ -365,20 +365,20 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 				// CRITICAL: Log if endpoint is unhealthy and service doesn't support it
 				if healthStatus == model.UnHealthy && !supportsUnhealthy {
 					if svc != nil {
-						klog.V(2).InfoS("updateEndpointCacheForSlice: endpoint %s is unhealthy (HealthStatus=%v) but service %s does not support unhealthy endpoints (PublishNotReadyAddresses=%v). Endpoint will be filtered in EDS.",
+						log.Debugf("updateEndpointCacheForSlice: endpoint %s is unhealthy (HealthStatus=%v) but service %s does not support unhealthy endpoints (PublishNotReadyAddresses=%v). Endpoint will be filtered in EDS.",
 							a, healthStatus, svcNamespacedName.Name, svc.Attributes.PublishNotReadyAddresses)
 					} else {
-						klog.V(2).InfoS("updateEndpointCacheForSlice: endpoint %s is unhealthy (HealthStatus=%v) but service %s is nil. Endpoint will be filtered in EDS.",
+						log.Debugf("updateEndpointCacheForSlice: endpoint %s is unhealthy (HealthStatus=%v) but service %s is nil. Endpoint will be filtered in EDS.",
 							a, healthStatus, svcNamespacedName.Name)
 					}
 				}
 
 				// CRITICAL: Verify the endpoint was created with correct ServicePortName
 				if dubboEndpoint != nil {
-					klog.V(2).InfoS("updateEndpointCacheForSlice: created endpoint with ServicePortName='%s', EndpointPort=%d, address=%s",
+					log.Debugf("updateEndpointCacheForSlice: created endpoint with ServicePortName='%s', EndpointPort=%d, address=%s",
 						dubboEndpoint.ServicePortName, dubboEndpoint.EndpointPort, dubboEndpoint.FirstAddressOrNil())
 				} else {
-					klog.Errorf("updateEndpointCacheForSlice: buildDubboEndpoint returned nil for address=%s, targetPortNum=%d, portName='%s'",
+					log.Debugf("updateEndpointCacheForSlice: buildDubboEndpoint returned nil for address=%s, targetPortNum=%d, portName='%s'",
 						a, targetPortNum, portName)
 				}
 				if len(overrideAddresses) > 1 {

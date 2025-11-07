@@ -365,7 +365,7 @@ func (s *schemaImpl) Equal(o Schema) bool {
 		s.ProtoPackage() == o.ProtoPackage()
 }
 
-// FromKubernetesGVK converts a Kubernetes GVK to an Istio GVK
+// FromKubernetesGVK converts a Kubernetes GVK to an Dubbo GVK
 func FromKubernetesGVK(in *schema.GroupVersionKind) config.GroupVersionKind {
 	return config.GroupVersionKind{
 		Group:   in.Group,

@@ -18,13 +18,13 @@
 package model
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	"k8s.io/klog/v2"
 )
 
 type XdsCacheImpl struct {
@@ -116,7 +116,7 @@ func (x XdsCacheImpl) Add(entry XdsCacheEntry, pushRequest *PushRequest, value *
 		key := k.(uint64)
 		x.rds.Add(key, entry, pushRequest, value)
 	default:
-		klog.Errorf("unknown type %s", entry.Type())
+		log.Errorf("unknown type %s", entry.Type())
 	}
 }
 
@@ -140,7 +140,7 @@ func (x XdsCacheImpl) Get(entry XdsCacheEntry) *discovery.Resource {
 		key := k.(uint64)
 		return x.rds.Get(key)
 	default:
-		klog.Errorf("unknown type %s", entry.Type())
+		log.Errorf("unknown type %s", entry.Type())
 		return nil
 	}
 }

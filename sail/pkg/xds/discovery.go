@@ -20,6 +20,7 @@ package xds
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"strconv"
 	"sync"
 	"time"
@@ -36,7 +37,6 @@ import (
 	"go.uber.org/atomic"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
-	"k8s.io/klog/v2"
 )
 
 type DebounceOptions struct {
@@ -110,7 +110,7 @@ func (s *DiscoveryServer) Start(stopCh <-chan struct{}) {
 }
 
 func (s *DiscoveryServer) CachesSynced() {
-	klog.Infof("All caches have been synced up in %v, marking server ready", time.Since(s.DiscoveryStartTime))
+	log.Infof("All caches have been synced up in %v, marking server ready", time.Since(s.DiscoveryStartTime))
 	s.serverReady.Store(true)
 }
 
@@ -243,7 +243,7 @@ func (s *DiscoveryServer) dropCacheForRequest(req *model.PushRequest) {
 	// If we don't know what updated, cannot safely cache. Clear the whole cache
 	if req.Forced {
 		s.Cache.ClearAll()
-		klog.V(2).Infof("dropCacheForRequest: cleared all cache (Forced=true)")
+		log.Debugf("dropCacheForRequest: cleared all cache (Forced=true)")
 	} else {
 		// Otherwise, just clear the updated configs
 		// CRITICAL: Log cache clear for debugging
@@ -252,7 +252,7 @@ func (s *DiscoveryServer) dropCacheForRequest(req *model.PushRequest) {
 			for ckey := range req.ConfigsUpdated {
 				configs = append(configs, ckey.String())
 			}
-			klog.V(3).Infof("dropCacheForRequest: clearing cache for configs: %v", configs)
+			log.Debugf("dropCacheForRequest: clearing cache for configs: %v", configs)
 		}
 		s.Cache.Clear(req.ConfigsUpdated)
 	}
@@ -327,11 +327,11 @@ func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceO
 			if req != nil {
 				pushCounter++
 				if req.ConfigsUpdated == nil {
-					klog.Infof("Push debounce stable[%d] %d for reason %s: %v since last change, %v since last push, full=%v",
+					log.Infof("Push debounce stable[%d] %d for reason %s: %v since last change, %v since last push, full=%v",
 						pushCounter, debouncedEvents, reasonsUpdated(req),
 						quietTime, eventDelay, req.Full)
 				} else {
-					klog.Infof("Push debounce stable[%d] %d for config %s: %v since last change, %v since last push, full=%v",
+					log.Infof("Push debounce stable[%d] %d for config %s: %v since last change, %v since last push, full=%v",
 						pushCounter, debouncedEvents, configsUpdated(req),
 						quietTime, eventDelay, req.Full)
 				}
@@ -376,18 +376,18 @@ func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceO
 			if wasNewDebounceWindow {
 				// First event in a new debounce window
 				if len(r.ConfigsUpdated) > 0 {
-					klog.V(2).Infof("Push debounce: new window started, event[1] for config %s (reason: %s)",
+					log.Debugf("Push debounce: new window started, event[1] for config %s (reason: %s)",
 						configsUpdated(r), reasonsUpdated(r))
 				} else {
-					klog.V(2).Infof("Push debounce: new window started, event[1] for reason %s", reasonsUpdated(r))
+					log.Debugf("Push debounce: new window started, event[1] for reason %s", reasonsUpdated(r))
 				}
 			} else {
 				// Event merged into existing debounce window
 				if len(r.ConfigsUpdated) > 0 {
-					klog.V(2).Infof("Push debounce: event[%d] merged into window for config %s (reason: %s, total events: %d)",
+					log.Debugf("Push debounce: event[%d] merged into window for config %s (reason: %s, total events: %d)",
 						debouncedEvents, configsUpdated(r), reasonsUpdated(r), debouncedEvents)
 				} else {
-					klog.V(2).Infof("Push debounce: event[%d] merged into window for reason %s (total events: %d)",
+					log.Debugf("Push debounce: event[%d] merged into window for reason %s (total events: %d)",
 						debouncedEvents, reasonsUpdated(r), debouncedEvents)
 				}
 			}
@@ -438,7 +438,7 @@ func doSendPushes(stopCh <-chan struct{}, semaphore chan struct{}, queue *PushQu
 					return
 				case <-closed: // grpc stream was closed
 					doneFunc()
-					klog.Infof("Client closed connection %v", client.ID())
+					log.Infof("Client closed connection %v", client.ID())
 				}
 			}()
 		}

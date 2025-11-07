@@ -19,6 +19,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
@@ -79,9 +80,10 @@ func newDiscoveryCommand() *cobra.Command {
 				return fmt.Errorf("failed to start discovery service: %v", err)
 			}
 
+			// Wait for signal - when received, immediately exit
 			cmd.WaitSignal(stop)
 
-			discoveryServer.WaitUntilCompletion()
+			// Signal received, exit immediately
 			return nil
 		},
 	}

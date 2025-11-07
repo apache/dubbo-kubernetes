@@ -67,8 +67,6 @@ type (
 )
 
 const (
-	Proxyless = pm.Proxyless
-
 	IPv4 = pm.IPv4
 	IPv6 = pm.IPv6
 	Dual = pm.Dual

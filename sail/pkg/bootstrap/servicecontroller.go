@@ -19,12 +19,12 @@ package bootstrap
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/aggregate"
 	kubecontroller "github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
-	"k8s.io/klog/v2"
 )
 
 func (s *Server) ServiceController() *aggregate.Controller {
@@ -39,11 +39,11 @@ func (s *Server) initServiceControllers(args *SailArgs) error {
 	for _, r := range args.RegistryOptions.Registries {
 		serviceRegistry := provider.ID(r)
 		if registered.Contains(serviceRegistry) {
-			klog.Infof("%s registry specified multiple times.", r)
+			log.Infof("%s registry specified multiple times.", r)
 			continue
 		}
 		registered.Insert(serviceRegistry)
-		klog.Infof("Adding %s registry adapter", serviceRegistry)
+		log.Infof("Adding %s registry adapter", serviceRegistry)
 		switch serviceRegistry {
 		case provider.Kubernetes:
 			if err := s.initKubeRegistry(args); err != nil {

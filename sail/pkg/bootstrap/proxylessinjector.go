@@ -20,6 +20,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"os"
 	"path/filepath"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 )
 
 const (
@@ -43,7 +43,7 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 	// currently the constant: "./var/lib/dubbo/inject"
 	injectPath := args.InjectionOptions.InjectionDirectory
 	if injectPath == "" || !injectionEnabled.Get() {
-		klog.Infof("Skipping proxyless injector, injection path is missing or disabled.")
+		log.Infof("Skipping proxyless injector, injection path is missing or disabled.")
 		return nil, nil
 	}
 
@@ -61,18 +61,18 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 		cms := s.kubeClient.Kube().CoreV1().ConfigMaps(args.Namespace)
 		if _, err := cms.Get(context.TODO(), configMapName, metav1.GetOptions{}); err != nil {
 			if errors.IsNotFound(err) {
-				klog.Infof("Skipping proxyless injector, template not found")
+				log.Infof("Skipping proxyless injector, template not found")
 				return nil, nil
 			}
 			return nil, err
 		}
 		watcher = inject.NewConfigMapWatcher(s.kubeClient, args.Namespace, configMapName, "config", "values")
 	} else {
-		klog.Infof("Skipping proxyless injector, template not found")
+		log.Infof("Skipping proxyless injector, template not found")
 		return nil, nil
 	}
 
-	klog.Info("initializing proxyless injector")
+	log.Info("initializing proxyless injector")
 
 	parameters := inject.WebhookParameters{
 		Watcher:      watcher,
@@ -91,7 +91,7 @@ func (s *Server) initProxylessInjector(args *SailArgs) (*inject.Webhook, error) 
 		s.addStartFunc("injection patcher", func(stop <-chan struct{}) error {
 			patcher, err := webhooks.NewWebhookCertPatcher(s.kubeClient, webhookName, args.Revision, s.dubbodCertBundleWatcher)
 			if err != nil {
-				klog.Errorf("failed to create webhook cert patcher: %v", err)
+				log.Errorf("failed to create webhook cert patcher: %v", err)
 				return nil
 			}
 

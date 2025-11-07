@@ -37,6 +37,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/namespace"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
@@ -64,7 +65,6 @@ import (
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
 	"net"
 	"net/http"
 	"os"
@@ -209,7 +209,6 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	if caOpts.ExternalCAType == ra.ExtCAK8s {
-		// Older environment variable preserved for backward compatibility
 		caOpts.ExternalCASigner = k8sSigner
 	}
 	// CA signing certificate must be created first if needed.
@@ -221,7 +220,7 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 		return nil, err
 	}
 
-	InitGenerators(s.XDSServer, configGen, args.Namespace, s.clusterID, s.internalDebugMux)
+	InitGenerators(s.XDSServer, configGen)
 
 	dubbodHost, _, err := e.GetDiscoveryAddress()
 	if err != nil {
@@ -274,7 +273,7 @@ func NewServer(args *SailArgs, initFuncs ...func(*Server)) (*Server, error) {
 }
 
 func (s *Server) Start(stop <-chan struct{}) error {
-	klog.Infof("Starting Dubbod Server with primary cluster %s", s.clusterID)
+	log.Infof("Starting Dubbod Server with primary cluster %s", s.clusterID)
 	if err := s.server.Start(stop); err != nil {
 		return err
 	}
@@ -291,9 +290,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 			return err
 		}
 		go func() {
-			klog.Infof("starting secure gRPC discovery service at %s", grpcListener.Addr())
+			log.Infof("starting secure gRPC discovery service at %s", grpcListener.Addr())
 			if err := s.secureGrpcServer.Serve(grpcListener); err != nil {
-				klog.Errorf("error serving secure GRPC server: %v", err)
+				log.Errorf("error serving secure GRPC server: %v", err)
 			}
 		}()
 	}
@@ -304,9 +303,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 			return err
 		}
 		go func() {
-			klog.Infof("starting gRPC discovery service at %s", grpcListener.Addr())
+			log.Infof("starting gRPC discovery service at %s", grpcListener.Addr())
 			if err := s.grpcServer.Serve(grpcListener); err != nil {
-				klog.Errorf("error serving GRPC server: %v", err)
+				log.Errorf("error serving GRPC server: %v", err)
 			}
 		}()
 	}
@@ -317,9 +316,9 @@ func (s *Server) Start(stop <-chan struct{}) error {
 			return err
 		}
 		go func() {
-			klog.Infof("starting webhook service at %s", httpsListener.Addr())
+			log.Infof("starting webhook service at %s", httpsListener.Addr())
 			if err := s.httpsServer.ServeTLS(httpsListener, "", ""); network.IsUnexpectedListenerError(err) {
-				klog.Errorf("error serving https server: %v", err)
+				log.Errorf("error serving https server: %v", err)
 			}
 		}()
 		s.httpsAddr = httpsListener.Addr().String()
@@ -331,16 +330,16 @@ func (s *Server) Start(stop <-chan struct{}) error {
 }
 
 func (s *Server) initDiscoveryService() {
-	klog.Infof("starting discovery service")
+	log.Infof("starting discovery service")
 	s.addStartFunc("xds server", func(stop <-chan struct{}) error {
-		klog.Infof("Starting ADS server")
+		log.Infof("Starting ADS server")
 		s.XDSServer.Start(stop)
 		return nil
 	})
 }
 
 func (s *Server) initRegistryEventHandlers() {
-	klog.Info("initializing registry event handlers")
+	log.Info("initializing registry event handlers")
 
 	if s.configController != nil {
 		configHandler := func(prev config.Config, curr config.Config, event model.Event) {}
@@ -378,10 +377,10 @@ func (s *Server) startCA(caOpts *caOptions) {
 	}
 	// init the RA server if configured, else start init CA server
 	if s.RA != nil {
-		klog.Infof("initializing CA server with RA")
+		log.Infof("initializing CA server with RA")
 		s.initCAServer(s.RA, caOpts)
 	} else if s.CA != nil {
-		klog.Infof("initializing CA server with Dubbod CA")
+		log.Infof("initializing CA server with Dubbod CA")
 		s.initCAServer(s.CA, caOpts)
 	}
 	s.addStartFunc("ca", func(stop <-chan struct{}) error {
@@ -389,7 +388,7 @@ func (s *Server) startCA(caOpts *caOptions) {
 		if s.secureGrpcServer == nil {
 			grpcServer = s.grpcServer
 		}
-		klog.Infof("Starting CA server")
+		log.Infof("Starting CA server")
 		s.RunCA(grpcServer)
 		return nil
 	})
@@ -457,7 +456,7 @@ func (s *Server) initKubeClient(args *SailArgs) error {
 }
 
 func (s *Server) initMeshHandlers(changeHandler func(_ *meshconfig.MeshConfig)) {
-	klog.Info("initializing mesh handlers")
+	log.Info("initializing mesh handlers")
 	// When the mesh config or networks change, do a full push.
 	s.environment.AddMeshHandler(func() {
 		changeHandler(s.environment.Mesh())
@@ -477,7 +476,7 @@ func (s *Server) initServers(args *SailArgs) {
 	} else {
 		// This happens only if the GRPC port (15010) is disabled. We will multiplex
 		// it on the HTTP port. Does not impact the HTTPS gRPC or HTTPS.
-		klog.Infof("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
+		log.Infof("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
 		multiplexGRPC = true
 	}
 	h2s := &http2.Server{
@@ -515,7 +514,7 @@ func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
 }
 
 func (s *Server) initControllers(args *SailArgs) error {
-	klog.Info("initializing controllers")
+	log.Info("initializing controllers")
 
 	s.initMulticluster(args)
 
@@ -532,7 +531,7 @@ func (s *Server) initControllers(args *SailArgs) error {
 
 func (s *Server) initSecureDiscoveryService(args *SailArgs, trustDomain string) error {
 	if args.ServerOptions.SecureGRPCAddr == "" {
-		klog.Info("The secure discovery port is disabled, multiplexing on httpAddr ")
+		log.Info("The secure discovery port is disabled, multiplexing on httpAddr ")
 		return nil
 	}
 
@@ -542,10 +541,10 @@ func (s *Server) initSecureDiscoveryService(args *SailArgs, trustDomain string) 
 	}
 	if peerCertVerifier == nil {
 		// Running locally without configured certs - no TLS mode
-		klog.Warningf("The secure discovery service is disabled")
+		log.Warnf("The secure discovery service is disabled")
 		return nil
 	}
-	klog.Info("initializing secure discovery service")
+	log.Info("initializing secure discovery service")
 
 	cfg := &tls.Config{
 		GetCertificate: s.getDubbodCertificate,
@@ -554,7 +553,7 @@ func (s *Server) initSecureDiscoveryService(args *SailArgs, trustDomain string) 
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			err := peerCertVerifier.VerifyPeerCert(rawCerts, verifiedChains)
 			if err != nil {
-				klog.Infof("Could not verify certificate: %v", err)
+				log.Infof("Could not verify certificate: %v", err)
 			}
 			return err
 		},
@@ -649,9 +648,9 @@ func (s *Server) serveHTTP() error {
 		return err
 	}
 	go func() {
-		klog.Infof("starting HTTP service at %s", httpListener.Addr())
+		log.Infof("starting HTTP service at %s", httpListener.Addr())
 		if err := s.httpServer.Serve(httpListener); network.IsUnexpectedListenerError(err) {
-			klog.Errorf("error serving http server: %v", err)
+			log.Errorf("error serving http server: %v", err)
 		}
 	}()
 	s.httpAddr = httpListener.Addr().String()
@@ -662,7 +661,7 @@ func (s *Server) serveHTTP() error {
 func (s *Server) maybeCreateCA(caOpts *caOptions) error {
 	// CA signing certificate must be created only if CA is enabled.
 	if features.EnableCAServer {
-		klog.Info("creating CA and initializing public key")
+		log.Info("creating CA and initializing public key")
 		var err error
 		if useRemoteCerts.Get() {
 			if err = s.loadCACerts(caOpts, LocalCertDir.Get()); err != nil {
@@ -708,7 +707,7 @@ func (s *Server) initSDSServer() {
 	}
 	if !features.EnableXDSIdentityCheck {
 		// Make sure we have security
-		klog.Warningf("skipping Kubernetes credential reader; SAIL_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
+		log.Warnf("skipping Kubernetes credential reader; SAIL_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
 	} else {
 		// TODO ConfigUpdated Multicluster get secret and configmap
 	}
@@ -766,11 +765,11 @@ func (s *Server) waitForShutdown(stop <-chan struct{}) {
 		ctx, cancel := context.WithTimeout(context.Background(), s.shutdownDuration)
 		defer cancel()
 		if err := s.httpServer.Shutdown(ctx); err != nil {
-			klog.Error(err)
+			log.Error(err)
 		}
 		if s.httpsServer != nil {
 			if err := s.httpsServer.Shutdown(ctx); err != nil {
-				klog.Error(err)
+				log.Error(err)
 			}
 		}
 
@@ -793,7 +792,7 @@ func (s *Server) cachesSynced() bool {
 func (s *Server) pushContextReady(expected int64) bool {
 	committed := s.XDSServer.CommittedUpdates.Load()
 	if committed < expected {
-		klog.V(2).Infof("Waiting for pushcontext to process inbound updates, inbound: %v, committed : %v", expected, committed)
+		log.Debugf("Waiting for pushcontext to process inbound updates, inbound: %v, committed : %v", expected, committed)
 		return false
 	}
 	return true
@@ -801,12 +800,12 @@ func (s *Server) pushContextReady(expected int64) bool {
 
 func (s *Server) waitForCacheSync(stop <-chan struct{}) bool {
 	start := time.Now()
-	klog.Info("Waiting for caches to be synced")
+	log.Info("Waiting for caches to be synced")
 	if !kubelib.WaitForCacheSync("server", stop, s.cachesSynced) {
-		klog.Errorf("Failed waiting for cache sync")
+		log.Errorf("Failed waiting for cache sync")
 		return false
 	}
-	klog.Infof("All controller caches have been synced up in %v", time.Since(start))
+	log.Infof("All controller caches have been synced up in %v", time.Since(start))
 	expected := s.XDSServer.InboundUpdates.Load()
 	return kubelib.WaitForCacheSync("push context", stop, func() bool { return s.pushContextReady(expected) })
 }
@@ -825,20 +824,20 @@ func (s *Server) initDubbodCerts(args *SailArgs, host string) error {
 		})
 		if err != nil {
 			// Not crashing dubbod - This typically happens if certs are missing and in tests.
-			klog.Errorf("error initializing certificate watches: %v", err)
+			log.Errorf("error initializing certificate watches: %v", err)
 			return nil
 		}
 	} else if features.EnableCAServer && features.SailCertProvider == constants.CertProviderDubbod {
-		klog.Infof("initializing Dubbod DNS certificates host: %s, custom host: %s", host, features.DubbodServiceCustomHost)
+		log.Infof("initializing Dubbod DNS certificates host: %s, custom host: %s", host, features.DubbodServiceCustomHost)
 		err = s.initDNSCertsDubbod()
 	} else if features.SailCertProvider == constants.CertProviderKubernetes {
-		klog.Warningf("SAIL_CERT_PROVIDER=kubernetes is no longer supported by upstream K8S")
+		log.Warnf("SAIL_CERT_PROVIDER=kubernetes is no longer supported by upstream K8S")
 	} else if strings.HasPrefix(features.SailCertProvider, constants.CertProviderKubernetesSignerPrefix) {
-		klog.Infof("initializing Dubbod DNS certificates using K8S RA:%s  host: %s, custom host: %s", features.SailCertProvider,
+		log.Infof("initializing Dubbod DNS certificates using K8S RA:%s  host: %s, custom host: %s", features.SailCertProvider,
 			host, features.DubbodServiceCustomHost)
 		err = s.initDNSCertsK8SRA()
 	} else {
-		klog.Warningf("SAIL_CERT_PROVIDER=%s is not implemented", features.SailCertProvider)
+		log.Warnf("SAIL_CERT_PROVIDER=%s is not implemented", features.SailCertProvider)
 	}
 
 	if err == nil {
@@ -851,7 +850,7 @@ func (s *Server) initDubbodCerts(args *SailArgs, host string) error {
 func (s *Server) dubbodReadyHandler(w http.ResponseWriter, _ *http.Request) {
 	for name, fn := range s.readinessProbes {
 		if ready := fn(); !ready {
-			klog.Warningf("%s is not ready", name)
+			log.Warnf("%s is not ready", name)
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
@@ -887,7 +886,7 @@ func getDNSNames(args *SailArgs, host string) []string {
 	sans := sets.New(cHosts...)
 	sans.Insert(host)
 	dnsNames := sets.SortedList(sans)
-	klog.Infof("Discover server subject alt names: %v", dnsNames)
+	log.Infof("Discover server subject alt names: %v", dnsNames)
 	return dnsNames
 }
 
@@ -954,13 +953,13 @@ func (s *Server) loadDubbodCert() error {
 			return fmt.Errorf("x509 cert - ParseCertificates() error: %v", err)
 		}
 		for _, c := range x509Cert {
-			klog.Infof("x509 cert - Issuer: %q, Subject: %q, SN: %x, NotBefore: %q, NotAfter: %q",
+			log.Infof("x509 cert - Issuer: %q, Subject: %q, SN: %x, NotBefore: %q, NotAfter: %q",
 				c.Issuer, c.Subject, c.SerialNumber,
 				c.NotBefore.Format(time.RFC3339), c.NotAfter.Format(time.RFC3339))
 		}
 	}
 
-	klog.Info("Dubbod certificates are reloaded")
+	log.Info("Dubbod certificates are reloaded")
 	s.certMu.Lock()
 	s.dubbodCert = &keyPair
 	s.certMu.Unlock()
@@ -974,7 +973,7 @@ func (s *Server) reloadDubbodCert(watchCh <-chan struct{}, stopCh <-chan struct{
 			return
 		case <-watchCh:
 			if err := s.loadDubbodCert(); err != nil {
-				klog.Errorf("reload dubbod cert failed: %v", err)
+				log.Errorf("reload dubbod cert failed: %v", err)
 			}
 		}
 	}

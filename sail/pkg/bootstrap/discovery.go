@@ -18,9 +18,6 @@
 package bootstrap
 
 import (
-	"net/http"
-
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/networking/apigen"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/networking/core"
@@ -32,9 +29,6 @@ import (
 func InitGenerators(
 	s *xds.DiscoveryServer,
 	cg core.ConfigGenerator,
-	systemNameSpace string,
-	clusterID cluster.ID,
-	internalDebugMux *http.ServeMux,
 ) {
 	env := s.Env
 	generators := map[string]model.XdsResourceGenerator{}
