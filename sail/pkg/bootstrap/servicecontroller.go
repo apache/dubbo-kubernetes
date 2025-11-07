@@ -63,7 +63,6 @@ func (s *Server) initServiceControllers(args *SailArgs) error {
 	return nil
 }
 
-// initKubeRegistry creates all the k8s service controllers under this pilot
 func (s *Server) initKubeRegistry(args *SailArgs) (err error) {
 	args.RegistryOptions.KubeOptions.ClusterID = s.clusterID
 	args.RegistryOptions.KubeOptions.Revision = args.Revision
