@@ -18,6 +18,7 @@
 package model
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"sync"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
@@ -25,7 +26,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/serviceregistry/provider"
-	"k8s.io/klog/v2"
 )
 
 type ShardKey struct {
@@ -153,9 +153,9 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 		// flip flopping between 1 and 0.
 		e.DeleteServiceShard(shard, hostname, namespace, true)
 		if logPushType {
-			klog.Infof("Incremental push, service %s at shard %v has no endpoints", hostname, shard)
+			log.Infof("Incremental push, service %s at shard %v has no endpoints", hostname, shard)
 		} else {
-			klog.Infof("Cache Update, Service %s at shard %v has no endpoints", hostname, shard)
+			log.Infof("Cache Update, Service %s at shard %v has no endpoints", hostname, shard)
 		}
 		return IncrementalPush
 	}
@@ -166,9 +166,9 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 	// If we create a new endpoint shard, that means we have not seen the service earlier. We should do a full push.
 	if created {
 		if logPushType {
-			klog.Infof("Full push, new service %s/%s", namespace, hostname)
+			log.Infof("Full push, new service %s/%s", namespace, hostname)
 		} else {
-			klog.Infof("Cache Update, new service %s/%s", namespace, hostname)
+			log.Infof("Cache Update, new service %s/%s", namespace, hostname)
 		}
 		pushType = FullPush
 	}
@@ -198,12 +198,12 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 				newUnhealthyCount++
 			}
 		}
-		klog.Warningf("UpdateServiceEndpoints: service=%s, shard=%v, oldEndpoints=%d (healthy=%d, unhealthy=%d), newEndpoints=%d (healthy=%d, unhealthy=%d), needPush=%v, pushType=%v",
+		log.Warnf("UpdateServiceEndpoints: service=%s, shard=%v, oldEndpoints=%d (healthy=%d, unhealthy=%d), newEndpoints=%d (healthy=%d, unhealthy=%d), needPush=%v, pushType=%v",
 			hostname, shard, len(oldDubboEndpoints), oldHealthyCount, oldUnhealthyCount, len(newDubboEndpoints), newHealthyCount, newUnhealthyCount, needPush, pushType)
 	}
 
 	if pushType != FullPush && !needPush {
-		klog.Warningf("No push, either old endpoint health status did not change or new endpoint came with unhealthy status, %v (oldEndpoints=%d, newEndpoints=%d)", hostname, len(oldDubboEndpoints), len(newDubboEndpoints))
+		log.Warnf("No push, either old endpoint health status did not change or new endpoint came with unhealthy status, %v (oldEndpoints=%d, newEndpoints=%d)", hostname, len(oldDubboEndpoints), len(newDubboEndpoints))
 		pushType = NoPush
 	}
 
@@ -216,9 +216,9 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 	if saUpdated && pushType != FullPush {
 		// Avoid extra logging if already a full push
 		if logPushType {
-			klog.Infof("Full push, service accounts changed, %v", hostname)
+			log.Infof("Full push, service accounts changed, %v", hostname)
 		} else {
-			klog.Infof("Cache Update, service accounts changed, %v", hostname)
+			log.Infof("Cache Update, service accounts changed, %v", hostname)
 		}
 		pushType = FullPush
 	}
@@ -265,7 +265,7 @@ func updateShardServiceAccount(shards *EndpointShards, serviceName string) bool 
 
 	if !oldServiceAccount.Equals(serviceAccounts) {
 		shards.ServiceAccounts = serviceAccounts
-		klog.V(2).Infof("Updating service accounts now, svc %v, before service account %v, after %v",
+		log.Debugf("Updating service accounts now, svc %v, before service account %v, after %v",
 			serviceName, oldServiceAccount, serviceAccounts)
 		return true
 	}

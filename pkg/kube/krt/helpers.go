@@ -19,7 +19,7 @@ package krt
 
 import (
 	"fmt"
-	"k8s.io/klog/v2"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -149,16 +149,16 @@ func waitForCacheSync(name string, stop <-chan struct{}, collections ...<-chan s
 	t0 := time.Now()
 	defer func() {
 		if r {
-			klog.Infof("sync complete: name=%s, time=%v", name, time.Since(t0))
+			log.Infof("sync complete: name=%s, time=%v", name, time.Since(t0))
 		} else {
-			klog.Infof("sync failed: name=%s, time=%v", name, time.Since(t0))
+			log.Infof("sync failed: name=%s, time=%v", name, time.Since(t0))
 		}
 	}()
 	for _, col := range collections {
 		for {
 			select {
 			case <-t.C:
-				klog.Infof("waiting for sync...: name=%s, time=%v\n", name, time.Since(t0))
+				log.Infof("waiting for sync...: name=%s, time=%v\n", name, time.Since(t0))
 				continue
 			case <-stop:
 				return false

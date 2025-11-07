@@ -23,9 +23,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
-	"k8s.io/klog/v2"
 	"os"
 	"sigs.k8s.io/yaml"
 )
@@ -35,21 +35,21 @@ const (
 )
 
 func (s *Server) initMeshConfiguration(args *SailArgs, fileWatcher filewatcher.FileWatcher) {
-	klog.Infof("initializing mesh configuration %v", args.MeshConfigFile)
+	log.Infof("initializing mesh configuration %v", args.MeshConfigFile)
 	col := s.getMeshConfiguration(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
 	s.environment.Watcher = meshwatcher.ConfigAdapter(col)
-	klog.Infof("mesh configuration: %s", meshwatcher.PrettyFormatOfMeshConfig(s.environment.Mesh()))
+	log.Infof("mesh configuration: %s", meshwatcher.PrettyFormatOfMeshConfig(s.environment.Mesh()))
 	argsdump, _ := yaml.Marshal(args)
-	klog.Infof("flags: \n%s", argsdump)
+	log.Infof("flags: \n%s", argsdump)
 }
 
 func (s *Server) initMeshNetworks(args *SailArgs, fileWatcher filewatcher.FileWatcher) {
-	klog.Infof("initializing mesh networks configuration %v", args.NetworksConfigFile)
+	log.Infof("initializing mesh networks configuration %v", args.NetworksConfigFile)
 	col := s.getMeshNetworks(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
 	s.environment.NetworksWatcher = meshwatcher.NetworksAdapter(col)
-	klog.Infof("mesh networks configuration: %s", meshwatcher.PrettyFormatOfMeshNetworks(s.environment.MeshNetworks()))
+	log.Infof("mesh networks configuration: %s", meshwatcher.PrettyFormatOfMeshNetworks(s.environment.MeshNetworks()))
 }
 
 func (s *Server) getMeshNetworks(args *SailArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshNetworksResource] {
@@ -58,7 +58,7 @@ func (s *Server) getMeshNetworks(args *SailArgs, fileWatcher filewatcher.FileWat
 	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
 	sources := s.getConfigurationSources(args, fileWatcher, args.NetworksConfigFile, kubemesh.MeshNetworksKey)
 	if len(sources) == 0 {
-		klog.Infof("Using default mesh networks - missing file %s and no k8s client", args.NetworksConfigFile)
+		log.Infof("Using default mesh networks - missing file %s and no k8s client", args.NetworksConfigFile)
 	}
 	return meshwatcher.NewNetworksCollection(opts, sources...)
 }
@@ -88,6 +88,7 @@ func (s *Server) getConfigurationSources(args *SailArgs, fileWatcher filewatcher
 	if s.kubeClient == nil {
 		return nil
 	}
+
 	configMapName := getMeshConfigMapName("")
 	primary := kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, configMapName, cmKey, opts)
 	return toSources(primary, userMeshConfig)

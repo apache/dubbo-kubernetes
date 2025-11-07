@@ -21,11 +21,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func AddFlags(rootCmd *cobra.Command) {
@@ -34,15 +36,18 @@ func AddFlags(rootCmd *cobra.Command) {
 
 func PrintFlags(flags *pflag.FlagSet) {
 	flags.VisitAll(func(flag *pflag.Flag) {
-		fmt.Printf("FLAG: --%s=%q\n", flag.Name, flag.Value)
+		log.Infof("FLAG: --%s=%q\n", flag.Name, flag.Value)
 	})
 }
 
 func WaitSignal(stop chan struct{}) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	<-sigs
+	sig := <-sigs
+	// Log the signal received
+	log.Infof("Received signal: %v, initiating graceful shutdown...", sig)
 	close(stop)
+	// Return immediately after closing stop channel to allow cleanup to proceed
 }
 
 func WaitSignalFunc(cancel context.CancelCauseFunc) {

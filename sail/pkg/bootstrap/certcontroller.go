@@ -21,13 +21,13 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/sleep"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	tb "github.com/apache/dubbo-kubernetes/sail/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/security/pkg/k8s/chiron"
 	"github.com/apache/dubbo-kubernetes/security/pkg/pki/ca"
 	certutil "github.com/apache/dubbo-kubernetes/security/pkg/util"
-	"k8s.io/klog/v2"
 	"os"
 	"path"
 	"strings"
@@ -41,7 +41,7 @@ const (
 )
 
 func (s *Server) updateRootCertAndGenKeyCert() error {
-	klog.Infof("update root cert and generate new dns certs")
+	log.Infof("update root cert and generate new dns certs")
 	caBundle := s.CA.GetCAKeyCertBundle().GetRootCertPem()
 	certChain, keyPEM, err := s.CA.GenKeyCert(s.dnsNames, SelfSignedCACertTTL.Get(), false)
 	if err != nil {
@@ -50,13 +50,13 @@ func (s *Server) updateRootCertAndGenKeyCert() error {
 
 	if features.MultiRootMesh {
 		// Trigger trust anchor update, this will send PCDS to all sidecars.
-		klog.Infof("Update trust anchor with new root cert")
+		log.Infof("Update trust anchor with new root cert")
 		err = s.workloadTrustBundle.UpdateTrustAnchor(&tb.TrustAnchorUpdate{
 			TrustAnchorConfig: tb.TrustAnchorConfig{Certs: []string{string(caBundle)}},
 			Source:            tb.SourceDubboCA,
 		})
 		if err != nil {
-			klog.Errorf("failed to update trust anchor from source Dubbo CA, err: %v", err)
+			log.Errorf("failed to update trust anchor from source Dubbo CA, err: %v", err)
 			return err
 		}
 	}
@@ -71,7 +71,7 @@ func (s *Server) initFileCertificateWatches(tlsOptions TLSOptions) error {
 	}
 	// TODO: Setup watcher for root and restart server if it changes.
 	for _, file := range []string{tlsOptions.CertFile, tlsOptions.KeyFile} {
-		klog.Infof("adding watcher for certificate %s", file)
+		log.Infof("adding watcher for certificate %s", file)
 		if err := s.fileWatcher.Add(file); err != nil {
 			return fmt.Errorf("could not watch %v: %v", file, err)
 		}
@@ -84,7 +84,7 @@ func (s *Server) initFileCertificateWatches(tlsOptions TLSOptions) error {
 				case <-keyCertTimerC:
 					keyCertTimerC = nil
 					if err := s.dubbodCertBundleWatcher.SetFromFilesAndNotify(tlsOptions.KeyFile, tlsOptions.CertFile, tlsOptions.CaCertFile); err != nil {
-						klog.Errorf("Setting keyCertBundle failed: %v", err)
+						log.Errorf("Setting keyCertBundle failed: %v", err)
 					}
 				case <-s.fileWatcher.Events(tlsOptions.CertFile):
 					if keyCertTimerC == nil {
@@ -95,9 +95,9 @@ func (s *Server) initFileCertificateWatches(tlsOptions TLSOptions) error {
 						keyCertTimerC = time.After(watchDebounceDelay)
 					}
 				case err := <-s.fileWatcher.Errors(tlsOptions.CertFile):
-					klog.Errorf("error watching %v: %v", tlsOptions.CertFile, err)
+					log.Errorf("error watching %v: %v", tlsOptions.CertFile, err)
 				case err := <-s.fileWatcher.Errors(tlsOptions.KeyFile):
-					klog.Errorf("error watching %v: %v", tlsOptions.KeyFile, err)
+					log.Errorf("error watching %v: %v", tlsOptions.KeyFile, err)
 				case <-stop:
 					return
 				}
@@ -123,7 +123,7 @@ func (s *Server) RotateDNSCertForK8sCA(stop <-chan struct{},
 		certChain, keyPEM, _, err := chiron.GenKeyCertK8sCA(s.kubeClient.Kube(),
 			strings.Join(s.dnsNames, ","), defaultCACertPath, signerName, approveCsr, requestedLifetime)
 		if err != nil {
-			klog.Errorf("failed regenerating key and cert for dubbod by kubernetes: %v", err)
+			log.Errorf("failed regenerating key and cert for dubbod by kubernetes: %v", err)
 			continue
 		}
 		s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, s.dubbodCertBundleWatcher.GetCABundle())
@@ -135,7 +135,7 @@ func (s *Server) initDNSCertsK8SRA() error {
 	sailCertProviderName := features.SailCertProvider
 
 	signerName := strings.TrimPrefix(sailCertProviderName, constants.CertProviderKubernetesSignerPrefix)
-	klog.Infof("Generating K8S-signed cert for %v using signer %v", s.dnsNames, signerName)
+	log.Infof("Generating K8S-signed cert for %v using signer %v", s.dnsNames, signerName)
 	certChain, keyPEM, _, err = chiron.GenKeyCertK8sCA(s.kubeClient.Kube(),
 		strings.Join(s.dnsNames, ","), "", signerName, true, SelfSignedCACertTTL.Get())
 	if err != nil {
@@ -153,7 +153,7 @@ func (s *Server) initDNSCertsK8SRA() error {
 			newCertChain, newKeyPEM, _, err := chiron.GenKeyCertK8sCA(s.kubeClient.Kube(),
 				strings.Join(s.dnsNames, ","), "", signerName, true, SelfSignedCACertTTL.Get())
 			if err != nil {
-				klog.Errorf("failed regenerating key and cert for istiod by kubernetes: %v", err)
+				log.Errorf("failed regenerating key and cert for istiod by kubernetes: %v", err)
 			}
 			s.dubbodCertBundleWatcher.SetAndNotify(newKeyPEM, newCertChain, newCaBundle)
 		}
@@ -178,7 +178,7 @@ func (s *Server) initDNSCertsDubbod() error {
 	if err != nil {
 		return fmt.Errorf("failed generating dubbod key cert %v", err)
 	}
-	klog.Infof("Generating dubbod-signed cert for %v:\n %s", s.dnsNames, certChain)
+	log.Infof("Generating dubbod-signed cert for %v:\n %s", s.dnsNames, certChain)
 
 	fileBundle, err := detectSigningCABundleAndCRL()
 	if err != nil {
@@ -196,7 +196,7 @@ func (s *Server) initDNSCertsDubbod() error {
 	// check if signing key file exists the cert dir and if the dubbo-generated file
 	// exists (only if USE_CACERTS_FOR_SELF_SIGNED_CA is enabled)
 	if !detectedSigningCABundle {
-		klog.Infof("Use roots from dubbo-ca-secret")
+		log.Infof("Use roots from dubbo-ca-secret")
 
 		caBundle = s.CA.GetCAKeyCertBundle().GetRootCertPem()
 		s.addStartFunc("dubbod server certificate rotation", func(stop <-chan struct{}) error {
@@ -207,7 +207,7 @@ func (s *Server) initDNSCertsDubbod() error {
 			return nil
 		})
 	} else if features.UseCacertsForSelfSignedCA && dubboGenerated {
-		klog.Infof("Use roots from %v and watch", fileBundle.RootCertFile)
+		log.Infof("Use roots from %v and watch", fileBundle.RootCertFile)
 
 		caBundle = s.CA.GetCAKeyCertBundle().GetRootCertPem()
 		// Similar code to dubbo-ca-secret: refresh the root cert, but in casecrets
@@ -220,7 +220,7 @@ func (s *Server) initDNSCertsDubbod() error {
 		})
 
 	} else {
-		klog.Infof("Use root cert from %v", fileBundle.RootCertFile)
+		log.Infof("Use root cert from %v", fileBundle.RootCertFile)
 
 		caBundle, err = os.ReadFile(fileBundle.RootCertFile)
 		if err != nil {
@@ -242,10 +242,10 @@ func (s *Server) watchRootCertAndGenKeyCert(stop <-chan struct{}) {
 			caBundle = newRootCert
 			certChain, keyPEM, err := s.CA.GenKeyCert(s.dnsNames, SelfSignedCACertTTL.Get(), false)
 			if err != nil {
-				klog.Errorf("failed generating dubbod key cert %v", err)
+				log.Errorf("failed generating dubbod key cert %v", err)
 			} else {
 				s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, caBundle)
-				klog.Infof("regenerated dubbod dns cert: %s", certChain)
+				log.Infof("regenerated dubbod dns cert: %s", certChain)
 			}
 		}
 	}

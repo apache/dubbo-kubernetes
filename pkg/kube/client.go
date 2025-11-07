@@ -20,6 +20,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/http"
 	"time"
 
@@ -362,9 +363,9 @@ func WaitForCacheSync(name string, stop <-chan struct{}, cacheSyncs ...cache.Inf
 	attempt := 0
 	defer func() {
 		if r {
-			klog.Infof("sync complete: name=%s, time=%v", name, time.Since(t0))
+			log.Infof("sync complete: name=%s, time=%v", name, time.Since(t0))
 		} else {
-			klog.Infof("sync failed: name=%s, time=%v", name, time.Since(t0))
+			log.Infof("sync failed: name=%s, time=%v", name, time.Since(t0))
 		}
 	}()
 	for {

@@ -19,6 +19,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"sync"
 	"time"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"google.golang.org/protobuf/testing/protocmp"
-	"k8s.io/klog/v2"
 )
 
 type CacheToken uint64
@@ -218,7 +218,7 @@ func (l *lruCache[K]) Clear(configs sets.Set[ConfigKey]) {
 		delete(l.configIndex, hc)
 	}
 	if clearedCount > 0 {
-		klog.V(3).Infof("lruCache.Clear: cleared %d cache entries for %d configs", clearedCount, len(configs))
+		log.Debugf("lruCache.Clear: cleared %d cache entries for %d configs", clearedCount, len(configs))
 	}
 }
 

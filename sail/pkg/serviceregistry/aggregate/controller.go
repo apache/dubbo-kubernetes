@@ -18,6 +18,7 @@
 package aggregate
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"sync"
 
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
@@ -75,7 +76,7 @@ func (c *Controller) Run(stop <-chan struct{}) {
 	c.storeLock.Unlock()
 
 	<-stop
-	klog.Info("Registry Aggregator terminated")
+	log.Info("Registry Aggregator terminated")
 }
 
 func (c *Controller) HasSynced() bool {

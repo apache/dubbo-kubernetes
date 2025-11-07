@@ -20,6 +20,7 @@ package leaderelection
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"os"
 	"sync"
 	"time"
@@ -31,11 +32,10 @@ import (
 	"go.uber.org/atomic"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 )
 
 const (
-	NamespaceController          = "istio-namespace-controller-election"
+	NamespaceController          = "dubbo-namespace-controller-election"
 	ClusterTrustBundleController = "dubbo-clustertrustbundle-controller-election"
 )
 
@@ -127,7 +127,7 @@ func (l *LeaderElection) create() (*k8sleaderelection.LeaderElector, error) {
 			leaderCtx := l.leaderCtx
 			l.leaderMu.Unlock()
 
-			klog.Infof("leader election lock obtained: %v", l.electionID)
+			log.Infof("leader election lock obtained: %v", l.electionID)
 			for _, f := range l.runFns {
 				go f(leaderCtx.Done())
 			}
@@ -141,7 +141,7 @@ func (l *LeaderElection) create() (*k8sleaderelection.LeaderElector, error) {
 				l.leaderCtx = nil
 			}
 			l.leaderMu.Unlock()
-			klog.Infof("leader election lock lost: %v", l.electionID)
+			log.Infof("leader election lock lost: %v", l.electionID)
 		},
 	}
 
@@ -183,7 +183,7 @@ func (l *LeaderElection) Run(stop <-chan struct{}) {
 	if !l.enabled {
 		// Silently bypass leader election for single-node deployments or when disabled
 		// No need to log this as it's expected behavior
-		klog.V(2).Infof("bypassing leader election: %v", l.electionID)
+		log.Infof("bypassing leader election: %v", l.electionID)
 		for _, f := range l.runFns {
 			go f(stop)
 		}
@@ -258,7 +258,7 @@ func (l *LeaderElection) Run(stop <-chan struct{}) {
 		default:
 			// Otherwise, we may have lost our lock. This can happen when the default revision changes and steals
 			// the lock from us.
-			klog.Infof("Leader election cycle %v lost. Trying again", l.cycle.Load())
+			log.Infof("Leader election cycle %v lost. Trying again", l.cycle.Load())
 		}
 	}
 }

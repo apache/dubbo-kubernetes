@@ -21,7 +21,7 @@ notifications:
 
 github:
   homepage: https://dubbo.apache.org/
-  description: "The Dubbo Kubernetes integration."
+  description: "Proxyless service mesh for Dubbo microservices on Kubernetes - zero-latency communication, traffic management, and security without sidecars."
   features:
     # Enable wiki for documentation
     wiki: false
@@ -39,4 +39,3 @@ github:
     - microservices
     - service-mesh
     - proxyless
-    - ai

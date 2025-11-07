@@ -18,7 +18,7 @@
 package server
 
 import (
-	"k8s.io/klog/v2"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"sync"
 	"time"
 )
@@ -68,7 +68,7 @@ func (i *instance) Start(stop <-chan struct{}) error {
 			}
 			runtime := time.Since(t0)
 			if runtime > time.Second {
-				klog.Warningf("slow startup task")
+				log.Warnf("slow startup task")
 			}
 		default:
 			startupDone = true
@@ -88,7 +88,7 @@ func (i *instance) Start(stop <-chan struct{}) error {
 				}
 				runtime := time.Since(t0)
 				if runtime > time.Second {
-					klog.Warningf("slow post-start task")
+					log.Warnf("slow post-start task")
 
 				}
 			}
@@ -101,7 +101,7 @@ func (i *instance) Start(stop <-chan struct{}) error {
 func (i *instance) RunComponent(name string, t Component) {
 	select {
 	case <-i.done:
-		klog.Warningf("attempting to run a new component %q after the server was shutdown", name)
+		log.Warnf("attempting to run a new component %q after the server was shutdown", name)
 	default:
 		i.components <- task{name, t}
 	}
@@ -126,5 +126,5 @@ func (i *instance) Wait() {
 }
 
 func logComponentError(name string, err error) {
-	klog.Errorf("failure in server component %q: %v", name, err)
+	log.Errorf("failure in server component %q: %v", name, err)
 }

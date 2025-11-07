@@ -19,6 +19,7 @@ package controller
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/clustertrustbundle"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
@@ -125,7 +126,7 @@ func (m *Multicluster) initializeCluster(cluster *multicluster.Cluster, kubeCont
 						election.SetEnabled(false)
 					}
 					election.AddRunFunction(func(leaderStop <-chan struct{}) {
-						klog.Infof("starting clustertrustbundle controller for cluster %s", cluster.ID)
+						log.Infof("starting clustertrustbundle controller for cluster %s", cluster.ID)
 						c := clustertrustbundle.NewController(client, m.caBundleWatcher)
 						client.RunAndWait(clusterStopCh)
 						c.Run(leaderStop)
@@ -144,7 +145,7 @@ func (m *Multicluster) initializeCluster(cluster *multicluster.Cluster, kubeCont
 						election.SetEnabled(false)
 					}
 					election.AddRunFunction(func(leaderStop <-chan struct{}) {
-						klog.Infof("starting namespace controller for cluster %s", cluster.ID)
+						log.Infof("starting namespace controller for cluster %s", cluster.ID)
 						nc := NewNamespaceController(client, m.caBundleWatcher)
 						// Start informers again. This fixes the case where informers for namespace do not start,
 						// as we create them only after acquiring the leader lock

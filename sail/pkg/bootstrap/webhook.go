@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"strings"
 
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
-	"k8s.io/klog/v2"
 )
 
 type httpServerErrorLogWriter struct{}
@@ -32,9 +32,9 @@ type httpServerErrorLogWriter struct{}
 func (*httpServerErrorLogWriter) Write(p []byte) (int, error) {
 	m := strings.TrimSuffix(string(p), "\n")
 	if strings.HasPrefix(m, "http: TLS handshake error") && strings.HasSuffix(m, ": EOF") {
-		klog.V(2).Info(m)
+		dubbolog.Debug(m)
 	} else {
-		klog.Info(m)
+		dubbolog.Info(m)
 	}
 	return len(p), nil
 }
@@ -42,7 +42,7 @@ func (*httpServerErrorLogWriter) Write(p []byte) (int, error) {
 func (s *Server) initSecureWebhookServer(args *SailArgs) {
 	if args.ServerOptions.HTTPSAddr == "" {
 		s.httpsMux = s.httpMux
-		klog.Infof("HTTPS port is disabled, multiplexing webhooks on the httpAddr %v", args.ServerOptions.HTTPAddr)
+		dubbolog.Infof("HTTPS port is disabled, multiplexing webhooks on the httpAddr %v", args.ServerOptions.HTTPAddr)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (s *Server) initSecureWebhookServer(args *SailArgs) {
 	// Compliance for control plane validation and injection webhook server.
 	sec_model.EnforceGoCompliance(tlsConfig)
 
-	klog.Info("initializing secure webhook server for dubbod webhooks")
+	dubbolog.Info("initializing secure webhook server for dubbod webhooks")
 	// create the https server for hosting the k8s injectionWebhook handlers.
 	s.httpsMux = http.NewServeMux()
 	s.httpsServer = &http.Server{

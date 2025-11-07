@@ -19,6 +19,7 @@ package grpcgen
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -28,7 +29,6 @@ import (
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	"k8s.io/klog/v2"
 )
 
 func (g *GrpcConfigGenerator) BuildClusters(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
@@ -37,7 +37,7 @@ func (g *GrpcConfigGenerator) BuildClusters(node *model.Proxy, push *model.PushC
 	for defaultClusterName, subsetFilter := range filter {
 		builder, err := newClusterBuilder(node, push, defaultClusterName, subsetFilter)
 		if err != nil {
-			klog.Warning(err)
+			log.Warn(err)
 			continue
 		}
 		clusters = append(clusters, builder.build()...)
@@ -51,7 +51,7 @@ func (g *GrpcConfigGenerator) BuildClusters(node *model.Proxy, push *model.PushC
 		})
 	}
 	if len(resp) == 0 && len(names) == 0 {
-		klog.Warningf("did not generate any cds for %s; no names provided", node.ID)
+		log.Warnf("did not generate any cds for %s; no names provided", node.ID)
 	}
 	return resp
 }

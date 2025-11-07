@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/adsc"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	configaggregate "github.com/apache/dubbo-kubernetes/sail/pkg/config/aggregate"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/crdclient"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/file"
@@ -37,7 +38,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"istio.io/api/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"net/url"
 	"strings"
 )
@@ -123,7 +123,7 @@ func (s *Server) initConfigSources(args *SailArgs) (err error) {
 				return err
 			}
 			s.ConfigStores = append(s.ConfigStores, configController)
-			klog.Infof("Started File configSource %s", configSource.Address)
+			log.Infof("Started File configSource %s", configSource.Address)
 		case XDS:
 			transportCredentials, err := s.getTransportCredentials(args, configSource.TlsSettings)
 			if err != nil {
@@ -155,22 +155,22 @@ func (s *Server) initConfigSources(args *SailArgs) (err error) {
 				return fmt.Errorf("MCP: failed running %v", err)
 			}
 			s.ConfigStores = append(s.ConfigStores, configController)
-			klog.Infof("Started XDS configSource %s", configSource.Address)
+			log.Infof("Started XDS configSource %s", configSource.Address)
 		case Kubernetes:
 			if srcAddress.Path == "" || srcAddress.Path == "/" {
 				err2 := s.initK8SConfigStore(args)
 				if err2 != nil {
-					klog.Errorf("Error loading k8s: %v", err2)
+					log.Errorf("Error loading k8s: %v", err2)
 					return err2
 				}
-				klog.Infof("Started Kubernetes configSource %s", configSource.Address)
+				log.Infof("Started Kubernetes configSource %s", configSource.Address)
 			} else {
-				klog.Infof("Not implemented, ignore: %v", configSource.Address)
+				log.Infof("Not implemented, ignore: %v", configSource.Address)
 				// TODO: handle k8s:// scheme for remote cluster. Use same mechanism as service registry,
 				// using the cluster name as key to match a secret.
 			}
 		default:
-			klog.Infof("Ignoring unsupported config source: %v", configSource.Address)
+			log.Infof("Ignoring unsupported config source: %v", configSource.Address)
 		}
 	}
 	return nil

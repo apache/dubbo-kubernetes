@@ -30,6 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	jsonmerge "github.com/evanphx/json-patch/v5"
@@ -38,7 +39,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 )
 
 type Client struct {
@@ -51,6 +51,7 @@ type Client struct {
 	schemas          collection.Schemas
 	client           kube.Client
 	filtersByGVK     map[config.GroupVersionKind]kubetypes.Filter
+	logger           *log.Logger
 }
 
 var _ model.ConfigStoreController = &Client{}
@@ -87,6 +88,7 @@ func NewForSchemas(client kube.Client, opts Option, schemas collection.Schemas) 
 		client:           client,
 		filtersByGVK:     opts.FiltersByGVK,
 		stop:             stop,
+		logger:           log.RegisterScope("crdclient", "Sail Kubernetes CRD controller"),
 	}
 
 	kopts := krt.NewOptionsBuilder(stop, "crdclient", opts.KrtDebugger)
@@ -106,15 +108,15 @@ func (cl *Client) Run(stop <-chan struct{}) {
 	}
 
 	t0 := time.Now()
-	klog.Info("Starting Sail Kubernetes CRD controller")
+	cl.logger.Infof("Starting Sail Kubernetes CRD controller")
 	if !kube.WaitForCacheSync("crdclient", stop, cl.informerSynced) {
-		klog.Errorf("Failed to sync Sail Kubernetes CRD controller cache")
+		cl.logger.Infof("Failed to sync Sail Kubernetes CRD controller cache")
 	} else {
-		klog.Infof("Sail Kubernetes CRD controller synced in %v", time.Since(t0))
+		cl.logger.Infof("Sail Kubernetes CRD controller synced in %v", time.Since(t0))
 	}
 	<-stop
 	close(cl.stop)
-	klog.Info("controller terminated")
+	cl.logger.Infof("controller terminated")
 }
 
 func (cl *Client) HasSynced() bool {
@@ -136,7 +138,7 @@ func (cl *Client) HasSynced() bool {
 func (cl *Client) informerSynced() bool {
 	for gk, ctl := range cl.allKinds() {
 		if !ctl.collection.HasSynced() {
-			klog.Infof("controller %q is syncing...", gk)
+			cl.logger.Infof("controller %q is syncing...", gk)
 			return false
 		}
 	}
@@ -185,10 +187,10 @@ func genPatchBytes(oldRes, modRes runtime.Object, patchType types.PatchType) ([]
 }
 
 func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
-	klog.V(2).Infof("adding CRD %q", name)
+	cl.logger.Debugf("adding CRD %q", name)
 	s, f := cl.schemasByCRDName[name]
 	if !f {
-		klog.V(2).Infof("added resource that we are not watching: %v", name)
+		cl.logger.Debugf("added resource that we are not watching: %v", name)
 		return
 	}
 	resourceGVK := s.GroupVersionKind()
@@ -197,12 +199,12 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	cl.kindsMu.Lock()
 	defer cl.kindsMu.Unlock()
 	if _, f := cl.kinds[resourceGVK]; f {
-		klog.V(2).Infof("added resource that already exists: %v", resourceGVK)
+		cl.logger.Debugf("added resource that already exists: %v", resourceGVK)
 		return
 	}
 	translateFunc, f := translationMap[resourceGVK]
 	if !f {
-		klog.Errorf("translation function for %v not found", resourceGVK)
+		cl.logger.Errorf("translation function for %v not found", resourceGVK)
 		return
 	}
 
@@ -273,7 +275,7 @@ func (cl *Client) Schemas() collection.Schemas {
 func (cl *Client) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
 	h, f := cl.kind(typ)
 	if !f {
-		klog.Warningf("unknown type: %s", typ)
+		cl.logger.Warnf("unknown type: %s", typ)
 		return nil
 	}
 
@@ -286,7 +288,7 @@ func (cl *Client) Get(typ config.GroupVersionKind, name, namespace string) *conf
 
 	obj := h.collection.GetKey(key)
 	if obj == nil {
-		klog.V(2).Infof("couldn't find %s/%s in informer index", namespace, name)
+		cl.logger.Debugf("couldn't find %s/%s in informer index", namespace, name)
 		return nil
 	}
 
@@ -374,5 +376,5 @@ func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler mod
 		return
 	}
 
-	klog.Warningf("unknown type: %s", kind)
+	cl.logger.Warnf("unknown type: %s", kind)
 }

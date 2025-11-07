@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/sail/pkg/features"
 	securityModel "github.com/apache/dubbo-kubernetes/sail/pkg/security/model"
@@ -38,7 +39,6 @@ import (
 	"istio.io/api/security/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"os"
 	"path"
 	"strings"
@@ -104,7 +104,7 @@ var (
 func (s *Server) initCAServer(ca caserver.CertificateAuthority, opts *caOptions) {
 	caServer, startErr := caserver.New(ca, maxWorkloadCertTTL.Get(), opts.Authenticators)
 	if startErr != nil {
-		klog.Errorf("failed to create dubbo ca server: %v", startErr)
+		log.Errorf("failed to create dubbo ca server: %v", startErr)
 	}
 	s.caServer = caServer
 }
@@ -117,7 +117,7 @@ func (s *Server) RunCA(grpc *grpc.Server) {
 	if err == nil {
 		tok, err := detectAuthEnv(string(token))
 		if err != nil {
-			klog.Warningf("Starting with invalid K8S JWT token: %v", err)
+			log.Warnf("Starting with invalid K8S JWT token: %v", err)
 		} else {
 			if iss == "" {
 				iss = tok.Iss
@@ -134,15 +134,15 @@ func (s *Server) RunCA(grpc *grpc.Server) {
 		oidcAuth, err := authenticate.NewJwtAuthenticator(&jwtRule, nil)
 		if err == nil {
 			s.caServer.Authenticators = append(s.caServer.Authenticators, oidcAuth)
-			klog.Info("Using out-of-cluster JWT authentication")
+			log.Info("Using out-of-cluster JWT authentication")
 		} else {
-			klog.Info("K8S token doesn't support OIDC, using only in-cluster auth")
+			log.Info("K8S token doesn't support OIDC, using only in-cluster auth")
 		}
 	}
 
 	s.caServer.Register(grpc)
 
-	klog.Info("Dubbod CA has started")
+	log.Info("Dubbod CA has started")
 }
 
 func (s *Server) loadCACerts(caOpts *caOptions, dir string) error {
@@ -164,7 +164,7 @@ func (s *Server) loadCACerts(caOpts *caOptions, dir string) error {
 		return nil
 	}
 	if bundleExists {
-		klog.Infof("incomplete signing CA bundle detected at %s", dir)
+		log.Infof("incomplete signing CA bundle detected at %s", dir)
 	}
 
 	secret, err := s.kubeClient.Kube().CoreV1().Secrets(caOpts.Namespace).Get(
@@ -177,7 +177,7 @@ func (s *Server) loadCACerts(caOpts *caOptions, dir string) error {
 	}
 
 	// TODO: writing cacerts files from remote cluster will always fail,
-	klog.Infof("cacerts Secret found in config cluster, saving contents to %s", dir)
+	log.Infof("cacerts Secret found in config cluster, saving contents to %s", dir)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
@@ -201,10 +201,10 @@ func (s *Server) createDubboRA(opts *caOptions) (ra.RegistrationAuthority, error
 
 		// File does not exist.
 		if certSignerDomain == "" {
-			klog.Infof("CA cert file %q not found, using %q.", caCertFile, defaultCACertPath)
+			log.Infof("CA cert file %q not found, using %q.", caCertFile, defaultCACertPath)
 			caCertFile = defaultCACertPath
 		} else {
-			klog.Infof("CA cert file %q not found - ignoring.", caCertFile)
+			log.Infof("CA cert file %q not found - ignoring.", caCertFile)
 			caCertFile = ""
 		}
 	}
@@ -270,7 +270,7 @@ func (s *Server) createDubboCA(opts *caOptions) (*ca.DubboCA, error) {
 	useSelfSignedCA := !signingCABundleComplete || (features.UseCacertsForSelfSignedCA && dubboGenerated)
 	if useSelfSignedCA {
 		if features.UseCacertsForSelfSignedCA && dubboGenerated {
-			klog.Infof("DubboGenerated %s secret found, use it as the CA certificate", ca.CACertsSecret)
+			log.Infof("DubboGenerated %s secret found, use it as the CA certificate", ca.CACertsSecret)
 		}
 
 		// Either the secret is not mounted because it is named `dubbo-ca-secret`,
@@ -282,7 +282,7 @@ func (s *Server) createDubboCA(opts *caOptions) (*ca.DubboCA, error) {
 		caOpts.OnRootCertUpdate = s.updateRootCertAndGenKeyCert
 	} else {
 		// The secret is mounted and the "dubbo-generated" key is not used.
-		klog.Info("Use local CA certificate")
+		log.Info("Use local CA certificate")
 
 		caOpts, err = ca.NewPluggedCertDubboCAOptions(fileBundle, workloadCertTTL.Get(), maxWorkloadCertTTL.Get(), caRSAKeySize.Get())
 		if err != nil {
@@ -293,10 +293,10 @@ func (s *Server) createDubboCA(opts *caOptions) (*ca.DubboCA, error) {
 			// CRL is only supported for Plugged CA.
 			// If CRL file is present, read and notify it for initial replication
 			if len(fileBundle.CRLFile) > 0 {
-				klog.Infof("CRL file %s found, notifying it for initial replication", fileBundle.CRLFile)
+				log.Infof("CRL file %s found, notifying it for initial replication", fileBundle.CRLFile)
 				crlBytes, crlErr := os.ReadFile(fileBundle.CRLFile)
 				if crlErr != nil {
-					klog.Errorf("failed to read CRL file %s: %v", fileBundle.CRLFile, crlErr)
+					log.Errorf("failed to read CRL file %s: %v", fileBundle.CRLFile, crlErr)
 					return nil, crlErr
 				}
 
@@ -321,13 +321,13 @@ func (s *Server) initCACertsAndCRLWatcher() {
 
 	s.cacertsWatcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		klog.Errorf("failed to add CAcerts watcher: %v", err)
+		log.Errorf("failed to add CAcerts watcher: %v", err)
 		return
 	}
 
 	err = s.addCACertsFileWatcher(LocalCertDir.Get())
 	if err != nil {
-		klog.Errorf("failed to add CAcerts file watcher: %v", err)
+		log.Errorf("failed to add CAcerts file watcher: %v", err)
 		return
 	}
 
@@ -344,7 +344,7 @@ func (s *Server) handleCACertsFileWatch() {
 
 		case event, ok := <-s.cacertsWatcher.Events:
 			if !ok {
-				klog.V(2).Infof("plugin cacerts watch stopped")
+				log.Debugf("plugin cacerts watch stopped")
 				return
 			}
 			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
@@ -355,7 +355,7 @@ func (s *Server) handleCACertsFileWatch() {
 
 		case err := <-s.cacertsWatcher.Errors:
 			if err != nil {
-				klog.Errorf("failed to catch events on cacerts file: %v", err)
+				log.Errorf("failed to catch events on cacerts file: %v", err)
 				return
 			}
 
@@ -387,7 +387,7 @@ func detectAuthEnv(jwt string) (*authenticate.JwtPayload, error) {
 }
 
 func handleEvent(s *Server) {
-	klog.Info("Update Dubbod cacerts")
+	log.Info("Update Dubbod cacerts")
 
 	var newCABundle []byte
 	var err error
@@ -395,14 +395,14 @@ func handleEvent(s *Server) {
 
 	fileBundle, err := detectSigningCABundleAndCRL()
 	if err != nil {
-		klog.Errorf("unable to determine signing file format %v", err)
+		log.Errorf("unable to determine signing file format %v", err)
 		return
 	}
 
 	// check if CA bundle is updated
 	newCABundle, err = os.ReadFile(fileBundle.RootCertFile)
 	if err != nil {
-		klog.Errorf("failed reading root-cert.pem: %v", err)
+		log.Errorf("failed reading root-cert.pem: %v", err)
 		return
 	}
 
@@ -411,7 +411,7 @@ func handleEvent(s *Server) {
 	// Only updating intermediate CA is supported now
 	if !bytes.Equal(currentCABundle, newCABundle) {
 		if !features.MultiRootMesh {
-			klog.Info("Multi root is disabled, updating new ROOT-CA not supported")
+			log.Info("Multi root is disabled, updating new ROOT-CA not supported")
 			return
 		}
 
@@ -419,10 +419,10 @@ func handleEvent(s *Server) {
 		// we need to make the new CA bundle contain both old and new CA certs
 		if bytes.Contains(currentCABundle, newCABundle) ||
 			bytes.Contains(newCABundle, currentCABundle) {
-			klog.Info("Updating new ROOT-CA")
+			log.Info("Updating new ROOT-CA")
 			updateRootCA = true
 		} else {
-			klog.V(2).Info("Updating new ROOT-CA not supported")
+			log.Info("Updating new ROOT-CA not supported")
 			return
 		}
 	}
@@ -436,18 +436,18 @@ func handleEvent(s *Server) {
 				// handleEvent can be triggered either for key-cert bundle update or
 				// for crl file update. So, even if there is an error in reading crl file,
 				// we should log error and continue with key-cert bundle update.
-				klog.Errorf("failed reading crl file: %v", crlReadErr)
+				log.Errorf("failed reading crl file: %v", crlReadErr)
 			}
 
 			if !bytes.Equal(currentCRLData, crlData) {
-				klog.Infof("Updating CRL data")
+				log.Infof("Updating CRL data")
 				updateCRL = true
 			}
 		}
 	}
 
 	if !updateRootCA && !updateCRL {
-		klog.Info("No changes detected in root cert or CRL file data, skipping update")
+		log.Info("No changes detected in root cert or CRL file data, skipping update")
 		return
 	}
 
@@ -460,7 +460,7 @@ func handleEvent(s *Server) {
 		fileBundle.CRLFile,
 	)
 	if err != nil {
-		klog.Errorf("Failed to update new Plug-in CA certs: %v", err)
+		log.Errorf("Failed to update new Plug-in CA certs: %v", err)
 		return
 	}
 	if len(s.CA.GetCAKeyCertBundle().GetRootCertPem()) != 0 {
@@ -470,26 +470,26 @@ func handleEvent(s *Server) {
 	// notify watcher to replicate new or updated crl data
 	if updateCRL {
 		s.dubbodCertBundleWatcher.SetAndNotifyCACRL(s.CA.GetCAKeyCertBundle().GetCRLPem())
-		klog.Infof("Dubbod has detected the newly added CRL file and updated its CRL accordingly")
+		log.Infof("Dubbod has detected the newly added CRL file and updated its CRL accordingly")
 	}
 
 	err = s.updateRootCertAndGenKeyCert()
 	if err != nil {
-		klog.Errorf("Failed generating plugged-in dubbod key cert: %v", err)
+		log.Errorf("Failed generating plugged-in dubbod key cert: %v", err)
 		return
 	}
 
-	klog.Info("Dubbod has detected the newly added intermediate CA and updated its key and certs accordingly")
+	log.Info("Dubbod has detected the newly added intermediate CA and updated its key and certs accordingly")
 }
 
 func (s *Server) addCACertsFileWatcher(dir string) error {
 	err := s.cacertsWatcher.Add(dir)
 	if err != nil {
-		klog.Infof("failed to add cacerts file watcher for %s: %v", dir, err)
+		log.Infof("failed to add cacerts file watcher for %s: %v", dir, err)
 		return err
 	}
 
-	klog.Infof("Added cacerts files watcher at %v", dir)
+	log.Infof("Added cacerts files watcher at %v", dir)
 
 	return nil
 }
@@ -498,7 +498,7 @@ func (s *Server) createSelfSignedCACertificateOptions(fileBundle *ca.SigningCAFi
 	var caOpts *ca.DubboCAOptions
 	var err error
 	if s.kubeClient != nil {
-		klog.Info("Use self-signed certificate as the CA certificate")
+		log.Info("Use self-signed certificate as the CA certificate")
 
 		// Abort after 20 minutes.
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*20)
@@ -513,7 +513,7 @@ func (s *Server) createSelfSignedCACertificateOptions(fileBundle *ca.SigningCAFi
 			opts.Namespace, s.kubeClient.Kube().CoreV1(), fileBundle.RootCertFile,
 			enableJitterForRootCertRotator.Get(), caRSAKeySize.Get())
 	} else {
-		klog.Infof("Use local self-signed CA certificate for testing. Will use in-memory root CA, no K8S access and no ca key file %s", fileBundle.SigningKeyFile)
+		log.Infof("Use local self-signed CA certificate for testing. Will use in-memory root CA, no K8S access and no ca key file %s", fileBundle.SigningKeyFile)
 
 		caOpts, err = ca.NewSelfSignedDebugDubboCAOptions(fileBundle.RootCertFile, SelfSignedCACertTTL.Get(),
 			workloadCertTTL.Get(), maxWorkloadCertTTL.Get(), opts.TrustDomain, caRSAKeySize.Get())
@@ -557,7 +557,7 @@ func detectSigningCABundleAndCRL() (ca.SigningCAFileBundle, error) {
 
 	// looking for tls file format (tls.crt)
 	if _, err := os.Stat(tlsSigningFile); err == nil {
-		klog.Info("Using kubernetes.io/tls secret type for signing ca files")
+		log.Info("Using kubernetes.io/tls secret type for signing ca files")
 		return ca.SigningCAFileBundle{
 			RootCertFile: path.Join(LocalCertDir.Get(), ca.TLSSecretRootCertFile),
 			CertChainFiles: []string{
@@ -571,7 +571,7 @@ func detectSigningCABundleAndCRL() (ca.SigningCAFileBundle, error) {
 		return ca.SigningCAFileBundle{}, err
 	}
 
-	klog.Info("Using dubbod file format for signing ca files")
+	log.Info("Using dubbod file format for signing ca files")
 	// default ca file format
 	signingCAFileBundle := ca.SigningCAFileBundle{
 		RootCertFile:    path.Join(LocalCertDir.Get(), ca.RootCertFile),
@@ -584,7 +584,7 @@ func detectSigningCABundleAndCRL() (ca.SigningCAFileBundle, error) {
 		// load crl file if it exists
 		crlFilePath := path.Join(LocalCertDir.Get(), ca.CACRLFile)
 		if _, err := os.Stat(crlFilePath); err == nil {
-			klog.Info("Detected CRL file")
+			log.Info("Detected CRL file")
 			signingCAFileBundle.CRLFile = crlFilePath
 		}
 	}

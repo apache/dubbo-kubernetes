@@ -19,6 +19,7 @@ package model
 
 import (
 	"cmp"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"sync"
 	"time"
 
@@ -35,13 +36,11 @@ import (
 	"go.uber.org/atomic"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 )
 
 var (
 	LastPushStatus *PushContext
-	// LastPushMutex will protect the LastPushStatus
-	LastPushMutex sync.Mutex
+	LastPushMutex  sync.Mutex
 )
 
 type TriggerReason string
@@ -318,7 +317,6 @@ func (ps *PushContext) OnConfigChange() {
 }
 
 func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
-	// TODO SidecarScope?
 	for _, service := range ps.ServiceIndex.HostnameAndNamespace[hostname] {
 		return service
 	}
@@ -387,7 +385,7 @@ func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.
 		}
 		if existing := ps.ServiceIndex.HostnameAndNamespace[s.Hostname][s.Attributes.Namespace]; existing != nil &&
 			!(existing.Attributes.ServiceRegistry != provider.Kubernetes && s.Attributes.ServiceRegistry == provider.Kubernetes) {
-			klog.V(2).Infof("Service %s/%s from registry %s ignored by %s/%s/%s", s.Attributes.Namespace, s.Hostname, s.Attributes.ServiceRegistry,
+			log.Debugf("Service %s/%s from registry %s ignored by %s/%s/%s", s.Attributes.Namespace, s.Hostname, s.Attributes.ServiceRegistry,
 				existing.Attributes.ServiceRegistry, existing.Attributes.Namespace, existing.Hostname)
 		} else {
 			ps.ServiceIndex.HostnameAndNamespace[s.Hostname][s.Attributes.Namespace] = s

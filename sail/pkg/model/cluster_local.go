@@ -18,11 +18,11 @@
 package model
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"strings"
 	"sync"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"k8s.io/klog/v2"
 )
 
 var (
@@ -76,7 +76,7 @@ func (c *clusterLocalProvider) onMeshUpdated(e *Environment) {
 	}
 
 	if discoveryHost, _, err := e.GetDiscoveryAddress(); err != nil {
-		klog.Errorf("failed to make discoveryAddress cluster-local: %v", err)
+		log.Errorf("failed to make discoveryAddress cluster-local: %v", err)
 	} else {
 		if !strings.HasSuffix(string(discoveryHost), domainSuffix) {
 			discoveryHost += host.Name("." + domainSuffix)
