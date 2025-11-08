@@ -493,7 +493,7 @@ spec:
         helm.sh/chart: prometheus-27.8.0
         app.kubernetes.io/part-of: prometheus
         
-        sidecar.dubbo.io/inject: "false"
+        sidecar.dubbo.apache.org/inject: "false"
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus

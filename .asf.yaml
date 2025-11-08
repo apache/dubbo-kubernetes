@@ -35,7 +35,8 @@ github:
       # foo: bar
   labels:
     - dubbo
-    - kubernetes
-    - microservices
-    - service-mesh
     - proxyless
+    - microservices
+    - kubernetes
+    - service-mesh
+

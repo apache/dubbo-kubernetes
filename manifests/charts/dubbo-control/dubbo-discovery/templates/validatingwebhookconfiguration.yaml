@@ -5,7 +5,7 @@ metadata:
   name: dubbo-validator-dubbo-system
   namespace: default
 webhooks:
-  - name: validation.dubbo.io
+  - name: validation.dubbo.apache.org
     clientConfig:
       service:
         name: dubbod
@@ -16,8 +16,8 @@ webhooks:
           - CREATE
           - UPDATE
         apiGroups:
-          - security.dubbo.io
-          - networking.dubbo.io
+          - security.dubbo.apache.org
+          - networking.dubbo.apache.org
         apiVersions:
           - "*"
         resources:

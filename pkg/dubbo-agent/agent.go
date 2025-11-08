@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/http"
 	"os"
 	"path"
@@ -29,21 +30,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/cmd/planet-agent/config"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
-	"github.com/apache/dubbo-kubernetes/sail/cmd/sail-agent/config"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
-	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/cache"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/structpb"
 	mesh "istio.io/api/mesh/v1alpha1"
-	"k8s.io/klog/v2"
 )
 
 const (
@@ -125,13 +125,13 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		return nil, fmt.Errorf("failed to check SDS socket: %v", err)
 	}
 	if socketExists {
-		klog.Infof("Existing workload SDS socket found at %s. Default Dubbo SDS Server will only serve files", configuredAgentSocketPath)
+		log.Infof("Existing workload SDS socket found at %s. Default Dubbo SDS Server will only serve files", configuredAgentSocketPath)
 		a.secOpts.ServeOnlyFiles = true
 	} else if !isDubboSDS {
 		return nil, fmt.Errorf("agent configured for non-default SDS socket path: %s but no socket found", configuredAgentSocketPath)
 	}
 
-	klog.Info("Starting default Dubbo SDS Server")
+	log.Info("Starting default Dubbo SDS Server")
 	err = a.initSdsServer()
 	if err != nil {
 		return nil, fmt.Errorf("failed to start default Dubbo SDS server: %v", err)
@@ -145,7 +145,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	// because we need the UDS path to be converted to absolute path
 	var bootstrapNode *core.Node
 	if a.cfg.GRPCBootstrapPath != "" {
-		klog.Infof("Starting sail-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
+		log.Infof("Starting planet-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
 		node, err := a.generateGRPCBootstrapWithNode()
 		if err != nil {
 			return nil, fmt.Errorf("failed generating gRPC XDS bootstrap: %v", err)
@@ -168,7 +168,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 			}
 		}
 	} else {
-		klog.Warning("GRPC_XDS_BOOTSTRAP not set, bootstrap file will not be generated")
+		log.Warn("GRPC_XDS_BOOTSTRAP not set, bootstrap file will not be generated")
 	}
 	// Watch for certificate changes to update dial options
 	// Note: dial options are already initialized in initXdsProxy, this is only for updates
@@ -179,16 +179,16 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		}
 		go a.startFileWatcher(ctx, rootCAForXDS, func() {
 			if err := a.xdsProxy.initDubbodDialOptions(a); err != nil {
-				klog.Warningf("Failed to update xds proxy dial options: %v", err)
+				log.Warnf("Failed to update xds proxy dial options: %v", err)
 			} else {
-				klog.Info("Updated xds proxy dial options after certificate change")
+				log.Info("Updated xds proxy dial options after certificate change")
 			}
 		})
 
 		// also watch CA root for CA client; rebuild SDS/CA client when it changes
 		if caRoot, err := a.FindRootCAForCA(); err == nil && caRoot != "" {
 			go a.startFileWatcher(ctx, caRoot, func() {
-				klog.Info("CA root changed, rebuilding CA client and SDS server")
+				log.Info("CA root changed, rebuilding CA client and SDS server")
 				a.rebuildSDSWithNewCAClient()
 			})
 		}
@@ -204,9 +204,9 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		klog.Infof("Opening status port %d", a.proxyConfig.StatusPort)
+		log.Infof("Opening status port %d", a.proxyConfig.StatusPort)
 		if err := a.statusSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			klog.Errorf("status server error: %v", err)
+			log.Errorf("status server error: %v", err)
 		}
 	}()
 
@@ -277,7 +277,7 @@ func (a *Agent) FindRootCAForXDS() (string, error) {
 	} else if a.secOpts.FileMountedCerts {
 		// FileMountedCerts - Load it from Proxy Metadata.
 		rootCAPath = a.proxyConfig.ProxyMetadata[MetadataClientRootCert]
-	} else if a.secOpts.SailCertProvider == constants.CertProviderNone {
+	} else if a.secOpts.PlanetCertProvider == constants.CertProviderNone {
 		return "", fmt.Errorf("root CA file for XDS required but configured provider as none")
 	} else {
 		rootCAPath = path.Join(AegisCACertPath, constants.CACertNamespaceConfigMapDataName)
@@ -317,7 +317,7 @@ func (a *Agent) FindRootCAForCA() (string, error) {
 		return "", nil
 	} else if a.cfg.CARootCerts != "" {
 		rootCAPath = a.cfg.CARootCerts
-	} else if a.secOpts.SailCertProvider == constants.CertProviderCustom {
+	} else if a.secOpts.PlanetCertProvider == constants.CertProviderCustom {
 		rootCAPath = security.DefaultRootCertFilePath // ./etc/certs/root-cert.pem
 	} else if a.secOpts.ProvCert != "" {
 		// This was never completely correct - PROV_CERT are only intended for auth with CA_ADDR,
@@ -325,7 +325,7 @@ func (a *Agent) FindRootCAForCA() (string, error) {
 		// For VMs, the root cert file used to auth may be populated afterwards.
 		// Thus, return directly here and skip checking for existence.
 		return a.secOpts.ProvCert + "/root-cert.pem", nil
-	} else if a.secOpts.SailCertProvider == constants.CertProviderNone {
+	} else if a.secOpts.PlanetCertProvider == constants.CertProviderNone {
 		return "", fmt.Errorf("root CA file for CA required but configured provider as none")
 	} else {
 		rootCAPath = path.Join(AegisCACertPath, constants.CACertNamespaceConfigMapDataName)
@@ -341,14 +341,14 @@ func (a *Agent) FindRootCAForCA() (string, error) {
 func (a *Agent) startFileWatcher(ctx context.Context, filePath string, handler func()) {
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
-		klog.Warningf("Failed to get absolute path for %s: %v", filePath, err)
+		log.Warnf("Failed to get absolute path for %s: %v", filePath, err)
 		return
 	}
 	// Ensure parent directory exists for filewatcher
 	parentDir := filepath.Dir(absPath)
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
-			klog.Warningf("Failed to create parent directory %s for file watcher: %v", parentDir, err)
+			log.Warnf("Failed to create parent directory %s for file watcher: %v", parentDir, err)
 			return
 		}
 	}
@@ -357,21 +357,21 @@ func (a *Agent) startFileWatcher(ctx context.Context, filePath string, handler f
 		// If the file is already being watched, this is expected and should be silently skipped
 		// Only log as warning if it's a different error
 		if strings.Contains(err.Error(), "is already being watched") {
-			klog.V(2).Infof("File watcher already exists for %s, skipping", absPath)
+			log.Debugf("File watcher already exists for %s, skipping", absPath)
 			return
 		}
-		klog.Warningf("Failed to add file watcher %s: %v", absPath, err)
+		log.Warnf("Failed to add file watcher %s: %v", absPath, err)
 		return
 	}
 
-	klog.V(2).Infof("Add file %s watcher", absPath)
+	log.Debugf("Add file %s watcher", absPath)
 	for {
 		select {
 		case gotEvent := <-a.fileWatcher.Events(absPath):
-			klog.V(2).Infof("Receive file %s event %v", absPath, gotEvent)
+			log.Debugf("Receive file %s event %v", absPath, gotEvent)
 			handler()
 		case err := <-a.fileWatcher.Errors(absPath):
-			klog.Warningf("Watch file %s error: %v", absPath, err)
+			log.Warnf("Watch file %s error: %v", absPath, err)
 		case <-ctx.Done():
 			return
 		}
@@ -381,7 +381,7 @@ func (a *Agent) startFileWatcher(ctx context.Context, filePath string, handler f
 func (a *Agent) initSdsServer() error {
 	var err error
 	if security.CheckWorkloadCertificate(security.WorkloadIdentityCertChainPath, security.WorkloadIdentityKeyPath, security.WorkloadIdentityRootCertPath) {
-		klog.Info("workload certificate files detected, creating secret manager without caClient")
+		log.Info("workload certificate files detected, creating secret manager without caClient")
 		a.secOpts.RootCertFilePath = security.WorkloadIdentityRootCertPath
 		a.secOpts.CertChainFilePath = security.WorkloadIdentityCertChainPath
 		a.secOpts.KeyFilePath = security.WorkloadIdentityKeyPath
@@ -405,24 +405,24 @@ func (a *Agent) rebuildSDSWithNewCAClient() {
 	a.sdsMu.Lock()
 	defer a.sdsMu.Unlock()
 	if a.sdsServer != nil {
-		klog.Info("Stopping existing SDS server for CA client rebuild")
+		log.Info("Stopping existing SDS server for CA client rebuild")
 		a.sdsServer.Stop()
 	}
 	if a.secretCache != nil {
-		klog.Info("Closing existing SecretManagerClient")
+		log.Info("Closing existing SecretManagerClient")
 		a.secretCache.Close()
 	}
 	// recreate secret manager with CA client enabled
 	sc, err := a.newSecretManager(true)
 	if err != nil {
-		klog.Errorf("failed to recreate secret manager with new CA client: %v", err)
+		log.Errorf("failed to recreate secret manager with new CA client: %v", err)
 		return
 	}
 	a.secretCache = sc
 	pkpConf := a.proxyConfig.GetPrivateKeyProvider()
 	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache, pkpConf)
 	a.secretCache.RegisterSecretHandler(a.sdsServer.OnSecretUpdate)
-	klog.Info("SDS server and CA client rebuilt successfully")
+	log.Info("SDS server and CA client rebuilt successfully")
 }
 
 func (a *Agent) generateGRPCBootstrapWithNode() (*model.Node, error) {
@@ -432,7 +432,7 @@ func (a *Agent) generateGRPCBootstrapWithNode() (*model.Node, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve absolute path for bootstrap file: %v", err)
 	}
-	klog.Infof("Generating gRPC bootstrap file at: %s (absolute: %s)", bootstrapPath, absBootstrapPath)
+	log.Infof("Generating gRPC bootstrap file at: %s (absolute: %s)", bootstrapPath, absBootstrapPath)
 
 	// generate metadata
 	node, err := a.generateNodeMetadata()
@@ -460,7 +460,7 @@ func (a *Agent) generateGRPCBootstrapWithNode() (*model.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	klog.Infof("gRPC bootstrap file generated successfully at: %s", absBootstrapPath)
+	log.Infof("gRPC bootstrap file generated successfully at: %s", absBootstrapPath)
 	return node, nil
 }
 
@@ -471,10 +471,10 @@ func (a *Agent) generateGRPCBootstrap() error {
 
 func (a *Agent) newSecretManager(createCaClient bool) (*cache.SecretManagerClient, error) {
 	if !createCaClient {
-		klog.Info("Workload is using file mounted certificates. Skipping connecting to CA")
+		log.Info("Workload is using file mounted certificates. Skipping connecting to CA")
 		return cache.NewSecretManagerClient(nil, a.secOpts)
 	}
-	klog.Infof("CA Endpoint %s, provider %s", a.secOpts.CAEndpoint, a.secOpts.CAProviderName)
+	log.Infof("CA Endpoint %s, provider %s", a.secOpts.CAEndpoint, a.secOpts.CAProviderName)
 
 	caClient, err := createCAClient(a.secOpts, a)
 	if err != nil {
@@ -484,9 +484,9 @@ func (a *Agent) newSecretManager(createCaClient bool) (*cache.SecretManagerClien
 }
 
 func (a *Agent) generateNodeMetadata() (*model.Node, error) {
-	var sailSAN []string
+	var planetSAN []string
 	if a.proxyConfig.ControlPlaneAuthPolicy == mesh.AuthenticationPolicy_MUTUAL_TLS {
-		sailSAN = []string{config.GetSailSan(a.proxyConfig.DiscoveryAddress)}
+		planetSAN = []string{config.GetPlanetSan(a.proxyConfig.DiscoveryAddress)}
 	}
 
 	credentialSocketExists, err := checkSocket(context.TODO(), security.CredentialNameSocketPath)
@@ -494,7 +494,7 @@ func (a *Agent) generateNodeMetadata() (*model.Node, error) {
 		return nil, fmt.Errorf("failed to check credential SDS socket: %v", err)
 	}
 	if credentialSocketExists {
-		klog.Info("Credential SDS socket found")
+		log.Info("Credential SDS socket found")
 	}
 
 	return bootstrap.GetNodeMetaData(bootstrap.MetadataOptions{
@@ -503,7 +503,7 @@ func (a *Agent) generateNodeMetadata() (*model.Node, error) {
 		InstanceIPs:            a.cfg.ProxyIPAddresses,
 		StsPort:                a.secOpts.STSPort,
 		ProxyConfig:            a.proxyConfig,
-		SailSubjectAltName:     sailSAN,
+		PlanetSubjectAltName:   planetSAN,
 		CredentialSocketExists: credentialSocketExists,
 		XDSRootCert:            a.cfg.XDSRootCerts,
 		MetadataDiscovery:      a.cfg.MetadataDiscovery,
@@ -537,7 +537,7 @@ func checkSocket(ctx context.Context, socketPath string) (bool, error) {
 
 	err := socketHealthCheck(ctx, socketPath)
 	if err != nil {
-		klog.V(2).Infof("SDS socket detected but not healthy: %v", err)
+		log.Debugf("SDS socket detected but not healthy: %v", err)
 		err = os.Remove(socketPath)
 		if err != nil {
 			return false, fmt.Errorf("existing SDS socket could not be removed: %v", err)
@@ -563,7 +563,7 @@ func socketHealthCheck(ctx context.Context, socketPath string) error {
 	}
 	err = conn.Close()
 	if err != nil {
-		klog.Infof("connection is not closed: %v", err)
+		log.Infof("connection is not closed: %v", err)
 	}
 
 	return nil

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: install.dubbo.io/v1alpha1
+apiVersion: install.dubbo.apache.org/v1alpha1
 kind: DubboOperator
 spec:
   components:

@@ -5,7 +5,7 @@ metadata:
   namespace: dubbo-system
   labels:
     app: dubbod
-    dubbo.io/rev: default
+    dubbo.apache.org/rev: default
 data:
   merged-values: |-
   original-values: |-

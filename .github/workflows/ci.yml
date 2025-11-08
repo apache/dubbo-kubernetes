@@ -13,70 +13,140 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Continues Integration
+name: Dubbo Kubernetes CI
 
 on:
   push:
     branches:
       - master
+      - main
   pull_request:
     branches:
       - master
+      - main
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
 
 jobs:
   unit-test:
-    name: Go Test
+    name: Go Unit Tests
     runs-on: ubuntu-latest
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Go 1.x
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: go.sum
+
       - name: Download dependencies
+        run: go mod download
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Run unit tests
         run: |
-          go mod download
-      - name: Go Test
-        run: |
-          go test ./... -gcflags=-l -coverprofile=coverage.txt -covermode=atomic
-      - name: "Upload test result"
+          go test ./... -gcflags=-l -coverprofile=coverage.txt -covermode=atomic -v
+
+      - name: Upload test coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-coverage
           path: "**/coverage.txt"
-      - name: Coverage
-        run: bash <(curl -s https://codecov.io/bash)
+          retention-days: 7
 
-  license-check:
-    name: License Check - Go
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.txt
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  lint:
+    name: Go Lint
     runs-on: ubuntu-latest
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Go 1.x
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run go fmt check
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "The following files need formatting:"
+            gofmt -s -d .
+            exit 1
+          fi
+
+  build:
+    name: Go Build
+    runs-on: ubuntu-latest
+    if: github.repository == 'apache/dubbo-kubernetes'
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build ./...
+
+  license-check:
+    name: License Header Check
+    runs-on: ubuntu-latest
+    if: github.repository == 'apache/dubbo-kubernetes'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Check License Header
         uses: apache/skywalking-eyes/header@main
 
-  go-fmt:
-    name: Go fmt
+  security-scan:
+    name: Security Scan
     runs-on: ubuntu-latest
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Go 1.x
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Download dependencies
-        run: |
-          go mod download
-      - name: Go Fmt
-        run: |
-          go fmt ./... && git status && [[ -z `git status -s` ]]
-          # diff -u <(echo -n) <(gofmt -d -s .)
+          cache-dependency-path: go.sum
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: './...'

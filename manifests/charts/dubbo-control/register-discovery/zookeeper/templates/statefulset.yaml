@@ -7,9 +7,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: zookeeper
-    dubbo.io/rev: {{ default "default" | quote }}
-    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
-    operator.dubbo.io/component: "Zookeeper"
+    dubbo.apache.org/rev: {{ default "default" | quote }}
+    install.operator.dubbo.apache.org/owning-resource: {{ default "unknown" }}
+    operator.dubbo.apache.org/component: "Zookeeper"
     dubbo: zookeeper
     release: {{ .Release.Name }}
     app.kubernetes.io/name: "register"
@@ -17,7 +17,7 @@ spec:
   selector:
     matchLabels:
       app: zookeeper
-      dubbo.io/rev: {{ default "default" | quote }}
+      dubbo.apache.org/rev: {{ default "default" | quote }}
       dubbo: zookeeper
   replicas: {{ $zookeeper.replicas }}
   serviceName: zookeeper
@@ -29,9 +29,9 @@ spec:
     metadata:
       labels:
         app: zookeeper
-        dubbo.io/rev: {{ default "default" | quote }}
-        install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
-        operator.dubbo.io/component: "Zookeeper"
+        dubbo.apache.org/rev: {{ default "default" | quote }}
+        install.operator.dubbo.apache.org/owning-resource: {{ default "unknown" }}
+        operator.dubbo.apache.org/component: "Zookeeper"
         dubbo: zookeeper
         release: {{ .Release.Name }}
         app.kubernetes.io/name: "register"

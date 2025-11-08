@@ -19,6 +19,8 @@ package cluster
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/uninstall"
@@ -26,7 +28,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 type uninstallArgs struct {
@@ -83,8 +84,7 @@ func UninstallCmd(ctx cli.Context) *cobra.Command {
 func Uninstall(cmd *cobra.Command, ctx cli.Context, rootArgs *RootArgs, uiArgs *uninstallArgs) error {
 	cl := clog.NewConsoleLogger(cmd.OutOrStdout(), cmd.ErrOrStderr())
 	var kubeClient kube.CLIClient
-	var err error
-	kubeClient, err = ctx.CLIClientWithRevision("")
+	kubeClient, err := ctx.CLIClientWithRevision("")
 	if err != nil {
 		return err
 	}

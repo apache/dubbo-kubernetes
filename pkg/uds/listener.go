@@ -19,11 +19,10 @@ package uds
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net"
 	"os"
 	"path/filepath"
-
-	"k8s.io/klog/v2"
 )
 
 func NewListener(path string) (net.Listener, error) {
@@ -36,7 +35,7 @@ func NewListener(path string) (net.Listener, error) {
 	// Attempt to create the folder in case it doesn't exist
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		// If we cannot create it, just warn here - we will fail later if there is a real error
-		klog.Warningf("Failed to create directory for %v: %v", path, err)
+		log.Warnf("Failed to create directory for %v: %v", path, err)
 	}
 
 	var err error

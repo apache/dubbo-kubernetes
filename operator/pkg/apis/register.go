@@ -23,11 +23,11 @@ import (
 
 // Package v1alpha1 contains API Schema definitions for the dubbo v1alpha1 API group
 // +k8s:deepcopy-gen=package,register
-// +groupName=install.dubbo.io
+// +groupName=install.dubbo.apache.org
 
 // DubboOperatorGVK is the GVK for DubboOperator.
 var DubboOperatorGVK = schema.GroupVersionKind{
 	Version: "v1alpha1",
-	Group:   "install.dubbo.io",
+	Group:   "install.dubbo.apache.org",
 	Kind:    "DubboOperator",
 }

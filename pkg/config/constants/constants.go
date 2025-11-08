@@ -25,7 +25,7 @@ const (
 	DefaultClusterName                 = "Kubernetes"
 	ServiceClusterName                 = "dubbo-proxy"
 	ConfigPathDir                      = "./etc/dubbo/proxy"
-	BinaryPathFilename                 = "/usr/local/bin/sail-agent"
+	BinaryPathFilename                 = "/usr/local/bin/planet-agent"
 	KeyFilename                        = "key.pem"
 	CertChainFilename                  = "cert-chain.pem"
 	CertProviderDubbod                 = "dubbod"
@@ -39,15 +39,15 @@ const (
 
 	StatPrefixDelimiter = ";"
 
-	SailWellKnownDNSCertPath   = "./var/run/secrets/dubbod/tls/"
-	SailWellKnownDNSCaCertPath = "./var/run/secrets/dubbod/ca/"
+	PlanetWellKnownDNSCertPath   = "./var/run/secrets/dubbod/tls/"
+	PlanetWellKnownDNSCaCertPath = "./var/run/secrets/dubbod/ca/"
 
-	DefaultSailTLSCert                = SailWellKnownDNSCertPath + "tls.crt"
-	DefaultSailTLSKey                 = SailWellKnownDNSCertPath + "tls.key"
-	DefaultSailTLSCaCert              = SailWellKnownDNSCaCertPath + "root-cert.pem"
-	DefaultSailTLSCaCertAlternatePath = SailWellKnownDNSCertPath + "ca.crt"
+	DefaultPlanetTLSCert                = PlanetWellKnownDNSCertPath + "tls.crt"
+	DefaultPlanetTLSKey                 = PlanetWellKnownDNSCertPath + "tls.key"
+	DefaultPlanetTLSCaCert              = PlanetWellKnownDNSCaCertPath + "root-cert.pem"
+	DefaultPlanetTLSCaCertAlternatePath = PlanetWellKnownDNSCertPath + "ca.crt"
 
-	AlwaysReject = "internal.dubbo.io/webhook-always-reject"
+	AlwaysReject = "internal.dubbo.apache.org/webhook-always-reject"
 
 	KubeSystemNamespace string = "kube-system"
 

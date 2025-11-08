@@ -18,56 +18,49 @@ header:
       limitations under the License.
 
   paths-ignore:
-    - '**/*.versionsBackup'
-    - '**/.idea/**'
-    - '**/*.iml'
-    - '**/.settings/*'
-    - '**/.classpath'
-    - '**/.project'
-    - '**/*.log'
-    - '**/codestyle/*'
-    - '**/resources/META-INF/**'
-    - '**/resources/mockito-extensions/**'
-    - '**/*.proto'
-    - '**/*.cache'
-    - '**/*.txt'
-    - '**/*.load'
-    - '**/*.flex'
-    - '**/*.fc'
-    - '**/*.properties'
+    # Build and dependency files
+    - '**/go.sum'
     - '**/*.pb.go'
-    - '**/*.sh'
-    - '**/*.bat'
+    - '**/*.cache'
+    
+    # Configuration and template files
+    - '**/*.proto'
+    - '**/*.tpl'
+    - '**/*.json'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*.conf'
+    - '**/*.properties'
+    - '**/templates/**'
+    
+    # Documentation and text files
     - '**/*.md'
+    - '**/*.txt'
     - '**/*.svg'
     - '**/*.png'
-    - '**/*.json'
-    - '**/*.conf'
-    - '**/*.ftl'
-    - '**/*.tpl'
-    - '**/*.factories'
-    - '**/*.handlers'
-    - '**/*.schemas'
-    - '**/*.nojekyll'
-    - '**/.browserslistrc'
+    
+    # Scripts
+    - '**/*.sh'
+    - '**/*.bat'
+    
+    # Git and version control
     - '.git/'
     - '.github/**'
     - '**/.gitignore'
     - '**/.gitattributes'
+    - '**/.gitmodules'
     - '**/.helmignore'
-    - '.repository/'
-    - 'compiler/**'
-    - '.gitmodules'
-    - '**/.gitrepo'
+    
+    # License and notice files
     - 'LICENSE'
     - 'NOTICE'
-    - 'CNAME'
-    - '**/go.sum'
-    - '**/templates/**'
+    
+    # Test data
     - '**/testdata/**'
-    - '**/deploy.tpl'
-    - '**/docs/**'
-    - '**/.husky/pre-commit'
+    
+    # Log files
+    - '**/*.log'
+
   comment: on-failure
 
   license-location-threshold: 130

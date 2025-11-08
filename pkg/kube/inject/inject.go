@@ -141,8 +141,8 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 	var useDefault bool
 	var inject bool
 
-	objectSelector := annos["proxyless.dubbo.io/inject"]
-	if lbl, labelPresent := metadata.GetLabels()["proxyless.dubbo.io/inject"]; labelPresent {
+	objectSelector := annos["proxyless.dubbo.apache.org/inject"]
+	if lbl, labelPresent := metadata.GetLabels()["proxyless.dubbo.apache.org/inject"]; labelPresent {
 		// The label is the new API; if both are present we prefer the label
 		objectSelector = lbl
 	}
@@ -155,7 +155,7 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 		useDefault = true
 	default:
 		klog.Warningf("Invalid value for %s: %q. Only 'true' and 'false' are accepted. Falling back to default injection policy.",
-			"proxyless.dubbo.io/inject", objectSelector)
+			"proxyless.dubbo.apache.org/inject", objectSelector)
 		useDefault = true
 	}
 
@@ -215,7 +215,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		MeshConfig:               meshConfig,
 		Values:                   params.valuesConfig.asMap,
 		Revision:                 params.revision,
-		ProxyImage:               "mfordjody/proxyadapter:test",
+		ProxyImage:               "mfordjody/proxyadapter:0.3.0-debug", // TODO ProxyImage
 		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
 		CompliancePolicy:         common_features.CompliancePolicy,
 	}

@@ -19,6 +19,10 @@ package render
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/manifests"
 	"github.com/apache/dubbo-kubernetes/operator/cmd/validation"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/apis"
@@ -29,9 +33,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"io"
-	"os"
-	"strings"
 )
 
 // MergeInputs merges the various configuration inputs into one single DubboOperator.
@@ -43,7 +44,7 @@ func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 	// then apply them on top of the base once we determine which base to use.
 	// Initial base values.
 	ConfigBase, err := values.MapFromJSON([]byte(`{
-	  "apiVersion": "install.dubbo.io/v1alpha1",
+	  "apiVersion": "install.dubbo.apache.org/v1alpha1",
 	  "kind": "DubboOperator",
 	  "metadata": {},
 	  "spec": {}

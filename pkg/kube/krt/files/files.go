@@ -18,7 +18,11 @@
 package files
 
 import (
-	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
@@ -26,10 +30,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
 	"k8s.io/klog/v2"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 type FileSingleton[T any] struct {
@@ -54,7 +54,7 @@ func NewFileSingleton[T any](fileWatcher filewatcher.FileWatcher, filename strin
 	watchFile(fileWatcher, filename, stop, func() {
 		cfg, err := readFile(filename)
 		if err != nil {
-			fmt.Errorf("failed to update: %v", err)
+			klog.Errorf("failed to update: %v", err)
 			return
 		}
 		cur.Store(&cfg)
@@ -235,8 +235,8 @@ func (f *FolderWatch[T]) fileTrigger(events chan struct{}, stop <-chan struct{})
 			case err := <-watcher.Errors:
 				klog.Errorf("Error watching file trigger: %v %v", f.root, err)
 				return
-			case signal := <-stop:
-				klog.Infof("Shutting down file watcher: %v %v", f.root, signal)
+			case <-stop:
+				klog.Infof("Shutting down file watcher: %v", f.root)
 				return
 			}
 		}

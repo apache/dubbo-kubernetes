@@ -36,9 +36,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/networking/util"
-	v3 "github.com/apache/dubbo-kubernetes/sail/pkg/xds/v3"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
+	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -514,11 +514,11 @@ func tlsConfig(config *Config) (*tls.Config, error) {
 }
 
 func ConfigInitialRequests() []*discovery.DiscoveryRequest {
-	out := make([]*discovery.DiscoveryRequest, 0, len(collections.Sail.All())+1)
+	out := make([]*discovery.DiscoveryRequest, 0, len(collections.Planet.All())+1)
 	out = append(out, &discovery.DiscoveryRequest{
 		TypeUrl: gvk.MeshConfig.String(),
 	})
-	for _, sch := range collections.Sail.All() {
+	for _, sch := range collections.Planet.All() {
 		out = append(out, &discovery.DiscoveryRequest{
 			TypeUrl: sch.GroupVersionKind().String(),
 		})
@@ -587,7 +587,7 @@ func (a *ADSC) handleMCP(groupVersionKind config.GroupVersionKind, resources []*
 			klog.Errorf("Error unmarshalling received MCP config %v", err)
 			continue
 		}
-		newCfg, err := a.mcpToSail(m)
+		newCfg, err := a.mcpToPlanet(m)
 		if err != nil {
 			klog.Errorf("Invalid data: %v (%v)", err, string(rsc.Value))
 			continue
@@ -627,7 +627,7 @@ func (a *ADSC) handleMCP(groupVersionKind config.GroupVersionKind, resources []*
 	}
 }
 
-func (a *ADSC) mcpToSail(m *mcp.Resource) (*config.Config, error) {
+func (a *ADSC) mcpToPlanet(m *mcp.Resource) (*config.Config, error) {
 	if m == nil || m.Metadata == nil {
 		return &config.Config{}, nil
 	}

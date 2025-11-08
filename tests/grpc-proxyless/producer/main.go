@@ -35,6 +35,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	xdscreds "google.golang.org/grpc/credentials/xds"
+	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
 	_ "google.golang.org/grpc/xds"
 
@@ -48,8 +49,95 @@ var (
 	testServer *grpc.Server
 )
 
+// grpcLogger filters out xDS informational logs that are incorrectly marked as ERROR
+type grpcLogger struct {
+	logger *log.Logger
+}
+
+func (l *grpcLogger) Info(args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
+		return
+	}
+	l.logger.Print("INFO: ", msg)
+}
+
+func (l *grpcLogger) Infoln(args ...interface{}) {
+	msg := fmt.Sprintln(args...)
+	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
+		return
+	}
+	l.logger.Print("INFO: ", msg)
+}
+
+func (l *grpcLogger) Infof(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
+		return
+	}
+	l.logger.Printf("INFO: %s", msg)
+}
+
+func (l *grpcLogger) Warning(args ...interface{}) {
+	l.logger.Print("WARNING: ", fmt.Sprint(args...))
+}
+
+func (l *grpcLogger) Warningln(args ...interface{}) {
+	l.logger.Print("WARNING: ", fmt.Sprintln(args...))
+}
+
+func (l *grpcLogger) Warningf(format string, args ...interface{}) {
+	l.logger.Printf("WARNING: %s", fmt.Sprintf(format, args...))
+}
+
+func (l *grpcLogger) Error(args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
+		return
+	}
+	l.logger.Print("ERROR: ", msg)
+}
+
+func (l *grpcLogger) Errorln(args ...interface{}) {
+	msg := fmt.Sprintln(args...)
+	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
+		return
+	}
+	l.logger.Print("ERROR: ", msg)
+}
+
+func (l *grpcLogger) Errorf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
+		return
+	}
+	l.logger.Printf("ERROR: %s", msg)
+}
+
+func (l *grpcLogger) Fatal(args ...interface{}) {
+	l.logger.Fatal(args...)
+}
+
+func (l *grpcLogger) Fatalln(args ...interface{}) {
+	l.logger.Fatal(args...)
+}
+
+func (l *grpcLogger) Fatalf(format string, args ...interface{}) {
+	l.logger.Fatalf(format, args...)
+}
+
+func (l *grpcLogger) V(level int) bool {
+	return level <= 0
+}
+
 func main() {
 	flag.Parse()
+
+	// Set custom gRPC logger to filter out xDS informational logs
+	// The "ERROR: [xds] Listener entering mode: SERVING" is actually an informational log
+	grpclog.SetLoggerV2(&grpcLogger{
+		logger: log.New(os.Stderr, "", log.LstdFlags),
+	})
 
 	go startTestServer(*port)
 
