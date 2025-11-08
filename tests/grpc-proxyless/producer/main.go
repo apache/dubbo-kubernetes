@@ -26,6 +26,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -54,11 +55,38 @@ type grpcLogger struct {
 	logger *log.Logger
 }
 
+var (
+	// Regex to match gRPC formatting errors like %!p(...)
+	formatErrorRegex = regexp.MustCompile(`%!p\([^)]+\)`)
+)
+
+// cleanMessage removes formatting errors from gRPC logs
+// Fixes issues like: "\u003c%!p(networktype.keyType=grpc.internal.transport.networktype)\u003e": "unix"
+func cleanMessage(msg string) string {
+	// Replace %!p(...) patterns with a cleaner representation
+	msg = formatErrorRegex.ReplaceAllStringFunc(msg, func(match string) string {
+		// Extract the key from %!p(networktype.keyType=...)
+		if strings.Contains(match, "networktype.keyType") {
+			return `"networktype"`
+		}
+		// For other cases, just remove the error pattern
+		return ""
+	})
+	// Also clean up Unicode escape sequences that appear with formatting errors
+	// Replace \u003c (which is <) and \u003e (which is >) when they appear with formatting errors
+	msg = strings.ReplaceAll(msg, `\u003c`, "<")
+	msg = strings.ReplaceAll(msg, `\u003e`, ">")
+	// Clean up patterns like <...>: "unix" to just show the value
+	msg = regexp.MustCompile(`<[^>]*>:\s*"unix"`).ReplaceAllString(msg, `"networktype": "unix"`)
+	return msg
+}
+
 func (l *grpcLogger) Info(args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Print("INFO: ", msg)
 }
 
@@ -67,6 +95,7 @@ func (l *grpcLogger) Infoln(args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Print("INFO: ", msg)
 }
 
@@ -75,19 +104,23 @@ func (l *grpcLogger) Infof(format string, args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Printf("INFO: %s", msg)
 }
 
 func (l *grpcLogger) Warning(args ...interface{}) {
-	l.logger.Print("WARNING: ", fmt.Sprint(args...))
+	msg := cleanMessage(fmt.Sprint(args...))
+	l.logger.Print("WARNING: ", msg)
 }
 
 func (l *grpcLogger) Warningln(args ...interface{}) {
-	l.logger.Print("WARNING: ", fmt.Sprintln(args...))
+	msg := cleanMessage(fmt.Sprintln(args...))
+	l.logger.Print("WARNING: ", msg)
 }
 
 func (l *grpcLogger) Warningf(format string, args ...interface{}) {
-	l.logger.Printf("WARNING: %s", fmt.Sprintf(format, args...))
+	msg := cleanMessage(fmt.Sprintf(format, args...))
+	l.logger.Printf("WARNING: %s", msg)
 }
 
 func (l *grpcLogger) Error(args ...interface{}) {
@@ -95,6 +128,7 @@ func (l *grpcLogger) Error(args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Print("ERROR: ", msg)
 }
 
@@ -103,6 +137,7 @@ func (l *grpcLogger) Errorln(args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Print("ERROR: ", msg)
 }
 
@@ -111,6 +146,7 @@ func (l *grpcLogger) Errorf(format string, args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Printf("ERROR: %s", msg)
 }
 

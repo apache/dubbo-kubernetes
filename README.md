@@ -2,7 +2,9 @@
 Dubbo Service Mesh for Kubernetes
 </h1>
 
-[![codecov](https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg)](https://codecov.io/gh/apache/dubbo-kubernetes)
+[![Go Report Card](https://goreportcard.com/badge/github.com/apache/dubbo-kubernetes)](https://goreportcard.com/report/github.com/apache/dubbo-kubernetes)
+[![Go Reference](https://pkg.go.dev/badge/github.com/apache/dubbo-kubernetes.svg)](https://pkg.go.dev/github.com/apache/dubbo-kubernetes)
+[![Release](https://img.shields.io/github/release/apache/dubbo-kubernetes.svg)](https://github.com/apache/dubbo-kubernetes/releases)
 ![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 
 Cloud-Native proxyless service mesh platform for Dubbo microservices, enabling zero-latency inter-service communication across multiple protocols, advanced traffic management, and enterprise-grade security without sidecar proxies. Built on Istio's control plane architecture with native Kubernetes integration, it delivers service mesh capabilities with minimal resource overhead and maximum performance.

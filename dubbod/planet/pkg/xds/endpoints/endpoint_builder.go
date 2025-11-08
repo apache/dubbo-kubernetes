@@ -18,6 +18,8 @@
 package endpoints
 
 import (
+	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -85,7 +87,9 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	// Get endpoints from the endpoint index
 	shards, ok := endpointIndex.ShardsForService(string(b.hostname), b.service.Attributes.Namespace)
 	if !ok {
-		log.Warnf("BuildClusterLoadAssignment: no shards found for service %s in namespace %s (cluster=%s, port=%d, svcPort.Name='%s', svcPort.Port=%d)",
+		// CRITICAL: Log at INFO level for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
+		log.Infof("BuildClusterLoadAssignment: no shards found for service %s in namespace %s (cluster=%s, port=%d, svcPort.Name='%s', svcPort.Port=%d). "+
+			"This usually means endpoints are not yet available or service is not registered.",
 			b.hostname, b.service.Attributes.Namespace, b.clusterName, b.port, svcPort.Name, svcPort.Port)
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
@@ -119,16 +123,46 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	var lbEndpoints []*endpoint.LbEndpoint
 	var filteredCount int
 	var totalEndpoints int
+	var portNameMismatchCount int
+	var unhealthyCount int
+	var buildFailedCount int
+
+	// CRITICAL: Log all endpoint ServicePortNames for debugging port name matching issues
+	allServicePortNames := make(map[string]int)
+	for _, eps := range shards.Shards {
+		for _, ep := range eps {
+			allServicePortNames[ep.ServicePortName]++
+		}
+	}
+	if len(allServicePortNames) > 0 {
+		portNamesList := make([]string, 0, len(allServicePortNames))
+		for name, count := range allServicePortNames {
+			portNamesList = append(portNamesList, fmt.Sprintf("'%s'(%d)", name, count))
+		}
+		log.Infof("BuildClusterLoadAssignment: service %s port %d (svcPort.Name='%s'), found endpoints with ServicePortNames: %v",
+			b.hostname, b.port, svcPort.Name, portNamesList)
+	}
 
 	for _, eps := range shards.Shards {
 		for _, ep := range eps {
 			totalEndpoints++
 			// Filter by port name
+			// CRITICAL: According to Istio's implementation, we must match ServicePortName exactly
+			// However, if ServicePortName is empty, we should still include the endpoint if there's only one port
+			// This handles cases where EndpointSlice doesn't have port name but Service does
 			if ep.ServicePortName != svcPort.Name {
-				filteredCount++
-				log.Debugf("BuildClusterLoadAssignment: filtering out endpoint %s (port name mismatch: '%s' != '%s')",
-					ep.FirstAddressOrNil(), ep.ServicePortName, svcPort.Name)
-				continue
+				// Special case: if ServicePortName is empty and service has only one port, include it
+				if ep.ServicePortName == "" && len(b.service.Ports) == 1 {
+					log.Debugf("BuildClusterLoadAssignment: including endpoint %s with empty ServicePortName (service has only one port '%s')",
+						ep.FirstAddressOrNil(), svcPort.Name)
+					// Continue processing this endpoint
+				} else {
+					portNameMismatchCount++
+					filteredCount++
+					log.Warnf("BuildClusterLoadAssignment: filtering out endpoint %s (port name mismatch: ep.ServicePortName='%s' != svcPort.Name='%s', EndpointPort=%d)",
+						ep.FirstAddressOrNil(), ep.ServicePortName, svcPort.Name, ep.EndpointPort)
+					continue
+				}
 			}
 
 			// Filter by subset labels if subset is specified
@@ -145,16 +179,19 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 			// as the client will handle connection failures. However, this is controlled by the service
 			// configuration (publishNotReadyAddresses).
 			if !b.service.SupportsUnhealthyEndpoints() && ep.HealthStatus == model.UnHealthy {
-				log.Debugf("BuildClusterLoadAssignment: filtering out unhealthy endpoint %s", ep.FirstAddressOrNil())
+				unhealthyCount++
 				filteredCount++
+				log.Debugf("BuildClusterLoadAssignment: filtering out unhealthy endpoint %s (HealthStatus=%v, SupportsUnhealthyEndpoints=%v)",
+					ep.FirstAddressOrNil(), ep.HealthStatus, b.service.SupportsUnhealthyEndpoints())
 				continue
 			}
 
 			// Build LbEndpoint
 			lbEp := b.buildLbEndpoint(ep)
 			if lbEp == nil {
-				log.Debugf("BuildClusterLoadAssignment: buildLbEndpoint returned nil for endpoint %s", ep.FirstAddressOrNil())
+				buildFailedCount++
 				filteredCount++
+				log.Debugf("BuildClusterLoadAssignment: buildLbEndpoint returned nil for endpoint %s", ep.FirstAddressOrNil())
 				continue
 			}
 			lbEndpoints = append(lbEndpoints, lbEp)
@@ -162,8 +199,17 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	}
 
 	if len(lbEndpoints) == 0 {
-		log.Debugf("BuildClusterLoadAssignment: no endpoints found for cluster %s (hostname=%s, port=%d, totalEndpoints=%d, filteredCount=%d)",
-			b.clusterName, b.hostname, b.port, totalEndpoints, filteredCount)
+		// CRITICAL: Log at WARN level for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
+		logLevel := log.Debugf
+		// For proxyless gRPC, log empty endpoints at INFO level to help diagnose connection issues
+		// This helps identify when endpoints are not available vs when they're filtered out
+		if totalEndpoints > 0 {
+			logLevel = log.Warnf // If endpoints exist but were filtered, this is a warning
+		} else {
+			logLevel = log.Infof // If no endpoints exist at all, this is informational
+		}
+		logLevel("BuildClusterLoadAssignment: no endpoints found for cluster %s (hostname=%s, port=%d, svcPort.Name='%s', svcPort.Port=%d, totalEndpoints=%d, filteredCount=%d, portNameMismatch=%d, unhealthy=%d, buildFailed=%d)",
+			b.clusterName, b.hostname, b.port, svcPort.Name, svcPort.Port, totalEndpoints, filteredCount, portNameMismatchCount, unhealthyCount, buildFailedCount)
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
 
@@ -243,8 +289,12 @@ func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbE
 }
 
 func buildEmptyClusterLoadAssignment(clusterName string) *endpoint.ClusterLoadAssignment {
+	// CRITICAL FIX: Following Istio's pattern, empty ClusterLoadAssignment should have empty Endpoints list
+	// This ensures gRPC proxyless clients receive the update and clear their endpoint cache,
+	// preventing "weighted-target: no targets to pick from" errors
 	return &endpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
+		Endpoints:   []*endpoint.LocalityLbEndpoints{}, // Explicitly empty, not nil
 	}
 }
 
