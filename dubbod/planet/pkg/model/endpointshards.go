@@ -61,8 +61,27 @@ func (e *EndpointIndex) clearCacheForService(svc, ns string) {
 }
 
 func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndpoints []*DubboEndpoint) ([]*DubboEndpoint, bool) {
-	if oldDubboEndpoints == nil {
+	// CRITICAL FIX: If old endpoints are empty (nil or empty slice), and we have new endpoints, we must push
+	// This ensures that when endpoints become available after being empty, clients receive the update
+	// This is critical for proxyless gRPC - when endpoints become available, clients must be notified
+	// to prevent "weighted-target: no targets to pick from" errors
+	// Note: len() for nil slices is defined as zero, so we can use len() directly
+	oldWasEmpty := len(oldDubboEndpoints) == 0
+	newIsEmpty := len(incomingEndpoints) == 0
+
+	if oldWasEmpty {
 		// If there are no old endpoints, we should push with incoming endpoints as there is nothing to compare.
+		// CRITICAL: Even if new endpoints are unhealthy, we must push to notify clients that endpoints are now available
+		// The client will handle unhealthy endpoints appropriately (e.g., retry, circuit breaker)
+		if !newIsEmpty {
+			return incomingEndpoints, true
+		}
+		// If both old and new are empty, no push needed
+		return incomingEndpoints, false
+	}
+	// CRITICAL FIX: If old endpoints exist but new endpoints are empty, we must push
+	// This ensures that when endpoints become unavailable, clients receive empty ClusterLoadAssignment
+	if newIsEmpty {
 		return incomingEndpoints, true
 	}
 	needPush := false
@@ -82,6 +101,7 @@ func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndp
 			}
 			newDubboEndpoints = append(newDubboEndpoints, nie)
 		} else {
+			// New endpoint that didn't exist before - always push if it's healthy or should be sent
 			if nie.HealthStatus != UnHealthy || nie.SendUnhealthyEndpoints {
 				needPush = true
 			}
@@ -89,6 +109,7 @@ func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndp
 		}
 	}
 	if !needPush {
+		// Check if any old endpoints were removed
 		for _, oie := range oldDubboEndpoints {
 			if _, f := nmap[oie.Key()]; !f {
 				needPush = true
@@ -175,7 +196,22 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 	ep.Lock()
 	defer ep.Unlock()
 	oldDubboEndpoints := ep.Shards[shard]
+	// CRITICAL: Check if this is a transition from empty to non-empty BEFORE calling endpointUpdateRequiresPush
+	// This ensures we always push when endpoints become available, even if they're unhealthy
+	// Note: len() for nil slices is defined as zero, so we can use len() directly
+	oldWasEmpty := len(oldDubboEndpoints) == 0
+	newIsEmpty := len(dubboEndpoints) == 0
+	transitionFromEmptyToNonEmpty := oldWasEmpty && !newIsEmpty
+
 	newDubboEndpoints, needPush := endpointUpdateRequiresPush(oldDubboEndpoints, dubboEndpoints)
+
+	// CRITICAL FIX: If endpoints transition from empty to non-empty, we MUST push
+	// This is essential for proxyless gRPC - clients need to know endpoints are now available
+	// even if they're initially unhealthy (client will handle retries/circuit breaking)
+	if transitionFromEmptyToNonEmpty {
+		needPush = true
+		log.Debugf("UpdateServiceEndpoints: service=%s, shard=%v, endpoints transitioned from empty to non-empty, forcing push", hostname, shard)
+	}
 
 	// CRITICAL: Log endpoint update details for debugging
 	if logPushType {
@@ -197,8 +233,8 @@ func (e *EndpointIndex) UpdateServiceEndpoints(
 				newUnhealthyCount++
 			}
 		}
-		log.Debugf("UpdateServiceEndpoints: service=%s, shard=%v, oldEndpoints=%d (healthy=%d, unhealthy=%d), newEndpoints=%d (healthy=%d, unhealthy=%d), needPush=%v, pushType=%v",
-			hostname, shard, len(oldDubboEndpoints), oldHealthyCount, oldUnhealthyCount, len(newDubboEndpoints), newHealthyCount, newUnhealthyCount, needPush, pushType)
+		log.Debugf("UpdateServiceEndpoints: service=%s, shard=%v, oldEndpoints=%d (healthy=%d, unhealthy=%d), newEndpoints=%d (healthy=%d, unhealthy=%d), needPush=%v, pushType=%v, transitionFromEmptyToNonEmpty=%v",
+			hostname, shard, len(oldDubboEndpoints), oldHealthyCount, oldUnhealthyCount, len(newDubboEndpoints), newHealthyCount, newUnhealthyCount, needPush, pushType, transitionFromEmptyToNonEmpty)
 	}
 
 	if pushType != FullPush && !needPush {

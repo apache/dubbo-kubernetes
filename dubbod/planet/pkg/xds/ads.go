@@ -85,13 +85,16 @@ func (s *DiscoveryServer) StartPush(req *model.PushRequest) {
 }
 
 func (s *DiscoveryServer) AdsPushAll(req *model.PushRequest) {
+	connectedEndpoints := s.adsClientCount()
 	if !req.Full {
-		log.Infof("XDS: :%d Version:%s",
-			s.adsClientCount(), req.Push.PushVersion)
+		// Incremental push - only log connection count and version
+		log.Infof("XDS: Incremental Push to %d Endpoints, Version:%s",
+			connectedEndpoints, req.Push.PushVersion)
 	} else {
+		// Full push - log services, connections, and version
 		totalService := len(req.Push.GetAllServices())
 		log.Infof("XDS: Pushing Services:%d ConnectedEndpoints:%d Version:%s",
-			totalService, s.adsClientCount(), req.Push.PushVersion)
+			totalService, connectedEndpoints, req.Push.PushVersion)
 
 		if req.ConfigsUpdated == nil {
 			req.ConfigsUpdated = make(sets.Set[model.ConfigKey])
@@ -331,19 +334,38 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 
 	shouldRespond, delta := xds.ShouldRespond(con.proxy, con.ID(), req)
 
-	if !shouldRespond {
-		// Don't log ACK/ignored/expired nonce requests to reduce noise
-		// These are normal and expected, logging them creates too much noise
-		return nil
-	}
-
-	// Log requested resource names only for requests that will be processed
+	// CRITICAL: Log NEW requests (will respond) at INFO level so every grpcurl request is visible
+	// This ensures every grpcurl request triggers visible xDS logs in control plane
+	// Format: "LDS: REQ node-xxx resources:1 nonce:abc123 [resource1, resource2] (will respond)"
 	resourceNamesStr := ""
 	if len(req.ResourceNames) > 0 {
-		resourceNamesStr = fmt.Sprintf(" [%s]", strings.Join(req.ResourceNames, ", "))
+		// Show resource names for better debugging
+		if len(req.ResourceNames) <= 10 {
+			resourceNamesStr = fmt.Sprintf(" [%s]", strings.Join(req.ResourceNames, ", "))
+		} else {
+			// If too many resources, show first 5 and count
+			resourceNamesStr = fmt.Sprintf(" [%s, ... and %d more]", strings.Join(req.ResourceNames[:5], ", "), len(req.ResourceNames)-5)
+		}
+	} else {
+		resourceNamesStr = " [wildcard]"
 	}
-	log.Infof("%s: REQ %s resources:%d nonce:%s%s", stype,
-		con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
+
+	if shouldRespond {
+		// Log NEW requests at INFO level - these are triggered by grpcurl requests
+		// This makes it easy to see when a grpcurl request triggers xDS configuration
+		log.Infof("%s: REQ %s resources:%d nonce:%s%s (will respond)", stype,
+			con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
+	} else {
+		// Log ACK/ignored requests at DEBUG level to reduce noise
+		// These are normal XDS protocol ACKs, not new requests from grpcurl
+		log.Debugf("%s: REQ %s resources:%d nonce:%s%s (ACK/ignored)", stype,
+			con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
+	}
+
+	if !shouldRespond {
+		// Don't process ACK/ignored/expired nonce requests
+		return nil
+	}
 
 	// CRITICAL FIX: For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
 	// this is likely an ACK and we should NOT push all resources again
@@ -359,12 +381,19 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		return nil
 	}
 
-	// Log PUSH request BEFORE calling pushXds
+	// Log PUSH request BEFORE calling pushXds with detailed information
+	// This helps track what resources are being requested for each push
+	pushResourceNamesStr := ""
 	if len(req.ResourceNames) > 0 {
-		log.Infof("%s: PUSH request for node:%s resources:%d", stype, con.ID(), len(req.ResourceNames))
+		if len(req.ResourceNames) <= 10 {
+			pushResourceNamesStr = fmt.Sprintf(" resources:%d [%s]", len(req.ResourceNames), strings.Join(req.ResourceNames, ", "))
+		} else {
+			pushResourceNamesStr = fmt.Sprintf(" resources:%d [%s, ... and %d more]", len(req.ResourceNames), strings.Join(req.ResourceNames[:5], ", "), len(req.ResourceNames)-5)
+		}
 	} else {
-		log.Infof("%s: PUSH request for node:%s", stype, con.ID())
+		pushResourceNamesStr = " resources:0 [wildcard]"
 	}
+	log.Infof("%s: PUSH request for node:%s%s", stype, con.ID(), pushResourceNamesStr)
 
 	// Don't set Forced=true for regular proxy requests to avoid unnecessary ServiceTargets recomputation
 	// Only set Forced for debug requests or when explicitly needed

@@ -25,8 +25,10 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -110,12 +112,39 @@ type grpcLogger struct {
 	logger *log.Logger
 }
 
+var (
+	// Regex to match gRPC formatting errors like %!p(...)
+	formatErrorRegex = regexp.MustCompile(`%!p\([^)]+\)`)
+)
+
+// cleanMessage removes formatting errors from gRPC logs
+// Fixes issues like: "\u003c%!p(networktype.keyType=grpc.internal.transport.networktype)\u003e": "unix"
+func cleanMessage(msg string) string {
+	// Replace %!p(...) patterns with a cleaner representation
+	msg = formatErrorRegex.ReplaceAllStringFunc(msg, func(match string) string {
+		// Extract the key from %!p(networktype.keyType=...)
+		if strings.Contains(match, "networktype.keyType") {
+			return `"networktype"`
+		}
+		// For other cases, just remove the error pattern
+		return ""
+	})
+	// Also clean up Unicode escape sequences that appear with formatting errors
+	// Replace \u003c (which is <) and \u003e (which is >) when they appear with formatting errors
+	msg = strings.ReplaceAll(msg, `\u003c`, "<")
+	msg = strings.ReplaceAll(msg, `\u003e`, ">")
+	// Clean up patterns like <...>: "unix" to just show the value
+	msg = regexp.MustCompile(`<[^>]*>:\s*"unix"`).ReplaceAllString(msg, `"networktype": "unix"`)
+	return msg
+}
+
 func (l *grpcLogger) Info(args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	// Filter out xDS "entering mode: SERVING" logs
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Print("INFO: ", msg)
 }
 
@@ -124,6 +153,7 @@ func (l *grpcLogger) Infoln(args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Print("INFO: ", msg)
 }
 
@@ -132,19 +162,23 @@ func (l *grpcLogger) Infof(format string, args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	msg = cleanMessage(msg)
 	l.logger.Printf("INFO: %s", msg)
 }
 
 func (l *grpcLogger) Warning(args ...interface{}) {
-	l.logger.Print("WARNING: ", fmt.Sprint(args...))
+	msg := cleanMessage(fmt.Sprint(args...))
+	l.logger.Print("WARNING: ", msg)
 }
 
 func (l *grpcLogger) Warningln(args ...interface{}) {
-	l.logger.Print("WARNING: ", fmt.Sprintln(args...))
+	msg := cleanMessage(fmt.Sprintln(args...))
+	l.logger.Print("WARNING: ", msg)
 }
 
 func (l *grpcLogger) Warningf(format string, args ...interface{}) {
-	l.logger.Printf("WARNING: %s", fmt.Sprintf(format, args...))
+	msg := cleanMessage(fmt.Sprintf(format, args...))
+	l.logger.Printf("WARNING: %s", msg)
 }
 
 func (l *grpcLogger) Error(args ...interface{}) {
@@ -153,6 +187,15 @@ func (l *grpcLogger) Error(args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	// Filter out common connection reset errors - these are normal network behavior
+	// when clients disconnect before completing the HTTP/2 handshake
+	if strings.Contains(msg, "connection reset by peer") ||
+		strings.Contains(msg, "failed to receive the preface from client") ||
+		strings.Contains(msg, "connection error") {
+		// These are normal network events, log at DEBUG level instead of ERROR
+		return
+	}
+	msg = cleanMessage(msg)
 	l.logger.Print("ERROR: ", msg)
 }
 
@@ -161,6 +204,13 @@ func (l *grpcLogger) Errorln(args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	// Filter out common connection reset errors - these are normal network behavior
+	if strings.Contains(msg, "connection reset by peer") ||
+		strings.Contains(msg, "failed to receive the preface from client") ||
+		strings.Contains(msg, "connection error") {
+		return
+	}
+	msg = cleanMessage(msg)
 	l.logger.Print("ERROR: ", msg)
 }
 
@@ -169,6 +219,13 @@ func (l *grpcLogger) Errorf(format string, args ...interface{}) {
 	if strings.Contains(msg, "entering mode") && strings.Contains(msg, "SERVING") {
 		return
 	}
+	// Filter out common connection reset errors - these are normal network behavior
+	if strings.Contains(msg, "connection reset by peer") ||
+		strings.Contains(msg, "failed to receive the preface from client") ||
+		strings.Contains(msg, "connection error") {
+		return
+	}
+	msg = cleanMessage(msg)
 	l.logger.Printf("ERROR: %s", msg)
 }
 
@@ -188,6 +245,35 @@ func (l *grpcLogger) V(level int) bool {
 	return level <= 0
 }
 
+// waitForBootstrapFile waits for the grpc-bootstrap.json file to exist
+// This is necessary because the dubbo-proxy sidecar needs time to generate the file
+func waitForBootstrapFile(bootstrapPath string, maxWait time.Duration) error {
+	log.Printf("Waiting for bootstrap file to exist: %s (max wait: %v)", bootstrapPath, maxWait)
+
+	ctx, cancel := context.WithTimeout(context.Background(), maxWait)
+	defer cancel()
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	startTime := time.Now()
+	for {
+		// Check if file exists and is not empty
+		if info, err := os.Stat(bootstrapPath); err == nil && info.Size() > 0 {
+			log.Printf("Bootstrap file found after %v: %s", time.Since(startTime), bootstrapPath)
+			return nil
+		}
+
+		// Check for timeout
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for bootstrap file: %s (waited %v)", bootstrapPath, time.Since(startTime))
+		case <-ticker.C:
+			// Continue waiting
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -200,6 +286,19 @@ func main() {
 	hostname, _ := os.Hostname()
 	if hostname == "" {
 		hostname = "unknown"
+	}
+
+	// Get bootstrap file path from environment variable or use default
+	bootstrapPath := os.Getenv("GRPC_XDS_BOOTSTRAP")
+	if bootstrapPath == "" {
+		bootstrapPath = "/etc/dubbo/proxy/grpc-bootstrap.json"
+		log.Printf("GRPC_XDS_BOOTSTRAP not set, using default: %s", bootstrapPath)
+	}
+
+	// Wait for bootstrap file to exist before creating xDS server
+	// The dubbo-proxy sidecar needs time to generate this file
+	if err := waitForBootstrapFile(bootstrapPath, 60*time.Second); err != nil {
+		log.Fatalf("Failed to wait for bootstrap file: %v", err)
 	}
 
 	// Create xDS-enabled gRPC server
@@ -237,7 +336,14 @@ func main() {
 		server.GracefulStop()
 	}()
 
+	// Serve the gRPC server
+	// Note: server.Serve returns when the listener is closed, which is normal during shutdown
+	// Connection reset errors are handled by the gRPC library and logged separately
 	if err := server.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+		// Only log as fatal if it's not a normal shutdown (listener closed)
+		if !strings.Contains(err.Error(), "use of closed network connection") {
+			log.Fatalf("Failed to serve: %v", err)
+		}
+		log.Printf("Server stopped: %v", err)
 	}
 }

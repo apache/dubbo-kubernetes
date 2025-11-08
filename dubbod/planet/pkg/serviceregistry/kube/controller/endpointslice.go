@@ -19,17 +19,18 @@ package controller
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"strings"
 	"sync"
 
+	"github.com/apache/dubbo-kubernetes/pkg/log"
+
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/hashicorp/go-multierror"
 	"istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
@@ -317,13 +318,60 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 					}
 
 					if !matched {
-						log.Debugf("updateEndpointCacheForSlice: failed to match EndpointSlice.Port (portNum=%d, portName='%s') with Service %s, using EndpointSlice values",
-							epSlicePortNum, epSlicePortName, svcNamespacedName.Name)
-						// Fallback: use EndpointSlice values
-						servicePortNum = epSlicePortNum
-						targetPortNum = epSlicePortNum
-						if epSlicePortName != "" {
-							portName = epSlicePortName
+						// CRITICAL FIX: If we can't match by Service, try to find ServicePort by port number only
+						// This handles cases where EndpointSlice.Port.Name doesn't match but port number does
+						// This is critical for ensuring portName matches Service.Port.Name
+						for _, kubePort := range kubeSvc.Spec.Ports {
+							if int32(kubePort.Port) == epSlicePortNum {
+								// Found by port number, use Service.Port.Name
+								servicePortNum = int32(kubePort.Port)
+								portName = kubePort.Name
+								// Resolve targetPortNum
+								if kubePort.TargetPort.Type == intstr.Int {
+									targetPortNum = kubePort.TargetPort.IntVal
+								} else if kubePort.TargetPort.Type == intstr.String && pod != nil {
+									for _, container := range pod.Spec.Containers {
+										for _, containerPort := range container.Ports {
+											if containerPort.Name == kubePort.TargetPort.StrVal {
+												targetPortNum = containerPort.ContainerPort
+												break
+											}
+										}
+										if targetPortNum != 0 {
+											break
+										}
+									}
+								}
+								if targetPortNum == 0 {
+									targetPortNum = servicePortNum
+								}
+								matched = true
+								log.Infof("updateEndpointCacheForSlice: matched ServicePort by port number only (servicePort=%d, targetPort=%d, portName='%s') for EndpointSlice.Port (portNum=%d, portName='%s')",
+									servicePortNum, targetPortNum, portName, epSlicePortNum, epSlicePortName)
+								break
+							}
+						}
+
+						if !matched {
+							log.Warnf("updateEndpointCacheForSlice: failed to match EndpointSlice.Port (portNum=%d, portName='%s') with Service %s, using EndpointSlice values (WARNING: portName may not match Service.Port.Name)",
+								epSlicePortNum, epSlicePortName, svcNamespacedName.Name)
+							// Fallback: use EndpointSlice values
+							// CRITICAL: This should rarely happen, but if it does, portName may not match Service.Port.Name
+							// which will cause endpoints to be filtered in BuildClusterLoadAssignment
+							servicePortNum = epSlicePortNum
+							targetPortNum = epSlicePortNum
+							if epSlicePortName != "" {
+								portName = epSlicePortName
+							} else {
+								// If EndpointSlice.Port.Name is also empty, try to get port name from Service by port number
+								for _, kubePort := range kubeSvc.Spec.Ports {
+									if int32(kubePort.Port) == epSlicePortNum {
+										portName = kubePort.Name
+										log.Debugf("updateEndpointCacheForSlice: resolved portName='%s' from Service by port number %d", portName, epSlicePortNum)
+										break
+									}
+								}
+							}
 						}
 					}
 				} else {

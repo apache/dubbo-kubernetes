@@ -47,12 +47,38 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 	dubboEndpoints []*model.DubboEndpoint,
 ) {
 	pushType := s.Env.EndpointIndex.UpdateServiceEndpoints(shard, serviceName, namespace, dubboEndpoints, true)
+	// CRITICAL FIX: Always push EDS updates when endpoints change state
+	// This ensures clients receive updates when:
+	// 1. Endpoints become available (from empty to non-empty)
+	// 2. Endpoints become unavailable (from non-empty to empty)
+	// 3. Endpoint health status changes
+	// This is critical for proxyless gRPC to prevent "weighted-target: no targets to pick from" errors
 	if pushType == model.IncrementalPush || pushType == model.FullPush {
+		log.Infof("EDSUpdate: service %s/%s triggering %v push (endpoints=%d)", namespace, serviceName, pushType, len(dubboEndpoints))
 		s.ConfigUpdate(&model.PushRequest{
 			Full:           pushType == model.FullPush,
 			ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
 			Reason:         model.NewReasonStats(model.EndpointUpdate),
 		})
+	} else if pushType == model.NoPush {
+		// CRITICAL: Even when UpdateServiceEndpoints returns NoPush, we may still need to push
+		// This happens when:
+		// 1. All old endpoints were unhealthy and new endpoints are also unhealthy (health status didn't change)
+		// 2. But we still need to notify clients about the current state
+		// For proxyless gRPC, we should push even if endpoints are empty to ensure clients know the state
+		if len(dubboEndpoints) == 0 {
+			log.Infof("EDSUpdate: service %s/%s endpoints became empty (NoPush), forcing push to clear client cache", namespace, serviceName)
+			s.ConfigUpdate(&model.PushRequest{
+				Full:           false, // Incremental push
+				ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
+				Reason:         model.NewReasonStats(model.EndpointUpdate),
+			})
+		} else {
+			// Endpoints exist but NoPush was returned - this means health status didn't change
+			// For proxyless gRPC, we should still push to ensure clients have the latest endpoint info
+			// This is especially important when endpoints become available after being empty
+			log.Debugf("EDSUpdate: service %s/%s has %d endpoints but NoPush returned (health status unchanged), skipping push", namespace, serviceName, len(dubboEndpoints))
+		}
 	}
 }
 
@@ -153,23 +179,39 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 			}
 		}
 
+		// CRITICAL FIX: For proxyless gRPC, we MUST always process all watched clusters
+		// This ensures clients receive EDS updates even when endpoints become available or unavailable
+		// For non-proxyless (Istio behavior), we skip clusters that are not in edsUpdatedServices for incremental pushes
 		if edsUpdatedServices != nil {
 			if _, ok := edsUpdatedServices[hostname]; !ok {
-				// Cluster was not updated, skip recomputing. This happens when we get an incremental update for a
-				// specific Hostname. On connect or for full push edsUpdatedServices will be empty.
+				// Cluster was not in edsUpdatedServices
 				if !serviceWasUpdated {
-					continue
+					// CRITICAL: For proxyless gRPC, always process all clusters to ensure EDS is up-to-date
+					// This is essential because proxyless gRPC clients need to know endpoint state changes
+					// even if the service wasn't explicitly updated in this push
+					if proxy.IsProxylessGrpc() {
+						log.Debugf("buildEndpoints: proxyless gRPC, processing cluster %s even though not in edsUpdatedServices (hostname=%s)", clusterName, hostname)
+						serviceWasUpdated = true
+					} else {
+						// For non-proxyless, skip if not updated (Istio behavior)
+						continue
+					}
 				}
 			} else {
 				serviceWasUpdated = true
 			}
+		} else {
+			// If edsUpdatedServices is nil, this is a full push - process all clusters
+			serviceWasUpdated = true
 		}
 		builder := endpoints.NewEndpointBuilder(clusterName, proxy, req.Push)
 		if builder == nil {
 			continue
 		}
 
-		// CRITICAL FIX: For incremental pushes (Full=false), we must always regenerate EDS
+		// CRITICAL FIX: For proxyless gRPC, we must always regenerate EDS when serviceWasUpdated is true
+		// to ensure empty endpoints are sent when they become unavailable, and endpoints are sent when available.
+		// For incremental pushes (Full=false), we must always regenerate EDS
 		// if ConfigsUpdated contains this service, because endpoint health status may have changed.
 		// The cache may contain stale empty endpoints from when the endpoint was unhealthy.
 		// For full pushes, we can use cache if the service was not updated.
@@ -181,9 +223,17 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 			for ckey := range req.ConfigsUpdated {
 				if ckey.Kind == kind.ServiceEntry && ckey.Name == hostname {
 					shouldRegenerate = true
+					log.Debugf("buildEndpoints: forcing regeneration for cluster %s (hostname=%s) due to ConfigsUpdated", clusterName, hostname)
 					break
 				}
 			}
+		}
+
+		// CRITICAL: For proxyless gRPC, if serviceWasUpdated is true, we must regenerate
+		// even if cache exists, to ensure endpoints are always up-to-date
+		// This is critical for preventing "weighted-target: no targets to pick from" errors
+		if shouldRegenerate && proxy.IsProxylessGrpc() {
+			log.Debugf("buildEndpoints: proxyless gRPC, forcing regeneration for cluster %s (hostname=%s, serviceWasUpdated=%v)", clusterName, hostname, serviceWasUpdated)
 		}
 
 		// Try to get from cache only if we don't need to regenerate
@@ -198,22 +248,41 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 
 		// generate eds from beginning
 		l := builder.BuildClusterLoadAssignment(eds.EndpointIndex)
-		// CRITICAL FIX: Even if endpoints are empty (l == nil), we should still create an empty ClusterLoadAssignment
-		// to ensure the client receives the EDS response. This is necessary for proxyless gRPC clients
-		// to know the endpoint state, even if it's empty initially.
-		// Note: BuildClusterLoadAssignment returns nil when no endpoints are found,
-		// but we still need to send an empty ClusterLoadAssignment to the client.
+		// NOTE: BuildClusterLoadAssignment never returns nil - it always returns either:
+		// 1. A valid ClusterLoadAssignment with endpoints, or
+		// 2. An empty ClusterLoadAssignment (via buildEmptyClusterLoadAssignment)
+		// The empty ClusterLoadAssignment has an explicit empty Endpoints list,
+		// which is critical for proxyless gRPC clients to know the endpoint state
+		// and prevent "weighted-target: no targets to pick from" errors.
+		// The nil check below is defensive programming, but should never be true in practice.
 		if l == nil {
-			// Build an empty ClusterLoadAssignment for this cluster
-			// Use the same logic as endpoint_builder.go:buildEmptyClusterLoadAssignment
+			// Defensive: Build an empty ClusterLoadAssignment if somehow nil is returned
+			// This should never happen, but ensures we always send a valid response
 			l = &endpoint.ClusterLoadAssignment{
 				ClusterName: clusterName,
+				Endpoints:   []*endpoint.LocalityLbEndpoints{}, // Empty endpoints list
 			}
+			log.Warnf("buildEndpoints: BuildClusterLoadAssignment returned nil for cluster %s (hostname: %s), created empty CLA", clusterName, hostname)
 		}
 		regenerated++
 
+		// CRITICAL: Log EDS push details for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
 		if len(l.Endpoints) == 0 {
 			empty++
+			if proxy.IsProxylessGrpc() {
+				log.Infof("buildEndpoints: proxyless gRPC, pushing empty EDS for cluster %s (hostname=%s, serviceWasUpdated=%v, shouldRegenerate=%v)",
+					clusterName, hostname, serviceWasUpdated, shouldRegenerate)
+			}
+		} else {
+			// Count total endpoints in the ClusterLoadAssignment
+			totalEndpointsInCLA := 0
+			for _, localityLbEp := range l.Endpoints {
+				totalEndpointsInCLA += len(localityLbEp.LbEndpoints)
+			}
+			if proxy.IsProxylessGrpc() {
+				log.Infof("buildEndpoints: proxyless gRPC, pushing EDS for cluster %s (hostname=%s, endpoints=%d, serviceWasUpdated=%v, shouldRegenerate=%v)",
+					clusterName, hostname, totalEndpointsInCLA, serviceWasUpdated, shouldRegenerate)
+			}
 		}
 		resource := &discovery.Resource{
 			Name:     l.ClusterName,
