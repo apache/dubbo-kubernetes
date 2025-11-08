@@ -19,11 +19,11 @@ package dubboagent
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/caclient/providers/aegis"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
-	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/caclient/providers/aegis"
-	"k8s.io/klog/v2"
 )
 
 type RootCertProvider interface {
@@ -42,7 +42,7 @@ func createAegis(opts *security.Options, a RootCertProvider) (security.Client, e
 	var err error
 
 	if strings.HasSuffix(opts.CAEndpoint, ":15010") {
-		klog.Warning("Debug mode or IP-secure network")
+		log.Warn("Debug mode or IP-secure network")
 	} else {
 		tlsOpts = &aegis.TLSOptions{}
 		tlsOpts.RootCert, err = a.FindRootCAForCA()
@@ -51,11 +51,11 @@ func createAegis(opts *security.Options, a RootCertProvider) (security.Client, e
 		}
 
 		if tlsOpts.RootCert == "" {
-			klog.Infof("Using CA %s cert with system certs", opts.CAEndpoint)
+			log.Infof("Using CA %s cert with system certs", opts.CAEndpoint)
 		} else if !fileExists(tlsOpts.RootCert) {
-			klog.Fatalf("invalid config - %s missing a root certificate %s", opts.CAEndpoint, tlsOpts.RootCert)
+			log.Fatalf("invalid config - %s missing a root certificate %s", opts.CAEndpoint, tlsOpts.RootCert)
 		} else {
-			klog.Infof("Using CA %s cert with certs: %s", opts.CAEndpoint, tlsOpts.RootCert)
+			log.Infof("Using CA %s cert with certs: %s", opts.CAEndpoint, tlsOpts.RootCert)
 		}
 
 		tlsOpts.Key, tlsOpts.Cert = a.GetKeyCertsForCA()

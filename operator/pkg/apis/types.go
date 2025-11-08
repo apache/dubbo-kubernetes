@@ -19,13 +19,14 @@ package apis
 
 import (
 	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DubboOperator defines the custom API.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubetype-gen
-// +kubetype-gen:groupVersion=install.dubbo.io/v1alpha1
+// +kubetype-gen:groupVersion=install.dubbo.apache.org/v1alpha1
 // +k8s:deepcopy-gen=true
 type DubboOperator struct {
 	metav1.TypeMeta `json:",inline"`

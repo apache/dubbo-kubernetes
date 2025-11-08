@@ -26,13 +26,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/log"
+
+	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/caclient"
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	"github.com/apache/dubbo-kubernetes/pkg/channels"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/uds"
-	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
-	"github.com/apache/dubbo-kubernetes/security/pkg/nodeagent/caclient"
-	"github.com/apache/dubbo-kubernetes/security/pkg/pki/util"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"go.uber.org/atomic"
@@ -44,8 +46,9 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/anypb"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	"k8s.io/klog/v2"
 )
+
+var proxyLog = log.RegisterScope("xdsproxy", "XDS Proxy in Dubbo Agent")
 
 type (
 	DiscoveryStream      = discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer
@@ -114,7 +117,7 @@ var connectionNumber = atomic.NewUint32(0)
 
 func (p *XdsProxy) handleStream(downstream adsStream) error {
 	conID := connectionNumber.Inc()
-	klog.Infof("XDS proxy: new downstream connection #%d", conID)
+	proxyLog.Infof("new downstream connection #%d", conID)
 	con := &ProxyConnection{
 		conID:           conID,
 		upstreamError:   make(chan error), // can be produced by recv and send
@@ -127,18 +130,18 @@ func (p *XdsProxy) handleStream(downstream adsStream) error {
 
 	p.registerStream(con)
 	defer p.unregisterStream(con)
-	defer klog.Infof("XDS proxy: downstream connection #%d closed", conID)
+	defer proxyLog.Infof("downstream connection #%d closed", conID)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	klog.Infof("XDS proxy: connection #%d building upstream connection to %s", conID, p.dubbodAddress)
+	proxyLog.Infof("connection #%d building upstream connection to %s", conID, p.dubbodAddress)
 	upstreamConn, err := p.buildUpstreamConn(ctx)
 	if err != nil {
-		klog.Errorf("XDS proxy: connection #%d failed to connect to upstream %s: %v", conID, p.dubbodAddress, err)
+		proxyLog.Errorf("connection #%d failed to connect to upstream %s: %v", conID, p.dubbodAddress, err)
 		return err
 	}
-	klog.Infof("XDS proxy: connection #%d successfully built upstream connection", conID)
+	proxyLog.Infof("connection #%d successfully built upstream connection", conID)
 	defer upstreamConn.Close()
 
 	xds := discovery.NewAggregatedDiscoveryServiceClient(upstreamConn)
@@ -155,14 +158,14 @@ const (
 )
 
 func (p *XdsProxy) handleUpstream(ctx context.Context, con *ProxyConnection, xds discovery.AggregatedDiscoveryServiceClient) error {
-	klog.Infof("XDS proxy: connection #%d connecting to upstream: %s", con.conID, p.dubbodAddress)
+	proxyLog.Infof("connection #%d connecting to upstream: %s", con.conID, p.dubbodAddress)
 	upstream, err := xds.StreamAggregatedResources(ctx,
 		grpc.MaxCallRecvMsgSize(defaultClientMaxReceiveMessageSize))
 	if err != nil {
-		klog.Errorf("xDS proxy: connection #%d failed to create stream to upstream %s: %v", con.conID, p.dubbodAddress, err)
+		proxyLog.Errorf("connection #%d failed to create stream to upstream %s: %v", con.conID, p.dubbodAddress, err)
 		return err
 	}
-	klog.Infof("xDS proxy: connected to upstream XDS server: %s id=%d", p.dubbodAddress, con.conID)
+	proxyLog.Infof("connected to upstream XDS server: %s id=%d", p.dubbodAddress, con.conID)
 
 	// Log when we start receiving responses
 	go func() {
@@ -171,17 +174,17 @@ func (p *XdsProxy) handleUpstream(ctx context.Context, con *ProxyConnection, xds
 			resp, err := upstream.Recv()
 			if err != nil {
 				if firstResponse {
-					klog.Warningf("XDS proxy: connection #%d upstream Recv failed before first response: %v", con.conID, err)
+					proxyLog.Warnf("connection #%d upstream Recv failed before first response: %v", con.conID, err)
 				}
 				upstreamErr(con, err)
 				return
 			}
 			if firstResponse {
-				klog.Infof("XDS proxy: connection #%d received first response from upstream: TypeUrl=%s, Resources=%d",
+				proxyLog.Infof("connection #%d received first response from upstream: TypeUrl=%s, Resources=%d",
 					con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources))
 				firstResponse = false
 			} else {
-				klog.V(3).Infof("XDS proxy: connection #%d received response from upstream: TypeUrl=%s, Resources=%d, VersionInfo=%s",
+				proxyLog.Debugf("connection #%d received response from upstream: TypeUrl=%s, Resources=%d, VersionInfo=%s",
 					con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources), resp.VersionInfo)
 			}
 			select {
@@ -217,12 +220,12 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 			// recv xds requests from envoy
 			req, err := con.downstream.Recv()
 			if err != nil {
-				klog.Warningf("XDS proxy: connection #%d downstream Recv error: %v", con.conID, err)
+				proxyLog.Warnf("connection #%d downstream Recv error: %v", con.conID, err)
 				downstreamErr(con, err)
 				return
 			}
 
-			klog.V(3).Infof("XDS proxy: connection #%d received request: TypeUrl=%s, Node=%v, ResourceNames=%d",
+			proxyLog.Debugf("connection #%d received request: TypeUrl=%s, Node=%v, ResourceNames=%d",
 				con.conID, model.GetShortType(req.TypeUrl), req.Node != nil, len(req.ResourceNames))
 
 			// Save Node from first request that contains it
@@ -236,7 +239,7 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 						Locality: req.Node.Locality,
 						Metadata: req.Node.Metadata,
 					}
-					klog.Infof("XDS proxy: connection #%d saved Node: %s", con.conID, req.Node.Id)
+					proxyLog.Infof("connection #%d saved Node: %s", con.conID, req.Node.Id)
 					nodeReceived.Store(true)
 				}
 				con.nodeMutex.Unlock()
@@ -244,7 +247,7 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 
 			// Skip health check probes that don't have Node information (before we've received any Node)
 			if req.TypeUrl == model.HealthInfoType && !nodeReceived.Load() {
-				klog.V(2).Infof("XDS proxy: connection #%d skipping health check probe without Node", con.conID)
+				proxyLog.Debugf("connection #%d skipping health check probe without Node", con.conID)
 				continue
 			}
 
@@ -255,9 +258,9 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 			con.nodeMutex.RUnlock()
 
 			// For XDS, any first request (not just LDS) without Node should wait
-			// because sail-discovery needs Node in the first request to initialize connection
+			// because planet-discovery needs Node in the first request to initialize connection
 			if !nodeReceived.Load() && req.Node == nil && req.TypeUrl != model.HealthInfoType {
-				klog.V(2).Infof("XDS proxy: connection #%d received first request without Node (TypeUrl=%s), waiting for Node information", con.conID, model.GetShortType(req.TypeUrl))
+				proxyLog.Debugf("connection #%d received first request without Node (TypeUrl=%s), waiting for Node information", con.conID, model.GetShortType(req.TypeUrl))
 				continue
 			}
 
@@ -273,21 +276,21 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 						Locality: con.node.Locality,
 						Metadata: con.node.Metadata,
 					}
-					klog.V(2).Infof("XDS proxy: connection #%d added saved Node to request", con.conID)
+					proxyLog.Debugf("connection #%d added saved Node to request", con.conID)
 				} else if req.Node.Id == "" {
 					// If Node exists but Id is empty, copy from saved node
 					req.Node.Id = con.node.Id
 					if req.Node.Metadata == nil {
 						req.Node.Metadata = con.node.Metadata
 					}
-					klog.V(2).Infof("XDS proxy: connection #%d filled empty Node.Id in request", con.conID)
+					proxyLog.Debugf("connection #%d filled empty Node.Id in request", con.conID)
 				}
 			}
 			con.nodeMutex.RUnlock()
 
 			// Final check: for initialization, we must have Node
 			if !hasNode && req.Node == nil && req.TypeUrl != model.HealthInfoType {
-				klog.Warningf("XDS proxy: connection #%d cannot forward request without Node: TypeUrl=%s", con.conID, model.GetShortType(req.TypeUrl))
+				proxyLog.Warnf("connection #%d cannot forward request without Node: TypeUrl=%s", con.conID, model.GetShortType(req.TypeUrl))
 				continue
 			}
 
@@ -373,11 +376,12 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 
 			// Final safety check: don't send if still no Node
 			if req.Node == nil || req.Node.Id == "" {
-				klog.Warningf("XDS proxy: connection #%d cannot send request without Node: TypeUrl=%s", con.conID, model.GetShortType(req.TypeUrl))
+				proxyLog.Warnf("connection #%d cannot send request without Node: TypeUrl=%s", con.conID, model.GetShortType(req.TypeUrl))
 				continue
 			}
 
-			klog.Infof("XDS proxy: connection #%d forwarding request: TypeUrl=%s, Node=%v",
+			// Only log at debug level to reduce noise - these are normal operations
+			proxyLog.Debugf("connection #%d forwarding request: TypeUrl=%s, Node=%v",
 				con.conID, model.GetShortType(req.TypeUrl), req.Node != nil && req.Node.Id != "")
 			if req.TypeUrl == model.ExtensionConfigurationType {
 				if req.VersionInfo != "" {
@@ -386,13 +390,14 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 				p.ecdsLastNonce.Store(req.ResponseNonce)
 			}
 			if err := con.upstream.Send(req); err != nil {
-				klog.Errorf("XDS proxy: connection #%d failed to send request upstream: TypeUrl=%s, error=%v",
+				proxyLog.Errorf("connection #%d failed to send request upstream: TypeUrl=%s, error=%v",
 					con.conID, model.GetShortType(req.TypeUrl), err)
 				err = fmt.Errorf("send error for type url %s: %v", req.TypeUrl, err)
 				upstreamErr(con, err)
 				return
 			}
-			klog.V(2).Infof("XDS proxy: connection #%d successfully sent request upstream: TypeUrl=%s",
+			// Only log at debug level to reduce noise - successful sends are normal
+			proxyLog.Debugf("connection #%d successfully sent request upstream: TypeUrl=%s",
 				con.conID, model.GetShortType(req.TypeUrl))
 		case <-con.stopChan:
 			return
@@ -406,9 +411,9 @@ func downstreamErr(con *ProxyConnection, err error) {
 		err = nil
 		fallthrough
 	case dubbogrpc.ExpectedError:
-		klog.Errorf("downstream terminated with status %v", err)
+		proxyLog.Errorf("downstream terminated with status %v", err)
 	default:
-		klog.Errorf("downstream terminated with unexpected error %v", err)
+		proxyLog.Errorf("downstream terminated with unexpected error %v", err)
 	}
 	select {
 	case con.downstreamError <- err:
@@ -421,12 +426,10 @@ func (p *XdsProxy) handleUpstreamResponse(con *ProxyConnection) {
 		select {
 		case resp := <-con.responsesChan:
 			// TODO: separate upstream response handling from requests sending, which are both time costly
-			klog.V(2).InfoS(
-				"Upstream response",
-				"id", con.conID,
-				"type", model.GetShortType(resp.TypeUrl),
-				"resources", len(resp.Resources),
-			)
+			proxyLog.Debugf("Upstream response id=%d type=%s resources=%d",
+				con.conID,
+				model.GetShortType(resp.TypeUrl),
+				len(resp.Resources))
 			// Handle internal types (e.g., ProxyConfig) that need special processing
 			hasHandler := false
 			if h, f := p.handlers[resp.TypeUrl]; f {
@@ -463,14 +466,14 @@ func (p *XdsProxy) handleUpstreamResponse(con *ProxyConnection) {
 			}
 
 			// Forward all non-internal responses to downstream (gRPC client)
-			klog.V(3).Infof("XDS proxy: connection #%d forwarding response to downstream: TypeUrl=%s, Resources=%d, VersionInfo=%s",
+			proxyLog.Debugf("connection #%d forwarding response to downstream: TypeUrl=%s, Resources=%d, VersionInfo=%s",
 				con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources), resp.VersionInfo)
 			if err := con.downstream.Send(resp); err != nil {
-				klog.Errorf("XDS proxy: connection #%d failed to send response to downstream: %v", con.conID, err)
+				proxyLog.Errorf("connection #%d failed to send response to downstream: %v", con.conID, err)
 				downstreamErr(con, err)
 				return
 			}
-			klog.V(3).Infof("XDS proxy: connection #%d successfully forwarded response to downstream: TypeUrl=%s, Resources=%d",
+			proxyLog.Debugf("connection #%d successfully forwarded response to downstream: TypeUrl=%s, Resources=%d",
 				con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources))
 
 			// Send ACK for normal XDS responses (if not already sent by handler)
@@ -504,9 +507,9 @@ func upstreamErr(con *ProxyConnection, err error) {
 		err = nil
 		fallthrough
 	case dubbogrpc.ExpectedError:
-		klog.Errorf("upstream terminated with status %v", err)
+		proxyLog.Errorf("upstream terminated with status %v", err)
 	default:
-		klog.Errorf("upstream terminated with unexpected error %v", err)
+		proxyLog.Errorf("upstream terminated with unexpected error %v", err)
 	}
 	select {
 	case con.upstreamError <- err:
@@ -520,10 +523,10 @@ func (p *XdsProxy) buildUpstreamConn(ctx context.Context) (*grpc.ClientConn, err
 	p.optsMutex.RUnlock()
 
 	if len(opts) == 0 {
-		klog.Warningf("XDS proxy: dialOptions is empty, connection may fail. Address: %s", p.dubbodAddress)
+		proxyLog.Warnf("dialOptions is empty, connection may fail. Address: %s", p.dubbodAddress)
 	}
 
-	klog.V(2).Infof("XDS proxy: dialing %s with %d options", p.dubbodAddress, len(opts))
+	proxyLog.Debugf("dialing %s with %d options", p.dubbodAddress, len(opts))
 	conn, err := grpc.DialContext(ctx, p.dubbodAddress, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("grpc.DialContext failed for %s: %w", p.dubbodAddress, err)
@@ -574,11 +577,11 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 		proxy.handlers[model.ProxyConfigType] = func(resp *anypb.Any) error {
 			pc := &meshconfig.ProxyConfig{}
 			if err := resp.UnmarshalTo(pc); err != nil {
-				klog.Errorf("failed to unmarshal proxy config: %v", err)
+				proxyLog.Errorf("failed to unmarshal proxy config: %v", err)
 				return err
 			}
 			caCerts := pc.GetCaCertificatesPem()
-			klog.Infof("received new certificates to add to mesh trust domain: %v", caCerts)
+			proxyLog.Infof("received new certificates to add to mesh trust domain: %v", caCerts)
 			trustBundle := []byte{}
 			for _, cert := range caCerts {
 				trustBundle = util.AppendCertByte(trustBundle, []byte(cert))
@@ -587,7 +590,7 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 		}
 	}
 
-	klog.Infof("Initializing with upstream address %q and cluster %q", proxy.dubbodAddress, proxy.clusterID)
+	proxyLog.Infof("Initializing with upstream address %q and cluster %q", proxy.dubbodAddress, proxy.clusterID)
 
 	if err = proxy.initDownstreamServer(); err != nil {
 		return nil, err
@@ -596,12 +599,12 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 	ia.wg.Add(1)
 	go func() {
 		defer ia.wg.Done()
-		klog.Infof("Starting XDS proxy server listening on UDS: %s", proxy.xdsUdsPath)
-		klog.Infof("XDS proxy server ready to accept connections on UDS: %s", proxy.xdsUdsPath)
+		proxyLog.Infof("Starting XDS proxy server listening on UDS: %s", proxy.xdsUdsPath)
+		proxyLog.Infof("XDS proxy server ready to accept connections on UDS: %s", proxy.xdsUdsPath)
 		if err := proxy.downstreamGrpcServer.Serve(proxy.downstreamListener); err != nil {
-			klog.Errorf("XDS proxy server stopped accepting connections: %v", err)
+			proxyLog.Errorf("XDS proxy server stopped accepting connections: %v", err)
 		}
-		klog.Warningf("XDS proxy server stopped serving on UDS: %s", proxy.xdsUdsPath)
+		proxyLog.Warnf("XDS proxy server stopped serving on UDS: %s", proxy.xdsUdsPath)
 	}()
 
 	// For proxyless mode, establish a preemptive connection to upstream using bootstrap Node
@@ -629,7 +632,7 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 		nodeReady := proxy.bootstrapNode != nil
 		proxy.preemptiveConnMutex.RUnlock()
 		if !nodeReady {
-			klog.Warningf("Bootstrap Node not set after 5 seconds, proceeding anyway")
+			proxyLog.Warnf("Bootstrap Node not set after 5 seconds, proceeding anyway")
 		}
 
 		maxBackoff := 30 * time.Second
@@ -646,7 +649,7 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 			connDone, err := proxy.establishPreemptiveConnection(ia)
 			if err != nil {
 				// Connection failed, log and retry with exponential backoff
-				klog.Warningf("Failed to establish preemptive upstream connection: %v, retrying in %v", err, backoff)
+				proxyLog.Warnf("Failed to establish preemptive upstream connection: %v, retrying in %v", err, backoff)
 
 				select {
 				case <-proxy.stopChan:
@@ -662,13 +665,13 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 
 			// Connection successful, reset backoff
 			backoff = time.Second
-			klog.Infof("Preemptive upstream connection established successfully")
+			proxyLog.Infof("Preemptive upstream connection established successfully")
 			// Wait for connection to terminate (connDone will be closed when connection dies)
 			select {
 			case <-proxy.stopChan:
 				return
 			case <-connDone:
-				klog.Warningf("Preemptive connection terminated, will retry")
+				proxyLog.Warnf("Preemptive connection terminated, will retry")
 			}
 		}
 	}()
@@ -696,7 +699,7 @@ func (p *XdsProxy) initDownstreamServer() error {
 	reflection.Register(grpcs)
 	p.downstreamGrpcServer = grpcs
 	p.downstreamListener = l
-	klog.Infof("XDS proxy server initialized, listening on UDS socket: %s", p.xdsUdsPath)
+	proxyLog.Infof("XDS proxy server initialized, listening on UDS socket: %s", p.xdsUdsPath)
 	return nil
 }
 
@@ -776,7 +779,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		return nil, fmt.Errorf("bootstrap node not available")
 	}
 
-	klog.Infof("xDS proxy: Establishing preemptive upstream connection for proxyless mode with Node: %s", node.Id)
+	proxyLog.Infof("Establishing preemptive upstream connection for proxyless mode with Node: %s", node.Id)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
@@ -802,7 +805,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		upstreamConn.Close()
 		return nil, fmt.Errorf("failed to create upstream stream: %w", err)
 	}
-	klog.Infof("xDS proxy: connected to upstream XDS server (preemptive): %s", p.dubbodAddress)
+	proxyLog.Infof("connected to upstream XDS server (preemptive): %s", p.dubbodAddress)
 
 	conID := connectionNumber.Inc()
 	con := &ProxyConnection{
@@ -836,12 +839,12 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 	}()
 
 	// Send initial LDS request with bootstrap Node to initialize connection
-	// This is critical for sail-discovery to recognize the connection and count it in ConnectedEndpoints
+	// This is critical for planet-discovery to recognize the connection and count it in ConnectedEndpoints
 	ldsReq := &discovery.DiscoveryRequest{
 		TypeUrl: model.ListenerType,
 		Node:    node,
 	}
-	klog.Infof("XDS proxy: preemptive connection sending initial LDS request with Node: %s", node.Id)
+	proxyLog.Infof("preemptive connection sending initial LDS request with Node: %s", node.Id)
 	if err := upstream.Send(ldsReq); err != nil {
 		upstreamConn.Close()
 		p.preemptiveConnMutex.Lock()
@@ -876,7 +879,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 				upstreamErr(con, err)
 				return
 			}
-			klog.V(2).Infof("XDS proxy: preemptive connection received response: TypeUrl=%s, Resources=%d",
+			proxyLog.Debugf("preemptive connection received response: TypeUrl=%s, Resources=%d",
 				model.GetShortType(resp.TypeUrl), len(resp.Resources))
 			// Send ACK
 			ackReq := &discovery.DiscoveryRequest{

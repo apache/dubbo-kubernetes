@@ -20,13 +20,15 @@ package security
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/metadata"
-	"k8s.io/klog/v2"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -115,7 +117,7 @@ type Options struct {
 	ServeOnlyFiles       bool
 	ProvCert             string
 	FileMountedCerts     bool
-	SailCertProvider     string
+	PlanetCertProvider   string
 	OutputKeyCertToDir   string
 	CertChainFilePath    string
 	KeyFilePath          string
@@ -265,4 +267,15 @@ func ExtractRequestToken(req *http.Request) (string, error) {
 	}
 
 	return "", fmt.Errorf("no bearer token exists in HTTP authorization header")
+}
+
+// GetConnectionAddress extracts the peer address from the gRPC context.
+// It returns "unknown" if the peer information is not available.
+func GetConnectionAddress(ctx context.Context) string {
+	peerInfo, ok := peer.FromContext(ctx)
+	peerAddr := "unknown"
+	if ok {
+		peerAddr = peerInfo.Addr.String()
+	}
+	return peerAddr
 }

@@ -11,9 +11,3 @@ To quickly deploy all addons:
 ```shell script
 kubectl apply -f samples/addons
 ```
-
-Alternatively, you can deploy individual addons:
-
-```shell script
-kubectl apply -f samples/addons/prometheus.yaml
-```

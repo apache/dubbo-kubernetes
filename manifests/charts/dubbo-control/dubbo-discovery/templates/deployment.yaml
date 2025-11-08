@@ -6,7 +6,7 @@ metadata:
   namespace: dubbo-system
   labels:
     app: dubbod
-    dubbo.io/rev: default
+    dubbo.apache.org/rev: default
 spec:
   selector:
     matchLabels:
@@ -19,7 +19,7 @@ spec:
       serviceAccountName: dubbod
       containers:
         - name: discovery
-          image: "mfordjody/sail-discovery:test"
+          image: "mfordjody/planet:0.3.0-debug"
           imagePullPolicy: Always
           args:
             - "discovery"
@@ -41,7 +41,7 @@ spec:
           env:
             - name: REVISION
               value: default
-            - name: SAIL_CERT_PROVIDER
+            - name: PLANET_CERT_PROVIDER
               value: dubbod
             - name: CLUSTER_ID
               value: "Kubernetes"

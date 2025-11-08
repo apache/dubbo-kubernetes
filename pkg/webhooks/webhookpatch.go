@@ -20,21 +20,21 @@ package webhooks
 import (
 	"bytes"
 	"errors"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"math"
 	"strings"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/util"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/keycertbundle"
 	v1 "k8s.io/api/admissionregistration/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog/v2"
 )
 
 var (
@@ -88,7 +88,7 @@ func (w *WebhookCertPatcher) webhookPatchTask(o types.NamespacedName) error {
 	}
 
 	if err != nil {
-		klog.Errorf("patching webhook %s failed: %v", o.Name, err)
+		log.Errorf("patching webhook %s failed: %v", o.Name, err)
 	}
 
 	return err
@@ -100,11 +100,11 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 		return errNotFound
 	}
 	// prevents a race condition between multiple istiods when the revision is changed or modified
-	v, ok := config.Labels["dubbo.io/rev"]
+	v, ok := config.Labels["dubbo.apache.org/rev"]
 	if !ok {
 		return nil
 	}
-	klog.Infof("This is webhook label: %v", v)
+	log.Infof("This is webhook label: %v", v)
 
 	if v != w.revision {
 		return errWrongRevision
@@ -114,7 +114,7 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 	updated := false
 	caCertPem, err := util.LoadCABundle(w.CABundleWatcher)
 	if err != nil {
-		klog.Errorf("Failed to load CA bundle: %v", err)
+		log.Errorf("Failed to load CA bundle: %v", err)
 		return err
 	}
 	for i, wh := range config.Webhooks {

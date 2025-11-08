@@ -29,7 +29,7 @@ const (
 	NameTableType   = APITypePrefix + "dubbo.networking.nds.v1.NameTable"
 	HealthInfoType  = APITypePrefix + "dubbo.v1.HealthInformation"
 	ProxyConfigType = APITypePrefix + "dubbo.mesh.v1alpha1.ProxyConfig"
-	DebugType       = "dubbo.io/debug"
+	DebugType       = "dubbo.apache.org/debug"
 	AddressType     = APITypePrefix + "dubbo.workload.Address"
 	WorkloadType    = APITypePrefix + "dubbo.workload.Workload"
 )

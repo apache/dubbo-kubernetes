@@ -66,7 +66,7 @@ func convertTypeURLToMCPGVK(typeURL string) (config.GroupVersionKind, bool) {
 		Kind:    parts[2],
 	}
 
-	_, isMCP := collections.Sail.FindByGroupVersionKind(gvk)
+	_, isMCP := collections.Planet.FindByGroupVersionKind(gvk)
 	if isMCP {
 		return gvk, true
 	}

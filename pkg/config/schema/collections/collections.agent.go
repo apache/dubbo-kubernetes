@@ -133,7 +133,7 @@ var (
 		MustAdd(ValidatingWebhookConfiguration).
 		Build()
 
-	Sail = collection.NewSchemasBuilder().
+	Planet = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
 		MustAdd(DestinationRule).

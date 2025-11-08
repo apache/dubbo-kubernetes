@@ -13,16 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $containers := list }}
-{{- range $index, $container := .Spec.Containers }}{{ if not (eq $container.Name "dubbo-proxy") }}{{ $containers = append $containers $container.Name }}{{end}}{{- end}}
 metadata:
   annotations:
-    dubbo.io/rev: default
+    dubbo.apache.org/rev: default
 spec:
   containers:
   - name: dubbo-proxy
     image: "{{ $.ProxyImage }}"
-    imagePullPolicy: Always # test
+    imagePullPolicy: Always
     ports:
     - containerPort: 15020
       protocol: TCP
@@ -35,7 +33,7 @@ spec:
       postStart:
         exec:
           command:
-          - sail-agent
+          - planet-agent
           - wait
           - --url=http://localhost:15020/healthz/ready
     readinessProbe:
@@ -55,7 +53,7 @@ spec:
       value: /etc/dubbo/proxy/grpc-bootstrap.json
     - name: OUTPUT_CERTS
       value: /var/lib/dubbo/data
-    - name: SAIL_CERT_PROVIDER
+    - name: PLANET_CERT_PROVIDER
       value: dubbod
     - name: DUBBO_META_CLUSTER_ID
       value: Kubernetes
@@ -114,17 +112,16 @@ spec:
   - downwardAPI:
       defaultMode: 420
       items:
-        - fieldRef:
-            apiVersion: v1
-            fieldPath: metadata.labels
-          path: labels
-        - fieldRef:
-            apiVersion: v1
-            fieldPath: metadata.annotations
-          path: annotations
+      - fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.labels
+        path: labels
+      - fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.annotations
+        path: annotations
     name: dubbo-podinfo
   - configMap:
       defaultMode: 420
       name: dubbo-ca-root-cert
     name: dubbod-ca-cert
-

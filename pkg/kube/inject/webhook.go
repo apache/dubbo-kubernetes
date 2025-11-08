@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/http"
 	"os"
 	"strings"
@@ -28,12 +29,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/model"
 	"gomodules.xyz/jsonpatch/v2"
 	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
@@ -46,7 +47,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
 )
 
@@ -130,7 +130,7 @@ func loadConfig(injectFile, valuesFile string) (*Config, string, error) {
 	}
 	var c *Config
 	if c, err = unmarshalConfig(data); err != nil {
-		klog.Warningf("Failed to parse injectFile %s", string(data))
+		log.Warnf("Failed to parse injectFile %s", string(data))
 		return nil, "", err
 	}
 
@@ -237,7 +237,7 @@ func (wh *Webhook) serveInject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := w.Write(resp); err != nil {
-		klog.Errorf("Could not write response: %v", err)
+		log.Errorf("Could not write response: %v", err)
 		http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -351,7 +351,7 @@ func addApplicationContainerConfig(pod *corev1.Pod) {
 				Name:  "GRPC_XDS_BOOTSTRAP",
 				Value: grpcBootstrapPath,
 			})
-			klog.Infof("Injection: Added GRPC_XDS_BOOTSTRAP=%s env to application container %s", grpcBootstrapPath, container.Name)
+			log.Infof("Injection: Added GRPC_XDS_BOOTSTRAP=%s env to application container %s", grpcBootstrapPath, container.Name)
 		}
 
 		// Add volume mount for /etc/dubbo/proxy if not already present
@@ -368,7 +368,7 @@ func addApplicationContainerConfig(pod *corev1.Pod) {
 				MountPath: proxyVolumeMountPath,
 				ReadOnly:  false,
 			})
-			klog.Infof("Injection: Added /etc/dubbo/proxy volume mount to application container %s", container.Name)
+			log.Infof("Injection: Added /etc/dubbo/proxy volume mount to application container %s", container.Name)
 		}
 	}
 }
@@ -516,7 +516,7 @@ func parseInjectEnvs(path string) map[string]string {
 	for i := 0; i < len(res); i += 2 {
 		k := res[i]
 		if i == len(res)-1 { // ignore the last key without value
-			klog.Warningf("Odd number of inject env entries, ignore the last key %s\n", k)
+			log.Warnf("Add number of inject env entries, ignore the last key %s\n", k)
 			break
 		}
 	}
@@ -525,10 +525,11 @@ func parseInjectEnvs(path string) map[string]string {
 }
 
 func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.AdmissionResponse {
+	log := log.WithLabels("path", path)
 	req := ar.Request
 	var pod corev1.Pod
 	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
-		klog.Errorf("Could not unmarshal raw object: %v %s", err, string(req.Object.Raw))
+		log.Errorf("Could not unmarshal raw object: %v %s", err, string(req.Object.Raw))
 		return toAdmissionResponse(err)
 	}
 
@@ -538,12 +539,13 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 	if pod.ObjectMeta.Namespace == "" {
 		pod.ObjectMeta.Namespace = req.Namespace
 	}
-	klog.Info(pod.Namespace + "/" + podName)
-	klog.Infof("path=%s Process proxyless injection request", path)
+
+	log = log.WithLabels("pod", pod.Namespace+"/"+podName)
+	log.Infof("Process proxyless injection request")
 
 	wh.mu.RLock()
 	if !injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &pod.Spec, pod.ObjectMeta) {
-		klog.Infof("Skipping due to policy check")
+		log.Infof("Skipping due to policy check")
 		wh.mu.RUnlock()
 		return &kube.AdmissionResponse{
 			Allowed: true,
@@ -568,15 +570,15 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 
 	wh.mu.RUnlock()
 
-	klog.Infof("Injecting pod with templates: %v, defaultTemplate: %v", len(params.templates), params.defaultTemplate)
-	klog.Infof("Pod labels: %v, annotations: %v", params.pod.Labels, params.pod.Annotations)
+	log.Infof("Injecting pod with templates: %v, defaultTemplate: %v", len(params.templates), params.defaultTemplate)
+	log.Infof("Pod labels: %v, annotations: %v", params.pod.Labels, params.pod.Annotations)
 	patchBytes, err := injectPod(params)
 	if err != nil {
-		klog.Errorf("Pod injection failed: %v", err)
+		log.Errorf("Pod injection failed: %v", err)
 		return toAdmissionResponse(err)
 	}
 
-	klog.Infof("Injection successful, patch size: %d bytes", len(patchBytes))
+	log.Infof("Injection successful, patch size: %d bytes", len(patchBytes))
 	reviewResponse := kube.AdmissionResponse{
 		Allowed: true,
 		Patch:   patchBytes,

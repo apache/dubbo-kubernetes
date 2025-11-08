@@ -21,9 +21,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"reflect"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 
 	gogojsonpb "github.com/gogo/protobuf/jsonpb" // nolint: depguard
 	gogoproto "github.com/gogo/protobuf/proto"   // nolint: depguard
@@ -43,7 +44,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/gogoprotomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/util/protoconv"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 )
 
 // Meta is metadata attached to each configuration unit.
@@ -131,7 +132,7 @@ func (o ObjectWithCluster[T]) GetObjectKeyable() any {
 }
 
 func LabelsInRevision(lbls map[string]string, rev string) bool {
-	configEnv, f := lbls["dubbo.io/rev"]
+	configEnv, f := lbls["dubbo.apache.org/rev"]
 	if !f {
 		// This is a global object, and always included
 		return true
@@ -149,7 +150,7 @@ func LabelsInRevisionOrTags(lbls map[string]string, rev string, tags sets.Set[st
 	if LabelsInRevision(lbls, rev) {
 		return true
 	}
-	configEnv := lbls["dubbo.io/rev"]
+	configEnv := lbls["dubbo.apache.org/rev"]
 	// Otherwise, only return true if revisions equal
 	return tags.Contains(configEnv)
 }

@@ -22,7 +22,7 @@ package dubbo.operator.v1alpha1;
 import "google/protobuf/wrappers.proto";
 
 // Package-wide variables from generator "generated".
-option go_package = "dubbo.io/dubbo/operator/pkg/apis";
+option go_package = "dubbo.apache.org/dubbo/operator/pkg/apis";
 
 // Global Configuration for Dubbo components.
 message GlobalConfig {}

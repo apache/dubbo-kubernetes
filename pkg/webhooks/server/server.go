@@ -28,7 +28,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/sail/pkg/config/kube/crd"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crd"
 	"github.com/hashicorp/go-multierror"
 	admissionv1 "k8s.io/api/admission/v1"
 	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"

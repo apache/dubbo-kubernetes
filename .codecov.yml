@@ -16,17 +16,33 @@
 # Documentation: https://docs.codecov.io/docs/codecov-yaml
 
 codecov:
-  require_ci_to_pass: false
+  require_ci_to_pass: true
   notify:
-    wait_for_ci: false
+    wait_for_ci: true
+
 coverage:
   status:
-    # pull-requests only
+    # Pull requests only
     patch:
       default:
         threshold: 0.1%
+    project:
+      default:
+        threshold: 0%
+
 ignore:
+  # Generated code
   - "**/generated/**"
   - "**/*generated*"
   - "**/*.pb.go"
+  - "**/*_embedded.go"
+  
+  # Test files
   - "**/*_test.go"
+  
+  # Dependencies
+  - "**/vendor/**"
+  - "**/node_modules/**"
+  
+  # Build artifacts
+  - "**/*.sum"

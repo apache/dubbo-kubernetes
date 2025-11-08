@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
+	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	dubbogrpc "github.com/apache/dubbo-kubernetes/sail/pkg/grpc"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/grpc/codes"
@@ -163,16 +163,16 @@ func Receive(ctx ConnectionContext) {
 		req, err := con.stream.Recv()
 		if err != nil {
 			if dubbogrpc.GRPCErrorType(err) != dubbogrpc.UnexpectedError {
-				klog.Infof("ADS: %q %s terminated", con.peerAddr, con.conID)
+				klog.Infof("%q %s terminated", con.peerAddr, con.conID)
 				return
 			}
 			con.errorChan <- err
-			klog.Errorf("ADS: %q %s terminated with error: %v", con.peerAddr, con.conID, err)
+			klog.Errorf("%q %s terminated with error: %v", con.peerAddr, con.conID, err)
 			return
 		}
 		if firstRequest {
 			if req.TypeUrl == model.HealthInfoType {
-				klog.Warningf("ADS: %q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
+				klog.Warningf("%q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
 				continue
 			}
 			firstRequest = false
@@ -191,7 +191,7 @@ func Receive(ctx ConnectionContext) {
 		select {
 		case con.reqChan <- req:
 		case <-con.stream.Context().Done():
-			klog.Infof("ADS: %q %s terminated with stream closed", con.peerAddr, con.conID)
+			klog.Infof("%q %s terminated with stream closed", con.peerAddr, con.conID)
 			return
 		}
 	}
@@ -261,7 +261,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 
 	if request.ErrorDetail != nil {
 		errCode := codes.Code(request.ErrorDetail.Code)
-		klog.Warningf("ADS:%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
+		klog.Warningf("%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
 		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
 			wr.LastError = request.ErrorDetail.GetMessage()
 			return wr
@@ -270,7 +270,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	}
 
 	if shouldUnsubscribe(request) {
-		klog.V(2).Infof("ADS:%s: UNSUBSCRIBE %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+		log.Debugf("%s: UNSUBSCRIBE %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
 		w.DeleteWatchedResource(request.TypeUrl)
 		return false, emptyResourceDelta
 	}
@@ -281,8 +281,29 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// 2. When Envoy reconnects to a new Istiod that does not have information about this typeUrl
 	// i.e. non empty response nonce.
 	// We should always respond with the current resource names.
-	if request.ResponseNonce == "" || previousInfo == nil {
-		klog.V(2).Infof("ADS:%s: INIT/RECONNECT %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+	if previousInfo == nil {
+		// No previous info - this is a new request
+		if request.ResponseNonce == "" {
+			// Initial request with no nonce
+			log.Debugf("%s: INIT %s %s", stype, id, request.VersionInfo)
+			w.NewWatchedResource(request.TypeUrl, request.ResourceNames)
+			return true, emptyResourceDelta
+		}
+		// Client sent a nonce but we have no previous info
+		// This could be a reconnect, but if we're getting many requests with different nonces,
+		// they're likely stale/expired requests that should be ignored
+		// Only treat as reconnect if this is the first request we see with a nonce
+		// For subsequent requests with nonces we don't recognize, treat as expired
+		log.Debugf("%s: REQ %s Unknown nonce (no previous info): %s, treating as expired/stale", stype, id, request.ResponseNonce)
+		// Create the watched resource but don't respond - let the client retry with empty nonce
+		w.NewWatchedResource(request.TypeUrl, request.ResourceNames)
+		return false, emptyResourceDelta
+	}
+
+	// We have previous info - check nonce match
+	if request.ResponseNonce == "" {
+		// Client sent empty nonce but we have previous info - this is a new request
+		log.Debugf("%s: INIT (empty nonce) %s %s", stype, id, request.VersionInfo)
 		w.NewWatchedResource(request.TypeUrl, request.ResourceNames)
 		return true, emptyResourceDelta
 	}
@@ -291,13 +312,16 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// A nonce becomes stale following a newer nonce being sent to Envoy.
 	// previousInfo.NonceSent can be empty if we previously had shouldRespond=true but didn't send any resources.
 	if request.ResponseNonce != previousInfo.NonceSent {
+		// Expired/stale nonce - don't respond, just log at debug level
 		if previousInfo.NonceSent == "" {
-			// Assert we do not end up in an invalid state
-			klog.V(2).Infof("ADS:%s: REQ %s Expired nonce received %s, but we never sent any nonce", stype,
+			// We never sent a nonce, but client sent one - this is unusual but treat as expired
+			log.Debugf("%s: REQ %s Expired nonce received %s, but we never sent any nonce", stype,
 				id, request.ResponseNonce)
+		} else {
+			// Normal case: client sent stale nonce
+			log.Debugf("%s: REQ %s Expired nonce received %s, sent %s", stype,
+				id, request.ResponseNonce, previousInfo.NonceSent)
 		}
-		klog.V(2).Infof("ADS:%s: REQ %s Expired nonce received %s, sent %s", stype,
-			id, request.ResponseNonce, previousInfo.NonceSent)
 		return false, emptyResourceDelta
 	}
 
@@ -332,7 +356,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		// Check if this is proxyless by attempting to get the proxy from watcher
 		// For now, we'll check if this is a proxyless scenario by the context
 		// If previous resources existed and client sends empty names with matching nonce, it's an ACK
-		klog.V(2).Infof("ADS:%s: wildcard request after specific resources (prev: %d resources, nonce: %s), treating as ACK",
+		log.Debugf("%s: wildcard request after specific resources (prev: %d resources, nonce: %s), treating as ACK",
 			stype, len(previousResources), previousInfo.NonceSent)
 		// Update ResourceNames to keep previous resources (don't clear them)
 		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
@@ -350,15 +374,15 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// We should always respond "alwaysRespond" marked requests to let Envoy finish warming
 	// even though Nonce match and it looks like an ACK.
 	if alwaysRespond {
-		klog.Infof("ADS:%s: FORCE RESPONSE %s for warming.", stype, id)
+		klog.Infof("%s: FORCE RESPONSE %s for warming.", stype, id)
 		return true, emptyResourceDelta
 	}
 
 	if len(removed) == 0 && len(added) == 0 {
-		klog.V(2).Infof("ADS:%s: ACK %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+		log.Debugf("%s: ACK %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
 		return false, emptyResourceDelta
 	}
-	klog.V(2).Infof("ADS:%s: RESOURCE CHANGE added %v removed %v %s %s %s", stype,
+	log.Debugf("%s: RESOURCE CHANGE added %v removed %v %s %s %s", stype,
 		added, removed, id, request.VersionInfo, request.ResponseNonce)
 
 	// For non wildcard resource, if no new resources are subscribed, it means we do not need to push.

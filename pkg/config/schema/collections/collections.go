@@ -35,7 +35,7 @@ import (
 var (
 	PeerAuthentication = collection.Builder{
 		Identifier: "PeerAuthentication",
-		Group:      "security.dubbo.io",
+		Group:      "security.dubbo.apache.org",
 		Kind:       "PeerAuthentication",
 		Plural:     "peerauthentications",
 		Version:    "v1",
@@ -51,7 +51,7 @@ var (
 	}.MustBuild()
 	RequestAuthentication = collection.Builder{
 		Identifier: "RequestAuthentication",
-		Group:      "security.dubbo.io",
+		Group:      "security.dubbo.apache.org",
 		Kind:       "RequestAuthentication",
 		Plural:     "requestauthentications",
 		Version:    "v1",
@@ -67,7 +67,7 @@ var (
 	}.MustBuild()
 	DestinationRule = collection.Builder{
 		Identifier: "DestinationRule",
-		Group:      "networking.dubbo.io",
+		Group:      "networking.dubbo.apache.org",
 		Kind:       "DestinationRule",
 		Plural:     "destinationrules",
 		Version:    "v1",
@@ -84,7 +84,7 @@ var (
 	}.MustBuild()
 	VirtualService = collection.Builder{
 		Identifier: "VirtualService",
-		Group:      "networking.dubbo.io",
+		Group:      "networking.dubbo.apache.org",
 		Kind:       "VirtualService",
 		Plural:     "virtualservices",
 		Version:    "v1",
@@ -178,7 +178,7 @@ var (
 		MustAdd(ValidatingWebhookConfiguration).
 		Build()
 
-	Sail = collection.NewSchemasBuilder().
+	Planet = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
 		MustAdd(DestinationRule).

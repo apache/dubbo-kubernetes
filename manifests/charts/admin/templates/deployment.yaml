@@ -6,9 +6,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: admin
-    dubbo.io/rev: {{ default "default" | quote }}
-    install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
-    operator.dubbo.io/component: "Admin"
+    dubbo.apache.org/rev: {{ default "default" | quote }}
+    install.operator.dubbo.apache.org/owning-resource: {{ default "unknown" }}
+    operator.dubbo.apache.org/component: "Admin"
     dubbo: admin
     release: {{ .Release.Name }}
     app.kubernetes.io/name: "dashboard"
@@ -21,15 +21,15 @@ spec:
   selector:
     matchLabels:
       app: admin
-      dubbo.io/rev: {{ default "default" | quote }}
+      dubbo.apache.org/rev: {{ default "default" | quote }}
       dubbo: admin
   template:
     metadata:
       labels:
         app: admin
-        dubbo.io/rev: {{ default "default" | quote }}
-        install.operator.dubbo.io/owning-resource: {{ default "unknown" }}
-        operator.dubbo.io/component: "Admin"
+        dubbo.apache.org/rev: {{ default "default" | quote }}
+        install.operator.dubbo.apache.org/owning-resource: {{ default "unknown" }}
+        operator.dubbo.apache.org/component: "Admin"
         dubbo: admin
         release: {{ .Release.Name }}
         app.kubernetes.io/name: "dashboard"

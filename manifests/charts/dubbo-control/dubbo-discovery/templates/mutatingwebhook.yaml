@@ -6,7 +6,7 @@ metadata:
   namespace: default
   labels:
     app: dubbod
-    dubbo.io/rev: default
+    dubbo.apache.org/rev: default
 webhooks:
   - admissionReviewVersions:
       - v1
@@ -17,10 +17,10 @@ webhooks:
         path: /inject
         port: 443
     failurePolicy: Fail
-    name: rev.namespace.sidecar-injector.dubbo.io
+    name: rev.namespace.sidecar-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
-        - key: dubbo.io/rev
+        - key: dubbo.apache.org/rev
           operator: In
           values:
             - default
@@ -28,7 +28,7 @@ webhooks:
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.io/inject
+        - key: proxyless.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -52,20 +52,20 @@ webhooks:
         path: /inject
         port: 443
     failurePolicy: Fail
-    name: rev.object.proxyless-injector.dubbo.io
+    name: rev.object.proxyless-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
-        - key: dubbo.io/rev
+        - key: dubbo.apache.org/rev
           operator: DoesNotExist
         - key: dubbo-injection
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.io/inject
+        - key: proxyless.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
-        - key: dubbo.io/rev
+        - key: dubbo.apache.org/rev
           operator: In
           values:
             - default
@@ -88,7 +88,7 @@ webhooks:
         namespace: dubbo-system
         path: /inject
         port: 443
-    name: namespace.proxyless-injector.dubbo.io
+    name: namespace.proxyless-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo-injection
@@ -97,7 +97,7 @@ webhooks:
             - enabled
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.io/inject
+        - key: proxyless.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -120,14 +120,14 @@ webhooks:
         namespace: dubbo-system
         path: /inject
         port: 443
-    name: object.proxyless-injector.dubbo.io
+    name: object.proxyless-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo-injection
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.io/inject
+        - key: proxyless.dubbo.apache.org/inject
           operator: In
           values:
             - "true"

@@ -24,7 +24,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	networkutil "github.com/apache/dubbo-kubernetes/sail/pkg/util/network"
+	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )
@@ -81,14 +81,14 @@ func (n *NodeMetaProxyConfig) UnmarshalJSON(data []byte) error {
 }
 
 type NodeMetadata struct {
-	Generator          string               `json:"GENERATOR,omitempty"`
-	ClusterID          cluster.ID           `json:"CLUSTER_ID,omitempty"`
-	Namespace          string               `json:"NAMESPACE,omitempty"`
-	StsPort            string               `json:"STS_PORT,omitempty"`
-	MetadataDiscovery  *StringBool          `json:"METADATA_DISCOVERY,omitempty"`
-	ProxyConfig        *NodeMetaProxyConfig `json:"PROXY_CONFIG,omitempty"`
-	SailSubjectAltName []string             `json:"SAIL_SAN,omitempty"`
-	XDSRootCert        string               `json:"-"`
+	Generator            string               `json:"GENERATOR,omitempty"`
+	ClusterID            cluster.ID           `json:"CLUSTER_ID,omitempty"`
+	Namespace            string               `json:"NAMESPACE,omitempty"`
+	StsPort              string               `json:"STS_PORT,omitempty"`
+	MetadataDiscovery    *StringBool          `json:"METADATA_DISCOVERY,omitempty"`
+	ProxyConfig          *NodeMetaProxyConfig `json:"PROXY_CONFIG,omitempty"`
+	PlanetSubjectAltName []string             `json:"PLANET_SAN,omitempty"`
+	XDSRootCert          string               `json:"-"`
 }
 type Node struct {
 	// ID of the Envoy node
