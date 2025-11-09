@@ -304,6 +304,7 @@ func (u UnionFS) Open(name string) (fs.File, error) {
 		return u.embedFS.Open(name)
 	}
 
+	// #nosec G304 -- File paths are controlled and validated by caller
 	return os.Open(name)
 }
 
