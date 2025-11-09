@@ -259,7 +259,6 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	stype := model.GetShortType(request.TypeUrl)
 
 	if request.ErrorDetail != nil {
-		// #nosec G115 -- ErrorDetail.Code is int32, codes.Code is uint32. Safe conversion for gRPC error codes.
 		errCode := codes.Code(request.ErrorDetail.Code)
 		log.Warnf("%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
 		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {

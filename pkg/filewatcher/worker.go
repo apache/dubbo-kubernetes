@@ -255,7 +255,6 @@ func (wk *worker) errorChannel(path string) chan error {
 
 // gets the hash of the given file, or nil if there's a problem
 func getHashSum(file string) []byte {
-	// #nosec G304 -- file is a controlled path from file watcher
 	f, err := os.Open(file)
 	if err != nil {
 		return nil

@@ -91,7 +91,6 @@ func (b *EndpointBuilder) buildDubboEndpoint(
 		Labels:         b.labels,
 		ServiceAccount: b.serviceAccount,
 		Addresses:      []string{endpointAddress},
-		// #nosec G115 -- Kubernetes port numbers are within valid uint32 range
 		EndpointPort:           uint32(endpointPort),
 		ServicePortName:        svcPortName,
 		Network:                networkID,

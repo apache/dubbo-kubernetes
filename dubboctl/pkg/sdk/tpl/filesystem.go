@@ -34,7 +34,6 @@ const (
 )
 
 func main() {
-	// #nosec G302 -- Generated file needs 0644 permissions for readability
 	f, err := os.OpenFile(generatePath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Fatal(err)
@@ -121,7 +120,6 @@ func main() {
 			_, err = w.Write([]byte(filepath.ToSlash(symlinkTarget)))
 			return err
 		case info.Mode()&fs.ModeType == 0: // regular file
-			// #nosec G304 -- File paths are controlled and validated by caller
 			f, err := os.Open(path)
 			if err != nil {
 				return err
@@ -134,7 +132,6 @@ func main() {
 			return nil
 		}
 	})
-	// #nosec G104 -- Close errors are non-critical; error is checked after
 	_ = zipWriter.Close()
 	if err != nil {
 		log.Fatal(err)

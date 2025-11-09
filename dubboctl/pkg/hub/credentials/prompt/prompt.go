@@ -154,7 +154,6 @@ you can install docker credential helper https://github.com/docker/docker-creden
 
 func GetDockerAuth(registry string) (pusher.Credentials, error) {
 	configFile := filepath.Join(os.Getenv("HOME"), ".docker", "config.json")
-	// #nosec G304 -- File paths are controlled and validated by caller
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return pusher.Credentials{}, err

@@ -97,7 +97,6 @@ func getRootCertificate(rootCertFile string) (*x509.CertPool, error) {
 	var err error
 
 	if rootCertFile != "" {
-		// #nosec G304 -- File paths are controlled and validated by caller
 		rootCert, err = os.ReadFile(rootCertFile)
 		if err != nil {
 			return nil, err

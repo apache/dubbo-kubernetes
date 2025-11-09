@@ -114,7 +114,6 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	if err != nil {
 		return dcfg, err
 	}
-	// #nosec G301 -- Root directory needs standard permissions
 	if err = os.MkdirAll(dcfg.Root, 0o755); err != nil {
 		return dcfg, err
 	}
@@ -242,7 +241,6 @@ func hasInitialized(path string) (bool, error) {
 		}
 		return false, err
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	bb, err := os.ReadFile(filename)
 	if err != nil {
 		return false, err
@@ -278,12 +276,10 @@ func assertEmptyRoot(path string) (err error) {
 }
 
 func runDataDir(root string) error {
-	// #nosec G301 -- Data directory needs standard permissions
 	if err := os.MkdirAll(filepath.Join(root, dubbo.DataDir), os.ModePerm); err != nil {
 		return err
 	}
 	filePath := filepath.Join(root, ".gitignore")
-	// #nosec G304 -- File paths are controlled and validated by caller
 	roFile, err := os.Open(filePath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -303,10 +299,7 @@ func runDataDir(root string) error {
 			}
 		}
 	}
-	// #nosec G104 -- Close errors are non-critical; file is read-only
 	_ = roFile.Close()
-	// #nosec G302 -- .gitignore file needs 0644 permissions for readability
-	// #nosec G304 -- File paths are controlled and validated by caller
 	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return err

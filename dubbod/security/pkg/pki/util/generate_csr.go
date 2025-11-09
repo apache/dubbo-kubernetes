@@ -121,7 +121,6 @@ func AppendRootCerts(pemCert []byte, rootCertFile string) ([]byte, error) {
 	rootCerts := pemCert
 	if len(rootCertFile) > 0 {
 		log.Debugf("append root certificates from %v", rootCertFile)
-		// #nosec G304 -- File paths are controlled and validated by caller
 		certBytes, err := os.ReadFile(rootCertFile)
 		if err != nil && !os.IsNotExist(err) {
 			return rootCerts, fmt.Errorf("failed to read root certificates (%v)", err)

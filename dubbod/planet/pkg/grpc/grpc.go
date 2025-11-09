@@ -84,7 +84,6 @@ func ServerOptions(options *dubbokeepalive.Options, interceptors ...grpc.UnarySe
 
 	grpcOptions := []grpc.ServerOption{
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(interceptors...)),
-		// #nosec G115 -- maxStreams is a configuration value within valid uint32 range
 		grpc.MaxConcurrentStreams(uint32(maxStreams)),
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 		// Ensure we allow clients sufficient ability to send keep alives. If this is higher than client

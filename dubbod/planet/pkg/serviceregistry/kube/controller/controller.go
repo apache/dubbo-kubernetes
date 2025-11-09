@@ -299,31 +299,26 @@ func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceT
 			if port == nil {
 				continue
 			}
-			// #nosec G115 -- Kubernetes port numbers are within valid uint32 range
 			targetPort := uint32(port.Port) // Default to service port
 
 			// Try to resolve actual targetPort from Kubernetes Service and Pod
 			if kubeSvc != nil {
 				// Find the matching ServicePort in Kubernetes Service
 				for _, kubePort := range kubeSvc.Spec.Ports {
-					// #nosec G115 -- Kubernetes port numbers are within valid int32 range
 					if kubePort.Name == port.Name && int32(kubePort.Port) == int32(port.Port) {
 						// Resolve targetPort from ServicePort.TargetPort
 						if kubePort.TargetPort.Type == intstr.Int {
 							// TargetPort is a number
-							// #nosec G115 -- Kubernetes port numbers are within valid uint32 range
 							targetPort = uint32(kubePort.TargetPort.IntVal)
 						} else if kubePort.TargetPort.Type == intstr.String && pod != nil {
 							// TargetPort is a string (port name), resolve from Pod container ports
 							for _, container := range pod.Spec.Containers {
 								for _, containerPort := range container.Ports {
 									if containerPort.Name == kubePort.TargetPort.StrVal {
-										// #nosec G115 -- Kubernetes port numbers are within valid uint32 range
 										targetPort = uint32(containerPort.ContainerPort)
 										break
 									}
 								}
-								// #nosec G115 -- Kubernetes port numbers are within valid uint32 range
 								if targetPort != uint32(port.Port) {
 									break
 								}

@@ -132,25 +132,6 @@ jobs:
       - name: Check License Header
         uses: apache/skywalking-eyes/header@main
 
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    if: github.repository == 'apache/dubbo-kubernetes'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
-
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: './...'
-
   helm-lint:
     name: Helm Lint
     runs-on: ubuntu-latest

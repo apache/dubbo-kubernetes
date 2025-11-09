@@ -76,7 +76,6 @@ func (d *dialer) DialContext(ctx context.Context, n, a string) (net.Conn, error)
 	go func() {
 		if ctx != nil {
 			<-ctx.Done()
-			// #nosec G104 -- Close errors are non-critical during cleanup
 			_ = conn.Close()
 		}
 	}()
@@ -115,7 +114,6 @@ func NewDialContext(url *nurl.URL, config Config) (ContextDialer, string, error)
 	}
 	defer func() {
 		if sshClient != nil {
-			// #nosec G104 -- Close errors are non-critical during cleanup
 			_ = sshClient.Close()
 		}
 	}()
@@ -352,7 +350,6 @@ func NewSSHClientConfig(url *nurl.URL, credentialsConfig Config) (*ssh.ClientCon
 }
 
 func publicKey(path string, passphrase []byte, passPhraseCallback PassPhraseCallback) (ssh.Signer, error) {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	key, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
@@ -396,7 +393,6 @@ func createHostKeyCallback(hostKeyCallback HostKeyCallback) func(hostPort string
 			return errUnknownServerKey
 		}
 
-		// #nosec G304 -- File paths are controlled and validated by caller
 		f, err := os.Open(knownHosts)
 		if err != nil {
 			return fmt.Errorf("failed to open known_hosts: %w", err)

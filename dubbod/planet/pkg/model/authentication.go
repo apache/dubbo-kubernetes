@@ -18,7 +18,6 @@
 package model
 
 import (
-	"crypto/md5" // #nosec G501 -- MD5 used for non-cryptographic hash, not security sensitive
 	"fmt"
 	"strings"
 	"time"
@@ -103,7 +102,6 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 		policy.peerAuthentications[config.Namespace] = append(policy.peerAuthentications[config.Namespace], config)
 	}
 
-	// #nosec G401 -- MD5 used for non-cryptographic hash (version aggregation), not security sensitive
 	// Not security sensitive code
 	policy.aggregateVersion = fmt.Sprintf("%x", md5.Sum([]byte(strings.Join(versions, ";"))))
 

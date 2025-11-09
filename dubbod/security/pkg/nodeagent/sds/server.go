@@ -124,7 +124,6 @@ func (s *Server) Stop() {
 		s.grpcWorkloadServer.Stop()
 	}
 	if s.grpcWorkloadListener != nil {
-		// #nosec G104 -- Close errors are non-critical during cleanup
 		_ = s.grpcWorkloadListener.Close()
 	}
 	if s.workloadSds != nil {

@@ -138,7 +138,6 @@ func (f *FolderWatch[T]) readOnce() error {
 		} else if !supportedExtensions.Contains(filepath.Ext(path)) || (info.Mode()&os.ModeType) != 0 {
 			return nil
 		}
-		// #nosec G304 -- path is validated and controlled from file watcher
 		data, err := os.ReadFile(path)
 		if err != nil {
 			log.Errorf("Failed to readOnce %s: %v", path, err)

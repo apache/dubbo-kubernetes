@@ -42,7 +42,6 @@ var (
 )
 
 func saveCreds(csrPem []byte, privPem []byte) {
-	// #nosec G306 -- CSR file needs 0644 permissions for readability
 	err := os.WriteFile(*outCsr, csrPem, 0o644)
 	if err != nil {
 		log.Errorf("Could not write output certificate request: %s.", err)

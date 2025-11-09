@@ -56,7 +56,6 @@ func DefaultProxyConfig() *meshconfig.ProxyConfig {
 }
 
 func ReadMeshConfig(filename string) (*meshconfig.MeshConfig, error) {
-	// #nosec G304 -- filename is a controlled path from configuration
 	yaml, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, multierror.Prefix(err, "cannot read mesh config file")

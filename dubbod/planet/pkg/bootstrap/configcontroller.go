@@ -224,7 +224,6 @@ func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3
 		if tlsSettings.GetInsecureSkipVerify().GetValue() || len(tlsSettings.GetCaCertificates()) == 0 {
 			return credentials.NewTLS(&tls.Config{
 				ServerName:         tlsSettings.GetSni(),
-				InsecureSkipVerify: tlsSettings.GetInsecureSkipVerify().GetValue(), // #nosec G402 -- InsecureSkipVerify is configurable by user
 			}), nil
 		}
 		certPool := x509.NewCertPool()
@@ -233,7 +232,6 @@ func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3
 		}
 		return credentials.NewTLS(&tls.Config{
 			ServerName:         tlsSettings.GetSni(),
-			InsecureSkipVerify: tlsSettings.GetInsecureSkipVerify().GetValue(), // #nosec G402 -- InsecureSkipVerify is configurable by user
 			RootCAs:            certPool,
 			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 				return s.verifyCert(rawCerts, tlsSettings)

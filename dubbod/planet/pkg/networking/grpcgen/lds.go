@@ -318,7 +318,6 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 					SocketAddress: &core.SocketAddress{
 						Address: svc.GetAddressForProxy(node), // Use service VIP
 						PortSpecifier: &core.SocketAddress_PortValue{
-							// #nosec G115 -- Port numbers are within valid uint32 range
 							PortValue: uint32(port),
 						},
 					},
@@ -331,7 +330,6 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 			// Add extra addresses if available
 			extrAddresses := svc.GetExtraAddressesForProxy(node)
 			if len(extrAddresses) > 0 {
-				// #nosec G115 -- Port numbers are within valid uint32 range
 				ll.AdditionalAddresses = util.BuildAdditionalAddresses(extrAddresses, uint32(port))
 			}
 
@@ -390,7 +388,6 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			log.Errorf("failed parsing port from gRPC listener name %s: %v", name, err)
 			continue
 		}
-		// #nosec G115 -- Port numbers are within valid uint32 range
 		si, ok := serviceInstancesByPort[uint32(listenPort)]
 		if !ok {
 			// If no service target found for this port, don't create a listener
@@ -449,7 +446,6 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 				SocketAddress: &core.SocketAddress{
 					Address: listenHost,
 					PortSpecifier: &core.SocketAddress_PortValue{
-						// #nosec G115 -- Port numbers are within valid uint32 range
 						PortValue: uint32(listenPort),
 					},
 				},
@@ -474,7 +470,6 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		// add extra addresses for the listener
 		extrAddresses := si.Service.GetExtraAddressesForProxy(node)
 		if len(extrAddresses) > 0 {
-			// #nosec G115 -- Port numbers are within valid uint32 range
 			ll.AdditionalAddresses = util.BuildAdditionalAddresses(extrAddresses, uint32(listenPort))
 		}
 

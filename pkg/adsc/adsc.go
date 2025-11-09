@@ -506,13 +506,11 @@ func tlsConfig(config *Config) (*tls.Config, error) {
 		shost = config.XDSSAN
 	}
 
-	// nolint: gosec
 	// it's insecure only when a user explicitly enable insecure mode.
 	return &tls.Config{
 		GetClientCertificate: getClientCertificate,
 		RootCAs:              serverCAs,
 		ServerName:           shost,
-		InsecureSkipVerify:   config.InsecureSkipVerify, // #nosec G402 -- InsecureSkipVerify is configurable by user
 	}, nil
 }
 

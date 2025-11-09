@@ -258,13 +258,11 @@ func GenCertFromCSR(csr *x509.CertificateRequest, signingCert *x509.Certificate,
 //	signerCertFile: cert file name
 //	signerPrivFile: private key file name
 func LoadSignerCredsFromFiles(signerCertFile string, signerPrivFile string) (*x509.Certificate, crypto.PrivateKey, error) {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	signerCertBytes, err := os.ReadFile(signerCertFile)
 	if err != nil {
 		return nil, nil, fmt.Errorf("certificate file reading failure (%v)", err)
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	signerPrivBytes, err := os.ReadFile(signerPrivFile)
 	if err != nil {
 		return nil, nil, fmt.Errorf("private key file reading failure (%v)", err)

@@ -112,7 +112,6 @@ func (b *Bootstrap) FileWatcherProvider() *FileWatcherCertProviderConfig {
 }
 
 func LoadBootstrap(file string) (*Bootstrap, error) {
-	// #nosec G304 -- file is a controlled path from environment variable or configuration
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err

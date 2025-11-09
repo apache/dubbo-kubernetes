@@ -178,7 +178,6 @@ func NewOsFilesystem(root string) osFilesystem {
 
 func (o osFilesystem) Open(name string) (fs.File, error) {
 	name = filepath.FromSlash(name)
-	// #nosec G304 -- File paths are controlled and validated by caller
 	return os.Open(filepath.Join(o.root, name))
 }
 
@@ -293,7 +292,6 @@ func (u UnionFS) ReadFile(name string) ([]byte, error) {
 		return u.embedFS.ReadFile(name)
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	return os.ReadFile(name)
 }
 
@@ -304,7 +302,6 @@ func (u UnionFS) Open(name string) (fs.File, error) {
 		return u.embedFS.Open(name)
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	return os.Open(name)
 }
 
@@ -360,7 +357,6 @@ func CopyFromFS(root, dest string, fsys Filesystem) (err error) {
 			// as 0644 instead of 0755. For now, just do it this way.
 			// See https://github.com/go-git/go-git/issues/364
 			// Upon resolution, return accessor.Stat(src).Mode()
-			// #nosec G301 -- Directory needs standard permissions
 			return os.MkdirAll(dest, 0o755)
 		case de.Type()&fs.ModeSymlink != 0:
 			var symlinkTarget string
@@ -374,7 +370,6 @@ func CopyFromFS(root, dest string, fsys Filesystem) (err error) {
 			if err != nil {
 				return err
 			}
-			// #nosec G304 -- File paths are controlled and validated by caller
 			destFile, err := os.OpenFile(dest, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fi.Mode())
 			if err != nil {
 				return err

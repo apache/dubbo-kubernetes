@@ -138,7 +138,6 @@ func (l *lruCache[K]) Add(k K, entry dependents, pushReq *PushRequest, value *di
 		return
 	}
 	// It will not overflow until year 2262
-	// #nosec G115 -- UnixNano() returns int64, but CacheToken is uint64. Safe conversion as documented.
 	token := CacheToken(pushReq.Start.UnixNano())
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -200,7 +199,6 @@ func (l *lruCache[K]) updateConfigIndex(k K, dependentConfigs []ConfigHash) {
 func (l *lruCache[K]) Clear(configs sets.Set[ConfigKey]) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	// #nosec G115 -- UnixNano() returns int64, but CacheToken is uint64. Safe conversion as documented.
 	l.token = CacheToken(time.Now().UnixNano())
 	l.evictedOnClear = true
 	defer func() {
@@ -226,7 +224,6 @@ func (l *lruCache[K]) Clear(configs sets.Set[ConfigKey]) {
 func (l *lruCache[K]) ClearAll() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	// #nosec G115 -- UnixNano() returns int64, but CacheToken is uint64. Safe conversion as documented.
 	l.token = CacheToken(time.Now().UnixNano())
 	// Purge with an evict function would turn up to be pretty slow since
 	// it runs the function for every key in the store, might be better to just

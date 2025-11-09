@@ -481,7 +481,6 @@ func (s *Server) initServers(args *PlanetArgs) {
 		multiplexGRPC = true
 	}
 	h2s := &http2.Server{
-		// #nosec G115 -- MaxConcurrentStreams is a configuration value within valid uint32 range
 		MaxConcurrentStreams: uint32(features.MaxConcurrentStreams),
 	}
 	multiplexHandler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -601,7 +600,6 @@ func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain strin
 	var rootCertBytes []byte
 	var err error
 	if caCertPath != "" {
-		// #nosec G304 -- File paths are controlled and validated by caller
 		if rootCertBytes, err = os.ReadFile(caCertPath); err != nil {
 			return nil, err
 		}

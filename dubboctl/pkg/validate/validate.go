@@ -158,7 +158,6 @@ func validateFiles(dubboNamespace *string, files []string, writer io.Writer) err
 		if path == "-" {
 			reader = io.NopCloser(os.Stdin)
 		} else {
-			// #nosec G304 -- File paths are controlled and validated by caller
 			reader, err = os.Open(path)
 			if err != nil {
 				errs = multierror.Append(errs, fmt.Errorf("cannot read file %q: %v", path, err))

@@ -79,7 +79,6 @@ func (d *deploy) Deploy(ctx context.Context, dc *dubbo.DubboConfig, option ...sd
 		fmt.Println("The k8s yaml file already exists in this directory.")
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	out, err := os.Create(path)
 	if err != nil {
 		return sdk.DeploymentResult{

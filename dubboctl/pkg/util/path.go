@@ -35,11 +35,9 @@ func Dir() (path string) {
 }
 
 func GetCreatePath() (err error) {
-	// #nosec G301 -- Config directory needs standard permissions
 	if err = os.MkdirAll(Dir(), os.ModePerm); err != nil {
 		return fmt.Errorf("error creating global config path: %v", err)
 	}
-	// #nosec G301 -- Repositories directory needs standard permissions
 	if err = os.MkdirAll(RepositoriesPath(), os.ModePerm); err != nil {
 		return fmt.Errorf("error creating global config repositories path: %v", err)
 	}

@@ -44,12 +44,9 @@ const (
 
 	SystemRootCerts                 = "SYSTEM"
 	DefaultRootCertFilePath         = "./etc/certs/root-cert.pem"
-	CredentialNameSocketPath        = "./var/run/secrets/credential-uds/socket"       // #nosec G101 -- Path constant, not a credential
-	WorkloadIdentityCredentialsPath = "./var/run/secrets/workload-spiffe-credentials" // #nosec G101 -- Path constant, not a credential
 	WorkloadIdentityCertChainPath   = WorkloadIdentityCredentialsPath + "/cert-chain.pem"
 	WorkloadIdentityRootCertPath    = WorkloadIdentityCredentialsPath + "/root-cert.pem"
 	WorkloadIdentityKeyPath         = WorkloadIdentityCredentialsPath + "/key.pem"
-	FileCredentialNameSocketPath    = "./var/run/secrets/credential-uds/files-socket" // #nosec G101 -- Path constant, not a credential
 	JWT                             = "JWT"
 
 	CredentialMetaDataName = "credential"

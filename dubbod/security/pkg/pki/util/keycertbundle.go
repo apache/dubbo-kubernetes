@@ -79,12 +79,10 @@ func NewVerifiedKeyCertBundleFromFile(
 ) (
 	*KeyCertBundle, error,
 ) {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	certBytes, err := os.ReadFile(certFile)
 	if err != nil {
 		return nil, err
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	privKeyBytes, err := os.ReadFile(privKeyFile)
 	if err != nil {
 		return nil, err
@@ -93,7 +91,6 @@ func NewVerifiedKeyCertBundleFromFile(
 	if len(certChainFiles) > 0 {
 		for _, f := range certChainFiles {
 			var b []byte
-			// #nosec G304 -- File paths are controlled and validated by caller
 			if b, err = os.ReadFile(f); err != nil {
 				return nil, err
 			}
@@ -101,7 +98,6 @@ func NewVerifiedKeyCertBundleFromFile(
 			certChainBytes = append(certChainBytes, b...)
 		}
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	rootCertBytes, err := os.ReadFile(rootCertFile)
 	if err != nil {
 		return nil, err
@@ -123,7 +119,6 @@ func NewKeyCertBundleWithRootCertFromFile(rootCertFile string) (*KeyCertBundle, 
 	if rootCertFile == "" {
 		rootCertBytes = []byte{}
 	} else {
-		// #nosec G304 -- File paths are controlled and validated by caller
 		rootCertBytes, err = os.ReadFile(rootCertFile)
 		if err != nil {
 			return nil, err
@@ -258,12 +253,10 @@ func (b *KeyCertBundle) UpdateVerifiedKeyCertBundleFromFile(
 	certChainFiles []string,
 	rootCertFile, crlFile string,
 ) error {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	certBytes, err := os.ReadFile(certFile)
 	if err != nil {
 		return err
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	privKeyBytes, err := os.ReadFile(privKeyFile)
 	if err != nil {
 		return err
@@ -272,7 +265,6 @@ func (b *KeyCertBundle) UpdateVerifiedKeyCertBundleFromFile(
 	if len(certChainFiles) != 0 {
 		for _, f := range certChainFiles {
 			var b []byte
-			// #nosec G304 -- File paths are controlled and validated by caller
 			if b, err = os.ReadFile(f); err != nil {
 				return err
 			}
@@ -280,7 +272,6 @@ func (b *KeyCertBundle) UpdateVerifiedKeyCertBundleFromFile(
 			certChainBytes = append(certChainBytes, b...)
 		}
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	rootCertBytes, err := os.ReadFile(rootCertFile)
 	if err != nil {
 		return err
@@ -307,7 +298,6 @@ func gerCRLBytesFromFile(crlFile string) ([]byte, error) {
 		return nil, nil
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	return os.ReadFile(crlFile)
 }
 

@@ -248,7 +248,6 @@ func checkAuth(ctx context.Context, image string, credentials pusher.Credentials
 }
 
 func getCredentialHelperFromConfig(confFilePath string) (string, error) {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	data, err := os.ReadFile(confFilePath)
 	if err != nil {
 		return "", err
@@ -271,7 +270,6 @@ func setCredentialHelperToConfig(confFilePath, helper string) error {
 
 	configData := make(map[string]interface{})
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	if data, err := os.ReadFile(confFilePath); err == nil {
 		err = json.Unmarshal(data, &configData)
 		if err != nil {

@@ -35,7 +35,6 @@ type MeshConfigSource = krt.Singleton[string]
 
 func NewFileSource(fileWatcher filewatcher.FileWatcher, filename string, opts krt.OptionsBuilder) (MeshConfigSource, error) {
 	return krtfiles.NewFileSingleton[string](fileWatcher, filename, func(filename string) (string, error) {
-		// #nosec G304 -- filename is a controlled path from configuration
 		b, err := os.ReadFile(filename)
 		if err != nil {
 			return "", err

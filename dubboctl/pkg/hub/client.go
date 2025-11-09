@@ -123,7 +123,6 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 		dockerClient = clientWithAdditionalCleanup{
 			CommonAPIClient: dockerClient,
 			cleanUp: func() {
-				// #nosec G104 -- Close errors are non-critical during cleanup
 				_ = closer.Close()
 			},
 		}
@@ -167,7 +166,6 @@ func newHttpClient() *http.Client {
 		dockerCertPath = config.Dir()
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	caData, err := os.ReadFile(filepath.Join(dockerCertPath, "ca.pem"))
 	if err == nil {
 		certPool := x509.NewCertPool()
@@ -178,9 +176,7 @@ func newHttpClient() *http.Client {
 		}
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	certData, certErr := os.ReadFile(filepath.Join(dockerCertPath, "cert.pem"))
-	// #nosec G304 -- File paths are controlled and validated by caller
 	keyData, keyErr := os.ReadFile(filepath.Join(dockerCertPath, "key.pem"))
 	if certErr == nil && keyErr == nil {
 		cliCert, err := tls.X509KeyPair(certData, keyData)

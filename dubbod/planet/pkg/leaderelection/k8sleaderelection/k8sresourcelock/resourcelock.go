@@ -123,9 +123,7 @@ func LeaseSpecToLeaderElectionRecord(spec *coordinationv1.LeaseSpec) *LeaderElec
 }
 
 func LeaderElectionRecordToLeaseSpec(ler *LeaderElectionRecord) coordinationv1.LeaseSpec {
-	// #nosec G115 -- Duration and transitions are within valid int32 range
 	leaseDurationSeconds := int32(ler.LeaseDurationSeconds)
-	// #nosec G115 -- Duration and transitions are within valid int32 range
 	leaseTransitions := int32(ler.LeaderTransitions)
 	return coordinationv1.LeaseSpec{
 		HolderIdentity:       &ler.HolderIdentity,

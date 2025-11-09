@@ -105,17 +105,14 @@ func (w *Watcher) SetAndNotifyCACRL(crl []byte) {
 
 // SetFromFilesAndNotify sets the key cert and root cert from files and notify the watchers.
 func (w *Watcher) SetFromFilesAndNotify(keyFile, certFile, rootCert string) error {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	cert, err := os.ReadFile(certFile)
 	if err != nil {
 		return err
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	key, err := os.ReadFile(keyFile)
 	if err != nil {
 		return err
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	caBundle, err := os.ReadFile(rootCert)
 	if err != nil {
 		return err

@@ -43,11 +43,9 @@ func readSecret(prompt string) (pw []byte, err error) {
 	for {
 		n, err := os.Stdin.Read(b[:])
 		if n > 0 && b[0] != '\r' {
-			// #nosec G602 -- n > 0 ensures b[0] is valid
 			if b[0] == '\n' {
 				return pw, nil
 			}
-			// #nosec G602 -- n > 0 ensures b[0] is valid
 			pw = append(pw, b[0])
 			if len(pw) > 1024 {
 				err = errors.New("password too long, 1024 byte limit")

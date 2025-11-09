@@ -70,7 +70,6 @@ func NewAegisClient(opts *security.Options, tlsOpts *TLSOptions) (*AegisClient, 
 
 func (c *AegisClient) Close() {
 	if c.conn != nil {
-		// #nosec G104 -- Close errors are non-critical during cleanup
 		_ = c.conn.Close()
 	}
 }

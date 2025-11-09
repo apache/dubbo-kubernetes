@@ -30,7 +30,6 @@ func LoadTemplate(path, file, builtin string) (string, error) {
 		return builtin, nil
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	content, err := os.ReadFile(file)
 	if err != nil {
 		return "", err

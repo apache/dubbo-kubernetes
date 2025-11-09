@@ -62,9 +62,7 @@ func NewSelfSignedCARootCertRotator(config *SelfSignedCARootCertRotatorConfig, c
 	if config.enableJitter {
 		// Select a back off time in seconds, which is in the range of [0, rotator.config.CheckInterval).
 		// Using crypto/rand for jitter is unnecessary overhead. math/rand is sufficient for backoff timing.
-		//nolint:gosec // G404: math/rand is sufficient for backoff jitter timing
 		randSource := rand.NewSource(time.Now().UnixNano())
-		// #nosec G404 -- math/rand is sufficient for backoff jitter timing
 		randBackOff := rand.New(randSource)
 		backOffSeconds := int(time.Duration(randBackOff.Int63n(int64(rotator.config.CheckInterval))).Seconds())
 		rotator.backOffTime = time.Duration(backOffSeconds) * time.Second

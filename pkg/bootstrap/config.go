@@ -58,7 +58,6 @@ func ReadPodAnnotations(path string) (map[string]string, error) {
 	if path == "" {
 		path = constants.PodInfoAnnotationsPath
 	}
-	// #nosec G304 -- path is a controlled path from constants or configuration
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

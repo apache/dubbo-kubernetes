@@ -63,7 +63,6 @@ func (s *Server) initSecureWebhookServer(args *PlanetArgs) {
 		ErrorLog:          log.New(&httpServerErrorLogWriter{}, "", 0),
 		Handler:           s.httpsMux,
 		TLSConfig:         tlsConfig,
-		ReadHeaderTimeout: 10 * time.Second, // #nosec G112 -- ReadHeaderTimeout set to prevent Slowloris attacks
 	}
 
 	// register istiodReadyHandler on the httpsMux so that readiness can also be checked remotely

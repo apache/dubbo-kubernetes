@@ -96,7 +96,6 @@ func NewDubboConfig(path string) (*DubboConfig, error) {
 		return f, err
 	}
 
-	// #nosec G304 -- File paths are controlled and validated by caller
 	bb, err := os.ReadFile(filename)
 	if err != nil {
 		return f, err
@@ -130,7 +129,6 @@ func (dc *DubboConfig) WriteFile() (err error) {
 	if bytes, err = yaml.Marshal(dc); err != nil {
 		return
 	}
-	// #nosec G306 -- Configuration file needs 0644 permissions for readability
 	if err = os.WriteFile(file, bytes, 0o644); err != nil {
 		return
 	}
@@ -144,7 +142,6 @@ func (dc *DubboConfig) WriteDockerfile(cmd *cobra.Command) (err error) {
 		fmt.Fprintln(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.")
 		return
 	}
-	// #nosec G306 -- Configuration file needs 0644 permissions for readability
 	if err = os.WriteFile(path, []byte(bytes), 0o644); err != nil {
 		return
 	}
@@ -204,7 +201,6 @@ func (dc *DubboConfig) buildStamp() string {
 	if _, err := os.Stat(path); err != nil {
 		return ""
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return ""
@@ -233,7 +229,6 @@ func (dc *DubboConfig) Stamp(oo ...stampOption) (err error) {
 		return
 	}
 
-	// #nosec G306 -- Build metadata file needs standard permissions
 	if err = os.WriteFile(filepath.Join(dc.Root, DataDir, built), []byte(hash), os.ModePerm); err != nil {
 		return err
 	}
@@ -293,12 +288,10 @@ func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
 }
 
 func runDataDir(root string) error {
-	// #nosec G301 -- Data directory needs standard permissions
 	if err := os.MkdirAll(filepath.Join(root, DataDir), os.ModePerm); err != nil {
 		return err
 	}
 	filePath := filepath.Join(root, ".gitignore")
-	// #nosec G304 -- File paths are controlled and validated by caller
 	roFile, err := os.Open(filePath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -318,10 +311,7 @@ func runDataDir(root string) error {
 			}
 		}
 	}
-	// #nosec G104 -- Close errors are non-critical; file is read-only
 	_ = roFile.Close()
-	// #nosec G302 -- .gitignore file needs 0644 permissions for readability
-	// #nosec G304 -- File paths are controlled and validated by caller
 	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return err

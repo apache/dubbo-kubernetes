@@ -434,12 +434,10 @@ func (sc *SecretManagerClient) generateFileSecret(resourceName string) (bool, *s
 }
 
 func (sc *SecretManagerClient) keyCertificateExist(certPath, keyPath string) bool {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	b, err := os.ReadFile(certPath)
 	if err != nil || len(b) == 0 {
 		return false
 	}
-	// #nosec G304 -- File paths are controlled and validated by caller
 	b, err = os.ReadFile(keyPath)
 	if err != nil || len(b) == 0 {
 		return false
@@ -453,7 +451,6 @@ var (
 )
 
 func (sc *SecretManagerClient) rootCertificateExist(filePath string) bool {
-	// #nosec G304 -- File paths are controlled and validated by caller
 	b, err := os.ReadFile(filePath)
 	if err != nil || len(b) == 0 {
 		return false
@@ -513,7 +510,6 @@ func (sc *SecretManagerClient) readFileWithTimeout(path string) ([]byte, error) 
 	retryBackoff := firstRetryBackOffDuration
 	timeout := time.After(totalTimeout)
 	for {
-		// #nosec G304 -- File paths are controlled and validated by caller
 		cert, err := os.ReadFile(path)
 		if err == nil {
 			return cert, nil
@@ -536,7 +532,6 @@ func (sc *SecretManagerClient) generateRootCertFromExistingFile(rootCertPath, re
 	o.InitialInterval = sc.configOptions.FileDebounceDuration
 	b := backoff.NewExponentialBackOff(o)
 	certValid := func() error {
-		// #nosec G304 -- File paths are controlled and validated by caller
 		rootCert, err = os.ReadFile(rootCertPath)
 		if err != nil {
 			return err
