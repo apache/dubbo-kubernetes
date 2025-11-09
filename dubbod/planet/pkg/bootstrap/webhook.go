@@ -22,7 +22,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
@@ -59,10 +58,10 @@ func (s *Server) initSecureWebhookServer(args *PlanetArgs) {
 	// create the https server for hosting the k8s injectionWebhook handlers.
 	s.httpsMux = http.NewServeMux()
 	s.httpsServer = &http.Server{
-		Addr:              args.ServerOptions.HTTPSAddr,
-		ErrorLog:          log.New(&httpServerErrorLogWriter{}, "", 0),
-		Handler:           s.httpsMux,
-		TLSConfig:         tlsConfig,
+		Addr:      args.ServerOptions.HTTPSAddr,
+		ErrorLog:  log.New(&httpServerErrorLogWriter{}, "", 0),
+		Handler:   s.httpsMux,
+		TLSConfig: tlsConfig,
 	}
 
 	// register istiodReadyHandler on the httpsMux so that readiness can also be checked remotely

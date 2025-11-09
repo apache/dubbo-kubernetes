@@ -18,6 +18,7 @@
 package model
 
 import (
+	"crypto/md5"
 	"fmt"
 	"strings"
 	"time"
