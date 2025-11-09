@@ -32,9 +32,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("inject", "inject debugging")
 
 const (
 	ProxyContainerName      = "dubbo-proxy"
@@ -107,7 +110,7 @@ func parseDryTemplate(tmplStr string, funcMap map[string]any) (*template.Templat
 	temp := template.New("inject")
 	t, err := temp.Funcs(sprig.TxtFuncMap()).Funcs(funcMap).Parse(tmplStr)
 	if err != nil {
-		klog.Infof("Failed to parse template: %v %v\n", err, tmplStr)
+		log.Infof("Failed to parse template: %v %v\n", err, tmplStr)
 		return nil, err
 	}
 
@@ -154,7 +157,7 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 	case "":
 		useDefault = true
 	default:
-		klog.Warningf("Invalid value for %s: %q. Only 'true' and 'false' are accepted. Falling back to default injection policy.",
+		log.Warnf("Invalid value for %s: %q. Only 'true' and 'false' are accepted. Falling back to default injection policy.",
 			"proxyless.dubbo.apache.org/inject", objectSelector)
 		useDefault = true
 	}
@@ -162,7 +165,7 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 	var required bool
 	switch config.Policy {
 	default: // InjectionPolicyOff
-		klog.Errorf("Illegal value for autoInject:%s, must be one of [%s,%s]. Auto injection disabled!",
+		log.Errorf("Illegal value for autoInject:%s, must be one of [%s,%s]. Auto injection disabled!",
 			config.Policy, InjectionPolicyDisabled, InjectionPolicyEnabled)
 		required = false
 	case InjectionPolicyDisabled:
@@ -197,7 +200,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 	meshConfig := params.meshConfig
 
 	if err := validateAnnotations(metadata.GetAnnotations()); err != nil {
-		klog.Errorf("Injection failed due to invalid annotations: %v", err)
+		log.Errorf("Injection failed due to invalid annotations: %v", err)
 		return nil, nil, err
 	}
 
@@ -292,7 +295,7 @@ func knownTemplates(t Templates) []string {
 func runTemplate(tmpl *template.Template, data ProxylessTemplateData) (bytes.Buffer, error) {
 	var res bytes.Buffer
 	if err := tmpl.Execute(&res, &data); err != nil {
-		klog.Errorf("Invalid template: %v", err)
+		log.Errorf("Invalid template: %v", err)
 		return bytes.Buffer{}, err
 	}
 
@@ -306,10 +309,10 @@ func selectTemplates(params InjectionParameters) []string {
 			name := strings.TrimSpace(tmplName)
 			names = append(names, name)
 		}
-		klog.Infof("Using templates from annotation: %v", names)
+		log.Infof("Using templates from annotation: %v", names)
 		return resolveAliases(params, names)
 	}
-	klog.Infof("Using default templates: %v", params.defaultTemplate)
+	log.Infof("Using default templates: %v", params.defaultTemplate)
 	return resolveAliases(params, params.defaultTemplate)
 }
 

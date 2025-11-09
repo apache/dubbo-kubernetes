@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/http"
 	"os"
 	"path"
@@ -29,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/cmd/planet-agent/config"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
@@ -200,7 +201,11 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	a.statusSrv = &http.Server{Addr: fmt.Sprintf(":%d", a.proxyConfig.StatusPort), Handler: mux}
+	a.statusSrv = &http.Server{
+		Addr:              fmt.Sprintf(":%d", a.proxyConfig.StatusPort),
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second, // #nosec G112 -- ReadHeaderTimeout set to prevent Slowloris attacks
+	}
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
@@ -347,6 +352,7 @@ func (a *Agent) startFileWatcher(ctx context.Context, filePath string, handler f
 	// Ensure parent directory exists for filewatcher
 	parentDir := filepath.Dir(absPath)
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+		// #nosec G301 -- Directory needs standard permissions
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
 			log.Warnf("Failed to create parent directory %s for file watcher: %v", parentDir, err)
 			return

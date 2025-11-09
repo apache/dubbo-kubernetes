@@ -20,6 +20,8 @@ package kube
 import (
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -27,8 +29,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -115,6 +115,7 @@ func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.I
 		// store the service port to node port mappings
 		portMap := make(map[uint32]uint32)
 		for _, p := range svc.Spec.Ports {
+			// #nosec G115 -- Kubernetes port numbers are within valid uint32 range
 			portMap[uint32(p.Port)] = uint32(p.NodePort)
 		}
 		dubboService.Attributes.ClusterExternalPorts = map[cluster.ID]map[uint32]uint32{clusterID: portMap}

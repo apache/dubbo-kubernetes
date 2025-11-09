@@ -19,10 +19,11 @@ package uds
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net"
 	"os"
 	"path/filepath"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
 func NewListener(path string) (net.Listener, error) {
@@ -48,6 +49,7 @@ func NewListener(path string) (net.Listener, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("uds file %q doesn't exist", path)
 	}
+	// #nosec G302 -- UDS socket needs 0666 permissions for inter-process communication
 	if err := os.Chmod(path, 0o666); err != nil {
 		return nil, fmt.Errorf("failed to update %q permission", path)
 	}

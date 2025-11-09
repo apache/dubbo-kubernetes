@@ -39,6 +39,7 @@ func ConstructProxyConfig(meshConfigFile, proxyConfigEnv string) (*meshconfig.Pr
 	}
 	var fileMeshContents string
 	if fileExists(meshConfigFile) {
+		// #nosec G304 -- meshConfigFile is a controlled path from configuration
 		contents, err := os.ReadFile(meshConfigFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read mesh config file %v: %v", meshConfigFile, err)

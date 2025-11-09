@@ -18,12 +18,13 @@
 package ca
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/k8s/controller"
 	certutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/util"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"math/rand"
-	"time"
 )
 
 var rootCertRotatorLog = log.RegisterScope("rootcertrotator", "Self-signed CA root cert rotator log")
@@ -60,6 +61,7 @@ func NewSelfSignedCARootCertRotator(config *SelfSignedCARootCertRotatorConfig, c
 	}
 	if config.enableJitter {
 		// Select a back off time in seconds, which is in the range of [0, rotator.config.CheckInterval).
+		// #nosec G404 -- Using crypto/rand for jitter is unnecessary overhead. math/rand is sufficient for backoff timing.
 		randSource := rand.NewSource(time.Now().UnixNano())
 		randBackOff := rand.New(randSource)
 		backOffSeconds := int(time.Duration(randBackOff.Int63n(int64(rotator.config.CheckInterval))).Seconds())

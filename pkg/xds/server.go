@@ -29,7 +29,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
-	"k8s.io/klog/v2"
 )
 
 type DiscoveryStream = discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer
@@ -163,16 +162,16 @@ func Receive(ctx ConnectionContext) {
 		req, err := con.stream.Recv()
 		if err != nil {
 			if dubbogrpc.GRPCErrorType(err) != dubbogrpc.UnexpectedError {
-				klog.Infof("%q %s terminated", con.peerAddr, con.conID)
+				log.Infof("%q %s terminated", con.peerAddr, con.conID)
 				return
 			}
 			con.errorChan <- err
-			klog.Errorf("%q %s terminated with error: %v", con.peerAddr, con.conID, err)
+			log.Errorf("%q %s terminated with error: %v", con.peerAddr, con.conID, err)
 			return
 		}
 		if firstRequest {
 			if req.TypeUrl == model.HealthInfoType {
-				klog.Warningf("%q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
+				log.Warnf("%q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
 				continue
 			}
 			firstRequest = false
@@ -191,7 +190,7 @@ func Receive(ctx ConnectionContext) {
 		select {
 		case con.reqChan <- req:
 		case <-con.stream.Context().Done():
-			klog.Infof("%q %s terminated with stream closed", con.peerAddr, con.conID)
+			log.Infof("%q %s terminated with stream closed", con.peerAddr, con.conID)
 			return
 		}
 	}
@@ -215,7 +214,7 @@ func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
 			})
 		}
 	} else if status.Convert(err).Code() == codes.DeadlineExceeded {
-		klog.Infof("Timeout writing %s: %v", conn.conID, model.GetShortType(res.TypeUrl))
+		log.Infof("Timeout writing %s: %v", conn.conID, model.GetShortType(res.TypeUrl))
 	}
 	return err
 }
@@ -260,8 +259,9 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	stype := model.GetShortType(request.TypeUrl)
 
 	if request.ErrorDetail != nil {
+		// #nosec G115 -- ErrorDetail.Code is int32, codes.Code is uint32. Safe conversion for gRPC error codes.
 		errCode := codes.Code(request.ErrorDetail.Code)
-		klog.Warningf("%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
+		log.Warnf("%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
 		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
 			wr.LastError = request.ErrorDetail.GetMessage()
 			return wr
@@ -374,7 +374,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// We should always respond "alwaysRespond" marked requests to let Envoy finish warming
 	// even though Nonce match and it looks like an ACK.
 	if alwaysRespond {
-		klog.Infof("%s: FORCE RESPONSE %s for warming.", stype, id)
+		log.Infof("%s: FORCE RESPONSE %s for warming.", stype, id)
 		return true, emptyResourceDelta
 	}
 

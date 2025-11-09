@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+//nolint:govet // protobuf messages contain internal locks, but copying is safe for API operations
 package crdclient
 
 import (
@@ -42,24 +43,28 @@ import (
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.DestinationRule:
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Create(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API creation
 		}, metav1.CreateOptions{})
 	case gvk.PeerAuthentication:
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
 		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Create(context.TODO(), &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API creation
 		}, metav1.CreateOptions{})
 	case gvk.RequestAuthentication:
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
 		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Create(context.TODO(), &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API creation
 		}, metav1.CreateOptions{})
 	case gvk.VirtualService:
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Create(context.TODO(), &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API creation
 		}, metav1.CreateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -69,24 +74,28 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.DestinationRule:
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Update(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API update
 		}, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
 		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Update(context.TODO(), &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API update
 		}, metav1.UpdateOptions{})
 	case gvk.RequestAuthentication:
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
 		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Update(context.TODO(), &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API update
 		}, metav1.UpdateOptions{})
 	case gvk.VirtualService:
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Update(context.TODO(), &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
+			Spec:       *spec, //nolint:govet // protobuf message contains internal locks, but this is safe for API update
 		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -96,24 +105,28 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.DestinationRule:
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
+			Status:     *status, //nolint:govet // protobuf message contains internal locks, but this is safe for API status update
 		}, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
+			Status:     *status, //nolint:govet // protobuf message contains internal locks, but this is safe for API status update
 		}, metav1.UpdateOptions{})
 	case gvk.RequestAuthentication:
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
+			Status:     *status, //nolint:govet // protobuf message contains internal locks, but this is safe for API status update
 		}, metav1.UpdateOptions{})
 	case gvk.VirtualService:
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
+			Status:     *status, //nolint:govet // protobuf message contains internal locks, but this is safe for API status update
 		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -126,13 +139,15 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 	}
 	switch orig.GroupVersionKind {
 	case gvk.DestinationRule:
+		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
+		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		oldRes := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *origSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		modRes := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *modSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
@@ -141,13 +156,15 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return c.Dubbo().NetworkingV1().DestinationRules(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.PeerAuthentication:
+		origSpec := orig.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		modSpec := mod.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
 		oldRes := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
+			Spec:       *origSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		modRes := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
+			Spec:       *modSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
@@ -156,13 +173,15 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return c.Dubbo().SecurityV1().PeerAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.RequestAuthentication:
+		origSpec := orig.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
+		modSpec := mod.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
 		oldRes := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
+			Spec:       *origSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		modRes := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
+			Spec:       *modSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
@@ -171,13 +190,15 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return c.Dubbo().SecurityV1().RequestAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.VirtualService:
+		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
+		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		oldRes := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
+			Spec:       *origSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		modRes := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
+			Spec:       *modSpec, //nolint:govet // protobuf message contains internal locks, but this is safe for API patch
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {

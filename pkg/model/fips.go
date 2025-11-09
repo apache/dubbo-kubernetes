@@ -21,8 +21,11 @@ import (
 	gotls "crypto/tls"
 
 	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("model", "model debugging")
 
 var fipsGoCiphers = []uint16{
 	gotls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
@@ -46,7 +49,7 @@ func EnforceGoCompliance(ctx *gotls.Config) {
 		ctx.CipherSuites = []uint16{gotls.TLS_AES_128_GCM_SHA256, gotls.TLS_AES_256_GCM_SHA384}
 		ctx.CurvePreferences = []gotls.CurveID{gotls.X25519MLKEM768}
 	default:
-		klog.Warningf("unknown compliance policy: %q", common_features.CompliancePolicy)
+		log.Warnf("unknown compliance policy: %q", common_features.CompliancePolicy)
 		return
 	}
 }

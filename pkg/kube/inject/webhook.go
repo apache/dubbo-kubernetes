@@ -21,13 +21,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"text/template"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
@@ -124,6 +125,7 @@ type ValuesConfig struct {
 }
 
 func loadConfig(injectFile, valuesFile string) (*Config, string, error) {
+	// #nosec G304 -- injectFile is a controlled path from configuration
 	data, err := os.ReadFile(injectFile)
 	if err != nil {
 		return nil, "", err
@@ -134,6 +136,7 @@ func loadConfig(injectFile, valuesFile string) (*Config, string, error) {
 		return nil, "", err
 	}
 
+	// #nosec G304 -- valuesFile is a controlled path from configuration
 	valuesConfig, err := os.ReadFile(valuesFile)
 	if err != nil {
 		return nil, "", err

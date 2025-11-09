@@ -19,9 +19,9 @@ package namespace
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	"k8s.io/klog/v2"
 	"sync"
+
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +35,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	meshapi "istio.io/api/mesh/v1alpha1"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("namespacefilter", "namespace filter debugging")
 
 type DiscoveryFilter func(obj any) bool
 
@@ -210,7 +214,7 @@ func (d *discoveryNamespacesFilter) selectorsChanged(
 		for _, selector := range discoverySelectors {
 			ls, err := LabelSelectorAsSelector(selector)
 			if err != nil {
-				klog.Errorf("error initializing discovery namespaces filter, invalid discovery selector: %v", err)
+				log.Errorf("error initializing discovery namespaces filter, invalid discovery selector: %v", err)
 				return nil, nil
 			}
 			selectors = append(selectors, ls)

@@ -22,9 +22,9 @@ import (
 	"math"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -84,6 +84,7 @@ func ServerOptions(options *dubbokeepalive.Options, interceptors ...grpc.UnarySe
 
 	grpcOptions := []grpc.ServerOption{
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(interceptors...)),
+		// #nosec G115 -- maxStreams is a configuration value within valid uint32 range
 		grpc.MaxConcurrentStreams(uint32(maxStreams)),
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 		// Ensure we allow clients sufficient ability to send keep alives. If this is higher than client

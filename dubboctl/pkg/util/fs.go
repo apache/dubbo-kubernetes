@@ -29,9 +29,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-)
 
-import (
 	billy "github.com/go-git/go-billy/v5"
 )
 
@@ -359,6 +357,7 @@ func CopyFromFS(root, dest string, fsys Filesystem) (err error) {
 			// as 0644 instead of 0755. For now, just do it this way.
 			// See https://github.com/go-git/go-git/issues/364
 			// Upon resolution, return accessor.Stat(src).Mode()
+			// #nosec G301 -- Directory needs standard permissions
 			return os.MkdirAll(dest, 0o755)
 		case de.Type()&fs.ModeSymlink != 0:
 			var symlinkTarget string

@@ -296,6 +296,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 	}
 
 	// Read bootstrap file to verify UDS socket
+	// #nosec G304 -- bootstrapPath is a controlled path from environment variable
 	bootstrapData, err := os.ReadFile(bootstrapPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read bootstrap file: %v", err)

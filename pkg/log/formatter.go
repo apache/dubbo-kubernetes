@@ -224,19 +224,24 @@ func parseKlogTimestamp(klogTime string) time.Time {
 	month := 0
 	day := 0
 	if len(datePart) == 4 {
-		fmt.Sscanf(datePart, "%02d%02d", &month, &day)
+		// #nosec G104 -- Sscanf errors are non-critical; default values are acceptable
+		_, _ = fmt.Sscanf(datePart, "%02d%02d", &month, &day)
 	}
 
 	hour := 0
 	min := 0
 	sec := 0
-	fmt.Sscanf(hmsParts[0], "%d", &hour)
-	fmt.Sscanf(hmsParts[1], "%d", &min)
-	fmt.Sscanf(hmsParts[2], "%d", &sec)
+	// #nosec G104 -- Sscanf errors are non-critical; default values are acceptable
+	_, _ = fmt.Sscanf(hmsParts[0], "%d", &hour)
+	// #nosec G104 -- Sscanf errors are non-critical; default values are acceptable
+	_, _ = fmt.Sscanf(hmsParts[1], "%d", &min)
+	// #nosec G104 -- Sscanf errors are non-critical; default values are acceptable
+	_, _ = fmt.Sscanf(hmsParts[2], "%d", &sec)
 
 	// Parse microseconds (pad to nanoseconds)
 	micro := 0
-	fmt.Sscanf(microseconds, "%d", &micro)
+	// #nosec G104 -- Sscanf errors are non-critical; default values are acceptable
+	_, _ = fmt.Sscanf(microseconds, "%d", &micro)
 	nanos := micro * 1000
 
 	if month == 0 || day == 0 {

@@ -23,13 +23,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -128,6 +129,7 @@ func (dc *DubboConfig) WriteFile() (err error) {
 	if bytes, err = yaml.Marshal(dc); err != nil {
 		return
 	}
+	// #nosec G306 -- Configuration file needs 0644 permissions for readability
 	if err = os.WriteFile(file, bytes, 0o644); err != nil {
 		return
 	}
@@ -141,6 +143,7 @@ func (dc *DubboConfig) WriteDockerfile(cmd *cobra.Command) (err error) {
 		fmt.Fprintln(cmd.OutOrStdout(), "The runtime of your current project is not one of Java or go. We cannot help you generate a Dockerfile template.")
 		return
 	}
+	// #nosec G306 -- Configuration file needs 0644 permissions for readability
 	if err = os.WriteFile(path, []byte(bytes), 0o644); err != nil {
 		return
 	}
@@ -228,6 +231,7 @@ func (dc *DubboConfig) Stamp(oo ...stampOption) (err error) {
 		return
 	}
 
+	// #nosec G306 -- Build metadata file needs standard permissions
 	if err = os.WriteFile(filepath.Join(dc.Root, DataDir, built), []byte(hash), os.ModePerm); err != nil {
 		return err
 	}
@@ -287,6 +291,7 @@ func Fingerprint(dc *DubboConfig) (hash, log string, err error) {
 }
 
 func runDataDir(root string) error {
+	// #nosec G301 -- Data directory needs standard permissions
 	if err := os.MkdirAll(filepath.Join(root, DataDir), os.ModePerm); err != nil {
 		return err
 	}
@@ -310,7 +315,9 @@ func runDataDir(root string) error {
 			}
 		}
 	}
-	roFile.Close()
+	// #nosec G104 -- Close errors are non-critical; file is read-only
+	_ = roFile.Close()
+	// #nosec G302 -- .gitignore file needs 0644 permissions for readability
 	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return err

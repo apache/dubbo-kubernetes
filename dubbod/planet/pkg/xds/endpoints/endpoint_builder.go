@@ -219,6 +219,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 			Locality:    &core.Locality{},
 			LbEndpoints: lbEndpoints,
 			LoadBalancingWeight: &wrapperspb.UInt32Value{
+				// #nosec G115 -- len() result is always non-negative and within uint32 range for practical purposes
 				Value: uint32(len(lbEndpoints)),
 			},
 		},

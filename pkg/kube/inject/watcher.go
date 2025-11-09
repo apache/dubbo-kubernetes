@@ -28,8 +28,11 @@ import (
 	"github.com/fsnotify/fsnotify"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("injectwatcher", "inject watcher debugging")
 
 type Watcher interface {
 	SetHandler(func(*Config, string) error)
@@ -81,19 +84,19 @@ func (w *fileWatcher) Run(stop <-chan struct{}) {
 			timerC = nil
 			proxylessconfig, valuesConfig, err := w.Get()
 			if err != nil {
-				klog.Errorf("update error: %v", err)
+				log.Errorf("update error: %v", err)
 				break
 			}
 			if w.handler != nil {
 				if err := w.handler(proxylessconfig, valuesConfig); err != nil {
-					klog.Errorf("update error: %v", err)
+					log.Errorf("update error: %v", err)
 				}
 			}
 		case event, ok := <-w.watcher.Events:
 			if !ok {
 				return
 			}
-			klog.V(2).Infof("Injector watch update: %+v", event)
+			log.Debugf("Injector watch update: %+v", event)
 			// use a timer to debounce configuration updates
 			if (event.Has(fsnotify.Write) || event.Has(fsnotify.Create)) && timerC == nil {
 				timerC = time.After(watchDebounceDelay)
@@ -102,7 +105,7 @@ func (w *fileWatcher) Run(stop <-chan struct{}) {
 			if !ok {
 				return
 			}
-			klog.Errorf("Watcher error: %v", err)
+			log.Errorf("Watcher error: %v", err)
 		case <-stop:
 			return
 		}
@@ -145,12 +148,12 @@ func NewConfigMapWatcher(client kube.Client, namespace, name, configKey, valuesK
 	w.c = configmapwatcher.NewController(client, namespace, name, func(cm *v1.ConfigMap) {
 		proxylessConfig, valuesConfig, err := readConfigMap(cm, configKey, valuesKey)
 		if err != nil {
-			klog.Warningf("failed to read injection config from ConfigMap: %v", err)
+			log.Warnf("failed to read injection config from ConfigMap: %v", err)
 			return
 		}
 		if w.handler != nil {
 			if err := w.handler(proxylessConfig, valuesConfig); err != nil {
-				klog.Errorf("update error: %v", err)
+				log.Errorf("update error: %v", err)
 			}
 		}
 	})

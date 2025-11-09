@@ -134,7 +134,8 @@ func (w *interceptWriter) Write(p []byte) (n int, err error) {
 		formatted = strings.TrimRight(formatted, "\n\r \t")
 		if formatted != "" {
 			formatted = formatted + "\n"
-			w.interceptor.original.Write([]byte(formatted))
+			// #nosec G104 -- Write errors are non-critical for logging; best effort is acceptable
+			_, _ = w.interceptor.original.Write([]byte(formatted))
 		}
 	}
 

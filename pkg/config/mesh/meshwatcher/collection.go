@@ -18,19 +18,24 @@
 package meshwatcher
 
 import (
+	"os"
+	"path"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	krtfiles "github.com/apache/dubbo-kubernetes/pkg/kube/krt/files"
-	"k8s.io/klog/v2"
-	"os"
-	"path"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("meshwatcher", "mesh watcher debugging")
 
 type MeshConfigSource = krt.Singleton[string]
 
 func NewFileSource(fileWatcher filewatcher.FileWatcher, filename string, opts krt.OptionsBuilder) (MeshConfigSource, error) {
 	return krtfiles.NewFileSingleton[string](fileWatcher, filename, func(filename string) (string, error) {
+		// #nosec G304 -- filename is a controlled path from configuration
 		b, err := os.ReadFile(filename)
 		if err != nil {
 			return "", err
@@ -50,17 +55,17 @@ func NewCollection(opts krt.OptionsBuilder, sources ...MeshConfigSource) krt.Sin
 			for _, attempt := range sources {
 				s := krt.FetchOne(ctx, attempt.AsCollection())
 				if s == nil {
-					klog.V(2).InfoS("mesh configuration source missing")
+					log.Debugf("mesh configuration source missing")
 					continue
 				}
 				n, err := mesh.ApplyMeshConfig(*s, meshCfg)
 				if err != nil {
 					if len(sources) == 1 {
-						klog.Errorf("invalid mesh config, using last known state: %v", err)
+						log.Errorf("invalid mesh config, using last known state: %v", err)
 						ctx.DiscardResult()
 						return &MeshConfigResource{mesh.DefaultMeshConfig()}
 					}
-					klog.Errorf("invalid mesh config, ignoring: %v", err)
+					log.Errorf("invalid mesh config, ignoring: %v", err)
 					continue
 				}
 				meshCfg = n
@@ -83,7 +88,7 @@ func NewNetworksCollection(opts krt.OptionsBuilder, sources ...MeshConfigSource)
 				if s := krt.FetchOne(ctx, attempt.AsCollection()); s != nil {
 					n, err := mesh.ParseMeshNetworks(*s)
 					if err != nil {
-						klog.Errorf("invalid mesh networks, using last known state: %v", err)
+						log.Errorf("invalid mesh networks, using last known state: %v", err)
 						ctx.DiscardResult()
 						return &MeshNetworksResource{mesh.DefaultMeshNetworks()}
 					}

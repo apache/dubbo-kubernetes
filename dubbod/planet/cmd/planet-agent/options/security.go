@@ -22,14 +22,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/apache/dubbo-kubernetes/pkg/jwt"
-	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/credentialfetcher"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/cafile"
+	"github.com/apache/dubbo-kubernetes/pkg/jwt"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("security", "security options debugging")
 
 const caHeaderPrefix = "CA_HEADER_"
 
@@ -37,7 +40,7 @@ func NewSecurityOptions(proxyConfig *meshconfig.ProxyConfig, stsPort int, tokenM
 	o := &security.Options{
 		CAEndpoint:           caEndpointEnv,
 		CAProviderName:       caProviderEnv,
-		PlanetCertProvider:     features.PlanetCertProvider,
+		PlanetCertProvider:   features.PlanetCertProvider,
 		OutputKeyCertToDir:   outputKeyCertToDir,
 		ProvCert:             provCert,
 		ClusterID:            clusterIDVar.Get(),
@@ -78,13 +81,13 @@ func SetupSecurityOptions(proxyConfig *meshconfig.ProxyConfig, secOpt *security.
 	// TODO jwtPath
 	switch jwtPolicy {
 	case jwt.PolicyThirdParty:
-		klog.Info("JWT policy is third-party-jwt")
+		log.Info("JWT policy is third-party-jwt")
 
 	case jwt.PolicyFirstParty:
-		klog.Warningf("Using deprecated JWT policy 'first-party-jwt'; treating as 'third-party-jwt'")
+		log.Warnf("Using deprecated JWT policy 'first-party-jwt'; treating as 'third-party-jwt'")
 
 	default:
-		klog.Info("Using existing certs")
+		log.Info("Using existing certs")
 	}
 
 	o := secOpt
@@ -100,7 +103,7 @@ func SetupSecurityOptions(proxyConfig *meshconfig.ProxyConfig, secOpt *security.
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credential fetcher: %v", err)
 	}
-	klog.Infof("using credential fetcher of %s type in %s trust domain", credFetcherTypeEnv, o.TrustDomain)
+	log.Infof("using credential fetcher of %s type in %s trust domain", credFetcherTypeEnv, o.TrustDomain)
 	o.CredFetcher = credFetcher
 
 	if o.ProvCert != "" && o.FileMountedCerts {

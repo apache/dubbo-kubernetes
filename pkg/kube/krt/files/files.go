@@ -29,8 +29,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/atomic"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("krtfiles", "krt files debugging")
 
 type FileSingleton[T any] struct {
 	krt.Singleton[T]
@@ -54,7 +57,7 @@ func NewFileSingleton[T any](fileWatcher filewatcher.FileWatcher, filename strin
 	watchFile(fileWatcher, filename, stop, func() {
 		cfg, err := readFile(filename)
 		if err != nil {
-			klog.Errorf("failed to update: %v", err)
+			log.Errorf("failed to update: %v", err)
 			return
 		}
 		cur.Store(&cfg)
@@ -135,21 +138,22 @@ func (f *FolderWatch[T]) readOnce() error {
 		} else if !supportedExtensions.Contains(filepath.Ext(path)) || (info.Mode()&os.ModeType) != 0 {
 			return nil
 		}
+		// #nosec G304 -- path is validated and controlled from file watcher
 		data, err := os.ReadFile(path)
 		if err != nil {
-			klog.Errorf("Failed to readOnce %s: %v", path, err)
+			log.Errorf("Failed to readOnce %s: %v", path, err)
 			return err
 		}
 		parsed, err := f.parse(data)
 		if err != nil {
-			klog.Errorf("Failed to parse %s: %v", path, err)
+			log.Errorf("Failed to parse %s: %v", path, err)
 			return err
 		}
 		result = append(result, parsed...)
 		return nil
 	})
 	if err != nil {
-		klog.Errorf("failure during filepath.Walk: %v", err)
+		log.Errorf("failure during filepath.Walk: %v", err)
 	}
 
 	if err != nil {
@@ -169,7 +173,7 @@ func (f *FolderWatch[T]) readOnce() error {
 func (f *FolderWatch[T]) watch(stop <-chan struct{}) {
 	c := make(chan struct{}, 1)
 	if err := f.fileTrigger(c, stop); err != nil {
-		klog.Errorf("Unable to setup FileTrigger for %s: %v", f.root, err)
+		log.Errorf("Unable to setup FileTrigger for %s: %v", f.root, err)
 		return
 	}
 	// Run the close loop asynchronously.
@@ -177,9 +181,9 @@ func (f *FolderWatch[T]) watch(stop <-chan struct{}) {
 		for {
 			select {
 			case <-c:
-				klog.Infof("Triggering reload of file configuration")
+				log.Infof("Triggering reload of file configuration")
 				if err := f.readOnce(); err != nil {
-					klog.Errorf("unable to reload file configuration %v: %v", f.root, err)
+					log.Errorf("unable to reload file configuration %v: %v", f.root, err)
 				}
 			case <-stop:
 				return
@@ -222,7 +226,7 @@ func (f *FolderWatch[T]) fileTrigger(events chan struct{}, stop <-chan struct{})
 				if err == nil && s != nil && s.IsDir() {
 					// If it's a directory, add a watch for it so we see nested files.
 					if e.Op&fsnotify.Create != 0 {
-						klog.V(2).Infof("add watch for %v: %v", s.Name(), watcher.watchRecursive(e.Name))
+						log.Debugf("add watch for %v: %v", s.Name(), watcher.watchRecursive(e.Name))
 					}
 				}
 				// Can't stat a deleted directory, so attempt to remove it. If it fails it is not a problem
@@ -233,10 +237,10 @@ func (f *FolderWatch[T]) fileTrigger(events chan struct{}, stop <-chan struct{})
 					debounceC = time.After(watchDebounceDelay)
 				}
 			case err := <-watcher.Errors:
-				klog.Errorf("Error watching file trigger: %v %v", f.root, err)
+				log.Errorf("Error watching file trigger: %v %v", f.root, err)
 				return
 			case <-stop:
-				klog.Infof("Shutting down file watcher: %v", f.root)
+				log.Infof("Shutting down file watcher: %v", f.root)
 				return
 			}
 		}

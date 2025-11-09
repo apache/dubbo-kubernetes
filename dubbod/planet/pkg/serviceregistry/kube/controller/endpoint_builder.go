@@ -18,11 +18,11 @@
 package controller
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
-	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/kube"
 	labelutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/util/label"
+	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
+	"github.com/apache/dubbo-kubernetes/pkg/network"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -88,9 +88,10 @@ func (b *EndpointBuilder) buildDubboEndpoint(
 	}
 
 	return &model.DubboEndpoint{
-		Labels:                 b.labels,
-		ServiceAccount:         b.serviceAccount,
-		Addresses:              []string{endpointAddress},
+		Labels:         b.labels,
+		ServiceAccount: b.serviceAccount,
+		Addresses:      []string{endpointAddress},
+		// #nosec G115 -- Kubernetes port numbers are within valid uint32 range
 		EndpointPort:           uint32(endpointPort),
 		ServicePortName:        svcPortName,
 		Network:                networkID,

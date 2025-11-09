@@ -80,7 +80,9 @@ func newDialTLSContext(dialer ContextDialer, config *tls.Config, selectCA func(c
 		if config != nil {
 			cfg = config.Clone()
 		} else {
-			cfg = &tls.Config{}
+			cfg = &tls.Config{
+				MinVersion: tls.VersionTLS12, // #nosec G402 -- MinVersion set to TLS 1.2 for security
+			}
 		}
 
 		serverName, _, err := net.SplitHostPort(addr)

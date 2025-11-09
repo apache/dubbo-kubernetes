@@ -28,8 +28,11 @@ import (
 
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("security", "security debugging")
 
 const (
 	RootCertReqResourceName           = "ROOTCA"
@@ -212,11 +215,11 @@ func GetOSRootFilePath() string {
 
 	for _, cert := range certFiles {
 		if _, err := os.Stat(cert); err == nil {
-			klog.Infof("Using OS CA certificate for proxy: %s", cert)
+			log.Infof("Using OS CA certificate for proxy: %s", cert)
 			return cert
 		}
 	}
-	klog.Info("OS CA Cert could not be found for agent")
+	log.Info("OS CA Cert could not be found for agent")
 	return ""
 }
 

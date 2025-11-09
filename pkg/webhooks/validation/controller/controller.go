@@ -23,18 +23,21 @@ import (
 	"math"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/util"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
 	kubeApiAdmission "k8s.io/api/admissionregistration/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("webhookvalidation", "webhook validation debugging")
 
 type Options struct {
 	// Istio system namespace where istiod resides.
@@ -101,13 +104,13 @@ func (c *Controller) updateValidatingWebhookConfiguration(current *kubeApiAdmiss
 	caChangeNeeded := caBundleUpdateRequired(current, caBundle)
 	failurePolicyMaybeNeedsUpdate := failurePolicyIsIgnore(current)
 	if !caChangeNeeded && !failurePolicyMaybeNeedsUpdate {
-		klog.V(2).Info("up-to-date, no change required")
+		log.Debug("up-to-date, no change required")
 		return nil
 	}
 	updateFailurePolicy := true
 	// Only check readyForFailClose if we need to switch, to avoid redundant calls
 	if failurePolicyMaybeNeedsUpdate && !c.readyForFailClose() {
-		klog.V(2).Info("failurePolicy is Ignore, but webhook is not ready; not setting to Fail")
+		log.Debug("failurePolicy is Ignore, but webhook is not ready; not setting to Fail")
 		updateFailurePolicy = false
 	}
 	updated := current.DeepCopy()
@@ -120,7 +123,7 @@ func (c *Controller) updateValidatingWebhookConfiguration(current *kubeApiAdmiss
 
 	_, err := c.webhooks.Update(updated)
 	if err != nil {
-		klog.Errorf("failed to updated: %v", err)
+		log.Errorf("failed to updated: %v", err)
 		return fmt.Errorf("fail to update webhook: %v", err)
 	}
 
@@ -136,16 +139,16 @@ func (c *Controller) Reconcile(key types.NamespacedName) error {
 	// Stop early if webhook is not present, rather than attempting (and failing) to reconcile permanently
 	// If the webhook is later added a new reconciliation request will trigger it to update
 	if whc == nil {
-		klog.Info("Skip patching webhook, not found")
+		log.Info("Skip patching webhook, not found")
 		return nil
 	}
 
-	klog.V(2).Info("Reconcile(enter)")
-	defer func() { klog.V(2).Info("Reconcile(exit)") }()
+	log.Debug("Reconcile(enter)")
+	defer func() { log.Debug("Reconcile(exit)") }()
 
 	caBundle, err := util.LoadCABundle(c.o.CABundleWatcher)
 	if err != nil {
-		klog.Errorf("Failed to load CA bundle: %v", err)
+		log.Errorf("Failed to load CA bundle: %v", err)
 		return nil
 	}
 	return c.updateValidatingWebhookConfiguration(whc, caBundle)

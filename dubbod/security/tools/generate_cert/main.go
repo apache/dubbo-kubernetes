@@ -89,6 +89,7 @@ func checkCmdLine() {
 }
 
 func saveCreds(certPem []byte, privPem []byte) {
+	// #nosec G306 -- Certificate file needs 0644 permissions for readability
 	err := os.WriteFile(*outCert, certPem, 0o644)
 	if err != nil {
 		log.Fatalf("Could not write output certificate: %s.", err)

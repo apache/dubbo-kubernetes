@@ -19,6 +19,7 @@ package krt
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
@@ -27,8 +28,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("krtinformer", "krt informer debugging")
 
 var _ internalCollection[controllers.Object] = &informer[controllers.Object]{}
 
@@ -70,7 +74,7 @@ func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...C
 			return
 		}
 		close(h.synced)
-		klog.Infof("%v synced", h.name())
+		log.Infof("%v synced", h.name())
 
 		<-o.stop
 	}()

@@ -20,7 +20,6 @@ package kube
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/http"
 	"time"
 
@@ -45,8 +44,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("kube", "kube client debugging")
 
 type client struct {
 	extSet                 kubeExtClient.Interface
@@ -282,9 +284,9 @@ func (c *client) Run(stop <-chan struct{}) {
 	}
 	alreadyStarted := c.started.Swap(true)
 	if alreadyStarted {
-		klog.V(2).Infof("cluster %q kube client started again", c.clusterID)
+		log.Debugf("cluster %q kube client started again", c.clusterID)
 	} else {
-		klog.Infof("cluster %q kube client started", c.clusterID)
+		log.Infof("cluster %q kube client started", c.clusterID)
 	}
 }
 

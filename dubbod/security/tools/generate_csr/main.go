@@ -22,10 +22,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
-	"k8s.io/klog/v2"
 	"os"
+
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("generatecsr", "generate csr debugging")
 
 var (
 	host    = flag.String("host", "", "Comma-separated hostnames and IPs to generate a certificate for.")
@@ -38,14 +42,15 @@ var (
 )
 
 func saveCreds(csrPem []byte, privPem []byte) {
+	// #nosec G306 -- CSR file needs 0644 permissions for readability
 	err := os.WriteFile(*outCsr, csrPem, 0o644)
 	if err != nil {
-		klog.Errorf("Could not write output certificate request: %s.", err)
+		log.Errorf("Could not write output certificate request: %s.", err)
 	}
 
 	err = os.WriteFile(*outPriv, privPem, 0o600)
 	if err != nil {
-		klog.Errorf("Could not write output private key: %s.", err)
+		log.Errorf("Could not write output private key: %s.", err)
 	}
 }
 
@@ -60,7 +65,7 @@ func main() {
 		ECCCurve:   util.SupportedEllipticCurves(*curve),
 	})
 	if err != nil {
-		klog.Errorf("Failed to generate CSR: %s.", err)
+		log.Errorf("Failed to generate CSR: %s.", err)
 	}
 
 	saveCreds(csrPem, privPem)

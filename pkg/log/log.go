@@ -349,7 +349,8 @@ func (l *Logger) log(level Level, format string, args ...interface{}) {
 	logLine = strings.TrimRight(logLine, "\n\r \t")
 	if logLine != "" {
 		logLine = logLine + "\n"
-		output.Write([]byte(logLine))
+		// #nosec G104 -- Write errors are non-critical for logging; best effort is acceptable
+		_, _ = output.Write([]byte(logLine))
 	}
 }
 

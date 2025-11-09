@@ -30,8 +30,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	meshAPI "istio.io/api/mesh/v1alpha1"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("bootstrap", "bootstrap debugging")
 
 const (
 	DubboMetaPrefix     = "DUBBO_META_"
@@ -55,6 +58,7 @@ func ReadPodAnnotations(path string) (map[string]string, error) {
 	if path == "" {
 		path = constants.PodInfoAnnotationsPath
 	}
+	// #nosec G304 -- path is a controlled path from constants or configuration
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -130,7 +134,7 @@ func GetNodeMetaData(options MetadataOptions) (*model.Node, error) {
 	extractMetadata(options.Envs, DubboMetaJSONPrefix, func(m map[string]any, key string, val string) {
 		err := json.Unmarshal([]byte(val), &m)
 		if err != nil {
-			klog.Warningf("Env variable %s [%s] failed json unmarshal: %v", key, val, err)
+			log.Warnf("Env variable %s [%s] failed json unmarshal: %v", key, val, err)
 		}
 	}, untypedMeta)
 

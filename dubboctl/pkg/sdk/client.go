@@ -21,15 +21,16 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 type Client struct {
@@ -113,6 +114,7 @@ func (c *Client) Initialize(dcfg *dubbo.DubboConfig, initialized bool, cmd *cobr
 	if err != nil {
 		return dcfg, err
 	}
+	// #nosec G301 -- Root directory needs standard permissions
 	if err = os.MkdirAll(dcfg.Root, 0o755); err != nil {
 		return dcfg, err
 	}
@@ -275,6 +277,7 @@ func assertEmptyRoot(path string) (err error) {
 }
 
 func runDataDir(root string) error {
+	// #nosec G301 -- Data directory needs standard permissions
 	if err := os.MkdirAll(filepath.Join(root, dubbo.DataDir), os.ModePerm); err != nil {
 		return err
 	}
@@ -298,7 +301,9 @@ func runDataDir(root string) error {
 			}
 		}
 	}
-	roFile.Close()
+	// #nosec G104 -- Close errors are non-critical; file is read-only
+	_ = roFile.Close()
+	// #nosec G302 -- .gitignore file needs 0644 permissions for readability
 	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return err

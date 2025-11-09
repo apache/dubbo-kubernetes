@@ -21,10 +21,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	fnssh "github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/ssh"
-	"github.com/docker/cli/cli/config"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/tlsconfig"
 	"io"
 	"net"
 	"net/http"
@@ -34,6 +30,11 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	fnssh "github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/ssh"
+	"github.com/docker/cli/cli/config"
+	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/tlsconfig"
 )
 
 var NoDockerAPIError = errors.New("docker API not available")
@@ -122,7 +123,8 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 		dockerClient = clientWithAdditionalCleanup{
 			CommonAPIClient: dockerClient,
 			cleanUp: func() {
-				closer.Close()
+				// #nosec G104 -- Close errors are non-critical during cleanup
+				_ = closer.Close()
 			},
 		}
 	}

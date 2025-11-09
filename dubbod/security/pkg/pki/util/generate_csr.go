@@ -31,10 +31,13 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
-	"k8s.io/klog/v2"
 	"os"
 	"strings"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("pkiutil", "pki util debugging")
 
 // MinimumRsaKeySize is the minimum RSA key size to generate certificates
 // to ensure proper security
@@ -102,7 +105,7 @@ func GenCSRTemplate(options CertOptions) (*x509.CertificateRequest, error) {
 			cn, err := DualUseCommonName(h)
 			if err != nil {
 				// log and continue
-				klog.Errorf("dual-use failed for CSR template - omitting CN (%v)", err)
+				log.Errorf("dual-use failed for CSR template - omitting CN (%v)", err)
 			} else {
 				template.Subject.CommonName = cn
 			}
@@ -117,7 +120,7 @@ func GenCSRTemplate(options CertOptions) (*x509.CertificateRequest, error) {
 func AppendRootCerts(pemCert []byte, rootCertFile string) ([]byte, error) {
 	rootCerts := pemCert
 	if len(rootCertFile) > 0 {
-		klog.V(2).Infof("append root certificates from %v", rootCertFile)
+		log.Debugf("append root certificates from %v", rootCertFile)
 		certBytes, err := os.ReadFile(rootCertFile)
 		if err != nil && !os.IsNotExist(err) {
 			return rootCerts, fmt.Errorf("failed to read root certificates (%v)", err)

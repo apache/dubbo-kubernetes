@@ -26,8 +26,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("grpcgen", "grpc generation debugging")
 
 func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, push *model.PushContext, routeNames []string) model.Resources {
 	resp := model.Resources{}
@@ -50,7 +53,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		// Try to parse as cluster naming format (outbound|port||hostname)
 		_, _, hostname, parsedPort := model.ParseSubsetKey(routeName)
 		if hostname == "" || parsedPort == 0 {
-			klog.Warningf("failed to parse route name %v", routeName)
+			log.Warnf("failed to parse route name %v", routeName)
 			return nil
 		}
 
@@ -58,7 +61,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		// This is used by ApiListener to route traffic to the correct cluster
 		svc := push.ServiceForHostname(node, hostname)
 		if svc == nil {
-			klog.Warningf("buildHTTPRoute: service not found for hostname %s", hostname)
+			log.Warnf("buildHTTPRoute: service not found for hostname %s", hostname)
 			return nil
 		}
 

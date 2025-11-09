@@ -18,18 +18,20 @@
 package aggregate
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"sync"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("aggregate", "aggregate controller debugging")
 
 var (
 	_ model.ServiceDiscovery    = &Controller{}
@@ -82,7 +84,7 @@ func (c *Controller) Run(stop <-chan struct{}) {
 func (c *Controller) HasSynced() bool {
 	for _, r := range c.GetRegistries() {
 		if !r.HasSynced() {
-			klog.V(2).Infof("registry %s is syncing", r.Cluster())
+			log.Debugf("registry %s is syncing", r.Cluster())
 			return false
 		}
 	}
@@ -163,7 +165,7 @@ func (c *Controller) GetRegistries() []serviceregistry.Instance {
 
 func (c *Controller) AddRegistryAndRun(registry serviceregistry.Instance, stop <-chan struct{}) {
 	if stop == nil {
-		klog.Warningf("nil stop channel passed to AddRegistryAndRun for registry %s/%s", registry.Provider(), registry.Cluster())
+		log.Warnf("nil stop channel passed to AddRegistryAndRun for registry %s/%s", registry.Provider(), registry.Cluster())
 	}
 	c.storeLock.Lock()
 	defer c.storeLock.Unlock()
@@ -193,7 +195,7 @@ func (c *Controller) addRegistry(registry serviceregistry.Instance, stop <-chan 
 
 func mergeService(dst, src *model.Service, srcRegistry serviceregistry.Instance) {
 	if !src.Ports.Equals(dst.Ports) {
-		klog.V(2).Infof("service %s defined from cluster %s is different from others", src.Hostname, srcRegistry.Cluster())
+		log.Debugf("service %s defined from cluster %s is different from others", src.Hostname, srcRegistry.Cluster())
 	}
 	// Prefer the k8s HostVIPs where possible
 	clusterID := srcRegistry.Cluster()
@@ -208,7 +210,7 @@ func (c *Controller) GetProxyServiceTargets(node *model.Proxy) []model.ServiceTa
 	nodeClusterID := nodeClusterID(node)
 	for _, r := range c.GetRegistries() {
 		if skipSearchingRegistryForProxy(nodeClusterID, r) {
-			klog.Infof("GetProxyServiceTargets(): not searching registry %v: proxy %v CLUSTER_ID is %v",
+			log.Infof("GetProxyServiceTargets(): not searching registry %v: proxy %v CLUSTER_ID is %v",
 				r.Cluster(), node.ID, nodeClusterID)
 			continue
 		}
@@ -220,7 +222,7 @@ func (c *Controller) GetProxyServiceTargets(node *model.Proxy) []model.ServiceTa
 	}
 
 	if len(out) == 0 {
-		klog.Infof("GetProxyServiceTargets(): no service targets found for proxy %s with clusterID %s",
+		log.Infof("GetProxyServiceTargets(): no service targets found for proxy %s with clusterID %s",
 			node.ID, nodeClusterID.String())
 	}
 

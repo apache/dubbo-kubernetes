@@ -366,6 +366,7 @@ func shouldRespondDelta(con *Connection, request *discovery.DeltaDiscoveryReques
 	stype := v3.GetShortType(request.TypeUrl)
 
 	if request.ErrorDetail != nil {
+		// #nosec G115 -- ErrorDetail.Code is int32, codes.Code is uint32. Safe conversion for gRPC error codes.
 		errCode := codes.Code(request.ErrorDetail.Code)
 		log.Warnf("%s: ACK ERROR %s %s:%s", stype, con.ID(), errCode.String(), request.ErrorDetail.GetMessage())
 		con.proxy.UpdateWatchedResource(request.TypeUrl, func(wr *model.WatchedResource) *model.WatchedResource {

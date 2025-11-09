@@ -29,6 +29,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
+	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
@@ -36,9 +39,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -53,8 +53,11 @@ import (
 	pstruct "google.golang.org/protobuf/types/known/structpb"
 	mcp "istio.io/api/mcp/v1alpha1"
 	"istio.io/api/mesh/v1alpha1"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("adsc", "adsc debugging")
 
 const (
 	defaultClientMaxReceiveMessageSize = math.MaxInt32
@@ -230,7 +233,7 @@ func (a *ADSC) handleRecv() {
 		var err error
 		msg, err := a.stream.Recv()
 		if err != nil {
-			klog.Errorf("connection closed with err: %v", err)
+			log.Errorf("connection closed with err: %v", err)
 			select {
 			case a.errChan <- err:
 			default:
@@ -262,7 +265,7 @@ func (a *ADSC) handleRecv() {
 			m := &v1alpha1.MeshConfig{}
 			err = proto.Unmarshal(rsc.Value, m)
 			if err != nil {
-				klog.Errorf("Failed to unmarshal mesh config: %v", err)
+				log.Errorf("Failed to unmarshal mesh config: %v", err)
 			}
 			a.Mesh = m
 			continue
@@ -584,12 +587,12 @@ func (a *ADSC) handleMCP(groupVersionKind config.GroupVersionKind, resources []*
 		m := &mcp.Resource{}
 		err := rsc.UnmarshalTo(m)
 		if err != nil {
-			klog.Errorf("Error unmarshalling received MCP config %v", err)
+			log.Errorf("Error unmarshalling received MCP config %v", err)
 			continue
 		}
 		newCfg, err := a.mcpToPlanet(m)
 		if err != nil {
-			klog.Errorf("Invalid data: %v (%v)", err, string(rsc.Value))
+			log.Errorf("Invalid data: %v (%v)", err, string(rsc.Value))
 			continue
 		}
 		if newCfg == nil {
@@ -602,7 +605,7 @@ func (a *ADSC) handleMCP(groupVersionKind config.GroupVersionKind, resources []*
 
 		if oldCfg == nil {
 			if _, err = a.Store.Create(*newCfg); err != nil {
-				klog.Errorf("Error adding a new resource to the store %v", err)
+				log.Errorf("Error adding a new resource to the store %v", err)
 				continue
 			}
 		} else if oldCfg.ResourceVersion != newCfg.ResourceVersion || newCfg.ResourceVersion == "" {
@@ -610,7 +613,7 @@ func (a *ADSC) handleMCP(groupVersionKind config.GroupVersionKind, resources []*
 			// newCfg.Annotations[mem.ResourceVersion] = newCfg.ResourceVersion
 			newCfg.ResourceVersion = oldCfg.ResourceVersion
 			if _, err = a.Store.Update(*newCfg); err != nil {
-				klog.Errorf("Error updating an existing resource in the store %v", err)
+				log.Errorf("Error updating an existing resource in the store %v", err)
 				continue
 			}
 		}
@@ -620,7 +623,7 @@ func (a *ADSC) handleMCP(groupVersionKind config.GroupVersionKind, resources []*
 	for _, config := range existingConfigs {
 		if _, ok := received[config.Namespace+"/"+config.Name]; !ok {
 			if err := a.Store.Delete(config.GroupVersionKind, config.Name, config.Namespace, nil); err != nil {
-				klog.Errorf("Error deleting an outdated resource from the store %v", err)
+				log.Errorf("Error deleting an outdated resource from the store %v", err)
 				continue
 			}
 		}
@@ -681,7 +684,7 @@ func (a *ADSC) handleCDS(ll []*cluster.Cluster) {
 		edscds[c.Name] = c
 	}
 
-	klog.Infof("CDS: %d size=%d", len(cn), cdsSize)
+	log.Infof("CDS: %d size=%d", len(cn), cdsSize)
 
 	if len(cn) > 0 {
 		a.sendRsc(v3.EndpointType, cn)
@@ -708,7 +711,7 @@ func (a *ADSC) handleEDS(eds []*endpoint.ClusterLoadAssignment) {
 		ep += len(cla.Endpoints)
 	}
 
-	klog.Infof("eds: %d size=%d ep=%d", len(eds), edsSize, ep)
+	log.Infof("eds: %d size=%d ep=%d", len(eds), edsSize, ep)
 	if a.initialLoad == 0 && !a.initialLds {
 		// first load - Envoy loads listeners after endpoints
 		_ = a.stream.Send(&discovery.DiscoveryRequest{
@@ -760,7 +763,7 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 			lt[l.Name] = l
 			config, _ := protomarshal.MessageToStructSlow(filter.GetTypedConfig())
 			c := config.Fields["cluster"].GetStringValue()
-			klog.V(2).InfoS("TCP: %s -> %s", l.Name, c)
+			log.Debugf("TCP: %s -> %s", l.Name, c)
 		case wellknown.HTTPConnectionManager:
 			lh[l.Name] = l
 
@@ -772,11 +775,11 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 				routes = append(routes, fmt.Sprintf("%d", port))
 			}
 		default:
-			klog.Info(protomarshal.ToJSONWithIndent(l, "  "))
+			log.Info(protomarshal.ToJSONWithIndent(l, "  "))
 		}
 	}
 
-	klog.Infof("LDS: http=%d tcp=%d size=%d", len(lh), len(lt), ldsSize)
+	log.Infof("LDS: http=%d tcp=%d size=%d", len(lh), len(lt), ldsSize)
 
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
@@ -822,7 +825,7 @@ func (a *ADSC) handleRDS(configurations []*route.RouteConfiguration) {
 			for _, rt := range h.Routes {
 				rcount++
 				// Example: match:<prefix:"/" > route:<cluster:"outbound|9154||load-se-154.local" ...
-				klog.V(2).Infof("Handle route %v, path %v, cluster %v", h.Name, rt.Match.PathSpecifier, rt.GetRoute().GetCluster())
+				log.Debugf("Handle route %v, path %v, cluster %v", h.Name, rt.Match.PathSpecifier, rt.GetRoute().GetCluster())
 			}
 		}
 		rds[r.Name] = r
@@ -830,9 +833,9 @@ func (a *ADSC) handleRDS(configurations []*route.RouteConfiguration) {
 	}
 	if a.initialLoad == 0 {
 		a.initialLoad = time.Since(a.watchTime)
-		klog.Infof("RDS: %d size=%d vhosts=%d routes=%d time=%d", len(configurations), size, vh, rcount, a.initialLoad)
+		log.Infof("RDS: %d size=%d vhosts=%d routes=%d time=%d", len(configurations), size, vh, rcount, a.initialLoad)
 	} else {
-		klog.Infof("RDS: %d size=%d vhosts=%d routes=%d", len(configurations), size, vh, rcount)
+		log.Infof("RDS: %d size=%d vhosts=%d routes=%d", len(configurations), size, vh, rcount)
 	}
 
 	a.mutex.Lock()

@@ -23,17 +23,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/docker/cli/cli/connhelper"
-	"github.com/docker/docker/pkg/homedir"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/crypto/ssh/knownhosts"
 	"net"
 	nurl "net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/docker/cli/cli/connhelper"
+	"github.com/docker/docker/pkg/homedir"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 var (
@@ -75,7 +76,8 @@ func (d *dialer) DialContext(ctx context.Context, n, a string) (net.Conn, error)
 	go func() {
 		if ctx != nil {
 			<-ctx.Done()
-			conn.Close()
+			// #nosec G104 -- Close errors are non-critical during cleanup
+			_ = conn.Close()
 		}
 	}()
 	return conn, nil
@@ -113,7 +115,8 @@ func NewDialContext(url *nurl.URL, config Config) (ContextDialer, string, error)
 	}
 	defer func() {
 		if sshClient != nil {
-			sshClient.Close()
+			// #nosec G104 -- Close errors are non-critical during cleanup
+			_ = sshClient.Close()
 		}
 	}()
 
