@@ -225,7 +225,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 				shortName = parts[0]
 			}
 
-			// If not found with FQDN, try short name (e.g., "consumer" from "consumer.grpc-proxyless.svc.cluster.local")
+			// If not found with FQDN, try short name (e.g., "consumer" from "consumer.grpc-app.svc.cluster.local")
 			if svc == nil && shortName != "" {
 				svc = push.ServiceForHostname(node, host.Name(shortName))
 				if svc != nil {
@@ -277,7 +277,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 				hostStr, port, svc.Attributes.Namespace, svc.Attributes.Name, matchedPort.Name)
 
 			// Build cluster name using BuildSubsetKey to ensure correct format
-			// Format: outbound|port||hostname (e.g., outbound|7070||consumer.grpc-proxyless.svc.cluster.local)
+			// Format: outbound|port||hostname (e.g., outbound|7070||consumer.grpc-app.svc.cluster.local)
 			// Use svc.Hostname (FQDN) instead of svc.Attributes.Name (short name) to match CDS expectations
 			clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", svc.Hostname, port)
 

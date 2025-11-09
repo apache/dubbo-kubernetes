@@ -1,0 +1,89 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadtest-server-xds
+  namespace: grpc-loadtest
+  labels:
+    app: loadtest-server
+    mode: xds
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadtest-server
+      mode: xds
+  template:
+    metadata:
+      labels:
+        app: loadtest-server
+        mode: xds
+        sidecar.dubbo.io/inject: "true"
+    spec:
+      containers:
+      - name: server
+        image: loadtest-server:latest
+        imagePullPolicy: IfNotPresent
+        command: ["./server"]
+        args:
+        - "-port=8080"
+        - "-mode=xds"
+        env:
+        - name: GRPC_XDS_BOOTSTRAP
+          value: "/etc/dubbo/proxy/grpc-bootstrap.json"
+        resources:
+          requests:
+            cpu: "1500m"
+            memory: "1000Mi"
+          limits:
+            cpu: "1500m"
+            memory: "1000Mi"
+        ports:
+        - containerPort: 8080
+          name: grpc
+        volumeMounts:
+        - name: dubbo-proxy
+          mountPath: /etc/dubbo/proxy
+      volumes:
+      - name: dubbo-proxy
+        emptyDir: {}
+      initContainers:
+      - name: dubbo-proxy
+        image: dubbo-proxy:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: dubbo-proxy
+          mountPath: /etc/dubbo/proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadtest-server-xds
+  namespace: grpc-loadtest
+  labels:
+    app: loadtest-server
+    mode: xds
+spec:
+  selector:
+    app: loadtest-server
+    mode: xds
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: grpc
+

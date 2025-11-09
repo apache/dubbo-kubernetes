@@ -21,24 +21,24 @@ Both services use native gRPC xDS clients to connect to the Dubbo control plane 
 ### 1. Create Namespace
 
 ```bash
-kubectl create ns grpc-proxyless
-kubectl label namespace grpc-proxyless dubbo-injection=enabled
+kubectl create ns grpc-app
+kubectl label namespace grpc-app dubbo-injection=enabled
 ```
 
 ### 2. Deploy Services
 
 ```bash
-kubectl apply -f grpc-proxyless.yaml
+kubectl apply -f grpc-app.yaml
 ```
 
 ### 3. Verify Deployment
 
 ```bash
 # Check pods are running
-kubectl get pods -n grpc-proxyless
+kubectl get pods -n grpc-app
 
 # Check services
-kubectl get svc -n grpc-proxyless
+kubectl get svc -n grpc-app
 ```
 
 ## Configuration
@@ -63,8 +63,8 @@ The `dubbo-proxy` sidecar automatically:
 1. Port forward to producer service:
 
 ```bash
-kubectl port-forward -n grpc-proxyless \
-  $(kubectl get pod -l app=producer -n grpc-proxyless -o jsonpath='{.items[0].metadata.name}') \
+kubectl port-forward -n grpc-app \
+  $(kubectl get pod -l app=producer -n grpc-app -o jsonpath='{.items[0].metadata.name}') \
   17171:17171 &
 ```
 
@@ -72,7 +72,7 @@ kubectl port-forward -n grpc-proxyless \
 
 ```bash
 grpcurl -plaintext -d '{
-  "url": "xds:///consumer.grpc-proxyless.svc.cluster.local:7070",
+  "url": "xds:///consumer.grpc-app.svc.cluster.local:7070",
   "count": 5
 }' localhost:17171 echo.EchoTestService/ForwardEcho
 ```
@@ -94,13 +94,13 @@ Expected output:
 
 ```bash
 # Consumer logs
-kubectl logs -f -l app=consumer -n grpc-proxyless -c app
+kubectl logs -f -l app=consumer -n grpc-app -c app
 
 # Producer logs
-kubectl logs -f -l app=producer -n grpc-proxyless -c app
+kubectl logs -f -l app=producer -n grpc-app -c app
 
 # Proxy sidecar logs
-kubectl logs -f -l app=consumer -n grpc-proxyless -c dubbo-proxy
+kubectl logs -f -l app=consumer -n grpc-app -c dubbo-proxy
 ```
 
 ## Troubleshooting
@@ -109,29 +109,29 @@ kubectl logs -f -l app=consumer -n grpc-proxyless -c dubbo-proxy
 
 If the application fails with "grpc-bootstrap.json: no such file or directory":
 - The `dubbo-proxy` sidecar may not have generated the bootstrap file yet
-- Check proxy logs: `kubectl logs <pod-name> -c dubbo-proxy -n grpc-proxyless`
+- Check proxy logs: `kubectl logs <pod-name> -c dubbo-proxy -n grpc-app`
 - Ensure `holdApplicationUntilProxyStarts: true` is set in annotations
 
 ### Connection issues
 
 1. Verify xDS proxy is running:
 ```bash
-kubectl exec <pod-name> -c dubbo-proxy -n grpc-proxyless -- ls -la /etc/dubbo/proxy/
+kubectl exec <pod-name> -c dubbo-proxy -n grpc-app -- ls -la /etc/dubbo/proxy/
 ```
 
 2. Check bootstrap file:
 ```bash
-kubectl exec <pod-name> -c app -n grpc-proxyless -- cat /etc/dubbo/proxy/grpc-bootstrap.json
+kubectl exec <pod-name> -c app -n grpc-app -- cat /etc/dubbo/proxy/grpc-bootstrap.json
 ```
 
 3. Verify control plane connectivity:
 ```bash
-kubectl logs <pod-name> -c dubbo-proxy -n grpc-proxyless | grep -i xds
+kubectl logs <pod-name> -c dubbo-proxy -n grpc-app | grep -i xds
 ```
 
 ## Cleanup
 
 ```bash
-kubectl delete -f grpc-proxyless.yaml
-kubectl delete ns grpc-proxyless
+kubectl delete -f grpc-app.yaml
+kubectl delete ns grpc-app
 ```

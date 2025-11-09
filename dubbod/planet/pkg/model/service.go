@@ -297,8 +297,20 @@ type Service struct {
 }
 
 func (s *Service) DeepCopy() *Service {
-	out := *s //nolint:govet // intentional deep copy of Service struct
-	out.Attributes = s.Attributes.DeepCopy()
+	// Manually copy fields to avoid copying the mutex in AddressMap
+	out := &Service{
+		Attributes:               s.Attributes.DeepCopy(),
+		Hostname:                 s.Hostname,
+		ServiceAccounts:          slices.Clone(s.ServiceAccounts),
+		CreationTime:             s.CreationTime,
+		DefaultAddress:           s.DefaultAddress,
+		ResourceVersion:          s.ResourceVersion,
+		Resolution:               s.Resolution,
+		AutoAllocatedIPv4Address: s.AutoAllocatedIPv4Address,
+		AutoAllocatedIPv6Address: s.AutoAllocatedIPv6Address,
+		MeshExternal:             s.MeshExternal,
+		ClusterVIPs:              *s.ClusterVIPs.DeepCopy(),
+	}
 	if s.Ports != nil {
 		out.Ports = make(PortList, len(s.Ports))
 		for i, port := range s.Ports {
@@ -313,10 +325,7 @@ func (s *Service) DeepCopy() *Service {
 			}
 		}
 	}
-
-	out.ServiceAccounts = slices.Clone(s.ServiceAccounts)
-	out.ClusterVIPs = *s.ClusterVIPs.DeepCopy()
-	return &out
+	return out
 }
 
 func (s *Service) Key() string {

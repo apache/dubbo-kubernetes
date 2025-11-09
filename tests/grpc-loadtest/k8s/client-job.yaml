@@ -1,0 +1,124 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadtest-client-baseline
+  namespace: grpc-loadtest
+spec:
+  template:
+    spec:
+      containers:
+      - name: client
+        image: loadtest-client:latest
+        imagePullPolicy: IfNotPresent
+        command: ["./client"]
+        args:
+        - "-target=loadtest-server-baseline.grpc-loadtest.svc.cluster.local:8080"
+        - "-mode=baseline"
+        - "-qps=100"
+        - "-duration=60s"
+        - "-connections=4"
+        resources:
+          requests:
+            cpu: "1500m"
+            memory: "1000Mi"
+          limits:
+            cpu: "1500m"
+            memory: "1000Mi"
+      restartPolicy: Never
+  backoffLimit: 1
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadtest-client-envoy
+  namespace: grpc-loadtest
+spec:
+  template:
+    metadata:
+      labels:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+      - name: client
+        image: loadtest-client:latest
+        imagePullPolicy: IfNotPresent
+        command: ["./client"]
+        args:
+        - "-target=loadtest-server-envoy.grpc-loadtest.svc.cluster.local:8080"
+        - "-mode=envoy"
+        - "-qps=100"
+        - "-duration=60s"
+        - "-connections=4"
+        resources:
+          requests:
+            cpu: "1500m"
+            memory: "1000Mi"
+          limits:
+            cpu: "1500m"
+            memory: "1000Mi"
+      restartPolicy: Never
+  backoffLimit: 1
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadtest-client-xds
+  namespace: grpc-loadtest
+spec:
+  template:
+    metadata:
+      labels:
+        sidecar.dubbo.io/inject: "true"
+    spec:
+      containers:
+      - name: client
+        image: loadtest-client:latest
+        imagePullPolicy: IfNotPresent
+        command: ["./client"]
+        args:
+        - "-target=xds:///loadtest-server-xds.grpc-loadtest.svc.cluster.local:8080"
+        - "-mode=xds"
+        - "-qps=100"
+        - "-duration=60s"
+        - "-connections=4"
+        env:
+        - name: GRPC_XDS_BOOTSTRAP
+          value: "/etc/dubbo/proxy/grpc-bootstrap.json"
+        resources:
+          requests:
+            cpu: "1500m"
+            memory: "1000Mi"
+          limits:
+            cpu: "1500m"
+            memory: "1000Mi"
+        volumeMounts:
+        - name: dubbo-proxy
+          mountPath: /etc/dubbo/proxy
+      volumes:
+      - name: dubbo-proxy
+        emptyDir: {}
+      initContainers:
+      - name: dubbo-proxy
+        image: dubbo-proxy:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: dubbo-proxy
+          mountPath: /etc/dubbo/proxy
+      restartPolicy: Never
+  backoffLimit: 1
+

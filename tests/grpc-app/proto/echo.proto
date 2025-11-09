@@ -17,7 +17,7 @@ syntax = "proto3";
 
 package echo;
 
-option go_package = "github.com/apache/dubbo-kubernetes/test/grpc-proxyless/proto";
+option go_package = "github.com/apache/dubbo-kubernetes/test/grpc-app/proto";
 
 // Echo service for testing gRPC proxyless
 service EchoService {
@@ -44,7 +44,7 @@ message EchoResponse {
 }
 
 message ForwardEchoRequest {
-  string url = 1;  // Target URL (e.g., "xds:///consumer.grpc-proxyless.svc.cluster.local:7070")
+  string url = 1;  // Target URL (e.g., "xds:///consumer.grpc-app.svc.cluster.local:7070")
   int32 count = 2; // Number of requests to send
   map<string, string> headers = 3;
   int32 timeout = 4; // Timeout in seconds

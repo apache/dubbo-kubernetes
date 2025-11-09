@@ -1,4 +1,4 @@
-# gRPC Proxyless Test Example
+# gRPC Application
 
 This is a test example for gRPC proxyless service mesh based on [Istio's blog post](https://istio.io/latest/blog/2021/proxyless-grpc/).
 

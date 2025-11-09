@@ -40,7 +40,7 @@ import (
 	"google.golang.org/grpc/reflection"
 	_ "google.golang.org/grpc/xds"
 
-	pb "github.com/apache/dubbo-kubernetes/test/grpc-proxyless/proto"
+	pb "github.com/apache/dubbo-kubernetes/test/grpc-app/proto"
 )
 
 var (
