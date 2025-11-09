@@ -26,11 +26,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
-
-var log = dubbolog.RegisterScope("grpcgen", "grpc generation debugging")
 
 func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, push *model.PushContext, routeNames []string) model.Resources {
 	resp := model.Resources{}

@@ -25,10 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 )
-
-var log = dubbolog.RegisterScope("wait", "wait debugging")
 
 var (
 	timeoutSeconds       int
@@ -55,7 +53,7 @@ var (
 				case <-time.After(time.Duration(periodMillis) * time.Millisecond):
 					err = checkIfReady(client, url)
 					if err == nil {
-						log.Infof("xDS adapter is ready!")
+						log.Info("xDS adapter is ready!")
 						return nil
 					}
 					log.Errorf("Not ready yet: %v\n", err)

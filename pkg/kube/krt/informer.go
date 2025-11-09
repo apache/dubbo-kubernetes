@@ -28,11 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
-
-var log = dubbolog.RegisterScope("krtinformer", "krt informer debugging")
 
 var _ internalCollection[controllers.Object] = &informer[controllers.Object]{}
 

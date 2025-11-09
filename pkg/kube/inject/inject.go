@@ -34,10 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 )
-
-var log = dubbolog.RegisterScope("inject", "inject debugging")
 
 const (
 	ProxyContainerName      = "dubbo-proxy"

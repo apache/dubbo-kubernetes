@@ -37,11 +37,7 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
-
-var log = dubbolog.RegisterScope("pkiutil", "pki util debugging")
 
 // SupportedECSignatureAlgorithms are the types of EC Signature Algorithms
 // to be used in key generation (e.g. ECDSA or ED2551)
