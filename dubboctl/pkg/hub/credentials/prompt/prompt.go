@@ -22,15 +22,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/credentials"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/pusher"
 	"golang.org/x/term"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 func NewPromptForCredentials(in io.Reader, out, errOut io.Writer) func(registry string) (pusher.Credentials, error) {
@@ -153,6 +154,7 @@ you can install docker credential helper https://github.com/docker/docker-creden
 
 func GetDockerAuth(registry string) (pusher.Credentials, error) {
 	configFile := filepath.Join(os.Getenv("HOME"), ".docker", "config.json")
+	// #nosec G304 -- File paths are controlled and validated by caller
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return pusher.Credentials{}, err

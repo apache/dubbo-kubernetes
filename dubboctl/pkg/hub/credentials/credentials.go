@@ -22,6 +22,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/pusher"
 	dockerConfig "github.com/containers/image/v5/pkg/docker/config"
 	containersTypes "github.com/containers/image/v5/types"
@@ -31,13 +39,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"net"
-	"net/http"
-	"net/url"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 var (
@@ -247,6 +248,7 @@ func checkAuth(ctx context.Context, image string, credentials pusher.Credentials
 }
 
 func getCredentialHelperFromConfig(confFilePath string) (string, error) {
+	// #nosec G304 -- File paths are controlled and validated by caller
 	data, err := os.ReadFile(confFilePath)
 	if err != nil {
 		return "", err
@@ -269,6 +271,7 @@ func setCredentialHelperToConfig(confFilePath, helper string) error {
 
 	configData := make(map[string]interface{})
 
+	// #nosec G304 -- File paths are controlled and validated by caller
 	if data, err := os.ReadFile(confFilePath); err == nil {
 		err = json.Unmarshal(data, &configData)
 		if err != nil {

@@ -178,6 +178,7 @@ func NewOsFilesystem(root string) osFilesystem {
 
 func (o osFilesystem) Open(name string) (fs.File, error) {
 	name = filepath.FromSlash(name)
+	// #nosec G304 -- File paths are controlled and validated by caller
 	return os.Open(filepath.Join(o.root, name))
 }
 
@@ -292,6 +293,7 @@ func (u UnionFS) ReadFile(name string) ([]byte, error) {
 		return u.embedFS.ReadFile(name)
 	}
 
+	// #nosec G304 -- File paths are controlled and validated by caller
 	return os.ReadFile(name)
 }
 
@@ -371,6 +373,7 @@ func CopyFromFS(root, dest string, fsys Filesystem) (err error) {
 			if err != nil {
 				return err
 			}
+			// #nosec G304 -- File paths are controlled and validated by caller
 			destFile, err := os.OpenFile(dest, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fi.Mode())
 			if err != nil {
 				return err

@@ -41,7 +41,7 @@ import (
 var pkiCaLog = log.RegisterScope("pkica", "Aegis CA log")
 
 const (
-	dubboCASecretType         = "dubbo.apache.org/ca-root"
+	dubboCASecretType         = "dubbo.apache.org/ca-root" // #nosec G101 -- Secret type constant, not a credential value
 	CACertFile                = "ca-cert.pem"
 	CAPrivateKeyFile          = "ca-key.pem"
 	CACRLFile                 = "ca-crl.pem"

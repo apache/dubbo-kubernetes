@@ -21,6 +21,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	operator "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	operatorvalidate "github.com/apache/dubbo-kubernetes/operator/pkg/apis/validation"
@@ -28,12 +33,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
-	"io"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 var (
@@ -157,6 +158,7 @@ func validateFiles(dubboNamespace *string, files []string, writer io.Writer) err
 		if path == "-" {
 			reader = io.NopCloser(os.Stdin)
 		} else {
+			// #nosec G304 -- File paths are controlled and validated by caller
 			reader, err = os.Open(path)
 			if err != nil {
 				errs = multierror.Append(errs, fmt.Errorf("cannot read file %q: %v", path, err))

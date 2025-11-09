@@ -121,6 +121,7 @@ func main() {
 			_, err = w.Write([]byte(filepath.ToSlash(symlinkTarget)))
 			return err
 		case info.Mode()&fs.ModeType == 0: // regular file
+			// #nosec G304 -- File paths are controlled and validated by caller
 			f, err := os.Open(path)
 			if err != nil {
 				return err

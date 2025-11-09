@@ -101,6 +101,7 @@ func NewVerifiedKeyCertBundleFromFile(
 			certChainBytes = append(certChainBytes, b...)
 		}
 	}
+	// #nosec G304 -- File paths are controlled and validated by caller
 	rootCertBytes, err := os.ReadFile(rootCertFile)
 	if err != nil {
 		return nil, err

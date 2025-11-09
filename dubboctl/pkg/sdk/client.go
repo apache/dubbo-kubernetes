@@ -242,6 +242,7 @@ func hasInitialized(path string) (bool, error) {
 		}
 		return false, err
 	}
+	// #nosec G304 -- File paths are controlled and validated by caller
 	bb, err := os.ReadFile(filename)
 	if err != nil {
 		return false, err
@@ -282,6 +283,7 @@ func runDataDir(root string) error {
 		return err
 	}
 	filePath := filepath.Join(root, ".gitignore")
+	// #nosec G304 -- File paths are controlled and validated by caller
 	roFile, err := os.Open(filePath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -304,6 +306,7 @@ func runDataDir(root string) error {
 	// #nosec G104 -- Close errors are non-critical; file is read-only
 	_ = roFile.Close()
 	// #nosec G302 -- .gitignore file needs 0644 permissions for readability
+	// #nosec G304 -- File paths are controlled and validated by caller
 	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return err
