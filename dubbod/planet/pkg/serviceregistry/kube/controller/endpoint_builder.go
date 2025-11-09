@@ -88,9 +88,9 @@ func (b *EndpointBuilder) buildDubboEndpoint(
 	}
 
 	return &model.DubboEndpoint{
-		Labels:         b.labels,
-		ServiceAccount: b.serviceAccount,
-		Addresses:      []string{endpointAddress},
+		Labels:                 b.labels,
+		ServiceAccount:         b.serviceAccount,
+		Addresses:              []string{endpointAddress},
 		EndpointPort:           uint32(endpointPort),
 		ServicePortName:        svcPortName,
 		Network:                networkID,

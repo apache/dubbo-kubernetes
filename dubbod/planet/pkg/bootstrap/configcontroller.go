@@ -223,7 +223,7 @@ func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3
 		}
 		if tlsSettings.GetInsecureSkipVerify().GetValue() || len(tlsSettings.GetCaCertificates()) == 0 {
 			return credentials.NewTLS(&tls.Config{
-				ServerName:         tlsSettings.GetSni(),
+				ServerName: tlsSettings.GetSni(),
 			}), nil
 		}
 		certPool := x509.NewCertPool()
@@ -231,8 +231,8 @@ func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3
 			return nil, fmt.Errorf("failed to add ca certificate from configSource.tlsSettings to pool")
 		}
 		return credentials.NewTLS(&tls.Config{
-			ServerName:         tlsSettings.GetSni(),
-			RootCAs:            certPool,
+			ServerName: tlsSettings.GetSni(),
+			RootCAs:    certPool,
 			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 				return s.verifyCert(rawCerts, tlsSettings)
 			},
