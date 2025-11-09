@@ -18,10 +18,10 @@
 package xds
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/core"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
 type RdsGenerator struct {

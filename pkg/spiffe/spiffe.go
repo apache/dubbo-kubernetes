@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"k8s.io/klog/v2"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,7 +34,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	meshconfig "istio.io/api/mesh/v1alpha1"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("spiffe", "spiffe debugging")
 
 const (
 	Scheme = "spiffe"
@@ -142,7 +145,7 @@ func ExpandWithTrustDomains(spiffeIdentities sets.String, trustDomainAliases []s
 		// Expand with aliases set.
 		m, err := ParseIdentity(id)
 		if err != nil {
-			klog.Errorf("Failed to extract SPIFFE trust domain from %v: %v", id, err)
+			log.Errorf("Failed to extract SPIFFE trust domain from %v: %v", id, err)
 			continue
 		}
 		for _, td := range trustDomainAliases {
@@ -222,7 +225,7 @@ func RetrieveSpiffeBundleRootCerts(config map[string]string, caCertPool *x509.Ce
 					trustDomain, endpoint, errMsg)
 			}
 
-			klog.V(2).Infof("%s, retry in %v", errMsg, retryBackoffTime)
+			log.Debugf("%s, retry in %v", errMsg, retryBackoffTime)
 			time.Sleep(retryBackoffTime)
 			retryBackoffTime *= 2 // Exponentially increase the retry backoff time.
 		}
@@ -249,7 +252,7 @@ func RetrieveSpiffeBundleRootCerts(config map[string]string, caCertPool *x509.Ce
 		ret[trustDomain] = certs
 	}
 	for trustDomain, certs := range ret {
-		klog.Infof("Loaded SPIFFE trust bundle for: %v, containing %d certs", trustDomain, len(certs))
+		log.Infof("Loaded SPIFFE trust bundle for: %v, containing %d certs", trustDomain, len(certs))
 	}
 	return ret, nil
 }
@@ -282,7 +285,7 @@ func (v *PeerCertVerifier) AddMapping(trustDomain string, certs []*x509.Certific
 		v.certPools[trustDomain].AddCert(cert)
 		v.generalCertPool.AddCert(cert)
 	}
-	klog.Infof("Added %d certs to trust domain %s in peer cert verifier", len(certs), trustDomain)
+	log.Infof("Added %d certs to trust domain %s in peer cert verifier", len(certs), trustDomain)
 }
 
 // AddMappingFromPEM adds multiple RootCA's to the spiffe Trust bundle in the trustDomain namespace
@@ -298,7 +301,7 @@ func (v *PeerCertVerifier) AddMappingFromPEM(trustDomain string, rootCertBytes [
 
 	rootCAs, err := x509.ParseCertificates(blockBytes)
 	if err != nil {
-		klog.Errorf("parse certificate from rootPEM got error: %v", err)
+		log.Errorf("parse certificate from rootPEM got error: %v", err)
 		return fmt.Errorf("parse certificate from rootPEM got error: %v", err)
 	}
 

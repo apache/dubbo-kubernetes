@@ -26,8 +26,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"k8s.io/klog/v2"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("file", "file debugging")
 
 func DirEquals(a, b string) (bool, error) {
 	aa, err := filepath.Abs(a)
@@ -96,6 +98,6 @@ func tryMarkLargeFileAsNotNeeded(size int64, in *os.File) {
 	}
 	if err := markNotNeeded(in); err != nil {
 		// Error is fine, this is just an optimization anyways. Continue
-		klog.Errorf("failed to mark not needed, continuing anyways: %v", err)
+		log.Errorf("failed to mark not needed, continuing anyways: %v", err)
 	}
 }

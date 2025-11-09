@@ -28,8 +28,11 @@ import (
 
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("security", "security debugging")
 
 const (
 	RootCertReqResourceName           = "ROOTCA"
@@ -41,12 +44,9 @@ const (
 
 	SystemRootCerts                 = "SYSTEM"
 	DefaultRootCertFilePath         = "./etc/certs/root-cert.pem"
-	CredentialNameSocketPath        = "./var/run/secrets/credential-uds/socket"
-	WorkloadIdentityCredentialsPath = "./var/run/secrets/workload-spiffe-credentials"
 	WorkloadIdentityCertChainPath   = WorkloadIdentityCredentialsPath + "/cert-chain.pem"
 	WorkloadIdentityRootCertPath    = WorkloadIdentityCredentialsPath + "/root-cert.pem"
 	WorkloadIdentityKeyPath         = WorkloadIdentityCredentialsPath + "/key.pem"
-	FileCredentialNameSocketPath    = "./var/run/secrets/credential-uds/files-socket"
 	JWT                             = "JWT"
 
 	CredentialMetaDataName = "credential"
@@ -212,11 +212,11 @@ func GetOSRootFilePath() string {
 
 	for _, cert := range certFiles {
 		if _, err := os.Stat(cert); err == nil {
-			klog.Infof("Using OS CA certificate for proxy: %s", cert)
+			log.Infof("Using OS CA certificate for proxy: %s", cert)
 			return cert
 		}
 	}
-	klog.Info("OS CA Cert could not be found for agent")
+	log.Info("OS CA Cert could not be found for agent")
 	return ""
 }
 

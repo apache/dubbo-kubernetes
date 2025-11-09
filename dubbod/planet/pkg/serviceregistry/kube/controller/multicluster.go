@@ -18,8 +18,6 @@
 package controller
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/clustertrustbundle"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
@@ -27,7 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/server"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/aggregate"
-	"k8s.io/klog/v2"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 )
 
 type kubeController struct {
@@ -84,7 +82,7 @@ func NewMulticluster(
 
 		options := opts
 		options.ClusterID = cluster.ID
-		klog.Infof("Initializing Kubernetes service registry %q", options.ClusterID)
+		log.Infof("Initializing Kubernetes service registry %q", options.ClusterID)
 		options.ConfigCluster = configCluster
 		kubeRegistry := NewController(client, options)
 		kubeController := &kubeController{
@@ -111,7 +109,7 @@ func (m *Multicluster) initializeCluster(cluster *multicluster.Cluster, kubeCont
 		var shouldLead bool
 		if !configCluster {
 			shouldLead = m.checkShouldLead()
-			klog.Infof("should join leader-election for cluster %s: %t", cluster.ID, shouldLead)
+			log.Infof("should join leader-election for cluster %s: %t", cluster.ID, shouldLead)
 		}
 
 		if m.distributeCACert && (shouldLead || configCluster) {

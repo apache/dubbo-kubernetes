@@ -802,7 +802,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 	upstream, err := xds.StreamAggregatedResources(ctx,
 		grpc.MaxCallRecvMsgSize(defaultClientMaxReceiveMessageSize))
 	if err != nil {
-		upstreamConn.Close()
+		_ = upstreamConn.Close()
 		return nil, fmt.Errorf("failed to create upstream stream: %w", err)
 	}
 	proxyLog.Infof("connected to upstream XDS server (preemptive): %s", p.dubbodAddress)
@@ -829,7 +829,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		case <-con.upstreamError:
 		case <-p.stopChan:
 		}
-		upstreamConn.Close()
+		_ = upstreamConn.Close()
 		p.preemptiveConnMutex.Lock()
 		if p.preemptiveConn == con {
 			p.preemptiveConn = nil
@@ -846,7 +846,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 	}
 	proxyLog.Infof("preemptive connection sending initial LDS request with Node: %s", node.Id)
 	if err := upstream.Send(ldsReq); err != nil {
-		upstreamConn.Close()
+		_ = upstreamConn.Close()
 		p.preemptiveConnMutex.Lock()
 		if p.preemptiveConn == con {
 			p.preemptiveConn = nil

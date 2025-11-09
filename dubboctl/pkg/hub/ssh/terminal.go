@@ -23,11 +23,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"strings"
+
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 )
 
 func readSecret(prompt string) (pw []byte, err error) {

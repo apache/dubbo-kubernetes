@@ -22,7 +22,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"k8s.io/klog/v2"
 	"os"
 	"time"
 
@@ -32,9 +31,13 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	clientset "k8s.io/client-go/kubernetes"
 
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
+	"github.com/apache/dubbo-kubernetes/pkg/ptr"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("chiron", "chiron debugging")
 
 const (
 	// The size of a private key for a leaf certificate.
@@ -59,7 +62,7 @@ func GenKeyCertK8sCA(client clientset.Interface, dnsName,
 	}
 	csrPEM, keyPEM, err := util.GenCSR(options)
 	if err != nil {
-		klog.Errorf("CSR generation error (%v)", err)
+		log.Errorf("CSR generation error (%v)", err)
 		return nil, nil, nil, err
 	}
 	usages := []cert.KeyUsage{
@@ -88,7 +91,7 @@ func SignCSRK8s(client clientset.Interface, csrData []byte, signerName string, u
 	if err != nil {
 		return nil, nil, err
 	}
-	klog.V(2).Infof("CSR (%v) has been created", csr.Name)
+	log.Debugf("CSR (%v) has been created", csr.Name)
 
 	// clean up certificate request after deletion
 	defer func() {
@@ -102,7 +105,7 @@ func SignCSRK8s(client clientset.Interface, csrData []byte, signerName string, u
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to approve CSR request: %v", err)
 		}
-		klog.V(2).Infof("CSR (%v) is approved", csr.Name)
+		log.Debugf("CSR (%v) is approved", csr.Name)
 	}
 
 	// 3. Read the signed certificate
@@ -119,7 +122,7 @@ func SignCSRK8s(client clientset.Interface, csrData []byte, signerName string, u
 func readCACert(caCertPath string) ([]byte, error) {
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
-		klog.Errorf("failed to read CA cert, cert. path: %v, error: %v", caCertPath, err)
+		log.Errorf("failed to read CA cert, cert. path: %v, error: %v", caCertPath, err)
 		return nil, fmt.Errorf("failed to read CA cert, cert. path: %v, error: %v", caCertPath, err)
 	}
 
@@ -144,7 +147,7 @@ func submitCSR(
 	usages []cert.KeyUsage,
 	requestedLifetime time.Duration,
 ) (*cert.CertificateSigningRequest, error) {
-	klog.V(2).Infof("create CSR for signer %v", signerName)
+	log.Debugf("create CSR for signer %v", signerName)
 	csr := &cert.CertificateSigningRequest{
 		// Username, UID, Groups will be injected by API server.
 		TypeMeta: metav1.TypeMeta{Kind: "CertificateSigningRequest"},
@@ -176,7 +179,7 @@ func approveCSR(client clientset.Interface, csr *cert.CertificateSigningRequest,
 	})
 	_, err := client.CertificatesV1().CertificateSigningRequests().UpdateApproval(context.TODO(), csr.Name, csr, metav1.UpdateOptions{})
 	if err != nil {
-		klog.Errorf("failed to approve CSR (%v): %v", csr.Name, err)
+		log.Errorf("failed to approve CSR (%v): %v", csr.Name, err)
 		return err
 	}
 	return nil
@@ -277,9 +280,9 @@ func readSignedCsr(client clientset.Interface, csr string, watchTimeout time.Dur
 func cleanupCSR(client clientset.Interface, csr *cert.CertificateSigningRequest) error {
 	err := client.CertificatesV1().CertificateSigningRequests().Delete(context.TODO(), csr.Name, metav1.DeleteOptions{})
 	if err != nil {
-		klog.Errorf("failed to delete CSR (%v): %v", csr.Name, err)
+		log.Errorf("failed to delete CSR (%v): %v", csr.Name, err)
 	} else {
-		klog.V(2).Infof("deleted CSR: %v", csr.Name)
+		log.Debugf("deleted CSR: %v", csr.Name)
 	}
 	return err
 }

@@ -19,7 +19,6 @@ package krt
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"reflect"
 	"strconv"
 	"strings"

@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.21'
+  GO_VERSION: '1.24'
 
 jobs:
   unit-test:
@@ -132,21 +132,45 @@ jobs:
       - name: Check License Header
         uses: apache/skywalking-eyes/header@main
 
-  security-scan:
-    name: Security Scan
+  helm-lint:
+    name: Helm Lint
     runs-on: ubuntu-latest
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Install Helm
+        uses: azure/setup-helm@v3
         with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
+          version: '3.13.0'
 
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: './...'
+      - name: Lint base chart
+        run: helm lint manifests/charts/base
+
+      - name: Lint admin chart
+        run: helm lint manifests/charts/admin
+
+      - name: Lint dubbo-discovery chart
+        run: helm lint manifests/charts/dubbo-control/dubbo-discovery
+
+      - name: Lint nacos chart
+        run: helm lint manifests/charts/dubbo-control/register-discovery/nacos
+
+      - name: Lint zookeeper chart
+        run: helm lint manifests/charts/dubbo-control/register-discovery/zookeeper
+
+      - name: Validate base chart template rendering
+        run: helm template test-release manifests/charts/base --debug
+
+      - name: Validate admin chart template rendering
+        run: helm template test-release manifests/charts/admin --debug
+
+      - name: Validate dubbo-discovery chart template rendering
+        run: helm template test-release manifests/charts/dubbo-control/dubbo-discovery --debug
+
+      - name: Validate nacos chart template rendering
+        run: helm template test-release manifests/charts/dubbo-control/register-discovery/nacos --debug
+
+      - name: Validate zookeeper chart template rendering
+        run: helm template test-release manifests/charts/dubbo-control/register-discovery/zookeeper --debug

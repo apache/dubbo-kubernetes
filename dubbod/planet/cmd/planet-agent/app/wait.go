@@ -24,7 +24,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"k8s.io/klog/v2"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
 var (
@@ -40,7 +41,7 @@ var (
 			client := &http.Client{
 				Timeout: time.Duration(requestTimeoutMillis) * time.Millisecond,
 			}
-			klog.Infof("Waiting for xDS adapter to be ready (timeout: %d seconds)...", timeoutSeconds)
+			log.Infof("Waiting for xDS adapter to be ready (timeout: %d seconds)...", timeoutSeconds)
 
 			var err error
 			timeout := time.After(time.Duration(timeoutSeconds) * time.Second)
@@ -52,10 +53,10 @@ var (
 				case <-time.After(time.Duration(periodMillis) * time.Millisecond):
 					err = checkIfReady(client, url)
 					if err == nil {
-						klog.Infof("xDS adapter is ready!")
+						log.Info("xDS adapter is ready!")
 						return nil
 					}
-					klog.Errorf("Not ready yet: %v\n", err)
+					log.Errorf("Not ready yet: %v\n", err)
 				}
 			}
 		},

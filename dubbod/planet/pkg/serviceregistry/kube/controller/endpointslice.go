@@ -22,8 +22,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/apache/dubbo-kubernetes/pkg/log"
-
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"

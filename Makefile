@@ -23,15 +23,3 @@ build-dubboctl:
 clone-sample:
 	mkdir -p bin
 	cp -r samples bin/samples
-
-.PHONY: build-planet
-build-planet:
-	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildvcs=false -o bin/planet-discovery ./dubbod/planet/cmd/planet-discovery
-
-	nerdctl build --build-arg GOOS=linux --build-arg GOARCH=arm64 \
-		-f dubbod/planet/docker/dockerfile.planet \
-		-t mfordjody/planet:0.3.0-debug \
-		.
-
-	nerdctl push mfordjody/planet:0.3.0-debug

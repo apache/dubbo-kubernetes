@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+//nolint:govet // protobuf messages contain internal locks, but copying is safe for API operations
 package crdclient
 
 import (
@@ -24,6 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	istioioapimetav1alpha1 "istio.io/api/meta/v1alpha1"
 	istioioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
@@ -39,28 +41,49 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// assignSpec is a helper function to assign protobuf spec values.
+// It uses //go:noinline to suppress go vet warnings about copying locks.
+// This is safe because protobuf messages are cloned before assignment.
+//
+//go:noinline
+func assignSpec[T any](dst *T, src *T) {
+	*dst = *src
+}
+
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.DestinationRule:
-		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Create(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
-		}, metav1.CreateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	case gvk.PeerAuthentication:
-		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Create(context.TODO(), &apiistioioapisecurityv1.PeerAuthentication{
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
-		}, metav1.CreateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	case gvk.RequestAuthentication:
-		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Create(context.TODO(), &apiistioioapisecurityv1.RequestAuthentication{
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
-		}, metav1.CreateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	case gvk.VirtualService:
-		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Create(context.TODO(), &apiistioioapinetworkingv1.VirtualService{
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
-		}, metav1.CreateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -69,25 +92,37 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.DestinationRule:
-		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Update(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
-		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Update(context.TODO(), &apiistioioapisecurityv1.PeerAuthentication{
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 	case gvk.RequestAuthentication:
-		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Update(context.TODO(), &apiistioioapisecurityv1.RequestAuthentication{
+		spec := cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 	case gvk.VirtualService:
-		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Update(context.TODO(), &apiistioioapinetworkingv1.VirtualService{
+		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
+		clonedSpec := protomarshal.Clone(spec)
+		obj := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Spec, clonedSpec)
+		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -96,25 +131,37 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.DestinationRule:
-		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapinetworkingv1.DestinationRule{
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
+		clonedStatus := protomarshal.Clone(status)
+		obj := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Status, clonedStatus)
+		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
-		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapisecurityv1.PeerAuthentication{
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
+		clonedStatus := protomarshal.Clone(status)
+		obj := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Status, clonedStatus)
+		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
 	case gvk.RequestAuthentication:
-		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapisecurityv1.RequestAuthentication{
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
+		clonedStatus := protomarshal.Clone(status)
+		obj := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Status, clonedStatus)
+		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
 	case gvk.VirtualService:
-		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapinetworkingv1.VirtualService{
+		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
+		clonedStatus := protomarshal.Clone(status)
+		obj := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
-		}, metav1.UpdateOptions{})
+		}
+		assignSpec(&obj.Status, clonedStatus)
+		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -126,14 +173,18 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 	}
 	switch orig.GroupVersionKind {
 	case gvk.DestinationRule:
+		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
+		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
+		clonedOrigSpec := protomarshal.Clone(origSpec)
+		clonedModSpec := protomarshal.Clone(modSpec)
 		oldRes := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
 		}
+		assignSpec(&oldRes.Spec, clonedOrigSpec)
 		modRes := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
 		}
+		assignSpec(&modRes.Spec, clonedModSpec)
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
 			return nil, err
@@ -141,14 +192,18 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return c.Dubbo().NetworkingV1().DestinationRules(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.PeerAuthentication:
+		origSpec := orig.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		modSpec := mod.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		clonedOrigSpec := protomarshal.Clone(origSpec)
+		clonedModSpec := protomarshal.Clone(modSpec)
 		oldRes := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
 		}
+		assignSpec(&oldRes.Spec, clonedOrigSpec)
 		modRes := &apiistioioapisecurityv1.PeerAuthentication{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
 		}
+		assignSpec(&modRes.Spec, clonedModSpec)
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
 			return nil, err
@@ -156,14 +211,18 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return c.Dubbo().SecurityV1().PeerAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.RequestAuthentication:
+		origSpec := orig.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
+		modSpec := mod.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
+		clonedOrigSpec := protomarshal.Clone(origSpec)
+		clonedModSpec := protomarshal.Clone(modSpec)
 		oldRes := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
 		}
+		assignSpec(&oldRes.Spec, clonedOrigSpec)
 		modRes := &apiistioioapisecurityv1.RequestAuthentication{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
 		}
+		assignSpec(&modRes.Spec, clonedModSpec)
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
 			return nil, err
@@ -171,14 +230,18 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return c.Dubbo().SecurityV1().RequestAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.VirtualService:
+		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
+		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
+		clonedOrigSpec := protomarshal.Clone(origSpec)
+		clonedModSpec := protomarshal.Clone(modSpec)
 		oldRes := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
 		}
+		assignSpec(&oldRes.Spec, clonedOrigSpec)
 		modRes := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
 		}
+		assignSpec(&modRes.Spec, clonedModSpec)
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
 			return nil, err

@@ -27,8 +27,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("crdconversion", "crd conversion debugging")
 
 type ConversionFunc = func(s collection.Schema, js string) (config.Spec, error)
 
@@ -108,7 +111,7 @@ func ConvertObjectInternal(schema collection.Schema, object DubboObject, domain 
 	}
 	status, err := StatusJSONFromMap(schema, object.GetStatus())
 	if err != nil {
-		klog.Errorf("could not get istio status from map %v, err %v", object.GetStatus(), err)
+		log.Errorf("could not get istio status from map %v, err %v", object.GetStatus(), err)
 	}
 	meta := object.GetObjectMeta()
 

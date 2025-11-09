@@ -20,10 +20,10 @@ package memory
 import (
 	"fmt"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"k8s.io/apimachinery/pkg/types"
 )
 

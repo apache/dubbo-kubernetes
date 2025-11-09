@@ -24,19 +24,22 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crd"
 	"github.com/hashicorp/go-multierror"
 	admissionv1 "k8s.io/api/admission/v1"
 	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("webhookserver", "webhook server debugging")
 
 var (
 	runtimeScheme = runtime.NewScheme()
@@ -116,13 +119,13 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 	switch request.Operation {
 	case kube.Create, kube.Update:
 	default:
-		klog.Warningf("Unsupported webhook operation %v", addDryRunMessageIfNeeded(request.Operation))
+		log.Warnf("Unsupported webhook operation %v", addDryRunMessageIfNeeded(request.Operation))
 		return &kube.AdmissionResponse{Allowed: true}
 	}
 
 	var obj crd.DubboKind
 	if err := json.Unmarshal(request.Object.Raw, &obj); err != nil {
-		klog.Infof("cannot decode configuration: %v", addDryRunMessageIfNeeded(err.Error()))
+		log.Infof("cannot decode configuration: %v", addDryRunMessageIfNeeded(err.Error()))
 		return toAdmissionResponse(fmt.Errorf("cannot decode configuration: %v", err))
 	}
 
@@ -132,13 +135,13 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 	// version. This ensures if a new version comes out and Istiod is not updated, we won't reject it.
 	s, exists := wh.schemas.FindByGroupKind(collection.FromKubernetesGVK(&gvk))
 	if !exists {
-		klog.Infof("unrecognized type %v", addDryRunMessageIfNeeded(obj.GroupVersionKind().String()))
+		log.Infof("unrecognized type %v", addDryRunMessageIfNeeded(obj.GroupVersionKind().String()))
 		return toAdmissionResponse(fmt.Errorf("unrecognized type %v", obj.GroupVersionKind()))
 	}
 
 	out, err := crd.ConvertObject(s, &obj, wh.domainSuffix)
 	if err != nil {
-		klog.Infof("error decoding configuration: %v", addDryRunMessageIfNeeded(err.Error()))
+		log.Infof("error decoding configuration: %v", addDryRunMessageIfNeeded(err.Error()))
 		return toAdmissionResponse(fmt.Errorf("error decoding configuration: %v", err))
 	}
 
@@ -146,7 +149,7 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 	if err != nil {
 		if _, f := out.Annotations[constants.AlwaysReject]; !f {
 			// Hide error message if it was intentionally rejected (by our own internal call)
-			klog.Infof("configuration is invalid: %v", addDryRunMessageIfNeeded(err.Error()))
+			log.Infof("configuration is invalid: %v", addDryRunMessageIfNeeded(err.Error()))
 		}
 		return toAdmissionResponse(fmt.Errorf("configuration is invalid: %v", err))
 	}
@@ -237,13 +240,13 @@ func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {
 func checkFields(raw []byte, kind string, namespace string, name string) (string, error) {
 	trial := make(map[string]json.RawMessage)
 	if err := json.Unmarshal(raw, &trial); err != nil {
-		klog.Errorf("cannot decode configuration fields: %v", err)
+		log.Errorf("cannot decode configuration fields: %v", err)
 		return "yaml_decode_error", fmt.Errorf("cannot decode configuration fields: %v", err)
 	}
 
 	for key := range trial {
 		if _, ok := validFields[key]; !ok {
-			klog.Infof("unknown field %q on %s resource %s/%s",
+			log.Infof("unknown field %q on %s resource %s/%s",
 				key, kind, namespace, name)
 			return "invalid_resource", fmt.Errorf("unknown field %q on %s resource %s/%s",
 				key, kind, namespace, name)

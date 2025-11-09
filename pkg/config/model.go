@@ -38,13 +38,13 @@ import (
 	kubetypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/util/gogoprotomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 )
 
 // Meta is metadata attached to each configuration unit.

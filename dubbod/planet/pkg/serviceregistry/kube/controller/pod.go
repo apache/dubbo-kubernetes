@@ -20,11 +20,11 @@ package controller
 import (
 	"sync"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"istio.io/api/annotation"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"

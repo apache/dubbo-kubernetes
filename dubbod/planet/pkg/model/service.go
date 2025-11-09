@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
@@ -32,11 +33,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/google/go-cmp/cmp"
 	"istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 )
 
 type Resolution int
@@ -260,7 +259,7 @@ func GetTrafficDistribution(specValue *string, annotations map[string]string) Tr
 		return TrafficDistributionPreferSameNode
 	default:
 		if trafficDistributionAnnotationValue != "" {
-			klog.Warningf("Unknown traffic distribution annotation, defaulting to any")
+			log.Warnf("Unknown traffic distribution annotation, defaulting to any")
 		}
 		return TrafficDistributionAny
 	}
@@ -298,9 +297,20 @@ type Service struct {
 }
 
 func (s *Service) DeepCopy() *Service {
-	// nolint: govet
-	out := *s
-	out.Attributes = s.Attributes.DeepCopy()
+	// Manually copy fields to avoid copying the mutex in AddressMap
+	out := &Service{
+		Attributes:               s.Attributes.DeepCopy(),
+		Hostname:                 s.Hostname,
+		ServiceAccounts:          slices.Clone(s.ServiceAccounts),
+		CreationTime:             s.CreationTime,
+		DefaultAddress:           s.DefaultAddress,
+		ResourceVersion:          s.ResourceVersion,
+		Resolution:               s.Resolution,
+		AutoAllocatedIPv4Address: s.AutoAllocatedIPv4Address,
+		AutoAllocatedIPv6Address: s.AutoAllocatedIPv6Address,
+		MeshExternal:             s.MeshExternal,
+		ClusterVIPs:              *s.ClusterVIPs.DeepCopy(),
+	}
 	if s.Ports != nil {
 		out.Ports = make(PortList, len(s.Ports))
 		for i, port := range s.Ports {
@@ -315,10 +325,7 @@ func (s *Service) DeepCopy() *Service {
 			}
 		}
 	}
-
-	out.ServiceAccounts = slices.Clone(s.ServiceAccounts)
-	out.ClusterVIPs = *s.ClusterVIPs.DeepCopy()
-	return &out
+	return out
 }
 
 func (s *Service) Key() string {

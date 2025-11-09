@@ -20,6 +20,8 @@ package kube
 import (
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -27,8 +29,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"

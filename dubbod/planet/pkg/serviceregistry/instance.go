@@ -18,9 +18,9 @@
 package serviceregistry
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 )
 
 // Instance of a service registry. A single service registry combines the capabilities of service discovery
