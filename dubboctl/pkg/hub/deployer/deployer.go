@@ -21,11 +21,12 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"os"
+	template2 "text/template"
+
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/sdk/dubbo"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
-	"os"
-	template2 "text/template"
 )
 
 const (

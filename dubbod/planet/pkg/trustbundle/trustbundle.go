@@ -21,18 +21,22 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	"k8s.io/klog/v2"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/slices"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	meshconfig "istio.io/api/mesh/v1alpha1"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("trustbundle", "trust bundle debugging")
 
 // Source is all possible sources of MeshConfig
 type Source int
@@ -187,7 +191,7 @@ func (tb *TrustBundle) UpdateTrustAnchor(anchorConfig *TrustAnchorUpdate) error 
 	tb.mutex.Unlock()
 	tb.mergeInternal()
 
-	klog.Infof("updating Source %v with certs %v",
+	log.Infof("updating Source %v with certs %v",
 		anchorConfig.Source,
 		strings.Join(anchorConfig.TrustAnchorConfig.Certs, "\n"))
 
@@ -205,7 +209,7 @@ func (tb *TrustBundle) updateRemoteEndpoint(spiffeEndpoints []string) {
 	if slices.Equal(spiffeEndpoints, remoteEndpoints) {
 		return
 	}
-	klog.Infof("updated remote endpoints  :%v", spiffeEndpoints)
+	log.Infof("updated remote endpoints  :%v", spiffeEndpoints)
 	tb.endpointMutex.Lock()
 	tb.endpoints = spiffeEndpoints
 	tb.endpointMutex.Unlock()
@@ -232,7 +236,7 @@ func (tb *TrustBundle) AddMeshConfigUpdate(cfg *meshconfig.MeshConfig) error {
 			Source:            SourceMeshConfig,
 		})
 		if err != nil {
-			klog.Errorf("failed to update meshConfig PEM trustAnchors: %v", err)
+			log.Errorf("failed to update meshConfig PEM trustAnchors: %v", err)
 			return err
 		}
 
@@ -254,13 +258,13 @@ func (tb *TrustBundle) fetchRemoteTrustAnchors() {
 		trustDomainAnchorMap, err := spiffe.RetrieveSpiffeBundleRootCerts(
 			map[string]string{currentTrustDomain: endpoint}, tb.remoteCaCertPool, remoteTimeout)
 		if err != nil {
-			klog.Errorf("unable to fetch trust Anchors from endpoint %s: %s", endpoint, err)
+			log.Errorf("unable to fetch trust Anchors from endpoint %s: %s", endpoint, err)
 			continue
 		}
 		certs := trustDomainAnchorMap[currentTrustDomain]
 		for _, cert := range certs {
 			certStr := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}))
-			klog.V(2).Infof("from endpoint %v, fetched trust anchor cert: %v", endpoint, certStr)
+			log.Debugf("from endpoint %v, fetched trust anchor cert: %v", endpoint, certStr)
 			remoteCerts = append(remoteCerts, certStr)
 		}
 	}
@@ -269,7 +273,7 @@ func (tb *TrustBundle) fetchRemoteTrustAnchors() {
 		Source:            sourceSpiffeEndpoints,
 	})
 	if err != nil {
-		klog.Errorf("failed to update meshConfig Spiffe trustAnchors: %v", err)
+		log.Errorf("failed to update meshConfig Spiffe trustAnchors: %v", err)
 	}
 }
 
@@ -279,14 +283,14 @@ func (tb *TrustBundle) ProcessRemoteTrustAnchors(stop <-chan struct{}, pollInter
 	for {
 		select {
 		case <-ticker.C:
-			klog.Infof("waking up to perform periodic checks")
+			log.Infof("waking up to perform periodic checks")
 			tb.fetchRemoteTrustAnchors()
 		case <-stop:
-			klog.Infof("stop processing endpoint trustAnchor updates")
+			log.Infof("stop processing endpoint trustAnchor updates")
 			return
 		case <-tb.endpointUpdateChan:
 			tb.fetchRemoteTrustAnchors()
-			klog.Infof("processing endpoint trustAnchor Updates for config change")
+			log.Infof("processing endpoint trustAnchor Updates for config change")
 		}
 	}
 }

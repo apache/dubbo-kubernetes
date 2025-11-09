@@ -19,15 +19,19 @@ package krt
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"k8s.io/klog/v2"
-	"sync"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("krt", "krt debugging")
 
 type indexedDependencyType uint8
 
@@ -593,7 +597,7 @@ func newManyCollection[I, O any](
 
 	h.queue = queue.NewWithSync(func() {
 		close(h.synced)
-		klog.Infof("%v synced (uid %v)", h.name(), h.uid())
+		log.Infof("%v synced (uid %v)", h.name(), h.uid())
 	}, h.collectionName)
 
 	go h.runQueue()

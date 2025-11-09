@@ -23,6 +23,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/aggregate"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/kube"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
@@ -37,11 +42,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/aggregate"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/kube"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/hashicorp/go-multierror"
 	"go.uber.org/atomic"
 	"istio.io/api/label"
@@ -50,7 +50,8 @@ import (
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
 type controllerInterface interface {
@@ -58,8 +59,9 @@ type controllerInterface interface {
 }
 
 var (
-	_ controllerInterface      = &Controller{}
-	_ serviceregistry.Instance = &Controller{}
+	log                          = dubbolog.RegisterScope("kubecontroller", "kube controller debugging")
+	_   controllerInterface      = &Controller{}
+	_   serviceregistry.Instance = &Controller{}
 )
 
 type Controller struct {
@@ -143,10 +145,10 @@ func (c *Controller) onNetworkChange() {
 	// the network for endpoints are computed when we process the events; this will fix the cache
 	// NOTE: this must run before the other network watcher handler that creates a force push
 	if err := c.syncPods(); err != nil {
-		klog.Errorf("one or more errors force-syncing pods: %v", err)
+		log.Errorf("one or more errors force-syncing pods: %v", err)
 	}
 	if err := c.endpoints.initializeNamespace(metav1.NamespaceAll, true); err != nil {
-		klog.Errorf("one or more errors force-syncing endpoints: %v", err)
+		log.Errorf("one or more errors force-syncing endpoints: %v", err)
 	}
 
 }
@@ -194,7 +196,7 @@ func (c *Controller) isControllerForProxy(proxy *model.Proxy) bool {
 
 func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceTarget {
 	if !c.isControllerForProxy(proxy) {
-		klog.Errorf("proxy is in cluster %v, but controller is for cluster %v", proxy.Metadata.ClusterID, c.Cluster())
+		log.Errorf("proxy is in cluster %v, but controller is for cluster %v", proxy.Metadata.ClusterID, c.Cluster())
 		return nil
 	}
 
@@ -229,11 +231,11 @@ func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceT
 				// Extract IP from pod and set it to proxy
 				if pod.Status.PodIP != "" {
 					proxy.IPAddresses = []string{pod.Status.PodIP}
-					klog.V(2).Infof("GetProxyServiceTargets: set proxy IP from pod %s/%s: %s", podNamespace, podName, pod.Status.PodIP)
+					log.Debugf("GetProxyServiceTargets: set proxy IP from pod %s/%s: %s", podNamespace, podName, pod.Status.PodIP)
 				}
 				podLabels = labels.Instance(pod.Labels)
 			} else {
-				klog.V(2).Infof("GetProxyServiceTargets: pod %s/%s not found by node ID", podNamespace, podName)
+				log.Debugf("GetProxyServiceTargets: pod %s/%s not found by node ID", podNamespace, podName)
 			}
 		}
 	}
@@ -350,7 +352,7 @@ func (c *Controller) GetService(hostname host.Name) *model.Service {
 }
 
 func (c *Controller) onServiceEvent(pre, curr *v1.Service, event model.Event) error {
-	klog.V(2).Infof("Handle event %s for service %s in namespace %s", event, curr.Name, curr.Namespace)
+	log.Debugf("Handle event %s for service %s in namespace %s", event, curr.Name, curr.Namespace)
 
 	// Create the standard (cluster.local) service.
 	svcConv := kube.ConvertService(*curr, c.opts.DomainSuffix, c.Cluster(), c.meshWatcher.Mesh())
@@ -397,7 +399,7 @@ func (c *Controller) addOrUpdateService(pre, curr *v1.Service, currConv *model.S
 	// log "Full push, new service" when a new endpoint shard is created.
 
 	if serviceUpdateNeedsPush(pre, curr, prevConv, currConv) {
-		klog.V(2).Infof("Service %s in namespace %s updated and needs push", currConv.Hostname, ns)
+		log.Debugf("Service %s in namespace %s updated and needs push", currConv.Hostname, ns)
 		c.handlers.NotifyServiceHandlers(prevConv, currConv, event)
 	}
 }
@@ -464,7 +466,7 @@ func (c *Controller) Run(stop <-chan struct{}) {
 	if c.opts.SyncTimeout != 0 {
 		time.AfterFunc(c.opts.SyncTimeout, func() {
 			if !c.queue.HasSynced() {
-				klog.Warningf("kube controller for %s initial sync timed out", c.opts.ClusterID)
+				log.Warnf("kube controller for %s initial sync timed out", c.opts.ClusterID)
 				c.initialSyncTimedout.Store(true)
 			}
 		})
@@ -472,11 +474,11 @@ func (c *Controller) Run(stop <-chan struct{}) {
 	st := time.Now()
 
 	kubelib.WaitForCacheSync("kube controller", stop, c.informersSynced)
-	klog.Infof("kube controller for %s synced after %v", c.opts.ClusterID, time.Since(st))
+	log.Infof("kube controller for %s synced after %v", c.opts.ClusterID, time.Since(st))
 
 	// after the in-order sync we can start processing the queue
 	c.queue.Run(stop)
-	klog.Infof("Controller terminated")
+	log.Infof("Controller terminated")
 }
 
 func (c *Controller) HasSynced() bool {

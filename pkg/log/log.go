@@ -349,7 +349,7 @@ func (l *Logger) log(level Level, format string, args ...interface{}) {
 	logLine = strings.TrimRight(logLine, "\n\r \t")
 	if logLine != "" {
 		logLine = logLine + "\n"
-		output.Write([]byte(logLine))
+		_, _ = output.Write([]byte(logLine))
 	}
 }
 

@@ -23,13 +23,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -310,7 +311,7 @@ func runDataDir(root string) error {
 			}
 		}
 	}
-	roFile.Close()
+	_ = roFile.Close()
 	rwFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return err

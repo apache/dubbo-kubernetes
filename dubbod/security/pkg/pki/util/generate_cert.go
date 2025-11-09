@@ -33,7 +33,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"k8s.io/klog/v2"
 	"math/big"
 	"os"
 	"strings"
@@ -317,7 +316,7 @@ func genCertTemplateFromCSR(csr *x509.CertificateRequest, subjectIDs []string, t
 	if len(csr.Subject.CommonName) != 0 {
 		if cn, err := DualUseCommonName(subjectIDsInString); err != nil {
 			// log and continue
-			klog.Errorf("dual-use failed for cert template - omitting CN (%v)", err)
+			log.Errorf("dual-use failed for cert template - omitting CN (%v)", err)
 		} else {
 			subject.CommonName = cn
 		}
@@ -387,7 +386,7 @@ func genCertTemplateFromOptions(options CertOptions) (*x509.Certificate, error) 
 			cn, err := DualUseCommonName(h)
 			if err != nil {
 				// log and continue
-				klog.Errorf("dual-use failed for cert template - omitting CN (%v)", err)
+				log.Errorf("dual-use failed for cert template - omitting CN (%v)", err)
 			} else {
 				subject.CommonName = cn
 			}

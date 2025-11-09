@@ -24,8 +24,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("k8sconfig", "k8s config debugging")
 
 func InsertDataToConfigMap(
 	client kclient.Client[*v1.ConfigMap],
@@ -49,7 +52,7 @@ func InsertDataToConfigMap(
 				return nil
 			}
 			if errors.IsForbidden(err) {
-				klog.Infof("skip writing ConfigMap %v/%v as we do not have permissions to do so", meta.Namespace, meta.Name)
+				log.Infof("skip writing ConfigMap %v/%v as we do not have permissions to do so", meta.Namespace, meta.Name)
 				return nil
 			}
 			return fmt.Errorf("error when creating configmap %v: %v", meta.Name, err)
@@ -73,7 +76,7 @@ func updateDataInConfigMap(c kclient.Client[*v1.ConfigMap], cm *v1.ConfigMap, da
 		dataKeyName: string(data),
 	}
 	if needsUpdate := insertData(newCm, cmData); !needsUpdate {
-		klog.V(2).InfoS("ConfigMap %s/%s is already up to date", cm.Namespace, cm.Name)
+		log.Debugf("ConfigMap %s/%s is already up to date", cm.Namespace, cm.Name)
 		return nil
 	}
 	if _, err := c.Update(newCm); err != nil {

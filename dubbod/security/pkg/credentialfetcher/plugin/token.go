@@ -21,8 +21,10 @@ import (
 	"os"
 	"strings"
 
-	"k8s.io/klog/v2"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("tokenplugin", "token plugin debugging")
 
 type KubernetesTokenPlugin struct {
 	path string
@@ -40,7 +42,7 @@ func (t KubernetesTokenPlugin) GetPlatformCredential() (string, error) {
 	}
 	tok, err := os.ReadFile(t.path)
 	if err != nil {
-		klog.Warningf("failed to fetch token from file: %v", err)
+		log.Warnf("failed to fetch token from file: %v", err)
 		return "", nil
 	}
 	return strings.TrimSpace(string(tok)), nil

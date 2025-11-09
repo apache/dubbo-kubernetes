@@ -20,12 +20,12 @@ package app
 import (
 	"fmt"
 
-	"github.com/apache/dubbo-kubernetes/pkg/cmd"
-	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/cmd"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/spf13/cobra"
 )
 

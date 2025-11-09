@@ -19,10 +19,11 @@ package uds
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net"
 	"os"
 	"path/filepath"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
 func NewListener(path string) (net.Listener, error) {

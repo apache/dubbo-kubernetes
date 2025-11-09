@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/http"
 	"os"
 	"path"
@@ -29,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/cmd/planet-agent/config"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
@@ -200,7 +201,10 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	a.statusSrv = &http.Server{Addr: fmt.Sprintf(":%d", a.proxyConfig.StatusPort), Handler: mux}
+	a.statusSrv = &http.Server{
+		Addr:              fmt.Sprintf(":%d", a.proxyConfig.StatusPort),
+		Handler:           mux,
+	}
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()

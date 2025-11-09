@@ -19,12 +19,15 @@ package ctrlz
 
 import (
 	"fmt"
-	"k8s.io/klog/v2"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("ctrlz", "ctrlz debugging")
 
 type Options struct {
 	Port    uint16
@@ -55,7 +58,7 @@ func Run(o *Options) (*Server, error) {
 	// Canonicalize the address and resolve a dynamic port if necessary
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", addr, o.Port))
 	if err != nil {
-		klog.Errorf("Unable to start ControlZ: %v", err)
+		log.Errorf("Unable to start ControlZ: %v", err)
 		return nil, err
 	}
 
@@ -75,18 +78,18 @@ func Run(o *Options) (*Server, error) {
 }
 
 func (s *Server) listen() {
-	klog.Infof("ControlZ available at %s", s.httpServer.Addr)
+	log.Infof("ControlZ available at %s", s.httpServer.Addr)
 	err := s.httpServer.Serve(s.listener)
-	klog.Infof("ControlZ terminated: %v", err)
+	log.Infof("ControlZ terminated: %v", err)
 	s.shutdown.Done()
 }
 
 func (s *Server) Close() {
-	klog.Info("Closing ControlZ")
+	log.Info("Closing ControlZ")
 
 	if s.listener != nil {
 		if err := s.listener.Close(); err != nil {
-			klog.Warningf("Error closing ControlZ: %v", err)
+			log.Warnf("Error closing ControlZ: %v", err)
 		}
 		s.shutdown.Wait()
 	}

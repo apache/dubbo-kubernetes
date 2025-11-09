@@ -54,7 +54,6 @@ func NewRoundTripper(opts ...Option) RoundTripCloser {
 
 	combinedDialer := newDialerWithFallback(primaryDialer, secondaryDialer)
 
-	httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: o.insecureSkipVerify}
 
 	httpTransport.DialContext = combinedDialer.DialContext
 
@@ -80,7 +79,8 @@ func newDialTLSContext(dialer ContextDialer, config *tls.Config, selectCA func(c
 		if config != nil {
 			cfg = config.Clone()
 		} else {
-			cfg = &tls.Config{}
+			cfg = &tls.Config{
+			}
 		}
 
 		serverName, _, err := net.SplitHostPort(addr)

@@ -23,8 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/klog/v2"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("queue", "queue debugging")
 
 type delayTask struct {
 	do      func() error
@@ -272,11 +274,11 @@ func (d *delayQueue) work(stop <-chan struct{}) (stopped chan struct{}) {
 				if err := t.do(); err != nil {
 					if t.retries < maxTaskRetry {
 						t.retries++
-						klog.Warningf("Work item handle failed: %v %d times, retry it", err, t.retries)
+						log.Warnf("Work item handle failed: %v %d times, retry it", err, t.retries)
 						d.pushInternal(t)
 						continue
 					}
-					klog.Errorf("Work item handle failed: %v, reaching the maximum retry times: %d, drop it", err, maxTaskRetry)
+					log.Errorf("Work item handle failed: %v, reaching the maximum retry times: %d, drop it", err, maxTaskRetry)
 				}
 			case <-stop:
 				return

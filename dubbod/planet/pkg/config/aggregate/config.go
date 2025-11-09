@@ -26,9 +26,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 )
 
 var errorUnsupported = errors.New("unsupported operation: the config aggregator is read-only")

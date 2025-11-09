@@ -25,14 +25,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
-	"github.com/apache/dubbo-kubernetes/pkg/sleep"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	tb "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/k8s/chiron"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	certutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/util"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/sleep"
 )
 
 const (

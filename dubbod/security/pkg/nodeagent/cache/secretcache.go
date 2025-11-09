@@ -329,26 +329,17 @@ func (sc *SecretManagerClient) registerSecret(item security.SecretItem) {
 	item.ResourceName = security.WorkloadKeyCertResourceName
 	// In case there are two calls to GenerateSecret at once, we don't want both to be concurrently registered
 	if sc.cache.GetWorkload() != nil {
-		cacheLog.Debugf(
-			"Skip scheduling certificate rotation, already scheduled",
-			"resource", item.ResourceName,
-		)
+		cacheLog.Debugf("Skip scheduling certificate rotation, already scheduled, resource=%s", item.ResourceName)
 		return
 	}
 	sc.cache.SetWorkload(&item)
-	cacheLog.Debugf(
-		"Scheduled certificate for rotation",
-		"resource", item.ResourceName,
-	)
+	cacheLog.Debugf("Scheduled certificate for rotation, resource=%s", item.ResourceName)
 	sc.queue.PushDelayed(func() error {
 		// In case `UpdateConfigTrustBundle` called, it will resign workload cert.
 		// Check if this is a stale scheduled rotating task.
 		if cached := sc.cache.GetWorkload(); cached != nil {
 			if cached.CreatedTime == item.CreatedTime {
-				cacheLog.Debugf(
-					"Rotating certificate",
-					"resource", item.ResourceName,
-				)
+				cacheLog.Debugf("Rotating certificate, resource=%s", item.ResourceName)
 				sc.cache.SetWorkload(nil)
 				sc.OnSecretUpdate(item.ResourceName)
 			}
@@ -436,10 +427,7 @@ func (sc *SecretManagerClient) generateFileSecret(resourceName string) (bool, *s
 			cacheLog.Errorf("failed to generate secret for proxy from file: %v", err)
 			return sdsFromFile, nil, err
 		}
-		cacheLog.Debugf(
-			"Read certificate from file",
-			"resource", resourceName,
-		)
+		cacheLog.Debugf("Read certificate from file, resource=%s", resourceName)
 		return sdsFromFile, sitem, nil
 	}
 	return sdsFromFile, nil, nil

@@ -19,6 +19,9 @@ package mesh
 
 import (
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
@@ -29,9 +32,7 @@ import (
 	wrappers "google.golang.org/protobuf/types/known/wrapperspb"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"istio.io/api/networking/v1alpha3"
-	"os"
 	"sigs.k8s.io/yaml"
-	"time"
 )
 
 // DefaultMeshNetworks returns a default meshnetworks configuration.

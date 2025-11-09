@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
@@ -69,7 +70,7 @@ func NewAegisClient(opts *security.Options, tlsOpts *TLSOptions) (*AegisClient, 
 
 func (c *AegisClient) Close() {
 	if c.conn != nil {
-		c.conn.Close()
+		_ = c.conn.Close()
 	}
 }
 

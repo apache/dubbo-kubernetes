@@ -20,6 +20,8 @@ package kclient
 import (
 	"context"
 	"fmt"
+
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	dubbogvr "github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kubeclient"
 	types "github.com/apache/dubbo-kubernetes/pkg/config/schema/kubetypes"
@@ -30,16 +32,19 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
+
 	"sync"
 	"sync/atomic"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("kclient", "kclient debugging")
 
 type fullClient[T controllers.Object] struct {
 	writeClient[T]
@@ -67,7 +72,7 @@ func NewDelayedInformer[T controllers.ComparableObject](
 ) Informer[T] {
 	watcher := c.CrdWatcher()
 	if watcher == nil {
-		klog.Info("NewDelayedInformer called without a CrdWatcher enabled")
+		log.Info("NewDelayedInformer called without a CrdWatcher enabled")
 	}
 	delay := newDelayedFilter(gvr, watcher)
 	inf := func() informerfactory.StartableInformer {
@@ -101,15 +106,15 @@ func newDelayedInformer[T controllers.ComparableObject](
 		}
 		applyDynamicFilter(filter, gvr, fc)
 		inf.Start(stop)
-		klog.Infof("%v is now ready, building client", gvr.GroupResource())
+		log.Infof("%v is now ready, building client", gvr.GroupResource())
 		// Swap out the dummy client with the full one
 		delayedClient.set(fc)
 	})
 	if !readyNow {
-		klog.V(2).Infof("%v is not ready now, building delayed client", gvr.GroupResource())
+		log.Debugf("%v is not ready now, building delayed client", gvr.GroupResource())
 		return delayedClient
 	}
-	klog.V(2).Infof("%v ready now, building client", gvr.GroupResource())
+	log.Debugf("%v ready now, building client", gvr.GroupResource())
 	return newInformerClient[T](gvr, getInf(), filter)
 }
 

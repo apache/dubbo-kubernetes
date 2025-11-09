@@ -132,7 +132,7 @@ func main() {
 			return nil
 		}
 	})
-	zipWriter.Close()
+	_ = zipWriter.Close()
 	if err != nil {
 		log.Fatal(err)
 	}

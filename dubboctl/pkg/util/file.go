@@ -18,9 +18,10 @@
 package util
 
 import (
-	"golang.org/x/term"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/term"
 )
 
 func LoadTemplate(path, file, builtin string) (string, error) {

@@ -19,6 +19,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder/dockerfile"
@@ -28,10 +33,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/ory/viper"
 	"github.com/spf13/cobra"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 type imageArgs struct {

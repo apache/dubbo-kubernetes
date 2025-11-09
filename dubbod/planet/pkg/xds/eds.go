@@ -169,7 +169,7 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 				configKeys = append(configKeys, fmt.Sprintf("%s/%s/%s", ckey.Kind, ckey.Namespace, ckey.Name))
 				if ckey.Kind == kind.ServiceEntry {
 					// CRITICAL: Match ConfigsUpdated.Name with hostname
-					// Both should be FQDN (e.g., "consumer.grpc-proxyless.svc.cluster.local")
+					// Both should be FQDN (e.g., "consumer.grpc-app.svc.cluster.local")
 					if ckey.Name == hostname {
 						serviceWasUpdated = true
 						log.Debugf("buildEndpoints: service %s was updated, forcing regeneration", hostname)

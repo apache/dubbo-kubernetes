@@ -22,10 +22,10 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/aggregate"
 	kubecontroller "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
 func (s *Server) ServiceController() *aggregate.Controller {

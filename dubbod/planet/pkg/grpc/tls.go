@@ -25,12 +25,15 @@ import (
 	"os"
 	"strings"
 
-	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
+	sec_model "github.com/apache/dubbo-kubernetes/pkg/model"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"k8s.io/klog/v2"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("grpc", "grpc debugging")
 
 type TLSOptions struct {
 	RootCert      string
@@ -53,11 +56,11 @@ func getTLSDialOption(opts *TLSOptions) (grpc.DialOption, error) {
 			if key != "" && cert != "" {
 				isExpired, err := util.IsCertExpired(opts.Cert)
 				if err != nil {
-					klog.Warningf("cannot parse the cert chain, using token instead: %v", err)
+					log.Warnf("cannot parse the cert chain, using token instead: %v", err)
 					return &certificate, nil
 				}
 				if isExpired {
-					klog.Warningf("cert expired, using token instead")
+					log.Warnf("cert expired, using token instead")
 					return &certificate, nil
 				}
 				// Load the certificate from disk

@@ -18,10 +18,10 @@
 package main
 
 import (
-	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubbo-agent"
-	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/cmd/planet-agent/app"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/sds"
+	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubbo-agent"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 	"os"
 )

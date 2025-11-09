@@ -26,9 +26,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/apache/dubbo-kubernetes/pkg/adsc"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	configaggregate "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/aggregate"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crdclient"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/file"
@@ -36,6 +33,9 @@ import (
 	dubboCredentials "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/credentials"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/credentials/kube"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/adsc"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -224,7 +224,6 @@ func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3
 		if tlsSettings.GetInsecureSkipVerify().GetValue() || len(tlsSettings.GetCaCertificates()) == 0 {
 			return credentials.NewTLS(&tls.Config{
 				ServerName:         tlsSettings.GetSni(),
-				InsecureSkipVerify: tlsSettings.GetInsecureSkipVerify().GetValue(), // nolint
 			}), nil
 		}
 		certPool := x509.NewCertPool()
@@ -233,7 +232,6 @@ func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3
 		}
 		return credentials.NewTLS(&tls.Config{
 			ServerName:         tlsSettings.GetSni(),
-			InsecureSkipVerify: tlsSettings.GetInsecureSkipVerify().GetValue(), // nolint
 			RootCAs:            certPool,
 			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 				return s.verifyCert(rawCerts, tlsSettings)

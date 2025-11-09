@@ -18,12 +18,12 @@
 package bootstrap
 
 import (
+	kubecontroller "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	kubecontroller "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/kube/controller"
 )
 
 var (
