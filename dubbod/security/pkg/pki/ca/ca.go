@@ -52,7 +52,12 @@ const (
 	TLSSecretRootCertFile     = "ca.crt"
 	rsaKeySize                = 2048
 	CACertsSecret             = "cacerts"
+	CASecret                  = "dubbo-ca-secret"
 	DubboGenerated            = "dubbo-generated"
+)
+
+var (
+	dubboCASecretType = v1.SecretTypeOpaque
 )
 
 const (

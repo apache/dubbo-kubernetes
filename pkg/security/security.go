@@ -38,19 +38,22 @@ const (
 	RootCertReqResourceName           = "ROOTCA"
 	WorkloadKeyCertResourceName       = "default"
 	WorkloadIdentityPath              = "./var/run/secrets/workload-spiffe-uds"
+	WorkloadIdentityCredentialsPath   = "./var/run/secrets/workload-spiffe-uds/credentials"
 	DefaultWorkloadIdentitySocketFile = "socket"
 	DefaultCertChainFilePath          = "./etc/certs/cert-chain.pem"
 	DefaultKeyFilePath                = "./etc/certs/key.pem"
 
-	SystemRootCerts                 = "SYSTEM"
-	DefaultRootCertFilePath         = "./etc/certs/root-cert.pem"
-	WorkloadIdentityCertChainPath   = WorkloadIdentityCredentialsPath + "/cert-chain.pem"
-	WorkloadIdentityRootCertPath    = WorkloadIdentityCredentialsPath + "/root-cert.pem"
-	WorkloadIdentityKeyPath         = WorkloadIdentityCredentialsPath + "/key.pem"
-	JWT                             = "JWT"
+	SystemRootCerts               = "SYSTEM"
+	DefaultRootCertFilePath       = "./etc/certs/root-cert.pem"
+	WorkloadIdentityCertChainPath = WorkloadIdentityCredentialsPath + "/cert-chain.pem"
+	WorkloadIdentityRootCertPath  = WorkloadIdentityCredentialsPath + "/root-cert.pem"
+	WorkloadIdentityKeyPath       = WorkloadIdentityCredentialsPath + "/key.pem"
+	JWT                           = "JWT"
 
-	CredentialMetaDataName = "credential"
-	FileRootSystemCACert   = "file-root:system"
+	CredentialMetaDataName       = "credential"
+	FileRootSystemCACert         = "file-root:system"
+	FileCredentialNameSocketPath = "./var/run/secrets/workload-spiffe-uds/file-credential-socket"
+	CredentialNameSocketPath     = "./var/run/secrets/workload-spiffe-uds/credential-socket"
 )
 
 const (
