@@ -25,10 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection/k8sleaderelection"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection/k8sleaderelection/k8sresourcelock"
+	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"go.uber.org/atomic"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"

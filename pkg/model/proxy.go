@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"strconv"
 
+	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )

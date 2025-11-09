@@ -26,12 +26,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/backoff"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/cmd"
 	caerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	certutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/util"
+	"github.com/apache/dubbo-kubernetes/pkg/backoff"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	apierror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +45,7 @@ const (
 	CACertFile                = "ca-cert.pem"
 	CAPrivateKeyFile          = "ca-key.pem"
 	CACRLFile                 = "ca-crl.pem"
-	CASecret                  = "dubbo-ca-secret"
+	CASecret                  = "dubbo-ca-secret" // #nosec G101 -- Secret name constant, not a credential value
 	CertChainFile             = "cert-chain.pem"
 	PrivateKeyFile            = "key.pem"
 	RootCertFile              = "root-cert.pem"

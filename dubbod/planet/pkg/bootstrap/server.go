@@ -601,6 +601,7 @@ func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain strin
 	var rootCertBytes []byte
 	var err error
 	if caCertPath != "" {
+		// #nosec G304 -- File paths are controlled and validated by caller
 		if rootCertBytes, err = os.ReadFile(caCertPath); err != nil {
 			return nil, err
 		}

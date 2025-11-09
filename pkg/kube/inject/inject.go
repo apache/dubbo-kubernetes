@@ -193,6 +193,29 @@ func InboundTrafficPolicyMode(meshConfig *meshconfig.MeshConfig) string {
 	return "passthrough"
 }
 
+// getProxyImage extracts the proxy image from values map, following Istio's pattern.
+// It checks common paths: global.proxy.image, global.proxyImage, and falls back to default.
+func getProxyImage(values map[string]any, defaultImage string) string {
+	if values == nil {
+		return defaultImage
+	}
+
+	// Check global.proxy.image (Istio pattern)
+	if global, ok := values["global"].(map[string]any); ok {
+		if proxy, ok := global["proxy"].(map[string]any); ok {
+			if image, ok := proxy["image"].(string); ok && image != "" {
+				return image
+			}
+		}
+		// Check global.proxyImage (alternative pattern)
+		if image, ok := global["proxyImage"].(string); ok && image != "" {
+			return image
+		}
+	}
+
+	return defaultImage
+}
+
 func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod *corev1.Pod, err error) {
 	metadata := &params.pod.ObjectMeta
 	meshConfig := params.meshConfig
@@ -216,7 +239,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		MeshConfig:               meshConfig,
 		Values:                   params.valuesConfig.asMap,
 		Revision:                 params.revision,
-		ProxyImage:               "mfordjody/proxyadapter:0.3.0-debug", // TODO ProxyImage
+		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.0-debug"),
 		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
 		CompliancePolicy:         common_features.CompliancePolicy,
 	}

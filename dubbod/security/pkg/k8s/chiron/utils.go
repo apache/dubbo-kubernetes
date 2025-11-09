@@ -120,6 +120,7 @@ func SignCSRK8s(client clientset.Interface, csrData []byte, signerName string, u
 
 // Read CA certificate and check whether it is a valid certificate.
 func readCACert(caCertPath string) ([]byte, error) {
+	// #nosec G304 -- File paths are controlled and validated by caller
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
 		log.Errorf("failed to read CA cert, cert. path: %v, error: %v", caCertPath, err)

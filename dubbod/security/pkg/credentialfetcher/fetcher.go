@@ -20,8 +20,8 @@ package credentialfetcher
 import (
 	"fmt"
 
-	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/credentialfetcher/plugin"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
 )
 
 func NewCredFetcher(credtype string) (security.CredFetcher, error) {

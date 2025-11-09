@@ -17,7 +17,7 @@ syntax = "proto3";
 
 package echo;
 
-option go_package = "github.com/apache/dubbo-kubernetes/test/grpc-app/proto";
+option go_package = "github.com/apache/dubbo-kubernetes/tests/grpc-app/proto";
 
 // Echo service for testing gRPC proxyless
 service EchoService {

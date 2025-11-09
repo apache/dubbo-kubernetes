@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -32,7 +33,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	jsonmerge "github.com/evanphx/json-patch/v5"
 	"go.uber.org/atomic"
 	"gomodules.xyz/jsonpatch/v2"

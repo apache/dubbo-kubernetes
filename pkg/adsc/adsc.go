@@ -512,7 +512,7 @@ func tlsConfig(config *Config) (*tls.Config, error) {
 		GetClientCertificate: getClientCertificate,
 		RootCAs:              serverCAs,
 		ServerName:           shost,
-		InsecureSkipVerify:   config.InsecureSkipVerify,
+		InsecureSkipVerify:   config.InsecureSkipVerify, // #nosec G402 -- InsecureSkipVerify is configurable by user
 	}, nil
 }
 

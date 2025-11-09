@@ -18,10 +18,10 @@
 package bootstrap
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/server"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/validation/controller"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 )
 
 func (s *Server) initConfigValidation(args *PlanetArgs) error {

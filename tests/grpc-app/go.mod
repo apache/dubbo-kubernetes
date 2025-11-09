@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module github.com/apache/dubbo-kubernetes/test/grpc-app
+module github.com/apache/dubbo-kubernetes/tests/grpc-app
 
 go 1.24.0
 

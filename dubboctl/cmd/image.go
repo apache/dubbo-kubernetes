@@ -19,6 +19,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/hub/builder/dockerfile"
@@ -28,10 +33,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
 	"github.com/ory/viper"
 	"github.com/spf13/cobra"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 type imageArgs struct {
@@ -327,6 +328,7 @@ func runDeploy(cmd *cobra.Command, args []string, clientFactory ClientFactory) e
 
 func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root, dc.Deploy.Output)
+	// #nosec G204 -- kubectl is a trusted system command
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "apply", "-f", file)
 	ec.Stdout, ec.Stderr = os.Stdout, os.Stderr
 	if err := ec.Run(); err != nil {
@@ -337,6 +339,7 @@ func apply(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 
 func remove(cmd *cobra.Command, dc *dubbo.DubboConfig) error {
 	file := filepath.Join(dc.Root, dc.Deploy.Output)
+	// #nosec G204 -- kubectl is a trusted system command
 	ec := exec.CommandContext(cmd.Context(), "kubectl", "delete", "-f", file)
 	ec.Stdout, ec.Stderr = os.Stdout, os.Stderr
 	if err := ec.Run(); err != nil {

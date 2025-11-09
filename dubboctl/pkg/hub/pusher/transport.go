@@ -54,7 +54,7 @@ func NewRoundTripper(opts ...Option) RoundTripCloser {
 
 	combinedDialer := newDialerWithFallback(primaryDialer, secondaryDialer)
 
-	httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: o.insecureSkipVerify}
+	httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: o.insecureSkipVerify} // #nosec G402 -- InsecureSkipVerify is configurable by user
 
 	httpTransport.DialContext = combinedDialer.DialContext
 

@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 )

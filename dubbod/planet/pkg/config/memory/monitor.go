@@ -18,8 +18,8 @@
 package memory
 
 import (
-	config2 "github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
+	config2 "github.com/apache/dubbo-kubernetes/pkg/config"
 )
 
 type Handler func(config2.Config, config2.Config, model.Event)

@@ -186,6 +186,7 @@ func FindRootCertFromCertificateChainBytes(certBytes []byte) ([]byte, error) {
 func IsCertExpired(filepath string) (bool, error) {
 	var err error
 	var certPEMBlock []byte
+	// #nosec G304 -- File paths are controlled and validated by caller
 	certPEMBlock, err = os.ReadFile(filepath)
 	if err != nil {
 		return true, fmt.Errorf("failed to read the cert, error is %v", err)

@@ -67,6 +67,7 @@ func OutputKeyCertToDir(dir string, privateKey, certChain, rootCert []byte) erro
 		if newData == nil {
 			return nil
 		}
+		// #nosec G304 -- File paths are controlled and validated by caller
 		oldData, _ := os.ReadFile(path.Join(dir, fileName))
 		if !bytes.Equal(oldData, newData) {
 			if err := file.AtomicWrite(path.Join(dir, fileName), newData, certFileMode); err != nil {

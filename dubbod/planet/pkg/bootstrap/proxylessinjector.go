@@ -25,10 +25,10 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

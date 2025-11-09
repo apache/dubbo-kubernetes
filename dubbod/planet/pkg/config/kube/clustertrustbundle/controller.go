@@ -22,10 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
 )
 
 const (

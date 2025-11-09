@@ -21,13 +21,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/kubemesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/ptr"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"sigs.k8s.io/yaml"
 )
 
