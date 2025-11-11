@@ -50,7 +50,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: dev-debug
+          image: mfordjody/grpc-consumer:dev-debug
           imagePullPolicy: Always
           ports:
             - containerPort: 17070
@@ -101,7 +101,7 @@ spec:
       containers:
         - name: app
           # Replace with your own image containing the producer binary
-          image: dev-debug
+          image: mfordjody/grpc-producer:dev-debug
           imagePullPolicy: Always
           # Optional: uncomment to test direct connection
           # - --target=xds:///consumer.grpc-app.svc.cluster.local:7070

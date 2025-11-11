@@ -85,12 +85,23 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	}
 
 	// Get endpoints from the endpoint index
+	// CRITICAL: Log all available services in EndpointIndex for debugging
+	allServices := endpointIndex.AllServices()
+	if len(allServices) > 0 {
+		log.Infof("BuildClusterLoadAssignment: EndpointIndex contains %d services: %v", len(allServices), allServices)
+	} else {
+		log.Warnf("BuildClusterLoadAssignment: EndpointIndex is empty - no services registered")
+	}
+
 	shards, ok := endpointIndex.ShardsForService(string(b.hostname), b.service.Attributes.Namespace)
 	if !ok {
 		// CRITICAL: Log at INFO level for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
+		// Also log what services ARE available in the namespace
+		servicesInNamespace := endpointIndex.ServicesInNamespace(b.service.Attributes.Namespace)
 		log.Infof("BuildClusterLoadAssignment: no shards found for service %s in namespace %s (cluster=%s, port=%d, svcPort.Name='%s', svcPort.Port=%d). "+
-			"This usually means endpoints are not yet available or service is not registered.",
-			b.hostname, b.service.Attributes.Namespace, b.clusterName, b.port, svcPort.Name, svcPort.Port)
+			"This usually means endpoints are not yet available or service is not registered. "+
+			"Available services in namespace: %v",
+			b.hostname, b.service.Attributes.Namespace, b.clusterName, b.port, svcPort.Name, svcPort.Port, servicesInNamespace)
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
 
@@ -170,21 +181,24 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 				continue
 			}
 
-			// Filter out unhealthy endpoints unless service supports them
-			// CRITICAL: Even if endpoint is unhealthy, we should include it if:
-			// 1. Service has publishNotReadyAddresses=true (SupportsUnhealthyEndpoints returns true)
-			// 2. Or if the endpoint is actually healthy (HealthStatus=Healthy)
+			// CRITICAL FIX: Following Istio's implementation, we should ALWAYS include endpoints in EDS,
+			// regardless of their health status. The client will decide whether to use them based on
+			// OverrideHostStatus in the Cluster configuration.
 			//
-			// For gRPC proxyless, we may want to include endpoints even if they're not ready initially,
-			// as the client will handle connection failures. However, this is controlled by the service
-			// configuration (publishNotReadyAddresses).
-			if !b.service.SupportsUnhealthyEndpoints() && ep.HealthStatus == model.UnHealthy {
-				unhealthyCount++
-				filteredCount++
-				log.Debugf("BuildClusterLoadAssignment: filtering out unhealthy endpoint %s (HealthStatus=%v, SupportsUnhealthyEndpoints=%v)",
-					ep.FirstAddressOrNil(), ep.HealthStatus, b.service.SupportsUnhealthyEndpoints())
-				continue
-			}
+			// However, if the service explicitly doesn't support unhealthy endpoints (publishNotReadyAddresses=false),
+			// we should still include them in EDS but mark them as UNHEALTHY. The client's OverrideHostStatus
+			// will determine if they can be used.
+			//
+			// This is critical for proxyless gRPC - even if endpoints are unhealthy, they should be
+			// included in EDS so the client knows they exist and can attempt to connect to them.
+			// The client will handle connection failures appropriately.
+			//
+			// Note: We only filter out unhealthy endpoints if the service explicitly doesn't support them
+			// AND we're not in a proxyless gRPC scenario. For proxyless gRPC, always include endpoints.
+			// For non-proxyless (Envoy), we follow the service's publishNotReadyAddresses setting.
+			// But since this is proxyless gRPC, we should always include endpoints.
+			// Actually, let's follow Istio's behavior: always include endpoints, let the client decide.
+			// The OverrideHostStatus in Cluster config will control whether unhealthy endpoints can be used.
 
 			// Build LbEndpoint
 			lbEp := b.buildLbEndpoint(ep)
@@ -214,6 +228,23 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	}
 
 	// Create LocalityLbEndpoints with empty locality (default)
+	// CRITICAL: Log endpoint health status for debugging
+	healthyCount := 0
+	unhealthyInLbCount := 0
+	drainingCount := 0
+	for _, lbEp := range lbEndpoints {
+		switch lbEp.HealthStatus {
+		case core.HealthStatus_HEALTHY:
+			healthyCount++
+		case core.HealthStatus_UNHEALTHY:
+			unhealthyInLbCount++
+		case core.HealthStatus_DRAINING:
+			drainingCount++
+		}
+	}
+	log.Infof("BuildClusterLoadAssignment: cluster %s (hostname=%s, port=%d) - total endpoints: %d (healthy=%d, unhealthy=%d, draining=%d, SupportsUnhealthyEndpoints=%v)",
+		b.clusterName, b.hostname, b.port, len(lbEndpoints), healthyCount, unhealthyInLbCount, drainingCount, b.service.SupportsUnhealthyEndpoints())
+
 	localityLbEndpoints := []*endpoint.LocalityLbEndpoints{
 		{
 			Locality:    &core.Locality{},

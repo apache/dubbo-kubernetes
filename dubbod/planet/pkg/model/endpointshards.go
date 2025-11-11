@@ -132,6 +132,30 @@ func (e *EndpointIndex) ShardsForService(serviceName, namespace string) (*Endpoi
 	return shards, ok
 }
 
+// AllServices returns all service names registered in the EndpointIndex
+func (e *EndpointIndex) AllServices() []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	services := make([]string, 0, len(e.shardsBySvc))
+	for svcName := range e.shardsBySvc {
+		services = append(services, svcName)
+	}
+	return services
+}
+
+// ServicesInNamespace returns all service names in the given namespace
+func (e *EndpointIndex) ServicesInNamespace(namespace string) []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	services := make([]string, 0)
+	for svcName, byNs := range e.shardsBySvc {
+		if _, ok := byNs[namespace]; ok {
+			services = append(services, svcName)
+		}
+	}
+	return services
+}
+
 func (es *EndpointShards) CopyEndpoints(portMap map[string]int, ports sets.Set[int]) map[int][]*DubboEndpoint {
 	es.RLock()
 	defer es.RUnlock()
