@@ -550,6 +550,18 @@ func (esc *endpointSliceController) pushEDS(hostnames []host.Name, namespace str
 
 	for _, hostname := range hostnames {
 		endpoints := esc.endpointCache.get(hostname)
+		// CRITICAL: Log endpoint registration for debugging
+		log.Infof("pushEDS: registering %d endpoints for service %s in namespace %s (shard=%v)",
+			len(endpoints), string(hostname), namespace, shard)
+		if len(endpoints) > 0 {
+			// Log endpoint details for first few endpoints
+			for i, ep := range endpoints {
+				if i < 3 {
+					log.Infof("pushEDS: endpoint[%d] address=%s, port=%d, ServicePortName='%s', HealthStatus=%v",
+						i, ep.FirstAddressOrNil(), ep.EndpointPort, ep.ServicePortName, ep.HealthStatus)
+				}
+			}
+		}
 		esc.c.opts.XDSUpdater.EDSUpdate(shard, string(hostname), namespace, endpoints)
 	}
 }

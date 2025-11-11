@@ -19,6 +19,7 @@ package grpcgen
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
@@ -115,25 +116,25 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	if b.filter.Contains(b.defaultClusterName) {
 		defaultCluster = b.edsCluster(b.defaultClusterName)
 		// CRITICAL: For gRPC proxyless, we need to set CommonLbConfig to handle endpoint health status
-		// This ensures that the cluster can use healthy endpoints for load balancing
+		// Following Istio's implementation, we should include UNHEALTHY and DRAINING endpoints
+		// in OverrideHostStatus so that clients can use them when healthy endpoints are not available.
+		// This prevents "weighted-target: no targets to pick from" errors when all endpoints are unhealthy.
+		// The client will prioritize HEALTHY endpoints but can fall back to UNHEALTHY/DRAINING if needed.
 		if defaultCluster.CommonLbConfig == nil {
 			defaultCluster.CommonLbConfig = &cluster.Cluster_CommonLbConfig{}
 		}
-		if b.svc.SupportsDrainingEndpoints() {
-			// see core/v1alpha3/cluster.go
-			defaultCluster.CommonLbConfig.OverrideHostStatus = &core.HealthStatusSet{
-				Statuses: []core.HealthStatus{
-					core.HealthStatus_HEALTHY,
-					core.HealthStatus_DRAINING, core.HealthStatus_UNKNOWN, core.HealthStatus_DEGRADED,
-				},
-			}
-		} else {
-			// For gRPC proxyless, only use HEALTHY endpoints by default
-			defaultCluster.CommonLbConfig.OverrideHostStatus = &core.HealthStatusSet{
-				Statuses: []core.HealthStatus{
-					core.HealthStatus_HEALTHY,
-				},
-			}
+		// CRITICAL FIX: Following Istio's implementation, always include UNHEALTHY and DRAINING
+		// in OverrideHostStatus. This allows clients to use unhealthy endpoints when healthy ones
+		// are not available, preventing "weighted-target: no targets to pick from" errors.
+		// The client will still prioritize HEALTHY endpoints, but can fall back to others.
+		defaultCluster.CommonLbConfig.OverrideHostStatus = &core.HealthStatusSet{
+			Statuses: []core.HealthStatus{
+				core.HealthStatus_HEALTHY,
+				core.HealthStatus_UNHEALTHY,
+				core.HealthStatus_DRAINING,
+				core.HealthStatus_UNKNOWN,
+				core.HealthStatus_DEGRADED,
+			},
 		}
 	}
 
