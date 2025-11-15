@@ -40,6 +40,13 @@ const (
 	SDSType = "sds"
 )
 
+type XdsCacheEntry interface {
+	Type() string
+	Key() any
+	DependentConfigs() []ConfigHash
+	Cacheable() bool
+}
+
 type XdsCache interface {
 	Run(stop <-chan struct{})
 	Add(entry XdsCacheEntry, pushRequest *PushRequest, value *discovery.Resource)
@@ -68,13 +75,6 @@ func NewXdsCache() XdsCache {
 	cache.sds = newTypedXdsCache[string]()
 
 	return cache
-}
-
-type XdsCacheEntry interface {
-	Type() string
-	Key() any
-	DependentConfigs() []ConfigHash
-	Cacheable() bool
 }
 
 func (x XdsCacheImpl) Run(stop <-chan struct{}) {
@@ -163,6 +163,14 @@ func (x XdsCacheImpl) ClearAll() {
 	x.sds.ClearAll()
 }
 
+func convertToAnySlices[K comparable](in []K) []any {
+	out := make([]any, len(in))
+	for i, k := range in {
+		out[i] = k
+	}
+	return out
+}
+
 func (x XdsCacheImpl) Keys(t string) []any {
 	switch t {
 	case CDSType:
@@ -182,14 +190,6 @@ func (x XdsCacheImpl) Keys(t string) []any {
 	}
 }
 
-func convertToAnySlices[K comparable](in []K) []any {
-	out := make([]any, len(in))
-	for i, k := range in {
-		out[i] = k
-	}
-	return out
-}
-
 func (x XdsCacheImpl) Snapshot() []*discovery.Resource {
 	var out []*discovery.Resource
 	out = append(out, x.cds.Snapshot()...)
@@ -201,6 +201,8 @@ func (x XdsCacheImpl) Snapshot() []*discovery.Resource {
 
 // DisabledCache is a cache that is always empty
 type DisabledCache struct{}
+
+var _ XdsCache = &DisabledCache{}
 
 func (d DisabledCache) Run(stop <-chan struct{}) {
 }
@@ -225,5 +227,3 @@ func (d DisabledCache) Keys(t string) []any {
 func (d DisabledCache) Snapshot() []*discovery.Resource {
 	return nil
 }
-
-var _ XdsCache = &DisabledCache{}

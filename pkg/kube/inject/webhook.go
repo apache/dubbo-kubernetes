@@ -21,14 +21,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	admissionv1 "k8s.io/api/admission/v1"
+	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"text/template"
 	"time"
-
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
@@ -39,8 +40,6 @@ import (
 	"gomodules.xyz/jsonpatch/v2"
 	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
-	admissionv1 "k8s.io/api/admission/v1"
-	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,20 +50,19 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const (
+	watchDebounceDelay   = 100 * time.Millisecond
+	grpcBootstrapPath    = "/etc/dubbo/proxy/grpc-bootstrap.json"
+	proxyVolumeMountPath = "/etc/dubbo/proxy"
+	proxyVolumeName      = "dubbo-xds"
+)
+
+var webhookLog = dubbolog.RegisterScope("webhook", "webhook debugging")
+
 var (
 	runtimeScheme = runtime.NewScheme()
 	codecs        = serializer.NewCodecFactory(runtimeScheme)
 	deserializer  = codecs.UniversalDeserializer()
-)
-
-func init() {
-	_ = corev1.AddToScheme(runtimeScheme)
-	_ = admissionv1.AddToScheme(runtimeScheme)
-	_ = kubeApiAdmissionv1beta1.AddToScheme(runtimeScheme)
-}
-
-const (
-	watchDebounceDelay = 100 * time.Millisecond
 )
 
 type Webhook struct {
@@ -75,6 +73,37 @@ type Webhook struct {
 	Config       *Config
 	valuesConfig ValuesConfig
 	revision     string
+}
+
+type WebhookParameters struct {
+	Watcher      Watcher
+	Port         int
+	Env          *model.Environment
+	Mux          *http.ServeMux
+	Revision     string
+	MultiCluster multicluster.ComponentBuilder
+}
+
+type ValuesConfig struct {
+	raw      string
+	asStruct *opconfig.Values
+	asMap    map[string]any
+}
+
+type InjectionParameters struct {
+	pod                 *corev1.Pod
+	deployMeta          types.NamespacedName
+	namespace           *corev1.Namespace
+	typeMeta            metav1.TypeMeta
+	templates           map[string]*template.Template
+	defaultTemplate     []string
+	aliases             map[string][]string
+	meshConfig          *meshconfig.MeshConfig
+	proxyConfig         *meshconfig.ProxyConfig
+	valuesConfig        ValuesConfig
+	revision            string
+	proxyEnvs           map[string]string
+	injectedAnnotations map[string]string
 }
 
 func NewWebhook(p WebhookParameters) (*Webhook, error) {
@@ -109,59 +138,6 @@ func NewWebhook(p WebhookParameters) (*Webhook, error) {
 	return wh, nil
 }
 
-type WebhookParameters struct {
-	Watcher      Watcher
-	Port         int
-	Env          *model.Environment
-	Mux          *http.ServeMux
-	Revision     string
-	MultiCluster multicluster.ComponentBuilder
-}
-
-type ValuesConfig struct {
-	raw      string
-	asStruct *opconfig.Values
-	asMap    map[string]any
-}
-
-func loadConfig(injectFile, valuesFile string) (*Config, string, error) {
-	data, err := os.ReadFile(injectFile)
-	if err != nil {
-		return nil, "", err
-	}
-	var c *Config
-	if c, err = unmarshalConfig(data); err != nil {
-		log.Warnf("Failed to parse injectFile %s", string(data))
-		return nil, "", err
-	}
-
-	valuesConfig, err := os.ReadFile(valuesFile)
-	if err != nil {
-		return nil, "", err
-	}
-	return c, string(valuesConfig), nil
-}
-
-func unmarshalConfig(data []byte) (*Config, error) {
-	c, err := UnmarshalConfig(data)
-	if err != nil {
-		return nil, err
-	}
-	return &c, nil
-}
-
-func (wh *Webhook) updateConfig(sidecarConfig *Config, valuesConfig string) error {
-	wh.mu.Lock()
-	defer wh.mu.Unlock()
-	wh.Config = sidecarConfig
-	vc, err := NewValuesConfig(valuesConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create new values config: %v", err)
-	}
-	wh.valuesConfig = vc
-	return nil
-}
-
 func NewValuesConfig(v string) (ValuesConfig, error) {
 	c := ValuesConfig{raw: v}
 	valuesStruct := &opconfig.Values{}
@@ -176,6 +152,18 @@ func NewValuesConfig(v string) (ValuesConfig, error) {
 	}
 	c.asMap = values
 	return c, nil
+}
+
+func (wh *Webhook) updateConfig(sidecarConfig *Config, valuesConfig string) error {
+	wh.mu.Lock()
+	defer wh.mu.Unlock()
+	wh.Config = sidecarConfig
+	vc, err := NewValuesConfig(valuesConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create new values config: %v", err)
+	}
+	wh.valuesConfig = vc
+	return nil
 }
 
 func (wh *Webhook) serveInject(w http.ResponseWriter, r *http.Request) {
@@ -238,26 +226,122 @@ func (wh *Webhook) serveInject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := w.Write(resp); err != nil {
-		log.Errorf("Could not write response: %v", err)
+		webhookLog.Errorf("Could not write response: %v", err)
 		http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
 		return
 	}
 }
 
-type InjectionParameters struct {
-	pod                 *corev1.Pod
-	deployMeta          types.NamespacedName
-	namespace           *corev1.Namespace
-	typeMeta            metav1.TypeMeta
-	templates           map[string]*template.Template
-	defaultTemplate     []string
-	aliases             map[string][]string
-	meshConfig          *meshconfig.MeshConfig
-	proxyConfig         *meshconfig.ProxyConfig
-	valuesConfig        ValuesConfig
-	revision            string
-	proxyEnvs           map[string]string
-	injectedAnnotations map[string]string
+func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.AdmissionResponse {
+	log := webhookLog.WithLabels("path", path)
+	req := ar.Request
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		log.Errorf("Could not unmarshal raw object: %v %s", err, string(req.Object.Raw))
+		return toAdmissionResponse(err)
+	}
+
+	pod.ManagedFields = nil
+
+	podName := potentialPodName(pod.ObjectMeta)
+	if pod.ObjectMeta.Namespace == "" {
+		pod.ObjectMeta.Namespace = req.Namespace
+	}
+
+	log = log.WithLabels("pod", pod.Namespace+"/"+podName)
+	log.Infof("Process proxyless injection request")
+
+	wh.mu.RLock()
+	if !injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &pod.Spec, pod.ObjectMeta) {
+		log.Infof("Skipping due to policy check")
+		wh.mu.RUnlock()
+		return &kube.AdmissionResponse{
+			Allowed: true,
+		}
+	}
+	proxyConfig := wh.env.GetProxyConfigOrDefault(pod.Namespace, pod.Labels, pod.Annotations, wh.meshConfig)
+	deploy, typeMeta := kube.GetDeployMetaFromPod(&pod)
+	params := InjectionParameters{
+		pod:                 &pod,
+		deployMeta:          deploy,
+		typeMeta:            typeMeta,
+		templates:           wh.Config.Templates,
+		defaultTemplate:     wh.Config.DefaultTemplates,
+		aliases:             wh.Config.Aliases,
+		meshConfig:          wh.meshConfig,
+		proxyConfig:         proxyConfig,
+		valuesConfig:        wh.valuesConfig,
+		injectedAnnotations: wh.Config.InjectedAnnotations,
+		proxyEnvs:           parseInjectEnvs(path),
+		revision:            wh.revision,
+	}
+
+	wh.mu.RUnlock()
+
+	log.Infof("Injecting pod with templates: %v, defaultTemplate: %v", len(params.templates), params.defaultTemplate)
+	log.Infof("Pod labels: %v, annotations: %v", params.pod.Labels, params.pod.Annotations)
+	patchBytes, err := injectPod(params)
+	if err != nil {
+		log.Errorf("Pod injection failed: %v", err)
+		return toAdmissionResponse(err)
+	}
+
+	log.Infof("Injection successful, patch size: %d bytes", len(patchBytes))
+	reviewResponse := kube.AdmissionResponse{
+		Allowed: true,
+		Patch:   patchBytes,
+		PatchType: func() *string {
+			pt := "JSONPatch"
+			return &pt
+		}(),
+	}
+	return &reviewResponse
+}
+
+func (wh *Webhook) Run(stop <-chan struct{}) {
+	go wh.watcher.Run(stop)
+}
+
+func loadConfig(injectFile, valuesFile string) (*Config, string, error) {
+	data, err := os.ReadFile(injectFile)
+	if err != nil {
+		return nil, "", err
+	}
+	var c *Config
+	if c, err = unmarshalConfig(data); err != nil {
+		webhookLog.Warnf("Failed to parse injectFile %s", string(data))
+		return nil, "", err
+	}
+
+	valuesConfig, err := os.ReadFile(valuesFile)
+	if err != nil {
+		return nil, "", err
+	}
+	return c, string(valuesConfig), nil
+}
+
+func unmarshalConfig(data []byte) (*Config, error) {
+	c, err := UnmarshalConfig(data)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func ParseTemplates(tmpls RawTemplates) (Templates, error) {
+	ret := make(Templates, len(tmpls))
+	for k, t := range tmpls {
+		p, err := parseDryTemplate(t, InjectionFuncmap)
+		if err != nil {
+			return nil, err
+		}
+		ret[k] = p
+	}
+	return ret, nil
+}
+
+func toAdmissionResponse(err error) *kube.AdmissionResponse {
+	return &kube.AdmissionResponse{Result: &metav1.Status{Message: err.Error()}}
 }
 
 func injectPod(req InjectionParameters) ([]byte, error) {
@@ -307,10 +391,6 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 // /etc/dubbo/proxy volume mount to all application containers (non-proxy containers)
 // to enable them to connect to the XDS proxy via UDS socket
 func addApplicationContainerConfig(pod *corev1.Pod) {
-	const grpcBootstrapPath = "/etc/dubbo/proxy/grpc-bootstrap.json"
-	const proxyVolumeMountPath = "/etc/dubbo/proxy"
-	const proxyVolumeName = "dubbo-xds"
-
 	// Ensure the volume exists in pod spec
 	hasProxyVolume := false
 	for _, vol := range pod.Spec.Volumes {
@@ -352,7 +432,7 @@ func addApplicationContainerConfig(pod *corev1.Pod) {
 				Name:  "GRPC_XDS_BOOTSTRAP",
 				Value: grpcBootstrapPath,
 			})
-			log.Infof("Injection: Added GRPC_XDS_BOOTSTRAP=%s env to application container %s", grpcBootstrapPath, container.Name)
+			webhookLog.Infof("Injection: Added GRPC_XDS_BOOTSTRAP=%s env to application container %s", grpcBootstrapPath, container.Name)
 		}
 
 		// Add volume mount for /etc/dubbo/proxy if not already present
@@ -369,7 +449,7 @@ func addApplicationContainerConfig(pod *corev1.Pod) {
 				MountPath: proxyVolumeMountPath,
 				ReadOnly:  false,
 			})
-			log.Infof("Injection: Added /etc/dubbo/proxy volume mount to application container %s", container.Name)
+			webhookLog.Infof("Injection: Added /etc/dubbo/proxy volume mount to application container %s", container.Name)
 		}
 	}
 }
@@ -399,15 +479,6 @@ func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
 	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, proxyLocation)
 
 	return nil
-}
-
-func hasContainer(cl []corev1.Container, name string) bool {
-	for _, c := range cl {
-		if c.Name == name {
-			return true
-		}
-	}
-	return false
 }
 
 func createPatch(pod *corev1.Pod, original []byte) ([]byte, error) {
@@ -517,7 +588,7 @@ func parseInjectEnvs(path string) map[string]string {
 	for i := 0; i < len(res); i += 2 {
 		k := res[i]
 		if i == len(res)-1 { // ignore the last key without value
-			log.Warnf("Add number of inject env entries, ignore the last key %s\n", k)
+			webhookLog.Warnf("Add number of inject env entries, ignore the last key %s\n", k)
 			break
 		}
 	}
@@ -525,88 +596,8 @@ func parseInjectEnvs(path string) map[string]string {
 	return newEnvs
 }
 
-func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.AdmissionResponse {
-	log := log.WithLabels("path", path)
-	req := ar.Request
-	var pod corev1.Pod
-	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
-		log.Errorf("Could not unmarshal raw object: %v %s", err, string(req.Object.Raw))
-		return toAdmissionResponse(err)
-	}
-
-	pod.ManagedFields = nil
-
-	podName := potentialPodName(pod.ObjectMeta)
-	if pod.ObjectMeta.Namespace == "" {
-		pod.ObjectMeta.Namespace = req.Namespace
-	}
-
-	log = log.WithLabels("pod", pod.Namespace+"/"+podName)
-	log.Infof("Process proxyless injection request")
-
-	wh.mu.RLock()
-	if !injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &pod.Spec, pod.ObjectMeta) {
-		log.Infof("Skipping due to policy check")
-		wh.mu.RUnlock()
-		return &kube.AdmissionResponse{
-			Allowed: true,
-		}
-	}
-	proxyConfig := wh.env.GetProxyConfigOrDefault(pod.Namespace, pod.Labels, pod.Annotations, wh.meshConfig)
-	deploy, typeMeta := kube.GetDeployMetaFromPod(&pod)
-	params := InjectionParameters{
-		pod:                 &pod,
-		deployMeta:          deploy,
-		typeMeta:            typeMeta,
-		templates:           wh.Config.Templates,
-		defaultTemplate:     wh.Config.DefaultTemplates,
-		aliases:             wh.Config.Aliases,
-		meshConfig:          wh.meshConfig,
-		proxyConfig:         proxyConfig,
-		valuesConfig:        wh.valuesConfig,
-		injectedAnnotations: wh.Config.InjectedAnnotations,
-		proxyEnvs:           parseInjectEnvs(path),
-		revision:            wh.revision,
-	}
-
-	wh.mu.RUnlock()
-
-	log.Infof("Injecting pod with templates: %v, defaultTemplate: %v", len(params.templates), params.defaultTemplate)
-	log.Infof("Pod labels: %v, annotations: %v", params.pod.Labels, params.pod.Annotations)
-	patchBytes, err := injectPod(params)
-	if err != nil {
-		log.Errorf("Pod injection failed: %v", err)
-		return toAdmissionResponse(err)
-	}
-
-	log.Infof("Injection successful, patch size: %d bytes", len(patchBytes))
-	reviewResponse := kube.AdmissionResponse{
-		Allowed: true,
-		Patch:   patchBytes,
-		PatchType: func() *string {
-			pt := "JSONPatch"
-			return &pt
-		}(),
-	}
-	return &reviewResponse
-}
-
-func (wh *Webhook) Run(stop <-chan struct{}) {
-	go wh.watcher.Run(stop)
-}
-
-func ParseTemplates(tmpls RawTemplates) (Templates, error) {
-	ret := make(Templates, len(tmpls))
-	for k, t := range tmpls {
-		p, err := parseDryTemplate(t, InjectionFuncmap)
-		if err != nil {
-			return nil, err
-		}
-		ret[k] = p
-	}
-	return ret, nil
-}
-
-func toAdmissionResponse(err error) *kube.AdmissionResponse {
-	return &kube.AdmissionResponse{Result: &metav1.Status{Message: err.Error()}}
+func init() {
+	_ = corev1.AddToScheme(runtimeScheme)
+	_ = admissionv1.AddToScheme(runtimeScheme)
+	_ = kubeApiAdmissionv1beta1.AddToScheme(runtimeScheme)
 }

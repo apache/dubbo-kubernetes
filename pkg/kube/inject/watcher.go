@@ -73,6 +73,29 @@ func NewFileWatcher(configFile, valuesFile string) (Watcher, error) {
 	}, nil
 }
 
+func NewConfigMapWatcher(client kube.Client, namespace, name, configKey, valuesKey string) Watcher {
+	w := &configMapWatcher{
+		client:    client,
+		namespace: namespace,
+		name:      name,
+		configKey: configKey,
+		valuesKey: valuesKey,
+	}
+	w.c = configmapwatcher.NewController(client, namespace, name, func(cm *v1.ConfigMap) {
+		proxylessConfig, valuesConfig, err := readConfigMap(cm, configKey, valuesKey)
+		if err != nil {
+			log.Warnf("failed to read injection config from ConfigMap: %v", err)
+			return
+		}
+		if w.handler != nil {
+			if err := w.handler(proxylessConfig, valuesConfig); err != nil {
+				log.Errorf("update error: %v", err)
+			}
+		}
+	})
+	return w
+}
+
 func (w *fileWatcher) Run(stop <-chan struct{}) {
 	defer w.watcher.Close()
 	var timerC <-chan time.Time
@@ -133,29 +156,6 @@ func (w *configMapWatcher) Get() (*Config, string, error) {
 		return nil, "", err
 	}
 	return readConfigMap(configmap, w.configKey, w.valuesKey)
-}
-
-func NewConfigMapWatcher(client kube.Client, namespace, name, configKey, valuesKey string) Watcher {
-	w := &configMapWatcher{
-		client:    client,
-		namespace: namespace,
-		name:      name,
-		configKey: configKey,
-		valuesKey: valuesKey,
-	}
-	w.c = configmapwatcher.NewController(client, namespace, name, func(cm *v1.ConfigMap) {
-		proxylessConfig, valuesConfig, err := readConfigMap(cm, configKey, valuesKey)
-		if err != nil {
-			log.Warnf("failed to read injection config from ConfigMap: %v", err)
-			return
-		}
-		if w.handler != nil {
-			if err := w.handler(proxylessConfig, valuesConfig); err != nil {
-				log.Errorf("update error: %v", err)
-			}
-		}
-	})
-	return w
 }
 
 func readConfigMap(cm *v1.ConfigMap, configKey, valuesKey string) (*Config, string, error) {

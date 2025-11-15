@@ -37,11 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var (
-	LastPushStatus *PushContext
-	LastPushMutex  sync.Mutex
-)
-
 type TriggerReason string
 
 const (
@@ -53,6 +48,19 @@ const (
 	ProxyUpdate            TriggerReason = "proxy"
 	DependentResource      TriggerReason = "depdendentresource"
 )
+
+var (
+	LastPushStatus *PushContext
+	LastPushMutex  sync.Mutex
+)
+
+type XDSUpdater interface {
+	ConfigUpdate(req *PushRequest)
+	ServiceUpdate(shard ShardKey, hostname string, namespace string, event Event)
+	EDSUpdate(shard ShardKey, hostname string, namespace string, entry []*DubboEndpoint)
+	EDSCacheUpdate(shard ShardKey, hostname string, namespace string, entry []*DubboEndpoint)
+	ProxyUpdate(clusterID cluster.ID, ip string)
+}
 
 type ProxyPushStatus struct {
 	Proxy   string `json:"proxy,omitempty"`
@@ -87,6 +95,16 @@ type serviceIndex struct {
 	instancesByPort      map[string]map[int][]*DubboEndpoint
 }
 
+func newServiceIndex() serviceIndex {
+	return serviceIndex{
+		public:               []*Service{},
+		privateByNamespace:   map[string][]*Service{},
+		exportedToNamespace:  map[string][]*Service{},
+		HostnameAndNamespace: map[host.Name]map[string]*Service{},
+		instancesByPort:      map[string]map[int][]*DubboEndpoint{},
+	}
+}
+
 type ConsolidatedDestRule struct {
 	exportTo sets.Set[visibility.Instance]
 	rule     *config.Config
@@ -94,6 +112,36 @@ type ConsolidatedDestRule struct {
 }
 
 type ReasonStats map[TriggerReason]int
+
+func NewReasonStats(reasons ...TriggerReason) ReasonStats {
+	ret := make(ReasonStats)
+	for _, reason := range reasons {
+		ret.Add(reason)
+	}
+	return ret
+}
+
+func (r ReasonStats) Has(reason TriggerReason) bool {
+	return r[reason] > 0
+}
+
+func (r ReasonStats) Add(reason TriggerReason) {
+	r[reason]++
+}
+
+func (r ReasonStats) Merge(other ReasonStats) {
+	for reason, count := range other {
+		r[reason] += count
+	}
+}
+
+func (r ReasonStats) Count() int {
+	var ret int
+	for _, count := range r {
+		ret += count
+	}
+	return ret
+}
 
 type PushRequest struct {
 	Reason           ReasonStats
@@ -115,16 +163,6 @@ func NewPushContext() *PushContext {
 	}
 }
 
-func newServiceIndex() serviceIndex {
-	return serviceIndex{
-		public:               []*Service{},
-		privateByNamespace:   map[string][]*Service{},
-		exportedToNamespace:  map[string][]*Service{},
-		HostnameAndNamespace: map[host.Name]map[string]*Service{},
-		instancesByPort:      map[string]map[int][]*DubboEndpoint{},
-	}
-}
-
 type ConfigKey struct {
 	Kind      kind.Kind
 	Name      string
@@ -135,122 +173,6 @@ type exportToDefaults struct {
 	service         sets.Set[visibility.Instance]
 	virtualService  sets.Set[visibility.Instance]
 	destinationRule sets.Set[visibility.Instance]
-}
-
-func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
-	if pr == nil {
-		return other
-	}
-	if other == nil {
-		return pr
-	}
-
-	merged := &PushRequest{}
-	return merged
-}
-
-func (pr *PushRequest) IsProxyUpdate() bool {
-	return pr.Reason.Has(ProxyUpdate)
-}
-
-type XDSUpdater interface {
-	ConfigUpdate(req *PushRequest)
-	ServiceUpdate(shard ShardKey, hostname string, namespace string, event Event)
-	EDSUpdate(shard ShardKey, hostname string, namespace string, entry []*DubboEndpoint)
-	EDSCacheUpdate(shard ShardKey, hostname string, namespace string, entry []*DubboEndpoint)
-	ProxyUpdate(clusterID cluster.ID, ip string)
-}
-
-func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
-	ps.initializeMutex.Lock()
-	defer ps.initializeMutex.Unlock()
-	if ps.InitDone.Load() {
-		return
-	}
-
-	ps.Mesh = env.Mesh()
-	ps.Networks = env.MeshNetworks()
-
-	ps.initDefaultExportMaps()
-
-	if pushReq == nil || oldPushContext == nil || !oldPushContext.InitDone.Load() || pushReq.Forced {
-		ps.createNewContext(env)
-	} else {
-		ps.updateContext(env, oldPushContext, pushReq)
-	}
-
-	ps.networkMgr = env.NetworkManager
-
-	ps.clusterLocalHosts = env.ClusterLocal().GetClusterLocalHosts()
-
-	ps.InitDone.Store(true)
-}
-
-func (ps *PushContext) initDefaultExportMaps() {
-	ps.exportToDefaults.destinationRule = sets.New[visibility.Instance]()
-	if ps.Mesh.DefaultDestinationRuleExportTo != nil {
-		for _, e := range ps.Mesh.DefaultDestinationRuleExportTo {
-			ps.exportToDefaults.destinationRule.Insert(visibility.Instance(e))
-		}
-	} else {
-		// default to *
-		ps.exportToDefaults.destinationRule.Insert(visibility.Public)
-	}
-
-	ps.exportToDefaults.service = sets.New[visibility.Instance]()
-	if ps.Mesh.DefaultServiceExportTo != nil {
-		for _, e := range ps.Mesh.DefaultServiceExportTo {
-			ps.exportToDefaults.service.Insert(visibility.Instance(e))
-		}
-	} else {
-		ps.exportToDefaults.service.Insert(visibility.Public)
-	}
-
-	ps.exportToDefaults.virtualService = sets.New[visibility.Instance]()
-	if ps.Mesh.DefaultVirtualServiceExportTo != nil {
-		for _, e := range ps.Mesh.DefaultVirtualServiceExportTo {
-			ps.exportToDefaults.virtualService.Insert(visibility.Instance(e))
-		}
-	} else {
-		ps.exportToDefaults.virtualService.Insert(visibility.Public)
-	}
-}
-
-func (ps *PushContext) createNewContext(env *Environment) {
-	ps.initServiceRegistry(env, nil)
-}
-
-func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
-	// Check if services have changed based on:
-	// 1. ServiceEntry updates in ConfigsUpdated
-	// 2. Address changes
-	// 3. Actual service count changes from environment (for Kubernetes Service changes)
-	servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
-		len(pushReq.AddressesUpdated) > 0)
-
-	// Also check if the actual number of services has changed
-	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
-	if !servicesChanged && oldPushContext != nil {
-		currentServices := env.Services()
-		// Count services in old ServiceIndex
-		oldServiceCount := 0
-		for _, namespaces := range oldPushContext.ServiceIndex.HostnameAndNamespace {
-			oldServiceCount += len(namespaces)
-		}
-		// If service count differs, services have changed
-		if len(currentServices) != oldServiceCount {
-			servicesChanged = true
-		}
-	}
-
-	if servicesChanged {
-		// Services have changed. initialize service registry
-		ps.initServiceRegistry(env, pushReq.ConfigsUpdated)
-	} else {
-		// make sure we copy over things that would be generated in initServiceRegistry
-		ps.ServiceIndex = oldPushContext.ServiceIndex
-		ps.serviceAccounts = oldPushContext.serviceAccounts
-	}
 }
 
 func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
@@ -297,6 +219,22 @@ func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
 	return pr
 }
 
+func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
+	if pr == nil {
+		return other
+	}
+	if other == nil {
+		return pr
+	}
+
+	merged := &PushRequest{}
+	return merged
+}
+
+func (pr *PushRequest) IsProxyUpdate() bool {
+	return pr.Reason.Has(ProxyUpdate)
+}
+
 func (pr *PushRequest) IsRequest() bool {
 	return len(pr.Reason) == 1 && pr.Reason.Has(ProxyRequest)
 }
@@ -308,140 +246,59 @@ func (pr *PushRequest) PushReason() string {
 	return ""
 }
 
-func (ps *PushContext) OnConfigChange() {
-	LastPushMutex.Lock()
-	LastPushStatus = ps
-	LastPushMutex.Unlock()
-	ps.UpdateMetrics()
-}
-
-func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
-	for _, service := range ps.ServiceIndex.HostnameAndNamespace[hostname] {
-		return service
-	}
-
-	// No service found
-	return nil
-}
-
-func (ps *PushContext) UpdateMetrics() {
-	ps.proxyStatusMutex.RLock()
-	defer ps.proxyStatusMutex.RUnlock()
-}
-
-func (ps *PushContext) GetAllServices() []*Service {
-	return ps.servicesExportedToNamespace(NamespaceAll)
-}
-
-func (ps *PushContext) servicesExportedToNamespace(ns string) []*Service {
-	var out []*Service
-
-	// First add private services and explicitly exportedTo services
-	if ns == NamespaceAll {
-		out = make([]*Service, 0, len(ps.ServiceIndex.privateByNamespace)+len(ps.ServiceIndex.public))
-		for _, privateServices := range ps.ServiceIndex.privateByNamespace {
-			out = append(out, privateServices...)
+func (ps *PushContext) initDefaultExportMaps() {
+	ps.exportToDefaults.destinationRule = sets.New[visibility.Instance]()
+	if ps.Mesh.DefaultDestinationRuleExportTo != nil {
+		for _, e := range ps.Mesh.DefaultDestinationRuleExportTo {
+			ps.exportToDefaults.destinationRule.Insert(visibility.Instance(e))
 		}
 	} else {
-		out = make([]*Service, 0, len(ps.ServiceIndex.privateByNamespace[ns])+
-			len(ps.ServiceIndex.exportedToNamespace[ns])+len(ps.ServiceIndex.public))
-		out = append(out, ps.ServiceIndex.privateByNamespace[ns]...)
-		out = append(out, ps.ServiceIndex.exportedToNamespace[ns]...)
+		// default to *
+		ps.exportToDefaults.destinationRule.Insert(visibility.Public)
 	}
 
-	// Second add public services
-	out = append(out, ps.ServiceIndex.public...)
+	ps.exportToDefaults.service = sets.New[visibility.Instance]()
+	if ps.Mesh.DefaultServiceExportTo != nil {
+		for _, e := range ps.Mesh.DefaultServiceExportTo {
+			ps.exportToDefaults.service.Insert(visibility.Instance(e))
+		}
+	} else {
+		ps.exportToDefaults.service.Insert(visibility.Public)
+	}
 
-	return out
+	ps.exportToDefaults.virtualService = sets.New[visibility.Instance]()
+	if ps.Mesh.DefaultVirtualServiceExportTo != nil {
+		for _, e := range ps.Mesh.DefaultVirtualServiceExportTo {
+			ps.exportToDefaults.virtualService.Insert(visibility.Instance(e))
+		}
+	} else {
+		ps.exportToDefaults.virtualService.Insert(visibility.Public)
+	}
 }
 
-func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.Set[ConfigKey]) {
-	allServices := SortServicesByCreationTime(env.Services())
-	resolveServiceAliases(allServices, configsUpdate)
-
-	for _, s := range allServices {
-		portMap := map[string]int{}
-		ports := sets.New[int]()
-		for _, port := range s.Ports {
-			portMap[port.Name] = port.Port
-			ports.Insert(port.Port)
-		}
-
-		svcKey := s.Key()
-		if _, ok := ps.ServiceIndex.instancesByPort[svcKey]; !ok {
-			ps.ServiceIndex.instancesByPort[svcKey] = make(map[int][]*DubboEndpoint)
-		}
-		shards, ok := env.EndpointIndex.ShardsForService(string(s.Hostname), s.Attributes.Namespace)
-		if ok {
-			instancesByPort := shards.CopyEndpoints(portMap, ports)
-			// Iterate over the instances and add them to the service index to avoid overriding the existing port instances.
-			for port, instances := range instancesByPort {
-				ps.ServiceIndex.instancesByPort[svcKey][port] = instances
-			}
-		}
-		if _, f := ps.ServiceIndex.HostnameAndNamespace[s.Hostname]; !f {
-			ps.ServiceIndex.HostnameAndNamespace[s.Hostname] = map[string]*Service{}
-		}
-		if existing := ps.ServiceIndex.HostnameAndNamespace[s.Hostname][s.Attributes.Namespace]; existing != nil &&
-			!(existing.Attributes.ServiceRegistry != provider.Kubernetes && s.Attributes.ServiceRegistry == provider.Kubernetes) {
-			log.Debugf("Service %s/%s from registry %s ignored by %s/%s/%s", s.Attributes.Namespace, s.Hostname, s.Attributes.ServiceRegistry,
-				existing.Attributes.ServiceRegistry, existing.Attributes.Namespace, existing.Hostname)
-		} else {
-			ps.ServiceIndex.HostnameAndNamespace[s.Hostname][s.Attributes.Namespace] = s
-		}
-
-		ns := s.Attributes.Namespace
-		if s.Attributes.ExportTo.IsEmpty() {
-			if ps.exportToDefaults.service.Contains(visibility.Private) {
-				ps.ServiceIndex.privateByNamespace[ns] = append(ps.ServiceIndex.privateByNamespace[ns], s)
-			} else if ps.exportToDefaults.service.Contains(visibility.Public) {
-				ps.ServiceIndex.public = append(ps.ServiceIndex.public, s)
-			}
-		} else {
-			if s.Attributes.ExportTo.Contains(visibility.Public) {
-				ps.ServiceIndex.public = append(ps.ServiceIndex.public, s)
-				continue
-			} else if s.Attributes.ExportTo.Contains(visibility.None) {
-				continue
-			}
-			// . or other namespaces
-			for exportTo := range s.Attributes.ExportTo {
-				if exportTo == visibility.Private || string(exportTo) == ns {
-					ps.ServiceIndex.privateByNamespace[ns] = append(ps.ServiceIndex.privateByNamespace[ns], s)
-				} else {
-					ps.ServiceIndex.exportedToNamespace[string(exportTo)] = append(ps.ServiceIndex.exportedToNamespace[string(exportTo)], s)
-				}
-			}
-		}
+func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
+	ps.initializeMutex.Lock()
+	defer ps.initializeMutex.Unlock()
+	if ps.InitDone.Load() {
+		return
 	}
 
-	ps.initServiceAccounts(env, allServices)
-}
+	ps.Mesh = env.Mesh()
+	ps.Networks = env.MeshNetworks()
 
-func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {
-	for _, svc := range services {
-		var accounts sets.String
-		// First get endpoint level service accounts
-		shard, f := env.EndpointIndex.ShardsForService(string(svc.Hostname), svc.Attributes.Namespace)
-		if f {
-			shard.RLock()
-			accounts = shard.ServiceAccounts.Copy()
-			shard.RUnlock()
-		}
-		if len(svc.ServiceAccounts) > 0 {
-			if accounts == nil {
-				accounts = sets.New(svc.ServiceAccounts...)
-			} else {
-				accounts = accounts.InsertAll(svc.ServiceAccounts...)
-			}
-		}
-		sa := sets.SortedList(spiffe.ExpandWithTrustDomains(accounts, ps.Mesh.TrustDomainAliases))
-		key := serviceAccountKey{
-			hostname:  svc.Hostname,
-			namespace: svc.Attributes.Namespace,
-		}
-		ps.serviceAccounts[key] = sa
+	ps.initDefaultExportMaps()
+
+	if pushReq == nil || oldPushContext == nil || !oldPushContext.InitDone.Load() || pushReq.Forced {
+		ps.createNewContext(env)
+	} else {
+		ps.updateContext(env, oldPushContext, pushReq)
 	}
+
+	ps.networkMgr = env.NetworkManager
+
+	ps.clusterLocalHosts = env.ClusterLocal().GetClusterLocalHosts()
+
+	ps.InitDone.Store(true)
 }
 
 func SortServicesByCreationTime(services []*Service) []*Service {
@@ -536,34 +393,177 @@ func resolveServiceAliases(allServices []*Service, configsUpdated sets.Set[Confi
 	}
 }
 
-func NewReasonStats(reasons ...TriggerReason) ReasonStats {
-	ret := make(ReasonStats)
-	for _, reason := range reasons {
-		ret.Add(reason)
+func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.Set[ConfigKey]) {
+	allServices := SortServicesByCreationTime(env.Services())
+	resolveServiceAliases(allServices, configsUpdate)
+
+	for _, s := range allServices {
+		portMap := map[string]int{}
+		ports := sets.New[int]()
+		for _, port := range s.Ports {
+			portMap[port.Name] = port.Port
+			ports.Insert(port.Port)
+		}
+
+		svcKey := s.Key()
+		if _, ok := ps.ServiceIndex.instancesByPort[svcKey]; !ok {
+			ps.ServiceIndex.instancesByPort[svcKey] = make(map[int][]*DubboEndpoint)
+		}
+		shards, ok := env.EndpointIndex.ShardsForService(string(s.Hostname), s.Attributes.Namespace)
+		if ok {
+			instancesByPort := shards.CopyEndpoints(portMap, ports)
+			// Iterate over the instances and add them to the service index to avoid overriding the existing port instances.
+			for port, instances := range instancesByPort {
+				ps.ServiceIndex.instancesByPort[svcKey][port] = instances
+			}
+		}
+		if _, f := ps.ServiceIndex.HostnameAndNamespace[s.Hostname]; !f {
+			ps.ServiceIndex.HostnameAndNamespace[s.Hostname] = map[string]*Service{}
+		}
+		if existing := ps.ServiceIndex.HostnameAndNamespace[s.Hostname][s.Attributes.Namespace]; existing != nil &&
+			!(existing.Attributes.ServiceRegistry != provider.Kubernetes && s.Attributes.ServiceRegistry == provider.Kubernetes) {
+			log.Debugf("Service %s/%s from registry %s ignored by %s/%s/%s", s.Attributes.Namespace, s.Hostname, s.Attributes.ServiceRegistry,
+				existing.Attributes.ServiceRegistry, existing.Attributes.Namespace, existing.Hostname)
+		} else {
+			ps.ServiceIndex.HostnameAndNamespace[s.Hostname][s.Attributes.Namespace] = s
+		}
+
+		ns := s.Attributes.Namespace
+		if s.Attributes.ExportTo.IsEmpty() {
+			if ps.exportToDefaults.service.Contains(visibility.Private) {
+				ps.ServiceIndex.privateByNamespace[ns] = append(ps.ServiceIndex.privateByNamespace[ns], s)
+			} else if ps.exportToDefaults.service.Contains(visibility.Public) {
+				ps.ServiceIndex.public = append(ps.ServiceIndex.public, s)
+			}
+		} else {
+			if s.Attributes.ExportTo.Contains(visibility.Public) {
+				ps.ServiceIndex.public = append(ps.ServiceIndex.public, s)
+				continue
+			} else if s.Attributes.ExportTo.Contains(visibility.None) {
+				continue
+			}
+			// . or other namespaces
+			for exportTo := range s.Attributes.ExportTo {
+				if exportTo == visibility.Private || string(exportTo) == ns {
+					ps.ServiceIndex.privateByNamespace[ns] = append(ps.ServiceIndex.privateByNamespace[ns], s)
+				} else {
+					ps.ServiceIndex.exportedToNamespace[string(exportTo)] = append(ps.ServiceIndex.exportedToNamespace[string(exportTo)], s)
+				}
+			}
+		}
 	}
-	return ret
+
+	ps.initServiceAccounts(env, allServices)
 }
 
-func (r ReasonStats) Has(reason TriggerReason) bool {
-	return r[reason] > 0
+func (ps *PushContext) createNewContext(env *Environment) {
+	ps.initServiceRegistry(env, nil)
 }
 
-func (r ReasonStats) Add(reason TriggerReason) {
-	r[reason]++
-}
+func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
+	// Check if services have changed based on:
+	// 1. ServiceEntry updates in ConfigsUpdated
+	// 2. Address changes
+	// 3. Actual service count changes from environment (for Kubernetes Service changes)
+	servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
+		len(pushReq.AddressesUpdated) > 0)
 
-func (r ReasonStats) Merge(other ReasonStats) {
-	for reason, count := range other {
-		r[reason] += count
+	// Also check if the actual number of services has changed
+	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
+	if !servicesChanged && oldPushContext != nil {
+		currentServices := env.Services()
+		// Count services in old ServiceIndex
+		oldServiceCount := 0
+		for _, namespaces := range oldPushContext.ServiceIndex.HostnameAndNamespace {
+			oldServiceCount += len(namespaces)
+		}
+		// If service count differs, services have changed
+		if len(currentServices) != oldServiceCount {
+			servicesChanged = true
+		}
+	}
+
+	if servicesChanged {
+		// Services have changed. initialize service registry
+		ps.initServiceRegistry(env, pushReq.ConfigsUpdated)
+	} else {
+		// make sure we copy over things that would be generated in initServiceRegistry
+		ps.ServiceIndex = oldPushContext.ServiceIndex
+		ps.serviceAccounts = oldPushContext.serviceAccounts
 	}
 }
 
-func (r ReasonStats) Count() int {
-	var ret int
-	for _, count := range r {
-		ret += count
+func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
+	for _, service := range ps.ServiceIndex.HostnameAndNamespace[hostname] {
+		return service
 	}
-	return ret
+
+	// No service found
+	return nil
+}
+
+func (ps *PushContext) UpdateMetrics() {
+	ps.proxyStatusMutex.RLock()
+	defer ps.proxyStatusMutex.RUnlock()
+}
+
+func (ps *PushContext) OnConfigChange() {
+	LastPushMutex.Lock()
+	LastPushStatus = ps
+	LastPushMutex.Unlock()
+	ps.UpdateMetrics()
+}
+
+func (ps *PushContext) servicesExportedToNamespace(ns string) []*Service {
+	var out []*Service
+
+	// First add private services and explicitly exportedTo services
+	if ns == NamespaceAll {
+		out = make([]*Service, 0, len(ps.ServiceIndex.privateByNamespace)+len(ps.ServiceIndex.public))
+		for _, privateServices := range ps.ServiceIndex.privateByNamespace {
+			out = append(out, privateServices...)
+		}
+	} else {
+		out = make([]*Service, 0, len(ps.ServiceIndex.privateByNamespace[ns])+
+			len(ps.ServiceIndex.exportedToNamespace[ns])+len(ps.ServiceIndex.public))
+		out = append(out, ps.ServiceIndex.privateByNamespace[ns]...)
+		out = append(out, ps.ServiceIndex.exportedToNamespace[ns]...)
+	}
+
+	// Second add public services
+	out = append(out, ps.ServiceIndex.public...)
+
+	return out
+}
+
+func (ps *PushContext) GetAllServices() []*Service {
+	return ps.servicesExportedToNamespace(NamespaceAll)
+}
+
+func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {
+	for _, svc := range services {
+		var accounts sets.String
+		// First get endpoint level service accounts
+		shard, f := env.EndpointIndex.ShardsForService(string(svc.Hostname), svc.Attributes.Namespace)
+		if f {
+			shard.RLock()
+			accounts = shard.ServiceAccounts.Copy()
+			shard.RUnlock()
+		}
+		if len(svc.ServiceAccounts) > 0 {
+			if accounts == nil {
+				accounts = sets.New(svc.ServiceAccounts...)
+			} else {
+				accounts = accounts.InsertAll(svc.ServiceAccounts...)
+			}
+		}
+		sa := sets.SortedList(spiffe.ExpandWithTrustDomains(accounts, ps.Mesh.TrustDomainAliases))
+		key := serviceAccountKey{
+			hostname:  svc.Hostname,
+			namespace: svc.Attributes.Namespace,
+		}
+		ps.serviceAccounts[key] = sa
+	}
 }
 
 // ConfigNamesOfKind extracts config names of the specified kind.

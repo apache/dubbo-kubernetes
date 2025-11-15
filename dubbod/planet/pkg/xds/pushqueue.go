@@ -100,12 +100,6 @@ func (p *PushQueue) MarkDone(con *Connection) {
 	}
 }
 
-func (p *PushQueue) Pending() int {
-	p.cond.L.Lock()
-	defer p.cond.L.Unlock()
-	return len(p.queue)
-}
-
 func (p *PushQueue) ShutDown() {
 	p.cond.L.Lock()
 	defer p.cond.L.Unlock()

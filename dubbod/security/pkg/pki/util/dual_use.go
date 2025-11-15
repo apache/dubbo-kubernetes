@@ -22,8 +22,6 @@ import (
 	"strings"
 )
 
-// DualUseCommonName extracts a valid CommonName from a comma-delimited host string
-// for dual-use certificates.
 func DualUseCommonName(host string) (string, error) {
 	// cn uses one hostname, drop the rest
 	first := strings.SplitN(host, ",", 2)[0]

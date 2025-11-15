@@ -23,10 +23,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	configaggregate "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/aggregate"
 	"net/url"
 	"strings"
 
-	configaggregate "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/aggregate"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crdclient"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/file"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/memory"
@@ -51,51 +51,29 @@ const (
 	Kubernetes ConfigSourceAddressScheme = "k8s"
 )
 
-func (s *Server) initConfigController(args *PlanetArgs) error {
-	meshConfig := s.environment.Mesh()
-	if len(meshConfig.ConfigSources) > 0 {
-		// Using MCP for config.
-		if err := s.initConfigSources(args); err != nil {
-			return err
-		}
-	} else if args.RegistryOptions.FileDir != "" {
-		// Local files - should be added even if other options are specified
-		configController, err := file.NewController(
-			args.RegistryOptions.FileDir,
-			args.RegistryOptions.KubeOptions.DomainSuffix,
-			collections.Planet,
-			args.RegistryOptions.KubeOptions,
-		)
-		if err != nil {
-			return err
-		}
-		s.ConfigStores = append(s.ConfigStores, configController)
-	} else {
-		err := s.initK8SConfigStore(args)
-		if err != nil {
-			return err
-		}
+func (s *Server) makeKubeConfigController(args *PlanetArgs) *crdclient.Client {
+	opts := crdclient.Option{
+		DomainSuffix: args.RegistryOptions.KubeOptions.DomainSuffix,
+		Identifier:   "crd-controller",
+		KrtDebugger:  args.KrtDebugger,
 	}
 
-	// TODO ingress controller
-	// TODO addTerminatingStartFunc
+	schemas := collections.Planet
 
-	// Wrap the config controller with a cache.
-	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
-	if err != nil {
-		return err
-	}
-	s.configController = aggregateConfigController
+	return crdclient.NewForSchemas(s.kubeClient, opts, schemas)
+}
 
-	// Create the config store.
-	s.environment.ConfigStore = aggregateConfigController
-
-	// Defer starting the controller until after the service is created.
-	s.addStartFunc("config controller", func(stop <-chan struct{}) error {
-		go s.configController.Run(stop)
+func (s *Server) initK8SConfigStore(args *PlanetArgs) error {
+	if s.kubeClient == nil {
 		return nil
+	}
+	configController := s.makeKubeConfigController(args)
+	s.ConfigStores = append(s.ConfigStores, configController)
+	s.XDSServer.ConfigUpdate(&model.PushRequest{
+		Full:   true,
+		Reason: model.NewReasonStats(model.GlobalUpdate),
+		Forced: true,
 	})
-
 	return nil
 }
 
@@ -177,69 +155,52 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 	return nil
 }
 
-func (s *Server) makeKubeConfigController(args *PlanetArgs) *crdclient.Client {
-	opts := crdclient.Option{
-		DomainSuffix: args.RegistryOptions.KubeOptions.DomainSuffix,
-		Identifier:   "crd-controller",
-		KrtDebugger:  args.KrtDebugger,
+func (s *Server) initConfigController(args *PlanetArgs) error {
+	meshConfig := s.environment.Mesh()
+	if len(meshConfig.ConfigSources) > 0 {
+		// Using MCP for config.
+		if err := s.initConfigSources(args); err != nil {
+			return err
+		}
+	} else if args.RegistryOptions.FileDir != "" {
+		// Local files - should be added even if other options are specified
+		configController, err := file.NewController(
+			args.RegistryOptions.FileDir,
+			args.RegistryOptions.KubeOptions.DomainSuffix,
+			collections.Planet,
+			args.RegistryOptions.KubeOptions,
+		)
+		if err != nil {
+			return err
+		}
+		s.ConfigStores = append(s.ConfigStores, configController)
+	} else {
+		err := s.initK8SConfigStore(args)
+		if err != nil {
+			return err
+		}
 	}
 
-	schemas := collections.Planet
+	// TODO ingress controller
+	// TODO addTerminatingStartFunc
 
-	return crdclient.NewForSchemas(s.kubeClient, opts, schemas)
-}
+	// Wrap the config controller with a cache.
+	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
+	if err != nil {
+		return err
+	}
+	s.configController = aggregateConfigController
 
-func (s *Server) initK8SConfigStore(args *PlanetArgs) error {
-	if s.kubeClient == nil {
+	// Create the config store.
+	s.environment.ConfigStore = aggregateConfigController
+
+	// Defer starting the controller until after the service is created.
+	s.addStartFunc("config controller", func(stop <-chan struct{}) error {
+		go s.configController.Run(stop)
 		return nil
-	}
-	configController := s.makeKubeConfigController(args)
-	s.ConfigStores = append(s.ConfigStores, configController)
-	s.XDSServer.ConfigUpdate(&model.PushRequest{
-		Full:   true,
-		Reason: model.NewReasonStats(model.GlobalUpdate),
-		Forced: true,
 	})
+
 	return nil
-}
-
-// getTransportCredentials attempts to create credentials.TransportCredentials from ClientTLSSettings in mesh config
-// Implemented only for SIMPLE_TLS mode
-// TODO:
-//
-//	Implement for MUTUAL_TLS/DUBBO_MUTUAL_TLS modes
-func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3.ClientTLSSettings) (credentials.TransportCredentials, error) {
-	// TODO ValidateTLS
-
-	switch tlsSettings.GetMode() {
-	case v1alpha3.ClientTLSSettings_SIMPLE:
-		if len(tlsSettings.GetCredentialName()) > 0 {
-			rootCert, err := s.getRootCertFromSecret(tlsSettings.GetCredentialName(), args.Namespace)
-			if err != nil {
-				return nil, err
-			}
-			tlsSettings.CaCertificates = string(rootCert.Cert)
-			tlsSettings.CaCrl = string(rootCert.CRL)
-		}
-		if tlsSettings.GetInsecureSkipVerify().GetValue() || len(tlsSettings.GetCaCertificates()) == 0 {
-			return credentials.NewTLS(&tls.Config{
-				ServerName: tlsSettings.GetSni(),
-			}), nil
-		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM([]byte(tlsSettings.GetCaCertificates())) {
-			return nil, fmt.Errorf("failed to add ca certificate from configSource.tlsSettings to pool")
-		}
-		return credentials.NewTLS(&tls.Config{
-			ServerName: tlsSettings.GetSni(),
-			RootCAs:    certPool,
-			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-				return s.verifyCert(rawCerts, tlsSettings)
-			},
-		}), nil
-	default:
-		return insecure.NewCredentials(), nil
-	}
 }
 
 // verifyCert verifies given cert against TLS settings like SANs and CRL.
@@ -288,6 +249,45 @@ func (s *Server) verifyCert(certs [][]byte, tlsSettings *v1alpha3.ClientTLSSetti
 	}
 
 	return nil
+}
+
+// getTransportCredentials attempts to create credentials.TransportCredentials from ClientTLSSettings in mesh config
+// Implemented only for SIMPLE_TLS mode
+// TODO:
+//
+//	Implement for MUTUAL_TLS/DUBBO_MUTUAL_TLS modes
+func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3.ClientTLSSettings) (credentials.TransportCredentials, error) {
+	// TODO ValidateTLS
+
+	switch tlsSettings.GetMode() {
+	case v1alpha3.ClientTLSSettings_SIMPLE:
+		if len(tlsSettings.GetCredentialName()) > 0 {
+			rootCert, err := s.getRootCertFromSecret(tlsSettings.GetCredentialName(), args.Namespace)
+			if err != nil {
+				return nil, err
+			}
+			tlsSettings.CaCertificates = string(rootCert.Cert)
+			tlsSettings.CaCrl = string(rootCert.CRL)
+		}
+		if tlsSettings.GetInsecureSkipVerify().GetValue() || len(tlsSettings.GetCaCertificates()) == 0 {
+			return credentials.NewTLS(&tls.Config{
+				ServerName: tlsSettings.GetSni(),
+			}), nil
+		}
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM([]byte(tlsSettings.GetCaCertificates())) {
+			return nil, fmt.Errorf("failed to add ca certificate from configSource.tlsSettings to pool")
+		}
+		return credentials.NewTLS(&tls.Config{
+			ServerName: tlsSettings.GetSni(),
+			RootCAs:    certPool,
+			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				return s.verifyCert(rawCerts, tlsSettings)
+			},
+		}), nil
+	default:
+		return insecure.NewCredentials(), nil
+	}
 }
 
 // getRootCertFromSecret fetches a map of keys and values from a secret with name in namespace

@@ -29,6 +29,11 @@ var (
 	defaultClusterLocalServices   = []string{"kubernetes.default.svc"}
 )
 
+type clusterLocalProvider struct {
+	mutex sync.RWMutex
+	hosts ClusterLocalHosts
+}
+
 type ClusterLocalHosts struct {
 	specific map[host.Name]bool
 	wildcard map[host.Name]bool
@@ -36,11 +41,6 @@ type ClusterLocalHosts struct {
 
 type ClusterLocalProvider interface {
 	GetClusterLocalHosts() ClusterLocalHosts
-}
-
-type clusterLocalProvider struct {
-	mutex sync.RWMutex
-	hosts ClusterLocalHosts
 }
 
 func NewClusterLocalProvider(e *Environment) ClusterLocalProvider {

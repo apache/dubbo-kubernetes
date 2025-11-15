@@ -36,7 +36,7 @@ func cdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) (*model.PushReques
 	if !req.Full {
 		return req, false
 	}
-	// TODO ?
+	// TODO Gateway
 	return nil, false
 }
 

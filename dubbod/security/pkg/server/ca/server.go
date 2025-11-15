@@ -41,6 +41,12 @@ type Server struct {
 	ca             CertificateAuthority
 }
 
+type CertificateAuthority interface {
+	Sign(csrPEM []byte, opts ca.CertOpts) ([]byte, error)
+	SignWithCertChain(csrPEM []byte, opts ca.CertOpts) ([]string, error)
+	GetCAKeyCertBundle() *util.KeyCertBundle
+}
+
 func New(ca CertificateAuthority, ttl time.Duration, authenticators []security.Authenticator) (*Server, error) {
 	certBundle := ca.GetCAKeyCertBundle()
 	if len(certBundle.GetRootCertPem()) != 0 {
@@ -54,12 +60,6 @@ func New(ca CertificateAuthority, ttl time.Duration, authenticators []security.A
 	}
 
 	return server, nil
-}
-
-type CertificateAuthority interface {
-	Sign(csrPEM []byte, opts ca.CertOpts) ([]byte, error)
-	SignWithCertChain(csrPEM []byte, opts ca.CertOpts) ([]string, error)
-	GetCAKeyCertBundle() *util.KeyCertBundle
 }
 
 func RecordCertsExpiry(keyCertBundle *util.KeyCertBundle) {}

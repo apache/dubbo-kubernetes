@@ -33,10 +33,26 @@ import (
 
 type CacheToken uint64
 
+type dependents interface {
+	DependentConfigs() []ConfigHash
+}
+
 type cacheValue struct {
 	value            *discovery.Resource
 	token            CacheToken
 	dependentConfigs []ConfigHash
+}
+
+func newLru[K comparable](evictCallback simplelru.EvictCallback[K, cacheValue]) simplelru.LRUCache[K, cacheValue] {
+	sz := features.XDSCacheMaxSize
+	if sz <= 0 {
+		sz = 20000
+	}
+	l, err := simplelru.NewLRU(sz, evictCallback)
+	if err != nil {
+		panic(fmt.Errorf("invalid lru configuration: %v", err))
+	}
+	return l
 }
 
 type evictKeyConfigs[K comparable] struct {
@@ -54,36 +70,9 @@ type lruCache[K comparable] struct {
 	evictedOnClear   bool
 }
 
-func (l *lruCache[K]) Flush() {
-	l.mu.Lock()
-	for _, keyConfigs := range l.evictQueue {
-		l.clearConfigIndex(keyConfigs.key, keyConfigs.dependentConfigs)
-	}
-	// The underlying array releases references to elements so that they can be garbage collected.
-	clear(l.evictQueue)
-	l.evictQueue = l.evictQueue[:0:1000]
-
-	l.mu.Unlock()
-}
-
-func (l *lruCache[K]) clearConfigIndex(k K, dependentConfigs []ConfigHash) {
-	c, exists := l.store.Get(k)
-	if exists {
-		newDependents := c.dependentConfigs
-		// we only need to clear configs {old difference new}
-		dependents := sets.New(dependentConfigs...).DifferenceInPlace(sets.New(newDependents...))
-		for cfg := range dependents {
-			sets.DeleteCleanupLast(l.configIndex, cfg, k)
-		}
-		return
-	}
-	for _, cfg := range dependentConfigs {
-		sets.DeleteCleanupLast(l.configIndex, cfg, k)
-	}
-}
-
-type dependents interface {
-	DependentConfigs() []ConfigHash
+func (l *lruCache[K]) onEvict(k K, v cacheValue) {
+	// async clearing indexes
+	l.evictQueue = append(l.evictQueue, evictKeyConfigs[K]{k, v.dependentConfigs})
 }
 
 type typedXdsCache[K comparable] interface {
@@ -108,15 +97,6 @@ func newTypedXdsCache[K comparable]() typedXdsCache[K] {
 
 var _ typedXdsCache[uint64] = &lruCache[uint64]{}
 
-func (l *lruCache[K]) onEvict(k K, v cacheValue) {
-	// async clearing indexes
-	l.evictQueue = append(l.evictQueue, evictKeyConfigs[K]{k, v.dependentConfigs})
-}
-
-func (l *lruCache[K]) Get(key K) *discovery.Resource {
-	return l.get(key, 0)
-}
-
 // get return the cached value if it exists.
 func (l *lruCache[K]) get(key K, token CacheToken) *discovery.Resource {
 	// DON'T try to refactor to use RLock here.
@@ -131,6 +111,22 @@ func (l *lruCache[K]) get(key K, token CacheToken) *discovery.Resource {
 		return cv.value
 	}
 	return nil
+}
+
+func (l *lruCache[K]) Get(key K) *discovery.Resource {
+	return l.get(key, 0)
+}
+
+func (l *lruCache[K]) Flush() {
+	l.mu.Lock()
+	for _, keyConfigs := range l.evictQueue {
+		l.clearConfigIndex(keyConfigs.key, keyConfigs.dependentConfigs)
+	}
+	// The underlying array releases references to elements so that they can be garbage collected.
+	clear(l.evictQueue)
+	l.evictQueue = l.evictQueue[:0:1000]
+
+	l.mu.Unlock()
 }
 
 func (l *lruCache[K]) Add(k K, entry dependents, pushReq *PushRequest, value *discovery.Resource) {
@@ -234,7 +230,6 @@ func (l *lruCache[K]) ClearAll() {
 	// The underlying array releases references to elements so that they can be garbage collected.
 	clear(l.evictQueue)
 	l.evictQueue = l.evictQueue[:0:1000]
-
 }
 
 func (l *lruCache[K]) Keys() []K {
@@ -259,16 +254,20 @@ func (l *lruCache[K]) Snapshot() []*discovery.Resource {
 	return res
 }
 
-func newLru[K comparable](evictCallback simplelru.EvictCallback[K, cacheValue]) simplelru.LRUCache[K, cacheValue] {
-	sz := features.XDSCacheMaxSize
-	if sz <= 0 {
-		sz = 20000
+func (l *lruCache[K]) clearConfigIndex(k K, dependentConfigs []ConfigHash) {
+	c, exists := l.store.Get(k)
+	if exists {
+		newDependents := c.dependentConfigs
+		// we only need to clear configs {old difference new}
+		dependents := sets.New(dependentConfigs...).DifferenceInPlace(sets.New(newDependents...))
+		for cfg := range dependents {
+			sets.DeleteCleanupLast(l.configIndex, cfg, k)
+		}
+		return
 	}
-	l, err := simplelru.NewLRU(sz, evictCallback)
-	if err != nil {
-		panic(fmt.Errorf("invalid lru configuration: %v", err))
+	for _, cfg := range dependentConfigs {
+		sets.DeleteCleanupLast(l.configIndex, cfg, k)
 	}
-	return l
 }
 
 // disabledCache is a cache that is always empty

@@ -25,6 +25,11 @@ import (
 	"github.com/cenkalti/backoff/v4"
 )
 
+const (
+	defaultInitialInterval = 500 * time.Millisecond
+	defaultMaxInterval     = 60 * time.Second
+)
+
 // BackOff is a backoff policy for retrying an operation.
 type BackOff interface {
 	NextBackOff() time.Duration
@@ -39,18 +44,6 @@ type Option struct {
 
 type ExponentialBackOff struct {
 	exponentialBackOff *backoff.ExponentialBackOff
-}
-
-const (
-	defaultInitialInterval = 500 * time.Millisecond
-	defaultMaxInterval     = 60 * time.Second
-)
-
-func DefaultOption() Option {
-	return Option{
-		InitialInterval: defaultInitialInterval,
-		MaxInterval:     defaultMaxInterval,
-	}
 }
 
 func NewExponentialBackOff(o Option) BackOff {
@@ -87,5 +80,12 @@ func (b ExponentialBackOff) RetryWithContext(ctx context.Context, operation func
 			return fmt.Errorf("%v with last error: %v", context.DeadlineExceeded, err)
 		case <-time.After(next):
 		}
+	}
+}
+
+func DefaultOption() Option {
+	return Option{
+		InitialInterval: defaultInitialInterval,
+		MaxInterval:     defaultMaxInterval,
 	}
 }

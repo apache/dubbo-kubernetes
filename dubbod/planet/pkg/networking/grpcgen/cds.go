@@ -22,13 +22,25 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 )
+
+type clusterBuilder struct {
+	push *model.PushContext
+	node *model.Proxy
+
+	defaultClusterName string
+	hostname           host.Name
+	portNum            int
+
+	// may not be set
+	svc    *model.Service
+	port   *model.Port
+	filter sets.String
+}
 
 func (g *GrpcConfigGenerator) BuildClusters(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
 	filter := newClusterFilter(names)
@@ -95,20 +107,6 @@ func newClusterBuilder(node *model.Proxy, push *model.PushContext, defaultCluste
 		svc:  svc,
 		port: port,
 	}, nil
-}
-
-type clusterBuilder struct {
-	push *model.PushContext
-	node *model.Proxy
-
-	defaultClusterName string
-	hostname           host.Name
-	portNum            int
-
-	// may not be set
-	svc    *model.Service
-	port   *model.Port
-	filter sets.String
 }
 
 func (b *clusterBuilder) build() []*cluster.Cluster {

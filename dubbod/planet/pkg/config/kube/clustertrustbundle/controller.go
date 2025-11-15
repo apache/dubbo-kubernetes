@@ -63,6 +63,23 @@ func NewController(kubeClient kube.Client, caBundleWatcher *keycertbundle.Watche
 	return c
 }
 
+func (c *Controller) Run(stopCh <-chan struct{}) {
+	if !kube.WaitForCacheSync("clustertrustbundle controller", stopCh, c.clustertrustbundles.HasSynced) {
+		return
+	}
+	go c.startCaBundleWatcher(stopCh)
+
+	// queue an initial event
+	c.queue.AddObject(&certificatesv1beta1.ClusterTrustBundle{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: dubboClusterTrustBundleName,
+		},
+	})
+
+	c.queue.Run(stopCh)
+	controllers.ShutdownAll(c.clustertrustbundles)
+}
+
 // startCaBundleWatcher listens for updates to the CA bundle and queues a reconciliation of the ClusterTrustBundle
 func (c *Controller) startCaBundleWatcher(stop <-chan struct{}) {
 	id, watchCh := c.caBundleWatcher.AddWatcher()
@@ -81,31 +98,7 @@ func (c *Controller) startCaBundleWatcher(stop <-chan struct{}) {
 	}
 }
 
-func (c *Controller) reconcileClusterTrustBundle(o types.NamespacedName) error {
-	if o.Name == dubboClusterTrustBundleName {
-		return c.updateClusterTrustBundle(c.caBundleWatcher.GetCABundle())
-	}
-	return nil
-}
-
 // Run starts the controller
-func (c *Controller) Run(stopCh <-chan struct{}) {
-	if !kube.WaitForCacheSync("clustertrustbundle controller", stopCh, c.clustertrustbundles.HasSynced) {
-		return
-	}
-	go c.startCaBundleWatcher(stopCh)
-
-	// queue an initial event
-	c.queue.AddObject(&certificatesv1beta1.ClusterTrustBundle{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: dubboClusterTrustBundleName,
-		},
-	})
-
-	c.queue.Run(stopCh)
-	controllers.ShutdownAll(c.clustertrustbundles)
-}
-
 // updateClusterTrustBundle updates the root certificate in the ClusterTrustBundle
 func (c *Controller) updateClusterTrustBundle(rootCert []byte) error {
 	bundle := &certificatesv1beta1.ClusterTrustBundle{
@@ -133,4 +126,11 @@ func (c *Controller) updateClusterTrustBundle(rootCert []byte) error {
 	// Create new bundle
 	_, err := c.clustertrustbundles.Create(bundle)
 	return err
+}
+
+func (c *Controller) reconcileClusterTrustBundle(o types.NamespacedName) error {
+	if o.Name == dubboClusterTrustBundleName {
+		return c.updateClusterTrustBundle(c.caBundleWatcher.GetCABundle())
+	}
+	return nil
 }

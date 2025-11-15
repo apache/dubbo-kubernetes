@@ -39,6 +39,8 @@ import (
 
 var sdsServiceLog = log.RegisterScope("sds", "SDS service debugging")
 
+var connectionNumber = int64(0)
+
 type sdsservice struct {
 	st security.SecretManager
 
@@ -50,15 +52,15 @@ type sdsservice struct {
 	clients map[string]*Context
 }
 
+type Watch struct {
+	sync.Mutex
+	watch *xds.WatchedResource
+}
+
 type Context struct {
 	BaseConnection xds.Connection
 	s              *sdsservice
 	w              *Watch
-}
-
-type Watch struct {
-	sync.Mutex
-	watch *xds.WatchedResource
 }
 
 func newSDSService(st security.SecretManager, options *security.Options, pkpConf *mesh.PrivateKeyProvider) *sdsservice {
@@ -129,15 +131,64 @@ func (s *sdsservice) register(rpcs *grpc.Server) {
 	sds.RegisterSecretDiscoveryServiceServer(rpcs, s)
 }
 
+func (s *sdsservice) generate(resourceNames []string) (*discovery.DiscoveryResponse, error) {
+	return &discovery.DiscoveryResponse{}, nil
+}
+
+func (s *sdsservice) push(secretName string) {
+	s.Lock()
+	defer s.Unlock()
+	for _, client := range s.clients {
+		go func(client *Context) {
+			select {
+			case client.XdsConnection().PushCh() <- secretName:
+			case <-client.XdsConnection().StreamDone():
+			}
+		}(client)
+	}
+}
+
 func (s *sdsservice) Close() {
 	close(s.stop)
 }
 
-func (c *Context) XdsConnection() *xds.Connection {
-	return &c.BaseConnection
+func (w *Watch) requested(secretName string) bool {
+	w.Lock()
+	defer w.Unlock()
+	if w.watch != nil {
+		return w.watch.ResourceNames.Contains(secretName)
+	}
+	return false
 }
 
-var connectionNumber = int64(0)
+func (w *Watch) NewWatchedResource(typeURL string, names []string) {
+	w.Lock()
+	defer w.Unlock()
+	w.watch = &xds.WatchedResource{TypeUrl: typeURL, ResourceNames: sets.New(names...)}
+}
+
+func (w *Watch) GetWatchedResource(string) *xds.WatchedResource {
+	w.Lock()
+	defer w.Unlock()
+	return w.watch
+}
+
+func (w *Watch) UpdateWatchedResource(_ string, f func(*xds.WatchedResource) *xds.WatchedResource) {
+	w.Lock()
+	defer w.Unlock()
+	w.watch = f(w.watch)
+}
+
+func (w *Watch) DeleteWatchedResource(string) {
+	w.Lock()
+	defer w.Unlock()
+	w.watch = nil
+}
+
+func (w *Watch) GetID() string {
+	// This always maps to the same local Envoy instance.
+	return ""
+}
 
 func (c *Context) Initialize(_ *core.Node) error {
 	id := atomic.AddInt64(&connectionNumber, 1)
@@ -152,14 +203,12 @@ func (c *Context) Initialize(_ *core.Node) error {
 	return nil
 }
 
-func (c *Context) Close() {
-	c.s.Lock()
-	defer c.s.Unlock()
-	delete(c.s.clients, c.XdsConnection().ID())
-}
-
 func (c *Context) Watcher() xds.Watcher {
 	return c.w
+}
+
+func (c *Context) XdsConnection() *xds.Connection {
+	return &c.BaseConnection
 }
 
 func (c *Context) Process(req *discovery.DiscoveryRequest) error {
@@ -190,57 +239,8 @@ func (c *Context) Push(ev any) error {
 	return xds.Send(c, res)
 }
 
-func (w *Watch) requested(secretName string) bool {
-	w.Lock()
-	defer w.Unlock()
-	if w.watch != nil {
-		return w.watch.ResourceNames.Contains(secretName)
-	}
-	return false
-}
-
-func (w *Watch) GetWatchedResource(string) *xds.WatchedResource {
-	w.Lock()
-	defer w.Unlock()
-	return w.watch
-}
-
-func (w *Watch) NewWatchedResource(typeURL string, names []string) {
-	w.Lock()
-	defer w.Unlock()
-	w.watch = &xds.WatchedResource{TypeUrl: typeURL, ResourceNames: sets.New(names...)}
-}
-
-func (w *Watch) UpdateWatchedResource(_ string, f func(*xds.WatchedResource) *xds.WatchedResource) {
-	w.Lock()
-	defer w.Unlock()
-	w.watch = f(w.watch)
-}
-
-func (w *Watch) DeleteWatchedResource(string) {
-	w.Lock()
-	defer w.Unlock()
-	w.watch = nil
-}
-
-func (w *Watch) GetID() string {
-	// This always maps to the same local Envoy instance.
-	return ""
-}
-
-func (s *sdsservice) generate(resourceNames []string) (*discovery.DiscoveryResponse, error) {
-	return &discovery.DiscoveryResponse{}, nil
-}
-
-func (s *sdsservice) push(secretName string) {
-	s.Lock()
-	defer s.Unlock()
-	for _, client := range s.clients {
-		go func(client *Context) {
-			select {
-			case client.XdsConnection().PushCh() <- secretName:
-			case <-client.XdsConnection().StreamDone():
-			}
-		}(client)
-	}
+func (c *Context) Close() {
+	c.s.Lock()
+	defer c.s.Unlock()
+	delete(c.s.clients, c.XdsConnection().ID())
 }

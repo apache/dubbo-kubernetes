@@ -34,6 +34,7 @@ const (
 	CertProviderNone                   = "none"
 	CertProviderCustom                 = "custom"
 	CACertNamespaceConfigMapDataName   = "root-cert.pem"
+	CACRLNamespaceConfigMapDataName    = "ca-crl.pem"
 
 	PodInfoAnnotationsPath = "./etc/dubbo/pod/annotations"
 
@@ -50,6 +51,4 @@ const (
 	AlwaysReject = "internal.dubbo.apache.org/webhook-always-reject"
 
 	KubeSystemNamespace string = "kube-system"
-
-	CACRLNamespaceConfigMapDataName = "ca-crl.pem"
 )

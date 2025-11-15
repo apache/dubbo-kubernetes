@@ -20,6 +20,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	"net"
 	"sort"
 	"strconv"
@@ -28,7 +29,6 @@ import (
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
-	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
@@ -49,6 +49,12 @@ const (
 	serviceNodeSeparator = "~"
 )
 
+const (
+	IPv4 = pm.IPv4
+	IPv6 = pm.IPv6
+	Dual = pm.Dual
+)
+
 type XdsResourceGenerator interface {
 	Generate(proxy *Proxy, w *WatchedResource, req *PushRequest) (Resources, XdsLogDetails, error)
 }
@@ -64,12 +70,6 @@ type (
 	BootstrapNodeMetadata = pm.BootstrapNodeMetadata
 	NodeType              = pm.NodeType
 	IPMode                = pm.IPMode
-)
-
-const (
-	IPv4 = pm.IPv4
-	IPv6 = pm.IPv6
-	Dual = pm.Dual
 )
 
 type Watcher = meshwatcher.WatcherCollection
@@ -117,6 +117,8 @@ type XdsLogDetails struct {
 }
 
 var DefaultXdsLogDetails = XdsLogDetails{}
+
+type Resources = []*discovery.Resource
 
 type DeletedResources = []string
 
@@ -236,6 +238,11 @@ func (node *Proxy) GetID() string {
 	return node.ID
 }
 
+func (node *Proxy) DiscoverIPMode() {
+	node.ipMode = pm.DiscoverIPMode(node.IPAddresses)
+	node.GlobalUnicastIP = networkutil.GlobalUnicastIP(node.IPAddresses)
+}
+
 func (node *Proxy) UpdateWatchedResource(typeURL string, updateFn func(*WatchedResource) *WatchedResource) {
 	node.Lock()
 	defer node.Unlock()
@@ -286,8 +293,6 @@ func (node *Proxy) ShallowCloneWatchedResources() map[string]*WatchedResource {
 	defer node.RUnlock()
 	return maps.Clone(node.WatchedResources)
 }
-
-type Resources = []*discovery.Resource
 
 func ParseMetadata(metadata *structpb.Struct) (*NodeMetadata, error) {
 	if metadata == nil {
@@ -376,9 +381,4 @@ func GetProxyConfigNamespace(proxy *Proxy) string {
 	}
 
 	return ""
-}
-
-func (node *Proxy) DiscoverIPMode() {
-	node.ipMode = pm.DiscoverIPMode(node.IPAddresses)
-	node.GlobalUnicastIP = networkutil.GlobalUnicastIP(node.IPAddresses)
 }

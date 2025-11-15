@@ -28,10 +28,13 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
-type ConfigHash uint64
-
 const (
 	NamespaceAll = ""
+)
+
+type (
+	ConfigHash   uint64
+	EventHandler = func(config.Config, config.Config, Event)
 )
 
 type ConfigStore interface {
@@ -44,8 +47,6 @@ type ConfigStore interface {
 	Patch(orig config.Config, patchFn config.PatchFunc) (string, error)
 	Delete(typ config.GroupVersionKind, name, namespace string, resourceVersion *string) error
 }
-
-type EventHandler = func(config.Config, config.Config, Event)
 
 type ConfigStoreController interface {
 	ConfigStore

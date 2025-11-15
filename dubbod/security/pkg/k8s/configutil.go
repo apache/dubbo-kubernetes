@@ -30,12 +30,7 @@ import (
 
 var log = dubbolog.RegisterScope("k8sconfig", "k8s config debugging")
 
-func InsertDataToConfigMap(
-	client kclient.Client[*v1.ConfigMap],
-	meta metav1.ObjectMeta,
-	dataKeyName string,
-	data []byte,
-) error {
+func InsertDataToConfigMap(client kclient.Client[*v1.ConfigMap], meta metav1.ObjectMeta, dataKeyName string, data []byte) error {
 	configmap := client.Get(meta.Name, meta.Namespace)
 	if configmap == nil {
 		// Create a new ConfigMap.
@@ -67,6 +62,21 @@ func InsertDataToConfigMap(
 	return nil
 }
 
+func insertData(cm *v1.ConfigMap, data map[string]string) bool {
+	if cm.Data == nil {
+		cm.Data = data
+		return true
+	}
+	needsUpdate := false
+	for k, v := range data {
+		if cm.Data[k] != v {
+			needsUpdate = true
+		}
+		cm.Data[k] = v
+	}
+	return needsUpdate
+}
+
 func updateDataInConfigMap(c kclient.Client[*v1.ConfigMap], cm *v1.ConfigMap, dataKeyName string, data []byte) error {
 	if cm == nil {
 		return fmt.Errorf("cannot update nil configmap")
@@ -83,19 +93,4 @@ func updateDataInConfigMap(c kclient.Client[*v1.ConfigMap], cm *v1.ConfigMap, da
 		return fmt.Errorf("error when updating configmap %v: %v", cm.Name, err)
 	}
 	return nil
-}
-
-func insertData(cm *v1.ConfigMap, data map[string]string) bool {
-	if cm.Data == nil {
-		cm.Data = data
-		return true
-	}
-	needsUpdate := false
-	for k, v := range data {
-		if cm.Data[k] != v {
-			needsUpdate = true
-		}
-		cm.Data[k] = v
-	}
-	return needsUpdate
 }

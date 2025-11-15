@@ -86,15 +86,14 @@ type Server struct {
 	server      server.Instance
 	kubeClient  kubelib.Client
 
-	grpcServer  *grpc.Server
-	grpcAddress string
-
+	grpcServer        *grpc.Server
+	grpcAddress       string
 	secureGrpcServer  *grpc.Server
 	secureGrpcAddress string
 
 	httpServer  *http.Server // debug, monitoring and readiness Server.
-	httpAddr    string
 	httpsServer *http.Server // webhooks HTTPS Server.
+	httpAddr    string
 	httpsAddr   string
 	httpMux     *http.ServeMux
 	httpsMux    *http.ServeMux // webhooks
@@ -103,22 +102,22 @@ type Server struct {
 	configController       model.ConfigStoreController
 	multiclusterController *multicluster.Controller
 
-	fileWatcher      filewatcher.FileWatcher
+	fileWatcher filewatcher.FileWatcher
+
 	internalStop     chan struct{}
 	shutdownDuration time.Duration
 
+	caServer                *caserver.Server
 	workloadTrustBundle     *tb.TrustBundle
 	cacertsWatcher          *fsnotify.Watcher
 	dubbodCertBundleWatcher *keycertbundle.Watcher
+	dubbodCert              *tls.Certificate
 	RA                      ra.RegistrationAuthority
 	CA                      *ca.DubboCA
 
 	dnsNames []string
 
-	caServer *caserver.Server
-
 	certMu           sync.RWMutex
-	dubbodCert       *tls.Certificate
 	internalDebugMux *http.ServeMux
 
 	readinessProbes map[string]readinessProbe
@@ -239,7 +238,7 @@ func NewServer(args *PlanetArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	if s.kubeClient != nil {
 		s.initSecureWebhookServer(args)
-		wh, err := s.initProxylessInjector(args)
+		wh, err := s.initInjector(args)
 		if err != nil {
 			return nil, fmt.Errorf("error initializing proxyless injector: %v", err)
 		}
@@ -330,48 +329,6 @@ func (s *Server) Start(stop <-chan struct{}) error {
 	return nil
 }
 
-func (s *Server) initDiscoveryService() {
-	log.Infof("starting discovery service")
-	s.addStartFunc("xds server", func(stop <-chan struct{}) error {
-		log.Infof("Starting ADS server")
-		s.XDSServer.Start(stop)
-		return nil
-	})
-}
-
-func (s *Server) initRegistryEventHandlers() {
-	log.Info("initializing registry event handlers")
-
-	if s.configController != nil {
-		configHandler := func(prev config.Config, curr config.Config, event model.Event) {}
-		schemas := collections.Planet.All()
-		for _, schema := range schemas {
-			s.configController.RegisterEventHandler(schema.GroupVersionKind(), configHandler)
-		}
-	}
-}
-
-func (s *Server) initReadinessProbes() {
-	probes := map[string]readinessProbe{
-		"discovery": func() bool {
-			return s.XDSServer.IsServerReady()
-		},
-		"proxyless injector": func() bool {
-			return s.readinessFlags.proxylessInjectorReady.Load()
-		},
-		"config validation": func() bool {
-			return s.readinessFlags.configValidationReady.Load()
-		},
-	}
-	for name, probe := range probes {
-		s.addReadinessProbe(name, probe)
-	}
-}
-
-func (s *Server) addReadinessProbe(name string, fn readinessProbe) {
-	s.readinessProbes[name] = fn
-}
-
 func (s *Server) startCA(caOpts *caOptions) {
 	if s.CA == nil && s.RA == nil {
 		return
@@ -395,139 +352,13 @@ func (s *Server) startCA(caOpts *caOptions) {
 	})
 }
 
-func (s *Server) initMulticluster(args *PlanetArgs) {
-	if s.kubeClient == nil {
-		return
-	}
-	s.multiclusterController = multicluster.NewController(s.kubeClient, args.Namespace, s.clusterID, s.environment.Watcher, func(r *rest.Config) {
-		r.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
-		r.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
-	})
-	// TODO ListRemoteClusters
-	s.addStartFunc("multicluster controller", func(stop <-chan struct{}) error {
-		return s.multiclusterController.Run(stop)
-	})
-}
-
-func (s *Server) initKubeClient(args *PlanetArgs) error {
-	if s.kubeClient != nil {
-		// Already initialized by startup arguments
+func (s *Server) initDiscoveryService() {
+	log.Infof("starting discovery service")
+	s.addStartFunc("xds server", func(stop <-chan struct{}) error {
+		log.Infof("Starting ADS server")
+		s.XDSServer.Start(stop)
 		return nil
-	}
-	hasK8SConfigStore := false
-	if args.RegistryOptions.FileDir == "" {
-		// If file dir is set - config controller will just use file.
-		if _, err := os.Stat(args.MeshConfigFile); !os.IsNotExist(err) {
-			meshConfig, err := mesh.ReadMeshConfig(args.MeshConfigFile)
-			if err != nil {
-				return fmt.Errorf("failed reading mesh config: %v", err)
-			}
-			if len(meshConfig.ConfigSources) == 0 && args.RegistryOptions.KubeConfig != "" {
-				hasK8SConfigStore = true
-			}
-			for _, cs := range meshConfig.ConfigSources {
-				if cs.Address == string(Kubernetes)+"://" {
-					hasK8SConfigStore = true
-					break
-				}
-			}
-		} else if args.RegistryOptions.KubeConfig != "" {
-			hasK8SConfigStore = true
-		}
-	}
-
-	if hasK8SConfigStore || hasKubeRegistry(args.RegistryOptions.Registries) {
-		// Used by validation
-		kubeRestConfig, err := kubelib.DefaultRestConfig(args.RegistryOptions.KubeConfig, "", func(config *rest.Config) {
-			config.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
-			config.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
-		})
-		if err != nil {
-			return fmt.Errorf("failed creating kube config: %v", err)
-		}
-
-		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), s.clusterID)
-		if err != nil {
-			return fmt.Errorf("failed creating kube client: %v", err)
-		}
-		s.kubeClient = kubelib.EnableCrdWatcher(s.kubeClient)
-	}
-
-	return nil
-}
-
-func (s *Server) initMeshHandlers(changeHandler func(_ *meshconfig.MeshConfig)) {
-	log.Info("initializing mesh handlers")
-	// When the mesh config or networks change, do a full push.
-	s.environment.AddMeshHandler(func() {
-		changeHandler(s.environment.Mesh())
-		s.XDSServer.ConfigUpdate(&model.PushRequest{
-			Full:   true,
-			Reason: model.NewReasonStats(model.GlobalUpdate),
-			Forced: true,
-		})
 	})
-}
-
-func (s *Server) initServers(args *PlanetArgs) {
-	s.initGrpcServer(args.KeepaliveOptions)
-	multiplexGRPC := false
-	if args.ServerOptions.GRPCAddr != "" {
-		s.grpcAddress = args.ServerOptions.GRPCAddr
-	} else {
-		// This happens only if the GRPC port (15010) is disabled. We will multiplex
-		// it on the HTTP port. Does not impact the HTTPS gRPC or HTTPS.
-		log.Infof("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
-		multiplexGRPC = true
-	}
-	h2s := &http2.Server{
-		MaxConcurrentStreams: uint32(features.MaxConcurrentStreams),
-	}
-	multiplexHandler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
-			s.grpcServer.ServeHTTP(w, r)
-			return
-		}
-		s.httpMux.ServeHTTP(w, r)
-	}), h2s)
-	s.httpServer = &http.Server{
-		Addr:        args.ServerOptions.HTTPAddr,
-		Handler:     s.httpMux,
-		IdleTimeout: 90 * time.Second, // matches http.DefaultTransport keep-alive timeout
-		ReadTimeout: 30 * time.Second,
-	}
-	if multiplexGRPC {
-		s.httpServer.ReadTimeout = 0
-		s.httpServer.ReadHeaderTimeout = 30 * time.Second
-		s.httpServer.Handler = multiplexHandler
-	}
-}
-
-func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
-	interceptors := []grpc.UnaryServerInterceptor{
-		// setup server prometheus monitoring (as final interceptor in chain)
-		grpcprom.UnaryServerInterceptor,
-	}
-	grpcOptions := dubbogrpc.ServerOptions(options, interceptors...)
-	s.grpcServer = grpc.NewServer(grpcOptions...)
-	s.XDSServer.Register(s.grpcServer)
-	reflection.Register(s.grpcServer)
-}
-
-func (s *Server) initControllers(args *PlanetArgs) error {
-	log.Info("initializing controllers")
-
-	s.initMulticluster(args)
-
-	s.initSDSServer()
-
-	if err := s.initConfigController(args); err != nil {
-		return fmt.Errorf("error initializing config controller: %v", err)
-	}
-	if err := s.initServiceControllers(args); err != nil {
-		return fmt.Errorf("error initializing service controllers: %v", err)
-	}
-	return nil
 }
 
 func (s *Server) initSecureDiscoveryService(args *PlanetArgs, trustDomain string) error {
@@ -590,6 +421,174 @@ func (s *Server) initSecureDiscoveryService(args *PlanetArgs, trustDomain string
 	return nil
 }
 
+func (s *Server) initRegistryEventHandlers() {
+	log.Info("initializing registry event handlers")
+
+	if s.configController != nil {
+		configHandler := func(prev config.Config, curr config.Config, event model.Event) {}
+		schemas := collections.Planet.All()
+		for _, schema := range schemas {
+			s.configController.RegisterEventHandler(schema.GroupVersionKind(), configHandler)
+		}
+	}
+}
+
+func (s *Server) addReadinessProbe(name string, fn readinessProbe) {
+	s.readinessProbes[name] = fn
+}
+
+func (s *Server) initReadinessProbes() {
+	probes := map[string]readinessProbe{
+		"discovery": func() bool {
+			return s.XDSServer.IsServerReady()
+		},
+		"proxyless injector": func() bool {
+			return s.readinessFlags.proxylessInjectorReady.Load()
+		},
+		"config validation": func() bool {
+			return s.readinessFlags.configValidationReady.Load()
+		},
+	}
+	for name, probe := range probes {
+		s.addReadinessProbe(name, probe)
+	}
+}
+
+func (s *Server) initMulticluster(args *PlanetArgs) {
+	if s.kubeClient == nil {
+		return
+	}
+	s.multiclusterController = multicluster.NewController(s.kubeClient, args.Namespace, s.clusterID, s.environment.Watcher, func(r *rest.Config) {
+		r.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
+		r.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
+	})
+	// TODO ListRemoteClusters
+	s.addStartFunc("multicluster controller", func(stop <-chan struct{}) error {
+		return s.multiclusterController.Run(stop)
+	})
+}
+
+func (s *Server) initMeshHandlers(changeHandler func(_ *meshconfig.MeshConfig)) {
+	log.Info("initializing mesh handlers")
+	// When the mesh config or networks change, do a full push.
+	s.environment.AddMeshHandler(func() {
+		changeHandler(s.environment.Mesh())
+		s.XDSServer.ConfigUpdate(&model.PushRequest{
+			Full:   true,
+			Reason: model.NewReasonStats(model.GlobalUpdate),
+			Forced: true,
+		})
+	})
+}
+
+func (s *Server) initKubeClient(args *PlanetArgs) error {
+	if s.kubeClient != nil {
+		// Already initialized by startup arguments
+		return nil
+	}
+	hasK8SConfigStore := false
+	if args.RegistryOptions.FileDir == "" {
+		// If file dir is set - config controller will just use file.
+		if _, err := os.Stat(args.MeshConfigFile); !os.IsNotExist(err) {
+			meshConfig, err := mesh.ReadMeshConfig(args.MeshConfigFile)
+			if err != nil {
+				return fmt.Errorf("failed reading mesh config: %v", err)
+			}
+			if len(meshConfig.ConfigSources) == 0 && args.RegistryOptions.KubeConfig != "" {
+				hasK8SConfigStore = true
+			}
+			for _, cs := range meshConfig.ConfigSources {
+				if cs.Address == string(Kubernetes)+"://" {
+					hasK8SConfigStore = true
+					break
+				}
+			}
+		} else if args.RegistryOptions.KubeConfig != "" {
+			hasK8SConfigStore = true
+		}
+	}
+
+	if hasK8SConfigStore || hasKubeRegistry(args.RegistryOptions.Registries) {
+		// Used by validation
+		kubeRestConfig, err := kubelib.DefaultRestConfig(args.RegistryOptions.KubeConfig, "", func(config *rest.Config) {
+			config.QPS = args.RegistryOptions.KubeOptions.KubernetesAPIQPS
+			config.Burst = args.RegistryOptions.KubeOptions.KubernetesAPIBurst
+		})
+		if err != nil {
+			return fmt.Errorf("failed creating kube config: %v", err)
+		}
+
+		s.kubeClient, err = kubelib.NewClient(kubelib.NewClientConfigForRestConfig(kubeRestConfig), s.clusterID)
+		if err != nil {
+			return fmt.Errorf("failed creating kube client: %v", err)
+		}
+		s.kubeClient = kubelib.EnableCrdWatcher(s.kubeClient)
+	}
+
+	return nil
+}
+
+func (s *Server) initControllers(args *PlanetArgs) error {
+	log.Info("initializing controllers")
+
+	s.initMulticluster(args)
+
+	s.initSDSServer()
+
+	if err := s.initConfigController(args); err != nil {
+		return fmt.Errorf("error initializing config controller: %v", err)
+	}
+	if err := s.initServiceControllers(args); err != nil {
+		return fmt.Errorf("error initializing service controllers: %v", err)
+	}
+	return nil
+}
+
+func (s *Server) initServers(args *PlanetArgs) {
+	s.initGrpcServer(args.KeepaliveOptions)
+	multiplexGRPC := false
+	if args.ServerOptions.GRPCAddr != "" {
+		s.grpcAddress = args.ServerOptions.GRPCAddr
+	} else {
+		// This happens only if the GRPC port (15010) is disabled. We will multiplex
+		// it on the HTTP port. Does not impact the HTTPS gRPC or HTTPS.
+		log.Infof("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
+		multiplexGRPC = true
+	}
+	h2s := &http2.Server{
+		MaxConcurrentStreams: uint32(features.MaxConcurrentStreams),
+	}
+	multiplexHandler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
+			s.grpcServer.ServeHTTP(w, r)
+			return
+		}
+		s.httpMux.ServeHTTP(w, r)
+	}), h2s)
+	s.httpServer = &http.Server{
+		Addr:        args.ServerOptions.HTTPAddr,
+		Handler:     s.httpMux,
+		IdleTimeout: 90 * time.Second, // matches http.DefaultTransport keep-alive timeout
+		ReadTimeout: 30 * time.Second,
+	}
+	if multiplexGRPC {
+		s.httpServer.ReadTimeout = 0
+		s.httpServer.ReadHeaderTimeout = 30 * time.Second
+		s.httpServer.Handler = multiplexHandler
+	}
+}
+
+func (s *Server) initGrpcServer(options *dubbokeepalive.Options) {
+	interceptors := []grpc.UnaryServerInterceptor{
+		// setup server prometheus monitoring (as final interceptor in chain)
+		grpcprom.UnaryServerInterceptor,
+	}
+	grpcOptions := dubbogrpc.ServerOptions(options, interceptors...)
+	s.grpcServer = grpc.NewServer(grpcOptions...)
+	s.XDSServer.Register(s.grpcServer)
+	reflection.Register(s.grpcServer)
+}
+
 func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain string) (*spiffe.PeerCertVerifier, error) {
 	customTLSCertsExists, _, _, caCertPath := hasCustomTLSCerts(tlsOptions)
 	if !customTLSCertsExists && s.CA == nil && !s.isK8SSigning() {
@@ -629,6 +628,34 @@ func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain strin
 	return peerCertVerifier, nil
 }
 
+// maybeCreateCA creates and initializes the built-in CA if needed.
+func (s *Server) maybeCreateCA(caOpts *caOptions) error {
+	// CA signing certificate must be created only if CA is enabled.
+	if features.EnableCAServer {
+		log.Info("creating CA and initializing public key")
+		var err error
+		if useRemoteCerts.Get() {
+			if err = s.loadCACerts(caOpts, LocalCertDir.Get()); err != nil {
+				return fmt.Errorf("failed to load remote CA certs: %v", err)
+			}
+		}
+		// May return nil, if the CA is missing required configs - This is not an error.
+		// This is currently only used for K8S signing.
+		if caOpts.ExternalCAType != "" {
+			if s.RA, err = s.createDubboRA(caOpts); err != nil {
+				return fmt.Errorf("failed to create RA: %v", err)
+			}
+		}
+		// If K8S signs - we don't need to use the built-in dubbo CA.
+		if !s.isK8SSigning() {
+			if s.CA, err = s.createDubboCA(caOpts); err != nil {
+				return fmt.Errorf("failed to create CA: %v", err)
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Server) getDubbodCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	s.certMu.RLock()
 	defer s.certMu.RUnlock()
@@ -655,34 +682,6 @@ func (s *Server) serveHTTP() error {
 		}
 	}()
 	s.httpAddr = httpListener.Addr().String()
-	return nil
-}
-
-// maybeCreateCA creates and initializes the built-in CA if needed.
-func (s *Server) maybeCreateCA(caOpts *caOptions) error {
-	// CA signing certificate must be created only if CA is enabled.
-	if features.EnableCAServer {
-		log.Info("creating CA and initializing public key")
-		var err error
-		if useRemoteCerts.Get() {
-			if err = s.loadCACerts(caOpts, LocalCertDir.Get()); err != nil {
-				return fmt.Errorf("failed to load remote CA certs: %v", err)
-			}
-		}
-		// May return nil, if the CA is missing required configs - This is not an error.
-		// This is currently only used for K8S signing.
-		if caOpts.ExternalCAType != "" {
-			if s.RA, err = s.createDubboRA(caOpts); err != nil {
-				return fmt.Errorf("failed to create RA: %v", err)
-			}
-		}
-		// If K8S signs - we don't need to use the built-in dubbo CA.
-		if !s.isK8SSigning() {
-			if s.CA, err = s.createDubboCA(caOpts); err != nil {
-				return fmt.Errorf("failed to create CA: %v", err)
-			}
-		}
-	}
 	return nil
 }
 
@@ -717,6 +716,17 @@ func (s *Server) initSDSServer() {
 // isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Dubbod
 func (s *Server) isK8SSigning() bool {
 	return s.RA != nil && strings.HasPrefix(features.PlanetCertProvider, constants.CertProviderKubernetesSignerPrefix)
+}
+
+func (s *Server) cachesSynced() bool {
+	// TODO multiclusterController HasSynced
+	if !s.ServiceController().HasSynced() {
+		return false
+	}
+	if !s.configController.HasSynced() {
+		return false
+	}
+	return true
 }
 
 func (s *Server) waitForShutdown(stop <-chan struct{}) {
@@ -777,17 +787,6 @@ func (s *Server) waitForShutdown(stop <-chan struct{}) {
 		// Shutdown the DiscoveryServer.
 		s.XDSServer.Shutdown()
 	}()
-}
-
-func (s *Server) cachesSynced() bool {
-	// TODO multiclusterController HasSynced
-	if !s.ServiceController().HasSynced() {
-		return false
-	}
-	if !s.configController.HasSynced() {
-		return false
-	}
-	return true
 }
 
 func (s *Server) pushContextReady(expected int64) bool {
@@ -876,7 +875,7 @@ func (s *Server) shouldStartNsController() bool {
 	return true
 }
 
-func getDNSNames(args *PlanetArgs, host string) []string {
+func getDNSNames(_ *PlanetArgs, host string) []string {
 	// Append custom hostname if there is any
 	customHost := features.DubbodServiceCustomHost
 	var cHosts []string

@@ -37,11 +37,7 @@ type mappedIndexer[T any, U any] struct {
 	mapFunc func(T) U
 }
 
-func MapCollection[T, U any](
-	collection Collection[T],
-	mapFunc func(T) U,
-	opts ...CollectionOption,
-) Collection[U] {
+func MapCollection[T, U any](collection Collection[T], mapFunc func(T) U, opts ...CollectionOption) Collection[U] {
 	o := buildCollectionOptions(opts...)
 	if o.name == "" {
 		o.name = fmt.Sprintf("Map[%v]", ptr.TypeName[T]())

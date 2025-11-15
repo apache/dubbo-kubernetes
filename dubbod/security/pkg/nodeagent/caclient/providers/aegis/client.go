@@ -36,6 +36,12 @@ import (
 
 var aegisClientLog = log.RegisterScope("aegisclient", "aegis client debugging")
 
+type TLSOptions struct {
+	RootCert string
+	Key      string
+	Cert     string
+}
+
 type AegisClient struct {
 	// It means enable tls connection to Citadel if this is not nil.
 	tlsOpts  *TLSOptions
@@ -43,12 +49,6 @@ type AegisClient struct {
 	conn     *grpc.ClientConn
 	provider credentials.PerRPCCredentials
 	opts     *security.Options
-}
-
-type TLSOptions struct {
-	RootCert string
-	Key      string
-	Cert     string
 }
 
 func NewAegisClient(opts *security.Options, tlsOpts *TLSOptions) (*AegisClient, error) {
@@ -66,25 +66,6 @@ func NewAegisClient(opts *security.Options, tlsOpts *TLSOptions) (*AegisClient, 
 	c.conn = conn
 	c.client = pb.NewIstioCertificateServiceClient(conn)
 	return c, nil
-}
-
-func (c *AegisClient) Close() {
-	if c.conn != nil {
-		_ = c.conn.Close()
-	}
-}
-
-func (c *AegisClient) getTLSOptions() *dubbogrpc.TLSOptions {
-	if c.tlsOpts != nil {
-		return &dubbogrpc.TLSOptions{
-			RootCert:      c.tlsOpts.RootCert,
-			Key:           c.tlsOpts.Key,
-			Cert:          c.tlsOpts.Cert,
-			ServerAddress: c.opts.CAEndpoint,
-			SAN:           c.opts.CAEndpointSAN,
-		}
-	}
-	return nil
 }
 
 func (c *AegisClient) CSRSign(csrPEM []byte, certValidTTLInSec int64) (res []string, err error) {
@@ -135,6 +116,19 @@ func (c *AegisClient) GetRootCertBundle() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *AegisClient) getTLSOptions() *dubbogrpc.TLSOptions {
+	if c.tlsOpts != nil {
+		return &dubbogrpc.TLSOptions{
+			RootCert:      c.tlsOpts.RootCert,
+			Key:           c.tlsOpts.Key,
+			Cert:          c.tlsOpts.Cert,
+			ServerAddress: c.opts.CAEndpoint,
+			SAN:           c.opts.CAEndpointSAN,
+		}
+	}
+	return nil
+}
+
 func (c *AegisClient) buildConnection() (*grpc.ClientConn, error) {
 	tlsOpts := c.getTLSOptions()
 	opts, err := dubbogrpc.ClientOptions(nil, tlsOpts)
@@ -167,4 +161,10 @@ func (c *AegisClient) reconnect() error {
 	c.client = pb.NewIstioCertificateServiceClient(conn)
 	aegisClientLog.Info("recreated connection")
 	return nil
+}
+
+func (c *AegisClient) Close() {
+	if c.conn != nil {
+		_ = c.conn.Close()
+	}
 }

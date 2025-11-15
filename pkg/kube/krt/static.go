@@ -28,10 +28,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
-type StaticCollection[T any] struct {
-	*staticList[T]
-}
-
 type staticList[T any] struct {
 	mu             sync.RWMutex
 	vals           map[string]T
@@ -42,6 +38,100 @@ type staticList[T any] struct {
 	syncer         Syncer
 	metadata       Metadata
 	indexes        map[string]staticListIndex[T]
+}
+
+// nolint: unused // (not true)
+type staticListIndex[T any] struct {
+	extract func(o T) []string
+	index   map[string]sets.Set[string]
+	parent  *staticList[T]
+}
+
+type StaticCollection[T any] struct {
+	*staticList[T]
+}
+
+func NewStaticCollection[T any](synced Syncer, vals []T, opts ...CollectionOption) StaticCollection[T] {
+	o := buildCollectionOptions(opts...)
+	if o.name == "" {
+		o.name = fmt.Sprintf("Static[%v]", ptr.TypeName[T]())
+	}
+
+	res := make(map[string]T, len(vals))
+	for _, v := range vals {
+		res[GetKey(v)] = v
+	}
+
+	if synced == nil {
+		synced = alwaysSynced{}
+	}
+
+	sl := &staticList[T]{
+		eventHandlers:  newHandlerSet[T](),
+		vals:           res,
+		id:             nextUID(),
+		stop:           o.stop,
+		collectionName: o.name,
+		syncer:         synced,
+		indexes:        make(map[string]staticListIndex[T]),
+	}
+
+	if o.metadata != nil {
+		sl.metadata = o.metadata
+	}
+
+	c := StaticCollection[T]{
+		staticList: sl,
+	}
+	maybeRegisterCollectionForDebugging[T](c, o.debugger)
+	return c
+}
+
+func (s StaticCollection[T]) Reset(newState []T) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var updates []Event[T]
+	nv := map[string]T{}
+	for _, incoming := range newState {
+		k := GetKey(incoming)
+		nv[k] = incoming
+		if old, f := s.vals[k]; f {
+			if !Equal(old, incoming) {
+				ev := Event[T]{
+					Old:   &old,
+					New:   &incoming,
+					Event: controllers.EventUpdate,
+				}
+				for _, index := range s.indexes {
+					index.update(ev, k)
+				}
+				updates = append(updates, ev)
+			}
+		} else {
+			ev := Event[T]{
+				New:   &incoming,
+				Event: controllers.EventAdd,
+			}
+			for _, index := range s.indexes {
+				index.update(ev, k)
+			}
+			updates = append(updates, ev)
+		}
+		delete(s.vals, k)
+	}
+	for k, remaining := range s.vals {
+		for _, index := range s.indexes {
+			index.delete(remaining, k)
+		}
+		updates = append(updates, Event[T]{
+			Old:   &remaining,
+			Event: controllers.EventDelete,
+		})
+	}
+	s.vals = nv
+	if len(updates) > 0 {
+		s.eventHandlers.Distribute(updates, false)
+	}
 }
 
 func (s *staticList[T]) Register(f func(o Event[T])) HandlerRegistration {
@@ -141,96 +231,6 @@ func (s *staticList[T]) List() []T {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return maps.Values(s.vals)
-}
-
-func NewStaticCollection[T any](synced Syncer, vals []T, opts ...CollectionOption) StaticCollection[T] {
-	o := buildCollectionOptions(opts...)
-	if o.name == "" {
-		o.name = fmt.Sprintf("Static[%v]", ptr.TypeName[T]())
-	}
-
-	res := make(map[string]T, len(vals))
-	for _, v := range vals {
-		res[GetKey(v)] = v
-	}
-
-	if synced == nil {
-		synced = alwaysSynced{}
-	}
-
-	sl := &staticList[T]{
-		eventHandlers:  newHandlerSet[T](),
-		vals:           res,
-		id:             nextUID(),
-		stop:           o.stop,
-		collectionName: o.name,
-		syncer:         synced,
-		indexes:        make(map[string]staticListIndex[T]),
-	}
-
-	if o.metadata != nil {
-		sl.metadata = o.metadata
-	}
-
-	c := StaticCollection[T]{
-		staticList: sl,
-	}
-	maybeRegisterCollectionForDebugging[T](c, o.debugger)
-	return c
-}
-
-func (s StaticCollection[T]) Reset(newState []T) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var updates []Event[T]
-	nv := map[string]T{}
-	for _, incoming := range newState {
-		k := GetKey(incoming)
-		nv[k] = incoming
-		if old, f := s.vals[k]; f {
-			if !Equal(old, incoming) {
-				ev := Event[T]{
-					Old:   &old,
-					New:   &incoming,
-					Event: controllers.EventUpdate,
-				}
-				for _, index := range s.indexes {
-					index.update(ev, k)
-				}
-				updates = append(updates, ev)
-			}
-		} else {
-			ev := Event[T]{
-				New:   &incoming,
-				Event: controllers.EventAdd,
-			}
-			for _, index := range s.indexes {
-				index.update(ev, k)
-			}
-			updates = append(updates, ev)
-		}
-		delete(s.vals, k)
-	}
-	for k, remaining := range s.vals {
-		for _, index := range s.indexes {
-			index.delete(remaining, k)
-		}
-		updates = append(updates, Event[T]{
-			Old:   &remaining,
-			Event: controllers.EventDelete,
-		})
-	}
-	s.vals = nv
-	if len(updates) > 0 {
-		s.eventHandlers.Distribute(updates, false)
-	}
-}
-
-// nolint: unused // (not true)
-type staticListIndex[T any] struct {
-	extract func(o T) []string
-	index   map[string]sets.Set[string]
-	parent  *staticList[T]
 }
 
 func (s staticListIndex[T]) update(ev Event[T], oKey string) {

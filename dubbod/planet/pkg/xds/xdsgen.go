@@ -58,15 +58,6 @@ var controlPlane = lazy.New(func() (*core.ControlPlane, error) {
 	return &core.ControlPlane{Identifier: string(byVersion)}, nil
 })
 
-func ControlPlane(typ string) *core.ControlPlane {
-	if typ != TypeDebugSyncronization {
-		// Currently only TypeDebugSyncronization utilizes this so don't both sending otherwise
-		return nil
-	}
-	cp, _ := controlPlane.Get()
-	return cp
-}
-
 func xdsNeedsPush(req *model.PushRequest, _ *model.Proxy) (needsPush, definitive bool) {
 	if req == nil {
 		return true, true
@@ -76,6 +67,7 @@ func xdsNeedsPush(req *model.PushRequest, _ *model.Proxy) (needsPush, definitive
 	}
 	return false, false
 }
+
 func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req *model.PushRequest) error {
 	if w == nil {
 		return nil
@@ -544,53 +536,100 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	return nil
 }
 
-// extractEDSClusterNamesFromCDS extracts EDS cluster names from CDS cluster resources
-// Only clusters with ClusterDiscoveryType=EDS are returned
-func extractEDSClusterNamesFromCDS(clusters model.Resources) []string {
-	clusterNames := sets.New[string]()
-	for _, r := range clusters {
-		// Unmarshal the cluster resource to check its type
-		cl := &cluster.Cluster{}
-		if err := r.Resource.UnmarshalTo(cl); err != nil {
-			log.Debugf("extractEDSClusterNamesFromCDS: failed to unmarshal cluster %s: %v", r.Name, err)
-			continue
-		}
-		// Check if this is an EDS cluster
-		if cl.ClusterDiscoveryType != nil {
-			if edsType, ok := cl.ClusterDiscoveryType.(*cluster.Cluster_Type); ok && edsType.Type == cluster.Cluster_EDS {
-				// This is an EDS cluster, add to the list
-				clusterNames.Insert(cl.Name)
-			}
-		}
+func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource, req *model.PushRequest) error {
+	if w == nil {
+		return nil
 	}
-	return clusterNames.UnsortedList()
+	gen := s.findGenerator(w.TypeUrl, con)
+	if gen == nil {
+		return nil
+	}
+
+	var logFiltered string
+	var res model.Resources
+	var deletedRes model.DeletedResources
+	var logdata model.XdsLogDetails
+	var usedDelta bool
+	var err error
+	switch g := gen.(type) {
+	case model.XdsDeltaResourceGenerator:
+		res, deletedRes, logdata, usedDelta, err = g.GenerateDeltas(con.proxy, req, w)
+	case model.XdsResourceGenerator:
+		res, logdata, err = g.Generate(con.proxy, w, req)
+	}
+	if err != nil || (res == nil && deletedRes == nil) {
+		return err
+	}
+	defer func() {}()
+	resp := &discovery.DeltaDiscoveryResponse{
+		ControlPlane: ControlPlane(w.TypeUrl),
+		TypeUrl:      w.TypeUrl,
+		// TODO: send different version for incremental eds
+		SystemVersionInfo: req.Push.PushVersion,
+		Nonce:             nonce(req.Push.PushVersion),
+		Resources:         res,
+	}
+	if usedDelta {
+		resp.RemovedResources = deletedRes
+	} else if req.Full {
+		// similar to sotw
+		removed := w.ResourceNames.Copy()
+		for _, r := range res {
+			removed.Delete(r.Name)
+		}
+		resp.RemovedResources = sets.SortedList(removed)
+	}
+	var newResourceNames sets.String
+	if len(resp.RemovedResources) > 0 {
+		deltaLog.Infof("%v REMOVE for node:%s %v", v3.GetShortType(w.TypeUrl), con.ID(), resp.RemovedResources)
+	}
+
+	ptype := "PUSH"
+	info := ""
+	if logdata.Incremental {
+		ptype = "PUSH INC"
+	}
+	if len(logdata.AdditionalInfo) > 0 {
+		info = " " + logdata.AdditionalInfo
+	}
+	if len(logFiltered) > 0 {
+		info += logFiltered
+	}
+
+	if err := con.sendDelta(resp, newResourceNames); err != nil {
+		return err
+	}
+
+	switch {
+	case !req.Full:
+	default:
+		deltaLog.Infof("%s: %s%s for node:%s resources:%d removed:%d%s",
+			v3.GetShortType(w.TypeUrl), ptype, req.PushReason(), con.proxy.ID, len(res), len(resp.RemovedResources), info)
+	}
+
+	return nil
 }
 
-// extractClusterNamesFromLDS extracts cluster names referenced in LDS listener resources
-// For outbound listeners with name format "hostname:port", the cluster name is "outbound|port||hostname"
-func extractClusterNamesFromLDS(listeners model.Resources) []string {
-	clusterNames := sets.New[string]()
-	for _, r := range listeners {
-		// Parse listener name to extract cluster name
-		// Outbound listener format: "hostname:port" -> cluster: "outbound|port||hostname"
-		// Inbound listener format: "xds.dubbo.apache.org/grpc/lds/inbound/[::]:port" -> no cluster
-		listenerName := r.Name
-		if strings.Contains(listenerName, ":") && !strings.HasPrefix(listenerName, "xds.dubbo.apache.org/grpc/lds/inbound/") {
-			// This is an outbound listener
-			parts := strings.Split(listenerName, ":")
-			if len(parts) == 2 {
-				hostname := parts[0]
-				portStr := parts[1]
-				port, err := strconv.Atoi(portStr)
-				if err == nil {
-					// Build cluster name: outbound|port||hostname
-					clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", host.Name(hostname), port)
-					clusterNames.Insert(clusterName)
-				}
-			}
+func (s *DiscoveryServer) findGenerator(typeURL string, con *Connection) model.XdsResourceGenerator {
+	if g, f := s.Generators[con.proxy.Metadata.Generator+"/"+typeURL]; f {
+		return g
+	}
+	if g, f := s.Generators[typeURL]; f {
+		return g
+	}
+
+	// XdsResourceGenerator is the default generator for this connection. We want to allow
+	// some types to use custom generators - for example EDS.
+	g := con.proxy.XdsResourceGenerator
+	if g == nil {
+		if strings.HasPrefix(typeURL, TypeDebugPrefix) {
+			g = s.Generators["event"]
+		} else {
+			// TODO move this to just directly using the resource TypeUrl
+			g = s.Generators["api"] // default to "MCP" generators - any type supported by store
 		}
 	}
-	return clusterNames.UnsortedList()
+	return g
 }
 
 // extractRouteNamesFromLDS extracts route names referenced in LDS listener resources
@@ -651,47 +690,68 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 	return routeNames.UnsortedList()
 }
 
+// extractClusterNamesFromLDS extracts cluster names referenced in LDS listener resources
+// For outbound listeners with name format "hostname:port", the cluster name is "outbound|port||hostname"
+func extractClusterNamesFromLDS(listeners model.Resources) []string {
+	clusterNames := sets.New[string]()
+	for _, r := range listeners {
+		// Parse listener name to extract cluster name
+		// Outbound listener format: "hostname:port" -> cluster: "outbound|port||hostname"
+		// Inbound listener format: "xds.dubbo.apache.org/grpc/lds/inbound/[::]:port" -> no cluster
+		listenerName := r.Name
+		if strings.Contains(listenerName, ":") && !strings.HasPrefix(listenerName, "xds.dubbo.apache.org/grpc/lds/inbound/") {
+			// This is an outbound listener
+			parts := strings.Split(listenerName, ":")
+			if len(parts) == 2 {
+				hostname := parts[0]
+				portStr := parts[1]
+				port, err := strconv.Atoi(portStr)
+				if err == nil {
+					// Build cluster name: outbound|port||hostname
+					clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", host.Name(hostname), port)
+					clusterNames.Insert(clusterName)
+				}
+			}
+		}
+	}
+	return clusterNames.UnsortedList()
+}
+
+// extractEDSClusterNamesFromCDS extracts EDS cluster names from CDS cluster resources
+// Only clusters with ClusterDiscoveryType=EDS are returned
+func extractEDSClusterNamesFromCDS(clusters model.Resources) []string {
+	clusterNames := sets.New[string]()
+	for _, r := range clusters {
+		// Unmarshal the cluster resource to check its type
+		cl := &cluster.Cluster{}
+		if err := r.Resource.UnmarshalTo(cl); err != nil {
+			log.Debugf("extractEDSClusterNamesFromCDS: failed to unmarshal cluster %s: %v", r.Name, err)
+			continue
+		}
+		// Check if this is an EDS cluster
+		if cl.ClusterDiscoveryType != nil {
+			if edsType, ok := cl.ClusterDiscoveryType.(*cluster.Cluster_Type); ok && edsType.Type == cluster.Cluster_EDS {
+				// This is an EDS cluster, add to the list
+				clusterNames.Insert(cl.Name)
+			}
+		}
+	}
+	return clusterNames.UnsortedList()
+}
+
+func ControlPlane(typ string) *core.ControlPlane {
+	if typ != TypeDebugSyncronization {
+		// Currently only TypeDebugSyncronization utilizes this so don't both sending otherwise
+		return nil
+	}
+	cp, _ := controlPlane.Get()
+	return cp
+}
+
 func ResourceSize(r model.Resources) int {
 	size := 0
 	for _, r := range r {
 		size += len(r.Resource.Value)
 	}
 	return size
-}
-
-func (s *DiscoveryServer) findGenerator(typeURL string, con *Connection) model.XdsResourceGenerator {
-	if g, f := s.Generators[con.proxy.Metadata.Generator+"/"+typeURL]; f {
-		return g
-	}
-	if g, f := s.Generators[typeURL]; f {
-		return g
-	}
-
-	// XdsResourceGenerator is the default generator for this connection. We want to allow
-	// some types to use custom generators - for example EDS.
-	g := con.proxy.XdsResourceGenerator
-	if g == nil {
-		if strings.HasPrefix(typeURL, TypeDebugPrefix) {
-			g = s.Generators["event"]
-		} else {
-			// TODO move this to just directly using the resource TypeUrl
-			g = s.Generators["api"] // default to "MCP" generators - any type supported by store
-		}
-	}
-	return g
-}
-
-// atMostNJoin joins up to N items from data, appending "and X others" if more exist
-func atMostNJoin(data []string, limit int) string {
-	if limit == 0 || limit == 1 {
-		// Assume limit >1, but make sure we don't crash if someone does pass those
-		return strings.Join(data, ", ")
-	}
-	if len(data) == 0 {
-		return ""
-	}
-	if len(data) < limit {
-		return strings.Join(data, ", ")
-	}
-	return strings.Join(data[:limit-1], ", ") + fmt.Sprintf(", and %d others", len(data)-limit+1)
 }

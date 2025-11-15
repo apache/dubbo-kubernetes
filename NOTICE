@@ -6,3 +6,6 @@ at The Apache Software Foundation (http://dubbo.apache.org/).
 
 For additional information about the Apache Software Foundation, please see
 <http://www.apache.org/>.
+
+Portions of this file are based on code from the Istio project
+(https://github.com/istio/istio), licensed under the Apache License, Version 2.0.

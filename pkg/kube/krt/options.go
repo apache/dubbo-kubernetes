@@ -17,13 +17,13 @@
 
 package krt
 
+type BuilderOption func(opt CollectionOption) OptionsBuilder
+
 type OptionsBuilder struct {
 	namePrefix string
 	stop       <-chan struct{}
 	debugger   *DebugHandler
 }
-
-type BuilderOption func(opt CollectionOption) OptionsBuilder
 
 func NewOptionsBuilder(stop <-chan struct{}, namePrefix string, debugger *DebugHandler) OptionsBuilder {
 	return OptionsBuilder{

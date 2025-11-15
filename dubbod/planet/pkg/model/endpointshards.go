@@ -27,6 +27,19 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
+type PushType int
+
+const (
+	NoPush PushType = iota
+	IncrementalPush
+	FullPush
+)
+
+type shardRegistry interface {
+	Cluster() cluster.ID
+	Provider() provider.ID
+}
+
 type ShardKey struct {
 	Cluster  cluster.ID
 	Provider provider.ID
@@ -42,22 +55,6 @@ type EndpointIndex struct {
 	mu          sync.RWMutex
 	shardsBySvc map[string]map[string]*EndpointShards
 	cache       XdsCache
-}
-
-type PushType int
-
-const (
-	NoPush PushType = iota
-	IncrementalPush
-	FullPush
-)
-
-func (e *EndpointIndex) clearCacheForService(svc, ns string) {
-	e.cache.Clear(sets.Set[ConfigKey]{{
-		Kind:      kind.ServiceEntry,
-		Name:      svc,
-		Namespace: ns,
-	}: {}})
 }
 
 func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndpoints []*DubboEndpoint) ([]*DubboEndpoint, bool) {
@@ -121,75 +118,28 @@ func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndp
 	return newDubboEndpoints, needPush
 }
 
-func (e *EndpointIndex) ShardsForService(serviceName, namespace string) (*EndpointShards, bool) {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	byNs, ok := e.shardsBySvc[serviceName]
-	if !ok {
-		return nil, false
-	}
-	shards, ok := byNs[namespace]
-	return shards, ok
-}
-
-// AllServices returns all service names registered in the EndpointIndex
-func (e *EndpointIndex) AllServices() []string {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	services := make([]string, 0, len(e.shardsBySvc))
-	for svcName := range e.shardsBySvc {
-		services = append(services, svcName)
-	}
-	return services
-}
-
-// ServicesInNamespace returns all service names in the given namespace
-func (e *EndpointIndex) ServicesInNamespace(namespace string) []string {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	services := make([]string, 0)
-	for svcName, byNs := range e.shardsBySvc {
-		if _, ok := byNs[namespace]; ok {
-			services = append(services, svcName)
-		}
-	}
-	return services
-}
-
-func (es *EndpointShards) CopyEndpoints(portMap map[string]int, ports sets.Set[int]) map[int][]*DubboEndpoint {
-	es.RLock()
-	defer es.RUnlock()
-	res := map[int][]*DubboEndpoint{}
-	for _, v := range es.Shards {
-		for _, ep := range v {
-			// use the port name as the key, unless LegacyClusterPortKey is set and takes precedence
-			// In EDS we match on port *name*. But for historical reasons, we match on port number for CDS.
-			var portNum int
-			if ep.LegacyClusterPortKey != 0 {
-				if !ports.Contains(ep.LegacyClusterPortKey) {
-					continue
-				}
-				portNum = ep.LegacyClusterPortKey
-			} else {
-				pn, f := portMap[ep.ServicePortName]
-				if !f {
-					continue
-				}
-				portNum = pn
+func updateShardServiceAccount(shards *EndpointShards, serviceName string) bool {
+	oldServiceAccount := shards.ServiceAccounts
+	serviceAccounts := sets.String{}
+	for _, epShards := range shards.Shards {
+		for _, ep := range epShards {
+			if ep.ServiceAccount != "" {
+				serviceAccounts.Insert(ep.ServiceAccount)
 			}
-			res[portNum] = append(res[portNum], ep)
 		}
 	}
-	return res
+
+	if !oldServiceAccount.Equals(serviceAccounts) {
+		shards.ServiceAccounts = serviceAccounts
+		log.Debugf("Updating service accounts now, svc %v, before service account %v, after %v",
+			serviceName, oldServiceAccount, serviceAccounts)
+		return true
+	}
+
+	return false
 }
 
-func (e *EndpointIndex) UpdateServiceEndpoints(
-	shard ShardKey,
-	hostname string,
-	namespace string,
-	dubboEndpoints []*DubboEndpoint,
-	logPushType bool,
-) PushType {
+func (e *EndpointIndex) UpdateServiceEndpoints(shard ShardKey, hostname string, namespace string, dubboEndpoints []*DubboEndpoint, logPushType bool) PushType {
 	if len(dubboEndpoints) == 0 {
 		// Should delete the service EndpointShards when endpoints become zero to prevent memory leak,
 		// but we should not delete the keys from EndpointIndex map - that will trigger
@@ -311,27 +261,6 @@ func (e *EndpointIndex) DeleteServiceShard(shard ShardKey, serviceName, namespac
 	e.deleteServiceInner(shard, serviceName, namespace, preserveKeys)
 }
 
-func updateShardServiceAccount(shards *EndpointShards, serviceName string) bool {
-	oldServiceAccount := shards.ServiceAccounts
-	serviceAccounts := sets.String{}
-	for _, epShards := range shards.Shards {
-		for _, ep := range epShards {
-			if ep.ServiceAccount != "" {
-				serviceAccounts.Insert(ep.ServiceAccount)
-			}
-		}
-	}
-
-	if !oldServiceAccount.Equals(serviceAccounts) {
-		shards.ServiceAccounts = serviceAccounts
-		log.Debugf("Updating service accounts now, svc %v, before service account %v, after %v",
-			serviceName, oldServiceAccount, serviceAccounts)
-		return true
-	}
-
-	return false
-}
-
 func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespace string, preserveKeys bool) {
 	if e.shardsBySvc[serviceName] == nil ||
 		e.shardsBySvc[serviceName][namespace] == nil {
@@ -352,9 +281,74 @@ func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespac
 	epShards.Unlock()
 }
 
-type shardRegistry interface {
-	Cluster() cluster.ID
-	Provider() provider.ID
+func (e *EndpointIndex) clearCacheForService(svc, ns string) {
+	e.cache.Clear(sets.Set[ConfigKey]{{
+		Kind:      kind.ServiceEntry,
+		Name:      svc,
+		Namespace: ns,
+	}: {}})
+}
+
+func (e *EndpointIndex) ShardsForService(serviceName, namespace string) (*EndpointShards, bool) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	byNs, ok := e.shardsBySvc[serviceName]
+	if !ok {
+		return nil, false
+	}
+	shards, ok := byNs[namespace]
+	return shards, ok
+}
+
+// ServicesInNamespace returns all service names in the given namespace
+func (e *EndpointIndex) ServicesInNamespace(namespace string) []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	services := make([]string, 0)
+	for svcName, byNs := range e.shardsBySvc {
+		if _, ok := byNs[namespace]; ok {
+			services = append(services, svcName)
+		}
+	}
+	return services
+}
+
+// AllServices returns all service names registered in the EndpointIndex
+func (e *EndpointIndex) AllServices() []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	services := make([]string, 0, len(e.shardsBySvc))
+	for svcName := range e.shardsBySvc {
+		services = append(services, svcName)
+	}
+	return services
+}
+
+func (es *EndpointShards) CopyEndpoints(portMap map[string]int, ports sets.Set[int]) map[int][]*DubboEndpoint {
+	es.RLock()
+	defer es.RUnlock()
+	res := map[int][]*DubboEndpoint{}
+	for _, v := range es.Shards {
+		for _, ep := range v {
+			// use the port name as the key, unless LegacyClusterPortKey is set and takes precedence
+			// In EDS we match on port *name*. But for historical reasons, we match on port number for CDS.
+			var portNum int
+			if ep.LegacyClusterPortKey != 0 {
+				if !ports.Contains(ep.LegacyClusterPortKey) {
+					continue
+				}
+				portNum = ep.LegacyClusterPortKey
+			} else {
+				pn, f := portMap[ep.ServicePortName]
+				if !f {
+					continue
+				}
+				portNum = pn
+			}
+			res[portNum] = append(res[portNum], ep)
+		}
+	}
+	return res
 }
 
 func ShardKeyFromRegistry(instance shardRegistry) ShardKey {

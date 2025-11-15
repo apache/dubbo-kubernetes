@@ -23,6 +23,8 @@ type Metadata map[string]any
 
 type FetchOption func(*dependency)
 
+type CollectionOption func(*collectionOptions)
+
 type HandlerContext interface {
 	DiscardResult()
 	_internalHandler()
@@ -35,12 +37,6 @@ type (
 	TransformationMulti[I, O any]  func(ctx HandlerContext, i I) []O
 	TransformationSingle[I, O any] func(ctx HandlerContext, i I) *O
 )
-
-type Event[T any] struct {
-	Old   *T
-	New   *T
-	Event controllers.EventType
-}
 
 type Equaler[K any] interface {
 	Equals(k K) bool
@@ -55,8 +51,6 @@ type EventStream[T any] interface {
 	Register(f func(o Event[T])) HandlerRegistration
 	RegisterBatch(f func(o []Event[T]), runExistingState bool) HandlerRegistration
 }
-
-type CollectionOption func(*collectionOptions)
 
 type HandlerRegistration interface {
 	Syncer
@@ -83,24 +77,6 @@ type LabelSelectorer interface {
 
 type Labeler interface {
 	GetLabels() map[string]string
-}
-
-func (e Event[T]) Items() []T {
-	res := make([]T, 0, 2)
-	if e.Old != nil {
-		res = append(res, *e.Old)
-	}
-	if e.New != nil {
-		res = append(res, *e.New)
-	}
-	return res
-}
-
-func (e Event[T]) Latest() T {
-	if e.New != nil {
-		return *e.New
-	}
-	return *e.Old
 }
 
 type ResourceNamer interface {
@@ -133,4 +109,28 @@ type internalCollection[T any] interface {
 // If implemented, this will be used to determine an objects' Namespace.
 type Namespacer interface {
 	GetNamespace() string
+}
+
+type Event[T any] struct {
+	Old   *T
+	New   *T
+	Event controllers.EventType
+}
+
+func (e Event[T]) Items() []T {
+	res := make([]T, 0, 2)
+	if e.Old != nil {
+		res = append(res, *e.Old)
+	}
+	if e.New != nil {
+		res = append(res, *e.New)
+	}
+	return res
+}
+
+func (e Event[T]) Latest() T {
+	if e.New != nil {
+		return *e.New
+	}
+	return *e.Old
 }

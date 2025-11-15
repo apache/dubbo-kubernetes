@@ -43,6 +43,15 @@ type informer[I controllers.ComparableObject] struct {
 	metadata       Metadata
 }
 
+type informerIndex[I any] struct {
+	idx kclient.RawIndexer
+}
+
+type informerHandlerRegistration struct {
+	Syncer
+	remove func()
+}
+
 func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...CollectionOption) Collection[I] {
 	o := buildCollectionOptions(opts...)
 	if o.name == "" {
@@ -75,6 +84,34 @@ func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...C
 		<-o.stop
 	}()
 	return h
+}
+
+func informerEventHandler[I controllers.ComparableObject](handler func(o Event[I], initialSync bool)) cache.ResourceEventHandler {
+	return controllers.EventHandler[I]{
+		AddExtendedFunc: func(obj I, initialSync bool) {
+			handler(Event[I]{
+				New:   &obj,
+				Event: controllers.EventAdd,
+			}, initialSync)
+		},
+		UpdateFunc: func(oldObj, newObj I) {
+			handler(Event[I]{
+				Old:   &oldObj,
+				New:   &newObj,
+				Event: controllers.EventUpdate,
+			}, false)
+		},
+		DeleteFunc: func(obj I) {
+			handler(Event[I]{
+				Old:   &obj,
+				Event: controllers.EventDelete,
+			}, false)
+		},
+	}
+}
+
+func (i informerHandlerRegistration) UnregisterHandler() {
+	i.remove()
 }
 
 func (i *informer[I]) name() string {
@@ -134,15 +171,6 @@ func (i *informer[I]) RegisterBatch(f func(o []Event[I]), runExistingState bool)
 	}
 }
 
-type informerHandlerRegistration struct {
-	Syncer
-	remove func()
-}
-
-func (i informerHandlerRegistration) UnregisterHandler() {
-	i.remove()
-}
-
 func (i *informer[I]) uid() collectionUID {
 	return i.id
 }
@@ -168,36 +196,8 @@ func (i *informer[I]) index(name string, extract func(o I) []string) indexer[I] 
 	}
 }
 
-type informerIndex[I any] struct {
-	idx kclient.RawIndexer
-}
-
 func (ii *informerIndex[I]) Lookup(key string) []I {
 	return slices.Map(ii.idx.Lookup(key), func(i any) I {
 		return i.(I)
 	})
-}
-
-func informerEventHandler[I controllers.ComparableObject](handler func(o Event[I], initialSync bool)) cache.ResourceEventHandler {
-	return controllers.EventHandler[I]{
-		AddExtendedFunc: func(obj I, initialSync bool) {
-			handler(Event[I]{
-				New:   &obj,
-				Event: controllers.EventAdd,
-			}, initialSync)
-		},
-		UpdateFunc: func(oldObj, newObj I) {
-			handler(Event[I]{
-				Old:   &oldObj,
-				New:   &newObj,
-				Event: controllers.EventUpdate,
-			}, false)
-		},
-		DeleteFunc: func(obj I) {
-			handler(Event[I]{
-				Old:   &obj,
-				Event: controllers.EventDelete,
-			}, false)
-		},
-	}
 }

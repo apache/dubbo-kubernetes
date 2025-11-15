@@ -50,9 +50,7 @@ var certWatchTimeout = 60 * time.Second
 // Options are meant to sign DNS certs
 // 1. Generate a CSR
 // 2. Call SignCSRK8s to finish rest of the flow
-func GenKeyCertK8sCA(client clientset.Interface, dnsName,
-	caFilePath string, signerName string, approveCsr bool, requestedLifetime time.Duration,
-) ([]byte, []byte, []byte, error) {
+func GenKeyCertK8sCA(client clientset.Interface, dnsName, caFilePath string, signerName string, approveCsr bool, requestedLifetime time.Duration) ([]byte, []byte, []byte, error) {
 	// 1. Generate a CSR
 	options := util.CertOptions{
 		Host:       dnsName,
@@ -83,9 +81,7 @@ func GenKeyCertK8sCA(client clientset.Interface, dnsName,
 // 2. Approve a CSR
 // 3. Read the signed certificate
 // 4. Clean up the artifacts (e.g., delete CSR)
-func SignCSRK8s(client clientset.Interface, csrData []byte, signerName string, usages []cert.KeyUsage,
-	dnsName, caFilePath string, approveCsr, appendCaCert bool, requestedLifetime time.Duration,
-) ([]byte, []byte, error) {
+func SignCSRK8s(client clientset.Interface, csrData []byte, signerName string, usages []cert.KeyUsage, dnsName, caFilePath string, approveCsr, appendCaCert bool, requestedLifetime time.Duration) ([]byte, []byte, error) {
 	// 1. Submit the CSR
 	csr, err := submitCSR(client, csrData, signerName, usages, requestedLifetime)
 	if err != nil {
@@ -140,13 +136,7 @@ func readCACert(caCertPath string) ([]byte, error) {
 	return caCert, nil
 }
 
-func submitCSR(
-	client clientset.Interface,
-	csrData []byte,
-	signerName string,
-	usages []cert.KeyUsage,
-	requestedLifetime time.Duration,
-) (*cert.CertificateSigningRequest, error) {
+func submitCSR(client clientset.Interface, csrData []byte, signerName string, usages []cert.KeyUsage, requestedLifetime time.Duration) (*cert.CertificateSigningRequest, error) {
 	log.Debugf("create CSR for signer %v", signerName)
 	csr := &cert.CertificateSigningRequest{
 		// Username, UID, Groups will be injected by API server.
@@ -187,9 +177,7 @@ func approveCSR(client clientset.Interface, csr *cert.CertificateSigningRequest,
 
 // Read the signed certificate
 // verify and append CA certificate to certChain if appendCaCert is true
-func readSignedCertificate(client clientset.Interface, csr *cert.CertificateSigningRequest,
-	watchTimeout time.Duration, caCertPath string, appendCaCert bool,
-) ([]byte, []byte, error) {
+func readSignedCertificate(client clientset.Interface, csr *cert.CertificateSigningRequest, watchTimeout time.Duration, caCertPath string, appendCaCert bool) ([]byte, []byte, error) {
 	// First try to read the signed CSR through a watching mechanism
 	certPEM, err := readSignedCsr(client, csr.Name, watchTimeout)
 	if err != nil {

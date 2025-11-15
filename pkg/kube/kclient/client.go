@@ -46,6 +46,22 @@ import (
 
 var log = dubbolog.RegisterScope("kclient", "kclient debugging")
 
+type Filter = kubetypes.Filter
+
+type handlerRegistration struct {
+	registration cache.ResourceEventHandlerRegistration
+	handler      cache.ResourceEventHandler
+}
+
+type informerClient[T controllers.Object] struct {
+	informer      cache.SharedIndexInformer
+	startInformer func(stopCh <-chan struct{})
+	filter        func(t any) bool
+
+	handlerMu          sync.RWMutex
+	registeredHandlers []handlerRegistration
+}
+
 type fullClient[T controllers.Object] struct {
 	writeClient[T]
 	Informer[T]
@@ -55,8 +71,37 @@ type writeClient[T controllers.Object] struct {
 	client kube.Client
 }
 
+type internalIndex struct {
+	key     string
+	indexer cache.Indexer
+	filter  func(t any) bool
+}
+
+type neverReady struct{}
+
 func New[T controllers.ComparableObject](c kube.Client) Client[T] {
 	return NewFiltered[T](c, Filter{})
+}
+
+func ToOpts(c kube.Client, gvr schema.GroupVersionResource, filter Filter) kubetypes.InformerOptions {
+	ns := filter.Namespace
+	if !dubbogvr.IsClusterScoped(gvr) && ns == "" {
+		ns = features.InformerWatchNamespace
+	}
+	return kubetypes.InformerOptions{
+		LabelSelector:   filter.LabelSelector,
+		FieldSelector:   filter.FieldSelector,
+		Namespace:       ns,
+		ObjectTransform: filter.ObjectTransform,
+		Cluster:         c.ClusterID(),
+	}
+}
+
+func NewMetadata(c kube.Client, gvr schema.GroupVersionResource, filter Filter) Informer[*metav1.PartialObjectMetadata] {
+	opts := ToOpts(c, gvr, filter)
+	opts.InformerType = kubetypes.MetadataInformer
+	inf := kubeclient.GetInformerFilteredFromGVR(c, opts, gvr)
+	return newInformerClient[*metav1.PartialObjectMetadata](gvr, inf, filter)
 }
 
 func NewUntypedInformer(c kube.Client, gvr schema.GroupVersionResource, filter Filter) Untyped {
@@ -64,12 +109,7 @@ func NewUntypedInformer(c kube.Client, gvr schema.GroupVersionResource, filter F
 	return newInformerClient[controllers.Object](gvr, inf, filter)
 }
 
-func NewDelayedInformer[T controllers.ComparableObject](
-	c kube.Client,
-	gvr schema.GroupVersionResource,
-	informerType kubetypes.InformerType,
-	filter Filter,
-) Informer[T] {
+func NewDelayedInformer[T controllers.ComparableObject](c kube.Client, gvr schema.GroupVersionResource, informerType kubetypes.InformerType, filter Filter) Informer[T] {
 	watcher := c.CrdWatcher()
 	if watcher == nil {
 		log.Info("NewDelayedInformer called without a CrdWatcher enabled")
@@ -83,12 +123,7 @@ func NewDelayedInformer[T controllers.ComparableObject](
 	return newDelayedInformer[T](gvr, inf, delay, filter)
 }
 
-func newDelayedInformer[T controllers.ComparableObject](
-	gvr schema.GroupVersionResource,
-	getInf func() informerfactory.StartableInformer,
-	delay kubetypes.DelayedFilter,
-	filter Filter,
-) Informer[T] {
+func newDelayedInformer[T controllers.ComparableObject](gvr schema.GroupVersionResource, getInf func() informerfactory.StartableInformer, delay kubetypes.DelayedFilter, filter Filter) Informer[T] {
 	delayedClient := &delayedClient[T]{
 		inf:     new(atomic.Pointer[Informer[T]]),
 		delayed: delay,
@@ -118,8 +153,6 @@ func newDelayedInformer[T controllers.ComparableObject](
 	return newInformerClient[T](gvr, getInf(), filter)
 }
 
-type Filter = kubetypes.Filter
-
 func NewFiltered[T controllers.ComparableObject](c kube.Client, filter Filter) Client[T] {
 	gvr := types.MustToGVR[T](types.MustGVKFromType[T]())
 	inf := kubeclient.GetInformerFiltered[T](c, ToOpts(c, gvr, filter), gvr)
@@ -129,39 +162,7 @@ func NewFiltered[T controllers.ComparableObject](c kube.Client, filter Filter) C
 	}
 }
 
-func ToOpts(c kube.Client, gvr schema.GroupVersionResource, filter Filter) kubetypes.InformerOptions {
-	ns := filter.Namespace
-	if !dubbogvr.IsClusterScoped(gvr) && ns == "" {
-		ns = features.InformerWatchNamespace
-	}
-	return kubetypes.InformerOptions{
-		LabelSelector:   filter.LabelSelector,
-		FieldSelector:   filter.FieldSelector,
-		Namespace:       ns,
-		ObjectTransform: filter.ObjectTransform,
-		Cluster:         c.ClusterID(),
-	}
-}
-
-type handlerRegistration struct {
-	registration cache.ResourceEventHandlerRegistration
-	handler      cache.ResourceEventHandler
-}
-
-type informerClient[T controllers.Object] struct {
-	informer      cache.SharedIndexInformer
-	startInformer func(stopCh <-chan struct{})
-	filter        func(t any) bool
-
-	handlerMu          sync.RWMutex
-	registeredHandlers []handlerRegistration
-}
-
-func newInformerClient[T controllers.ComparableObject](
-	gvr schema.GroupVersionResource,
-	inf informerfactory.StartableInformer,
-	filter Filter,
-) Informer[T] {
+func newInformerClient[T controllers.ComparableObject](gvr schema.GroupVersionResource, inf informerfactory.StartableInformer, filter Filter) Informer[T] {
 	ic := &informerClient[T]{
 		informer:      inf.Informer,
 		startInformer: inf.Start,
@@ -301,12 +302,6 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 	return reg
 }
 
-type neverReady struct{}
-
-func (a neverReady) HasSynced() bool {
-	return false
-}
-
 func (n *informerClient[T]) Index(name string, extract func(o T) []string) RawIndexer {
 	if _, ok := n.informer.GetIndexer().GetIndexers()[name]; !ok {
 		if err := n.informer.AddIndexers(map[string]cache.IndexFunc{
@@ -325,12 +320,6 @@ func (n *informerClient[T]) Index(name string, extract func(o T) []string) RawIn
 	return ret
 }
 
-type internalIndex struct {
-	key     string
-	indexer cache.Indexer
-	filter  func(t any) bool
-}
-
 func (n *informerClient[T]) ShutdownHandler(registration cache.ResourceEventHandlerRegistration) {
 	n.handlerMu.Lock()
 	defer n.handlerMu.Unlock()
@@ -340,27 +329,11 @@ func (n *informerClient[T]) ShutdownHandler(registration cache.ResourceEventHand
 	_ = n.informer.RemoveEventHandler(registration)
 }
 
-func keyFunc(name, namespace string) string {
-	if len(namespace) == 0 {
-		return name
-	}
-	return namespace + "/" + name
-}
-
 func (n *informerClient[T]) applyFilter(t T) bool {
 	if n.filter == nil {
 		return true
 	}
 	return n.filter(t)
-}
-func (i internalIndex) Lookup(key string) []any {
-	res, err := i.indexer.ByIndex(i.key, key)
-	if err != nil {
-	}
-	if i.filter != nil {
-		return slices.FilterInPlace(res, i.filter)
-	}
-	return res
 }
 
 func (n *writeClient[T]) Create(object T) (T, error) {
@@ -404,9 +377,23 @@ func (n *writeClient[T]) Delete(name, namespace string) error {
 	return api.Delete(context.Background(), name, metav1.DeleteOptions{})
 }
 
-func NewMetadata(c kube.Client, gvr schema.GroupVersionResource, filter Filter) Informer[*metav1.PartialObjectMetadata] {
-	opts := ToOpts(c, gvr, filter)
-	opts.InformerType = kubetypes.MetadataInformer
-	inf := kubeclient.GetInformerFilteredFromGVR(c, opts, gvr)
-	return newInformerClient[*metav1.PartialObjectMetadata](gvr, inf, filter)
+func (a neverReady) HasSynced() bool {
+	return false
+}
+
+func (i internalIndex) Lookup(key string) []any {
+	res, err := i.indexer.ByIndex(i.key, key)
+	if err != nil {
+	}
+	if i.filter != nil {
+		return slices.FilterInPlace(res, i.filter)
+	}
+	return res
+}
+
+func keyFunc(name, namespace string) string {
+	if len(namespace) == 0 {
+		return name
+	}
+	return namespace + "/" + name
 }

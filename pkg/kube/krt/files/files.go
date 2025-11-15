@@ -33,10 +33,47 @@ import (
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
+const watchDebounceDelay = 50 * time.Millisecond
+
 var log = dubbolog.RegisterScope("krtfiles", "krt files debugging")
+
+var supportedExtensions = sets.New(".yaml", ".yml")
+
+type recursiveWatcher struct {
+	*fsnotify.Watcher
+}
+
+type FileCollection[T any] struct {
+	krt.StaticCollection[T]
+	read func() []T
+}
 
 type FileSingleton[T any] struct {
 	krt.Singleton[T]
+}
+
+type FolderWatch[T any] struct {
+	root  string
+	parse func([]byte) ([]T, error)
+
+	mu        sync.RWMutex
+	state     []T
+	callbacks []func()
+}
+
+func NewFileCollection[F any, O any](w *FolderWatch[F], transform func(F) *O, opts ...krt.CollectionOption) FileCollection[O] {
+	res := FileCollection[O]{
+		read: func() []O {
+			return readSnapshot[F, O](w, transform)
+		},
+	}
+	sc := krt.NewStaticCollection[O](nil, res.read(), opts...)
+	w.subscribe(func() {
+		now := res.read()
+		sc.Reset(now)
+	})
+	res.StaticCollection = sc
+	return res
 }
 
 func NewFileSingleton[T any](fileWatcher filewatcher.FileWatcher, filename string, readFile func(filename string) (T, error), opts ...krt.CollectionOption) (FileSingleton[T], error) {
@@ -64,59 +101,6 @@ func NewFileSingleton[T any](fileWatcher filewatcher.FileWatcher, filename strin
 		trigger.TriggerRecomputation()
 	})
 	return FileSingleton[T]{sc}, nil
-}
-
-type FileCollection[T any] struct {
-	krt.StaticCollection[T]
-	read func() []T
-}
-
-func NewFileCollection[F any, O any](w *FolderWatch[F], transform func(F) *O, opts ...krt.CollectionOption) FileCollection[O] {
-	res := FileCollection[O]{
-		read: func() []O {
-			return readSnapshot[F, O](w, transform)
-		},
-	}
-	sc := krt.NewStaticCollection[O](nil, res.read(), opts...)
-	w.subscribe(func() {
-		now := res.read()
-		sc.Reset(now)
-	})
-	res.StaticCollection = sc
-	return res
-}
-
-func watchFile(fileWatcher filewatcher.FileWatcher, file string, stop <-chan struct{}, callback func()) {
-	_ = fileWatcher.Add(file)
-	go func() {
-		var timerC <-chan time.Time
-		for {
-			select {
-			case <-stop:
-				return
-			case <-timerC:
-				timerC = nil
-				callback()
-			case <-fileWatcher.Events(file):
-				if timerC == nil {
-					timerC = time.After(100 * time.Millisecond)
-				}
-			}
-		}
-	}()
-}
-
-var supportedExtensions = sets.New(".yaml", ".yml")
-
-const watchDebounceDelay = 50 * time.Millisecond
-
-type FolderWatch[T any] struct {
-	root  string
-	parse func([]byte) ([]T, error)
-
-	mu        sync.RWMutex
-	state     []T
-	callbacks []func()
 }
 
 func NewFolderWatch[T any](fileDir string, parse func([]byte) ([]T, error), stop <-chan struct{}) (*FolderWatch[T], error) {
@@ -247,15 +231,6 @@ func (f *FolderWatch[T]) fileTrigger(events chan struct{}, stop <-chan struct{})
 	return nil
 }
 
-func readSnapshot[F any, O any](w *FolderWatch[F], transform func(F) *O) []O {
-	res := w.get()
-	return slices.MapFilter(res, transform)
-}
-
-type recursiveWatcher struct {
-	*fsnotify.Watcher
-}
-
 func (m recursiveWatcher) watchRecursive(path string) error {
 	err := filepath.Walk(path, func(walkPath string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -269,4 +244,29 @@ func (m recursiveWatcher) watchRecursive(path string) error {
 		return nil
 	})
 	return err
+}
+
+func watchFile(fileWatcher filewatcher.FileWatcher, file string, stop <-chan struct{}, callback func()) {
+	_ = fileWatcher.Add(file)
+	go func() {
+		var timerC <-chan time.Time
+		for {
+			select {
+			case <-stop:
+				return
+			case <-timerC:
+				timerC = nil
+				callback()
+			case <-fileWatcher.Events(file):
+				if timerC == nil {
+					timerC = time.After(100 * time.Millisecond)
+				}
+			}
+		}
+	}()
+}
+
+func readSnapshot[F any, O any](w *FolderWatch[F], transform func(F) *O) []O {
+	res := w.get()
+	return slices.MapFilter(res, transform)
 }

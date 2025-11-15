@@ -27,19 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Controller is an implementation of ConfigStoreController.
 type Controller struct {
 	monitor     Monitor
 	configStore model.ConfigStore
 	hasSynced   func() bool
 
-	// If meshConfig.DiscoverySelectors are specified, the namespacesFilter tracks the namespaces this controller watches.
 	namespacesFilter func(obj interface{}) bool
 }
 
-// NewController return an implementation of ConfigStoreController
-// This is a client-side monitor that dispatches events as the changes are being
-// made on the client.
 func NewController(cs model.ConfigStore) *Controller {
 	out := &Controller{
 		configStore: cs,
@@ -48,26 +43,15 @@ func NewController(cs model.ConfigStore) *Controller {
 	return out
 }
 
-func (c *Controller) RegisterHasSyncedHandler(cb func() bool) {
-	c.hasSynced = cb
+func (c *Controller) Run(stop <-chan struct{}) {
+	c.monitor.Run(stop)
 }
 
-func (c *Controller) RegisterEventHandler(kind config.GroupVersionKind, f model.EventHandler) {
-	c.monitor.AppendEventHandler(kind, f)
-}
-
-// HasSynced return whether store has synced
-// It can be controlled externally (such as by the data source),
-// otherwise it'll always consider synced.
 func (c *Controller) HasSynced() bool {
 	if c.hasSynced != nil {
 		return c.hasSynced()
 	}
 	return true
-}
-
-func (c *Controller) Run(stop <-chan struct{}) {
-	c.monitor.Run(stop)
 }
 
 func (c *Controller) Schemas() collection.Schemas {
@@ -155,4 +139,12 @@ func (c *Controller) List(kind config.GroupVersionKind, namespace string) []conf
 		})
 	}
 	return configs
+}
+
+func (c *Controller) RegisterEventHandler(kind config.GroupVersionKind, f model.EventHandler) {
+	c.monitor.AppendEventHandler(kind, f)
+}
+
+func (c *Controller) RegisterHasSyncedHandler(cb func() bool) {
+	c.hasSynced = cb
 }

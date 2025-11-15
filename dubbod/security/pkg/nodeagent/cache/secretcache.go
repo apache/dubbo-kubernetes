@@ -41,17 +41,19 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+const (
+	firstRetryBackOffDuration = 50 * time.Millisecond
+)
+
 var cacheLog = dubbolog.RegisterScope("cache", "cache debugging")
+
+var (
+	totalTimeout = time.Second * 10
+)
 
 type FileCert struct {
 	ResourceName string
 	Filename     string
-}
-
-type secretCache struct {
-	mu       sync.RWMutex
-	workload *security.SecretItem
-	certRoot []byte
 }
 
 type SecretManagerClient struct {
@@ -72,25 +74,10 @@ type SecretManagerClient struct {
 	cache                   secretCache
 }
 
-func (s *secretCache) GetRoot() (rootCert []byte) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.certRoot
-}
-
-func (s *secretCache) SetRoot(rootCert []byte) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.certRoot = rootCert
-}
-
-func (s *secretCache) GetWorkload() *security.SecretItem {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.workload == nil {
-		return nil
-	}
-	return s.workload
+type secretCache struct {
+	mu       sync.RWMutex
+	workload *security.SecretItem
+	certRoot []byte
 }
 
 func NewSecretManagerClient(caClient security.Client, options *security.Options) (*SecretManagerClient, error) {
@@ -117,6 +104,47 @@ func NewSecretManagerClient(caClient security.Client, options *security.Options)
 	go ret.queue.Run(ret.stop)
 	go ret.handleFileWatch()
 	return ret, nil
+}
+
+func (s *secretCache) GetRoot() (rootCert []byte) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.certRoot
+}
+
+func (s *secretCache) SetRoot(rootCert []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.certRoot = rootCert
+}
+
+func (s *secretCache) GetWorkload() *security.SecretItem {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.workload == nil {
+		return nil
+	}
+	return s.workload
+}
+
+func (s *secretCache) SetWorkload(value *security.SecretItem) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.workload = value
+}
+
+func concatCerts(certsPEM []string) []byte {
+	if len(certsPEM) == 0 {
+		return []byte{}
+	}
+	var certChain bytes.Buffer
+	for i, c := range certsPEM {
+		certChain.WriteString(c)
+		if i < len(certsPEM)-1 && !strings.HasSuffix(c, "\n") {
+			certChain.WriteString("\n")
+		}
+	}
+	return certChain.Bytes()
 }
 
 func (sc *SecretManagerClient) GenerateSecret(resourceName string) (secret *security.SecretItem, err error) {
@@ -305,26 +333,6 @@ func (sc *SecretManagerClient) generateNewSecret(resourceName string) (*security
 	}, nil
 }
 
-func concatCerts(certsPEM []string) []byte {
-	if len(certsPEM) == 0 {
-		return []byte{}
-	}
-	var certChain bytes.Buffer
-	for i, c := range certsPEM {
-		certChain.WriteString(c)
-		if i < len(certsPEM)-1 && !strings.HasSuffix(c, "\n") {
-			certChain.WriteString("\n")
-		}
-	}
-	return certChain.Bytes()
-}
-
-func (s *secretCache) SetWorkload(value *security.SecretItem) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.workload = value
-}
-
 func (sc *SecretManagerClient) registerSecret(item security.SecretItem) {
 	item.ResourceName = security.WorkloadKeyCertResourceName
 	// In case there are two calls to GenerateSecret at once, we don't want both to be concurrently registered
@@ -446,10 +454,6 @@ func (sc *SecretManagerClient) keyCertificateExist(certPath, keyPath string) boo
 	return true
 }
 
-var (
-	totalTimeout = time.Second * 10
-)
-
 func (sc *SecretManagerClient) rootCertificateExist(filePath string) bool {
 	b, err := os.ReadFile(filePath)
 	if err != nil || len(b) == 0 {
@@ -501,10 +505,6 @@ func (sc *SecretManagerClient) keyCertSecretItem(cert, key, resource string) (*s
 		ExpireTime:       certExpireTime,
 	}, nil
 }
-
-const (
-	firstRetryBackOffDuration = 50 * time.Millisecond
-)
 
 func (sc *SecretManagerClient) readFileWithTimeout(path string) ([]byte, error) {
 	retryBackoff := firstRetryBackOffDuration

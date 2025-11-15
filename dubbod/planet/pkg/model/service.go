@@ -18,6 +18,8 @@
 package model
 
 import (
+	"istio.io/api/annotation"
+	corev1 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,65 +36,17 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/google/go-cmp/cmp"
-	"istio.io/api/annotation"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type Resolution int
 
 const (
-	// ClientSideLB implies that the proxy will decide the endpoint from its local lb pool
 	ClientSideLB Resolution = iota
-	// DNSLB implies that the proxy will resolve a DNS address and forward to the resolved address
 	DNSLB
-	// Passthrough implies that the proxy should forward traffic to the destination IP requested by the caller
 	Passthrough
-	// DNSRoundRobinLB implies that the proxy will resolve a DNS address and forward to the resolved address
 	DNSRoundRobinLB
-	// Alias defines a Service that is an alias for another.
 	Alias
 )
-
-type workloadKind int
-
-const (
-	// PodKind indicates the workload is from pod
-	PodKind workloadKind = iota
-	// WorkloadEntryKind indicates the workload is from workloadentry
-	WorkloadEntryKind
-)
-
-type WorkloadInstance struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	// Where the workloadInstance come from, valid values are`Pod` or `WorkloadEntry`
-	Kind     workloadKind      `json:"kind"`
-	Endpoint *DubboEndpoint    `json:"endpoint,omitempty"`
-	PortMap  map[string]uint32 `json:"portMap,omitempty"`
-	// Can only be selected by service entry of DNS type.
-	DNSServiceEntryOnly bool `json:"dnsServiceEntryOnly,omitempty"`
-}
-
-type EndpointDiscoverabilityPolicy interface {
-	String() string
-}
-
-type endpointDiscoverabilityPolicyImpl struct {
-	name string
-	f    func(*DubboEndpoint, *Proxy) bool
-}
-
-func (p *endpointDiscoverabilityPolicyImpl) String() string {
-	return p.name
-}
-
-var endpointDiscoverabilityPolicyImplCmpOpt = cmp.Comparer(func(x, y endpointDiscoverabilityPolicyImpl) bool {
-	return x.String() == y.String()
-})
-
-func (p *endpointDiscoverabilityPolicyImpl) CmpOpts() []cmp.Option {
-	return []cmp.Option{endpointDiscoverabilityPolicyImplCmpOpt}
-}
 
 type HealthStatus int32
 
@@ -102,6 +56,120 @@ const (
 	Draining    HealthStatus = 3
 	Terminating HealthStatus = 4
 )
+
+type TrafficDistribution int
+
+const (
+	TrafficDistributionAny TrafficDistribution = iota
+	TrafficDistributionPreferSameZone
+	TrafficDistributionPreferSameNode
+)
+
+type TrafficDirection string
+
+const (
+	TrafficDirectionInbound           TrafficDirection = "inbound"
+	TrafficDirectionOutbound          TrafficDirection = "outbound"
+	trafficDirectionOutboundSrvPrefix                  = string(TrafficDirectionOutbound) + "_"
+	trafficDirectionInboundSrvPrefix                   = string(TrafficDirectionInbound) + "_"
+)
+
+type EndpointDiscoverabilityPolicy interface {
+	String() string
+}
+
+type ServiceDiscovery interface {
+	Services() []*Service
+	GetService(hostname host.Name) *Service
+	GetProxyServiceTargets(*Proxy) []ServiceTarget
+}
+
+type (
+	ServicePort         = *Port
+	ServiceInstancePort struct {
+		ServicePort
+		TargetPort uint32
+	}
+)
+
+type ServiceTarget struct {
+	Service *Service
+	Port    ServiceInstancePort
+}
+
+type Port struct {
+	Name     string            `json:"name,omitempty"`
+	Port     int               `json:"port"`
+	Protocol protocol.Instance `json:"protocol,omitempty"`
+}
+
+type PortList []*Port
+
+type AddressMap struct {
+	Addresses map[cluster.ID][]string
+
+	// NOTE: The copystructure library is not able to copy unexported fields, so the mutex will not be copied.
+	mutex sync.RWMutex
+}
+
+type Service struct {
+	Attributes               ServiceAttributes
+	Hostname                 host.Name  `json:"hostname"`
+	Ports                    PortList   `json:"ports,omitempty"`
+	ServiceAccounts          []string   `json:"serviceAccounts,omitempty"`
+	ClusterVIPs              AddressMap `json:"clusterVIPs,omitempty"`
+	CreationTime             time.Time  `json:"creationTime,omitempty"`
+	DefaultAddress           string     `json:"defaultAddress,omitempty"`
+	ResourceVersion          string
+	Resolution               Resolution
+	AutoAllocatedIPv4Address string `json:"autoAllocatedIPv4Address,omitempty"`
+	AutoAllocatedIPv6Address string `json:"autoAllocatedIPv6Address,omitempty"`
+	MeshExternal             bool
+}
+
+type ServiceAttributes struct {
+	Labels                   map[string]string
+	LabelSelectors           map[string]string
+	ExportTo                 sets.Set[visibility.Instance]
+	ClusterExternalAddresses *AddressMap
+	ClusterExternalPorts     map[cluster.ID]map[uint32]uint32
+	Aliases                  []NamespacedHostname
+	PassthroughTargetPorts   map[uint32]uint32
+	// Name is "destination.service.name" attribute
+	Name string
+	// Namespace is "destination.service.namespace" attribute
+	Namespace       string
+	ServiceRegistry provider.ID
+	K8sAttributes
+}
+
+type K8sAttributes struct {
+	// Type holds the value of the corev1.Type of the Kubernetes service
+	// spec.Type
+	Type string
+
+	// spec.ExternalName
+	ExternalName string
+
+	// NodeLocal means the proxy will only forward traffic to node local endpoints
+	// spec.InternalTrafficPolicy == Local
+	NodeLocal bool
+
+	// TrafficDistribution determines the service-level traffic distribution.
+	// This may be overridden by locality load balancing settings.
+	TrafficDistribution TrafficDistribution
+
+	// ObjectName is the object name of the underlying object. This may differ from the Service.Attributes.Name for legacy semantics.
+	ObjectName string
+
+	// spec.PublishNotReadyAddresses
+	PublishNotReadyAddresses bool
+}
+
+type NamespacedHostname struct {
+	Hostname  host.Name
+	Namespace string
+}
 
 type DubboEndpoint struct {
 	ServiceAccount         string
@@ -121,6 +189,23 @@ type DubboEndpoint struct {
 	// If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
 	SubDomain string
 	NodeName  string
+}
+
+type endpointDiscoverabilityPolicyImpl struct {
+	name string
+	f    func(*DubboEndpoint, *Proxy) bool
+}
+
+func (p *endpointDiscoverabilityPolicyImpl) String() string {
+	return p.name
+}
+
+var endpointDiscoverabilityPolicyImplCmpOpt = cmp.Comparer(func(x, y endpointDiscoverabilityPolicyImpl) bool {
+	return x.String() == y.String()
+})
+
+func (p *endpointDiscoverabilityPolicyImpl) CmpOpts() []cmp.Option {
+	return []cmp.Option{endpointDiscoverabilityPolicyImplCmpOpt}
 }
 
 func (ep *DubboEndpoint) FirstAddressOrNil() string {
@@ -185,209 +270,6 @@ func (ep *DubboEndpoint) Equals(other *DubboEndpoint) bool {
 	return true
 }
 
-type NamespacedHostname struct {
-	Hostname  host.Name
-	Namespace string
-}
-
-type ServiceAttributes struct {
-	Labels                   map[string]string
-	LabelSelectors           map[string]string
-	ExportTo                 sets.Set[visibility.Instance]
-	ClusterExternalAddresses *AddressMap
-	ClusterExternalPorts     map[cluster.ID]map[uint32]uint32
-	Aliases                  []NamespacedHostname
-	PassthroughTargetPorts   map[uint32]uint32
-	// Name is "destination.service.name" attribute
-	Name string
-	// Namespace is "destination.service.namespace" attribute
-	Namespace       string
-	ServiceRegistry provider.ID
-	K8sAttributes
-}
-
-type K8sAttributes struct {
-	// Type holds the value of the corev1.Type of the Kubernetes service
-	// spec.Type
-	Type string
-
-	// spec.ExternalName
-	ExternalName string
-
-	// NodeLocal means the proxy will only forward traffic to node local endpoints
-	// spec.InternalTrafficPolicy == Local
-	NodeLocal bool
-
-	// TrafficDistribution determines the service-level traffic distribution.
-	// This may be overridden by locality load balancing settings.
-	TrafficDistribution TrafficDistribution
-
-	// ObjectName is the object name of the underlying object. This may differ from the Service.Attributes.Name for legacy semantics.
-	ObjectName string
-
-	// spec.PublishNotReadyAddresses
-	PublishNotReadyAddresses bool
-}
-
-type TrafficDistribution int
-
-const (
-	// TrafficDistributionAny allows any destination
-	TrafficDistributionAny TrafficDistribution = iota
-	// TrafficDistributionPreferPreferSameZone prefers traffic in same zone, failing over to same region and then network.
-	TrafficDistributionPreferSameZone
-	// TrafficDistributionPreferNode prefers traffic in same node, failing over to same subzone, then zone, region, and network.
-	TrafficDistributionPreferSameNode
-)
-
-func GetTrafficDistribution(specValue *string, annotations map[string]string) TrafficDistribution {
-	if specValue != nil {
-		switch *specValue {
-		case corev1.ServiceTrafficDistributionPreferSameZone, corev1.ServiceTrafficDistributionPreferClose:
-			return TrafficDistributionPreferSameZone
-		case corev1.ServiceTrafficDistributionPreferSameNode:
-			return TrafficDistributionPreferSameNode
-		}
-	}
-	// The TrafficDistribution field is quite new, so we allow a legacy annotation option as well
-	// This also has some custom types
-	trafficDistributionAnnotationValue := strings.ToLower(annotations[annotation.NetworkingTrafficDistribution.Name])
-	switch trafficDistributionAnnotationValue {
-	case strings.ToLower(corev1.ServiceTrafficDistributionPreferClose), strings.ToLower(corev1.ServiceTrafficDistributionPreferSameZone):
-		return TrafficDistributionPreferSameZone
-	case strings.ToLower(corev1.ServiceTrafficDistributionPreferSameNode):
-		return TrafficDistributionPreferSameNode
-	default:
-		if trafficDistributionAnnotationValue != "" {
-			log.Warnf("Unknown traffic distribution annotation, defaulting to any")
-		}
-		return TrafficDistributionAny
-	}
-}
-
-type AddressMap struct {
-	Addresses map[cluster.ID][]string
-
-	// NOTE: The copystructure library is not able to copy unexported fields, so the mutex will not be copied.
-	mutex sync.RWMutex
-}
-
-func (m *AddressMap) DeepCopy() *AddressMap {
-	if m == nil {
-		return nil
-	}
-	return &AddressMap{
-		Addresses: m.GetAddresses(),
-	}
-}
-
-type Service struct {
-	Attributes               ServiceAttributes
-	Hostname                 host.Name  `json:"hostname"`
-	Ports                    PortList   `json:"ports,omitempty"`
-	ServiceAccounts          []string   `json:"serviceAccounts,omitempty"`
-	ClusterVIPs              AddressMap `json:"clusterVIPs,omitempty"`
-	CreationTime             time.Time  `json:"creationTime,omitempty"`
-	DefaultAddress           string     `json:"defaultAddress,omitempty"`
-	ResourceVersion          string
-	Resolution               Resolution
-	AutoAllocatedIPv4Address string `json:"autoAllocatedIPv4Address,omitempty"`
-	AutoAllocatedIPv6Address string `json:"autoAllocatedIPv6Address,omitempty"`
-	MeshExternal             bool
-}
-
-func (s *Service) DeepCopy() *Service {
-	// Manually copy fields to avoid copying the mutex in AddressMap
-	out := &Service{
-		Attributes:               s.Attributes.DeepCopy(),
-		Hostname:                 s.Hostname,
-		ServiceAccounts:          slices.Clone(s.ServiceAccounts),
-		CreationTime:             s.CreationTime,
-		DefaultAddress:           s.DefaultAddress,
-		ResourceVersion:          s.ResourceVersion,
-		Resolution:               s.Resolution,
-		AutoAllocatedIPv4Address: s.AutoAllocatedIPv4Address,
-		AutoAllocatedIPv6Address: s.AutoAllocatedIPv6Address,
-		MeshExternal:             s.MeshExternal,
-		ClusterVIPs:              *s.ClusterVIPs.DeepCopy(),
-	}
-	if s.Ports != nil {
-		out.Ports = make(PortList, len(s.Ports))
-		for i, port := range s.Ports {
-			if port != nil {
-				out.Ports[i] = &Port{
-					Name:     port.Name,
-					Port:     port.Port,
-					Protocol: port.Protocol,
-				}
-			} else {
-				out.Ports[i] = nil
-			}
-		}
-	}
-	return out
-}
-
-func (s *Service) Key() string {
-	if s == nil {
-		return ""
-	}
-
-	return s.Attributes.Namespace + "/" + string(s.Hostname)
-}
-
-type (
-	ServicePort         = *Port
-	ServiceInstancePort struct {
-		ServicePort
-		TargetPort uint32
-	}
-)
-
-type ServiceTarget struct {
-	Service *Service
-	Port    ServiceInstancePort
-}
-
-type Port struct {
-	Name     string            `json:"name,omitempty"`
-	Port     int               `json:"port"`
-	Protocol protocol.Instance `json:"protocol,omitempty"`
-}
-
-type PortList []*Port
-
-type TrafficDirection string
-
-const (
-	TrafficDirectionInbound           TrafficDirection = "inbound"
-	TrafficDirectionOutbound          TrafficDirection = "outbound"
-	trafficDirectionOutboundSrvPrefix                  = string(TrafficDirectionOutbound) + "_"
-	trafficDirectionInboundSrvPrefix                   = string(TrafficDirectionInbound) + "_"
-)
-
-func (p *Port) Equals(other *Port) bool {
-	if p == nil {
-		return other == nil
-	}
-	if other == nil {
-		return p == nil
-	}
-	return p.Name == other.Name && p.Port == other.Port && p.Protocol == other.Protocol
-}
-
-func (ports PortList) Equals(other PortList) bool {
-	return slices.EqualFunc(ports, other, func(a, b *Port) bool {
-		return a.Equals(b)
-	})
-}
-
-type ServiceDiscovery interface {
-	Services() []*Service
-	GetService(hostname host.Name) *Service
-	GetProxyServiceTargets(*Proxy) []ServiceTarget
-}
-
 func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 	// AddressMap contains a mutex, which is safe to copy in this case.
 	// nolint: govet
@@ -413,48 +295,6 @@ func (s *ServiceAttributes) DeepCopy() ServiceAttributes {
 
 	// nolint: govet
 	return out
-}
-
-func (s *Service) Equals(other *Service) bool {
-	if s == nil {
-		return other == nil
-	}
-	if other == nil {
-		return s == nil
-	}
-
-	if !s.Attributes.Equals(&other.Attributes) {
-		return false
-	}
-
-	if !s.Ports.Equals(other.Ports) {
-		return false
-	}
-	if !slices.Equal(s.ServiceAccounts, other.ServiceAccounts) {
-		return false
-	}
-
-	if len(s.ClusterVIPs.Addresses) != len(other.ClusterVIPs.Addresses) {
-		return false
-	}
-	for k, v1 := range s.ClusterVIPs.Addresses {
-		if v2, ok := other.ClusterVIPs.Addresses[k]; !ok || !slices.Equal(v1, v2) {
-			return false
-		}
-	}
-
-	return s.DefaultAddress == other.DefaultAddress && s.AutoAllocatedIPv4Address == other.AutoAllocatedIPv4Address &&
-		s.AutoAllocatedIPv6Address == other.AutoAllocatedIPv6Address && s.Hostname == other.Hostname &&
-		s.Resolution == other.Resolution && s.MeshExternal == other.MeshExternal
-}
-
-func (ports PortList) GetByPort(num int) (*Port, bool) {
-	for _, port := range ports {
-		if port.Port == num && port.Protocol != protocol.UDP {
-			return port, true
-		}
-	}
-	return nil, false
 }
 
 func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
@@ -504,6 +344,79 @@ func (s *ServiceAttributes) Equals(other *ServiceAttributes) bool {
 		s.ServiceRegistry == other.ServiceRegistry && s.K8sAttributes == other.K8sAttributes
 }
 
+func (s *Service) DeepCopy() *Service {
+	// Manually copy fields to avoid copying the mutex in AddressMap
+	out := &Service{
+		Attributes:               s.Attributes.DeepCopy(),
+		Hostname:                 s.Hostname,
+		ServiceAccounts:          slices.Clone(s.ServiceAccounts),
+		CreationTime:             s.CreationTime,
+		DefaultAddress:           s.DefaultAddress,
+		ResourceVersion:          s.ResourceVersion,
+		Resolution:               s.Resolution,
+		AutoAllocatedIPv4Address: s.AutoAllocatedIPv4Address,
+		AutoAllocatedIPv6Address: s.AutoAllocatedIPv6Address,
+		MeshExternal:             s.MeshExternal,
+		ClusterVIPs:              *s.ClusterVIPs.DeepCopy(),
+	}
+	if s.Ports != nil {
+		out.Ports = make(PortList, len(s.Ports))
+		for i, port := range s.Ports {
+			if port != nil {
+				out.Ports[i] = &Port{
+					Name:     port.Name,
+					Port:     port.Port,
+					Protocol: port.Protocol,
+				}
+			} else {
+				out.Ports[i] = nil
+			}
+		}
+	}
+	return out
+}
+
+func (s *Service) Key() string {
+	if s == nil {
+		return ""
+	}
+
+	return s.Attributes.Namespace + "/" + string(s.Hostname)
+}
+
+func (s *Service) Equals(other *Service) bool {
+	if s == nil {
+		return other == nil
+	}
+	if other == nil {
+		return s == nil
+	}
+
+	if !s.Attributes.Equals(&other.Attributes) {
+		return false
+	}
+
+	if !s.Ports.Equals(other.Ports) {
+		return false
+	}
+	if !slices.Equal(s.ServiceAccounts, other.ServiceAccounts) {
+		return false
+	}
+
+	if len(s.ClusterVIPs.Addresses) != len(other.ClusterVIPs.Addresses) {
+		return false
+	}
+	for k, v1 := range s.ClusterVIPs.Addresses {
+		if v2, ok := other.ClusterVIPs.Addresses[k]; !ok || !slices.Equal(v1, v2) {
+			return false
+		}
+	}
+
+	return s.DefaultAddress == other.DefaultAddress && s.AutoAllocatedIPv4Address == other.AutoAllocatedIPv4Address &&
+		s.AutoAllocatedIPv6Address == other.AutoAllocatedIPv6Address && s.Hostname == other.Hostname &&
+		s.Resolution == other.Resolution && s.MeshExternal == other.MeshExternal
+}
+
 func (s *Service) SupportsUnhealthyEndpoints() bool {
 	// CRITICAL FIX: Return PublishNotReadyAddresses to support publishing not-ready endpoints
 	// This allows endpoints with Ready=false to be included in EDS if the service has
@@ -539,6 +452,13 @@ func (s *Service) GetExtraAddressesForProxy(node *Proxy) []string {
 	return nil
 }
 
+func nodeUsesAutoallocatedIPs(node *Proxy) bool {
+	if node == nil {
+		return false
+	}
+	return false
+}
+
 func (s *Service) getAllAddressesForProxy(node *Proxy) []string {
 	addresses := []string{}
 	if node.Metadata != nil && node.Metadata.ClusterID != "" {
@@ -562,11 +482,63 @@ func (s *Service) getAllAddressesForProxy(node *Proxy) []string {
 	return nil
 }
 
-func nodeUsesAutoallocatedIPs(node *Proxy) bool {
-	if node == nil {
-		return false
+func (p *Port) Equals(other *Port) bool {
+	if p == nil {
+		return other == nil
 	}
-	return false
+	if other == nil {
+		return p == nil
+	}
+	return p.Name == other.Name && p.Port == other.Port && p.Protocol == other.Protocol
+}
+
+func (ports PortList) Equals(other PortList) bool {
+	return slices.EqualFunc(ports, other, func(a, b *Port) bool {
+		return a.Equals(b)
+	})
+}
+
+func (ports PortList) GetByPort(num int) (*Port, bool) {
+	for _, port := range ports {
+		if port.Port == num && port.Protocol != protocol.UDP {
+			return port, true
+		}
+	}
+	return nil, false
+}
+
+func (m *AddressMap) DeepCopy() *AddressMap {
+	if m == nil {
+		return nil
+	}
+	return &AddressMap{
+		Addresses: m.GetAddresses(),
+	}
+}
+
+func GetTrafficDistribution(specValue *string, annotations map[string]string) TrafficDistribution {
+	if specValue != nil {
+		switch *specValue {
+		case corev1.ServiceTrafficDistributionPreferSameZone, corev1.ServiceTrafficDistributionPreferClose:
+			return TrafficDistributionPreferSameZone
+		case corev1.ServiceTrafficDistributionPreferSameNode:
+			return TrafficDistributionPreferSameNode
+		}
+	}
+	// The TrafficDistribution field is quite new, so we allow a legacy annotation option as well
+	// This also has some custom types
+	trafficDistributionAnnotationValue := strings.ToLower(annotations[annotation.NetworkingTrafficDistribution.Name])
+	switch trafficDistributionAnnotationValue {
+	case strings.ToLower(corev1.ServiceTrafficDistributionPreferClose), strings.ToLower(corev1.ServiceTrafficDistributionPreferSameZone):
+		return TrafficDistributionPreferSameZone
+	case strings.ToLower(corev1.ServiceTrafficDistributionPreferSameNode):
+		return TrafficDistributionPreferSameNode
+	default:
+		if trafficDistributionAnnotationValue != "" {
+			log.Warnf("Unknown traffic distribution annotation, defaulting to any")
+		}
+		return TrafficDistributionAny
+	}
 }
 
 func BuildSubsetKey(direction TrafficDirection, subsetName string, hostname host.Name, port int) string {

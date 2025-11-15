@@ -1,4 +1,7 @@
 /*
+ * Portions of this file are derived from the Istio project:
+ *   https://github.com/istio/istio/blob/master/pkg/kube/controllers/queue.go
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -26,6 +29,10 @@ import (
 )
 
 type ReconcilerFn func(key types.NamespacedName) error
+
+type syncSignal struct{}
+
+var defaultSyncSignal = syncSignal{}
 
 type Queue struct {
 	queue       workqueue.TypedRateLimitingInterface[any]
@@ -145,7 +152,3 @@ func WithReconciler(f ReconcilerFn) func(q *Queue) {
 		}
 	}
 }
-
-type syncSignal struct{}
-
-var defaultSyncSignal = syncSignal{}

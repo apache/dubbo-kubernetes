@@ -45,6 +45,15 @@ func (s *Server) initMeshConfiguration(args *PlanetArgs, fileWatcher filewatcher
 	log.Infof("flags: \n%s", argsdump)
 }
 
+func (s *Server) getMeshConfiguration(args *PlanetArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
+	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
+	sources := s.getConfigurationSources(args, fileWatcher, args.MeshConfigFile, kubemesh.MeshConfigKey)
+	if len(sources) == 0 {
+		fmt.Printf("\nUsing default mesh - missing file %s and no k8s client\n", args.MeshConfigFile)
+	}
+	return meshwatcher.NewCollection(opts, sources...)
+}
+
 func (s *Server) initMeshNetworks(args *PlanetArgs, fileWatcher filewatcher.FileWatcher) {
 	log.Infof("initializing mesh networks configuration %v", args.NetworksConfigFile)
 	col := s.getMeshNetworks(args, fileWatcher)
@@ -62,15 +71,6 @@ func (s *Server) getMeshNetworks(args *PlanetArgs, fileWatcher filewatcher.FileW
 		log.Infof("Using default mesh networks - missing file %s and no k8s client", args.NetworksConfigFile)
 	}
 	return meshwatcher.NewNetworksCollection(opts, sources...)
-}
-
-func (s *Server) getMeshConfiguration(args *PlanetArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
-	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
-	sources := s.getConfigurationSources(args, fileWatcher, args.MeshConfigFile, kubemesh.MeshConfigKey)
-	if len(sources) == 0 {
-		fmt.Printf("\nUsing default mesh - missing file %s and no k8s client\n", args.MeshConfigFile)
-	}
-	return meshwatcher.NewCollection(opts, sources...)
 }
 
 func (s *Server) getConfigurationSources(args *PlanetArgs, fileWatcher filewatcher.FileWatcher, file string, cmKey string) []meshwatcher.MeshConfigSource {

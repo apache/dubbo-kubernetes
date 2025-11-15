@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
-
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
@@ -40,58 +38,11 @@ import (
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 )
 
-var log = dubbolog.RegisterScope("grpcgen", "xDS Generator for Proxyless gRPC")
-
 type listenerNames map[string]listenerName
 
 type listenerName struct {
 	RequestedNames sets.String
 	Ports          sets.String
-}
-
-func newListenerNameFilter(names []string, node *model.Proxy) listenerNames {
-	filter := make(listenerNames, len(names))
-	for _, name := range names {
-		// inbound, create a simple entry and move on
-		if strings.HasPrefix(name, grpcxds.ServerListenerNamePrefix) {
-			filter[name] = listenerName{RequestedNames: sets.New(name)}
-			continue
-		}
-
-		host, port, err := net.SplitHostPort(name)
-		hasPort := err == nil
-
-		// attempt to expand shortname to FQDN
-		requestedName := name
-		if hasPort {
-			requestedName = host
-		}
-		allNames := []string{requestedName}
-		if fqdn := tryFindFQDN(requestedName, node); fqdn != "" {
-			allNames = append(allNames, fqdn)
-		}
-
-		for _, name := range allNames {
-			ln, ok := filter[name]
-			if !ok {
-				ln = listenerName{RequestedNames: sets.New[string]()}
-			}
-			ln.RequestedNames.Insert(requestedName)
-
-			// only build the portmap if we aren't filtering this name yet, or if the existing filter is non-empty
-			if hasPort && (!ok || len(ln.Ports) != 0) {
-				if ln.Ports == nil {
-					ln.Ports = map[string]struct{}{}
-				}
-				ln.Ports.Insert(port)
-			} else if !hasPort {
-				// if we didn't have a port, we should clear the portmap
-				ln.Ports = nil
-			}
-			filter[name] = ln
-		}
-	}
-	return filter
 }
 
 func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
@@ -140,6 +91,192 @@ func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.Push
 	}
 
 	return resp
+}
+
+func tryFindFQDN(name string, node *model.Proxy) string {
+	// no "." - assuming this is a shortname "foo" -> "foo.ns.svc.cluster.local"
+	if !strings.Contains(name, ".") {
+		return fmt.Sprintf("%s.%s", name, node.DNSDomain)
+	}
+	for _, suffix := range []string{
+		node.Metadata.Namespace,
+		node.Metadata.Namespace + ".svc",
+	} {
+		shortname := strings.TrimSuffix(name, "."+suffix)
+		if shortname != name && strings.HasPrefix(node.DNSDomain, suffix) {
+			return fmt.Sprintf("%s.%s", shortname, node.DNSDomain)
+		}
+	}
+	return ""
+}
+
+func newListenerNameFilter(names []string, node *model.Proxy) listenerNames {
+	filter := make(listenerNames, len(names))
+	for _, name := range names {
+		// inbound, create a simple entry and move on
+		if strings.HasPrefix(name, grpcxds.ServerListenerNamePrefix) {
+			filter[name] = listenerName{RequestedNames: sets.New(name)}
+			continue
+		}
+
+		host, port, err := net.SplitHostPort(name)
+		hasPort := err == nil
+
+		// attempt to expand shortname to FQDN
+		requestedName := name
+		if hasPort {
+			requestedName = host
+		}
+		allNames := []string{requestedName}
+		if fqdn := tryFindFQDN(requestedName, node); fqdn != "" {
+			allNames = append(allNames, fqdn)
+		}
+
+		for _, name := range allNames {
+			ln, ok := filter[name]
+			if !ok {
+				ln = listenerName{RequestedNames: sets.New[string]()}
+			}
+			ln.RequestedNames.Insert(requestedName)
+
+			// only build the portmap if we aren't filtering this name yet, or if the existing filter is non-empty
+			if hasPort && (!ok || len(ln.Ports) != 0) {
+				if ln.Ports == nil {
+					ln.Ports = map[string]struct{}{}
+				}
+				ln.Ports.Insert(port)
+			} else if !hasPort {
+				// if we didn't have a port, we should clear the portmap
+				ln.Ports = nil
+			}
+			filter[name] = ln
+		}
+	}
+	return filter
+}
+
+func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
+	var out model.Resources
+	// TODO NewMtlsPolicy
+	serviceInstancesByPort := map[uint32]model.ServiceTarget{}
+	for _, si := range node.ServiceTargets {
+		if si.Port.ServicePort != nil {
+			serviceInstancesByPort[si.Port.TargetPort] = si
+		}
+	}
+
+	// Use the provided names - at this point names should not be empty
+	// (empty names are handled in BuildListeners to generate all listeners)
+	// This ensures we only generate listeners that were requested, preventing inconsistent behavior
+	listenerNames := names
+	if len(listenerNames) == 0 {
+		// This should not happen if BuildListeners logic is correct, but handle gracefully
+		return out
+	}
+
+	for _, name := range listenerNames {
+		listenAddress := strings.TrimPrefix(name, grpcxds.ServerListenerNamePrefix)
+		listenHost, listenPortStr, err := net.SplitHostPort(listenAddress)
+		if err != nil {
+			log.Errorf("failed parsing address from gRPC listener name %s: %v", name, err)
+			continue
+		}
+		listenPort, err := strconv.Atoi(listenPortStr)
+		if err != nil {
+			log.Errorf("failed parsing port from gRPC listener name %s: %v", name, err)
+			continue
+		}
+		si, ok := serviceInstancesByPort[uint32(listenPort)]
+		if !ok {
+			// If no service target found for this port, don't create a listener
+			// This prevents creating invalid listeners that would cause SERVING/NOT_SERVING cycles
+			// The client should only request listeners for ports that are actually exposed by the service
+			log.Warnf("%s has no service instance for port %s, skipping listener %s. "+
+				"This usually means the requested port doesn't match any service port in the pod's ServiceTargets.",
+				node.ID, listenPortStr, name)
+			continue
+		}
+
+		// For proxyless gRPC inbound listeners, we need a FilterChain with HttpConnectionManager filter
+		// to satisfy gRPC client requirements. According to grpc-go issue #7691 and the error
+		// "missing HttpConnectionManager filter", gRPC proxyless clients require HttpConnectionManager
+		// in the FilterChain for inbound listeners.
+		// Use inline RouteConfig instead of RDS to avoid triggering additional RDS requests that cause push loops
+		// For proxyless gRPC, inline configuration is preferred to minimize round-trips
+		routeName := fmt.Sprintf("%d", listenPort)
+		hcm := &hcmv3.HttpConnectionManager{
+			CodecType:  hcmv3.HttpConnectionManager_AUTO,
+			StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
+			RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
+				RouteConfig: &route.RouteConfiguration{
+					Name: routeName,
+					VirtualHosts: []*route.VirtualHost{
+						{
+							Name:    "inbound|http|" + routeName,
+							Domains: []string{"*"},
+							Routes: []*route.Route{
+								{
+									Match: &route.RouteMatch{
+										PathSpecifier: &route.RouteMatch_Prefix{
+											Prefix: "/",
+										},
+									},
+									Action: &route.Route_NonForwardingAction{},
+								},
+							},
+						},
+					},
+				},
+			},
+			HttpFilters: []*hcmv3.HttpFilter{
+				{
+					Name: "envoy.filters.http.router",
+					ConfigType: &hcmv3.HttpFilter_TypedConfig{
+						TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
+					},
+				},
+			},
+		}
+
+		ll := &listener.Listener{
+			Name: name,
+			Address: &core.Address{Address: &core.Address_SocketAddress{
+				SocketAddress: &core.SocketAddress{
+					Address: listenHost,
+					PortSpecifier: &core.SocketAddress_PortValue{
+						PortValue: uint32(listenPort),
+					},
+				},
+			}},
+			// Create FilterChain with HttpConnectionManager filter for proxyless gRPC
+			FilterChains: []*listener.FilterChain{
+				{
+					Filters: []*listener.Filter{
+						{
+							Name: wellknown.HTTPConnectionManager,
+							ConfigType: &listener.Filter_TypedConfig{
+								TypedConfig: protoconv.MessageToAny(hcm),
+							},
+						},
+					},
+				},
+			},
+			// the following must not be set or the client will NACK
+			ListenerFilters: nil,
+			UseOriginalDst:  nil,
+		}
+		// add extra addresses for the listener
+		extrAddresses := si.Service.GetExtraAddressesForProxy(node)
+		if len(extrAddresses) > 0 {
+			ll.AdditionalAddresses = util.BuildAdditionalAddresses(extrAddresses, uint32(listenPort))
+		}
+
+		out = append(out, &discovery.Resource{
+			Name:     ll.Name,
+			Resource: protoconv.MessageToAny(ll),
+		})
+	}
+	return out
 }
 
 func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter listenerNames) model.Resources {
@@ -355,145 +492,4 @@ func (f listenerNames) inboundNames() []string {
 		}
 	}
 	return out
-}
-
-func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []string) model.Resources {
-	var out model.Resources
-	// TODO NewMtlsPolicy
-	serviceInstancesByPort := map[uint32]model.ServiceTarget{}
-	for _, si := range node.ServiceTargets {
-		if si.Port.ServicePort != nil {
-			serviceInstancesByPort[si.Port.TargetPort] = si
-		}
-	}
-
-	// Use the provided names - at this point names should not be empty
-	// (empty names are handled in BuildListeners to generate all listeners)
-	// This ensures we only generate listeners that were requested, preventing inconsistent behavior
-	listenerNames := names
-	if len(listenerNames) == 0 {
-		// This should not happen if BuildListeners logic is correct, but handle gracefully
-		return out
-	}
-
-	for _, name := range listenerNames {
-		listenAddress := strings.TrimPrefix(name, grpcxds.ServerListenerNamePrefix)
-		listenHost, listenPortStr, err := net.SplitHostPort(listenAddress)
-		if err != nil {
-			log.Errorf("failed parsing address from gRPC listener name %s: %v", name, err)
-			continue
-		}
-		listenPort, err := strconv.Atoi(listenPortStr)
-		if err != nil {
-			log.Errorf("failed parsing port from gRPC listener name %s: %v", name, err)
-			continue
-		}
-		si, ok := serviceInstancesByPort[uint32(listenPort)]
-		if !ok {
-			// If no service target found for this port, don't create a listener
-			// This prevents creating invalid listeners that would cause SERVING/NOT_SERVING cycles
-			// The client should only request listeners for ports that are actually exposed by the service
-			log.Warnf("%s has no service instance for port %s, skipping listener %s. "+
-				"This usually means the requested port doesn't match any service port in the pod's ServiceTargets.",
-				node.ID, listenPortStr, name)
-			continue
-		}
-
-		// For proxyless gRPC inbound listeners, we need a FilterChain with HttpConnectionManager filter
-		// to satisfy gRPC client requirements. According to grpc-go issue #7691 and the error
-		// "missing HttpConnectionManager filter", gRPC proxyless clients require HttpConnectionManager
-		// in the FilterChain for inbound listeners.
-		// Use inline RouteConfig instead of RDS to avoid triggering additional RDS requests that cause push loops
-		// For proxyless gRPC, inline configuration is preferred to minimize round-trips
-		routeName := fmt.Sprintf("%d", listenPort)
-		hcm := &hcmv3.HttpConnectionManager{
-			CodecType:  hcmv3.HttpConnectionManager_AUTO,
-			StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
-			RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
-				RouteConfig: &route.RouteConfiguration{
-					Name: routeName,
-					VirtualHosts: []*route.VirtualHost{
-						{
-							Name:    "inbound|http|" + routeName,
-							Domains: []string{"*"},
-							Routes: []*route.Route{
-								{
-									Match: &route.RouteMatch{
-										PathSpecifier: &route.RouteMatch_Prefix{
-											Prefix: "/",
-										},
-									},
-									Action: &route.Route_NonForwardingAction{},
-								},
-							},
-						},
-					},
-				},
-			},
-			HttpFilters: []*hcmv3.HttpFilter{
-				{
-					Name: "envoy.filters.http.router",
-					ConfigType: &hcmv3.HttpFilter_TypedConfig{
-						TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
-					},
-				},
-			},
-		}
-
-		ll := &listener.Listener{
-			Name: name,
-			Address: &core.Address{Address: &core.Address_SocketAddress{
-				SocketAddress: &core.SocketAddress{
-					Address: listenHost,
-					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: uint32(listenPort),
-					},
-				},
-			}},
-			// Create FilterChain with HttpConnectionManager filter for proxyless gRPC
-			FilterChains: []*listener.FilterChain{
-				{
-					Filters: []*listener.Filter{
-						{
-							Name: wellknown.HTTPConnectionManager,
-							ConfigType: &listener.Filter_TypedConfig{
-								TypedConfig: protoconv.MessageToAny(hcm),
-							},
-						},
-					},
-				},
-			},
-			// the following must not be set or the client will NACK
-			ListenerFilters: nil,
-			UseOriginalDst:  nil,
-		}
-		// add extra addresses for the listener
-		extrAddresses := si.Service.GetExtraAddressesForProxy(node)
-		if len(extrAddresses) > 0 {
-			ll.AdditionalAddresses = util.BuildAdditionalAddresses(extrAddresses, uint32(listenPort))
-		}
-
-		out = append(out, &discovery.Resource{
-			Name:     ll.Name,
-			Resource: protoconv.MessageToAny(ll),
-		})
-	}
-	return out
-}
-
-func tryFindFQDN(name string, node *model.Proxy) string {
-	// no "." - assuming this is a shortname "foo" -> "foo.ns.svc.cluster.local"
-	if !strings.Contains(name, ".") {
-		return fmt.Sprintf("%s.%s", name, node.DNSDomain)
-	}
-	for _, suffix := range []string{
-		node.Metadata.Namespace,
-		node.Metadata.Namespace + ".svc",
-	} {
-		shortname := strings.TrimSuffix(name, "."+suffix)
-		if shortname != name && strings.HasPrefix(node.DNSDomain, suffix) {
-			return fmt.Sprintf("%s.%s", shortname, node.DNSDomain)
-		}
-	}
-	return ""
 }

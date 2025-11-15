@@ -30,7 +30,6 @@ import (
 
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/caclient"
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	"github.com/apache/dubbo-kubernetes/pkg/channels"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
@@ -48,7 +47,19 @@ import (
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
+const (
+	defaultClientMaxReceiveMessageSize = math.MaxInt32
+)
+
 var proxyLog = log.RegisterScope("xdsproxy", "XDS Proxy in Dubbo Agent")
+
+var connectionNumber = atomic.NewUint32(0)
+
+type adsStream interface {
+	Send(*discovery.DiscoveryResponse) error
+	Recv() (*discovery.DiscoveryRequest, error)
+	Context() context.Context
+}
 
 type (
 	DiscoveryStream      = discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer
@@ -58,6 +69,23 @@ type (
 )
 
 type ResponseHandler func(resp *anypb.Any) error
+
+type ProxyConnection struct {
+	conID              uint32
+	upstreamError      chan error
+	downstreamError    chan error
+	requestsChan       *channels.Unbounded[*discovery.DiscoveryRequest]
+	responsesChan      chan *discovery.DiscoveryResponse
+	deltaRequestsChan  *channels.Unbounded[*discovery.DeltaDiscoveryRequest]
+	deltaResponsesChan chan *discovery.DeltaDiscoveryResponse
+	stopChan           chan struct{}
+	downstream         adsStream
+	upstream           DiscoveryClient
+	downstreamDeltas   DeltaDiscoveryStream
+	upstreamDeltas     DeltaDiscoveryClient
+	node               *core.Node // Preserve Node from first request
+	nodeMutex          sync.RWMutex
+}
 
 type XdsProxy struct {
 	stopChan                  chan struct{}
@@ -86,34 +114,136 @@ type XdsProxy struct {
 	preemptiveConn      *ProxyConnection
 }
 
+func initXdsProxy(ia *Agent) (*XdsProxy, error) {
+	var err error
+
+	proxy := &XdsProxy{
+		dubbodAddress:         ia.proxyConfig.DiscoveryAddress,
+		dubbodSAN:             ia.cfg.DubbodSAN,
+		clusterID:             ia.secOpts.ClusterID,
+		stopChan:              make(chan struct{}),
+		xdsHeaders:            ia.cfg.XDSHeaders,
+		xdsUdsPath:            ia.cfg.XdsUdsPath,
+		proxyAddresses:        ia.cfg.ProxyIPAddresses,
+		ia:                    ia,
+		downstreamGrpcOptions: ia.cfg.DownstreamGrpcOptions,
+		handlers:              make(map[string]ResponseHandler),
+	}
+
+	// Initialize dial options immediately, required for connecting to upstream
+	if err = proxy.initDubbodDialOptions(ia); err != nil {
+		return nil, fmt.Errorf("failed to init dubbod dial options: %v", err)
+	}
+
+	if ia.cfg.EnableDynamicProxyConfig && ia.secretCache != nil {
+		proxy.handlers[model.ProxyConfigType] = func(resp *anypb.Any) error {
+			pc := &meshconfig.ProxyConfig{}
+			if err := resp.UnmarshalTo(pc); err != nil {
+				proxyLog.Errorf("failed to unmarshal proxy config: %v", err)
+				return err
+			}
+			caCerts := pc.GetCaCertificatesPem()
+			proxyLog.Infof("received new certificates to add to mesh trust domain: %v", caCerts)
+			trustBundle := []byte{}
+			for _, cert := range caCerts {
+				trustBundle = util.AppendCertByte(trustBundle, []byte(cert))
+			}
+			return ia.secretCache.UpdateConfigTrustBundle(trustBundle)
+		}
+	}
+
+	proxyLog.Infof("Initializing with upstream address %q and cluster %q", proxy.dubbodAddress, proxy.clusterID)
+
+	if err = proxy.initDownstreamServer(); err != nil {
+		return nil, err
+	}
+
+	ia.wg.Add(1)
+	go func() {
+		defer ia.wg.Done()
+		proxyLog.Infof("Starting XDS proxy server listening on UDS: %s", proxy.xdsUdsPath)
+		proxyLog.Infof("XDS proxy server ready to accept connections on UDS: %s", proxy.xdsUdsPath)
+		if err := proxy.downstreamGrpcServer.Serve(proxy.downstreamListener); err != nil {
+			proxyLog.Errorf("XDS proxy server stopped accepting connections: %v", err)
+		}
+		proxyLog.Warnf("XDS proxy server stopped serving on UDS: %s", proxy.xdsUdsPath)
+	}()
+
+	// For proxyless mode, establish a preemptive connection to upstream using bootstrap Node
+	// This ensures the proxy is ready even before downstream clients connect
+	// Use a retry loop with exponential backoff to automatically reconnect on failures
+	ia.wg.Add(1)
+	go func() {
+		defer ia.wg.Done()
+		// Wait for bootstrap Node to be set (with timeout)
+		// The Node is set synchronously after bootstrap file generation in agent.Run()
+		for i := 0; i < 50; i++ {
+			proxy.preemptiveConnMutex.RLock()
+			nodeReady := proxy.bootstrapNode != nil
+			proxy.preemptiveConnMutex.RUnlock()
+			if nodeReady {
+				break
+			}
+			select {
+			case <-proxy.stopChan:
+				return
+			case <-time.After(100 * time.Millisecond):
+			}
+		}
+		proxy.preemptiveConnMutex.RLock()
+		nodeReady := proxy.bootstrapNode != nil
+		proxy.preemptiveConnMutex.RUnlock()
+		if !nodeReady {
+			proxyLog.Warnf("Bootstrap Node not set after 5 seconds, proceeding anyway")
+		}
+
+		maxBackoff := 30 * time.Second
+		backoff := time.Second
+
+		for {
+			select {
+			case <-proxy.stopChan:
+				return
+			default:
+			}
+
+			// Establish connection
+			connDone, err := proxy.establishPreemptiveConnection(ia)
+			if err != nil {
+				// Connection failed, log and retry with exponential backoff
+				proxyLog.Warnf("Failed to establish preemptive upstream connection: %v, retrying in %v", err, backoff)
+
+				select {
+				case <-proxy.stopChan:
+					return
+				case <-time.After(backoff):
+					backoff *= 2
+					if backoff > maxBackoff {
+						backoff = maxBackoff
+					}
+				}
+				continue
+			}
+
+			// Connection successful, reset backoff
+			backoff = time.Second
+			proxyLog.Infof("Preemptive upstream connection established successfully")
+			// Wait for connection to terminate (connDone will be closed when connection dies)
+			select {
+			case <-proxy.stopChan:
+				return
+			case <-connDone:
+				proxyLog.Warnf("Preemptive connection terminated, will retry")
+			}
+		}
+	}()
+
+	return proxy, nil
+}
+
 func (p *XdsProxy) StreamAggregatedResources(downstream DiscoveryStream) error {
 	return p.handleStream(downstream)
 }
-
-type adsStream interface {
-	Send(*discovery.DiscoveryResponse) error
-	Recv() (*discovery.DiscoveryRequest, error)
-	Context() context.Context
-}
-
-type ProxyConnection struct {
-	conID              uint32
-	upstreamError      chan error
-	downstreamError    chan error
-	requestsChan       *channels.Unbounded[*discovery.DiscoveryRequest]
-	responsesChan      chan *discovery.DiscoveryResponse
-	deltaRequestsChan  *channels.Unbounded[*discovery.DeltaDiscoveryRequest]
-	deltaResponsesChan chan *discovery.DeltaDiscoveryResponse
-	stopChan           chan struct{}
-	downstream         adsStream
-	upstream           DiscoveryClient
-	downstreamDeltas   DeltaDiscoveryStream
-	upstreamDeltas     DeltaDiscoveryClient
-	node               *core.Node // Preserve Node from first request
-	nodeMutex          sync.RWMutex
-}
-
-var connectionNumber = atomic.NewUint32(0)
 
 func (p *XdsProxy) handleStream(downstream adsStream) error {
 	conID := connectionNumber.Inc()
@@ -152,10 +282,6 @@ func (p *XdsProxy) handleStream(downstream adsStream) error {
 	// We must propagate upstream termination to Envoy. This ensures that we resume the full XDS sequence on new connection
 	return p.handleUpstream(ctx, con, xds)
 }
-
-const (
-	defaultClientMaxReceiveMessageSize = math.MaxInt32
-)
 
 func (p *XdsProxy) handleUpstream(ctx context.Context, con *ProxyConnection, xds discovery.AggregatedDiscoveryServiceClient) error {
 	proxyLog.Infof("connection #%d connecting to upstream: %s", con.conID, p.dubbodAddress)
@@ -405,22 +531,6 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 	}
 }
 
-func downstreamErr(con *ProxyConnection, err error) {
-	switch dubbogrpc.GRPCErrorType(err) {
-	case dubbogrpc.GracefulTermination:
-		err = nil
-		fallthrough
-	case dubbogrpc.ExpectedError:
-		proxyLog.Errorf("downstream terminated with status %v", err)
-	default:
-		proxyLog.Errorf("downstream terminated with unexpected error %v", err)
-	}
-	select {
-	case con.downstreamError <- err:
-	case <-con.stopChan:
-	}
-}
-
 func (p *XdsProxy) handleUpstreamResponse(con *ProxyConnection) {
 	for {
 		select {
@@ -497,26 +607,6 @@ func (p *XdsProxy) handleUpstreamResponse(con *ProxyConnection) {
 	}
 }
 
-func (con *ProxyConnection) sendRequest(req *discovery.DiscoveryRequest) {
-	con.requestsChan.Put(req)
-}
-
-func upstreamErr(con *ProxyConnection, err error) {
-	switch dubbogrpc.GRPCErrorType(err) {
-	case dubbogrpc.GracefulTermination:
-		err = nil
-		fallthrough
-	case dubbogrpc.ExpectedError:
-		proxyLog.Errorf("upstream terminated with status %v", err)
-	default:
-		proxyLog.Errorf("upstream terminated with unexpected error %v", err)
-	}
-	select {
-	case con.upstreamError <- err:
-	case <-con.stopChan:
-	}
-}
-
 func (p *XdsProxy) buildUpstreamConn(ctx context.Context) (*grpc.ClientConn, error) {
 	p.optsMutex.RLock()
 	opts := p.dialOptions
@@ -550,133 +640,6 @@ func (p *XdsProxy) registerStream(c *ProxyConnection) {
 		close(p.connected.stopChan)
 	}
 	p.connected = c
-}
-
-func initXdsProxy(ia *Agent) (*XdsProxy, error) {
-	var err error
-
-	proxy := &XdsProxy{
-		dubbodAddress:         ia.proxyConfig.DiscoveryAddress,
-		dubbodSAN:             ia.cfg.DubbodSAN,
-		clusterID:             ia.secOpts.ClusterID,
-		stopChan:              make(chan struct{}),
-		xdsHeaders:            ia.cfg.XDSHeaders,
-		xdsUdsPath:            ia.cfg.XdsUdsPath,
-		proxyAddresses:        ia.cfg.ProxyIPAddresses,
-		ia:                    ia,
-		downstreamGrpcOptions: ia.cfg.DownstreamGrpcOptions,
-		handlers:              make(map[string]ResponseHandler),
-	}
-
-	// Initialize dial options immediately, required for connecting to upstream
-	if err = proxy.initDubbodDialOptions(ia); err != nil {
-		return nil, fmt.Errorf("failed to init dubbod dial options: %v", err)
-	}
-
-	if ia.cfg.EnableDynamicProxyConfig && ia.secretCache != nil {
-		proxy.handlers[model.ProxyConfigType] = func(resp *anypb.Any) error {
-			pc := &meshconfig.ProxyConfig{}
-			if err := resp.UnmarshalTo(pc); err != nil {
-				proxyLog.Errorf("failed to unmarshal proxy config: %v", err)
-				return err
-			}
-			caCerts := pc.GetCaCertificatesPem()
-			proxyLog.Infof("received new certificates to add to mesh trust domain: %v", caCerts)
-			trustBundle := []byte{}
-			for _, cert := range caCerts {
-				trustBundle = util.AppendCertByte(trustBundle, []byte(cert))
-			}
-			return ia.secretCache.UpdateConfigTrustBundle(trustBundle)
-		}
-	}
-
-	proxyLog.Infof("Initializing with upstream address %q and cluster %q", proxy.dubbodAddress, proxy.clusterID)
-
-	if err = proxy.initDownstreamServer(); err != nil {
-		return nil, err
-	}
-
-	ia.wg.Add(1)
-	go func() {
-		defer ia.wg.Done()
-		proxyLog.Infof("Starting XDS proxy server listening on UDS: %s", proxy.xdsUdsPath)
-		proxyLog.Infof("XDS proxy server ready to accept connections on UDS: %s", proxy.xdsUdsPath)
-		if err := proxy.downstreamGrpcServer.Serve(proxy.downstreamListener); err != nil {
-			proxyLog.Errorf("XDS proxy server stopped accepting connections: %v", err)
-		}
-		proxyLog.Warnf("XDS proxy server stopped serving on UDS: %s", proxy.xdsUdsPath)
-	}()
-
-	// For proxyless mode, establish a preemptive connection to upstream using bootstrap Node
-	// This ensures the proxy is ready even before downstream clients connect
-	// Use a retry loop with exponential backoff to automatically reconnect on failures
-	ia.wg.Add(1)
-	go func() {
-		defer ia.wg.Done()
-		// Wait for bootstrap Node to be set (with timeout)
-		// The Node is set synchronously after bootstrap file generation in agent.Run()
-		for i := 0; i < 50; i++ {
-			proxy.preemptiveConnMutex.RLock()
-			nodeReady := proxy.bootstrapNode != nil
-			proxy.preemptiveConnMutex.RUnlock()
-			if nodeReady {
-				break
-			}
-			select {
-			case <-proxy.stopChan:
-				return
-			case <-time.After(100 * time.Millisecond):
-			}
-		}
-		proxy.preemptiveConnMutex.RLock()
-		nodeReady := proxy.bootstrapNode != nil
-		proxy.preemptiveConnMutex.RUnlock()
-		if !nodeReady {
-			proxyLog.Warnf("Bootstrap Node not set after 5 seconds, proceeding anyway")
-		}
-
-		maxBackoff := 30 * time.Second
-		backoff := time.Second
-
-		for {
-			select {
-			case <-proxy.stopChan:
-				return
-			default:
-			}
-
-			// Establish connection
-			connDone, err := proxy.establishPreemptiveConnection(ia)
-			if err != nil {
-				// Connection failed, log and retry with exponential backoff
-				proxyLog.Warnf("Failed to establish preemptive upstream connection: %v, retrying in %v", err, backoff)
-
-				select {
-				case <-proxy.stopChan:
-					return
-				case <-time.After(backoff):
-					backoff *= 2
-					if backoff > maxBackoff {
-						backoff = maxBackoff
-					}
-				}
-				continue
-			}
-
-			// Connection successful, reset backoff
-			backoff = time.Second
-			proxyLog.Infof("Preemptive upstream connection established successfully")
-			// Wait for connection to terminate (connDone will be closed when connection dies)
-			select {
-			case <-proxy.stopChan:
-				return
-			case <-connDone:
-				proxyLog.Warnf("Preemptive connection terminated, will retry")
-			}
-		}
-	}()
-
-	return proxy, nil
 }
 
 func (p *XdsProxy) initDownstreamServer() error {
@@ -941,8 +904,38 @@ func (p *XdsProxy) close() {
 	}
 }
 
-func (p *XdsProxy) isPreemptiveConnAlive() bool {
-	p.preemptiveConnMutex.RLock()
-	defer p.preemptiveConnMutex.RUnlock()
-	return p.preemptiveConn != nil
+func (con *ProxyConnection) sendRequest(req *discovery.DiscoveryRequest) {
+	con.requestsChan.Put(req)
+}
+
+func upstreamErr(con *ProxyConnection, err error) {
+	switch dubbogrpc.GRPCErrorType(err) {
+	case dubbogrpc.GracefulTermination:
+		err = nil
+		fallthrough
+	case dubbogrpc.ExpectedError:
+		proxyLog.Errorf("upstream terminated with status %v", err)
+	default:
+		proxyLog.Errorf("upstream terminated with unexpected error %v", err)
+	}
+	select {
+	case con.upstreamError <- err:
+	case <-con.stopChan:
+	}
+}
+
+func downstreamErr(con *ProxyConnection, err error) {
+	switch dubbogrpc.GRPCErrorType(err) {
+	case dubbogrpc.GracefulTermination:
+		err = nil
+		fallthrough
+	case dubbogrpc.ExpectedError:
+		proxyLog.Errorf("downstream terminated with status %v", err)
+	default:
+		proxyLog.Errorf("downstream terminated with unexpected error %v", err)
+	}
+	select {
+	case con.downstreamError <- err:
+	case <-con.stopChan:
+	}
 }

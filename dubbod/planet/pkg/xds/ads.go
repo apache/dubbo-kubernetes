@@ -19,6 +19,7 @@ package xds
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -61,20 +62,18 @@ type Event struct {
 	done        func()
 }
 
-func (conn *Connection) XdsConnection() *xds.Connection {
-	return &conn.Connection
-}
-
-func (conn *Connection) Proxy() *model.Proxy {
-	return conn.proxy
+func (s *DiscoveryServer) StreamAggregatedResources(stream DiscoveryStream) error {
+	return s.Stream(stream)
 }
 
 func (s *DiscoveryServer) DeltaAggregatedResources(stream discovery.AggregatedDiscoveryService_DeltaAggregatedResourcesServer) error {
 	return s.StreamDeltas(stream)
 }
 
-func (s *DiscoveryServer) StreamAggregatedResources(stream DiscoveryStream) error {
-	return s.Stream(stream)
+func (s *DiscoveryServer) AllClients() []*Connection {
+	s.adsClientsMutex.RLock()
+	defer s.adsClientsMutex.RUnlock()
+	return maps.Values(s.adsClients)
 }
 
 func (s *DiscoveryServer) StartPush(req *model.PushRequest) {
@@ -82,6 +81,12 @@ func (s *DiscoveryServer) StartPush(req *model.PushRequest) {
 	for _, p := range s.AllClients() {
 		s.pushQueue.Enqueue(p, req)
 	}
+}
+
+func (s *DiscoveryServer) adsClientCount() int {
+	s.adsClientsMutex.RLock()
+	defer s.adsClientsMutex.RUnlock()
+	return len(s.adsClients)
 }
 
 func (s *DiscoveryServer) AdsPushAll(req *model.PushRequest) {
@@ -103,49 +108,6 @@ func (s *DiscoveryServer) AdsPushAll(req *model.PushRequest) {
 	s.StartPush(req)
 }
 
-func (s *DiscoveryServer) adsClientCount() int {
-	s.adsClientsMutex.RLock()
-	defer s.adsClientsMutex.RUnlock()
-	return len(s.adsClients)
-}
-
-func (s *DiscoveryServer) computeProxyState(proxy *model.Proxy, request *model.PushRequest) {
-	proxy.Lock()
-	defer proxy.Unlock()
-	// 1. If request == nil(initiation phase) or request.ConfigsUpdated == nil(global push), set proxy serviceTargets.
-	// 2. otherwise only set when svc update, this is for the case that a service may select the proxy
-	if request == nil || request.Forced ||
-		proxy.ShouldUpdateServiceTargets(request.ConfigsUpdated) {
-		proxy.SetServiceTargets(s.Env.ServiceDiscovery)
-	}
-
-	recomputeLabels := request == nil || request.IsProxyUpdate()
-	if recomputeLabels {
-	}
-
-	push := proxy.LastPushContext
-	if request == nil {
-	} else {
-		push = request.Push
-		if request.Forced {
-		}
-		for conf := range request.ConfigsUpdated {
-			switch conf.Kind {
-			}
-		}
-	}
-
-	proxy.LastPushContext = push
-	if request != nil {
-		proxy.LastPushTime = request.Start
-	}
-}
-
-func connectionID(node string) string {
-	id := atomic.AddInt64(&connectionNumber, 1)
-	return node + "-" + strconv.FormatInt(id, 10)
-}
-
 func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, identities []string) error {
 	proxy, err := s.initProxyMetadata(node)
 	if err != nil {
@@ -161,9 +123,7 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 	con.node = node
 	con.proxy = proxy
 
-	if err := s.authorize(con, identities); err != nil {
-		return err
-	}
+	// TODO authorize
 
 	s.addCon(con.ID(), con)
 	currentCount := s.adsClientCount()
@@ -225,6 +185,38 @@ func (s *DiscoveryServer) initProxyMetadata(node *core.Node) (*model.Proxy, erro
 	return proxy, nil
 }
 
+func (s *DiscoveryServer) computeProxyState(proxy *model.Proxy, request *model.PushRequest) {
+	proxy.Lock()
+	defer proxy.Unlock()
+	// 1. If request == nil(initiation phase) or request.ConfigsUpdated == nil(global push), set proxy serviceTargets.
+	// 2. otherwise only set when svc update, this is for the case that a service may select the proxy
+	if request == nil || request.Forced ||
+		proxy.ShouldUpdateServiceTargets(request.ConfigsUpdated) {
+		proxy.SetServiceTargets(s.Env.ServiceDiscovery)
+	}
+
+	recomputeLabels := request == nil || request.IsProxyUpdate()
+	if recomputeLabels {
+	}
+
+	push := proxy.LastPushContext
+	if request == nil {
+	} else {
+		push = request.Push
+		if request.Forced {
+		}
+		for conf := range request.ConfigsUpdated {
+			switch conf.Kind {
+			}
+		}
+	}
+
+	proxy.LastPushContext = push
+	if request != nil {
+		proxy.LastPushTime = request.Start
+	}
+}
+
 func (s *DiscoveryServer) addCon(conID string, con *Connection) {
 	s.adsClientsMutex.Lock()
 	defer s.adsClientsMutex.Unlock()
@@ -258,20 +250,10 @@ func (s *DiscoveryServer) Stream(stream DiscoveryStream) error {
 		return status.Errorf(codes.ResourceExhausted, "request rate limit exceeded: %v", err)
 	}
 
-	ids, err := s.authenticate(ctx)
-	if err != nil {
-		return status.Error(codes.Unauthenticated, err.Error())
-	}
-
-	if ids != nil {
-		log.Debugf("Authenticated XDS: %v with identity %v", peerAddr, ids)
-	} else {
-		log.Debugf("Unauthenticated XDS: %s", peerAddr)
-	}
+	// TODO authenticate
 
 	s.globalPushContext().InitContext(s.Env, nil, nil)
 	con := newConnection(peerAddr, stream)
-	con.ids = ids
 	con.s = s
 	return xds.Stream(con)
 }
@@ -421,9 +403,59 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 	return s.pushXds(con, w, request)
 }
 
+func (s *DiscoveryServer) processDeltaRequest(req *discovery.DeltaDiscoveryRequest, con *Connection) error {
+	stype := v3.GetShortType(req.TypeUrl)
+	deltaLog.Infof("%s: REQ %s resources sub:%d unsub:%d nonce:%s", stype,
+		con.ID(), len(req.ResourceNamesSubscribe), len(req.ResourceNamesUnsubscribe), req.ResponseNonce)
+
+	if req.TypeUrl == v3.HealthInfoType {
+		return nil
+	}
+	if strings.HasPrefix(req.TypeUrl, v3.DebugType) {
+		return s.pushDeltaXds(con,
+			&model.WatchedResource{TypeUrl: req.TypeUrl, ResourceNames: sets.New(req.ResourceNamesSubscribe...)},
+			&model.PushRequest{Full: true, Push: con.proxy.LastPushContext, Forced: true})
+	}
+
+	shouldRespond := shouldRespondDelta(con, req)
+	if !shouldRespond {
+		return nil
+	}
+
+	subs, _, _ := deltaWatchedResources(nil, req)
+	request := &model.PushRequest{
+		Full:   true,
+		Push:   con.proxy.LastPushContext,
+		Reason: model.NewReasonStats(model.ProxyRequest),
+		Start:  con.proxy.LastPushTime,
+		Delta: model.ResourceDelta{
+			Subscribed:   subs,
+			Unsubscribed: sets.New(req.ResourceNamesUnsubscribe...).Delete("*"),
+		},
+		Forced: true,
+	}
+
+	err := s.pushDeltaXds(con, con.proxy.GetWatchedResource(req.TypeUrl), request)
+	if err != nil {
+		return err
+	}
+	if req.TypeUrl != v3.ClusterType {
+		return nil
+	}
+	return s.forceEDSPush(con)
+}
+
 func newConnection(peerAddr string, stream DiscoveryStream) *Connection {
 	return &Connection{
 		Connection: xds.NewConnection(peerAddr, stream),
+	}
+}
+
+func newDeltaConnection(peerAddr string, stream DeltaDiscoveryStream) *Connection {
+	return &Connection{
+		Connection:   xds.NewConnection(peerAddr, nil),
+		deltaStream:  stream,
+		deltaReqChan: make(chan *discovery.DeltaDiscoveryRequest, 1),
 	}
 }
 
@@ -476,4 +508,17 @@ func (conn *Connection) Process(req *discovery.DiscoveryRequest) error {
 
 func (conn *Connection) Watcher() xds.Watcher {
 	return conn.proxy
+}
+
+func (conn *Connection) Proxy() *model.Proxy {
+	return conn.proxy
+}
+
+func (conn *Connection) XdsConnection() *xds.Connection {
+	return &conn.Connection
+}
+
+func connectionID(node string) string {
+	id := atomic.AddInt64(&connectionNumber, 1)
+	return node + "-" + strconv.FormatInt(id, 10)
 }

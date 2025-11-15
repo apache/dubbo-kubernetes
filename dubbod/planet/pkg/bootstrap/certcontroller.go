@@ -20,13 +20,13 @@ package bootstrap
 import (
 	"bytes"
 	"fmt"
+	tb "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/trustbundle"
 	"os"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
-	tb "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/k8s/chiron"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	certutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/util"
@@ -40,31 +40,6 @@ const (
 	rootCertPollingInterval     = 60 * time.Second
 	defaultCACertPath           = "./var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
-
-func (s *Server) updateRootCertAndGenKeyCert() error {
-	log.Infof("update root cert and generate new dns certs")
-	caBundle := s.CA.GetCAKeyCertBundle().GetRootCertPem()
-	certChain, keyPEM, err := s.CA.GenKeyCert(s.dnsNames, SelfSignedCACertTTL.Get(), false)
-	if err != nil {
-		return err
-	}
-
-	if features.MultiRootMesh {
-		// Trigger trust anchor update, this will send PCDS to all sidecars.
-		log.Infof("Update trust anchor with new root cert")
-		err = s.workloadTrustBundle.UpdateTrustAnchor(&tb.TrustAnchorUpdate{
-			TrustAnchorConfig: tb.TrustAnchorConfig{Certs: []string{string(caBundle)}},
-			Source:            tb.SourceDubboCA,
-		})
-		if err != nil {
-			log.Errorf("failed to update trust anchor from source Dubbo CA, err: %v", err)
-			return err
-		}
-	}
-
-	s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, caBundle)
-	return nil
-}
 
 func (s *Server) initFileCertificateWatches(tlsOptions TLSOptions) error {
 	if err := s.dubbodCertBundleWatcher.SetFromFilesAndNotify(tlsOptions.KeyFile, tlsOptions.CertFile, tlsOptions.CaCertFile); err != nil {
@@ -109,12 +84,7 @@ func (s *Server) initFileCertificateWatches(tlsOptions TLSOptions) error {
 	return nil
 }
 
-func (s *Server) RotateDNSCertForK8sCA(stop <-chan struct{},
-	defaultCACertPath string,
-	signerName string,
-	approveCsr bool,
-	requestedLifetime time.Duration,
-) {
+func (s *Server) RotateDNSCertForK8sCA(stop <-chan struct{}, defaultCACertPath string, signerName string, approveCsr bool, requestedLifetime time.Duration) {
 	certUtil := certutil.NewCertUtil(int(defaultCertGracePeriodRatio * 100))
 	for {
 		waitTime, _ := certUtil.GetWaitTime(s.dubbodCertBundleWatcher.GetKeyCertBundle().CertPem, time.Now())
@@ -130,6 +100,7 @@ func (s *Server) RotateDNSCertForK8sCA(stop <-chan struct{},
 		s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, s.dubbodCertBundleWatcher.GetCABundle())
 	}
 }
+
 func (s *Server) initDNSCertsK8SRA() error {
 	var certChain, keyPEM, caBundle []byte
 	var err error
@@ -250,4 +221,29 @@ func (s *Server) watchRootCertAndGenKeyCert(stop <-chan struct{}) {
 			}
 		}
 	}
+}
+
+func (s *Server) updateRootCertAndGenKeyCert() error {
+	log.Infof("update root cert and generate new dns certs")
+	caBundle := s.CA.GetCAKeyCertBundle().GetRootCertPem()
+	certChain, keyPEM, err := s.CA.GenKeyCert(s.dnsNames, SelfSignedCACertTTL.Get(), false)
+	if err != nil {
+		return err
+	}
+
+	if features.MultiRootMesh {
+		// Trigger trust anchor update, this will send PCDS to all sidecars.
+		log.Infof("Update trust anchor with new root cert")
+		err = s.workloadTrustBundle.UpdateTrustAnchor(&tb.TrustAnchorUpdate{
+			TrustAnchorConfig: tb.TrustAnchorConfig{Certs: []string{string(caBundle)}},
+			Source:            tb.SourceDubboCA,
+		})
+		if err != nil {
+			log.Errorf("failed to update trust anchor from source Dubbo CA, err: %v", err)
+			return err
+		}
+	}
+
+	s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, caBundle)
+	return nil
 }

@@ -43,6 +43,14 @@ type Error struct {
 	err error
 }
 
+// NewError creates a new Error instance.
+func NewError(t ErrType, err error) *Error {
+	return &Error{
+		t:   t,
+		err: err,
+	}
+}
+
 // Error returns the string error message.
 func (e Error) Error() string {
 	return e.err.Error()
@@ -76,12 +84,4 @@ func (e Error) HTTPErrorCode() codes.Code {
 		return codes.InvalidArgument
 	}
 	return codes.Internal
-}
-
-// NewError creates a new Error instance.
-func NewError(t ErrType, err error) *Error {
-	return &Error{
-		t:   t,
-		err: err,
-	}
 }
