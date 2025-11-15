@@ -32,8 +32,6 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-var _ model.XdsCacheEntry = &EndpointBuilder{}
-
 var log = dubbolog.RegisterScope("ads", "ads debugging")
 
 // EndpointBuilder builds Envoy endpoints from Dubbo endpoints
@@ -46,6 +44,8 @@ type EndpointBuilder struct {
 	subsetName  string
 	service     *model.Service
 }
+
+var _ model.XdsCacheEntry = &EndpointBuilder{}
 
 // NewEndpointBuilder creates a new EndpointBuilder
 func NewEndpointBuilder(clusterName string, proxy *model.Proxy, push *model.PushContext) *EndpointBuilder {

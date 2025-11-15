@@ -37,8 +37,22 @@ type ObjectDecorator interface {
 	GetObjectKeyable() any
 }
 
-func getTypedKey[O any](a O) Key[O] {
-	return Key[O](GetKey(a))
+// Named is a convenience struct. It is ideal to be embedded into a type that has a name and namespace,
+// and will automatically implement the various interfaces to return the name, namespace, and a key based on these two.
+type Named struct {
+	Name, Namespace string
+}
+
+func (n Named) ResourceName() string {
+	return n.Namespace + "/" + n.Name
+}
+
+func (n Named) GetName() string {
+	return n.Name
+}
+
+func (n Named) GetNamespace() string {
+	return n.Namespace
 }
 
 // GetKey returns the key for the provided object.
@@ -88,24 +102,6 @@ func GetKey[O any](a O) string {
 	return fmt.Sprintf("Cannot get Key, got %T", a)
 }
 
-// Named is a convenience struct. It is ideal to be embedded into a type that has a name and namespace,
-// and will automatically implement the various interfaces to return the name, namespace, and a key based on these two.
-type Named struct {
-	Name, Namespace string
-}
-
-func (n Named) ResourceName() string {
-	return n.Namespace + "/" + n.Name
-}
-
-func (n Named) GetName() string {
-	return n.Name
-}
-
-func (n Named) GetNamespace() string {
-	return n.Namespace
-}
-
 // GetApplyConfigKey returns the key for the ApplyConfig.
 // If there is none, this will return nil.
 func GetApplyConfigKey[O any](a O) *string {
@@ -131,6 +127,10 @@ func GetApplyConfigKey[O any](a O) *string {
 		return ptr.Of(*meta.Namespace + "/" + *meta.Name)
 	}
 	return meta.Name
+}
+
+func getTypedKey[O any](a O) Key[O] {
+	return Key[O](GetKey(a))
 }
 
 // keyFunc is the internal API key function that returns "namespace"/"name" or

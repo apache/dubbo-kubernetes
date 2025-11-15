@@ -51,18 +51,6 @@ type ConfigKind struct {
 	*config.Config
 }
 
-func (c ConfigKind) ResourceName() string {
-	if c.Namespace == "" {
-		return c.GroupVersionKind.String() + "/" + c.Name
-	}
-
-	return c.GroupVersionKind.String() + "/" + c.Namespace + c.Name
-}
-
-func (c ConfigKind) Equals(other ConfigKind) bool {
-	return c.Config.Equals(other.Config)
-}
-
 func NewController(fileDir string, domainSuffix string, schemas collection.Schemas, options kubecontroller.Options) (*Controller, error) {
 	stop := make(chan struct{})
 	opts := krt.NewOptionsBuilder(stop, "file-monitor", options.KrtDebugger)
@@ -189,6 +177,18 @@ func (c *Controller) HasSynced() bool {
 	}
 
 	return true
+}
+
+func (c ConfigKind) ResourceName() string {
+	if c.Namespace == "" {
+		return c.GroupVersionKind.String() + "/" + c.Name
+	}
+
+	return c.GroupVersionKind.String() + "/" + c.Namespace + c.Name
+}
+
+func (c ConfigKind) Equals(other ConfigKind) bool {
+	return c.Config.Equals(other.Config)
 }
 
 // parseInputs is identical to crd.ParseInputs, except that it returns an array of config pointers.

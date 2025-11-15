@@ -1,4 +1,7 @@
 /*
+ * Portions of this file are derived from the Istio project:
+ *   https://github.com/istio/istio/blob/master/pkg/kube/informerfactory/factory.go
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -30,15 +33,6 @@ import (
 // NewInformerFunc returns a SharedIndexInformer.
 type NewInformerFunc func() cache.SharedIndexInformer
 
-type StartableInformer struct {
-	Informer cache.SharedIndexInformer
-	start    func(stopCh <-chan struct{})
-}
-
-func (s StartableInformer) Start(stopCh <-chan struct{}) {
-	s.start(stopCh)
-}
-
 // InformerFactory provides access to a shared informer factory
 type InformerFactory interface {
 	// Start initializes all requested informers. They are handled in goroutines
@@ -65,12 +59,9 @@ type InformerFactory interface {
 	Shutdown()
 }
 
-// NewSharedInformerFactory constructs a new instance of informerFactory for all namespaces.
-func NewSharedInformerFactory() InformerFactory {
-	return &informerFactory{
-		informers:        map[informerKey]builtInformer{},
-		startedInformers: sets.New[informerKey](),
-	}
+type StartableInformer struct {
+	Informer cache.SharedIndexInformer
+	start    func(stopCh <-chan struct{})
 }
 
 // InformerKey represents a unique informer
@@ -102,6 +93,14 @@ type informerFactory struct {
 }
 
 var _ InformerFactory = &informerFactory{}
+
+// NewSharedInformerFactory constructs a new instance of informerFactory for all namespaces.
+func NewSharedInformerFactory() InformerFactory {
+	return &informerFactory{
+		informers:        map[informerKey]builtInformer{},
+		startedInformers: sets.New[informerKey](),
+	}
+}
 
 func (f *informerFactory) InformerFor(resource schema.GroupVersionResource, opts kubetypes.InformerOptions, newFunc NewInformerFunc) StartableInformer {
 	f.lock.Lock()
@@ -213,4 +212,8 @@ func (f *informerFactory) Shutdown() {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	f.shuttingDown = true
+}
+
+func (s StartableInformer) Start(stopCh <-chan struct{}) {
+	s.start(stopCh)
 }

@@ -19,15 +19,17 @@ package ctrlz
 
 import (
 	"fmt"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/spf13/cobra"
 	"net"
 	"net/http"
 	"sync"
 	"time"
-
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
 var log = dubbolog.RegisterScope("ctrlz", "ctrlz debugging")
+
+const DefaultControlZPort = 9876
 
 type Options struct {
 	Port    uint16
@@ -40,7 +42,23 @@ type Server struct {
 	httpServer http.Server
 }
 
-const DefaultControlZPort = 9876
+func (s *Server) listen() {
+	log.Infof("ControlZ available at %s", s.httpServer.Addr)
+	err := s.httpServer.Serve(s.listener)
+	log.Infof("ControlZ terminated: %v", err)
+	s.shutdown.Done()
+}
+
+func (s *Server) Close() {
+	log.Info("Closing ControlZ")
+
+	if s.listener != nil {
+		if err := s.listener.Close(); err != nil {
+			log.Warnf("Error closing ControlZ: %v", err)
+		}
+		s.shutdown.Wait()
+	}
+}
 
 func DefaultOptions() *Options {
 	return &Options{
@@ -77,20 +95,9 @@ func Run(o *Options) (*Server, error) {
 	return s, nil
 }
 
-func (s *Server) listen() {
-	log.Infof("ControlZ available at %s", s.httpServer.Addr)
-	err := s.httpServer.Serve(s.listener)
-	log.Infof("ControlZ terminated: %v", err)
-	s.shutdown.Done()
-}
-
-func (s *Server) Close() {
-	log.Info("Closing ControlZ")
-
-	if s.listener != nil {
-		if err := s.listener.Close(); err != nil {
-			log.Warnf("Error closing ControlZ: %v", err)
-		}
-		s.shutdown.Wait()
-	}
+func (o *Options) AttachCobraFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().Uint16Var(&o.Port, "ctrlz_port", o.Port,
+		"The IP port to use for the ControlZ introspection facility")
+	cmd.PersistentFlags().StringVar(&o.Address, "ctrlz_address", o.Address,
+		"The IP Address to listen on for the ControlZ introspection facility. Use '*' to indicate all addresses.")
 }

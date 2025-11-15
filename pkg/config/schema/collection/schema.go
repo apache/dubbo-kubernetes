@@ -32,6 +32,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 )
 
+var protoMessageType = protoregistry.GlobalTypes.FindMessageByName
+
 // Schema for a resource.
 type Schema interface {
 	fmt.Stringer
@@ -151,6 +153,23 @@ type Builder struct {
 	ValidateProto validation.ValidateFunc
 }
 
+type schemaImpl struct {
+	clusterScoped  bool
+	builtin        bool
+	gvk            config.GroupVersionKind
+	versionAliases []string
+	plural         string
+	apiVersion     string
+	proto          string
+	goPackage      string
+	validateConfig validation.ValidateFunc
+	reflectType    reflect.Type
+	statusType     reflect.Type
+	statusPackage  string
+	identifier     string
+	synthetic      bool
+}
+
 // Build a Schema instance.
 func (b Builder) Build() (Schema, error) {
 	s := b.BuildNoValidate()
@@ -198,23 +217,6 @@ func (b Builder) BuildNoValidate() Schema {
 		statusType:     b.StatusType,
 		statusPackage:  b.StatusPackage,
 	}
-}
-
-type schemaImpl struct {
-	clusterScoped  bool
-	builtin        bool
-	gvk            config.GroupVersionKind
-	versionAliases []string
-	plural         string
-	apiVersion     string
-	proto          string
-	goPackage      string
-	validateConfig validation.ValidateFunc
-	reflectType    reflect.Type
-	statusType     reflect.Type
-	statusPackage  string
-	identifier     string
-	synthetic      bool
 }
 
 func (s *schemaImpl) GroupVersionKind() config.GroupVersionKind {
@@ -382,5 +384,3 @@ func getProtoMessageType(protoMessageName string) reflect.Type {
 	}
 	return reflect.TypeOf(t.Zero().Interface())
 }
-
-var protoMessageType = protoregistry.GlobalTypes.FindMessageByName

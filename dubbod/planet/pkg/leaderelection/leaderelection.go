@@ -68,10 +68,6 @@ type LeaderElection struct {
 	leaderMu     sync.Mutex
 }
 
-func NewLeaderElectionMulticluster(namespace, name, electionID, revision string, remote bool, client kube.Client) *LeaderElection {
-	return newLeaderElection(namespace, name, electionID, revision, false, remote, false, client)
-}
-
 func newLeaderElection(namespace, name, electionID, revision string, perRevision bool, remote bool, leaseLock bool, client kube.Client) *LeaderElection {
 	if revision == "" {
 		revision = "default"
@@ -102,16 +98,8 @@ func newLeaderElection(namespace, name, electionID, revision string, perRevision
 	}
 }
 
-func (l *LeaderElection) AddRunFunction(f func(stop <-chan struct{})) *LeaderElection {
-	l.runFns = append(l.runFns, f)
-	return l
-}
-
-// SetEnabled sets whether leader election is enabled. This can be used to override
-// the global EnableLeaderElection setting for specific cases (e.g., single-node deployments).
-func (l *LeaderElection) SetEnabled(enabled bool) *LeaderElection {
-	l.enabled = enabled
-	return l
+func NewLeaderElectionMulticluster(namespace, name, electionID, revision string, remote bool, client kube.Client) *LeaderElection {
+	return newLeaderElection(namespace, name, electionID, revision, false, remote, false, client)
 }
 
 func (l *LeaderElection) create() (*k8sleaderelection.LeaderElector, error) {
@@ -261,4 +249,16 @@ func (l *LeaderElection) Run(stop <-chan struct{}) {
 			log.Infof("Leader election cycle %v lost. Trying again", l.cycle.Load())
 		}
 	}
+}
+
+// SetEnabled sets whether leader election is enabled. This can be used to override
+// the global EnableLeaderElection setting for specific cases (e.g., single-node deployments).
+func (l *LeaderElection) SetEnabled(enabled bool) *LeaderElection {
+	l.enabled = enabled
+	return l
+}
+
+func (l *LeaderElection) AddRunFunction(f func(stop <-chan struct{})) *LeaderElection {
+	l.runFns = append(l.runFns, f)
+	return l
 }

@@ -27,7 +27,6 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 
-	"github.com/apache/dubbo-kubernetes/pkg/file"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -40,11 +39,11 @@ const (
 	FileWatcherCertProviderName = "file_watcher"
 )
 
-type FileWatcherCertProviderConfig struct {
-	CertificateFile   string          `json:"certificate_file,omitempty"`
-	PrivateKeyFile    string          `json:"private_key_file,omitempty"`
-	CACertificateFile string          `json:"ca_certificate_file,omitempty"`
-	RefreshDuration   json.RawMessage `json:"refresh_interval,omitempty"`
+type Bootstrap struct {
+	XDSServers                 []XdsServer                    `json:"xds_servers,omitempty"`
+	Node                       *core.Node                     `json:"node,omitempty"`
+	CertProviders              map[string]CertificateProvider `json:"certificate_providers,omitempty"`
+	ServerListenerNameTemplate string                         `json:"server_listener_resource_name_template,omitempty"`
 }
 
 type GenerateBootstrapOptions struct {
@@ -54,73 +53,16 @@ type GenerateBootstrapOptions struct {
 	CertDir          string
 }
 
-func (cp *CertificateProvider) UnmarshalJSON(data []byte) error {
-	var dat map[string]*json.RawMessage
-	if err := json.Unmarshal(data, &dat); err != nil {
-		return err
-	}
-	*cp = CertificateProvider{}
-
-	if pluginNameVal, ok := dat["plugin_name"]; ok {
-		if err := json.Unmarshal(*pluginNameVal, &cp.PluginName); err != nil {
-			return fmt.Errorf("failed parsing plugin_name in certificate_provider: %v", err)
-		}
-	} else {
-		return fmt.Errorf("did not find plugin_name in certificate_provider")
-	}
-
-	if configVal, ok := dat["config"]; ok {
-		var err error
-		switch cp.PluginName {
-		case FileWatcherCertProviderName:
-			config := FileWatcherCertProviderConfig{}
-			err = json.Unmarshal(*configVal, &config)
-			cp.Config = config
-		default:
-			config := FileWatcherCertProviderConfig{}
-			err = json.Unmarshal(*configVal, &config)
-			cp.Config = config
-		}
-		if err != nil {
-			return fmt.Errorf("failed parsing config in certificate_provider: %v", err)
-		}
-	} else {
-		return fmt.Errorf("did not find config in certificate_provider")
-	}
-
-	return nil
+type CertificateProvider struct {
+	PluginName string `json:"plugin_name,omitempty"`
+	Config     any    `json:"config,omitempty"`
 }
 
-func (c *FileWatcherCertProviderConfig) FilePaths() []string {
-	return []string{c.CertificateFile, c.PrivateKeyFile, c.CACertificateFile}
-}
-
-func (b *Bootstrap) FileWatcherProvider() *FileWatcherCertProviderConfig {
-	if b == nil || b.CertProviders == nil {
-		return nil
-	}
-	for _, provider := range b.CertProviders {
-		if provider.PluginName == FileWatcherCertProviderName {
-			cfg, ok := provider.Config.(FileWatcherCertProviderConfig)
-			if !ok {
-				return nil
-			}
-			return &cfg
-		}
-	}
-	return nil
-}
-
-func LoadBootstrap(file string) (*Bootstrap, error) {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	b := &Bootstrap{}
-	if err := json.Unmarshal(data, b); err != nil {
-		return nil, err
-	}
-	return b, err
+type FileWatcherCertProviderConfig struct {
+	CertificateFile   string          `json:"certificate_file,omitempty"`
+	PrivateKeyFile    string          `json:"private_key_file,omitempty"`
+	CACertificateFile string          `json:"ca_certificate_file,omitempty"`
+	RefreshDuration   json.RawMessage `json:"refresh_interval,omitempty"`
 }
 
 type ChannelCreds struct {
@@ -128,22 +70,10 @@ type ChannelCreds struct {
 	Config any    `json:"config,omitempty"`
 }
 
-type Bootstrap struct {
-	XDSServers                 []XdsServer                    `json:"xds_servers,omitempty"`
-	Node                       *core.Node                     `json:"node,omitempty"`
-	CertProviders              map[string]CertificateProvider `json:"certificate_providers,omitempty"`
-	ServerListenerNameTemplate string                         `json:"server_listener_resource_name_template,omitempty"`
-}
-
 type XdsServer struct {
 	ServerURI      string         `json:"server_uri,omitempty"`
 	ChannelCreds   []ChannelCreds `json:"channel_creds,omitempty"`
 	ServerFeatures []string       `json:"server_features,omitempty"`
-}
-
-type CertificateProvider struct {
-	PluginName string `json:"plugin_name,omitempty"`
-	Config     any    `json:"config,omitempty"`
 }
 
 func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
@@ -204,6 +134,78 @@ func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
 	return &bootstrap, nil
 }
 
+func GenerateBootstrapFile(opts GenerateBootstrapOptions, path string) (*Bootstrap, error) {
+	bootstrap, err := GenerateBootstrap(opts)
+	if err != nil {
+		return nil, err
+	}
+	jsonData, err := json.MarshalIndent(bootstrap, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	if err := file.AtomicWrite(path, jsonData, os.FileMode(0o644)); err != nil {
+		return nil, fmt.Errorf("failed writing to %s: %v", path, err)
+	}
+	return bootstrap, nil
+}
+
+func (b *Bootstrap) FileWatcherProvider() *FileWatcherCertProviderConfig {
+	if b == nil || b.CertProviders == nil {
+		return nil
+	}
+	for _, provider := range b.CertProviders {
+		if provider.PluginName == FileWatcherCertProviderName {
+			cfg, ok := provider.Config.(FileWatcherCertProviderConfig)
+			if !ok {
+				return nil
+			}
+			return &cfg
+		}
+	}
+	return nil
+}
+
+func (c *FileWatcherCertProviderConfig) FilePaths() []string {
+	return []string{c.CertificateFile, c.PrivateKeyFile, c.CACertificateFile}
+}
+
+func (cp *CertificateProvider) UnmarshalJSON(data []byte) error {
+	var dat map[string]*json.RawMessage
+	if err := json.Unmarshal(data, &dat); err != nil {
+		return err
+	}
+	*cp = CertificateProvider{}
+
+	if pluginNameVal, ok := dat["plugin_name"]; ok {
+		if err := json.Unmarshal(*pluginNameVal, &cp.PluginName); err != nil {
+			return fmt.Errorf("failed parsing plugin_name in certificate_provider: %v", err)
+		}
+	} else {
+		return fmt.Errorf("did not find plugin_name in certificate_provider")
+	}
+
+	if configVal, ok := dat["config"]; ok {
+		var err error
+		switch cp.PluginName {
+		case FileWatcherCertProviderName:
+			config := FileWatcherCertProviderConfig{}
+			err = json.Unmarshal(*configVal, &config)
+			cp.Config = config
+		default:
+			config := FileWatcherCertProviderConfig{}
+			err = json.Unmarshal(*configVal, &config)
+			cp.Config = config
+		}
+		if err != nil {
+			return fmt.Errorf("failed parsing config in certificate_provider: %v", err)
+		}
+	} else {
+		return fmt.Errorf("did not find config in certificate_provider")
+	}
+
+	return nil
+}
+
 func extractMeta(node *model.Node) (*structpb.Struct, error) {
 	bytes, err := json.Marshal(node.Metadata)
 	if err != nil {
@@ -230,19 +232,4 @@ func extractMeta(node *model.Node) (*structpb.Struct, error) {
 		return nil, err
 	}
 	return xdsMeta, nil
-}
-
-func GenerateBootstrapFile(opts GenerateBootstrapOptions, path string) (*Bootstrap, error) {
-	bootstrap, err := GenerateBootstrap(opts)
-	if err != nil {
-		return nil, err
-	}
-	jsonData, err := json.MarshalIndent(bootstrap, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	if err := file.AtomicWrite(path, jsonData, os.FileMode(0o644)); err != nil {
-		return nil, fmt.Errorf("failed writing to %s: %v", path, err)
-	}
-	return bootstrap, nil
 }

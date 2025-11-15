@@ -35,12 +35,6 @@ var (
 	errConflict = errors.New("conflicting resource version, try again")
 )
 
-// Make creates an in-memory config store from a config schemas
-// It is with validation
-func Make(schemas collection.Schemas) model.ConfigStore {
-	return newStore(schemas, false)
-}
-
 type store struct {
 	schemas        collection.Schemas
 	data           map[config.GroupVersionKind]map[string]map[string]any
@@ -63,6 +57,7 @@ func newStore(schemas collection.Schemas, skipValidation bool) model.ConfigStore
 func (cr *store) Schemas() collection.Schemas {
 	return cr.schemas
 }
+
 func (cr *store) Get(kind config.GroupVersionKind, name, namespace string) *config.Config {
 	cr.mutex.RLock()
 	defer cr.mutex.RUnlock()
@@ -252,6 +247,12 @@ func (cr *store) Patch(orig config.Config, patchFn config.PatchFunc) (string, er
 	ns[cfg.Name] = cfg
 
 	return rev, nil
+}
+
+// Make creates an in-memory config store from a config schemas
+// It is with validation
+func Make(schemas collection.Schemas) model.ConfigStore {
+	return newStore(schemas, false)
 }
 
 // hasConflict checks if the two resources have a conflict, which will block Update calls

@@ -22,8 +22,6 @@ import (
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 )
 
-func (configgen *ConfigGeneratorImpl) BuildListeners(node *model.Proxy,
-	push *model.PushContext,
-) []*listener.Listener {
+func (configgen *ConfigGeneratorImpl) BuildListeners(node *model.Proxy, push *model.PushContext) []*listener.Listener {
 	return nil
 }

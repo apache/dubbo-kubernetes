@@ -23,16 +23,16 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func MessageToAnyWithError(msg proto.Message) (*anypb.Any, error) {
-	b, err := marshal(msg)
+type vtStrictMarshal interface {
+	MarshalVTStrict() ([]byte, error)
+}
+
+func MessageToAny(msg proto.Message) *anypb.Any {
+	out, err := MessageToAnyWithError(msg)
 	if err != nil {
-		return nil, err
+		return nil
 	}
-	return &anypb.Any{
-		// nolint: staticcheck
-		TypeUrl: "type.googleapis.com/" + string(msg.ProtoReflect().Descriptor().FullName()),
-		Value:   b,
-	}, nil
+	return out
 }
 
 func marshal(msg proto.Message) ([]byte, error) {
@@ -47,14 +47,14 @@ func marshal(msg proto.Message) ([]byte, error) {
 	return proto.MarshalOptions{Deterministic: true}.Marshal(msg)
 }
 
-func MessageToAny(msg proto.Message) *anypb.Any {
-	out, err := MessageToAnyWithError(msg)
+func MessageToAnyWithError(msg proto.Message) (*anypb.Any, error) {
+	b, err := marshal(msg)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return out
-}
-
-type vtStrictMarshal interface {
-	MarshalVTStrict() ([]byte, error)
+	return &anypb.Any{
+		// nolint: staticcheck
+		TypeUrl: "type.googleapis.com/" + string(msg.ProtoReflect().Descriptor().FullName()),
+		Value:   b,
+	}, nil
 }

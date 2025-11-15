@@ -40,11 +40,6 @@ type crdWatcher struct {
 	stop    <-chan struct{}
 }
 
-func init() {
-	// Unfortunate hack needed to avoid circular imports
-	kube.NewCrdWatcher = newCrdWatcher
-}
-
 func newCrdWatcher(client kube.Client) kubetypes.CrdWatcher {
 	c := &crdWatcher{
 		running:   make(chan struct{}),
@@ -135,4 +130,9 @@ func (c *crdWatcher) Run(stop <-chan struct{}) {
 	kube.WaitForCacheSync("crd watcher", stop, c.crds.HasSynced)
 	c.queue.Run(stop)
 	c.crds.ShutdownHandlers()
+}
+
+func init() {
+	// Unfortunate hack needed to avoid circular imports
+	kube.NewCrdWatcher = newCrdWatcher
 }

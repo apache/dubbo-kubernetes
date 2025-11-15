@@ -23,9 +23,7 @@ import (
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 )
 
 func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, push *model.PushContext, routeNames []string) model.Resources {

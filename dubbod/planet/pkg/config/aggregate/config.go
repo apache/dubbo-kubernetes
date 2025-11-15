@@ -33,58 +33,6 @@ import (
 
 var errorUnsupported = errors.New("unsupported operation: the config aggregator is read-only")
 
-// makeStore creates an aggregate config store from several config stores and
-// unifies their descriptors
-func makeStore(stores []model.ConfigStore, writer model.ConfigStore) (model.ConfigStore, error) {
-	union := collection.NewSchemasBuilder()
-	storeTypes := make(map[config.GroupVersionKind][]model.ConfigStore)
-	for _, store := range stores {
-		for _, s := range store.Schemas().All() {
-			if len(storeTypes[s.GroupVersionKind()]) == 0 {
-				if err := union.Add(s); err != nil {
-					return nil, err
-				}
-			}
-			storeTypes[s.GroupVersionKind()] = append(storeTypes[s.GroupVersionKind()], store)
-		}
-	}
-
-	schemas := union.Build()
-	if err := schemas.Validate(); err != nil {
-		return nil, err
-	}
-	result := &store{
-		schemas: schemas,
-		stores:  storeTypes,
-		writer:  writer,
-	}
-
-	return result, nil
-}
-
-// MakeWriteableCache creates an aggregate config store cache from several config store caches. An additional
-// `writer` config store is passed, which may or may not be part of `caches`.
-func MakeWriteableCache(caches []model.ConfigStoreController, writer model.ConfigStore) (model.ConfigStoreController, error) {
-	stores := make([]model.ConfigStore, 0, len(caches))
-	for _, cache := range caches {
-		stores = append(stores, cache)
-	}
-	store, err := makeStore(stores, writer)
-	if err != nil {
-		return nil, err
-	}
-	return &storeCache{
-		ConfigStore: store,
-		caches:      caches,
-	}, nil
-}
-
-// MakeCache creates an aggregate config store cache from several config store
-// caches.
-func MakeCache(caches []model.ConfigStoreController) (model.ConfigStoreController, error) {
-	return MakeWriteableCache(caches, nil)
-}
-
 type store struct {
 	// schemas is the unified
 	schemas collection.Schemas
@@ -95,11 +43,15 @@ type store struct {
 	writer model.ConfigStore
 }
 
+type storeCache struct {
+	model.ConfigStore
+	caches []model.ConfigStoreController
+}
+
 func (cr *store) Schemas() collection.Schemas {
 	return cr.schemas
 }
 
-// Get the first config found in the stores.
 func (cr *store) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
 	for _, store := range cr.stores[typ] {
 		config := store.Get(typ, name, namespace)
@@ -110,7 +62,6 @@ func (cr *store) Get(typ config.GroupVersionKind, name, namespace string) *confi
 	return nil
 }
 
-// List all configs in the stores.
 func (cr *store) List(typ config.GroupVersionKind, namespace string) []config.Config {
 	stores := cr.stores[typ]
 	if len(stores) == 0 {
@@ -177,18 +128,33 @@ func (cr *store) Patch(orig config.Config, patchFn config.PatchFunc) (string, er
 	return cr.writer.Patch(orig, patchFn)
 }
 
-type storeCache struct {
-	model.ConfigStore
-	caches []model.ConfigStoreController
-}
-
-func (cr *storeCache) HasSynced() bool {
-	for _, cache := range cr.caches {
-		if !cache.HasSynced() {
-			return false
+// makeStore creates an aggregate config store from several config stores and
+// unifies their descriptors
+func makeStore(stores []model.ConfigStore, writer model.ConfigStore) (model.ConfigStore, error) {
+	union := collection.NewSchemasBuilder()
+	storeTypes := make(map[config.GroupVersionKind][]model.ConfigStore)
+	for _, store := range stores {
+		for _, s := range store.Schemas().All() {
+			if len(storeTypes[s.GroupVersionKind()]) == 0 {
+				if err := union.Add(s); err != nil {
+					return nil, err
+				}
+			}
+			storeTypes[s.GroupVersionKind()] = append(storeTypes[s.GroupVersionKind()], store)
 		}
 	}
-	return true
+
+	schemas := union.Build()
+	if err := schemas.Validate(); err != nil {
+		return nil, err
+	}
+	result := &store{
+		schemas: schemas,
+		stores:  storeTypes,
+		writer:  writer,
+	}
+
+	return result, nil
 }
 
 func (cr *storeCache) RegisterEventHandler(kind config.GroupVersionKind, handler model.EventHandler) {
@@ -204,4 +170,36 @@ func (cr *storeCache) Run(stop <-chan struct{}) {
 		go cache.Run(stop)
 	}
 	<-stop
+}
+
+func (cr *storeCache) HasSynced() bool {
+	for _, cache := range cr.caches {
+		if !cache.HasSynced() {
+			return false
+		}
+	}
+	return true
+}
+
+// MakeWriteableCache creates an aggregate config store cache from several config store caches. An additional
+// `writer` config store is passed, which may or may not be part of `caches`.
+func MakeWriteableCache(caches []model.ConfigStoreController, writer model.ConfigStore) (model.ConfigStoreController, error) {
+	stores := make([]model.ConfigStore, 0, len(caches))
+	for _, cache := range caches {
+		stores = append(stores, cache)
+	}
+	store, err := makeStore(stores, writer)
+	if err != nil {
+		return nil, err
+	}
+	return &storeCache{
+		ConfigStore: store,
+		caches:      caches,
+	}, nil
+}
+
+// MakeCache creates an aggregate config store cache from several config store
+// caches.
+func MakeCache(caches []model.ConfigStoreController) (model.ConfigStoreController, error) {
+	return MakeWriteableCache(caches, nil)
 }

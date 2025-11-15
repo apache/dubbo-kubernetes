@@ -26,11 +26,9 @@ const (
 	RouteType                  = model.RouteType
 	SecretType                 = model.SecretType
 	ExtensionConfigurationType = model.ExtensionConfigurationType
-	NameTableType              = model.NameTableType
 	DebugType                  = model.DebugType
 	HealthInfoType             = model.HealthInfoType
 	AddressType                = model.AddressType
-	WorkloadType               = model.WorkloadType
 )
 
 func GetShortType(typeURL string) string {

@@ -130,4 +130,8 @@ func addFlags(c *cobra.Command) {
 		"The ID of the cluster that this Dubbod instance resides")
 	c.PersistentFlags().StringToStringVar(&serverArgs.RegistryOptions.KubeOptions.ClusterAliases, "clusterAliases", map[string]string{},
 		"Alias names for clusters. Example: alias1=cluster1,alias2=cluster2")
+
+	serverArgs.CtrlZOptions.AttachCobraFlags(c)
+
+	serverArgs.KeepaliveOptions.AttachCobraFlags(c)
 }

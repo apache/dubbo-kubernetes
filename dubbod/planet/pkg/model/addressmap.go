@@ -41,6 +41,23 @@ func (m *AddressMap) GetAddresses() map[cluster.ID][]string {
 	return out
 }
 
+func (m *AddressMap) AddAddressesFor(c cluster.ID, addresses []string) *AddressMap {
+	if len(addresses) == 0 {
+		return m
+	}
+
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// Create the map if nil.
+	if m.Addresses == nil {
+		m.Addresses = make(map[cluster.ID][]string)
+	}
+
+	m.Addresses[c] = append(m.Addresses[c], addresses...)
+	return m
+}
+
 func (m *AddressMap) GetAddressesFor(c cluster.ID) []string {
 	if m == nil {
 		return nil
@@ -89,21 +106,4 @@ func (m *AddressMap) Len() int {
 	defer m.mutex.RUnlock()
 
 	return len(m.Addresses)
-}
-
-func (m *AddressMap) AddAddressesFor(c cluster.ID, addresses []string) *AddressMap {
-	if len(addresses) == 0 {
-		return m
-	}
-
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	// Create the map if nil.
-	if m.Addresses == nil {
-		m.Addresses = make(map[cluster.ID][]string)
-	}
-
-	m.Addresses[c] = append(m.Addresses[c], addresses...)
-	return m
 }

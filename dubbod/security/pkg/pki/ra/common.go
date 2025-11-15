@@ -110,25 +110,8 @@ func (r *KubernetesRA) SignWithCertChain(csrPEM []byte, certOpts ca.CertOpts) ([
 	return respCertChain, nil
 }
 
-// GetCAKeyCertBundle returns the KeyCertBundle for the CA.
 func (r *KubernetesRA) GetCAKeyCertBundle() *util.KeyCertBundle {
 	return r.keyCertBundle
-}
-
-func (r *KubernetesRA) SetCACertificatesFromMeshConfig(caCertificates []*meshconfig.MeshConfig_CertificateData) {
-	r.mutex.Lock()
-	for _, pemCert := range caCertificates {
-		// TODO:  take care of spiffe bundle format as well
-		cert := pemCert.GetPem()
-		certSigners := pemCert.CertSigners
-		if len(certSigners) != 0 {
-			certSigner := strings.Join(certSigners, ",")
-			if cert != "" {
-				r.caCertificatesFromMeshConfig[certSigner] = cert
-			}
-		}
-	}
-	r.mutex.Unlock()
 }
 
 func (r *KubernetesRA) GetRootCertFromMeshConfig(signerName string) ([]byte, error) {
@@ -152,36 +135,20 @@ func (r *KubernetesRA) GetRootCertFromMeshConfig(signerName string) ([]byte, err
 	return nil, fmt.Errorf("failed to find root cert for signer: %v in mesh config", signerName)
 }
 
-func ValidateCSR(csrPEM []byte, subjectIDs []string) bool {
-	csr, err := util.ParsePemEncodedCSR(csrPEM)
-	if err != nil {
-		return false
-	}
-	if err := csr.CheckSignature(); err != nil {
-		return false
-	}
-	csrIDs, err := util.ExtractIDs(csr.Extensions)
-	if err != nil {
-		return false
-	}
-	for _, s1 := range csrIDs {
-		if !slices.Contains(subjectIDs, s1) {
-			return false
+func (r *KubernetesRA) SetCACertificatesFromMeshConfig(caCertificates []*meshconfig.MeshConfig_CertificateData) {
+	r.mutex.Lock()
+	for _, pemCert := range caCertificates {
+		// TODO:  take care of spiffe bundle format as well
+		cert := pemCert.GetPem()
+		certSigners := pemCert.CertSigners
+		if len(certSigners) != 0 {
+			certSigner := strings.Join(certSigners, ",")
+			if cert != "" {
+				r.caCertificatesFromMeshConfig[certSigner] = cert
+			}
 		}
 	}
-
-	hosts := strings.Join(csrIDs, ",")
-	genCSRTemplate, err := util.GenCSRTemplate(util.CertOptions{Host: hosts})
-	if err != nil {
-		return false
-	}
-	if len(csr.Subject.Organization) == 0 {
-		csr.Subject.Organization = []string{""}
-	}
-	if !compareCSRs(csr, genCSRTemplate) {
-		return false
-	}
-	return true
+	r.mutex.Unlock()
 }
 
 func compareCSRs(orgCSR, genCSR *x509.CertificateRequest) bool {
@@ -228,6 +195,38 @@ func compareCSRs(orgCSR, genCSR *x509.CertificateRequest) bool {
 	}
 	// ExtraExtensions should not be populated in the orgCSR
 	return len(orgCSR.ExtraExtensions) == 0
+}
+
+func ValidateCSR(csrPEM []byte, subjectIDs []string) bool {
+	csr, err := util.ParsePemEncodedCSR(csrPEM)
+	if err != nil {
+		return false
+	}
+	if err := csr.CheckSignature(); err != nil {
+		return false
+	}
+	csrIDs, err := util.ExtractIDs(csr.Extensions)
+	if err != nil {
+		return false
+	}
+	for _, s1 := range csrIDs {
+		if !slices.Contains(subjectIDs, s1) {
+			return false
+		}
+	}
+
+	hosts := strings.Join(csrIDs, ",")
+	genCSRTemplate, err := util.GenCSRTemplate(util.CertOptions{Host: hosts})
+	if err != nil {
+		return false
+	}
+	if len(csr.Subject.Organization) == 0 {
+		csr.Subject.Organization = []string{""}
+	}
+	if !compareCSRs(csr, genCSRTemplate) {
+		return false
+	}
+	return true
 }
 
 func preSign(raOpts *DubboRAOptions, csrPEM []byte, subjectIDs []string, requestedLifetime time.Duration, forCA bool) (time.Duration, error) {

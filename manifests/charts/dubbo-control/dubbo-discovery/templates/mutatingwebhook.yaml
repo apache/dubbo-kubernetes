@@ -2,7 +2,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: dubbo-proxyless-injector
+  name: dubbo-grpcxds-injector
   namespace: default
   labels:
     app: dubbod
@@ -17,7 +17,7 @@ webhooks:
         path: /inject
         port: 443
     failurePolicy: Fail
-    name: rev.namespace.sidecar-injector.dubbo.apache.org
+    name: rev.namespace.grpcxds-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo.apache.org/rev
@@ -28,7 +28,7 @@ webhooks:
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: grpcxds.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -52,7 +52,7 @@ webhooks:
         path: /inject
         port: 443
     failurePolicy: Fail
-    name: rev.object.proxyless-injector.dubbo.apache.org
+    name: rev.object.grpcxds-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo.apache.org/rev
@@ -61,7 +61,7 @@ webhooks:
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: grpcxds.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -88,7 +88,7 @@ webhooks:
         namespace: dubbo-system
         path: /inject
         port: 443
-    name: namespace.proxyless-injector.dubbo.apache.org
+    name: namespace.grpcxds-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo-injection
@@ -97,7 +97,7 @@ webhooks:
             - enabled
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: grpcxds.dubbo.apache.org/inject
           operator: NotIn
           values:
             - "false"
@@ -120,14 +120,14 @@ webhooks:
         namespace: dubbo-system
         path: /inject
         port: 443
-    name: object.proxyless-injector.dubbo.apache.org
+    name: object.grpcxds-injector.dubbo.apache.org
     namespaceSelector:
       matchExpressions:
         - key: dubbo-injection
           operator: DoesNotExist
     objectSelector:
       matchExpressions:
-        - key: proxyless.dubbo.apache.org/inject
+        - key: grpcxds.dubbo.apache.org/inject
           operator: In
           values:
             - "true"

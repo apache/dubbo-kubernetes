@@ -48,6 +48,10 @@ import (
 )
 
 const (
+	serviceNodeSeparator = "~"
+)
+
+const (
 	AegisCACertPath = "./var/run/secrets/dubbo"
 )
 
@@ -58,6 +62,11 @@ const (
 )
 
 type SDSServiceFactory = func(_ *security.Options, _ security.SecretManager, _ *mesh.PrivateKeyProvider) SDSService
+
+type SDSService interface {
+	OnSecretUpdate(resourceName string)
+	Stop()
+}
 
 type Proxy struct {
 	ID          string
@@ -142,8 +151,6 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		return nil, fmt.Errorf("failed to start xds proxy: %v", err)
 	}
 
-	// Generate bootstrap file must happen after xdsProxy is initialized
-	// because we need the UDS path to be converted to absolute path
 	var bootstrapNode *core.Node
 	if a.cfg.GRPCBootstrapPath != "" {
 		log.Infof("Starting planet-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
@@ -171,8 +178,6 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	} else {
 		log.Warn("GRPC_XDS_BOOTSTRAP not set, bootstrap file will not be generated")
 	}
-	// Watch for certificate changes to update dial options
-	// Note: dial options are already initialized in initXdsProxy, this is only for updates
 	if a.proxyConfig.ControlPlaneAuthPolicy != mesh.AuthenticationPolicy_NONE {
 		rootCAForXDS, err := a.FindRootCAForXDS()
 		if err != nil {
@@ -252,10 +257,6 @@ func (a *Agent) Close() {
 	if a.statusSrv != nil {
 		_ = a.statusSrv.Shutdown(context.Background())
 	}
-}
-
-func (node *Proxy) DiscoverIPMode() {
-	node.ipMode = model.DiscoverIPMode(node.IPAddresses)
 }
 
 func (a *Agent) FindRootCAForXDS() (string, error) {
@@ -514,14 +515,9 @@ func (a *Agent) generateNodeMetadata() (*model.Node, error) {
 	})
 }
 
-type SDSService interface {
-	OnSecretUpdate(resourceName string)
-	Stop()
+func (node *Proxy) DiscoverIPMode() {
+	node.ipMode = model.DiscoverIPMode(node.IPAddresses)
 }
-
-const (
-	serviceNodeSeparator = "~"
-)
 
 func (node *Proxy) ServiceNode() string {
 	ip := ""
@@ -533,23 +529,17 @@ func (node *Proxy) ServiceNode() string {
 	}, serviceNodeSeparator)
 }
 
-func checkSocket(ctx context.Context, socketPath string) (bool, error) {
-	socketExists := socketFileExists(socketPath)
-	if !socketExists {
-		return false, nil
-	}
+func getKeyCertInner(certPath string) (string, string) {
+	key := path.Join(certPath, constants.KeyFilename)
+	cert := path.Join(certPath, constants.CertChainFilename)
+	return key, cert
+}
 
-	err := socketHealthCheck(ctx, socketPath)
-	if err != nil {
-		log.Debugf("SDS socket detected but not healthy: %v", err)
-		err = os.Remove(socketPath)
-		if err != nil {
-			return false, fmt.Errorf("existing SDS socket could not be removed: %v", err)
-		}
-		return false, nil
+func fileExists(path string) bool {
+	if fi, err := os.Stat(path); err == nil && fi.Mode().IsRegular() {
+		return true
 	}
-
-	return true, nil
+	return false
 }
 
 func socketHealthCheck(ctx context.Context, socketPath string) error {
@@ -573,22 +563,28 @@ func socketHealthCheck(ctx context.Context, socketPath string) error {
 	return nil
 }
 
-func getKeyCertInner(certPath string) (string, string) {
-	key := path.Join(certPath, constants.KeyFilename)
-	cert := path.Join(certPath, constants.CertChainFilename)
-	return key, cert
-}
-
-func fileExists(path string) bool {
-	if fi, err := os.Stat(path); err == nil && fi.Mode().IsRegular() {
-		return true
-	}
-	return false
-}
-
 func socketFileExists(path string) bool {
 	if fi, err := os.Stat(path); err == nil && !fi.Mode().IsRegular() {
 		return true
 	}
 	return false
+}
+
+func checkSocket(ctx context.Context, socketPath string) (bool, error) {
+	socketExists := socketFileExists(socketPath)
+	if !socketExists {
+		return false, nil
+	}
+
+	err := socketHealthCheck(ctx, socketPath)
+	if err != nil {
+		log.Debugf("SDS socket detected but not healthy: %v", err)
+		err = os.Remove(socketPath)
+		if err != nil {
+			return false, fmt.Errorf("existing SDS socket could not be removed: %v", err)
+		}
+		return false, nil
+	}
+
+	return true, nil
 }

@@ -19,11 +19,11 @@ package util
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	dubbonetworking "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking"
-	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 )
@@ -32,11 +32,6 @@ const (
 	// PassthroughFilterChain to catch traffic that doesn't match other filter chains.
 	PassthroughFilterChain = "PassthroughFilterChain"
 )
-
-func DelimitedStatsPrefix(statPrefix string) string {
-	statPrefix += constants.StatPrefixDelimiter
-	return statPrefix
-}
 
 func BuildAdditionalAddresses(extrAddresses []string, listenPort uint32) []*listener.AdditionalAddress {
 	var additionalAddresses []*listener.AdditionalAddress
@@ -84,6 +79,11 @@ func BuildNetworkAddress(bind string, port uint32, transport dubbonetworking.Tra
 			},
 		},
 	}
+}
+
+func DelimitedStatsPrefix(statPrefix string) string {
+	statPrefix += constants.StatPrefixDelimiter
+	return statPrefix
 }
 
 // ByteCount returns a human readable byte format

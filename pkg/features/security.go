@@ -1,4 +1,7 @@
 /*
+ * Portions of this file are derived from the Istio project:
+ *   https://github.com/istio/istio/blob/master/pkg/features/security.go
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.

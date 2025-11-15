@@ -25,7 +25,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
 	"istio.io/api/annotation"
 	meshconfig "istio.io/api/mesh/v1alpha1"
@@ -38,10 +37,14 @@ import (
 )
 
 const (
-	ProxyContainerName      = "dubbo-proxy"
-	ValidationContainerName = "dubbo-validation"
-	InitContainerName       = "dubbo-init"
-	EnableCoreDumpName      = "enable-core-dump"
+	ProxyContainerName = "dubbo-proxy"
+)
+
+type InjectionPolicy string
+
+const (
+	InjectionPolicyDisabled InjectionPolicy = "disabled"
+	InjectionPolicyEnabled  InjectionPolicy = "enabled"
 )
 
 type (
@@ -50,11 +53,12 @@ type (
 	Templates    map[string]*template.Template
 )
 
-type InjectionPolicy string
+type ContainerReorder int
 
 const (
-	InjectionPolicyDisabled InjectionPolicy = "disabled"
-	InjectionPolicyEnabled  InjectionPolicy = "enabled"
+	MoveFirst ContainerReorder = iota
+	MoveLast
+	Remove
 )
 
 type Config struct {
@@ -66,7 +70,7 @@ type Config struct {
 	Policy              InjectionPolicy     `json:"policy"`
 }
 
-type ProxylessTemplateData struct {
+type TemplateData struct {
 	TypeMeta                 metav1.TypeMeta
 	DeploymentMeta           types.NamespacedName
 	ObjectMeta               metav1.ObjectMeta
@@ -81,12 +85,78 @@ type ProxylessTemplateData struct {
 	CompliancePolicy         string
 }
 
-type ProxylessInjectionStatus struct {
-	InitContainers   []string `json:"initContainers"`
+type InjectionStatus struct {
 	Containers       []string `json:"containers"`
 	Volumes          []string `json:"volumes"`
 	ImagePullSecrets []string `json:"imagePullSecrets"`
 	Revision         string   `json:"revision"`
+}
+
+func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod *corev1.Pod, err error) {
+	metadata := &params.pod.ObjectMeta
+	meshConfig := params.meshConfig
+
+	if err := validateAnnotations(metadata.GetAnnotations()); err != nil {
+		log.Errorf("Injection failed due to invalid annotations: %v", err)
+		return nil, nil, err
+	}
+
+	strippedPod, err := reinsertOverrides(stripPod(params))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data := TemplateData{
+		TypeMeta:                 params.typeMeta,
+		DeploymentMeta:           params.deployMeta,
+		ObjectMeta:               strippedPod.ObjectMeta,
+		Spec:                     strippedPod.Spec,
+		ProxyConfig:              params.proxyConfig,
+		MeshConfig:               meshConfig,
+		Values:                   params.valuesConfig.asMap,
+		Revision:                 params.revision,
+		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.0-debug"),
+		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
+		CompliancePolicy:         common_features.CompliancePolicy,
+	}
+
+	if params.valuesConfig.asMap == nil {
+		return nil, nil, fmt.Errorf("failed to parse values.yaml; check Dubbod logs for errors")
+	}
+
+	mergedPod = params.pod
+	templatePod = &corev1.Pod{}
+
+	for _, templateName := range selectTemplates(params) {
+		parsedTemplate, f := params.templates[templateName]
+		if !f {
+			return nil, nil, fmt.Errorf("requested template %q not found; have %v",
+				templateName, strings.Join(knownTemplates(params.templates), ", "))
+		}
+		bbuf, err := runTemplate(parsedTemplate, data)
+		if err != nil {
+			return nil, nil, err
+		}
+		templatePod, err = applyOverlayYAML(templatePod, bbuf.Bytes())
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed applying injection overlay: %v", err)
+		}
+		mergedPod, err = applyOverlayYAML(mergedPod, bbuf.Bytes())
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed parsing generated injected YAML (check Istio sidecar injector configuration): %v", err)
+		}
+	}
+
+	return mergedPod, templatePod, nil
+}
+
+func FindContainer(name string, containers []corev1.Container) *corev1.Container {
+	for i := range containers {
+		if containers[i].Name == name {
+			return &containers[i]
+		}
+	}
+	return nil
 }
 
 func UnmarshalConfig(yml []byte) (Config, error) {
@@ -104,6 +174,71 @@ func UnmarshalConfig(yml []byte) (Config, error) {
 	return injectConfig, nil
 }
 
+func InboundTrafficPolicyMode(meshConfig *meshconfig.MeshConfig) string {
+	switch meshConfig.GetInboundTrafficPolicy().GetMode() {
+	case meshconfig.MeshConfig_InboundTrafficPolicy_LOCALHOST:
+		return "localhost"
+	case meshconfig.MeshConfig_InboundTrafficPolicy_PASSTHROUGH:
+		return "passthrough"
+	}
+	return "passthrough"
+}
+
+func runTemplate(tmpl *template.Template, data TemplateData) (bytes.Buffer, error) {
+	var res bytes.Buffer
+	if err := tmpl.Execute(&res, &data); err != nil {
+		log.Errorf("Invalid template: %v", err)
+		return bytes.Buffer{}, err
+	}
+
+	return res, nil
+}
+
+func knownTemplates(t Templates) []string {
+	keys := make([]string, 0, len(t))
+	for k := range t {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// getProxyImage extracts the proxy image from values map, following Istio's pattern.
+// It checks common paths: global.proxy.image, global.proxyImage, and falls back to default.
+func getProxyImage(values map[string]any, defaultImage string) string {
+	if values == nil {
+		return defaultImage
+	}
+
+	// Check global.proxy.image (Istio pattern)
+	if global, ok := values["global"].(map[string]any); ok {
+		if proxy, ok := global["proxy"].(map[string]any); ok {
+			if image, ok := proxy["image"].(string); ok && image != "" {
+				return image
+			}
+		}
+		// Check global.proxyImage (alternative pattern)
+		if image, ok := global["proxyImage"].(string); ok && image != "" {
+			return image
+		}
+	}
+
+	return defaultImage
+}
+
+func selectTemplates(params InjectionParameters) []string {
+	if a, f := params.pod.Annotations[annotation.InjectTemplates.Name]; f {
+		names := []string{}
+		for _, tmplName := range strings.Split(a, ",") {
+			name := strings.TrimSpace(tmplName)
+			names = append(names, name)
+		}
+		log.Infof("Using templates from annotation: %v", names)
+		return resolveAliases(params, names)
+	}
+	log.Infof("Using default templates: %v", params.defaultTemplate)
+	return resolveAliases(params, params.defaultTemplate)
+}
+
 func parseDryTemplate(tmplStr string, funcMap map[string]any) (*template.Template, error) {
 	temp := template.New("inject")
 	t, err := temp.Funcs(sprig.TxtFuncMap()).Funcs(funcMap).Parse(tmplStr)
@@ -115,6 +250,54 @@ func parseDryTemplate(tmplStr string, funcMap map[string]any) (*template.Templat
 	return t, nil
 }
 
+func overwriteClusterInfo(pod *corev1.Pod, params InjectionParameters) {
+	c := FindProxy(pod)
+	if c == nil {
+		return
+	}
+	if len(params.proxyEnvs) > 0 {
+		updateClusterEnvs(c, params.proxyEnvs)
+	}
+}
+
+func updateClusterEnvs(container *corev1.Container, newKVs map[string]string) {
+	envVars := make([]corev1.EnvVar, 0)
+
+	for _, env := range container.Env {
+		if _, found := newKVs[env.Name]; !found {
+			envVars = append(envVars, env)
+		}
+	}
+
+	keys := make([]string, 0, len(newKVs))
+	for key := range newKVs {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		val := newKVs[key]
+		envVars = append(envVars, corev1.EnvVar{Name: key, Value: val, ValueFrom: nil})
+	}
+	container.Env = envVars
+}
+
+func stripPod(req InjectionParameters) *corev1.Pod {
+	pod := req.pod.DeepCopy()
+	prevStatus := injectionStatus(pod)
+	if prevStatus == nil {
+		return req.pod
+	}
+	// We found a previous status annotation. Possibly we are re-injecting the pod
+	// To ensure idempotency, remove our injected containers first
+	for _, c := range prevStatus.Containers {
+		pod.Spec.Containers = modifyContainers(pod.Spec.Containers, c, Remove)
+	}
+
+	delete(pod.Annotations, annotation.SidecarStatus.Name)
+
+	return pod
+}
+
 func potentialPodName(metadata metav1.ObjectMeta) string {
 	if metadata.Name != "" {
 		return metadata.Name
@@ -123,6 +306,31 @@ func potentialPodName(metadata metav1.ObjectMeta) string {
 		return metadata.GenerateName + "***** (actual name not yet known)"
 	}
 	return ""
+}
+
+func modifyContainers(cl []corev1.Container, name string, modifier ContainerReorder) []corev1.Container {
+	containers := []corev1.Container{}
+	var match *corev1.Container
+	for _, c := range cl {
+		if c.Name != name {
+			containers = append(containers, c)
+		} else {
+			match = &c
+		}
+	}
+	if match == nil {
+		return containers
+	}
+	switch modifier {
+	case MoveFirst:
+		return append([]corev1.Container{*match}, containers...)
+	case MoveLast:
+		return append(containers, *match)
+	case Remove:
+		return containers
+	default:
+		return cl
+	}
 }
 
 func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, metadata metav1.ObjectMeta) bool { // nolint: lll
@@ -183,158 +391,23 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 	return required
 }
 
-func InboundTrafficPolicyMode(meshConfig *meshconfig.MeshConfig) string {
-	switch meshConfig.GetInboundTrafficPolicy().GetMode() {
-	case meshconfig.MeshConfig_InboundTrafficPolicy_LOCALHOST:
-		return "localhost"
-	case meshconfig.MeshConfig_InboundTrafficPolicy_PASSTHROUGH:
-		return "passthrough"
-	}
-	return "passthrough"
-}
-
-// getProxyImage extracts the proxy image from values map, following Istio's pattern.
-// It checks common paths: global.proxy.image, global.proxyImage, and falls back to default.
-func getProxyImage(values map[string]any, defaultImage string) string {
-	if values == nil {
-		return defaultImage
-	}
-
-	// Check global.proxy.image (Istio pattern)
-	if global, ok := values["global"].(map[string]any); ok {
-		if proxy, ok := global["proxy"].(map[string]any); ok {
-			if image, ok := proxy["image"].(string); ok && image != "" {
-				return image
-			}
-		}
-		// Check global.proxyImage (alternative pattern)
-		if image, ok := global["proxyImage"].(string); ok && image != "" {
-			return image
+func injectionStatus(pod *corev1.Pod) *InjectionStatus {
+	var statusBytes []byte
+	if pod.ObjectMeta.Annotations != nil {
+		if value, ok := pod.ObjectMeta.Annotations[annotation.SidecarStatus.Name]; ok {
+			statusBytes = []byte(value)
 		}
 	}
-
-	return defaultImage
-}
-
-func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod *corev1.Pod, err error) {
-	metadata := &params.pod.ObjectMeta
-	meshConfig := params.meshConfig
-
-	if err := validateAnnotations(metadata.GetAnnotations()); err != nil {
-		log.Errorf("Injection failed due to invalid annotations: %v", err)
-		return nil, nil, err
+	if statusBytes == nil {
+		return nil
 	}
 
-	strippedPod, err := reinsertOverrides(stripPod(params))
-	if err != nil {
-		return nil, nil, err
+	// default case when injected pod has explicit status
+	var iStatus InjectionStatus
+	if err := json.Unmarshal(statusBytes, &iStatus); err != nil {
+		return nil
 	}
-
-	data := ProxylessTemplateData{
-		TypeMeta:                 params.typeMeta,
-		DeploymentMeta:           params.deployMeta,
-		ObjectMeta:               strippedPod.ObjectMeta,
-		Spec:                     strippedPod.Spec,
-		ProxyConfig:              params.proxyConfig,
-		MeshConfig:               meshConfig,
-		Values:                   params.valuesConfig.asMap,
-		Revision:                 params.revision,
-		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.0-debug"),
-		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
-		CompliancePolicy:         common_features.CompliancePolicy,
-	}
-
-	if params.valuesConfig.asMap == nil {
-		return nil, nil, fmt.Errorf("failed to parse values.yaml; check Dubbod logs for errors")
-	}
-
-	mergedPod = params.pod
-	templatePod = &corev1.Pod{}
-
-	for _, templateName := range selectTemplates(params) {
-		parsedTemplate, f := params.templates[templateName]
-		if !f {
-			return nil, nil, fmt.Errorf("requested template %q not found; have %v",
-				templateName, strings.Join(knownTemplates(params.templates), ", "))
-		}
-		bbuf, err := runTemplate(parsedTemplate, data)
-		if err != nil {
-			return nil, nil, err
-		}
-		templatePod, err = applyOverlayYAML(templatePod, bbuf.Bytes())
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed applying injection overlay: %v", err)
-		}
-		mergedPod, err = applyOverlayYAML(mergedPod, bbuf.Bytes())
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed parsing generated injected YAML (check Istio sidecar injector configuration): %v", err)
-		}
-	}
-
-	return mergedPod, templatePod, nil
-}
-
-func overwriteClusterInfo(pod *corev1.Pod, params InjectionParameters) {
-	c := FindProxy(pod)
-	if c == nil {
-		return
-	}
-	if len(params.proxyEnvs) > 0 {
-		updateClusterEnvs(c, params.proxyEnvs)
-	}
-}
-
-func updateClusterEnvs(container *corev1.Container, newKVs map[string]string) {
-	envVars := make([]corev1.EnvVar, 0)
-
-	for _, env := range container.Env {
-		if _, found := newKVs[env.Name]; !found {
-			envVars = append(envVars, env)
-		}
-	}
-
-	keys := make([]string, 0, len(newKVs))
-	for key := range newKVs {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		val := newKVs[key]
-		envVars = append(envVars, corev1.EnvVar{Name: key, Value: val, ValueFrom: nil})
-	}
-	container.Env = envVars
-}
-
-func knownTemplates(t Templates) []string {
-	keys := make([]string, 0, len(t))
-	for k := range t {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func runTemplate(tmpl *template.Template, data ProxylessTemplateData) (bytes.Buffer, error) {
-	var res bytes.Buffer
-	if err := tmpl.Execute(&res, &data); err != nil {
-		log.Errorf("Invalid template: %v", err)
-		return bytes.Buffer{}, err
-	}
-
-	return res, nil
-}
-
-func selectTemplates(params InjectionParameters) []string {
-	if a, f := params.pod.Annotations[annotation.InjectTemplates.Name]; f {
-		names := []string{}
-		for _, tmplName := range strings.Split(a, ",") {
-			name := strings.TrimSpace(tmplName)
-			names = append(names, name)
-		}
-		log.Infof("Using templates from annotation: %v", names)
-		return resolveAliases(params, names)
-	}
-	log.Infof("Using default templates: %v", params.defaultTemplate)
-	return resolveAliases(params, params.defaultTemplate)
+	return &iStatus
 }
 
 func resolveAliases(params InjectionParameters, names []string) []string {
@@ -347,78 +420,6 @@ func resolveAliases(params InjectionParameters, names []string) []string {
 		}
 	}
 	return ret
-}
-
-func stripPod(req InjectionParameters) *corev1.Pod {
-	pod := req.pod.DeepCopy()
-	prevStatus := injectionStatus(pod)
-	if prevStatus == nil {
-		return req.pod
-	}
-	// We found a previous status annotation. Possibly we are re-injecting the pod
-	// To ensure idempotency, remove our injected containers first
-	for _, c := range prevStatus.Containers {
-		pod.Spec.Containers = modifyContainers(pod.Spec.Containers, c, Remove)
-	}
-	for _, c := range prevStatus.InitContainers {
-		pod.Spec.InitContainers = modifyContainers(pod.Spec.InitContainers, c, Remove)
-	}
-
-	delete(pod.Annotations, annotation.SidecarStatus.Name)
-
-	return pod
-}
-
-type ContainerReorder int
-
-const (
-	MoveFirst ContainerReorder = iota
-	MoveLast
-	Remove
-)
-
-func modifyContainers(cl []corev1.Container, name string, modifier ContainerReorder) []corev1.Container {
-	containers := []corev1.Container{}
-	var match *corev1.Container
-	for _, c := range cl {
-		if c.Name != name {
-			containers = append(containers, c)
-		} else {
-			match = &c
-		}
-	}
-	if match == nil {
-		return containers
-	}
-	switch modifier {
-	case MoveFirst:
-		return append([]corev1.Container{*match}, containers...)
-	case MoveLast:
-		return append(containers, *match)
-	case Remove:
-		return containers
-	default:
-		return cl
-	}
-}
-
-func injectionStatus(pod *corev1.Pod) *ProxylessInjectionStatus {
-	var statusBytes []byte
-	if pod.ObjectMeta.Annotations != nil {
-		if value, ok := pod.ObjectMeta.Annotations[annotation.SidecarStatus.Name]; ok {
-			statusBytes = []byte(value)
-		}
-	}
-	if statusBytes == nil {
-		return nil
-	}
-
-	// default case when injected pod has explicit status
-	var iStatus ProxylessInjectionStatus
-	if err := json.Unmarshal(statusBytes, &iStatus); err != nil {
-		return nil
-	}
-	return &iStatus
 }
 
 func reinsertOverrides(pod *corev1.Pod) (*corev1.Pod, error) {
@@ -452,13 +453,4 @@ func reinsertOverrides(pod *corev1.Pod) (*corev1.Pod, error) {
 	}
 
 	return pod, nil
-}
-
-func FindContainer(name string, containers []corev1.Container) *corev1.Container {
-	for i := range containers {
-		if containers[i].Name == name {
-			return &containers[i]
-		}
-	}
-	return nil
 }

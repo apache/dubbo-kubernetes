@@ -31,21 +31,10 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-type DiscoveryStream = discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer
-
-type Resources = []*discovery.Resource
-
-type Connection struct {
-	peerAddr    string
-	connectedAt time.Time
-	conID       string
-	pushChannel chan any
-	stream      DiscoveryStream
-	initialized chan struct{}
-	stop        chan struct{}
-	reqChan     chan *discovery.DiscoveryRequest
-	errorChan   chan error
-}
+type (
+	DiscoveryStream = discovery.AggregatedDiscoveryService_StreamAggregatedResourcesServer
+	Resources       = []*discovery.Resource
+)
 
 type ConnectionContext interface {
 	XdsConnection() *Connection
@@ -84,6 +73,22 @@ type ResourceDelta struct {
 }
 
 var emptyResourceDelta = ResourceDelta{}
+
+func (rd ResourceDelta) IsEmpty() bool {
+	return len(rd.Subscribed) == 0 && len(rd.Unsubscribed) == 0
+}
+
+type Connection struct {
+	peerAddr    string
+	connectedAt time.Time
+	conID       string
+	pushChannel chan any
+	stream      DiscoveryStream
+	initialized chan struct{}
+	stop        chan struct{}
+	reqChan     chan *discovery.DiscoveryRequest
+	errorChan   chan error
+}
 
 func NewConnection(peerAddr string, stream DiscoveryStream) Connection {
 	return Connection{
@@ -223,24 +228,16 @@ func (conn *Connection) ID() string {
 	return conn.conID
 }
 
-func (conn *Connection) Peer() string {
-	return conn.peerAddr
-}
-
 func (conn *Connection) SetID(id string) {
 	conn.conID = id
 }
 
+func (conn *Connection) Peer() string {
+	return conn.peerAddr
+}
+
 func (conn *Connection) MarkInitialized() {
 	close(conn.initialized)
-}
-
-func (conn *Connection) PushCh() chan any {
-	return conn.pushChannel
-}
-
-func (conn *Connection) StreamDone() <-chan struct{} {
-	return conn.stream.Context().Done()
 }
 
 func (conn *Connection) InitializedCh() chan struct{} {
@@ -251,8 +248,16 @@ func (conn *Connection) ErrorCh() chan error {
 	return conn.errorChan
 }
 
+func (conn *Connection) PushCh() chan any {
+	return conn.pushChannel
+}
+
 func (conn *Connection) StopCh() chan struct{} {
 	return conn.stop
+}
+
+func (conn *Connection) StreamDone() <-chan struct{} {
+	return conn.stream.Context().Done()
 }
 
 func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (bool, ResourceDelta) {
@@ -419,8 +424,4 @@ func ResourcesToAny(r Resources) []*anypb.Any {
 		a = append(a, rr.Resource)
 	}
 	return a
-}
-
-func (rd ResourceDelta) IsEmpty() bool {
-	return len(rd.Subscribed) == 0 && len(rd.Unsubscribed) == 0
 }

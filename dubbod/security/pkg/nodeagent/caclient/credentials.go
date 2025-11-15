@@ -33,6 +33,18 @@ func NewDefaultTokenProvider(opts *security.Options) credentials.PerRPCCredentia
 	return &DefaultTokenProvider{opts}
 }
 
+func (t *DefaultTokenProvider) GetToken() (string, error) {
+	if t.opts.CredFetcher == nil {
+		return "", nil
+	}
+	token, err := t.opts.CredFetcher.GetPlatformCredential()
+	if err != nil {
+		return "", fmt.Errorf("fetch platform credential: %v", err)
+	}
+
+	return token, nil
+}
+
 func (t *DefaultTokenProvider) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
 	if t == nil {
 		return nil, nil
@@ -53,16 +65,4 @@ func (t *DefaultTokenProvider) GetRequestMetadata(ctx context.Context, uri ...st
 // this is safe themselves.
 func (t *DefaultTokenProvider) RequireTransportSecurity() bool {
 	return false
-}
-
-func (t *DefaultTokenProvider) GetToken() (string, error) {
-	if t.opts.CredFetcher == nil {
-		return "", nil
-	}
-	token, err := t.opts.CredFetcher.GetPlatformCredential()
-	if err != nil {
-		return "", fmt.Errorf("fetch platform credential: %v", err)
-	}
-
-	return token, nil
 }

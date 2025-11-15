@@ -25,6 +25,16 @@ import (
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
+// MeshConfigResource holds the current MeshConfig state
+type MeshConfigResource struct {
+	*meshconfig.MeshConfig
+}
+
+// MeshNetworksResource holds the current MeshNetworks state
+type MeshNetworksResource struct {
+	*meshconfig.MeshNetworks
+}
+
 type adapter struct {
 	krt.Singleton[MeshConfigResource]
 }
@@ -53,18 +63,9 @@ func (a adapter) AddMeshHandler(h func()) *mesh.WatcherHandlerRegistration {
 	return reg
 }
 
-func ConfigAdapter(configuration krt.Singleton[MeshConfigResource]) WatcherCollection {
-	return adapter{configuration}
-}
-
 // DeleteMeshHandler removes a previously registered handler.
 func (a adapter) DeleteMeshHandler(registration *mesh.WatcherHandlerRegistration) {
 	registration.Remove()
-}
-
-// MeshConfigResource holds the current MeshConfig state
-type MeshConfigResource struct {
-	*meshconfig.MeshConfig
 }
 
 func (m MeshConfigResource) ResourceName() string { return "MeshConfigResource" }
@@ -73,15 +74,14 @@ func (m MeshConfigResource) Equals(other MeshConfigResource) bool {
 	return proto.Equal(m.MeshConfig, other.MeshConfig)
 }
 
-// MeshNetworksResource holds the current MeshNetworks state
-type MeshNetworksResource struct {
-	*meshconfig.MeshNetworks
-}
-
 func (m MeshNetworksResource) ResourceName() string { return "MeshNetworksResource" }
 
 func (m MeshNetworksResource) Equals(other MeshNetworksResource) bool {
 	return proto.Equal(m.MeshNetworks, other.MeshNetworks)
+}
+
+func ConfigAdapter(configuration krt.Singleton[MeshConfigResource]) WatcherCollection {
+	return adapter{configuration}
 }
 
 // NetworksAdapter wraps a MeshNetworks collection into a mesh.NetworksWatcher interface.

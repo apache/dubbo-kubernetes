@@ -41,6 +41,8 @@ const (
 	DubboMetaJSONPrefix = "DUBBO_METAJSON_"
 )
 
+type setMetaFunc func(m map[string]any, key string, val string)
+
 type MetadataOptions struct {
 	ID                     string
 	InstanceIPs            []string
@@ -81,39 +83,6 @@ func ParseDownwardAPI(i string) (map[string]string, error) {
 		res[key] = val
 	}
 	return res, nil
-}
-
-func shouldExtract(envVar, prefix string) bool {
-	return strings.HasPrefix(envVar, prefix)
-}
-
-func isEnvVar(str string) bool {
-	return strings.Contains(str, "=")
-}
-
-func parseEnvVar(varStr string) (string, string) {
-	parts := strings.SplitN(varStr, "=", 2)
-	if len(parts) != 2 {
-		return varStr, ""
-	}
-	return parts[0], parts[1]
-}
-
-type setMetaFunc func(m map[string]any, key string, val string)
-
-func extractMetadata(envs []string, prefix string, set setMetaFunc, meta map[string]any) {
-	metaPrefixLen := len(prefix)
-	for _, e := range envs {
-		if !shouldExtract(e, prefix) {
-			continue
-		}
-		v := e[metaPrefixLen:]
-		if !isEnvVar(v) {
-			continue
-		}
-		metaKey, metaVal := parseEnvVar(v)
-		set(meta, metaKey, metaVal)
-	}
 }
 
 func GetNodeMetaData(options MetadataOptions) (*model.Node, error) {
@@ -169,4 +138,35 @@ func GetNodeMetaData(options MetadataOptions) (*model.Node, error) {
 		RawMetadata: untypedMeta,
 		Locality:    l,
 	}, nil
+}
+
+func shouldExtract(envVar, prefix string) bool {
+	return strings.HasPrefix(envVar, prefix)
+}
+
+func isEnvVar(str string) bool {
+	return strings.Contains(str, "=")
+}
+
+func parseEnvVar(varStr string) (string, string) {
+	parts := strings.SplitN(varStr, "=", 2)
+	if len(parts) != 2 {
+		return varStr, ""
+	}
+	return parts[0], parts[1]
+}
+
+func extractMetadata(envs []string, prefix string, set setMetaFunc, meta map[string]any) {
+	metaPrefixLen := len(prefix)
+	for _, e := range envs {
+		if !shouldExtract(e, prefix) {
+			continue
+		}
+		v := e[metaPrefixLen:]
+		if !isEnvVar(v) {
+			continue
+		}
+		metaKey, metaVal := parseEnvVar(v)
+		set(meta, metaKey, metaVal)
+	}
 }

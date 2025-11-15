@@ -26,20 +26,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-func AllIPv6(ipAddrs []string) bool {
-	for i := 0; i < len(ipAddrs); i++ {
-		addr, err := netip.ParseAddr(ipAddrs[i])
-		if err != nil {
-			// Should not happen, invalid IP in proxy's IPAddresses slice should have been caught earlier,
-			// skip it to prevent a panic.
-			continue
-		}
-		if addr.Is4() {
-			return false
-		}
-	}
-	return true
-}
+const (
+	waitInterval = 100 * time.Millisecond
+	waitTimeout  = 2 * time.Minute
+)
 
 func AllIPv4(ipAddrs []string) bool {
 	for i := 0; i < len(ipAddrs); i++ {
@@ -56,10 +46,35 @@ func AllIPv4(ipAddrs []string) bool {
 	return true
 }
 
-const (
-	waitInterval = 100 * time.Millisecond
-	waitTimeout  = 2 * time.Minute
-)
+func AllIPv6(ipAddrs []string) bool {
+	for i := 0; i < len(ipAddrs); i++ {
+		addr, err := netip.ParseAddr(ipAddrs[i])
+		if err != nil {
+			// Should not happen, invalid IP in proxy's IPAddresses slice should have been caught earlier,
+			// skip it to prevent a panic.
+			continue
+		}
+		if addr.Is4() {
+			return false
+		}
+	}
+	return true
+}
+
+func GlobalUnicastIP(ipAddrs []string) string {
+	for i := 0; i < len(ipAddrs); i++ {
+		addr, err := netip.ParseAddr(ipAddrs[i])
+		if err != nil {
+			// Should not happen, invalid IP in proxy's IPAddresses slice should have been caught earlier,
+			// skip it to prevent a panic.
+			continue
+		}
+		if addr.IsGlobalUnicast() {
+			return addr.String()
+		}
+	}
+	return ""
+}
 
 func GetPrivateIPs(ctx context.Context) ([]string, bool) {
 	if _, ok := ctx.Deadline(); !ok {
@@ -125,19 +140,4 @@ func GetPrivateIPsIfAvailable() ([]string, bool) {
 		}
 	}
 	return ipAddresses, ok
-}
-
-func GlobalUnicastIP(ipAddrs []string) string {
-	for i := 0; i < len(ipAddrs); i++ {
-		addr, err := netip.ParseAddr(ipAddrs[i])
-		if err != nil {
-			// Should not happen, invalid IP in proxy's IPAddresses slice should have been caught earlier,
-			// skip it to prevent a panic.
-			continue
-		}
-		if addr.IsGlobalUnicast() {
-			return addr.String()
-		}
-	}
-	return ""
 }

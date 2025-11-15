@@ -29,9 +29,7 @@ var (
 	}
 )
 
-type (
-	Warning = agent.Warning
-)
+type Warning = agent.Warning
 
 // ValidateFunc defines a validation func for an API proto.
 type ValidateFunc func(config config.Config) (Warning, error)

@@ -25,16 +25,16 @@ import (
 
 type Component func(stop <-chan struct{}) error
 
-type task struct {
-	name string
-	task Component
-}
-
 type Instance interface {
 	Start(stop <-chan struct{}) error
 	RunComponent(name string, t Component)
 	RunComponentAsyncAndWait(name string, t Component)
 	Wait()
+}
+
+type task struct {
+	name string
+	task Component
 }
 
 type instance struct {

@@ -25,7 +25,6 @@ const (
 type JwksFetchMode int
 
 const (
-	// Istiod is used to indicate Istiod ALWAYS fetches the JWKs server
 	Dubbod JwksFetchMode = iota
 )
 

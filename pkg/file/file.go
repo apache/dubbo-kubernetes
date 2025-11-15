@@ -43,6 +43,13 @@ func DirEquals(a, b string) (bool, error) {
 	return aa == bb, nil
 }
 
+func Exists(name string) bool {
+	// We must explicitly check if the error is due to the file not existing (as opposed to a
+	// permissions error).
+	_, err := os.Stat(name)
+	return !errors.Is(err, fs.ErrNotExist)
+}
+
 func AtomicWrite(path string, data []byte, mode os.FileMode) error {
 	return AtomicWriteReader(path, bytes.NewReader(data), mode)
 }
@@ -81,13 +88,6 @@ func AtomicWriteReader(path string, data io.Reader, mode os.FileMode) error {
 	}
 
 	return os.Rename(tmpFile.Name(), path)
-}
-
-func Exists(name string) bool {
-	// We must explicitly check if the error is due to the file not existing (as opposed to a
-	// permissions error).
-	_, err := os.Stat(name)
-	return !errors.Is(err, fs.ErrNotExist)
 }
 
 func tryMarkLargeFileAsNotNeeded(size int64, in *os.File) {

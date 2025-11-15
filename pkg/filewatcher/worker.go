@@ -1,4 +1,7 @@
 /*
+ * Portions of this file are derived from the Istio project:
+ *   https://github.com/istio/istio/blob/master/pkg/filewatcher/worker.go
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -29,6 +32,14 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+type fileTracker struct {
+	events chan fsnotify.Event
+	errors chan error
+
+	// Hash sum to indicate if a file has been updated.
+	hash []byte
+}
+
 type worker struct {
 	mu sync.RWMutex
 
@@ -49,14 +60,6 @@ type worker struct {
 
 	// tells the worker to exit
 	terminateCh chan bool
-}
-
-type fileTracker struct {
-	events chan fsnotify.Event
-	errors chan error
-
-	// Hash sum to indicate if a file has been updated.
-	hash []byte
 }
 
 func newWorker(path string, funcs *patchTable) (*worker, error) {
@@ -182,14 +185,6 @@ func (wk *worker) getTrackers() map[string]*fileTracker {
 	return result
 }
 
-// used only by the worker goroutine
-func retireTracker(ft *fileTracker) {
-	close(ft.events)
-	close(ft.errors)
-	ft.events = nil
-	ft.errors = nil
-}
-
 func (wk *worker) terminate() {
 	wk.terminateCh <- true
 }
@@ -251,6 +246,14 @@ func (wk *worker) errorChannel(path string) chan error {
 	}
 
 	return nil
+}
+
+// used only by the worker goroutine
+func retireTracker(ft *fileTracker) {
+	close(ft.events)
+	close(ft.errors)
+	ft.events = nil
+	ft.errors = nil
 }
 
 // gets the hash of the given file, or nil if there's a problem

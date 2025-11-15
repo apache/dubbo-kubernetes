@@ -59,7 +59,7 @@ type controllerInterface interface {
 }
 
 var (
-	log                          = dubbolog.RegisterScope("kubecontroller", "kube controller debugging")
+	log                          = dubbolog.RegisterScope("controller", "kube controller debugging")
 	_   controllerInterface      = &Controller{}
 	_   serviceregistry.Instance = &Controller{}
 )

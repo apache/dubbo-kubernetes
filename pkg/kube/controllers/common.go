@@ -61,6 +61,10 @@ type Object interface {
 	runtime.Object
 }
 
+type Shutdowner interface {
+	ShutdownHandlers()
+}
+
 type EventHandler[T Object] struct {
 	AddFunc         func(obj T)
 	AddExtendedFunc func(obj T, initialSync bool)
@@ -175,10 +179,6 @@ func TypedObjectHandler[T ComparableObject](handler func(o T)) cache.ResourceEve
 		},
 		DeleteFunc: h,
 	}
-}
-
-type Shutdowner interface {
-	ShutdownHandlers()
 }
 
 // ShutdownAll is a simple helper to shutdown all informers

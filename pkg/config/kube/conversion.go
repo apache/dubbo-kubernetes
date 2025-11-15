@@ -25,13 +25,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	DNS = 53
+)
+
 var (
 	grpcWeb    = string(protocol.GRPCWeb)
 	grpcWebLen = len(grpcWeb)
-)
-
-const (
-	DNS = 53
 )
 
 var wellKnownPorts = sets.New[int32](DNS)

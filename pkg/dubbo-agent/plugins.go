@@ -26,15 +26,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 )
 
+var providers = make(map[string]func(*security.Options, RootCertProvider) (security.Client, error))
+
 type RootCertProvider interface {
 	GetKeyCertsForCA() (string, string)
 	FindRootCAForCA() (string, error)
-}
-
-var providers = make(map[string]func(*security.Options, RootCertProvider) (security.Client, error))
-
-func init() {
-	providers["Aegis"] = createAegis
 }
 
 func createAegis(opts *security.Options, a RootCertProvider) (security.Client, error) {
@@ -72,4 +68,8 @@ func createCAClient(opts *security.Options, a RootCertProvider) (security.Client
 		return nil, fmt.Errorf("CA provider %q not registered", opts.CAProviderName)
 	}
 	return provider(opts, a)
+}
+
+func init() {
+	providers["Aegis"] = createAegis
 }

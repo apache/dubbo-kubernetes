@@ -27,6 +27,8 @@ type networksAdapter struct {
 	krt.Singleton[MeshNetworksResource]
 }
 
+var _ mesh.NetworksWatcher = networksAdapter{}
+
 func (n networksAdapter) Networks() *meshconfig.MeshNetworks {
 	v := n.Singleton.Get()
 	return v.MeshNetworks
@@ -47,5 +49,3 @@ func (n networksAdapter) AddNetworksHandler(h func()) *mesh.WatcherHandlerRegist
 func (n networksAdapter) DeleteNetworksHandler(registration *mesh.WatcherHandlerRegistration) {
 	registration.Remove()
 }
-
-var _ mesh.NetworksWatcher = networksAdapter{}

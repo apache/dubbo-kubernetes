@@ -151,41 +151,6 @@ func (cl *Client) allKinds() map[config.GroupVersionKind]nsStore {
 	return maps.Clone(cl.kinds)
 }
 
-func getObjectMetadata(config config.Config) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:            config.Name,
-		Namespace:       config.Namespace,
-		Labels:          config.Labels,
-		Annotations:     config.Annotations,
-		ResourceVersion: config.ResourceVersion,
-		OwnerReferences: config.OwnerReferences,
-		UID:             types.UID(config.UID),
-	}
-}
-
-func genPatchBytes(oldRes, modRes runtime.Object, patchType types.PatchType) ([]byte, error) {
-	oldJSON, err := json.Marshal(oldRes)
-	if err != nil {
-		return nil, fmt.Errorf("failed marhsalling original resource: %v", err)
-	}
-	newJSON, err := json.Marshal(modRes)
-	if err != nil {
-		return nil, fmt.Errorf("failed marhsalling modified resource: %v", err)
-	}
-	switch patchType {
-	case types.JSONPatchType:
-		ops, err := jsonpatch.CreatePatch(oldJSON, newJSON)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(ops)
-	case types.MergePatchType:
-		return jsonmerge.CreateMergePatch(oldJSON, newJSON)
-	default:
-		return nil, fmt.Errorf("unsupported patch type: %v. must be one of JSONPatchType or MergePatchType", patchType)
-	}
-}
-
 func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	cl.logger.Debugf("adding CRD %q", name)
 	s, f := cl.schemasByCRDName[name]
@@ -272,6 +237,26 @@ func (cl *Client) Schemas() collection.Schemas {
 	return cl.schemas
 }
 
+func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler model.EventHandler) {
+	if c, ok := cl.kind(kind); ok {
+		c.handlers = append(c.handlers, c.collection.RegisterBatch(func(o []krt.Event[config.Config]) {
+			for _, event := range o {
+				switch event.Event {
+				case controllers.EventAdd:
+					handler(config.Config{}, *event.New, model.Event(event.Event))
+				case controllers.EventUpdate:
+					handler(*event.Old, *event.New, model.Event(event.Event))
+				case controllers.EventDelete:
+					handler(config.Config{}, *event.Old, model.Event(event.Event))
+				}
+			}
+		}, false))
+		return
+	}
+
+	cl.logger.Warnf("unknown type: %s", kind)
+}
+
 func (cl *Client) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
 	h, f := cl.kind(typ)
 	if !f {
@@ -345,7 +330,6 @@ func (cl *Client) Delete(typ config.GroupVersionKind, name, namespace string, re
 	return delete(cl.client, typ, name, namespace, resourceVersion)
 }
 
-// List implements store interface
 func (cl *Client) List(kind config.GroupVersionKind, namespace string) []config.Config {
 	h, f := cl.kind(kind)
 	if !f {
@@ -359,22 +343,37 @@ func (cl *Client) List(kind config.GroupVersionKind, namespace string) []config.
 	return h.index.Lookup(namespace)
 }
 
-func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler model.EventHandler) {
-	if c, ok := cl.kind(kind); ok {
-		c.handlers = append(c.handlers, c.collection.RegisterBatch(func(o []krt.Event[config.Config]) {
-			for _, event := range o {
-				switch event.Event {
-				case controllers.EventAdd:
-					handler(config.Config{}, *event.New, model.Event(event.Event))
-				case controllers.EventUpdate:
-					handler(*event.Old, *event.New, model.Event(event.Event))
-				case controllers.EventDelete:
-					handler(config.Config{}, *event.Old, model.Event(event.Event))
-				}
-			}
-		}, false))
-		return
+func getObjectMetadata(config config.Config) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:            config.Name,
+		Namespace:       config.Namespace,
+		Labels:          config.Labels,
+		Annotations:     config.Annotations,
+		ResourceVersion: config.ResourceVersion,
+		OwnerReferences: config.OwnerReferences,
+		UID:             types.UID(config.UID),
 	}
+}
 
-	cl.logger.Warnf("unknown type: %s", kind)
+func genPatchBytes(oldRes, modRes runtime.Object, patchType types.PatchType) ([]byte, error) {
+	oldJSON, err := json.Marshal(oldRes)
+	if err != nil {
+		return nil, fmt.Errorf("failed marhsalling original resource: %v", err)
+	}
+	newJSON, err := json.Marshal(modRes)
+	if err != nil {
+		return nil, fmt.Errorf("failed marhsalling modified resource: %v", err)
+	}
+	switch patchType {
+	case types.JSONPatchType:
+		ops, err := jsonpatch.CreatePatch(oldJSON, newJSON)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(ops)
+	case types.MergePatchType:
+		return jsonmerge.CreateMergePatch(oldJSON, newJSON)
+	default:
+		return nil, fmt.Errorf("unsupported patch type: %v. must be one of JSONPatchType or MergePatchType", patchType)
+	}
 }

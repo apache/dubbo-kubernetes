@@ -27,6 +27,17 @@ import (
 	"reflect"
 )
 
+var globalUIDCounter = atomic.NewUint64(1)
+
+type collectionUID uint64
+
+type erasedEventHandler = func(o []Event[any])
+
+type registerDependency interface {
+	registerDependency(*dependency, Syncer, func(f erasedEventHandler) Syncer)
+	name() string
+}
+
 type collectionOptions struct {
 	name         string
 	augmentation func(o any) any
@@ -41,42 +52,15 @@ type dependency struct {
 	filter         *filter
 }
 
-type collectionUID uint64
-
-func GetStop(opts ...CollectionOption) <-chan struct{} {
-	o := buildCollectionOptions(opts...)
-	return o.stop
-}
-
-func buildCollectionOptions(opts ...CollectionOption) collectionOptions {
-	c := &collectionOptions{}
-	for _, o := range opts {
-		o(c)
-	}
-	if c.stop == nil {
-		c.stop = make(chan struct{})
-	}
-	return *c
-}
-
-var globalUIDCounter = atomic.NewUint64(1)
-
-func nextUID() collectionUID {
-	return collectionUID(globalUIDCounter.Inc())
-}
-
 type indexedDependency struct {
 	id  collectionUID
 	key string
 	typ indexedDependencyType
 }
 
-func registerHandlerAsBatched[T any](c internalCollection[T], f func(o Event[T])) HandlerRegistration {
-	return c.RegisterBatch(func(events []Event[T]) {
-		for _, o := range events {
-			f(o)
-		}
-	}, true)
+func GetStop(opts ...CollectionOption) <-chan struct{} {
+	o := buildCollectionOptions(opts...)
+	return o.stop
 }
 
 func Equal[O any](a, b O) bool {
@@ -103,11 +87,27 @@ func Equal[O any](a, b O) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-type erasedEventHandler = func(o []Event[any])
+func buildCollectionOptions(opts ...CollectionOption) collectionOptions {
+	c := &collectionOptions{}
+	for _, o := range opts {
+		o(c)
+	}
+	if c.stop == nil {
+		c.stop = make(chan struct{})
+	}
+	return *c
+}
 
-type registerDependency interface {
-	registerDependency(*dependency, Syncer, func(f erasedEventHandler) Syncer)
-	name() string
+func registerHandlerAsBatched[T any](c internalCollection[T], f func(o Event[T])) HandlerRegistration {
+	return c.RegisterBatch(func(events []Event[T]) {
+		for _, o := range events {
+			f(o)
+		}
+	}, true)
+}
+
+func nextUID() collectionUID {
+	return collectionUID(globalUIDCounter.Inc())
 }
 
 func getLabels(a any) map[string]string {

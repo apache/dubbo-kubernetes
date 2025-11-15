@@ -56,15 +56,15 @@ const (
 	DubboGenerated            = "dubbo-generated"
 )
 
-var (
-	dubboCASecretType = v1.SecretTypeOpaque
-)
-
 const (
 	// selfSignedCA means the Dubbo CA uses a self signed certificate.
 	selfSignedCA caTypes = iota
 	// pluggedCertCA means the Dubbo CA uses a operator-specified key/cert.
 	pluggedCertCA
+)
+
+var (
+	dubboCASecretType = v1.SecretTypeOpaque
 )
 
 type SigningCAFileBundle struct {
@@ -75,14 +75,14 @@ type SigningCAFileBundle struct {
 	CRLFile         string
 }
 
-type caTypes int
-
 type CertOpts struct {
 	SubjectIDs []string
 	TTL        time.Duration
 	ForCA      bool
 	CertSigner string
 }
+
+type caTypes int
 
 type DubboCA struct {
 	defaultCertTTL  time.Duration
@@ -129,6 +129,28 @@ func NewDubboCA(opts *DubboCAOptions) (*DubboCA, error) {
 	ca.defaultCertTTL = defaultCertTTL
 
 	return ca, nil
+}
+
+func loadSelfSignedCaSecret(client corev1.CoreV1Interface, namespace string, caCertName string, rootCertFile string, caOpts *DubboCAOptions) error {
+	caSecret, err := client.Secrets(namespace).Get(context.TODO(), caCertName, metav1.GetOptions{})
+	if err == nil {
+		pkiCaLog.Infof("Load signing key and cert from existing secret %s/%s", caSecret.Namespace, caSecret.Name)
+		rootCerts, err := util.AppendRootCerts(caSecret.Data[CACertFile], rootCertFile)
+		if err != nil {
+			return fmt.Errorf("failed to append root certificates (%v)", err)
+		}
+		if caOpts.KeyCertBundle, err = util.NewVerifiedKeyCertBundleFromPem(
+			caSecret.Data[CACertFile],
+			caSecret.Data[CAPrivateKeyFile],
+			nil,
+			rootCerts,
+			nil,
+		); err != nil {
+			return fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
+		}
+		pkiCaLog.Infof("Using existing public key: \n%v", string(rootCerts))
+	}
+	return err
 }
 
 func NewSelfSignedDubboCAOptions(ctx context.Context,
@@ -226,6 +248,85 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 	return caOpts, err
 }
 
+func NewPluggedCertDubboCAOptions(fileBundle SigningCAFileBundle, defaultCertTTL, maxCertTTL time.Duration, caRSAKeySize int) (caOpts *DubboCAOptions, err error) {
+	caOpts = &DubboCAOptions{
+		CAType:         pluggedCertCA,
+		DefaultCertTTL: defaultCertTTL,
+		MaxCertTTL:     maxCertTTL,
+		CARSAKeySize:   caRSAKeySize,
+	}
+
+	if caOpts.KeyCertBundle, err = util.NewVerifiedKeyCertBundleFromFile(
+		fileBundle.SigningCertFile,
+		fileBundle.SigningKeyFile,
+		fileBundle.CertChainFiles,
+		fileBundle.RootCertFile,
+		fileBundle.CRLFile,
+	); err != nil {
+		return nil, fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
+	}
+
+	// Validate that the passed in signing cert can be used as CA.
+	// The check can't be done inside `KeyCertBundle`, since bundle could also be used to
+	// validate workload certificates (i.e., where the leaf certificate is not a CA).
+	b, err := os.ReadFile(fileBundle.SigningCertFile)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(b)
+	if block == nil {
+		return nil, fmt.Errorf("invalid PEM encoded certificate")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse X.509 certificate")
+	}
+	if !cert.IsCA {
+		return nil, fmt.Errorf("certificate is not authorized to sign other certificates")
+	}
+
+	return caOpts, nil
+}
+
+func NewSelfSignedDebugDubboCAOptions(rootCertFile string, caCertTTL, defaultCertTTL, maxCertTTL time.Duration, org string, caRSAKeySize int) (caOpts *DubboCAOptions, err error) {
+	caOpts = &DubboCAOptions{
+		CAType:         selfSignedCA,
+		DefaultCertTTL: defaultCertTTL,
+		MaxCertTTL:     maxCertTTL,
+		CARSAKeySize:   caRSAKeySize,
+	}
+
+	options := util.CertOptions{
+		TTL:          caCertTTL,
+		Org:          org,
+		IsCA:         true,
+		IsSelfSigned: true,
+		RSAKeySize:   caRSAKeySize,
+		IsDualUse:    true, // hardcoded to true for K8S as well
+	}
+	pemCert, pemKey, ckErr := util.GenCertKeyFromOptions(options)
+	if ckErr != nil {
+		return nil, fmt.Errorf("unable to generate CA cert and key for self-signed CA (%v)", ckErr)
+	}
+
+	rootCerts, err := util.AppendRootCerts(pemCert, rootCertFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to append root certificates (%v)", err)
+	}
+
+	if caOpts.KeyCertBundle, err = util.NewVerifiedKeyCertBundleFromPem(
+		pemCert,
+		pemKey,
+		nil,
+		rootCerts,
+		nil,
+	); err != nil {
+		return nil, fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
+	}
+
+	return caOpts, nil
+}
+
 func (ca *DubboCA) Run(stopChan chan struct{}) {
 	if ca.rootCertRotator != nil {
 		// Start root cert rotator in a separate goroutine.
@@ -243,10 +344,6 @@ func (ca *DubboCA) SignWithCertChain(csrPEM []byte, certOpts CertOpts) ([]string
 		return nil, err
 	}
 	return []string{string(cert)}, nil
-}
-
-func (ca *DubboCA) GetCAKeyCertBundle() *util.KeyCertBundle {
-	return ca.keyCertBundle
 }
 
 func (ca *DubboCA) sign(csrPEM []byte, subjectIDs []string, requestedLifetime time.Duration, checkLifetime, forCA bool) ([]byte, error) {
@@ -302,66 +399,8 @@ func (ca *DubboCA) signWithCertChain(csrPEM []byte, subjectIDs []string, request
 	return cert, nil
 }
 
-func loadSelfSignedCaSecret(client corev1.CoreV1Interface, namespace string, caCertName string, rootCertFile string, caOpts *DubboCAOptions) error {
-	caSecret, err := client.Secrets(namespace).Get(context.TODO(), caCertName, metav1.GetOptions{})
-	if err == nil {
-		pkiCaLog.Infof("Load signing key and cert from existing secret %s/%s", caSecret.Namespace, caSecret.Name)
-		rootCerts, err := util.AppendRootCerts(caSecret.Data[CACertFile], rootCertFile)
-		if err != nil {
-			return fmt.Errorf("failed to append root certificates (%v)", err)
-		}
-		if caOpts.KeyCertBundle, err = util.NewVerifiedKeyCertBundleFromPem(
-			caSecret.Data[CACertFile],
-			caSecret.Data[CAPrivateKeyFile],
-			nil,
-			rootCerts,
-			nil,
-		); err != nil {
-			return fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
-		}
-		pkiCaLog.Infof("Using existing public key: \n%v", string(rootCerts))
-	}
-	return err
-}
-
-func NewPluggedCertDubboCAOptions(fileBundle SigningCAFileBundle, defaultCertTTL, maxCertTTL time.Duration, caRSAKeySize int) (caOpts *DubboCAOptions, err error) {
-	caOpts = &DubboCAOptions{
-		CAType:         pluggedCertCA,
-		DefaultCertTTL: defaultCertTTL,
-		MaxCertTTL:     maxCertTTL,
-		CARSAKeySize:   caRSAKeySize,
-	}
-
-	if caOpts.KeyCertBundle, err = util.NewVerifiedKeyCertBundleFromFile(
-		fileBundle.SigningCertFile,
-		fileBundle.SigningKeyFile,
-		fileBundle.CertChainFiles,
-		fileBundle.RootCertFile,
-		fileBundle.CRLFile,
-	); err != nil {
-		return nil, fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
-	}
-
-	// Validate that the passed in signing cert can be used as CA.
-	// The check can't be done inside `KeyCertBundle`, since bundle could also be used to
-	// validate workload certificates (i.e., where the leaf certificate is not a CA).
-	b, err := os.ReadFile(fileBundle.SigningCertFile)
-	if err != nil {
-		return nil, err
-	}
-	block, _ := pem.Decode(b)
-	if block == nil {
-		return nil, fmt.Errorf("invalid PEM encoded certificate")
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse X.509 certificate")
-	}
-	if !cert.IsCA {
-		return nil, fmt.Errorf("certificate is not authorized to sign other certificates")
-	}
-
-	return caOpts, nil
+func (ca *DubboCA) GetCAKeyCertBundle() *util.KeyCertBundle {
+	return ca.keyCertBundle
 }
 
 func (ca *DubboCA) GenKeyCert(hostnames []string, certTTL time.Duration, checkLifetime bool) ([]byte, []byte, error) {
@@ -416,45 +455,6 @@ func (ca *DubboCA) minTTL(defaultCertTTL time.Duration) (time.Duration, error) {
 	}
 
 	return defaultCertTTL, nil
-}
-
-func NewSelfSignedDebugDubboCAOptions(rootCertFile string, caCertTTL, defaultCertTTL, maxCertTTL time.Duration, org string, caRSAKeySize int) (caOpts *DubboCAOptions, err error) {
-	caOpts = &DubboCAOptions{
-		CAType:         selfSignedCA,
-		DefaultCertTTL: defaultCertTTL,
-		MaxCertTTL:     maxCertTTL,
-		CARSAKeySize:   caRSAKeySize,
-	}
-
-	options := util.CertOptions{
-		TTL:          caCertTTL,
-		Org:          org,
-		IsCA:         true,
-		IsSelfSigned: true,
-		RSAKeySize:   caRSAKeySize,
-		IsDualUse:    true, // hardcoded to true for K8S as well
-	}
-	pemCert, pemKey, ckErr := util.GenCertKeyFromOptions(options)
-	if ckErr != nil {
-		return nil, fmt.Errorf("unable to generate CA cert and key for self-signed CA (%v)", ckErr)
-	}
-
-	rootCerts, err := util.AppendRootCerts(pemCert, rootCertFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to append root certificates (%v)", err)
-	}
-
-	if caOpts.KeyCertBundle, err = util.NewVerifiedKeyCertBundleFromPem(
-		pemCert,
-		pemKey,
-		nil,
-		rootCerts,
-		nil,
-	); err != nil {
-		return nil, fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
-	}
-
-	return caOpts, nil
 }
 
 func BuildSecret(scrtName, namespace string, certChain, privateKey, rootCert, caCert, caPrivateKey []byte, secretType v1.SecretType) *v1.Secret {

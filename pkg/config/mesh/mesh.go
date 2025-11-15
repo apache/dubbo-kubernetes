@@ -35,26 +35,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// DefaultMeshNetworks returns a default meshnetworks configuration.
-// By default, it is empty.
-func DefaultMeshNetworks() *meshconfig.MeshNetworks {
-	return ptr.Of(EmptyMeshNetworks())
-}
-
-func DefaultProxyConfig() *meshconfig.ProxyConfig {
-	return &meshconfig.ProxyConfig{
-		ConfigPath:               constants.ConfigPathDir,
-		ClusterName:              &meshconfig.ProxyConfig_ServiceCluster{ServiceCluster: constants.ServiceClusterName},
-		DrainDuration:            durationpb.New(45 * time.Second),
-		TerminationDrainDuration: durationpb.New(5 * time.Second),
-		ProxyAdminPort:           15000,
-		DiscoveryAddress:         "dubbod.dubbo-system.svc:15012",
-		ControlPlaneAuthPolicy:   meshconfig.AuthenticationPolicy_MUTUAL_TLS,
-		StatusPort:               15020,
-		BinaryPath:               constants.BinaryPathFilename,
-	}
-}
-
 func ReadMeshConfig(filename string) (*meshconfig.MeshConfig, error) {
 	yaml, err := os.ReadFile(filename)
 	if err != nil {
@@ -63,9 +43,6 @@ func ReadMeshConfig(filename string) (*meshconfig.MeshConfig, error) {
 	return ApplyMeshConfigDefaults(string(yaml))
 }
 
-func ApplyMeshConfigDefaults(yaml string) (*meshconfig.MeshConfig, error) {
-	return ApplyMeshConfig(yaml, DefaultMeshConfig())
-}
 func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshconfig.MeshConfig, error) {
 	prevProxyConfig := defaultConfig.DefaultConfig
 	prevDefaultProvider := defaultConfig.DefaultProviders
@@ -126,6 +103,10 @@ func ApplyMeshConfig(yaml string, defaultConfig *meshconfig.MeshConfig) (*meshco
 	return defaultConfig, nil
 }
 
+func ApplyMeshConfigDefaults(yaml string) (*meshconfig.MeshConfig, error) {
+	return ApplyMeshConfig(yaml, DefaultMeshConfig())
+}
+
 func ApplyProxyConfig(yaml string, meshConfig *meshconfig.MeshConfig) (*meshconfig.MeshConfig, error) {
 	mc := protomarshal.Clone(meshConfig)
 	pc, err := MergeProxyConfig(yaml, mc.DefaultConfig)
@@ -136,25 +117,60 @@ func ApplyProxyConfig(yaml string, meshConfig *meshconfig.MeshConfig) (*meshconf
 	return mc, nil
 }
 
-// EmptyMeshNetworks configuration with no networks
-func EmptyMeshNetworks() meshconfig.MeshNetworks {
-	return meshconfig.MeshNetworks{
-		Networks: map[string]*meshconfig.Network{},
+func MergeProxyConfig(yaml string, proxyConfig *meshconfig.ProxyConfig) (*meshconfig.ProxyConfig, error) {
+	origMetadata := proxyConfig.ProxyMetadata
+	origProxyHeaders := proxyConfig.ProxyHeaders
+	if err := protomarshal.ApplyYAML(yaml, proxyConfig); err != nil {
+		return nil, fmt.Errorf("could not parse proxy config: %v", err)
+	}
+	newMetadata := proxyConfig.ProxyMetadata
+	proxyConfig.ProxyMetadata = mergeMap(origMetadata, newMetadata)
+	correctProxyHeaders(proxyConfig, origProxyHeaders)
+	return proxyConfig, nil
+}
+
+func correctProxyHeaders(proxyConfig *meshconfig.ProxyConfig, orig *meshconfig.ProxyConfig_ProxyHeaders) {
+	ph := proxyConfig.ProxyHeaders
+	if ph != nil && orig != nil {
+		ph.ForwardedClientCert = pointer.NonEmptyOrDefault(ph.ForwardedClientCert, orig.ForwardedClientCert)
+		ph.RequestId = pointer.NonEmptyOrDefault(ph.RequestId, orig.RequestId)
+		ph.AttemptCount = pointer.NonEmptyOrDefault(ph.AttemptCount, orig.AttemptCount)
+		ph.Server = pointer.NonEmptyOrDefault(ph.Server, orig.Server)
+		ph.EnvoyDebugHeaders = pointer.NonEmptyOrDefault(ph.EnvoyDebugHeaders, orig.EnvoyDebugHeaders)
 	}
 }
 
-// ParseMeshNetworks returns a new MeshNetworks decoded from the
-// input YAML.
-func ParseMeshNetworks(yaml string) (*meshconfig.MeshNetworks, error) {
-	out := EmptyMeshNetworks()
-	if err := protomarshal.ApplyYAML(yaml, &out); err != nil {
-		return nil, multierror.Prefix(err, "failed to convert to proto.")
+func extractYamlField(key string, mp map[string]any) (string, error) {
+	proxyConfig := mp[key]
+	if proxyConfig == nil {
+		return "", nil
 	}
+	bytes, err := yaml.Marshal(proxyConfig)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
 
-	// if err := agent.ValidateMeshNetworks(&out); err != nil {
-	// 	return nil, err
-	// }
-	return &out, nil
+func toMap(yamlText string) (map[string]any, error) {
+	mp := map[string]any{}
+	if err := yaml.Unmarshal([]byte(yamlText), &mp); err != nil {
+		return nil, err
+	}
+	return mp, nil
+}
+
+func mergeMap(original map[string]string, merger map[string]string) map[string]string {
+	if original == nil && merger == nil {
+		return nil
+	}
+	if original == nil {
+		original = map[string]string{}
+	}
+	for k, v := range merger {
+		original[k] = v
+	}
+	return original
 }
 
 func DefaultMeshConfig() *meshconfig.MeshConfig {
@@ -189,57 +205,43 @@ func DefaultMeshConfig() *meshconfig.MeshConfig {
 	}
 }
 
-func MergeProxyConfig(yaml string, proxyConfig *meshconfig.ProxyConfig) (*meshconfig.ProxyConfig, error) {
-	origMetadata := proxyConfig.ProxyMetadata
-	origProxyHeaders := proxyConfig.ProxyHeaders
-	if err := protomarshal.ApplyYAML(yaml, proxyConfig); err != nil {
-		return nil, fmt.Errorf("could not parse proxy config: %v", err)
-	}
-	newMetadata := proxyConfig.ProxyMetadata
-	proxyConfig.ProxyMetadata = mergeMap(origMetadata, newMetadata)
-	correctProxyHeaders(proxyConfig, origProxyHeaders)
-	return proxyConfig, nil
+// DefaultMeshNetworks returns a default meshnetworks configuration.
+// By default, it is empty.
+func DefaultMeshNetworks() *meshconfig.MeshNetworks {
+	return ptr.Of(EmptyMeshNetworks())
 }
 
-func correctProxyHeaders(proxyConfig *meshconfig.ProxyConfig, orig *meshconfig.ProxyConfig_ProxyHeaders) {
-	ph := proxyConfig.ProxyHeaders
-	if ph != nil && orig != nil {
-		ph.ForwardedClientCert = pointer.NonEmptyOrDefault(ph.ForwardedClientCert, orig.ForwardedClientCert)
-		ph.RequestId = pointer.NonEmptyOrDefault(ph.RequestId, orig.RequestId)
-		ph.AttemptCount = pointer.NonEmptyOrDefault(ph.AttemptCount, orig.AttemptCount)
-		ph.Server = pointer.NonEmptyOrDefault(ph.Server, orig.Server)
-		ph.EnvoyDebugHeaders = pointer.NonEmptyOrDefault(ph.EnvoyDebugHeaders, orig.EnvoyDebugHeaders)
+func DefaultProxyConfig() *meshconfig.ProxyConfig {
+	return &meshconfig.ProxyConfig{
+		ConfigPath:               constants.ConfigPathDir,
+		ClusterName:              &meshconfig.ProxyConfig_ServiceCluster{ServiceCluster: constants.ServiceClusterName},
+		DrainDuration:            durationpb.New(45 * time.Second),
+		TerminationDrainDuration: durationpb.New(5 * time.Second),
+		ProxyAdminPort:           15000,
+		DiscoveryAddress:         "dubbod.dubbo-system.svc:15012",
+		ControlPlaneAuthPolicy:   meshconfig.AuthenticationPolicy_MUTUAL_TLS,
+		StatusPort:               15020,
+		BinaryPath:               constants.BinaryPathFilename,
 	}
-}
-func extractYamlField(key string, mp map[string]any) (string, error) {
-	proxyConfig := mp[key]
-	if proxyConfig == nil {
-		return "", nil
-	}
-	bytes, err := yaml.Marshal(proxyConfig)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
 }
 
-func toMap(yamlText string) (map[string]any, error) {
-	mp := map[string]any{}
-	if err := yaml.Unmarshal([]byte(yamlText), &mp); err != nil {
-		return nil, err
+// EmptyMeshNetworks configuration with no networks
+func EmptyMeshNetworks() meshconfig.MeshNetworks {
+	return meshconfig.MeshNetworks{
+		Networks: map[string]*meshconfig.Network{},
 	}
-	return mp, nil
 }
 
-func mergeMap(original map[string]string, merger map[string]string) map[string]string {
-	if original == nil && merger == nil {
-		return nil
+// ParseMeshNetworks returns a new MeshNetworks decoded from the
+// input YAML.
+func ParseMeshNetworks(yaml string) (*meshconfig.MeshNetworks, error) {
+	out := EmptyMeshNetworks()
+	if err := protomarshal.ApplyYAML(yaml, &out); err != nil {
+		return nil, multierror.Prefix(err, "failed to convert to proto.")
 	}
-	if original == nil {
-		original = map[string]string{}
-	}
-	for k, v := range merger {
-		original[k] = v
-	}
-	return original
+
+	// if err := agent.ValidateMeshNetworks(&out); err != nil {
+	// 	return nil, err
+	// }
+	return &out, nil
 }

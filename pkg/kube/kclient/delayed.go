@@ -68,6 +68,13 @@ func newDelayedFilter(resource schema.GroupVersionResource, watcher kubetypes.Cr
 	}
 }
 
+func (r delayedHandlerRegistration) HasSynced() bool {
+	if s := r.hasSynced.Load(); s != nil {
+		return (*s)()
+	}
+	return false
+}
+
 func (d *delayedFilter) HasSynced() bool {
 	return d.Watcher.HasSynced()
 }
@@ -169,13 +176,6 @@ func (s *delayedClient[T]) HasSyncedIgnoringHandlers() bool {
 	return hs
 }
 
-func (r delayedHandlerRegistration) HasSynced() bool {
-	if s := r.hasSynced.Load(); s != nil {
-		return (*s)()
-	}
-	return false
-}
-
 func (s *delayedClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.ResourceEventHandlerRegistration {
 	if c := s.inf.Load(); c != nil {
 		return (*c).AddEventHandler(h)
@@ -192,14 +192,6 @@ func (s *delayedClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.R
 	return hasSynced
 }
 
-func (d delayedIndex[T]) Lookup(key string) []interface{} {
-	if c := d.indexer.Load(); c != nil {
-		return (*c).Lookup(key)
-	}
-	// Not ready yet, return nil
-	return nil
-}
-
 func (s *delayedClient[T]) Index(name string, extract func(o T) []string) RawIndexer {
 	if c := s.inf.Load(); c != nil {
 		return (*c).Index(name, extract)
@@ -209,4 +201,12 @@ func (s *delayedClient[T]) Index(name string, extract func(o T) []string) RawInd
 	di := delayedIndex[T]{name: name, indexer: new(atomic.Pointer[RawIndexer]), extract: extract}
 	s.indexers = append(s.indexers, di)
 	return di
+}
+
+func (d delayedIndex[T]) Lookup(key string) []interface{} {
+	if c := d.indexer.Load(); c != nil {
+		return (*c).Lookup(key)
+	}
+	// Not ready yet, return nil
+	return nil
 }

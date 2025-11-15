@@ -41,16 +41,12 @@ func (sg *StatusGen) Generate(proxy *model.Proxy, w *model.WatchedResource, req 
 	return sg.handleInternalRequest(proxy, w, req)
 }
 
-func (sg *StatusGen) GenerateDeltas(
-	proxy *model.Proxy,
-	req *model.PushRequest,
-	w *model.WatchedResource,
-) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
+func (sg *StatusGen) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
 	res, detail, err := sg.handleInternalRequest(proxy, w, req)
 	return res, nil, detail, true, err
 }
 
-func (sg *StatusGen) handleInternalRequest(_ *model.Proxy, w *model.WatchedResource, _ *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
+func (sg *StatusGen) handleInternalRequest(_ *model.Proxy, _ *model.WatchedResource, _ *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
 	res := model.Resources{}
 	return res, model.DefaultXdsLogDetails, nil
 }

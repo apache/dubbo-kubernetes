@@ -39,22 +39,23 @@ type IndexObject[K comparable, O any] struct {
 	Objects []O
 }
 
-func (i IndexObject[K, O]) ResourceName() string {
-	return toString(i.Key)
+type index[K comparable, O any] struct {
+	uid collectionUID
+	indexer[O]
+	c       Collection[O]
+	extract func(o O) []K
 }
 
-// NewNamespaceIndex is a small helper to index a collection by namespace
-func NewNamespaceIndex[O Namespacer](c Collection[O]) Index[string, O] {
-	return NewIndex(c, cache.NamespaceIndex, func(o O) []string {
-		return []string{o.GetNamespace()}
-	})
+type indexCollection[K comparable, O any] struct {
+	idx      index[K, O]
+	id       collectionUID
+	metadata Metadata
+	// nolint: unused // (not true, its to implement an interface)
+	collectionName string
+	fromKey        func(string) any
 }
 
-func NewIndex[K comparable, O any](
-	c Collection[O],
-	name string,
-	extract func(o O) []K,
-) Index[K, O] {
+func NewIndex[K comparable, O any](c Collection[O], name string, extract func(o O) []K) Index[K, O] {
 	idx := c.(internalCollection[O]).index(name, func(o O) []string {
 		return slices.Map(extract(o), func(e K) string {
 			return toString(e)
@@ -69,11 +70,11 @@ func NewIndex[K comparable, O any](
 	}
 }
 
-type index[K comparable, O any] struct {
-	uid collectionUID
-	indexer[O]
-	c       Collection[O]
-	extract func(o O) []K
+// NewNamespaceIndex is a small helper to index a collection by namespace
+func NewNamespaceIndex[O Namespacer](c Collection[O]) Index[string, O] {
+	return NewIndex(c, cache.NamespaceIndex, func(o O) []string {
+		return []string{o.GetNamespace()}
+	})
 }
 
 func (i index[K, O]) AsCollection(opts ...CollectionOption) Collection[IndexObject[K, O]] {
@@ -125,23 +126,6 @@ func (i index[K, O]) Lookup(k K) []O {
 		return nil
 	}
 	return i.indexer.Lookup(toString(k))
-}
-
-func toString(rk any) string {
-	tk, ok := rk.(string)
-	if !ok {
-		return rk.(fmt.Stringer).String()
-	}
-	return tk
-}
-
-type indexCollection[K comparable, O any] struct {
-	idx      index[K, O]
-	id       collectionUID
-	metadata Metadata
-	// nolint: unused // (not true, its to implement an interface)
-	collectionName string
-	fromKey        func(string) any
 }
 
 // nolint: unused // (not true, its to implement an interface)
@@ -255,4 +239,16 @@ func (i indexCollection[K, O]) RegisterBatch(f func(o []Event[IndexObject[K, O]]
 		}
 		f(downstream)
 	}, runExistingState)
+}
+
+func (i IndexObject[K, O]) ResourceName() string {
+	return toString(i.Key)
+}
+
+func toString(rk any) string {
+	tk, ok := rk.(string)
+	if !ok {
+		return rk.(fmt.Stringer).String()
+	}
+	return tk
 }

@@ -41,6 +41,8 @@ type indexFilter struct {
 	key          string
 }
 
+type objectKeyExtractor = func(o any) []string
+
 func FilterKey(k string) FetchOption {
 	return func(h *dependency) {
 		h.filter.keys = smallset.New(k)
@@ -49,21 +51,6 @@ func FilterKey(k string) FetchOption {
 
 func getKeyExtractor(o any) []string {
 	return []string{GetKey(o)}
-}
-
-type objectKeyExtractor = func(o any) []string
-
-func (f *filter) reverseIndexKey() ([]string, indexedDependencyType, objectKeyExtractor, collectionUID, bool) {
-	if f.keys.Len() > 0 {
-		if f.index != nil {
-			panic("cannot filter by index and key")
-		}
-		return f.keys.List(), getKeyType, getKeyExtractor, 0, true
-	}
-	if f.index != nil {
-		return []string{f.index.key}, indexType, f.index.extractKeys, f.index.filterUID, true
-	}
-	return nil, unknownIndexType, nil, 0, false
 }
 
 func getLabelSelector(a any) map[string]string {
@@ -93,6 +80,19 @@ func getLabelSelector(a any) map[string]string {
 	default:
 		panic(fmt.Sprintf("obj %T has unknown Selector", s))
 	}
+}
+
+func (f *filter) reverseIndexKey() ([]string, indexedDependencyType, objectKeyExtractor, collectionUID, bool) {
+	if f.keys.Len() > 0 {
+		if f.index != nil {
+			panic("cannot filter by index and key")
+		}
+		return f.keys.List(), getKeyType, getKeyExtractor, 0, true
+	}
+	if f.index != nil {
+		return []string{f.index.key}, indexType, f.index.extractKeys, f.index.filterUID, true
+	}
+	return nil, unknownIndexType, nil, 0, false
 }
 
 func (f *filter) Matches(object any, forList bool) bool {

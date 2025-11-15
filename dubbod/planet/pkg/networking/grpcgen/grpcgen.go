@@ -20,7 +20,10 @@ package grpcgen
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
+
+var log = dubbolog.RegisterScope("grpcgen", "xDS Generator for Proxyless gRPC")
 
 type GrpcConfigGenerator struct{}
 

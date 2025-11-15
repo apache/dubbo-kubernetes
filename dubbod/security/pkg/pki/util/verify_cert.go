@@ -158,15 +158,6 @@ func VerifyCertificate(privPem []byte, certChainPem []byte, rootCertPem []byte, 
 	return nil
 }
 
-func sortExtKeyUsage(extKeyUsage []x509.ExtKeyUsage) []int {
-	data := make([]int, len(extKeyUsage))
-	for i := range extKeyUsage {
-		data[i] = int(extKeyUsage[i])
-	}
-	sort.Ints(data)
-	return data
-}
-
 // FindRootCertFromCertificateChainBytes find the root cert from cert chain
 func FindRootCertFromCertificateChainBytes(certBytes []byte) ([]byte, error) {
 	certChain, cert, err := ParsePemEncodedCertificateChain(certBytes)
@@ -195,4 +186,13 @@ func IsCertExpired(filepath string) (bool, error) {
 		return true, fmt.Errorf("failed to parse the cert, err is %v", err)
 	}
 	return x509Cert.NotAfter.Before(time.Now()), nil
+}
+
+func sortExtKeyUsage(extKeyUsage []x509.ExtKeyUsage) []int {
+	data := make([]int, len(extKeyUsage))
+	for i := range extKeyUsage {
+		data[i] = int(extKeyUsage[i])
+	}
+	sort.Ints(data)
+	return data
 }

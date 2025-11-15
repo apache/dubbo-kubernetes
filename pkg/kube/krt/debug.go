@@ -28,13 +28,18 @@ type DebugHandler struct {
 	mu               sync.RWMutex
 }
 
-func (p *DebugHandler) MarshalJSON() ([]byte, error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return json.Marshal(p.debugCollections)
+var GlobalDebugHandler = new(DebugHandler)
+
+type DebugCollection struct {
+	name string
+	dump func() CollectionDump
+	uid  collectionUID
 }
 
-var GlobalDebugHandler = new(DebugHandler)
+type InputDump struct {
+	Outputs      []string `json:"outputs,omitempty"`
+	Dependencies []string `json:"dependencies,omitempty"`
+}
 
 type CollectionDump struct {
 	// Map of output key -> output
@@ -46,14 +51,11 @@ type CollectionDump struct {
 	// Synced returns whether the collection is synced or not
 	Synced bool `json:"synced"`
 }
-type InputDump struct {
-	Outputs      []string `json:"outputs,omitempty"`
-	Dependencies []string `json:"dependencies,omitempty"`
-}
-type DebugCollection struct {
-	name string
-	dump func() CollectionDump
-	uid  collectionUID
+
+func (p *DebugHandler) MarshalJSON() ([]byte, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return json.Marshal(p.debugCollections)
 }
 
 func (p DebugCollection) MarshalJSON() ([]byte, error) {

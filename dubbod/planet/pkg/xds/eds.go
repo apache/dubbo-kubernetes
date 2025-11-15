@@ -29,64 +29,12 @@ import (
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 )
 
-var _ model.XdsDeltaResourceGenerator = &EdsGenerator{}
-
 type EdsGenerator struct {
 	Cache         model.XdsCache
 	EndpointIndex *model.EndpointIndex
 }
 
-func (s *DiscoveryServer) ServiceUpdate(shard model.ShardKey, hostname string, namespace string, event model.Event) {
-	if event == model.EventDelete {
-		s.Env.EndpointIndex.DeleteServiceShard(shard, hostname, namespace, false)
-	} else {
-	}
-}
-
-func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, namespace string,
-	dubboEndpoints []*model.DubboEndpoint,
-) {
-	pushType := s.Env.EndpointIndex.UpdateServiceEndpoints(shard, serviceName, namespace, dubboEndpoints, true)
-	// CRITICAL FIX: Always push EDS updates when endpoints change state
-	// This ensures clients receive updates when:
-	// 1. Endpoints become available (from empty to non-empty)
-	// 2. Endpoints become unavailable (from non-empty to empty)
-	// 3. Endpoint health status changes
-	// This is critical for proxyless gRPC to prevent "weighted-target: no targets to pick from" errors
-	if pushType == model.IncrementalPush || pushType == model.FullPush {
-		log.Infof("EDSUpdate: service %s/%s triggering %v push (endpoints=%d)", namespace, serviceName, pushType, len(dubboEndpoints))
-		s.ConfigUpdate(&model.PushRequest{
-			Full:           pushType == model.FullPush,
-			ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
-			Reason:         model.NewReasonStats(model.EndpointUpdate),
-		})
-	} else if pushType == model.NoPush {
-		// CRITICAL: Even when UpdateServiceEndpoints returns NoPush, we may still need to push
-		// This happens when:
-		// 1. All old endpoints were unhealthy and new endpoints are also unhealthy (health status didn't change)
-		// 2. But we still need to notify clients about the current state
-		// For proxyless gRPC, we should push even if endpoints are empty to ensure clients know the state
-		if len(dubboEndpoints) == 0 {
-			log.Infof("EDSUpdate: service %s/%s endpoints became empty (NoPush), forcing push to clear client cache", namespace, serviceName)
-			s.ConfigUpdate(&model.PushRequest{
-				Full:           false, // Incremental push
-				ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
-				Reason:         model.NewReasonStats(model.EndpointUpdate),
-			})
-		} else {
-			// Endpoints exist but NoPush was returned - this means health status didn't change
-			// For proxyless gRPC, we should still push to ensure clients have the latest endpoint info
-			// This is especially important when endpoints become available after being empty
-			log.Debugf("EDSUpdate: service %s/%s has %d endpoints but NoPush returned (health status unchanged), skipping push", namespace, serviceName, len(dubboEndpoints))
-		}
-	}
-}
-
-func (s *DiscoveryServer) EDSCacheUpdate(shard model.ShardKey, serviceName string, namespace string,
-	dubboEndpoints []*model.DubboEndpoint,
-) {
-	s.Env.EndpointIndex.UpdateServiceEndpoints(shard, serviceName, namespace, dubboEndpoints, false)
-}
+var _ model.XdsDeltaResourceGenerator = &EdsGenerator{}
 
 var skippedEdsConfigs = sets.New(
 	kind.VirtualService,
@@ -118,43 +66,33 @@ func edsNeedsPush(req *model.PushRequest, proxy *model.Proxy) bool {
 
 func (eds *EdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
 	// CRITICAL: Log EDS generation attempt for debugging
-	log.Infof("EDS Generate: proxy=%s, watchedResources=%d, req.Full=%v, req.ConfigsUpdated=%v",
+	log.Debugf("EDS Generate: proxy=%s, watchedResources=%d, req.Full=%v, req.ConfigsUpdated=%v",
 		proxy.ID, len(w.ResourceNames), req.Full, len(req.ConfigsUpdated))
 
 	if !edsNeedsPush(req, proxy) {
-		log.Infof("EDS Generate: edsNeedsPush returned false, skipping EDS generation for proxy=%s", proxy.ID)
+		log.Debugf("EDS Generate: edsNeedsPush returned false, skipping EDS generation for proxy=%s", proxy.ID)
 		return nil, model.DefaultXdsLogDetails, nil
 	}
 	resources, logDetails := eds.buildEndpoints(proxy, req, w)
-	log.Infof("EDS Generate: built %d resources for proxy=%s (%s)",
+	log.Debugf("EDS Generate: built %d resources for proxy=%s (%s)",
 		len(resources), proxy.ID, logDetails.AdditionalInfo)
 	return resources, logDetails, nil
 }
 
-// canSendPartialFullPushes checks if a request contains *only* endpoints updates except `skippedEdsConfigs`.
-// This allows us to perform more efficient pushes where we only update the endpoints that did change.
-func canSendPartialFullPushes(req *model.PushRequest) bool {
-	// If we don't know what configs are updated, just send a full push
-	if req.Forced {
-		return false
+func (eds *EdsGenerator) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
+	if !edsNeedsPush(req, proxy) {
+		return nil, nil, model.DefaultXdsLogDetails, false, nil
 	}
-	for cfg := range req.ConfigsUpdated {
-		if skippedEdsConfigs.Contains(cfg.Kind) {
-			// the updated config does not impact EDS, skip it
-			// this happens when push requests are merged due to debounce
-			continue
-		}
-		if cfg.Kind != kind.ServiceEntry {
-			return false
-		}
+	if !shouldUseDeltaEds(req) {
+		resources, logDetails := eds.buildEndpoints(proxy, req, w)
+		return resources, nil, logDetails, false, nil
 	}
-	return true
+
+	resources, removed, logs := eds.buildDeltaEndpoints(proxy, req, w)
+	return resources, removed, logs, true, nil
 }
 
-func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
-	req *model.PushRequest,
-	w *model.WatchedResource,
-) (model.Resources, model.XdsLogDetails) {
+func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, model.XdsLogDetails) {
 	var edsUpdatedServices map[string]struct{}
 	// canSendPartialFullPushes determines if we can send a partial push (ie a subset of known CLAs).
 	// This is safe when only Services has changed, as this implies that only the CLAs for the
@@ -314,33 +252,8 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy,
 	}
 }
 
-func shouldUseDeltaEds(req *model.PushRequest) bool {
-	if !req.Full {
-		return false
-	}
-	return canSendPartialFullPushes(req)
-}
-
-func (eds *EdsGenerator) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest,
-	w *model.WatchedResource,
-) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
-	if !edsNeedsPush(req, proxy) {
-		return nil, nil, model.DefaultXdsLogDetails, false, nil
-	}
-	if !shouldUseDeltaEds(req) {
-		resources, logDetails := eds.buildEndpoints(proxy, req, w)
-		return resources, nil, logDetails, false, nil
-	}
-
-	resources, removed, logs := eds.buildDeltaEndpoints(proxy, req, w)
-	return resources, removed, logs, true, nil
-}
-
 // buildDeltaEndpoints builds endpoints for delta XDS
-func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy,
-	req *model.PushRequest,
-	w *model.WatchedResource,
-) (model.Resources, []string, model.XdsLogDetails) {
+func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, []string, model.XdsLogDetails) {
 	edsUpdatedServices := model.ConfigNamesOfKind(req.ConfigsUpdated, kind.ServiceEntry)
 	var resources model.Resources
 	var removed []string
@@ -478,4 +391,31 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy,
 		Incremental:    len(edsUpdatedServices) != 0,
 		AdditionalInfo: fmt.Sprintf("empty:%v cached:%v/%v", empty, cached, cached+regenerated),
 	}
+}
+
+// canSendPartialFullPushes checks if a request contains *only* endpoints updates except `skippedEdsConfigs`.
+// This allows us to perform more efficient pushes where we only update the endpoints that did change.
+func canSendPartialFullPushes(req *model.PushRequest) bool {
+	// If we don't know what configs are updated, just send a full push
+	if req.Forced {
+		return false
+	}
+	for cfg := range req.ConfigsUpdated {
+		if skippedEdsConfigs.Contains(cfg.Kind) {
+			// the updated config does not impact EDS, skip it
+			// this happens when push requests are merged due to debounce
+			continue
+		}
+		if cfg.Kind != kind.ServiceEntry {
+			return false
+		}
+	}
+	return true
+}
+
+func shouldUseDeltaEds(req *model.PushRequest) bool {
+	if !req.Full {
+		return false
+	}
+	return canSendPartialFullPushes(req)
 }

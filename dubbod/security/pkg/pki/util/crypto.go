@@ -36,8 +36,6 @@ const (
 	blockTypePKCS8PrivateKey = "PRIVATE KEY"     // PKCS#8 plain private key
 )
 
-// ParsePemEncodedCertificate constructs a `x509.Certificate` object using the
-// given a PEM-encoded certificate.
 func ParsePemEncodedCertificate(certBytes []byte) (*x509.Certificate, error) {
 	cb, _ := pem.Decode(certBytes)
 	if cb == nil {
@@ -52,8 +50,6 @@ func ParsePemEncodedCertificate(certBytes []byte) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-// ParsePemEncodedCertificateChain constructs a slice of `x509.Certificate` and `rootCertBytes`
-// objects using the given a PEM-encoded certificate chain.
 func ParsePemEncodedCertificateChain(certBytes []byte) ([]*x509.Certificate, []byte, error) {
 	var (
 		certs         []*x509.Certificate
@@ -82,8 +78,6 @@ func ParsePemEncodedCertificateChain(certBytes []byte) ([]*x509.Certificate, []b
 	return certs, rootCertBytes, nil
 }
 
-// ParsePemEncodedCSR constructs a `x509.CertificateRequest` object using the
-// given PEM-encoded certificate signing request.
 func ParsePemEncodedCSR(csrBytes []byte) (*x509.CertificateRequest, error) {
 	block, _ := pem.Decode(csrBytes)
 	if block == nil {
@@ -96,7 +90,6 @@ func ParsePemEncodedCSR(csrBytes []byte) (*x509.CertificateRequest, error) {
 	return csr, nil
 }
 
-// ParsePemEncodedKey takes a PEM-encoded key and parsed the bytes into a `crypto.PrivateKey`.
 func ParsePemEncodedKey(keyBytes []byte) (crypto.PrivateKey, error) {
 	kb, _ := pem.Decode(keyBytes)
 	if kb == nil {
@@ -127,7 +120,6 @@ func ParsePemEncodedKey(keyBytes []byte) (crypto.PrivateKey, error) {
 	}
 }
 
-// GetRSAKeySize returns the size if it is RSA key, otherwise it returns an error.
 func GetRSAKeySize(privKey crypto.PrivateKey) (int, error) {
 	if t := reflect.TypeOf(privKey); t != reflect.TypeOf(&rsa.PrivateKey{}) {
 		return 0, fmt.Errorf("key type is not RSA: %v", t)
@@ -136,9 +128,6 @@ func GetRSAKeySize(privKey crypto.PrivateKey) (int, error) {
 	return pkey.N.BitLen(), nil
 }
 
-// GetEllipticCurve returns the type of curve associated with the private key;
-// if ECDSA is used, then only 384 and 256 (default) are returned; if non-ECDSA
-// is used then an error is returned
 func GetEllipticCurve(privKey *crypto.PrivateKey) (elliptic.Curve, error) {
 	switch key := (*privKey).(type) {
 	// this should agree with var SupportedECSignatureAlgorithms
@@ -152,8 +141,6 @@ func GetEllipticCurve(privKey *crypto.PrivateKey) (elliptic.Curve, error) {
 	}
 }
 
-// PemCertBytestoString: takes an array of PEM certs in bytes and returns a string array in the same order with
-// trailing newline characters removed
 func PemCertBytestoString(caCerts []byte) []string {
 	certs := []string{}
 	var cert string
