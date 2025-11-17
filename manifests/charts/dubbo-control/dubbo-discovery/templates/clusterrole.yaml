@@ -4,6 +4,9 @@ kind: ClusterRole
 metadata:
   name: dubbod-clusterrole-dubbo-system
 rules:
+  - apiGroups: [ "security.istio.io", "networking.istio.io" ]
+    verbs: [ "get", "watch", "list" ]
+    resources: [ "*" ]
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
     verbs: ["get", "list", "watch", "update", "patch"]

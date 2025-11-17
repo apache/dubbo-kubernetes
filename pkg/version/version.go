@@ -38,13 +38,6 @@ type BuildVersion struct {
 	GitTag        string `json:"tag"`
 }
 
-func (b BuildVersion) String() string {
-	return fmt.Sprintf("%v-%v-%v",
-		b.Version,
-		b.GitRevision,
-		b.BuildStatus)
-}
-
 var Cobra BuildVersion
 
 var (
@@ -56,11 +49,6 @@ var (
 	buildDate    = "unknown"
 )
 
-var (
-	// Info exports the build version information.
-	Info BuildInfo
-)
-
 type BuildInfo struct {
 	Product      string
 	Version      string
@@ -69,6 +57,13 @@ type BuildInfo struct {
 	BuildDate    string
 	BasedOnDubbo string
 }
+
+var (
+	// Info exports the build version information.
+	Info BuildInfo
+)
+
+var Build BuildInfo
 
 func (b BuildInfo) FormatDetailedProductInfo() string {
 	base := []string{
@@ -85,13 +80,6 @@ func (b BuildInfo) FormatDetailedProductInfo() string {
 		base,
 		"\n",
 	)
-}
-
-func shortCommit(c string) string {
-	if len(c) < 7 {
-		return c
-	}
-	return c[:7]
 }
 
 func (b BuildInfo) AsMap() map[string]string {
@@ -122,7 +110,19 @@ func (b BuildInfo) UserAgent(component string) string {
 		commit)
 }
 
-var Build BuildInfo
+func (b BuildVersion) String() string {
+	return fmt.Sprintf("%v-%v-%v",
+		b.Version,
+		b.GitRevision,
+		b.BuildStatus)
+}
+
+func shortCommit(c string) string {
+	if len(c) < 7 {
+		return c
+	}
+	return c[:7]
+}
 
 func init() {
 	Build = BuildInfo{

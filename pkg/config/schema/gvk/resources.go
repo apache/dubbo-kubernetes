@@ -24,25 +24,23 @@ import (
 )
 
 var (
-	Namespace                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
 	CustomResourceDefinition       = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
 	MutatingWebhookConfiguration   = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "MutatingWebhookConfiguration"}
 	ValidatingWebhookConfiguration = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "ValidatingWebhookConfiguration"}
+	Namespace                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
 	Deployment                     = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
-	Job                            = config.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
 	ConfigMap                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
-	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
+	Job                            = config.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
+	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
 	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
-	RequestAuthentication          = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1", Kind: "RequestAuthentication"}
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1", Kind: "PeerAuthentication"}
-	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1", Kind: "AuthorizationPolicy"}
-	DestinationRule                = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "DestinationRule"}
-	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "VirtualService"}
+	SubsetRule                     = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "SubsetRule"}
+	ServiceRoute                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "serviceRoute"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
 )
@@ -55,6 +53,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.MutatingWebhookConfiguration, true
 	case ValidatingWebhookConfiguration:
 		return gvr.ValidatingWebhookConfiguration, true
+	case Namespace:
+		return gvr.Namespace, true
 	case Deployment:
 		return gvr.Deployment, true
 	case StatefulSet:
@@ -69,28 +69,22 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Service, true
 	case ServiceAccount:
 		return gvr.ServiceAccount, true
-	case Namespace:
-		return gvr.Namespace, true
 	case Job:
 		return gvr.Job, true
+	case Pod:
+		return gvr.Pod, true
 	case MeshConfig:
 		return gvr.MeshConfig, true
-	case RequestAuthentication:
-		return gvr.RequestAuthentication, true
 	case PeerAuthentication:
 		return gvr.PeerAuthentication, true
-	case AuthorizationPolicy:
-		return gvr.AuthorizationPolicy, true
-	case DestinationRule:
-		return gvr.DestinationRule, true
-	case VirtualService:
-		return gvr.VirtualService, true
+	case SubsetRule:
+		return gvr.SubsetRule, true
+	case ServiceRoute:
+		return gvr.ServiceRoute, true
 	case EndpointSlice:
 		return gvr.EndpointSlice, true
 	case Endpoints:
 		return gvr.Endpoints, true
-	case Pod:
-		return gvr.Pod, true
 	}
 	return schema.GroupVersionResource{}, false
 }
@@ -122,14 +116,10 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Job, true
 	case gvr.PeerAuthentication:
 		return PeerAuthentication, true
-	case gvr.RequestAuthentication:
-		return RequestAuthentication, true
-	case gvr.AuthorizationPolicy:
-		return AuthorizationPolicy, true
-	case gvr.VirtualService:
-		return VirtualService, true
-	case gvr.DestinationRule:
-		return DestinationRule, true
+	case gvr.ServiceRoute:
+		return ServiceRoute, true
+	case gvr.SubsetRule:
+		return SubsetRule, true
 	case gvr.EndpointSlice:
 		return EndpointSlice, true
 	case gvr.Endpoints:

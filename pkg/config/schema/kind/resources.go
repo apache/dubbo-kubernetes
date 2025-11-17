@@ -33,10 +33,8 @@ const (
 	ValidatingWebhookConfiguration
 	MutatingWebhookConfiguration
 	PeerAuthentication
-	RequestAuthentication
-	VirtualService
-	DestinationRule
-	DNSName
+	ServiceRoute
+	SubsetRule
 )
 
 func (k Kind) String() string {
@@ -69,14 +67,10 @@ func (k Kind) String() string {
 		return "MutatingWebhookConfiguration"
 	case PeerAuthentication:
 		return "PeerAuthentication"
-	case RequestAuthentication:
-		return "RequestAuthentication"
-	case VirtualService:
-		return "VirtualService"
-	case DestinationRule:
-		return "DestinationRule"
-	case DNSName:
-		return "DNSName"
+	case ServiceRoute:
+		return "serviceRoute"
+	case SubsetRule:
+		return "SubsetRule"
 	default:
 		return "Unknown"
 	}

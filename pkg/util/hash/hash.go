@@ -30,11 +30,11 @@ type Hash interface {
 	Sum64() uint64
 }
 
+var _ Hash = &instance{}
+
 type instance struct {
 	hash *xxhash.Digest
 }
-
-var _ Hash = &instance{}
 
 func New() Hash {
 	return &instance{

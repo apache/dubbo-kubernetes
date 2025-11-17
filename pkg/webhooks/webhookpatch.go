@@ -94,6 +94,21 @@ func (w *WebhookCertPatcher) webhookPatchTask(o types.NamespacedName) error {
 	return err
 }
 
+func (w *WebhookCertPatcher) startCaBundleWatcher(stop <-chan struct{}) {
+	id, watchCh := w.CABundleWatcher.AddWatcher()
+	defer w.CABundleWatcher.RemoveWatcher(id)
+	for {
+		select {
+		case <-watchCh:
+			for _, whc := range w.webhooks.List("", klabels.Everything()) {
+				w.queue.AddObject(whc)
+			}
+		case <-stop:
+			return
+		}
+	}
+}
+
 func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string) error {
 	config := w.webhooks.Get(webhookConfigName, "")
 	if config == nil {
@@ -137,21 +152,6 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 	}
 
 	return err
-}
-
-func (w *WebhookCertPatcher) startCaBundleWatcher(stop <-chan struct{}) {
-	id, watchCh := w.CABundleWatcher.AddWatcher()
-	defer w.CABundleWatcher.RemoveWatcher(id)
-	for {
-		select {
-		case <-watchCh:
-			for _, whc := range w.webhooks.List("", klabels.Everything()) {
-				w.queue.AddObject(whc)
-			}
-		case <-stop:
-			return
-		}
-	}
 }
 
 func (w *WebhookCertPatcher) Run(stopChan <-chan struct{}) {

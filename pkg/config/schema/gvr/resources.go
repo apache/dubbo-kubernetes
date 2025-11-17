@@ -35,11 +35,9 @@ var (
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 	MeshConfig                     = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshconfigs"}
-	RequestAuthentication          = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1", Resource: "requestauthentications"}
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1", Resource: "peerauthentications"}
-	AuthorizationPolicy            = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1", Resource: "authorizationpolicies"}
-	DestinationRule                = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "destinationrules"}
-	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "virtualservices"}
+	SubsetRule                     = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "subsetrules"}
+	ServiceRoute                   = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "serviceroutes"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 	Pod                            = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
@@ -63,15 +61,11 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 		return false
 	case ServiceAccount:
 		return false
-	case RequestAuthentication:
-		return false
 	case PeerAuthentication:
 		return false
-	case AuthorizationPolicy:
+	case SubsetRule:
 		return false
-	case DestinationRule:
-		return false
-	case VirtualService:
+	case ServiceRoute:
 		return false
 	case MutatingWebhookConfiguration:
 		return true

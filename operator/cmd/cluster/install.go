@@ -26,7 +26,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/progress"
 	"github.com/apache/dubbo-kubernetes/pkg/art"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
-	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -104,7 +104,7 @@ func Install(kubeClient kube.CLIClient, rootArgs *RootArgs, iArgs *installArgs, 
 	if err != nil {
 		return fmt.Errorf("generate config: %v", err)
 	}
-	profile := pointer.NonEmptyOrDefault(vals.GetPathString("spec.profile"), "default")
+	profile := ptr.NonEmptyOrDefault(vals.GetPathString("spec.profile"), "default")
 	if !rootArgs.DryRun && !iArgs.skipConfirmation {
 		prompt := fmt.Sprintf("The %q profile will be installed into the cluster. \nDo you want to proceed? (y/N)", profile)
 		if !OptionDeterminate(prompt, stdOut) {

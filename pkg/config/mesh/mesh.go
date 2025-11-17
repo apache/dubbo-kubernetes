@@ -19,12 +19,11 @@ package mesh
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"os"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
-	"github.com/apache/dubbo-kubernetes/pkg/util/pointer"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/hashicorp/go-multierror"
@@ -132,11 +131,11 @@ func MergeProxyConfig(yaml string, proxyConfig *meshconfig.ProxyConfig) (*meshco
 func correctProxyHeaders(proxyConfig *meshconfig.ProxyConfig, orig *meshconfig.ProxyConfig_ProxyHeaders) {
 	ph := proxyConfig.ProxyHeaders
 	if ph != nil && orig != nil {
-		ph.ForwardedClientCert = pointer.NonEmptyOrDefault(ph.ForwardedClientCert, orig.ForwardedClientCert)
-		ph.RequestId = pointer.NonEmptyOrDefault(ph.RequestId, orig.RequestId)
-		ph.AttemptCount = pointer.NonEmptyOrDefault(ph.AttemptCount, orig.AttemptCount)
-		ph.Server = pointer.NonEmptyOrDefault(ph.Server, orig.Server)
-		ph.EnvoyDebugHeaders = pointer.NonEmptyOrDefault(ph.EnvoyDebugHeaders, orig.EnvoyDebugHeaders)
+		ph.ForwardedClientCert = ptr.NonEmptyOrDefault(ph.ForwardedClientCert, orig.ForwardedClientCert)
+		ph.RequestId = ptr.NonEmptyOrDefault(ph.RequestId, orig.RequestId)
+		ph.AttemptCount = ptr.NonEmptyOrDefault(ph.AttemptCount, orig.AttemptCount)
+		ph.Server = ptr.NonEmptyOrDefault(ph.Server, orig.Server)
+		ph.EnvoyDebugHeaders = ptr.NonEmptyOrDefault(ph.EnvoyDebugHeaders, orig.EnvoyDebugHeaders)
 	}
 }
 

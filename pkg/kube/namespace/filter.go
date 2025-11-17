@@ -51,11 +51,7 @@ type discoveryNamespacesFilter struct {
 	handlers            []func(added, removed sets.String)
 }
 
-func NewDiscoveryNamespacesFilter(
-	namespaces kclient.Client[*corev1.Namespace],
-	mesh mesh.Watcher,
-	stop <-chan struct{},
-) kubetypes.DynamicObjectFilter {
+func NewDiscoveryNamespacesFilter(namespaces kclient.Client[*corev1.Namespace], mesh mesh.Watcher, stop <-chan struct{}) kubetypes.DynamicObjectFilter {
 	// convert LabelSelectors to Selectors
 	f := &discoveryNamespacesFilter{
 		namespaces:          namespaces,
@@ -107,18 +103,6 @@ func NewDiscoveryNamespacesFilter(
 	return f
 }
 
-func (d *discoveryNamespacesFilter) notifyHandlers(added sets.Set[string], removed sets.String) {
-	// Clone handlers; we handle dynamic handlers so they can change after the filter has started.
-	// Important: handlers are not called under the lock. If they are, then handlers which eventually call discoveryNamespacesFilter.Filter
-	// (as some do in the codebase currently, via kclient.List), will deadlock.
-	d.lock.RLock()
-	handlers := slices.Clone(d.handlers)
-	d.lock.RUnlock()
-	for _, h := range handlers {
-		h(added, removed)
-	}
-}
-
 func (d *discoveryNamespacesFilter) Filter(obj any) bool {
 	// When an object is deleted, obj could be a DeletionFinalStateUnknown marker item.
 	ns, ok := extractObjectNamespace(obj)
@@ -141,66 +125,28 @@ func (d *discoveryNamespacesFilter) Filter(obj any) bool {
 	return d.discoveryNamespaces.Contains(ns)
 }
 
-func extractObjectNamespace(obj any) (string, bool) {
-	if ns, ok := obj.(string); ok {
-		return ns, true
-	}
-	object := controllers.ExtractObject(obj)
-	if object == nil {
-		// When an object is deleted, obj could be a DeletionFinalStateUnknown marker item.
-		return "", false
-	}
-	if _, ok := object.(*corev1.Namespace); ok {
-		return object.GetName(), true
-	}
-	return object.GetNamespace(), true
+// AddHandler registers a handler on namespace, which will be triggered when namespace selected or deselected.
+// If the namespaces have been synced, trigger the new added handler.
+func (d *discoveryNamespacesFilter) AddHandler(f func(added, removed sets.String)) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	d.handlers = append(d.handlers, f)
 }
 
-func LabelSelectorAsSelector(ps *meshapi.LabelSelector) (labels.Selector, error) {
-	if ps == nil {
-		return labels.Nothing(), nil
+func (d *discoveryNamespacesFilter) notifyHandlers(added sets.Set[string], removed sets.String) {
+	// Clone handlers; we handle dynamic handlers so they can change after the filter has started.
+	// Important: handlers are not called under the lock. If they are, then handlers which eventually call discoveryNamespacesFilter.Filter
+	// (as some do in the codebase currently, via kclient.List), will deadlock.
+	d.lock.RLock()
+	handlers := slices.Clone(d.handlers)
+	d.lock.RUnlock()
+	for _, h := range handlers {
+		h(added, removed)
 	}
-	if len(ps.MatchLabels)+len(ps.MatchExpressions) == 0 {
-		return labels.Everything(), nil
-	}
-	requirements := make([]labels.Requirement, 0, len(ps.MatchLabels)+len(ps.MatchExpressions))
-	for k, v := range ps.MatchLabels {
-		r, err := labels.NewRequirement(k, selection.Equals, []string{v})
-		if err != nil {
-			return nil, err
-		}
-		requirements = append(requirements, *r)
-	}
-	for _, expr := range ps.MatchExpressions {
-		var op selection.Operator
-		switch metav1.LabelSelectorOperator(expr.Operator) {
-		case metav1.LabelSelectorOpIn:
-			op = selection.In
-		case metav1.LabelSelectorOpNotIn:
-			op = selection.NotIn
-		case metav1.LabelSelectorOpExists:
-			op = selection.Exists
-		case metav1.LabelSelectorOpDoesNotExist:
-			op = selection.DoesNotExist
-		default:
-			return nil, fmt.Errorf("%q is not a valid label selector operator", expr.Operator)
-		}
-		r, err := labels.NewRequirement(expr.Key, op, append([]string(nil), expr.Values...))
-		if err != nil {
-			return nil, err
-		}
-		requirements = append(requirements, *r)
-	}
-	selector := labels.NewSelector()
-	selector = selector.Add(requirements...)
-	return selector, nil
 }
 
 // SelectorsChanged initializes the discovery filter state with the discovery selectors and selected namespaces
-func (d *discoveryNamespacesFilter) selectorsChanged(
-	discoverySelectors []*meshapi.LabelSelector,
-	notify bool,
-) {
+func (d *discoveryNamespacesFilter) selectorsChanged(discoverySelectors []*meshapi.LabelSelector, notify bool) {
 	// Call closure to allow safe defer lock handling
 	selectedNamespaces, deselectedNamespaces := func() (sets.String, sets.String) {
 		d.lock.Lock()
@@ -279,14 +225,6 @@ func (d *discoveryNamespacesFilter) namespaceDeletedLocked(ns metav1.ObjectMeta)
 	d.discoveryNamespaces.Delete(ns.Name)
 }
 
-// AddHandler registers a handler on namespace, which will be triggered when namespace selected or deselected.
-// If the namespaces have been synced, trigger the new added handler.
-func (d *discoveryNamespacesFilter) AddHandler(f func(added, removed sets.String)) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-	d.handlers = append(d.handlers, f)
-}
-
 func (d *discoveryNamespacesFilter) isSelectedLocked(labels labels.Set) bool {
 	// permit all objects if discovery selectors are not specified
 	if len(d.discoverySelectors) == 0 {
@@ -300,4 +238,59 @@ func (d *discoveryNamespacesFilter) isSelectedLocked(labels labels.Set) bool {
 	}
 
 	return false
+}
+
+func extractObjectNamespace(obj any) (string, bool) {
+	if ns, ok := obj.(string); ok {
+		return ns, true
+	}
+	object := controllers.ExtractObject(obj)
+	if object == nil {
+		// When an object is deleted, obj could be a DeletionFinalStateUnknown marker item.
+		return "", false
+	}
+	if _, ok := object.(*corev1.Namespace); ok {
+		return object.GetName(), true
+	}
+	return object.GetNamespace(), true
+}
+
+func LabelSelectorAsSelector(ps *meshapi.LabelSelector) (labels.Selector, error) {
+	if ps == nil {
+		return labels.Nothing(), nil
+	}
+	if len(ps.MatchLabels)+len(ps.MatchExpressions) == 0 {
+		return labels.Everything(), nil
+	}
+	requirements := make([]labels.Requirement, 0, len(ps.MatchLabels)+len(ps.MatchExpressions))
+	for k, v := range ps.MatchLabels {
+		r, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		if err != nil {
+			return nil, err
+		}
+		requirements = append(requirements, *r)
+	}
+	for _, expr := range ps.MatchExpressions {
+		var op selection.Operator
+		switch metav1.LabelSelectorOperator(expr.Operator) {
+		case metav1.LabelSelectorOpIn:
+			op = selection.In
+		case metav1.LabelSelectorOpNotIn:
+			op = selection.NotIn
+		case metav1.LabelSelectorOpExists:
+			op = selection.Exists
+		case metav1.LabelSelectorOpDoesNotExist:
+			op = selection.DoesNotExist
+		default:
+			return nil, fmt.Errorf("%q is not a valid label selector operator", expr.Operator)
+		}
+		r, err := labels.NewRequirement(expr.Key, op, append([]string(nil), expr.Values...))
+		if err != nil {
+			return nil, err
+		}
+		requirements = append(requirements, *r)
+	}
+	selector := labels.NewSelector()
+	selector = selector.Add(requirements...)
+	return selector, nil
 }

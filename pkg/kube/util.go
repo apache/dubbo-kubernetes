@@ -35,7 +35,13 @@ import (
 	"strings"
 )
 
+const MaxRequestBodyBytes = int64(6 * 1024 * 1024)
+
 var cronJobNameRegexp = regexp.MustCompile(`(.+)-\d{8,10}$`)
+
+type Syncer interface {
+	HasSynced() bool
+}
 
 func DefaultRestConfig(kubeconfig, configContext string, fns ...func(config *rest.Config)) (*rest.Config, error) {
 	config, err := BuildClientConfig(kubeconfig, configContext)
@@ -101,6 +107,31 @@ func SetRestDefaults(config *rest.Config) *rest.Config {
 	return config
 }
 
+func AllSynced[T Syncer](syncers []T) bool {
+	for _, h := range syncers {
+		if !h.HasSynced() {
+			return false
+		}
+	}
+	return true
+}
+
+func HTTPConfigReader(req *http.Request) ([]byte, error) {
+	defer req.Body.Close()
+	lr := &io.LimitedReader{
+		R: req.Body,
+		N: MaxRequestBodyBytes + 1,
+	}
+	data, err := io.ReadAll(lr)
+	if err != nil {
+		return nil, err
+	}
+	if lr.N <= 0 {
+		return nil, errors.NewRequestEntityTooLargeError(fmt.Sprintf("limit is %d", MaxRequestBodyBytes))
+	}
+	return data, nil
+}
+
 func StripPodUnusedFields(obj any) (any, error) {
 	t, ok := obj.(metav1.ObjectMetaAccessor)
 	if !ok {
@@ -134,24 +165,6 @@ func StripPodUnusedFields(obj any) (any, error) {
 	}
 
 	return obj, nil
-}
-
-const MaxRequestBodyBytes = int64(6 * 1024 * 1024)
-
-func HTTPConfigReader(req *http.Request) ([]byte, error) {
-	defer req.Body.Close()
-	lr := &io.LimitedReader{
-		R: req.Body,
-		N: MaxRequestBodyBytes + 1,
-	}
-	data, err := io.ReadAll(lr)
-	if err != nil {
-		return nil, err
-	}
-	if lr.N <= 0 {
-		return nil, errors.NewRequestEntityTooLargeError(fmt.Sprintf("limit is %d", MaxRequestBodyBytes))
-	}
-	return data, nil
 }
 
 func GetDeployMetaFromPod(pod *corev1.Pod) (types.NamespacedName, metav1.TypeMeta) {
@@ -226,17 +239,4 @@ func GetDeployMetaFromPod(pod *corev1.Pod) (types.NamespacedName, metav1.TypeMet
 	}
 
 	return deployMeta, typeMetadata
-}
-
-type Syncer interface {
-	HasSynced() bool
-}
-
-func AllSynced[T Syncer](syncers []T) bool {
-	for _, h := range syncers {
-		if !h.HasSynced() {
-			return false
-		}
-	}
-	return true
 }

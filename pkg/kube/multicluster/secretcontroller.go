@@ -27,6 +27,17 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type handler interface {
+	clusterAdded(cluster *Cluster) ComponentConstraint
+	clusterUpdated(cluster *Cluster) ComponentConstraint
+	clusterDeleted(clusterID cluster.ID)
+	HasSynced() bool
+}
+
+type ComponentBuilder interface {
+	registerHandler(h handler)
+}
+
 type Controller struct {
 	namespace            string
 	configClusterID      cluster.ID
@@ -55,6 +66,15 @@ func NewController(kubeclientset kube.Client, namespace string, clusterID cluste
 		meshWatcher:     meshWatcher,
 	}
 	return controller
+}
+
+func BuildMultiClusterComponent[T ComponentConstraint](c ComponentBuilder, constructor func(cluster *Cluster) T) *Component[T] {
+	comp := &Component[T]{
+		constructor: constructor,
+		clusters:    make(map[cluster.ID]T),
+	}
+	c.registerHandler(comp)
+	return comp
 }
 
 func (c *Controller) Run(stopCh <-chan struct{}) error {
@@ -89,26 +109,6 @@ func (c *Controller) handleDelete(key cluster.ID) {
 	for _, handler := range c.handlers {
 		handler.clusterDeleted(key)
 	}
-}
-
-type handler interface {
-	clusterAdded(cluster *Cluster) ComponentConstraint
-	clusterUpdated(cluster *Cluster) ComponentConstraint
-	clusterDeleted(clusterID cluster.ID)
-	HasSynced() bool
-}
-
-type ComponentBuilder interface {
-	registerHandler(h handler)
-}
-
-func BuildMultiClusterComponent[T ComponentConstraint](c ComponentBuilder, constructor func(cluster *Cluster) T) *Component[T] {
-	comp := &Component[T]{
-		constructor: constructor,
-		clusters:    make(map[cluster.ID]T),
-	}
-	c.registerHandler(comp)
-	return comp
 }
 
 func (c *Controller) registerHandler(h handler) {

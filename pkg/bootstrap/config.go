@@ -20,13 +20,13 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	meshAPI "istio.io/api/mesh/v1alpha1"

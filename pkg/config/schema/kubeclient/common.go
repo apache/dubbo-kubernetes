@@ -65,11 +65,7 @@ type TypeRegistration[T runtime.Object] interface {
 
 var registerTypes = typemap.NewTypeMap()
 
-func GetInformerFiltered[T runtime.Object](
-	c ClientGetter,
-	opts ktypes.InformerOptions,
-	gvr schema.GroupVersionResource,
-) informerfactory.StartableInformer {
+func GetInformerFiltered[T runtime.Object](c ClientGetter, opts ktypes.InformerOptions, gvr schema.GroupVersionResource) informerfactory.StartableInformer {
 	reg := typemap.Get[TypeRegistration[T]](registerTypes)
 	if reg != nil {
 		// This is registered type

@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"os"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
@@ -27,7 +28,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"sigs.k8s.io/yaml"
 )
 

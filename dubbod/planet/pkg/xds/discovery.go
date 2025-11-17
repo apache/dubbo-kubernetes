@@ -20,6 +20,7 @@ package xds
 import (
 	"context"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"strconv"
 	"sync"
 	"time"

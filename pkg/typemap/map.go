@@ -18,7 +18,7 @@
 package typemap
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"reflect"
 )
 

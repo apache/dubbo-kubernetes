@@ -23,7 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	apiistioioapinetworkingv1 "istio.io/client-go/pkg/apis/networking/v1"
 	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -31,7 +31,6 @@ import (
 	k8sioapicertificatesv1 "k8s.io/api/certificates/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
-	k8sioapipolicyv1 "k8s.io/api/policy/v1"
 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,12 +41,12 @@ import (
 
 func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.WriteAPI[T] {
 	switch any(ptr.Empty[T]()).(type) {
+	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
+		return c.Ext().ApiextensionsV1().CustomResourceDefinitions().(ktypes.WriteAPI[T])
 	case *k8sioapicertificatesv1.CertificateSigningRequest:
 		return c.Kube().CertificatesV1().CertificateSigningRequests().(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ConfigMap:
 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.WriteAPI[T])
-	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
-		return c.Ext().ApiextensionsV1().CustomResourceDefinitions().(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.DaemonSet:
 		return c.Kube().AppsV1().DaemonSets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.Deployment:
@@ -62,16 +61,12 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Nodes().(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Pod:
 		return c.Kube().CoreV1().Pods(namespace).(ktypes.WriteAPI[T])
-	case *k8sioapipolicyv1.PodDisruptionBudget:
-		return c.Kube().PolicyV1().PodDisruptionBudgets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Secret:
 		return c.Kube().CoreV1().Secrets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Service:
 		return c.Kube().CoreV1().Services(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
-	case *apiistioioapisecurityv1.RequestAuthentication:
-		return c.Dubbo().SecurityV1().RequestAuthentications(namespace).(ktypes.WriteAPI[T])
 	case *apiistioioapisecurityv1.PeerAuthentication:
 		return c.Dubbo().SecurityV1().PeerAuthentications(namespace).(ktypes.WriteAPI[T])
 	case *apiistioioapinetworkingv1.VirtualService:
@@ -113,15 +108,12 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration{}
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
-	case gvr.RequestAuthentication:
-		return &apiistioioapisecurityv1.RequestAuthentication{}
 	case gvr.PeerAuthentication:
 		return &apiistioioapisecurityv1.PeerAuthentication{}
-	case gvr.VirtualService:
+	case gvr.ServiceRoute:
 		return &apiistioioapinetworkingv1.VirtualService{}
-	case gvr.DestinationRule:
+	case gvr.SubsetRule:
 		return &apiistioioapinetworkingv1.DestinationRule{}
-
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}
@@ -159,6 +151,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AppsV1().Deployments(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.StatefulSet:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Kube().AppsV1().StatefulSets(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Kube().AppsV1().StatefulSets(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.Namespace:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
@@ -202,13 +201,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoreV1().ServiceAccounts(opts.Namespace).Watch(context.Background(), options)
 		}
-	case gvr.StatefulSet:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Kube().AppsV1().StatefulSets(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Kube().AppsV1().StatefulSets(opts.Namespace).Watch(context.Background(), options)
-		}
 	case gvr.MutatingWebhookConfiguration:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			return c.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().List(context.Background(), options)
@@ -223,14 +215,14 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Watch(context.Background(), options)
 		}
-	case gvr.VirtualService:
+	case gvr.ServiceRoute:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			return c.Dubbo().NetworkingV1().VirtualServices(opts.Namespace).List(context.Background(), options)
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Dubbo().NetworkingV1().VirtualServices(opts.Namespace).Watch(context.Background(), options)
 		}
-	case gvr.DestinationRule:
+	case gvr.SubsetRule:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			return c.Dubbo().NetworkingV1().DestinationRules(opts.Namespace).List(context.Background(), options)
 		}
@@ -243,13 +235,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Dubbo().SecurityV1().PeerAuthentications(opts.Namespace).Watch(context.Background(), options)
-		}
-	case gvr.RequestAuthentication:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().SecurityV1().RequestAuthentications(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().SecurityV1().RequestAuthentications(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.Pod:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

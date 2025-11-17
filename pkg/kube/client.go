@@ -50,6 +50,8 @@ import (
 
 var log = dubbolog.RegisterScope("kube", "kube client debugging")
 
+var NewCrdWatcher func(Client) kubetypes.CrdWatcher
+
 type client struct {
 	extSet                 kubeExtClient.Interface
 	config                 *rest.Config
@@ -106,9 +108,10 @@ type CLIClient interface {
 
 type ClientOption func(cliClient CLIClient) CLIClient
 
-func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLIClient, error) {
-	return newClientInternal(newClientFactory(clientCfg, false), opts...)
-}
+var (
+	_ Client    = &client{}
+	_ CLIClient = &client{}
+)
 
 func NewClient(clientCfg clientcmd.ClientConfig, cluster cluster.ID) (Client, error) {
 	return newClientInternal(newClientFactory(clientCfg, false), WithCluster(cluster))
@@ -185,6 +188,10 @@ func newClientInternal(clientFactory *clientFactory, opts ...ClientOption) (*cli
 	return &c, nil
 }
 
+func NewCLIClient(clientCfg clientcmd.ClientConfig, opts ...ClientOption) (CLIClient, error) {
+	return newClientInternal(newClientFactory(clientCfg, false), opts...)
+}
+
 func (c *client) RESTConfig() *rest.Config {
 	if c.config == nil {
 		return nil
@@ -192,11 +199,6 @@ func (c *client) RESTConfig() *rest.Config {
 	cpy := *c.config
 	return &cpy
 }
-
-var (
-	_ Client    = &client{}
-	_ CLIClient = &client{}
-)
 
 func EnableCrdWatcher(c Client) Client {
 	if NewCrdWatcher == nil {
@@ -208,8 +210,6 @@ func EnableCrdWatcher(c Client) Client {
 	c.(*client).crdWatcher = NewCrdWatcher(c)
 	return c
 }
-
-var NewCrdWatcher func(Client) kubetypes.CrdWatcher
 
 func (c *client) Ext() kubeExtClient.Interface {
 	return c.extSet
@@ -333,6 +333,10 @@ func (c *client) RunAndWait(stop <-chan struct{}) bool {
 	return c.informerFactory.WaitForCacheSync(stop)
 }
 
+func (c *client) Shutdown() {
+	c.informerFactory.Shutdown()
+}
+
 func (c *client) bestEffortToGVR(gvk schema.GroupVersionKind, obj *unstructured.Unstructured, namespace string) (schema.GroupVersionResource, bool) {
 	if s, f := collections.All.FindByGroupVersionAliasesKind(config.FromKubernetesGVK(gvk)); f {
 		gvr := s.GroupVersionResource()
@@ -416,10 +420,6 @@ func fastWaitForCacheSync(stop <-chan struct{}, informerFactory informerfactory.
 		return informerFactory.WaitForCacheSync(returnImmediately), nil
 	})
 	return err == nil
-}
-
-func (c *client) Shutdown() {
-	c.informerFactory.Shutdown()
 }
 
 func SetObjectFilter(c Client, filter kubetypes.DynamicObjectFilter) Client {

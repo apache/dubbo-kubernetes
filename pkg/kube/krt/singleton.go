@@ -20,22 +20,43 @@ package krt
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"sync/atomic"
 )
 
 type dummyValue struct{}
-
-func (d dummyValue) ResourceName() string {
-	return ""
-}
 
 type StaticSingleton[T any] interface {
 	Singleton[T]
 	Set(*T)
 	MarkSynced()
 }
+
+type static[T any] struct {
+	val            *atomic.Pointer[T]
+	synced         *atomic.Bool
+	id             collectionUID
+	eventHandlers  *handlers[T]
+	collectionName string
+	syncer         Syncer
+	metadata       Metadata
+}
+
+type staticHandler struct {
+	Syncer
+	remove func()
+}
+
+var _ Collection[dummyValue] = &static[dummyValue]{}
+
+type collectionAdapter[T any] struct {
+	c Collection[T]
+}
+
+var (
+	_ Singleton[any] = &collectionAdapter[any]{}
+)
 
 func NewStatic[T any](initial *T, startSynced bool, opts ...CollectionOption) StaticSingleton[T] {
 	val := new(atomic.Pointer[T])
@@ -64,14 +85,13 @@ func NewStatic[T any](initial *T, startSynced bool, opts ...CollectionOption) St
 	return collectionAdapter[T]{x}
 }
 
-type static[T any] struct {
-	val            *atomic.Pointer[T]
-	synced         *atomic.Bool
-	id             collectionUID
-	eventHandlers  *handlers[T]
-	collectionName string
-	syncer         Syncer
-	metadata       Metadata
+func NewSingleton[O any](hf TransformationEmpty[O], opts ...CollectionOption) Singleton[O] {
+	staticOpts := append(slices.Clone(opts), WithDebugging(nil))
+	dummyCollection := NewStatic[dummyValue](&dummyValue{}, true, staticOpts...).AsCollection()
+	col := NewCollection[dummyValue, O](dummyCollection, func(ctx HandlerContext, _ dummyValue) *O {
+		return hf(ctx)
+	}, opts...)
+	return collectionAdapter[O]{col}
 }
 
 func (d *static[T]) GetKey(k string) *T {
@@ -109,19 +129,6 @@ func (d *static[T]) RegisterBatch(f func(o []Event[T]), runExistingState bool) H
 	return staticHandler{Syncer: d.syncer, remove: func() {
 		d.eventHandlers.Delete(reg)
 	}}
-}
-
-func (c collectionAdapter[T]) uid() collectionUID {
-	return c.c.(uidable).uid()
-}
-
-type staticHandler struct {
-	Syncer
-	remove func()
-}
-
-func (s staticHandler) UnregisterHandler() {
-	s.remove()
 }
 
 func (d *static[T]) Synced() Syncer {
@@ -181,6 +188,48 @@ func (d *static[T]) index(name string, extract func(o T) []string) indexer[T] {
 	panic("TODO")
 }
 
+func (c collectionAdapter[T]) uid() collectionUID {
+	return c.c.(uidable).uid()
+}
+
+func (c collectionAdapter[T]) MarkSynced() {
+	c.c.(*static[T]).synced.Store(true)
+}
+
+func (c collectionAdapter[T]) Get() *T {
+	// Guaranteed to be 0 or 1 len
+	res := c.c.List()
+	if len(res) == 0 {
+		return nil
+	}
+	return &res[0]
+}
+
+func (c collectionAdapter[T]) Set(t *T) {
+	c.c.(*static[T]).Set(t)
+}
+
+func (c collectionAdapter[T]) Metadata() Metadata {
+	// The metadata is passed to the internal dummy collection so just return that
+	return c.c.Metadata()
+}
+
+func (c collectionAdapter[T]) Register(f func(o Event[T])) HandlerRegistration {
+	return c.c.Register(f)
+}
+
+func (c collectionAdapter[T]) AsCollection() Collection[T] {
+	return c.c
+}
+
+func (d dummyValue) ResourceName() string {
+	return ""
+}
+
+func (s staticHandler) UnregisterHandler() {
+	s.remove()
+}
+
 func toEvent[T any](old, now *T) Event[T] {
 	if old == nil {
 		return Event[T]{
@@ -198,53 +247,4 @@ func toEvent[T any](old, now *T) Event[T] {
 		Old:   old,
 		Event: controllers.EventUpdate,
 	}
-}
-
-var _ Collection[dummyValue] = &static[dummyValue]{}
-
-type collectionAdapter[T any] struct {
-	c Collection[T]
-}
-
-func (c collectionAdapter[T]) MarkSynced() {
-	c.c.(*static[T]).synced.Store(true)
-}
-
-func (c collectionAdapter[T]) Set(t *T) {
-	c.c.(*static[T]).Set(t)
-}
-
-func (c collectionAdapter[T]) Get() *T {
-	// Guaranteed to be 0 or 1 len
-	res := c.c.List()
-	if len(res) == 0 {
-		return nil
-	}
-	return &res[0]
-}
-
-func (c collectionAdapter[T]) Metadata() Metadata {
-	// The metadata is passed to the internal dummy collection so just return that
-	return c.c.Metadata()
-}
-
-func (c collectionAdapter[T]) Register(f func(o Event[T])) HandlerRegistration {
-	return c.c.Register(f)
-}
-
-func (c collectionAdapter[T]) AsCollection() Collection[T] {
-	return c.c
-}
-
-var (
-	_ Singleton[any] = &collectionAdapter[any]{}
-)
-
-func NewSingleton[O any](hf TransformationEmpty[O], opts ...CollectionOption) Singleton[O] {
-	staticOpts := append(slices.Clone(opts), WithDebugging(nil))
-	dummyCollection := NewStatic[dummyValue](&dummyValue{}, true, staticOpts...).AsCollection()
-	col := NewCollection[dummyValue, O](dummyCollection, func(ctx HandlerContext, _ dummyValue) *O {
-		return hf(ctx)
-	}, opts...)
-	return collectionAdapter[O]{col}
 }

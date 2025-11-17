@@ -19,7 +19,10 @@ package model
 
 import (
 	"cmp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/host"
+	netutil "github.com/apache/dubbo-kubernetes/pkg/util/net"
 	"sort"
+	"strings"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
@@ -81,6 +84,40 @@ func (key ConfigKey) HashCode() ConfigHash {
 	h.WriteString("/")
 	h.WriteString(key.Name)
 	return ConfigHash(h.Sum64())
+}
+
+func ResolveShortnameToFQDN(hostname string, meta config.Meta) host.Name {
+	if len(hostname) == 0 {
+		// only happens when the gateway-api BackendRef is invalid
+		return ""
+	}
+	out := hostname
+	// Treat the wildcard hostname as fully qualified. Any other variant of a wildcard hostname will contain a `.` too,
+	// and skip the next if, so we only need to check for the literal wildcard itself.
+	if hostname == "*" {
+		return host.Name(out)
+	}
+
+	// if the hostname is a valid ipv4 or ipv6 address, do not append domain or namespace
+	if netutil.IsValidIPAddress(hostname) {
+		return host.Name(out)
+	}
+
+	// if FQDN is specified, do not append domain or namespace to hostname
+	if !strings.Contains(hostname, ".") {
+		if meta.Namespace != "" {
+			out = out + "." + meta.Namespace
+		}
+
+		// FIXME this is a gross hack to hardcode a service's domain name in kubernetes
+		// BUG this will break non kubernetes environments if they use shortnames in the
+		// rules.
+		if meta.Domain != "" {
+			out = out + ".svc." + meta.Domain
+		}
+	}
+
+	return host.Name(out)
 }
 
 func HasConfigsOfKind(configs sets.Set[ConfigKey], kind kind.Kind) bool {

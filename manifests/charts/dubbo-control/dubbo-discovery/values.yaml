@@ -14,6 +14,40 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
+  hub: ""
+  tag: 0.3.0-debug
+  image: planet
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2048Mi
+
   injectorWebhook:
     defaultTemplates: []
     templates: {}
+
+  revision: ""
+
+  global:
+    dubboNamespace: dubbo-system
+
+    planetCertProvider: dubbod
+    proxy:
+      image: ""
+
+      autoInject: enabled
+
+      clusterDomain: "cluster.local"
+
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 512Mi
+
+    statusPort: 15020
+
+    caAddress: ""

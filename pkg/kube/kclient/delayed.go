@@ -18,12 +18,12 @@
 package kclient
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"sync"
 	"sync/atomic"
 
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"

@@ -33,15 +33,41 @@ type handlerRegistration struct {
 	remove func()
 }
 
-func (h handlerRegistration) UnregisterHandler() {
-	h.remove()
-}
-
 // handlerSet tracks a set of handlers. Handlers can be added at any time.
 type handlerSet[O any] struct {
 	mu       sync.RWMutex
 	handlers sets.Set[*processorListener[O]]
 	wg       wait.Group
+}
+
+type processorListener[O any] struct {
+	nextCh chan any
+	addCh  chan any
+	stop   <-chan struct{}
+
+	handler func(o []Event[O])
+
+	syncTracker *countingTracker
+
+	pendingNotifications buffer.RingGrowing
+}
+
+type eventSet[O any] struct {
+	event           []Event[O]
+	isInInitialList bool
+}
+
+type parentSyncedNotification struct{}
+
+type countingTracker struct {
+	count int64
+
+	// upstreamHasSyncedButEventsPending marks true if the parent has synced, but there are still events pending
+	// This helps us known when we need to mark ourselves as 'synced' (which we do exactly once).
+	upstreamHasSyncedButEventsPending bool
+	upstreamSyncer                    Syncer
+	synced                            chan struct{}
+	hasSynced                         bool
 }
 
 func newHandlerSet[O any]() *handlerSet[O] {
@@ -50,12 +76,21 @@ func newHandlerSet[O any]() *handlerSet[O] {
 	}
 }
 
-func (o *handlerSet[O]) Insert(
-	f func(o []Event[O]),
-	parentSynced Syncer,
-	initialEvents []Event[O],
-	stopCh <-chan struct{},
-) HandlerRegistration {
+func newProcessListener[O any](handler func(o []Event[O]), upstreamSyncer Syncer, stop <-chan struct{}) *processorListener[O] {
+	bufferSize := 1024
+	ret := &processorListener[O]{
+		nextCh:               make(chan any),
+		addCh:                make(chan any),
+		stop:                 stop,
+		handler:              handler,
+		syncTracker:          &countingTracker{upstreamSyncer: upstreamSyncer, synced: make(chan struct{})},
+		pendingNotifications: *buffer.NewRingGrowing(bufferSize),
+	}
+
+	return ret
+}
+
+func (o *handlerSet[O]) Insert(f func(o []Event[O]), parentSynced Syncer, initialEvents []Event[O], stopCh <-chan struct{}) HandlerRegistration {
 	o.mu.Lock()
 	initialSynced := parentSynced.HasSynced()
 	l := newProcessListener(f, parentSynced, stopCh)
@@ -128,41 +163,6 @@ func (o *handlerSet[O]) Synced() Syncer {
 	return syncer
 }
 
-type processorListener[O any] struct {
-	nextCh chan any
-	addCh  chan any
-	stop   <-chan struct{}
-
-	handler func(o []Event[O])
-
-	syncTracker *countingTracker
-
-	pendingNotifications buffer.RingGrowing
-}
-
-func newProcessListener[O any](
-	handler func(o []Event[O]),
-	upstreamSyncer Syncer,
-	stop <-chan struct{},
-) *processorListener[O] {
-	bufferSize := 1024
-	ret := &processorListener[O]{
-		nextCh:               make(chan any),
-		addCh:                make(chan any),
-		stop:                 stop,
-		handler:              handler,
-		syncTracker:          &countingTracker{upstreamSyncer: upstreamSyncer, synced: make(chan struct{})},
-		pendingNotifications: *buffer.NewRingGrowing(bufferSize),
-	}
-
-	return ret
-}
-
-type eventSet[O any] struct {
-	event           []Event[O]
-	isInInitialList bool
-}
-
 func (p *processorListener[O]) send(event []Event[O], isInInitialList bool) {
 	if isInInitialList {
 		p.syncTracker.Start(len(event))
@@ -206,8 +206,6 @@ func (p *processorListener[O]) pop() {
 	}
 }
 
-type parentSyncedNotification struct{}
-
 func (p *processorListener[O]) run() {
 	for {
 		select {
@@ -237,17 +235,6 @@ func (p *processorListener[O]) run() {
 
 func (p *processorListener[O]) Synced() Syncer {
 	return p.syncTracker.Synced()
-}
-
-type countingTracker struct {
-	count int64
-
-	// upstreamHasSyncedButEventsPending marks true if the parent has synced, but there are still events pending
-	// This helps us known when we need to mark ourselves as 'synced' (which we do exactly once).
-	upstreamHasSyncedButEventsPending bool
-	upstreamSyncer                    Syncer
-	synced                            chan struct{}
-	hasSynced                         bool
 }
 
 func (t *countingTracker) Start(count int) {
@@ -284,4 +271,8 @@ func (t *countingTracker) Synced() Syncer {
 			channelSyncer{synced: t.synced, name: "tracker"},
 		},
 	}
+}
+
+func (h handlerRegistration) UnregisterHandler() {
+	h.remove()
 }

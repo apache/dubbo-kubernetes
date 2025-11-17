@@ -20,22 +20,76 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"strconv"
 
 	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
-type NodeType string
+type (
+	NodeType   string
+	IPMode     int
+	StringBool bool
+)
 
 const (
 	Proxyless NodeType = "proxyless"
 )
 
+const (
+	IPv4 IPMode = iota + 1
+	IPv6
+	Dual
+)
+
 type NodeMetaProxyConfig meshconfig.ProxyConfig
+
+type Node struct {
+	// ID of the Envoy node
+	ID string
+	// Metadata is the typed node metadata
+	Metadata *BootstrapNodeMetadata
+	// RawMetadata is the untyped node metadata
+	RawMetadata map[string]any
+	// Locality from Envoy bootstrap
+	Locality *core.Locality
+}
+
+type NodeMetadata struct {
+	Generator            string               `json:"GENERATOR,omitempty"`
+	ClusterID            cluster.ID           `json:"CLUSTER_ID,omitempty"`
+	Namespace            string               `json:"NAMESPACE,omitempty"`
+	StsPort              string               `json:"STS_PORT,omitempty"`
+	MetadataDiscovery    *StringBool          `json:"METADATA_DISCOVERY,omitempty"`
+	ProxyConfig          *NodeMetaProxyConfig `json:"PROXY_CONFIG,omitempty"`
+	PlanetSubjectAltName []string             `json:"PLANET_SAN,omitempty"`
+	XDSRootCert          string               `json:"-"`
+}
+
+type BootstrapNodeMetadata struct {
+	NodeMetadata
+}
+
+func IsApplicationNodeType(nType NodeType) bool {
+	switch nType {
+	case Proxyless:
+		return true
+	default:
+		return false
+	}
+}
+
+func DiscoverIPMode(addrs []string) IPMode {
+	if networkutil.AllIPv4(addrs) {
+		return IPv4
+	} else if networkutil.AllIPv6(addrs) {
+		return IPv6
+	}
+	return Dual
+}
 
 // MarshalJSON customizes JSON serialization to handle oneof ClusterName field
 func (n *NodeMetaProxyConfig) MarshalJSON() ([]byte, error) {
@@ -79,58 +133,6 @@ func (n *NodeMetaProxyConfig) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
-
-type NodeMetadata struct {
-	Generator            string               `json:"GENERATOR,omitempty"`
-	ClusterID            cluster.ID           `json:"CLUSTER_ID,omitempty"`
-	Namespace            string               `json:"NAMESPACE,omitempty"`
-	StsPort              string               `json:"STS_PORT,omitempty"`
-	MetadataDiscovery    *StringBool          `json:"METADATA_DISCOVERY,omitempty"`
-	ProxyConfig          *NodeMetaProxyConfig `json:"PROXY_CONFIG,omitempty"`
-	PlanetSubjectAltName []string             `json:"PLANET_SAN,omitempty"`
-	XDSRootCert          string               `json:"-"`
-}
-type Node struct {
-	// ID of the Envoy node
-	ID string
-	// Metadata is the typed node metadata
-	Metadata *BootstrapNodeMetadata
-	// RawMetadata is the untyped node metadata
-	RawMetadata map[string]any
-	// Locality from Envoy bootstrap
-	Locality *core.Locality
-}
-type BootstrapNodeMetadata struct {
-	NodeMetadata
-}
-
-func IsApplicationNodeType(nType NodeType) bool {
-	switch nType {
-	case Proxyless:
-		return true
-	default:
-		return false
-	}
-}
-
-type IPMode int
-
-const (
-	IPv4 IPMode = iota + 1
-	IPv6
-	Dual
-)
-
-func DiscoverIPMode(addrs []string) IPMode {
-	if networkutil.AllIPv4(addrs) {
-		return IPv4
-	} else if networkutil.AllIPv6(addrs) {
-		return IPv6
-	}
-	return Dual
-}
-
-type StringBool bool
 
 func (s StringBool) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%t"`, s)), nil

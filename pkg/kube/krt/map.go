@@ -19,8 +19,8 @@ package krt
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 )
 

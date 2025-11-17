@@ -52,7 +52,7 @@ func assignSpec[T any](dst *T, src *T) {
 
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
-	case gvk.DestinationRule:
+	case gvk.SubsetRule:
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.DestinationRule{
@@ -68,15 +68,7 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		}
 		assignSpec(&obj.Spec, clonedSpec)
 		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
-	case gvk.RequestAuthentication:
-		spec := cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
-		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapisecurityv1.RequestAuthentication{
-			ObjectMeta: objMeta,
-		}
-		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
-	case gvk.VirtualService:
+	case gvk.ServiceRoute:
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.VirtualService{
@@ -91,7 +83,7 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 
 func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
-	case gvk.DestinationRule:
+	case gvk.SubsetRule:
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.DestinationRule{
@@ -107,15 +99,7 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		}
 		assignSpec(&obj.Spec, clonedSpec)
 		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
-	case gvk.RequestAuthentication:
-		spec := cfg.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
-		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapisecurityv1.RequestAuthentication{
-			ObjectMeta: objMeta,
-		}
-		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
-	case gvk.VirtualService:
+	case gvk.ServiceRoute:
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.VirtualService{
@@ -130,7 +114,7 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 
 func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
-	case gvk.DestinationRule:
+	case gvk.SubsetRule:
 		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		clonedStatus := protomarshal.Clone(status)
 		obj := &apiistioioapinetworkingv1.DestinationRule{
@@ -146,15 +130,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		}
 		assignSpec(&obj.Status, clonedStatus)
 		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
-	case gvk.RequestAuthentication:
-		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
-		clonedStatus := protomarshal.Clone(status)
-		obj := &apiistioioapisecurityv1.RequestAuthentication{
-			ObjectMeta: objMeta,
-		}
-		assignSpec(&obj.Status, clonedStatus)
-		return c.Dubbo().SecurityV1().RequestAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
-	case gvk.VirtualService:
+	case gvk.ServiceRoute:
 		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		clonedStatus := protomarshal.Clone(status)
 		obj := &apiistioioapinetworkingv1.VirtualService{
@@ -172,7 +148,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return nil, fmt.Errorf("gvk mismatch: %v, modified: %v", orig.GroupVersionKind, mod.GroupVersionKind)
 	}
 	switch orig.GroupVersionKind {
-	case gvk.DestinationRule:
+	case gvk.SubsetRule:
 		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		clonedOrigSpec := protomarshal.Clone(origSpec)
@@ -210,26 +186,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dubbo().SecurityV1().PeerAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
-	case gvk.RequestAuthentication:
-		origSpec := orig.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
-		modSpec := mod.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)
-		clonedOrigSpec := protomarshal.Clone(origSpec)
-		clonedModSpec := protomarshal.Clone(modSpec)
-		oldRes := &apiistioioapisecurityv1.RequestAuthentication{
-			ObjectMeta: origMeta,
-		}
-		assignSpec(&oldRes.Spec, clonedOrigSpec)
-		modRes := &apiistioioapisecurityv1.RequestAuthentication{
-			ObjectMeta: modMeta,
-		}
-		assignSpec(&modRes.Spec, clonedModSpec)
-		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
-		if err != nil {
-			return nil, err
-		}
-		return c.Dubbo().SecurityV1().RequestAuthentications(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
-	case gvk.VirtualService:
+	case gvk.ServiceRoute:
 		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		clonedOrigSpec := protomarshal.Clone(origSpec)
@@ -259,13 +216,11 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		deleteOptions.Preconditions = &metav1.Preconditions{ResourceVersion: resourceVersion}
 	}
 	switch typ {
-	case gvk.DestinationRule:
+	case gvk.SubsetRule:
 		return c.Dubbo().NetworkingV1().DestinationRules(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1().PeerAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
-	case gvk.RequestAuthentication:
-		return c.Dubbo().SecurityV1().RequestAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
-	case gvk.VirtualService:
+	case gvk.ServiceRoute:
 		return c.Dubbo().NetworkingV1().VirtualServices(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
 		return fmt.Errorf("unsupported type: %v", typ)
@@ -345,11 +300,11 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 			Spec: &obj.Spec,
 		}
 	},
-	gvk.DestinationRule: func(r runtime.Object) config.Config {
+	gvk.SubsetRule: func(r runtime.Object) config.Config {
 		obj := r.(*apiistioioapinetworkingv1.DestinationRule)
 		return config.Config{
 			Meta: config.Meta{
-				GroupVersionKind:  gvk.DestinationRule,
+				GroupVersionKind:  gvk.SubsetRule,
 				Name:              obj.Name,
 				Namespace:         obj.Namespace,
 				Labels:            obj.Labels,
@@ -387,25 +342,6 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.PeerAuthentication,
-				Name:              obj.Name,
-				Namespace:         obj.Namespace,
-				Labels:            obj.Labels,
-				Annotations:       obj.Annotations,
-				ResourceVersion:   obj.ResourceVersion,
-				CreationTimestamp: obj.CreationTimestamp.Time,
-				OwnerReferences:   obj.OwnerReferences,
-				UID:               string(obj.UID),
-				Generation:        obj.Generation,
-			},
-			Spec:   &obj.Spec,
-			Status: &obj.Status,
-		}
-	},
-	gvk.RequestAuthentication: func(r runtime.Object) config.Config {
-		obj := r.(*apiistioioapisecurityv1.RequestAuthentication)
-		return config.Config{
-			Meta: config.Meta{
-				GroupVersionKind:  gvk.RequestAuthentication,
 				Name:              obj.Name,
 				Namespace:         obj.Namespace,
 				Labels:            obj.Labels,
@@ -529,11 +465,11 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 			Spec: obj,
 		}
 	},
-	gvk.VirtualService: func(r runtime.Object) config.Config {
+	gvk.ServiceRoute: func(r runtime.Object) config.Config {
 		obj := r.(*apiistioioapinetworkingv1.VirtualService)
 		return config.Config{
 			Meta: config.Meta{
-				GroupVersionKind:  gvk.VirtualService,
+				GroupVersionKind:  gvk.ServiceRoute,
 				Name:              obj.Name,
 				Namespace:         obj.Namespace,
 				Labels:            obj.Labels,

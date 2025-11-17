@@ -12,10 +12,7 @@ Cloud-Native proxyless service mesh platform for Dubbo microservices, enabling z
 The main repositories of Dubbo on Kubernetes include:
 
 - **dubboctl** — The command-line management tool that provides control plane management, development framework scaffolding, and application deployment.
-- **dubbod** — The dubbo control plane. It is similar to the Istio components, used to implement a proxyless service mesh, and includes the following components:
-  - **planet** - Runtime proxy configuration and xDS server
-  - **aegis** - Certificate issuance and rotation
-  - **gear** - Validation, aggregation, transformation, and distribution of Dubbo configuration
+- **dubbod** — The dubbo control plane. used to implement a Dubbo proxyless service mesh.
 - **operator** — Provides user-friendly options to operate the Dubbo proxyless service mesh.
 
 ## Quick Start

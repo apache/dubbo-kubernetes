@@ -19,6 +19,9 @@ package model
 
 import (
 	"cmp"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	networking "istio.io/api/networking/v1alpha3"
+	"sort"
 	"sync"
 	"time"
 
@@ -54,6 +57,34 @@ var (
 	LastPushMutex  sync.Mutex
 )
 
+type PushContext struct {
+	Mesh              *meshconfig.MeshConfig `json:"-"`
+	initializeMutex   sync.Mutex
+	InitDone          atomic.Bool
+	Networks          *meshconfig.MeshNetworks
+	networkMgr        *NetworkManager
+	clusterLocalHosts ClusterLocalHosts
+	exportToDefaults  exportToDefaults
+	ServiceIndex      serviceIndex
+	serviceRouteIndex serviceRouteIndex
+	subsetRuleIndex   subsetRuleIndex
+	serviceAccounts   map[serviceAccountKey][]string
+	PushVersion       string
+	ProxyStatus       map[string]map[string]ProxyPushStatus
+	proxyStatusMutex  sync.RWMutex
+}
+
+type PushRequest struct {
+	Reason           ReasonStats
+	ConfigsUpdated   sets.Set[ConfigKey]
+	AddressesUpdated sets.Set[string]
+	Forced           bool
+	Full             bool
+	Push             *PushContext
+	Start            time.Time
+	Delta            ResourceDelta
+}
+
 type XDSUpdater interface {
 	ConfigUpdate(req *PushRequest)
 	ServiceUpdate(shard ShardKey, hostname string, namespace string, event Event)
@@ -65,21 +96,6 @@ type XDSUpdater interface {
 type ProxyPushStatus struct {
 	Proxy   string `json:"proxy,omitempty"`
 	Message string `json:"message,omitempty"`
-}
-
-type PushContext struct {
-	Mesh              *meshconfig.MeshConfig `json:"-"`
-	initializeMutex   sync.Mutex
-	InitDone          atomic.Bool
-	Networks          *meshconfig.MeshNetworks
-	networkMgr        *NetworkManager
-	clusterLocalHosts ClusterLocalHosts
-	exportToDefaults  exportToDefaults
-	ServiceIndex      serviceIndex
-	serviceAccounts   map[serviceAccountKey][]string
-	PushVersion       string
-	ProxyStatus       map[string]map[string]ProxyPushStatus
-	proxyStatusMutex  sync.RWMutex
 }
 
 type serviceAccountKey struct {
@@ -95,6 +111,56 @@ type serviceIndex struct {
 	instancesByPort      map[string]map[int][]*DubboEndpoint
 }
 
+type ReasonStats map[TriggerReason]int
+
+type ResourceDelta = xds.ResourceDelta
+
+type ConfigKey struct {
+	Kind      kind.Kind
+	Name      string
+	Namespace string
+}
+
+type ConsolidatedSubRule struct {
+	exportTo sets.Set[visibility.Instance]
+	rule     *config.Config
+	from     []types.NamespacedName
+}
+
+type exportToDefaults struct {
+	service      sets.Set[visibility.Instance]
+	serviceRoute sets.Set[visibility.Instance]
+	subsetRule   sets.Set[visibility.Instance]
+}
+
+type serviceRouteIndex struct {
+	// root vs namespace/name ->delegate vs virtualservice gvk/namespace/name
+	delegates map[ConfigKey][]ConfigKey
+
+	// Map of VS hostname -> referenced hostnames
+	referencedDestinations map[string]sets.String
+}
+
+type subsetRuleIndex struct {
+	namespaceLocal      map[string]*consolidatedSubRules
+	exportedByNamespace map[string]*consolidatedSubRules
+	rootNamespaceLocal  *consolidatedSubRules
+}
+
+type consolidatedSubRules struct {
+	specificSubRules map[host.Name][]*ConsolidatedSubRule
+	wildcardSubRules map[host.Name][]*ConsolidatedSubRule
+}
+
+func NewPushContext() *PushContext {
+	return &PushContext{
+		ServiceIndex:      newServiceIndex(),
+		serviceRouteIndex: newServiceRouteIndex(),
+		subsetRuleIndex:   newSubsetRuleIndex(),
+		serviceAccounts:   map[serviceAccountKey][]string{},
+	}
+}
+
 func newServiceIndex() serviceIndex {
 	return serviceIndex{
 		public:               []*Service{},
@@ -105,13 +171,27 @@ func newServiceIndex() serviceIndex {
 	}
 }
 
-type ConsolidatedDestRule struct {
-	exportTo sets.Set[visibility.Instance]
-	rule     *config.Config
-	from     []types.NamespacedName
+func newServiceRouteIndex() serviceRouteIndex {
+	out := serviceRouteIndex{
+		delegates:              map[ConfigKey][]ConfigKey{},
+		referencedDestinations: map[string]sets.String{},
+	}
+	return out
 }
 
-type ReasonStats map[TriggerReason]int
+func newSubsetRuleIndex() subsetRuleIndex {
+	return subsetRuleIndex{
+		namespaceLocal:      map[string]*consolidatedSubRules{},
+		exportedByNamespace: map[string]*consolidatedSubRules{},
+	}
+}
+
+func newConsolidatedDestRules() *consolidatedSubRules {
+	return &consolidatedSubRules{
+		specificSubRules: map[host.Name][]*ConsolidatedSubRule{},
+		wildcardSubRules: map[host.Name][]*ConsolidatedSubRule{},
+	}
+}
 
 func NewReasonStats(reasons ...TriggerReason) ReasonStats {
 	ret := make(ReasonStats)
@@ -141,38 +221,6 @@ func (r ReasonStats) Count() int {
 		ret += count
 	}
 	return ret
-}
-
-type PushRequest struct {
-	Reason           ReasonStats
-	ConfigsUpdated   sets.Set[ConfigKey]
-	AddressesUpdated sets.Set[string]
-	Forced           bool
-	Full             bool
-	Push             *PushContext
-	Start            time.Time
-	Delta            ResourceDelta
-}
-
-type ResourceDelta = xds.ResourceDelta
-
-func NewPushContext() *PushContext {
-	return &PushContext{
-		ServiceIndex:    newServiceIndex(),
-		serviceAccounts: map[serviceAccountKey][]string{},
-	}
-}
-
-type ConfigKey struct {
-	Kind      kind.Kind
-	Name      string
-	Namespace string
-}
-
-type exportToDefaults struct {
-	service         sets.Set[visibility.Instance]
-	virtualService  sets.Set[visibility.Instance]
-	destinationRule sets.Set[visibility.Instance]
 }
 
 func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
@@ -247,14 +295,14 @@ func (pr *PushRequest) PushReason() string {
 }
 
 func (ps *PushContext) initDefaultExportMaps() {
-	ps.exportToDefaults.destinationRule = sets.New[visibility.Instance]()
+	ps.exportToDefaults.subsetRule = sets.New[visibility.Instance]()
 	if ps.Mesh.DefaultDestinationRuleExportTo != nil {
 		for _, e := range ps.Mesh.DefaultDestinationRuleExportTo {
-			ps.exportToDefaults.destinationRule.Insert(visibility.Instance(e))
+			ps.exportToDefaults.subsetRule.Insert(visibility.Instance(e))
 		}
 	} else {
 		// default to *
-		ps.exportToDefaults.destinationRule.Insert(visibility.Public)
+		ps.exportToDefaults.subsetRule.Insert(visibility.Public)
 	}
 
 	ps.exportToDefaults.service = sets.New[visibility.Instance]()
@@ -266,13 +314,13 @@ func (ps *PushContext) initDefaultExportMaps() {
 		ps.exportToDefaults.service.Insert(visibility.Public)
 	}
 
-	ps.exportToDefaults.virtualService = sets.New[visibility.Instance]()
+	ps.exportToDefaults.serviceRoute = sets.New[visibility.Instance]()
 	if ps.Mesh.DefaultVirtualServiceExportTo != nil {
 		for _, e := range ps.Mesh.DefaultVirtualServiceExportTo {
-			ps.exportToDefaults.virtualService.Insert(visibility.Instance(e))
+			ps.exportToDefaults.serviceRoute.Insert(visibility.Instance(e))
 		}
 	} else {
-		ps.exportToDefaults.virtualService.Insert(visibility.Public)
+		ps.exportToDefaults.serviceRoute.Insert(visibility.Public)
 	}
 }
 
@@ -468,6 +516,16 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
 		len(pushReq.AddressesUpdated) > 0)
 
+	// Check if serviceRoutes have changed base on:
+	// 1. ServiceRoute updates in ConfigsUpdated
+	serviceRoutesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceRoute) ||
+		len(pushReq.AddressesUpdated) > 0)
+
+	// Check if serviceRoutes have changed base on:
+	// 1. SubsetRule updates in ConfigsUpdated
+	subsetRulesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.SubsetRule) ||
+		len(pushReq.AddressesUpdated) > 0)
+
 	// Also check if the actual number of services has changed
 	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
 	if !servicesChanged && oldPushContext != nil {
@@ -491,6 +549,19 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.ServiceIndex = oldPushContext.ServiceIndex
 		ps.serviceAccounts = oldPushContext.serviceAccounts
 	}
+
+	if serviceRoutesChanged {
+		ps.initServiceRoutes(env)
+	} else {
+		ps.serviceRouteIndex = oldPushContext.serviceRouteIndex
+	}
+
+	if subsetRulesChanged {
+		ps.initSubsetRules(env)
+	} else {
+		ps.subsetRuleIndex = oldPushContext.subsetRuleIndex
+	}
+
 }
 
 func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
@@ -540,6 +611,118 @@ func (ps *PushContext) GetAllServices() []*Service {
 	return ps.servicesExportedToNamespace(NamespaceAll)
 }
 
+func (ps *PushContext) initServiceRoutes(env *Environment) {
+	ps.serviceRouteIndex.referencedDestinations = map[string]sets.String{}
+	serviceroutes := env.List(gvk.ServiceRoute, NamespaceAll)
+	sroutes := make([]config.Config, len(serviceroutes))
+
+	for i, r := range serviceroutes {
+		sroutes[i] = resolveServiceRouteShortnames(r)
+	}
+	sroutes, ps.serviceRouteIndex.delegates = mergeServiceRoutesIfNeeded(sroutes, ps.exportToDefaults.serviceRoute)
+
+}
+
+// sortConfigBySelectorAndCreationTime sorts the list of config objects based on priority and creation time.
+func sortConfigBySelectorAndCreationTime(configs []config.Config) []config.Config {
+	sort.Slice(configs, func(i, j int) bool {
+		// check if one of the configs has priority
+		idr := configs[i].Spec.(*networking.DestinationRule)
+		jdr := configs[j].Spec.(*networking.DestinationRule)
+		if idr.GetWorkloadSelector() != nil && jdr.GetWorkloadSelector() == nil {
+			return true
+		}
+		if idr.GetWorkloadSelector() == nil && jdr.GetWorkloadSelector() != nil {
+			return false
+		}
+
+		// If priority is the same or neither has priority, fallback to creation time ordering
+		if r := configs[i].CreationTimestamp.Compare(configs[j].CreationTimestamp); r != 0 {
+			return r == -1 // -1 means i is less than j, so return true.
+		}
+		if r := cmp.Compare(configs[i].Name, configs[j].Name); r != 0 {
+			return r == -1
+		}
+		return cmp.Compare(configs[i].Namespace, configs[j].Namespace) == -1
+	})
+	return configs
+}
+
+func (ps *PushContext) setSubsetRules(configs []config.Config) {
+	sortConfigBySelectorAndCreationTime(configs)
+
+	namespaceLocalSubRules := make(map[string]*consolidatedSubRules)
+	exportedDestRulesByNamespace := make(map[string]*consolidatedSubRules)
+	rootNamespaceLocalDestRules := newConsolidatedDestRules()
+
+	for i := range configs {
+		rule := configs[i].Spec.(*networking.DestinationRule)
+
+		rule.Host = string(ResolveShortnameToFQDN(rule.Host, configs[i].Meta))
+		var exportToSet sets.Set[visibility.Instance]
+
+		// destination rules with workloadSelector should not be exported to other namespaces
+		if rule.GetWorkloadSelector() == nil {
+			exportToSet = sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
+			for _, e := range rule.ExportTo {
+				exportToSet.Insert(visibility.Instance(e))
+			}
+		} else {
+			exportToSet = sets.New[visibility.Instance](visibility.Private)
+		}
+
+		// add only if the dest rule is exported with . or * or explicit exportTo containing this namespace
+		// The global exportTo doesn't matter here (its either . or * - both of which are applicable here)
+		if exportToSet.IsEmpty() || exportToSet.Contains(visibility.Public) || exportToSet.Contains(visibility.Private) ||
+			exportToSet.Contains(visibility.Instance(configs[i].Namespace)) {
+			// Store in an index for the config's namespace
+			// a proxy from this namespace will first look here for the destination rule for a given service
+			// This pool consists of both public/private destination rules.
+			if _, exist := namespaceLocalSubRules[configs[i].Namespace]; !exist {
+				namespaceLocalSubRules[configs[i].Namespace] = newConsolidatedDestRules()
+			}
+			// Merge this destination rule with any public/private dest rules for same host in the same namespace
+			// If there are no duplicates, the dest rule will be added to the list
+			ps.mergeSubsetRule(namespaceLocalSubRules[configs[i].Namespace], configs[i], exportToSet)
+		}
+
+		isPrivateOnly := false
+		// No exportTo in destinationRule. Use the global default
+		// We only honor . and *
+		if exportToSet.IsEmpty() && ps.exportToDefaults.subsetRule.Contains(visibility.Private) {
+			isPrivateOnly = true
+		} else if exportToSet.Len() == 1 && (exportToSet.Contains(visibility.Private) || exportToSet.Contains(visibility.Instance(configs[i].Namespace))) {
+			isPrivateOnly = true
+		}
+
+		if !isPrivateOnly {
+			if _, exist := exportedDestRulesByNamespace[configs[i].Namespace]; !exist {
+				exportedDestRulesByNamespace[configs[i].Namespace] = newConsolidatedDestRules()
+			}
+			ps.mergeSubsetRule(exportedDestRulesByNamespace[configs[i].Namespace], configs[i], exportToSet)
+		} else if configs[i].Namespace == ps.Mesh.RootNamespace {
+			ps.mergeSubsetRule(rootNamespaceLocalDestRules, configs[i], exportToSet)
+		}
+	}
+
+	ps.subsetRuleIndex.namespaceLocal = namespaceLocalSubRules
+	ps.subsetRuleIndex.exportedByNamespace = exportedDestRulesByNamespace
+	ps.subsetRuleIndex.rootNamespaceLocal = rootNamespaceLocalDestRules
+}
+
+func (ps *PushContext) initSubsetRules(env *Environment) {
+	configs := env.List(gvk.SubsetRule, NamespaceAll)
+
+	// values returned from ConfigStore.List are immutable.
+	// Therefore, we make a copy
+	subRules := make([]config.Config, len(configs))
+	for i := range subRules {
+		subRules[i] = configs[i]
+	}
+
+	ps.setSubsetRules(subRules)
+}
+
 func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {
 	for _, svc := range services {
 		var accounts sets.String
@@ -566,7 +749,16 @@ func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service
 	}
 }
 
-// ConfigNamesOfKind extracts config names of the specified kind.
+func (ps *PushContext) DelegateServiceRoutes(vses []config.Config) []ConfigHash {
+	var out []ConfigHash
+	for _, vs := range vses {
+		for _, delegate := range ps.serviceRouteIndex.delegates[ConfigKey{Kind: kind.ServiceRoute, Namespace: vs.Namespace, Name: vs.Name}] {
+			out = append(out, delegate.HashCode())
+		}
+	}
+	return out
+}
+
 func ConfigNamesOfKind(configs sets.Set[ConfigKey], k kind.Kind) sets.String {
 	ret := sets.New[string]()
 

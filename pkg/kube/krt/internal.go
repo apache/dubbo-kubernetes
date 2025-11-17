@@ -20,7 +20,7 @@ package krt
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"go.uber.org/atomic"
 	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
