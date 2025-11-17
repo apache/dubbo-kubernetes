@@ -44,6 +44,34 @@ func NewClientConfigForRestConfig(restConfig *rest.Config) clientcmd.ClientConfi
 	}
 }
 
+func newAuthInfo(restConfig *rest.Config) *api.AuthInfo {
+	return &api.AuthInfo{
+		ClientCertificate:     restConfig.CertFile,
+		ClientCertificateData: restConfig.CertData,
+		ClientKey:             restConfig.KeyFile,
+		ClientKeyData:         restConfig.KeyData,
+		Token:                 restConfig.BearerToken,
+		TokenFile:             restConfig.BearerTokenFile,
+		Impersonate:           restConfig.Impersonate.UserName,
+		ImpersonateGroups:     restConfig.Impersonate.Groups,
+		ImpersonateUserExtra:  restConfig.Impersonate.Extra,
+		Username:              restConfig.Username,
+		Password:              restConfig.Password,
+		AuthProvider:          restConfig.AuthProvider,
+		Exec:                  restConfig.ExecProvider,
+	}
+}
+
+func newCluster(restConfig *rest.Config) *api.Cluster {
+	return &api.Cluster{
+		Server:                   restConfig.Host,
+		TLSServerName:            restConfig.ServerName,
+		InsecureSkipTLSVerify:    restConfig.Insecure,
+		CertificateAuthority:     restConfig.CAFile,
+		CertificateAuthorityData: restConfig.CAData,
+	}
+}
+
 func (c *clientConfig) RawConfig() (api.Config, error) {
 	cfg := api.Config{
 		Kind:        "Config",
@@ -82,32 +110,4 @@ func (c *clientConfig) ConfigAccess() clientcmd.ConfigAccess {
 func (c *clientConfig) copyRestConfig() *rest.Config {
 	out := c.restConfig
 	return &out
-}
-
-func newAuthInfo(restConfig *rest.Config) *api.AuthInfo {
-	return &api.AuthInfo{
-		ClientCertificate:     restConfig.CertFile,
-		ClientCertificateData: restConfig.CertData,
-		ClientKey:             restConfig.KeyFile,
-		ClientKeyData:         restConfig.KeyData,
-		Token:                 restConfig.BearerToken,
-		TokenFile:             restConfig.BearerTokenFile,
-		Impersonate:           restConfig.Impersonate.UserName,
-		ImpersonateGroups:     restConfig.Impersonate.Groups,
-		ImpersonateUserExtra:  restConfig.Impersonate.Extra,
-		Username:              restConfig.Username,
-		Password:              restConfig.Password,
-		AuthProvider:          restConfig.AuthProvider,
-		Exec:                  restConfig.ExecProvider,
-	}
-}
-
-func newCluster(restConfig *rest.Config) *api.Cluster {
-	return &api.Cluster{
-		Server:                   restConfig.Host,
-		TLSServerName:            restConfig.ServerName,
-		InsecureSkipTLSVerify:    restConfig.Insecure,
-		CertificateAuthority:     restConfig.CAFile,
-		CertificateAuthorityData: restConfig.CAData,
-	}
 }

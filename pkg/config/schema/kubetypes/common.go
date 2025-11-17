@@ -18,7 +18,9 @@
 package kubetypes
 
 import (
+	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/typemap"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

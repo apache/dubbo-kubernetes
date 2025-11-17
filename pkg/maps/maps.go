@@ -18,10 +18,7 @@
 package maps
 
 import (
-	"cmp"
-	"iter"
-	"maps"   // nolint: depguard
-	"slices" // nolint: depguard
+	"maps" // nolint: depguard
 )
 
 // Equal reports whether two maps contain the same key/value pairs.
@@ -56,17 +53,6 @@ func Keys[M ~map[K]V, K comparable, V any](m M) []K {
 	return r
 }
 
-// MergeCopy creates a new map by merging all key/value pairs from base and override.
-// When a key in override is already present in base,
-// the value in base will be overwritten by the value associated
-// with the key in override.
-func MergeCopy[M1 ~map[K]V, M2 ~map[K]V, K comparable, V any](base M1, override M2) M1 {
-	dst := make(M1, len(base)+len(override))
-	maps.Copy(dst, base)
-	maps.Copy(dst, override)
-	return dst
-}
-
 // Contains checks if all key-value pairs in 'subset' are present in 'superset'.
 // It returns true only if every key in 'subset' exists in 'superset' and their corresponding values are equal.
 func Contains[M1, M2 ~map[K]V, K comparable, V comparable](superset M1, subset M2) bool {
@@ -82,16 +68,4 @@ func Contains[M1, M2 ~map[K]V, K comparable, V comparable](superset M1, subset M
 // Keys are still compared with ==.
 func EqualFunc[M1 ~map[K]V1, M2 ~map[K]V2, K comparable, V1, V2 any](m1 M1, m2 M2, eq func(V1, V2) bool) bool {
 	return maps.EqualFunc(m1, m2, eq)
-}
-
-func SeqStable[M ~map[K]V, K cmp.Ordered, V any](m M) iter.Seq2[K, V] {
-	return func(yield func(K, V) bool) {
-		k := Keys(m)
-		slices.Sort(k)
-		for _, key := range k {
-			if !yield(key, m[key]) {
-				return
-			}
-		}
-	}
 }

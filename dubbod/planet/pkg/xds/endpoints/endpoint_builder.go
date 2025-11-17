@@ -273,13 +273,13 @@ func (b *EndpointBuilder) servicePort(port int) *model.Port {
 }
 
 func (b *EndpointBuilder) matchesSubset(epLabels labels.Instance) bool {
-	// TODO: implement subset matching logic based on DestinationRule
+	// TODO: implement subset matching logic based on SubsetRule
 	// For now, return true if no subset is specified or if subset is empty
 	if b.subsetName == "" {
 		return true
 	}
 	// Simplified subset matching - in real implementation, this should match
-	// against DestinationRule subset labels
+	// against SubsetRule subset labels
 	return true
 }
 

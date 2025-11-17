@@ -18,13 +18,41 @@
 package krt
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"go.uber.org/atomic"
 )
+
+// RecomputeTrigger trigger provides an escape hatch to allow krt transformations to depend on external state and recompute
+// correctly when those change.
+// Typically, all state is registered and fetched through krt.Fetch. Through this mechanism, any changes are automatically
+// propagated through the system to dependencies.
+// In some cases, it may not be feasible to get all state into krt; hopefully, this is a temporary state.
+// RecomputeTrigger works around this by allowing an explicit call to recompute a collection; the caller must be sure to call Trigger()
+// any time the state changes.
+type RecomputeTrigger struct {
+	inner StaticSingleton[int32]
+	// krt will suppress events for unchanged resources. To workaround this, we constantly change and int each time TriggerRecomputation
+	// is called to ensure our event is not suppressed.
+	i *atomic.Int32
+}
 
 type RecomputeProtected[T any] struct {
 	trigger *RecomputeTrigger
 	data    T
+}
+
+func NewRecomputeTrigger(startSynced bool, opts ...CollectionOption) *RecomputeTrigger {
+	inner := NewStatic[int32](ptr.Of(int32(0)), startSynced, opts...)
+	return &RecomputeTrigger{inner: inner, i: atomic.NewInt32(0)}
+}
+
+// NewRecomputeProtected builds a RecomputeProtected which wraps some data, ensuring it is always MarkDependant when accessed
+func NewRecomputeProtected[T any](initialData T, startSynced bool, opts ...CollectionOption) RecomputeProtected[T] {
+	trigger := NewRecomputeTrigger(startSynced, opts...)
+	return RecomputeProtected[T]{
+		trigger: trigger,
+		data:    initialData,
+	}
 }
 
 // Get marks us as dependent on the value and fetches it.
@@ -54,34 +82,6 @@ func (c RecomputeProtected[T]) Modify(fn func(*T)) {
 // is likely broken
 func (c RecomputeProtected[T]) AccessUnprotected() T {
 	return c.data
-}
-
-// NewRecomputeProtected builds a RecomputeProtected which wraps some data, ensuring it is always MarkDependant when accessed
-func NewRecomputeProtected[T any](initialData T, startSynced bool, opts ...CollectionOption) RecomputeProtected[T] {
-	trigger := NewRecomputeTrigger(startSynced, opts...)
-	return RecomputeProtected[T]{
-		trigger: trigger,
-		data:    initialData,
-	}
-}
-
-// RecomputeTrigger trigger provides an escape hatch to allow krt transformations to depend on external state and recompute
-// correctly when those change.
-// Typically, all state is registered and fetched through krt.Fetch. Through this mechanism, any changes are automatically
-// propagated through the system to dependencies.
-// In some cases, it may not be feasible to get all state into krt; hopefully, this is a temporary state.
-// RecomputeTrigger works around this by allowing an explicit call to recompute a collection; the caller must be sure to call Trigger()
-// any time the state changes.
-type RecomputeTrigger struct {
-	inner StaticSingleton[int32]
-	// krt will suppress events for unchanged resources. To workaround this, we constantly change and int each time TriggerRecomputation
-	// is called to ensure our event is not suppressed.
-	i *atomic.Int32
-}
-
-func NewRecomputeTrigger(startSynced bool, opts ...CollectionOption) *RecomputeTrigger {
-	inner := NewStatic[int32](ptr.Of(int32(0)), startSynced, opts...)
-	return &RecomputeTrigger{inner: inner, i: atomic.NewInt32(0)}
 }
 
 // TriggerRecomputation tells all dependants to recompute

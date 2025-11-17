@@ -14,5 +14,9 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
-  global: {}
+  global:
+    dubboNamespace: dubbo-system
+
   base: {}
+
+  defaultRevision: "default"

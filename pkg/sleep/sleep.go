@@ -22,10 +22,6 @@ import (
 	"time"
 )
 
-func UntilContext(ctx context.Context, d time.Duration) bool {
-	return Until(ctx.Done(), d)
-}
-
 func Until(ch <-chan struct{}, d time.Duration) bool {
 	timer := time.NewTimer(d)
 	select {
@@ -37,4 +33,8 @@ func Until(ch <-chan struct{}, d time.Duration) bool {
 	case <-timer.C:
 		return true
 	}
+}
+
+func UntilContext(ctx context.Context, d time.Duration) bool {
+	return Until(ctx.Done(), d)
 }

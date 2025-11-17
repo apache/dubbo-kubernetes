@@ -31,10 +31,8 @@ type RdsGenerator struct {
 var _ model.XdsResourceGenerator = &RdsGenerator{}
 
 var skippedRdsConfigs = sets.New[kind.Kind](
-	kind.RequestAuthentication,
 	kind.PeerAuthentication,
 	kind.Secret,
-	kind.DNSName,
 )
 
 func rdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) bool {

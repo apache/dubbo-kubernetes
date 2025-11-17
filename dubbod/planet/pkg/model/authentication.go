@@ -54,7 +54,6 @@ func initAuthenticationPolicies(env *Environment) *AuthenticationPolicies {
 		rootNamespace:          env.Mesh().GetRootNamespace(),
 	}
 
-	policy.addRequestAuthentication(sortConfigByCreationTime(env.List(gvk.RequestAuthentication, NamespaceAll)))
 	policy.addPeerAuthentication(sortConfigByCreationTime(env.List(gvk.PeerAuthentication, NamespaceAll)))
 
 	return policy

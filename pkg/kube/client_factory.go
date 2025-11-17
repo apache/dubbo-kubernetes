@@ -37,7 +37,29 @@ import (
 	"time"
 )
 
-var _ PartialFactory = &clientFactory{}
+type rESTClientGetter interface {
+	// ToRESTConfig returns restconfig
+	ToRESTConfig() (*rest.Config, error)
+	// ToDiscoveryClient returns discovery client
+	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
+	// ToRESTMapper returns a restmapper
+	ToRESTMapper() (meta.RESTMapper, error)
+	// ToRawKubeConfigLoader return kubeconfig loader as-is
+	ToRawKubeConfigLoader() clientcmd.ClientConfig
+}
+
+type PartialFactory interface {
+	rESTClientGetter
+
+	// DynamicClient returns a dynamic client ready for use
+	DynamicClient() (dynamic.Interface, error)
+
+	// KubernetesClientSet gives you back an external clientset
+	KubernetesClientSet() (*kubernetes.Clientset, error)
+
+	// Returns a RESTClient for accessing Kubernetes resources or an error.
+	RESTClient() (*rest.RESTClient, error)
+}
 
 // clientFactory partially implements the kubectl util.Factory, which is provides access to various k8s clients.
 // The full Factory can be built with MakeKubeFactory.
@@ -50,6 +72,8 @@ type clientFactory struct {
 
 	discoveryClient lazy.Lazy[discovery.CachedDiscoveryInterface]
 }
+
+var _ PartialFactory = &clientFactory{}
 
 // newClientFactory creates a new util.Factory from the given clientcmd.ClientConfig.
 func newClientFactory(clientConfig clientcmd.ClientConfig, diskCache bool) *clientFactory {
@@ -155,28 +179,4 @@ func (c *clientFactory) RESTClient() (*rest.RESTClient, error) {
 		return nil, err
 	}
 	return rest.RESTClientFor(clientConfig)
-}
-
-type rESTClientGetter interface {
-	// ToRESTConfig returns restconfig
-	ToRESTConfig() (*rest.Config, error)
-	// ToDiscoveryClient returns discovery client
-	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
-	// ToRESTMapper returns a restmapper
-	ToRESTMapper() (meta.RESTMapper, error)
-	// ToRawKubeConfigLoader return kubeconfig loader as-is
-	ToRawKubeConfigLoader() clientcmd.ClientConfig
-}
-
-type PartialFactory interface {
-	rESTClientGetter
-
-	// DynamicClient returns a dynamic client ready for use
-	DynamicClient() (dynamic.Interface, error)
-
-	// KubernetesClientSet gives you back an external clientset
-	KubernetesClientSet() (*kubernetes.Clientset, error)
-
-	// Returns a RESTClient for accessing Kubernetes resources or an error.
-	RESTClient() (*rest.RESTClient, error)
 }

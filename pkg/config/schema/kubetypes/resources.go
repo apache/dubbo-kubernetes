@@ -30,34 +30,30 @@ import (
 
 func getGvk(obj any) (config.GroupVersionKind, bool) {
 	switch obj.(type) {
-	case *apiistioioapisecurityv1.AuthorizationPolicy:
-		return gvk.AuthorizationPolicy, true
-	case *apiistioioapisecurityv1.PeerAuthentication:
-		return gvk.PeerAuthentication, true
-	case *apiistioioapisecurityv1.RequestAuthentication:
-		return gvk.RequestAuthentication, true
-	case *apiistioioapinetworkingv1.DestinationRule:
-		return gvk.DestinationRule, true
-	case *apiistioioapinetworkingv1.VirtualService:
-		return gvk.VirtualService, true
-	case *k8sioapicorev1.ConfigMap:
-		return gvk.ConfigMap, true
-	case *istioioapimeshv1alpha1.MeshConfig:
-		return gvk.MeshConfig, true
-	case *k8sioapicorev1.Namespace:
-		return gvk.Namespace, true
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return gvk.MutatingWebhookConfiguration, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
-	case *k8sioapidiscoveryv1.EndpointSlice:
-		return gvk.EndpointSlice, true
+	case *istioioapimeshv1alpha1.MeshConfig:
+		return gvk.MeshConfig, true
+	case *apiistioioapisecurityv1.PeerAuthentication:
+		return gvk.PeerAuthentication, true
+	case *apiistioioapinetworkingv1.DestinationRule:
+		return gvk.SubsetRule, true
+	case *apiistioioapinetworkingv1.VirtualService:
+		return gvk.ServiceRoute, true
+	case *k8sioapicorev1.ConfigMap:
+		return gvk.ConfigMap, true
 	case *k8sioapicorev1.Endpoints:
 		return gvk.Endpoints, true
+	case *k8sioapidiscoveryv1.EndpointSlice:
+		return gvk.EndpointSlice, true
 	case *k8sioapicorev1.Service:
 		return gvk.Service, true
 	case *k8sioapicorev1.Pod:
 		return gvk.Pod, true
+	case *k8sioapicorev1.Namespace:
+		return gvk.Namespace, true
 	default:
 		return config.GroupVersionKind{}, false
 	}

@@ -27,6 +27,8 @@ import (
 
 const Name = "proto"
 
+var defaultBufferPool = mem.DefaultBufferPool()
+
 type vtprotoMessage interface {
 	MarshalToSizedBufferVTStrict(data []byte) (int, error)
 	SizeVT() int
@@ -37,8 +39,6 @@ type Codec struct {
 }
 
 func (Codec) Name() string { return Name }
-
-var defaultBufferPool = mem.DefaultBufferPool()
 
 func (c *Codec) Marshal(v any) (mem.BufferSlice, error) {
 	if m, ok := v.(vtprotoMessage); ok {

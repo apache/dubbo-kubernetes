@@ -129,8 +129,8 @@ type Server struct {
 }
 
 type readinessFlags struct {
-	proxylessInjectorReady atomic.Bool
-	configValidationReady  atomic.Bool
+	InjectorReady         atomic.Bool
+	configValidationReady atomic.Bool
 }
 
 type webhookInfo struct {
@@ -240,9 +240,9 @@ func NewServer(args *PlanetArgs, initFuncs ...func(*Server)) (*Server, error) {
 		s.initSecureWebhookServer(args)
 		wh, err := s.initInjector(args)
 		if err != nil {
-			return nil, fmt.Errorf("error initializing proxyless injector: %v", err)
+			return nil, fmt.Errorf("error initializing grpcxds injector: %v", err)
 		}
-		s.readinessFlags.proxylessInjectorReady.Store(true)
+		s.readinessFlags.InjectorReady.Store(true)
 		s.webhookInfo.mu.Lock()
 		s.webhookInfo.wh = wh
 		s.webhookInfo.mu.Unlock()
@@ -443,7 +443,7 @@ func (s *Server) initReadinessProbes() {
 			return s.XDSServer.IsServerReady()
 		},
 		"proxyless injector": func() bool {
-			return s.readinessFlags.proxylessInjectorReady.Load()
+			return s.readinessFlags.InjectorReady.Load()
 		},
 		"config validation": func() bool {
 			return s.readinessFlags.configValidationReady.Load()

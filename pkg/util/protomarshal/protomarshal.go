@@ -36,8 +36,9 @@ var (
 	strictUnmarshaler = jsonpb.Unmarshaler{}
 )
 
-func Unmarshal(b []byte, m proto.Message) error {
-	return strictUnmarshaler.Unmarshal(bytes.NewReader(b), legacyproto.MessageV1(m))
+type ComparableMessage interface {
+	comparable
+	proto.Message
 }
 
 func ToJSON(msg proto.Message) (string, error) {
@@ -58,6 +59,25 @@ func MarshalIndent(msg proto.Message, indent string) ([]byte, error) {
 		return nil, err
 	}
 	return []byte(res), err
+}
+
+func MarshalProtoNames(msg proto.Message) ([]byte, error) {
+	if msg == nil {
+		return nil, errors.New("unexpected nil message")
+	}
+
+	// Marshal from proto to json bytes
+	m := jsonpb.Marshaler{OrigName: true}
+	buf := &bytes.Buffer{}
+	err := m.Marshal(buf, legacyproto.MessageV1(msg))
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func Unmarshal(b []byte, m proto.Message) error {
+	return strictUnmarshaler.Unmarshal(bytes.NewReader(b), legacyproto.MessageV1(m))
 }
 
 func ToJSONWithIndent(msg proto.Message, indent string) (string, error) {
@@ -109,11 +129,6 @@ func ApplyYAML(yml string, pb proto.Message) error {
 	return ApplyJSON(string(js), pb)
 }
 
-type ComparableMessage interface {
-	comparable
-	proto.Message
-}
-
 func Clone[T proto.Message](obj T) T {
 	return proto.Clone(obj).(T)
 }
@@ -134,19 +149,4 @@ func MessageToStructSlow(msg proto.Message) (*structpb.Struct, error) {
 	}
 
 	return pbs, nil
-}
-
-func MarshalProtoNames(msg proto.Message) ([]byte, error) {
-	if msg == nil {
-		return nil, errors.New("unexpected nil message")
-	}
-
-	// Marshal from proto to json bytes
-	m := jsonpb.Marshaler{OrigName: true}
-	buf := &bytes.Buffer{}
-	err := m.Marshal(buf, legacyproto.MessageV1(msg))
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }

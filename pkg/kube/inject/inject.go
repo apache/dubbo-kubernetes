@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/Masterminds/sprig/v3"
 	"sort"
 	"strings"
 	"text/template"

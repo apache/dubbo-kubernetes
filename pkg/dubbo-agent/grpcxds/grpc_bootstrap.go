@@ -20,6 +20,7 @@ package grpcxds
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/file"
 	"os"
 	"path"
 	"path/filepath"

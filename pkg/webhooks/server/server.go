@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	admissionv1 "k8s.io/api/admission/v1"
+	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"net/http"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crd"
@@ -30,8 +32,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/hashicorp/go-multierror"
-	admissionv1 "k8s.io/api/admission/v1"
-	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -56,26 +56,13 @@ var (
 	}
 )
 
-func init() {
-	_ = admissionv1.AddToScheme(runtimeScheme)
-	_ = kubeApiAdmissionv1beta1.AddToScheme(runtimeScheme)
-}
+type admitFunc func(*kube.AdmissionRequest) *kube.AdmissionResponse
 
 type Options struct {
 	Schemas      collection.Schemas
 	DomainSuffix string
 	Port         uint
 	Mux          *http.ServeMux
-}
-
-// String produces a stringified version of the arguments for debugging.
-func (o Options) String() string {
-	buf := &bytes.Buffer{}
-
-	_, _ = fmt.Fprintf(buf, "DomainSuffix: %s\n", o.DomainSuffix)
-	_, _ = fmt.Fprintf(buf, "Port: %d\n", o.Port)
-
-	return buf.String()
 }
 
 type Webhook struct {
@@ -99,12 +86,18 @@ func New(o Options) (*Webhook, error) {
 	return wh, nil
 }
 
-func (wh *Webhook) serveValidate(w http.ResponseWriter, r *http.Request) {
-	serve(w, r, wh.validate)
+// String produces a stringified version of the arguments for debugging.
+func (o Options) String() string {
+	buf := &bytes.Buffer{}
+
+	_, _ = fmt.Fprintf(buf, "DomainSuffix: %s\n", o.DomainSuffix)
+	_, _ = fmt.Fprintf(buf, "Port: %d\n", o.Port)
+
+	return buf.String()
 }
 
-func toAdmissionResponse(err error) *kube.AdmissionResponse {
-	return &kube.AdmissionResponse{Result: &metav1.Status{Message: err.Error()}}
+func (wh *Webhook) serveValidate(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, wh.validate)
 }
 
 func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionResponse {
@@ -159,23 +152,6 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 	}
 	return &kube.AdmissionResponse{Allowed: true, Warnings: toKubeWarnings(warnings)}
 }
-
-func toKubeWarnings(warn validation.Warning) []string {
-	if warn == nil {
-		return nil
-	}
-	me, ok := warn.(*multierror.Error)
-	if ok {
-		res := []string{}
-		for _, e := range me.Errors {
-			res = append(res, e.Error())
-		}
-		return res
-	}
-	return []string{warn.Error()}
-}
-
-type admitFunc func(*kube.AdmissionRequest) *kube.AdmissionResponse
 
 func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {
 	var body []byte
@@ -254,4 +230,28 @@ func checkFields(raw []byte, kind string, namespace string, name string) (string
 	}
 
 	return "", nil
+}
+
+func toKubeWarnings(warn validation.Warning) []string {
+	if warn == nil {
+		return nil
+	}
+	me, ok := warn.(*multierror.Error)
+	if ok {
+		res := []string{}
+		for _, e := range me.Errors {
+			res = append(res, e.Error())
+		}
+		return res
+	}
+	return []string{warn.Error()}
+}
+
+func toAdmissionResponse(err error) *kube.AdmissionResponse {
+	return &kube.AdmissionResponse{Result: &metav1.Status{Message: err.Error()}}
+}
+
+func init() {
+	_ = admissionv1.AddToScheme(runtimeScheme)
+	_ = kubeApiAdmissionv1beta1.AddToScheme(runtimeScheme)
 }

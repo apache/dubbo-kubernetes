@@ -32,65 +32,41 @@ import (
 
 var (
 	PeerAuthentication = collection.Builder{
-		Identifier: "PeerAuthentication",
-		Group:      "security.istio.io",
-		Kind:       "PeerAuthentication",
-		Plural:     "peerauthentications",
-		Version:    "v1",
-		VersionAliases: []string{
-			"v1beta1",
-		},
-		Proto: "istio.security.v1beta1.PeerAuthentication", StatusProto: "istio.meta.v1alpha1.IstioStatus",
+		Identifier:     "PeerAuthentication",
+		Group:          "security.dubbo.apache.org",
+		Kind:           "PeerAuthentication",
+		Plural:         "peerauthentications",
+		Version:        "v1",
+		VersionAliases: []string{},
+		Proto:          "istio.security.v1beta1.PeerAuthentication", StatusProto: "istio.meta.v1alpha1.IstioStatus",
 		ReflectType: reflect.TypeOf(&istioioapisecurityv1beta1.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&istioioapimetav1alpha1.IstioStatus{}).Elem(),
 		ProtoPackage: "istio.io/api/security/v1beta1", StatusPackage: "istio.io/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	RequestAuthentication = collection.Builder{
-		Identifier: "RequestAuthentication",
-		Group:      "security.istio.io",
-		Kind:       "RequestAuthentication",
-		Plural:     "requestauthentications",
-		Version:    "v1",
-		VersionAliases: []string{
-			"v1beta1",
-		},
-		Proto: "istio.security.v1beta1.RequestAuthentication", StatusProto: "istio.meta.v1alpha1.IstioStatus",
-		ReflectType: reflect.TypeOf(&istioioapisecurityv1beta1.RequestAuthentication{}).Elem(), StatusType: reflect.TypeOf(&istioioapimetav1alpha1.IstioStatus{}).Elem(),
-		ProtoPackage: "istio.io/api/security/v1beta1", StatusPackage: "istio.io/api/meta/v1alpha1",
-		ClusterScoped: false,
-		Synthetic:     false,
-		Builtin:       false,
-	}.MustBuild()
-	DestinationRule = collection.Builder{
-		Identifier: "DestinationRule",
-		Group:      "networking.istio.io",
-		Kind:       "DestinationRule",
-		Plural:     "destinationrules",
-		Version:    "v1",
-		VersionAliases: []string{
-			"v1alpha3",
-			"v1beta1",
-		},
-		Proto: "istio.networking.v1alpha3.DestinationRule", StatusProto: "istio.meta.v1alpha1.IstioStatus",
+	SubsetRule = collection.Builder{
+		Identifier:     "SubsetRule",
+		Group:          "networking.dubbo.apache.org",
+		Kind:           "SubsetRule",
+		Plural:         "destinationrules",
+		Version:        "v1",
+		VersionAliases: []string{},
+		Proto:          "istio.networking.v1alpha3.DestinationRule", StatusProto: "istio.meta.v1alpha1.IstioStatus",
 		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&istioioapimetav1alpha1.IstioStatus{}).Elem(),
 		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "istio.io/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	VirtualService = collection.Builder{
-		Identifier: "VirtualService",
-		Group:      "networking.istio.io",
-		Kind:       "VirtualService",
-		Plural:     "virtualservices",
-		Version:    "v1",
-		VersionAliases: []string{
-			"v1alpha3",
-			"v1beta1",
-		},
-		Proto: "istio.networking.v1alpha3.VirtualService", StatusProto: "istio.meta.v1alpha1.IstioStatus",
+	ServiceRoute = collection.Builder{
+		Identifier:     "serviceRoute",
+		Group:          "networking.dubbo.apache.org",
+		Kind:           "serviceRoute",
+		Plural:         "serviceroutes",
+		Version:        "v1",
+		VersionAliases: []string{},
+		Proto:          "istio.networking.v1alpha3.VirtualService", StatusProto: "istio.meta.v1alpha1.IstioStatus",
 		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&istioioapimetav1alpha1.IstioStatus{}).Elem(),
 		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "istio.io/api/meta/v1alpha1",
 		ClusterScoped: false,
@@ -126,17 +102,15 @@ var (
 
 	All = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
-		MustAdd(RequestAuthentication).
-		MustAdd(DestinationRule).
-		MustAdd(VirtualService).
+		MustAdd(SubsetRule).
+		MustAdd(ServiceRoute).
 		MustAdd(MutatingWebhookConfiguration).
 		MustAdd(ValidatingWebhookConfiguration).
 		Build()
 
 	Planet = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
-		MustAdd(RequestAuthentication).
-		MustAdd(DestinationRule).
-		MustAdd(VirtualService).
+		MustAdd(SubsetRule).
+		MustAdd(ServiceRoute).
 		Build()
 )

@@ -19,6 +19,7 @@ package krt
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"reflect"
 	"strconv"
 	"strings"
@@ -30,7 +31,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 )
 
 type ObjectDecorator interface {

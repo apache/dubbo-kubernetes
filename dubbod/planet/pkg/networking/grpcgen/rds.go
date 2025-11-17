@@ -19,6 +19,8 @@ package grpcgen
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"strconv"
 	"strings"
 

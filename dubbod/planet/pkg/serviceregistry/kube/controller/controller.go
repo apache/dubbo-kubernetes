@@ -18,6 +18,7 @@
 package controller
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"sort"
 	"strings"
 	"sync"
@@ -39,7 +40,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/hashicorp/go-multierror"

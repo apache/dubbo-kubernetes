@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"os"
 	"time"
 
@@ -32,8 +33,6 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
-	"github.com/apache/dubbo-kubernetes/pkg/ptr"
-
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 

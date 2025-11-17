@@ -28,20 +28,20 @@ import (
 
 var log = dubbolog.RegisterScope("queue", "queue debugging")
 
+const maxTaskRetry = 3
+
 type delayTask struct {
 	do      func() error
 	runAt   time.Time
 	retries int
 }
 
-const maxTaskRetry = 3
-
-var _ heap.Interface = &pq{}
-
 // pq implements an internal priority queue so that tasks with the soonest expiry will be run first.
 // Methods on pq are not threadsafe, access should be protected.
 // much of this is taken from the example at https://golang.org/pkg/container/heap/
 type pq []*delayTask
+
+var _ heap.Interface = &pq{}
 
 func (q pq) Len() int {
 	return len(q)

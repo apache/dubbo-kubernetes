@@ -47,42 +47,11 @@ type WriteStatusAPI[T runtime.Object] interface {
 	UpdateStatus(ctx context.Context, object T, opts metav1.UpdateOptions) (T, error)
 }
 
-type InformerOptions struct {
-	LabelSelector   string
-	FieldSelector   string
-	Namespace       string
-	ObjectTransform func(obj any) (any, error)
-	Cluster         cluster.ID
-	InformerType    InformerType
-}
-
-type Filter struct {
-	LabelSelector   string
-	FieldSelector   string
-	Namespace       string
-	ObjectFilter    DynamicObjectFilter
-	ObjectTransform func(obj any) (any, error)
-}
-
 type DynamicObjectFilter interface {
 	// Filter returns true if the input object or namespace string resides in a namespace selected for discovery
 	Filter(obj any) bool
 	// AddHandler registers a handler on namespace, which will be triggered when namespace selected or deselected.
 	AddHandler(func(selected, deselected sets.String))
-}
-
-type staticFilter struct {
-	f func(obj interface{}) bool
-}
-
-var _ DynamicObjectFilter = staticFilter{}
-
-func (s staticFilter) Filter(obj any) bool {
-	return s.f(obj)
-}
-
-func (s staticFilter) AddHandler(func(selected, deselected sets.String)) {
-	// Do nothing
 }
 
 type CrdWatcher interface {
@@ -92,9 +61,64 @@ type CrdWatcher interface {
 	Run(stop <-chan struct{})
 }
 
+type DelayedFilter interface {
+	HasSynced() bool
+	KnownOrCallback(f func(stop <-chan struct{})) bool
+}
+
+type staticFilter struct {
+	f func(obj interface{}) bool
+}
+
+var _ DynamicObjectFilter = staticFilter{}
+
+type Filter struct {
+	LabelSelector   string
+	FieldSelector   string
+	Namespace       string
+	ObjectFilter    DynamicObjectFilter
+	ObjectTransform func(obj any) (any, error)
+}
+
 type composedFilter struct {
 	filter DynamicObjectFilter
 	extra  []func(obj any) bool
+}
+
+type InformerOptions struct {
+	LabelSelector   string
+	FieldSelector   string
+	Namespace       string
+	ObjectTransform func(obj any) (any, error)
+	Cluster         cluster.ID
+	InformerType    InformerType
+}
+
+func NewStaticObjectFilter(f func(obj any) bool) DynamicObjectFilter {
+	return staticFilter{f}
+}
+
+func ComposeFilters(filter DynamicObjectFilter, extra ...func(obj any) bool) DynamicObjectFilter {
+	return composedFilter{
+		filter: filter,
+		extra: slices.FilterInPlace(extra, func(f func(obj any) bool) bool {
+			return f != nil
+		}),
+	}
+}
+
+func (s staticFilter) Filter(obj any) bool {
+	return s.f(obj)
+}
+
+func (s staticFilter) AddHandler(func(selected, deselected sets.String)) {
+	// Do nothing
+}
+
+func (f composedFilter) AddHandler(fn func(selected, deselected sets.String)) {
+	if f.filter != nil {
+		f.filter.AddHandler(fn)
+	}
 }
 
 func (f composedFilter) Filter(obj any) bool {
@@ -107,28 +131,4 @@ func (f composedFilter) Filter(obj any) bool {
 		return f.filter.Filter(obj)
 	}
 	return true
-}
-
-func (f composedFilter) AddHandler(fn func(selected, deselected sets.String)) {
-	if f.filter != nil {
-		f.filter.AddHandler(fn)
-	}
-}
-
-func ComposeFilters(filter DynamicObjectFilter, extra ...func(obj any) bool) DynamicObjectFilter {
-	return composedFilter{
-		filter: filter,
-		extra: slices.FilterInPlace(extra, func(f func(obj any) bool) bool {
-			return f != nil
-		}),
-	}
-}
-
-func NewStaticObjectFilter(f func(obj any) bool) DynamicObjectFilter {
-	return staticFilter{f}
-}
-
-type DelayedFilter interface {
-	HasSynced() bool
-	KnownOrCallback(f func(stop <-chan struct{})) bool
 }

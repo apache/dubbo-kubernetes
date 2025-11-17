@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,36 +32,47 @@ import (
 
 	jose "github.com/go-jose/go-jose/v4"
 
-	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	meshconfig "istio.io/api/mesh/v1alpha1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
-var log = dubbolog.RegisterScope("spiffe", "spiffe debugging")
-
 const (
-	Scheme = "spiffe"
-
-	URIPrefix    = Scheme + "://"
-	URIPrefixLen = len(URIPrefix)
-
-	// The default SPIFFE URL value for trust domain
-	defaultTrustDomain = constants.DefaultClusterLocalDomain
-
+	Scheme                = "spiffe"
+	URIPrefix             = Scheme + "://"
+	URIPrefixLen          = len(URIPrefix)
 	ServiceAccountSegment = "sa"
 	NamespaceSegment      = "ns"
 )
+
+var log = dubbolog.RegisterScope("spiffe", "spiffe debugging")
 
 var (
 	firstRetryBackOffTime = time.Millisecond * 50
 )
 
+type bundleDoc struct {
+	jose.JSONWebKeySet
+	Sequence    uint64 `json:"spiffe_sequence,omitempty"`
+	RefreshHint int    `json:"spiffe_refresh_hint,omitempty"`
+}
+
 type Identity struct {
 	TrustDomain    string
 	Namespace      string
 	ServiceAccount string
+}
+
+type PeerCertVerifier struct {
+	generalCertPool *x509.CertPool
+	certPools       map[string]*x509.CertPool
+}
+
+func NewPeerCertVerifier() *PeerCertVerifier {
+	return &PeerCertVerifier{
+		generalCertPool: x509.NewCertPool(),
+		certPools:       make(map[string]*x509.CertPool),
+	}
 }
 
 func ParseIdentity(s string) (Identity, error) {
@@ -81,56 +93,14 @@ func ParseIdentity(s string) (Identity, error) {
 	}, nil
 }
 
-func (i Identity) String() string {
-	return URIPrefix + i.TrustDomain + "/ns/" + i.Namespace + "/sa/" + i.ServiceAccount
-}
-
-type bundleDoc struct {
-	jose.JSONWebKeySet
-	Sequence    uint64 `json:"spiffe_sequence,omitempty"`
-	RefreshHint int    `json:"spiffe_refresh_hint,omitempty"`
-}
-
-func sanitizeTrustDomain(td string) string {
-	return strings.Replace(td, "@", ".", -1)
-}
-
-// GenSpiffeURI returns the formatted uri(SPIFFE format for now) for the certificate.
-func genSpiffeURI(td, ns, serviceAccount string) (string, error) {
-	var err error
-	if ns == "" || serviceAccount == "" {
-		err = fmt.Errorf(
-			"namespace or service account empty for SPIFFE uri ns=%v serviceAccount=%v", ns, serviceAccount)
-	}
-	return URIPrefix + sanitizeTrustDomain(td) + "/ns/" + ns + "/sa/" + serviceAccount, err
-}
-
-// MustGenSpiffeURI returns the formatted uri(SPIFFE format for now) for the certificate and logs if there was an error.
-func MustGenSpiffeURI(meshCfg *meshconfig.MeshConfig, ns, serviceAccount string) string {
-	uri, err := genSpiffeURI(meshCfg.GetTrustDomain(), ns, serviceAccount)
+func GetTrustDomainFromURISAN(uriSan string) (string, error) {
+	parsed, err := ParseIdentity(uriSan)
 	if err != nil {
+		return "", fmt.Errorf("failed to parse URI SAN %s. Error: %v", uriSan, err)
 	}
-	return uri
+	return parsed.TrustDomain, nil
 }
 
-// MustGenSpiffeURIForTrustDomain returns the formatted uri(SPIFFE format for now) for the certificate and logs if there was an error.
-func MustGenSpiffeURIForTrustDomain(td, ns, serviceAccount string) string {
-	uri, err := genSpiffeURI(td, ns, serviceAccount)
-	if err != nil {
-	}
-	return uri
-}
-
-// ExpandWithTrustDomains expands a given spiffe identities, plus a list of trust domain aliases.
-// We ensure the returned list does not contain duplicates; the original input is always retained.
-// For example,
-// ExpandWithTrustDomains({"spiffe://td1/ns/def/sa/def"}, {"td1", "td2"}) returns
-//
-//	{"spiffe://td1/ns/def/sa/def", "spiffe://td2/ns/def/sa/def"}.
-//
-// ExpandWithTrustDomains({"spiffe://td1/ns/def/sa/a", "spiffe://td1/ns/def/sa/b"}, {"td2"}) returns
-//
-//	{"spiffe://td1/ns/def/sa/a", "spiffe://td2/ns/def/sa/a", "spiffe://td1/ns/def/sa/b", "spiffe://td2/ns/def/sa/b"}.
 func ExpandWithTrustDomains(spiffeIdentities sets.String, trustDomainAliases []string) sets.String {
 	if len(trustDomainAliases) == 0 {
 		return spiffeIdentities
@@ -156,20 +126,7 @@ func ExpandWithTrustDomains(spiffeIdentities sets.String, trustDomainAliases []s
 	return out
 }
 
-// GetTrustDomainFromURISAN extracts the trust domain part from the URI SAN in the X.509 certificate.
-func GetTrustDomainFromURISAN(uriSan string) (string, error) {
-	parsed, err := ParseIdentity(uriSan)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse URI SAN %s. Error: %v", uriSan, err)
-	}
-	return parsed.TrustDomain, nil
-}
-
-// RetrieveSpiffeBundleRootCerts retrieves the trusted CA certificates from a list of SPIFFE bundle endpoints.
-// It can use the system cert pool and the supplied certificates to validate the endpoints.
-func RetrieveSpiffeBundleRootCerts(config map[string]string, caCertPool *x509.CertPool, retryTimeout time.Duration) (
-	map[string][]*x509.Certificate, error,
-) {
+func RetrieveSpiffeBundleRootCerts(config map[string]string, caCertPool *x509.CertPool, retryTimeout time.Duration) (map[string][]*x509.Certificate, error) {
 	httpClient := &http.Client{
 		Timeout: time.Second * 10,
 	}
@@ -257,26 +214,14 @@ func RetrieveSpiffeBundleRootCerts(config map[string]string, caCertPool *x509.Ce
 	return ret, nil
 }
 
-// PeerCertVerifier is an instance to verify the peer certificate in the SPIFFE way using the retrieved root certificates.
-type PeerCertVerifier struct {
-	generalCertPool *x509.CertPool
-	certPools       map[string]*x509.CertPool
+func (i Identity) String() string {
+	return URIPrefix + i.TrustDomain + "/ns/" + i.Namespace + "/sa/" + i.ServiceAccount
 }
 
-// NewPeerCertVerifier returns a new PeerCertVerifier.
-func NewPeerCertVerifier() *PeerCertVerifier {
-	return &PeerCertVerifier{
-		generalCertPool: x509.NewCertPool(),
-		certPools:       make(map[string]*x509.CertPool),
-	}
-}
-
-// GetGeneralCertPool returns generalCertPool containing all root certs.
 func (v *PeerCertVerifier) GetGeneralCertPool() *x509.CertPool {
 	return v.generalCertPool
 }
 
-// AddMapping adds a new trust domain to certificates mapping to the certPools map.
 func (v *PeerCertVerifier) AddMapping(trustDomain string, certs []*x509.Certificate) {
 	if v.certPools[trustDomain] == nil {
 		v.certPools[trustDomain] = x509.NewCertPool()
@@ -288,7 +233,6 @@ func (v *PeerCertVerifier) AddMapping(trustDomain string, certs []*x509.Certific
 	log.Infof("Added %d certs to trust domain %s in peer cert verifier", len(certs), trustDomain)
 }
 
-// AddMappingFromPEM adds multiple RootCA's to the spiffe Trust bundle in the trustDomain namespace
 func (v *PeerCertVerifier) AddMappingFromPEM(trustDomain string, rootCertBytes []byte) error {
 	block, rest := pem.Decode(rootCertBytes)
 	var blockBytes []byte
@@ -309,15 +253,12 @@ func (v *PeerCertVerifier) AddMappingFromPEM(trustDomain string, rootCertBytes [
 	return nil
 }
 
-// AddMappings merges a trust domain to certs map to the certPools map.
 func (v *PeerCertVerifier) AddMappings(certMap map[string][]*x509.Certificate) {
 	for trustDomain, certs := range certMap {
 		v.AddMapping(trustDomain, certs)
 	}
 }
 
-// VerifyPeerCert is an implementation of tls.Config.VerifyPeerCertificate.
-// It verifies the peer certificate using the root certificates associated with its trust domain.
 func (v *PeerCertVerifier) VerifyPeerCert(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 	if len(rawCerts) == 0 {
 		// Peer doesn't present a certificate. Just skip. Other authn methods may be used.
@@ -353,4 +294,24 @@ func (v *PeerCertVerifier) VerifyPeerCert(rawCerts [][]byte, _ [][]*x509.Certifi
 		Intermediates: intCertPool,
 	})
 	return err
+}
+
+func sanitizeTrustDomain(td string) string {
+	return strings.Replace(td, "@", ".", -1)
+}
+
+func genSpiffeURI(td, ns, serviceAccount string) (string, error) {
+	var err error
+	if ns == "" || serviceAccount == "" {
+		err = fmt.Errorf(
+			"namespace or service account empty for SPIFFE uri ns=%v serviceAccount=%v", ns, serviceAccount)
+	}
+	return URIPrefix + sanitizeTrustDomain(td) + "/ns/" + ns + "/sa/" + serviceAccount, err
+}
+
+func MustGenSpiffeURI(meshCfg *meshconfig.MeshConfig, ns, serviceAccount string) string {
+	uri, err := genSpiffeURI(meshCfg.GetTrustDomain(), ns, serviceAccount)
+	if err != nil {
+	}
+	return uri
 }

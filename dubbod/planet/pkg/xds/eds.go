@@ -37,11 +37,9 @@ type EdsGenerator struct {
 var _ model.XdsDeltaResourceGenerator = &EdsGenerator{}
 
 var skippedEdsConfigs = sets.New(
-	kind.VirtualService,
-	kind.RequestAuthentication,
+	kind.ServiceRoute,
 	kind.PeerAuthentication,
 	kind.Secret,
-	kind.DNSName,
 )
 
 func edsNeedsPush(req *model.PushRequest, proxy *model.Proxy) bool {
