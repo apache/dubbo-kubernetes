@@ -19,6 +19,7 @@ package grpcgen
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 
@@ -113,7 +114,8 @@ func newClusterBuilder(node *model.Proxy, push *model.PushContext, defaultCluste
 
 func (b *clusterBuilder) build() []*cluster.Cluster {
 	var defaultCluster *cluster.Cluster
-	if b.filter.Contains(b.defaultClusterName) {
+	defaultRequested := b.filter == nil || b.filter.Contains(b.defaultClusterName)
+	if defaultRequested {
 		defaultCluster = b.edsCluster(b.defaultClusterName)
 		// CRITICAL: For gRPC proxyless, we need to set CommonLbConfig to handle endpoint health status
 		// Following Istio's implementation, we should include UNHEALTHY and DRAINING endpoints
@@ -136,6 +138,7 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 				core.HealthStatus_DEGRADED,
 			},
 		}
+		log.Infof("clusterBuilder.build: generated default cluster %s", b.defaultClusterName)
 	}
 
 	subsetClusters := b.applyDestinationRule(defaultCluster)
@@ -143,7 +146,10 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	if defaultCluster != nil {
 		out = append(out, defaultCluster)
 	}
-	return append(out, subsetClusters...)
+	result := append(out, subsetClusters...)
+	log.Infof("clusterBuilder.build: generated %d clusters total (1 default + %d subsets) for %s",
+		len(result), len(subsetClusters), b.defaultClusterName)
+	return result
 }
 
 func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
@@ -167,8 +173,71 @@ func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
 
 func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (subsetClusters []*cluster.Cluster) {
 	if b.svc == nil || b.port == nil {
+		log.Warnf("applyDestinationRule: service or port is nil for %s", b.defaultClusterName)
 		return nil
 	}
-	// TODO
-	return
+	log.Infof("applyDestinationRule: looking for DestinationRule for service %s/%s (hostname=%s, port=%d)",
+		b.svc.Attributes.Namespace, b.svc.Attributes.Name, b.hostname, b.portNum)
+	dr := b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.hostname)
+	if dr == nil {
+		log.Warnf("applyDestinationRule: no DestinationRule found for %s/%s", b.svc.Attributes.Namespace, b.hostname)
+		return nil
+	}
+	if len(dr.Subsets) == 0 {
+		log.Warnf("applyDestinationRule: DestinationRule found for %s/%s but has no subsets", b.svc.Attributes.Namespace, b.hostname)
+		return nil
+	}
+
+	log.Infof("applyDestinationRule: found DestinationRule for %s/%s with %d subsets, defaultCluster requested=%v",
+		b.svc.Attributes.Namespace, b.hostname, len(dr.Subsets), defaultCluster != nil)
+
+	var commonLbConfig *cluster.Cluster_CommonLbConfig
+	if defaultCluster != nil {
+		commonLbConfig = defaultCluster.CommonLbConfig
+	} else {
+		commonLbConfig = &cluster.Cluster_CommonLbConfig{
+			OverrideHostStatus: &core.HealthStatusSet{
+				Statuses: []core.HealthStatus{
+					core.HealthStatus_HEALTHY,
+					core.HealthStatus_UNHEALTHY,
+					core.HealthStatus_DRAINING,
+					core.HealthStatus_UNKNOWN,
+					core.HealthStatus_DEGRADED,
+				},
+			},
+		}
+	}
+
+	defaultClusterRequested := defaultCluster != nil
+	if b.filter != nil {
+		defaultClusterRequested = b.filter.Contains(b.defaultClusterName)
+	}
+
+	for _, subset := range dr.Subsets {
+		if subset == nil || subset.Name == "" {
+			continue
+		}
+		clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, subset.Name, b.hostname, b.portNum)
+
+		// CRITICAL: Always generate subset clusters if default cluster is requested
+		// This is essential for RDS WeightedCluster to work correctly
+		shouldGenerate := true
+		if b.filter != nil && !b.filter.Contains(clusterName) {
+			// Subset cluster not explicitly requested, but generate it if default cluster was requested
+			shouldGenerate = defaultClusterRequested
+		}
+
+		if !shouldGenerate {
+			log.Debugf("applyDestinationRule: skipping subset cluster %s (not requested and default not requested)", clusterName)
+			continue
+		}
+
+		log.Infof("applyDestinationRule: generating subset cluster %s for subset %s", clusterName, subset.Name)
+		subsetCluster := b.edsCluster(clusterName)
+		subsetCluster.CommonLbConfig = commonLbConfig
+		subsetClusters = append(subsetClusters, subsetCluster)
+	}
+
+	log.Infof("applyDestinationRule: generated %d subset clusters for %s/%s", len(subsetClusters), b.svc.Attributes.Namespace, b.hostname)
+	return subsetClusters
 }

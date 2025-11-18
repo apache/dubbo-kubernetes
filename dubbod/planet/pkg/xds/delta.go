@@ -19,9 +19,10 @@ package xds
 
 import (
 	"errors"
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"strings"
 	"time"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
@@ -67,12 +68,16 @@ func (s *DiscoveryServer) StreamDeltas(stream DeltaDiscoveryStream) error {
 		return status.Errorf(codes.ResourceExhausted, "request rate limit exceeded: %v", err)
 	}
 
-	// TODO authenticate
+	ids, err := s.authenticate(ctx)
+	if err != nil {
+		return status.Error(codes.Unauthenticated, err.Error())
+	}
 
 	s.globalPushContext().InitContext(s.Env, nil, nil)
 	con := newDeltaConnection(peerAddr, stream)
+	con.s = s
 
-	go s.receiveDelta(con, nil)
+	go s.receiveDelta(con, ids)
 
 	<-con.InitializedCh()
 
@@ -153,6 +158,18 @@ func (s *DiscoveryServer) receiveDelta(con *Connection, identities []string) {
 			defer s.closeConnection(con)
 			deltaLog.Infof("new delta connection for node:%s", con.ID())
 		}
+
+		subscribeStr := " [wildcard]"
+		if len(req.ResourceNamesSubscribe) > 0 {
+			subscribeStr = " [" + strings.Join(req.ResourceNamesSubscribe, ", ") + "]"
+		}
+		unsubscribeStr := ""
+		if len(req.ResourceNamesUnsubscribe) > 0 {
+			unsubscribeStr = " unsubscribe:[" + strings.Join(req.ResourceNamesUnsubscribe, ", ") + "]"
+		}
+		deltaLog.Infof("%s: RAW DELTA REQ %s sub:%d%s nonce:%s%s",
+			v3.GetShortType(req.TypeUrl), con.ID(), len(req.ResourceNamesSubscribe), subscribeStr,
+			req.ResponseNonce, unsubscribeStr)
 
 		select {
 		case con.deltaReqChan <- req:

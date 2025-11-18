@@ -107,10 +107,12 @@ func (d *discoveryNamespacesFilter) Filter(obj any) bool {
 	// When an object is deleted, obj could be a DeletionFinalStateUnknown marker item.
 	ns, ok := extractObjectNamespace(obj)
 	if !ok {
+		log.Debugf("discoveryNamespacesFilter.Filter: failed to extract namespace from object, rejecting")
 		return false
 	}
 	if ns == "" {
 		// Cluster scoped resources. Always included
+		log.Debugf("discoveryNamespacesFilter.Filter: cluster-scoped resource, allowing")
 		return true
 	}
 
@@ -118,11 +120,18 @@ func (d *discoveryNamespacesFilter) Filter(obj any) bool {
 	defer d.lock.RUnlock()
 	// permit all objects if discovery selectors are not specified
 	if len(d.discoverySelectors) == 0 {
+		log.Debugf("discoveryNamespacesFilter.Filter: no discovery selectors, allowing namespace %s", ns)
 		return true
 	}
 
 	// permit if object resides in a namespace labeled for discovery
-	return d.discoveryNamespaces.Contains(ns)
+	allowed := d.discoveryNamespaces.Contains(ns)
+	if !allowed {
+		log.Infof("discoveryNamespacesFilter.Filter: namespace %s not in discoveryNamespaces (selectors=%d, namespaces=%v), rejecting", ns, len(d.discoverySelectors), d.discoveryNamespaces)
+	} else {
+		log.Debugf("discoveryNamespacesFilter.Filter: namespace %s in discoveryNamespaces, allowing", ns)
+	}
+	return allowed
 }
 
 // AddHandler registers a handler on namespace, which will be triggered when namespace selected or deselected.

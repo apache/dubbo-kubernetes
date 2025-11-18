@@ -19,6 +19,7 @@ package bootstrap
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/server"
 	"github.com/apache/dubbo-kubernetes/pkg/webhooks/validation/controller"
@@ -30,6 +31,7 @@ func (s *Server) initConfigValidation(args *PlanetArgs) error {
 	}
 	log.Info("initializing config validator")
 	params := server.Options{
+		Schemas:      collections.Planet,
 		DomainSuffix: args.RegistryOptions.KubeOptions.DomainSuffix,
 		Mux:          s.httpsMux,
 	}

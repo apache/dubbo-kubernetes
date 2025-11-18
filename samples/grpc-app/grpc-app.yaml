@@ -32,13 +32,14 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: consumer
+  name: consumer-v1
   namespace: grpc-app
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: consumer
+      version: v1
   template:
     metadata:
       annotations:
@@ -47,6 +48,7 @@ spec:
         proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
         app: consumer
+        version: v1
     spec:
       containers:
         - name: app
@@ -62,6 +64,78 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: status.podIP
+            - name: SERVICE_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['version']
+            - name: SERVICE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_PORT
+              value: "17070"
+          readinessProbe:
+            tcpSocket:
+              port: 17070
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 17070
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-v2
+  namespace: grpc-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: consumer
+      version: v2
+  template:
+    metadata:
+      annotations:
+        proxyless.dubbo.apache.org/inject: "true"
+        inject.dubbo.apache.org/templates: grpc-agent
+        proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
+      labels:
+        app: consumer
+        version: v2
+    spec:
+      containers:
+        - name: app
+          image: mfordjody/grpc-consumer:dev-debug
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 17070
+              protocol: TCP
+              name: grpc
+          env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: SERVICE_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['version']
+            - name: SERVICE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_PORT
+              value: "17070"
           readinessProbe:
             tcpSocket:
               port: 17070

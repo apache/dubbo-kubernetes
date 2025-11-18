@@ -19,11 +19,13 @@ package model
 
 import (
 	"cmp"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	networking "istio.io/api/networking/v1alpha3"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	networking "istio.io/api/networking/v1alpha3"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
@@ -139,6 +141,9 @@ type serviceRouteIndex struct {
 
 	// Map of VS hostname -> referenced hostnames
 	referencedDestinations map[string]sets.String
+
+	// hostToRoutes keeps the resolved VirtualServices keyed by host
+	hostToRoutes map[host.Name][]config.Config
 }
 
 type subsetRuleIndex struct {
@@ -175,6 +180,7 @@ func newServiceRouteIndex() serviceRouteIndex {
 	out := serviceRouteIndex{
 		delegates:              map[ConfigKey][]ConfigKey{},
 		referencedDestinations: map[string]sets.String{},
+		hostToRoutes:           map[host.Name][]config.Config{},
 	}
 	return out
 }
@@ -505,7 +511,10 @@ func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.
 }
 
 func (ps *PushContext) createNewContext(env *Environment) {
+	log.Infof("createNewContext: creating new PushContext (full initialization)")
 	ps.initServiceRegistry(env, nil)
+	ps.initServiceRoutes(env)
+	ps.initSubsetRules(env)
 }
 
 func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
@@ -518,13 +527,44 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 
 	// Check if serviceRoutes have changed base on:
 	// 1. ServiceRoute updates in ConfigsUpdated
-	serviceRoutesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceRoute) ||
+	// 2. Full push (Full: true) - always re-initialize on full push
+	serviceRoutesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceRoute) ||
 		len(pushReq.AddressesUpdated) > 0)
 
-	// Check if serviceRoutes have changed base on:
+	if pushReq != nil {
+		serviceRouteCount := 0
+		for cfg := range pushReq.ConfigsUpdated {
+			if cfg.Kind == kind.ServiceRoute {
+				serviceRouteCount++
+			}
+		}
+		if serviceRouteCount > 0 {
+			log.Infof("updateContext: detected %d ServiceRoute config changes", serviceRouteCount)
+		}
+	}
+
+	// Check if subsetRules have changed base on:
 	// 1. SubsetRule updates in ConfigsUpdated
-	subsetRulesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.SubsetRule) ||
+	// 2. Full push (Full: true) - always re-initialize on full push
+	subsetRulesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.SubsetRule) ||
 		len(pushReq.AddressesUpdated) > 0)
+
+	if pushReq != nil {
+		subsetRuleCount := 0
+		for cfg := range pushReq.ConfigsUpdated {
+			if cfg.Kind == kind.SubsetRule {
+				subsetRuleCount++
+			}
+		}
+		if subsetRuleCount > 0 {
+			log.Infof("updateContext: detected %d SubsetRule config changes", subsetRuleCount)
+		}
+		if pushReq.Full {
+			log.Infof("updateContext: Full push requested, will re-initialize SubsetRule and ServiceRoute indexes")
+		}
+		log.Debugf("updateContext: subsetRulesChanged=%v, serviceRoutesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
+			subsetRulesChanged, serviceRoutesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
+	}
 
 	// Also check if the actual number of services has changed
 	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
@@ -551,14 +591,18 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	}
 
 	if serviceRoutesChanged {
+		log.Infof("updateContext: ServiceRoutes changed, re-initializing ServiceRoute index")
 		ps.initServiceRoutes(env)
 	} else {
+		log.Debugf("updateContext: ServiceRoutes unchanged, reusing old ServiceRoute index")
 		ps.serviceRouteIndex = oldPushContext.serviceRouteIndex
 	}
 
 	if subsetRulesChanged {
+		log.Infof("updateContext: SubsetRules changed, re-initializing SubsetRule index")
 		ps.initSubsetRules(env)
 	} else {
+		log.Debugf("updateContext: SubsetRules unchanged, reusing old SubsetRule index")
 		ps.subsetRuleIndex = oldPushContext.subsetRuleIndex
 	}
 
@@ -612,15 +656,34 @@ func (ps *PushContext) GetAllServices() []*Service {
 }
 
 func (ps *PushContext) initServiceRoutes(env *Environment) {
+	log.Infof("initServiceRoutes: starting ServiceRoute initialization")
 	ps.serviceRouteIndex.referencedDestinations = map[string]sets.String{}
 	serviceroutes := env.List(gvk.ServiceRoute, NamespaceAll)
+	log.Infof("initServiceRoutes: found %d ServiceRoute configs", len(serviceroutes))
 	sroutes := make([]config.Config, len(serviceroutes))
 
 	for i, r := range serviceroutes {
 		sroutes[i] = resolveServiceRouteShortnames(r)
+		if vs, ok := r.Spec.(*networking.VirtualService); ok {
+			log.Infof("initServiceRoutes: ServiceRoute %s/%s with hosts %v and %d HTTP routes",
+				r.Namespace, r.Name, vs.Hosts, len(vs.Http))
+		}
 	}
 	sroutes, ps.serviceRouteIndex.delegates = mergeServiceRoutesIfNeeded(sroutes, ps.exportToDefaults.serviceRoute)
 
+	hostToRoutes := make(map[host.Name][]config.Config)
+	for i := range sroutes {
+		vs := sroutes[i].Spec.(*networking.VirtualService)
+		for idx, h := range vs.Hosts {
+			resolvedHost := string(ResolveShortnameToFQDN(h, sroutes[i].Meta))
+			vs.Hosts[idx] = resolvedHost
+			hostName := host.Name(resolvedHost)
+			hostToRoutes[hostName] = append(hostToRoutes[hostName], sroutes[i])
+			log.Debugf("initServiceRoutes: indexed ServiceRoute %s/%s for hostname %s", sroutes[i].Namespace, sroutes[i].Name, hostName)
+		}
+	}
+	ps.serviceRouteIndex.hostToRoutes = hostToRoutes
+	log.Infof("initServiceRoutes: indexed ServiceRoutes for %d hostnames", len(hostToRoutes))
 }
 
 // sortConfigBySelectorAndCreationTime sorts the list of config objects based on priority and creation time.
@@ -708,16 +771,42 @@ func (ps *PushContext) setSubsetRules(configs []config.Config) {
 	ps.subsetRuleIndex.namespaceLocal = namespaceLocalSubRules
 	ps.subsetRuleIndex.exportedByNamespace = exportedDestRulesByNamespace
 	ps.subsetRuleIndex.rootNamespaceLocal = rootNamespaceLocalDestRules
+
+	// Log indexing results
+	log.Infof("setSubsetRules: indexed %d namespaces with local rules", len(namespaceLocalSubRules))
+	for ns, rules := range namespaceLocalSubRules {
+		totalRules := 0
+		for _, ruleList := range rules.specificSubRules {
+			totalRules += len(ruleList)
+		}
+		log.Infof("setSubsetRules: namespace %s has %d DestinationRules with %d specific hostnames", ns, totalRules, len(rules.specificSubRules))
+		for hostname := range rules.specificSubRules {
+			log.Debugf("setSubsetRules: namespace %s has rules for hostname %s", ns, hostname)
+		}
+	}
+	log.Infof("setSubsetRules: indexed %d namespaces with exported rules", len(exportedDestRulesByNamespace))
+	if rootNamespaceLocalDestRules != nil {
+		totalRootRules := 0
+		for _, ruleList := range rootNamespaceLocalDestRules.specificSubRules {
+			totalRootRules += len(ruleList)
+		}
+		log.Infof("setSubsetRules: root namespace has %d DestinationRules with %d specific hostnames", totalRootRules, len(rootNamespaceLocalDestRules.specificSubRules))
+	}
 }
 
 func (ps *PushContext) initSubsetRules(env *Environment) {
 	configs := env.List(gvk.SubsetRule, NamespaceAll)
+	log.Infof("initSubsetRules: found %d SubsetRule configs", len(configs))
 
 	// values returned from ConfigStore.List are immutable.
 	// Therefore, we make a copy
 	subRules := make([]config.Config, len(configs))
 	for i := range subRules {
 		subRules[i] = configs[i]
+		if dr, ok := configs[i].Spec.(*networking.DestinationRule); ok {
+			log.Infof("initSubsetRules: SubsetRule %s/%s for host %s with %d subsets",
+				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets))
+		}
 	}
 
 	ps.setSubsetRules(subRules)
@@ -747,6 +836,103 @@ func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service
 		}
 		ps.serviceAccounts[key] = sa
 	}
+}
+
+// ServiceRouteForHost returns the first ServiceRoute (VirtualService) that matches the given host.
+func (ps *PushContext) ServiceRouteForHost(hostname host.Name) *networking.VirtualService {
+	routes := ps.serviceRouteIndex.hostToRoutes[hostname]
+	if len(routes) == 0 {
+		log.Debugf("ServiceRouteForHost: no ServiceRoute found for hostname %s", hostname)
+		return nil
+	}
+	if vs, ok := routes[0].Spec.(*networking.VirtualService); ok {
+		log.Infof("ServiceRouteForHost: found ServiceRoute %s/%s for hostname %s with %d HTTP routes",
+			routes[0].Namespace, routes[0].Name, hostname, len(vs.Http))
+		return vs
+	}
+	log.Warnf("ServiceRouteForHost: ServiceRoute %s/%s for hostname %s is not a VirtualService",
+		routes[0].Namespace, routes[0].Name, hostname)
+	return nil
+}
+
+// DestinationRuleForService returns the first DestinationRule (SubsetRule) applicable to the service hostname/namespace.
+func (ps *PushContext) DestinationRuleForService(namespace string, hostname host.Name) *networking.DestinationRule {
+	log.Debugf("DestinationRuleForService: looking for DestinationRule for %s/%s", namespace, hostname)
+
+	// Check namespace-local rules first
+	if nsRules := ps.subsetRuleIndex.namespaceLocal[namespace]; nsRules != nil {
+		log.Debugf("DestinationRuleForService: checking namespace-local rules for %s (found %d specific rules)", namespace, len(nsRules.specificSubRules))
+		if dr := firstDestinationRule(nsRules, hostname); dr != nil {
+			log.Infof("DestinationRuleForService: found DestinationRule in namespace-local index for %s/%s with %d subsets", namespace, hostname, len(dr.Subsets))
+			return dr
+		}
+	} else {
+		log.Debugf("DestinationRuleForService: no namespace-local rules for namespace %s", namespace)
+	}
+
+	// Check exported rules
+	log.Debugf("DestinationRuleForService: checking exported rules (found %d exported namespaces)", len(ps.subsetRuleIndex.exportedByNamespace))
+	for ns, exported := range ps.subsetRuleIndex.exportedByNamespace {
+		if dr := firstDestinationRule(exported, hostname); dr != nil {
+			log.Infof("DestinationRuleForService: found DestinationRule in exported rules from namespace %s for %s/%s with %d subsets", ns, namespace, hostname, len(dr.Subsets))
+			return dr
+		}
+	}
+
+	// Finally, check root namespace scoped rules
+	if rootRules := ps.subsetRuleIndex.rootNamespaceLocal; rootRules != nil {
+		log.Debugf("DestinationRuleForService: checking root namespace rules (found %d specific rules)", len(rootRules.specificSubRules))
+		if dr := firstDestinationRule(rootRules, hostname); dr != nil {
+			log.Infof("DestinationRuleForService: found DestinationRule in root namespace for %s/%s with %d subsets", namespace, hostname, len(dr.Subsets))
+			return dr
+		}
+	}
+
+	log.Warnf("DestinationRuleForService: no DestinationRule found for %s/%s", namespace, hostname)
+	return nil
+}
+
+// SubsetLabelsForHost returns the label selector for a subset defined in DestinationRule.
+func (ps *PushContext) SubsetLabelsForHost(namespace string, hostname host.Name, subset string) labels.Instance {
+	if subset == "" {
+		return nil
+	}
+	rule := ps.DestinationRuleForService(namespace, hostname)
+	if rule == nil {
+		return nil
+	}
+	for _, ss := range rule.Subsets {
+		if ss.Name == subset {
+			return labels.Instance(ss.Labels)
+		}
+	}
+	return nil
+}
+
+func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networking.DestinationRule {
+	if csr == nil {
+		log.Debugf("firstDestinationRule: consolidatedSubRules is nil for hostname %s", hostname)
+		return nil
+	}
+	if rules := csr.specificSubRules[hostname]; len(rules) > 0 {
+		log.Debugf("firstDestinationRule: found %d rules for hostname %s", len(rules), hostname)
+		if dr, ok := rules[0].rule.Spec.(*networking.DestinationRule); ok {
+			log.Debugf("firstDestinationRule: successfully cast to DestinationRule for hostname %s", hostname)
+			return dr
+		} else {
+			log.Warnf("firstDestinationRule: failed to cast rule to DestinationRule for hostname %s", hostname)
+		}
+	} else {
+		log.Debugf("firstDestinationRule: no specific rules found for hostname %s (available hostnames: %v)", hostname, func() []string {
+			hosts := make([]string, 0, len(csr.specificSubRules))
+			for h := range csr.specificSubRules {
+				hosts = append(hosts, string(h))
+			}
+			return hosts
+		}())
+	}
+	// TODO: support wildcard hosts
+	return nil
 }
 
 func (ps *PushContext) DelegateServiceRoutes(vses []config.Config) []ConfigHash {

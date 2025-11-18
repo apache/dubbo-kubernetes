@@ -40,7 +40,7 @@ var (
 	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1", Kind: "PeerAuthentication"}
 	SubsetRule                     = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "SubsetRule"}
-	ServiceRoute                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "serviceRoute"}
+	ServiceRoute                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "ServiceRoute"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
 )

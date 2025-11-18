@@ -41,6 +41,11 @@ message EchoRequest {
 message EchoResponse {
   string message = 1;
   string hostname = 2;
+  string service_version = 3;
+  string namespace = 4;
+  string ip = 5;
+  string cluster = 6;
+  int32 service_port = 7;
 }
 
 message ForwardEchoRequest {

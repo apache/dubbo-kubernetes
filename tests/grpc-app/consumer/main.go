@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -47,7 +48,12 @@ var (
 type echoServer struct {
 	pb.UnimplementedEchoServiceServer
 	pb.UnimplementedEchoTestServiceServer
-	hostname string
+	hostname       string
+	serviceVersion string
+	namespace      string
+	instanceIP     string
+	cluster        string
+	servicePort    int
 }
 
 func (s *echoServer) Echo(ctx context.Context, req *pb.EchoRequest) (*pb.EchoResponse, error) {
@@ -56,8 +62,13 @@ func (s *echoServer) Echo(ctx context.Context, req *pb.EchoRequest) (*pb.EchoRes
 	}
 	log.Printf("Received: %v", req.Message)
 	return &pb.EchoResponse{
-		Message:  req.Message,
-		Hostname: s.hostname,
+		Message:        req.Message,
+		Hostname:       s.hostname,
+		ServiceVersion: s.serviceVersion,
+		Namespace:      s.namespace,
+		Ip:             s.instanceIP,
+		Cluster:        s.cluster,
+		ServicePort:    int32(s.servicePort),
 	}, nil
 }
 
@@ -98,7 +109,14 @@ func (s *echoServer) ForwardEcho(ctx context.Context, req *pb.ForwardEchoRequest
 
 	output := make([]string, 0, count)
 	for i := int32(0); i < count; i++ {
-		line := fmt.Sprintf("[%d body] Hostname=%s", i, s.hostname)
+		line := fmt.Sprintf("[%d body] Hostname=%s ServiceVersion=%s ServicePort=%d Namespace=%s",
+			i, s.hostname, s.serviceVersion, s.servicePort, s.namespace)
+		if s.instanceIP != "" {
+			line += fmt.Sprintf(" IP=%s", s.instanceIP)
+		}
+		if s.cluster != "" {
+			line += fmt.Sprintf(" Cluster=%s", s.cluster)
+		}
 		output = append(output, line)
 	}
 
@@ -274,6 +292,15 @@ func waitForBootstrapFile(bootstrapPath string, maxWait time.Duration) error {
 	}
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func main() {
 	flag.Parse()
 
@@ -286,6 +313,24 @@ func main() {
 	hostname, _ := os.Hostname()
 	if hostname == "" {
 		hostname = "unknown"
+	}
+
+	namespace := firstNonEmpty(os.Getenv("SERVICE_NAMESPACE"), os.Getenv("POD_NAMESPACE"), "default")
+	serviceVersion := firstNonEmpty(
+		os.Getenv("SERVICE_VERSION"),
+		os.Getenv("POD_VERSION"),
+		os.Getenv("VERSION"),
+	)
+	if serviceVersion == "" {
+		serviceVersion = "unknown"
+	}
+	cluster := os.Getenv("SERVICE_CLUSTER")
+	instanceIP := os.Getenv("INSTANCE_IP")
+	servicePort := *port
+	if sp := os.Getenv("SERVICE_PORT"); sp != "" {
+		if parsed, err := strconv.Atoi(sp); err == nil {
+			servicePort = parsed
+		}
 	}
 
 	// Get bootstrap file path from environment variable or use default
@@ -315,7 +360,14 @@ func main() {
 		log.Fatalf("Failed to create xDS gRPC server: %v", err)
 	}
 
-	es := &echoServer{hostname: hostname}
+	es := &echoServer{
+		hostname:       hostname,
+		serviceVersion: serviceVersion,
+		namespace:      namespace,
+		instanceIP:     instanceIP,
+		cluster:        cluster,
+		servicePort:    servicePort,
+	}
 	pb.RegisterEchoServiceServer(server, es)
 	pb.RegisterEchoTestServiceServer(server, es)
 	// Enable reflection API for grpcurl to discover services

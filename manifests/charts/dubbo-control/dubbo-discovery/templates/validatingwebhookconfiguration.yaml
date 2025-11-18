@@ -4,24 +4,37 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: dubbo-validator-dubbo-system
   namespace: default
+  labels:
+    app: dubbod
+    dubbo.apache.org/rev: {{ .Values.revision | default "default" }}
 webhooks:
-  - name: validation.dubbo.apache.org
+  - name: rev.validation.dubbo.apache.org
+    admissionReviewVersions: ["v1"]
     clientConfig:
       service:
         name: dubbod
         namespace: dubbo-system
         path: "/validate"
+      caBundle: ""
+    failurePolicy: Ignore
+    objectSelector:
+      matchExpressions:
+      - key: dubbo.apache.org/rev
+        operator: In
+        values:
+        - default
     rules:
-      - operations:
-          - CREATE
-          - UPDATE
-        apiGroups:
-          - security.istio.io
-          - networking.istio.io
-        apiVersions:
-          - "*"
-        resources:
-          - "*"
+    - operations:
+      - CREATE
+      - UPDATE
+      apiGroups:
+      - security.istio.io
+      - networking.istio.io
+      - security.dubbo.apache.org
+      - networking.dubbo.apache.org
+      apiVersions:
+      - "*"
+      resources:
+      - "*"
     sideEffects: None
-    admissionReviewVersions: ["v1"]
 

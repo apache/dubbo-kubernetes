@@ -20,9 +20,11 @@ package kubeclient
 import (
 	"context"
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	apiistioioapinetworkingv1 "istio.io/client-go/pkg/apis/networking/v1"
 	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
@@ -216,25 +218,78 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 			return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Watch(context.Background(), options)
 		}
 	case gvr.ServiceRoute:
+		// ServiceRoute uses networking.dubbo.apache.org API group, not networking.istio.io
+		// Use Dynamic client to access it
+		gvr := schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "serviceroutes",
+		}
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().NetworkingV1().VirtualServices(opts.Namespace).List(context.Background(), options)
+			return c.Dynamic().Resource(gvr).Namespace(opts.Namespace).List(context.Background(), options)
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().NetworkingV1().VirtualServices(opts.Namespace).Watch(context.Background(), options)
+			return c.Dynamic().Resource(gvr).Namespace(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.SubsetRule:
+		// SubsetRule uses networking.dubbo.apache.org API group, not networking.istio.io
+		// Use Dynamic client to access it
+		gvr := schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "subsetrules",
+		}
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().NetworkingV1().DestinationRules(opts.Namespace).List(context.Background(), options)
+			// Log the namespace being watched for diagnosis
+			if opts.Namespace == "" {
+				log.Infof("SubsetRule informer: List called for all namespaces")
+			} else {
+				log.Infof("SubsetRule informer: List called for namespace %s", opts.Namespace)
+			}
+			return c.Dynamic().Resource(gvr).Namespace(opts.Namespace).List(context.Background(), options)
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().NetworkingV1().DestinationRules(opts.Namespace).Watch(context.Background(), options)
+			// Log the namespace being watched for diagnosis
+			if opts.Namespace == "" {
+				log.Infof("SubsetRule informer: Watch called for all namespaces")
+			} else {
+				log.Infof("SubsetRule informer: Watch called for namespace %s", opts.Namespace)
+			}
+			watchInterface, err := c.Dynamic().Resource(gvr).Namespace(opts.Namespace).Watch(context.Background(), options)
+			if err != nil {
+				log.Errorf("SubsetRule informer: Watch failed: %v", err)
+			} else {
+				log.Infof("SubsetRule informer: Watch connection established successfully")
+			}
+			return watchInterface, err
 		}
 	case gvr.PeerAuthentication:
+		peerAuthGVR := schema.GroupVersionResource{
+			Group:    "security.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "peerauthentications",
+		}
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().SecurityV1().PeerAuthentications(opts.Namespace).List(context.Background(), options)
+			if opts.Namespace == "" {
+				log.Infof("PeerAuthentication informer: List called for all namespaces")
+			} else {
+				log.Infof("PeerAuthentication informer: List called for namespace %s", opts.Namespace)
+			}
+			return c.Dynamic().Resource(peerAuthGVR).Namespace(opts.Namespace).List(context.Background(), options)
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().SecurityV1().PeerAuthentications(opts.Namespace).Watch(context.Background(), options)
+			if opts.Namespace == "" {
+				log.Infof("PeerAuthentication informer: Watch called for all namespaces")
+			} else {
+				log.Infof("PeerAuthentication informer: Watch called for namespace %s", opts.Namespace)
+			}
+			watchInterface, err := c.Dynamic().Resource(peerAuthGVR).Namespace(opts.Namespace).Watch(context.Background(), options)
+			if err != nil {
+				log.Errorf("PeerAuthentication informer: Watch failed: %v", err)
+			} else {
+				log.Infof("PeerAuthentication informer: Watch connection established successfully")
+			}
+			return watchInterface, err
 		}
 	case gvr.Pod:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
