@@ -580,6 +580,26 @@ func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource
 		resp.RemovedResources = sets.SortedList(removed)
 	}
 	var newResourceNames sets.String
+	if shouldSetWatchedResources(w) {
+		if usedDelta {
+			if w.ResourceNames != nil {
+				newResourceNames = w.ResourceNames.Copy()
+			} else {
+				newResourceNames = sets.New[string]()
+			}
+			for _, removed := range resp.RemovedResources {
+				newResourceNames.Delete(removed)
+			}
+			for _, r := range res {
+				newResourceNames.Insert(r.Name)
+			}
+		} else {
+			newResourceNames = resourceNamesSet(res)
+		}
+	}
+	if neverRemoveDelta(w.TypeUrl) {
+		resp.RemovedResources = nil
+	}
 	if len(resp.RemovedResources) > 0 {
 		deltaLog.Infof("%v REMOVE for node:%s %v", v3.GetShortType(w.TypeUrl), con.ID(), resp.RemovedResources)
 	}
@@ -630,6 +650,36 @@ func (s *DiscoveryServer) findGenerator(typeURL string, con *Connection) model.X
 		}
 	}
 	return g
+}
+
+func resourceNamesSet(res model.Resources) sets.String {
+	names := sets.New[string]()
+	for _, r := range res {
+		if r != nil {
+			names.Insert(r.Name)
+		}
+	}
+	return names
+}
+
+func shouldSetWatchedResources(w *model.WatchedResource) bool {
+	if w == nil {
+		return false
+	}
+	if requiresResourceNamesModification(w.TypeUrl) {
+		return false
+	}
+	return xds.IsWildcardTypeURL(w.TypeUrl)
+}
+
+func requiresResourceNamesModification(typeURL string) bool {
+	return typeURL == v3.AddressType
+}
+
+func neverRemoveDelta(typeURL string) bool {
+	// Align with Envoy bug https://github.com/envoyproxy/envoy/issues/32823
+	// Skip removals for ExtensionConfiguration to avoid flapping.
+	return typeURL == v3.ExtensionConfigurationType
 }
 
 // extractRouteNamesFromLDS extracts route names referenced in LDS listener resources

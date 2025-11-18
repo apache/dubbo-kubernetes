@@ -19,11 +19,12 @@ package xds
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/maps"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
@@ -332,15 +333,12 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		resourceNamesStr = " [wildcard]"
 	}
 
+	// Always log at INFO so手工调用 grpcurl 也能看到完整请求轨迹
 	if shouldRespond {
-		// Log NEW requests at INFO level - these are triggered by grpcurl requests
-		// This makes it easy to see when a grpcurl request triggers xDS configuration
 		log.Infof("%s: REQ %s resources:%d nonce:%s%s (will respond)", stype,
 			con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
 	} else {
-		// Log ACK/ignored requests at DEBUG level to reduce noise
-		// These are normal XDS protocol ACKs, not new requests from grpcurl
-		log.Debugf("%s: REQ %s resources:%d nonce:%s%s (ACK/ignored)", stype,
+		log.Infof("%s: REQ %s resources:%d nonce:%s%s (ACK/ignored)", stype,
 			con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
 	}
 

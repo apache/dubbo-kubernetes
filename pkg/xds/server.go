@@ -192,6 +192,13 @@ func Receive(ctx ConnectionContext) {
 			// Connection logged in initConnection() after addCon() to ensure accurate counting
 		}
 
+		resourceNamesStr := " [wildcard]"
+		if len(req.ResourceNames) > 0 {
+			resourceNamesStr = " [" + strings.Join(req.ResourceNames, ", ") + "]"
+		}
+		log.Infof("%s: RAW REQ %s resources:%d nonce:%s%s",
+			model.GetShortType(req.TypeUrl), con.conID, len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
+
 		select {
 		case con.reqChan <- req:
 		case <-con.stream.Context().Done():
@@ -316,6 +323,32 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// A nonce becomes stale following a newer nonce being sent to Envoy.
 	// previousInfo.NonceSent can be empty if we previously had shouldRespond=true but didn't send any resources.
 	if request.ResponseNonce != previousInfo.NonceSent {
+		newResources := sets.New(request.ResourceNames...)
+		// Special-case proxyless gRPC: Envoy will send a "stale" nonce when it changes
+		// subscriptions (e.g., after ServiceRoute introduces subset clusters). Treat this
+		// as a resource change rather than an ACK so the new clusters get a response.
+		previousResourcesCopy := previousInfo.ResourceNames.Copy()
+		if !newResources.Equals(previousResourcesCopy) && len(newResources) > 0 {
+			log.Infof("%s: REQ %s nonce mismatch (got %s, sent %s) but resources changed -> responding",
+				stype, id, request.ResponseNonce, previousInfo.NonceSent)
+			added := newResources.Difference(previousResourcesCopy)
+			w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
+				if wr == nil {
+					return nil
+				}
+				wr.LastError = ""
+				wr.ResourceNames = newResources
+				// keep previous nonce so the subsequent ACK can match
+				return wr
+			})
+			if len(added) == 0 {
+				// Still respond to make sure client receives an update even if map difference logic
+				// thinks nothing was added (e.g., only removal happened).
+				return true, ResourceDelta{Subscribed: added}
+			}
+			return true, ResourceDelta{Subscribed: added}
+		}
+
 		// Expired/stale nonce - don't respond, just log at debug level
 		if previousInfo.NonceSent == "" {
 			// We never sent a nonce, but client sent one - this is unusual but treat as expired

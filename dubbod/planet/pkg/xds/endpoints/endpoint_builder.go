@@ -273,14 +273,18 @@ func (b *EndpointBuilder) servicePort(port int) *model.Port {
 }
 
 func (b *EndpointBuilder) matchesSubset(epLabels labels.Instance) bool {
-	// TODO: implement subset matching logic based on SubsetRule
-	// For now, return true if no subset is specified or if subset is empty
 	if b.subsetName == "" {
 		return true
 	}
-	// Simplified subset matching - in real implementation, this should match
-	// against SubsetRule subset labels
-	return true
+	if b.service == nil || b.push == nil {
+		return true
+	}
+	selector := b.push.SubsetLabelsForHost(b.service.Attributes.Namespace, b.hostname, b.subsetName)
+	if len(selector) == 0 {
+		// No subset labels defined, treat as match-all
+		return true
+	}
+	return selector.SubsetOf(epLabels)
 }
 
 func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbEndpoint {

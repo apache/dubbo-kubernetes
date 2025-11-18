@@ -19,6 +19,7 @@ package krt
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -155,7 +156,44 @@ func (i *informer[I]) Register(f func(o Event[I])) HandlerRegistration {
 
 func (i *informer[I]) RegisterBatch(f func(o []Event[I]), runExistingState bool) HandlerRegistration {
 	synced := i.inf.AddEventHandler(informerEventHandler[I](func(o Event[I], initialSync bool) {
-		f([]Event[I]{o})
+		// Only process events if runExistingState is true OR this is not an initial sync event
+		// This matches Istio's behavior: runExistingState=false means skip initial sync events
+		if runExistingState || !initialSync {
+			// Log all events to help diagnose missing events
+			var nameStr, nsStr string
+			if o.New != nil {
+				if objWithNs, ok := any(*o.New).(interface {
+					GetNamespace() string
+					GetName() string
+				}); ok {
+					nsStr = objWithNs.GetNamespace()
+					nameStr = objWithNs.GetName()
+				}
+			} else if o.Old != nil {
+				if objWithNs, ok := any(*o.Old).(interface {
+					GetNamespace() string
+					GetName() string
+				}); ok {
+					nsStr = objWithNs.GetNamespace()
+					nameStr = objWithNs.GetName()
+				}
+			}
+			log.Debugf("informer.RegisterBatch: processing event %s for %s/%s (initialSync=%v, runExistingState=%v)", o.Event, nsStr, nameStr, initialSync, runExistingState)
+			f([]Event[I]{o})
+		} else {
+			// Log skipped events to help diagnose
+			var nameStr, nsStr string
+			if o.New != nil {
+				if objWithNs, ok := any(*o.New).(interface {
+					GetNamespace() string
+					GetName() string
+				}); ok {
+					nsStr = objWithNs.GetNamespace()
+					nameStr = objWithNs.GetName()
+				}
+			}
+			log.Debugf("informer.RegisterBatch: skipping initial sync event for %s/%s (initialSync=%v, runExistingState=%v)", nsStr, nameStr, initialSync, runExistingState)
+		}
 	}))
 	base := i.baseSyncer
 	handler := pollSyncer{

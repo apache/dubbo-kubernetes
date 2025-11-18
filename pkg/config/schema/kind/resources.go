@@ -68,7 +68,7 @@ func (k Kind) String() string {
 	case PeerAuthentication:
 		return "PeerAuthentication"
 	case ServiceRoute:
-		return "serviceRoute"
+		return "ServiceRoute"
 	case SubsetRule:
 		return "SubsetRule"
 	default:

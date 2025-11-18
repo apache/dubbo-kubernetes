@@ -18,11 +18,13 @@
 package kclient
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"sync"
 	"sync/atomic"
 
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
+
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	klabels "k8s.io/apimachinery/pkg/labels"
@@ -89,6 +91,8 @@ func (s *delayedClient[T]) set(inf Informer[T]) {
 		s.hm.Lock()
 		defer s.hm.Unlock()
 		for _, h := range s.handlers {
+			// h is a delayedHandler which embeds ResourceEventHandler, so we can pass it directly
+			// This matches Istio's implementation
 			reg := inf.AddEventHandler(h)
 			h.hasSynced.hasSynced.Store(ptr.Of(reg.HasSynced))
 		}
@@ -209,4 +213,44 @@ func (d delayedIndex[T]) Lookup(key string) []interface{} {
 	}
 	// Not ready yet, return nil
 	return nil
+}
+
+func newDelayedInformer[T controllers.ComparableObject](
+	gvr schema.GroupVersionResource,
+	getInf func() informerfactory.StartableInformer,
+	delay kubetypes.DelayedFilter,
+	filter Filter,
+) Informer[T] {
+	delayedClient := &delayedClient[T]{
+		inf:     new(atomic.Pointer[Informer[T]]),
+		delayed: delay,
+	}
+
+	// If resource is not yet known, we will use the delayedClient.
+	// When the resource is later loaded, the callback will trigger and swap our dummy delayedClient
+	// with a full client
+	readyNow := delay.KnownOrCallback(func(stop <-chan struct{}) {
+		// The inf() call is responsible for starting the informer
+		inf := getInf()
+		fc := &informerClient[T]{
+			informer:      inf.Informer,
+			startInformer: inf.Start,
+		}
+		applyDynamicFilter(filter, gvr, fc)
+		// Swap out the dummy client with the full one BEFORE starting the informer
+		// This ensures handlers are registered before the informer starts syncing
+		delayedClient.set(fc)
+		inf.Start(stop)
+		log.Infof("%v is now ready, building client", gvr.GroupResource())
+	})
+	if !readyNow {
+		log.Debugf("%v is not ready now, building delayed client", gvr.GroupResource())
+		return delayedClient
+	}
+	log.Debugf("%v ready now, building client", gvr.GroupResource())
+	// When readyNow is true, we need to ensure the informer is registered with the factory
+	// so InformerFactory.Start() can pick it up.
+	inf := getInf()
+	fc := newInformerClient[T](gvr, inf, filter)
+	return fc
 }

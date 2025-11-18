@@ -47,6 +47,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/h2c"
@@ -252,8 +253,7 @@ func NewServer(args *PlanetArgs, initFuncs ...func(*Server)) (*Server, error) {
 		}
 	}
 
-	s.initRegistryEventHandlers()
-
+	// Note: initRegistryEventHandlers is called in Start() after config controller starts
 	s.initDiscoveryService()
 
 	s.startCA(caOpts)
@@ -283,6 +283,10 @@ func (s *Server) Start(stop <-chan struct{}) error {
 	}
 
 	s.XDSServer.CachesSynced()
+
+	// Register event handlers after config controller has started and synced
+	// This ensures that config changes are properly detected and handled
+	s.initRegistryEventHandlers()
 
 	if s.secureGrpcAddress != "" {
 		grpcListener, err := net.Listen("tcp", s.secureGrpcAddress)
@@ -424,13 +428,84 @@ func (s *Server) initSecureDiscoveryService(args *PlanetArgs, trustDomain string
 func (s *Server) initRegistryEventHandlers() {
 	log.Info("initializing registry event handlers")
 
-	if s.configController != nil {
-		configHandler := func(prev config.Config, curr config.Config, event model.Event) {}
-		schemas := collections.Planet.All()
-		for _, schema := range schemas {
-			s.configController.RegisterEventHandler(schema.GroupVersionKind(), configHandler)
-		}
+	if s.configController == nil {
+		log.Warnf("initRegistryEventHandlers: configController is nil, cannot register event handlers")
+		return
 	}
+
+	log.Infof("initRegistryEventHandlers: configController is available, registering event handlers")
+
+	configHandler := func(prev config.Config, curr config.Config, event model.Event) {
+		// Log ALL events at INFO level to ensure visibility
+		log.Infof("configHandler: received event %s for config %v (prev.Name=%s, curr.Name=%s, prev.Namespace=%s, curr.Namespace=%s)",
+			event, curr.GroupVersionKind, prev.Name, curr.Name, prev.Namespace, curr.Namespace)
+
+		// Handle delete events - use prev config if curr is empty
+		cfg := curr
+		if event == model.EventDelete && curr.Name == "" {
+			cfg = prev
+		}
+
+		// Build ConfigKey for the changed config
+		// Find the schema to get the kind.Kind
+		schema, found := collections.Planet.FindByGroupVersionKind(cfg.GroupVersionKind)
+		if !found {
+			log.Warnf("configHandler: schema not found for %v, skipping", cfg.GroupVersionKind)
+			return
+		}
+
+		// Map GVK to kind.Kind using schema identifier
+		// This matches Istio's approach of using gvk.MustToKind, but we use schema.Identifier() instead
+		schemaID := schema.Identifier()
+		log.Infof("configHandler: processing config change, schema identifier=%s, GVK=%v, name=%s/%s, event=%s",
+			schemaID, cfg.GroupVersionKind, cfg.Namespace, cfg.Name, event)
+
+		var configKind kind.Kind
+		switch schemaID {
+		case "SubsetRule":
+			configKind = kind.SubsetRule
+		case "serviceRoute", "ServiceRoute":
+			configKind = kind.ServiceRoute
+		case "PeerAuthentication":
+			configKind = kind.PeerAuthentication
+		default:
+			log.Debugf("configHandler: unknown schema identifier %s for %v, skipping", schemaID, cfg.GroupVersionKind)
+			return
+		}
+
+		configKey := model.ConfigKey{
+			Kind:      configKind,
+			Name:      cfg.Name,
+			Namespace: cfg.Namespace,
+		}
+
+		// Log the config change
+		log.Infof("configHandler: %s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
+
+		// CRITICAL: For SubsetRule and ServiceRoute changes, we need Full push to ensure
+		// PushContext is re-initialized and configuration is reloaded
+		// This is because these configs affect CDS/RDS generation and need complete context refresh
+		needsFullPush := configKind == kind.SubsetRule || configKind == kind.ServiceRoute
+
+		// Trigger ConfigUpdate to push changes to all connected proxies
+		s.XDSServer.ConfigUpdate(&model.PushRequest{
+			ConfigsUpdated: sets.New(configKey),
+			Reason:         model.NewReasonStats(model.DependentResource),
+			Full:           needsFullPush, // Full push for SubsetRule/ServiceRoute to reload PushContext
+		})
+	}
+	schemas := collections.Planet.All()
+	log.Infof("initRegistryEventHandlers: found %d schemas to register", len(schemas))
+	registeredCount := 0
+	for _, schema := range schemas {
+		gvk := schema.GroupVersionKind()
+		schemaID := schema.Identifier()
+		log.Infof("initRegistryEventHandlers: registering event handler for %s (GVK: %v)", schemaID, gvk)
+		s.configController.RegisterEventHandler(gvk, configHandler)
+		registeredCount++
+		log.Infof("initRegistryEventHandlers: successfully registered event handler for %s (GVK: %v)", schemaID, gvk)
+	}
+	log.Infof("initRegistryEventHandlers: successfully registered event handlers for %d schemas", registeredCount)
 }
 
 func (s *Server) addReadinessProbe(name string, fn readinessProbe) {

@@ -525,8 +525,29 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 			continue
 		}
 
-		log.Printf("ForwardEcho: request %d succeeded: Hostname=%s", i+1, resp.Hostname)
-		output = append(output, fmt.Sprintf("[%d body] Hostname=%s", i, resp.Hostname))
+		log.Printf("ForwardEcho: request %d succeeded: Hostname=%s ServiceVersion=%s Namespace=%s IP=%s",
+			i+1, resp.Hostname, resp.ServiceVersion, resp.Namespace, resp.Ip)
+
+		lineParts := []string{
+			fmt.Sprintf("[%d body] Hostname=%s", i, resp.Hostname),
+		}
+		if resp.ServiceVersion != "" {
+			lineParts = append(lineParts, fmt.Sprintf("ServiceVersion=%s", resp.ServiceVersion))
+		}
+		if resp.Namespace != "" {
+			lineParts = append(lineParts, fmt.Sprintf("Namespace=%s", resp.Namespace))
+		}
+		if resp.Ip != "" {
+			lineParts = append(lineParts, fmt.Sprintf("IP=%s", resp.Ip))
+		}
+		if resp.Cluster != "" {
+			lineParts = append(lineParts, fmt.Sprintf("Cluster=%s", resp.Cluster))
+		}
+		if resp.ServicePort > 0 {
+			lineParts = append(lineParts, fmt.Sprintf("ServicePort=%d", resp.ServicePort))
+		}
+
+		output = append(output, strings.Join(lineParts, " "))
 
 		// Small delay between successful requests to avoid overwhelming the server
 		if i < count-1 {

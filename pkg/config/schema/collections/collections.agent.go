@@ -49,7 +49,7 @@ var (
 		Identifier:     "SubsetRule",
 		Group:          "networking.dubbo.apache.org",
 		Kind:           "SubsetRule",
-		Plural:         "destinationrules",
+		Plural:         "subsetrules",
 		Version:        "v1",
 		VersionAliases: []string{},
 		Proto:          "istio.networking.v1alpha3.DestinationRule", StatusProto: "istio.meta.v1alpha1.IstioStatus",
@@ -60,9 +60,9 @@ var (
 		Builtin:       false,
 	}.MustBuild()
 	ServiceRoute = collection.Builder{
-		Identifier:     "serviceRoute",
+		Identifier:     "ServiceRoute",
 		Group:          "networking.dubbo.apache.org",
-		Kind:           "serviceRoute",
+		Kind:           "ServiceRoute",
 		Plural:         "serviceroutes",
 		Version:        "v1",
 		VersionAliases: []string{},

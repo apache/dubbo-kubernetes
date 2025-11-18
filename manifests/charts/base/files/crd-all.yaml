@@ -197,7 +197,7 @@ spec:
                           redirect or forward (default) traffic.
                         items:
                           properties:
-                            subset:
+                            destination:
                               description: Subset uniquely identifies the instances
                                 of a service to which the request/connection should
                                 be forwarded to.
@@ -225,7 +225,7 @@ spec:
                               format: int32
                               type: integer
                           required:
-                            - subset
+                            - destination
                           type: object
                         type: array
                     type: object

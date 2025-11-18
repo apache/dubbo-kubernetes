@@ -37,7 +37,9 @@ import (
 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -53,13 +55,30 @@ func assignSpec[T any](dst *T, src *T) {
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.SubsetRule:
+		// SubsetRule uses networking.dubbo.apache.org API group, not networking.istio.io
+		// Use Dynamic client to access it, but reuse Istio's DestinationRule spec structure
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
+		// Convert to unstructured for Dynamic client
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert DestinationRule to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "networking.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "SubsetRule",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "subsetrules",
+		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
 	case gvk.PeerAuthentication:
 		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
 		clonedSpec := protomarshal.Clone(spec)
@@ -67,15 +86,46 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert PeerAuthentication to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "security.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "PeerAuthentication",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "security.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "peerauthentications",
+		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
 	case gvk.ServiceRoute:
+		// ServiceRoute uses networking.dubbo.apache.org API group, not networking.istio.io
+		// Use Dynamic client to access it, but reuse Istio's VirtualService spec structure
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
+		// Convert to unstructured for Dynamic client
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert VirtualService to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "networking.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "ServiceRoute",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "serviceroutes",
+		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -84,13 +134,28 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.SubsetRule:
+		// SubsetRule uses networking.dubbo.apache.org API group, use Dynamic client
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert DestinationRule to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "networking.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "SubsetRule",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "subsetrules",
+		}).Namespace(cfg.Namespace).Update(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
 		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
 		clonedSpec := protomarshal.Clone(spec)
@@ -98,15 +163,44 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert PeerAuthentication to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "security.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "PeerAuthentication",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "security.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "peerauthentications",
+		}).Namespace(cfg.Namespace).Update(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.ServiceRoute:
+		// ServiceRoute uses networking.dubbo.apache.org API group, use Dynamic client
 		spec := cfg.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
-		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).Update(context.TODO(), obj, metav1.UpdateOptions{})
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert VirtualService to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "networking.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "ServiceRoute",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "serviceroutes",
+		}).Namespace(cfg.Namespace).Update(context.TODO(), u, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -115,13 +209,28 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.SubsetRule:
+		// SubsetRule uses networking.dubbo.apache.org API group, use Dynamic client
 		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		clonedStatus := protomarshal.Clone(status)
 		obj := &apiistioioapinetworkingv1.DestinationRule{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Status, clonedStatus)
-		return c.Dubbo().NetworkingV1().DestinationRules(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert DestinationRule to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "networking.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "SubsetRule",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "subsetrules",
+		}).Namespace(cfg.Namespace).UpdateStatus(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
 		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		clonedStatus := protomarshal.Clone(status)
@@ -129,15 +238,44 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Status, clonedStatus)
-		return c.Dubbo().SecurityV1().PeerAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert PeerAuthentication status to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "security.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "PeerAuthentication",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "security.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "peerauthentications",
+		}).Namespace(cfg.Namespace).UpdateStatus(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.ServiceRoute:
+		// ServiceRoute uses networking.dubbo.apache.org API group, use Dynamic client
 		status := cfg.Status.(*istioioapimetav1alpha1.IstioStatus)
 		clonedStatus := protomarshal.Clone(status)
 		obj := &apiistioioapinetworkingv1.VirtualService{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Status, clonedStatus)
-		return c.Dubbo().NetworkingV1().VirtualServices(cfg.Namespace).UpdateStatus(context.TODO(), obj, metav1.UpdateOptions{})
+		uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert VirtualService to unstructured: %v", err)
+		}
+		u := &unstructured.Unstructured{Object: uObj}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "networking.dubbo.apache.org",
+			Version: "v1",
+			Kind:    "ServiceRoute",
+		})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "serviceroutes",
+		}).Namespace(cfg.Namespace).UpdateStatus(context.TODO(), u, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -149,6 +287,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 	}
 	switch orig.GroupVersionKind {
 	case gvk.SubsetRule:
+		// SubsetRule uses networking.dubbo.apache.org API group, use Dynamic client
 		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)
 		clonedOrigSpec := protomarshal.Clone(origSpec)
@@ -165,8 +304,11 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		if err != nil {
 			return nil, err
 		}
-		return c.Dubbo().NetworkingV1().DestinationRules(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "subsetrules",
+		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.PeerAuthentication:
 		origSpec := orig.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
 		modSpec := mod.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
@@ -184,9 +326,13 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		if err != nil {
 			return nil, err
 		}
-		return c.Dubbo().SecurityV1().PeerAuthentications(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "security.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "peerauthentications",
+		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.ServiceRoute:
+		// ServiceRoute uses networking.dubbo.apache.org API group, use Dynamic client
 		origSpec := orig.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		modSpec := mod.Spec.(*istioioapinetworkingv1alpha3.VirtualService)
 		clonedOrigSpec := protomarshal.Clone(origSpec)
@@ -203,8 +349,11 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		if err != nil {
 			return nil, err
 		}
-		return c.Dubbo().NetworkingV1().VirtualServices(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "serviceroutes",
+		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", orig.GroupVersionKind)
 	}
@@ -217,11 +366,25 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 	}
 	switch typ {
 	case gvk.SubsetRule:
-		return c.Dubbo().NetworkingV1().DestinationRules(namespace).Delete(context.TODO(), name, deleteOptions)
+		// SubsetRule uses networking.dubbo.apache.org API group, use Dynamic client
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "subsetrules",
+		}).Namespace(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.PeerAuthentication:
-		return c.Dubbo().SecurityV1().PeerAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "security.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "peerauthentications",
+		}).Namespace(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.ServiceRoute:
-		return c.Dubbo().NetworkingV1().VirtualServices(namespace).Delete(context.TODO(), name, deleteOptions)
+		// ServiceRoute uses networking.dubbo.apache.org API group, use Dynamic client
+		return c.Dynamic().Resource(schema.GroupVersionResource{
+			Group:    "networking.dubbo.apache.org",
+			Version:  "v1",
+			Resource: "serviceroutes",
+		}).Namespace(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
 		return fmt.Errorf("unsupported type: %v", typ)
 	}
@@ -301,7 +464,32 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		}
 	},
 	gvk.SubsetRule: func(r runtime.Object) config.Config {
-		obj := r.(*apiistioioapinetworkingv1.DestinationRule)
+		var obj *apiistioioapinetworkingv1.DestinationRule
+		// Handle unstructured objects from Dynamic client
+		// First try to convert from unstructured, as Dynamic client returns unstructured objects
+		// Note: r may be controllers.Object which embeds runtime.Object, so we need to check the concrete type
+		switch v := r.(type) {
+		case *unstructured.Unstructured:
+			obj = &apiistioioapinetworkingv1.DestinationRule{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, obj); err != nil {
+				panic(fmt.Sprintf("failed to convert unstructured to DestinationRule: %v", err))
+			}
+		case *apiistioioapinetworkingv1.DestinationRule:
+			// Handle typed objects from Istio client
+			obj = v
+		default:
+			// Fallback: try to convert any runtime.Object to unstructured first, then to DestinationRule
+			uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
+			if err == nil {
+				u := &unstructured.Unstructured{Object: uObj}
+				obj = &apiistioioapinetworkingv1.DestinationRule{}
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, obj); err != nil {
+					panic(fmt.Sprintf("failed to convert object %T to DestinationRule: %v", r, err))
+				}
+			} else {
+				panic(fmt.Sprintf("unexpected object type for SubsetRule: %T, expected *unstructured.Unstructured or *apiistioioapinetworkingv1.DestinationRule, conversion error: %v", r, err))
+			}
+		}
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.SubsetRule,
@@ -338,7 +526,27 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		}
 	},
 	gvk.PeerAuthentication: func(r runtime.Object) config.Config {
-		obj := r.(*apiistioioapisecurityv1.PeerAuthentication)
+		var obj *apiistioioapisecurityv1.PeerAuthentication
+		switch v := r.(type) {
+		case *unstructured.Unstructured:
+			obj = &apiistioioapisecurityv1.PeerAuthentication{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, obj); err != nil {
+				panic(fmt.Sprintf("failed to convert unstructured to PeerAuthentication: %v", err))
+			}
+		case *apiistioioapisecurityv1.PeerAuthentication:
+			obj = v
+		default:
+			uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
+			if err == nil {
+				u := &unstructured.Unstructured{Object: uObj}
+				obj = &apiistioioapisecurityv1.PeerAuthentication{}
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, obj); err != nil {
+					panic(fmt.Sprintf("failed to convert object %T to PeerAuthentication: %v", r, err))
+				}
+			} else {
+				panic(fmt.Sprintf("unexpected object type for PeerAuthentication: %T, conversion error: %v", r, err))
+			}
+		}
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.PeerAuthentication,
@@ -466,7 +674,32 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		}
 	},
 	gvk.ServiceRoute: func(r runtime.Object) config.Config {
-		obj := r.(*apiistioioapinetworkingv1.VirtualService)
+		var obj *apiistioioapinetworkingv1.VirtualService
+		// Handle unstructured objects from Dynamic client
+		// First try to convert from unstructured, as Dynamic client returns unstructured objects
+		// Note: r may be controllers.Object which embeds runtime.Object, so we need to check the concrete type
+		switch v := r.(type) {
+		case *unstructured.Unstructured:
+			obj = &apiistioioapinetworkingv1.VirtualService{}
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, obj); err != nil {
+				panic(fmt.Sprintf("failed to convert unstructured to VirtualService: %v", err))
+			}
+		case *apiistioioapinetworkingv1.VirtualService:
+			// Handle typed objects from Istio client
+			obj = v
+		default:
+			// Fallback: try to convert any runtime.Object to unstructured first, then to VirtualService
+			uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
+			if err == nil {
+				u := &unstructured.Unstructured{Object: uObj}
+				obj = &apiistioioapinetworkingv1.VirtualService{}
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, obj); err != nil {
+					panic(fmt.Sprintf("failed to convert object %T to VirtualService: %v", r, err))
+				}
+			} else {
+				panic(fmt.Sprintf("unexpected object type for ServiceRoute: %T, expected *unstructured.Unstructured or *apiistioioapinetworkingv1.VirtualService, conversion error: %v", r, err))
+			}
+		}
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.ServiceRoute,
