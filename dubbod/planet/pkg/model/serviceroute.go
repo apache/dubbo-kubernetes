@@ -18,13 +18,15 @@
 package model
 
 import (
+	"strings"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	"google.golang.org/protobuf/proto"
 	networking "istio.io/api/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
-	"strings"
 )
 
 func resolveServiceRouteShortnames(config config.Config) config.Config {
@@ -226,14 +228,21 @@ func mergeHTTPMatchRequests(root, delegate []*networking.HTTPMatchRequest) (out 
 }
 
 func mergeHTTPMatchRequest(root, delegate *networking.HTTPMatchRequest) *networking.HTTPMatchRequest {
-	// nolint: govet
-	out := *delegate
+	cloned := proto.Clone(delegate)
+	out, ok := cloned.(*networking.HTTPMatchRequest)
+	if !ok {
+		log.Warnf("mergeHTTPMatchRequest: failed to clone HTTPMatchRequest for delegate %s", delegate.GetName())
+		return nil
+	}
+	if out == nil {
+		return nil
+	}
 	if out.Name == "" {
 		out.Name = root.Name
 	} else if root.Name != "" {
 		out.Name = root.Name + "-" + out.Name
 	}
-	return &out
+	return out
 }
 
 func hasConflict(root, leaf *networking.HTTPMatchRequest) bool {
