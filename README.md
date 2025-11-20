@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg)](https://codecov.io/gh/apache/dubbo-kubernetes)
 ![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 
-Cloud-Native proxyless service mesh platform for Dubbo microservices, enabling zero-latency inter-service communication across multiple protocols, advanced traffic management, and enterprise-grade security without sidecar proxies. Built on Istio's control plane architecture with native Kubernetes integration, it delivers service mesh capabilities with minimal resource overhead and maximum performance.
+This project is an open-source proxyless service mesh for Dubbo microservices. Built on the Istio control plane architecture, it leverages its core capabilities and integrates deeply with Kubernetes, providing full service mesh functionality with minimal resource overhead, enabling high-performance inter-service communication, traffic management, and security features.
 
 ## Project Structure
 
