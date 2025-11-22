@@ -31,7 +31,29 @@ kubectl label namespace grpc-app dubbo-injection=enabled
 kubectl apply -f grpc-app.yaml
 ```
 
-## 3. Traffic Management
+### 3. Call the test service
+
+```bash
+kubectl port-forward -n grpc-app $(kubectl get pod -l app=consumer -n grpc-app -o jsonpath='{.items[0].metadata.name}') 17171:17171
+```
+
+```bash
+grpcurl -plaintext -d '{"url": "xds:///producer.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
+```
+
+```json
+{
+  "output": [
+    "[0 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+    "[1 body] Hostname=producer-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
+    "[2 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+    "[3 body] Hostname=producer-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
+    "[4 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070"
+  ]
+}
+```
+
+## Traffic Management
 
 ### Creating subsets with SubsetRule
 
@@ -103,7 +125,7 @@ The response should contain mostly `v2` responses, demonstrating the weighted tr
 }
 ```
 
-## 4. Enabling mTLS
+## Enabling mTLS
 
 Due to the changes to the application itself required to enable security in gRPC, Dubbo Kubernetes's traditional method of automatically detecting mTLS support is unreliable. For this reason, the initial release requires explicitly enabling mTLS on both the client and server.
 
