@@ -35,7 +35,9 @@ import (
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	routerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type listenerNames map[string]listenerName
@@ -197,6 +199,16 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			continue
 		}
 
+		// According to Istio's proxyless gRPC implementation:
+		// - DestinationRule with ISTIO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
+		// - PeerAuthentication with STRICT configures SERVER-SIDE (inbound) mTLS
+		// Both are REQUIRED for mTLS to work. Server-side mTLS should ONLY be controlled by PeerAuthentication.
+		// Reference: https://istio.io/latest/blog/2021/proxyless-grpc/#enabling-mtls
+		mode := push.InboundMTLSModeForProxy(node, uint32(listenPort))
+		if mode == model.MTLSPermissive {
+			log.Warnf("buildInboundListeners: PERMISSIVE mTLS is not supported for proxyless gRPC; defaulting to plaintext on listener %s", name)
+		}
+
 		// For proxyless gRPC inbound listeners, we need a FilterChain with HttpConnectionManager filter
 		// to satisfy gRPC client requirements. According to grpc-go issue #7691 and the error
 		// "missing HttpConnectionManager filter", gRPC proxyless clients require HttpConnectionManager
@@ -238,6 +250,32 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			},
 		}
 
+		filterChain := &listener.FilterChain{
+			Filters: []*listener.Filter{
+				{
+					Name: wellknown.HTTPConnectionManager,
+					ConfigType: &listener.Filter_TypedConfig{
+						TypedConfig: protoconv.MessageToAny(hcm),
+					},
+				},
+			},
+		}
+
+		if ts := buildDownstreamTransportSocket(mode); ts != nil {
+			// For STRICT mTLS mode, set TransportSocket to require TLS connections
+			// When TransportSocket is present, only TLS connections can match this FilterChain
+			// No FilterChainMatch needed - gRPC proxyless will automatically match based on TransportSocket presence
+			filterChain.TransportSocket = ts
+			log.Infof("buildInboundListeners: applied STRICT mTLS transport socket to listener %s (mode=%v, requires client cert=true)", name, mode)
+		} else if mode == model.MTLSStrict {
+			log.Warnf("buildInboundListeners: expected to enable STRICT mTLS on listener %s but failed to build transport socket (mode=%v)", name, mode)
+		} else {
+			// For plaintext mode, no TransportSocket means only plaintext connections can match
+			// No FilterChainMatch needed - gRPC proxyless will automatically match based on TransportSocket absence
+			// TLS connections will fail to match this FilterChain (no TransportSocket) and connection will fail
+			log.Debugf("buildInboundListeners: listener %s using plaintext (mode=%v) - clients using TLS will fail to connect", name, mode)
+		}
+
 		ll := &listener.Listener{
 			Name: name,
 			Address: &core.Address{Address: &core.Address_SocketAddress{
@@ -249,18 +287,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 				},
 			}},
 			// Create FilterChain with HttpConnectionManager filter for proxyless gRPC
-			FilterChains: []*listener.FilterChain{
-				{
-					Filters: []*listener.Filter{
-						{
-							Name: wellknown.HTTPConnectionManager,
-							ConfigType: &listener.Filter_TypedConfig{
-								TypedConfig: protoconv.MessageToAny(hcm),
-							},
-						},
-					},
-				},
-			},
+			FilterChains: []*listener.FilterChain{filterChain},
 			// the following must not be set or the client will NACK
 			ListenerFilters: nil,
 			UseOriginalDst:  nil,
@@ -277,6 +304,31 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		})
 	}
 	return out
+}
+
+func buildDownstreamTransportSocket(mode model.MutualTLSMode) *core.TransportSocket {
+	if mode != model.MTLSStrict {
+		return nil
+	}
+	common := buildCommonTLSContext()
+	if common == nil {
+		return nil
+	}
+	common.AlpnProtocols = []string{"h2"}
+
+	// For STRICT mTLS, we require client certificates and validate them
+	// The validation context is already configured in buildCommonTLSContext
+	// via the certificate provider instance (ROOTCA)
+	tlsContext := &tlsv3.DownstreamTlsContext{
+		CommonTlsContext:         common,
+		RequireClientCertificate: wrapperspb.Bool(true),
+		// Note: gRPC proxyless uses certificate provider for validation
+		// The ValidationContextType in CommonTlsContext handles client cert validation
+	}
+	return &core.TransportSocket{
+		Name:       "envoy.transport_sockets.tls",
+		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
+	}
 }
 
 func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter listenerNames) model.Resources {

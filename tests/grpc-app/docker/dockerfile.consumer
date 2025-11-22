@@ -47,4 +47,7 @@ WORKDIR /app
 COPY --from=builder /build/grpc-consumer /usr/local/bin/grpc-consumer
 RUN chmod +x /usr/local/bin/grpc-consumer
 
+COPY ./grpcurl /usr/local/bin/grpcurl
+RUN chmod +x /usr/local/bin/grpcurl
+
 ENTRYPOINT ["/usr/local/bin/grpc-consumer"]

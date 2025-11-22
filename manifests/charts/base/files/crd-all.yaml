@@ -90,12 +90,12 @@ spec:
                                 description: |-
                                   Indicates whether connections to this port should be secured using TLS.
                                   
-                                  Valid Options: DISABLE, SIMPLE, MUTUAL, DUBBO_MUTUAL
+                                  Valid Options: DISABLE, SIMPLE, MUTUAL, ISTIO_MUTUAL
                                 enum:
                                   - DISABLE
                                   - SIMPLE
                                   - MUTUAL
-                                  - DUBBO_MUTUAL
+                                  - ISTIO_MUTUAL
                                 type: string
                             type: object
                         type: object
@@ -114,12 +114,12 @@ spec:
                           description: |-
                             Indicates whether connections to this port should be secured using TLS.
                             
-                            Valid Options: DISABLE, SIMPLE, MUTUAL, DUBBO_MUTUAL
+                            Valid Options: DISABLE, SIMPLE, MUTUAL, ISTIO_MUTUAL
                           enum:
                             - DISABLE
                             - SIMPLE
                             - MUTUAL
-                            - DUBBO_MUTUAL
+                            - ISTIO_MUTUAL
                           type: string
                       type: object
                   type: object
