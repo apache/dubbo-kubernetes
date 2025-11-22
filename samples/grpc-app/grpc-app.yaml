@@ -17,12 +17,12 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: consumer
-  name: consumer
+    app: producer
+  name: producer
   namespace: grpc-app
 spec:
   selector:
-    app: consumer
+    app: producer
   type: ClusterIP
   ports:
     - name: grpc
@@ -32,13 +32,13 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: consumer-v1
+  name: producer-v1
   namespace: grpc-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: consumer
+      app: producer
       version: v1
   template:
     metadata:
@@ -47,18 +47,20 @@ spec:
         inject.dubbo.apache.org/templates: grpc-agent
         proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
-        app: consumer
+        app: producer
         version: v1
     spec:
       containers:
         - name: app
-          image: mfordjody/grpc-consumer:dev-debug
+          image: mfordjody/grpc-producer:dev-debug
           imagePullPolicy: Always
           ports:
             - containerPort: 17070
               protocol: TCP
               name: grpc
           env:
+            - name: GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT
+              value: "true"
             - name: INSTANCE_IP
               valueFrom:
                 fieldRef:
@@ -74,6 +76,9 @@ spec:
                   fieldPath: metadata.namespace
             - name: SERVICE_PORT
               value: "17070"
+          volumeMounts:
+            - mountPath: /var/lib/dubbo/data
+              name: dubbo-data
           readinessProbe:
             tcpSocket:
               port: 17070
@@ -90,17 +95,20 @@ spec:
             timeoutSeconds: 2
             successThreshold: 1
             failureThreshold: 3
+      volumes:
+        - name: dubbo-data
+          emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: consumer-v2
+  name: producer-v2
   namespace: grpc-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: consumer
+      app: producer
       version: v2
   template:
     metadata:
@@ -109,18 +117,20 @@ spec:
         inject.dubbo.apache.org/templates: grpc-agent
         proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
-        app: consumer
+        app: producer
         version: v2
     spec:
       containers:
         - name: app
-          image: mfordjody/grpc-consumer:dev-debug
+          image: mfordjody/grpc-producer:dev-debug
           imagePullPolicy: Always
           ports:
             - containerPort: 17070
               protocol: TCP
               name: grpc
           env:
+            - name: GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT
+              value: "true"
             - name: INSTANCE_IP
               valueFrom:
                 fieldRef:
@@ -136,6 +146,9 @@ spec:
                   fieldPath: metadata.namespace
             - name: SERVICE_PORT
               value: "17070"
+          volumeMounts:
+            - mountPath: /var/lib/dubbo/data
+              name: dubbo-data
           readinessProbe:
             tcpSocket:
               port: 17070
@@ -152,17 +165,20 @@ spec:
             timeoutSeconds: 2
             successThreshold: 1
             failureThreshold: 3
+      volumes:
+        - name: dubbo-data
+          emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: producer
+  name: consumer
   namespace: grpc-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: producer
+      app: consumer
   template:
     metadata:
       annotations:
@@ -170,23 +186,28 @@ spec:
         inject.dubbo.apache.org/templates: grpc-agent
         proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
-        app: producer
+        app: consumer
     spec:
       containers:
         - name: app
-          # Replace with your own image containing the producer binary
-          image: mfordjody/grpc-producer:dev-debug
+          # Replace with your own image containing the consumer binary
+          image: mfordjody/grpc-consumer:dev-debug
           imagePullPolicy: Always
-          # Optional: uncomment to test direct connection
-          # - --target=xds:///consumer.grpc-app.svc.cluster.local:7070
-          # - --count=10
           ports:
             - containerPort: 17171
               protocol: TCP
               name: grpc-test
           env:
+            - name: GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT
+              value: "true"
             - name: INSTANCE_IP
               valueFrom:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: status.podIP
+          volumeMounts:
+            - mountPath: /var/lib/dubbo/data
+              name: dubbo-data
+      volumes:
+        - name: dubbo-data
+          emptyDir: {}

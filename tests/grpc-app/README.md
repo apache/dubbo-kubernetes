@@ -4,8 +4,8 @@ This is a test example for gRPC proxyless service mesh based on [Istio's blog po
 
 ## Architecture
 
-- **Consumer**: gRPC server with xDS support (port 17070)
-- **Producer**: gRPC client with xDS support + test server (port 17171)
+- **Producer**: gRPC server with xDS support (port 17070). This service is deployed with multiple versions (v1/v2) to demonstrate gray release/traffic-splitting scenarios and exposes gRPC reflection so `grpcurl` can query it directly.
+- **Consumer**: gRPC client with xDS support + test server (port 17171). This component drives load toward the producer service for automated tests.
 
 Both services use `dubbo-proxy` sidecar as an xDS proxy to connect to the control plane. The sidecar runs an xDS proxy server that listens on a Unix Domain Socket (UDS) at `/etc/dubbo/proxy/XDS`. The gRPC applications connect to this xDS proxy via the UDS socket using the `GRPC_XDS_BOOTSTRAP` environment variable.
 

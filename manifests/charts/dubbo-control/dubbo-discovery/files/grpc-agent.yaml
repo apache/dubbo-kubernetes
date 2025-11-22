@@ -17,6 +17,11 @@ metadata:
   annotations:
     dubbo.apache.org/rev: default
 spec:
+  # NOTE:
+  #   Application containers that rely on this template must mount the same "dubbo-data"
+  #   volume at /var/lib/dubbo/data and set GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT=true
+  #   in order for proxyless gRPC security (mTLS) to pick up the certificates generated
+  #   by the dubbo-proxy sidecar.
   containers:
     - name: dubbo-proxy
       image: "{{ $.ProxyImage }}"
@@ -57,6 +62,10 @@ spec:
           value: dubbod
         - name: DUBBO_META_CLUSTER_ID
           value: Kubernetes
+        - name: DUBBO_META_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         - name: CA_ADDR
           value: dubbod.dubbo-system.svc:15012
         - name: PROXY_CONFIG

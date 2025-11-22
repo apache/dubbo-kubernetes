@@ -482,10 +482,11 @@ func (s *Server) initRegistryEventHandlers() {
 		// Log the config change
 		log.Infof("configHandler: %s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
-		// CRITICAL: For SubsetRule and ServiceRoute changes, we need Full push to ensure
-		// PushContext is re-initialized and configuration is reloaded
-		// This is because these configs affect CDS/RDS generation and need complete context refresh
-		needsFullPush := configKind == kind.SubsetRule || configKind == kind.ServiceRoute
+		// CRITICAL: Some configs (SubsetRule/ServiceRoute/PeerAuthentication) require Full push to ensure
+		// PushContext is re-initialized and configuration is reloaded.
+		// PeerAuthentication must rebuild AuthenticationPolicies to enable STRICT mTLS on LDS; without
+		// a full push the cached PushContext would continue serving plaintext listeners.
+		needsFullPush := configKind == kind.SubsetRule || configKind == kind.ServiceRoute || configKind == kind.PeerAuthentication
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
 		s.XDSServer.ConfigUpdate(&model.PushRequest{

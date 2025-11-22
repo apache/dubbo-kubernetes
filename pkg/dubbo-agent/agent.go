@@ -35,6 +35,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/cache"
+	"github.com/apache/dubbo-kubernetes/pkg/backoff"
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/grpcxds"
@@ -142,7 +143,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	}
 
 	log.Info("Starting default Dubbo SDS Server")
-	err = a.initSdsServer()
+	err = a.initSdsServer(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start default Dubbo SDS server: %v", err)
 	}
@@ -218,19 +219,6 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 			log.Errorf("status server error: %v", err)
 		}
 	}()
-
-	// Wait for certificate generation to complete before establishing preemptive connection.
-	// This ensures certificate logs appear after "Opening status port" but before "Establishing preemptive connection".
-	// The SDS service generates certificates asynchronously in newSDSService.
-	// We wait a short time for the SDS service's async generation to complete and log.
-	// This avoids calling GenerateSecret ourselves, which would cause duplicate generation and logs.
-	if a.secretCache != nil && !a.secOpts.FileMountedCerts && !a.secOpts.ServeOnlyFiles {
-		// Give SDS service's async certificate generation goroutine a chance to complete.
-		// The SDS service starts generating certificates immediately after initSdsServer,
-		// so a short wait is usually sufficient for the certificates to be generated and logged.
-		// This avoids the need to call GenerateSecret ourselves, which would cause duplicate logs.
-		time.Sleep(300 * time.Millisecond)
-	}
 
 	// Now set bootstrap node to trigger preemptive connection.
 	// This ensures preemptive connection logs appear after certificate logs.
@@ -383,7 +371,7 @@ func (a *Agent) startFileWatcher(ctx context.Context, filePath string, handler f
 	}
 }
 
-func (a *Agent) initSdsServer() error {
+func (a *Agent) initSdsServer(ctx context.Context) error {
 	var err error
 	if security.CheckWorkloadCertificate(security.WorkloadIdentityCertChainPath, security.WorkloadIdentityKeyPath, security.WorkloadIdentityRootCertPath) {
 		log.Info("workload certificate files detected, creating secret manager without caClient")
@@ -401,9 +389,7 @@ func (a *Agent) initSdsServer() error {
 
 	pkpConf := a.proxyConfig.GetPrivateKeyProvider()
 	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache, pkpConf)
-	a.secretCache.RegisterSecretHandler(a.sdsServer.OnSecretUpdate)
-
-	return nil
+	return a.registerSecretHandler(ctx)
 }
 
 func (a *Agent) rebuildSDSWithNewCAClient() {
@@ -426,8 +412,55 @@ func (a *Agent) rebuildSDSWithNewCAClient() {
 	a.secretCache = sc
 	pkpConf := a.proxyConfig.GetPrivateKeyProvider()
 	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache, pkpConf)
-	a.secretCache.RegisterSecretHandler(a.sdsServer.OnSecretUpdate)
-	log.Info("SDS server and CA client rebuilt successfully")
+	if err := a.registerSecretHandler(context.Background()); err != nil {
+		log.Errorf("failed to refresh workload certificates after CA rebuild: %v", err)
+	} else {
+		log.Info("SDS server and CA client rebuilt successfully")
+	}
+}
+
+func (a *Agent) registerSecretHandler(ctx context.Context) error {
+	if a.secretCache == nil {
+		return nil
+	}
+	handler := func(resourceName string) {
+		if a.sdsServer != nil {
+			a.sdsServer.OnSecretUpdate(resourceName)
+		}
+		if resourceName == security.WorkloadKeyCertResourceName || resourceName == security.RootCertReqResourceName {
+			go func() {
+				if err := a.ensureWorkloadCertificates(context.Background()); err != nil {
+					log.Warnf("failed to refresh workload certificates after %s update: %v", resourceName, err)
+				}
+			}()
+		}
+	}
+	a.secretCache.RegisterSecretHandler(handler)
+	return a.ensureWorkloadCertificates(ctx)
+}
+
+func (a *Agent) ensureWorkloadCertificates(ctx context.Context) error {
+	if a.secretCache == nil || a.secOpts == nil || a.secOpts.OutputKeyCertToDir == "" {
+		// Nothing to write
+		return nil
+	}
+	generate := func(resource string) error {
+		b := backoff.NewExponentialBackOff(backoff.DefaultOption())
+		return b.RetryWithContext(ctx, func() error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			_, err := a.secretCache.GenerateSecret(resource)
+			if err != nil {
+				log.Warnf("failed to generate %s: %v", resource, err)
+			}
+			return err
+		})
+	}
+	if err := generate(security.WorkloadKeyCertResourceName); err != nil {
+		return err
+	}
+	return generate(security.RootCertReqResourceName)
 }
 
 func (a *Agent) generateGRPCBootstrapWithNode() (*model.Node, error) {

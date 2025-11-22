@@ -60,20 +60,21 @@ var (
 )
 
 type PushContext struct {
-	Mesh              *meshconfig.MeshConfig `json:"-"`
-	initializeMutex   sync.Mutex
-	InitDone          atomic.Bool
-	Networks          *meshconfig.MeshNetworks
-	networkMgr        *NetworkManager
-	clusterLocalHosts ClusterLocalHosts
-	exportToDefaults  exportToDefaults
-	ServiceIndex      serviceIndex
-	serviceRouteIndex serviceRouteIndex
-	subsetRuleIndex   subsetRuleIndex
-	serviceAccounts   map[serviceAccountKey][]string
-	PushVersion       string
-	ProxyStatus       map[string]map[string]ProxyPushStatus
-	proxyStatusMutex  sync.RWMutex
+	Mesh                   *meshconfig.MeshConfig `json:"-"`
+	initializeMutex        sync.Mutex
+	InitDone               atomic.Bool
+	Networks               *meshconfig.MeshNetworks
+	networkMgr             *NetworkManager
+	clusterLocalHosts      ClusterLocalHosts
+	exportToDefaults       exportToDefaults
+	ServiceIndex           serviceIndex
+	serviceRouteIndex      serviceRouteIndex
+	subsetRuleIndex        subsetRuleIndex
+	serviceAccounts        map[serviceAccountKey][]string
+	AuthenticationPolicies *AuthenticationPolicies
+	PushVersion            string
+	ProxyStatus            map[string]map[string]ProxyPushStatus
+	proxyStatusMutex       sync.RWMutex
 }
 
 type PushRequest struct {
@@ -515,6 +516,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	ps.initServiceRegistry(env, nil)
 	ps.initServiceRoutes(env)
 	ps.initSubsetRules(env)
+	ps.initAuthenticationPolicies(env)
 }
 
 func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushContext, pushReq *PushRequest) {
@@ -606,6 +608,41 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.subsetRuleIndex = oldPushContext.subsetRuleIndex
 	}
 
+	authnPoliciesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.PeerAuthentication))
+	if authnPoliciesChanged || oldPushContext == nil || oldPushContext.AuthenticationPolicies == nil {
+		log.Infof("updateContext: PeerAuthentication changed (full=%v, configsUpdatedContainingPeerAuth=%v), rebuilding authentication policies",
+			pushReq != nil && pushReq.Full, func() bool {
+				if pushReq == nil {
+					return false
+				}
+				return HasConfigsOfKind(pushReq.ConfigsUpdated, kind.PeerAuthentication)
+			}())
+		ps.initAuthenticationPolicies(env)
+	} else {
+		ps.AuthenticationPolicies = oldPushContext.AuthenticationPolicies
+	}
+}
+
+func (ps *PushContext) initAuthenticationPolicies(env *Environment) {
+	if env == nil {
+		ps.AuthenticationPolicies = nil
+		return
+	}
+	ps.AuthenticationPolicies = initAuthenticationPolicies(env)
+}
+
+func (ps *PushContext) InboundMTLSModeForProxy(proxy *Proxy, port uint32) MutualTLSMode {
+	if ps == nil || proxy == nil || ps.AuthenticationPolicies == nil {
+		return MTLSUnknown
+	}
+	var namespace string
+	if proxy.Metadata != nil {
+		namespace = proxy.Metadata.Namespace
+	}
+	if namespace == "" {
+		namespace = proxy.ConfigNamespace
+	}
+	return ps.AuthenticationPolicies.EffectiveMutualTLSMode(namespace, nil, port)
 }
 
 func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
@@ -776,13 +813,22 @@ func (ps *PushContext) setSubsetRules(configs []config.Config) {
 	log.Infof("setSubsetRules: indexed %d namespaces with local rules", len(namespaceLocalSubRules))
 	for ns, rules := range namespaceLocalSubRules {
 		totalRules := 0
-		for _, ruleList := range rules.specificSubRules {
+		for hostname, ruleList := range rules.specificSubRules {
 			totalRules += len(ruleList)
+			// Log TLS configuration for each merged DestinationRule
+			for _, rule := range ruleList {
+				if dr, ok := rule.rule.Spec.(*networking.DestinationRule); ok {
+					hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
+					tlsMode := "none"
+					if hasTLS {
+						tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+					}
+					log.Infof("setSubsetRules: namespace %s, hostname %s: DestinationRule has %d subsets, TLS mode: %s",
+						ns, hostname, len(dr.Subsets), tlsMode)
+				}
+			}
 		}
 		log.Infof("setSubsetRules: namespace %s has %d DestinationRules with %d specific hostnames", ns, totalRules, len(rules.specificSubRules))
-		for hostname := range rules.specificSubRules {
-			log.Debugf("setSubsetRules: namespace %s has rules for hostname %s", ns, hostname)
-		}
 	}
 	log.Infof("setSubsetRules: indexed %d namespaces with exported rules", len(exportedDestRulesByNamespace))
 	if rootNamespaceLocalDestRules != nil {
@@ -804,8 +850,12 @@ func (ps *PushContext) initSubsetRules(env *Environment) {
 	for i := range subRules {
 		subRules[i] = configs[i]
 		if dr, ok := configs[i].Spec.(*networking.DestinationRule); ok {
-			log.Infof("initSubsetRules: SubsetRule %s/%s for host %s with %d subsets",
-				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets))
+			tlsMode := "none"
+			if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
+				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+			}
+			log.Infof("initSubsetRules: SubsetRule %s/%s for host %s with %d subsets, TLS mode: %s",
+				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 		}
 	}
 
@@ -863,7 +913,13 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 	if nsRules := ps.subsetRuleIndex.namespaceLocal[namespace]; nsRules != nil {
 		log.Debugf("DestinationRuleForService: checking namespace-local rules for %s (found %d specific rules)", namespace, len(nsRules.specificSubRules))
 		if dr := firstDestinationRule(nsRules, hostname); dr != nil {
-			log.Infof("DestinationRuleForService: found DestinationRule in namespace-local index for %s/%s with %d subsets", namespace, hostname, len(dr.Subsets))
+			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
+			tlsMode := "none"
+			if hasTLS {
+				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+			}
+			log.Infof("DestinationRuleForService: found DestinationRule in namespace-local index for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
+				namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
 			return dr
 		}
 	} else {
@@ -874,7 +930,13 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 	log.Debugf("DestinationRuleForService: checking exported rules (found %d exported namespaces)", len(ps.subsetRuleIndex.exportedByNamespace))
 	for ns, exported := range ps.subsetRuleIndex.exportedByNamespace {
 		if dr := firstDestinationRule(exported, hostname); dr != nil {
-			log.Infof("DestinationRuleForService: found DestinationRule in exported rules from namespace %s for %s/%s with %d subsets", ns, namespace, hostname, len(dr.Subsets))
+			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
+			tlsMode := "none"
+			if hasTLS {
+				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+			}
+			log.Infof("DestinationRuleForService: found DestinationRule in exported rules from namespace %s for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
+				ns, namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
 			return dr
 		}
 	}
@@ -883,7 +945,13 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 	if rootRules := ps.subsetRuleIndex.rootNamespaceLocal; rootRules != nil {
 		log.Debugf("DestinationRuleForService: checking root namespace rules (found %d specific rules)", len(rootRules.specificSubRules))
 		if dr := firstDestinationRule(rootRules, hostname); dr != nil {
-			log.Infof("DestinationRuleForService: found DestinationRule in root namespace for %s/%s with %d subsets", namespace, hostname, len(dr.Subsets))
+			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
+			tlsMode := "none"
+			if hasTLS {
+				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+			}
+			log.Infof("DestinationRuleForService: found DestinationRule in root namespace for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
+				namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
 			return dr
 		}
 	}
@@ -915,12 +983,45 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 		return nil
 	}
 	if rules := csr.specificSubRules[hostname]; len(rules) > 0 {
-		log.Debugf("firstDestinationRule: found %d rules for hostname %s", len(rules), hostname)
-		if dr, ok := rules[0].rule.Spec.(*networking.DestinationRule); ok {
-			log.Debugf("firstDestinationRule: successfully cast to DestinationRule for hostname %s", hostname)
-			return dr
+		log.Infof("firstDestinationRule: found %d rules for hostname %s", len(rules), hostname)
+		// CRITICAL: According to Istio behavior, multiple DestinationRules should be merged into one.
+		// The first rule should contain the merged result if merge was successful.
+		// However, if merge failed (e.g., EnableEnhancedSubsetRuleMerge is disabled),
+		// we need to check all rules and prefer the one with TLS configuration.
+		// This ensures that when multiple SubsetRules exist (e.g., one with subsets, one with TLS),
+		// we return the one that has TLS if available, or the first one otherwise.
+		var bestRule *networking.DestinationRule
+		var bestRuleHasTLS bool
+		for i, rule := range rules {
+			if dr, ok := rule.rule.Spec.(*networking.DestinationRule); ok {
+				hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
+				if hasTLS {
+					tlsMode := dr.TrafficPolicy.Tls.Mode
+					tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
+					hasTLS = (tlsMode == networking.ClientTLSSettings_ISTIO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
+				}
+				if i == 0 {
+					// Always use first rule as fallback
+					bestRule = dr
+					bestRuleHasTLS = hasTLS
+				} else if hasTLS && !bestRuleHasTLS {
+					// Prefer rule with TLS over rule without TLS
+					log.Infof("firstDestinationRule: found rule %d with TLS for hostname %s, preferring it over rule 0", i, hostname)
+					bestRule = dr
+					bestRuleHasTLS = hasTLS
+				}
+			}
+		}
+		if bestRule != nil {
+			tlsMode := "none"
+			if bestRuleHasTLS {
+				tlsMode = bestRule.TrafficPolicy.Tls.Mode.String()
+			}
+			log.Infof("firstDestinationRule: returning DestinationRule for hostname %s (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s, has %d subsets)",
+				hostname, bestRule.TrafficPolicy != nil, bestRuleHasTLS, tlsMode, len(bestRule.Subsets))
+			return bestRule
 		} else {
-			log.Warnf("firstDestinationRule: failed to cast rule to DestinationRule for hostname %s", hostname)
+			log.Warnf("firstDestinationRule: failed to cast any rule to DestinationRule for hostname %s", hostname)
 		}
 	} else {
 		log.Debugf("firstDestinationRule: no specific rules found for hostname %s (available hostnames: %v)", hostname, func() []string {

@@ -41,6 +41,7 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 	}
 
 	if mdrList, exists := subRules[resolvedHost]; exists {
+		log.Infof("mergeSubsetRule: found existing rules for host %s (count: %d)", resolvedHost, len(mdrList))
 		// `appendSeparately` determines if the incoming destination rule would become a new unique entry in the processedDestRules list.
 		appendSeparately := true
 		for _, mdr := range mdrList {
@@ -72,6 +73,8 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 			// at the same time added as a unique entry in the processedDestRules.
 			if bothWithoutSelector || (bothWithSelector && selectorsMatch) {
 				appendSeparately = false
+				log.Debugf("mergeSubsetRule: will merge rules for host %s (bothWithoutSelector: %v, bothWithSelector: %v, selectorsMatch: %v)",
+					resolvedHost, bothWithoutSelector, bothWithSelector, selectorsMatch)
 			}
 
 			// Deep copy destination rule, to prevent mutate it later when merge with a new one.
@@ -96,10 +99,28 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 				}
 			}
 
-			// If there is no top level policy and the incoming rule has top level
-			// traffic policy, use the one from the incoming rule.
-			if mergedRule.TrafficPolicy == nil && rule.TrafficPolicy != nil {
-				mergedRule.TrafficPolicy = rule.TrafficPolicy
+			// Merge top-level traffic policy. Historically we only copied the first non-nil policy,
+			// which meant a later SubsetRule that supplied TLS settings was ignored once a prior
+			// rule (e.g. subsets only) existed. To match Istio's behavior and ensure Proxyless gRPC
+			// can enable mTLS after subsets are defined, allow the incoming rule to override the TLS
+			// portion even when a Common TrafficPolicy already exists.
+			if rule.TrafficPolicy != nil {
+				if mergedRule.TrafficPolicy == nil {
+					// First rule with TrafficPolicy, copy it entirely
+					mergedRule.TrafficPolicy = rule.TrafficPolicy
+					log.Infof("mergeSubsetRule: copied TrafficPolicy from new rule to merged rule for host %s (has TLS: %v)",
+						resolvedHost, rule.TrafficPolicy.Tls != nil)
+				} else {
+					// Merge TrafficPolicy fields, with TLS settings from the latest rule taking precedence
+					if rule.TrafficPolicy.Tls != nil {
+						// CRITICAL: TLS settings from the latest rule always win (ISTIO_MUTUAL/DUBBO_MUTUAL)
+						mergedRule.TrafficPolicy.Tls = rule.TrafficPolicy.Tls
+						log.Infof("mergeSubsetRule: updated TLS settings in merged TrafficPolicy for host %s (mode: %v)",
+							resolvedHost, rule.TrafficPolicy.Tls.Mode)
+					}
+					// Merge other TrafficPolicy fields if needed (loadBalancer, connectionPool, etc.)
+					// For now, we only merge TLS as it's the critical setting for mTLS
+				}
 			}
 		}
 		if appendSeparately {
