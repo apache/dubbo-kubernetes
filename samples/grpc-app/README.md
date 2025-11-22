@@ -31,7 +31,7 @@ kubectl label namespace grpc-app dubbo-injection=enabled
 kubectl apply -f grpc-app.yaml
 ```
 
-### 3. Call the test service
+### 3. Test service
 
 ```bash
 kubectl port-forward -n grpc-app $(kubectl get pod -l app=consumer -n grpc-app -o jsonpath='{.items[0].metadata.name}') 17171:17171
