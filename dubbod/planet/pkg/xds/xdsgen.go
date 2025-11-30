@@ -77,7 +77,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return nil
 	}
 
-	// CRITICAL FIX: For proxyless gRPC, handle wildcard (empty ResourceNames) requests correctly
+	// For proxyless gRPC, handle wildcard (empty ResourceNames) requests correctly
 	// When client sends empty ResourceNames after receiving specific resources, it's likely an ACK
 	// We should NOT generate all resources, but instead return the last sent resources
 	// However, for initial wildcard requests, we need to extract resource names from parent resources
@@ -93,7 +93,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			// We'll populate this from the last sent resources after generation
 			log.Debugf("pushXds: proxyless gRPC wildcard request with NonceSent=%s, will use last sent resources", w.NonceSent)
 		} else if len(w.ResourceNames) == 0 && w.NonceSent == "" {
-			// CRITICAL FIX: Initial wildcard request - need to extract resource names from parent resources
+			// Initial wildcard request - need to extract resource names from parent resources
 			// For CDS: extract cluster names from LDS
 			// For EDS: extract cluster names from CDS
 			if w.TypeUrl == v3.ClusterType {
@@ -155,7 +155,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 					}
 				}
 			} else if w.TypeUrl == v3.RouteType {
-				// CRITICAL FIX: Extract route names from LDS response for RDS wildcard requests
+				// Extract route names from LDS response for RDS wildcard requests
 				// RDS is not a wildcard type, so when client sends empty ResourceNames,
 				// we need to extract route names from LDS listeners that reference RDS
 				ldsWatched := con.proxy.GetWatchedResource(v3.ListenerType)
@@ -230,7 +230,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return err
 	}
 
-	// CRITICAL FIX: For proxyless gRPC wildcard requests with previous NonceSent, return last sent resources
+	// For proxyless gRPC wildcard requests with previous NonceSent, return last sent resources
 	if useLastSentResources && res == nil {
 		// This is a wildcard ACK - client is acknowledging previous push
 		// We should NOT push again, as the client already has the resources
@@ -243,7 +243,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return nil
 	}
 
-	// CRITICAL FIX: For proxyless gRPC, filter resources to only include requested ones
+	// For proxyless gRPC, filter resources to only include requested ones
 	// This prevents the push loop where client requests 1 resource but receives 13/14
 	var filteredRes model.Resources
 	if con.proxy.IsProxylessGrpc() {
@@ -261,7 +261,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 				info += " filtered:" + strconv.Itoa(len(res)-len(filteredRes))
 				res = filteredRes
 			}
-			// CRITICAL: If filtering resulted in 0 resources but client requested specific resources,
+			// If filtering resulted in 0 resources but client requested specific resources,
 			// this means the requested resources don't exist. Don't send empty response to avoid loop.
 			// Instead, log and return nil to prevent push.
 			if len(res) == 0 && len(requestedResourceNames) > 0 {
@@ -276,7 +276,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		}
 	}
 
-	// CRITICAL: Never send empty response for proxyless gRPC - this causes push loops
+	// Never send empty response for proxyless gRPC - this causes push loops
 	// If we have no resources to send, return nil instead of sending empty response
 	if len(res) == 0 {
 		log.Debugf("pushXds: no resources to send for %s (proxy: %s), skipping push", w.TypeUrl, con.proxy.ID)
@@ -301,8 +301,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		return err
 	}
 
-	// CRITICAL FIX: Update NonceSent after successfully sending the response
-	// This is essential for tracking which nonce was sent and preventing push loops
+	// Update NonceSent after successfully sending the response
 	con.proxy.UpdateWatchedResource(w.TypeUrl, func(wr *model.WatchedResource) *model.WatchedResource {
 		if wr == nil {
 			return nil
@@ -341,7 +340,6 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	case !req.Full:
 	default:
 		// Log format matches Istio: "LDS: PUSH for node:xxx resources:1 size:342B"
-		// CRITICAL: Always log resource names for better debugging, especially for proxyless gRPC
 		resourceNamesStr := ""
 		if len(res) > 0 {
 			if len(res) <= 10 {
@@ -366,7 +364,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			util.ByteCount(ResourceSize(res)), info, resourceNamesStr)
 	}
 
-	// CRITICAL FIX: For proxyless gRPC, after pushing LDS with outbound listeners,
+	// For proxyless gRPC, after pushing LDS with outbound listeners,
 	// automatically trigger CDS and RDS push for the referenced clusters and routes
 	// ONLY if this is a direct request push (not a push from pushConnection which would cause loops)
 	// Only auto-push if CDS/RDS is not already being watched by the client (client will request it naturally)
@@ -405,8 +403,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 				}
 			}
 
-			// CRITICAL FIX: Auto-push RDS for referenced routes
-			// This is essential for gRPC proxyless - client needs RDS to route traffic correctly
+			// Auto-push RDS for referenced routes
 			if len(routeNames) > 0 {
 				rdsWatched := con.proxy.GetWatchedResource(v3.RouteType)
 				// Only auto-push RDS if client hasn't already requested it
@@ -474,7 +471,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		}
 	}
 
-	// CRITICAL FIX: For proxyless gRPC, after pushing CDS with EDS clusters,
+	// For proxyless gRPC, after pushing CDS with EDS clusters,
 	// we should NOT automatically push EDS before the client requests it.
 	// The gRPC xDS client will automatically request EDS after receiving CDS with EDS clusters.
 	// If we push EDS before the client requests it, the client will receive the response
@@ -490,7 +487,6 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			edsWatched := con.proxy.GetWatchedResource(v3.EndpointType)
 			if edsWatched == nil {
 				// EDS not watched yet, create watched resource with cluster names
-				// This ensures that when the client requests EDS, we know which clusters to send
 				con.proxy.NewWatchedResource(v3.EndpointType, edsClusterNames)
 				log.Debugf("pushXds: CDS push completed, created EDS watched resource for clusters: %v (waiting for client request)", edsClusterNames)
 			} else {
@@ -527,7 +523,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 					log.Debugf("pushXds: CDS push completed, EDS clusters already watched: %v", edsClusterNames)
 				}
 			}
-			// CRITICAL: Do NOT push EDS here - wait for the client to request it naturally
+			// Do NOT push EDS here - wait for the client to request it naturally
 			// The gRPC xDS client will automatically request EDS after receiving CDS with EDS clusters
 			// Pushing EDS before the client requests it causes "no state exists" warnings
 		}

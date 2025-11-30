@@ -482,7 +482,7 @@ func (s *Server) initRegistryEventHandlers() {
 		// Log the config change
 		log.Infof("configHandler: %s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
-		// CRITICAL: Some configs (SubsetRule/ServiceRoute/PeerAuthentication) require Full push to ensure
+		// Some configs (SubsetRule/ServiceRoute/PeerAuthentication) require Full push to ensure
 		// PushContext is re-initialized and configuration is reloaded.
 		// PeerAuthentication must rebuild AuthenticationPolicies to enable STRICT mTLS on LDS; without
 		// a full push the cached PushContext would continue serving plaintext listeners.

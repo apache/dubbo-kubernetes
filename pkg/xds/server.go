@@ -383,7 +383,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	removed := previousResources.Difference(cur)
 	added := cur.Difference(previousResources)
 
-	// CRITICAL FIX: For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
+	// For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
 	// this is likely an ACK and we should NOT push all resources again
 	// Check if this is a wildcard request after specific resources were sent
 	if len(request.ResourceNames) == 0 && len(previousResources) > 0 && previousInfo.NonceSent != "" {

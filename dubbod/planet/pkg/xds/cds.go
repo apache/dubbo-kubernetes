@@ -34,7 +34,6 @@ func cdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) (*model.PushReques
 		return req, res
 	}
 
-	// CRITICAL: According to Istio proxyless gRPC behavior, when SubsetRule (DestinationRule) is created/updated
 	// with TLS configuration (ISTIO_MUTUAL), CDS must be pushed to update cluster TransportSocket.
 	// Even if req.Full is false, we need to check if SubsetRule was updated, as it affects cluster TLS config.
 	if req != nil && req.ConfigsUpdated != nil {

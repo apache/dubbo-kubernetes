@@ -66,7 +66,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		}
 
 		// Build VirtualHost Domains for outbound route
-		// CRITICAL: Domains must match the xDS URL hostname for gRPC xDS client
+		// Domains must match the xDS URL hostname for gRPC xDS client
 		hostStr := string(hostname)
 		domains := []string{
 			fmt.Sprintf("%s:%d", hostStr, parsedPort), // FQDN with port - MOST SPECIFIC

@@ -984,11 +984,9 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 	}
 	if rules := csr.specificSubRules[hostname]; len(rules) > 0 {
 		log.Infof("firstDestinationRule: found %d rules for hostname %s", len(rules), hostname)
-		// CRITICAL: According to Istio behavior, multiple DestinationRules should be merged into one.
 		// The first rule should contain the merged result if merge was successful.
 		// However, if merge failed (e.g., EnableEnhancedSubsetRuleMerge is disabled),
 		// we need to check all rules and prefer the one with TLS configuration.
-		// This ensures that when multiple SubsetRules exist (e.g., one with subsets, one with TLS),
 		// we return the one that has TLS if available, or the first one otherwise.
 		var bestRule *networking.DestinationRule
 		var bestRuleHasTLS bool

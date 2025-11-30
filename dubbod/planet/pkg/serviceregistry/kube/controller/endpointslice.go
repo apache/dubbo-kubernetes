@@ -199,7 +199,6 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 		// If we start using them for other features, this can be adjusted.
 		healthStatus := endpointHealthStatus(svc, e)
 
-		// CRITICAL: Log health status for debugging (use Warningf to ensure visibility)
 		if len(e.Addresses) > 0 {
 			ready := "nil"
 			terminating := "nil"
@@ -222,7 +221,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 			var overrideAddresses []string
 			builder := esc.c.NewEndpointBuilder(pod)
 			// EDS and ServiceEntry use name for service port - ADS will need to map to numbers.
-			// CRITICAL FIX: Always use Service.Port.Name as source of truth for ServicePortName
+			// Always use Service.Port.Name as source of truth for ServicePortName
 			// - Use EndpointSlice.Port.Port (service port number) as endpointPort
 			// - Always resolve portName from Service by matching port number (Service is source of truth)
 			// - This ensures ep.ServicePortName matches svcPort.Name in BuildClusterLoadAssignment
@@ -241,7 +240,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 				var targetPortNum int32
 				var portName string
 
-				// CRITICAL FIX: EndpointSlice.Port.Port might be targetPort or service port
+				// EndpointSlice.Port.Port might be targetPort or service port
 				// We need to find the matching ServicePort and resolve:
 				// 1. servicePortNum (Service.Port) - used for matching in BuildClusterLoadAssignment
 				// 2. targetPortNum (Service.TargetPort) - used as EndpointPort
@@ -314,9 +313,8 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 					}
 
 					if !matched {
-						// CRITICAL FIX: If we can't match by Service, try to find ServicePort by port number only
+						// If we can't match by Service, try to find ServicePort by port number only
 						// This handles cases where EndpointSlice.Port.Name doesn't match but port number does
-						// This is critical for ensuring portName matches Service.Port.Name
 						for _, kubePort := range kubeSvc.Spec.Ports {
 							if int32(kubePort.Port) == epSlicePortNum {
 								// Found by port number, use Service.Port.Name
@@ -352,7 +350,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 							log.Warnf("updateEndpointCacheForSlice: failed to match EndpointSlice.Port (portNum=%d, portName='%s') with Service %s, using EndpointSlice values (WARNING: portName may not match Service.Port.Name)",
 								epSlicePortNum, epSlicePortName, svcNamespacedName.Name)
 							// Fallback: use EndpointSlice values
-							// CRITICAL: This should rarely happen, but if it does, portName may not match Service.Port.Name
+							// This should rarely happen, but if it does, portName may not match Service.Port.Name
 							// which will cause endpoints to be filtered in BuildClusterLoadAssignment
 							servicePortNum = epSlicePortNum
 							targetPortNum = epSlicePortNum
@@ -381,11 +379,9 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 						svcNamespacedName.Name, epSlicePortNum, epSlicePortName)
 				}
 
-				// CRITICAL: Log endpoint creation with actual values for debugging
 				log.Debugf("updateEndpointCacheForSlice: creating endpoint for service %s (address=%s, servicePortNum=%d, targetPortNum=%d, portName='%s', hostname=%s, kubeSvc=%v)",
 					svcNamespacedName.Name, a, servicePortNum, targetPortNum, portName, hostName, kubeSvc != nil)
 
-				// CRITICAL FIX: According to Istio's implementation and Kubernetes EndpointSlice spec:
 				// - EndpointSlice.Port.Port should be the Service Port (not targetPort)
 				// - But IstioEndpoint.EndpointPort should be the targetPort (container port)
 				// - ServicePortName should match Service.Port.Name for filtering in BuildClusterLoadAssignment
@@ -393,10 +389,10 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 				// We use targetPortNum as EndpointPort because that's what the container actually listens on.
 				// The servicePortNum is used for matching in BuildClusterLoadAssignment via portName.
 				//
-				// CRITICAL: svc.SupportsUnhealthyEndpoints() returns true if Service has publishNotReadyAddresses=true
+				// svc.SupportsUnhealthyEndpoints() returns true if Service has publishNotReadyAddresses=true
 				// This allows endpoints with Ready=false to be included in EDS, which is useful for services
 				// that need to receive traffic even before they are fully ready (e.g., during startup).
-				// CRITICAL FIX: Check if svc is nil before calling SupportsUnhealthyEndpoints
+				// Check if svc is nil before calling SupportsUnhealthyEndpoints
 				var supportsUnhealthy bool
 				if svc != nil {
 					supportsUnhealthy = svc.SupportsUnhealthyEndpoints()
@@ -406,7 +402,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 				}
 				dubboEndpoint := builder.buildDubboEndpoint(a, targetPortNum, portName, nil, healthStatus, supportsUnhealthy)
 
-				// CRITICAL: Log if endpoint is unhealthy and service doesn't support it
+				// Log if endpoint is unhealthy and service doesn't support it
 				if healthStatus == model.UnHealthy && !supportsUnhealthy {
 					if svc != nil {
 						log.Debugf("updateEndpointCacheForSlice: endpoint %s is unhealthy (HealthStatus=%v) but service %s does not support unhealthy endpoints (PublishNotReadyAddresses=%v). Endpoint will be filtered in EDS.",
@@ -417,7 +413,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 					}
 				}
 
-				// CRITICAL: Verify the endpoint was created with correct ServicePortName
+				// Verify the endpoint was created with correct ServicePortName
 				if dubboEndpoint != nil {
 					log.Debugf("updateEndpointCacheForSlice: created endpoint with ServicePortName='%s', EndpointPort=%d, address=%s",
 						dubboEndpoint.ServicePortName, dubboEndpoint.EndpointPort, dubboEndpoint.FirstAddressOrNil())
@@ -458,7 +454,7 @@ func (e *endpointSliceCache) update(hostname host.Name, slice string, endpoints 
 }
 
 func endpointHealthStatus(svc *model.Service, e v1.Endpoint) model.HealthStatus {
-	// CRITICAL FIX: Correct health status logic
+	// Correct health status logic
 	// 1. If Ready is nil or true, endpoint is healthy
 	// 2. If Ready is false, check if it's terminating
 	// 3. If terminating, mark as Terminating
@@ -470,7 +466,7 @@ func endpointHealthStatus(svc *model.Service, e v1.Endpoint) model.HealthStatus 
 	}
 
 	// Ready is false, check if it's terminating
-	// CRITICAL FIX: Terminating should be checked only if it's not nil AND true
+	// Terminating should be checked only if it's not nil AND true
 	// If Terminating is nil, it means the endpoint is not terminating (it's just not ready)
 	if e.Conditions.Terminating != nil && *e.Conditions.Terminating {
 		return model.Terminating
@@ -548,7 +544,6 @@ func (esc *endpointSliceController) pushEDS(hostnames []host.Name, namespace str
 
 	for _, hostname := range hostnames {
 		endpoints := esc.endpointCache.get(hostname)
-		// CRITICAL: Log endpoint registration for debugging
 		log.Infof("pushEDS: registering %d endpoints for service %s in namespace %s (shard=%v)",
 			len(endpoints), string(hostname), namespace, shard)
 		if len(endpoints) > 0 {

@@ -40,7 +40,6 @@ func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResou
 	switch w.TypeUrl {
 	case v3.ListenerType:
 		// Pass requested names to BuildListeners to ensure consistent behavior
-		// This is critical for gRPC proxyless clients to avoid resource count oscillation
 		// When requestedNames is empty (wildcard), BuildListeners generates all listeners
 		// When requestedNames is non-empty, BuildListeners only generates requested listeners
 		return g.BuildListeners(proxy, req.Push, requestedNames), model.DefaultXdsLogDetails, nil

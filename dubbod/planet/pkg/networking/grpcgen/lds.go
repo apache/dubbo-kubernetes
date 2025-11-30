@@ -66,7 +66,7 @@ func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.Push
 		log.Debugf("BuildListeners: specific request for %s, requested listeners: %v", node.ID, names)
 	}
 
-	// CRITICAL: If names is provided (non-empty), we MUST only generate those specific listeners
+	// If names is provided (non-empty), we MUST only generate those specific listeners
 	// This prevents the push loop where client requests 1 listener but receives 14
 	// The filter ensures we only generate requested listeners
 	filter := newListenerNameFilter(names, node)
@@ -78,7 +78,6 @@ func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.Push
 	resp = append(resp, buildInboundListeners(node, push, filter.inboundNames())...)
 
 	// Final safety check: ensure we only return resources that were requested
-	// This is critical for preventing push loops in proxyless gRPC
 	if len(names) > 0 {
 		requestedSet := sets.New(names...)
 		filtered := make(model.Resources, 0, len(resp))
@@ -199,7 +198,6 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			continue
 		}
 
-		// According to Istio's proxyless gRPC implementation:
 		// - DestinationRule with ISTIO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
 		// - PeerAuthentication with STRICT configures SERVER-SIDE (inbound) mTLS
 		// Both are REQUIRED for mTLS to work. Server-side mTLS should ONLY be controlled by PeerAuthentication.
@@ -473,7 +471,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 			// Build route name (same format as cluster name) for RDS
 			routeName := clusterName
 
-			// CRITICAL: For gRPC proxyless, outbound listeners MUST use ApiListener with RDS
+			// For gRPC proxyless, outbound listeners MUST use ApiListener with RDS
 			// This is the correct pattern used by Istio for gRPC xDS clients
 			// Using FilterChain with inline RouteConfig causes the gRPC client to remain in IDLE state
 			hcm := &hcmv3.HttpConnectionManager{
@@ -500,7 +498,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 			}
 
 			// Build outbound listener with ApiListener (Istio pattern)
-			// CRITICAL: gRPC xDS clients expect ApiListener for outbound, not FilterChain
+			// gRPC xDS clients expect ApiListener for outbound, not FilterChain
 			ll := &listener.Listener{
 				Name: fullListenerName,
 				Address: &core.Address{Address: &core.Address_SocketAddress{
@@ -522,7 +520,6 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 				ll.AdditionalAddresses = util.BuildAdditionalAddresses(extrAddresses, uint32(port))
 			}
 
-			// CRITICAL: Log listener details for debugging gRPC xDS client connection issues
 			log.Debugf("buildOutboundListeners: created ApiListener name=%s, address=%s:%d, routeName=%s",
 				ll.Name, ll.Address.GetSocketAddress().Address, ll.Address.GetSocketAddress().GetPortValue(), routeName)
 

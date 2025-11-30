@@ -58,17 +58,14 @@ type EndpointIndex struct {
 }
 
 func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndpoints []*DubboEndpoint) ([]*DubboEndpoint, bool) {
-	// CRITICAL FIX: If old endpoints are empty (nil or empty slice), and we have new endpoints, we must push
-	// This ensures that when endpoints become available after being empty, clients receive the update
-	// This is critical for proxyless gRPC - when endpoints become available, clients must be notified
-	// to prevent "weighted-target: no targets to pick from" errors
+	// If old endpoints are empty (nil or empty slice), and we have new endpoints, we must push
 	// Note: len() for nil slices is defined as zero, so we can use len() directly
 	oldWasEmpty := len(oldDubboEndpoints) == 0
 	newIsEmpty := len(incomingEndpoints) == 0
 
 	if oldWasEmpty {
 		// If there are no old endpoints, we should push with incoming endpoints as there is nothing to compare.
-		// CRITICAL: Even if new endpoints are unhealthy, we must push to notify clients that endpoints are now available
+		// Even if new endpoints are unhealthy, we must push to notify clients that endpoints are now available
 		// The client will handle unhealthy endpoints appropriately (e.g., retry, circuit breaker)
 		if !newIsEmpty {
 			return incomingEndpoints, true
@@ -76,8 +73,7 @@ func endpointUpdateRequiresPush(oldDubboEndpoints []*DubboEndpoint, incomingEndp
 		// If both old and new are empty, no push needed
 		return incomingEndpoints, false
 	}
-	// CRITICAL FIX: If old endpoints exist but new endpoints are empty, we must push
-	// This ensures that when endpoints become unavailable, clients receive empty ClusterLoadAssignment
+	// If old endpoints exist but new endpoints are empty, we must push
 	if newIsEmpty {
 		return incomingEndpoints, true
 	}
@@ -170,7 +166,7 @@ func (e *EndpointIndex) UpdateServiceEndpoints(shard ShardKey, hostname string, 
 	ep.Lock()
 	defer ep.Unlock()
 	oldDubboEndpoints := ep.Shards[shard]
-	// CRITICAL: Check if this is a transition from empty to non-empty BEFORE calling endpointUpdateRequiresPush
+	// Check if this is a transition from empty to non-empty BEFORE calling endpointUpdateRequiresPush
 	// This ensures we always push when endpoints become available, even if they're unhealthy
 	// Note: len() for nil slices is defined as zero, so we can use len() directly
 	oldWasEmpty := len(oldDubboEndpoints) == 0
@@ -179,15 +175,13 @@ func (e *EndpointIndex) UpdateServiceEndpoints(shard ShardKey, hostname string, 
 
 	newDubboEndpoints, needPush := endpointUpdateRequiresPush(oldDubboEndpoints, dubboEndpoints)
 
-	// CRITICAL FIX: If endpoints transition from empty to non-empty, we MUST push
-	// This is essential for proxyless gRPC - clients need to know endpoints are now available
+	// If endpoints transition from empty to non-empty, we MUST push
 	// even if they're initially unhealthy (client will handle retries/circuit breaking)
 	if transitionFromEmptyToNonEmpty {
 		needPush = true
 		log.Debugf("UpdateServiceEndpoints: service=%s, shard=%v, endpoints transitioned from empty to non-empty, forcing push", hostname, shard)
 	}
 
-	// CRITICAL: Log endpoint update details for debugging
 	if logPushType {
 		oldHealthyCount := 0
 		oldUnhealthyCount := 0

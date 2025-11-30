@@ -256,13 +256,13 @@ func (ep *DubboEndpoint) Equals(other *DubboEndpoint) bool {
 		return false
 	}
 
-	// CRITICAL FIX: Compare HealthStatus to detect health status changes
+	// Compare HealthStatus to detect health status changes
 	// This is necessary to trigger EDS push when endpoints become healthy/unhealthy
 	if ep.HealthStatus != other.HealthStatus {
 		return false
 	}
 
-	// CRITICAL FIX: Compare EndpointPort to detect port changes
+	// Compare EndpointPort to detect port changes
 	if ep.EndpointPort != other.EndpointPort {
 		return false
 	}
@@ -418,11 +418,11 @@ func (s *Service) Equals(other *Service) bool {
 }
 
 func (s *Service) SupportsUnhealthyEndpoints() bool {
-	// CRITICAL FIX: Return PublishNotReadyAddresses to support publishing not-ready endpoints
+	// Return PublishNotReadyAddresses to support publishing not-ready endpoints
 	// This allows endpoints with Ready=false to be included in EDS if the service has
 	// publishNotReadyAddresses=true, which is useful for services that need to receive
 	// traffic even before they are fully ready (e.g., during startup).
-	// CRITICAL FIX: Check if s is nil before accessing Attributes
+	// Check if s is nil before accessing Attributes
 	if s == nil {
 		return false
 	}

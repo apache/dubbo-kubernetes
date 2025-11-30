@@ -314,7 +314,6 @@ func (s *DiscoveryServer) dropCacheForRequest(req *model.PushRequest) {
 		log.Debugf("dropCacheForRequest: cleared all cache (Forced=true)")
 	} else {
 		// Otherwise, just clear the updated configs
-		// CRITICAL: Log cache clear for debugging
 		if len(req.ConfigsUpdated) > 0 {
 			configs := make([]string, 0, len(req.ConfigsUpdated))
 			for ckey := range req.ConfigsUpdated {
@@ -388,12 +387,11 @@ func (s *DiscoveryServer) ProxyUpdate(clusterID cluster.ID, ip string) {
 
 func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, namespace string, dubboEndpoints []*model.DubboEndpoint) {
 	pushType := s.Env.EndpointIndex.UpdateServiceEndpoints(shard, serviceName, namespace, dubboEndpoints, true)
-	// CRITICAL FIX: Always push EDS updates when endpoints change state
+	// Always push EDS updates when endpoints change state
 	// This ensures clients receive updates when:
 	// 1. Endpoints become available (from empty to non-empty)
 	// 2. Endpoints become unavailable (from non-empty to empty)
 	// 3. Endpoint health status changes
-	// This is critical for proxyless gRPC to prevent "weighted-target: no targets to pick from" errors
 	if pushType == model.IncrementalPush || pushType == model.FullPush {
 		log.Infof("EDSUpdate: service %s/%s triggering %v push (endpoints=%d)", namespace, serviceName, pushType, len(dubboEndpoints))
 		s.ConfigUpdate(&model.PushRequest{
@@ -402,7 +400,7 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 			Reason:         model.NewReasonStats(model.EndpointUpdate),
 		})
 	} else if pushType == model.NoPush {
-		// CRITICAL: Even when UpdateServiceEndpoints returns NoPush, we may still need to push
+		// Even when UpdateServiceEndpoints returns NoPush, we may still need to push
 		// This happens when:
 		// 1. All old endpoints were unhealthy and new endpoints are also unhealthy (health status didn't change)
 		// 2. But we still need to notify clients about the current state

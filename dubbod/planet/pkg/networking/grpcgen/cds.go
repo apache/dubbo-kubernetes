@@ -119,8 +119,7 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	var defaultCluster *cluster.Cluster
 	defaultRequested := b.filter == nil || b.filter.Contains(b.defaultClusterName)
 
-	// CRITICAL: Check if DestinationRule has TLS configuration before generating default cluster
-	// According to Istio's proxyless gRPC implementation:
+	// Check if DestinationRule has TLS configuration before generating default cluster
 	// - DestinationRule with ISTIO_MUTUAL configures CLIENT-SIDE (outbound) mTLS
 	// - If DestinationRule specifies ISTIO_MUTUAL, we MUST generate default cluster and apply TLS
 	//   even if it's not explicitly requested, so that clients can use mTLS when connecting
@@ -142,15 +141,12 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	// Generate default cluster if requested OR if DestinationRule has ISTIO_MUTUAL TLS
 	if defaultRequested || hasTLSInDR {
 		defaultCluster = b.edsCluster(b.defaultClusterName)
-		// CRITICAL: For gRPC proxyless, we need to set CommonLbConfig to handle endpoint health status
-		// Following Istio's implementation, we should include UNHEALTHY and DRAINING endpoints
+		// For gRPC proxyless, we need to set CommonLbConfig to handle endpoint health status
 		// in OverrideHostStatus so that clients can use them when healthy endpoints are not available.
-		// This prevents "weighted-target: no targets to pick from" errors when all endpoints are unhealthy.
 		// The client will prioritize HEALTHY endpoints but can fall back to UNHEALTHY/DRAINING if needed.
 		if defaultCluster.CommonLbConfig == nil {
 			defaultCluster.CommonLbConfig = &cluster.Cluster_CommonLbConfig{}
 		}
-		// CRITICAL FIX: Following Istio's implementation, always include UNHEALTHY and DRAINING
 		// in OverrideHostStatus. This allows clients to use unhealthy endpoints when healthy ones
 		// are not available, preventing "weighted-target: no targets to pick from" errors.
 		// The client will still prioritize HEALTHY endpoints, but can fall back to others.
@@ -200,7 +196,7 @@ func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
 				},
 			},
 		},
-		// CRITICAL: For gRPC proxyless, we need to set LbPolicy to ROUND_ROBIN
+		// For gRPC proxyless, we need to set LbPolicy to ROUND_ROBIN
 		// This is the default load balancing policy for gRPC xDS clients
 		LbPolicy: cluster.Cluster_ROUND_ROBIN,
 	}
@@ -242,7 +238,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 	log.Infof("applyDestinationRule: found DestinationRule for %s/%s with %d subsets, defaultCluster requested=%v, hasTLS=%v",
 		b.svc.Attributes.Namespace, b.hostname, len(dr.Subsets), defaultCluster != nil, hasTLS)
 
-	// CRITICAL: Apply TLS to default cluster if it exists and doesn't have TransportSocket yet
+	// Apply TLS to default cluster if it exists and doesn't have TransportSocket yet
 	// This ensures that default cluster gets TLS from the top-level TrafficPolicy in DestinationRule
 	// When SubsetRule sets ISTIO_MUTUAL, inbound listener enforces STRICT mTLS, so outbound must also use TLS
 	// NOTE: We re-check hasTLS here because firstDestinationRule might have returned a different rule
@@ -262,7 +258,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 			log.Debugf("applyDestinationRule: skipping TLS for default cluster %s (DestinationRule has no TrafficPolicy or TLS)", b.defaultClusterName)
 		}
 	} else if defaultCluster == nil && hasTLS {
-		// CRITICAL: If default cluster was not generated in build() but DestinationRule has TLS,
+		// If default cluster was not generated in build() but DestinationRule has TLS,
 		// we need to generate it here to ensure TLS is applied
 		// This can happen if build() checked the first rule (without TLS) but applyDestinationRule
 		// found a different rule (with TLS) via firstDestinationRule's improved logic
@@ -313,8 +309,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 		}
 		clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, subset.Name, b.hostname, b.portNum)
 
-		// CRITICAL: Always generate subset clusters if default cluster is requested
-		// This is essential for RDS WeightedCluster to work correctly
+		// Always generate subset clusters if default cluster is requested
 		shouldGenerate := true
 		if b.filter != nil && !b.filter.Contains(clusterName) {
 			// Subset cluster not explicitly requested, but generate it if default cluster was requested
@@ -388,7 +383,6 @@ func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networki
 		return
 	}
 
-	// Log SNI configuration for debugging
 	sni := tlsContext.Sni
 	if sni == "" {
 		log.Warnf("applyTLSForCluster: SNI is empty for cluster %s, this may cause TLS handshake failures", c.Name)
@@ -415,7 +409,7 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings
 		CommonTlsContext: common,
 		Sni:              tlsSettings.GetSni(),
 	}
-	// CRITICAL: SNI must be the service hostname, not the cluster name
+	// SNI must be the service hostname, not the cluster name
 	// Cluster name format: outbound|port|subset|hostname
 	// We need to extract the hostname from the cluster name or use the service hostname
 	if tlsContext.Sni == "" {
