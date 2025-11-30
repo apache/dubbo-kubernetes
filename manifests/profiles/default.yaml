@@ -24,19 +24,20 @@ spec:
       enabled: true
     register:
       nacos:
-        enabled: true
+        enabled: false
       zookeeper:
         enabled: false
+    discovery:
+      planet:
+        enabled: true
   dashboard:
     admin:
-      enabled: true
+      enabled: false
   values:
     global: {}
     base: {}
-    nacos:
-      enabled: true
-    zookeeper:
-      enabled: false
+    nacos: {}
+    zookeeper: {}
 
 
 

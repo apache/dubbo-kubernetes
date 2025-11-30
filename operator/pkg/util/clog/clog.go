@@ -88,3 +88,39 @@ func (l *ConsoleLogger) Print(s string) {
 func (l *ConsoleLogger) PrintErr(s string) {
 	_, _ = l.stdErr.Write([]byte(s))
 }
+
+// SilentLogger is a logger that discards all output
+type SilentLogger struct{}
+
+// NewSilentLogger creates a new silent logger that discards all output
+func NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
+}
+
+func (l *SilentLogger) LogAndPrint(v ...any) {
+	// Silent - do nothing
+}
+
+func (l *SilentLogger) LogAndError(v ...any) {
+	// Silent - do nothing
+}
+
+func (l *SilentLogger) LogAndFatal(a ...any) {
+	// Silent - do nothing
+}
+
+func (l *SilentLogger) LogAndPrintf(format string, a ...any) {
+	// Silent - do nothing
+}
+
+func (l *SilentLogger) LogAndErrorf(format string, a ...any) {
+	// Silent - do nothing
+}
+
+func (l *SilentLogger) LogAndFatalf(format string, a ...any) {
+	// Silent - do nothing
+}
+
+func (l *SilentLogger) Print(s string) {
+	// Silent - do nothing
+}

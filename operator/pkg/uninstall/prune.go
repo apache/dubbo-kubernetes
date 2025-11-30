@@ -20,12 +20,15 @@ package uninstall
 import (
 	"context"
 	"fmt"
+
+	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -69,6 +72,7 @@ func GetRemovedResources(kc kube.CLIClient, dopName, dopNamespace string, includ
 	if dopNamespace != "" {
 		labels[manifest.OwningResourceNamespace] = dopNamespace
 	}
+	selector := klabels.Set(labels).AsSelectorPreValidated()
 	resources := NamespacedResources()
 	gvkList := append(resources, ClusterControlPlaneResources...)
 	if includeClusterResources {
@@ -76,6 +80,10 @@ func GetRemovedResources(kc kube.CLIClient, dopName, dopNamespace string, includ
 	}
 	for _, g := range gvkList {
 		var result *unstructured.UnstructuredList
+		componentRequirement, err := klabels.NewRequirement(manifest.DubboComponentLabel, selection.Exists, nil)
+		if err != nil {
+			return nil, err
+		}
 		compReq, err := klabels.NewRequirement(manifest.DubboComponentLabel, selection.Exists, nil)
 		if err != nil {
 			return nil, err
@@ -87,12 +95,23 @@ func GetRemovedResources(kc kube.CLIClient, dopName, dopNamespace string, includ
 		if includeClusterResources {
 			s := klabels.NewSelector()
 			result, err = c.List(context.Background(), metav1.ListOptions{LabelSelector: s.Add(*compReq).String()})
+		} else {
+			includeCN := []string{
+				string(component.PlanetDiscoveryComponentName),
+			}
+			includeRequirement, lerr := klabels.NewRequirement(manifest.DubboComponentLabel, selection.In, includeCN)
+			if lerr != nil {
+				return nil, lerr
+			}
+			result, err = c.List(context.Background(), metav1.ListOptions{LabelSelector: selector.Add(*includeRequirement, *componentRequirement).String()})
+		}
+		if controllers.IgnoreNotFound(err) != nil {
+			return nil, err
 		}
 		if result == nil || len(result.Items) == 0 {
 			continue
 		}
 		usList = append(usList, result)
-
 	}
 	return usList, nil
 }
@@ -133,9 +152,12 @@ func DeleteObjectsList(c kube.CLIClient, dryRun bool, log clog.Logger, objectsLi
 }
 
 func DeleteResource(kc kube.CLIClient, dryRun bool, log clog.Logger, obj *unstructured.Unstructured) error {
-	name := fmt.Sprintf("%v/%s.%s", obj.GroupVersionKind(), obj.GetName(), obj.GetNamespace())
+	name := fmt.Sprintf("%v/%s", obj.GroupVersionKind(), obj.GetName())
+	if obj.GetNamespace() != "" {
+		name = fmt.Sprintf("%v/%s.%s", obj.GroupVersionKind(), obj.GetName(), obj.GetNamespace())
+	}
 	if dryRun {
-		fmt.Printf("Not remove object %s because of dry run.", name)
+		log.LogAndPrintf("Not remove object %s because of dry run.", name)
 		return nil
 	}
 
@@ -149,12 +171,11 @@ func DeleteResource(kc kube.CLIClient, dryRun bool, log clog.Logger, obj *unstru
 			return err
 		}
 		// do not return error if resources are not found
-		log.LogAndPrintf("object: %s is not being deleted because it no longer exists", name)
-
+		log.LogAndPrintf("Resource %s not found, skipping", name)
 		return nil
 	}
 
-	log.LogAndPrintf("✔︎ Removed %s.", name)
+	log.LogAndPrintf("Removed %s", name)
 
 	return nil
 }

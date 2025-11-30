@@ -57,6 +57,8 @@ type DubboComponentSpec struct {
 	Base *BaseComponentSpec `json:"base,omitempty"`
 	// Using Zookeeper and Nacos as the registration plane.
 	Register *RegisterSpec `json:"register,omitempty"`
+	// Using Planet as the control plane.
+	Discovery *DiscoverySpec `json:"discovery,omitempty"`
 }
 
 type DubboDashboardSpec struct {
@@ -70,6 +72,11 @@ type RegisterSpec struct {
 	Zookeeper *RegisterComponentSpec `json:"zookeeper,omitempty"`
 }
 
+type DiscoverySpec struct {
+	// Planet component
+	Planet *DiscoveryComponentSpec `json:"planet,omitempty"`
+}
+
 type BaseComponentSpec struct {
 	// Selects whether this component is installed.
 	Enabled *BoolValue `json:"enabled,omitempty"`
@@ -81,6 +88,15 @@ type DashboardComponentSpec struct {
 }
 
 type RegisterComponentSpec struct {
+	// Selects whether this component is installed.
+	Enabled *BoolValue `json:"enabled,omitempty"`
+	// Namespace for the component.
+	Namespace string `json:"namespace,omitempty"`
+	// Raw is the raw inputs. This allows distinguishing unset vs zero-values for KubernetesResources
+	Raw map[string]any `json:"-"`
+}
+
+type DiscoveryComponentSpec struct {
 	// Selects whether this component is installed.
 	Enabled *BoolValue `json:"enabled,omitempty"`
 	// Namespace for the component.
