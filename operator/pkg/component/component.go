@@ -32,6 +32,7 @@ const (
 	NacosRegisterComponentName     Name = "Nacos"
 	ZookeeperRegisterComponentName Name = "Zookeeper"
 	AdminComponentName             Name = "Admin"
+	PlanetDiscoveryComponentName   Name = "Planet"
 )
 
 type Component struct {
@@ -72,6 +73,16 @@ var AllComponents = []Component{
 		HelmValuesTreeRoot: "admin",
 	},
 	{
+		UserFacingName:     PlanetDiscoveryComponentName,
+		SpecName:           "planet",
+		ResourceType:       "Deployment",
+		ResourceName:       "dubbod",
+		ContainerName:      "dubbo-discovery",
+		Default:            true,
+		HelmSubDir:         "dubbo-control/dubbo-discovery",
+		HelmValuesTreeRoot: "planet",
+	},
+	{
 		UserFacingName:     NacosRegisterComponentName,
 		SpecName:           "nacos",
 		ResourceType:       "StatefulSet",
@@ -99,13 +110,15 @@ var (
 		AdminComponentName:             "Admin Dashboard",
 		NacosRegisterComponentName:     "Nacos Register Plane",
 		ZookeeperRegisterComponentName: "Zookeeper Register Plane",
+		PlanetDiscoveryComponentName:   "Dubbo Control Plane",
 	}
 
 	Icons = map[Name]string{
-		BaseComponentName:              "",
-		NacosRegisterComponentName:     "",
-		ZookeeperRegisterComponentName: "",
-		AdminComponentName:             "",
+		BaseComponentName:              "🔮",
+		NacosRegisterComponentName:     "🔨",
+		ZookeeperRegisterComponentName: "🔧️",
+		AdminComponentName:             "🔭",
+		PlanetDiscoveryComponentName:   "🪐",
 	}
 )
 

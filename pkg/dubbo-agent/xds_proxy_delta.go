@@ -312,7 +312,6 @@ func (p *XdsProxy) handleUpstreamDeltaResponse(con *ProxyConnection) {
 			}
 
 			// Forward all delta responses to downstream (gRPC client)
-			// This is critical for proxyless gRPC clients to receive XDS configuration
 			if err := con.downstreamDeltas.Send(resp); err != nil {
 				proxyLog.Errorf("delta connection #%d failed to send response to downstream: %v", con.conID, err)
 				downstreamErr(con, err)

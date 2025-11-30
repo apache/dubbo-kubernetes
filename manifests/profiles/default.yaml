@@ -35,7 +35,8 @@ spec:
     base: {}
     nacos:
       enabled: true
-    zookeeper: {}
+    zookeeper:
+      enabled: false
 
 
 

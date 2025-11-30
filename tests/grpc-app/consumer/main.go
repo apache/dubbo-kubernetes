@@ -319,7 +319,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 		}
 	}
 
-	// CRITICAL: Reuse connections to avoid creating new xDS connections for each RPC call
+	// Reuse connections to avoid creating new xDS connections for each RPC call
 	// This prevents the RDS request loop issue and ensures stable connection state
 	s.connMutex.RLock()
 	cached, exists := s.connCache[req.Url]
@@ -329,11 +329,10 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 	}
 	s.connMutex.RUnlock()
 
-	// CRITICAL: Check if cached connection is still valid and not too old.
+	// Check if cached connection is still valid and not too old.
 	// When xDS config changes (e.g., TLS is added/removed), gRPC xDS client should update connections,
 	// but if the connection was established before xDS config was received, it may use old configuration.
 	// To ensure we use the latest xDS config, we clear connections older than 10 seconds.
-	// This ensures that when SubsetRule or PeerAuthentication is created/updated, connections are
 	// rebuilt quickly to use the new configuration.
 	const maxConnectionAge = 10 * time.Second
 	if exists && conn != nil {
@@ -367,7 +366,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 		// Double-check after acquiring write lock
 		if cached, exists = s.connCache[req.Url]; !exists || cached == nil || cached.conn == nil {
 			conn = nil
-			// CRITICAL: When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
+			// When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
 			// to fetch certificates from CertificateProvider. The CertificateProvider uses file_watcher
 			// to read certificate files. If the files are not ready or CertificateProvider is not
 			// initialized, certificate fetching will timeout.
@@ -393,7 +392,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 
 			// Dial with xDS URL - use background context, not the request context
 			// The request context might timeout before xDS configuration is received
-			// CRITICAL: When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
+			// When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
 			// to fetch certificates from CertificateProvider. This may take time, especially on
 			// first connection. We use a longer timeout context to allow certificate fetching.
 			log.Printf("ForwardEcho: creating new connection for %s...", req.Url)
@@ -422,14 +421,14 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 	initialState := conn.GetState()
 	log.Printf("ForwardEcho: initial connection state: %v", initialState)
 
-	// CRITICAL: Even if connection is READY, we need to verify it's still valid
+	// Even if connection is READY, we need to verify it's still valid
 	// because xDS configuration may have changed (e.g., from plaintext to TLS)
 	// and the cached connection might be using old configuration.
 	// gRPC xDS client should automatically update connections, but if the connection
 	// was established before xDS config was received, it might be using FallbackCreds (plaintext).
 	// We'll proceed with RPC calls, but if they fail with TLS/plaintext mismatch errors,
 	// we'll clear the cache and retry.
-	// CRITICAL: When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
+	// When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
 	// to fetch certificates from CertificateProvider during TLS handshake. The TLS handshake
 	// happens when the connection state transitions to READY. If CertificateProvider is not ready,
 	// the TLS handshake will timeout. We need to wait for the connection to be READY, which
@@ -440,7 +439,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 		// Only wait for new connections or connections that are not READY
 		// For gRPC xDS proxyless, we need to wait for the client to receive and process LDS/CDS/EDS
 		// The connection state may transition: IDLE -> CONNECTING -> READY (or TRANSIENT_FAILURE -> CONNECTING -> READY)
-		// CRITICAL: When TLS is configured, the TLS handshake happens during this state transition.
+		// When TLS is configured, the TLS handshake happens during this state transition.
 		// If CertificateProvider is not ready, the TLS handshake will timeout and connection will fail.
 		// We use a longer timeout (60 seconds) to allow CertificateProvider to fetch certificates.
 		log.Printf("ForwardEcho: waiting for xDS configuration to be processed and connection to be ready (60 seconds)...")
@@ -449,7 +448,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 		maxWait := 60 * time.Second
 
 		// Wait for state changes, allowing multiple state transitions
-		// CRITICAL: Don't exit on TRANSIENT_FAILURE - it may recover to READY
+		// Don't exit on TRANSIENT_FAILURE - it may recover to READY
 		stateChanged := false
 		currentState := initialState
 		startTime := time.Now()
@@ -569,7 +568,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 			errMsg := formatGRPCError(err, i, count)
 			output = append(output, errMsg)
 
-			// CRITICAL: Only clear cache if we detect specific TLS/plaintext mismatch errors.
+			// Only clear cache if we detect specific TLS/plaintext mismatch errors.
 			// TRANSIENT_FAILURE can occur for many reasons (e.g., xDS config updates, endpoint changes),
 			// so we should NOT clear cache on every TRANSIENT_FAILURE.
 			// Only clear cache when we detect explicit TLS-related errors that indicate a mismatch.
@@ -592,12 +591,11 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 				log.Printf("ForwardEcho: detected TLS/plaintext mismatch or CertificateProvider not ready error: %v", err)
 			}
 
-			// CRITICAL: When TLS mismatch is detected, immediately clear cache and force reconnection.
+			// When TLS mismatch is detected, immediately clear cache and force reconnection.
 			// This ensures that:
 			// 1. If client config changed (plaintext -> TLS), new connection uses TLS
 			// 2. If server config changed (TLS -> plaintext), new connection uses plaintext
 			// 3. Connection behavior is consistent with current xDS configuration
-			// According to Istio proxyless gRPC behavior:
 			// - When only client TLS (SubsetRule ISTIO_MUTUAL) but server plaintext: connection SHOULD FAIL
 			// - When client TLS + server mTLS (PeerAuthentication STRICT): connection SHOULD SUCCEED
 			// - When both plaintext: connection SHOULD SUCCEED
@@ -629,7 +627,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 				conn = nil
 				s.connMutex.Unlock()
 
-				// CRITICAL: Wait for xDS config to propagate and be processed by gRPC xDS client.
+				// Wait for xDS config to propagate and be processed by gRPC xDS client.
 				// When CDS/LDS config changes, it takes time for:
 				// 1. Control plane to push new config to gRPC xDS client
 				// 2. gRPC xDS client to process and apply new config
@@ -647,7 +645,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 				}
 
 				// Recreate connection - this will use current xDS config
-				// CRITICAL: When TLS is configured, gRPC xDS client needs to fetch certificates
+				// When TLS is configured, gRPC xDS client needs to fetch certificates
 				// from CertificateProvider. Use a longer timeout to allow certificate fetching.
 				log.Printf("ForwardEcho: recreating connection with current xDS config...")
 				creds, credErr := xdscreds.NewClientCredentials(xdscreds.ClientOptions{

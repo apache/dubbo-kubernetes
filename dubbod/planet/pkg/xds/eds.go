@@ -46,9 +46,7 @@ func edsNeedsPush(req *model.PushRequest, proxy *model.Proxy) bool {
 	if res, ok := xdsNeedsPush(req, proxy); ok {
 		return res
 	}
-	// CRITICAL FIX: For proxy requests (ProxyRequest reason), we should always push EDS
-	// This ensures that when a client explicitly requests EDS resources, we generate them
-	// even if there are no config updates. This is essential for proxyless gRPC clients
+	// For proxy requests (ProxyRequest reason), we should always push EDS
 	// that request specific EDS resources.
 	if req.Reason != nil && req.Reason.Has(model.ProxyRequest) {
 		log.Debugf("edsNeedsPush: ProxyRequest detected, pushing EDS even without config updates")
@@ -63,7 +61,6 @@ func edsNeedsPush(req *model.PushRequest, proxy *model.Proxy) bool {
 }
 
 func (eds *EdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
-	// CRITICAL: Log EDS generation attempt for debugging
 	log.Debugf("EDS Generate: proxy=%s, watchedResources=%d, req.Full=%v, req.ConfigsUpdated=%v",
 		proxy.ID, len(w.ResourceNames), req.Full, len(req.ConfigsUpdated))
 
@@ -110,16 +107,15 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 	regenerated := 0
 	for clusterName := range w.ResourceNames {
 		hostname := model.ParseSubsetKeyHostname(clusterName)
-		// CRITICAL FIX: Always check if this service was updated, even if edsUpdatedServices is nil
+		// Always check if this service was updated, even if edsUpdatedServices is nil
 		// For incremental pushes, we need to check ConfigsUpdated directly to ensure cache is cleared
 		serviceWasUpdated := false
 		if req.ConfigsUpdated != nil {
-			// CRITICAL: Log all ConfigsUpdated entries for debugging hostname matching
 			configKeys := make([]string, 0, len(req.ConfigsUpdated))
 			for ckey := range req.ConfigsUpdated {
 				configKeys = append(configKeys, fmt.Sprintf("%s/%s/%s", ckey.Kind, ckey.Namespace, ckey.Name))
 				if ckey.Kind == kind.ServiceEntry {
-					// CRITICAL: Match ConfigsUpdated.Name with hostname
+					// Match ConfigsUpdated.Name with hostname
 					// Both should be FQDN (e.g., "consumer.grpc-app.svc.cluster.local")
 					if ckey.Name == hostname {
 						serviceWasUpdated = true
@@ -130,15 +126,14 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 			}
 		}
 
-		// CRITICAL FIX: For proxyless gRPC, we MUST always process all watched clusters
+		// For proxyless gRPC, we MUST always process all watched clusters
 		// This ensures clients receive EDS updates even when endpoints become available or unavailable
 		// For non-proxyless (Istio behavior), we skip clusters that are not in edsUpdatedServices for incremental pushes
 		if edsUpdatedServices != nil {
 			if _, ok := edsUpdatedServices[hostname]; !ok {
 				// Cluster was not in edsUpdatedServices
 				if !serviceWasUpdated {
-					// CRITICAL: For proxyless gRPC, always process all clusters to ensure EDS is up-to-date
-					// This is essential because proxyless gRPC clients need to know endpoint state changes
+					// For proxyless gRPC, always process all clusters to ensure EDS is up-to-date
 					// even if the service wasn't explicitly updated in this push
 					if proxy.IsProxylessGrpc() {
 						log.Debugf("buildEndpoints: proxyless gRPC, processing cluster %s even though not in edsUpdatedServices (hostname=%s)", clusterName, hostname)
@@ -160,13 +155,13 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 			continue
 		}
 
-		// CRITICAL FIX: For proxyless gRPC, we must always regenerate EDS when serviceWasUpdated is true
+		// For proxyless gRPC, we must always regenerate EDS when serviceWasUpdated is true
 		// to ensure empty endpoints are sent when they become unavailable, and endpoints are sent when available.
 		// For incremental pushes (Full=false), we must always regenerate EDS
 		// if ConfigsUpdated contains this service, because endpoint health status may have changed.
 		// The cache may contain stale empty endpoints from when the endpoint was unhealthy.
 		// For full pushes, we can use cache if the service was not updated.
-		// CRITICAL: If this is an incremental push and ConfigsUpdated contains any ServiceEntry,
+		// If this is an incremental push and ConfigsUpdated contains any ServiceEntry,
 		// we must check if it matches this hostname. If it does, force regeneration.
 		shouldRegenerate := serviceWasUpdated
 		if !shouldRegenerate && !req.Full && req.ConfigsUpdated != nil {
@@ -180,9 +175,7 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 			}
 		}
 
-		// CRITICAL: For proxyless gRPC, if serviceWasUpdated is true, we must regenerate
-		// even if cache exists, to ensure endpoints are always up-to-date
-		// This is critical for preventing "weighted-target: no targets to pick from" errors
+		// For proxyless gRPC, if serviceWasUpdated is true, we must regenerate
 		if shouldRegenerate && proxy.IsProxylessGrpc() {
 			log.Debugf("buildEndpoints: proxyless gRPC, forcing regeneration for cluster %s (hostname=%s, serviceWasUpdated=%v)", clusterName, hostname, serviceWasUpdated)
 		}
@@ -203,7 +196,6 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 		// 1. A valid ClusterLoadAssignment with endpoints, or
 		// 2. An empty ClusterLoadAssignment (via buildEmptyClusterLoadAssignment)
 		// The empty ClusterLoadAssignment has an explicit empty Endpoints list,
-		// which is critical for proxyless gRPC clients to know the endpoint state
 		// and prevent "weighted-target: no targets to pick from" errors.
 		// The nil check below is defensive programming, but should never be true in practice.
 		if l == nil {
@@ -217,7 +209,6 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 		}
 		regenerated++
 
-		// CRITICAL: Log EDS push details for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
 		if len(l.Endpoints) == 0 {
 			empty++
 			if proxy.IsProxylessGrpc() {
@@ -262,15 +253,14 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 	for clusterName := range w.ResourceNames {
 		hostname := model.ParseSubsetKeyHostname(clusterName)
 
-		// CRITICAL FIX: For proxyless gRPC, we MUST always process all watched clusters
+		// For proxyless gRPC, we MUST always process all watched clusters
 		// This ensures clients receive EDS updates even when endpoints become available or unavailable
 		// For non-proxyless (Istio behavior), we skip clusters that are not in edsUpdatedServices for incremental pushes
 		serviceWasUpdated := false
 		if len(edsUpdatedServices) > 0 {
 			if _, ok := edsUpdatedServices[hostname]; !ok {
 				// Cluster was not in edsUpdatedServices
-				// CRITICAL: For proxyless gRPC, always process all clusters to ensure EDS is up-to-date
-				// This is essential because proxyless gRPC clients need to know endpoint state changes
+				// For proxyless gRPC, always process all clusters to ensure EDS is up-to-date
 				// even if the service wasn't explicitly updated in this push
 				if proxy.IsProxylessGrpc() {
 					log.Debugf("buildDeltaEndpoints: proxyless gRPC, processing cluster %s even though not in edsUpdatedServices (hostname=%s)", clusterName, hostname)
@@ -299,7 +289,7 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 			continue
 		}
 
-		// CRITICAL FIX: For proxyless gRPC, we must always regenerate EDS when serviceWasUpdated is true
+		// For proxyless gRPC, we must always regenerate EDS when serviceWasUpdated is true
 		// to ensure empty endpoints are sent when they become unavailable, and endpoints are sent when available.
 		// For incremental pushes (Full=false), we must always regenerate EDS
 		// if ConfigsUpdated contains this service, because endpoint health status may have changed.
@@ -316,9 +306,7 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 			}
 		}
 
-		// CRITICAL: For proxyless gRPC, if serviceWasUpdated is true, we must regenerate
-		// even if cache exists, to ensure endpoints are always up-to-date
-		// This is critical for preventing "weighted-target: no targets to pick from" errors
+		// For proxyless gRPC, if serviceWasUpdated is true, we must regenerate
 		if shouldRegenerate && proxy.IsProxylessGrpc() {
 			log.Debugf("buildDeltaEndpoints: proxyless gRPC, forcing regeneration for cluster %s (hostname=%s, serviceWasUpdated=%v)", clusterName, hostname, serviceWasUpdated)
 		}
@@ -339,7 +327,6 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 		// 1. A valid ClusterLoadAssignment with endpoints, or
 		// 2. An empty ClusterLoadAssignment (via buildEmptyClusterLoadAssignment)
 		// The empty ClusterLoadAssignment has an explicit empty Endpoints list,
-		// which is critical for proxyless gRPC clients to know the endpoint state
 		// and prevent "weighted-target: no targets to pick from" errors.
 		// The nil check below is defensive programming, but should never be true in practice.
 		if l == nil {
@@ -353,7 +340,6 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 		}
 		regenerated++
 
-		// CRITICAL: Log EDS push details for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
 		if len(l.Endpoints) == 0 {
 			empty++
 			if proxy.IsProxylessGrpc() {
@@ -372,8 +358,7 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 			}
 		}
 
-		// CRITICAL FIX: Always send ClusterLoadAssignment, even if empty
-		// This is essential for proxyless gRPC - clients need to know when endpoints are unavailable
+		// Always send ClusterLoadAssignment, even if empty
 		// Removing the cluster from the response causes "weighted-target: no targets to pick from" errors
 		// because the client never receives an update indicating endpoints are empty
 		resource := &discovery.Resource{

@@ -250,8 +250,11 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 
 var componentDependencies = map[component.Name][]component.Name{
 	component.BaseComponentName: {
+		component.PlanetDiscoveryComponentName,
 		component.NacosRegisterComponentName,
 		component.ZookeeperRegisterComponentName,
+	},
+	component.PlanetDiscoveryComponentName: {
 		component.AdminComponentName,
 	},
 	component.NacosRegisterComponentName:     {},

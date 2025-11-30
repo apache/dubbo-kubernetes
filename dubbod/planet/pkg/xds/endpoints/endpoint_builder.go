@@ -85,7 +85,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	}
 
 	// Get endpoints from the endpoint index
-	// CRITICAL: Log all available services in EndpointIndex for debugging
 	allServices := endpointIndex.AllServices()
 	if len(allServices) > 0 {
 		log.Infof("BuildClusterLoadAssignment: EndpointIndex contains %d services: %v", len(allServices), allServices)
@@ -95,7 +94,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 
 	shards, ok := endpointIndex.ShardsForService(string(b.hostname), b.service.Attributes.Namespace)
 	if !ok {
-		// CRITICAL: Log at INFO level for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
 		// Also log what services ARE available in the namespace
 		servicesInNamespace := endpointIndex.ServicesInNamespace(b.service.Attributes.Namespace)
 		log.Infof("BuildClusterLoadAssignment: no shards found for service %s in namespace %s (cluster=%s, port=%d, svcPort.Name='%s', svcPort.Port=%d). "+
@@ -105,7 +103,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
 
-	// CRITICAL: Log shards info before processing
+	// Log shards info before processing
 	shards.RLock()
 	shardCount := len(shards.Shards)
 	totalEndpointsInShards := 0
@@ -138,7 +136,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	var unhealthyCount int
 	var buildFailedCount int
 
-	// CRITICAL: Log all endpoint ServicePortNames for debugging port name matching issues
 	allServicePortNames := make(map[string]int)
 	for _, eps := range shards.Shards {
 		for _, ep := range eps {
@@ -158,7 +155,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 		for _, ep := range eps {
 			totalEndpoints++
 			// Filter by port name
-			// CRITICAL: According to Istio's implementation, we must match ServicePortName exactly
 			// However, if ServicePortName is empty, we should still include the endpoint if there's only one port
 			// This handles cases where EndpointSlice doesn't have port name but Service does
 			if ep.ServicePortName != svcPort.Name {
@@ -181,7 +177,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 				continue
 			}
 
-			// CRITICAL FIX: Following Istio's implementation, we should ALWAYS include endpoints in EDS,
 			// regardless of their health status. The client will decide whether to use them based on
 			// OverrideHostStatus in the Cluster configuration.
 			//
@@ -189,7 +184,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 			// we should still include them in EDS but mark them as UNHEALTHY. The client's OverrideHostStatus
 			// will determine if they can be used.
 			//
-			// This is critical for proxyless gRPC - even if endpoints are unhealthy, they should be
 			// included in EDS so the client knows they exist and can attempt to connect to them.
 			// The client will handle connection failures appropriately.
 			//
@@ -213,7 +207,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	}
 
 	if len(lbEndpoints) == 0 {
-		// CRITICAL: Log at WARN level for proxyless gRPC to help diagnose "weighted-target: no targets to pick from" errors
 		logLevel := log.Debugf
 		// For proxyless gRPC, log empty endpoints at INFO level to help diagnose connection issues
 		// This helps identify when endpoints are not available vs when they're filtered out
@@ -228,7 +221,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	}
 
 	// Create LocalityLbEndpoints with empty locality (default)
-	// CRITICAL: Log endpoint health status for debugging
 	healthyCount := 0
 	unhealthyInLbCount := 0
 	drainingCount := 0
@@ -324,8 +316,6 @@ func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbE
 }
 
 func buildEmptyClusterLoadAssignment(clusterName string) *endpoint.ClusterLoadAssignment {
-	// CRITICAL FIX: Following Istio's pattern, empty ClusterLoadAssignment should have empty Endpoints list
-	// This ensures gRPC proxyless clients receive the update and clear their endpoint cache,
 	// preventing "weighted-target: no targets to pick from" errors
 	return &endpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
@@ -340,7 +330,7 @@ func (b *EndpointBuilder) Cacheable() bool {
 
 // Key implements model.XdsCacheEntry
 func (b *EndpointBuilder) Key() any {
-	// CRITICAL FIX: EDS cache expects uint64 key, not string
+	// EDS cache expects uint64 key, not string
 	// Hash the cluster name to uint64 to match the cache type
 	return xxhash.Sum64String(b.clusterName)
 }
@@ -352,7 +342,7 @@ func (b *EndpointBuilder) Type() string {
 
 // DependentConfigs implements model.XdsCacheEntry
 func (b *EndpointBuilder) DependentConfigs() []model.ConfigHash {
-	// CRITICAL FIX: Return ServiceEntry ConfigHash so that EDS cache can be properly cleared
+	// Return ServiceEntry ConfigHash so that EDS cache can be properly cleared
 	// when endpoints are updated. Without this, cache.Clear() cannot find and remove stale EDS entries.
 	if b.service == nil {
 		return nil

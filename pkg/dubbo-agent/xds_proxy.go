@@ -803,7 +803,6 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 	}()
 
 	// Send initial LDS request with bootstrap Node to initialize connection
-	// This is critical for planet-discovery to recognize the connection and count it in ConnectedEndpoints
 	ldsReq := &discovery.DiscoveryRequest{
 		TypeUrl: model.ListenerType,
 		Node:    node,

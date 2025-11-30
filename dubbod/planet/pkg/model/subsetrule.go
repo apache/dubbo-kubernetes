@@ -113,7 +113,7 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 				} else {
 					// Merge TrafficPolicy fields, with TLS settings from the latest rule taking precedence
 					if rule.TrafficPolicy.Tls != nil {
-						// CRITICAL: TLS settings from the latest rule always win (ISTIO_MUTUAL/DUBBO_MUTUAL)
+						// TLS settings from the latest rule always win (ISTIO_MUTUAL/DUBBO_MUTUAL)
 						mergedRule.TrafficPolicy.Tls = rule.TrafficPolicy.Tls
 						log.Infof("mergeSubsetRule: updated TLS settings in merged TrafficPolicy for host %s (mode: %v)",
 							resolvedHost, rule.TrafficPolicy.Tls.Mode)

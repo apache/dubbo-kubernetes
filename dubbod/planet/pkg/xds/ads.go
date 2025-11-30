@@ -137,7 +137,6 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 	}
 
 	// Trigger a ConfigUpdate to ensure ConnectedEndpoints count is updated in subsequent XDS: Pushing logs.
-	// This ensures that when the next global push happens, the count reflects the newly established connection.
 	// The push will be debounced, so this is safe to call.
 	s.ConfigUpdate(&model.PushRequest{
 		Full:   true,
@@ -317,7 +316,7 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 
 	shouldRespond, delta := xds.ShouldRespond(con.proxy, con.ID(), req)
 
-	// CRITICAL: Log NEW requests (will respond) at INFO level so every grpcurl request is visible
+	// Log NEW requests (will respond) at INFO level so every grpcurl request is visible
 	// This ensures every grpcurl request triggers visible xDS logs in control plane
 	// Format: "LDS: REQ node-xxx resources:1 nonce:abc123 [resource1, resource2] (will respond)"
 	resourceNamesStr := ""
@@ -347,7 +346,7 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		return nil
 	}
 
-	// CRITICAL FIX: For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
+	// For proxyless gRPC, if client sends wildcard (empty ResourceNames) after receiving specific resources,
 	// this is likely an ACK and we should NOT push all resources again
 	// Check if this is a wildcard request after specific resources were sent
 	watchedResource := con.proxy.GetWatchedResource(req.TypeUrl)
@@ -388,7 +387,7 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		Forced: false, // Only recompute ServiceTargets when ConfigsUpdated indicates service changes
 	}
 
-	// CRITICAL FIX: Get WatchedResource after ShouldRespond has created it
+	// Get WatchedResource after ShouldRespond has created it
 	// ShouldRespond may have created a new WatchedResource for first-time requests
 	w := con.proxy.GetWatchedResource(req.TypeUrl)
 	if w == nil {
