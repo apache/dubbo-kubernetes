@@ -107,10 +107,10 @@ var AllComponents = []Component{
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:              "Dubbo Resource Core",
-		AdminComponentName:             "Admin Dashboard",
+		PlanetDiscoveryComponentName:   "Dubbo Control Plane",
 		NacosRegisterComponentName:     "Nacos Register Plane",
 		ZookeeperRegisterComponentName: "Zookeeper Register Plane",
-		PlanetDiscoveryComponentName:   "Dubbo Control Plane",
+		AdminComponentName:             "Admin Dashboard",
 	}
 
 	Icons = map[Name]string{
@@ -164,6 +164,19 @@ func (c Component) Get(merged values.Map) ([]apis.DefaultCompSpec, error) {
 	}
 	if c.ContainerName == "register-discovery" {
 		s, ok := merged.GetPathMap("spec.components.register." + c.SpecName)
+		if !ok {
+			return defaultResp, nil
+		}
+		spec, err := buildSpec(s)
+		if err != nil {
+			return nil, err
+		}
+		if !(spec.Enabled.GetValueOrTrue()) {
+			return nil, nil
+		}
+	}
+	if c.ContainerName == "dubbo-discovery" {
+		s, ok := merged.GetPathMap("spec.components.discovery." + c.SpecName)
 		if !ok {
 			return defaultResp, nil
 		}

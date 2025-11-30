@@ -15,8 +15,6 @@
 
 _internal_default_values_not_set:
   rollingPartition: ""
-  # Whether to enable the nacos.
-  enabled: false
   # Specifies the mode in which nacos is running (standalone, cluster, etc.).
   mode: ""
   # Number of replicas for the Deployment.

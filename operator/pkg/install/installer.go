@@ -20,6 +20,9 @@ package install
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/uninstall"
@@ -36,8 +39,6 @@ import (
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
-	"sync"
-	"time"
 )
 
 type Installer struct {
@@ -190,7 +191,8 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 		return nil
 	}
 
-	i.ProgressInfo.SetState(progress.StatePruning)
+	// During installation, pruning should be silent - only show progress bar, not detailed messages
+	// i.ProgressInfo.SetState(progress.StatePruning) // Commented out to avoid showing "Pruning removed resources" during install
 
 	// Build up a map of component->resources, so we know what to keep around
 	excluded := map[component.Name]sets.String{}
@@ -239,7 +241,10 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 				if !compLabels.Matches(klabels.Set(obj.GetLabels())) {
 					continue
 				}
-				if err := uninstall.DeleteResource(i.Kube, i.DryRun, i.Logger, &obj); err != nil {
+				// During installation, use a silent logger to avoid showing "Removed" messages
+				// The pruning progress is already shown by the progress bar
+				silentLogger := clog.NewSilentLogger()
+				if err := uninstall.DeleteResource(i.Kube, i.DryRun, silentLogger, &obj); err != nil {
 					errs = append(errs, err)
 				}
 			}
@@ -249,17 +254,17 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 }
 
 var componentDependencies = map[component.Name][]component.Name{
-	component.BaseComponentName: {
-		component.PlanetDiscoveryComponentName,
-		component.NacosRegisterComponentName,
-		component.ZookeeperRegisterComponentName,
-	},
 	component.PlanetDiscoveryComponentName: {
 		component.AdminComponentName,
 	},
 	component.NacosRegisterComponentName:     {},
 	component.ZookeeperRegisterComponentName: {},
-	component.AdminComponentName:             {},
+	component.BaseComponentName: {
+		component.PlanetDiscoveryComponentName,
+		component.NacosRegisterComponentName,
+		component.ZookeeperRegisterComponentName,
+	},
+	component.AdminComponentName: {},
 }
 
 func dependenciesChannels() map[component.Name]chan struct{} {
