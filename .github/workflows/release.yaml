@@ -60,7 +60,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Update navi-discovery logic code.
+            add dubbo daemon 
+            add dubbod load test
+            add sample grpc-app
+            add test grpc-app
           draft: false
           prerelease: false
 
