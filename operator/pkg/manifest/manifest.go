@@ -19,6 +19,7 @@ package manifest
 
 import (
 	"encoding/json"
+
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -75,7 +76,7 @@ func (m Manifest) Hash() string {
 func ObjectHash(o *unstructured.Unstructured) string {
 	k := o.GroupVersionKind().Kind
 	switch o.GroupVersionKind().Kind {
-	case "ClusterRole", "ClusterRoleBinding":
+	case "ClusterRole", "ClusterRoleBinding", "MutatingWebhookConfiguration", "ValidatingWebhookConfiguration":
 		return k + ":" + o.GetName()
 	}
 	return k + ":" + o.GetNamespace() + ":" + o.GetName()

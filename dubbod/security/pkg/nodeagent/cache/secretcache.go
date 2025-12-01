@@ -244,7 +244,7 @@ func (sc *SecretManagerClient) getCachedSecret(resourceName string) (secret *sec
 				ResourceName: resourceName,
 				RootCert:     rootCertBundle,
 			}
-			cacheLog.Infof("returned workload trust anchor from cache (ttl=%v)", time.Until(c.ExpireTime))
+			cacheLog.Debugf("returned workload trust anchor from cache (ttl=%v)", time.Until(c.ExpireTime))
 		} else {
 			ns = &security.SecretItem{
 				ResourceName:     resourceName,
@@ -253,7 +253,7 @@ func (sc *SecretManagerClient) getCachedSecret(resourceName string) (secret *sec
 				ExpireTime:       c.ExpireTime,
 				CreatedTime:      c.CreatedTime,
 			}
-			cacheLog.Infof("returned workload certificate from cache (ttl=%v)", time.Until(c.ExpireTime))
+			cacheLog.Debugf("returned workload certificate from cache (ttl=%v)", time.Until(c.ExpireTime))
 		}
 
 		return ns
@@ -314,7 +314,7 @@ func (sc *SecretManagerClient) generateNewSecret(resourceName string) (*security
 	cacheLog.WithLabels("resourceName", resourceName,
 		"latency", time.Since(t0),
 		"ttl", time.Until(expireTime)).
-		Info("generated new workload certificate")
+		Debug("generated new workload certificate")
 
 	if len(trustBundlePEM) > 0 {
 		rootCertPEM = concatCerts(trustBundlePEM)

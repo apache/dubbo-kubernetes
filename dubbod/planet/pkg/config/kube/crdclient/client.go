@@ -153,15 +153,15 @@ func (cl *Client) allKinds() map[config.GroupVersionKind]nsStore {
 }
 
 func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
-	cl.logger.Infof("addCRD: adding CRD %q", name)
+	cl.logger.Debugf("addCRD: adding CRD %q", name)
 	s, f := cl.schemasByCRDName[name]
 	if !f {
-		cl.logger.Warnf("addCRD: added resource that we are not watching: %v", name)
+		cl.logger.Debugf("addCRD: added resource that we are not watching: %v", name)
 		return
 	}
 	resourceGVK := s.GroupVersionKind()
 	gvr := s.GroupVersionResource()
-	cl.logger.Infof("addCRD: CRD %q maps to GVK %v, GVR %v", name, resourceGVK, gvr)
+	cl.logger.Debugf("addCRD: CRD %q maps to GVK %v, GVR %v", name, resourceGVK, gvr)
 
 	cl.kindsMu.Lock()
 	defer cl.kindsMu.Unlock()
@@ -191,9 +191,9 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	var namespaceFilter kubetypes.DynamicObjectFilter
 	if !s.IsClusterScoped() {
 		namespaceFilter = cl.client.ObjectFilter()
-		cl.logger.Infof("addCRD: using namespace filter for %v (not cluster-scoped)", resourceGVK)
+		cl.logger.Debugf("addCRD: using namespace filter for %v (not cluster-scoped)", resourceGVK)
 	} else {
-		cl.logger.Infof("addCRD: no namespace filter for %v (cluster-scoped)", resourceGVK)
+		cl.logger.Debugf("addCRD: no namespace filter for %v (cluster-scoped)", resourceGVK)
 	}
 
 	filter := kubetypes.Filter{
@@ -201,7 +201,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 		ObjectTransform: transform,
 		FieldSelector:   fieldSelector,
 	}
-	cl.logger.Infof("addCRD: created filter for %v (namespaceFilter=%v, extraFilter=%v, fieldSelector=%v)", resourceGVK, namespaceFilter != nil, extraFilter != nil, fieldSelector)
+	cl.logger.Debugf("addCRD: created filter for %v (namespaceFilter=%v, extraFilter=%v, fieldSelector=%v)", resourceGVK, namespaceFilter != nil, extraFilter != nil, fieldSelector)
 
 	var kc kclient.Untyped
 	if s.IsBuiltin() {
@@ -212,7 +212,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 		informerType := kubetypes.StandardInformer
 		if resourceGVK == gvk.SubsetRule || resourceGVK == gvk.ServiceRoute || resourceGVK == gvk.PeerAuthentication {
 			informerType = kubetypes.DynamicInformer
-			cl.logger.Infof("addCRD: using DynamicInformer for %v (uses Dynamic client)", resourceGVK)
+			cl.logger.Debugf("addCRD: using DynamicInformer for %v (uses Dynamic client)", resourceGVK)
 		}
 		kc = kclient.NewDelayedInformer[controllers.Object](
 			cl.client,
@@ -235,7 +235,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	// This helps diagnose if events are being filtered before reaching the collection
 	wrappedClientDebugHandler := wrappedClient.RegisterBatch(func(o []krt.Event[controllers.Object]) {
 		if len(o) > 0 {
-			cl.logger.Infof("addCRD: wrappedClient event detected for %v: %d events", resourceGVK, len(o))
+			cl.logger.Debugf("addCRD: wrappedClient event detected for %v: %d events", resourceGVK, len(o))
 			for i, event := range o {
 				var nameStr, nsStr string
 				if event.New != nil {
@@ -247,7 +247,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 					nameStr = obj.GetName()
 					nsStr = obj.GetNamespace()
 				}
-				cl.logger.Infof("addCRD: wrappedClient event[%d] %s for %v (name=%s/%s)",
+				cl.logger.Debugf("addCRD: wrappedClient event[%d] %s for %v (name=%s/%s)",
 					i, event.Event, resourceGVK, nsStr, nameStr)
 			}
 		}
@@ -257,7 +257,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	// Use false to match Istio's implementation - only process future events, not initial sync
 	debugHandler := collection.RegisterBatch(func(o []krt.Event[config.Config]) {
 		if len(o) > 0 {
-			cl.logger.Infof("addCRD: collection event detected for %v: %d events", resourceGVK, len(o))
+			cl.logger.Debugf("addCRD: collection event detected for %v: %d events", resourceGVK, len(o))
 			for i, event := range o {
 				var nameStr, nsStr string
 				if event.New != nil {
@@ -267,7 +267,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 					nameStr = event.Old.Name
 					nsStr = event.Old.Namespace
 				}
-				cl.logger.Infof("addCRD: collection event[%d] %s for %v (name=%s/%s)",
+				cl.logger.Debugf("addCRD: collection event[%d] %s for %v (name=%s/%s)",
 					i, event.Event, resourceGVK, nsStr, nameStr)
 			}
 		}
@@ -303,13 +303,13 @@ func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler mod
 		return
 	}
 
-	cl.logger.Infof("RegisterEventHandler: registering handler for %v", kind)
+	cl.logger.Debugf("RegisterEventHandler: registering handler for %v", kind)
 	// Match Istio's implementation: RegisterBatch returns a HandlerRegistration that is already
 	// registered with the collection, so we just need to append it to handlers to keep a reference
 	// The handler will be called by the collection when events occur, regardless of whether we
 	// update cl.kinds[kind] or not. However, we update it to keep the handlers slice in sync.
 	handlerReg := c.collection.RegisterBatch(func(o []krt.Event[config.Config]) {
-		cl.logger.Infof("RegisterEventHandler: batch handler triggered for %v with %d events", kind, len(o))
+		cl.logger.Debugf("RegisterEventHandler: batch handler triggered for %v with %d events", kind, len(o))
 		for i, event := range o {
 			var nameStr, nsStr string
 			if event.New != nil {
@@ -319,7 +319,7 @@ func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler mod
 				nameStr = event.Old.Name
 				nsStr = event.Old.Namespace
 			}
-			cl.logger.Infof("RegisterEventHandler: processing event[%d] %s for %v (name=%s/%s)",
+			cl.logger.Debugf("RegisterEventHandler: processing event[%d] %s for %v (name=%s/%s)",
 				i, event.Event, kind, nsStr, nameStr)
 			switch event.Event {
 			case controllers.EventAdd:
@@ -346,7 +346,7 @@ func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler mod
 	// Update handlers slice to keep reference (though not strictly necessary for functionality)
 	c.handlers = append(c.handlers, handlerReg)
 	cl.kinds[kind] = c
-	cl.logger.Infof("RegisterEventHandler: successfully registered handler for %v", kind)
+	cl.logger.Debugf("RegisterEventHandler: successfully registered handler for %v", kind)
 }
 
 func (cl *Client) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
@@ -438,26 +438,26 @@ func (cl *Client) List(kind config.GroupVersionKind, namespace string) []config.
 	if namespace == metav1.NamespaceAll {
 		// Get all configs from collection
 		configs = h.collection.List()
-		cl.logger.Infof("List: found %d configs for %v (namespace=all, synced=%v)",
+		cl.logger.Debugf("List: found %d configs for %v (namespace=all, synced=%v)",
 			len(configs), kind, h.collection.HasSynced())
 		if len(configs) > 0 {
 			for i, cfg := range configs {
-				cl.logger.Infof("List: config[%d] %s/%s for %v", i, cfg.Namespace, cfg.Name, kind)
+				cl.logger.Debugf("List: config[%d] %s/%s for %v", i, cfg.Namespace, cfg.Name, kind)
 			}
 		} else {
-			cl.logger.Warnf("List: collection returned 0 configs for %v (synced=%v), this may indicate informer is not watching correctly or resources are being filtered", kind, h.collection.HasSynced())
+			cl.logger.Debugf("List: collection returned 0 configs for %v (synced=%v), this may indicate informer is not watching correctly or resources are being filtered", kind, h.collection.HasSynced())
 		}
 		// Log collection type for diagnosis
-		cl.logger.Infof("List: collection type is %T, HasSynced=%v", h.collection, h.collection.HasSynced())
+		cl.logger.Debugf("List: collection type is %T, HasSynced=%v", h.collection, h.collection.HasSynced())
 	} else {
 		configs = h.index.Lookup(namespace)
-		cl.logger.Infof("List: found %d configs for %v in namespace %s (synced=%v)", len(configs), kind, namespace, h.collection.HasSynced())
+		cl.logger.Debugf("List: found %d configs for %v in namespace %s (synced=%v)", len(configs), kind, namespace, h.collection.HasSynced())
 		if len(configs) > 0 {
 			for i, cfg := range configs {
-				cl.logger.Infof("List: config[%d] %s/%s for %v", i, cfg.Namespace, cfg.Name, kind)
+				cl.logger.Debugf("List: config[%d] %s/%s for %v", i, cfg.Namespace, cfg.Name, kind)
 			}
 		} else {
-			cl.logger.Warnf("List: found 0 configs for %v in namespace %s (synced=%v), checking if resources exist in cluster", kind, namespace, h.collection.HasSynced())
+			cl.logger.Debugf("List: found 0 configs for %v in namespace %s (synced=%v), checking if resources exist in cluster", kind, namespace, h.collection.HasSynced())
 		}
 	}
 

@@ -210,10 +210,10 @@ func (n *informerClient[T]) List(namespace string, selector klabels.Selector) []
 	})
 
 	if err != nil {
-		log.Warnf("informerClient.List: lister returned err for namespace=%s: %v", namespace, err)
+		log.Debugf("informerClient.List: lister returned err for namespace=%s: %v", namespace, err)
 	}
 	if namespace == metav1.NamespaceAll {
-		log.Infof("informerClient.List: namespace=%s, total=%d, filtered=%d, result=%d", namespace, totalCount, filteredCount, len(res))
+		log.Debugf("informerClient.List: namespace=%s, total=%d, filtered=%d, result=%d", namespace, totalCount, filteredCount, len(res))
 	} else if filteredCount > 0 {
 		log.Debugf("informerClient.List: filtered out %d items for namespace=%s (total=%d, result=%d)", filteredCount, namespace, totalCount, len(res))
 	}
@@ -311,7 +311,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 			allowed := n.filter(cast)
 			if !allowed {
 				// Log when objects are filtered out to help diagnose missing events
-				log.Infof("informerClient.AddEventHandler: FilterFunc filtered out object %s/%s", nsStr, nameStr)
+				log.Debugf("informerClient.AddEventHandler: FilterFunc filtered out object %s/%s", nsStr, nameStr)
 			} else {
 				log.Debugf("informerClient.AddEventHandler: FilterFunc allowing object %s/%s", nsStr, nameStr)
 			}
@@ -327,7 +327,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 					nsStr = objWithNs.GetNamespace()
 					nameStr = objWithNs.GetName()
 				}
-				log.Infof("informerClient.AddEventHandler: OnAdd called for %s/%s", nsStr, nameStr)
+				log.Debugf("informerClient.AddEventHandler: OnAdd called for %s/%s", nsStr, nameStr)
 				h.OnAdd(obj, false)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -339,7 +339,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 					nsStr = objWithNs.GetNamespace()
 					nameStr = objWithNs.GetName()
 				}
-				log.Infof("informerClient.AddEventHandler: OnUpdate called for %s/%s", nsStr, nameStr)
+				log.Debugf("informerClient.AddEventHandler: OnUpdate called for %s/%s", nsStr, nameStr)
 				h.OnUpdate(oldObj, newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -351,7 +351,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 					nsStr = objWithNs.GetNamespace()
 					nameStr = objWithNs.GetName()
 				}
-				log.Infof("informerClient.AddEventHandler: OnDelete called for %s/%s", nsStr, nameStr)
+				log.Debugf("informerClient.AddEventHandler: OnDelete called for %s/%s", nsStr, nameStr)
 				h.OnDelete(obj)
 			},
 		},

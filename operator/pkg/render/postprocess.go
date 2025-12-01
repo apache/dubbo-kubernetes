@@ -18,7 +18,9 @@
 package render
 
 import (
+	"encoding/json"
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/operator/pkg/component"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/values"
@@ -36,6 +38,46 @@ type patchContext struct {
 func postProcess(_ component.Component, manifests []manifest.Manifest, _ values.Map) ([]manifest.Manifest, error) {
 	// needPatching builds a map of manifest index -> patch. This ensures we only do the full round-tripping once per object.
 	needPatching := map[int][]patchContext{}
+
+	// Remove namespace field from cluster-scoped resources
+	clusterScopedKinds := map[string]bool{
+		"MutatingWebhookConfiguration":   true,
+		"ValidatingWebhookConfiguration": true,
+		"ClusterRole":                    true,
+		"ClusterRoleBinding":             true,
+		"CustomResourceDefinition":       true,
+	}
+
+	for idx := range manifests {
+		m := manifests[idx]
+		kind := m.GroupVersionKind().Kind
+		if clusterScopedKinds[kind] && m.GetNamespace() != "" {
+			// Remove namespace field from cluster-scoped resources
+			baseJSON, err := yaml.YAMLToJSON([]byte(m.Content))
+			if err != nil {
+				return nil, err
+			}
+			// Parse JSON to remove namespace field
+			var obj map[string]interface{}
+			if err := json.Unmarshal(baseJSON, &obj); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
+			}
+			if metadata, ok := obj["metadata"].(map[string]interface{}); ok {
+				delete(metadata, "namespace")
+			}
+			// Convert back to JSON
+			newJSON, err := json.Marshal(obj)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal JSON: %v", err)
+			}
+			nm, err := manifest.FromJSON(newJSON)
+			if err != nil {
+				return nil, err
+			}
+			manifests[idx] = nm
+		}
+	}
+
 	// For anything needing a patch, apply them.
 	for idx, patches := range needPatching {
 		m := manifests[idx]

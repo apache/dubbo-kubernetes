@@ -17,12 +17,12 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: producer
-  name: producer
+    app: provider
+  name: provider
   namespace: grpc-app
 spec:
   selector:
-    app: producer
+    app: provider
   type: ClusterIP
   ports:
     - name: grpc
@@ -32,13 +32,13 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: producer-v1
+  name: provider-v1
   namespace: grpc-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: producer
+      app: provider
       version: v1
   template:
     metadata:
@@ -47,12 +47,12 @@ spec:
         inject.dubbo.apache.org/templates: grpc-agent
         proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
-        app: producer
+        app: provider
         version: v1
     spec:
       containers:
         - name: app
-          image: mfordjody/grpc-producer:dev-debug
+          image: mfordjody/grpc-provider:dev-debug
           imagePullPolicy: Always
           ports:
             - containerPort: 17070
@@ -102,13 +102,13 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: producer-v2
+  name: provider-v2
   namespace: grpc-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: producer
+      app: provider
       version: v2
   template:
     metadata:
@@ -117,12 +117,12 @@ spec:
         inject.dubbo.apache.org/templates: grpc-agent
         proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
-        app: producer
+        app: provider
         version: v2
     spec:
       containers:
         - name: app
-          image: mfordjody/grpc-producer:dev-debug
+          image: mfordjody/grpc-provider:dev-debug
           imagePullPolicy: Always
           ports:
             - containerPort: 17070

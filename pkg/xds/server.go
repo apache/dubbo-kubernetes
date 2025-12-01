@@ -288,8 +288,8 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 
 	previousInfo := w.GetWatchedResource(request.TypeUrl)
 	// This can happen in two cases:
-	// 1. When Envoy starts for the first time, it sends an initial Discovery request to Istiod.
-	// 2. When Envoy reconnects to a new Istiod that does not have information about this typeUrl
+	// 1. When an xDS client (Envoy, gRPC xDS client, etc.) starts for the first time, it sends an initial Discovery request.
+	// 2. When an xDS client reconnects to a new control plane that does not have information about this typeUrl
 	// i.e. non empty response nonce.
 	// We should always respond with the current resource names.
 	if previousInfo == nil {
@@ -320,11 +320,11 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	}
 
 	// If there is mismatch in the nonce, that is a case of expired/stale nonce.
-	// A nonce becomes stale following a newer nonce being sent to Envoy.
+	// A nonce becomes stale following a newer nonce being sent to the xDS client.
 	// previousInfo.NonceSent can be empty if we previously had shouldRespond=true but didn't send any resources.
 	if request.ResponseNonce != previousInfo.NonceSent {
 		newResources := sets.New(request.ResourceNames...)
-		// Special-case proxyless gRPC: Envoy will send a "stale" nonce when it changes
+		// Special-case proxyless gRPC: xDS clients may send a "stale" nonce when they change
 		// subscriptions (e.g., after ServiceRoute introduces subset clusters). Treat this
 		// as a resource change rather than an ACK so the new clusters get a response.
 		previousResourcesCopy := previousInfo.ResourceNames.Copy()
@@ -378,8 +378,8 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		return wr
 	})
 
-	// Envoy can send two DiscoveryRequests with same version and nonce.
-	// when it detects a new resource. We should respond if they change.
+	// xDS clients can send two DiscoveryRequests with same version and nonce
+	// when they detect a new resource. We should respond if they change.
 	removed := previousResources.Difference(cur)
 	added := cur.Difference(previousResources)
 
@@ -408,7 +408,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		return false, emptyResourceDelta
 	}
 
-	// We should always respond "alwaysRespond" marked requests to let Envoy finish warming
+	// We should always respond "alwaysRespond" marked requests to let xDS clients finish warming
 	// even though Nonce match and it looks like an ACK.
 	if alwaysRespond {
 		log.Infof("%s: FORCE RESPONSE %s for warming.", stype, id)

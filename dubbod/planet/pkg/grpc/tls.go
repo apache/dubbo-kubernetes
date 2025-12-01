@@ -80,7 +80,7 @@ func getTLSDialOption(opts *TLSOptions) (grpc.DialOption, error) {
 	}
 	// For debugging on localhost (with port forward)
 	if strings.Contains(config.ServerName, "localhost") {
-		config.ServerName = "istiod.istio-system.svc"
+		config.ServerName = "dubbod.dubbo-system.svc"
 	}
 	if opts.SAN != "" {
 		config.ServerName = opts.SAN

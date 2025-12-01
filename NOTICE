@@ -9,3 +9,11 @@ For additional information about the Apache Software Foundation, please see
 
 Portions of this file are based on code from the Istio project
 (https://github.com/istio/istio), licensed under the Apache License, Version 2.0.
+
+The following files contain code derived from Istio:
+  - pkg/env/var.go (derived from istio/pkg/env/var.go)
+  - pkg/features/security.go (derived from istio/pkg/features/security.go)
+  - pkg/filewatcher/filewatcher.go (derived from istio/pkg/filewatcher/filewatcher.go)
+  - pkg/filewatcher/worker.go (derived from istio/pkg/filewatcher/worker.go)
+  - pkg/h2c/wrapper.go (derived from istio/pkg/h2c/wrapper.go)
+  - pkg/keepalive/options.go (derived from istio/pkg/keepalive/options.go)

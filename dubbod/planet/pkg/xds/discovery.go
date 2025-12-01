@@ -393,7 +393,7 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 	// 2. Endpoints become unavailable (from non-empty to empty)
 	// 3. Endpoint health status changes
 	if pushType == model.IncrementalPush || pushType == model.FullPush {
-		log.Infof("EDSUpdate: service %s/%s triggering %v push (endpoints=%d)", namespace, serviceName, pushType, len(dubboEndpoints))
+		log.Debugf("EDSUpdate: service %s/%s triggering %v push (endpoints=%d)", namespace, serviceName, pushType, len(dubboEndpoints))
 		s.ConfigUpdate(&model.PushRequest{
 			Full:           pushType == model.FullPush,
 			ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
@@ -406,7 +406,7 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 		// 2. But we still need to notify clients about the current state
 		// For proxyless gRPC, we should push even if endpoints are empty to ensure clients know the state
 		if len(dubboEndpoints) == 0 {
-			log.Infof("EDSUpdate: service %s/%s endpoints became empty (NoPush), forcing push to clear client cache", namespace, serviceName)
+			log.Debugf("EDSUpdate: service %s/%s endpoints became empty (NoPush), forcing push to clear client cache", namespace, serviceName)
 			s.ConfigUpdate(&model.PushRequest{
 				Full:           false, // Incremental push
 				ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),

@@ -114,12 +114,10 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 	if config == nil {
 		return errNotFound
 	}
-	// prevents a race condition between multiple istiods when the revision is changed or modified
 	v, ok := config.Labels["dubbo.apache.org/rev"]
 	if !ok {
 		return nil
 	}
-	log.Infof("This is webhook label: %v", v)
 
 	if v != w.revision {
 		return errWrongRevision

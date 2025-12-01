@@ -64,6 +64,5 @@ func (s *Server) initSecureWebhookServer(args *PlanetArgs) {
 		TLSConfig: tlsConfig,
 	}
 
-	// register istiodReadyHandler on the httpsMux so that readiness can also be checked remotely
 	s.httpsMux.HandleFunc("/ready", s.dubbodReadyHandler)
 }

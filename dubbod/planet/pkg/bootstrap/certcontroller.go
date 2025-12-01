@@ -125,13 +125,13 @@ func (s *Server) initDNSCertsK8SRA() error {
 			newCertChain, newKeyPEM, _, err := chiron.GenKeyCertK8sCA(s.kubeClient.Kube(),
 				strings.Join(s.dnsNames, ","), "", signerName, true, SelfSignedCACertTTL.Get())
 			if err != nil {
-				log.Errorf("failed regenerating key and cert for istiod by kubernetes: %v", err)
+				log.Errorf("failed regenerating key and cert for dubbod by kubernetes: %v", err)
 			}
 			s.dubbodCertBundleWatcher.SetAndNotify(newKeyPEM, newCertChain, newCaBundle)
 		}
 	})
 
-	s.addStartFunc("istiod server certificate rotation", func(stop <-chan struct{}) error {
+	s.addStartFunc("dubbod server certificate rotation", func(stop <-chan struct{}) error {
 		go func() {
 			// Track TTL of DNS cert and renew cert in accordance to grace period.
 			s.RotateDNSCertForK8sCA(stop, "", signerName, true, SelfSignedCACertTTL.Get())

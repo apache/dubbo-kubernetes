@@ -160,18 +160,18 @@ func makeStore(stores []model.ConfigStore, writer model.ConfigStore) (model.Conf
 
 func (cr *storeCache) RegisterEventHandler(kind config.GroupVersionKind, handler model.EventHandler) {
 	log := log.RegisterScope("aggregate", "aggregate config controller")
-	log.Infof("RegisterEventHandler: registering handler for %v across %d caches", kind, len(cr.caches))
+	log.Debugf("RegisterEventHandler: registering handler for %v across %d caches", kind, len(cr.caches))
 	registeredCount := 0
 	for i, cache := range cr.caches {
 		if _, exists := cache.Schemas().FindByGroupVersionKind(kind); exists {
-			log.Infof("RegisterEventHandler: registering handler for %v on cache[%d] (type=%T)", kind, i, cache)
+			log.Debugf("RegisterEventHandler: registering handler for %v on cache[%d] (type=%T)", kind, i, cache)
 			cache.RegisterEventHandler(kind, handler)
 			registeredCount++
 		} else {
 			log.Debugf("RegisterEventHandler: cache[%d] does not support %v, skipping", i, kind)
 		}
 	}
-	log.Infof("RegisterEventHandler: successfully registered handler for %v on %d caches", kind, registeredCount)
+	log.Debugf("RegisterEventHandler: successfully registered handler for %v on %d caches", kind, registeredCount)
 }
 
 func (cr *storeCache) Run(stop <-chan struct{}) {

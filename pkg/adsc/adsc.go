@@ -86,17 +86,12 @@ type Config struct {
 	XDSRootCAFile string
 	// XDSSAN is the expected SAN of the XDS server. If not set, the ProxyConfig.DiscoveryAddress is used.
 	XDSSAN string
-	// InsecureSkipVerify skips client verification the server's certificate chain and host name.
-	InsecureSkipVerify bool
 	// Workload defaults to 'test'
 	Workload string
 	// Revision for this control plane instance. We will only read configs that match this revision.
 	Revision string
 	// Meta includes additional metadata for the node
 	Meta *pstruct.Struct
-	// IP is currently the primary key used to locate inbound configs. It is sent by client,
-	// must match a known endpoint IP. Tests can use a ServiceEntry to register fake IPs.
-	IP string
 	// BackoffPolicy determines the reconnect policy. Based on MCP client.
 	BackoffPolicy backoff.BackOff
 }

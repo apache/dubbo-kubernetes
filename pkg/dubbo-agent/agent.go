@@ -159,7 +159,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed generating gRPC XDS bootstrap: %v", err)
 		}
-		// Prepare Node for preemptive connection, but don't set it yet
+		// Prepare Node for upstream connection, but don't set it yet
 		// We'll set it after status port starts and certificates are generated
 		if node != nil && a.xdsProxy != nil {
 			bootstrapNode = &core.Node{
@@ -220,8 +220,8 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		}
 	}()
 
-	// Now set bootstrap node to trigger preemptive connection.
-	// This ensures preemptive connection logs appear after certificate logs.
+	// Now set bootstrap node to trigger upstream connection.
+	// This ensures upstream connection logs appear after certificate logs.
 	if bootstrapNode != nil && a.xdsProxy != nil {
 		a.xdsProxy.SetBootstrapNode(bootstrapNode)
 	}

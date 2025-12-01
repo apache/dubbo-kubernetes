@@ -512,7 +512,7 @@ func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.
 }
 
 func (ps *PushContext) createNewContext(env *Environment) {
-	log.Infof("createNewContext: creating new PushContext (full initialization)")
+	log.Debug("createNewContext: creating new PushContext (full initialization)")
 	ps.initServiceRegistry(env, nil)
 	ps.initServiceRoutes(env)
 	ps.initSubsetRules(env)
@@ -541,7 +541,7 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 			}
 		}
 		if serviceRouteCount > 0 {
-			log.Infof("updateContext: detected %d ServiceRoute config changes", serviceRouteCount)
+			log.Debugf("updateContext: detected %d ServiceRoute config changes", serviceRouteCount)
 		}
 	}
 
@@ -559,10 +559,10 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 			}
 		}
 		if subsetRuleCount > 0 {
-			log.Infof("updateContext: detected %d SubsetRule config changes", subsetRuleCount)
+			log.Debugf("updateContext: detected %d SubsetRule config changes", subsetRuleCount)
 		}
 		if pushReq.Full {
-			log.Infof("updateContext: Full push requested, will re-initialize SubsetRule and ServiceRoute indexes")
+			log.Debugf("updateContext: Full push requested, will re-initialize SubsetRule and ServiceRoute indexes")
 		}
 		log.Debugf("updateContext: subsetRulesChanged=%v, serviceRoutesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
 			subsetRulesChanged, serviceRoutesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
@@ -593,7 +593,7 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	}
 
 	if serviceRoutesChanged {
-		log.Infof("updateContext: ServiceRoutes changed, re-initializing ServiceRoute index")
+		log.Debugf("updateContext: ServiceRoutes changed, re-initializing ServiceRoute index")
 		ps.initServiceRoutes(env)
 	} else {
 		log.Debugf("updateContext: ServiceRoutes unchanged, reusing old ServiceRoute index")
@@ -601,7 +601,7 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	}
 
 	if subsetRulesChanged {
-		log.Infof("updateContext: SubsetRules changed, re-initializing SubsetRule index")
+		log.Debugf("updateContext: SubsetRules changed, re-initializing SubsetRule index")
 		ps.initSubsetRules(env)
 	} else {
 		log.Debugf("updateContext: SubsetRules unchanged, reusing old SubsetRule index")
@@ -610,7 +610,7 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 
 	authnPoliciesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.PeerAuthentication))
 	if authnPoliciesChanged || oldPushContext == nil || oldPushContext.AuthenticationPolicies == nil {
-		log.Infof("updateContext: PeerAuthentication changed (full=%v, configsUpdatedContainingPeerAuth=%v), rebuilding authentication policies",
+		log.Debugf("updateContext: PeerAuthentication changed (full=%v, configsUpdatedContainingPeerAuth=%v), rebuilding authentication policies",
 			pushReq != nil && pushReq.Full, func() bool {
 				if pushReq == nil {
 					return false
@@ -693,16 +693,16 @@ func (ps *PushContext) GetAllServices() []*Service {
 }
 
 func (ps *PushContext) initServiceRoutes(env *Environment) {
-	log.Infof("initServiceRoutes: starting ServiceRoute initialization")
+	log.Debugf("initServiceRoutes: starting ServiceRoute initialization")
 	ps.serviceRouteIndex.referencedDestinations = map[string]sets.String{}
 	serviceroutes := env.List(gvk.ServiceRoute, NamespaceAll)
-	log.Infof("initServiceRoutes: found %d ServiceRoute configs", len(serviceroutes))
+	log.Debugf("initServiceRoutes: found %d ServiceRoute configs", len(serviceroutes))
 	sroutes := make([]config.Config, len(serviceroutes))
 
 	for i, r := range serviceroutes {
 		sroutes[i] = resolveServiceRouteShortnames(r)
 		if vs, ok := r.Spec.(*networking.VirtualService); ok {
-			log.Infof("initServiceRoutes: ServiceRoute %s/%s with hosts %v and %d HTTP routes",
+			log.Debugf("initServiceRoutes: ServiceRoute %s/%s with hosts %v and %d HTTP routes",
 				r.Namespace, r.Name, vs.Hosts, len(vs.Http))
 		}
 	}
@@ -720,7 +720,7 @@ func (ps *PushContext) initServiceRoutes(env *Environment) {
 		}
 	}
 	ps.serviceRouteIndex.hostToRoutes = hostToRoutes
-	log.Infof("initServiceRoutes: indexed ServiceRoutes for %d hostnames", len(hostToRoutes))
+	log.Debugf("initServiceRoutes: indexed ServiceRoutes for %d hostnames", len(hostToRoutes))
 }
 
 // sortConfigBySelectorAndCreationTime sorts the list of config objects based on priority and creation time.
@@ -810,7 +810,7 @@ func (ps *PushContext) setSubsetRules(configs []config.Config) {
 	ps.subsetRuleIndex.rootNamespaceLocal = rootNamespaceLocalDestRules
 
 	// Log indexing results
-	log.Infof("setSubsetRules: indexed %d namespaces with local rules", len(namespaceLocalSubRules))
+	log.Debugf("setSubsetRules: indexed %d namespaces with local rules", len(namespaceLocalSubRules))
 	for ns, rules := range namespaceLocalSubRules {
 		totalRules := 0
 		for hostname, ruleList := range rules.specificSubRules {
@@ -823,26 +823,26 @@ func (ps *PushContext) setSubsetRules(configs []config.Config) {
 					if hasTLS {
 						tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 					}
-					log.Infof("setSubsetRules: namespace %s, hostname %s: DestinationRule has %d subsets, TLS mode: %s",
+					log.Debugf("setSubsetRules: namespace %s, hostname %s: DestinationRule has %d subsets, TLS mode: %s",
 						ns, hostname, len(dr.Subsets), tlsMode)
 				}
 			}
 		}
-		log.Infof("setSubsetRules: namespace %s has %d DestinationRules with %d specific hostnames", ns, totalRules, len(rules.specificSubRules))
+		log.Debugf("setSubsetRules: namespace %s has %d DestinationRules with %d specific hostnames", ns, totalRules, len(rules.specificSubRules))
 	}
-	log.Infof("setSubsetRules: indexed %d namespaces with exported rules", len(exportedDestRulesByNamespace))
+	log.Debugf("setSubsetRules: indexed %d namespaces with exported rules", len(exportedDestRulesByNamespace))
 	if rootNamespaceLocalDestRules != nil {
 		totalRootRules := 0
 		for _, ruleList := range rootNamespaceLocalDestRules.specificSubRules {
 			totalRootRules += len(ruleList)
 		}
-		log.Infof("setSubsetRules: root namespace has %d DestinationRules with %d specific hostnames", totalRootRules, len(rootNamespaceLocalDestRules.specificSubRules))
+		log.Debugf("setSubsetRules: root namespace has %d DestinationRules with %d specific hostnames", totalRootRules, len(rootNamespaceLocalDestRules.specificSubRules))
 	}
 }
 
 func (ps *PushContext) initSubsetRules(env *Environment) {
 	configs := env.List(gvk.SubsetRule, NamespaceAll)
-	log.Infof("initSubsetRules: found %d SubsetRule configs", len(configs))
+	log.Debugf("initSubsetRules: found %d SubsetRule configs", len(configs))
 
 	// values returned from ConfigStore.List are immutable.
 	// Therefore, we make a copy
@@ -854,7 +854,7 @@ func (ps *PushContext) initSubsetRules(env *Environment) {
 			if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
 				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 			}
-			log.Infof("initSubsetRules: SubsetRule %s/%s for host %s with %d subsets, TLS mode: %s",
+			log.Debugf("initSubsetRules: SubsetRule %s/%s for host %s with %d subsets, TLS mode: %s",
 				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 		}
 	}
