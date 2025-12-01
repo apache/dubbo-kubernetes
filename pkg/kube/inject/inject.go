@@ -116,7 +116,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		MeshConfig:               meshConfig,
 		Values:                   params.valuesConfig.asMap,
 		Revision:                 params.revision,
-		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.0-debug"),
+		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.0"),
 		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
 		CompliancePolicy:         common_features.CompliancePolicy,
 	}
