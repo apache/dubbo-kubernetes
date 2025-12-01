@@ -1,9 +1,8 @@
----
+{{- if .Values.global.configValidation }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: dubbo-validator-dubbo-system
-  namespace: default
   labels:
     app: dubbod
     dubbo.apache.org/rev: {{ .Values.revision | default "default" }}
@@ -37,4 +36,4 @@ webhooks:
       resources:
       - "*"
     sideEffects: None
-
+{{- end -}}

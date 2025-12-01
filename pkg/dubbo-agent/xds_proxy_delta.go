@@ -175,7 +175,7 @@ func (p *XdsProxy) handleUpstreamDeltaRequest(con *ProxyConnection) {
 				continue
 			}
 
-			// forward to istiod
+			// forward to dubbod
 			con.sendDeltaRequest(req)
 			if !initialRequestsSent.Load() && req.TypeUrl == model.ListenerType {
 				// fire off an initial NDS request

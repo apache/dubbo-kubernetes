@@ -20,12 +20,13 @@ package dubboagent
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	"math"
 	"net"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
@@ -109,10 +110,10 @@ type XdsProxy struct {
 	ecdsLastNonce             atomic.String
 	initialHealthRequest      *discovery.DiscoveryRequest
 	initialDeltaHealthRequest *discovery.DeltaDiscoveryRequest
-	// Preemptive connection for proxyless mode
-	bootstrapNode       *core.Node
-	preemptiveConnMutex sync.RWMutex
-	preemptiveConn      *ProxyConnection
+	// Upstream connection for proxyless mode
+	bootstrapNode      *core.Node
+	proxylessConnMutex sync.RWMutex
+	proxylessConn      *ProxyConnection
 }
 
 func initXdsProxy(ia *Agent) (*XdsProxy, error) {
@@ -170,7 +171,7 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 		proxyLog.Warnf("XDS proxy server stopped serving on UDS: %s", proxy.xdsUdsPath)
 	}()
 
-	// For proxyless mode, establish a preemptive connection to upstream using bootstrap Node
+	// For proxyless mode, establish an upstream connection using bootstrap Node
 	// This ensures the proxy is ready even before downstream clients connect
 	// Use a retry loop with exponential backoff to automatically reconnect on failures
 	ia.wg.Add(1)
@@ -179,9 +180,9 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 		// Wait for bootstrap Node to be set (with timeout)
 		// The Node is set synchronously after bootstrap file generation in agent.Run()
 		for i := 0; i < 50; i++ {
-			proxy.preemptiveConnMutex.RLock()
+			proxy.proxylessConnMutex.RLock()
 			nodeReady := proxy.bootstrapNode != nil
-			proxy.preemptiveConnMutex.RUnlock()
+			proxy.proxylessConnMutex.RUnlock()
 			if nodeReady {
 				break
 			}
@@ -191,9 +192,9 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 			case <-time.After(100 * time.Millisecond):
 			}
 		}
-		proxy.preemptiveConnMutex.RLock()
+		proxy.proxylessConnMutex.RLock()
 		nodeReady := proxy.bootstrapNode != nil
-		proxy.preemptiveConnMutex.RUnlock()
+		proxy.proxylessConnMutex.RUnlock()
 		if !nodeReady {
 			proxyLog.Warnf("Bootstrap Node not set after 5 seconds, proceeding anyway")
 		}
@@ -209,10 +210,10 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 			}
 
 			// Establish connection
-			connDone, err := proxy.establishPreemptiveConnection(ia)
+			connDone, err := proxy.establishProxylessConnection(ia)
 			if err != nil {
 				// Connection failed, log and retry with exponential backoff
-				proxyLog.Warnf("Failed to establish preemptive upstream connection: %v, retrying in %v", err, backoff)
+				proxyLog.Warnf("Failed to establish proxyless upstream connection: %v, retrying in %v", err, backoff)
 
 				select {
 				case <-proxy.stopChan:
@@ -228,13 +229,13 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 
 			// Connection successful, reset backoff
 			backoff = time.Second
-			proxyLog.Infof("Preemptive upstream connection established successfully")
+			proxyLog.Infof("Proxyless upstream connection connected successfully")
 			// Wait for connection to terminate (connDone will be closed when connection dies)
 			select {
 			case <-proxy.stopChan:
 				return
 			case <-connDone:
-				proxyLog.Warnf("Preemptive connection terminated, will retry")
+				proxyLog.Warnf("Proxyless connection terminated, will retry")
 			}
 		}
 	}()
@@ -421,7 +422,7 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 				continue
 			}
 
-			// forward to istiod
+			// forward to dubbod
 			con.sendRequest(req)
 			if !initialRequestsSent.Load() && req.TypeUrl == model.ListenerType {
 				// fire off an initial NDS request
@@ -724,26 +725,26 @@ func (p *XdsProxy) getTLSOptions(agent *Agent) (*dubbogrpc.TLSOptions, error) {
 }
 
 func (p *XdsProxy) SetBootstrapNode(node *core.Node) {
-	p.preemptiveConnMutex.Lock()
+	p.proxylessConnMutex.Lock()
 	p.bootstrapNode = node
-	p.preemptiveConnMutex.Unlock()
+	p.proxylessConnMutex.Unlock()
 }
 
-func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, error) {
-	p.preemptiveConnMutex.Lock()
+func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, error) {
+	p.proxylessConnMutex.Lock()
 	node := p.bootstrapNode
 	// Clean up old connection if it exists
-	if p.preemptiveConn != nil {
-		close(p.preemptiveConn.stopChan)
-		p.preemptiveConn = nil
+	if p.proxylessConn != nil {
+		close(p.proxylessConn.stopChan)
+		p.proxylessConn = nil
 	}
-	p.preemptiveConnMutex.Unlock()
+	p.proxylessConnMutex.Unlock()
 
 	if node == nil {
 		return nil, fmt.Errorf("bootstrap node not available")
 	}
 
-	proxyLog.Infof("Establishing preemptive upstream connection for proxyless mode with Node: %s", node.Id)
+	proxyLog.Infof("Connecting proxyless upstream connection with Node: %s", node.Id)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
@@ -769,7 +770,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		_ = upstreamConn.Close()
 		return nil, fmt.Errorf("failed to create upstream stream: %w", err)
 	}
-	proxyLog.Infof("connected to upstream XDS server (preemptive): %s", p.dubbodAddress)
+	proxyLog.Infof("connected to upstream XDS server (proxyless): %s", p.dubbodAddress)
 
 	conID := connectionNumber.Inc()
 	con := &ProxyConnection{
@@ -782,9 +783,9 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		node:          node,
 	}
 
-	p.preemptiveConnMutex.Lock()
-	p.preemptiveConn = con
-	p.preemptiveConnMutex.Unlock()
+	p.proxylessConnMutex.Lock()
+	p.proxylessConn = con
+	p.proxylessConnMutex.Unlock()
 
 	// Close upstream connection when connection terminates and signal done channel
 	go func() {
@@ -794,11 +795,11 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		case <-p.stopChan:
 		}
 		_ = upstreamConn.Close()
-		p.preemptiveConnMutex.Lock()
-		if p.preemptiveConn == con {
-			p.preemptiveConn = nil
+		p.proxylessConnMutex.Lock()
+		if p.proxylessConn == con {
+			p.proxylessConn = nil
 		}
-		p.preemptiveConnMutex.Unlock()
+		p.proxylessConnMutex.Unlock()
 		close(connDone)
 	}()
 
@@ -807,14 +808,14 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		TypeUrl: model.ListenerType,
 		Node:    node,
 	}
-	proxyLog.Infof("preemptive connection sending initial LDS request with Node: %s", node.Id)
+	proxyLog.Infof("proxyless connection sending initial LDS request with Node: %s", node.Id)
 	if err := upstream.Send(ldsReq); err != nil {
 		_ = upstreamConn.Close()
-		p.preemptiveConnMutex.Lock()
-		if p.preemptiveConn == con {
-			p.preemptiveConn = nil
+		p.proxylessConnMutex.Lock()
+		if p.proxylessConn == con {
+			p.proxylessConn = nil
 		}
-		p.preemptiveConnMutex.Unlock()
+		p.proxylessConnMutex.Unlock()
 		close(connDone)
 		return nil, fmt.Errorf("failed to send initial LDS request: %w", err)
 	}
@@ -842,7 +843,7 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 				upstreamErr(con, err)
 				return
 			}
-			proxyLog.Debugf("preemptive connection received response: TypeUrl=%s, Resources=%d",
+			proxyLog.Debugf("proxyless connection received response: TypeUrl=%s, Resources=%d",
 				model.GetShortType(resp.TypeUrl), len(resp.Resources))
 			// Send ACK
 			ackReq := &discovery.DiscoveryRequest{
@@ -883,19 +884,19 @@ func (p *XdsProxy) establishPreemptiveConnection(ia *Agent) (<-chan struct{}, er
 		}
 	}()
 
-	// Return immediately - connection is established and running in background
+	// Return immediately - connection is connected and running in background
 	// The connDone channel will be closed when connection terminates
 	return connDone, nil
 }
 
 func (p *XdsProxy) close() {
 	close(p.stopChan)
-	p.preemptiveConnMutex.Lock()
-	if p.preemptiveConn != nil {
-		close(p.preemptiveConn.stopChan)
-		p.preemptiveConn = nil
+	p.proxylessConnMutex.Lock()
+	if p.proxylessConn != nil {
+		close(p.proxylessConn.stopChan)
+		p.proxylessConn = nil
 	}
-	p.preemptiveConnMutex.Unlock()
+	p.proxylessConnMutex.Unlock()
 	if p.downstreamGrpcServer != nil {
 		p.downstreamGrpcServer.Stop()
 	}

@@ -40,7 +40,7 @@ type Cluster struct {
 func (c *Cluster) HasSynced() bool {
 	// It could happen when a wrong credential provide, this cluster has no chance to run.
 	// In this case, the `initialSyncTimeout` will never be set
-	// In order not block istiod start up, check close as well.
+	// In order not block dubbod start up, check close as well.
 	if c.Closed() {
 		return true
 	}

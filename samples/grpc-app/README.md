@@ -5,8 +5,8 @@ This example demonstrates how to deploy gRPC applications with proxyless service
 ## Overview
 
 This sample includes:
-- **Producer**: A gRPC server that receives requests (port 17070) and is deployed with multiple versions (v1/v2) to showcase gray release scenarios.
-- **Consumer**: A gRPC client that sends requests to the producer service and exposes a test server (port 17171) for driving traffic via `grpcurl`.
+- **Provider**: A gRPC server that receives requests (port 17070) and is deployed with multiple versions (v1/v2) to showcase gray release scenarios.
+- **Consumer**: A gRPC client that sends requests to the provider service and exposes a test server (port 17171) for driving traffic via `grpcurl`.
 
 Both services use native gRPC xDS clients to connect to the Dubbo control plane through the `dubbo-proxy` sidecar, enabling service discovery, load balancing, and traffic management without requiring Envoy proxy for application traffic.
 
@@ -38,17 +38,17 @@ kubectl port-forward -n grpc-app $(kubectl get pod -l app=consumer -n grpc-app -
 ```
 
 ```bash
-grpcurl -plaintext -d '{"url": "xds:///producer.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
+grpcurl -plaintext -d '{"url": "xds:///provider.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
 ```
 
 ```json
 {
   "output": [
-    "[0 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-    "[1 body] Hostname=producer-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
-    "[2 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-    "[3 body] Hostname=producer-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
-    "[4 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070"
+    "[0 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+    "[1 body] Hostname=provider-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
+    "[2 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+    "[3 body] Hostname=provider-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
+    "[4 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070"
   ]
 }
 ```
@@ -64,10 +64,10 @@ cat <<EOF | kubectl apply -f -
 apiVersion: networking.dubbo.apache.org/v1
 kind: SubsetRule
 metadata:
-  name: producer-versions
+  name: provider-versions
   namespace: grpc-app
 spec:
-  host: producer.grpc-app.svc.cluster.local
+  host: provider.grpc-app.svc.cluster.local
   subsets:
   - name: v1
     labels:
@@ -87,19 +87,19 @@ cat <<EOF | kubectl apply -f -
 apiVersion: networking.dubbo.apache.org/v1
 kind: ServiceRoute
 metadata:
-  name: producer-weights
+  name: provider-weights
   namespace: grpc-app
 spec:
   hosts:
-  - producer.grpc-app.svc.cluster.local
+  - provider.grpc-app.svc.cluster.local
   http:
   - route:
     - destination:
-        host: producer.grpc-app.svc.cluster.local
+        host: provider.grpc-app.svc.cluster.local
         subset: v1
       weight: 10
     - destination:
-        host: producer.grpc-app.svc.cluster.local
+        host: provider.grpc-app.svc.cluster.local
         subset: v2
       weight: 90
 EOF
@@ -108,7 +108,7 @@ EOF
 Now, send a set of 10 requests to verify the traffic distribution:
 
 ```bash
-grpcurl -plaintext -d '{"url": "xds:///producer.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
+grpcurl -plaintext -d '{"url": "xds:///provider.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
 ```
 
 The response should contain mostly `v2` responses, demonstrating the weighted traffic splitting:
@@ -116,11 +116,11 @@ The response should contain mostly `v2` responses, demonstrating the weighted tr
 ```json
 {
   "output": [
-    "[0 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-    "[1 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-    "[2 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-    "[3 body] Hostname=producer-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
-    "[4 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070"
+    "[0 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+    "[1 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+    "[2 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+    "[3 body] Hostname=provider-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070",
+    "[4 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070"
   ]
 }
 ```
@@ -138,10 +138,10 @@ cat <<EOF | kubectl apply -f -
 apiVersion: networking.dubbo.apache.org/v1
 kind: SubsetRule
 metadata:
-  name: producer-mtls
+  name: provider-mtls
   namespace: grpc-app
 spec:
-  host: producer.grpc-app.svc.cluster.local
+  host: provider.grpc-app.svc.cluster.local
   trafficPolicy:
     tls:
       mode: ISTIO_MUTUAL
@@ -151,7 +151,7 @@ EOF
 Now an attempt to call the server that is not yet configured for mTLS will fail:
 
 ```bash
-grpcurl -plaintext -d '{"url": "xds:///producer.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
+grpcurl -plaintext -d '{"url": "xds:///provider.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
 ```
 
 Expected error output:
@@ -177,7 +177,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: security.dubbo.apache.org/v1
 kind: PeerAuthentication
 metadata:
-  name: producer-mtls
+  name: provider-mtls
   namespace: grpc-app
 spec:
   mtls:
@@ -188,18 +188,18 @@ EOF
 Requests will start to succeed after applying the policy:
 
 ```bash
-grpcurl -plaintext -d '{"url": "xds:///producer.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
+grpcurl -plaintext -d '{"url": "xds:///provider.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
 ```
 
 Expected successful output:
 ```json
 {
    "output": [
-      "[0 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-      "[1 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-      "[2 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-      "[3 body] Hostname=producer-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
-      "[4 body] Hostname=producer-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070"
+      "[0 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+      "[1 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+      "[2 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+      "[3 body] Hostname=provider-v2-594b6977c8-5gw2z ServiceVersion=v2 Namespace=grpc-app IP=192.168.219.88 ServicePort=17070",
+      "[4 body] Hostname=provider-v1-fbb7b9bd9-l8frj ServiceVersion=v1 Namespace=grpc-app IP=192.168.219.119 ServicePort=17070"
    ]
 }
 ```

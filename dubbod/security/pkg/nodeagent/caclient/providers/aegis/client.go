@@ -81,11 +81,7 @@ func (c *AegisClient) CSRSign(csrPEM []byte, certValidTTLInSec int64) (res []str
 		ValidityDuration: certValidTTLInSec,
 		Metadata:         crMetaStruct,
 	}
-	// TODO(hzxuzhonghu): notify caclient rebuilding only when root cert is updated.
-	// It can happen when the istiod dns certs is resigned after root cert is updated,
-	// in this case, the ca grpc client can not automatically connect to istiod after the underlying network connection closed.
-	// Becase that the grpc client still use the old tls configuration to reconnect to istiod.
-	// So here we need to rebuild the caClient in order to use the new root cert.
+
 	defer func() {
 		if err != nil {
 			aegisClientLog.Errorf("failed to sign CSR: %v", err)

@@ -124,8 +124,6 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 
 	gvk := obj.GroupVersionKind()
 
-	// "Version" is not relevant for Istio types; each version has the same schema. So do a lookup that does not consider
-	// version. This ensures if a new version comes out and Istiod is not updated, we won't reject it.
 	s, exists := wh.schemas.FindByGroupKind(collection.FromKubernetesGVK(&gvk))
 	if !exists {
 		log.Infof("unrecognized type %v", addDryRunMessageIfNeeded(obj.GroupVersionKind().String()))

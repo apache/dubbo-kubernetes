@@ -433,7 +433,7 @@ func (s *Server) initRegistryEventHandlers() {
 		return
 	}
 
-	log.Infof("initRegistryEventHandlers: configController is available, registering event handlers")
+	log.Debugf("initRegistryEventHandlers: configController is available, registering event handlers")
 
 	configHandler := func(prev config.Config, curr config.Config, event model.Event) {
 		// Log ALL events at INFO level to ensure visibility
@@ -496,17 +496,17 @@ func (s *Server) initRegistryEventHandlers() {
 		})
 	}
 	schemas := collections.Planet.All()
-	log.Infof("initRegistryEventHandlers: found %d schemas to register", len(schemas))
+	log.Debugf("initRegistryEventHandlers: found %d schemas to register", len(schemas))
 	registeredCount := 0
 	for _, schema := range schemas {
 		gvk := schema.GroupVersionKind()
 		schemaID := schema.Identifier()
-		log.Infof("initRegistryEventHandlers: registering event handler for %s (GVK: %v)", schemaID, gvk)
+		log.Debugf("initRegistryEventHandlers: registering event handler for %s (GVK: %v)", schemaID, gvk)
 		s.configController.RegisterEventHandler(gvk, configHandler)
 		registeredCount++
-		log.Infof("initRegistryEventHandlers: successfully registered event handler for %s (GVK: %v)", schemaID, gvk)
+		log.Debugf("initRegistryEventHandlers: successfully registered event handler for %s (GVK: %v)", schemaID, gvk)
 	}
-	log.Infof("initRegistryEventHandlers: successfully registered event handlers for %d schemas", registeredCount)
+	log.Debugf("initRegistryEventHandlers: successfully registered event handlers for %d schemas", registeredCount)
 }
 
 func (s *Server) addReadinessProbe(name string, fn readinessProbe) {

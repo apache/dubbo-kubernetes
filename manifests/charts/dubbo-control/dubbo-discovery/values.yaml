@@ -51,3 +51,5 @@ _internal_default_values_not_set:
     statusPort: 15020
 
     caAddress: ""
+
+    configValidation: true

@@ -24,7 +24,7 @@ var (
 		"The name of the ConfigMap that stores the Root CA Certificate that is used by dubbod").Get()
 	EnableLeaderElection = env.Register("ENABLE_LEADER_ELECTION", true,
 		"If enabled (default), starts a leader election client and gains leadership before executing controllers. "+
-			"If false, it assumes that only one instance of istiod is running and skips leader election.").Get()
+			"If false, it assumes that only one instance of dubbod is running and skips leader election.").Get()
 	EnableEnhancedSubsetRuleMerge = env.Register("ENABLE_ENHANCED_DESTINATIONRULE_MERGE", true,
 		"If enabled, Dubbo merge subsetrules considering their exportTo fields,"+
 			" they will be kept as independent rules if the exportTos are not equal.").Get()
