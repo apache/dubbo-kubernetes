@@ -5,6 +5,12 @@
 [![codecov](https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg)](https://codecov.io/gh/apache/dubbo-kubernetes)
 ![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 
+<p align="left">
+  <a href="https://dubbo.apache.org/">
+    <img src="logo/dubbo-transparentbackground-unframed.svg" alt="Apache Dubbo" title="Apache Dubbo" width="240" height="320" >
+  </a>
+</p>
+
 This project is an open-source proxyless service mesh for Dubbo microservices. Built on the Istio control plane architecture, it leverages its core capabilities and integrates deeply with Kubernetes, providing full service mesh functionality with minimal resource overhead, enabling high-performance inter-service communication, traffic management, and security features.
 
 ## Project Structure
