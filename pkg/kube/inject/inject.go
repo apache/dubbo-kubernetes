@@ -116,7 +116,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		MeshConfig:               meshConfig,
 		Values:                   params.valuesConfig.asMap,
 		Revision:                 params.revision,
-		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.0"),
+		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.1-debug"),
 		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
 		CompliancePolicy:         common_features.CompliancePolicy,
 	}
@@ -210,7 +210,6 @@ func getProxyImage(values map[string]any, defaultImage string) string {
 		return defaultImage
 	}
 
-	// Check global.proxy.image (Istio pattern)
 	if global, ok := values["global"].(map[string]any); ok {
 		if proxy, ok := global["proxy"].(map[string]any); ok {
 			if image, ok := proxy["image"].(string); ok && image != "" {

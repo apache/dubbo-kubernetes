@@ -120,6 +120,71 @@ func NewFormatter() *Formatter {
 					}
 				},
 			},
+			// Pixiu pattern: 2025-12-20T13:54:15.077Z	WARN	cmd/gateway.go:104            	[startGatewayCmd] failed to init logger...
+			// Format: timestamp\tLEVEL\tsource\tmessage
+			{
+				Name:    "pixiu",
+				Pattern: regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\t+(\w+)\t+([^\t]+)\t+(.+)$`),
+				Extractor: func(matches []string) *LogEntry {
+					if len(matches) < 5 {
+						return nil
+					}
+					// Parse timestamp - Pixiu uses variable precision (milliseconds or nanoseconds)
+					timestampStr := matches[1]
+					var timestamp time.Time
+					// Try RFC3339Nano first (for nanosecond precision)
+					if t, err := time.Parse(time.RFC3339Nano, timestampStr); err == nil {
+						timestamp = t
+					} else if t, err := time.Parse(time.RFC3339, timestampStr); err == nil {
+						timestamp = t
+					} else {
+						// Fallback: parse with custom format handling variable precision
+						// Remove Z and parse manually
+						timestampStr = strings.TrimSuffix(timestampStr, "Z")
+						parts := strings.Split(timestampStr, ".")
+						if len(parts) == 2 {
+							baseTime, _ := time.Parse("2006-01-02T15:04:05", parts[0])
+							// Pad fractional seconds to nanoseconds
+							fracStr := parts[1]
+							for len(fracStr) < 9 {
+								fracStr += "0"
+							}
+							if len(fracStr) > 9 {
+								fracStr = fracStr[:9]
+							}
+							var nanos int
+							fmt.Sscanf(fracStr, "%d", &nanos)
+							timestamp = baseTime.Add(time.Duration(nanos) * time.Nanosecond).UTC()
+						} else {
+							timestamp = time.Now().UTC()
+						}
+					}
+					level := strings.ToLower(matches[2])
+					source := matches[3]
+					message := matches[4]
+
+					// Extract package name from source (e.g., "httpproxy/routerfilter.go:114" -> "httpproxy")
+					packageName := ""
+					if idx := strings.Index(source, "/"); idx > 0 {
+						packageName = source[:idx]
+					} else if idx := strings.Index(source, "."); idx > 0 {
+						packageName = source[:idx]
+					}
+
+					// Prepend package name to message if available
+					if packageName != "" {
+						message = packageName + "      " + message
+					}
+					
+					return &LogEntry{
+						Timestamp: timestamp,
+						Level:     level,
+						Scope:     "gateway",
+						Message:   message,
+						Original:  strings.Join(matches, " "),
+					}
+				},
+			},
 		},
 	}
 	return f
@@ -132,6 +197,9 @@ func (f *Formatter) Format(line string) string {
 	if line == "" {
 		return ""
 	}
+
+	// Remove ANSI color codes (escape sequences)
+	line = removeANSICodes(line)
 
 	// Remove any newlines from the input line
 	line = strings.TrimRight(line, "\n\r")
@@ -252,4 +320,11 @@ func parseKlogTimestamp(klogTime string) time.Time {
 	}
 
 	return t
+}
+
+// removeANSICodes removes ANSI escape sequences (color codes) from a string
+func removeANSICodes(s string) string {
+	// ANSI escape sequence pattern: \033[...m or \x1b[...m
+	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	return ansiRegex.ReplaceAllString(s, "")
 }

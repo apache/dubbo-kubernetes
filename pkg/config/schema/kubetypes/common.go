@@ -18,6 +18,8 @@
 package kubetypes
 
 import (
+	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
@@ -52,4 +54,20 @@ func MustToGVR[T runtime.Object](cfg config.GroupVersionKind) schema.GroupVersio
 		return (*rp).GetGVR()
 	}
 	panic("unknown kind: " + cfg.String())
+}
+
+func GvkFromObject(obj runtime.Object) config.GroupVersionKind {
+	if gvk, ok := getGvk(obj); ok {
+		return gvk
+	}
+	panic("unknown kind: " + obj.GetObjectKind().GroupVersionKind().String())
+}
+
+func GvrFromObject(t runtime.Object) schema.GroupVersionResource {
+	gk := GvkFromObject(t)
+	gr, ok := gvk.ToGVR(gk)
+	if !ok {
+		panic(fmt.Sprintf("unknown GVR for GVK %v", gk))
+	}
+	return gr
 }

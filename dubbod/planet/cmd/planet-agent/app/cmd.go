@@ -21,8 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"net/netip"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/cmd/planet-agent/options"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"

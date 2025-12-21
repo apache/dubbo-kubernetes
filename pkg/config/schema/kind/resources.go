@@ -35,6 +35,9 @@ const (
 	PeerAuthentication
 	ServiceRoute
 	SubsetRule
+	Gateway
+	GatewayClass
+	HTTPRoute
 )
 
 func (k Kind) String() string {
@@ -71,6 +74,12 @@ func (k Kind) String() string {
 		return "ServiceRoute"
 	case SubsetRule:
 		return "SubsetRule"
+	case GatewayClass:
+		return "GatewayClass"
+	case Gateway:
+		return "Gateway"
+	case HTTPRoute:
+		return "HTTPRoute"
 	default:
 		return "Unknown"
 	}

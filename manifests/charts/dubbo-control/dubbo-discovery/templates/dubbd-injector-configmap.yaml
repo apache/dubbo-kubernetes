@@ -13,5 +13,7 @@ data:
     templates:
       grpc-agent: |
 {{ .Files.Get "files/grpc-agent.yaml" | trim | indent 8 }}
+      gateway: |
+{{ .Files.Get "files/gateway.yaml" | trim | indent 8 }}
   values: |-
 

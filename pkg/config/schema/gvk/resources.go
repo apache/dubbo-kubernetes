@@ -43,6 +43,9 @@ var (
 	ServiceRoute                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "ServiceRoute"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
+	GatewayClass                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
+	Gateway                        = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
+	HTTPRoute                      = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"}
 )
 
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
@@ -85,15 +88,14 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.EndpointSlice, true
 	case Endpoints:
 		return gvr.Endpoints, true
+	case GatewayClass:
+		return gvr.GatewayClass, true
+	case Gateway:
+		return gvr.KubernetesGateway, true
+	case HTTPRoute:
+		return gvr.HTTPRoute, true
 	}
 	return schema.GroupVersionResource{}, false
-}
-func MustToGVR(g config.GroupVersionKind) schema.GroupVersionResource {
-	r, ok := ToGVR(g)
-	if !ok {
-		panic("unknown kind: " + g.String())
-	}
-	return r
 }
 
 func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
@@ -126,8 +128,22 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Endpoints, true
 	case gvr.Service:
 		return Service, true
+	case gvr.GatewayClass:
+		return GatewayClass, true
+	case gvr.KubernetesGateway:
+		return Gateway, true
+	case gvr.HTTPRoute:
+		return HTTPRoute, true
 	}
 	return config.GroupVersionKind{}, false
+}
+
+func MustToGVR(g config.GroupVersionKind) schema.GroupVersionResource {
+	r, ok := ToGVR(g)
+	if !ok {
+		panic("unknown kind: " + g.String())
+	}
+	return r
 }
 
 func MustFromGVR(g schema.GroupVersionResource) config.GroupVersionKind {

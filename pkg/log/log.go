@@ -218,51 +218,11 @@ func (s *Scope) Description() string {
 	return s.description
 }
 
-// SetDefaultOutput sets the default output writer for all scopes
-func SetDefaultOutput(w io.Writer) {
-	globalMu.Lock()
-	defer globalMu.Unlock()
-	defaultOut = w
-}
-
-// SetScopeLevel sets the output level for a specific scope
-func SetScopeLevel(name string, level Level) {
-	scopesMu.RLock()
-	scope, exists := scopes[name]
-	scopesMu.RUnlock()
-
-	if exists {
-		scope.SetOutputLevel(level)
-	}
-}
-
-// SetAllScopesLevel sets the output level for all scopes
-func SetAllScopesLevel(level Level) {
-	scopesMu.RLock()
-	defer scopesMu.RUnlock()
-
-	for _, scope := range scopes {
-		scope.SetOutputLevel(level)
-	}
-}
-
 // FindScope returns a scope by name
 func FindScope(name string) *Scope {
 	scopesMu.RLock()
 	defer scopesMu.RUnlock()
 	return scopes[name]
-}
-
-// AllScopes returns all registered scopes
-func AllScopes() map[string]*Scope {
-	scopesMu.RLock()
-	defer scopesMu.RUnlock()
-
-	result := make(map[string]*Scope)
-	for k, v := range scopes {
-		result[k] = v
-	}
-	return result
 }
 
 // log writes a log message if the level is enabled
@@ -437,34 +397,6 @@ func formatMessage(format string, args ...interface{}) string {
 	msg = strings.ReplaceAll(msg, "\n", " ")
 	msg = strings.ReplaceAll(msg, "\r", " ")
 	return msg
-}
-
-// formatLogLine formats a log line in standard style (deprecated, use formatStandardLine)
-// Kept for backward compatibility
-func formatLogLine(timestamp, level, scope, message string) string {
-	return formatStandardLine(timestamp, level, scope, message)
-}
-
-// EnablePrettyLogging enables pretty logging with colors and better formatting
-func EnablePrettyLogging() {
-	prettyLogMu.Lock()
-	defer prettyLogMu.Unlock()
-	usePrettyLog = true
-	GetPrettyFormatter()
-}
-
-// DisablePrettyLogging disables pretty logging, reverts to standard Istio format
-func DisablePrettyLogging() {
-	prettyLogMu.Lock()
-	defer prettyLogMu.Unlock()
-	usePrettyLog = false
-}
-
-// IsPrettyLoggingEnabled returns whether pretty logging is enabled
-func IsPrettyLoggingEnabled() bool {
-	prettyLogMu.RLock()
-	defer prettyLogMu.RUnlock()
-	return usePrettyLog
 }
 
 // getDefaultLogger returns the default logger instance

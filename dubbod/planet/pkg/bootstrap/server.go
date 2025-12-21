@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/status"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
@@ -127,6 +129,9 @@ type Server struct {
 	webhookInfo *webhookInfo
 
 	krtDebugger *krt.DebugHandler
+
+	RWConfigStore model.ConfigStoreController
+	statusManager *status.Manager
 }
 
 type readinessFlags struct {
@@ -137,6 +142,28 @@ type readinessFlags struct {
 type webhookInfo struct {
 	mu sync.RWMutex
 	wh *inject.Webhook
+}
+
+func (w *webhookInfo) getWebhookConfig() inject.Config {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	if w.wh != nil && w.wh.Config != nil {
+		return *w.wh.Config
+	}
+	return inject.Config{}
+}
+
+func (w *webhookInfo) addHandler(fn func()) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	// Note: Dubbo's Webhook doesn't have RegisterInjectionHandler method
+	// This is a placeholder for future implementation
+	// For now, we'll call the handler directly if webhook is available
+	if w.wh != nil {
+		// Handler will be called when webhook config changes
+		// This is a simplified implementation compared to Istio
+		fn()
+	}
 }
 
 type readinessProbe func() bool
@@ -448,7 +475,11 @@ func (s *Server) initRegistryEventHandlers() {
 
 		// Build ConfigKey for the changed config
 		// Find the schema to get the kind.Kind
+		// First try Planet schemas, then try PlanetGatewayAPI schemas
 		schema, found := collections.Planet.FindByGroupVersionKind(cfg.GroupVersionKind)
+		if !found && features.EnableGatewayAPI {
+			schema, found = collections.PlanetGatewayAPI().FindByGroupVersionKind(cfg.GroupVersionKind)
+		}
 		if !found {
 			log.Warnf("configHandler: schema not found for %v, skipping", cfg.GroupVersionKind)
 			return
@@ -468,6 +499,12 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind = kind.ServiceRoute
 		case "PeerAuthentication":
 			configKind = kind.PeerAuthentication
+		case "GatewayClass":
+			configKind = kind.GatewayClass
+		case "Gateway":
+			configKind = kind.Gateway
+		case "HTTPRoute":
+			configKind = kind.HTTPRoute
 		default:
 			log.Debugf("configHandler: unknown schema identifier %s for %v, skipping", schemaID, cfg.GroupVersionKind)
 			return
@@ -482,11 +519,12 @@ func (s *Server) initRegistryEventHandlers() {
 		// Log the config change
 		log.Infof("configHandler: %s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
-		// Some configs (SubsetRule/ServiceRoute/PeerAuthentication) require Full push to ensure
+		// Some configs (SubsetRule/ServiceRoute/PeerAuthentication/HTTPRoute) require Full push to ensure
 		// PushContext is re-initialized and configuration is reloaded.
 		// PeerAuthentication must rebuild AuthenticationPolicies to enable STRICT mTLS on LDS; without
 		// a full push the cached PushContext would continue serving plaintext listeners.
-		needsFullPush := configKind == kind.SubsetRule || configKind == kind.ServiceRoute || configKind == kind.PeerAuthentication
+		// HTTPRoute must rebuild HTTPRoute index to enable Gateway API routing.
+		needsFullPush := configKind == kind.SubsetRule || configKind == kind.ServiceRoute || configKind == kind.PeerAuthentication || configKind == kind.HTTPRoute
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
 		s.XDSServer.ConfigUpdate(&model.PushRequest{
@@ -496,6 +534,9 @@ func (s *Server) initRegistryEventHandlers() {
 		})
 	}
 	schemas := collections.Planet.All()
+	if features.EnableGatewayAPI {
+		schemas = collections.PlanetGatewayAPI().All()
+	}
 	log.Debugf("initRegistryEventHandlers: found %d schemas to register", len(schemas))
 	registeredCount := 0
 	for _, schema := range schemas {
@@ -951,6 +992,14 @@ func (s *Server) shouldStartNsController() bool {
 	return true
 }
 
+func (s *Server) initStatusManager(_ *PlanetArgs) {
+	s.addStartFunc("status manager", func(stop <-chan struct{}) error {
+		s.statusManager = status.NewManager(s.RWConfigStore)
+		s.statusManager.Start(stop)
+		return nil
+	})
+}
+
 func getDNSNames(_ *PlanetArgs, host string) []string {
 	// Append custom hostname if there is any
 	customHost := features.DubbodServiceCustomHost
@@ -1053,4 +1102,8 @@ func (s *Server) reloadDubbodCert(watchCh <-chan struct{}, stopCh <-chan struct{
 			}
 		}
 	}
+}
+
+func (s *Server) addTerminatingStartFunc(name string, fn server.Component) {
+	s.server.RunComponentAsyncAndWait(name, fn)
 }

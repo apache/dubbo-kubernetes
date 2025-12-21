@@ -65,4 +65,12 @@ var (
 	).Get()
 	EnableClusterTrustBundles = env.Register("ENABLE_CLUSTER_TRUST_BUNDLE_API", false,
 		"If enabled, uses the ClusterTrustBundle API instead of ConfigMaps to store the root certificate in the cluster.").Get()
+	ResolveHostnameGateways = env.Register("RESOLVE_HOSTNAME_GATEWAYS", true,
+		"If true, hostnames in the LoadBalancer addresses of a Service will be resolved at the control plane for use in cross-network gateways.").Get()
+	ManagedGatewayController = env.Register("PLANET_GATEWAY_API_CONTROLLER_NAME", "dubbo.apache.org/gateway-controller",
+		"Gateway API controller name. dubbod will only reconcile Gateway API resources referencing a GatewayClass with this controller name").Get()
+	GatewayAPIDefaultGatewayClass = env.Register("PLANET_GATEWAY_API_DEFAULT_GATEWAYCLASS_NAME", "dubbo",
+		"Name of the default GatewayClass").Get()
+	StatusMaxWorkers = env.Register("PLANET_STATUS_MAX_WORKERS", 100, "The maximum number of workers"+
+		" for status update").Get()
 )

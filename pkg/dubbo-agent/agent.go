@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -39,6 +40,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/dubbo-agent/pixiu"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -89,6 +91,9 @@ type Agent struct {
 	xdsProxy    *XdsProxy
 	fileWatcher filewatcher.FileWatcher
 	statusSrv   *http.Server
+
+	// Pixiu agent for router mode (Gateway Pods)
+	pixiuAgent *pixiu.Agent
 
 	wg sync.WaitGroup
 }
@@ -224,6 +229,13 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	// This ensures upstream connection logs appear after certificate logs.
 	if bootstrapNode != nil && a.xdsProxy != nil {
 		a.xdsProxy.SetBootstrapNode(bootstrapNode)
+	}
+
+	// Initialize and start Pixiu for router mode (Gateway Pods)
+	if a.cfg.ProxyType == model.Router {
+		if err := a.initializePixiuAgent(ctx); err != nil {
+			return nil, fmt.Errorf("failed to initialize Pixiu agent: %v", err)
+		}
 	}
 
 	return a.wg.Wait, nil
@@ -620,4 +632,74 @@ func checkSocket(ctx context.Context, socketPath string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// initializePixiuAgent initializes and starts Pixiu agent for router mode
+func (a *Agent) initializePixiuAgent(ctx context.Context) error {
+	configPath := os.Getenv("PROXY_CONFIG_PATH")
+	if configPath == "" {
+		configPath = "/etc/pixiu/config/pixiu.yaml"
+	}
+
+	binaryPath := os.Getenv("PROXY_BINARY_PATH")
+	if binaryPath == "" {
+		possiblePaths := []string{
+			"/usr/local/bin/pixiugateway",
+			"pixiugateway",
+		}
+
+		found := false
+		for _, path := range possiblePaths {
+			if strings.Contains(path, "/") {
+				// Check absolute path
+				if _, err := os.Stat(path); err == nil {
+					binaryPath = path
+					found = true
+					break
+				}
+			} else {
+				// Check in PATH
+				if fullPath, err := exec.LookPath(path); err == nil {
+					binaryPath = fullPath
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
+			return fmt.Errorf("gateway binary pixiugateway not found. Please set PROXY_BINARY_PATH environment variable or ensure pixiu binary is installed at /usr/local/bin/pixiugateway")
+		}
+	}
+
+	if _, err := os.Stat(binaryPath); err != nil {
+		return fmt.Errorf("gateway binary not found at %s: %v", binaryPath, err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+		return fmt.Errorf("failed to create proxy config directory: %v", err)
+	}
+
+	pixiuProxy := pixiu.NewProxy(pixiu.ProxyConfig{
+		ConfigPath:    configPath,
+		ConfigCleanup: false, // Don't cleanup config file
+		BinaryPath:    binaryPath,
+	})
+
+	terminationDrainDuration := 45 * time.Second // Default drain duration
+	if a.proxyConfig.DrainDuration != nil {
+		terminationDrainDuration = a.proxyConfig.DrainDuration.AsDuration()
+	}
+	minDrainDuration := 5 * time.Second
+
+	a.pixiuAgent = pixiu.NewAgent(pixiuProxy, terminationDrainDuration, minDrainDuration)
+
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		a.pixiuAgent.Run(ctx)
+	}()
+
+	log.Infof("pixiu agent initialized for router mode, config path: %s, binary: %s", configPath, binaryPath)
+	return nil
 }

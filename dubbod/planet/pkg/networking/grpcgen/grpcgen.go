@@ -46,7 +46,8 @@ func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResou
 	case v3.ClusterType:
 		return g.BuildClusters(proxy, req.Push, requestedNames), model.DefaultXdsLogDetails, nil
 	case v3.RouteType:
-		return g.BuildHTTPRoutes(proxy, req.Push, requestedNames), model.DefaultXdsLogDetails, nil
+		resources, logDetails := g.BuildHTTPRoutes(proxy, req, requestedNames)
+		return resources, logDetails, nil
 	}
 
 	return nil, model.DefaultXdsLogDetails, nil

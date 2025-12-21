@@ -121,6 +121,10 @@ func ExtractObject(obj any) Object {
 	return Extract[Object](obj)
 }
 
+func FilteredObjectHandler(handler func(o Object), filter func(o Object) bool) cache.ResourceEventHandler {
+	return filteredObjectHandler(handler, false, filter)
+}
+
 func FilteredObjectSpecHandler(handler func(o Object), filter func(o Object) bool) cache.ResourceEventHandler {
 	return filteredObjectHandler(handler, true, filter)
 }

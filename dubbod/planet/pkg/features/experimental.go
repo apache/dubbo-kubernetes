@@ -28,4 +28,13 @@ var (
 	EnableEnhancedSubsetRuleMerge = env.Register("ENABLE_ENHANCED_DESTINATIONRULE_MERGE", true,
 		"If enabled, Dubbo merge subsetrules considering their exportTo fields,"+
 			" they will be kept as independent rules if the exportTos are not equal.").Get()
+	EnableGatewayAPI = env.Register("PLANET_ENABLE_GATEWAY_API", true,
+		"If this is set to true, support for Kubernetes gateway-api (github.com/kubernetes-sigs/gateway-api) will "+
+			" be enabled. In addition to this being enabled, the gateway-api CRDs need to be installed.").Get()
+	EnableGatewayAPIStatus = env.Register("PLANET_ENABLE_GATEWAY_API_STATUS", true,
+		"If this is set to true, gateway-api resources will have status written to them").Get()
+	EnableGatewayAPIGatewayClassController = env.Register("PLANET_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER", true,
+		"If this is set to true, dubbod will create and manage its default GatewayClasses").Get()
+	EnableGatewayAPIDeploymentController = env.Register("PLANET_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER", true,
+		"If this is set to true, gateway-api resources will automatically provision in cluster deployment, services, etc").Get()
 )
