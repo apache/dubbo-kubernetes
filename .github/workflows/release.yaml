@@ -60,12 +60,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            add dubbo daemon 
-            add dubbod load test
-            add sample grpc-app
-            add test grpc-app
+            dubbo-agent provides support for north-south traffic using the gateway API.
           draft: false
-          prerelease: false
+          prerelease: true
 
   build_and_upload:
     name: Build and Upload Binaries
