@@ -37,14 +37,3 @@ func GetClassStatus(existing *gatewayv1.GatewayClassStatus, gen int64) *gatewayv
 	})
 	return existing
 }
-
-
-
-
-
-
-
-
-
-
-

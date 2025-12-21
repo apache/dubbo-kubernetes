@@ -197,11 +197,11 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 				node.ID, listenPortStr, name)
 			continue
 		}
-		
+
 		// Check if this is a Gateway Pod by checking service name
 		// Gateway Pods typically have "gateway" in their service name
 		isGatewayPod := strings.Contains(strings.ToLower(si.Service.Attributes.Name), "gateway")
-		log.Debugf("buildInboundListeners: listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v", 
+		log.Debugf("buildInboundListeners: listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v",
 			name, si.Service.Attributes.Name, isGatewayPod, node.Type, node.IsRouter())
 
 		// - DestinationRule with ISTIO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
@@ -219,7 +219,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		// in the FilterChain for inbound listeners.
 		routeName := fmt.Sprintf("%d", listenPort)
 		var hcm *hcmv3.HttpConnectionManager
-		
+
 		// For Gateway Pods (router type), use RDS to get route configuration from HTTPRoute
 		// This allows Gateway to route external traffic to backend services based on HTTPRoute rules
 		if node.IsRouter() || isGatewayPod {

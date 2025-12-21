@@ -175,7 +175,7 @@ func NewFormatter() *Formatter {
 					if packageName != "" {
 						message = packageName + "      " + message
 					}
-					
+
 					return &LogEntry{
 						Timestamp: timestamp,
 						Level:     level,

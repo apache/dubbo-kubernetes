@@ -55,7 +55,7 @@ func GatewayClassesCollection(
 		}
 		_, known := classInfos[obj.Spec.ControllerName]
 		if !known {
-			log.Warnf("GatewayClass %s has unknown controller name %q, skipping status update. Known controllers: %v", 
+			log.Warnf("GatewayClass %s has unknown controller name %q, skipping status update. Known controllers: %v",
 				obj.Name, obj.Spec.ControllerName, getKnownControllerNames())
 			return nil, nil
 		}

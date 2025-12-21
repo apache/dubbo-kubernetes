@@ -622,7 +622,7 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	}
 
 	httpRoutesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.HTTPRoute)
-	
+
 	if serviceRoutesChanged {
 		log.Debugf("updateContext: ServiceRoutes changed, re-initializing ServiceRoute index")
 		ps.initServiceRoutes(env)
@@ -630,7 +630,7 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		log.Debugf("updateContext: ServiceRoutes unchanged, reusing old ServiceRoute index")
 		ps.serviceRouteIndex = oldPushContext.serviceRouteIndex
 	}
-	
+
 	if httpRoutesChanged {
 		log.Debugf("updateContext: HTTPRoutes changed, re-initializing HTTPRoute index")
 		ps.initHTTPRoutes(env)
@@ -821,7 +821,7 @@ func (ps *PushContext) initHTTPRoutes(env *Environment) {
 func (ps *PushContext) HTTPRouteForHost(hostname host.Name) []config.Config {
 	var routes []config.Config
 	hostStr := string(hostname)
-	
+
 	// Special case: if hostname is "*", return ALL HTTPRoutes
 	// This is needed for Gateway Pod inbound listeners that need to route traffic based on HTTPRoute hostnames
 	if hostname == "*" {
@@ -835,12 +835,12 @@ func (ps *PushContext) HTTPRouteForHost(hostname host.Name) []config.Config {
 		log.Infof("HTTPRouteForHost: found %d HTTPRoute(s) for wildcard hostname", len(routes))
 		return routes
 	}
-	
+
 	// First check exact match
 	if exactRoutes, ok := ps.httpRouteIndex.hostToRoutes[hostname]; ok {
 		routes = append(routes, exactRoutes...)
 	}
-	
+
 	// Check wildcard patterns (e.g., *.example.com)
 	for patternHost, patternRoutes := range ps.httpRouteIndex.hostToRoutes {
 		if patternHost == "*" {
@@ -855,17 +855,17 @@ func (ps *PushContext) HTTPRouteForHost(hostname host.Name) []config.Config {
 			}
 		}
 	}
-	
+
 	// Then check global wildcard
 	if wildcardRoutes, ok := ps.httpRouteIndex.hostToRoutes["*"]; ok {
 		routes = append(routes, wildcardRoutes...)
 	}
-	
+
 	if len(routes) == 0 {
 		log.Debugf("HTTPRouteForHost: no HTTPRoute found for hostname %s", hostname)
 		return nil
 	}
-	
+
 	log.Infof("HTTPRouteForHost: found %d HTTPRoute(s) for hostname %s", len(routes), hostname)
 	return routes
 }

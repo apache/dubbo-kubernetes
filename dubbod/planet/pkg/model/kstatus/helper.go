@@ -48,14 +48,3 @@ func UpdateConditionIfChanged(conditions []metav1.Condition, condition metav1.Co
 
 	return ret
 }
-
-
-
-
-
-
-
-
-
-
-

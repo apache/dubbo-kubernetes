@@ -119,13 +119,3 @@ func enqueueStatus[T any](sw Queue, obj controllers.Object, ws T) {
 	}
 	sw.EnqueueStatusUpdateResource(ws, res)
 }
-
-
-
-
-
-
-
-
-
-
