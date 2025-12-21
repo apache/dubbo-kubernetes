@@ -33,9 +33,11 @@ type HandlerContext interface {
 type Key[O any] string
 
 type (
-	TransformationEmpty[T any]     func(ctx HandlerContext) *T
-	TransformationMulti[I, O any]  func(ctx HandlerContext, i I) []O
-	TransformationSingle[I, O any] func(ctx HandlerContext, i I) *O
+	TransformationEmpty[T any]                    func(ctx HandlerContext) *T
+	TransformationMulti[I, O any]                 func(ctx HandlerContext, i I) []O
+	TransformationSingle[I, O any]                func(ctx HandlerContext, i I) *O
+	TransformationMultiStatus[I, IStatus, O any]  func(ctx HandlerContext, i I) (*IStatus, []O)
+	TransformationSingleStatus[I, IStatus, O any] func(ctx HandlerContext, i I) (*IStatus, *O)
 )
 
 type Equaler[K any] interface {

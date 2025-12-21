@@ -198,6 +198,12 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			continue
 		}
 
+		// Check if this is a Gateway Pod by checking service name
+		// Gateway Pods typically have "gateway" in their service name
+		isGatewayPod := strings.Contains(strings.ToLower(si.Service.Attributes.Name), "gateway")
+		log.Debugf("buildInboundListeners: listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v",
+			name, si.Service.Attributes.Name, isGatewayPod, node.Type, node.IsRouter())
+
 		// - DestinationRule with ISTIO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
 		// - PeerAuthentication with STRICT configures SERVER-SIDE (inbound) mTLS
 		// Both are REQUIRED for mTLS to work. Server-side mTLS should ONLY be controlled by PeerAuthentication.
@@ -211,43 +217,84 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		// to satisfy gRPC client requirements. According to grpc-go issue #7691 and the error
 		// "missing HttpConnectionManager filter", gRPC proxyless clients require HttpConnectionManager
 		// in the FilterChain for inbound listeners.
-		// Use inline RouteConfig instead of RDS to avoid triggering additional RDS requests that cause push loops
-		// For proxyless gRPC, inline configuration is preferred to minimize round-trips
 		routeName := fmt.Sprintf("%d", listenPort)
-		hcm := &hcmv3.HttpConnectionManager{
-			CodecType:  hcmv3.HttpConnectionManager_AUTO,
-			StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
-			RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
-				RouteConfig: &route.RouteConfiguration{
-					Name: routeName,
-					VirtualHosts: []*route.VirtualHost{
-						{
-							Name:    "inbound|http|" + routeName,
-							Domains: []string{"*"},
-							Routes: []*route.Route{
-								{
-									Match: &route.RouteMatch{
-										PathSpecifier: &route.RouteMatch_Prefix{
-											Prefix: "/",
+		var hcm *hcmv3.HttpConnectionManager
+
+		// For Gateway Pods (router type), use RDS to get route configuration from HTTPRoute
+		// This allows Gateway to route external traffic to backend services based on HTTPRoute rules
+		if node.IsRouter() || isGatewayPod {
+			if isGatewayPod && !node.IsRouter() {
+				log.Warnf("buildInboundListeners: Gateway Pod detected but node.Type is not Router (node.Type=%v, node.ID=%s), treating as router anyway", node.Type, node.ID)
+			}
+			log.Infof("buildInboundListeners: Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v, service=%s", name, routeName, node.ID, node.Type, si.Service.Attributes.Name)
+			// Gateway Pods need RDS to route traffic based on HTTPRoute
+			hcm = &hcmv3.HttpConnectionManager{
+				CodecType:  hcmv3.HttpConnectionManager_AUTO,
+				StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
+				RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
+					Rds: &hcmv3.Rds{
+						ConfigSource: &core.ConfigSource{
+							ConfigSourceSpecifier: &core.ConfigSource_Ads{
+								Ads: &core.AggregatedConfigSource{},
+							},
+						},
+						RouteConfigName: routeName,
+					},
+				},
+				HttpFilters: []*hcmv3.HttpFilter{
+					{
+						Name: "envoy.filters.http.router",
+						ConfigType: &hcmv3.HttpFilter_TypedConfig{
+							TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
+						},
+					},
+				},
+			}
+			log.Infof("buildInboundListeners: Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v", name, routeName, node.ID, node.Type)
+		} else {
+			// For regular service Pods, use inline RouteConfig with NonForwardingAction
+			// Use inline RouteConfig instead of RDS to avoid triggering additional RDS requests that cause push loops
+			// For proxyless gRPC, inline configuration is preferred to minimize round-trips
+			hcm = &hcmv3.HttpConnectionManager{
+				CodecType:  hcmv3.HttpConnectionManager_AUTO,
+				StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
+				RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
+					RouteConfig: &route.RouteConfiguration{
+						Name: routeName,
+						VirtualHosts: []*route.VirtualHost{
+							{
+								Name:    "inbound|http|" + routeName,
+								Domains: []string{"*"},
+								Routes: []*route.Route{
+									{
+										Match: &route.RouteMatch{
+											PathSpecifier: &route.RouteMatch_Prefix{
+												Prefix: "/",
+											},
 										},
+										Action: &route.Route_NonForwardingAction{},
 									},
-									Action: &route.Route_NonForwardingAction{},
 								},
 							},
 						},
 					},
 				},
-			},
-			HttpFilters: []*hcmv3.HttpFilter{
-				{
-					Name: "envoy.filters.http.router",
-					ConfigType: &hcmv3.HttpFilter_TypedConfig{
-						TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
+				HttpFilters: []*hcmv3.HttpFilter{
+					{
+						Name: "envoy.filters.http.router",
+						ConfigType: &hcmv3.HttpFilter_TypedConfig{
+							TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
+						},
 					},
 				},
-			},
+			}
+			log.Debugf("buildInboundListeners: regular service Pod using inline RouteConfig for listener %s", name)
 		}
 
+		// For Gateway Pods and regular service Pods, use FilterChain
+		// Note: gRPC xDS ApiListener is ONLY for outbound (client-side load balancing)
+		// For inbound (server-side), we MUST use FilterChain
+		// Gateway Pods need FilterChain to receive external HTTP traffic (north-south traffic)
 		filterChain := &listener.FilterChain{
 			Filters: []*listener.Filter{
 				{

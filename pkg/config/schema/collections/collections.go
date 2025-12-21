@@ -21,7 +21,10 @@
 package collections
 
 import (
+	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"reflect"
+	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
+	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	istioioapimetav1alpha1 "istio.io/api/meta/v1alpha1"
@@ -99,47 +102,60 @@ var (
 		Synthetic:     false,
 		Builtin:       true,
 	}.MustBuild()
+	Gateway = collection.Builder{
+		Identifier: "KubernetesGateway",
+		Group:      "gateway.networking.k8s.io",
+		Kind:       "Gateway",
+		Plural:     "gateways",
+		Version:    "v1",
+		Proto:      "k8s.io.gateway_api.api.v1alpha1.GatewaySpec", StatusProto: "k8s.io.gateway_api.api.v1alpha1.GatewayStatus",
+		ReflectType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.GatewaySpec{}).Elem(), StatusType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.GatewayStatus{}).Elem(),
+		ProtoPackage: "sigs.k8s.io/gateway-api/apis/v1", StatusPackage: "sigs.k8s.io/gateway-api/apis/v1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+	GatewayClass = collection.Builder{
+		Identifier: "GatewayClass",
+		Group:      "gateway.networking.k8s.io",
+		Kind:       "GatewayClass",
+		Plural:     "gatewayclasses",
+		Version:    "v1",
+		Proto:      "k8s.io.gateway_api.api.v1alpha1.GatewayClassSpec", StatusProto: "k8s.io.gateway_api.api.v1alpha1.GatewayClassStatus",
+		ReflectType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.GatewayClassSpec{}).Elem(), StatusType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.GatewayClassStatus{}).Elem(),
+		ProtoPackage: "sigs.k8s.io/gateway-api/apis/v1", StatusPackage: "sigs.k8s.io/gateway-api/apis/v1",
+		ClusterScoped: true,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+	HTTPRoute = collection.Builder{
+		Identifier: "HTTPRoute",
+		Group:      "gateway.networking.k8s.io",
+		Kind:       "HTTPRoute",
+		Plural:     "httproutes",
+		Version:    "v1",
+		Proto:      "k8s.io.gateway_api.api.v1alpha1.HTTPRouteSpec", StatusProto: "k8s.io.gateway_api.api.v1alpha1.HTTPRouteStatus",
+		ReflectType: reflect.TypeOf(&sigsk8siogatewayapiapisv1beta1.HTTPRouteSpec{}).Elem(), StatusType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.HTTPRouteStatus{}).Elem(),
+		ProtoPackage: "sigs.k8s.io/gateway-api/apis/v1", StatusPackage: "sigs.k8s.io/gateway-api/apis/v1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
 
-	// EndpointSlice = collection.Builder{
-	// 	Identifier:    "EndpointSlice",
-	// 	Group:         "discovery.k8s.io",
-	// 	Kind:          "EndpointSlice",
-	// 	Plural:        "endpointslices",
-	// 	Version:       "v1",
-	// 	Proto:         "k8s.io.api.discovery.v1.EndpointSlice",
-	// 	ReflectType:   reflect.TypeOf(&k8sioapidiscoveryv1.EndpointSlice{}).Elem(),
-	// 	ProtoPackage:  "k8s.io/api/discovery/v1",
-	// 	ClusterScoped: false,
-	// 	Synthetic:     false,
-	// 	Builtin:       true,
-	// }.MustBuild()
+	Planet = collection.NewSchemasBuilder().
+		MustAdd(PeerAuthentication).
+		MustAdd(SubsetRule).
+		MustAdd(ServiceRoute).
+		Build()
 
-	// Endpoints = collection.Builder{
-	// 	Identifier:    "Endpoints",
-	// 	Group:         "",
-	// 	Kind:          "Endpoints",
-	// 	Plural:        "endpoints",
-	// 	Version:       "v1",
-	// 	Proto:         "k8s.io.api.core.v1.Endpoints",
-	// 	ReflectType:   reflect.TypeOf(&k8sioapicorev1.Endpoints{}).Elem(),
-	// 	ProtoPackage:  "k8s.io/api/core/v1",
-	// 	ClusterScoped: false,
-	// 	Synthetic:     false,
-	// 	Builtin:       true,
-	// }.MustBuild()
-	// Service = collection.Builder{
-	// 	Identifier: "Service",
-	// 	Group:      "",
-	// 	Kind:       "Service",
-	// 	Plural:     "services",
-	// 	Version:    "v1",
-	// 	Proto:      "k8s.io.api.core.v1.ServiceSpec", StatusProto: "k8s.io.api.core.v1.ServiceStatus",
-	// 	ReflectType: reflect.TypeOf(&k8sioapicorev1.ServiceSpec{}).Elem(), StatusType: reflect.TypeOf(&k8sioapicorev1.ServiceStatus{}).Elem(),
-	// 	ProtoPackage: "k8s.io/api/core/v1", StatusPackage: "k8s.io/api/core/v1",
-	// 	ClusterScoped: false,
-	// 	Synthetic:     false,
-	// 	Builtin:       true,
-	// }.MustBuild()
+	planetGatewayAPI = collection.NewSchemasBuilder().
+				MustAdd(GatewayClass).
+				MustAdd(Gateway).
+				MustAdd(HTTPRoute).
+				Build()
 
 	All = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
@@ -147,11 +163,8 @@ var (
 		MustAdd(ServiceRoute).
 		MustAdd(MutatingWebhookConfiguration).
 		MustAdd(ValidatingWebhookConfiguration).
-		Build()
-
-	Planet = collection.NewSchemasBuilder().
-		MustAdd(PeerAuthentication).
-		MustAdd(SubsetRule).
-		MustAdd(ServiceRoute).
+		MustAdd(GatewayClass).
+		MustAdd(Gateway).
+		MustAdd(HTTPRoute).
 		Build()
 )

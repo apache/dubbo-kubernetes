@@ -35,6 +35,9 @@ var skippedRdsConfigs = sets.New[kind.Kind](
 	kind.Secret,
 )
 
+// HTTPRoute changes should trigger RDS push for Gateway Pods
+// Gateway Pods use RDS to route traffic based on HTTPRoute rules
+
 func rdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) bool {
 	if res, ok := xdsNeedsPush(req, proxy); ok {
 		return res
@@ -51,9 +54,14 @@ func rdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) bool {
 }
 
 func (c RdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
-	if !rdsNeedsPush(req, proxy) {
+	log.Infof("RDS Generate: node=%s, routeNames=%v, Full=%v, ConfigsUpdated=%v", proxy.ID, w.ResourceNames.UnsortedList(), req.Full, req.ConfigsUpdated)
+	needsPush := rdsNeedsPush(req, proxy)
+	log.Infof("RDS Generate: rdsNeedsPush=%v for node=%s", needsPush, proxy.ID)
+	if !needsPush {
+		log.Debugf("RDS Generate: skipping push for node=%s (rdsNeedsPush=false)", proxy.ID)
 		return nil, model.DefaultXdsLogDetails, nil
 	}
 	resources, logDetails := c.ConfigGenerator.BuildHTTPRoutes(proxy, req, w.ResourceNames.UnsortedList())
+	log.Infof("RDS Generate: built %d resources for node=%s", len(resources), proxy.ID)
 	return resources, logDetails, nil
 }

@@ -233,6 +233,58 @@ func (s *staticList[T]) List() []T {
 	return maps.Values(s.vals)
 }
 
+func (s *staticList[T]) DeleteObject(k string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	old, f := s.vals[k]
+	if f {
+		delete(s.vals, k)
+		for _, index := range s.indexes {
+			index.delete(old, k)
+		}
+		s.eventHandlers.Distribute([]Event[T]{{
+			Old:   &old,
+			Event: controllers.EventDelete,
+		}}, false)
+	}
+}
+
+func (s *staticList[T]) ConditionalUpdateObject(obj T) {
+	s.updateObject(obj, true)
+}
+
+func (s *staticList[T]) updateObject(obj T, conditional bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	k := GetKey(obj)
+	old, f := s.vals[k]
+	s.vals[k] = obj
+	if f {
+		if conditional && Equal(old, obj) {
+			return
+		}
+
+		ev := Event[T]{
+			Old:   &old,
+			New:   &obj,
+			Event: controllers.EventUpdate,
+		}
+		for _, index := range s.indexes {
+			index.update(ev, k)
+		}
+		s.eventHandlers.Distribute([]Event[T]{ev}, false)
+	} else {
+		ev := Event[T]{
+			New:   &obj,
+			Event: controllers.EventAdd,
+		}
+		for _, index := range s.indexes {
+			index.update(ev, k)
+		}
+		s.eventHandlers.Distribute([]Event[T]{ev}, false)
+	}
+}
+
 func (s staticListIndex[T]) update(ev Event[T], oKey string) {
 	if ev.Old != nil {
 		s.delete(*ev.Old, oKey)

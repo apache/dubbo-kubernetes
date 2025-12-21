@@ -20,13 +20,15 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	"net"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
@@ -72,6 +74,11 @@ type (
 	IPMode                = pm.IPMode
 )
 
+const (
+	Proxyless = pm.Proxyless
+	Router    = pm.Router
+)
+
 type Watcher = meshwatcher.WatcherCollection
 
 type WatchedResource = xds.WatchedResource
@@ -88,6 +95,13 @@ type Environment struct {
 	DomainSuffix         string
 	EndpointIndex        *EndpointIndex
 	Cache                XdsCache
+	GatewayAPIController GatewayController
+}
+
+type GatewayController interface {
+	ConfigStoreController
+	Reconcile(ctx *PushContext)
+	SecretAllowed(ourKind config.GroupVersionKind, resourceName string, namespace string) bool
 }
 
 func NewEnvironment() *Environment {
@@ -156,6 +170,35 @@ func (e *Environment) AddMeshHandler(h func()) {
 	}
 }
 
+func (e *Environment) AddNetworksHandler(h func()) {
+	if e != nil && e.NetworksWatcher != nil {
+		e.NetworksWatcher.AddNetworksHandler(h)
+	}
+}
+
+// NetworkGateways returns all known network gateways from the underlying registries.
+// This is delegated to the embedded ServiceDiscovery if it implements NetworkGatewaysWatcher.
+func (e *Environment) NetworkGateways() []NetworkGateway {
+	if e == nil || e.ServiceDiscovery == nil {
+		return nil
+	}
+	if w, ok := e.ServiceDiscovery.(NetworkGatewaysWatcher); ok {
+		return w.NetworkGateways()
+	}
+	return nil
+}
+
+// AppendNetworkGatewayHandler registers a handler that is invoked when network gateways change
+// in any of the underlying service registries.
+func (e *Environment) AppendNetworkGatewayHandler(h func()) {
+	if e == nil || e.ServiceDiscovery == nil {
+		return
+	}
+	if w, ok := e.ServiceDiscovery.(NetworkGatewaysWatcher); ok {
+		w.AppendNetworkGatewayHandler(h)
+	}
+}
+
 func (e *Environment) GetDiscoveryAddress() (host.Name, string, error) {
 	proxyConfig := mesh.DefaultProxyConfig()
 	if e.Mesh().DefaultConfig != nil {
@@ -198,16 +241,18 @@ type Proxy struct {
 	XdsResourceGenerator XdsResourceGenerator
 	LastPushContext      *PushContext
 	LastPushTime         time.Time
-	WatchedResources     map[string]*WatchedResource
-	ID                   string
-	DNSDomain            string
-	Metadata             *NodeMetadata
-	IPAddresses          []string
-	XdsNode              *core.Node
-	ConfigNamespace      string
-	ServiceTargets       []ServiceTarget
-	ipMode               IPMode
-	GlobalUnicastIP      string
+	// Type specifies the node type. First part of the ID.
+	Type             NodeType
+	WatchedResources map[string]*WatchedResource
+	ID               string
+	DNSDomain        string
+	Metadata         *NodeMetadata
+	IPAddresses      []string
+	XdsNode          *core.Node
+	ConfigNamespace  string
+	ServiceTargets   []ServiceTarget
+	ipMode           IPMode
+	GlobalUnicastIP  string
 }
 
 func (node *Proxy) GetWatchedResource(typeURL string) *WatchedResource {
@@ -222,6 +267,14 @@ func (node *Proxy) DeleteWatchedResource(typeURL string) {
 	defer node.Unlock()
 
 	delete(node.WatchedResources, typeURL)
+}
+
+func (node *Proxy) IsRouter() bool {
+	return node != nil && node.Type == Router
+}
+
+func (node *Proxy) IsProxyless() bool {
+	return node != nil && node.Type == Proxyless
 }
 
 func (node *Proxy) NewWatchedResource(typeURL string, names []string) {
@@ -327,10 +380,15 @@ func ParseServiceNodeWithMetadata(nodeID string, metadata *NodeMetadata) (*Proxy
 	out := &Proxy{
 		Metadata: metadata,
 	}
-
 	if len(parts) != 4 {
 		return out, fmt.Errorf("missing parts in the service node %q (expected 4 parts, got %d)", nodeID, len(parts))
 	}
+
+	// Validate node type
+	if !pm.IsApplicationNodeType(NodeType(parts[0])) {
+		return out, fmt.Errorf("invalid node type %q in the service node %q", parts[0], nodeID)
+	}
+	out.Type = NodeType(parts[0])
 
 	// Extract IP address from parts[1] (format: type~ip~id~domain)
 	// Validate and set IP address

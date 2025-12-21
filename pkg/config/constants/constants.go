@@ -51,4 +51,6 @@ const (
 	AlwaysReject = "internal.dubbo.apache.org/webhook-always-reject"
 
 	KubeSystemNamespace string = "kube-system"
+
+	ManagedGatewayControllerLabel = "dubbo.apache.org-gateway-controller"
 )

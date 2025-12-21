@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // assignSpec is a helper function to assign protobuf spec values.
@@ -126,6 +127,21 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			Version:  "v1",
 			Resource: "serviceroutes",
 		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
+	case gvk.Gateway:
+		return c.GatewayAPI().GatewayV1().Gateways(cfg.Namespace).Create(context.TODO(), &sigsk8siogatewayapiapisv1.Gateway{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.GatewaySpec)),
+		}, metav1.CreateOptions{})
+	case gvk.GatewayClass:
+		return c.GatewayAPI().GatewayV1().GatewayClasses().Create(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.GatewayClassSpec)),
+		}, metav1.CreateOptions{})
+	case gvk.HTTPRoute:
+		return c.GatewayAPI().GatewayV1().HTTPRoutes(cfg.Namespace).Create(context.TODO(), &sigsk8siogatewayapiapisv1.HTTPRoute{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)),
+		}, metav1.CreateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -201,6 +217,21 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			Version:  "v1",
 			Resource: "serviceroutes",
 		}).Namespace(cfg.Namespace).Update(context.TODO(), u, metav1.UpdateOptions{})
+	case gvk.GatewayClass:
+		return c.GatewayAPI().GatewayV1().GatewayClasses().Update(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.GatewayClassSpec)),
+		}, metav1.UpdateOptions{})
+	case gvk.Gateway:
+		return c.GatewayAPI().GatewayV1().Gateways(cfg.Namespace).Update(context.TODO(), &sigsk8siogatewayapiapisv1.Gateway{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.GatewaySpec)),
+		}, metav1.UpdateOptions{})
+	case gvk.HTTPRoute:
+		return c.GatewayAPI().GatewayV1().HTTPRoutes(cfg.Namespace).Update(context.TODO(), &sigsk8siogatewayapiapisv1.HTTPRoute{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)),
+		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -276,6 +307,21 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 			Version:  "v1",
 			Resource: "serviceroutes",
 		}).Namespace(cfg.Namespace).UpdateStatus(context.TODO(), u, metav1.UpdateOptions{})
+	case gvk.Gateway:
+		return c.GatewayAPI().GatewayV1().Gateways(cfg.Namespace).UpdateStatus(context.TODO(), &sigsk8siogatewayapiapisv1.Gateway{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*sigsk8siogatewayapiapisv1.GatewayStatus)),
+		}, metav1.UpdateOptions{})
+	case gvk.GatewayClass:
+		return c.GatewayAPI().GatewayV1().GatewayClasses().UpdateStatus(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*sigsk8siogatewayapiapisv1.GatewayClassStatus)),
+		}, metav1.UpdateOptions{})
+	case gvk.HTTPRoute:
+		return c.GatewayAPI().GatewayV1().HTTPRoutes(cfg.Namespace).UpdateStatus(context.TODO(), &sigsk8siogatewayapiapisv1.HTTPRoute{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*sigsk8siogatewayapiapisv1.HTTPRouteStatus)),
+		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -354,6 +400,51 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			Version:  "v1",
 			Resource: "serviceroutes",
 		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+	case gvk.GatewayClass:
+		oldRes := &sigsk8siogatewayapiapisv1.GatewayClass{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*sigsk8siogatewayapiapisv1.GatewayClassSpec)),
+		}
+		modRes := &sigsk8siogatewayapiapisv1.GatewayClass{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*sigsk8siogatewayapiapisv1.GatewayClassSpec)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.GatewayAPI().GatewayV1().GatewayClasses().
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.Gateway:
+		oldRes := &sigsk8siogatewayapiapisv1.Gateway{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*sigsk8siogatewayapiapisv1.GatewaySpec)),
+		}
+		modRes := &sigsk8siogatewayapiapisv1.Gateway{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*sigsk8siogatewayapiapisv1.GatewaySpec)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.GatewayAPI().GatewayV1().Gateways(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+	case gvk.HTTPRoute:
+		oldRes := &sigsk8siogatewayapiapisv1.HTTPRoute{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)),
+		}
+		modRes := &sigsk8siogatewayapiapisv1.HTTPRoute{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.GatewayAPI().GatewayV1().HTTPRoutes(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", orig.GroupVersionKind)
 	}
@@ -385,6 +476,12 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 			Version:  "v1",
 			Resource: "serviceroutes",
 		}).Namespace(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.GatewayClass:
+		return c.GatewayAPI().GatewayV1().GatewayClasses().Delete(context.TODO(), name, deleteOptions)
+	case gvk.Gateway:
+		return c.GatewayAPI().GatewayV1().Gateways(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.HTTPRoute:
+		return c.GatewayAPI().GatewayV1().HTTPRoutes(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
 		return fmt.Errorf("unsupported type: %v", typ)
 	}
@@ -733,6 +830,63 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				Generation:        obj.Generation,
 			},
 			Spec: obj,
+		}
+	},
+	gvk.GatewayClass: func(r runtime.Object) config.Config {
+		obj := r.(*sigsk8siogatewayapiapisv1.GatewayClass)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.GatewayClass,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
+		}
+	},
+	gvk.Gateway: func(r runtime.Object) config.Config {
+		obj := r.(*sigsk8siogatewayapiapisv1.Gateway)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.Gateway,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
+		}
+	},
+	gvk.HTTPRoute: func(r runtime.Object) config.Config {
+		obj := r.(*sigsk8siogatewayapiapisv1.HTTPRoute)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.HTTPRoute,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
 		}
 	},
 }

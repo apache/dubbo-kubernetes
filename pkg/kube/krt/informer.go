@@ -19,6 +19,7 @@ package krt
 
 import (
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
@@ -51,6 +52,14 @@ type informerIndex[I any] struct {
 type informerHandlerRegistration struct {
 	Syncer
 	remove func()
+}
+
+func NewInformer[I controllers.ComparableObject](c kube.Client, opts ...CollectionOption) Collection[I] {
+	return NewInformerFiltered[I](c, kubetypes.Filter{}, opts...)
+}
+
+func NewInformerFiltered[I controllers.ComparableObject](c kube.Client, filter kubetypes.Filter, opts ...CollectionOption) Collection[I] {
+	return WrapClient[I](kclient.NewFiltered[I](c, filter), opts...)
 }
 
 func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...CollectionOption) Collection[I] {

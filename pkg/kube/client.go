@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
@@ -69,6 +70,7 @@ type client struct {
 	informerWatchesPending *atomic.Int32
 	started                atomic.Bool
 	dubbo                  istioclient.Interface
+	gatewayapi             gatewayapiclient.Interface
 	crdWatcher             kubetypes.CrdWatcher
 	fastSync               bool
 }
@@ -93,6 +95,8 @@ type Client interface {
 	ClusterID() cluster.ID
 
 	CrdWatcher() kubetypes.CrdWatcher
+
+	GatewayAPI() gatewayapiclient.Interface
 
 	RunAndWait(stop <-chan struct{}) bool
 
@@ -155,6 +159,11 @@ func newClientInternal(clientFactory *clientFactory, opts ...ClientOption) (*cli
 	}
 
 	c.dubbo, err = istioclient.NewForConfig(c.config)
+	if err != nil {
+		return nil, err
+	}
+
+	c.gatewayapi, err = gatewayapiclient.NewForConfig(c.config)
 	if err != nil {
 		return nil, err
 	}
@@ -237,6 +246,10 @@ func (c *client) Informers() informerfactory.InformerFactory {
 
 func (c *client) Dubbo() istioclient.Interface {
 	return c.dubbo
+}
+
+func (c *client) GatewayAPI() gatewayapiclient.Interface {
+	return c.gatewayapi
 }
 
 func (c *client) ObjectFilter() kubetypes.DynamicObjectFilter {

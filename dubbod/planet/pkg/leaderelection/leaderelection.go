@@ -20,10 +20,11 @@ package leaderelection
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection/k8sleaderelection"
@@ -36,6 +37,8 @@ import (
 
 const (
 	NamespaceController          = "dubbo-namespace-controller-election"
+	GatewayStatusController      = "dubbo-gateway-status-leader"
+	GatewayDeploymentController  = "dubbo-gateway-deployment"
 	ClusterTrustBundleController = "dubbo-clustertrustbundle-controller-election"
 )
 
@@ -98,8 +101,17 @@ func newLeaderElection(namespace, name, electionID, revision string, perRevision
 	}
 }
 
+func NewLeaderElection(namespace, name, electionID, revision string, client kube.Client) *LeaderElection {
+	return newLeaderElection(namespace, name, electionID, revision, false, false, false, client)
+}
+
 func NewLeaderElectionMulticluster(namespace, name, electionID, revision string, remote bool, client kube.Client) *LeaderElection {
 	return newLeaderElection(namespace, name, electionID, revision, false, remote, false, client)
+}
+
+func NewPerRevisionLeaderElection(namespace, name, electionID, revision string, client kube.Client) *LeaderElection {
+	// PerRevision is new, so always use the more modern lease lock
+	return newLeaderElection(namespace, name, electionID, revision, true, false, true, client)
 }
 
 func (l *LeaderElection) create() (*k8sleaderelection.LeaderElector, error) {

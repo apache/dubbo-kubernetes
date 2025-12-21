@@ -21,9 +21,16 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	configaggregate "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/aggregate"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/gateway"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection/k8sleaderelection/k8sresourcelock"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"net/url"
 	"strings"
 
@@ -59,7 +66,9 @@ func (s *Server) makeKubeConfigController(args *PlanetArgs) *crdclient.Client {
 	}
 
 	schemas := collections.Planet
-
+	if features.EnableGatewayAPI {
+		schemas = collections.PlanetGatewayAPI()
+	}
 	return crdclient.NewForSchemas(s.kubeClient, opts, schemas)
 }
 
@@ -69,6 +78,72 @@ func (s *Server) initK8SConfigStore(args *PlanetArgs) error {
 	}
 	configController := s.makeKubeConfigController(args)
 	s.ConfigStores = append(s.ConfigStores, configController)
+
+	if features.EnableGatewayAPI {
+		if s.statusManager == nil && features.EnableGatewayAPIStatus {
+			s.initStatusManager(args)
+		}
+		args.RegistryOptions.KubeOptions.KrtDebugger = args.KrtDebugger
+		gwc := gateway.NewController(s.kubeClient, s.kubeClient.CrdWatcher().WaitForCRD, args.RegistryOptions.KubeOptions, s.XDSServer)
+		s.environment.GatewayAPIController = gwc
+		s.ConfigStores = append(s.ConfigStores, s.environment.GatewayAPIController)
+
+		// Use a channel to signal activation of per-revision status writer
+		activatePerRevisionStatusWriterCh := make(chan struct{})
+		s.checkAndRunNonRevisionLeaderElectionIfRequired(args, activatePerRevisionStatusWriterCh)
+
+		s.addTerminatingStartFunc("gateway status", func(stop <-chan struct{}) error {
+			leaderelection.
+				NewPerRevisionLeaderElection(args.Namespace, args.PodName, leaderelection.GatewayStatusController, args.Revision, s.kubeClient).
+				AddRunFunction(func(leaderStop <-chan struct{}) {
+					log.Infof("waiting for gateway status writer activation")
+					<-activatePerRevisionStatusWriterCh
+					log.Infof("Starting gateway status writer for revision: %s", args.Revision)
+					gwc.SetStatusWrite(true, s.statusManager)
+
+					// Trigger a push so we can recompute status
+					s.XDSServer.ConfigUpdate(&model.PushRequest{
+						Full:   true,
+						Reason: model.NewReasonStats(model.GlobalUpdate),
+						Forced: true,
+					})
+					<-leaderStop
+					log.Infof("Stopping gateway status writer")
+					gwc.SetStatusWrite(false, nil)
+				}).
+				Run(stop)
+			return nil
+		})
+		if features.EnableGatewayAPIDeploymentController {
+			s.addTerminatingStartFunc("gateway deployment controller", func(stop <-chan struct{}) error {
+				leaderelection.
+					NewPerRevisionLeaderElection(args.Namespace, args.PodName, leaderelection.GatewayDeploymentController, args.Revision, s.kubeClient).
+					AddRunFunction(func(leaderStop <-chan struct{}) {
+						// We can only run this if the Gateway CRD is created
+						if s.kubeClient.CrdWatcher().WaitForCRD(gvr.KubernetesGateway, leaderStop) {
+							controller := gateway.NewDeploymentController(s.kubeClient, s.clusterID, s.environment,
+								s.webhookInfo.getWebhookConfig, s.webhookInfo.addHandler, nil, args.Revision, args.Namespace)
+							// Start informers again. This fixes the case where informers for namespace do not start,
+							// as we create them only after acquiring the leader lock
+							// Note: stop here should be the overall pilot stop, NOT the leader election stop. We are
+							// basically lazy loading the informer, if we stop it when we lose the lock we will never
+							// recreate it again.
+							s.kubeClient.RunAndWait(stop)
+							// TODO tag watcher
+							controller.Run(leaderStop)
+						}
+					}).
+					Run(stop)
+				return nil
+			})
+		}
+	}
+	var err error
+	s.RWConfigStore, err = configaggregate.MakeWriteableCache(s.ConfigStores, configController)
+	if err != nil {
+		return err
+	}
+
 	s.XDSServer.ConfigUpdate(&model.PushRequest{
 		Full:   true,
 		Reason: model.NewReasonStats(model.GlobalUpdate),
@@ -180,9 +255,6 @@ func (s *Server) initConfigController(args *PlanetArgs) error {
 			return err
 		}
 	}
-
-	// TODO ingress controller
-	// TODO addTerminatingStartFunc
 
 	// Wrap the config controller with a cache.
 	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
@@ -297,4 +369,61 @@ func (s *Server) getRootCertFromSecret(name, namespace string) (*dubboCredential
 		return nil, fmt.Errorf("failed to get credential with name %v: %v", name, err)
 	}
 	return kube.ExtractRoot(secret.Data)
+}
+
+func (s *Server) checkAndRunNonRevisionLeaderElectionIfRequired(args *PlanetArgs, activateCh chan struct{}) {
+	cm, err := s.kubeClient.Kube().CoreV1().ConfigMaps(args.Namespace).Get(context.Background(), leaderelection.GatewayStatusController, v1.GetOptions{})
+
+	if errors.IsNotFound(err) {
+		// ConfigMap does not exist, so per-revision leader election should be active
+		close(activateCh)
+		return
+	}
+	leaderAnn, ok := cm.Annotations[k8sresourcelock.LeaderElectionRecordAnnotationKey]
+	if ok {
+		var leaderInfo struct {
+			HolderIdentity string `json:"holderIdentity"`
+		}
+		if err := json.Unmarshal([]byte(leaderAnn), &leaderInfo); err == nil {
+			if leaderInfo.HolderIdentity != "" {
+				// Non-revision leader election should run, per-revision should be waiting for activation
+				s.addTerminatingStartFunc("gateway status", func(stop <-chan struct{}) error {
+					secondStop := make(chan struct{})
+					// if stop closes, ensure secondStop closes too
+					go func() {
+						<-stop
+						select {
+						case <-secondStop:
+						default:
+							close(secondStop)
+						}
+					}()
+					leaderelection.
+						NewLeaderElection(args.Namespace, args.PodName, leaderelection.GatewayStatusController, args.Revision, s.kubeClient).
+						AddRunFunction(func(leaderStop <-chan struct{}) {
+							// now that we have the leader lock, we can activate the per-revision status writer
+							// first close the activateCh channel if it is not already closed
+							log.Infof("Activating gateway status writer")
+							select {
+							case <-activateCh:
+								// Channel already closed, do nothing
+							default:
+								close(activateCh)
+							}
+							// now end this lease itself
+							select {
+							case <-secondStop:
+							default:
+								close(secondStop)
+							}
+						}).
+						Run(secondStop)
+					return nil
+				})
+				return
+			}
+		}
+	}
+	// If annotation missing or holderIdentity is blank, per-revision leader election should be active
+	close(activateCh)
 }

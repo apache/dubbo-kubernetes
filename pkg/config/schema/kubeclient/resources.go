@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
+	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.WriteAPI[T] {
@@ -75,6 +76,12 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Dubbo().NetworkingV1().VirtualServices(namespace).(ktypes.WriteAPI[T])
 	case *apiistioioapinetworkingv1.DestinationRule:
 		return c.Dubbo().NetworkingV1().DestinationRules(namespace).(ktypes.WriteAPI[T])
+	case *sigsk8siogatewayapiapisv1.GatewayClass:
+		return c.GatewayAPI().GatewayV1().GatewayClasses().(ktypes.WriteAPI[T])
+	case *sigsk8siogatewayapiapisv1.Gateway:
+		return c.GatewayAPI().GatewayV1().Gateways(namespace).(ktypes.WriteAPI[T])
+	case *sigsk8siogatewayapiapisv1.HTTPRoute:
+		return c.GatewayAPI().GatewayV1().HTTPRoutes(namespace).(ktypes.WriteAPI[T])
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
 	}
@@ -116,6 +123,12 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &apiistioioapinetworkingv1.VirtualService{}
 	case gvr.SubsetRule:
 		return &apiistioioapinetworkingv1.DestinationRule{}
+	case gvr.GatewayClass:
+		return &sigsk8siogatewayapiapisv1.GatewayClass{}
+	case gvr.KubernetesGateway:
+		return &sigsk8siogatewayapiapisv1.Gateway{}
+	case gvr.HTTPRoute:
+		return &sigsk8siogatewayapiapisv1.HTTPRoute{}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}
@@ -297,6 +310,27 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoreV1().Pods(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.GatewayClass:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.GatewayAPI().GatewayV1().GatewayClasses().List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.GatewayAPI().GatewayV1().GatewayClasses().Watch(context.Background(), options)
+		}
+	case gvr.KubernetesGateway:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.GatewayAPI().GatewayV1().Gateways(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.GatewayAPI().GatewayV1().Gateways(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.HTTPRoute:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.GatewayAPI().GatewayV1().HTTPRoutes(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.GatewayAPI().GatewayV1().HTTPRoutes(opts.Namespace).Watch(context.Background(), options)
 		}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))

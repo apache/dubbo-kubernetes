@@ -41,6 +41,9 @@ var (
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 	Pod                            = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
+	GatewayClass                   = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"}
+	KubernetesGateway              = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"}
+	HTTPRoute                      = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
@@ -76,6 +79,12 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case Endpoints:
 		return false
 	case Pod:
+		return false
+	case GatewayClass:
+		return true
+	case KubernetesGateway:
+		return false
+	case HTTPRoute:
 		return false
 	}
 	return false

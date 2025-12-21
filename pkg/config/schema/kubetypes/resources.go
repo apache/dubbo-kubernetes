@@ -24,8 +24,11 @@ import (
 	apiistioioapinetworkingv1 "istio.io/client-go/pkg/apis/networking/v1"
 	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func getGvk(obj any) (config.GroupVersionKind, bool) {
@@ -54,6 +57,16 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Pod, true
 	case *k8sioapicorev1.Namespace:
 		return gvk.Namespace, true
+	case *k8sioapicorev1.ServiceAccount:
+		return gvk.ServiceAccount, true
+	case *k8sioapiappsv1.Deployment:
+		return gvk.Deployment, true
+	case *gatewayv1.GatewayClass:
+		return gvk.GatewayClass, true
+	case *gatewayv1.Gateway:
+		return gvk.Gateway, true
+	case *sigsk8siogatewayapiapisv1.HTTPRoute:
+		return gvk.HTTPRoute, true
 	default:
 		return config.GroupVersionKind{}, false
 	}

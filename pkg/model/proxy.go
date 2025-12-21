@@ -37,6 +37,7 @@ type (
 
 const (
 	Proxyless NodeType = "proxyless"
+	Router    NodeType = "router"
 )
 
 const (
@@ -75,7 +76,7 @@ type BootstrapNodeMetadata struct {
 
 func IsApplicationNodeType(nType NodeType) bool {
 	switch nType {
-	case Proxyless:
+	case Proxyless, Router:
 		return true
 	default:
 		return false

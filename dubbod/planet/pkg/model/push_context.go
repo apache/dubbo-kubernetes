@@ -20,12 +20,14 @@ package model
 import (
 	"cmp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	networking "istio.io/api/networking/v1alpha3"
+	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
@@ -51,7 +53,10 @@ const (
 	HeadlessEndpointUpdate TriggerReason = "headlessendpoint"
 	EndpointUpdate         TriggerReason = "endpoint"
 	ProxyUpdate            TriggerReason = "proxy"
+	ConfigUpdate           TriggerReason = "config"
 	DependentResource      TriggerReason = "depdendentresource"
+	// NetworksTrigger describes a push triggered for Networks change
+	NetworksTrigger TriggerReason = "networks"
 )
 
 var (
@@ -60,15 +65,20 @@ var (
 )
 
 type PushContext struct {
-	Mesh                   *meshconfig.MeshConfig `json:"-"`
-	initializeMutex        sync.Mutex
-	InitDone               atomic.Bool
-	Networks               *meshconfig.MeshNetworks
+	Mesh            *meshconfig.MeshConfig `json:"-"`
+	initializeMutex sync.Mutex
+	InitDone        atomic.Bool
+	Networks        *meshconfig.MeshNetworks
+	// GatewayAPIController holds a reference to the Gateway API controller.
+	// When enabled, this controller is responsible for translating Kubernetes
+	// Gateway API resources into internal Dubbo resources during push.
+	GatewayAPIController   GatewayController
 	networkMgr             *NetworkManager
 	clusterLocalHosts      ClusterLocalHosts
 	exportToDefaults       exportToDefaults
 	ServiceIndex           serviceIndex
 	serviceRouteIndex      serviceRouteIndex
+	httpRouteIndex         httpRouteIndex
 	subsetRuleIndex        subsetRuleIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
@@ -144,6 +154,11 @@ type serviceRouteIndex struct {
 	referencedDestinations map[string]sets.String
 
 	// hostToRoutes keeps the resolved VirtualServices keyed by host
+	hostToRoutes map[host.Name][]config.Config
+}
+
+type httpRouteIndex struct {
+	// hostToRoutes keeps the Gateway API HTTPRoutes keyed by hostname
 	hostToRoutes map[host.Name][]config.Config
 }
 
@@ -514,7 +529,12 @@ func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.
 func (ps *PushContext) createNewContext(env *Environment) {
 	log.Debug("createNewContext: creating new PushContext (full initialization)")
 	ps.initServiceRegistry(env, nil)
+	// Initialize Kubernetes Gateway API resources if the controller is enabled.
+	// This mirrors Istio's behavior, where Gateway API is translated into
+	// internal Gateway and VirtualService resources during push context creation.
+	ps.initKubernetesGateways(env)
 	ps.initServiceRoutes(env)
+	ps.initHTTPRoutes(env)
 	ps.initSubsetRules(env)
 	ps.initAuthenticationPolicies(env)
 }
@@ -592,12 +612,31 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.serviceAccounts = oldPushContext.serviceAccounts
 	}
 
+	// Initialize or reuse Gateway API controller state.
+	// Gateway status and derived configs depend on services, so recompute
+	// if services have changed, otherwise carry over the previous controller.
+	if servicesChanged {
+		ps.initKubernetesGateways(env)
+	} else {
+		ps.GatewayAPIController = oldPushContext.GatewayAPIController
+	}
+
+	httpRoutesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.HTTPRoute)
+
 	if serviceRoutesChanged {
 		log.Debugf("updateContext: ServiceRoutes changed, re-initializing ServiceRoute index")
 		ps.initServiceRoutes(env)
 	} else {
 		log.Debugf("updateContext: ServiceRoutes unchanged, reusing old ServiceRoute index")
 		ps.serviceRouteIndex = oldPushContext.serviceRouteIndex
+	}
+
+	if httpRoutesChanged {
+		log.Debugf("updateContext: HTTPRoutes changed, re-initializing HTTPRoute index")
+		ps.initHTTPRoutes(env)
+	} else {
+		log.Debugf("updateContext: HTTPRoutes unchanged, reusing old HTTPRoute index")
+		ps.httpRouteIndex = oldPushContext.httpRouteIndex
 	}
 
 	if subsetRulesChanged {
@@ -643,6 +682,17 @@ func (ps *PushContext) InboundMTLSModeForProxy(proxy *Proxy, port uint32) Mutual
 		namespace = proxy.ConfigNamespace
 	}
 	return ps.AuthenticationPolicies.EffectiveMutualTLSMode(namespace, nil, port)
+}
+
+// initKubernetesGateways initializes Kubernetes Gateway API objects by delegating
+// to the GatewayAPIController, if it is present in the Environment.
+// This closely follows Istio's initKubernetesGateways behavior.
+func (ps *PushContext) initKubernetesGateways(env *Environment) {
+	if env == nil || env.GatewayAPIController == nil {
+		return
+	}
+	ps.GatewayAPIController = env.GatewayAPIController
+	env.GatewayAPIController.Reconcile(ps)
 }
 
 func (ps *PushContext) ServiceForHostname(proxy *Proxy, hostname host.Name) *Service {
@@ -721,6 +771,103 @@ func (ps *PushContext) initServiceRoutes(env *Environment) {
 	}
 	ps.serviceRouteIndex.hostToRoutes = hostToRoutes
 	log.Debugf("initServiceRoutes: indexed ServiceRoutes for %d hostnames", len(hostToRoutes))
+}
+
+func (ps *PushContext) initHTTPRoutes(env *Environment) {
+	log.Infof("initHTTPRoutes: starting HTTPRoute initialization")
+	httproutes := env.List(gvk.HTTPRoute, NamespaceAll)
+	log.Infof("initHTTPRoutes: found %d HTTPRoute configs", len(httproutes))
+
+	hostToRoutes := make(map[host.Name][]config.Config)
+	for _, hr := range httproutes {
+		hrSpec, ok := hr.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
+		if !ok {
+			log.Warnf("initHTTPRoutes: HTTPRoute %s/%s spec is not HTTPRouteSpec", hr.Namespace, hr.Name)
+			continue
+		}
+
+		// Process hostnames from HTTPRoute
+		if len(hrSpec.Hostnames) == 0 {
+			// If no hostnames specified, match all
+			hostToRoutes["*"] = append(hostToRoutes["*"], hr)
+			log.Debugf("initHTTPRoutes: indexed HTTPRoute %s/%s for wildcard hostname (no hostnames specified)", hr.Namespace, hr.Name)
+		} else {
+			for _, hostname := range hrSpec.Hostnames {
+				if hostname == "" {
+					// Empty hostname means match all
+					hostToRoutes["*"] = append(hostToRoutes["*"], hr)
+					log.Debugf("initHTTPRoutes: indexed HTTPRoute %s/%s for wildcard hostname", hr.Namespace, hr.Name)
+				} else {
+					hostStr := string(hostname)
+					// Resolve shortname to FQDN
+					resolvedHost := string(ResolveShortnameToFQDN(hostStr, hr.Meta))
+					hostName := host.Name(resolvedHost)
+					hostToRoutes[hostName] = append(hostToRoutes[hostName], hr)
+					log.Debugf("initHTTPRoutes: indexed HTTPRoute %s/%s for hostname %s", hr.Namespace, hr.Name, hostName)
+				}
+			}
+		}
+	}
+	ps.httpRouteIndex.hostToRoutes = hostToRoutes
+	log.Infof("initHTTPRoutes: indexed HTTPRoutes for %d hostnames", len(hostToRoutes))
+	if len(hostToRoutes) > 0 {
+		for hostname, routes := range hostToRoutes {
+			log.Infof("initHTTPRoutes: hostname %s has %d HTTPRoute(s)", hostname, len(routes))
+		}
+	}
+}
+
+// HTTPRouteForHost returns HTTPRoutes that match the given hostname.
+func (ps *PushContext) HTTPRouteForHost(hostname host.Name) []config.Config {
+	var routes []config.Config
+	hostStr := string(hostname)
+
+	// Special case: if hostname is "*", return ALL HTTPRoutes
+	// This is needed for Gateway Pod inbound listeners that need to route traffic based on HTTPRoute hostnames
+	if hostname == "*" {
+		for _, routeList := range ps.httpRouteIndex.hostToRoutes {
+			routes = append(routes, routeList...)
+		}
+		if len(routes) == 0 {
+			log.Debugf("HTTPRouteForHost: no HTTPRoute found for wildcard hostname")
+			return nil
+		}
+		log.Infof("HTTPRouteForHost: found %d HTTPRoute(s) for wildcard hostname", len(routes))
+		return routes
+	}
+
+	// First check exact match
+	if exactRoutes, ok := ps.httpRouteIndex.hostToRoutes[hostname]; ok {
+		routes = append(routes, exactRoutes...)
+	}
+
+	// Check wildcard patterns (e.g., *.example.com)
+	for patternHost, patternRoutes := range ps.httpRouteIndex.hostToRoutes {
+		if patternHost == "*" {
+			continue // Skip global wildcard, handle separately
+		}
+		patternStr := string(patternHost)
+		if strings.HasPrefix(patternStr, "*.") {
+			// Wildcard pattern like *.example.com
+			suffix := patternStr[2:] // Remove "*."
+			if strings.HasSuffix(hostStr, suffix) {
+				routes = append(routes, patternRoutes...)
+			}
+		}
+	}
+
+	// Then check global wildcard
+	if wildcardRoutes, ok := ps.httpRouteIndex.hostToRoutes["*"]; ok {
+		routes = append(routes, wildcardRoutes...)
+	}
+
+	if len(routes) == 0 {
+		log.Debugf("HTTPRouteForHost: no HTTPRoute found for hostname %s", hostname)
+		return nil
+	}
+
+	log.Infof("HTTPRouteForHost: found %d HTTPRoute(s) for hostname %s", len(routes), hostname)
+	return routes
 }
 
 // sortConfigBySelectorAndCreationTime sorts the list of config objects based on priority and creation time.

@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/tools/cache"
+	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
 
 type ClientGetter interface {
@@ -53,6 +54,9 @@ type ClientGetter interface {
 
 	// Informers returns an informer factory.
 	Informers() informerfactory.InformerFactory
+
+	// GatewayAPI returns the gateway-api kube client.
+	GatewayAPI() gatewayapiclient.Interface
 }
 
 type TypeRegistration[T runtime.Object] interface {

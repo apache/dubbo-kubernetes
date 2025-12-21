@@ -691,6 +691,29 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 			continue
 		}
 
+		// Check FilterChains for HttpConnectionManager with RDS (used by Gateway Pod inbound listeners)
+		for _, fc := range ll.FilterChains {
+			for _, filter := range fc.Filters {
+				if filter.Name == "envoy.filters.network.http_connection_manager" {
+					hcm := &hcmv3.HttpConnectionManager{}
+					if err := filter.GetTypedConfig().UnmarshalTo(hcm); err != nil {
+						log.Debugf("extractRouteNamesFromLDS: failed to unmarshal HttpConnectionManager for listener %s: %v", r.Name, err)
+						continue
+					}
+					// Check if HttpConnectionManager uses RDS
+					if hcm.RouteSpecifier != nil {
+						if rds, ok := hcm.RouteSpecifier.(*hcmv3.HttpConnectionManager_Rds); ok && rds.Rds != nil {
+							routeName := rds.Rds.RouteConfigName
+							if routeName != "" {
+								routeNames.Insert(routeName)
+								log.Infof("extractRouteNamesFromLDS: found route name %s from FilterChain in listener %s", routeName, r.Name)
+							}
+						}
+					}
+				}
+			}
+		}
+
 		// Check if this listener has ApiListener (used by gRPC proxyless for outbound)
 		if ll.ApiListener != nil && ll.ApiListener.ApiListener != nil {
 			// Unmarshal ApiListener to get HttpConnectionManager
@@ -707,7 +730,7 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 					routeName := rds.Rds.RouteConfigName
 					if routeName != "" {
 						routeNames.Insert(routeName)
-						log.Debugf("extractRouteNamesFromLDS: found route name %s from listener %s", routeName, r.Name)
+						log.Debugf("extractRouteNamesFromLDS: found route name %s from ApiListener in listener %s", routeName, r.Name)
 					}
 				}
 			}
@@ -733,6 +756,7 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 			}
 		}
 	}
+	log.Infof("extractRouteNamesFromLDS: extracted %d route names: %v", len(routeNames), routeNames.UnsortedList())
 	return routeNames.UnsortedList()
 }
 
