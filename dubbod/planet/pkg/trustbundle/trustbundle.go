@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package trustbundle
 
@@ -28,22 +27,22 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
 var log = dubbolog.RegisterScope("trustbundle", "trust bundle debugging")
 
-// Source is all possible sources of MeshConfig
+// Source is all possible sources of MeshGlobalConfig
 type Source int
 
 const (
 	SourceDubboCA Source = iota
-	SourceMeshConfig
+	SourceMeshGlobalConfig
 	SourceDubboRA
 	sourceSpiffeEndpoints
 )
@@ -52,8 +51,8 @@ func (s Source) String() string {
 	switch s {
 	case SourceDubboCA:
 		return "DubboCA"
-	case SourceMeshConfig:
-		return "MeshConfig"
+	case SourceMeshGlobalConfig:
+		return "MeshGlobalConfig"
 	case SourceDubboRA:
 		return "DubboRA"
 	case sourceSpiffeEndpoints:
@@ -81,7 +80,7 @@ type TrustBundle struct {
 	endpoints          []string
 	endpointUpdateChan chan struct{}
 	remoteCaCertPool   *x509.CertPool
-	meshConfig         mesh.Watcher
+	meshWatcher        mesh.Watcher
 }
 
 var (
@@ -90,20 +89,20 @@ var (
 )
 
 // NewTrustBundle returns a new trustbundle
-func NewTrustBundle(remoteCaCertPool *x509.CertPool, meshConfig mesh.Watcher) *TrustBundle {
+func NewTrustBundle(remoteCaCertPool *x509.CertPool, meshwatcher mesh.Watcher) *TrustBundle {
 	var err error
 	tb := &TrustBundle{
 		sourceConfig: map[Source]TrustAnchorConfig{
-			SourceDubboCA:         {Certs: []string{}},
-			SourceMeshConfig:      {Certs: []string{}},
-			SourceDubboRA:         {Certs: []string{}},
-			sourceSpiffeEndpoints: {Certs: []string{}},
+			SourceDubboCA:          {Certs: []string{}},
+			SourceMeshGlobalConfig: {Certs: []string{}},
+			SourceDubboRA:          {Certs: []string{}},
+			sourceSpiffeEndpoints:  {Certs: []string{}},
 		},
 		mergedCerts:        []string{},
 		updatecb:           nil,
 		endpointUpdateChan: make(chan struct{}, 1),
 		endpoints:          []string{},
-		meshConfig:         meshConfig,
+		meshWatcher:        meshwatcher,
 	}
 	if remoteCaCertPool == nil {
 		tb.remoteCaCertPool, err = x509.SystemCertPool()
@@ -216,8 +215,7 @@ func (tb *TrustBundle) updateRemoteEndpoint(spiffeEndpoints []string) {
 	tb.endpointUpdateChan <- struct{}{}
 }
 
-// AddMeshConfigUpdate : Update trustAnchor configurations from meshConfig
-func (tb *TrustBundle) AddMeshConfigUpdate(cfg *meshconfig.MeshConfig) error {
+func (tb *TrustBundle) AddMeshGlobalConfigUpdate(cfg *meshv1alpha1.MeshGlobalConfig) error {
 	var err error
 	if cfg != nil {
 		certs := []string{}
@@ -233,10 +231,10 @@ func (tb *TrustBundle) AddMeshConfigUpdate(cfg *meshconfig.MeshConfig) error {
 
 		err = tb.UpdateTrustAnchor(&TrustAnchorUpdate{
 			TrustAnchorConfig: TrustAnchorConfig{Certs: certs},
-			Source:            SourceMeshConfig,
+			Source:            SourceMeshGlobalConfig,
 		})
 		if err != nil {
-			log.Errorf("failed to update meshConfig PEM trustAnchors: %v", err)
+			log.Errorf("failed to update meshWatcher PEM trustAnchors: %v", err)
 			return err
 		}
 
@@ -253,7 +251,7 @@ func (tb *TrustBundle) fetchRemoteTrustAnchors() {
 	tb.endpointMutex.RUnlock()
 	remoteCerts := []string{}
 
-	currentTrustDomain := tb.meshConfig.Mesh().GetTrustDomain()
+	currentTrustDomain := tb.meshWatcher.Mesh().GetTrustDomain()
 	for _, endpoint := range remoteEndpoints {
 		trustDomainAnchorMap, err := spiffe.RetrieveSpiffeBundleRootCerts(
 			map[string]string{currentTrustDomain: endpoint}, tb.remoteCaCertPool, remoteTimeout)
@@ -273,7 +271,7 @@ func (tb *TrustBundle) fetchRemoteTrustAnchors() {
 		Source:            sourceSpiffeEndpoints,
 	})
 	if err != nil {
-		log.Errorf("failed to update meshConfig Spiffe trustAnchors: %v", err)
+		log.Errorf("failed to update meshWatcher Spiffe trustAnchors: %v", err)
 	}
 }
 

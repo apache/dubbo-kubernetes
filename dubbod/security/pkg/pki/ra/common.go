@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package ra
 
@@ -22,12 +21,12 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	raerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	caserver "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 	clientset "k8s.io/client-go/kubernetes"
 	"strings"
 	"time"
@@ -42,8 +41,8 @@ const (
 
 type RegistrationAuthority interface {
 	caserver.CertificateAuthority
-	SetCACertificatesFromMeshConfig([]*meshconfig.MeshConfig_CertificateData)
-	GetRootCertFromMeshConfig(signerName string) ([]byte, error)
+	SetCACertificatesFromMeshGlobalConfig([]*meshv1alpha1.MeshGlobalConfig_CertificateData)
+	GetRootCertFromMeshGlobalConfig(signerName string) ([]byte, error)
 }
 
 type DubboRAOptions struct {
@@ -81,19 +80,19 @@ func (r *KubernetesRA) SignWithCertChain(csrPEM []byte, certOpts ca.CertOpts) ([
 		cert = append(cert, chainPem...)
 	}
 	respCertChain := []string{string(cert)}
-	var possibleRootCert, rootCertFromMeshConfig, rootCertFromCertChain []byte
+	var possibleRootCert, rootCertFromMeshGlobalConfig, rootCertFromCertChain []byte
 	certSigner := r.certSignerDomain + "/" + certOpts.CertSigner
 	if len(r.GetCAKeyCertBundle().GetRootCertPem()) == 0 {
 		rootCertFromCertChain, err = util.FindRootCertFromCertificateChainBytes(cert)
 		if err != nil {
 			pkiRaLog.Infof("failed to find root cert from signed cert-chain (%v)", err.Error())
 		}
-		rootCertFromMeshConfig, err = r.GetRootCertFromMeshConfig(certSigner)
+		rootCertFromMeshGlobalConfig, err = r.GetRootCertFromMeshGlobalConfig(certSigner)
 		if err != nil {
 			pkiRaLog.Infof("failed to find root cert from mesh config (%v)", err.Error())
 		}
-		if rootCertFromMeshConfig != nil {
-			possibleRootCert = rootCertFromMeshConfig
+		if rootCertFromMeshGlobalConfig != nil {
+			possibleRootCert = rootCertFromMeshGlobalConfig
 		} else if rootCertFromCertChain != nil {
 			possibleRootCert = rootCertFromCertChain
 		}
@@ -114,10 +113,10 @@ func (r *KubernetesRA) GetCAKeyCertBundle() *util.KeyCertBundle {
 	return r.keyCertBundle
 }
 
-func (r *KubernetesRA) GetRootCertFromMeshConfig(signerName string) ([]byte, error) {
+func (r *KubernetesRA) GetRootCertFromMeshGlobalConfig(signerName string) ([]byte, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	caCertificates := r.caCertificatesFromMeshConfig
+	caCertificates := r.caCertificatesFromMeshGlobalConfig
 	if len(caCertificates) == 0 {
 		return nil, fmt.Errorf("no caCertificates defined in mesh config")
 	}
@@ -135,7 +134,7 @@ func (r *KubernetesRA) GetRootCertFromMeshConfig(signerName string) ([]byte, err
 	return nil, fmt.Errorf("failed to find root cert for signer: %v in mesh config", signerName)
 }
 
-func (r *KubernetesRA) SetCACertificatesFromMeshConfig(caCertificates []*meshconfig.MeshConfig_CertificateData) {
+func (r *KubernetesRA) SetCACertificatesFromMeshGlobalConfig(caCertificates []*meshv1alpha1.MeshGlobalConfig_CertificateData) {
 	r.mutex.Lock()
 	for _, pemCert := range caCertificates {
 		// TODO:  take care of spiffe bundle format as well
@@ -144,7 +143,7 @@ func (r *KubernetesRA) SetCACertificatesFromMeshConfig(caCertificates []*meshcon
 		if len(certSigners) != 0 {
 			certSigner := strings.Join(certSigners, ",")
 			if cert != "" {
-				r.caCertificatesFromMeshConfig[certSigner] = cert
+				r.caCertificatesFromMeshGlobalConfig[certSigner] = cert
 			}
 		}
 	}

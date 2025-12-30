@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package features
 
@@ -26,8 +25,8 @@ var (
 	ValidationWebhookConfigName = env.Register("VALIDATION_WEBHOOK_CONFIG_NAME", "dubbo-dubbo-system",
 		"If not empty, the controller will automatically patch validatingwebhookconfiguration when the CA certificate changes. "+
 			"Only works in kubernetes environment.").Get()
-	SharedMeshConfig = env.Register("SHARED_MESH_CONFIG", "",
-		"Additional config map to load for shared MeshConfig settings. The standard mesh config will take precedence.").Get()
+	SharedMeshGlobalConfig = env.Register("SHARED_MESH_CONFIG", "",
+		"Additional config map to load for shared MeshGlobalConfig settings. The standard mesh config will take precedence.").Get()
 	MultiRootMesh = env.Register("DUBBO_MULTIROOT_MESH", false,
 		"If enabled, mesh will support certificates signed by more than one trustAnchor for DUBBO_MUTUAL mTLS").Get()
 	InformerWatchNamespace = env.Register("DUBBO_WATCH_NAMESPACE", "",

@@ -45,7 +45,6 @@ spec:
       annotations:
         proxyless.dubbo.apache.org/inject: "true"
         inject.dubbo.apache.org/templates: grpc-agent
-        proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
         app: provider
         version: v1
@@ -115,7 +114,6 @@ spec:
       annotations:
         proxyless.dubbo.apache.org/inject: "true"
         inject.dubbo.apache.org/templates: grpc-agent
-        proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
         app: provider
         version: v2
@@ -184,7 +182,6 @@ spec:
       annotations:
         proxyless.dubbo.apache.org/inject: "true"
         inject.dubbo.apache.org/templates: grpc-agent
-        proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
       labels:
         app: consumer
     spec:

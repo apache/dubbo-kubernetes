@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package bootstrap
 
@@ -179,10 +178,8 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 			s.ConfigStores = append(s.ConfigStores, configController)
 			log.Infof("Started File configSource %s", configSource.Address)
 		case XDS:
-			transportCredentials, err := s.getTransportCredentials(args, configSource.TlsSettings)
-			if err != nil {
-				return fmt.Errorf("failed to read transport credentials from config: %v", err)
-			}
+			// TLS settings removed from ConfigSource - use insecure credentials
+			// TODO: Implement TLS support when needed
 			xdsMCP, err := adsc.New(srcAddress.Host, &adsc.ADSConfig{
 				InitialDiscoveryRequests: adsc.ConfigInitialRequests(),
 				Config: adsc.Config{
@@ -192,7 +189,7 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 					Meta:      nil,
 					GrpcOpts: []grpc.DialOption{
 						args.KeepaliveOptions.ConvertToClientOption(),
-						grpc.WithTransportCredentials(transportCredentials),
+						grpc.WithTransportCredentials(insecure.NewCredentials()),
 					},
 				},
 			})
@@ -231,8 +228,8 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 }
 
 func (s *Server) initConfigController(args *PlanetArgs) error {
-	meshConfig := s.environment.Mesh()
-	if len(meshConfig.ConfigSources) > 0 {
+	meshGlobalConfig := s.environment.Mesh()
+	if len(meshGlobalConfig.ConfigSources) > 0 {
 		// Using MCP for config.
 		if err := s.initConfigSources(args); err != nil {
 			return err

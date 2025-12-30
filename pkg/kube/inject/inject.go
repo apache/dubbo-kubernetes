@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package inject
 
@@ -26,9 +25,9 @@ import (
 	"strings"
 	"text/template"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
 	"istio.io/api/annotation"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -72,18 +71,17 @@ type Config struct {
 }
 
 type TemplateData struct {
-	TypeMeta                 metav1.TypeMeta
-	DeploymentMeta           types.NamespacedName
-	ObjectMeta               metav1.ObjectMeta
-	Spec                     corev1.PodSpec
-	ProxyConfig              *meshconfig.ProxyConfig
-	MeshConfig               *meshconfig.MeshConfig
-	Values                   map[string]any
-	Revision                 string
-	NativeSidecars           bool
-	ProxyImage               string
-	InboundTrafficPolicyMode string
-	CompliancePolicy         string
+	TypeMeta         metav1.TypeMeta
+	DeploymentMeta   types.NamespacedName
+	ObjectMeta       metav1.ObjectMeta
+	Spec             corev1.PodSpec
+	ProxyConfig      *meshv1alpha1.ProxyConfig
+	MeshGlobalConfig *meshv1alpha1.MeshGlobalConfig
+	Values           map[string]any
+	Revision         string
+	NativeSidecars   bool
+	ProxyImage       string
+	CompliancePolicy string
 }
 
 type InjectionStatus struct {
@@ -95,7 +93,7 @@ type InjectionStatus struct {
 
 func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod *corev1.Pod, err error) {
 	metadata := &params.pod.ObjectMeta
-	meshConfig := params.meshConfig
+	meshGlobalConfig := params.meshGlobalConfig
 
 	if err := validateAnnotations(metadata.GetAnnotations()); err != nil {
 		log.Errorf("Injection failed due to invalid annotations: %v", err)
@@ -108,17 +106,16 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 	}
 
 	data := TemplateData{
-		TypeMeta:                 params.typeMeta,
-		DeploymentMeta:           params.deployMeta,
-		ObjectMeta:               strippedPod.ObjectMeta,
-		Spec:                     strippedPod.Spec,
-		ProxyConfig:              params.proxyConfig,
-		MeshConfig:               meshConfig,
-		Values:                   params.valuesConfig.asMap,
-		Revision:                 params.revision,
-		ProxyImage:               getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.1-debug"),
-		InboundTrafficPolicyMode: InboundTrafficPolicyMode(meshConfig),
-		CompliancePolicy:         common_features.CompliancePolicy,
+		TypeMeta:         params.typeMeta,
+		DeploymentMeta:   params.deployMeta,
+		ObjectMeta:       strippedPod.ObjectMeta,
+		Spec:             strippedPod.Spec,
+		ProxyConfig:      params.proxyConfig,
+		MeshGlobalConfig: meshGlobalConfig,
+		Values:           params.valuesConfig.asMap,
+		Revision:         params.revision,
+		ProxyImage:       getProxyImage(params.valuesConfig.asMap, "mfordjody/proxyadapter:0.3.1-debug"),
+		CompliancePolicy: common_features.CompliancePolicy,
 	}
 
 	if params.valuesConfig.asMap == nil {
@@ -173,16 +170,6 @@ func UnmarshalConfig(yml []byte) (Config, error) {
 	}
 
 	return injectConfig, nil
-}
-
-func InboundTrafficPolicyMode(meshConfig *meshconfig.MeshConfig) string {
-	switch meshConfig.GetInboundTrafficPolicy().GetMode() {
-	case meshconfig.MeshConfig_InboundTrafficPolicy_LOCALHOST:
-		return "localhost"
-	case meshconfig.MeshConfig_InboundTrafficPolicy_PASSTHROUGH:
-		return "passthrough"
-	}
-	return "passthrough"
 }
 
 func runTemplate(tmpl *template.Template, data TemplateData) (bytes.Buffer, error) {

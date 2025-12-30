@@ -68,9 +68,6 @@ spec:
               fieldPath: metadata.namespace
         - name: CA_ADDR
           value: dubbod.dubbo-system.svc:15012
-        - name: PROXY_CONFIG
-          value: |
-            {"holdApplicationUntilProxyStarts":true}
         - name: DUBBO_META_MESH_ID
           value: cluster.local
         - name: TRUST_DOMAIN

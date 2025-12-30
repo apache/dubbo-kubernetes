@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package options
 
@@ -22,12 +21,12 @@ import (
 	"os"
 	"strings"
 
+	serviceRouteIndex "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/credentialfetcher"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/cafile"
 	"github.com/apache/dubbo-kubernetes/pkg/jwt"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
@@ -36,7 +35,7 @@ var log = dubbolog.RegisterScope("security", "security options debugging")
 
 const caHeaderPrefix = "CA_HEADER_"
 
-func NewSecurityOptions(proxyConfig *meshconfig.ProxyConfig, stsPort int, tokenManagerPlugin string) (*security.Options, error) {
+func NewSecurityOptions(proxyConfig *serviceRouteIndex.ProxyConfig, stsPort int, tokenManagerPlugin string) (*security.Options, error) {
 	o := &security.Options{
 		CAEndpoint:           caEndpointEnv,
 		CAProviderName:       caProviderEnv,
@@ -75,7 +74,7 @@ func NewSecurityOptions(proxyConfig *meshconfig.ProxyConfig, stsPort int, tokenM
 	return o, nil
 }
 
-func SetupSecurityOptions(proxyConfig *meshconfig.ProxyConfig, secOpt *security.Options, jwtPolicy,
+func SetupSecurityOptions(proxyConfig *serviceRouteIndex.ProxyConfig, secOpt *security.Options, jwtPolicy,
 	credFetcherTypeEnv, credIdentityProvider string,
 ) (*security.Options, error) {
 	// TODO jwtPath

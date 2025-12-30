@@ -45,7 +45,6 @@ Requires Dubbo control plane. Add annotations and set mode:
 annotations:
   proxyless.dubbo.apache.org/inject: "true"
   inject.dubbo.apache.org/templates: grpc-agent
-  proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
 ```
 
 Set mode to `xds` in both server and client. Client target should use `xds:///` scheme.

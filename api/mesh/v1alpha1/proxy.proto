@@ -1,0 +1,57 @@
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package dubbo.mesh.v1alpha1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+
+option go_package = "/api/mesh/v1alpha1";
+
+enum AuthenticationPolicy {
+  NONE = 0;
+  MUTUAL_TLS = 1;
+  INHERIT = 1000;
+}
+
+message ProxyConfig {
+  string config_path = 1;
+  string binary_path = 2;
+
+  google.protobuf.Duration drain_duration = 4;
+
+  reserved "parent_shutdown_duration";
+  reserved 5;
+
+  string discovery_address = 6;
+
+  reserved "connect_timeout";
+  reserved 9;
+
+  AuthenticationPolicy control_plane_auth_policy = 13;
+  string custom_config_file = 14;
+
+  string proxy_bootstrap_template_path = 17;
+
+  map<string, string> proxy_metadata = 24;
+
+  int32 status_port = 26;
+
+  // ProxyImage removed - not needed for proxyless mesh
+  // dubbo.networking.v1alpha3.ProxyImage image = 35;
+}

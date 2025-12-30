@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package model
 
@@ -24,9 +23,9 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"strconv"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
 type (
@@ -46,7 +45,7 @@ const (
 	Dual
 )
 
-type NodeMetaProxyConfig meshconfig.ProxyConfig
+type NodeMetaProxyConfig meshv1alpha1.ProxyConfig
 
 type Node struct {
 	// ID of the Envoy node
@@ -95,7 +94,7 @@ func DiscoverIPMode(addrs []string) IPMode {
 // MarshalJSON customizes JSON serialization to handle oneof ClusterName field
 func (n *NodeMetaProxyConfig) MarshalJSON() ([]byte, error) {
 	// Convert to base type
-	base := (*meshconfig.ProxyConfig)(n)
+	base := (*meshv1alpha1.ProxyConfig)(n)
 
 	// Use protomarshal to handle protobuf message serialization correctly
 	return protomarshal.Marshal(base)
@@ -127,7 +126,7 @@ func (n *NodeMetaProxyConfig) UnmarshalJSON(data []byte) error {
 
 	// Use protomarshal to handle protobuf message deserialization correctly
 	// Convert to base type pointer for unmarshaling
-	base := (*meshconfig.ProxyConfig)(n)
+	base := (*meshv1alpha1.ProxyConfig)(n)
 	if err := protomarshal.Unmarshal(convertedData, base); err != nil {
 		return err
 	}

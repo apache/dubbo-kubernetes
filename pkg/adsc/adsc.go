@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package adsc
 
@@ -29,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
 	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
@@ -52,7 +52,6 @@ import (
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	pstruct "google.golang.org/protobuf/types/known/structpb"
 	mcp "istio.io/api/mcp/v1alpha1"
-	"istio.io/api/mesh/v1alpha1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
@@ -117,7 +116,7 @@ type ADSC struct {
 
 	mutex sync.RWMutex
 
-	Mesh *v1alpha1.MeshConfig
+	Mesh *v1alpha1.MeshGlobalConfig
 
 	// Retrieved configurations can be stored using the common istio model interface.
 	Store model.ConfigStore
@@ -188,7 +187,7 @@ func New(discoveryAddr string, opts *ADSConfig) (*ADSC, error) {
 func ConfigInitialRequests() []*discovery.DiscoveryRequest {
 	out := make([]*discovery.DiscoveryRequest, 0, len(collections.Planet.All())+1)
 	out = append(out, &discovery.DiscoveryRequest{
-		TypeUrl: gvk.MeshConfig.String(),
+		TypeUrl: gvk.MeshGlobalConfig.String(),
 	})
 	for _, sch := range collections.Planet.All() {
 		out = append(out, &discovery.DiscoveryRequest{
@@ -495,10 +494,10 @@ func (a *ADSC) handleRecv() {
 			a.cfg.ResponseHandler.HandleResponse(a, msg)
 		}
 
-		if msg.TypeUrl == gvk.MeshConfig.String() &&
+		if msg.TypeUrl == gvk.MeshGlobalConfig.String() &&
 			len(msg.Resources) > 0 {
 			rsc := msg.Resources[0]
-			m := &v1alpha1.MeshConfig{}
+			m := &v1alpha1.MeshGlobalConfig{}
 			err = proto.Unmarshal(rsc.Value, m)
 			if err != nil {
 				log.Errorf("Failed to unmarshal mesh config: %v", err)

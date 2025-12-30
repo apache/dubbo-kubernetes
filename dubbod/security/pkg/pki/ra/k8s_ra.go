@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package ra
 
@@ -34,12 +33,12 @@ var pkiRaLog = log.RegisterScope("pkira", "Dubbod RA log")
 
 // KubernetesRA integrated with an external CA using Kubernetes CSR API
 type KubernetesRA struct {
-	csrInterface                 clientset.Interface
-	keyCertBundle                *util.KeyCertBundle
-	raOpts                       *DubboRAOptions
-	caCertificatesFromMeshConfig map[string]string
-	certSignerDomain             string
-	// mutex protects the R/W to caCertificatesFromMeshConfig.
+	csrInterface                       clientset.Interface
+	keyCertBundle                      *util.KeyCertBundle
+	raOpts                             *DubboRAOptions
+	caCertificatesFromMeshGlobalConfig map[string]string
+	certSignerDomain                   string
+	// mutex protects the R/W to caCertificatesFromMeshGlobalConfig.
 	mutex sync.RWMutex
 }
 
@@ -49,11 +48,11 @@ func NewKubernetesRA(raOpts *DubboRAOptions) (*KubernetesRA, error) {
 		return nil, raerror.NewError(raerror.CAInitFail, fmt.Errorf("error processing Certificate Bundle for Kubernetes RA"))
 	}
 	dubboRA := &KubernetesRA{
-		csrInterface:                 raOpts.K8sClient,
-		raOpts:                       raOpts,
-		keyCertBundle:                keyCertBundle,
-		certSignerDomain:             raOpts.CertSignerDomain,
-		caCertificatesFromMeshConfig: make(map[string]string),
+		csrInterface:                       raOpts.K8sClient,
+		raOpts:                             raOpts,
+		keyCertBundle:                      keyCertBundle,
+		certSignerDomain:                   raOpts.CertSignerDomain,
+		caCertificatesFromMeshGlobalConfig: make(map[string]string),
 	}
 	return dubboRA, nil
 }

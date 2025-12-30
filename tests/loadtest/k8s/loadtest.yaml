@@ -42,7 +42,6 @@ spec:
         # xDS mode: Uncomment the following annotations to enable Dubbo proxyless injection
         # proxyless.dubbo.apache.org/inject: "true"
         # inject.dubbo.apache.org/templates: grpc-agent
-        # proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
     spec:
       containers:
       - name: server
@@ -141,7 +140,6 @@ spec:
         # xDS mode: Uncomment the following annotations to enable Dubbo proxyless injection
         # proxyless.dubbo.apache.org/inject: "true"
         # inject.dubbo.apache.org/templates: grpc-agent
-        # proxy.dubbo.apache.org/config: '{"holdApplicationUntilProxyStarts": true}'
     spec:
       containers:
       - name: client

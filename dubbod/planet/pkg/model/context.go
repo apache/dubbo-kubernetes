@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package model
 
@@ -30,6 +29,7 @@ import (
 	networkutil "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/network"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -44,7 +44,6 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/protobuf/types/known/structpb"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
 const (
@@ -89,7 +88,6 @@ type Environment struct {
 	ConfigStore
 	mutex                sync.RWMutex
 	pushContext          *PushContext
-	NetworksWatcher      mesh.NetworksWatcher
 	NetworkManager       *NetworkManager
 	clusterLocalServices ClusterLocalProvider
 	DomainSuffix         string
@@ -150,16 +148,9 @@ func (e *Environment) SetPushContext(pc *PushContext) {
 	e.pushContext = pc
 }
 
-func (e *Environment) Mesh() *meshconfig.MeshConfig {
+func (e *Environment) Mesh() *meshv1alpha1.MeshGlobalConfig {
 	if e != nil && e.Watcher != nil {
 		return e.Watcher.Mesh()
-	}
-	return nil
-}
-
-func (e *Environment) MeshNetworks() *meshconfig.MeshNetworks {
-	if e != nil && e.NetworksWatcher != nil {
-		return e.NetworksWatcher.Networks()
 	}
 	return nil
 }
@@ -167,12 +158,6 @@ func (e *Environment) MeshNetworks() *meshconfig.MeshNetworks {
 func (e *Environment) AddMeshHandler(h func()) {
 	if e != nil && e.Watcher != nil {
 		e.Watcher.AddMeshHandler(h)
-	}
-}
-
-func (e *Environment) AddNetworksHandler(h func()) {
-	if e != nil && e.NetworksWatcher != nil {
-		e.NetworksWatcher.AddNetworksHandler(h)
 	}
 }
 
@@ -214,7 +199,7 @@ func (e *Environment) GetDiscoveryAddress() (host.Name, string, error) {
 	return host.Name(hostname), port, nil
 }
 
-func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map[string]string, meshConfig *meshconfig.MeshConfig) *meshconfig.ProxyConfig {
+func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map[string]string, meshGlobalConfig *meshv1alpha1.MeshGlobalConfig) *meshv1alpha1.ProxyConfig {
 	return mesh.DefaultProxyConfig()
 }
 
