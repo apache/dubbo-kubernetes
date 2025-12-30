@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package kubemesh
 
@@ -31,12 +30,11 @@ import (
 )
 
 const (
-	MeshConfigKey   = "mesh"
-	MeshNetworksKey = "meshNetworks"
+	MeshGlobalConfigKey = "mesh"
 )
 
-// NewConfigMapSource builds a MeshConfigSource reading from ConfigMap "name" with key "key".
-func NewConfigMapSource(client kube.Client, namespace, name, key string, opts krt.OptionsBuilder) meshwatcher.MeshConfigSource {
+// NewConfigMapSource builds a MeshGlobalConfigSource reading from ConfigMap "name" with key "key".
+func NewConfigMapSource(client kube.Client, namespace, name, key string, opts krt.OptionsBuilder) meshwatcher.MeshGlobalConfigSource {
 	clt := kclient.NewFiltered[*v1.ConfigMap](client, kclient.Filter{
 		Namespace:     namespace,
 		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
@@ -46,11 +44,11 @@ func NewConfigMapSource(client kube.Client, namespace, name, key string, opts kr
 	cmKey := types.NamespacedName{Namespace: namespace, Name: name}.String()
 	return krt.NewSingleton(func(ctx krt.HandlerContext) *string {
 		cm := ptr.Flatten(krt.FetchOne(ctx, cms, krt.FilterKey(cmKey)))
-		return meshConfigMapData(cm, key)
+		return meshGlobalConfigMapData(cm, key)
 	}, opts.WithName(fmt.Sprintf("ConfigMap_%s_%s", name, key))...)
 }
 
-func meshConfigMapData(cm *v1.ConfigMap, key string) *string {
+func meshGlobalConfigMapData(cm *v1.ConfigMap, key string) *string {
 	if cm == nil {
 		return nil
 	}

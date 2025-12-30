@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package namespace
 
@@ -28,13 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
+	meshapi "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	meshapi "istio.io/api/mesh/v1alpha1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
@@ -58,7 +57,10 @@ func NewDiscoveryNamespacesFilter(namespaces kclient.Client[*corev1.Namespace], 
 		discoveryNamespaces: sets.New[string](),
 	}
 	mesh.AddMeshHandler(func() {
-		f.selectorsChanged(mesh.Mesh().GetDiscoverySelectors(), true)
+		// DiscoverySelectors field is not available in current MeshGlobalConfig
+		// If needed, this functionality should be implemented when the field is added
+		var selectors []*meshapi.LabelSelector
+		f.selectorsChanged(selectors, true)
 	})
 
 	namespaces.AddEventHandler(controllers.EventHandler[*corev1.Namespace]{
@@ -99,7 +101,10 @@ func NewDiscoveryNamespacesFilter(namespaces kclient.Client[*corev1.Namespace], 
 	// Start namespaces and wait for it to be ready now. This is required for subsequent users, so we want to block
 	namespaces.Start(stop)
 	kube.WaitForCacheSync("discovery filter", stop, namespaces.HasSynced)
-	f.selectorsChanged(mesh.Mesh().GetDiscoverySelectors(), false)
+	// DiscoverySelectors field is not available in current MeshGlobalConfig
+	// If needed, this functionality should be implemented when the field is added
+	var selectors []*meshapi.LabelSelector
+	f.selectorsChanged(selectors, false)
 	return f
 }
 

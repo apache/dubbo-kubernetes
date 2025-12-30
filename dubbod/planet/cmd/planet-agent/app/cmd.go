@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package app
 
@@ -78,7 +77,7 @@ func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 				return err
 			}
 
-			proxyConfig, err := config.ConstructProxyConfig(proxyArgs.MeshConfigFile, options.ProxyConfigEnv)
+			proxyConfig, err := config.ConstructProxyConfig(proxyArgs.MeshGlobalConfigFile, options.ProxyConfigEnv)
 			if err != nil {
 				return fmt.Errorf("failed to get proxy config: %v", err)
 			}
@@ -169,7 +168,7 @@ func addFlags(proxyCmd *cobra.Command) {
 		"HTTP Port on which to serve Security Token Service (STS). If zero, STS service will not be provided.")
 	proxyCmd.PersistentFlags().StringVar(&proxyArgs.TemplateFile, "templateFile", "",
 		"Go template bootstrap config")
-	proxyCmd.PersistentFlags().StringVar(&proxyArgs.MeshConfigFile, "meshConfig", "./etc/dubbo/config/mesh",
-		"File name for Dubbo mesh configuration. If not specified, a default mesh will be used. This may be overridden by "+
+	proxyCmd.PersistentFlags().StringVar(&proxyArgs.MeshGlobalConfigFile, "meshGlobalConfig", "./etc/dubbo/config/mesh",
+		"File name for Dubbo mesh global configuration. If not specified, a default mesh will be used. This may be overridden by "+
 			"PROXY_CONFIG environment variable or proxy.dubbo.apache.org/config annotation.")
 }

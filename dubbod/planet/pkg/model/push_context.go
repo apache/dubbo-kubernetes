@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package model
 
@@ -29,6 +28,7 @@ import (
 	networking "istio.io/api/networking/v1alpha3"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
@@ -40,7 +40,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	"go.uber.org/atomic"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -65,10 +64,9 @@ var (
 )
 
 type PushContext struct {
-	Mesh            *meshconfig.MeshConfig `json:"-"`
+	Mesh            *meshv1alpha1.MeshGlobalConfig `json:"-"`
 	initializeMutex sync.Mutex
 	InitDone        atomic.Bool
-	Networks        *meshconfig.MeshNetworks
 	// GatewayAPIController holds a reference to the Gateway API controller.
 	// When enabled, this controller is responsible for translating Kubernetes
 	// Gateway API resources into internal Dubbo resources during push.
@@ -354,7 +352,6 @@ func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext
 	}
 
 	ps.Mesh = env.Mesh()
-	ps.Networks = env.MeshNetworks()
 
 	ps.initDefaultExportMaps()
 

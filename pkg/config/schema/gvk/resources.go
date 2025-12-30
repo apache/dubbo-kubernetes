@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package gvk
 
@@ -37,7 +36,7 @@ var (
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
 	Job                            = config.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
 	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
-	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
+	MeshGlobalConfig               = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshGlobalConfig"}
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1", Kind: "PeerAuthentication"}
 	SubsetRule                     = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "SubsetRule"}
 	ServiceRoute                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "ServiceRoute"}
@@ -76,8 +75,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Job, true
 	case Pod:
 		return gvr.Pod, true
-	case MeshConfig:
-		return gvr.MeshConfig, true
+	case MeshGlobalConfig:
+		return gvr.MeshGlobalConfig, true
 	case PeerAuthentication:
 		return gvr.PeerAuthentication, true
 	case SubsetRule:

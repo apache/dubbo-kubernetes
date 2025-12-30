@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package dubboagent
 
@@ -31,6 +30,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/caclient"
 	"github.com/apache/dubbo-kubernetes/pkg/channels"
@@ -52,7 +52,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/anypb"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
 const (
@@ -149,7 +148,7 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 
 	if ia.cfg.EnableDynamicProxyConfig && ia.secretCache != nil {
 		proxy.handlers[model.ProxyConfigType] = func(resp *anypb.Any) error {
-			pc := &meshconfig.ProxyConfig{}
+			pc := &meshv1alpha1.ProxyConfig{}
 			if err := resp.UnmarshalTo(pc); err != nil {
 				proxyLog.Errorf("failed to unmarshal proxy config: %v", err)
 				return err
@@ -708,7 +707,7 @@ func (p *XdsProxy) initDubbodDialOptions(agent *Agent) error {
 
 func (p *XdsProxy) buildUpstreamClientDialOpts(sa *Agent) ([]grpc.DialOption, error) {
 	// For NONE auth policy, use insecure credentials
-	if sa.proxyConfig.ControlPlaneAuthPolicy == meshconfig.AuthenticationPolicy_NONE {
+	if sa.proxyConfig.ControlPlaneAuthPolicy == meshv1alpha1.AuthenticationPolicy_NONE {
 		options := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		}
@@ -733,7 +732,7 @@ func (p *XdsProxy) buildUpstreamClientDialOpts(sa *Agent) ([]grpc.DialOption, er
 }
 
 func (p *XdsProxy) getTLSOptions(agent *Agent) (*dubbogrpc.TLSOptions, error) {
-	if agent.proxyConfig.ControlPlaneAuthPolicy == meshconfig.AuthenticationPolicy_NONE {
+	if agent.proxyConfig.ControlPlaneAuthPolicy == meshv1alpha1.AuthenticationPolicy_NONE {
 		return nil, nil
 	}
 	xdsCACertPath, err := agent.FindRootCAForXDS()

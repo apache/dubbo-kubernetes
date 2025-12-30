@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package bootstrap
 
@@ -31,6 +30,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/status"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
@@ -72,7 +72,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 )
@@ -209,7 +208,7 @@ func NewServer(args *PlanetArgs, initFuncs ...func(*Server)) (*Server, error) {
 		return nil, fmt.Errorf("error initializing kube client: %v", err)
 	}
 
-	s.initMeshConfiguration(args, s.fileWatcher)
+	s.initMeshGlobalConfiguration(args, s.fileWatcher)
 
 	if s.kubeClient != nil {
 		// Build a namespace watcher. This must have no filter, since this is our input to the filter itself.
@@ -218,7 +217,6 @@ func NewServer(args *PlanetArgs, initFuncs ...func(*Server)) (*Server, error) {
 		s.kubeClient = kubelib.SetObjectFilter(s.kubeClient, filter)
 	}
 
-	s.initMeshNetworks(args, s.fileWatcher)
 	s.initMeshHandlers(nil)
 
 	s.environment.Init()
@@ -585,7 +583,7 @@ func (s *Server) initMulticluster(args *PlanetArgs) {
 	})
 }
 
-func (s *Server) initMeshHandlers(changeHandler func(_ *meshconfig.MeshConfig)) {
+func (s *Server) initMeshHandlers(changeHandler func(_ *meshv1alpha1.MeshGlobalConfig)) {
 	log.Info("initializing mesh handlers")
 	// When the mesh config or networks change, do a full push.
 	s.environment.AddMeshHandler(func() {
@@ -606,15 +604,15 @@ func (s *Server) initKubeClient(args *PlanetArgs) error {
 	hasK8SConfigStore := false
 	if args.RegistryOptions.FileDir == "" {
 		// If file dir is set - config controller will just use file.
-		if _, err := os.Stat(args.MeshConfigFile); !os.IsNotExist(err) {
-			meshConfig, err := mesh.ReadMeshConfig(args.MeshConfigFile)
+		if _, err := os.Stat(args.MeshGlobalConfigFile); !os.IsNotExist(err) {
+			meshGlobalConfig, err := mesh.ReadMeshGlobalConfig(args.MeshGlobalConfigFile)
 			if err != nil {
 				return fmt.Errorf("failed reading mesh config: %v", err)
 			}
-			if len(meshConfig.ConfigSources) == 0 && args.RegistryOptions.KubeConfig != "" {
+			if len(meshGlobalConfig.ConfigSources) == 0 && args.RegistryOptions.KubeConfig != "" {
 				hasK8SConfigStore = true
 			}
-			for _, cs := range meshConfig.ConfigSources {
+			for _, cs := range meshGlobalConfig.ConfigSources {
 				if cs.Address == string(Kubernetes)+"://" {
 					hasK8SConfigStore = true
 					break
@@ -723,7 +721,7 @@ func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain strin
 		if s.RA != nil {
 			if strings.HasPrefix(features.PlanetCertProvider, constants.CertProviderKubernetesSignerPrefix) {
 				signerName := strings.TrimPrefix(features.PlanetCertProvider, constants.CertProviderKubernetesSignerPrefix)
-				caBundle, _ := s.RA.GetRootCertFromMeshConfig(signerName)
+				caBundle, _ := s.RA.GetRootCertFromMeshGlobalConfig(signerName)
 				rootCertBytes = append(rootCertBytes, caBundle...)
 			} else {
 				rootCertBytes = append(rootCertBytes, s.RA.GetCAKeyCertBundle().GetRootCertPem()...)
@@ -977,7 +975,7 @@ func (s *Server) dubbodReadyHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) shouldStartNsController() bool {
 	if s.isK8SSigning() {
-		// Need to distribute the roots from MeshConfig
+		// Need to distribute the roots from MeshGlobalConfig
 		return true
 	}
 	if s.CA == nil {

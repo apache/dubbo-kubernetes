@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package config
 
@@ -21,14 +20,14 @@ import (
 	"fmt"
 	"os"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 )
 
 // ConstructProxyConfig returns proxyConfig
-func ConstructProxyConfig(meshConfigFile, proxyConfigEnv string) (*meshconfig.ProxyConfig, error) {
+func ConstructProxyConfig(meshGlobalConfigFile, proxyConfigEnv string) (*meshv1alpha1.ProxyConfig, error) {
 	annotations, err := bootstrap.ReadPodAnnotations("")
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -38,31 +37,31 @@ func ConstructProxyConfig(meshConfigFile, proxyConfigEnv string) (*meshconfig.Pr
 		}
 	}
 	var fileMeshContents string
-	if fileExists(meshConfigFile) {
-		contents, err := os.ReadFile(meshConfigFile)
+	if fileExists(meshGlobalConfigFile) {
+		contents, err := os.ReadFile(meshGlobalConfigFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read mesh config file %v: %v", meshConfigFile, err)
+			return nil, fmt.Errorf("failed to read mesh config file %v: %v", meshGlobalConfigFile, err)
 		}
 		fileMeshContents = string(contents)
 	}
-	meshConfig, err := getMeshConfig(fileMeshContents, annotations["proxy.dubbo.apache.org/config"], proxyConfigEnv)
+	meshGlobalConfig, err := getMeshGlobalConfig(fileMeshContents, annotations["proxy.dubbo.apache.org/config"], proxyConfigEnv)
 	if err != nil {
 		return nil, err
 	}
 	proxyConfig := mesh.DefaultProxyConfig()
-	if meshConfig.DefaultConfig != nil {
-		proxyConfig = meshConfig.DefaultConfig
+	if meshGlobalConfig.DefaultConfig != nil {
+		proxyConfig = meshGlobalConfig.DefaultConfig
 	}
 	// TODO ResolveAddr
-	// TODO ValidateMeshConfigProxyConfig
+	// TODO ValidateMeshGlobalConfigProxyConfig
 	return proxyConfig, nil
 }
 
-func getMeshConfig(fileOverride, annotationOverride, proxyConfigEnv string) (*meshconfig.MeshConfig, error) {
-	mc := mesh.DefaultMeshConfig()
+func getMeshGlobalConfig(fileOverride, annotationOverride, proxyConfigEnv string) (*meshv1alpha1.MeshGlobalConfig, error) {
+	mc := mesh.DefaultMeshGlobalConfig()
 	if fileOverride != "" {
-		log.Infof("Apply mesh config from file %v", fileOverride)
-		fileMesh, err := mesh.ApplyMeshConfig(fileOverride, mc)
+		log.Infof("Apply mesh global config from file %v", fileOverride)
+		fileMesh, err := mesh.ApplyMeshGlobalConfig(fileOverride, mc)
 		if err != nil || fileMesh == nil {
 			return nil, fmt.Errorf("failed to unmarshal mesh config from file [%v]: %v", fileOverride, err)
 		}

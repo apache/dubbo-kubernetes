@@ -12,4 +12,3 @@ data:
       discoveryAddress: dubbod.dubbo-system.svc:15012
     rootNamespace: dubbo-system
     trustDomain: cluster.local
-  meshNetworks: 'networks: {}'

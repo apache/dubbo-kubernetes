@@ -1,19 +1,18 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package model
 
@@ -70,7 +69,7 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 	sortConfigByCreationTime(configs)
 
 	foundNamespaceMTLS := make(map[string]v1beta1.PeerAuthentication_MutualTLS_Mode)
-	seenNamespaceOrMeshConfig := make(map[string]time.Time)
+	seenNamespaceOrMeshGlobalConfig := make(map[string]time.Time)
 	versions := []string{}
 
 	for _, config := range configs {
@@ -78,13 +77,13 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 		spec := config.Spec.(*v1beta1.PeerAuthentication)
 		selector := spec.GetSelector()
 		if selector == nil || len(selector.MatchLabels) == 0 {
-			if t, ok := seenNamespaceOrMeshConfig[config.Namespace]; ok {
+			if t, ok := seenNamespaceOrMeshGlobalConfig[config.Namespace]; ok {
 				log.Warnf(
 					"Namespace/mesh-level PeerAuthentication is already defined for %q at time %v. Ignore %q which was created at time %v",
 					config.Namespace, t, config.Name, config.CreationTimestamp)
 				continue
 			}
-			seenNamespaceOrMeshConfig[config.Namespace] = config.CreationTimestamp
+			seenNamespaceOrMeshGlobalConfig[config.Namespace] = config.CreationTimestamp
 
 			mode := v1beta1.PeerAuthentication_MutualTLS_UNSET
 			if spec.Mtls != nil {
