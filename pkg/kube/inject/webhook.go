@@ -30,15 +30,13 @@ import (
 	"text/template"
 	"time"
 
+	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
-	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"gomodules.xyz/jsonpatch/v2"
-	"istio.io/api/annotation"
-	meshconfig "istio.io/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,7 +65,7 @@ var (
 type Webhook struct {
 	mu           sync.RWMutex
 	watcher      Watcher
-	meshConfig   *meshconfig.MeshConfig
+	meshConfig   *meshv1alpha1.MeshGlobalConfig
 	env          *model.Environment
 	Config       *Config
 	valuesConfig ValuesConfig
@@ -97,8 +95,8 @@ type InjectionParameters struct {
 	templates           map[string]*template.Template
 	defaultTemplate     []string
 	aliases             map[string][]string
-	meshConfig          *meshconfig.MeshConfig
-	proxyConfig         *meshconfig.ProxyConfig
+	meshGlobalConfig    *meshv1alpha1.MeshGlobalConfig
+	proxyConfig         *meshv1alpha1.ProxyConfig
 	valuesConfig        ValuesConfig
 	revision            string
 	proxyEnvs           map[string]string
@@ -267,7 +265,7 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 		templates:           wh.Config.Templates,
 		defaultTemplate:     wh.Config.DefaultTemplates,
 		aliases:             wh.Config.Aliases,
-		meshConfig:          wh.meshConfig,
+		meshGlobalConfig:    wh.meshConfig,
 		proxyConfig:         proxyConfig,
 		valuesConfig:        wh.valuesConfig,
 		injectedAnnotations: wh.Config.InjectedAnnotations,
@@ -454,29 +452,9 @@ func addApplicationContainerConfig(pod *corev1.Pod) {
 }
 
 func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
-	var merr error
-	mc := req.meshConfig
-	// Get copy of pod proxyconfig, to determine container ordering
-	if pca, f := req.pod.ObjectMeta.GetAnnotations()[annotation.ProxyConfig.Name]; f {
-		mc, merr = mesh.ApplyProxyConfig(pca, req.meshConfig)
-		if merr != nil {
-			return merr
-		}
-	}
-
-	// nolint: staticcheck
-	holdPod := mc.GetDefaultConfig().GetHoldApplicationUntilProxyStarts().GetValue()
-
-	proxyLocation := MoveLast
-	// If HoldApplicationUntilProxyStarts is set, reorder the proxy location
-	if holdPod {
-		proxyLocation = MoveFirst
-	}
-
-	// Proxy container should be last, unless HoldApplicationUntilProxyStarts is set
-	// This is to ensure `kubectl exec` and similar commands continue to default to the user's container
-	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, proxyLocation)
-
+	// Proxy container should be last to ensure `kubectl exec` and similar commands
+	// continue to default to the user's container
+	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, MoveLast)
 	return nil
 }
 

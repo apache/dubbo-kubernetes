@@ -32,7 +32,7 @@ const (
 	MutatingWebhookConfiguration
 	PeerAuthentication
 	ServiceRoute
-	SubsetRule
+	DestinationRule
 	Gateway
 	GatewayClass
 	HTTPRoute
@@ -68,8 +68,8 @@ func (k Kind) String() string {
 		return "PeerAuthentication"
 	case ServiceRoute:
 		return "ServiceRoute"
-	case SubsetRule:
-		return "SubsetRule"
+	case DestinationRule:
+		return "DestinationRule"
 	case GatewayClass:
 		return "GatewayClass"
 	case Gateway:

@@ -43,7 +43,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/hashicorp/go-multierror"
 	"go.uber.org/atomic"
-	"istio.io/api/label"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
@@ -550,7 +549,7 @@ func (c *Controller) servicesForNamespacedName(name types.NamespacedName) []*mod
 
 func (c *Controller) Network(endpointIP string, labels labels.Instance) network.ID {
 	// 1. check the pod/workloadEntry label
-	if nw := labels[label.TopologyNetwork.Name]; nw != "" {
+	if nw := labels["topology.dubbo.apache.org/network"]; nw != "" {
 		return network.ID(nw)
 	}
 	// 2. check the system namespace labels

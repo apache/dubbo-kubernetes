@@ -365,12 +365,12 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 		// Double-check after acquiring write lock
 		if cached, exists = s.connCache[req.Url]; !exists || cached == nil || cached.conn == nil {
 			conn = nil
-			// When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
+			// When TLS is configured (DestinationRule ISTIO_MUTUAL), gRPC xDS client needs
 			// to fetch certificates from CertificateProvider. The CertificateProvider uses file_watcher
 			// to read certificate files. If the files are not ready or CertificateProvider is not
 			// initialized, certificate fetching will timeout.
 			// We wait a short time to ensure CertificateProvider is ready and certificate files are accessible.
-			// This is especially important when SubsetRule is just created and TLS is enabled.
+			// This is especially important when DestinationRule is just created and TLS is enabled.
 			// The CertificateProvider may need time to initialize, especially on first connection.
 			// We wait 3 seconds to give CertificateProvider enough time to initialize (reduced from 5s for faster startup).
 			log.Printf("ForwardEcho: waiting 3 seconds to ensure CertificateProvider is ready...")
@@ -391,7 +391,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 
 			// Dial with xDS URL - use background context, not the request context
 			// The request context might timeout before xDS configuration is received
-			// When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
+			// When TLS is configured (DestinationRule ISTIO_MUTUAL), gRPC xDS client needs
 			// to fetch certificates from CertificateProvider. This may take time, especially on
 			// first connection. We use a longer timeout context to allow certificate fetching.
 			log.Printf("ForwardEcho: creating new connection for %s...", req.Url)
@@ -427,7 +427,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 	// was established before xDS config was received, it might be using FallbackCreds (plaintext).
 	// We'll proceed with RPC calls, but if they fail with TLS/plaintext mismatch errors,
 	// we'll clear the cache and retry.
-	// When TLS is configured (SubsetRule ISTIO_MUTUAL), gRPC xDS client needs
+	// When TLS is configured (DestinationRule ISTIO_MUTUAL), gRPC xDS client needs
 	// to fetch certificates from CertificateProvider during TLS handshake. The TLS handshake
 	// happens when the connection state transitions to READY. If CertificateProvider is not ready,
 	// the TLS handshake will timeout. We need to wait for the connection to be READY, which
@@ -595,7 +595,7 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 			// 1. If client config changed (plaintext -> TLS), new connection uses TLS
 			// 2. If server config changed (TLS -> plaintext), new connection uses plaintext
 			// 3. Connection behavior is consistent with current xDS configuration
-			// - When only client TLS (SubsetRule ISTIO_MUTUAL) but server plaintext: connection SHOULD FAIL
+			// - When only client TLS (DestinationRule ISTIO_MUTUAL) but server plaintext: connection SHOULD FAIL
 			// - When client TLS + server mTLS (PeerAuthentication STRICT): connection SHOULD SUCCEED
 			// - When both plaintext: connection SHOULD SUCCEED
 			// By clearing cache and reconnecting, we ensure connection uses current xDS config.
@@ -613,8 +613,8 @@ func (s *testServerImpl) ForwardEcho(ctx context.Context, req *pb.ForwardEchoReq
 					log.Printf("ForwardEcho: WARNING - detected TLS/plaintext mismatch error: %v", err)
 					log.Printf("ForwardEcho: NOTE - This error indicates that client and server TLS configuration are mismatched")
 					log.Printf("ForwardEcho: This usually happens when:")
-					log.Printf("ForwardEcho:   1. SubsetRule with ISTIO_MUTUAL exists but PeerAuthentication with STRICT does not (client TLS, server plaintext)")
-					log.Printf("ForwardEcho:   2. SubsetRule was deleted but cached connection still uses TLS")
+					log.Printf("ForwardEcho:   1. DestinationRule with ISTIO_MUTUAL exists but PeerAuthentication with STRICT does not (client TLS, server plaintext)")
+					log.Printf("ForwardEcho:   2. DestinationRule was deleted but cached connection still uses TLS")
 					log.Printf("ForwardEcho: Clearing connection cache to force reconnection with updated xDS config...")
 				}
 

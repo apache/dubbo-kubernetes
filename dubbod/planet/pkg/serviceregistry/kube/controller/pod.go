@@ -24,7 +24,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"istio.io/api/annotation"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -193,12 +192,9 @@ func (pc *PodCache) deleteIP(ip string, podKey types.NamespacedName) bool {
 }
 
 func (pc *PodCache) labelFilter(old, cur *v1.Pod) bool {
-	// If labels/annotations updated, trigger proxy push
-	labelsChanged := !maps.Equal(old.Labels, cur.Labels)
-	// Annotations are only used in endpoints in one case, so just compare that one
-	relevantAnnotationsChanged := old.Annotations[annotation.AmbientRedirection.Name] != cur.Annotations[annotation.AmbientRedirection.Name]
-	changed := labelsChanged || relevantAnnotationsChanged
-	return changed
+	// If labels updated, trigger proxy push
+	// In proxyless mesh, we don't need to check ambient redirection annotations
+	return !maps.Equal(old.Labels, cur.Labels)
 }
 
 func (pc *PodCache) proxyUpdates(pod *v1.Pod, isPodUpdate bool) {

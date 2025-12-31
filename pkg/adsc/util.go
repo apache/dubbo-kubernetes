@@ -18,10 +18,7 @@ package adsc
 
 import (
 	"crypto/tls"
-	"strings"
 
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 )
 
@@ -53,22 +50,3 @@ func getClientCertFn(config *Config) func(requestInfo *tls.CertificateRequestInf
 	return nil
 }
 
-func convertTypeURLToMCPGVK(typeURL string) (config.GroupVersionKind, bool) {
-	parts := strings.SplitN(typeURL, "/", 3)
-	if len(parts) != 3 {
-		return config.GroupVersionKind{}, false
-	}
-
-	gvk := config.GroupVersionKind{
-		Group:   parts[0],
-		Version: parts[1],
-		Kind:    parts[2],
-	}
-
-	_, isMCP := collections.Planet.FindByGroupVersionKind(gvk)
-	if isMCP {
-		return gvk, true
-	}
-
-	return config.GroupVersionKind{}, false
-}

@@ -178,9 +178,12 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 			s.ConfigStores = append(s.ConfigStores, configController)
 			log.Infof("Started File configSource %s", configSource.Address)
 		case XDS:
+			// XDS config source support (legacy - MCP protocol removed)
+			// Note: MCP was a legacy protocol replaced by APIGenerator in Istio
+			// This XDS config source may not be needed for proxyless mesh
 			// TLS settings removed from ConfigSource - use insecure credentials
 			// TODO: Implement TLS support when needed
-			xdsMCP, err := adsc.New(srcAddress.Host, &adsc.ADSConfig{
+			xdsClient, err := adsc.New(srcAddress.Host, &adsc.ADSConfig{
 				InitialDiscoveryRequests: adsc.ConfigInitialRequests(),
 				Config: adsc.Config{
 					Namespace: args.Namespace,
@@ -199,11 +202,11 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 			store := memory.Make(collections.Planet)
 			// TODO: enable namespace filter for memory controller
 			configController := memory.NewController(store)
-			configController.RegisterHasSyncedHandler(xdsMCP.HasSynced)
-			xdsMCP.Store = configController
-			err = xdsMCP.Run()
+			configController.RegisterHasSyncedHandler(xdsClient.HasSynced)
+			xdsClient.Store = configController
+			err = xdsClient.Run()
 			if err != nil {
-				return fmt.Errorf("MCP: failed running %v", err)
+				return fmt.Errorf("XDS config source: failed running %v", err)
 			}
 			s.ConfigStores = append(s.ConfigStores, configController)
 			log.Infof("Started XDS configSource %s", configSource.Address)
@@ -230,7 +233,8 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 func (s *Server) initConfigController(args *PlanetArgs) error {
 	meshGlobalConfig := s.environment.Mesh()
 	if len(meshGlobalConfig.ConfigSources) > 0 {
-		// Using MCP for config.
+		// XDS config source support (legacy - MCP protocol removed)
+		// Note: MCP was a legacy protocol replaced by APIGenerator in Istio
 		if err := s.initConfigSources(args); err != nil {
 			return err
 		}

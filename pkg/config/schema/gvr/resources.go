@@ -35,7 +35,7 @@ var (
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 	MeshGlobalConfig               = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshglobalconfigs"}
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1", Resource: "peerauthentications"}
-	SubsetRule                     = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "subsetrules"}
+	DestinationRule                     = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "destinationrules"}
 	ServiceRoute                   = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "serviceroutes"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
@@ -65,7 +65,7 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 		return false
 	case PeerAuthentication:
 		return false
-	case SubsetRule:
+	case DestinationRule:
 		return false
 	case ServiceRoute:
 		return false

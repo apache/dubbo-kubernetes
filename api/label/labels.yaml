@@ -1,0 +1,71 @@
+labels:
+  - name: dubbo.apache.org/rev
+    featureStatus: Beta
+    description: Dubbo control plane revision or tag associated with the resource; e.g. `canary`
+    hidden: false
+    deprecated: false
+    resources:
+      - Namespace
+      - Gateway
+      - Pod
+
+  - name: operator.dubbo.apache.org/component
+    featureStatus: Alpha
+    description: Dubbo operator component name of the resource, e.g. `Pilot`
+    hidden: true
+    deprecated: false
+    resources:
+      - Any
+
+  - name: operator.dubbo.apache.org/managed
+    featureStatus: Alpha
+    description: Set to `Reconcile` if the Dubbo operator will reconcile the resource.
+    hidden: true
+    deprecated: false
+    resources:
+      - Any
+
+  - name: operator.dubbo.apache.org/version
+    featureStatus: Alpha
+    description: The Dubbo operator version that installed the resource, e.g. `1.6.0`
+    hidden: true
+    deprecated: false
+    resources:
+      - Any
+
+  - name: proxyless.dubbo.apache.org/inject
+    featureStatus: Alpha
+    description: Specifies whether or not an proxyless adapter should be automatically
+      injected into the workload.
+    deprecated: false
+    hidden: false
+    resources:
+      - Pod
+
+
+  - name: gateway.networking.k8s.io/gateway-name
+    featureStatus: Stable
+    description: Automatically added to all resources [automatically created](/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment)
+      by Dubbo Gateway controller to indicate which `Gateway` resulted in the object creation. Users should not set this label themselves.
+    deprecated: false
+    hidden: false
+    resources:
+      - ServiceAccount
+      - Deployment
+      - Service
+      - PodDisruptionBudget
+      - HorizontalPodAutoscaler
+
+  - name: gateway.networking.k8s.io/gateway-class-name
+    featureStatus: Stable
+    description: Automatically added to all resources [automatically created](/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment)
+      by Dubbo Gateway controller to indicate which `GatewayClass` resulted in the object creation. Users should not set this label themselves.
+    deprecated: false
+    hidden: false
+    resources:
+      - ServiceAccount
+      - Deployment
+      - Service
+      - PodDisruptionBudget
+      - HorizontalPodAutoscaler
+

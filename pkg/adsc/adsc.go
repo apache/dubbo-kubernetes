@@ -33,7 +33,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
 	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
-	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
@@ -49,9 +48,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
-	anypb "google.golang.org/protobuf/types/known/anypb"
 	pstruct "google.golang.org/protobuf/types/known/structpb"
-	mcp "istio.io/api/mcp/v1alpha1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
@@ -91,7 +88,7 @@ type Config struct {
 	Revision string
 	// Meta includes additional metadata for the node
 	Meta *pstruct.Struct
-	// BackoffPolicy determines the reconnect policy. Based on MCP client.
+	// BackoffPolicy determines the reconnect policy.
 	BackoffPolicy backoff.BackOff
 }
 
@@ -348,26 +345,10 @@ func (a *ADSC) WaitClear() {
 	}
 }
 
-// HasSynced returns true if MCP configs have synced
+// HasSynced returns true if configs have synced
+// MCP support removed - it's a legacy protocol replaced by APIGenerator
 func (a *ADSC) HasSynced() bool {
-	if a.cfg == nil || len(a.cfg.InitialDiscoveryRequests) == 0 {
-		return true
-	}
-
-	a.mutex.RLock()
-	defer a.mutex.RUnlock()
-
-	for _, req := range a.cfg.InitialDiscoveryRequests {
-		_, isMCP := convertTypeURLToMCPGVK(req.TypeUrl)
-		if !isMCP {
-			continue
-		}
-
-		if _, ok := a.sync[req.TypeUrl]; !ok {
-			return false
-		}
-	}
-
+	// MCP was replaced by APIGenerator in Istio, not needed for proxyless mesh
 	return true
 }
 
@@ -423,41 +404,6 @@ func (a *ADSC) ack(msg *discovery.DiscoveryResponse) {
 	})
 }
 
-func (a *ADSC) mcpToPlanet(m *mcp.Resource) (*config.Config, error) {
-	if m == nil || m.Metadata == nil {
-		return &config.Config{}, nil
-	}
-	c := &config.Config{
-		Meta: config.Meta{
-			ResourceVersion: m.Metadata.Version,
-			Labels:          m.Metadata.Labels,
-			Annotations:     m.Metadata.Annotations,
-		},
-	}
-
-	if !config.ObjectInRevision(c, a.cfg.Revision) { // In case upstream does not support rev in node meta.
-		return nil, nil
-	}
-
-	if c.Meta.Annotations == nil {
-		c.Meta.Annotations = make(map[string]string)
-	}
-	nsn := strings.Split(m.Metadata.Name, "/")
-	if len(nsn) != 2 {
-		return nil, fmt.Errorf("invalid name %s", m.Metadata.Name)
-	}
-	c.Namespace = nsn[0]
-	c.Name = nsn[1]
-	var err error
-	c.CreationTimestamp = m.Metadata.CreateTime.AsTime()
-
-	pb, err := m.Body.UnmarshalNew()
-	if err != nil {
-		return nil, err
-	}
-	c.Spec = pb
-	return c, nil
-}
 
 func (a *ADSC) handleRecv() {
 	// We connected, so reset the backoff
@@ -487,7 +433,7 @@ func (a *ADSC) handleRecv() {
 		}
 
 		// Group-value-kind - used for high level api generator.
-		resourceGvk, isMCP := convertTypeURLToMCPGVK(msg.TypeUrl)
+		// MCP support removed - it's a legacy protocol replaced by APIGenerator
 
 		// TODO WithLabels
 		if a.cfg.ResponseHandler != nil {
@@ -546,9 +492,7 @@ func (a *ADSC) handleRecv() {
 			}
 			a.handleRDS(routes)
 		default:
-			if isMCP {
-				a.handleMCP(resourceGvk, msg.Resources)
-			}
+			// MCP support removed - it's a legacy protocol replaced by APIGenerator
 		}
 
 		// If we got no resource - still save to the store with empty name/namespace, to notify sync
@@ -557,11 +501,6 @@ func (a *ADSC) handleRecv() {
 		// TODO: add hook to inject nacks
 
 		a.mutex.Lock()
-		if isMCP {
-			if _, exist := a.sync[resourceGvk.String()]; !exist {
-				a.sync[resourceGvk.String()] = time.Now()
-			}
-		}
 		a.Received[msg.TypeUrl] = msg
 		a.ack(msg)
 		a.mutex.Unlock()
@@ -569,62 +508,6 @@ func (a *ADSC) handleRecv() {
 		select {
 		case a.XDSUpdates <- msg:
 		default:
-		}
-	}
-}
-
-func (a *ADSC) handleMCP(groupVersionKind config.GroupVersionKind, resources []*anypb.Any) {
-	// Generic - fill up the store
-	if a.Store == nil {
-		return
-	}
-
-	existingConfigs := a.Store.List(groupVersionKind, "")
-
-	received := make(map[string]*config.Config)
-	for _, rsc := range resources {
-		m := &mcp.Resource{}
-		err := rsc.UnmarshalTo(m)
-		if err != nil {
-			log.Errorf("Error unmarshalling received MCP config %v", err)
-			continue
-		}
-		newCfg, err := a.mcpToPlanet(m)
-		if err != nil {
-			log.Errorf("Invalid data: %v (%v)", err, string(rsc.Value))
-			continue
-		}
-		if newCfg == nil {
-			continue
-		}
-		received[newCfg.Namespace+"/"+newCfg.Name] = newCfg
-
-		newCfg.GroupVersionKind = groupVersionKind
-		oldCfg := a.Store.Get(newCfg.GroupVersionKind, newCfg.Name, newCfg.Namespace)
-
-		if oldCfg == nil {
-			if _, err = a.Store.Create(*newCfg); err != nil {
-				log.Errorf("Error adding a new resource to the store %v", err)
-				continue
-			}
-		} else if oldCfg.ResourceVersion != newCfg.ResourceVersion || newCfg.ResourceVersion == "" {
-			// update the store only when resource version differs or unset.
-			// newCfg.Annotations[mem.ResourceVersion] = newCfg.ResourceVersion
-			newCfg.ResourceVersion = oldCfg.ResourceVersion
-			if _, err = a.Store.Update(*newCfg); err != nil {
-				log.Errorf("Error updating an existing resource in the store %v", err)
-				continue
-			}
-		}
-	}
-
-	// remove deleted resources from cache
-	for _, config := range existingConfigs {
-		if _, ok := received[config.Namespace+"/"+config.Name]; !ok {
-			if err := a.Store.Delete(config.GroupVersionKind, config.Name, config.Namespace, nil); err != nil {
-				log.Errorf("Error deleting an outdated resource from the store %v", err)
-				continue
-			}
 		}
 	}
 }

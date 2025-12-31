@@ -17,61 +17,31 @@
 package label
 
 import (
-	"strings"
-
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/network"
-	"istio.io/api/label"
 )
 
 const (
-	LabelHostname = "kubernetes.io/hostname"
-
-	LabelTopologyZone    = "topology.kubernetes.io/zone"
-	LabelTopologySubzone = "topology.dubbo.apache.org/subzone"
-	LabelTopologyRegion  = "topology.kubernetes.io/region"
+	LabelTopologyCluster = "topology.dubbo.apache.org/cluster"
+	LabelTopologyNetwork = "topology.dubbo.apache.org/network"
 )
 
 func AugmentLabels(in labels.Instance, clusterID cluster.ID, locality, k8sNode string, networkID network.ID) labels.Instance {
 	// Copy the original labels to a new map.
-	out := make(labels.Instance, len(in)+6)
+	out := make(labels.Instance, len(in)+2)
 	for k, v := range in {
 		out[k] = v
 	}
 
-	region, zone, subzone := SplitLocalityLabel(locality)
-	if len(region) > 0 {
-		out[LabelTopologyRegion] = region
-	}
-	if len(zone) > 0 {
-		out[LabelTopologyZone] = zone
-	}
-	if len(subzone) > 0 {
-		out[label.TopologySubzone.Name] = subzone
-	}
+	// In proxyless mesh, locality is not used, so we skip region/zone/subzone labels
 	if len(clusterID) > 0 {
-		out[label.TopologyCluster.Name] = clusterID.String()
-	}
-	if len(k8sNode) > 0 {
-		out[LabelHostname] = k8sNode
+		out[LabelTopologyCluster] = clusterID.String()
 	}
 	// In c.Network(), we already set the network label in priority order pod labels > namespace label
 	// We won't let proxy.Metadata.Network override the above.
-	if len(networkID) > 0 && out[label.TopologyNetwork.Name] == "" {
-		out[label.TopologyNetwork.Name] = networkID.String()
+	if len(networkID) > 0 && out[LabelTopologyNetwork] == "" {
+		out[LabelTopologyNetwork] = networkID.String()
 	}
 	return out
-}
-
-func SplitLocalityLabel(locality string) (region, zone, subzone string) {
-	items := strings.Split(locality, "/")
-	switch len(items) {
-	case 1:
-		return items[0], "", ""
-	case 2:
-		return items[0], items[1], ""
-	default:
-		return items[0], items[1], items[2]
-	}
 }

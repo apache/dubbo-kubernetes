@@ -41,7 +41,7 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 	case *apiistioioapisecurityv1.PeerAuthentication:
 		return gvk.PeerAuthentication, true
 	case *apiistioioapinetworkingv1.DestinationRule:
-		return gvk.SubsetRule, true
+		return gvk.DestinationRule, true
 	case *apiistioioapinetworkingv1.VirtualService:
 		return gvk.ServiceRoute, true
 	case *k8sioapicorev1.ConfigMap:

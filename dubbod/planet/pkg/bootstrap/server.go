@@ -491,8 +491,8 @@ func (s *Server) initRegistryEventHandlers() {
 
 		var configKind kind.Kind
 		switch schemaID {
-		case "SubsetRule":
-			configKind = kind.SubsetRule
+		case "DestinationRule":
+			configKind = kind.DestinationRule
 		case "serviceRoute", "ServiceRoute":
 			configKind = kind.ServiceRoute
 		case "PeerAuthentication":
@@ -517,18 +517,18 @@ func (s *Server) initRegistryEventHandlers() {
 		// Log the config change
 		log.Infof("configHandler: %s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
-		// Some configs (SubsetRule/ServiceRoute/PeerAuthentication/HTTPRoute) require Full push to ensure
+		// Some configs (DestinationRule/ServiceRoute/PeerAuthentication/HTTPRoute) require Full push to ensure
 		// PushContext is re-initialized and configuration is reloaded.
 		// PeerAuthentication must rebuild AuthenticationPolicies to enable STRICT mTLS on LDS; without
 		// a full push the cached PushContext would continue serving plaintext listeners.
 		// HTTPRoute must rebuild HTTPRoute index to enable Gateway API routing.
-		needsFullPush := configKind == kind.SubsetRule || configKind == kind.ServiceRoute || configKind == kind.PeerAuthentication || configKind == kind.HTTPRoute
+		needsFullPush := configKind == kind.DestinationRule || configKind == kind.ServiceRoute || configKind == kind.PeerAuthentication || configKind == kind.HTTPRoute
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
 		s.XDSServer.ConfigUpdate(&model.PushRequest{
 			ConfigsUpdated: sets.New(configKey),
 			Reason:         model.NewReasonStats(model.DependentResource),
-			Full:           needsFullPush, // Full push for SubsetRule/ServiceRoute to reload PushContext
+			Full:           needsFullPush, // Full push for DestinationRule/ServiceRoute to reload PushContext
 		})
 	}
 	schemas := collections.Planet.All()

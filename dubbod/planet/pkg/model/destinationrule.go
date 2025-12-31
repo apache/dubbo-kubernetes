@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig config.Config, exportToSet sets.Set[visibility.Instance]) {
+func (ps *PushContext) mergeDestinationRule(p *consolidatedSubRules, subRuleConfig config.Config, exportToSet sets.Set[visibility.Instance]) {
 	rule := subRuleConfig.Spec.(*networking.DestinationRule)
 	resolvedHost := host.Name(rule.Host)
 
@@ -40,11 +40,11 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 	}
 
 	if mdrList, exists := subRules[resolvedHost]; exists {
-		log.Infof("mergeSubsetRule: found existing rules for host %s (count: %d)", resolvedHost, len(mdrList))
+		log.Infof("mergeDestinationRule: found existing rules for host %s (count: %d)", resolvedHost, len(mdrList))
 		// `appendSeparately` determines if the incoming destination rule would become a new unique entry in the processedDestRules list.
 		appendSeparately := true
 		for _, mdr := range mdrList {
-			if features.EnableEnhancedSubsetRuleMerge {
+			if features.EnableEnhancedDestinationRuleMerge {
 				if exportToSet.Equals(mdr.exportTo) {
 					appendSeparately = false
 				} else if len(mdr.exportTo) > 0 && exportToSet.SupersetOf(mdr.exportTo) {
@@ -72,7 +72,7 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 			// at the same time added as a unique entry in the processedDestRules.
 			if bothWithoutSelector || (bothWithSelector && selectorsMatch) {
 				appendSeparately = false
-				log.Debugf("mergeSubsetRule: will merge rules for host %s (bothWithoutSelector: %v, bothWithSelector: %v, selectorsMatch: %v)",
+				log.Debugf("mergeDestinationRule: will merge rules for host %s (bothWithoutSelector: %v, bothWithSelector: %v, selectorsMatch: %v)",
 					resolvedHost, bothWithoutSelector, bothWithSelector, selectorsMatch)
 			}
 
@@ -99,7 +99,7 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 			}
 
 			// Merge top-level traffic policy. Historically we only copied the first non-nil policy,
-			// which meant a later SubsetRule that supplied TLS settings was ignored once a prior
+			// which meant a later DestinationRule that supplied TLS settings was ignored once a prior
 			// rule (e.g. subsets only) existed. To match Istio's behavior and ensure Proxyless gRPC
 			// can enable mTLS after subsets are defined, allow the incoming rule to override the TLS
 			// portion even when a Common TrafficPolicy already exists.
@@ -107,14 +107,14 @@ func (ps *PushContext) mergeSubsetRule(p *consolidatedSubRules, subRuleConfig co
 				if mergedRule.TrafficPolicy == nil {
 					// First rule with TrafficPolicy, copy it entirely
 					mergedRule.TrafficPolicy = rule.TrafficPolicy
-					log.Infof("mergeSubsetRule: copied TrafficPolicy from new rule to merged rule for host %s (has TLS: %v)",
+					log.Infof("mergeDestinationRule: copied TrafficPolicy from new rule to merged rule for host %s (has TLS: %v)",
 						resolvedHost, rule.TrafficPolicy.Tls != nil)
 				} else {
 					// Merge TrafficPolicy fields, with TLS settings from the latest rule taking precedence
 					if rule.TrafficPolicy.Tls != nil {
 						// TLS settings from the latest rule always win (ISTIO_MUTUAL/DUBBO_MUTUAL)
 						mergedRule.TrafficPolicy.Tls = rule.TrafficPolicy.Tls
-						log.Infof("mergeSubsetRule: updated TLS settings in merged TrafficPolicy for host %s (mode: %v)",
+						log.Infof("mergeDestinationRule: updated TLS settings in merged TrafficPolicy for host %s (mode: %v)",
 							resolvedHost, rule.TrafficPolicy.Tls.Mode)
 					}
 					// Merge other TrafficPolicy fields if needed (loadBalancer, connectionPool, etc.)

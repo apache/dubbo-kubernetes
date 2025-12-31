@@ -25,8 +25,8 @@ import (
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	dubboapimetav1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	istioioapimetav1alpha1 "istio.io/api/meta/v1alpha1"
 	istioioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -40,23 +40,23 @@ var (
 		Plural:         "peerauthentications",
 		Version:        "v1",
 		VersionAliases: []string{},
-		Proto:          "istio.security.v1beta1.PeerAuthentication", StatusProto: "istio.meta.v1alpha1.IstioStatus",
-		ReflectType: reflect.TypeOf(&istioioapisecurityv1beta1.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&istioioapimetav1alpha1.IstioStatus{}).Elem(),
-		ProtoPackage: "istio.io/api/security/v1beta1", StatusPackage: "istio.io/api/meta/v1alpha1",
+		Proto:          "istio.security.v1beta1.PeerAuthentication", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&istioioapisecurityv1beta1.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "istio.io/api/security/v1beta1", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	SubsetRule = collection.Builder{
-		Identifier:     "SubsetRule",
+	DestinationRule = collection.Builder{
+		Identifier:     "DestinationRule",
 		Group:          "networking.dubbo.apache.org",
-		Kind:           "SubsetRule",
-		Plural:         "subsetrules",
-		Version:        "v1",
+		Kind:           "DestinationRule",
+		Plural:         "destinationrules",
+		Version:        "v1alpha3",
 		VersionAliases: []string{},
-		Proto:          "istio.networking.v1alpha3.DestinationRule", StatusProto: "istio.meta.v1alpha1.IstioStatus",
-		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&istioioapimetav1alpha1.IstioStatus{}).Elem(),
-		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "istio.io/api/meta/v1alpha1",
+		Proto:          "istio.networking.v1alpha3.DestinationRule", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
@@ -68,9 +68,9 @@ var (
 		Plural:         "serviceroutes",
 		Version:        "v1",
 		VersionAliases: []string{},
-		Proto:          "istio.networking.v1alpha3.VirtualService", StatusProto: "istio.meta.v1alpha1.IstioStatus",
-		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&istioioapimetav1alpha1.IstioStatus{}).Elem(),
-		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "istio.io/api/meta/v1alpha1",
+		Proto:          "istio.networking.v1alpha3.VirtualService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
@@ -146,7 +146,7 @@ var (
 
 	Planet = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
-		MustAdd(SubsetRule).
+		MustAdd(DestinationRule).
 		MustAdd(ServiceRoute).
 		Build()
 
@@ -158,7 +158,7 @@ var (
 
 	All = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
-		MustAdd(SubsetRule).
+		MustAdd(DestinationRule).
 		MustAdd(ServiceRoute).
 		MustAdd(MutatingWebhookConfiguration).
 		MustAdd(ValidatingWebhookConfiguration).

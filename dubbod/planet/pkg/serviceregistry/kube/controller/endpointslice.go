@@ -18,18 +18,15 @@ package controller
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
-	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/hashicorp/go-multierror"
-	"istio.io/api/annotation"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -524,15 +521,7 @@ func getServiceNamespacedName(slice *v1.EndpointSlice) types.NamespacedName {
 }
 
 func serviceNeedsPush(svc *corev1.Service) bool {
-	if svc.Annotations[annotation.NetworkingExportTo.Name] != "" {
-		namespaces := strings.Split(svc.Annotations[annotation.NetworkingExportTo.Name], ",")
-		for _, ns := range namespaces {
-			ns = strings.TrimSpace(ns)
-			if ns == string(visibility.None) {
-				return false
-			}
-		}
-	}
+	// In proxyless mesh, all services need to be pushed
 	return true
 }
 
