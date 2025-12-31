@@ -55,14 +55,14 @@ grpcurl -plaintext -d '{"url": "xds:///provider.grpc-app.svc.cluster.local:7070"
 
 ## Traffic Management
 
-### Creating subsets with SubsetRule
+### Creating subsets with DestinationRule
 
 First, create a subset for each version of the workload to enable traffic splitting:
 
 ```bash
 cat <<EOF | kubectl apply -f -
-apiVersion: networking.dubbo.apache.org/v1
-kind: SubsetRule
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: DestinationRule
 metadata:
   name: provider-versions
   namespace: grpc-app
@@ -84,7 +84,7 @@ Using the subsets defined above, you can send weighted traffic to different vers
 
 ```bash
 cat <<EOF | kubectl apply -f -
-apiVersion: networking.dubbo.apache.org/v1
+apiVersion: networking.dubbo.apache.org/v1alpha3
 kind: ServiceRoute
 metadata:
   name: provider-weights
@@ -131,12 +131,12 @@ Due to the changes to the application itself required to enable security in gRPC
 
 ### Enable client-side mTLS
 
-To enable client-side mTLS, apply a `SubsetRule` with `tls` settings:
+To enable client-side mTLS, apply a `DestinationRule` with `tls` settings:
 
 ```bash
 cat <<EOF | kubectl apply -f -
-apiVersion: networking.dubbo.apache.org/v1
-kind: SubsetRule
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: DestinationRule
 metadata:
   name: provider-mtls
   namespace: grpc-app

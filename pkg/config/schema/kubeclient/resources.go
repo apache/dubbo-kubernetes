@@ -120,7 +120,7 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &apiistioioapisecurityv1.PeerAuthentication{}
 	case gvr.ServiceRoute:
 		return &apiistioioapinetworkingv1.VirtualService{}
-	case gvr.SubsetRule:
+	case gvr.DestinationRule:
 		return &apiistioioapinetworkingv1.DestinationRule{}
 	case gvr.GatewayClass:
 		return &sigsk8siogatewayapiapisv1.GatewayClass{}
@@ -243,35 +243,35 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Dynamic().Resource(gvr).Namespace(opts.Namespace).Watch(context.Background(), options)
 		}
-	case gvr.SubsetRule:
-		// SubsetRule uses networking.dubbo.apache.org API group, not networking.istio.io
+	case gvr.DestinationRule:
+		// DestinationRule uses networking.dubbo.apache.org API group, not networking.istio.io
 		// Use Dynamic client to access it
 		gvr := schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
-			Version:  "v1",
-			Resource: "subsetrules",
+			Version:  "v1alpha3",
+			Resource: "destinationrules",
 		}
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			// Log the namespace being watched for diagnosis
 			if opts.Namespace == "" {
-				log.Infof("SubsetRule informer: List called for all namespaces")
+				log.Infof("DestinationRule informer: List called for all namespaces")
 			} else {
-				log.Infof("SubsetRule informer: List called for namespace %s", opts.Namespace)
+				log.Infof("DestinationRule informer: List called for namespace %s", opts.Namespace)
 			}
 			return c.Dynamic().Resource(gvr).Namespace(opts.Namespace).List(context.Background(), options)
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			// Log the namespace being watched for diagnosis
 			if opts.Namespace == "" {
-				log.Infof("SubsetRule informer: Watch called for all namespaces")
+				log.Infof("DestinationRule informer: Watch called for all namespaces")
 			} else {
-				log.Infof("SubsetRule informer: Watch called for namespace %s", opts.Namespace)
+				log.Infof("DestinationRule informer: Watch called for namespace %s", opts.Namespace)
 			}
 			watchInterface, err := c.Dynamic().Resource(gvr).Namespace(opts.Namespace).Watch(context.Background(), options)
 			if err != nil {
-				log.Errorf("SubsetRule informer: Watch failed: %v", err)
+				log.Errorf("DestinationRule informer: Watch failed: %v", err)
 			} else {
-				log.Infof("SubsetRule informer: Watch connection established successfully")
+				log.Infof("DestinationRule informer: Watch connection established successfully")
 			}
 			return watchInterface, err
 		}

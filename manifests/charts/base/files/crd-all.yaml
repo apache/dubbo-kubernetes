@@ -24,19 +24,19 @@ metadata:
     chart: dubbo
     heritage: Tiller
     release: dubbo
-  name: subsetrules.networking.dubbo.apache.org
+  name: destinationrules.networking.dubbo.apache.org
 spec:
   group: networking.dubbo.apache.org
   names:
     categories:
       - dubbo
       - networking
-    kind: SubsetRule
-    listKind: SubsetRuleList
-    plural: subsetrules
+    kind: DestinationRule
+    listKind: DestinationRuleList
+    plural: destinationrules
     shortNames:
-      - ssr
-    singular: subsetrules
+      - dr
+    singular: destinationrule
   scope: Namespaced
   versions:
     - additionalPrinterColumns:
@@ -95,7 +95,7 @@ spec:
                                   - DISABLE
                                   - SIMPLE
                                   - MUTUAL
-                                  - ISTIO_MUTUAL
+                                  - DUBBO_MUTUAL
                                 type: string
                             type: object
                         type: object
@@ -114,12 +114,12 @@ spec:
                           description: |-
                             Indicates whether connections to this port should be secured using TLS.
                             
-                            Valid Options: DISABLE, SIMPLE, MUTUAL, ISTIO_MUTUAL
+                            Valid Options: DISABLE, SIMPLE, MUTUAL, DUBBO_MUTUAL
                           enum:
                             - DISABLE
                             - SIMPLE
                             - MUTUAL
-                            - ISTIO_MUTUAL
+                            - DUBBO_MUTUAL
                           type: string
                       type: object
                   type: object

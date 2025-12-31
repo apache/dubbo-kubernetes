@@ -17,8 +17,6 @@
 package model
 
 import (
-	"istio.io/api/annotation"
-	corev1 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,14 +52,6 @@ const (
 	UnHealthy   HealthStatus = 2
 	Draining    HealthStatus = 3
 	Terminating HealthStatus = 4
-)
-
-type TrafficDistribution int
-
-const (
-	TrafficDistributionAny TrafficDistribution = iota
-	TrafficDistributionPreferSameZone
-	TrafficDistributionPreferSameNode
 )
 
 type TrafficDirection string
@@ -153,10 +143,6 @@ type K8sAttributes struct {
 	// NodeLocal means the proxy will only forward traffic to node local endpoints
 	// spec.InternalTrafficPolicy == Local
 	NodeLocal bool
-
-	// TrafficDistribution determines the service-level traffic distribution.
-	// This may be overridden by locality load balancing settings.
-	TrafficDistribution TrafficDistribution
 
 	// ObjectName is the object name of the underlying object. This may differ from the Service.Attributes.Name for legacy semantics.
 	ObjectName string
@@ -512,31 +498,6 @@ func (m *AddressMap) DeepCopy() *AddressMap {
 	}
 	return &AddressMap{
 		Addresses: m.GetAddresses(),
-	}
-}
-
-func GetTrafficDistribution(specValue *string, annotations map[string]string) TrafficDistribution {
-	if specValue != nil {
-		switch *specValue {
-		case corev1.ServiceTrafficDistributionPreferSameZone, corev1.ServiceTrafficDistributionPreferClose:
-			return TrafficDistributionPreferSameZone
-		case corev1.ServiceTrafficDistributionPreferSameNode:
-			return TrafficDistributionPreferSameNode
-		}
-	}
-	// The TrafficDistribution field is quite new, so we allow a legacy annotation option as well
-	// This also has some custom types
-	trafficDistributionAnnotationValue := strings.ToLower(annotations[annotation.NetworkingTrafficDistribution.Name])
-	switch trafficDistributionAnnotationValue {
-	case strings.ToLower(corev1.ServiceTrafficDistributionPreferClose), strings.ToLower(corev1.ServiceTrafficDistributionPreferSameZone):
-		return TrafficDistributionPreferSameZone
-	case strings.ToLower(corev1.ServiceTrafficDistributionPreferSameNode):
-		return TrafficDistributionPreferSameNode
-	default:
-		if trafficDistributionAnnotationValue != "" {
-			log.Warnf("Unknown traffic distribution annotation, defaulting to any")
-		}
-		return TrafficDistributionAny
 	}
 }
 

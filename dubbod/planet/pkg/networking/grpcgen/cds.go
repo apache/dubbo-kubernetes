@@ -239,9 +239,9 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 
 	// Apply TLS to default cluster if it exists and doesn't have TransportSocket yet
 	// This ensures that default cluster gets TLS from the top-level TrafficPolicy in DestinationRule
-	// When SubsetRule sets ISTIO_MUTUAL, inbound listener enforces STRICT mTLS, so outbound must also use TLS
+	// When DestinationRule sets ISTIO_MUTUAL, inbound listener enforces STRICT mTLS, so outbound must also use TLS
 	// NOTE: We re-check hasTLS here because firstDestinationRule might have returned a different rule
-	// than the one checked in build(), especially when multiple SubsetRules exist and merge failed
+	// than the one checked in build(), especially when multiple DestinationRules exist and merge failed
 	if defaultCluster != nil && defaultCluster.TransportSocket == nil {
 		// Re-check TLS in case DestinationRule was found here but not in build()
 		recheckTLS := dr != nil && dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil

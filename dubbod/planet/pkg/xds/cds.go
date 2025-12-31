@@ -34,11 +34,11 @@ func cdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) (*model.PushReques
 	}
 
 	// with TLS configuration (ISTIO_MUTUAL), CDS must be pushed to update cluster TransportSocket.
-	// Even if req.Full is false, we need to check if SubsetRule was updated, as it affects cluster TLS config.
+	// Even if req.Full is false, we need to check if DestinationRule was updated, as it affects cluster TLS config.
 	if req != nil && req.ConfigsUpdated != nil {
-		// Check if SubsetRule was updated - this requires CDS push to update cluster TransportSocket
-		if model.HasConfigsOfKind(req.ConfigsUpdated, kind.SubsetRule) {
-			log.Debugf("cdsNeedsPush: SubsetRule updated, CDS push required to update cluster TLS config")
+		// Check if DestinationRule was updated - this requires CDS push to update cluster TransportSocket
+		if model.HasConfigsOfKind(req.ConfigsUpdated, kind.DestinationRule) {
+			log.Debugf("cdsNeedsPush: DestinationRule updated, CDS push required to update cluster TLS config")
 			return req, true
 		}
 	}

@@ -77,7 +77,7 @@ type PushContext struct {
 	ServiceIndex           serviceIndex
 	serviceRouteIndex      serviceRouteIndex
 	httpRouteIndex         httpRouteIndex
-	subsetRuleIndex        subsetRuleIndex
+	destinationRuleIndex        destinationRuleIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
 	PushVersion            string
@@ -141,7 +141,7 @@ type ConsolidatedSubRule struct {
 type exportToDefaults struct {
 	service      sets.Set[visibility.Instance]
 	serviceRoute sets.Set[visibility.Instance]
-	subsetRule   sets.Set[visibility.Instance]
+	destinationRule   sets.Set[visibility.Instance]
 }
 
 type serviceRouteIndex struct {
@@ -160,7 +160,7 @@ type httpRouteIndex struct {
 	hostToRoutes map[host.Name][]config.Config
 }
 
-type subsetRuleIndex struct {
+type destinationRuleIndex struct {
 	namespaceLocal      map[string]*consolidatedSubRules
 	exportedByNamespace map[string]*consolidatedSubRules
 	rootNamespaceLocal  *consolidatedSubRules
@@ -175,7 +175,7 @@ func NewPushContext() *PushContext {
 	return &PushContext{
 		ServiceIndex:      newServiceIndex(),
 		serviceRouteIndex: newServiceRouteIndex(),
-		subsetRuleIndex:   newSubsetRuleIndex(),
+		destinationRuleIndex:   newDestinationRuleIndex(),
 		serviceAccounts:   map[serviceAccountKey][]string{},
 	}
 }
@@ -199,8 +199,8 @@ func newServiceRouteIndex() serviceRouteIndex {
 	return out
 }
 
-func newSubsetRuleIndex() subsetRuleIndex {
-	return subsetRuleIndex{
+func newDestinationRuleIndex() destinationRuleIndex {
+	return destinationRuleIndex{
 		namespaceLocal:      map[string]*consolidatedSubRules{},
 		exportedByNamespace: map[string]*consolidatedSubRules{},
 	}
@@ -315,14 +315,14 @@ func (pr *PushRequest) PushReason() string {
 }
 
 func (ps *PushContext) initDefaultExportMaps() {
-	ps.exportToDefaults.subsetRule = sets.New[visibility.Instance]()
+	ps.exportToDefaults.destinationRule = sets.New[visibility.Instance]()
 	if ps.Mesh.DefaultDestinationRuleExportTo != nil {
 		for _, e := range ps.Mesh.DefaultDestinationRuleExportTo {
-			ps.exportToDefaults.subsetRule.Insert(visibility.Instance(e))
+			ps.exportToDefaults.destinationRule.Insert(visibility.Instance(e))
 		}
 	} else {
 		// default to *
-		ps.exportToDefaults.subsetRule.Insert(visibility.Public)
+		ps.exportToDefaults.destinationRule.Insert(visibility.Public)
 	}
 
 	ps.exportToDefaults.service = sets.New[visibility.Instance]()
@@ -532,7 +532,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	ps.initKubernetesGateways(env)
 	ps.initServiceRoutes(env)
 	ps.initHTTPRoutes(env)
-	ps.initSubsetRules(env)
+	ps.initDestinationRules(env)
 	ps.initAuthenticationPolicies(env)
 }
 
@@ -562,27 +562,27 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		}
 	}
 
-	// Check if subsetRules have changed base on:
-	// 1. SubsetRule updates in ConfigsUpdated
+	// Check if destinationrules have changed base on:
+	// 1. DestinationRule updates in ConfigsUpdated
 	// 2. Full push (Full: true) - always re-initialize on full push
-	subsetRulesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.SubsetRule) ||
+		destinationRuleChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.DestinationRule) ||
 		len(pushReq.AddressesUpdated) > 0)
 
 	if pushReq != nil {
-		subsetRuleCount := 0
+		destinationRuleCount := 0
 		for cfg := range pushReq.ConfigsUpdated {
-			if cfg.Kind == kind.SubsetRule {
-				subsetRuleCount++
+			if cfg.Kind == kind.DestinationRule {
+				destinationRuleCount++
 			}
 		}
-		if subsetRuleCount > 0 {
-			log.Debugf("updateContext: detected %d SubsetRule config changes", subsetRuleCount)
+		if destinationRuleCount > 0 {
+			log.Debugf("updateContext: detected %d DestinationRule config changes", destinationRuleCount)
 		}
 		if pushReq.Full {
-			log.Debugf("updateContext: Full push requested, will re-initialize SubsetRule and ServiceRoute indexes")
+			log.Debugf("updateContext: Full push requested, will re-initialize DestinationRule and ServiceRoute indexes")
 		}
-		log.Debugf("updateContext: subsetRulesChanged=%v, serviceRoutesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
-			subsetRulesChanged, serviceRoutesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
+		log.Debugf("updateContext: destinationRuleChanged=%v, serviceRoutesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
+			destinationRuleChanged, serviceRoutesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
 	}
 
 	// Also check if the actual number of services has changed
@@ -636,12 +636,12 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.httpRouteIndex = oldPushContext.httpRouteIndex
 	}
 
-	if subsetRulesChanged {
-		log.Debugf("updateContext: SubsetRules changed, re-initializing SubsetRule index")
-		ps.initSubsetRules(env)
+	if destinationRuleChanged {
+		log.Debugf("updateContext: DestinationRules changed, re-initializing DestinationRule index")
+		ps.initDestinationRules(env)
 	} else {
-		log.Debugf("updateContext: SubsetRules unchanged, reusing old SubsetRule index")
-		ps.subsetRuleIndex = oldPushContext.subsetRuleIndex
+		log.Debugf("updateContext: DestinationRules unchanged, reusing old DestinationRule index")
+		ps.destinationRuleIndex = oldPushContext.destinationRuleIndex
 	}
 
 	authnPoliciesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.PeerAuthentication))
@@ -892,7 +892,7 @@ func sortConfigBySelectorAndCreationTime(configs []config.Config) []config.Confi
 	return configs
 }
 
-func (ps *PushContext) setSubsetRules(configs []config.Config) {
+func (ps *PushContext) setDestinationRules(configs []config.Config) {
 	sortConfigBySelectorAndCreationTime(configs)
 
 	namespaceLocalSubRules := make(map[string]*consolidatedSubRules)
@@ -927,13 +927,13 @@ func (ps *PushContext) setSubsetRules(configs []config.Config) {
 			}
 			// Merge this destination rule with any public/private dest rules for same host in the same namespace
 			// If there are no duplicates, the dest rule will be added to the list
-			ps.mergeSubsetRule(namespaceLocalSubRules[configs[i].Namespace], configs[i], exportToSet)
+			ps.mergeDestinationRule(namespaceLocalSubRules[configs[i].Namespace], configs[i], exportToSet)
 		}
 
 		isPrivateOnly := false
 		// No exportTo in destinationRule. Use the global default
 		// We only honor . and *
-		if exportToSet.IsEmpty() && ps.exportToDefaults.subsetRule.Contains(visibility.Private) {
+		if exportToSet.IsEmpty() && ps.exportToDefaults.destinationRule.Contains(visibility.Private) {
 			isPrivateOnly = true
 		} else if exportToSet.Len() == 1 && (exportToSet.Contains(visibility.Private) || exportToSet.Contains(visibility.Instance(configs[i].Namespace))) {
 			isPrivateOnly = true
@@ -943,18 +943,18 @@ func (ps *PushContext) setSubsetRules(configs []config.Config) {
 			if _, exist := exportedDestRulesByNamespace[configs[i].Namespace]; !exist {
 				exportedDestRulesByNamespace[configs[i].Namespace] = newConsolidatedDestRules()
 			}
-			ps.mergeSubsetRule(exportedDestRulesByNamespace[configs[i].Namespace], configs[i], exportToSet)
+			ps.mergeDestinationRule(exportedDestRulesByNamespace[configs[i].Namespace], configs[i], exportToSet)
 		} else if configs[i].Namespace == ps.Mesh.RootNamespace {
-			ps.mergeSubsetRule(rootNamespaceLocalDestRules, configs[i], exportToSet)
+			ps.mergeDestinationRule(rootNamespaceLocalDestRules, configs[i], exportToSet)
 		}
 	}
 
-	ps.subsetRuleIndex.namespaceLocal = namespaceLocalSubRules
-	ps.subsetRuleIndex.exportedByNamespace = exportedDestRulesByNamespace
-	ps.subsetRuleIndex.rootNamespaceLocal = rootNamespaceLocalDestRules
+	ps.destinationRuleIndex.namespaceLocal = namespaceLocalSubRules
+	ps.destinationRuleIndex.exportedByNamespace = exportedDestRulesByNamespace
+	ps.destinationRuleIndex.rootNamespaceLocal = rootNamespaceLocalDestRules
 
 	// Log indexing results
-	log.Debugf("setSubsetRules: indexed %d namespaces with local rules", len(namespaceLocalSubRules))
+	log.Debugf("setDestinationRules: indexed %d namespaces with local rules", len(namespaceLocalSubRules))
 	for ns, rules := range namespaceLocalSubRules {
 		totalRules := 0
 		for hostname, ruleList := range rules.specificSubRules {
@@ -967,26 +967,26 @@ func (ps *PushContext) setSubsetRules(configs []config.Config) {
 					if hasTLS {
 						tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 					}
-					log.Debugf("setSubsetRules: namespace %s, hostname %s: DestinationRule has %d subsets, TLS mode: %s",
+					log.Debugf("setDestinationRules: namespace %s, hostname %s: DestinationRule has %d subsets, TLS mode: %s",
 						ns, hostname, len(dr.Subsets), tlsMode)
 				}
 			}
 		}
-		log.Debugf("setSubsetRules: namespace %s has %d DestinationRules with %d specific hostnames", ns, totalRules, len(rules.specificSubRules))
+		log.Debugf("setDestinationRules: namespace %s has %d DestinationRules with %d specific hostnames", ns, totalRules, len(rules.specificSubRules))
 	}
-	log.Debugf("setSubsetRules: indexed %d namespaces with exported rules", len(exportedDestRulesByNamespace))
+	log.Debugf("setDestinationRules: indexed %d namespaces with exported rules", len(exportedDestRulesByNamespace))
 	if rootNamespaceLocalDestRules != nil {
 		totalRootRules := 0
 		for _, ruleList := range rootNamespaceLocalDestRules.specificSubRules {
 			totalRootRules += len(ruleList)
 		}
-		log.Debugf("setSubsetRules: root namespace has %d DestinationRules with %d specific hostnames", totalRootRules, len(rootNamespaceLocalDestRules.specificSubRules))
+		log.Debugf("setDestinationRules: root namespace has %d DestinationRules with %d specific hostnames", totalRootRules, len(rootNamespaceLocalDestRules.specificSubRules))
 	}
 }
 
-func (ps *PushContext) initSubsetRules(env *Environment) {
-	configs := env.List(gvk.SubsetRule, NamespaceAll)
-	log.Debugf("initSubsetRules: found %d SubsetRule configs", len(configs))
+func (ps *PushContext) initDestinationRules(env *Environment) {
+	configs := env.List(gvk.DestinationRule, NamespaceAll)
+	log.Debugf("initDestinationRules: found %d DestinationRule configs", len(configs))
 
 	// values returned from ConfigStore.List are immutable.
 	// Therefore, we make a copy
@@ -998,12 +998,12 @@ func (ps *PushContext) initSubsetRules(env *Environment) {
 			if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
 				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 			}
-			log.Debugf("initSubsetRules: SubsetRule %s/%s for host %s with %d subsets, TLS mode: %s",
+			log.Debugf("initDestinationRules: DestinationRule %s/%s for host %s with %d subsets, TLS mode: %s",
 				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 		}
 	}
 
-	ps.setSubsetRules(subRules)
+	ps.setDestinationRules(subRules)
 }
 
 func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {
@@ -1049,12 +1049,12 @@ func (ps *PushContext) ServiceRouteForHost(hostname host.Name) *networking.Virtu
 	return nil
 }
 
-// DestinationRuleForService returns the first DestinationRule (SubsetRule) applicable to the service hostname/namespace.
+// DestinationRuleForService returns the first DestinationRule applicable to the service hostname/namespace.
 func (ps *PushContext) DestinationRuleForService(namespace string, hostname host.Name) *networking.DestinationRule {
 	log.Debugf("DestinationRuleForService: looking for DestinationRule for %s/%s", namespace, hostname)
 
 	// Check namespace-local rules first
-	if nsRules := ps.subsetRuleIndex.namespaceLocal[namespace]; nsRules != nil {
+	if nsRules := ps.destinationRuleIndex.namespaceLocal[namespace]; nsRules != nil {
 		log.Debugf("DestinationRuleForService: checking namespace-local rules for %s (found %d specific rules)", namespace, len(nsRules.specificSubRules))
 		if dr := firstDestinationRule(nsRules, hostname); dr != nil {
 			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
@@ -1071,8 +1071,8 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 	}
 
 	// Check exported rules
-	log.Debugf("DestinationRuleForService: checking exported rules (found %d exported namespaces)", len(ps.subsetRuleIndex.exportedByNamespace))
-	for ns, exported := range ps.subsetRuleIndex.exportedByNamespace {
+	log.Debugf("DestinationRuleForService: checking exported rules (found %d exported namespaces)", len(ps.destinationRuleIndex.exportedByNamespace))
+	for ns, exported := range ps.destinationRuleIndex.exportedByNamespace {
 		if dr := firstDestinationRule(exported, hostname); dr != nil {
 			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
 			tlsMode := "none"
@@ -1086,7 +1086,7 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 	}
 
 	// Finally, check root namespace scoped rules
-	if rootRules := ps.subsetRuleIndex.rootNamespaceLocal; rootRules != nil {
+	if rootRules := ps.destinationRuleIndex.rootNamespaceLocal; rootRules != nil {
 		log.Debugf("DestinationRuleForService: checking root namespace rules (found %d specific rules)", len(rootRules.specificSubRules))
 		if dr := firstDestinationRule(rootRules, hostname); dr != nil {
 			hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
@@ -1129,7 +1129,7 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 	if rules := csr.specificSubRules[hostname]; len(rules) > 0 {
 		log.Infof("firstDestinationRule: found %d rules for hostname %s", len(rules), hostname)
 		// The first rule should contain the merged result if merge was successful.
-		// However, if merge failed (e.g., EnableEnhancedSubsetRuleMerge is disabled),
+		// However, if merge failed (e.g., EnableEnhancedDestinationRuleMerge is disabled),
 		// we need to check all rules and prefer the one with TLS configuration.
 		// we return the one that has TLS if available, or the first one otherwise.
 		var bestRule *networking.DestinationRule
