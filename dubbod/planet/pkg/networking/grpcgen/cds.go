@@ -134,7 +134,7 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	if hasTLSInDR {
 		tlsMode := dr.TrafficPolicy.Tls.Mode
 		tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-		hasTLSInDR = (tlsMode == networking.ClientTLSSettings_ISTIO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
+		hasTLSInDR = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
 	}
 
 	// Generate default cluster if requested OR if DestinationRule has ISTIO_MUTUAL TLS
@@ -225,7 +225,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 	if hasTLS {
 		tlsMode := dr.TrafficPolicy.Tls.Mode
 		tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-		hasTLS = (tlsMode == networking.ClientTLSSettings_ISTIO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
+		hasTLS = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
 	}
 
 	// If no subsets and no TLS, there's nothing to do
@@ -248,7 +248,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 		if recheckTLS {
 			tlsMode := dr.TrafficPolicy.Tls.Mode
 			tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-			recheckTLS = (tlsMode == networking.ClientTLSSettings_ISTIO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
+			recheckTLS = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
 		}
 		if hasTLS || recheckTLS {
 			log.Infof("applyDestinationRule: applying TLS to default cluster %s (DestinationRule has ISTIO_MUTUAL)", b.defaultClusterName)
@@ -371,7 +371,7 @@ func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networki
 
 	mode := policy.Tls.Mode
 	modeStr := policy.Tls.Mode.String()
-	if mode != networking.ClientTLSSettings_ISTIO_MUTUAL && modeStr != "DUBBO_MUTUAL" {
+	if mode != networking.ClientTLSSettings_DUBBO_MUTUAL && modeStr != "DUBBO_MUTUAL" {
 		log.Debugf("applyTLSForCluster: TLS mode %v (%s) not supported for gRPC proxyless, skipping", mode, modeStr)
 		return
 	}
@@ -406,7 +406,6 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings
 
 	tlsContext := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: common,
-		Sni:              tlsSettings.GetSni(),
 	}
 	// SNI must be the service hostname, not the cluster name
 	// Cluster name format: outbound|port|subset|hostname

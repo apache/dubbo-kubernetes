@@ -368,17 +368,14 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 				Host: string(hostName),
 			}
 		} else {
-			log.Debugf("buildRouteFromHTTPRoute: route[%d] Destination: host=%s, subset=%s, port=%v, weight=%d",
-				i, destination.Host, destination.Subset, destination.Port, dest.Weight)
+			log.Debugf("buildRouteFromHTTPRoute: route[%d] Destination: host=%s, subset=%s, weight=%d",
+				i, destination.Host, destination.Subset, dest.Weight)
 		}
 		targetHost := destination.Host
 		if targetHost == "" {
 			targetHost = string(hostName)
 		}
 		targetPort := defaultPort
-		if destination.Port != nil && destination.Port.Number != 0 {
-			targetPort = int(destination.Port.Number)
-		}
 		subsetName := destination.Subset
 		clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, subsetName, host.Name(targetHost), targetPort)
 		weight := dest.Weight
