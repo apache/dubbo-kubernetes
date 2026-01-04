@@ -23,9 +23,9 @@ import (
 	"sync"
 	"time"
 
+	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	networking "istio.io/api/networking/v1alpha3"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
@@ -75,9 +75,9 @@ type PushContext struct {
 	clusterLocalHosts      ClusterLocalHosts
 	exportToDefaults       exportToDefaults
 	ServiceIndex           serviceIndex
-	serviceRouteIndex      serviceRouteIndex
+	virtualServiceIndex    virtualServiceIndex
 	httpRouteIndex         httpRouteIndex
-	destinationRuleIndex        destinationRuleIndex
+	destinationRuleIndex   destinationRuleIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
 	PushVersion            string
@@ -139,12 +139,12 @@ type ConsolidatedSubRule struct {
 }
 
 type exportToDefaults struct {
-	service      sets.Set[visibility.Instance]
-	serviceRoute sets.Set[visibility.Instance]
-	destinationRule   sets.Set[visibility.Instance]
+	service         sets.Set[visibility.Instance]
+	virtualService  sets.Set[visibility.Instance]
+	destinationRule sets.Set[visibility.Instance]
 }
 
-type serviceRouteIndex struct {
+type virtualServiceIndex struct {
 	// root vs namespace/name ->delegate vs virtualservice gvk/namespace/name
 	delegates map[ConfigKey][]ConfigKey
 
@@ -173,10 +173,10 @@ type consolidatedSubRules struct {
 
 func NewPushContext() *PushContext {
 	return &PushContext{
-		ServiceIndex:      newServiceIndex(),
-		serviceRouteIndex: newServiceRouteIndex(),
-		destinationRuleIndex:   newDestinationRuleIndex(),
-		serviceAccounts:   map[serviceAccountKey][]string{},
+		ServiceIndex:         newServiceIndex(),
+		virtualServiceIndex:  newVirtualServiceIndex(),
+		destinationRuleIndex: newDestinationRuleIndex(),
+		serviceAccounts:      map[serviceAccountKey][]string{},
 	}
 }
 
@@ -190,8 +190,8 @@ func newServiceIndex() serviceIndex {
 	}
 }
 
-func newServiceRouteIndex() serviceRouteIndex {
-	out := serviceRouteIndex{
+func newVirtualServiceIndex() virtualServiceIndex {
+	out := virtualServiceIndex{
 		delegates:              map[ConfigKey][]ConfigKey{},
 		referencedDestinations: map[string]sets.String{},
 		hostToRoutes:           map[host.Name][]config.Config{},
@@ -334,13 +334,13 @@ func (ps *PushContext) initDefaultExportMaps() {
 		ps.exportToDefaults.service.Insert(visibility.Public)
 	}
 
-	ps.exportToDefaults.serviceRoute = sets.New[visibility.Instance]()
+	ps.exportToDefaults.virtualService = sets.New[visibility.Instance]()
 	if ps.Mesh.DefaultVirtualServiceExportTo != nil {
 		for _, e := range ps.Mesh.DefaultVirtualServiceExportTo {
-			ps.exportToDefaults.serviceRoute.Insert(visibility.Instance(e))
+			ps.exportToDefaults.virtualService.Insert(visibility.Instance(e))
 		}
 	} else {
-		ps.exportToDefaults.serviceRoute.Insert(visibility.Public)
+		ps.exportToDefaults.virtualService.Insert(visibility.Public)
 	}
 }
 
@@ -530,7 +530,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	// This mirrors Istio's behavior, where Gateway API is translated into
 	// internal Gateway and VirtualService resources during push context creation.
 	ps.initKubernetesGateways(env)
-	ps.initServiceRoutes(env)
+	ps.initVirtualServices(env)
 	ps.initHTTPRoutes(env)
 	ps.initDestinationRules(env)
 	ps.initAuthenticationPolicies(env)
@@ -544,28 +544,28 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
 		len(pushReq.AddressesUpdated) > 0)
 
-	// Check if serviceRoutes have changed base on:
-	// 1. ServiceRoute updates in ConfigsUpdated
+	// Check if virtualServices have changed base on:
+	// 1. VirtualService updates in ConfigsUpdated
 	// 2. Full push (Full: true) - always re-initialize on full push
-	serviceRoutesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceRoute) ||
+	virtualServicesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.VirtualService) ||
 		len(pushReq.AddressesUpdated) > 0)
 
 	if pushReq != nil {
-		serviceRouteCount := 0
+		virtualServiceCount := 0
 		for cfg := range pushReq.ConfigsUpdated {
-			if cfg.Kind == kind.ServiceRoute {
-				serviceRouteCount++
+			if cfg.Kind == kind.VirtualService {
+				virtualServiceCount++
 			}
 		}
-		if serviceRouteCount > 0 {
-			log.Debugf("updateContext: detected %d ServiceRoute config changes", serviceRouteCount)
+		if virtualServiceCount > 0 {
+			log.Debugf("updateContext: detected %d VirtualService config changes", virtualServiceCount)
 		}
 	}
 
 	// Check if destinationrules have changed base on:
 	// 1. DestinationRule updates in ConfigsUpdated
 	// 2. Full push (Full: true) - always re-initialize on full push
-		destinationRuleChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.DestinationRule) ||
+	destinationRuleChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.DestinationRule) ||
 		len(pushReq.AddressesUpdated) > 0)
 
 	if pushReq != nil {
@@ -579,10 +579,10 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 			log.Debugf("updateContext: detected %d DestinationRule config changes", destinationRuleCount)
 		}
 		if pushReq.Full {
-			log.Debugf("updateContext: Full push requested, will re-initialize DestinationRule and ServiceRoute indexes")
+			log.Debugf("updateContext: Full push requested, will re-initialize DestinationRule and VirtualService indexes")
 		}
-		log.Debugf("updateContext: destinationRuleChanged=%v, serviceRoutesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
-			destinationRuleChanged, serviceRoutesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
+		log.Debugf("updateContext: destinationRuleChanged=%v, virtualServicesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
+			destinationRuleChanged, virtualServicesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
 	}
 
 	// Also check if the actual number of services has changed
@@ -620,12 +620,12 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 
 	httpRoutesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.HTTPRoute)
 
-	if serviceRoutesChanged {
-		log.Debugf("updateContext: ServiceRoutes changed, re-initializing ServiceRoute index")
-		ps.initServiceRoutes(env)
+	if virtualServicesChanged {
+		log.Debugf("updateContext: VirtualServices changed, re-initializing VirtualService index")
+		ps.initVirtualServices(env)
 	} else {
-		log.Debugf("updateContext: ServiceRoutes unchanged, reusing old ServiceRoute index")
-		ps.serviceRouteIndex = oldPushContext.serviceRouteIndex
+		log.Debugf("updateContext: VirtualServices unchanged, reusing old VirtualService index")
+		ps.virtualServiceIndex = oldPushContext.virtualServiceIndex
 	}
 
 	if httpRoutesChanged {
@@ -739,35 +739,35 @@ func (ps *PushContext) GetAllServices() []*Service {
 	return ps.servicesExportedToNamespace(NamespaceAll)
 }
 
-func (ps *PushContext) initServiceRoutes(env *Environment) {
-	log.Debugf("initServiceRoutes: starting ServiceRoute initialization")
-	ps.serviceRouteIndex.referencedDestinations = map[string]sets.String{}
-	serviceroutes := env.List(gvk.ServiceRoute, NamespaceAll)
-	log.Debugf("initServiceRoutes: found %d ServiceRoute configs", len(serviceroutes))
-	sroutes := make([]config.Config, len(serviceroutes))
+func (ps *PushContext) initVirtualServices(env *Environment) {
+	log.Debugf("initVirtualServices: starting VirtualService initialization")
+	ps.virtualServiceIndex.referencedDestinations = map[string]sets.String{}
+	virtualservices := env.List(gvk.VirtualService, NamespaceAll)
+	log.Debugf("initVirtualServices: found %d VirtualService configs", len(virtualservices))
+	vsroutes := make([]config.Config, len(virtualservices))
 
-	for i, r := range serviceroutes {
-		sroutes[i] = resolveServiceRouteShortnames(r)
+	for i, r := range virtualservices {
+		vsroutes[i] = resolveVirtualServiceShortnames(r)
 		if vs, ok := r.Spec.(*networking.VirtualService); ok {
-			log.Debugf("initServiceRoutes: ServiceRoute %s/%s with hosts %v and %d HTTP routes",
+			log.Debugf("initVirtualServices: VirtualService %s/%s with hosts %v and %d HTTP routes",
 				r.Namespace, r.Name, vs.Hosts, len(vs.Http))
 		}
 	}
-	sroutes, ps.serviceRouteIndex.delegates = mergeServiceRoutesIfNeeded(sroutes, ps.exportToDefaults.serviceRoute)
+	vsroutes, ps.virtualServiceIndex.delegates = mergeVirtualServicesIfNeeded(vsroutes, ps.exportToDefaults.virtualService)
 
 	hostToRoutes := make(map[host.Name][]config.Config)
-	for i := range sroutes {
-		vs := sroutes[i].Spec.(*networking.VirtualService)
+	for i := range vsroutes {
+		vs := vsroutes[i].Spec.(*networking.VirtualService)
 		for idx, h := range vs.Hosts {
-			resolvedHost := string(ResolveShortnameToFQDN(h, sroutes[i].Meta))
+			resolvedHost := string(ResolveShortnameToFQDN(h, vsroutes[i].Meta))
 			vs.Hosts[idx] = resolvedHost
 			hostName := host.Name(resolvedHost)
-			hostToRoutes[hostName] = append(hostToRoutes[hostName], sroutes[i])
-			log.Debugf("initServiceRoutes: indexed ServiceRoute %s/%s for hostname %s", sroutes[i].Namespace, sroutes[i].Name, hostName)
+			hostToRoutes[hostName] = append(hostToRoutes[hostName], vsroutes[i])
+			log.Debugf("initVirtualServices: indexed VirtualService %s/%s for hostname %s", vsroutes[i].Namespace, vsroutes[i].Name, hostName)
 		}
 	}
-	ps.serviceRouteIndex.hostToRoutes = hostToRoutes
-	log.Debugf("initServiceRoutes: indexed ServiceRoutes for %d hostnames", len(hostToRoutes))
+	ps.virtualServiceIndex.hostToRoutes = hostToRoutes
+	log.Debugf("initVirtualServices: indexed VirtualServices for %d hostnames", len(hostToRoutes))
 }
 
 func (ps *PushContext) initHTTPRoutes(env *Environment) {
@@ -1032,19 +1032,19 @@ func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service
 	}
 }
 
-// ServiceRouteForHost returns the first ServiceRoute (VirtualService) that matches the given host.
-func (ps *PushContext) ServiceRouteForHost(hostname host.Name) *networking.VirtualService {
-	routes := ps.serviceRouteIndex.hostToRoutes[hostname]
+// VirtualServiceForHost returns the first VirtualService that matches the given host.
+func (ps *PushContext) VirtualServiceForHost(hostname host.Name) *networking.VirtualService {
+	routes := ps.virtualServiceIndex.hostToRoutes[hostname]
 	if len(routes) == 0 {
-		log.Debugf("ServiceRouteForHost: no ServiceRoute found for hostname %s", hostname)
+		log.Debugf("VirtualServiceForHost: no VirtualService found for hostname %s", hostname)
 		return nil
 	}
 	if vs, ok := routes[0].Spec.(*networking.VirtualService); ok {
-		log.Infof("ServiceRouteForHost: found ServiceRoute %s/%s for hostname %s with %d HTTP routes",
+		log.Infof("VirtualServiceForHost: found VirtualService %s/%s for hostname %s with %d HTTP routes",
 			routes[0].Namespace, routes[0].Name, hostname, len(vs.Http))
 		return vs
 	}
-	log.Warnf("ServiceRouteForHost: ServiceRoute %s/%s for hostname %s is not a VirtualService",
+	log.Warnf("VirtualServiceForHost: VirtualService %s/%s for hostname %s is not a VirtualService",
 		routes[0].Namespace, routes[0].Name, hostname)
 	return nil
 }
@@ -1178,10 +1178,10 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 	return nil
 }
 
-func (ps *PushContext) DelegateServiceRoutes(vses []config.Config) []ConfigHash {
+func (ps *PushContext) DelegateVirtualServices(vses []config.Config) []ConfigHash {
 	var out []ConfigHash
 	for _, vs := range vses {
-		for _, delegate := range ps.serviceRouteIndex.delegates[ConfigKey{Kind: kind.ServiceRoute, Namespace: vs.Namespace, Name: vs.Name}] {
+		for _, delegate := range ps.virtualServiceIndex.delegates[ConfigKey{Kind: kind.VirtualService, Namespace: vs.Namespace, Name: vs.Name}] {
 			out = append(out, delegate.HashCode())
 		}
 	}

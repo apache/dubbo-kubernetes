@@ -19,16 +19,16 @@ package model
 import (
 	"strings"
 
+	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"google.golang.org/protobuf/proto"
-	networking "istio.io/api/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func resolveServiceRouteShortnames(config config.Config) config.Config {
+func resolveVirtualServiceShortnames(config config.Config) config.Config {
 	// values returned from ConfigStore.List are immutable.
 	// Therefore, we make a copy
 	r := config.DeepCopy()
@@ -52,15 +52,15 @@ func resolveServiceRouteShortnames(config config.Config) config.Config {
 	return r
 }
 
-// Return merged service routes and the root->delegate vs map
-func mergeServiceRoutesIfNeeded(sRoutes []config.Config, defaultExportTo sets.Set[visibility.Instance]) ([]config.Config, map[ConfigKey][]ConfigKey) {
+// Return merged virtual services and the root->delegate vs map
+func mergeVirtualServicesIfNeeded(sRoutes []config.Config, defaultExportTo sets.Set[visibility.Instance]) ([]config.Config, map[ConfigKey][]ConfigKey) {
 	out := make([]config.Config, 0, len(sRoutes))
 	delegatesMap := map[types.NamespacedName]config.Config{}
 	delegatesExportToMap := make(map[types.NamespacedName]sets.Set[visibility.Instance])
 	// root service routes with delegate
 	var rootVses []config.Config
 
-	// 1. classify serviceroutes
+	// 1. classify virtualservices
 	for _, sr := range sRoutes {
 		rule := sr.Spec.(*networking.VirtualService)
 		// it is delegate, add it to the indexer cache along with the exportTo for the delegate
@@ -106,7 +106,7 @@ func mergeServiceRoutesIfNeeded(sRoutes []config.Config, defaultExportTo sets.Se
 
 	// 2. merge delegates and root
 	for _, root := range rootVses {
-		rootConfigKey := ConfigKey{Kind: kind.ServiceRoute, Name: root.Name, Namespace: root.Namespace}
+		rootConfigKey := ConfigKey{Kind: kind.VirtualService, Name: root.Name, Namespace: root.Namespace}
 		rootVs := root.Spec.(*networking.VirtualService)
 		mergedRoutes := []*networking.HTTPRoute{}
 		for _, route := range rootVs.Http {
@@ -116,7 +116,7 @@ func mergeServiceRoutesIfNeeded(sRoutes []config.Config, defaultExportTo sets.Se
 				if delegateNamespace == "" {
 					delegateNamespace = root.Namespace
 				}
-				delegateConfigKey := ConfigKey{Kind: kind.ServiceRoute, Name: delegate.Name, Namespace: delegateNamespace}
+				delegateConfigKey := ConfigKey{Kind: kind.VirtualService, Name: delegate.Name, Namespace: delegateNamespace}
 				delegatesByRoot[rootConfigKey] = append(delegatesByRoot[rootConfigKey], delegateConfigKey)
 				delegateVS, ok := delegatesMap[types.NamespacedName{Namespace: delegateNamespace, Name: delegate.Name}]
 				if !ok {

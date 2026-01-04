@@ -33,6 +33,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crdclient"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/file"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/memory"
@@ -45,7 +46,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"istio.io/api/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

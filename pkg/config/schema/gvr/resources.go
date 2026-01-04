@@ -36,7 +36,7 @@ var (
 	MeshGlobalConfig               = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshglobalconfigs"}
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1", Resource: "peerauthentications"}
 	DestinationRule                     = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "destinationrules"}
-	ServiceRoute                   = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "serviceroutes"}
+	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "virtualservices"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 	Pod                            = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
@@ -67,7 +67,7 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 		return false
 	case DestinationRule:
 		return false
-	case ServiceRoute:
+	case VirtualService:
 		return false
 	case MutatingWebhookConfiguration:
 		return true

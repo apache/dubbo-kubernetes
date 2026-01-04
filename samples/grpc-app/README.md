@@ -85,7 +85,7 @@ Using the subsets defined above, you can send weighted traffic to different vers
 ```bash
 cat <<EOF | kubectl apply -f -
 apiVersion: networking.dubbo.apache.org/v1alpha3
-kind: ServiceRoute
+kind: VirtualService
 metadata:
   name: provider-weights
   namespace: grpc-app

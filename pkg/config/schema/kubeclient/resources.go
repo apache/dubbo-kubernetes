@@ -118,7 +118,7 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
 	case gvr.PeerAuthentication:
 		return &apiistioioapisecurityv1.PeerAuthentication{}
-	case gvr.ServiceRoute:
+	case gvr.VirtualService:
 		return &apiistioioapinetworkingv1.VirtualService{}
 	case gvr.DestinationRule:
 		return &apiistioioapinetworkingv1.DestinationRule{}
@@ -229,13 +229,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Watch(context.Background(), options)
 		}
-	case gvr.ServiceRoute:
-		// ServiceRoute uses networking.dubbo.apache.org API group, not networking.istio.io
+	case gvr.VirtualService:
+		// VirtualService uses networking.dubbo.apache.org API group, not networking.istio.io
 		// Use Dynamic client to access it
 		gvr := schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
 			Version:  "v1",
-			Resource: "serviceroutes",
+			Resource: "virtualservices",
 		}
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			return c.Dynamic().Resource(gvr).Namespace(opts.Namespace).List(context.Background(), options)

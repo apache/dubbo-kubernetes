@@ -43,7 +43,7 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 	case *apiistioioapinetworkingv1.DestinationRule:
 		return gvk.DestinationRule, true
 	case *apiistioioapinetworkingv1.VirtualService:
-		return gvk.ServiceRoute, true
+		return gvk.VirtualService, true
 	case *k8sioapicorev1.ConfigMap:
 		return gvk.ConfigMap, true
 	case *k8sioapicorev1.Endpoints:
