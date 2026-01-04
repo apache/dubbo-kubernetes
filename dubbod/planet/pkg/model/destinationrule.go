@@ -21,7 +21,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,24 +56,9 @@ func (ps *PushContext) mergeDestinationRule(p *consolidatedSubRules, subRuleConf
 				}
 			}
 
-			existingRule := mdr.rule.Spec.(*networking.DestinationRule)
-			bothWithoutSelector := rule.GetWorkloadSelector() == nil && existingRule.GetWorkloadSelector() == nil
-			bothWithSelector := existingRule.GetWorkloadSelector() != nil && rule.GetWorkloadSelector() != nil
-			selectorsMatch := labels.Instance(existingRule.GetWorkloadSelector().GetMatchLabels()).Equals(rule.GetWorkloadSelector().GetMatchLabels())
-			if bothWithSelector && !selectorsMatch {
-				// If the new destination rule and the existing one has workload selectors associated with them, skip merging
-				// if the selectors do not match
-				appendSeparately = true
-				continue
-			}
-			// If both the destination rules are without a workload selector or with matching workload selectors, simply merge them.
-			// If the incoming rule has a workload selector, it has to be merged with the existing rules with workload selector, and
-			// at the same time added as a unique entry in the processedDestRules.
-			if bothWithoutSelector || (bothWithSelector && selectorsMatch) {
-				appendSeparately = false
-				log.Debugf("mergeDestinationRule: will merge rules for host %s (bothWithoutSelector: %v, bothWithSelector: %v, selectorsMatch: %v)",
-					resolvedHost, bothWithoutSelector, bothWithSelector, selectorsMatch)
-			}
+			// Merge destination rules for the same host
+			appendSeparately = false
+			log.Debugf("mergeDestinationRule: will merge rules for host %s", resolvedHost)
 
 			// Deep copy destination rule, to prevent mutate it later when merge with a new one.
 			// This can happen when there are more than one destination rule of same host in one namespace.

@@ -145,9 +145,6 @@ type exportToDefaults struct {
 }
 
 type virtualServiceIndex struct {
-	// root vs namespace/name ->delegate vs virtualservice gvk/namespace/name
-	delegates map[ConfigKey][]ConfigKey
-
 	// Map of VS hostname -> referenced hostnames
 	referencedDestinations map[string]sets.String
 
@@ -192,7 +189,6 @@ func newServiceIndex() serviceIndex {
 
 func newVirtualServiceIndex() virtualServiceIndex {
 	out := virtualServiceIndex{
-		delegates:              map[ConfigKey][]ConfigKey{},
 		referencedDestinations: map[string]sets.String{},
 		hostToRoutes:           map[host.Name][]config.Config{},
 	}
@@ -753,7 +749,6 @@ func (ps *PushContext) initVirtualServices(env *Environment) {
 				r.Namespace, r.Name, vs.Hosts, len(vs.Http))
 		}
 	}
-	vsroutes, ps.virtualServiceIndex.delegates = mergeVirtualServicesIfNeeded(vsroutes, ps.exportToDefaults.virtualService)
 
 	hostToRoutes := make(map[host.Name][]config.Config)
 	for i := range vsroutes {
@@ -867,20 +862,10 @@ func (ps *PushContext) HTTPRouteForHost(hostname host.Name) []config.Config {
 	return routes
 }
 
-// sortConfigBySelectorAndCreationTime sorts the list of config objects based on priority and creation time.
+// sortConfigBySelectorAndCreationTime sorts the list of config objects based on creation time.
 func sortConfigBySelectorAndCreationTime(configs []config.Config) []config.Config {
 	sort.Slice(configs, func(i, j int) bool {
-		// check if one of the configs has priority
-		idr := configs[i].Spec.(*networking.DestinationRule)
-		jdr := configs[j].Spec.(*networking.DestinationRule)
-		if idr.GetWorkloadSelector() != nil && jdr.GetWorkloadSelector() == nil {
-			return true
-		}
-		if idr.GetWorkloadSelector() == nil && jdr.GetWorkloadSelector() != nil {
-			return false
-		}
-
-		// If priority is the same or neither has priority, fallback to creation time ordering
+		// Sort by creation time ordering
 		if r := configs[i].CreationTimestamp.Compare(configs[j].CreationTimestamp); r != 0 {
 			return r == -1 // -1 means i is less than j, so return true.
 		}
@@ -905,14 +890,9 @@ func (ps *PushContext) setDestinationRules(configs []config.Config) {
 		rule.Host = string(ResolveShortnameToFQDN(rule.Host, configs[i].Meta))
 		var exportToSet sets.Set[visibility.Instance]
 
-		// destination rules with workloadSelector should not be exported to other namespaces
-		if rule.GetWorkloadSelector() == nil {
-			exportToSet = sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
-			for _, e := range rule.ExportTo {
-				exportToSet.Insert(visibility.Instance(e))
-			}
-		} else {
-			exportToSet = sets.New[visibility.Instance](visibility.Private)
+		exportToSet = sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
+		for _, e := range rule.ExportTo {
+			exportToSet.Insert(visibility.Instance(e))
 		}
 
 		// add only if the dest rule is exported with . or * or explicit exportTo containing this namespace
@@ -1138,9 +1118,8 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 			if dr, ok := rule.rule.Spec.(*networking.DestinationRule); ok {
 				hasTLS := dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil
 				if hasTLS {
-					tlsMode := dr.TrafficPolicy.Tls.Mode
 					tlsModeStr := dr.TrafficPolicy.Tls.Mode.String()
-					hasTLS = (tlsMode == networking.ClientTLSSettings_ISTIO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
+					hasTLS = (tlsModeStr == "DUBBO_MUTUAL")
 				}
 				if i == 0 {
 					// Always use first rule as fallback
@@ -1178,15 +1157,6 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 	return nil
 }
 
-func (ps *PushContext) DelegateVirtualServices(vses []config.Config) []ConfigHash {
-	var out []ConfigHash
-	for _, vs := range vses {
-		for _, delegate := range ps.virtualServiceIndex.delegates[ConfigKey{Kind: kind.VirtualService, Namespace: vs.Namespace, Name: vs.Name}] {
-			out = append(out, delegate.HashCode())
-		}
-	}
-	return out
-}
 
 func ConfigNamesOfKind(configs sets.Set[ConfigKey], k kind.Kind) sets.String {
 	ret := sets.New[string]()
