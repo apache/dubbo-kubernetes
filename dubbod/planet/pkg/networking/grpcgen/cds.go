@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 
+	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -30,7 +31,6 @@ import (
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	networking "istio.io/api/networking/v1alpha3"
 )
 
 type clusterBuilder struct {

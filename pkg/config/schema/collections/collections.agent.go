@@ -26,8 +26,8 @@ import (
 	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	dubboapimetav1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
+	orgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	istioioapinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
@@ -54,23 +54,23 @@ var (
 		Plural:         "destinationrules",
 		Version:        "v1alpha3",
 		VersionAliases: []string{},
-		Proto:          "istio.networking.v1alpha3.DestinationRule", StatusProto: "istio.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
+		Proto:          "dubbo.networking.v1alpha3.DestinationRule", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&orgapachedubboapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
 	}.MustBuild()
-	ServiceRoute = collection.Builder{
-		Identifier:     "ServiceRoute",
+	VirtualService = collection.Builder{
+		Identifier:     "VirtualService",
 		Group:          "networking.dubbo.apache.org",
-		Kind:           "ServiceRoute",
-		Plural:         "serviceroutes",
+		Kind:           "VirtualService",
+		Plural:         "virtualservices",
 		Version:        "v1",
 		VersionAliases: []string{},
-		Proto:          "istio.networking.v1alpha3.VirtualService", StatusProto: "istio.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&istioioapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "istio.io/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
+		Proto:          "dubbo.networking.v1alpha3.VirtualService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&orgapachedubboapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
@@ -147,19 +147,19 @@ var (
 	Planet = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
 		MustAdd(DestinationRule).
-		MustAdd(ServiceRoute).
+		MustAdd(VirtualService).
 		Build()
 
 	planetGatewayAPI = collection.NewSchemasBuilder().
-				MustAdd(GatewayClass).
-				MustAdd(Gateway).
-				MustAdd(HTTPRoute).
-				Build()
+		MustAdd(GatewayClass).
+		MustAdd(Gateway).
+		MustAdd(HTTPRoute).
+		Build()
 
 	All = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
 		MustAdd(DestinationRule).
-		MustAdd(ServiceRoute).
+		MustAdd(VirtualService).
 		MustAdd(MutatingWebhookConfiguration).
 		MustAdd(ValidatingWebhookConfiguration).
 		MustAdd(GatewayClass).

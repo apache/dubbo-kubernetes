@@ -206,10 +206,10 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	if s.IsBuiltin() {
 		kc = kclient.NewUntypedInformer(cl.client, gvr, filter)
 	} else {
-		// For DestinationRule and ServiceRoute, we use Dynamic client which returns unstructured objects
+		// For DestinationRule and VirtualService, we use Dynamic client which returns unstructured objects
 		// So we need to use DynamicInformer type to ensure the informer expects unstructured objects
 		informerType := kubetypes.StandardInformer
-		if resourceGVK == gvk.DestinationRule || resourceGVK == gvk.ServiceRoute || resourceGVK == gvk.PeerAuthentication {
+		if resourceGVK == gvk.DestinationRule || resourceGVK == gvk.VirtualService || resourceGVK == gvk.PeerAuthentication {
 			informerType = kubetypes.DynamicInformer
 			cl.logger.Debugf("addCRD: using DynamicInformer for %v (uses Dynamic client)", resourceGVK)
 		}

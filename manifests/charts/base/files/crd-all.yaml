@@ -142,19 +142,19 @@ metadata:
     chart: dubbo
     heritage: Tiller
     release: dubbo
-  name: serviceroutes.networking.dubbo.apache.org
+  name: virtualservices.networking.dubbo.apache.org
 spec:
   group: networking.dubbo.apache.org
   names:
     categories:
       - dubbo
       - networking
-    kind: ServiceRoute
-    listKind: ServiceRouteList
-    plural: serviceroutes
+    kind: VirtualService
+    listKind: VirtualServiceList
+    plural: virtualservices
     shortNames:
-      - sr
-    singular: serviceroute
+      - vs
+    singular: virtualservice
   scope: Namespaced
   versions:
     - additionalPrinterColumns:

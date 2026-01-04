@@ -13,3 +13,42 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+syntax = "proto3";
+
+package dubbo.networking.v1alpha3;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+
+option go_package = "/api/networking/v1alpha3";
+
+//
+// <!-- go code generation tags
+// +kubetype-gen
+// +kubetype-gen:groupVersion=networking.dubbo.apache.org/v1alpha3
+// +genclient
+// +k8s:deepcopy-gen=true
+// -->
+message VirtualService {
+  repeated string hosts = 1;
+  repeated HTTPRoute http = 2;
+  repeated string export_to = 3;
+}
+
+message Destination {
+  string host = 1 [(google.api.field_behavior) = REQUIRED];
+  string subset = 2;
+}
+
+message HTTPRoute {
+  repeated HTTPRouteDestination route = 1;
+}
+
+message HTTPRouteDestination {
+  Destination destination = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 weight = 2;
+}
+
+

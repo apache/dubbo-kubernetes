@@ -39,7 +39,7 @@ var (
 	MeshGlobalConfig               = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshGlobalConfig"}
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1", Kind: "PeerAuthentication"}
 	DestinationRule                     = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "DestinationRule"}
-	ServiceRoute                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "ServiceRoute"}
+	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "VirtualService"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
 	GatewayClass                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
@@ -81,8 +81,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.PeerAuthentication, true
 	case DestinationRule:
 		return gvr.DestinationRule, true
-	case ServiceRoute:
-		return gvr.ServiceRoute, true
+	case VirtualService:
+		return gvr.VirtualService, true
 	case EndpointSlice:
 		return gvr.EndpointSlice, true
 	case Endpoints:
@@ -117,8 +117,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Job, true
 	case gvr.PeerAuthentication:
 		return PeerAuthentication, true
-	case gvr.ServiceRoute:
-		return ServiceRoute, true
+	case gvr.VirtualService:
+		return VirtualService, true
 	case gvr.DestinationRule:
 		return DestinationRule, true
 	case gvr.EndpointSlice:

@@ -24,13 +24,13 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 
+	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	networking "istio.io/api/networking/v1alpha3"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -142,17 +142,17 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			} else {
 				log.Warnf("buildHTTPRoute: HTTPRoute found but no routes built")
 			}
-		} else if vs := push.ServiceRouteForHost(host.Name(hostStr)); vs != nil {
-			// Fallback to ServiceRoute if no HTTPRoute found
-			log.Infof("buildHTTPRoute: found ServiceRoute for host %s with %d HTTP routes", hostStr, len(vs.Http))
-			if routes := buildRoutesFromServiceRoute(vs, host.Name(hostStr), parsedPort); len(routes) > 0 {
-				log.Infof("buildHTTPRoute: built %d weighted routes from ServiceRoute for host %s", len(routes), hostStr)
+		} else if vs := push.VirtualServiceForHost(host.Name(hostStr)); vs != nil {
+			// Fallback to VirtualService if no HTTPRoute found
+			log.Infof("buildHTTPRoute: found VirtualService for host %s with %d HTTP routes", hostStr, len(vs.Http))
+			if routes := buildRoutesFromVirtualService(vs, host.Name(hostStr), parsedPort); len(routes) > 0 {
+				log.Infof("buildHTTPRoute: built %d weighted routes from VirtualService for host %s", len(routes), hostStr)
 				outboundRoutes = routes
 			} else {
-				log.Warnf("buildHTTPRoute: ServiceRoute found but no routes built for host %s", hostStr)
+				log.Warnf("buildHTTPRoute: VirtualService found but no routes built for host %s", hostStr)
 			}
 		} else {
-			log.Debugf("buildHTTPRoute: no HTTPRoute or ServiceRoute found for host %s, using default route", hostStr)
+			log.Debugf("buildHTTPRoute: no HTTPRoute or VirtualService found for host %s, using default route", hostStr)
 		}
 
 		return &route.RouteConfiguration{
@@ -331,7 +331,7 @@ func defaultSingleClusterRoute(clusterName string) *route.Route {
 	}
 }
 
-func buildRoutesFromServiceRoute(vs *networking.VirtualService, hostName host.Name, defaultPort int) []*route.Route {
+func buildRoutesFromVirtualService(vs *networking.VirtualService, hostName host.Name, defaultPort int) []*route.Route {
 	if vs == nil || len(vs.Http) == 0 {
 		return nil
 	}

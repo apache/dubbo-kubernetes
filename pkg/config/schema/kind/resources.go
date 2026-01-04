@@ -31,7 +31,7 @@ const (
 	ValidatingWebhookConfiguration
 	MutatingWebhookConfiguration
 	PeerAuthentication
-	ServiceRoute
+	VirtualService
 	DestinationRule
 	Gateway
 	GatewayClass
@@ -66,8 +66,8 @@ func (k Kind) String() string {
 		return "MutatingWebhookConfiguration"
 	case PeerAuthentication:
 		return "PeerAuthentication"
-	case ServiceRoute:
-		return "ServiceRoute"
+	case VirtualService:
+		return "VirtualService"
 	case DestinationRule:
 		return "DestinationRule"
 	case GatewayClass:

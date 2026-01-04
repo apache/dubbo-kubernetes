@@ -36,7 +36,7 @@ type EdsGenerator struct {
 var _ model.XdsDeltaResourceGenerator = &EdsGenerator{}
 
 var skippedEdsConfigs = sets.New(
-	kind.ServiceRoute,
+	kind.VirtualService,
 	kind.PeerAuthentication,
 	kind.Secret,
 )

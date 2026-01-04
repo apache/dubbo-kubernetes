@@ -324,7 +324,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	if request.ResponseNonce != previousInfo.NonceSent {
 		newResources := sets.New(request.ResourceNames...)
 		// Special-case proxyless gRPC: xDS clients may send a "stale" nonce when they change
-		// subscriptions (e.g., after ServiceRoute introduces subset clusters). Treat this
+		// subscriptions (e.g., after VirtualService introduces subset clusters). Treat this
 		// as a resource change rather than an ACK so the new clusters get a response.
 		previousResourcesCopy := previousInfo.ResourceNames.Copy()
 		if !newResources.Equals(previousResourcesCopy) && len(newResources) > 0 {
