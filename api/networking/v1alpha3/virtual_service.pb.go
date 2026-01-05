@@ -40,6 +40,22 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// <!-- crd generation tags
+// +cue-gen:VirtualService:groupName:networking.dubbo.apache.org
+// +cue-gen:VirtualService:versions:v1alpha3
+// +cue-gen:VirtualService:annotations:helm.sh/resource-policy=keep
+// +cue-gen:VirtualService:labels:app=dubbo-planet,chart=dubbo,heritage=Tiller,release=dubbo
+// +cue-gen:VirtualService:subresource:status
+// +cue-gen:VirtualService:scope:Namespaced
+// +cue-gen:VirtualService:resource:categories=dubbo,networking,shortNames=vs
+// +cue-gen:VirtualService:printerColumn:name=Hosts,type=string,JSONPath=.spec.hosts,description="The destination hosts to which traffic is being sent"
+// +cue-gen:VirtualService:printerColumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp
+// representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations.
+// Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+// Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+// +cue-gen:VirtualService:preserveUnknownFields:false
+// -->
+//
 // <!-- go code generation tags
 // +kubetype-gen
 // +kubetype-gen:groupVersion=networking.dubbo.apache.org/v1alpha3

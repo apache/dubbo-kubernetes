@@ -18,6 +18,12 @@ module github.com/apache/dubbo-kubernetes
 go 1.24.0
 
 require (
+	k8s.io/apimachinery v0.34.1
+	k8s.io/client-go v0.34.1
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0
+)
+
+require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/Microsoft/go-winio v0.6.2
@@ -79,8 +85,6 @@ require (
 	istio.io/client-go v1.27.1
 	k8s.io/api v0.34.1
 	k8s.io/apiextensions-apiserver v0.34.1
-	k8s.io/apimachinery v0.34.1
-	k8s.io/client-go v0.34.1
 	k8s.io/gengo v0.0.0-20251215205346-5ee0d033ba5b
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.33.3
@@ -273,5 +277,4 @@ replace (
 	github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.20.2
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
-
 )
