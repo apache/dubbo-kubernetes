@@ -19,9 +19,12 @@
 package applyconfiguration
 
 import (
+	metav1 "client-go/pkg/applyconfiguration/meta/v1"
+	networkingv1alpha3 "client-go/pkg/applyconfiguration/networking/v1alpha3"
+
+	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
 // ForKind returns an apply configuration type for the given GroupVersionKind, or nil if no
@@ -29,12 +32,20 @@ import (
 func ForKind(kind schema.GroupVersionKind) interface{} {
 	switch kind {
 	// Group=meta.k8s.io, Version=v1
+	case v1.SchemeGroupVersion.WithKind("ManagedFieldsEntry"):
+		return &metav1.ManagedFieldsEntryApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("ObjectMeta"):
 		return &metav1.ObjectMetaApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("OwnerReference"):
 		return &metav1.OwnerReferenceApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("TypeMeta"):
 		return &metav1.TypeMetaApplyConfiguration{}
+
+		// Group=networking.dubbo.apache.org, Version=v1alpha3
+	case v1alpha3.SchemeGroupVersion.WithKind("DestinationRule"):
+		return &networkingv1alpha3.DestinationRuleApplyConfiguration{}
+	case v1alpha3.SchemeGroupVersion.WithKind("VirtualService"):
+		return &networkingv1alpha3.VirtualServiceApplyConfiguration{}
 
 	}
 	return nil

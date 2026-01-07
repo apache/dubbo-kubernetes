@@ -67,25 +67,36 @@ RUN --mount=type=cache,target=/tmp/go/pkg/mod \
 FROM binary_tools_context_base AS go_tools_2
 
 # Build Dubbo Kubernetes kubetype-gen tool from source
-# Clone the repository and checkout the specified version
-RUN --mount=type=cache,target=/tmp/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    if [ "${DUBBO_KUBERNETES_VERSION}" != "main" ]; then \
-        git clone --single-branch --branch "${DUBBO_KUBERNETES_VERSION}" \
-        https://github.com/apache/dubbo-kubernetes.git /tmp/dubbo-kubernetes 2>/dev/null || \
-        (git clone https://github.com/apache/dubbo-kubernetes.git /tmp/dubbo-kubernetes && \
-         cd /tmp/dubbo-kubernetes && git checkout "${DUBBO_KUBERNETES_VERSION}"); \
-    else \
-        git clone --single-branch --branch main \
-        https://github.com/apache/dubbo-kubernetes.git /tmp/dubbo-kubernetes 2>/dev/null || \
-        git clone https://github.com/apache/dubbo-kubernetes.git /tmp/dubbo-kubernetes; \
-    fi && \
-    cd /tmp/dubbo-kubernetes && \
-    test -f go.mod && test -d tools/cmd/kubetype-gen || \
-    (echo "Error: Required files not found. Listing:" && ls -la && ls -la tools/cmd/ 2>&1 && exit 1) && \
-    go mod download && \
-    CGO_ENABLED=0 go install -ldflags="-extldflags -static -s -w" \
-    ./tools/cmd/kubetype-gen
+# Copy pre-built kubetype-gen binary from project root
+# IMPORTANT: Build context must be project root (where kubetype-gen exists)
+# IMPORTANT: kubetype-gen must be built for Linux architecture (not macOS)
+# Build command: cd tools/cmd/kubetype-gen && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-extldflags -static -s -w" -o ../../../kubetype-gen .
+# For ARM64: use GOARCH=arm64 instead of amd64
+# Run: cd /path/to/dubbo-kubernetes && nerdctl build -f tools/build-tools/docker/Dockerfile -t build-tools .
+COPY --chmod=755 kubetype-gen /tmp/go/bin/kubetype-gen
+
+# Original git clone logic (commented out for local testing)
+# TODO: Uncomment after testing
+# # Clone the repository and checkout the specified version
+# # Remove any existing directory to ensure we get the latest code
+# RUN --mount=type=cache,target=/tmp/go/pkg/mod \
+#     --mount=type=cache,target=/root/.cache/go-build \
+#     rm -rf /tmp/dubbo-kubernetes && \
+#     if [ "${DUBBO_KUBERNETES_VERSION}" != "main" ]; then \
+#         git clone --depth=1 --single-branch --branch "${DUBBO_KUBERNETES_VERSION}" \
+#         https://github.com/apache/dubbo-kubernetes.git /tmp/dubbo-kubernetes 2>/dev/null || \
+#         (git clone --depth=1 https://github.com/apache/dubbo-kubernetes.git /tmp/dubbo-kubernetes && \
+#          cd /tmp/dubbo-kubernetes && git checkout "${DUBBO_KUBERNETES_VERSION}"); \
+#     else \
+#         git clone --depth=1 --single-branch --branch main \
+#         https://github.com/apache/dubbo-kubernetes.git /tmp/dubbo-kubernetes; \
+#     fi && \
+#     cd /tmp/dubbo-kubernetes && \
+#     test -f go.mod && test -d tools/cmd/kubetype-gen || \
+#     (echo "Error: Required files not found. Listing:" && ls -la && ls -la tools/cmd/ 2>&1 && exit 1) && \
+#     go mod download && \
+#     CGO_ENABLED=0 go install -ldflags="-extldflags -static -s -w" \
+#     ./tools/cmd/kubetype-gen
 
 #############
 # Base OS

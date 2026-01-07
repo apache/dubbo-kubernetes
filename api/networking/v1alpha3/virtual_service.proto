@@ -24,6 +24,11 @@ import "google/protobuf/wrappers.proto";
 
 option go_package = "/api/networking/v1alpha3";
 
+// VirtualService defines a set of traffic routing rules to apply when a host is
+// addressed. Each routing rule defines matching criteria for traffic of a specific
+// protocol. If the traffic is matched, then it is sent to a named destination service
+// (or subset/version of it) defined in the registry.
+//
 // <!-- crd generation tags
 // +cue-gen:VirtualService:groupName:networking.dubbo.apache.org
 // +cue-gen:VirtualService:versions:v1alpha3

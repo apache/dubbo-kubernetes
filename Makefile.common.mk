@@ -8,6 +8,6 @@ mod-download-go:
 	@find -name go.mod -execdir go mod tidy \;
 
 format-go: tidy-go
-	@${FINDFILES} -name '*.go' \( ! \( -name '*.gen.go' -o -name '*.pb.go' \) \) -print0 | ${XARGS} common/scripts/format_go.sh
+	@${FINDFILES} -name '*.go' \( ! \( -name '*.gen.go' -o -name '*.pb.go' \) \) -print0 | ${XARGS} tools/scripts/format_go.sh
 
 .PHONY: format-go tidy-go mod-download-go

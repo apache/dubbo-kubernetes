@@ -93,6 +93,9 @@ func (ClientTLSSettings_TLSmode) EnumDescriptor() ([]byte, []int) {
 	return file_networking_v1alpha3_destination_rule_proto_rawDescGZIP(), []int{3, 0}
 }
 
+// DestinationRule defines policies that apply to traffic intended for a service
+// after routing has occurred.
+//
 // <!-- crd generation tags
 // +cue-gen:DestinationRule:groupName:networking.dubbo.apache.org
 // +cue-gen:DestinationRule:versions:v1alpha3

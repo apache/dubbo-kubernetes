@@ -9,28 +9,22 @@ client_gen = client-gen
 lister_gen = lister-gen
 informer_gen = informer-gen
 
-empty:=
-space := $(empty) $(empty)
-comma := ,
-
-kube_dubbo_source_packages = $(subst $(space),$(empty), \
-	./api/networking/v1alpha3 \
-	)
+kube_dubbo_source_packages = github.com/apache/dubbo-kubernetes/api/networking/v1alpha3
 
 kube_base_output_package = client-go/pkg
 kube_api_base_package = $(kube_base_output_package)/apis
-kube_api_packages = $(subst $(space),$(empty), \
-	$(kube_api_base_package)/networking/v1alpha3 \
-	)
-
+kube_api_packages = github.com/apache/dubbo-kubernetes/$(kube_api_base_package)/networking/v1alpha3
 kube_api_applyconfiguration_packages = $(kube_api_packages),k8s.io/apimachinery/pkg/apis/meta/v1
 kube_clientset_package = $(kube_base_output_package)/clientset
 kube_clientset_name = versioned
 kube_listers_package = $(kube_base_output_package)/listers
 kube_informers_package = $(kube_base_output_package)/informers
 kube_applyconfiguration_package = $(kube_base_output_package)/applyconfiguration
-
 kube_go_header_text = header.go.txt
+
+empty:=
+space := $(empty) $(empty)
+comma := ,
 
 ifeq ($(IN_BUILD_CONTAINER),1)
 	# k8s code generators rely on GOPATH, using $GOPATH/src as the base package
@@ -45,18 +39,11 @@ else
 endif
 
 rename_generated_files=\
-	for dir in $(subst client-go/, $(empty), $(subst $(comma), $(space), $(kube_api_packages)) $(kube_clientset_package) $(kube_listers_package) $(kube_informers_package)); do \
-		if [ -d "$$dir" ]; then \
-			find "$$dir" -name '*.go' -and -not -name 'doc.go' -and -not -name '*.gen.go' -type f -exec sh -c 'mv "$$1" "$${1%.go}".gen.go' - '{}' \; ; \
-		fi \
-	done
+	cd client-go && find $(subst client-go/, $(empty), $(subst $(comma), $(space), $(kube_api_packages)) $(subst github.com/apache/dubbo-kubernetes/, $(empty), $(kube_clientset_package)) $(subst github.com/apache/dubbo-kubernetes/, $(empty), $(kube_listers_package)) $(subst github.com/apache/dubbo-kubernetes/, $(empty), $(kube_informers_package))) \
+	-name '*.go' -and -not -name 'doc.go' -and -not -name '*.gen.go' -type f -exec sh -c 'mv "$$1" "$${1%.go}".gen.go' - '{}' \; || true
 
-
-# Kubernetes deepcopy gen directly sets values of our types. Our types are protos; it is illegal to do this for protos.
-# However, we don't even need this anyways -- each individual field is explicitly copied already.
-# Remove the line doing this illegal operation.
 fixup_generated_files=\
-	find . -name "*.deepcopy.gen.go" -type f -exec sed -i '' -e '/\*out = \*in/d' {} +
+	find client-go -name "*.deepcopy.gen.go" -type f -exec sed -i '' -e '/\*out = \*in/d' {} +
 
 .PHONY: generate-k8s-client
 generate-k8s-client:
