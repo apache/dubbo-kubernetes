@@ -19,10 +19,9 @@
 package fake
 
 import (
-	clientset "client-go/pkg/clientset/versioned"
-	networkingv1alpha3 "client-go/pkg/clientset/versioned/typed/networking/v1alpha3"
-	fakenetworkingv1alpha3 "client-go/pkg/clientset/versioned/typed/networking/v1alpha3/fake"
-
+	clientset "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
+	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/networking/v1alpha3"
+	fakenetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/networking/v1alpha3/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

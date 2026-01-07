@@ -1,4 +1,19 @@
-gen: generate-k8s-client tidy-go
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+gen: generate-k8s-client
 
 clean: clean-k8s-client
 
@@ -9,11 +24,17 @@ client_gen = client-gen
 lister_gen = lister-gen
 informer_gen = informer-gen
 
-kube_dubbo_source_packages = github.com/apache/dubbo-kubernetes/api/networking/v1alpha3
+kube_dubbo_source_packages = $(subst $(space),$(empty), \
+    github.com/apache/dubbo-kubernetes/api/networking/v1alpha3 \
+    )
 
-kube_base_output_package = client-go/pkg
+kube_base_output_package = github.com/apache/dubbo-kubernetes/client-go/pkg
 kube_api_base_package = $(kube_base_output_package)/apis
-kube_api_packages = github.com/apache/dubbo-kubernetes/$(kube_api_base_package)/networking/v1alpha3
+
+kube_api_packages = $(subst $(space),$(empty), \
+    $(kube_api_base_package)/networking/v1alpha3 \
+    )
+
 kube_api_applyconfiguration_packages = $(kube_api_packages),k8s.io/apimachinery/pkg/apis/meta/v1
 kube_clientset_package = $(kube_base_output_package)/clientset
 kube_clientset_name = versioned
@@ -39,11 +60,11 @@ else
 endif
 
 rename_generated_files=\
-	cd client-go && find $(subst client-go/, $(empty), $(subst $(comma), $(space), $(kube_api_packages)) $(subst github.com/apache/dubbo-kubernetes/, $(empty), $(kube_clientset_package)) $(subst github.com/apache/dubbo-kubernetes/, $(empty), $(kube_listers_package)) $(subst github.com/apache/dubbo-kubernetes/, $(empty), $(kube_informers_package))) \
+	cd client-go && find $(subst client-go/, $(empty), $(subst github.com/apache/dubbo-kubernetes/, $(empty), $(subst $(comma), $(space), $(kube_api_packages) $(kube_clientset_package) $(kube_listers_package) $(kube_informers_package)))) \
 	-name '*.go' -and -not -name 'doc.go' -and -not -name '*.gen.go' -type f -exec sh -c 'mv "$$1" "$${1%.go}".gen.go' - '{}' \; || true
 
 fixup_generated_files=\
-	find client-go -name "*.deepcopy.gen.go" -type f -exec sed -i '' -e '/\*out = \*in/d' {} +
+	find . -name "*.deepcopy.gen.go" -type f | xargs sed -i -e '/\*out = \*in/d'
 
 .PHONY: generate-k8s-client
 generate-k8s-client:
@@ -68,5 +89,3 @@ generate-k8s-client:
 clean-k8s-client:
     # remove generated code
 	@rm -rf client-go/pkg
-
-include Makefile.common.mk

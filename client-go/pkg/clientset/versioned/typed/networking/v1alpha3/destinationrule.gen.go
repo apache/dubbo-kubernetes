@@ -19,14 +19,14 @@
 package v1alpha3
 
 import (
-	networkingv1alpha3 "client-go/pkg/applyconfiguration/networking/v1alpha3"
-	scheme "client-go/pkg/clientset/versioned/scheme"
 	"context"
 	json "encoding/json"
 	"fmt"
 	"time"
 
 	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/networking/v1alpha3"
+	scheme "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

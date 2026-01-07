@@ -19,10 +19,10 @@
 package v1alpha3
 
 import (
-	"client-go/pkg/clientset/versioned/scheme"
 	"net/http"
 
 	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	"github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
