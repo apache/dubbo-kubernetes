@@ -19,14 +19,17 @@
 package v1alpha3
 
 import (
-	networkingv1alpha3 "./api/networking/v1alpha3"
 	v1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
+	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// DestinationRule defines policies that apply to traffic intended for a service
+// after routing has occurred.
+//
 // <!-- crd generation tags
 // +cue-gen:DestinationRule:groupName:networking.dubbo.apache.org
 // +cue-gen:DestinationRule:versions:v1alpha3
@@ -74,6 +77,11 @@ type DestinationRuleList struct {
 //
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// VirtualService defines a set of traffic routing rules to apply when a host is
+// addressed. Each routing rule defines matching criteria for traffic of a specific
+// protocol. If the traffic is matched, then it is sent to a named destination service
+// (or subset/version of it) defined in the registry.
+//
 // <!-- crd generation tags
 // +cue-gen:VirtualService:groupName:networking.dubbo.apache.org
 // +cue-gen:VirtualService:versions:v1alpha3
