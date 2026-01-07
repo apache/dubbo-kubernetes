@@ -19,10 +19,9 @@
 package applyconfiguration
 
 import (
-	metav1 "client-go/pkg/applyconfiguration/meta/v1"
-	networkingv1alpha3 "client-go/pkg/applyconfiguration/networking/v1alpha3"
-
 	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	metav1 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/meta/v1"
+	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )

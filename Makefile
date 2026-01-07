@@ -24,8 +24,12 @@ clone-sample:
 	mkdir -p bin
 	cp -r samples bin/samples
 
+#########
+
+#########
+
 # allow optional per-repo overrides
--include Makefile.overrides.mk
+-include client-go/Makefile.overrides.mk
 
 # Set the environment variable BUILD_WITH_CONTAINER to use a container
 # to build the repo. The only dependencies in this mode are to have make and
@@ -41,7 +45,7 @@ export
 
 RUN = ./tools/scripts/run.sh
 
-MAKE_DOCKER = $(RUN) make --no-print-directory -e -f Makefile.core.mk
+MAKE_DOCKER = $(RUN) make --no-print-directory -e -f client-go/Makefile.core.mk
 
 %:
 	@$(MAKE_DOCKER) $@
@@ -67,6 +71,6 @@ include out/.env
 export
 
 export GOBIN ?= $(GOPATH)/bin
-include Makefile.core.mk
+include client-go/Makefile.core.mk
 
 endif

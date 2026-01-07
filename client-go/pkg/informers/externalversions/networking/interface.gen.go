@@ -19,8 +19,8 @@
 package networking
 
 import (
-	internalinterfaces "client-go/pkg/informers/externalversions/internalinterfaces"
-	v1alpha3 "client-go/pkg/informers/externalversions/networking/v1alpha3"
+	internalinterfaces "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/internalinterfaces"
+	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/networking/v1alpha3"
 )
 
 // Interface provides access to each of this group's versions.

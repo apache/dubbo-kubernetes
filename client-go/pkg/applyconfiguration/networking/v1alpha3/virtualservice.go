@@ -19,10 +19,9 @@
 package v1alpha3
 
 import (
-	v1 "client-go/pkg/applyconfiguration/meta/v1"
-
 	v1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
 	v1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+	v1 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 )

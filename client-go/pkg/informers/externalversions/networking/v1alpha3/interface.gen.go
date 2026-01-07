@@ -19,7 +19,7 @@
 package v1alpha3
 
 import (
-	internalinterfaces "client-go/pkg/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

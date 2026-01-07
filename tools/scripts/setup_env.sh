@@ -25,9 +25,7 @@ fi
 
 LOCAL_OS=$(uname)
 
-# Pass environment set target operating-system to build system
 if [[ ${TARGET_OS} ]]; then
-    # Target explicitly set
     :
 elif [[ $LOCAL_OS == Linux ]]; then
     TARGET_OS=linux
@@ -53,15 +51,6 @@ fi
 if [[ "${IMAGE_NAME:-}" == "" ]]; then
   IMAGE_NAME=build-tools
 fi
-
-#TOOLS_REGISTRY_PROVIDER=${TOOLS_REGISTRY_PROVIDER:-gcr.io}
-#PROJECT_ID=${PROJECT_ID:-istio-testing}
-#if [[ "${IMAGE_VERSION:-}" == "" ]]; then
-#  IMAGE_VERSION=master-dd350f492cf194be812d6f79d13e450f10b62e94
-#fi
-#if [[ "${IMAGE_NAME:-}" == "" ]]; then
-#  IMAGE_NAME=build-tools
-#fi
 
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 

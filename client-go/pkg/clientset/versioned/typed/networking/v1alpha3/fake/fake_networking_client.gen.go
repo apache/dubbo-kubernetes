@@ -19,8 +19,7 @@
 package fake
 
 import (
-	v1alpha3 "client-go/pkg/clientset/versioned/typed/networking/v1alpha3"
-
+	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/networking/v1alpha3"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

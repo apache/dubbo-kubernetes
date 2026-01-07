@@ -19,10 +19,10 @@
 package versioned
 
 import (
-	networkingv1alpha3 "client-go/pkg/clientset/versioned/typed/networking/v1alpha3"
 	"fmt"
 	"net/http"
 
+	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/networking/v1alpha3"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

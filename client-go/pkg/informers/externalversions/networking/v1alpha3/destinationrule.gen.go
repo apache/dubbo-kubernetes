@@ -19,13 +19,13 @@
 package v1alpha3
 
 import (
-	versioned "client-go/pkg/clientset/versioned"
-	internalinterfaces "client-go/pkg/informers/externalversions/internalinterfaces"
-	v1alpha3 "client-go/pkg/listers/networking/v1alpha3"
 	"context"
 	time "time"
 
 	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	versioned "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
+	internalinterfaces "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/internalinterfaces"
+	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/listers/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

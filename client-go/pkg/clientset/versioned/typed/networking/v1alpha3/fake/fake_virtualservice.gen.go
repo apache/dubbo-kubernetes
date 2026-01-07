@@ -19,12 +19,12 @@
 package fake
 
 import (
-	networkingv1alpha3 "client-go/pkg/applyconfiguration/networking/v1alpha3"
 	"context"
 	json "encoding/json"
 	"fmt"
 
 	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	types "k8s.io/apimachinery/pkg/types"

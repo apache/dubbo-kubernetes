@@ -13,7 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/static:debug
-COPY bin/server /usr/local/bin/server
-USER 9999:9999
-ENTRYPOINT ["/usr/local/bin/server"]
+BUILD_WITH_CONTAINER ?= 1

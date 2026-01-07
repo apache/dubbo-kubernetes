@@ -19,13 +19,13 @@
 package externalversions
 
 import (
-	versioned "client-go/pkg/clientset/versioned"
-	internalinterfaces "client-go/pkg/informers/externalversions/internalinterfaces"
-	networking "client-go/pkg/informers/externalversions/networking"
 	reflect "reflect"
 	sync "sync"
 	time "time"
 
+	versioned "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
+	internalinterfaces "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/internalinterfaces"
+	networking "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/networking"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
