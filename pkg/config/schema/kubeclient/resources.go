@@ -20,12 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	apiorgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
-	apiistioioapinetworkingv1 "istio.io/client-go/pkg/apis/networking/v1"
 	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -71,10 +71,10 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
 	case *apiistioioapisecurityv1.PeerAuthentication:
 		return c.Dubbo().SecurityV1().PeerAuthentications(namespace).(ktypes.WriteAPI[T])
-	case *apiistioioapinetworkingv1.VirtualService:
-		return c.Dubbo().NetworkingV1().VirtualServices(namespace).(ktypes.WriteAPI[T])
-	case *apiistioioapinetworkingv1.DestinationRule:
-		return c.Dubbo().NetworkingV1().DestinationRules(namespace).(ktypes.WriteAPI[T])
+	case *apiorgapachedubboapinetworkingv1alpha3.VirtualService:
+		return c.Dubbo().NetworkingV1alpha3().VirtualServices(namespace).(ktypes.WriteAPI[T])
+	case *apiorgapachedubboapinetworkingv1alpha3.DestinationRule:
+		return c.Dubbo().NetworkingV1alpha3().DestinationRules(namespace).(ktypes.WriteAPI[T])
 	case *sigsk8siogatewayapiapisv1.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().(ktypes.WriteAPI[T])
 	case *sigsk8siogatewayapiapisv1.Gateway:
@@ -119,9 +119,9 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	case gvr.PeerAuthentication:
 		return &apiistioioapisecurityv1.PeerAuthentication{}
 	case gvr.VirtualService:
-		return &apiistioioapinetworkingv1.VirtualService{}
+		return &apiorgapachedubboapinetworkingv1alpha3.VirtualService{}
 	case gvr.DestinationRule:
-		return &apiistioioapinetworkingv1.DestinationRule{}
+		return &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{}
 	case gvr.GatewayClass:
 		return &sigsk8siogatewayapiapisv1.GatewayClass{}
 	case gvr.KubernetesGateway:
