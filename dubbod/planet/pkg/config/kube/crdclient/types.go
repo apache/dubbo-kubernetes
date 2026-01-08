@@ -23,12 +23,12 @@ import (
 
 	dubboapimetav1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
 	orgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+	apiorgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
-	apiistioioapinetworkingv1 "istio.io/client-go/pkg/apis/networking/v1"
 	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -59,7 +59,7 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		// Use Dynamic client to access it, but reuse Istio's DestinationRule spec structure
 		spec := cfg.Spec.(*orgapachedubboapinetworkingv1alpha3.DestinationRule)
 		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapinetworkingv1.DestinationRule{
+		obj := &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
@@ -106,7 +106,7 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		// Use Dynamic client to access it, but reuse Istio's VirtualService spec structure
 		spec := cfg.Spec.(*orgapachedubboapinetworkingv1alpha3.VirtualService)
 		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapinetworkingv1.VirtualService{
+		obj := &apiorgapachedubboapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
@@ -152,7 +152,7 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		// DestinationRule uses networking.dubbo.apache.org API group, use Dynamic client
 		spec := cfg.Spec.(*orgapachedubboapinetworkingv1alpha3.DestinationRule)
 		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapinetworkingv1.DestinationRule{
+		obj := &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
@@ -197,7 +197,7 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		// VirtualService uses networking.dubbo.apache.org API group, use Dynamic client
 		spec := cfg.Spec.(*orgapachedubboapinetworkingv1alpha3.VirtualService)
 		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapinetworkingv1.VirtualService{
+		obj := &apiorgapachedubboapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
@@ -242,7 +242,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		// DestinationRule uses networking.dubbo.apache.org API group, use Dynamic client
 		status := cfg.Status.(*dubboapimetav1alpha1.DubboStatus)
 		clonedStatus := protomarshal.Clone(status)
-		obj := &apiistioioapinetworkingv1.DestinationRule{
+		obj := &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Status, clonedStatus)
@@ -287,7 +287,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		// VirtualService uses networking.dubbo.apache.org API group, use Dynamic client
 		status := cfg.Status.(*dubboapimetav1alpha1.DubboStatus)
 		clonedStatus := protomarshal.Clone(status)
-		obj := &apiistioioapinetworkingv1.VirtualService{
+		obj := &apiorgapachedubboapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Status, clonedStatus)
@@ -337,11 +337,11 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		modSpec := mod.Spec.(*orgapachedubboapinetworkingv1alpha3.DestinationRule)
 		clonedOrigSpec := protomarshal.Clone(origSpec)
 		clonedModSpec := protomarshal.Clone(modSpec)
-		oldRes := &apiistioioapinetworkingv1.DestinationRule{
+		oldRes := &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: origMeta,
 		}
 		assignSpec(&oldRes.Spec, clonedOrigSpec)
-		modRes := &apiistioioapinetworkingv1.DestinationRule{
+		modRes := &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: modMeta,
 		}
 		assignSpec(&modRes.Spec, clonedModSpec)
@@ -382,11 +382,11 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		modSpec := mod.Spec.(*orgapachedubboapinetworkingv1alpha3.VirtualService)
 		clonedOrigSpec := protomarshal.Clone(origSpec)
 		clonedModSpec := protomarshal.Clone(modSpec)
-		oldRes := &apiistioioapinetworkingv1.VirtualService{
+		oldRes := &apiorgapachedubboapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: origMeta,
 		}
 		assignSpec(&oldRes.Spec, clonedOrigSpec)
-		modRes := &apiistioioapinetworkingv1.VirtualService{
+		modRes := &apiorgapachedubboapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: modMeta,
 		}
 		assignSpec(&modRes.Spec, clonedModSpec)
@@ -560,17 +560,17 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		}
 	},
 	gvk.DestinationRule: func(r runtime.Object) config.Config {
-		var obj *apiistioioapinetworkingv1.DestinationRule
+		var obj *apiorgapachedubboapinetworkingv1alpha3.DestinationRule
 		// Handle unstructured objects from Dynamic client
 		// First try to convert from unstructured, as Dynamic client returns unstructured objects
 		// Note: r may be controllers.Object which embeds runtime.Object, so we need to check the concrete type
 		switch v := r.(type) {
 		case *unstructured.Unstructured:
-			obj = &apiistioioapinetworkingv1.DestinationRule{}
+			obj = &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{}
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, obj); err != nil {
 				panic(fmt.Sprintf("failed to convert unstructured to DestinationRule: %v", err))
 			}
-		case *apiistioioapinetworkingv1.DestinationRule:
+		case *apiorgapachedubboapinetworkingv1alpha3.DestinationRule:
 			// Handle typed objects from Istio client
 			obj = v
 		default:
@@ -578,12 +578,12 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 			uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
 			if err == nil {
 				u := &unstructured.Unstructured{Object: uObj}
-				obj = &apiistioioapinetworkingv1.DestinationRule{}
+				obj = &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{}
 				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, obj); err != nil {
 					panic(fmt.Sprintf("failed to convert object %T to DestinationRule: %v", r, err))
 				}
 			} else {
-				panic(fmt.Sprintf("unexpected object type for DestinationRule: %T, expected *unstructured.Unstructured or *apiistioioapinetworkingv1.DestinationRule, conversion error: %v", r, err))
+				panic(fmt.Sprintf("unexpected object type for DestinationRule: %T, expected *unstructured.Unstructured or *apiorgapachedubboapinetworkingv1alpha3.DestinationRule, conversion error: %v", r, err))
 			}
 		}
 		return config.Config{
@@ -770,17 +770,17 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		}
 	},
 	gvk.VirtualService: func(r runtime.Object) config.Config {
-		var obj *apiistioioapinetworkingv1.VirtualService
+		var obj *apiorgapachedubboapinetworkingv1alpha3.VirtualService
 		// Handle unstructured objects from Dynamic client
 		// First try to convert from unstructured, as Dynamic client returns unstructured objects
 		// Note: r may be controllers.Object which embeds runtime.Object, so we need to check the concrete type
 		switch v := r.(type) {
 		case *unstructured.Unstructured:
-			obj = &apiistioioapinetworkingv1.VirtualService{}
+			obj = &apiorgapachedubboapinetworkingv1alpha3.VirtualService{}
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, obj); err != nil {
 				panic(fmt.Sprintf("failed to convert unstructured to VirtualService: %v", err))
 			}
-		case *apiistioioapinetworkingv1.VirtualService:
+		case *apiorgapachedubboapinetworkingv1alpha3.VirtualService:
 			// Handle typed objects from Istio client
 			obj = v
 		default:
@@ -788,12 +788,12 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 			uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
 			if err == nil {
 				u := &unstructured.Unstructured{Object: uObj}
-				obj = &apiistioioapinetworkingv1.VirtualService{}
+				obj = &apiorgapachedubboapinetworkingv1alpha3.VirtualService{}
 				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, obj); err != nil {
 					panic(fmt.Sprintf("failed to convert object %T to VirtualService: %v", r, err))
 				}
 			} else {
-				panic(fmt.Sprintf("unexpected object type for VirtualService: %T, expected *unstructured.Unstructured or *apiistioioapinetworkingv1.VirtualService, conversion error: %v", r, err))
+				panic(fmt.Sprintf("unexpected object type for VirtualService: %T, expected *unstructured.Unstructured or *apiorgapachedubboapinetworkingv1alpha3.VirtualService, conversion error: %v", r, err))
 			}
 		}
 		return config.Config{

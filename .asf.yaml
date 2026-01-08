@@ -20,8 +20,8 @@ notifications:
     jira_options: link label
 
 github:
-  homepage: https://dubbo.apache.org/
-  description: "Provides a proxyless service mesh for Dubbo microservices on Kubernetes."
+  homepage: https://dubbo.apache.org
+  description: "Grant Dubbo the ability to connect, secure, control, and observe."
   features:
     # Enable wiki for documentation
     wiki: false
@@ -35,7 +35,10 @@ github:
       # foo: bar
   labels:
     - dubbo
-    - kubernetes
+    - consul
+    - dubbo-go-pixiu
+    - microservice
     - microservices
+    - kubernetes
     - service-mesh
 

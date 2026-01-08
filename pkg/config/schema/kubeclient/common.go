@@ -18,11 +18,11 @@ package kubeclient
 
 import (
 	"context"
+	dubboclient "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/typemap"
-	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	kubeext "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -46,7 +46,7 @@ type ClientGetter interface {
 	// Dynamic client.
 	Dynamic() dynamic.Interface
 
-	Dubbo() istioclient.Interface
+	Dubbo() dubboclient.Interface
 
 	// Metadata returns the Metadata kube client.
 	Metadata() metadata.Interface

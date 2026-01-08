@@ -6,24 +6,26 @@
 ![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 
 <p align="left">
-  <a href="https://dubbo.apache.org/">
+  <a href="https://dubbo.apache.org">
     <img src="logo/dubbo-transparentbackground-unframed.svg" alt="Apache Dubbo" title="Apache Dubbo" width="240" height="320" >
   </a>
 </p>
 
-This project is an open-source proxyless service mesh for Dubbo microservices. Built on the Istio control plane architecture, it leverages its core capabilities and integrates deeply with Kubernetes, providing full service mesh functionality with minimal resource overhead, enabling high-performance inter-service communication, traffic management, and security features.
+This project is gRPC service mesh built for Dubbo, with low resource usage, enabling high-performance inter-service communication, traffic control, and security.
 
-## Project Structure
+## Introduction
 
-The main repositories of Dubbo on Kubernetes include:
+The repositories include:
 
-- **dubboctl** — The command-line management tool that provides control plane management, development framework scaffolding, and application deployment.
-- **dubbod** — The dubbo control plane. used to implement a Dubbo proxyless service mesh.
-- **operator** — Provides user-friendly options to operate the Dubbo proxyless service mesh.
+- **api** — API definitions for Dubbo.
+- **client-go** — Go client library for the Dubbo API.
+- **dubboctl** — Command-line tool that provides control plane management, development framework setup, and application deployment capabilities.
+- **dubbod** — The control plane, communicating based on gRPC and xDS APIs.
+- **operator** — Provides user-friendly options for operating the service mesh.
 
 ## Quick Start
 
-Please refer to [official website](https://cn.dubbo.apache.org/zh-cn/overview/home/)
+Please refer to [official website](https://cn.dubbo.apache.org/zh-cn/overview/mesh/)
 
 ## Contributing
 
