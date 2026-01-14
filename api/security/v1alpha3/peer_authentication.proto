@@ -13,3 +13,65 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+syntax = "proto3";
+
+package dubbo.security.v1alpha3;
+
+import "type/v1alpha3/selector.proto";
+
+option go_package = "/api/security/v1alpha3";
+
+// <!-- crd generation tags
+// +cue-gen:PeerAuthentication:groupName:security.dubbo.apache.org
+// +cue-gen:PeerAuthentication:versions:v1alpha3
+// +cue-gen:PeerAuthentication:storageVersion
+// +cue-gen:PeerAuthentication:annotations:helm.sh/resource-policy=keep
+// +cue-gen:PeerAuthentication:labels:app=dubbo-planet,chart=dubbo,dubbo=security,heritage=Tiller,release=dubbo
+// +cue-gen:PeerAuthentication:subresource:status
+// +cue-gen:PeerAuthentication:scope:Namespaced
+// +cue-gen:PeerAuthentication:resource:categories=dubbo,security,shortNames=pa
+// +cue-gen:PeerAuthentication:preserveUnknownFields:false
+// +cue-gen:PeerAuthentication:printerColumn:name=Mode,type=string,JSONPath=.spec.mtls.mode,description="Defines the mTLS mode used for peer authentication."
+// +cue-gen:PeerAuthentication:printerColumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp
+// representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations.
+// Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+// Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+// -->
+//
+// <!-- go code generation tags
+// +kubetype-gen
+// +kubetype-gen:groupVersion=security.dubbo.apache.org/v1alpha3
+// +genclient
+// +k8s:deepcopy-gen=true
+// -->
+// +kubebuilder:validation:XValidation:message="portLevelMtls requires selector",rule="has(self.portLevelMtls) ? self.index({}, selector, matchLabels).size() > 0 : true"
+message PeerAuthentication {
+  dubbo.type.v1alpha3.WorkloadSelector selector = 1;
+  // Mutual TLS settings.
+  message MutualTLS {
+    enum Mode {
+      // Inherit from parent, if has one. Otherwise treated as `PERMISSIVE`.
+      UNSET = 0;
+
+      // Connection is not tunneled.
+      DISABLE = 1;
+
+      // Connection can be either plaintext or mTLS tunnel.
+      PERMISSIVE = 2;
+
+      // Connection is an mTLS tunnel (TLS with client cert must be presented).
+      STRICT = 3;
+    }
+
+    // Defines the mTLS mode used for peer authentication.
+    Mode mode = 1;
+  }
+
+  // Mutual TLS settings for workload. If not defined, inherit from parent.
+  MutualTLS mtls = 2;
+
+  // +kubebuilder:validation:XValidation:message="port must be between 1-65535",rule="self.all(key, 0 < int(key) && int(key) <= 65535)"
+  // +kubebuilder:validation:MinProperties=1
+  map<uint32, MutualTLS> port_level_mtls = 3;
+}

@@ -27,8 +27,8 @@ import (
 
 	dubboapimetav1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
 	orgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+	orgapachedubboapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
@@ -40,9 +40,9 @@ var (
 		Plural:         "peerauthentications",
 		Version:        "v1",
 		VersionAliases: []string{},
-		Proto:          "istio.security.v1beta1.PeerAuthentication", StatusProto: "istio.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&istioioapisecurityv1beta1.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "istio.io/api/security/v1beta1", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
+		Proto:          "dubbo.security.v1alpha3.PeerAuthentication", StatusProto: "dubbo.meta.v1alpha3.DubboStatus",
+		ReflectType: reflect.TypeOf(&orgapachedubboapisecurityv1alpha3.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&dubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/security/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
@@ -151,10 +151,10 @@ var (
 		Build()
 
 	planetGatewayAPI = collection.NewSchemasBuilder().
-		MustAdd(GatewayClass).
-		MustAdd(Gateway).
-		MustAdd(HTTPRoute).
-		Build()
+				MustAdd(GatewayClass).
+				MustAdd(Gateway).
+				MustAdd(HTTPRoute).
+				Build()
 
 	All = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).

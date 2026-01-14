@@ -523,7 +523,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	log.Debug("createNewContext: creating new PushContext (full initialization)")
 	ps.initServiceRegistry(env, nil)
 	// Initialize Kubernetes Gateway API resources if the controller is enabled.
-	// This mirrors Istio's behavior, where Gateway API is translated into
+	// This mirrors Dubbo's behavior, where Gateway API is translated into
 	// internal Gateway and VirtualService resources during push context creation.
 	ps.initKubernetesGateways(env)
 	ps.initVirtualServices(env)
@@ -679,7 +679,7 @@ func (ps *PushContext) InboundMTLSModeForProxy(proxy *Proxy, port uint32) Mutual
 
 // initKubernetesGateways initializes Kubernetes Gateway API objects by delegating
 // to the GatewayAPIController, if it is present in the Environment.
-// This closely follows Istio's initKubernetesGateways behavior.
+// This closely follows Dubbo's initKubernetesGateways behavior.
 func (ps *PushContext) initKubernetesGateways(env *Environment) {
 	if env == nil || env.GatewayAPIController == nil {
 		return
@@ -1156,7 +1156,6 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 	// TODO: support wildcard hosts
 	return nil
 }
-
 
 func ConfigNamesOfKind(configs sets.Set[ConfigKey], k kind.Kind) sets.String {
 	ret := sets.New[string]()

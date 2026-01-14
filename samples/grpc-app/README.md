@@ -144,7 +144,7 @@ spec:
   host: provider.grpc-app.svc.cluster.local
   trafficPolicy:
     tls:
-      mode: ISTIO_MUTUAL
+      mode: DUBBO_MUTUAL
 EOF
 ```
 

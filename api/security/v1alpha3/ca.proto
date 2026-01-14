@@ -13,3 +13,25 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+syntax = "proto3";
+
+package dubbo.v1.auth;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "/api/security/v1alpha3";
+
+message DubboCertificateRequest {
+  string csr = 1;
+  int64 validity_duration = 2;
+  google.protobuf.Struct metadata = 3;
+}
+
+message DubboCertificateResponse {
+  repeated string cert_chain = 1;
+}
+
+service DubboCertificateService {
+  rpc CreateCertificate(DubboCertificateRequest) returns (DubboCertificateResponse) {}
+}

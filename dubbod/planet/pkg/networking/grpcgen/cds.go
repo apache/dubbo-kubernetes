@@ -118,11 +118,6 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	var defaultCluster *cluster.Cluster
 	defaultRequested := b.filter == nil || b.filter.Contains(b.defaultClusterName)
 
-	// Check if DestinationRule has TLS configuration before generating default cluster
-	// - DestinationRule with ISTIO_MUTUAL configures CLIENT-SIDE (outbound) mTLS
-	// - If DestinationRule specifies ISTIO_MUTUAL, we MUST generate default cluster and apply TLS
-	//   even if it's not explicitly requested, so that clients can use mTLS when connecting
-	// Reference: https://istio.io/latest/blog/2021/proxyless-grpc/#enabling-mtls
 	var dr *networking.DestinationRule
 	if b.svc != nil {
 		dr = b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.hostname)
@@ -137,7 +132,7 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 		hasTLSInDR = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
 	}
 
-	// Generate default cluster if requested OR if DestinationRule has ISTIO_MUTUAL TLS
+	// Generate default cluster if requested OR if DestinationRule has DUBBO_MUTUAL TLS
 	if defaultRequested || hasTLSInDR {
 		defaultCluster = b.edsCluster(b.defaultClusterName)
 		// For gRPC proxyless, we need to set CommonLbConfig to handle endpoint health status
@@ -160,7 +155,7 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 		}
 		// TLS will be applied in applyDestinationRule after DestinationRule is found
 		if hasTLSInDR {
-			log.Infof("clusterBuilder.build: generated default cluster %s (required for ISTIO_MUTUAL TLS)", b.defaultClusterName)
+			log.Infof("clusterBuilder.build: generated default cluster %s (required for DUBBO_MUTUAL TLS)", b.defaultClusterName)
 		} else {
 			log.Infof("clusterBuilder.build: generated default cluster %s", b.defaultClusterName)
 		}
@@ -239,7 +234,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 
 	// Apply TLS to default cluster if it exists and doesn't have TransportSocket yet
 	// This ensures that default cluster gets TLS from the top-level TrafficPolicy in DestinationRule
-	// When DestinationRule sets ISTIO_MUTUAL, inbound listener enforces STRICT mTLS, so outbound must also use TLS
+	// When DestinationRule sets DUBBO_MUTUAL, inbound listener enforces STRICT mTLS, so outbound must also use TLS
 	// NOTE: We re-check hasTLS here because firstDestinationRule might have returned a different rule
 	// than the one checked in build(), especially when multiple DestinationRules exist and merge failed
 	if defaultCluster != nil && defaultCluster.TransportSocket == nil {

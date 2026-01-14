@@ -33,9 +33,6 @@ const (
 	maxRetries                        = 5
 )
 
-// Controller manages the lifecycle of the Istio root certificate in ClusterTrustBundle
-// It watches Istio's KeyCert bundle as well as ClusterTrustBundles in the cluster, and it updates ClusterTrustBundles whenever
-// the certificate is rotated. Later on, we might want to add reading from other ClusterTrustBundles as well
 type Controller struct {
 	caBundleWatcher     *keycertbundle.Watcher
 	queue               controllers.Queue

@@ -20,8 +20,10 @@ package applyconfiguration
 
 import (
 	v1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	securityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 	metav1 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/meta/v1"
 	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/networking/v1alpha3"
+	applyconfigurationsecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/applyconfiguration/security/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -45,6 +47,10 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &networkingv1alpha3.DestinationRuleApplyConfiguration{}
 	case v1alpha3.SchemeGroupVersion.WithKind("VirtualService"):
 		return &networkingv1alpha3.VirtualServiceApplyConfiguration{}
+
+		// Group=security.dubbo.apache.org, Version=v1alpha3
+	case securityv1alpha3.SchemeGroupVersion.WithKind("PeerAuthentication"):
+		return &applyconfigurationsecurityv1alpha3.PeerAuthenticationApplyConfiguration{}
 
 	}
 	return nil

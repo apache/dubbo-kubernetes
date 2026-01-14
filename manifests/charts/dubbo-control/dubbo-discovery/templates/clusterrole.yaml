@@ -4,9 +4,6 @@ kind: ClusterRole
 metadata:
   name: dubbod-clusterrole-dubbo-system
 rules:
-  - apiGroups: [ "security.istio.io", "networking.istio.io" ]
-    verbs: [ "get", "watch", "list" ]
-    resources: [ "*" ]
   - apiGroups: [ "security.dubbo.apache.org", "networking.dubbo.apache.org" ]
     verbs: [ "get", "watch", "list" ]
     resources: [ "*" ]

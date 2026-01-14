@@ -110,7 +110,7 @@ func ConvertObjectInternal(schema collection.Schema, object DubboObject, domain 
 	}
 	status, err := StatusJSONFromMap(schema, object.GetStatus())
 	if err != nil {
-		log.Errorf("could not get istio status from map %v, err %v", object.GetStatus(), err)
+		log.Errorf("could not get dubbo status from map %v, err %v", object.GetStatus(), err)
 	}
 	meta := object.GetObjectMeta()
 

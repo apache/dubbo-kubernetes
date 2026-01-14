@@ -84,7 +84,7 @@ func (ps *PushContext) mergeDestinationRule(p *consolidatedSubRules, subRuleConf
 
 			// Merge top-level traffic policy. Historically we only copied the first non-nil policy,
 			// which meant a later DestinationRule that supplied TLS settings was ignored once a prior
-			// rule (e.g. subsets only) existed. To match Istio's behavior and ensure Proxyless gRPC
+			// rule (e.g. subsets only) existed. To match Dubbo's behavior and ensure Proxyless gRPC
 			// can enable mTLS after subsets are defined, allow the incoming rule to override the TLS
 			// portion even when a Common TrafficPolicy already exists.
 			if rule.TrafficPolicy != nil {
@@ -96,7 +96,7 @@ func (ps *PushContext) mergeDestinationRule(p *consolidatedSubRules, subRuleConf
 				} else {
 					// Merge TrafficPolicy fields, with TLS settings from the latest rule taking precedence
 					if rule.TrafficPolicy.Tls != nil {
-						// TLS settings from the latest rule always win (ISTIO_MUTUAL/DUBBO_MUTUAL)
+						// TLS settings from the latest rule always win (DUBBO_MUTUAL)
 						mergedRule.TrafficPolicy.Tls = rule.TrafficPolicy.Tls
 						log.Infof("mergeDestinationRule: updated TLS settings in merged TrafficPolicy for host %s (mode: %v)",
 							resolvedHost, rule.TrafficPolicy.Tls.Mode)

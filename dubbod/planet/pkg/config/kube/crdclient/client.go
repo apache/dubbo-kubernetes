@@ -253,7 +253,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	}, false)
 	// Register a debug handler to track all events from the collection
 	// This helps diagnose why new config changes might not trigger events
-	// Use false to match Istio's implementation - only process future events, not initial sync
+	// Use false to match Dubbo's implementation - only process future events, not initial sync
 	debugHandler := collection.RegisterBatch(func(o []krt.Event[config.Config]) {
 		if len(o) > 0 {
 			cl.logger.Debugf("addCRD: collection event detected for %v: %d events", resourceGVK, len(o))
@@ -303,7 +303,7 @@ func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler mod
 	}
 
 	cl.logger.Debugf("RegisterEventHandler: registering handler for %v", kind)
-	// Match Istio's implementation: RegisterBatch returns a HandlerRegistration that is already
+	// Match Dubbo's implementation: RegisterBatch returns a HandlerRegistration that is already
 	// registered with the collection, so we just need to append it to handlers to keep a reference
 	// The handler will be called by the collection when events occur, regardless of whether we
 	// update cl.kinds[kind] or not. However, we update it to keep the handlers slice in sync.
