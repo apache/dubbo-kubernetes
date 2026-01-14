@@ -233,7 +233,7 @@ func (le *LeaderElector) release() bool {
 	// which is expected behavior. The lock will expire naturally.
 	err := le.config.Lock.Update(ctx, leaderElectionRecord)
 	if err != nil {
-		// Log as error to match Istio behavior, but this is expected during shutdown
+		// Log as error to match Dubbo behavior, but this is expected during shutdown
 		// when the ConfigMap was modified by another process or lease was already expired
 		log.Errorf("Failed to release lock: %v", err)
 		return false

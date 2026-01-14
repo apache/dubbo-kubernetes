@@ -21,12 +21,12 @@ import (
 	"fmt"
 
 	apiorgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	orgapachedubboapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
-	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapicertificatesv1 "k8s.io/api/certificates/v1"
@@ -69,8 +69,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Services(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
-	case *apiistioioapisecurityv1.PeerAuthentication:
-		return c.Dubbo().SecurityV1().PeerAuthentications(namespace).(ktypes.WriteAPI[T])
+	case *orgapachedubboapisecurityv1alpha3.PeerAuthentication:
+		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(namespace).(ktypes.WriteAPI[T])
 	case *apiorgapachedubboapinetworkingv1alpha3.VirtualService:
 		return c.Dubbo().NetworkingV1alpha3().VirtualServices(namespace).(ktypes.WriteAPI[T])
 	case *apiorgapachedubboapinetworkingv1alpha3.DestinationRule:
@@ -117,7 +117,7 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
 	case gvr.PeerAuthentication:
-		return &apiistioioapisecurityv1.PeerAuthentication{}
+		return &orgapachedubboapisecurityv1alpha3.PeerAuthentication{}
 	case gvr.VirtualService:
 		return &apiorgapachedubboapinetworkingv1alpha3.VirtualService{}
 	case gvr.DestinationRule:

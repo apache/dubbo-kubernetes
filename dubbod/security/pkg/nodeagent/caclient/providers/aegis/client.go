@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	pb "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
@@ -30,7 +31,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/structpb"
-	pb "istio.io/api/security/v1alpha1"
 )
 
 var aegisClientLog = log.RegisterScope("aegisclient", "aegis client debugging")

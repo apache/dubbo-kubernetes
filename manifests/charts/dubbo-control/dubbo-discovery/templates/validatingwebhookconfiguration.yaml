@@ -27,8 +27,6 @@ webhooks:
       - CREATE
       - UPDATE
       apiGroups:
-      - security.istio.io
-      - networking.istio.io
       - security.dubbo.apache.org
       - networking.dubbo.apache.org
       apiVersions:

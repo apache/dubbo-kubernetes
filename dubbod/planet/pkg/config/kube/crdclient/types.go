@@ -23,13 +23,13 @@ import (
 
 	dubboapimetav1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
 	orgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+	orgapachedubboapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
 	apiorgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	apiorgapachedubboapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
-	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
@@ -55,8 +55,6 @@ func assignSpec[T any](dst *T, src *T) {
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
 	case gvk.DestinationRule:
-		// DestinationRule uses networking.dubbo.apache.org API group, not networking.istio.io
-		// Use Dynamic client to access it, but reuse Istio's DestinationRule spec structure
 		spec := cfg.Spec.(*orgapachedubboapinetworkingv1alpha3.DestinationRule)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiorgapachedubboapinetworkingv1alpha3.DestinationRule{
@@ -80,9 +78,9 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			Resource: "destinationrules",
 		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
 	case gvk.PeerAuthentication:
-		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		spec := cfg.Spec.(*orgapachedubboapisecurityv1alpha3.PeerAuthentication)
 		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapisecurityv1.PeerAuthentication{
+		obj := &apiorgapachedubboapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
@@ -102,8 +100,6 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			Resource: "peerauthentications",
 		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
 	case gvk.VirtualService:
-		// VirtualService uses networking.dubbo.apache.org API group, not networking.istio.io
-		// Use Dynamic client to access it, but reuse Istio's VirtualService spec structure
 		spec := cfg.Spec.(*orgapachedubboapinetworkingv1alpha3.VirtualService)
 		clonedSpec := protomarshal.Clone(spec)
 		obj := &apiorgapachedubboapinetworkingv1alpha3.VirtualService{
@@ -172,9 +168,9 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			Resource: "destinationrules",
 		}).Namespace(cfg.Namespace).Update(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
-		spec := cfg.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		spec := cfg.Spec.(*orgapachedubboapisecurityv1alpha3.PeerAuthentication)
 		clonedSpec := protomarshal.Clone(spec)
-		obj := &apiistioioapisecurityv1.PeerAuthentication{
+		obj := &apiorgapachedubboapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Spec, clonedSpec)
@@ -264,7 +260,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 	case gvk.PeerAuthentication:
 		status := cfg.Status.(*dubboapimetav1alpha1.DubboStatus)
 		clonedStatus := protomarshal.Clone(status)
-		obj := &apiistioioapisecurityv1.PeerAuthentication{
+		obj := &apiorgapachedubboapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
 		}
 		assignSpec(&obj.Status, clonedStatus)
@@ -355,15 +351,15 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			Resource: "destinationrules",
 		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.PeerAuthentication:
-		origSpec := orig.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
-		modSpec := mod.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)
+		origSpec := orig.Spec.(*orgapachedubboapisecurityv1alpha3.PeerAuthentication)
+		modSpec := mod.Spec.(*orgapachedubboapisecurityv1alpha3.PeerAuthentication)
 		clonedOrigSpec := protomarshal.Clone(origSpec)
 		clonedModSpec := protomarshal.Clone(modSpec)
-		oldRes := &apiistioioapisecurityv1.PeerAuthentication{
+		oldRes := &apiorgapachedubboapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: origMeta,
 		}
 		assignSpec(&oldRes.Spec, clonedOrigSpec)
-		modRes := &apiistioioapisecurityv1.PeerAuthentication{
+		modRes := &apiorgapachedubboapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: modMeta,
 		}
 		assignSpec(&modRes.Spec, clonedModSpec)
@@ -571,7 +567,6 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				panic(fmt.Sprintf("failed to convert unstructured to DestinationRule: %v", err))
 			}
 		case *apiorgapachedubboapinetworkingv1alpha3.DestinationRule:
-			// Handle typed objects from Istio client
 			obj = v
 		default:
 			// Fallback: try to convert any runtime.Object to unstructured first, then to DestinationRule
@@ -622,20 +617,20 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		}
 	},
 	gvk.PeerAuthentication: func(r runtime.Object) config.Config {
-		var obj *apiistioioapisecurityv1.PeerAuthentication
+		var obj *apiorgapachedubboapisecurityv1alpha3.PeerAuthentication
 		switch v := r.(type) {
 		case *unstructured.Unstructured:
-			obj = &apiistioioapisecurityv1.PeerAuthentication{}
+			obj = &apiorgapachedubboapisecurityv1alpha3.PeerAuthentication{}
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(v.Object, obj); err != nil {
 				panic(fmt.Sprintf("failed to convert unstructured to PeerAuthentication: %v", err))
 			}
-		case *apiistioioapisecurityv1.PeerAuthentication:
+		case *apiorgapachedubboapisecurityv1alpha3.PeerAuthentication:
 			obj = v
 		default:
 			uObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
 			if err == nil {
 				u := &unstructured.Unstructured{Object: uObj}
-				obj = &apiistioioapisecurityv1.PeerAuthentication{}
+				obj = &apiorgapachedubboapisecurityv1alpha3.PeerAuthentication{}
 				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, obj); err != nil {
 					panic(fmt.Sprintf("failed to convert object %T to PeerAuthentication: %v", r, err))
 				}
@@ -781,7 +776,6 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				panic(fmt.Sprintf("failed to convert unstructured to VirtualService: %v", err))
 			}
 		case *apiorgapachedubboapinetworkingv1alpha3.VirtualService:
-			// Handle typed objects from Istio client
 			obj = v
 		default:
 			// Fallback: try to convert any runtime.Object to unstructured first, then to VirtualService

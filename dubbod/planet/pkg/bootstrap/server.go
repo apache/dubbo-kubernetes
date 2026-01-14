@@ -160,7 +160,7 @@ func (w *webhookInfo) addHandler(fn func()) {
 	// For now, we'll call the handler directly if webhook is available
 	if w.wh != nil {
 		// Handler will be called when webhook config changes
-		// This is a simplified implementation compared to Istio
+		// This is a simplified implementation compared to Dubbo
 		fn()
 	}
 }
@@ -484,7 +484,7 @@ func (s *Server) initRegistryEventHandlers() {
 		}
 
 		// Map GVK to kind.Kind using schema identifier
-		// This matches Istio's approach of using gvk.MustToKind, but we use schema.Identifier() instead
+		// This matches Dubbo's approach of using gvk.MustToKind, but we use schema.Identifier() instead
 		schemaID := schema.Identifier()
 		log.Infof("configHandler: processing config change, schema identifier=%s, GVK=%v, name=%s/%s, event=%s",
 			schemaID, cfg.GroupVersionKind, cfg.Namespace, cfg.Name, event)

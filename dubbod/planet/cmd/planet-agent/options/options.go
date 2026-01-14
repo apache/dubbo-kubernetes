@@ -50,7 +50,7 @@ var (
 		fmt.Sprintf("SPIRE workload identity SDS socket filename. If set, an SDS socket with this name must exist at %s", security.WorkloadIdentityPath)).Get()
 
 	secretTTLEnv = env.Register("SECRET_TTL", 24*time.Hour,
-		"The cert lifetime requested by istio agent").Get()
+		"The cert lifetime requested by dubbo agent").Get()
 
 	fileDebounceDuration = env.Register("FILE_DEBOUNCE_DURATION", 100*time.Millisecond,
 		"The duration for which the file read operation is delayed once file update is detected").Get()

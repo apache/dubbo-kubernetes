@@ -22,6 +22,8 @@ import (
 	clientset "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
 	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/networking/v1alpha3"
 	fakenetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/networking/v1alpha3/fake"
+	securityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/security/v1alpha3"
+	fakesecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned/typed/security/v1alpha3/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -82,4 +84,9 @@ var (
 // NetworkingV1alpha3 retrieves the NetworkingV1alpha3Client
 func (c *Clientset) NetworkingV1alpha3() networkingv1alpha3.NetworkingV1alpha3Interface {
 	return &fakenetworkingv1alpha3.FakeNetworkingV1alpha3{Fake: &c.Fake}
+}
+
+// SecurityV1alpha3 retrieves the SecurityV1alpha3Client
+func (c *Clientset) SecurityV1alpha3() securityv1alpha3.SecurityV1alpha3Interface {
+	return &fakesecurityv1alpha3.FakeSecurityV1alpha3{Fake: &c.Fake}
 }

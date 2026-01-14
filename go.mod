@@ -80,8 +80,6 @@ require (
 	google.golang.org/protobuf v1.36.9
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.6
-	istio.io/api v1.27.1-0.20250820125923-f5a5d3a605a9
-	istio.io/client-go v1.27.1
 	k8s.io/api v0.34.1
 	k8s.io/apiextensions-apiserver v0.34.1
 	k8s.io/gengo v0.0.0-20251215205346-5ee0d033ba5b

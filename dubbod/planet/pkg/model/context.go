@@ -411,7 +411,7 @@ func GetProxyConfigNamespace(proxy *Proxy) string {
 	}
 
 	// First look for DUBBO_META_CONFIG_NAMESPACE
-	// All newer proxies (from Istio 1.1 onwards) are supposed to supply this
+	// All newer proxies (from Dubbo 1.1 onwards) are supposed to supply this
 	if len(proxy.Metadata.Namespace) > 0 {
 		return proxy.Metadata.Namespace
 	}

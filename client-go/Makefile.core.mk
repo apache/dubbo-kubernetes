@@ -25,14 +25,16 @@ lister_gen = lister-gen
 informer_gen = informer-gen
 
 kube_dubbo_source_packages = $(subst $(space),$(empty), \
-    github.com/apache/dubbo-kubernetes/api/networking/v1alpha3 \
+    github.com/apache/dubbo-kubernetes/api/networking/v1alpha3, \
+    github.com/apache/dubbo-kubernetes/api/security/v1alpha3 \
     )
 
 kube_base_output_package = github.com/apache/dubbo-kubernetes/client-go/pkg
 kube_api_base_package = $(kube_base_output_package)/apis
 
 kube_api_packages = $(subst $(space),$(empty), \
-    $(kube_api_base_package)/networking/v1alpha3 \
+    $(kube_api_base_package)/networking/v1alpha3, \
+    $(kube_api_base_package)/security/v1alpha3 \
     )
 
 kube_api_applyconfiguration_packages = $(kube_api_packages),k8s.io/apimachinery/pkg/apis/meta/v1

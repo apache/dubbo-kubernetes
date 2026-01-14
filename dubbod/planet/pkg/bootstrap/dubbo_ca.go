@@ -35,7 +35,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/fsnotify/fsnotify"
 	"google.golang.org/grpc"
-	"istio.io/api/security/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
@@ -124,18 +123,6 @@ func (s *Server) RunCA(grpc *grpc.Server) {
 			if len(tok.Aud) > 0 && len(aud) == 0 {
 				aud = tok.Aud[0]
 			}
-		}
-	}
-
-	if iss != "" && // issuer set explicitly or extracted from our own JWT
-		k8sInCluster.Get() == "" { // not running in cluster - in cluster use direct call to apiserver
-		jwtRule := v1beta1.JWTRule{Issuer: iss, Audiences: []string{aud}}
-		oidcAuth, err := authenticate.NewJwtAuthenticator(&jwtRule, nil)
-		if err == nil {
-			s.caServer.Authenticators = append(s.caServer.Authenticators, oidcAuth)
-			log.Info("Using out-of-cluster JWT authentication")
-		} else {
-			log.Info("K8S token doesn't support OIDC, using only in-cluster auth")
 		}
 	}
 
@@ -461,9 +448,6 @@ func handleEvent(s *Server) {
 	if err != nil {
 		log.Errorf("Failed to update new Plug-in CA certs: %v", err)
 		return
-	}
-	if len(s.CA.GetCAKeyCertBundle().GetRootCertPem()) != 0 {
-		caserver.RecordCertsExpiry(s.CA.GetCAKeyCertBundle())
 	}
 
 	// notify watcher to replicate new or updated crl data

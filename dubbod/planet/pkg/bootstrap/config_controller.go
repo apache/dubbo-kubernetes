@@ -179,7 +179,7 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 			log.Infof("Started File configSource %s", configSource.Address)
 		case XDS:
 			// XDS config source support (legacy - MCP protocol removed)
-			// Note: MCP was a legacy protocol replaced by APIGenerator in Istio
+			// Note: MCP was a legacy protocol replaced by APIGenerator in Dubbo
 			// This XDS config source may not be needed for proxyless mesh
 			// TLS settings removed from ConfigSource - use insecure credentials
 			// TODO: Implement TLS support when needed
@@ -234,7 +234,7 @@ func (s *Server) initConfigController(args *PlanetArgs) error {
 	meshGlobalConfig := s.environment.Mesh()
 	if len(meshGlobalConfig.ConfigSources) > 0 {
 		// XDS config source support (legacy - MCP protocol removed)
-		// Note: MCP was a legacy protocol replaced by APIGenerator in Istio
+		// Note: MCP was a legacy protocol replaced by APIGenerator in Dubbo
 		if err := s.initConfigSources(args); err != nil {
 			return err
 		}

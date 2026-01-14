@@ -19,13 +19,13 @@ package model
 import (
 	"crypto/md5"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"strings"
 	"time"
 
+	typev1alpha3 "github.com/apache/dubbo-kubernetes/api/type/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	"istio.io/api/security/v1beta1"
-	typev1beta1 "istio.io/api/type/v1beta1"
 )
 
 type MutualTLSMode int
@@ -68,13 +68,13 @@ func (policy *AuthenticationPolicies) addRequestAuthentication(configs []config.
 func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Config) {
 	sortConfigByCreationTime(configs)
 
-	foundNamespaceMTLS := make(map[string]v1beta1.PeerAuthentication_MutualTLS_Mode)
+	foundNamespaceMTLS := make(map[string]v1alpha3.PeerAuthentication_MutualTLS_Mode)
 	seenNamespaceOrMeshGlobalConfig := make(map[string]time.Time)
 	versions := []string{}
 
 	for _, config := range configs {
 		versions = append(versions, config.UID+"."+config.ResourceVersion)
-		spec := config.Spec.(*v1beta1.PeerAuthentication)
+		spec := config.Spec.(*v1alpha3.PeerAuthentication)
 		selector := spec.GetSelector()
 		if selector == nil || len(selector.MatchLabels) == 0 {
 			if t, ok := seenNamespaceOrMeshGlobalConfig[config.Namespace]; ok {
@@ -85,12 +85,12 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 			}
 			seenNamespaceOrMeshGlobalConfig[config.Namespace] = config.CreationTimestamp
 
-			mode := v1beta1.PeerAuthentication_MutualTLS_UNSET
+			mode := v1alpha3.PeerAuthentication_MutualTLS_UNSET
 			if spec.Mtls != nil {
 				mode = spec.Mtls.Mode
 			}
 			if config.Namespace == policy.rootNamespace {
-				if mode == v1beta1.PeerAuthentication_MutualTLS_UNSET {
+				if mode == v1alpha3.PeerAuthentication_MutualTLS_UNSET {
 					policy.globalMutualTLSMode = MTLSPermissive
 				} else {
 					policy.globalMutualTLSMode = ConvertToMutualTLSMode(mode)
@@ -113,7 +113,7 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 		inheritedMTLSMode = MTLSPermissive
 	}
 	for ns, mtlsMode := range foundNamespaceMTLS {
-		if mtlsMode == v1beta1.PeerAuthentication_MutualTLS_UNSET {
+		if mtlsMode == v1alpha3.PeerAuthentication_MutualTLS_UNSET {
 			policy.namespaceMutualTLSMode[ns] = inheritedMTLSMode
 		} else {
 			policy.namespaceMutualTLSMode[ns] = ConvertToMutualTLSMode(mtlsMode)
@@ -121,13 +121,13 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 	}
 }
 
-func ConvertToMutualTLSMode(mode v1beta1.PeerAuthentication_MutualTLS_Mode) MutualTLSMode {
+func ConvertToMutualTLSMode(mode v1alpha3.PeerAuthentication_MutualTLS_Mode) MutualTLSMode {
 	switch mode {
-	case v1beta1.PeerAuthentication_MutualTLS_DISABLE:
+	case v1alpha3.PeerAuthentication_MutualTLS_DISABLE:
 		return MTLSDisable
-	case v1beta1.PeerAuthentication_MutualTLS_PERMISSIVE:
+	case v1alpha3.PeerAuthentication_MutualTLS_PERMISSIVE:
 		return MTLSPermissive
-	case v1beta1.PeerAuthentication_MutualTLS_STRICT:
+	case v1alpha3.PeerAuthentication_MutualTLS_STRICT:
 		return MTLSStrict
 	default:
 		return MTLSUnknown
@@ -168,7 +168,7 @@ func (policy *AuthenticationPolicies) matchingPeerAuthentication(namespace strin
 	}
 
 	for _, cfg := range configs {
-		spec := cfg.Spec.(*v1beta1.PeerAuthentication)
+		spec := cfg.Spec.(*v1alpha3.PeerAuthentication)
 		if hasPeerAuthSelector(spec) && selectorMatchesWorkload(spec.GetSelector(), workloadLabels) {
 			if mode := peerAuthenticationModeForPort(spec, port); mode != MTLSUnknown {
 				return mode
@@ -177,7 +177,7 @@ func (policy *AuthenticationPolicies) matchingPeerAuthentication(namespace strin
 	}
 
 	for _, cfg := range configs {
-		spec := cfg.Spec.(*v1beta1.PeerAuthentication)
+		spec := cfg.Spec.(*v1alpha3.PeerAuthentication)
 		if !hasPeerAuthSelector(spec) {
 			if mode := peerAuthenticationModeForPort(spec, port); mode != MTLSUnknown {
 				return mode
@@ -188,7 +188,7 @@ func (policy *AuthenticationPolicies) matchingPeerAuthentication(namespace strin
 	return MTLSUnknown
 }
 
-func hasPeerAuthSelector(spec *v1beta1.PeerAuthentication) bool {
+func hasPeerAuthSelector(spec *v1alpha3.PeerAuthentication) bool {
 	if spec == nil {
 		return false
 	}
@@ -196,7 +196,7 @@ func hasPeerAuthSelector(spec *v1beta1.PeerAuthentication) bool {
 	return selector != nil && len(selector.MatchLabels) > 0
 }
 
-func selectorMatchesWorkload(selector *typev1beta1.WorkloadSelector, workloadLabels map[string]string) bool {
+func selectorMatchesWorkload(selector *typev1alpha3.WorkloadSelector, workloadLabels map[string]string) bool {
 	if selector == nil || len(selector.MatchLabels) == 0 {
 		return true
 	}
@@ -211,18 +211,18 @@ func selectorMatchesWorkload(selector *typev1beta1.WorkloadSelector, workloadLab
 	return true
 }
 
-func peerAuthenticationModeForPort(spec *v1beta1.PeerAuthentication, port uint32) MutualTLSMode {
+func peerAuthenticationModeForPort(spec *v1alpha3.PeerAuthentication, port uint32) MutualTLSMode {
 	if spec == nil {
 		return MTLSUnknown
 	}
 	if port != 0 && spec.PortLevelMtls != nil {
 		if mtls, ok := spec.PortLevelMtls[port]; ok && mtls != nil {
-			if mtls.Mode != v1beta1.PeerAuthentication_MutualTLS_UNSET {
+			if mtls.Mode != v1alpha3.PeerAuthentication_MutualTLS_UNSET {
 				return ConvertToMutualTLSMode(mtls.Mode)
 			}
 		}
 	}
-	if spec.Mtls != nil && spec.Mtls.Mode != v1beta1.PeerAuthentication_MutualTLS_UNSET {
+	if spec.Mtls != nil && spec.Mtls.Mode != v1alpha3.PeerAuthentication_MutualTLS_UNSET {
 		return ConvertToMutualTLSMode(spec.Mtls.Mode)
 	}
 	return MTLSUnknown

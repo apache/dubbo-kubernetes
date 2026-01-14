@@ -26,6 +26,7 @@ import (
 	versioned "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
 	internalinterfaces "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/internalinterfaces"
 	networking "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/networking"
+	security "github.com/apache/dubbo-kubernetes/client-go/pkg/informers/externalversions/security"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -254,8 +255,13 @@ type SharedInformerFactory interface {
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer
 
 	Networking() networking.Interface
+	Security() security.Interface
 }
 
 func (f *sharedInformerFactory) Networking() networking.Interface {
 	return networking.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Security() security.Interface {
+	return security.New(f, f.namespace, f.tweakListOptions)
 }

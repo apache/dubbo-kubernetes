@@ -19,9 +19,9 @@ package kubetypes
 import (
 	dubboapimeshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	apiorgapachedubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	orgapachedubboapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	apiistioioapisecurityv1 "istio.io/client-go/pkg/apis/security/v1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapicorev1 "k8s.io/api/core/v1"
@@ -38,7 +38,7 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.ValidatingWebhookConfiguration, true
 	case *dubboapimeshv1alpha1.MeshGlobalConfig:
 		return gvk.MeshGlobalConfig, true
-	case *apiistioioapisecurityv1.PeerAuthentication:
+	case *orgapachedubboapisecurityv1alpha3.PeerAuthentication:
 		return gvk.PeerAuthentication, true
 	case *apiorgapachedubboapinetworkingv1alpha3.DestinationRule:
 		return gvk.DestinationRule, true

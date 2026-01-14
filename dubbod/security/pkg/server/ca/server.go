@@ -21,6 +21,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"time"
 
+	pb "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	caerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
@@ -28,13 +29,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	pb "istio.io/api/security/v1alpha1"
 )
 
 var serverCaLog = log.RegisterScope("serverca", "Aegis server log")
 
 type Server struct {
-	pb.UnimplementedIstioCertificateServiceServer
+	pb.UnimplementedDubboCertificateServiceServer
 	Authenticators []security.Authenticator
 	serverCertTTL  time.Duration
 	ca             CertificateAuthority
@@ -47,11 +47,6 @@ type CertificateAuthority interface {
 }
 
 func New(ca CertificateAuthority, ttl time.Duration, authenticators []security.Authenticator) (*Server, error) {
-	certBundle := ca.GetCAKeyCertBundle()
-	if len(certBundle.GetRootCertPem()) != 0 {
-		RecordCertsExpiry(certBundle)
-	}
-
 	server := &Server{
 		Authenticators: authenticators,
 		serverCertTTL:  ttl,
@@ -61,19 +56,11 @@ func New(ca CertificateAuthority, ttl time.Duration, authenticators []security.A
 	return server, nil
 }
 
-func RecordCertsExpiry(keyCertBundle *util.KeyCertBundle) {}
-
 func (s *Server) Register(grpcServer *grpc.Server) {
-	pb.RegisterIstioCertificateServiceServer(grpcServer, s)
+	pb.RegisterDubboCertificateServiceServer(grpcServer, s)
 }
 
-// CreateCertificate handles an incoming certificate signing request (CSR). It does
-// authentication and authorization. Upon validated, signs a certificate that:
-// the SAN is the identity of the caller in authentication result.
-// the subject public key is the public key in the CSR.
-// the validity duration is the ValidityDuration in request, or default value if the given duration is invalid.
-// it is signed by the CA signing key.
-func (s *Server) CreateCertificate(ctx context.Context, request *pb.IstioCertificateRequest) (*pb.IstioCertificateResponse, error) {
+func (s *Server) CreateCertificate(ctx context.Context, request *pb.DubboCertificateRequest) (*pb.DubboCertificateResponse, error) {
 	caller, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "request authenticate failure")
@@ -117,7 +104,7 @@ func (s *Server) CreateCertificate(ctx context.Context, request *pb.IstioCertifi
 		}
 	}
 	// expand `respCertChain` since each element might be a concatenated multi-cert PEM
-	response := &pb.IstioCertificateResponse{}
+	response := &pb.DubboCertificateResponse{}
 	for _, pem := range respCertChain {
 		for _, cert := range util.PemCertBytestoString([]byte(pem)) {
 			// the trailing "\n" is added for backwards compatibility

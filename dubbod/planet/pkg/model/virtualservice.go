@@ -33,7 +33,7 @@ func resolveVirtualServiceShortnames(config config.Config) config.Config {
 		rule.Hosts[i] = string(ResolveShortnameToFQDN(h, meta))
 	}
 
-	// resolve host in http route.subset（istio destination）
+	// resolve host in http route.subset（dubbo destination）
 	for _, d := range rule.Http {
 		for _, w := range d.Route {
 			if w.Destination != nil {
