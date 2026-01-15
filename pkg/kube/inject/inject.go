@@ -141,7 +141,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		}
 		mergedPod, err = applyOverlayYAML(mergedPod, bbuf.Bytes())
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed parsing generated injected YAML (check Istio sidecar injector configuration): %v", err)
+			return nil, nil, fmt.Errorf("failed parsing generated injected YAML: %v", err)
 		}
 	}
 
@@ -190,8 +190,6 @@ func knownTemplates(t Templates) []string {
 	return keys
 }
 
-// getProxyImage extracts the proxy image from values map, following Istio's pattern.
-// It checks common paths: global.proxy.image, global.proxyImage, and falls back to default.
 func getProxyImage(values map[string]any, defaultImage string) string {
 	if values == nil {
 		return defaultImage

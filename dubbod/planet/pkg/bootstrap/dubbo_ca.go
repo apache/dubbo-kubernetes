@@ -19,16 +19,12 @@ package bootstrap
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
-	securityModel "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/security/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/cmd"
+	"github.com/apache/dubbo-kubernetes/dubbod/security/cmd"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ra"
 	caserver "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca"
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca/authenticate"
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
@@ -39,7 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path"
-	"strings"
 	"time"
 )
 
@@ -108,24 +103,6 @@ func (s *Server) initCAServer(ca caserver.CertificateAuthority, opts *caOptions)
 }
 
 func (s *Server) RunCA(grpc *grpc.Server) {
-	iss := trustedIssuer.Get()
-	aud := audience.Get()
-
-	token, err := os.ReadFile(securityModel.ThirdPartyJwtPath)
-	if err == nil {
-		tok, err := detectAuthEnv(string(token))
-		if err != nil {
-			log.Warnf("Starting with invalid K8S JWT token: %v", err)
-		} else {
-			if iss == "" {
-				iss = tok.Iss
-			}
-			if len(tok.Aud) > 0 && len(aud) == 0 {
-				aud = tok.Aud[0]
-			}
-		}
-	}
-
 	s.caServer.Register(grpc)
 
 	log.Info("Dubbod CA has started")
@@ -349,27 +326,6 @@ func (s *Server) handleCACertsFileWatch() {
 			return
 		}
 	}
-}
-
-func detectAuthEnv(jwt string) (*authenticate.JwtPayload, error) {
-	jwtSplit := strings.Split(jwt, ".")
-	if len(jwtSplit) != 3 {
-		return nil, fmt.Errorf("invalid JWT parts: %s", jwt)
-	}
-	payload := jwtSplit[1]
-
-	payloadBytes, err := util.DecodeJwtPart(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode jwt: %v", err.Error())
-	}
-
-	structuredPayload := &authenticate.JwtPayload{}
-	err = json.Unmarshal(payloadBytes, &structuredPayload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal jwt: %v", err.Error())
-	}
-
-	return structuredPayload, nil
 }
 
 func handleEvent(s *Server) {

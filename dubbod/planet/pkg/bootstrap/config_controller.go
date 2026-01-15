@@ -18,35 +18,28 @@ package bootstrap
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	configaggregate "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/aggregate"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/gateway"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection/k8sleaderelection/k8sresourcelock"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"net/url"
-	"strings"
-
-	"github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crdclient"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/file"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/gateway"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/memory"
 	dubboCredentials "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/credentials"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/credentials/kube"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection"
+	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection/k8sleaderelection/k8sresourcelock"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/adsc"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"net/url"
 )
 
 type ConfigSourceAddressScheme string
@@ -274,93 +267,6 @@ func (s *Server) initConfigController(args *PlanetArgs) error {
 	})
 
 	return nil
-}
-
-// verifyCert verifies given cert against TLS settings like SANs and CRL.
-func (s *Server) verifyCert(certs [][]byte, tlsSettings *v1alpha3.ClientTLSSettings) error {
-	if len(certs) == 0 {
-		return fmt.Errorf("no certificates provided")
-	}
-	cert, err := x509.ParseCertificate(certs[0])
-	if err != nil {
-		return fmt.Errorf("failed to parse certificate: %w", err)
-	}
-
-	if len(tlsSettings.SubjectAltNames) > 0 {
-		sanMatchFound := false
-		for _, san := range cert.DNSNames {
-			if sanMatchFound {
-				break
-			}
-			for _, name := range tlsSettings.SubjectAltNames {
-				if san == name {
-					sanMatchFound = true
-					break
-				}
-			}
-		}
-		if !sanMatchFound {
-			return fmt.Errorf("no matching SAN found")
-		}
-	}
-
-	if len(tlsSettings.CaCrl) > 0 {
-		crlData := []byte(strings.TrimSpace(tlsSettings.CaCrl))
-		block, _ := pem.Decode(crlData)
-		if block != nil {
-			crlData = block.Bytes
-		}
-		crl, err := x509.ParseRevocationList(crlData)
-		if err != nil {
-			return fmt.Errorf("failed to parse CRL: %w", err)
-		}
-		for _, revokedCert := range crl.RevokedCertificateEntries {
-			if cert.SerialNumber.Cmp(revokedCert.SerialNumber) == 0 {
-				return fmt.Errorf("certificate is revoked")
-			}
-		}
-	}
-
-	return nil
-}
-
-// getTransportCredentials attempts to create credentials.TransportCredentials from ClientTLSSettings in mesh config
-// Implemented only for SIMPLE_TLS mode
-// TODO:
-//
-//	Implement for MUTUAL_TLS/DUBBO_MUTUAL_TLS modes
-func (s *Server) getTransportCredentials(args *PlanetArgs, tlsSettings *v1alpha3.ClientTLSSettings) (credentials.TransportCredentials, error) {
-	// TODO ValidateTLS
-
-	switch tlsSettings.GetMode() {
-	case v1alpha3.ClientTLSSettings_SIMPLE:
-		if len(tlsSettings.GetCredentialName()) > 0 {
-			rootCert, err := s.getRootCertFromSecret(tlsSettings.GetCredentialName(), args.Namespace)
-			if err != nil {
-				return nil, err
-			}
-			tlsSettings.CaCertificates = string(rootCert.Cert)
-			tlsSettings.CaCrl = string(rootCert.CRL)
-		}
-		if tlsSettings.GetInsecureSkipVerify().GetValue() || len(tlsSettings.GetCaCertificates()) == 0 {
-			return credentials.NewTLS(&tls.Config{
-				ServerName: tlsSettings.GetSni(),
-			}), nil
-		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM([]byte(tlsSettings.GetCaCertificates())) {
-			return nil, fmt.Errorf("failed to add ca certificate from configSource.tlsSettings to pool")
-		}
-		return credentials.NewTLS(&tls.Config{
-			ServerName: tlsSettings.GetSni(),
-			RootCAs:    certPool,
-			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-				return s.verifyCert(rawCerts, tlsSettings)
-			},
-		}), nil
-	default:
-		return insecure.NewCredentials(), nil
-	}
 }
 
 // getRootCertFromSecret fetches a map of keys and values from a secret with name in namespace

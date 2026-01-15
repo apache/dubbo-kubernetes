@@ -230,8 +230,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 			return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Watch(context.Background(), options)
 		}
 	case gvr.VirtualService:
-		// VirtualService uses networking.dubbo.apache.org API group, not networking.istio.io
-		// Use Dynamic client to access it
 		gvr := schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
 			Version:  "v1",
@@ -244,8 +242,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 			return c.Dynamic().Resource(gvr).Namespace(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.DestinationRule:
-		// DestinationRule uses networking.dubbo.apache.org API group, not networking.istio.io
-		// Use Dynamic client to access it
 		gvr := schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
 			Version:  "v1alpha3",

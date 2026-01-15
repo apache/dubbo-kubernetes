@@ -22,10 +22,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubbod/security/cmd"
 	"os"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/cmd"
 	caerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	certutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/util"

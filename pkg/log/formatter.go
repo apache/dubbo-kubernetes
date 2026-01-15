@@ -33,12 +33,10 @@ type LogEntry struct {
 	Original  string
 }
 
-// Formatter formats log entries in Istio style
 type Formatter struct {
 	patterns []*LogPattern
 }
 
-// LogPattern represents a pattern for recognizing different log formats
 type LogPattern struct {
 	Name      string
 	Pattern   *regexp.Regexp
@@ -58,12 +56,9 @@ func GetFormatter() *Formatter {
 	return defaultFormatter
 }
 
-// NewFormatter creates a new formatter with built-in patterns
 func NewFormatter() *Formatter {
 	f := &Formatter{
 		patterns: []*LogPattern{
-			// Klog pattern: I0926 16:53:33.461184       1 controller.go:123] message
-			// or: I0926 16:53:33.461184       1 controller.go:123] successfully acquired lease istio-system/istio-namespace-controller-election
 			{
 				Name:    "klog",
 				Pattern: regexp.MustCompile(`^([IWEF])(\d{4} \d{2}:\d{2}:\d{2}\.\d+)\s+\d+\s+[^\s]+\]\s+(.+)$`),
@@ -71,7 +66,7 @@ func NewFormatter() *Formatter {
 					if len(matches) < 4 {
 						return nil
 					}
-					level := klogLevelToIstio(matches[1])
+					level := klogLevelToDubbo(matches[1])
 					timestamp := parseKlogTimestamp(matches[2])
 					message := matches[3]
 					return &LogEntry{
@@ -189,8 +184,6 @@ func NewFormatter() *Formatter {
 	return f
 }
 
-// Format formats a log line in Istio style
-// Removes any trailing newlines to prevent blank lines
 func (f *Formatter) Format(line string) string {
 	line = strings.TrimSpace(line)
 	if line == "" {
@@ -240,8 +233,7 @@ func (f *Formatter) formatEntry(entry *LogEntry) string {
 	)
 }
 
-// klogLevelToIstio converts klog level to Istio level
-func klogLevelToIstio(klogLevel string) string {
+func klogLevelToDubbo(klogLevel string) string {
 	switch klogLevel {
 	case "I":
 		return "info"

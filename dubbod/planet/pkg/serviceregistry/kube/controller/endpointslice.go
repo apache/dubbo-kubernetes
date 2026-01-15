@@ -378,10 +378,6 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 				log.Debugf("updateEndpointCacheForSlice: creating endpoint for service %s (address=%s, servicePortNum=%d, targetPortNum=%d, portName='%s', hostname=%s, kubeSvc=%v)",
 					svcNamespacedName.Name, a, servicePortNum, targetPortNum, portName, hostName, kubeSvc != nil)
 
-				// - EndpointSlice.Port.Port should be the Service Port (not targetPort)
-				// - But IstioEndpoint.EndpointPort should be the targetPort (container port)
-				// - ServicePortName should match Service.Port.Name for filtering in BuildClusterLoadAssignment
-				//
 				// We use targetPortNum as EndpointPort because that's what the container actually listens on.
 				// The servicePortNum is used for matching in BuildClusterLoadAssignment via portName.
 				//

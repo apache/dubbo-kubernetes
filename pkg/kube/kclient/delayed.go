@@ -90,8 +90,6 @@ func (s *delayedClient[T]) set(inf Informer[T]) {
 		s.hm.Lock()
 		defer s.hm.Unlock()
 		for _, h := range s.handlers {
-			// h is a delayedHandler which embeds ResourceEventHandler, so we can pass it directly
-			// This matches Istio's implementation
 			reg := inf.AddEventHandler(h)
 			h.hasSynced.hasSynced.Store(ptr.Of(reg.HasSynced))
 		}

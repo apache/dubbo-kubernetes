@@ -58,7 +58,6 @@ type controllerInterface interface {
 
 var (
 	log                          = dubbolog.RegisterScope("controller", "kube controller debugging")
-	_   controllerInterface      = &Controller{}
 	_   serviceregistry.Instance = &Controller{}
 )
 
@@ -391,7 +390,7 @@ func (c *Controller) addOrUpdateService(pre, curr *v1.Service, currConv *model.S
 	c.opts.XDSUpdater.ServiceUpdate(shard, string(currConv.Hostname), ns, event)
 
 	// Note: Endpoint updates are handled separately by EndpointSlice events, not here.
-	// This matches Istio's behavior where service changes don't immediately update endpoints.
+	// service changes don't immediately update endpoints.
 	// EndpointSlice events will trigger EDSUpdate (with logPushType=true) which will properly
 	// log "Full push, new service" when a new endpoint shard is created.
 
@@ -545,17 +544,4 @@ func (c *Controller) servicesForNamespacedName(name types.NamespacedName) []*mod
 		return []*model.Service{svc}
 	}
 	return nil
-}
-
-func (c *Controller) Network(endpointIP string, labels labels.Instance) network.ID {
-	// 1. check the pod/workloadEntry label
-	if nw := labels["topology.dubbo.apache.org/network"]; nw != "" {
-		return network.ID(nw)
-	}
-	// 2. check the system namespace labels
-	if nw := c.networkFromSystemNamespace(); nw != "" {
-		return nw
-	}
-
-	return ""
 }

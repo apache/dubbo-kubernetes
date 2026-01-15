@@ -338,7 +338,6 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	switch {
 	case !req.Full:
 	default:
-		// Log format matches Istio: "LDS: PUSH for node:xxx resources:1 size:342B"
 		resourceNamesStr := ""
 		if len(res) > 0 {
 			if len(res) <= 10 {

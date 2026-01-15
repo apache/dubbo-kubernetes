@@ -246,7 +246,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 			recheckTLS = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
 		}
 		if hasTLS || recheckTLS {
-			log.Infof("applyDestinationRule: applying TLS to default cluster %s (DestinationRule has ISTIO_MUTUAL)", b.defaultClusterName)
+			log.Infof("applyDestinationRule: applying TLS to default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
 			b.applyTLSForCluster(defaultCluster, nil)
 		} else {
 			log.Debugf("applyDestinationRule: skipping TLS for default cluster %s (DestinationRule has no TrafficPolicy or TLS)", b.defaultClusterName)
@@ -270,7 +270,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 				core.HealthStatus_DEGRADED,
 			},
 		}
-		log.Infof("applyDestinationRule: applying TLS to newly generated default cluster %s (DestinationRule has ISTIO_MUTUAL)", b.defaultClusterName)
+		log.Infof("applyDestinationRule: applying TLS to newly generated default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
 		b.applyTLSForCluster(defaultCluster, nil)
 		return nil, defaultCluster // Return the newly generated default cluster
 	}
@@ -327,7 +327,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 }
 
 // applyTLSForCluster attaches a gRPC-compatible TLS transport socket whenever the
-// DestinationRule (or subset override) specifies ISTIO_MUTUAL/DUBBO_MUTUAL mode.
+// DestinationRule (or subset override) specifies DUBBO_MUTUAL/DUBBO_MUTUAL mode.
 func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networking.Subset) {
 	if c == nil || b.svc == nil {
 		return

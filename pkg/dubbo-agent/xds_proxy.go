@@ -26,8 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
-
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
 	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
@@ -144,23 +142,6 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 	// Initialize dial options immediately, required for connecting to upstream
 	if err = proxy.initDubbodDialOptions(ia); err != nil {
 		return nil, fmt.Errorf("failed to init dubbod dial options: %v", err)
-	}
-
-	if ia.cfg.EnableDynamicProxyConfig && ia.secretCache != nil {
-		proxy.handlers[model.ProxyConfigType] = func(resp *anypb.Any) error {
-			pc := &meshv1alpha1.ProxyConfig{}
-			if err := resp.UnmarshalTo(pc); err != nil {
-				proxyLog.Errorf("failed to unmarshal proxy config: %v", err)
-				return err
-			}
-			caCerts := pc.GetCaCertificatesPem()
-			proxyLog.Infof("received new certificates to add to mesh trust domain: %v", caCerts)
-			trustBundle := []byte{}
-			for _, cert := range caCerts {
-				trustBundle = util.AppendCertByte(trustBundle, []byte(cert))
-			}
-			return ia.secretCache.UpdateConfigTrustBundle(trustBundle)
-		}
 	}
 
 	// Initialize Pixiu converter for router mode (Gateway Pods)

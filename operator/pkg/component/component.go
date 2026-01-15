@@ -24,8 +24,6 @@ import (
 
 type Name string
 
-// DubboComponent names corresponding to the IstioOperator proto component names.
-// These must be the same since they are used for struct traversal.
 const (
 	BaseComponentName              Name = "Base"
 	NacosRegisterComponentName     Name = "Nacos"

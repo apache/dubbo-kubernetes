@@ -127,7 +127,6 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 
 		// For proxyless gRPC, we MUST always process all watched clusters
 		// This ensures clients receive EDS updates even when endpoints become available or unavailable
-		// For non-proxyless (Istio behavior), we skip clusters that are not in edsUpdatedServices for incremental pushes
 		if edsUpdatedServices != nil {
 			if _, ok := edsUpdatedServices[hostname]; !ok {
 				// Cluster was not in edsUpdatedServices
@@ -138,7 +137,7 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 						log.Debugf("buildEndpoints: proxyless gRPC, processing cluster %s even though not in edsUpdatedServices (hostname=%s)", clusterName, hostname)
 						serviceWasUpdated = true
 					} else {
-						// For non-proxyless, skip if not updated (Istio behavior)
+						// For non-proxyless, skip if not updated
 						continue
 					}
 				}
@@ -254,7 +253,6 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 
 		// For proxyless gRPC, we MUST always process all watched clusters
 		// This ensures clients receive EDS updates even when endpoints become available or unavailable
-		// For non-proxyless (Istio behavior), we skip clusters that are not in edsUpdatedServices for incremental pushes
 		serviceWasUpdated := false
 		if len(edsUpdatedServices) > 0 {
 			if _, ok := edsUpdatedServices[hostname]; !ok {
@@ -265,7 +263,7 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 					log.Debugf("buildDeltaEndpoints: proxyless gRPC, processing cluster %s even though not in edsUpdatedServices (hostname=%s)", clusterName, hostname)
 					serviceWasUpdated = true
 				} else {
-					// For non-proxyless, skip if not updated (Istio behavior)
+					// For non-proxyless, skip if not updated
 					continue
 				}
 			} else {
