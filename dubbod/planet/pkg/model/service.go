@@ -29,7 +29,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
-	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/google/go-cmp/cmp"
@@ -167,7 +166,6 @@ type DubboEndpoint struct {
 	LegacyClusterPortKey   int
 	EndpointPort           uint32
 	WorkloadName           string
-	Network                network.ID
 	Namespace              string
 	// Specifies the hostname of the Pod, empty for vm workload.
 	HostName string

@@ -35,7 +35,7 @@ func (v Instance) Validate() (errs error) {
 	case Private, Public:
 		return nil
 	case None:
-		return fmt.Errorf("exportTo ~ (none) is not allowed for Istio configuration objects")
+		return fmt.Errorf("exportTo ~ (none) is not allowed for Dubbo configuration objects")
 	default:
 		if !labels.IsDNS1123Label(string(v)) {
 			return fmt.Errorf("only .,*, or a valid DNS 1123 label is allowed as exportTo entry")

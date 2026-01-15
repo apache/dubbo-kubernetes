@@ -44,7 +44,7 @@ type TLSOptions struct {
 type AegisClient struct {
 	// It means enable tls connection to Citadel if this is not nil.
 	tlsOpts  *TLSOptions
-	client   pb.IstioCertificateServiceClient
+	client   pb.DubboCertificateServiceClient
 	conn     *grpc.ClientConn
 	provider credentials.PerRPCCredentials
 	opts     *security.Options
@@ -63,7 +63,7 @@ func NewAegisClient(opts *security.Options, tlsOpts *TLSOptions) (*AegisClient, 
 		return nil, fmt.Errorf("failed to connect to endpoint %s", opts.CAEndpoint)
 	}
 	c.conn = conn
-	c.client = pb.NewIstioCertificateServiceClient(conn)
+	c.client = pb.NewDubboCertificateServiceClient(conn)
 	return c, nil
 }
 
@@ -75,7 +75,7 @@ func (c *AegisClient) CSRSign(csrPEM []byte, certValidTTLInSec int64) (res []str
 			},
 		},
 	}
-	req := &pb.IstioCertificateRequest{
+	req := &pb.DubboCertificateRequest{
 		Csr:              string(csrPEM),
 		ValidityDuration: certValidTTLInSec,
 		Metadata:         crMetaStruct,
@@ -153,7 +153,7 @@ func (c *AegisClient) reconnect() error {
 		return err
 	}
 	c.conn = conn
-	c.client = pb.NewIstioCertificateServiceClient(conn)
+	c.client = pb.NewDubboCertificateServiceClient(conn)
 	aegisClientLog.Info("recreated connection")
 	return nil
 }

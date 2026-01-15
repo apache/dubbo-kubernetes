@@ -13,8 +13,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// Portions of this file are derived from the Istio project:
-//   https://github.com/istio/istio/blob/master/pkg/filewatcher/filewatcher.go
 
 package filewatcher
 

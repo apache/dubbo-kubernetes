@@ -115,7 +115,6 @@ type ADSC struct {
 
 	Mesh *v1alpha1.MeshGlobalConfig
 
-	// Retrieved configurations can be stored using the common istio model interface.
 	Store model.ConfigStore
 	cfg   *ADSConfig
 	// sendNodeMeta is set to true if the connection is new - and we need to send node meta.,
@@ -348,7 +347,7 @@ func (a *ADSC) WaitClear() {
 // HasSynced returns true if configs have synced
 // MCP support removed - it's a legacy protocol replaced by APIGenerator
 func (a *ADSC) HasSynced() bool {
-	// MCP was replaced by APIGenerator in Istio, not needed for proxyless mesh
+	// MCP was replaced by APIGenerator, not needed for proxyless mesh
 	return true
 }
 
@@ -379,8 +378,6 @@ func (a *ADSC) ack(msg *discovery.DiscoveryResponse) {
 	var resources []string
 
 	if strings.HasPrefix(msg.TypeUrl, v3.DebugType) {
-		// If the response is for istio.io/debug or istio.io/debug/*,
-		// skip to send ACK.
 		return
 	}
 
@@ -403,7 +400,6 @@ func (a *ADSC) ack(msg *discovery.DiscoveryResponse) {
 		ResourceNames: resources,
 	})
 }
-
 
 func (a *ADSC) handleRecv() {
 	// We connected, so reset the backoff

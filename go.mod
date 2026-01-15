@@ -33,7 +33,6 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/containers/image/v5 v5.34.0
 	github.com/containers/storage v1.57.1
-	github.com/coreos/go-oidc/v3 v3.15.0
 	github.com/docker/cli v28.3.3+incompatible
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/docker-credential-helpers v0.9.3

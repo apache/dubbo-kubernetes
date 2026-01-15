@@ -53,7 +53,6 @@ func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResou
 }
 
 // buildCommonTLSContext creates a TLS context that matches gRPC xDS expectations.
-// It is adapted from Istio's buildCommonTLSContext implementation, but kept minimal:
 // - Uses certificate provider "default" for workload certs and root CA
 // - Does not configure explicit SAN matches (left to future hardening)
 func buildCommonTLSContext() *tlsv3.CommonTlsContext {

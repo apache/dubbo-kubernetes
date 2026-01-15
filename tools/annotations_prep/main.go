@@ -350,8 +350,8 @@ func generateVariableName(v Variable) string {
 
 	// First, process the namespace portion ...
 
-	// Strip .istio.io from the namespace portion of the annotation name.
-	ns = strings.TrimSuffix(ns, ".istio.io")
+	// Strip .dubbo.apache.org from the namespace portion of the annotation name.
+	ns = strings.TrimSuffix(ns, ".dubbo.apache.org")
 
 	// Separate the words by spaces and capitalize each word.
 	ns = strings.ReplaceAll(ns, ".", " ")

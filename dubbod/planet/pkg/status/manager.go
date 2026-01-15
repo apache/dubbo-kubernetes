@@ -77,7 +77,7 @@ func NewManager(store model.ConfigStore) *Manager {
 func (m *Manager) Start(stop <-chan struct{}) {
 	scope.Info("Starting status manager")
 
-	ctx := NewIstioContext(stop)
+	ctx := NewDubboContext(stop)
 	m.workers.Run(ctx)
 }
 

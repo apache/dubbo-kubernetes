@@ -65,7 +65,7 @@ func GetStatusManipulator(in any) (out Manipulator) {
 	return &NopStatusManipulator{in}
 }
 
-func NewIstioContext(stop <-chan struct{}) context.Context {
+func NewDubboContext(stop <-chan struct{}) context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-stop

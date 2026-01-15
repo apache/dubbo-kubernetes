@@ -203,10 +203,9 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		log.Debugf("buildInboundListeners: listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v",
 			name, si.Service.Attributes.Name, isGatewayPod, node.Type, node.IsRouter())
 
-		// - DestinationRule with ISTIO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
+		// - DestinationRule with DUBBO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
 		// - PeerAuthentication with STRICT configures SERVER-SIDE (inbound) mTLS
 		// Both are REQUIRED for mTLS to work. Server-side mTLS should ONLY be controlled by PeerAuthentication.
-		// Reference: https://istio.io/latest/blog/2021/proxyless-grpc/#enabling-mtls
 		mode := push.InboundMTLSModeForProxy(node, uint32(listenPort))
 		if mode == model.MTLSPermissive {
 			log.Warnf("buildInboundListeners: PERMISSIVE mTLS is not supported for proxyless gRPC; defaulting to plaintext on listener %s", name)
@@ -518,7 +517,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 			routeName := clusterName
 
 			// For gRPC proxyless, outbound listeners MUST use ApiListener with RDS
-			// This is the correct pattern used by Istio for gRPC xDS clients
+			// This is the correct pattern used by Dubbo for gRPC xDS clients
 			// Using FilterChain with inline RouteConfig causes the gRPC client to remain in IDLE state
 			hcm := &hcmv3.HttpConnectionManager{
 				CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -543,7 +542,7 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 				},
 			}
 
-			// Build outbound listener with ApiListener (Istio pattern)
+			// Build outbound listener with ApiListener
 			// gRPC xDS clients expect ApiListener for outbound, not FilterChain
 			ll := &listener.Listener{
 				Name: fullListenerName,

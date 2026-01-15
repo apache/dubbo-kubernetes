@@ -28,21 +28,16 @@ import (
 
 	gogojsonpb "github.com/gogo/protobuf/jsonpb" // nolint: depguard
 	gogoproto "github.com/gogo/protobuf/proto"   // nolint: depguard
-	gogotypes "github.com/gogo/protobuf/types"   // nolint: depguard
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubetypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/util/protoconv"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/util/gogoprotomarshal"
-	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
@@ -165,37 +160,6 @@ func ObjectInRevision(o *Config, rev string) bool {
 // * Able to marshal/unmarshal using json
 type Spec any
 
-func ToProto(s Spec) (*anypb.Any, error) {
-	// golang protobuf. Use protoreflect.ProtoMessage to distinguish from gogo
-	// golang/protobuf 1.4+ will have this interface. Older golang/protobuf are gogo compatible
-	// but also not used by Istio at all.
-	if pb, ok := s.(protoreflect.ProtoMessage); ok {
-		return protoconv.MessageToAnyWithError(pb)
-	}
-
-	// gogo protobuf
-	if pb, ok := s.(gogoproto.Message); ok {
-		gogoany, err := gogotypes.MarshalAny(pb)
-		if err != nil {
-			return nil, err
-		}
-		return &anypb.Any{
-			TypeUrl: gogoany.TypeUrl,
-			Value:   gogoany.Value,
-		}, nil
-	}
-
-	js, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-	pbs := &structpb.Struct{}
-	if err := protomarshal.Unmarshal(js, pbs); err != nil {
-		return nil, err
-	}
-	return protoconv.MessageToAnyWithError(pbs)
-}
-
 func ToMap(s Spec) (map[string]any, error) {
 	js, err := ToJSON(s)
 	if err != nil {
@@ -236,16 +200,6 @@ func toJSON(s Spec, pretty bool) ([]byte, error) {
 		indent = "    "
 	}
 
-	// golang protobuf. Use protoreflect.ProtoMessage to distinguish from gogo
-	// golang/protobuf 1.4+ will have this interface. Older golang/protobuf are gogo compatible
-	// but also not used by Istio at all.
-	if _, ok := s.(protoreflect.ProtoMessage); ok {
-		if pb, ok := s.(proto.Message); ok {
-			b, err := protomarshal.MarshalIndent(pb, indent)
-			return b, err
-		}
-	}
-
 	b := &bytes.Buffer{}
 	// gogo protobuf
 	if pb, ok := s.(gogoproto.Message); ok {
@@ -271,16 +225,6 @@ func ApplyYAML(s Spec, yml string) error {
 }
 
 func ApplyJSONStrict(s Spec, js string) error {
-	// golang protobuf. Use protoreflect.ProtoMessage to distinguish from gogo
-	// golang/protobuf 1.4+ will have this interface. Older golang/protobuf are gogo compatible
-	// but also not used by Istio at all.
-	if _, ok := s.(protoreflect.ProtoMessage); ok {
-		if pb, ok := s.(proto.Message); ok {
-			err := protomarshal.ApplyJSONStrict(js, pb)
-			return err
-		}
-	}
-
 	// gogo protobuf
 	if pb, ok := s.(gogoproto.Message); ok {
 		err := gogoprotomarshal.ApplyJSONStrict(js, pb)
@@ -293,16 +237,6 @@ func ApplyJSONStrict(s Spec, js string) error {
 }
 
 func ApplyJSON(s Spec, js string) error {
-	// golang protobuf. Use protoreflect.ProtoMessage to distinguish from gogo
-	// golang/protobuf 1.4+ will have this interface. Older golang/protobuf are gogo compatible
-	// but also not used by Istio at all.
-	if _, ok := s.(protoreflect.ProtoMessage); ok {
-		if pb, ok := s.(proto.Message); ok {
-			err := protomarshal.ApplyJSON(js, pb)
-			return err
-		}
-	}
-
 	// gogo protobuf
 	if pb, ok := s.(gogoproto.Message); ok {
 		err := gogoprotomarshal.ApplyJSON(js, pb)
@@ -321,22 +255,13 @@ func DeepCopy(s any) any {
 		return dc.DeepCopyInterface()
 	}
 
-	// golang protobuf. Use protoreflect.ProtoMessage to distinguish from gogo
-	// golang/protobuf 1.4+ will have this interface. Older golang/protobuf are gogo compatible
-	// but also not used by Istio at all.
-	if _, ok := s.(protoreflect.ProtoMessage); ok {
-		if pb, ok := s.(proto.Message); ok {
-			return protomarshal.Clone(pb)
-		}
-	}
-
 	// gogo protobuf
 	if pb, ok := s.(gogoproto.Message); ok {
 		return gogoproto.Clone(pb)
 	}
 
 	// If we don't have a deep copy method, we will have to do some reflection magic. Its not ideal,
-	// but all Istio types have an efficient deep copy.
+	// but all Dubbo types have an efficient deep copy.
 	js, err := json.Marshal(s)
 	if err != nil {
 		return nil

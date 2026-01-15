@@ -28,7 +28,6 @@ const (
 	PQC = "pqc"
 )
 
-// Define common security feature flags shared among the Istio components.
 var (
 	CompliancePolicy = env.Register("COMPLIANCE_POLICY", "",
 		`If set, applies policy-specific restrictions over all existing TLS

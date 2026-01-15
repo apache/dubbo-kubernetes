@@ -164,8 +164,6 @@ func (i *informer[I]) Register(f func(o Event[I])) HandlerRegistration {
 
 func (i *informer[I]) RegisterBatch(f func(o []Event[I]), runExistingState bool) HandlerRegistration {
 	synced := i.inf.AddEventHandler(informerEventHandler[I](func(o Event[I], initialSync bool) {
-		// Only process events if runExistingState is true OR this is not an initial sync event
-		// This matches Istio's behavior: runExistingState=false means skip initial sync events
 		if runExistingState || !initialSync {
 			// Log all events to help diagnose missing events
 			var nameStr, nsStr string

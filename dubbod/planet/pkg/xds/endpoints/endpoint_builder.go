@@ -190,7 +190,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 			// AND we're not in a proxyless gRPC scenario. For proxyless gRPC, always include endpoints.
 			// For non-proxyless (Envoy), we follow the service's publishNotReadyAddresses setting.
 			// But since this is proxyless gRPC, we should always include endpoints.
-			// Actually, let's follow Istio's behavior: always include endpoints, let the client decide.
+			// Actually, let's follow: always include endpoints, let the client decide.
 			// The OverrideHostStatus in Cluster config will control whether unhealthy endpoints can be used.
 
 			// Build LbEndpoint

@@ -33,7 +33,7 @@ func cdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) (*model.PushReques
 		return req, res
 	}
 
-	// with TLS configuration (ISTIO_MUTUAL), CDS must be pushed to update cluster TransportSocket.
+	// with TLS configuration (DUBBO_MUTUAL), CDS must be pushed to update cluster TransportSocket.
 	// Even if req.Full is false, we need to check if DestinationRule was updated, as it affects cluster TLS config.
 	if req != nil && req.ConfigsUpdated != nil {
 		// Check if DestinationRule was updated - this requires CDS push to update cluster TransportSocket

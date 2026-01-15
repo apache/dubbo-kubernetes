@@ -63,7 +63,7 @@ const (
 	MetadataClientRootCert  = "DUBBO_META_TLS_CLIENT_ROOT_CERT"
 )
 
-type SDSServiceFactory = func(_ *security.Options, _ security.SecretManager, _ *mesh.PrivateKeyProvider) SDSService
+type SDSServiceFactory = func(_ *security.Options, _ security.SecretManager) SDSService
 
 type SDSService interface {
 	OnSecretUpdate(resourceName string)
@@ -112,7 +112,7 @@ type AgentOptions struct {
 	DubbodSAN                  string
 	DownstreamGrpcOptions      []grpc.ServerOption
 	ProxyType                  model.NodeType
-	SDSFactory                 func(options *security.Options, workloadSecretCache security.SecretManager, pkpConf *mesh.PrivateKeyProvider) SDSService
+	SDSFactory                 func(options *security.Options, workloadSecretCache security.SecretManager) SDSService
 }
 
 func NewAgent(proxyConfig *mesh.ProxyConfig, agentOpts *AgentOptions, sopts *security.Options) *Agent {
@@ -398,8 +398,7 @@ func (a *Agent) initSdsServer(ctx context.Context) error {
 		return fmt.Errorf("failed to start workload secret manager %v", err)
 	}
 
-	pkpConf := a.proxyConfig.GetPrivateKeyProvider()
-	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache, pkpConf)
+	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache)
 	return a.registerSecretHandler(ctx)
 }
 
@@ -421,8 +420,7 @@ func (a *Agent) rebuildSDSWithNewCAClient() {
 		return
 	}
 	a.secretCache = sc
-	pkpConf := a.proxyConfig.GetPrivateKeyProvider()
-	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache, pkpConf)
+	a.sdsServer = a.cfg.SDSFactory(a.secOpts, a.secretCache)
 	if err := a.registerSecretHandler(context.Background()); err != nil {
 		log.Errorf("failed to refresh workload certificates after CA rebuild: %v", err)
 	} else {

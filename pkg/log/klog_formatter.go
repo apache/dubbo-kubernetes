@@ -30,11 +30,7 @@ import (
 type LogFormat int
 
 const (
-	// FormatKlog uses klog-style format (Istio default)
-	// Format: I1107 07:53:52.789817 3352004 server.go:652] message
 	FormatKlog LogFormat = iota
-	// FormatStandard uses standard format
-	// Format: 2025-11-07T07:53:52.787717694Z info default message
 	FormatStandard
 )
 
@@ -62,8 +58,6 @@ func GetLogFormat() LogFormat {
 	return logFormat
 }
 
-// formatKlogLine formats a log line in klog style (Istio format)
-// Format: I1107 07:53:52.789817 3352004 server.go:652] message
 func formatKlogLine(level Level, scope, message string, skip int) string {
 	now := time.Now()
 
