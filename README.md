@@ -11,11 +11,11 @@
   </a>
 </p>
 
-This project is gRPC service mesh built for Dubbo, with low resource usage, enabling high-performance inter-service communication, traffic control, and security.
+## Dubbo Service Mesh for Kubernetes
 
-## Introduction
+Implement an open-source service mesh for Dubbo in a Kubernetes cluster, integrate applications directly into the service mesh through the SDK, secure, connect, and observe services in a unified, lighter, and more efficient way, and support load balancing and service-to-service authentication.
 
-The repositories include:
+## Project Core
 
 - **api** — API definitions for Dubbo.
 - **client-go** — Go client library for the Dubbo API.

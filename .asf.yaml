@@ -21,7 +21,7 @@ notifications:
 
 github:
   homepage: https://dubbo.apache.org
-  description: "Grant Dubbo the ability to connect, secure, control, and observe."
+  description: "Dubbo Service Mesh for Kubernetes."
   features:
     # Enable wiki for documentation
     wiki: false
