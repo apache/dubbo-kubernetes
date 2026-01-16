@@ -4,12 +4,20 @@
   </a>
 </p>
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/apache/dubbo-kubernetes.svg)](https://pkg.go.dev/github.com/apache/dubbo-kubernetes)
-[![Go Report Card](https://goreportcard.com/badge/github.com/apache/dubbo-kubernetes)](https://goreportcard.com/report/github.com/apache/dubbo-kubernetes)
-[![codecov](https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg)](https://codecov.io/gh/apache/dubbo-kubernetes)
-![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
+<p align="center">
+  <a href="https://pkg.go.dev/github.com/apache/dubbo-kubernetes">
+    <img src="https://pkg.go.dev/badge/github.com/apache/dubbo-kubernetes.svg" />
+  </a>
+  <a href="https://goreportcard.com/report/github.com/apache/dubbo-kubernetes">
+    <img src="https://goreportcard.com/badge/github.com/apache/dubbo-kubernetes" />
+  </a>
+  <a href="https://codecov.io/gh/apache/dubbo-kubernetes">
+    <img src="https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg" />
+  </a>
+  <img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" />
+</p>
 
-## Dubbo Service Mesh for Kubernetes
+<h2 align="center">Dubbo Service Mesh for Kubernetes</h2>
 
 Implement an open-source service mesh for Dubbo in a Kubernetes cluster, integrate applications directly into the service mesh through the SDK, secure, connect, and observe services in a unified, lighter, and more efficient way, and support load balancing and service-to-service authentication.
 
