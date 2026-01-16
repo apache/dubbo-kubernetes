@@ -43,7 +43,7 @@ kube_clientset_name = versioned
 kube_listers_package = $(kube_base_output_package)/listers
 kube_informers_package = $(kube_base_output_package)/informers
 kube_applyconfiguration_package = $(kube_base_output_package)/applyconfiguration
-kube_go_header_text = header.go.txt
+kube_go_header_text = client-go/header.go.txt
 
 empty:=
 space := $(empty) $(empty)
