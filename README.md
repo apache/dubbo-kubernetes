@@ -1,15 +1,13 @@
-# Dubbo Service Mesh for Kubernetes
+<p align="center">
+  <a href="https://dubbo.apache.org">
+    <img src="logo/dubbo-transparentbackground-unframed.svg" alt="Apache Dubbo" title="Apache Dubbo" width="240" height="320" >
+  </a>
+</p>
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/apache/dubbo-kubernetes.svg)](https://pkg.go.dev/github.com/apache/dubbo-kubernetes)
 [![Go Report Card](https://goreportcard.com/badge/github.com/apache/dubbo-kubernetes)](https://goreportcard.com/report/github.com/apache/dubbo-kubernetes)
 [![codecov](https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg)](https://codecov.io/gh/apache/dubbo-kubernetes)
 ![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
-
-<p align="left">
-  <a href="https://dubbo.apache.org">
-    <img src="logo/dubbo-transparentbackground-unframed.svg" alt="Apache Dubbo" title="Apache Dubbo" width="240" height="320" >
-  </a>
-</p>
 
 ## Dubbo Service Mesh for Kubernetes
 
