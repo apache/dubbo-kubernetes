@@ -31,6 +31,7 @@ type KubernetesTokenPlugin struct {
 
 func CreateTokenPlugin() *KubernetesTokenPlugin {
 	return &KubernetesTokenPlugin{
+		// e.g: /var/run/secrets/kubernetes.io/serviceaccount/token
 		path: "",
 	}
 }

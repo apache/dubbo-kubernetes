@@ -100,8 +100,9 @@ type Server struct {
 	httpMux     *http.ServeMux
 	httpsMux    *http.ServeMux // webhooks
 
-	ConfigStores           []model.ConfigStoreController
-	configController       model.ConfigStoreController
+	ConfigStores     []model.ConfigStoreController
+	configController model.ConfigStoreController
+
 	multiclusterController *multicluster.Controller
 
 	fileWatcher filewatcher.FileWatcher

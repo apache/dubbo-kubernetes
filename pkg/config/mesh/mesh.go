@@ -145,6 +145,7 @@ func DefaultMeshGlobalConfig() *meshv1alpha1.MeshGlobalConfig {
 
 func DefaultProxyConfig() *meshv1alpha1.ProxyConfig {
 	return &meshv1alpha1.ProxyConfig{
+		ConfigPath:             constants.ConfigPathDir,
 		DiscoveryAddress:       "dubbod.dubbo-system.svc:15012",
 		ControlPlaneAuthPolicy: meshv1alpha1.AuthenticationPolicy_MUTUAL_TLS,
 		StatusPort:             15020,

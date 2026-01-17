@@ -125,8 +125,6 @@ func NewAgent(proxyConfig *mesh.ProxyConfig, agentOpts *AgentOptions, sopts *sec
 }
 
 func (a *Agent) Run(ctx context.Context) (func(), error) {
-	// TODO initLocalDNSServer?
-
 	if a.cfg.WorkloadIdentitySocketFile != filepath.Base(a.cfg.WorkloadIdentitySocketFile) {
 		return nil, fmt.Errorf("workload identity socket file override must be a filename, not a path: %s", a.cfg.WorkloadIdentitySocketFile)
 	}

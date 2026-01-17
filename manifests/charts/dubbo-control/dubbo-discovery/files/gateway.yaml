@@ -46,7 +46,7 @@ spec:
       serviceAccountName: {{ .ServiceAccount }}
       containers:
       - name: dubbo-proxy
-        image: mfordjody/proxyadapter:0.3.1-debug
+        image: mfordjody/proxyadapter:0.3.2-debug
         imagePullPolicy: Always
         ports:
         - containerPort: 15020
