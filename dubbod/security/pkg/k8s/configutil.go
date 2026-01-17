@@ -61,6 +61,10 @@ func InsertDataToConfigMap(client kclient.Client[*v1.ConfigMap], meta metav1.Obj
 	return nil
 }
 
+// Plugin new data into the ConfigMap.
+// Returns true if the content has changed.
+// Returns false if the content is exactly the same.
+// Avoids meaningless updates.
 func insertData(cm *v1.ConfigMap, data map[string]string) bool {
 	if cm.Data == nil {
 		cm.Data = data

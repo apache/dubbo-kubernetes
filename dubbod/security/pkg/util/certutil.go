@@ -46,14 +46,10 @@ func (cu CertUtilImpl) GetWaitTime(certBytes []byte, now time.Time) (time.Durati
 		return time.Duration(0), fmt.Errorf("certificate already expired at %s, but now is %s",
 			cert.NotAfter, now)
 	}
-	// Note: multiply time.Duration(int64) by an int (gracePeriodPercentage) will cause overflow (e.g.,
-	// when duration is time.Hour * 90000). So float64 is used instead.
 	gracePeriod := time.Duration(float64(cert.NotAfter.Sub(cert.NotBefore)) * (float64(cu.gracePeriodPercentage) / 100))
-	// waitTime is the duration between now and the grace period starts.
-	// It is the time until cert expiration minus the length of grace period.
+
 	waitTime := timeToExpire - gracePeriod
 	if waitTime < 0 {
-		// We are within the grace period.
 		return time.Duration(0), fmt.Errorf("got a certificate that should be renewed now")
 	}
 	return waitTime, nil

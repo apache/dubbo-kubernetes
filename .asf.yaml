@@ -34,6 +34,7 @@ github:
       # only disable force push
       # foo: bar
   labels:
+    - grpc
     - dubbo
     - consul
     - dubbo-go-pixiu

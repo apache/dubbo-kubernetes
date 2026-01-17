@@ -18,14 +18,12 @@ package security
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
@@ -56,9 +54,7 @@ const (
 )
 
 const (
-	BearerTokenPrefix = "Bearer "
-	K8sTokenPrefix    = "Dubbo "
-	CertSigner        = "CertSigner"
+	CertSigner = "CertSigner"
 )
 
 type AuthContext struct {
@@ -94,11 +90,6 @@ type AuthSource int
 
 const (
 	AuthSourceClientCertificate AuthSource = iota
-	AuthSourceIDToken
-)
-
-const (
-	authorizationMeta = "authorization"
 )
 
 type KubernetesInfo struct {
@@ -233,42 +224,6 @@ func CheckWorkloadCertificate(certChainFilePath, keyFilePath, rootCertFilePath s
 		return false
 	}
 	return true
-}
-
-func ExtractBearerToken(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("no metadata is attached")
-	}
-
-	authHeader, exists := md[authorizationMeta]
-	if !exists {
-		return "", fmt.Errorf("no HTTP authorization header exists")
-	}
-
-	for _, value := range authHeader {
-		if strings.HasPrefix(value, BearerTokenPrefix) {
-			return strings.TrimPrefix(value, BearerTokenPrefix), nil
-		}
-	}
-
-	return "", fmt.Errorf("no bearer token exists in HTTP authorization header")
-}
-
-func ExtractRequestToken(req *http.Request) (string, error) {
-	value := req.Header.Get(authorizationMeta)
-	if value == "" {
-		return "", fmt.Errorf("no HTTP authorization header exists")
-	}
-
-	if strings.HasPrefix(value, BearerTokenPrefix) {
-		return strings.TrimPrefix(value, BearerTokenPrefix), nil
-	}
-	if strings.HasPrefix(value, K8sTokenPrefix) {
-		return strings.TrimPrefix(value, K8sTokenPrefix), nil
-	}
-
-	return "", fmt.Errorf("no bearer token exists in HTTP authorization header")
 }
 
 // GetConnectionAddress extracts the peer address from the gRPC context.

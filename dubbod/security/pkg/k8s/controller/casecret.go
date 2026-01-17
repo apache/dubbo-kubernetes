@@ -22,6 +22,9 @@ type CaSecretController struct {
 	client corev1.CoreV1Interface
 }
 
+// Create a CA certificate secret
+// Rotate CAs
+// Synchronize CAs to various namespaces
 func NewCaSecretController(core corev1.CoreV1Interface) *CaSecretController {
 	cs := &CaSecretController{
 		client: core,

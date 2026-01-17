@@ -23,6 +23,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 )
 
+// If the credential generator does not have a JWT or is not configured with any secure credentials,
+// it will obtain them from the Kubernetes token plugin.
 func NewCredFetcher(credtype string) (security.CredFetcher, error) {
 	switch credtype {
 	case security.JWT, "":
