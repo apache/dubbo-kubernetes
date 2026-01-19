@@ -38,7 +38,7 @@ var (
 	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
 	MeshGlobalConfig               = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshGlobalConfig"}
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1", Kind: "PeerAuthentication"}
-	DestinationRule                     = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "DestinationRule"}
+	DestinationRule                = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "DestinationRule"}
 	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1", Kind: "VirtualService"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}

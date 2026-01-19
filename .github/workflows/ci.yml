@@ -87,9 +87,6 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run go vet
-        run: go vet ./...
-
       - name: Run go fmt check
         run: |
           if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then

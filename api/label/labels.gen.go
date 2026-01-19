@@ -1,4 +1,3 @@
-
 // GENERATED FILE -- DO NOT EDIT
 
 package label
@@ -27,15 +26,15 @@ type ResourceTypes int
 
 const (
 	Unknown ResourceTypes = iota
-    Any
-    Deployment
-    Gateway
-    HorizontalPodAutoscaler
-    Namespace
-    Pod
-    PodDisruptionBudget
-    Service
-    ServiceAccount
+	Any
+	Deployment
+	Gateway
+	HorizontalPodAutoscaler
+	Namespace
+	Pod
+	PodDisruptionBudget
+	Service
+	ServiceAccount
 )
 
 func (r ResourceTypes) String() string {
@@ -84,11 +83,10 @@ type Instance struct {
 }
 
 var (
-
-	OrgApacheDubboRev = Instance {
-		Name:          "dubbo.apache.org/rev",
-		Description:   "Dubbo control plane revision or tag associated with the "+
-                        "resource; e.g. `canary`",
+	OrgApacheDubboRev = Instance{
+		Name: "dubbo.apache.org/rev",
+		Description: "Dubbo control plane revision or tag associated with the " +
+			"resource; e.g. `canary`",
 		FeatureStatus: Beta,
 		Hidden:        false,
 		Deprecated:    false,
@@ -99,13 +97,13 @@ var (
 		},
 	}
 
-	IoK8sNetworkingGatewayGatewayClassName = Instance {
-		Name:          "gateway.networking.k8s.io/gateway-class-name",
-		Description:   "Automatically added to all resources [automatically "+
-                        "created](/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment) "+
-                        "by Dubbo Gateway controller to indicate which "+
-                        "`GatewayClass` resulted in the object creation. Users "+
-                        "should not set this label themselves.",
+	IoK8sNetworkingGatewayGatewayClassName = Instance{
+		Name: "gateway.networking.k8s.io/gateway-class-name",
+		Description: "Automatically added to all resources [automatically " +
+			"created](/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment) " +
+			"by Dubbo Gateway controller to indicate which " +
+			"`GatewayClass` resulted in the object creation. Users " +
+			"should not set this label themselves.",
 		FeatureStatus: Stable,
 		Hidden:        false,
 		Deprecated:    false,
@@ -118,13 +116,13 @@ var (
 		},
 	}
 
-	IoK8sNetworkingGatewayGatewayName = Instance {
-		Name:          "gateway.networking.k8s.io/gateway-name",
-		Description:   "Automatically added to all resources [automatically "+
-                        "created](/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment) "+
-                        "by Dubbo Gateway controller to indicate which `Gateway` "+
-                        "resulted in the object creation. Users should not set "+
-                        "this label themselves.",
+	IoK8sNetworkingGatewayGatewayName = Instance{
+		Name: "gateway.networking.k8s.io/gateway-name",
+		Description: "Automatically added to all resources [automatically " +
+			"created](/docs/tasks/traffic-management/ingress/gateway-api/#automated-deployment) " +
+			"by Dubbo Gateway controller to indicate which `Gateway` " +
+			"resulted in the object creation. Users should not set " +
+			"this label themselves.",
 		FeatureStatus: Stable,
 		Hidden:        false,
 		Deprecated:    false,
@@ -137,10 +135,10 @@ var (
 		},
 	}
 
-	OrgApacheDubboOperatorComponent = Instance {
-		Name:          "operator.dubbo.apache.org/component",
-		Description:   "Dubbo operator component name of the resource, e.g. "+
-                        "`Pilot`",
+	OrgApacheDubboOperatorComponent = Instance{
+		Name: "operator.dubbo.apache.org/component",
+		Description: "Dubbo operator component name of the resource, e.g. " +
+			"`Pilot`",
 		FeatureStatus: Alpha,
 		Hidden:        true,
 		Deprecated:    false,
@@ -149,10 +147,10 @@ var (
 		},
 	}
 
-	OrgApacheDubboOperatorManaged = Instance {
-		Name:          "operator.dubbo.apache.org/managed",
-		Description:   "Set to `Reconcile` if the Dubbo operator will reconcile "+
-                        "the resource.",
+	OrgApacheDubboOperatorManaged = Instance{
+		Name: "operator.dubbo.apache.org/managed",
+		Description: "Set to `Reconcile` if the Dubbo operator will reconcile " +
+			"the resource.",
 		FeatureStatus: Alpha,
 		Hidden:        true,
 		Deprecated:    false,
@@ -161,10 +159,10 @@ var (
 		},
 	}
 
-	OrgApacheDubboOperatorVersion = Instance {
-		Name:          "operator.dubbo.apache.org/version",
-		Description:   "The Dubbo operator version that installed the resource, "+
-                        "e.g. `1.6.0`",
+	OrgApacheDubboOperatorVersion = Instance{
+		Name: "operator.dubbo.apache.org/version",
+		Description: "The Dubbo operator version that installed the resource, " +
+			"e.g. `1.6.0`",
 		FeatureStatus: Alpha,
 		Hidden:        true,
 		Deprecated:    false,
@@ -173,10 +171,10 @@ var (
 		},
 	}
 
-	OrgApacheDubboProxylessInject = Instance {
-		Name:          "proxyless.dubbo.apache.org/inject",
-		Description:   "Specifies whether or not an proxyless adapter should be "+
-                        "automatically injected into the workload.",
+	OrgApacheDubboProxylessInject = Instance{
+		Name: "proxyless.dubbo.apache.org/inject",
+		Description: "Specifies whether or not an proxyless adapter should be " +
+			"automatically injected into the workload.",
 		FeatureStatus: Alpha,
 		Hidden:        false,
 		Deprecated:    false,
@@ -184,11 +182,10 @@ var (
 			Pod,
 		},
 	}
-
 )
 
 func AllResourceLabels() []*Instance {
-	return []*Instance {
+	return []*Instance{
 		&OrgApacheDubboRev,
 		&IoK8sNetworkingGatewayGatewayClassName,
 		&IoK8sNetworkingGatewayGatewayName,
@@ -200,7 +197,7 @@ func AllResourceLabels() []*Instance {
 }
 
 func AllResourceTypes() []string {
-	return []string {
+	return []string{
 		"Any",
 		"Deployment",
 		"Gateway",

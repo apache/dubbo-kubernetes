@@ -35,7 +35,7 @@ var (
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 	MeshGlobalConfig               = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshglobalconfigs"}
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1", Resource: "peerauthentications"}
-	DestinationRule                     = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "destinationrules"}
+	DestinationRule                = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "destinationrules"}
 	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1", Resource: "virtualservices"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
