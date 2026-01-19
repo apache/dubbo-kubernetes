@@ -18,10 +18,8 @@ package xds
 
 import (
 	"errors"
-	"strings"
-	"time"
-
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	"strings"
 
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
@@ -284,10 +282,6 @@ func shouldRespondDelta(con *Connection, request *discovery.DeltaDiscoveryReques
 		}
 
 		res, wildcard, _ := deltaWatchedResources(nil, request)
-		skip := request.TypeUrl == v3.AddressType && wildcard
-		if skip {
-			res = nil
-		}
 		con.proxy.WatchedResources[request.TypeUrl] = &model.WatchedResource{
 			TypeUrl:       request.TypeUrl,
 			ResourceNames: res,
@@ -342,22 +336,7 @@ func (conn *Connection) sendDelta(res *discovery.DeltaDiscoveryResponse, newReso
 		return conn.deltaStream.Send(res)
 	}
 	err := sendResonse()
-	if err == nil {
-		if !strings.HasPrefix(res.TypeUrl, v3.DebugType) {
-			conn.proxy.UpdateWatchedResource(res.TypeUrl, func(wr *model.WatchedResource) *model.WatchedResource {
-				if wr == nil {
-					wr = &model.WatchedResource{TypeUrl: res.TypeUrl}
-				}
-				// some resources dynamically update ResourceNames. Most don't though
-				if newResourceNames != nil {
-					wr.ResourceNames = newResourceNames
-				}
-				wr.NonceSent = res.Nonce
-				wr.LastSendTime = time.Now()
-				return wr
-			})
-		}
-	} else if status.Convert(err).Code() == codes.DeadlineExceeded {
+	if status.Convert(err).Code() == codes.DeadlineExceeded {
 		deltaLog.Infof("Timeout writing %s: %v", conn.ID(), v3.GetShortType(res.TypeUrl))
 	}
 	return err

@@ -1,3 +1,18 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # hadolint global ignore=SC2086
 
 ARG GOLANG_IMAGE=golang:1.24-bookworm
@@ -61,14 +76,10 @@ RUN --mount=type=cache,target=/tmp/go/pkg/mod \
 
 FROM binary_tools_context_base AS go_tools_2
 
-# Build Dubbo Kubernetes kubetype-gen tool from source
+# Build Dubbo Kubernetes kubetype-gen and protoc-gen-crd tool from source.
 # Copy pre-built kubetype-gen binary from project root
-# IMPORTANT: Build context must be project root (where kubetype-gen exists)
-# IMPORTANT: kubetype-gen must be built for Linux architecture (not macOS)
-# Build command: cd tools/cmd/kubetype-gen && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-extldflags -static -s -w" -o ../../../kubetype-gen .
-# For ARM64: use GOARCH=arm64 instead of amd64
-# Run: cd /path/to/dubbo-kubernetes && nerdctl build -f tools/build-tools/docker/Dockerfile -t build-tools .
-COPY --chmod=755 kubetype-gen /tmp/go/bin/kubetype-gen
+COPY --chmod=755 ./tools/bin/kubetype-gen /tmp/go/bin/kubetype-gen
+COPY --chmod=755 ./tools/bin/protoc-gen-crd /tmp/go/bin/protoc-gen-crd
 
 FROM ubuntu:noble AS base_os_context
 

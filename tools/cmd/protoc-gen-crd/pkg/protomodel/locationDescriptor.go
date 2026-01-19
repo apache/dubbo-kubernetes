@@ -14,19 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v3
+package protomodel
 
-import "github.com/apache/dubbo-kubernetes/pkg/model"
-
-const (
-	ClusterType    = model.ClusterType
-	ListenerType   = model.ListenerType
-	EndpointType   = model.EndpointType
-	RouteType      = model.RouteType
-	SecretType     = model.SecretType
-	HealthInfoType = model.HealthInfoType
+import (
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 )
 
-func GetShortType(typeURL string) string {
-	return model.GetShortType(typeURL)
+type LocationDescriptor struct {
+	*descriptor.SourceCodeInfo_Location
+	File *FileDescriptor
+}
+
+func newLocationDescriptor(desc *descriptor.SourceCodeInfo_Location, file *FileDescriptor) LocationDescriptor {
+	return LocationDescriptor{
+		SourceCodeInfo_Location: desc,
+		File:                    file,
+	}
 }

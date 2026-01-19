@@ -21,6 +21,7 @@ header:
     # Build and dependency files
     - '**/go.sum'
     - '**/*.pb.go'
+    - '**/*.gen.go'
     - '**/*.cache'
     
     # Configuration and template files

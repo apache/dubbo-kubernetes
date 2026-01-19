@@ -284,7 +284,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 
 	nonceValue := nonce(req.Push.PushVersion)
 	resp := &discovery.DiscoveryResponse{
-		ControlPlane: ControlPlane(w.TypeUrl),
+		ControlPlane: ControlPlane(),
 		TypeUrl:      w.TypeUrl,
 		VersionInfo:  req.Push.PushVersion,
 		Nonce:        nonceValue,
@@ -556,7 +556,7 @@ func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource
 	}
 	defer func() {}()
 	resp := &discovery.DeltaDiscoveryResponse{
-		ControlPlane: ControlPlane(w.TypeUrl),
+		ControlPlane: ControlPlane(),
 		TypeUrl:      w.TypeUrl,
 		// TODO: send different version for incremental eds
 		SystemVersionInfo: req.Push.PushVersion,
@@ -590,9 +590,6 @@ func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource
 		} else {
 			newResourceNames = resourceNamesSet(res)
 		}
-	}
-	if neverRemoveDelta(w.TypeUrl) {
-		resp.RemovedResources = nil
 	}
 	if len(resp.RemovedResources) > 0 {
 		deltaLog.Infof("%v REMOVE for node:%s %v", v3.GetShortType(w.TypeUrl), con.ID(), resp.RemovedResources)
@@ -636,12 +633,8 @@ func (s *DiscoveryServer) findGenerator(typeURL string, con *Connection) model.X
 	// some types to use custom generators - for example EDS.
 	g := con.proxy.XdsResourceGenerator
 	if g == nil {
-		if strings.HasPrefix(typeURL, TypeDebugPrefix) {
-			g = s.Generators["event"]
-		} else {
-			// TODO move this to just directly using the resource TypeUrl
-			g = s.Generators["api"] // default to "MCP" generators - any type supported by store
-		}
+		// TODO move this to just directly using the resource TypeUrl
+		g = s.Generators["api"] // default to "MCP" generators - any type supported by store
 	}
 	return g
 }
@@ -660,20 +653,7 @@ func shouldSetWatchedResources(w *model.WatchedResource) bool {
 	if w == nil {
 		return false
 	}
-	if requiresResourceNamesModification(w.TypeUrl) {
-		return false
-	}
 	return xds.IsWildcardTypeURL(w.TypeUrl)
-}
-
-func requiresResourceNamesModification(typeURL string) bool {
-	return typeURL == v3.AddressType
-}
-
-func neverRemoveDelta(typeURL string) bool {
-	// Align with Envoy bug https://github.com/envoyproxy/envoy/issues/32823
-	// Skip removals for ExtensionConfiguration to avoid flapping.
-	return typeURL == v3.ExtensionConfigurationType
 }
 
 // extractRouteNamesFromLDS extracts route names referenced in LDS listener resources
@@ -807,11 +787,7 @@ func extractEDSClusterNamesFromCDS(clusters model.Resources) []string {
 	return clusterNames.UnsortedList()
 }
 
-func ControlPlane(typ string) *core.ControlPlane {
-	if typ != TypeDebugSyncronization {
-		// Currently only TypeDebugSyncronization utilizes this so don't both sending otherwise
-		return nil
-	}
+func ControlPlane() *core.ControlPlane {
 	cp, _ := controlPlane.Get()
 	return cp
 }

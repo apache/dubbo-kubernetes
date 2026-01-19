@@ -18,12 +18,6 @@ package xds
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
-)
-
-const (
-	TypeDebugPrefix         = v3.DebugType + "/"
-	TypeDebugSyncronization = v3.DebugType + "/syncz"
 )
 
 type StatusGen struct {

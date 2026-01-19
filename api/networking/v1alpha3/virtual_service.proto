@@ -16,6 +16,10 @@
 
 syntax = "proto3";
 
+// $schema: dubbo.networking.v1alpha3.VirtualService
+// $title: Virtual Service
+// $description: Configuration affecting label/content routing, sni routing, etc.
+
 package dubbo.networking.v1alpha3;
 
 import "google/api/field_behavior.proto";
@@ -24,10 +28,7 @@ import "google/protobuf/wrappers.proto";
 
 option go_package = "/api/networking/v1alpha3";
 
-// VirtualService defines a set of traffic routing rules to apply when a host is
-// addressed. Each routing rule defines matching criteria for traffic of a specific
-// protocol. If the traffic is matched, then it is sent to a named destination service
-// (or subset/version of it) defined in the registry.
+// Configuration affecting traffic routing.
 //
 // <!-- crd generation tags
 // +cue-gen:VirtualService:groupName:networking.dubbo.apache.org
@@ -52,22 +53,53 @@ option go_package = "/api/networking/v1alpha3";
 // +k8s:deepcopy-gen=true
 // -->
 message VirtualService {
+  // The hosts field applies to both HTTP and TCP services. Service inside
+  // the mesh, i.e., those found in the service registry, must always be
+  // referred to using their alphanumeric names.
   repeated string hosts = 1;
+  // An ordered list of route rules for HTTP traffic.
   repeated HTTPRoute http = 2;
+  // A list of namespaces to which this virtual service is exported. Exporting a
+  // virtual service allows it to be used by sidecars and gateways defined in
+  // other namespaces. This feature provides a mechanism for service owners
+  // and mesh administrators to control the visibility of virtual services
+  // across namespace boundaries.
+  //
+  // If no namespaces are specified then the virtual service is exported to all
+  // namespaces by default.
+  //
+  // The value "." is reserved and defines an export to the same namespace that
+  // the virtual service is declared in. Similarly the value "*" is reserved and
+  // defines an export to all namespaces.
   repeated string export_to = 3;
 }
 
 message Destination {
+  // The name of a service from the service registry.
   string host = 1 [(google.api.field_behavior) = REQUIRED];
+  // The name of a subset within the service. Applicable only to services
+  // within the mesh. The subset must be defined in a corresponding
+  // DestinationRule.
   string subset = 2;
 }
 
+// Describes match conditions and actions for routing HTTP/1.1, HTTP2, and
+// gRPC traffic. See VirtualService for usage examples.
 message HTTPRoute {
+  // A HTTP rule can either return a direct_response, redirect or forward (default) traffic.
+  // The forwarding target can be one of several versions of a service (see
+  // glossary in beginning of document). Weights associated with the
+  // service version determine the proportion of traffic it receives.
   repeated HTTPRouteDestination route = 1;
 }
 
 message HTTPRouteDestination {
+  // Destination uniquely identifies the instances of a service
+  // to which the request/connection should be forwarded to.
   Destination destination = 1 [(google.api.field_behavior) = REQUIRED];
+  // Weight specifies the relative proportion of traffic to be forwarded to the destination. A destination will receive `weight/(sum of all weights)` requests.
+  // If there is only one destination in a rule, it will receive all traffic.
+  // Otherwise, if weight is `0`, the destination will not receive any traffic.
   int32 weight = 2;
 }
 

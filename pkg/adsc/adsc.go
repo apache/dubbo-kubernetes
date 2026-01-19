@@ -24,7 +24,6 @@ import (
 	"math"
 	"net"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,11 +34,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -48,12 +47,13 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
-	pstruct "google.golang.org/protobuf/types/known/structpb"
-
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
 
 var log = dubbolog.RegisterScope("adsc", "adsc debugging")
+
+type ResponseHandler interface {
+	HandleResponse(con *ADSC, response *discovery.DiscoveryResponse)
+}
 
 const (
 	defaultClientMaxReceiveMessageSize = math.MaxInt32
@@ -61,8 +61,12 @@ const (
 	defaultInitialWindowSize           = 1024 * 1024 // default gRPC ConnWindowSize
 )
 
-type ResponseHandler interface {
-	HandleResponse(con *ADSC, response *discovery.DiscoveryResponse)
+func defaultGrpcDialOptions() []grpc.DialOption {
+	return []grpc.DialOption{
+		grpc.WithInitialWindowSize(int32(defaultInitialWindowSize)),
+		grpc.WithInitialConnWindowSize(int32(defaultInitialConnWindowSize)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(defaultClientMaxReceiveMessageSize)),
+	}
 }
 
 type Config struct {
@@ -82,12 +86,8 @@ type Config struct {
 	XDSRootCAFile string
 	// XDSSAN is the expected SAN of the XDS server. If not set, the ProxyConfig.DiscoveryAddress is used.
 	XDSSAN string
-	// Workload defaults to 'test'
-	Workload string
 	// Revision for this control plane instance. We will only read configs that match this revision.
 	Revision string
-	// Meta includes additional metadata for the node
-	Meta *pstruct.Struct
 	// BackoffPolicy determines the reconnect policy.
 	BackoffPolicy backoff.BackOff
 }
@@ -107,18 +107,12 @@ type ADSC struct {
 	errChan     chan error
 	XDSUpdates  chan *discovery.DiscoveryResponse
 	VersionInfo map[string]string
-
 	// Last received message, by type
 	Received map[string]*discovery.DiscoveryResponse
-
-	mutex sync.RWMutex
-
-	Mesh *v1alpha1.MeshGlobalConfig
-
-	Store model.ConfigStore
-	cfg   *ADSConfig
-	// sendNodeMeta is set to true if the connection is new - and we need to send node meta.,
-	sendNodeMeta bool
+	mutex    sync.RWMutex
+	Mesh     *v1alpha1.MeshGlobalConfig
+	Store    model.ConfigStore
+	cfg      *ADSConfig
 	// initialLoad tracks the time to receive the initial configuration.
 	initialLoad time.Duration
 	// indicates if the initial LDS request is sent
@@ -141,11 +135,9 @@ type ADSC struct {
 // ADSConfig for the ADS connection.
 type ADSConfig struct {
 	Config
-
 	// InitialDiscoveryRequests is a list of resources to watch at first, represented as URLs (for new XDS resource naming)
 	// or type URLs.
 	InitialDiscoveryRequests []*discovery.DiscoveryRequest
-
 	// ResponseHandler will be called on each DiscoveryResponse.
 	// TODO: mirror Generator, allow adding handler per type
 	ResponseHandler ResponseHandler
@@ -180,6 +172,16 @@ func New(discoveryAddr string, opts *ADSConfig) (*ADSC, error) {
 	return adsc, nil
 }
 
+func setDefaultConfig(config *Config) Config {
+	if config == nil {
+		config = &Config{}
+	}
+	if config.Namespace == "" {
+		config.Namespace = "default"
+	}
+	return *config
+}
+
 func ConfigInitialRequests() []*discovery.DiscoveryRequest {
 	out := make([]*discovery.DiscoveryRequest, 0, len(collections.Planet.All())+1)
 	out = append(out, &discovery.DiscoveryRequest{
@@ -192,16 +194,6 @@ func ConfigInitialRequests() []*discovery.DiscoveryRequest {
 	}
 
 	return out
-}
-
-func setDefaultConfig(config *Config) Config {
-	if config == nil {
-		config = &Config{}
-	}
-	if config.Namespace == "" {
-		config.Namespace = "default"
-	}
-	return *config
 }
 
 func dialWithConfig(ctx context.Context, config *Config) (*grpc.ClientConn, error) {
@@ -278,40 +270,6 @@ func tlsConfig(config *Config) (*tls.Config, error) {
 	}, nil
 }
 
-func defaultGrpcDialOptions() []grpc.DialOption {
-	return []grpc.DialOption{
-		// TODO(SpecialYang) maybe need to make it configurable.
-		grpc.WithInitialWindowSize(int32(defaultInitialWindowSize)),
-		grpc.WithInitialConnWindowSize(int32(defaultInitialConnWindowSize)),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(defaultClientMaxReceiveMessageSize)),
-	}
-}
-
-// Run will create a new stream using the existing grpc client connection and send the initial xds requests.
-// And then it will run a go routine receiving and handling xds response.
-// Note: it is non blocking
-func (a *ADSC) Run() error {
-	var err error
-	a.client = discovery.NewAggregatedDiscoveryServiceClient(a.conn)
-	a.stream, err = a.client.StreamAggregatedResources(context.Background())
-	if err != nil {
-		return err
-	}
-	a.sendNodeMeta = true
-	a.initialLoad = 0
-	a.initialLds = false
-	// Send the initial requests
-	for _, r := range a.cfg.InitialDiscoveryRequests {
-		if r.TypeUrl == v3.ClusterType {
-			a.watchTime = time.Now()
-		}
-		_ = a.Send(r)
-	}
-
-	go a.handleRecv()
-	return nil
-}
-
 // Dial connects to a ADS server, with optional MTLS authentication if a cert dir is specified.
 func (a *ADSC) Dial() error {
 	conn, err := dialWithConfig(context.Background(), &a.cfg.Config)
@@ -324,10 +282,6 @@ func (a *ADSC) Dial() error {
 
 // Raw send of a request.
 func (a *ADSC) Send(req *discovery.DiscoveryRequest) error {
-	if a.sendNodeMeta {
-		req.Node = a.node()
-		a.sendNodeMeta = false
-	}
 	req.ResponseNonce = time.Now().String()
 	return a.stream.Send(req)
 }
@@ -345,10 +299,34 @@ func (a *ADSC) WaitClear() {
 }
 
 // HasSynced returns true if configs have synced
-// MCP support removed - it's a legacy protocol replaced by APIGenerator
 func (a *ADSC) HasSynced() bool {
-	// MCP was replaced by APIGenerator, not needed for proxyless mesh
 	return true
+}
+
+// Run will create a new stream using the existing grpc client connection and send the initial xds requests.
+// And then it will run a go routine receiving and handling xds response.
+// Note: it is non blocking
+func (a *ADSC) Run() error {
+	var err error
+	a.client = discovery.NewAggregatedDiscoveryServiceClient(a.conn)
+	a.stream, err = a.client.StreamAggregatedResources(context.Background())
+	if err != nil {
+		return err
+	}
+
+	a.initialLoad = 0
+	a.initialLds = false
+
+	// Send the initial requests
+	for _, r := range a.cfg.InitialDiscoveryRequests {
+		if r.TypeUrl == v3.ClusterType {
+			a.watchTime = time.Now()
+		}
+		_ = a.Send(r)
+	}
+
+	go a.handleReceive()
+	return nil
 }
 
 // Close the stream.
@@ -377,10 +355,6 @@ func (a *ADSC) reconnect() {
 func (a *ADSC) ack(msg *discovery.DiscoveryResponse) {
 	var resources []string
 
-	if strings.HasPrefix(msg.TypeUrl, v3.DebugType) {
-		return
-	}
-
 	if msg.TypeUrl == v3.EndpointType {
 		for c := range a.edsClusters {
 			resources = append(resources, c)
@@ -395,13 +369,12 @@ func (a *ADSC) ack(msg *discovery.DiscoveryResponse) {
 	_ = a.stream.Send(&discovery.DiscoveryRequest{
 		ResponseNonce: msg.Nonce,
 		TypeUrl:       msg.TypeUrl,
-		Node:          a.node(),
 		VersionInfo:   msg.VersionInfo,
 		ResourceNames: resources,
 	})
 }
 
-func (a *ADSC) handleRecv() {
+func (a *ADSC) handleReceive() {
 	// We connected, so reset the backoff
 	if a.cfg.BackoffPolicy != nil {
 		a.cfg.BackoffPolicy.Reset()
@@ -508,7 +481,6 @@ func (a *ADSC) handleRecv() {
 	}
 }
 
-// nolint: staticcheck
 func (a *ADSC) handleLDS(ll []*listener.Listener) {
 	lh := map[string]*listener.Listener{}
 	lt := map[string]*listener.Listener{}
@@ -561,7 +533,7 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	if len(routes) > 0 {
-		a.sendRsc(v3.RouteType, routes)
+		a.sendResources(v3.RouteType, routes)
 	}
 	a.httpListeners = lh
 	a.tcpListeners = lt
@@ -629,7 +601,7 @@ func (a *ADSC) handleCDS(ll []*cluster.Cluster) {
 	log.Infof("CDS: %d size=%d", len(cn), cdsSize)
 
 	if len(cn) > 0 {
-		a.sendRsc(v3.EndpointType, cn)
+		a.sendResources(v3.EndpointType, cn)
 	}
 
 	a.mutex.Lock()
@@ -657,7 +629,6 @@ func (a *ADSC) handleEDS(eds []*endpoint.ClusterLoadAssignment) {
 	if a.initialLoad == 0 && !a.initialLds {
 		// first load - Envoy loads listeners after endpoints
 		_ = a.stream.Send(&discovery.DiscoveryRequest{
-			Node:    a.node(),
 			TypeUrl: v3.ListenerType,
 		})
 		a.initialLds = true
@@ -673,28 +644,7 @@ func (a *ADSC) handleEDS(eds []*endpoint.ClusterLoadAssignment) {
 	}
 }
 
-func buildNode(config *Config) *core.Node {
-	n := &core.Node{}
-	if config.Meta == nil {
-		n.Metadata = &pstruct.Struct{
-			Fields: map[string]*pstruct.Value{
-				"DUBBO_VERSION": {Kind: &pstruct.Value_StringValue{StringValue: "65536.65536.65536"}},
-			},
-		}
-	} else {
-		n.Metadata = config.Meta
-		if config.Meta.Fields["DUBBO_VERSION"] == nil {
-			config.Meta.Fields["DUBBO_VERSION"] = &pstruct.Value{Kind: &pstruct.Value_StringValue{StringValue: "65536.65536.65536"}}
-		}
-	}
-	return n
-}
-
-func (a *ADSC) node() *core.Node {
-	return buildNode(&a.cfg.Config)
-}
-
-func (a *ADSC) sendRsc(typeurl string, rsc []string) {
+func (a *ADSC) sendResources(typeurl string, resource []string) {
 	ex := a.Received[typeurl]
 	version := ""
 	nonce := ""
@@ -705,8 +655,7 @@ func (a *ADSC) sendRsc(typeurl string, rsc []string) {
 	_ = a.stream.Send(&discovery.DiscoveryRequest{
 		ResponseNonce: nonce,
 		VersionInfo:   version,
-		Node:          a.node(),
 		TypeUrl:       typeurl,
-		ResourceNames: rsc,
+		ResourceNames: resource,
 	})
 }
