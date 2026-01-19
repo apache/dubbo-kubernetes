@@ -21,7 +21,6 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -35,11 +34,7 @@ var (
 
 var wellKnownPorts = sets.New[int32](DNS)
 
-func ConvertProtocol(port int32, portName string, proto corev1.Protocol, appProto *string) protocol.Instance {
-	if proto == corev1.ProtocolUDP {
-		return protocol.UDP
-	}
-
+func ConvertProtocol(port int32, portName string, appProto *string) protocol.Instance {
 	// If application protocol is set, we will use that
 	// If not, use the port name
 	name := portName
@@ -53,8 +48,6 @@ func ConvertProtocol(port int32, portName string, proto corev1.Protocol, appProt
 		case "kubernetes.io/h2c":
 			return protocol.HTTP2
 		// WebSocket over cleartext
-		case "kubernetes.io/ws":
-			return protocol.HTTP
 		// WebSocket over TLS
 		case "kubernetes.io/wss":
 			return protocol.HTTPS
@@ -75,10 +68,7 @@ func ConvertProtocol(port int32, portName string, proto corev1.Protocol, appProt
 
 	p := protocol.Parse(name)
 	if p == protocol.Unsupported {
-		// Make TCP as default protocol for well know ports if protocol is not specified.
-		if wellKnownPorts.Contains(port) {
-			return protocol.TCP
-		}
+		// TODO
 	}
 	return p
 }

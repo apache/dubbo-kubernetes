@@ -106,18 +106,18 @@ func (esc *endpointSliceController) onEventInternal(_, ep *v1.EndpointSlice, eve
 	}
 
 	configsUpdated := sets.New[model.ConfigKey]()
-	supportsOnlyHTTP := true
-	for _, modelSvc := range esc.c.servicesForNamespacedName(config.NamespacedName(svc)) {
-		for _, p := range modelSvc.Ports {
-			if !p.Protocol.IsHTTP() {
-				supportsOnlyHTTP = false
-				break
-			}
-		}
-		if supportsOnlyHTTP {
-			configsUpdated.Insert(model.ConfigKey{Kind: kind.ServiceEntry, Name: modelSvc.Hostname.String(), Namespace: svc.Namespace})
-		}
-	}
+	// supportsOnlyHTTP := true
+	// for _, modelSvc := range esc.c.servicesForNamespacedName(config.NamespacedName(svc)) {
+	// 	for _, p := range modelSvc.Ports {
+	// 		if !p.Protocol.IsHTTP() {
+	// 			supportsOnlyHTTP = false
+	// 			break
+	// 		}
+	// 	}
+	// 	if supportsOnlyHTTP {
+	// 		configsUpdated.Insert(model.ConfigKey{Kind: kind.ServiceEntry, Name: modelSvc.Hostname.String(), Namespace: svc.Namespace})
+	// 	}
+	// }
 
 	if len(configsUpdated) > 0 {
 		esc.c.opts.XDSUpdater.ConfigUpdate(&model.PushRequest{

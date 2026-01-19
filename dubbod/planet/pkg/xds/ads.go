@@ -307,12 +307,6 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		return nil
 	}
 
-	if strings.HasPrefix(req.TypeUrl, v3.DebugType) {
-		return s.pushXds(con,
-			&model.WatchedResource{TypeUrl: req.TypeUrl, ResourceNames: sets.New(req.ResourceNames...)},
-			&model.PushRequest{Full: true, Push: con.proxy.LastPushContext, Forced: true})
-	}
-
 	shouldRespond, delta := xds.ShouldRespond(con.proxy, con.ID(), req)
 
 	// Log NEW requests (will respond) at INFO level so every grpcurl request is visible
@@ -331,7 +325,6 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 		resourceNamesStr = " [wildcard]"
 	}
 
-	// Always log at INFO so手工调用 grpcurl 也能看到完整请求轨迹
 	if shouldRespond {
 		log.Infof("%s: REQ %s resources:%d nonce:%s%s (will respond)", stype,
 			con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
@@ -407,11 +400,6 @@ func (s *DiscoveryServer) processDeltaRequest(req *discovery.DeltaDiscoveryReque
 	if req.TypeUrl == v3.HealthInfoType {
 		return nil
 	}
-	if strings.HasPrefix(req.TypeUrl, v3.DebugType) {
-		return s.pushDeltaXds(con,
-			&model.WatchedResource{TypeUrl: req.TypeUrl, ResourceNames: sets.New(req.ResourceNamesSubscribe...)},
-			&model.PushRequest{Full: true, Push: con.proxy.LastPushContext, Forced: true})
-	}
 
 	shouldRespond := shouldRespondDelta(con, req)
 	if !shouldRespond {
@@ -460,7 +448,6 @@ var PushOrder = []string{
 	v3.EndpointType,
 	v3.ListenerType,
 	v3.RouteType,
-	v3.AddressType,
 }
 
 var KnownOrderedTypeUrls = sets.New(PushOrder...)

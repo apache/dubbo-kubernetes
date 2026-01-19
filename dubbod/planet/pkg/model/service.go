@@ -483,7 +483,7 @@ func (ports PortList) Equals(other PortList) bool {
 
 func (ports PortList) GetByPort(num int) (*Port, bool) {
 	for _, port := range ports {
-		if port.Port == num && port.Protocol != protocol.UDP {
+		if port.Port == num {
 			return port, true
 		}
 	}

@@ -426,19 +426,6 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 			// forward to dubbod
 			con.sendRequest(req)
 			if !initialRequestsSent.Load() && req.TypeUrl == model.ListenerType {
-				// fire off an initial NDS request
-				if _, f := p.handlers[model.NameTableType]; f {
-					ndsReq := &discovery.DiscoveryRequest{
-						TypeUrl: model.NameTableType,
-					}
-					// Include Node in internal requests
-					con.nodeMutex.RLock()
-					if con.node != nil {
-						ndsReq.Node = con.node
-					}
-					con.nodeMutex.RUnlock()
-					con.sendRequest(ndsReq)
-				}
 				// fire off an initial PCDS request
 				if _, f := p.handlers[model.ProxyConfigType]; f {
 					pcdsReq := &discovery.DiscoveryRequest{
@@ -512,12 +499,6 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 			// Only log at debug level to reduce noise - these are normal operations
 			proxyLog.Debugf("connection #%d forwarding request: TypeUrl=%s, Node=%v",
 				con.conID, model.GetShortType(req.TypeUrl), req.Node != nil && req.Node.Id != "")
-			if req.TypeUrl == model.ExtensionConfigurationType {
-				if req.VersionInfo != "" {
-					p.ecdsLastAckVersion.Store(req.VersionInfo)
-				}
-				p.ecdsLastNonce.Store(req.ResponseNonce)
-			}
 			if err := con.upstream.Send(req); err != nil {
 				proxyLog.Errorf("connection #%d failed to send request upstream: TypeUrl=%s, error=%v",
 					con.conID, model.GetShortType(req.TypeUrl), err)

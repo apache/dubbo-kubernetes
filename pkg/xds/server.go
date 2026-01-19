@@ -209,12 +209,9 @@ func Receive(ctx ConnectionContext) {
 
 func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
 	conn := ctx.XdsConnection()
-	sendResponse := func() error {
-		return conn.stream.Send(res)
-	}
-	err := sendResponse()
+	err := conn.stream.Send(res)
 	if err == nil {
-		if res.Nonce != "" && !strings.HasPrefix(res.TypeUrl, model.DebugType) {
+		if res.Nonce != "" {
 			ctx.Watcher().UpdateWatchedResource(res.TypeUrl, func(wr *WatchedResource) *WatchedResource {
 				if wr == nil {
 					wr = &WatchedResource{TypeUrl: res.TypeUrl}
@@ -224,8 +221,6 @@ func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
 				return wr
 			})
 		}
-	} else if status.Convert(err).Code() == codes.DeadlineExceeded {
-		log.Infof("Timeout writing %s: %v", conn.conID, model.GetShortType(res.TypeUrl))
 	}
 	return err
 }
@@ -438,7 +433,7 @@ func shouldUnsubscribe(request *discovery.DiscoveryRequest) bool {
 
 func IsWildcardTypeURL(typeURL string) bool {
 	switch typeURL {
-	case model.SecretType, model.EndpointType, model.RouteType, model.ExtensionConfigurationType:
+	case model.SecretType, model.EndpointType, model.RouteType:
 		// By XDS spec, these are not wildcard
 		return false
 	case model.ClusterType, model.ListenerType:
