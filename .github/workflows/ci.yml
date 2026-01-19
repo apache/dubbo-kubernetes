@@ -87,18 +87,15 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run go vet (ignore copylocks)
+      - name: Run go vet
         run: |
           set -euo pipefail
           tmp=$(mktemp)
-          # run go vet, capture stderr (vet writes to stderr)
-          if go vet ./... 2> "$tmp"; then
-            echo "go vet: no issues"
-            rm -f "$tmp"
-            exit 0
-          fi
-          # filter out copylocks messages
+          # run go vet, capture stderr
+          go vet ./... 2> "$tmp" || true
+          # filter out all copylocks warnings (assignment copies lock value / passes lock by value)
           grep -vE 'assignment copies lock value|passes lock by value' "$tmp" > "${tmp}.filtered" || true
+          # check if anything remains
           if [ -s "${tmp}.filtered" ]; then
             cat "${tmp}.filtered" >&2
             rm -f "$tmp" "${tmp}.filtered"
