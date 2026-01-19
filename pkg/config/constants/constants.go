@@ -19,21 +19,22 @@ package constants
 const (
 	UnspecifiedIP = "0.0.0.0"
 
-	DubboSystemNamespace               = "dubbo-system"
-	DefaultClusterLocalDomain          = "cluster.local"
-	DefaultClusterName                 = "Kubernetes"
-	ServiceClusterName                 = "dubbo-proxy"
-	ConfigPathDir                      = "./etc/dubbo/proxy"
-	BinaryPathFilename                 = "/usr/local/bin/planet-agent"
-	KeyFilename                        = "key.pem"
-	CertChainFilename                  = "cert-chain.pem"
+	DubboSystemNamespace = "dubbo-system"
+	KubeSystemNamespace  = "kube-system"
+
+	DefaultClusterLocalDomain = "cluster.local"
+	DefaultClusterName        = "Kubernetes"
+
+	CertChainFilename = "cert-chain.pem"
+
 	CertProviderDubbod                 = "dubbod"
 	CertProviderKubernetes             = "kubernetes"
 	CertProviderKubernetesSignerPrefix = "k8s.io/"
 	CertProviderNone                   = "none"
 	CertProviderCustom                 = "custom"
-	CACertNamespaceConfigMapDataName   = "root-cert.pem"
-	CACRLNamespaceConfigMapDataName    = "ca-crl.pem"
+
+	CACertNamespaceConfigMapDataName = "root-cert.pem"
+	CACRLNamespaceConfigMapDataName  = "ca-crl.pem"
 
 	PodInfoAnnotationsPath = "./etc/dubbo/pod/annotations"
 
@@ -42,14 +43,14 @@ const (
 	PlanetWellKnownDNSCertPath   = "./var/run/secrets/dubbod/tls/"
 	PlanetWellKnownDNSCaCertPath = "./var/run/secrets/dubbod/ca/"
 
+	ConfigPathDir                       = "./etc/dubbo/proxy"
+	KeyFilename                         = "key.pem"
 	DefaultPlanetTLSCert                = PlanetWellKnownDNSCertPath + "tls.crt"
 	DefaultPlanetTLSKey                 = PlanetWellKnownDNSCertPath + "tls.key"
 	DefaultPlanetTLSCaCert              = PlanetWellKnownDNSCaCertPath + "root-cert.pem"
 	DefaultPlanetTLSCaCertAlternatePath = PlanetWellKnownDNSCertPath + "ca.crt"
 
 	AlwaysReject = "internal.dubbo.apache.org/webhook-always-reject"
-
-	KubeSystemNamespace string = "kube-system"
 
 	ManagedGatewayControllerLabel = "dubbo.apache.org-gateway-controller"
 )

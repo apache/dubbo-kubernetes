@@ -41,6 +41,13 @@ type Option struct {
 	MaxInterval     time.Duration
 }
 
+func DefaultOption() Option {
+	return Option{
+		InitialInterval: defaultInitialInterval,
+		MaxInterval:     defaultMaxInterval,
+	}
+}
+
 type ExponentialBackOff struct {
 	exponentialBackOff *backoff.ExponentialBackOff
 }
@@ -79,12 +86,5 @@ func (b ExponentialBackOff) RetryWithContext(ctx context.Context, operation func
 			return fmt.Errorf("%v with last error: %v", context.DeadlineExceeded, err)
 		case <-time.After(next):
 		}
-	}
-}
-
-func DefaultOption() Option {
-	return Option{
-		InitialInterval: defaultInitialInterval,
-		MaxInterval:     defaultMaxInterval,
 	}
 }

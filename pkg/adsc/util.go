@@ -23,6 +23,8 @@ import (
 )
 
 func getClientCertFn(config *Config) func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	// Request a certificate chain and private key from SecretManager,
+	// combine them into a tls.Certificate object, and return it for use by TLS.
 	if config.SecretManager != nil {
 		return func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			key, err := config.SecretManager.GenerateSecret(security.WorkloadKeyCertResourceName)
@@ -36,6 +38,7 @@ func getClientCertFn(config *Config) func(requestInfo *tls.CertificateRequestInf
 			return &clientCert, nil
 		}
 	}
+	// local file
 	if config.CertDir != "" {
 		return func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			certName := config.CertDir + "/cert-chain.pem"
@@ -47,6 +50,7 @@ func getClientCertFn(config *Config) func(requestInfo *tls.CertificateRequestInf
 		}
 	}
 
+	// If neither option is selected,
+	// mTLS client certificates will not be enabled.
 	return nil
 }
-

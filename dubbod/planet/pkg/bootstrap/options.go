@@ -53,7 +53,6 @@ type PlanetArgs struct {
 	CtrlZOptions         *ctrlz.Options
 	KeepaliveOptions     *keepalive.Options
 	KrtDebugger          *krt.DebugHandler `json:"-"`
-	JwtRule              string
 	Revision             string
 }
 

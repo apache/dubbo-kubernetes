@@ -16,12 +16,18 @@
 
 syntax = "proto3";
 
+// $schema: dubbo.security.v1alpha3.PeerAuthentication
+// $title: PeerAuthentication
+// $description: Peer authentication configuration for workloads.
+
 package dubbo.security.v1alpha3;
 
 import "type/v1alpha3/selector.proto";
 
 option go_package = "/api/security/v1alpha3";
 
+// PeerAuthentication defines mutual TLS (mTLS) requirements for incoming connections.
+//
 // <!-- crd generation tags
 // +cue-gen:PeerAuthentication:groupName:security.dubbo.apache.org
 // +cue-gen:PeerAuthentication:versions:v1alpha3
@@ -47,30 +53,32 @@ option go_package = "/api/security/v1alpha3";
 // -->
 // +kubebuilder:validation:XValidation:message="portLevelMtls requires selector",rule="has(self.portLevelMtls) ? self.index({}, selector, matchLabels).size() > 0 : true"
 message PeerAuthentication {
+  // The selector determines the workloads to apply the PeerAuthentication on. The selector will match with workloads in the
+  // same namespace as the policy. If the policy is in the root namespace, the selector will additionally match with workloads in all namespace.
+  //
+  // If not set, the policy will be applied to all workloads in the same namespace as the policy. If it is in the root namespace, it would be applied
+  // to all workloads in the mesh.
   dubbo.type.v1alpha3.WorkloadSelector selector = 1;
   // Mutual TLS settings.
   message MutualTLS {
     enum Mode {
       // Inherit from parent, if has one. Otherwise treated as `PERMISSIVE`.
       UNSET = 0;
-
       // Connection is not tunneled.
       DISABLE = 1;
-
       // Connection can be either plaintext or mTLS tunnel.
       PERMISSIVE = 2;
-
       // Connection is an mTLS tunnel (TLS with client cert must be presented).
       STRICT = 3;
     }
-
     // Defines the mTLS mode used for peer authentication.
     Mode mode = 1;
   }
-
   // Mutual TLS settings for workload. If not defined, inherit from parent.
   MutualTLS mtls = 2;
-
+  // Port specific mutual TLS settings. These only apply when a workload selector
+  // is specified. The port refers to the port of the workload, not the port of the
+  // Kubernetes service.
   // +kubebuilder:validation:XValidation:message="port must be between 1-65535",rule="self.all(key, 0 < int(key) && int(key) <= 65535)"
   // +kubebuilder:validation:MinProperties=1
   map<uint32, MutualTLS> port_level_mtls = 3;

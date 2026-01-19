@@ -24,10 +24,6 @@ clone-sample:
 	mkdir -p bin
 	cp -r samples bin/samples
 
-#########
-
-#########
-
 # allow optional per-repo overrides
 -include client-go/Makefile.overrides.mk
 

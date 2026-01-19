@@ -180,9 +180,7 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 				InitialDiscoveryRequests: adsc.ConfigInitialRequests(),
 				Config: adsc.Config{
 					Namespace: args.Namespace,
-					Workload:  args.PodName,
 					Revision:  args.Revision,
-					Meta:      nil,
 					GrpcOpts: []grpc.DialOption{
 						args.KeepaliveOptions.ConvertToClientOption(),
 						grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -193,7 +191,6 @@ func (s *Server) initConfigSources(args *PlanetArgs) (err error) {
 				return fmt.Errorf("failed to dial XDS %s %v", configSource.Address, err)
 			}
 			store := memory.Make(collections.Planet)
-			// TODO: enable namespace filter for memory controller
 			configController := memory.NewController(store)
 			configController.RegisterHasSyncedHandler(xdsClient.HasSynced)
 			xdsClient.Store = configController

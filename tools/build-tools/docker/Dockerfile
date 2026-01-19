@@ -61,14 +61,10 @@ RUN --mount=type=cache,target=/tmp/go/pkg/mod \
 
 FROM binary_tools_context_base AS go_tools_2
 
-# Build Dubbo Kubernetes kubetype-gen tool from source
+# Build Dubbo Kubernetes kubetype-gen and protoc-gen-crd tool from source.
 # Copy pre-built kubetype-gen binary from project root
-# IMPORTANT: Build context must be project root (where kubetype-gen exists)
-# IMPORTANT: kubetype-gen must be built for Linux architecture (not macOS)
-# Build command: cd tools/cmd/kubetype-gen && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-extldflags -static -s -w" -o ../../../kubetype-gen .
-# For ARM64: use GOARCH=arm64 instead of amd64
-# Run: cd /path/to/dubbo-kubernetes && nerdctl build -f tools/build-tools/docker/Dockerfile -t build-tools .
-COPY --chmod=755 kubetype-gen /tmp/go/bin/kubetype-gen
+COPY --chmod=755 ./tools/bin/kubetype-gen /tmp/go/bin/kubetype-gen
+COPY --chmod=755 ./tools/bin/protoc-gen-crd /tmp/go/bin/protoc-gen-crd
 
 FROM ubuntu:noble AS base_os_context
 
