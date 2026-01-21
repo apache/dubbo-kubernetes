@@ -91,12 +91,12 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		u := &unstructured.Unstructured{Object: uObj}
 		u.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "security.dubbo.apache.org",
-			Version: "v1",
+			Version: "v1alpha3",
 			Kind:    "PeerAuthentication",
 		})
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "security.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "peerauthentications",
 		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
 	case gvk.VirtualService:
@@ -114,12 +114,12 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		u := &unstructured.Unstructured{Object: uObj}
 		u.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "networking.dubbo.apache.org",
-			Version: "v1",
+			Version: "v1alpha3",
 			Kind:    "VirtualService",
 		})
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "virtualservices",
 		}).Namespace(cfg.Namespace).Create(context.TODO(), u, metav1.CreateOptions{})
 	case gvk.Gateway:
@@ -181,12 +181,12 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		u := &unstructured.Unstructured{Object: uObj}
 		u.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "security.dubbo.apache.org",
-			Version: "v1",
+			Version: "v1alpha3",
 			Kind:    "PeerAuthentication",
 		})
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "security.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "peerauthentications",
 		}).Namespace(cfg.Namespace).Update(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.VirtualService:
@@ -204,12 +204,12 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		u := &unstructured.Unstructured{Object: uObj}
 		u.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "networking.dubbo.apache.org",
-			Version: "v1",
+			Version: "v1alpha3",
 			Kind:    "VirtualService",
 		})
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "virtualservices",
 		}).Namespace(cfg.Namespace).Update(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.GatewayClass:
@@ -276,7 +276,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		})
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "security.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "peerauthentications",
 		}).Namespace(cfg.Namespace).UpdateStatus(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.VirtualService:
@@ -299,7 +299,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		})
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "virtualservices",
 		}).Namespace(cfg.Namespace).UpdateStatus(context.TODO(), u, metav1.UpdateOptions{})
 	case gvk.Gateway:
@@ -369,7 +369,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "security.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "peerauthentications",
 		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.VirtualService:
@@ -392,7 +392,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "virtualservices",
 		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
 	case gvk.GatewayClass:
@@ -461,14 +461,14 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 	case gvk.PeerAuthentication:
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "security.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "peerauthentications",
 		}).Namespace(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.VirtualService:
 		// VirtualService uses networking.dubbo.apache.org API group, use Dynamic client
 		return c.Dynamic().Resource(schema.GroupVersionResource{
 			Group:    "networking.dubbo.apache.org",
-			Version:  "v1",
+			Version:  "v1alpha3",
 			Resource: "virtualservices",
 		}).Namespace(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.GatewayClass:

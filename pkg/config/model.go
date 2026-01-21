@@ -35,7 +35,6 @@ import (
 	kubetypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
-	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	"github.com/apache/dubbo-kubernetes/pkg/util/gogoprotomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -109,20 +108,6 @@ type Config struct {
 
 	// Extra holds additional, non-spec information for internal processing.
 	Extra map[string]any
-}
-
-type ObjectWithCluster[T any] struct {
-	ClusterID cluster.ID
-	Object    *T
-}
-
-// We can't refer to krt directly without causing an import cycle, but this function
-// implements an interface that allows the krt helper to know how to get the object key
-func (o ObjectWithCluster[T]) GetObjectKeyable() any {
-	if o.Object == nil {
-		return nil
-	}
-	return *o.Object
 }
 
 func LabelsInRevision(lbls map[string]string, rev string) bool {
@@ -397,7 +382,6 @@ func (c Config) DeepCopy() Config {
 	if c.Status != nil {
 		clone.Status = DeepCopy(c.Status)
 	}
-	// Note that this is effectively a shallow clone, but this is fine as it is not manipulated.
 	if c.Extra != nil {
 		clone.Extra = maps.Clone(c.Extra)
 	}
@@ -467,14 +451,10 @@ func CanonicalGroup(group string) string {
 	return "core"
 }
 
-// CanonicalGroup returns the group with defaulting applied. This means an empty group will
-// be treated as "core", following Kubernetes API standards
 func (g GroupVersionKind) CanonicalGroup() string {
 	return CanonicalGroup(g.Group)
 }
 
-// PatchFunc provides the cached config as a base for modification. Only diff the between the cfg
-// parameter and the returned Config will be applied.
 type PatchFunc func(cfg Config) (Config, kubetypes.PatchType)
 
 type Namer interface {

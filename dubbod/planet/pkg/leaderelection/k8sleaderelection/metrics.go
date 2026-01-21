@@ -101,9 +101,3 @@ func (f *leaderMetricsFactory) newLeaderMetrics() leaderMetricsAdapter {
 		leader: mp.NewLeaderMetric(),
 	}
 }
-
-// SetProvider sets the metrics provider for all subsequently created work
-// queues. Only the first call has an effect.
-func SetProvider(metricsProvider MetricsProvider) {
-	globalMetricsFactory.setProvider(metricsProvider)
-}

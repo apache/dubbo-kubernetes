@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
 const (
@@ -31,8 +30,6 @@ var (
 	grpcWeb    = string(protocol.GRPCWeb)
 	grpcWebLen = len(grpcWeb)
 )
-
-var wellKnownPorts = sets.New[int32](DNS)
 
 func ConvertProtocol(port int32, portName string, appProto *string) protocol.Instance {
 	// If application protocol is set, we will use that

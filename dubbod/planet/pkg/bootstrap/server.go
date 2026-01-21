@@ -39,7 +39,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/server"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/aggregate"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/serviceregistry/provider"
-	tb "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/trustbundle"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ra"
@@ -111,7 +110,6 @@ type Server struct {
 	shutdownDuration time.Duration
 
 	caServer                *caserver.Server
-	workloadTrustBundle     *tb.TrustBundle
 	cacertsWatcher          *fsnotify.Watcher
 	dubbodCertBundleWatcher *keycertbundle.Watcher
 	dubbodCert              *tls.Certificate

@@ -38,7 +38,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	"github.com/apache/dubbo-kubernetes/pkg/network"
 	"github.com/apache/dubbo-kubernetes/pkg/queue"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/hashicorp/go-multierror"
@@ -51,10 +50,6 @@ import (
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
-
-type controllerInterface interface {
-	Network(endpointIP string, labels labels.Instance) network.ID
-}
 
 var (
 	log                          = dubbolog.RegisterScope("controller", "kube controller debugging")
@@ -77,7 +72,6 @@ type Controller struct {
 	meshWatcher mesh.Watcher
 	handlers    model.ControllerHandlers
 	pods        *PodCache
-	*networkManager
 }
 
 func NewController(kubeClient kubelib.Client, options Options) *Controller {
@@ -90,7 +84,6 @@ func NewController(kubeClient kubelib.Client, options Options) *Controller {
 
 		configCluster: options.ConfigCluster,
 	}
-	c.networkManager = initNetworkManager(c, options)
 
 	c.namespaces = kclient.New[*v1.Namespace](kubeClient)
 	if c.opts.SystemNamespace != "" {
@@ -130,24 +123,7 @@ func (c *Controller) onSystemNamespaceEvent(_, ns *v1.Namespace, ev model.Event)
 	if ev == model.EventDelete {
 		return nil
 	}
-	if c.setNetworkFromNamespace(ns) {
-		// network changed, rarely happen
-		// refresh pods/endpoints/services
-		c.onNetworkChange()
-	}
 	return nil
-}
-
-func (c *Controller) onNetworkChange() {
-	// the network for endpoints are computed when we process the events; this will fix the cache
-	// NOTE: this must run before the other network watcher handler that creates a force push
-	if err := c.syncPods(); err != nil {
-		log.Errorf("one or more errors force-syncing pods: %v", err)
-	}
-	if err := c.endpoints.initializeNamespace(metav1.NamespaceAll, true); err != nil {
-		log.Errorf("one or more errors force-syncing endpoints: %v", err)
-	}
-
 }
 
 func (c *Controller) syncPods() error {
@@ -488,8 +464,7 @@ func (c *Controller) informersSynced() bool {
 	return c.namespaces.HasSynced() &&
 		c.pods.pods.HasSynced() &&
 		c.services.HasSynced() &&
-		c.endpoints.slices.HasSynced() &&
-		c.networkManager.HasSynced()
+		c.endpoints.slices.HasSynced()
 }
 
 func (c *Controller) hostNamesForNamespacedName(name types.NamespacedName) []host.Name {

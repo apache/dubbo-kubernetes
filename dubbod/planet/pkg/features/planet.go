@@ -27,8 +27,6 @@ var (
 			"Only works in kubernetes environment.").Get()
 	SharedMeshGlobalConfig = env.Register("SHARED_MESH_CONFIG", "",
 		"Additional config map to load for shared MeshGlobalConfig settings. The standard mesh config will take precedence.").Get()
-	MultiRootMesh = env.Register("DUBBO_MULTIROOT_MESH", false,
-		"If enabled, mesh will support certificates signed by more than one trustAnchor for DUBBO_MUTUAL mTLS").Get()
 	InformerWatchNamespace = env.Register("DUBBO_WATCH_NAMESPACE", "",
 		"If set, limit Kubernetes watches to a single namespace. "+
 			"Warning: only a single namespace can be set.").Get()
@@ -56,14 +54,6 @@ var (
 			"Multiple custom host names are supported, and multiple values are separated by commas.").Get()
 	InjectionWebhookConfigName = env.Register("INJECTION_WEBHOOK_CONFIG_NAME", "dubbo-grpcxds-injector",
 		"Name of the mutatingwebhookconfiguration to patch, if dubboctl is not used.").Get()
-	EnableUnsafeAssertions = env.Register(
-		"UNSAFE_PLANET_ENABLE_RUNTIME_ASSERTIONS",
-		false,
-		"If enabled, addition runtime asserts will be performed. "+
-			"These checks are both expensive and panic on failure. As a result, this should be used only for testing.",
-	).Get()
-	EnableClusterTrustBundles = env.Register("ENABLE_CLUSTER_TRUST_BUNDLE_API", false,
-		"If enabled, uses the ClusterTrustBundle API instead of ConfigMaps to store the root certificate in the cluster.").Get()
 	ResolveHostnameGateways = env.Register("RESOLVE_HOSTNAME_GATEWAYS", true,
 		"If true, hostnames in the LoadBalancer addresses of a Service will be resolved at the control plane for use in cross-network gateways.").Get()
 	ManagedGatewayController = env.Register("PLANET_GATEWAY_API_CONTROLLER_NAME", "dubbo.apache.org/gateway-controller",
