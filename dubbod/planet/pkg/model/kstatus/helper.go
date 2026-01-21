@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	StatusTrue  = "True"
-	StatusFalse = "False"
+	StatusTrue = "True"
 )
 
 func UpdateConditionIfChanged(conditions []metav1.Condition, condition metav1.Condition) []metav1.Condition {

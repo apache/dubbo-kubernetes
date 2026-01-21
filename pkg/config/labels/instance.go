@@ -30,9 +30,6 @@ import (
 const (
 	DNS1123LabelMaxLength = 63 // Public for testing only.
 	dns1123LabelFmt       = "[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?"
-	// a wild-card prefix is an '*', a normal DNS1123 label with a leading '*' or '*-', or a normal DNS1123 label
-	wildcardPrefix = `(\*|(\*|\*-)?` + dns1123LabelFmt + `)`
-
 	// Using kubernetes requirement, a valid key must be a non-empty string consist
 	// of alphanumeric characters, '-', '_' or '.', and must start and end with an
 	// alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345'
@@ -44,10 +41,9 @@ const (
 )
 
 var (
-	tagRegexp            = regexp.MustCompile("^(" + dnsNamePrefixFmt + ")?(" + qualifiedNameFmt + ")$") // label value can be an empty string
-	labelValueRegexp     = regexp.MustCompile("^" + "(" + qualifiedNameFmt + ")?" + "$")
-	dns1123LabelRegexp   = regexp.MustCompile("^" + dns1123LabelFmt + "$")
-	wildcardPrefixRegexp = regexp.MustCompile("^" + wildcardPrefix + "$")
+	tagRegexp          = regexp.MustCompile("^(" + dnsNamePrefixFmt + ")?(" + qualifiedNameFmt + ")$") // label value can be an empty string
+	labelValueRegexp   = regexp.MustCompile("^" + "(" + qualifiedNameFmt + ")?" + "$")
+	dns1123LabelRegexp = regexp.MustCompile("^" + dns1123LabelFmt + "$")
 )
 
 // Instance is a non empty map of arbitrary strings. Each version of a service can
@@ -112,12 +108,6 @@ func (i Instance) Validate() error {
 // DNS (RFC 1123).
 func IsDNS1123Label(value string) bool {
 	return len(value) <= DNS1123LabelMaxLength && dns1123LabelRegexp.MatchString(value)
-}
-
-// IsWildcardDNS1123Label tests for a string that conforms to the definition of a label in DNS (RFC 1123), but allows
-// the wildcard label (`*`), and typical labels with a leading astrisk instead of alphabetic character (e.g. "*-foo")
-func IsWildcardDNS1123Label(value string) bool {
-	return len(value) <= DNS1123LabelMaxLength && wildcardPrefixRegexp.MatchString(value)
 }
 
 // validateTagKey checks that a string is valid as a Kubernetes label name.

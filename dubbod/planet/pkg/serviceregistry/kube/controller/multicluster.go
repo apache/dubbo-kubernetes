@@ -17,8 +17,6 @@
 package controller
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/clustertrustbundle"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/leaderelection"
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
@@ -112,50 +110,29 @@ func (m *Multicluster) initializeCluster(cluster *multicluster.Cluster, kubeCont
 		}
 
 		if m.distributeCACert && (shouldLead || configCluster) {
-			if features.EnableClusterTrustBundles {
-				// Block server exit on graceful termination of the leader controller.
-				m.s.RunComponentAsyncAndWait("clustertrustbundle controller", func(_ <-chan struct{}) error {
-					election := leaderelection.
-						NewLeaderElectionMulticluster(options.SystemNamespace, m.serverID, leaderelection.NamespaceController, m.revision, !configCluster, client)
-					// For config cluster (single-node deployment), disable leader election even if globally enabled
-					// because there's only one instance and no need for election.
-					if configCluster {
-						election.SetEnabled(false)
-					}
-					election.AddRunFunction(func(leaderStop <-chan struct{}) {
-						log.Infof("starting clustertrustbundle controller for cluster %s", cluster.ID)
-						c := clustertrustbundle.NewController(client, m.caBundleWatcher)
-						client.RunAndWait(clusterStopCh)
-						c.Run(leaderStop)
-					})
-					election.Run(clusterStopCh)
-					return nil
+			// Block server exit on graceful termination of the leader controller.
+			m.s.RunComponentAsyncAndWait("namespace controller", func(_ <-chan struct{}) error {
+				election := leaderelection.
+					NewLeaderElectionMulticluster(options.SystemNamespace, m.serverID, leaderelection.NamespaceController, m.revision, !configCluster, client)
+				// For config cluster (single-node deployment), disable leader election even if globally enabled
+				// because there's only one instance and no need for election.
+				if configCluster {
+					election.SetEnabled(false)
+				}
+				election.AddRunFunction(func(leaderStop <-chan struct{}) {
+					log.Infof("starting namespace controller for cluster %s", cluster.ID)
+					nc := NewNamespaceController(client, m.caBundleWatcher)
+					// Start informers again. This fixes the case where informers for namespace do not start,
+					// as we create them only after acquiring the leader lock
+					// Note: stop here should be the overall planet stop, NOT the leader election stop. We are
+					// basically lazy loading the informer, if we stop it when we lose the lock we will never
+					// recreate it again.
+					client.RunAndWait(clusterStopCh)
+					nc.Run(leaderStop)
 				})
-			} else {
-				// Block server exit on graceful termination of the leader controller.
-				m.s.RunComponentAsyncAndWait("namespace controller", func(_ <-chan struct{}) error {
-					election := leaderelection.
-						NewLeaderElectionMulticluster(options.SystemNamespace, m.serverID, leaderelection.NamespaceController, m.revision, !configCluster, client)
-					// For config cluster (single-node deployment), disable leader election even if globally enabled
-					// because there's only one instance and no need for election.
-					if configCluster {
-						election.SetEnabled(false)
-					}
-					election.AddRunFunction(func(leaderStop <-chan struct{}) {
-						log.Infof("starting namespace controller for cluster %s", cluster.ID)
-						nc := NewNamespaceController(client, m.caBundleWatcher)
-						// Start informers again. This fixes the case where informers for namespace do not start,
-						// as we create them only after acquiring the leader lock
-						// Note: stop here should be the overall planet stop, NOT the leader election stop. We are
-						// basically lazy loading the informer, if we stop it when we lose the lock we will never
-						// recreate it again.
-						client.RunAndWait(clusterStopCh)
-						nc.Run(leaderStop)
-					})
-					election.Run(clusterStopCh)
-					return nil
-				})
-			}
+				election.Run(clusterStopCh)
+				return nil
+			})
 		}
 	}()
 }

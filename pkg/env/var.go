@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -40,8 +39,6 @@ const (
 	FLOAT
 	// Variable holds a time duration.
 	DURATION
-	// Variable holds a dynamic unknown type.
-	OTHER
 )
 
 // Var describes a single environment variable
@@ -97,22 +94,6 @@ var (
 	allVars = make(map[string]Var)
 	mutex   sync.Mutex
 )
-
-// VarDescriptions returns a description of this process' environment variables, sorted by name.
-func VarDescriptions() []Var {
-	mutex.Lock()
-	sorted := make([]Var, 0, len(allVars))
-	for _, v := range allVars {
-		sorted = append(sorted, v)
-	}
-	mutex.Unlock()
-
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Name < sorted[j].Name
-	})
-
-	return sorted
-}
 
 type Parseable interface {
 	comparable

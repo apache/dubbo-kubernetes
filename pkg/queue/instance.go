@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"go.uber.org/atomic"
-	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 // Task to be performed.
@@ -61,11 +60,6 @@ type queueImpl struct {
 	initialSync  *atomic.Bool
 	id           string
 	syncCallback func()
-}
-
-// NewQueue instantiates a queue with a processing function
-func NewQueue(errorDelay time.Duration) Instance {
-	return NewQueueWithID(errorDelay, rand.String(10))
 }
 
 // NewQueue instantiates a queue with a processing function

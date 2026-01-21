@@ -483,7 +483,6 @@ func (a *ADSC) handleReceive() {
 
 func (a *ADSC) handleLDS(ll []*listener.Listener) {
 	lh := map[string]*listener.Listener{}
-	lt := map[string]*listener.Listener{}
 
 	routes := []string{}
 	ldsSize := 0
@@ -508,11 +507,6 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 		}
 
 		switch filter.Name {
-		case wellknown.TCPProxy:
-			lt[l.Name] = l
-			config, _ := protomarshal.MessageToStructSlow(filter.GetTypedConfig())
-			c := config.Fields["cluster"].GetStringValue()
-			log.Debugf("TCP: %s -> %s", l.Name, c)
 		case wellknown.HTTPConnectionManager:
 			lh[l.Name] = l
 
@@ -528,7 +522,7 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 		}
 	}
 
-	log.Infof("LDS: http=%d tcp=%d size=%d", len(lh), len(lt), ldsSize)
+	log.Infof("LDS: http=%d size=%d", len(lh), ldsSize)
 
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
@@ -536,7 +530,6 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 		a.sendResources(v3.RouteType, routes)
 	}
 	a.httpListeners = lh
-	a.tcpListeners = lt
 
 	select {
 	case a.Updates <- v3.ListenerType:

@@ -25,9 +25,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 type CacheToken uint64
@@ -60,13 +58,12 @@ type evictKeyConfigs[K comparable] struct {
 }
 
 type lruCache[K comparable] struct {
-	enableAssertions bool
-	store            simplelru.LRUCache[K, cacheValue]
-	token            CacheToken
-	mu               sync.RWMutex
-	configIndex      map[ConfigHash]sets.Set[K]
-	evictQueue       []evictKeyConfigs[K]
-	evictedOnClear   bool
+	store          simplelru.LRUCache[K, cacheValue]
+	token          CacheToken
+	mu             sync.RWMutex
+	configIndex    map[ConfigHash]sets.Set[K]
+	evictQueue     []evictKeyConfigs[K]
+	evictedOnClear bool
 }
 
 func (l *lruCache[K]) onEvict(k K, v cacheValue) {
@@ -86,9 +83,8 @@ type typedXdsCache[K comparable] interface {
 
 func newTypedXdsCache[K comparable]() typedXdsCache[K] {
 	cache := &lruCache[K]{
-		enableAssertions: features.EnableUnsafeAssertions,
-		configIndex:      map[ConfigHash]sets.Set[K]{},
-		evictQueue:       make([]evictKeyConfigs[K], 0, 1000),
+		configIndex: map[ConfigHash]sets.Set[K]{},
+		evictQueue:  make([]evictKeyConfigs[K], 0, 1000),
 	}
 	cache.store = newLru(cache.onEvict)
 	return cache
@@ -147,9 +143,6 @@ func (l *lruCache[K]) Add(k K, entry dependents, pushReq *PushRequest, value *di
 		if token <= cur.token {
 			return
 		}
-		if l.enableAssertions {
-			l.assertUnchanged(k, cur.value, value)
-		}
 	}
 
 	dependentConfigs := entry.DependentConfigs()
@@ -162,26 +155,6 @@ func (l *lruCache[K]) Add(k K, entry dependents, pushReq *PushRequest, value *di
 	// to prevent leaking in the index maps
 	if f {
 		l.evictQueue = append(l.evictQueue, evictKeyConfigs[K]{k, cur.dependentConfigs})
-	}
-}
-
-func (l *lruCache[K]) assertUnchanged(key K, existing *discovery.Resource, replacement *discovery.Resource) {
-	if l.enableAssertions {
-		if existing == nil {
-			// This is a new addition, not an update
-			return
-		}
-		// Record time so that we can correlate when the error actually happened, since the async reporting
-		// may be delayed
-		t0 := time.Now()
-		// This operation is really slow, which makes tests fail for unrelated reasons, so we process it async.
-		go func() {
-			if !cmp.Equal(existing, replacement, protocmp.Transform()) {
-				warning := fmt.Errorf("assertion failed at %v, cache entry changed but not cleared for key %v: %v\n%v\n%v",
-					t0, key, cmp.Diff(existing, replacement, protocmp.Transform()), existing, replacement)
-				panic(warning)
-			}
-		}()
 	}
 }
 

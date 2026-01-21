@@ -19,7 +19,6 @@ package bootstrap
 import (
 	"bytes"
 	"fmt"
-	tb "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/trustbundle"
 	"os"
 	"path"
 	"strings"
@@ -228,19 +227,6 @@ func (s *Server) updateRootCertAndGenKeyCert() error {
 	certChain, keyPEM, err := s.CA.GenKeyCert(s.dnsNames, SelfSignedCACertTTL.Get(), false)
 	if err != nil {
 		return err
-	}
-
-	if features.MultiRootMesh {
-		// Trigger trust anchor update, this will send PCDS to all sidecars.
-		log.Infof("Update trust anchor with new root cert")
-		err = s.workloadTrustBundle.UpdateTrustAnchor(&tb.TrustAnchorUpdate{
-			TrustAnchorConfig: tb.TrustAnchorConfig{Certs: []string{string(caBundle)}},
-			Source:            tb.SourceDubboCA,
-		})
-		if err != nil {
-			log.Errorf("failed to update trust anchor from source Dubbo CA, err: %v", err)
-			return err
-		}
 	}
 
 	s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, caBundle)

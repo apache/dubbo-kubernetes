@@ -22,8 +22,6 @@ type CertInfo struct {
 	Cert []byte
 	// The private key
 	Key []byte
-	// The oscp staple
-	Staple []byte
 	// Certificate Revocation List information
 	CRL []byte
 }

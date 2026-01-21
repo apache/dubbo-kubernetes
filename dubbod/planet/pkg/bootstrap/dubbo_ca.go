@@ -49,10 +49,6 @@ type caOptions struct {
 }
 
 var (
-	trustedIssuer = env.Register("TOKEN_ISSUER", "",
-		"OIDC token issuer. If set, will be used to check the tokens.")
-	audience = env.Register("AUDIENCE", "",
-		"Expected audience in the tokens. ")
 	LocalCertDir = env.Register("ROOT_CA_DIR", "./etc/cacerts",
 		"Location of a local or mounted CA root")
 	useRemoteCerts = env.Register("USE_REMOTE_CERTS", false,
@@ -63,8 +59,6 @@ var (
 	// TODO: Likely to be removed and added to mesh config
 	k8sSigner = env.Register("K8S_SIGNER", "",
 		"Kubernetes CA Signer type. Valid from Kubernetes 1.18").Get()
-	k8sInCluster = env.Register("KUBERNETES_SERVICE_HOST", "",
-		"Kubernetes service host, set automatically when running in-cluster")
 	workloadCertTTL = env.Register("DEFAULT_WORKLOAD_CERT_TTL",
 		cmd.DefaultWorkloadCertTTL,
 		"The default TTL of issued workload certificates. Applied when the client sets a "+
@@ -352,11 +346,6 @@ func handleEvent(s *Server) {
 
 	// Only updating intermediate CA is supported now
 	if !bytes.Equal(currentCABundle, newCABundle) {
-		if !features.MultiRootMesh {
-			log.Info("Multi root is disabled, updating new ROOT-CA not supported")
-			return
-		}
-
 		// in order to support root ca rotation, or we are removing the old ca,
 		// we need to make the new CA bundle contain both old and new CA certs
 		if bytes.Contains(currentCABundle, newCABundle) ||

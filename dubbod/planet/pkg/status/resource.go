@@ -18,7 +18,6 @@ package status
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,19 +45,6 @@ func (r *Resource) ToModelKey() string {
 	return config.Key(
 		gk.Group, gk.Version, gk.Kind,
 		r.Name, r.Namespace)
-}
-
-func ResourceFromModelConfig(c config.Config) Resource {
-	gvr, ok := gvk.ToGVR(c.GroupVersionKind)
-	if !ok {
-		return Resource{}
-	}
-	return Resource{
-		GroupVersionResource: gvr,
-		Namespace:            c.Namespace,
-		Name:                 c.Name,
-		Generation:           strconv.FormatInt(c.Generation, 10),
-	}
 }
 
 func GetStatusManipulator(in any) (out Manipulator) {

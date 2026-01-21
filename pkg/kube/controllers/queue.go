@@ -53,10 +53,7 @@ func NewQueue(name string, options ...func(*Queue)) Queue {
 		q.queue = workqueue.NewTypedRateLimitingQueueWithConfig[any](
 			workqueue.DefaultTypedControllerRateLimiter[any](),
 			workqueue.TypedRateLimitingQueueConfig[any]{
-				Name:            name,
-				MetricsProvider: nil,
-				Clock:           nil,
-				DelayingQueue:   nil,
+				Name: name,
 			},
 		)
 	}

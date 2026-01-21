@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	dubbonetworking "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 )
@@ -49,7 +48,7 @@ func BuildAdditionalAddresses(extrAddresses []string, listenPort uint32) []*list
 }
 
 func BuildAddress(bind string, port uint32) *core.Address {
-	address := BuildNetworkAddress(bind, port, dubbonetworking.TransportProtocolTCP)
+	address := BuildNetworkAddress(bind, port)
 	if address != nil {
 		return address
 	}
@@ -63,15 +62,14 @@ func BuildAddress(bind string, port uint32) *core.Address {
 	}
 }
 
-func BuildNetworkAddress(bind string, port uint32, transport dubbonetworking.TransportProtocol) *core.Address {
+func BuildNetworkAddress(bind string, port uint32) *core.Address {
 	if port == 0 {
 		return nil
 	}
 	return &core.Address{
 		Address: &core.Address_SocketAddress{
 			SocketAddress: &core.SocketAddress{
-				Address:  bind,
-				Protocol: transport.ToEnvoySocketProtocol(),
+				Address: bind,
 				PortSpecifier: &core.SocketAddress_PortValue{
 					PortValue: port,
 				},

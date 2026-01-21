@@ -60,7 +60,6 @@ func (c RdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req
 		log.Debugf("RDS Generate: skipping push for node=%s (rdsNeedsPush=false)", proxy.ID)
 		return nil, model.DefaultXdsLogDetails, nil
 	}
-	resources, logDetails := c.ConfigGenerator.BuildHTTPRoutes(proxy, req, w.ResourceNames.UnsortedList())
-	log.Infof("RDS Generate: built %d resources for node=%s", len(resources), proxy.ID)
-	return resources, logDetails, nil
+	resources := model.Resources{}
+	return resources, model.DefaultXdsLogDetails, nil
 }
