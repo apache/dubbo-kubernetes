@@ -18,7 +18,7 @@ package kube
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

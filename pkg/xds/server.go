@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/grpc"
+	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"

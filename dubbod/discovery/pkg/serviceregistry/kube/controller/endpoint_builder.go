@@ -1,0 +1,89 @@
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package controller
+
+import (
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/kube"
+	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
+	v1 "k8s.io/api/core/v1"
+)
+
+type EndpointBuilder struct {
+	labels         labels.Instance
+	serviceAccount string
+	workloadName   string
+	namespace      string
+	hostname       string
+	subDomain      string
+	nodeName       string
+}
+
+func (c *Controller) NewEndpointBuilder(pod *v1.Pod) *EndpointBuilder {
+	var sa, namespace, hostname, subdomain, node string
+	var podLabels labels.Instance
+	if pod != nil {
+		sa = kube.SecureNamingSAN(pod, c.meshWatcher.Mesh())
+		podLabels = pod.Labels
+		namespace = pod.Namespace
+		subdomain = pod.Spec.Subdomain
+		if subdomain != "" {
+			hostname = pod.Spec.Hostname
+			if hostname == "" {
+				hostname = pod.Name
+			}
+		}
+		node = pod.Spec.NodeName
+	}
+	out := &EndpointBuilder{
+		serviceAccount: sa,
+		namespace:      namespace,
+		hostname:       hostname,
+		subDomain:      subdomain,
+		labels:         podLabels,
+		nodeName:       node,
+	}
+	return out
+}
+
+func (b *EndpointBuilder) buildDubboEndpoint(
+	endpointAddress string,
+	endpointPort int32,
+	svcPortName string,
+	discoverabilityPolicy model.EndpointDiscoverabilityPolicy,
+	healthStatus model.HealthStatus,
+	sendUnhealthy bool,
+) *model.DubboEndpoint {
+	if b == nil {
+		return nil
+	}
+
+	return &model.DubboEndpoint{
+		Labels:                 b.labels,
+		ServiceAccount:         b.serviceAccount,
+		Addresses:              []string{endpointAddress},
+		EndpointPort:           uint32(endpointPort),
+		ServicePortName:        svcPortName,
+		Namespace:              b.namespace,
+		HostName:               b.hostname,
+		SubDomain:              b.subDomain,
+		DiscoverabilityPolicy:  discoverabilityPolicy,
+		HealthStatus:           healthStatus,
+		SendUnhealthyEndpoints: sendUnhealthy,
+		NodeName:               b.nodeName,
+	}
+}
