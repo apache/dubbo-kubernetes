@@ -22,7 +22,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/keycertbundle"
 )
 
 type ConfigError struct {

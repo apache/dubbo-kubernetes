@@ -25,7 +25,7 @@ import (
 	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"net/http"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/config/kube/crd"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/kube/crd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"

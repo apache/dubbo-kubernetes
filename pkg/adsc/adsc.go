@@ -28,9 +28,9 @@ import (
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/model"
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/networking/util"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/xds/v3"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
+	v3 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v3"
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"

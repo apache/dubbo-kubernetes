@@ -22,7 +22,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/features"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	dubbogvr "github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kubeclient"
 	types "github.com/apache/dubbo-kubernetes/pkg/config/schema/kubetypes"
@@ -148,35 +148,35 @@ func applyDynamicFilter[T controllers.ComparableObject](filter Filter, gvr schem
 		filter.ObjectFilter.AddHandler(func(added, removed sets.String) {
 			ic.handlerMu.RLock()
 			defer ic.handlerMu.RUnlock()
-			log.Infof("applyDynamicFilter: namespace filter handler triggered for %v: added=%v, removed=%v", gvr, added, removed)
+			log.Infof("namespace filter handler triggered for %v: added=%v, removed=%v", gvr, added, removed)
 			if gvr == dubbogvr.Namespace {
 				for _, item := range ic.ListUnfiltered(metav1.NamespaceAll, klabels.Everything()) {
 					if !added.Contains(item.GetName()) {
 						continue
 					}
-					log.Infof("applyDynamicFilter: triggering OnAdd for namespace %s", item.GetName())
+					log.Infof("triggering OnAdd for namespace %s", item.GetName())
 					for _, c := range ic.registeredHandlers {
 						c.handler.OnAdd(item, false)
 					}
 				}
 			} else {
 				for ns := range added {
-					log.Infof("applyDynamicFilter: namespace %s added, listing unfiltered objects for %v", ns, gvr)
+					log.Infof("namespace %s added, listing unfiltered objects for %v", ns, gvr)
 					items := ic.ListUnfiltered(ns, klabels.Everything())
-					log.Infof("applyDynamicFilter: found %d unfiltered objects in namespace %s for %v", len(items), ns, gvr)
+					log.Infof("found %d unfiltered objects in namespace %s for %v", len(items), ns, gvr)
 					for _, item := range items {
-						log.Infof("applyDynamicFilter: triggering OnAdd for %s/%s in namespace %s", item.GetNamespace(), item.GetName(), ns)
+						log.Infof("triggering OnAdd for %s/%s in namespace %s", item.GetNamespace(), item.GetName(), ns)
 						for _, c := range ic.registeredHandlers {
 							c.handler.OnAdd(item, false)
 						}
 					}
 				}
 				for ns := range removed {
-					log.Infof("applyDynamicFilter: namespace %s removed, listing unfiltered objects for %v", ns, gvr)
+					log.Infof("namespace %s removed, listing unfiltered objects for %v", ns, gvr)
 					items := ic.ListUnfiltered(ns, klabels.Everything())
-					log.Infof("applyDynamicFilter: found %d unfiltered objects in namespace %s for %v", len(items), ns, gvr)
+					log.Infof("found %d unfiltered objects in namespace %s for %v", len(items), ns, gvr)
 					for _, item := range items {
-						log.Infof("applyDynamicFilter: triggering OnDelete for %s/%s in namespace %s", item.GetNamespace(), item.GetName(), ns)
+						log.Infof("triggering OnDelete for %s/%s in namespace %s", item.GetNamespace(), item.GetName(), ns)
 						for _, c := range ic.registeredHandlers {
 							c.handler.OnDelete(item)
 						}
@@ -203,18 +203,18 @@ func (n *informerClient[T]) List(namespace string, selector klabels.Selector) []
 				GetNamespace() string
 				GetName() string
 			}); ok {
-				log.Debugf("informerClient.List: filtered out object %s/%s for namespace=%s", objWithNs.GetNamespace(), objWithNs.GetName(), namespace)
+				log.Debugf("filtered out object %s/%s for namespace=%s", objWithNs.GetNamespace(), objWithNs.GetName(), namespace)
 			}
 		}
 	})
 
 	if err != nil {
-		log.Debugf("informerClient.List: lister returned err for namespace=%s: %v", namespace, err)
+		log.Debugf("lister returned err for namespace=%s: %v", namespace, err)
 	}
 	if namespace == metav1.NamespaceAll {
-		log.Debugf("informerClient.List: namespace=%s, total=%d, filtered=%d, result=%d", namespace, totalCount, filteredCount, len(res))
+		log.Debugf("namespace=%s, total=%d, filtered=%d, result=%d", namespace, totalCount, filteredCount, len(res))
 	} else if filteredCount > 0 {
-		log.Debugf("informerClient.List: filtered out %d items for namespace=%s (total=%d, result=%d)", filteredCount, namespace, totalCount, len(res))
+		log.Debugf("filtered out %d items for namespace=%s (total=%d, result=%d)", filteredCount, namespace, totalCount, len(res))
 	}
 	return res
 }
@@ -227,17 +227,17 @@ func (n *informerClient[T]) ListUnfiltered(namespace string, selector klabels.Se
 	})
 
 	if err != nil {
-		log.Warnf("informerClient.ListUnfiltered: lister returned err for namespace=%s: %v", namespace, err)
+		log.Warnf("lister returned err for namespace=%s: %v", namespace, err)
 	}
 	if namespace == metav1.NamespaceAll {
-		log.Infof("informerClient.ListUnfiltered: found %d unfiltered objects for namespace=%s (synced=%v)", len(res), namespace, n.informer.HasSynced())
+		log.Infof("found %d unfiltered objects for namespace=%s (synced=%v)", len(res), namespace, n.informer.HasSynced())
 		if len(res) > 0 {
 			for i, obj := range res {
 				if objWithNs, ok := any(obj).(interface {
 					GetNamespace() string
 					GetName() string
 				}); ok {
-					log.Infof("informerClient.ListUnfiltered: object[%d] %s/%s", i, objWithNs.GetNamespace(), objWithNs.GetName())
+					log.Infof("object[%d] %s/%s", i, objWithNs.GetNamespace(), objWithNs.GetName())
 				}
 			}
 		}
@@ -303,16 +303,16 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 				nameStr = objWithNs.GetName()
 			}
 			if n.filter == nil {
-				log.Debugf("informerClient.AddEventHandler: FilterFunc allowing object %s/%s (no filter)", nsStr, nameStr)
+				log.Debugf("FilterFunc allowing object %s/%s (no filter)", nsStr, nameStr)
 				return true
 			}
 			cast := obj.(T)
 			allowed := n.filter(cast)
 			if !allowed {
 				// Log when objects are filtered out to help diagnose missing events
-				log.Debugf("informerClient.AddEventHandler: FilterFunc filtered out object %s/%s", nsStr, nameStr)
+				log.Debugf("FilterFunc filtered out object %s/%s", nsStr, nameStr)
 			} else {
-				log.Debugf("informerClient.AddEventHandler: FilterFunc allowing object %s/%s", nsStr, nameStr)
+				log.Debugf("FilterFunc allowing object %s/%s", nsStr, nameStr)
 			}
 			return allowed
 		},
@@ -326,7 +326,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 					nsStr = objWithNs.GetNamespace()
 					nameStr = objWithNs.GetName()
 				}
-				log.Debugf("informerClient.AddEventHandler: OnAdd called for %s/%s", nsStr, nameStr)
+				log.Debugf("OnAdd called for %s/%s", nsStr, nameStr)
 				h.OnAdd(obj, false)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -338,7 +338,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 					nsStr = objWithNs.GetNamespace()
 					nameStr = objWithNs.GetName()
 				}
-				log.Debugf("informerClient.AddEventHandler: OnUpdate called for %s/%s", nsStr, nameStr)
+				log.Debugf("OnUpdate called for %s/%s", nsStr, nameStr)
 				h.OnUpdate(oldObj, newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -350,7 +350,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 					nsStr = objWithNs.GetNamespace()
 					nameStr = objWithNs.GetName()
 				}
-				log.Debugf("informerClient.AddEventHandler: OnDelete called for %s/%s", nsStr, nameStr)
+				log.Debugf("OnDelete called for %s/%s", nsStr, nameStr)
 				h.OnDelete(obj)
 			},
 		},

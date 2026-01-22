@@ -31,7 +31,6 @@ import (
 )
 
 var (
-	unmarshaler       = jsonpb.Unmarshaler{AllowUnknownFields: true}
 	strictUnmarshaler = jsonpb.Unmarshaler{}
 )
 

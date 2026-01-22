@@ -23,7 +23,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/keycertbundle"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"

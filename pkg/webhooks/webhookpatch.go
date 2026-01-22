@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/planet/pkg/keycertbundle"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/keycertbundle"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
