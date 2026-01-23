@@ -25,7 +25,7 @@ Implement an open-source service mesh for Dubbo in a Kubernetes cluster, integra
 
 - **api** — API definitions for Dubbo.
 - **client-go** — Go client library for the Dubbo API.
-- **dubboctl** — Command-line tool that provides control plane management, development framework setup, and application deployment capabilities.
+- **dubboctl** — Command-line tool that provides control plane management.
 - **dubbod** — The control plane, communicating based on gRPC and xDS APIs.
 - **operator** — Provides user-friendly options for operating the service mesh.
 
