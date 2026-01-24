@@ -370,7 +370,6 @@ func (s *DiscoveryServer) ProxyUpdate(clusterID cluster.ID, ip string) {
 		}
 	}
 
-	// It is possible that the envoy has not connected to this planet, maybe connected to another planet
 	if connection == nil {
 		return
 	}

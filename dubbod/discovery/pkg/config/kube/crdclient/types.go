@@ -349,7 +349,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			Group:    "networking.dubbo.apache.org",
 			Version:  "v1alpha3",
 			Resource: "destinationrules",
-		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "dubbo-discovery"})
 	case gvk.PeerAuthentication:
 		origSpec := orig.Spec.(*orgapachedubboapisecurityv1alpha3.PeerAuthentication)
 		modSpec := mod.Spec.(*orgapachedubboapisecurityv1alpha3.PeerAuthentication)
@@ -371,7 +371,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			Group:    "security.dubbo.apache.org",
 			Version:  "v1alpha3",
 			Resource: "peerauthentications",
-		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "dubbo-discovery"})
 	case gvk.VirtualService:
 		// VirtualService uses networking.dubbo.apache.org API group, use Dynamic client
 		origSpec := orig.Spec.(*orgapachedubboapinetworkingv1alpha3.VirtualService)
@@ -394,7 +394,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			Group:    "networking.dubbo.apache.org",
 			Version:  "v1alpha3",
 			Resource: "virtualservices",
-		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+		}).Namespace(orig.Namespace).Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "dubbo-discovery"})
 	case gvk.GatewayClass:
 		oldRes := &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: origMeta,
@@ -424,7 +424,7 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.GatewayAPI().GatewayV1().Gateways(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "planet-discovery"})
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "dubbo-discovery"})
 	case gvk.HTTPRoute:
 		oldRes := &sigsk8siogatewayapiapisv1.HTTPRoute{
 			ObjectMeta: origMeta,

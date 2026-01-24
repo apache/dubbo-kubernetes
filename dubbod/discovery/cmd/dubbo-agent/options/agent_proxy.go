@@ -16,11 +16,11 @@
 
 package options
 
-import planetagent "github.com/apache/dubbo-kubernetes/pkg/dubboagent"
+import "github.com/apache/dubbo-kubernetes/pkg/dubboagent"
 
 // ProxyArgs provides all of the configuration parameters for the Saku proxy.
 type ProxyArgs struct {
-	planetagent.Proxy
+	dubboagent.Proxy
 	Concurrency int
 	StsPort     int
 

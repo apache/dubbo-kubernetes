@@ -19,12 +19,12 @@ package features
 import "github.com/apache/dubbo-kubernetes/pkg/env"
 
 var (
-	EnableCDSCaching = env.Register("PLANET_ENABLE_CDS_CACHE", true,
-		"If true, PLANET will cache CDS responses. Note: this depends on PLANET_ENABLE_XDS_CACHE.").Get()
+	EnableCDSCaching = env.Register("DUBBO_ENABLE_CDS_CACHE", true,
+		"If true, DUBBO will cache CDS responses. Note: this depends on DUBBO_ENABLE_XDS_CACHE.").Get()
 
-	EnableRDSCaching = env.Register("PLANET_ENABLE_RDS_CACHE", true,
-		"If true, PLANET will cache RDS responses. Note: this depends on PLANET_ENABLE_XDS_CACHE.").Get()
+	EnableRDSCaching = env.Register("DUBBO_ENABLE_RDS_CACHE", true,
+		"If true, DUBBO will cache RDS responses. Note: this depends on DUBBO_ENABLE_XDS_CACHE.").Get()
 
-	EnableXDSCaching = env.Register("PLANET_ENABLE_XDS_CACHE", true,
-		"If true, Planet will cache XDS responses.").Get()
+	EnableXDSCaching = env.Register("DUBBO_ENABLE_XDS_CACHE", true,
+		"If true, DUBBO will cache XDS responses.").Get()
 )

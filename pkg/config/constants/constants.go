@@ -40,15 +40,15 @@ const (
 
 	StatPrefixDelimiter = ";"
 
-	PlanetWellKnownDNSCertPath   = "./var/run/secrets/dubbod/tls/"
-	PlanetWellKnownDNSCaCertPath = "./var/run/secrets/dubbod/ca/"
+	DubboWellKnownDNSCertPath   = "./var/run/secrets/dubbod/tls/"
+	DubboWellKnownDNSCaCertPath = "./var/run/secrets/dubbod/ca/"
 
-	ConfigPathDir                       = "./etc/dubbo/proxy"
-	KeyFilename                         = "key.pem"
-	DefaultPlanetTLSCert                = PlanetWellKnownDNSCertPath + "tls.crt"
-	DefaultPlanetTLSKey                 = PlanetWellKnownDNSCertPath + "tls.key"
-	DefaultPlanetTLSCaCert              = PlanetWellKnownDNSCaCertPath + "root-cert.pem"
-	DefaultPlanetTLSCaCertAlternatePath = PlanetWellKnownDNSCertPath + "ca.crt"
+	ConfigPathDir                      = "./etc/dubbo/proxy"
+	KeyFilename                        = "key.pem"
+	DefaultDubboTLSCert                = DubboWellKnownDNSCertPath + "tls.crt"
+	DefaultDubboTLSKey                 = DubboWellKnownDNSCertPath + "tls.key"
+	DefaultDubboTLSCaCert              = DubboWellKnownDNSCaCertPath + "root-cert.pem"
+	DefaultDubboTLSCaCertAlternatePath = DubboWellKnownDNSCertPath + "ca.crt"
 
 	AlwaysReject = "internal.dubbo.apache.org/webhook-always-reject"
 

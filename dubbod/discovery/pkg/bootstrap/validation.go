@@ -30,7 +30,7 @@ func (s *Server) initConfigValidation(args *DubboArgs) error {
 	}
 	log.Info("initializing config validator")
 	params := server.Options{
-		Schemas:      collections.Planet,
+		Schemas:      collections.Dubbo,
 		DomainSuffix: args.RegistryOptions.KubeOptions.DomainSuffix,
 		Mux:          s.httpsMux,
 	}

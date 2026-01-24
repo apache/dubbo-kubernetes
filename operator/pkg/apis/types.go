@@ -56,7 +56,7 @@ type DubboComponentSpec struct {
 	Base *BaseComponentSpec `json:"base,omitempty"`
 	// Using Zookeeper and Nacos as the registration plane.
 	Register *RegisterSpec `json:"register,omitempty"`
-	// Using Planet as the control plane.
+	// Using Dubbo as the control plane.
 	Discovery *DiscoverySpec `json:"discovery,omitempty"`
 }
 
@@ -72,8 +72,8 @@ type RegisterSpec struct {
 }
 
 type DiscoverySpec struct {
-	// Planet component
-	Planet *DiscoveryComponentSpec `json:"planet,omitempty"`
+	// Dubbo component
+	Dubbo *DiscoveryComponentSpec `json:"dubbo,omitempty"`
 }
 
 type BaseComponentSpec struct {

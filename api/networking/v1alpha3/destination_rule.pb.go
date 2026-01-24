@@ -100,7 +100,7 @@ func (ClientTLSSettings_TLSmode) EnumDescriptor() ([]byte, []int) {
 // +cue-gen:DestinationRule:groupName:networking.dubbo.apache.org
 // +cue-gen:DestinationRule:versions:v1alpha3
 // +cue-gen:DestinationRule:annotations:helm.sh/resource-policy=keep
-// +cue-gen:DestinationRule:labels:app=dubbo-planet,chart=dubbo,heritage=Tiller,release=dubbo
+// +cue-gen:DestinationRule:labels:app=dubbo,chart=dubbo,heritage=Tiller,release=dubbo
 // +cue-gen:DestinationRule:subresource:status
 // +cue-gen:DestinationRule:scope:Namespaced
 // +cue-gen:DestinationRule:resource:categories=dubbo,networking,shortNames=dr

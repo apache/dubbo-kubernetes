@@ -57,9 +57,9 @@ func (s *Server) makeKubeConfigController(args *DubboArgs) *crdclient.Client {
 		KrtDebugger:  args.KrtDebugger,
 	}
 
-	schemas := collections.Planet
+	schemas := collections.Dubbo
 	if features.EnableGatewayAPI {
-		schemas = collections.PlanetGatewayAPI()
+		schemas = collections.DubboGatewayAPI()
 	}
 	return crdclient.NewForSchemas(s.kubeClient, opts, schemas)
 }
@@ -162,7 +162,7 @@ func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 			configController, err := file.NewController(
 				srcAddress.Path,
 				args.RegistryOptions.KubeOptions.DomainSuffix,
-				collections.Planet,
+				collections.Dubbo,
 				args.RegistryOptions.KubeOptions,
 			)
 			if err != nil {
@@ -190,7 +190,7 @@ func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 			if err != nil {
 				return fmt.Errorf("failed to dial XDS %s %v", configSource.Address, err)
 			}
-			store := memory.Make(collections.Planet)
+			store := memory.Make(collections.Dubbo)
 			configController := memory.NewController(store)
 			configController.RegisterHasSyncedHandler(xdsClient.HasSynced)
 			xdsClient.Store = configController
@@ -233,7 +233,7 @@ func (s *Server) initConfigController(args *DubboArgs) error {
 		configController, err := file.NewController(
 			args.RegistryOptions.FileDir,
 			args.RegistryOptions.KubeOptions.DomainSuffix,
-			collections.Planet,
+			collections.Dubbo,
 			args.RegistryOptions.KubeOptions,
 		)
 		if err != nil {

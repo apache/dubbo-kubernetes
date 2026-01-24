@@ -28,8 +28,7 @@ const (
 	BaseComponentName              Name = "Base"
 	NacosRegisterComponentName     Name = "Nacos"
 	ZookeeperRegisterComponentName Name = "Zookeeper"
-	AdminComponentName             Name = "Admin"
-	PlanetDiscoveryComponentName   Name = "Planet"
+	DubboDiscoveryComponentName    Name = "Dubbo-Discovery"
 )
 
 type Component struct {
@@ -70,14 +69,14 @@ var AllComponents = []Component{
 		HelmValuesTreeRoot: "admin",
 	},
 	{
-		UserFacingName:     PlanetDiscoveryComponentName,
-		SpecName:           "planet",
+		UserFacingName:     DubboDiscoveryComponentName,
+		SpecName:           "dubbo",
 		ResourceType:       "Deployment",
 		ResourceName:       "dubbod",
 		ContainerName:      "dubbo-discovery",
 		Default:            true,
 		HelmSubDir:         "dubbo-control/dubbo-discovery",
-		HelmValuesTreeRoot: "planet",
+		HelmValuesTreeRoot: "dubbo-discovery",
 	},
 	{
 		UserFacingName:     NacosRegisterComponentName,
@@ -104,7 +103,7 @@ var AllComponents = []Component{
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:              "Dubbo Resource Core",
-		PlanetDiscoveryComponentName:   "Dubbo Control Plane",
+		DubboDiscoveryComponentName:    "Dubbo Control Plane",
 		NacosRegisterComponentName:     "Nacos Register Plane",
 		ZookeeperRegisterComponentName: "Zookeeper Register Plane",
 		AdminComponentName:             "Admin Dashboard",
@@ -115,7 +114,7 @@ var (
 		NacosRegisterComponentName:     "🔨",
 		ZookeeperRegisterComponentName: "🔧️",
 		AdminComponentName:             "🔭",
-		PlanetDiscoveryComponentName:   "🪐",
+		DubboDiscoveryComponentName:    "🪐",
 	}
 )
 

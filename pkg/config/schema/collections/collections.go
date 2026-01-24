@@ -144,17 +144,17 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
-	Planet = collection.NewSchemasBuilder().
+	Dubbo = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).
 		MustAdd(DestinationRule).
 		MustAdd(VirtualService).
 		Build()
 
-	planetGatewayAPI = collection.NewSchemasBuilder().
-				MustAdd(GatewayClass).
-				MustAdd(Gateway).
-				MustAdd(HTTPRoute).
-				Build()
+	dubboGatewayAPI = collection.NewSchemasBuilder().
+			MustAdd(GatewayClass).
+			MustAdd(Gateway).
+			MustAdd(HTTPRoute).
+			Build()
 
 	All = collection.NewSchemasBuilder().
 		MustAdd(PeerAuthentication).

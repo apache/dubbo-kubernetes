@@ -66,7 +66,7 @@ func NewController(fileDir string, domainSuffix string, schemas collection.Schem
 	data := make(map[config.GroupVersionKind]kindStore)
 	for _, s := range schemas.All() {
 		gvk := s.GroupVersionKind()
-		if _, ok := collections.Planet.FindByGroupVersionKind(gvk); ok {
+		if _, ok := collections.Dubbo.FindByGroupVersionKind(gvk); ok {
 			collection := krt.NewCollection(mainCollection, func(ctx krt.HandlerContext, c ConfigKind) *config.Config {
 				if c.GroupVersionKind == gvk {
 					return c.Config

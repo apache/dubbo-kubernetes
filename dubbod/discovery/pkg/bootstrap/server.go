@@ -472,10 +472,10 @@ func (s *Server) initRegistryEventHandlers() {
 
 		// Build ConfigKey for the changed config
 		// Find the schema to get the kind.Kind
-		// First try Planet schemas, then try PlanetGatewayAPI schemas
-		schema, found := collections.Planet.FindByGroupVersionKind(cfg.GroupVersionKind)
+		// First try Dubbo schemas, then try DubboGatewayAPI schemas
+		schema, found := collections.Dubbo.FindByGroupVersionKind(cfg.GroupVersionKind)
 		if !found && features.EnableGatewayAPI {
-			schema, found = collections.PlanetGatewayAPI().FindByGroupVersionKind(cfg.GroupVersionKind)
+			schema, found = collections.DubboGatewayAPI().FindByGroupVersionKind(cfg.GroupVersionKind)
 		}
 		if !found {
 			log.Warnf("configHandler: schema not found for %v, skipping", cfg.GroupVersionKind)
@@ -530,9 +530,9 @@ func (s *Server) initRegistryEventHandlers() {
 			Full:           needsFullPush, // Full push for DestinationRule/VirtualService to reload PushContext
 		})
 	}
-	schemas := collections.Planet.All()
+	schemas := collections.Dubbo.All()
 	if features.EnableGatewayAPI {
-		schemas = collections.PlanetGatewayAPI().All()
+		schemas = collections.DubboGatewayAPI().All()
 	}
 	log.Debugf("initRegistryEventHandlers: found %d schemas to register", len(schemas))
 	registeredCount := 0
@@ -718,8 +718,8 @@ func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain strin
 		}
 	} else {
 		if s.RA != nil {
-			if strings.HasPrefix(features.PlanetCertProvider, constants.CertProviderKubernetesSignerPrefix) {
-				signerName := strings.TrimPrefix(features.PlanetCertProvider, constants.CertProviderKubernetesSignerPrefix)
+			if strings.HasPrefix(features.DubboCertProvider, constants.CertProviderKubernetesSignerPrefix) {
+				signerName := strings.TrimPrefix(features.DubboCertProvider, constants.CertProviderKubernetesSignerPrefix)
 				caBundle, _ := s.RA.GetRootCertFromMeshGlobalConfig(signerName)
 				rootCertBytes = append(rootCertBytes, caBundle...)
 			} else {
@@ -821,7 +821,7 @@ func (s *Server) initSDSServer() {
 	}
 	if !features.EnableXDSIdentityCheck {
 		// Make sure we have security
-		log.Warnf("skipping Kubernetes credential reader; PLANET_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
+		log.Warnf("skipping Kubernetes credential reader; DUBBO_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
 	} else {
 		// TODO ConfigUpdated Multicluster get secret and configmap
 	}
@@ -829,7 +829,7 @@ func (s *Server) initSDSServer() {
 
 // isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Dubbod
 func (s *Server) isK8SSigning() bool {
-	return s.RA != nil && strings.HasPrefix(features.PlanetCertProvider, constants.CertProviderKubernetesSignerPrefix)
+	return s.RA != nil && strings.HasPrefix(features.DubboCertProvider, constants.CertProviderKubernetesSignerPrefix)
 }
 
 func (s *Server) cachesSynced() bool {
@@ -941,17 +941,17 @@ func (s *Server) initDubbodCerts(args *DubboArgs, host string) error {
 			log.Errorf("error initializing certificate watches: %v", err)
 			return nil
 		}
-	} else if features.EnableCAServer && features.PlanetCertProvider == constants.CertProviderDubbod {
+	} else if features.EnableCAServer && features.DubboCertProvider == constants.CertProviderDubbod {
 		log.Infof("initializing Dubbod DNS certificates host: %s, custom host: %s", host, features.DubbodServiceCustomHost)
 		err = s.initDNSCertsDubbod()
-	} else if features.PlanetCertProvider == constants.CertProviderKubernetes {
-		log.Warnf("PLANET_CERT_PROVIDER=kubernetes is no longer supported by upstream K8S")
-	} else if strings.HasPrefix(features.PlanetCertProvider, constants.CertProviderKubernetesSignerPrefix) {
-		log.Infof("initializing Dubbod DNS certificates using K8S RA:%s  host: %s, custom host: %s", features.PlanetCertProvider,
+	} else if features.DubboCertProvider == constants.CertProviderKubernetes {
+		log.Warnf("DUBBO_CERT_PROVIDER=kubernetes is no longer supported by upstream K8S")
+	} else if strings.HasPrefix(features.DubboCertProvider, constants.CertProviderKubernetesSignerPrefix) {
+		log.Infof("initializing Dubbod DNS certificates using K8S RA:%s  host: %s, custom host: %s", features.DubboCertProvider,
 			host, features.DubbodServiceCustomHost)
 		err = s.initDNSCertsK8SRA()
 	} else {
-		log.Warnf("PLANET_CERT_PROVIDER=%s is not implemented", features.PlanetCertProvider)
+		log.Warnf("DUBBO_CERT_PROVIDER=%s is not implemented", features.DubboCertProvider)
 	}
 
 	if err == nil {
@@ -982,7 +982,7 @@ func (s *Server) shouldStartNsController() bool {
 	}
 
 	// For no CA we don't distribute it either, as there is no cert
-	if features.PlanetCertProvider == constants.CertProviderNone {
+	if features.DubboCertProvider == constants.CertProviderNone {
 		return false
 	}
 
@@ -1018,17 +1018,17 @@ func hasCustomTLSCerts(tlsOptions TLSOptions) (ok bool, tlsCertPath, tlsKeyPath,
 		return true, tlsOptions.CertFile, tlsOptions.KeyFile, tlsOptions.CaCertFile
 	}
 
-	if ok = checkPathsExist(constants.DefaultPlanetTLSCert, constants.DefaultPlanetTLSKey, constants.DefaultPlanetTLSCaCert); ok {
-		tlsCertPath = constants.DefaultPlanetTLSCert
-		tlsKeyPath = constants.DefaultPlanetTLSKey
-		caCertPath = constants.DefaultPlanetTLSCaCert
+	if ok = checkPathsExist(constants.DefaultDubboTLSCert, constants.DefaultDubboTLSKey, constants.DefaultDubboTLSCaCert); ok {
+		tlsCertPath = constants.DefaultDubboTLSCert
+		tlsKeyPath = constants.DefaultDubboTLSKey
+		caCertPath = constants.DefaultDubboTLSCaCert
 		return
 	}
 
-	if ok = checkPathsExist(constants.DefaultPlanetTLSCert, constants.DefaultPlanetTLSKey, constants.DefaultPlanetTLSCaCertAlternatePath); ok {
-		tlsCertPath = constants.DefaultPlanetTLSCert
-		tlsKeyPath = constants.DefaultPlanetTLSKey
-		caCertPath = constants.DefaultPlanetTLSCaCertAlternatePath
+	if ok = checkPathsExist(constants.DefaultDubboTLSCert, constants.DefaultDubboTLSKey, constants.DefaultDubboTLSCaCertAlternatePath); ok {
+		tlsCertPath = constants.DefaultDubboTLSCert
+		tlsKeyPath = constants.DefaultDubboTLSKey
+		caCertPath = constants.DefaultDubboTLSCaCertAlternatePath
 		return
 	}
 

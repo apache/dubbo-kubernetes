@@ -73,7 +73,7 @@ type TLSOptions struct {
 	CipherSuits     []uint16 // This is the parsed cipher suites
 }
 
-func NewPlanetArgs(initFuncs ...func(*DubboArgs)) *DubboArgs {
+func NewDubboArgs(initFuncs ...func(*DubboArgs)) *DubboArgs {
 	p := &DubboArgs{}
 
 	// Apply Default Values.

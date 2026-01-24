@@ -40,13 +40,13 @@ var (
 		"If this is set to false, will not create CA server in dubbod.").Get()
 	// EnableCACRL ToDo (nilekh): remove this feature flag once it's stable
 	EnableCACRL = env.Register(
-		"PLANET_ENABLE_CA_CRL",
+		"DUBBO_ENABLE_CA_CRL",
 		true, // Default value (true = feature enabled by default)
 		"If set to false, Dubbo will not watch for the ca-crl.pem file in the /etc/cacerts directory "+
 			"and will not distribute CRL data to namespaces for proxies to consume.",
 	).Get()
-	PlanetCertProvider = env.Register("PLANET_CERT_PROVIDER", constants.CertProviderDubbod,
-		"The provider of Planet DNS certificate. K8S RA will be used for k8s.io/NAME. 'dubbod' value will sign"+
+	DubboCertProvider = env.Register("DUBBO_CERT_PROVIDER", constants.CertProviderDubbod,
+		"The provider of Dubbo DNS certificate. K8S RA will be used for k8s.io/NAME. 'dubbod' value will sign"+
 			" using Dubbo build in CA. Other values will not not generate TLS certs, but still "+
 			" distribute ./etc/certs/root-cert.pem. Only used if custom certificates are not mounted.").Get()
 	DubbodServiceCustomHost = env.Register("DUBBOD_CUSTOM_HOST", "",
@@ -56,10 +56,10 @@ var (
 		"Name of the mutatingwebhookconfiguration to patch, if dubboctl is not used.").Get()
 	ResolveHostnameGateways = env.Register("RESOLVE_HOSTNAME_GATEWAYS", true,
 		"If true, hostnames in the LoadBalancer addresses of a Service will be resolved at the control plane for use in cross-network gateways.").Get()
-	ManagedGatewayController = env.Register("PLANET_GATEWAY_API_CONTROLLER_NAME", "dubbo.apache.org/gateway-controller",
+	ManagedGatewayController = env.Register("DUBBO_GATEWAY_API_CONTROLLER_NAME", "dubbo.apache.org/gateway-controller",
 		"Gateway API controller name. dubbod will only reconcile Gateway API resources referencing a GatewayClass with this controller name").Get()
-	GatewayAPIDefaultGatewayClass = env.Register("PLANET_GATEWAY_API_DEFAULT_GATEWAYCLASS_NAME", "dubbo",
+	GatewayAPIDefaultGatewayClass = env.Register("DUBBO_GATEWAY_API_DEFAULT_GATEWAYCLASS_NAME", "dubbo",
 		"Name of the default GatewayClass").Get()
-	StatusMaxWorkers = env.Register("PLANET_STATUS_MAX_WORKERS", 100, "The maximum number of workers"+
+	StatusMaxWorkers = env.Register("DUBBO_STATUS_MAX_WORKERS", 100, "The maximum number of workers"+
 		" for status update").Get()
 )

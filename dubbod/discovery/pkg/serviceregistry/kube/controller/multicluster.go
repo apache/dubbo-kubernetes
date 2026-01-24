@@ -36,7 +36,7 @@ func (k *kubeController) Close() {
 }
 
 type Multicluster struct {
-	// serverID of this planet instance used for leader election
+	// serverID of this dubbo instance used for leader election
 	serverID string
 
 	// options to use when creating kube controllers
@@ -124,7 +124,7 @@ func (m *Multicluster) initializeCluster(cluster *multicluster.Cluster, kubeCont
 					nc := NewNamespaceController(client, m.caBundleWatcher)
 					// Start informers again. This fixes the case where informers for namespace do not start,
 					// as we create them only after acquiring the leader lock
-					// Note: stop here should be the overall planet stop, NOT the leader election stop. We are
+					// Note: stop here should be the overall dubbo stop, NOT the leader election stop. We are
 					// basically lazy loading the informer, if we stop it when we lose the lock we will never
 					// recreate it again.
 					client.RunAndWait(clusterStopCh)

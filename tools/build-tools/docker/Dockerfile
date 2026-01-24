@@ -78,8 +78,8 @@ FROM binary_tools_context_base AS go_tools_2
 
 # Build Dubbo Kubernetes kubetype-gen and protoc-gen-crd tool from source.
 # Copy pre-built kubetype-gen binary from project root
-COPY --chmod=755 ./tools/bin/kubetype-gen /tmp/go/bin/kubetype-gen
-COPY --chmod=755 ./tools/bin/protoc-gen-crd /tmp/go/bin/protoc-gen-crd
+COPY --chmod=755 ./tools/cmd/bin/kubetype-gen /tmp/go/bin/kubetype-gen
+COPY --chmod=755 ./tools/cmd/bin/protoc-gen-crd /tmp/go/bin/protoc-gen-crd
 
 FROM ubuntu:noble AS base_os_context
 

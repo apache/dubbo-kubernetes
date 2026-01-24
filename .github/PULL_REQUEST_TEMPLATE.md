@@ -28,8 +28,7 @@ Related to #
 <!-- Please put an X in all that apply -->
 
 - [ ] Core Components
-- [ ] Control Plane (Planet Discovery)
-- [ ] Data Plane (Planet Agent)
+- [ ] Control Plane
 - [ ] Operator
 - [ ] Helm Charts
 - [ ] Documentation

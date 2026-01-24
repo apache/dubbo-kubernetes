@@ -46,9 +46,9 @@ var (
 
 func NewRootCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:          "planet-agent",
-		Short:        "Dubbo Planet agent.",
-		Long:         "Dubbo Planet agent bootstraps via gRPC xDS.",
+		Use:          "dubbo-agent",
+		Short:        "Dubbo agent.",
+		Long:         "Dubbo agent bootstraps via gRPC xDS.",
 		SilenceUsage: true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,

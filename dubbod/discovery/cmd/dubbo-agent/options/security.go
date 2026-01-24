@@ -39,7 +39,7 @@ func NewSecurityOptions(proxyConfig *serviceRouteIndex.ProxyConfig, stsPort int,
 	o := &security.Options{
 		CAEndpoint:           caEndpointEnv,
 		CAProviderName:       caProviderEnv,
-		PlanetCertProvider:   features.PlanetCertProvider,
+		DubboCertProvider:    features.DubboCertProvider,
 		OutputKeyCertToDir:   outputKeyCertToDir,
 		ProvCert:             provCert,
 		ClusterID:            clusterIDVar.Get(),
