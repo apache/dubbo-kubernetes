@@ -145,29 +145,11 @@ jobs:
       - name: Lint base chart
         run: helm lint manifests/charts/base
 
-      - name: Lint admin chart
-        run: helm lint manifests/charts/admin
-
       - name: Lint dubbo-discovery chart
         run: helm lint manifests/charts/dubbo-control/dubbo-discovery
-
-      - name: Lint nacos chart
-        run: helm lint manifests/charts/dubbo-control/register-discovery/nacos
-
-      - name: Lint zookeeper chart
-        run: helm lint manifests/charts/dubbo-control/register-discovery/zookeeper
 
       - name: Validate base chart template rendering
         run: helm template test-release manifests/charts/base --debug
 
-      - name: Validate admin chart template rendering
-        run: helm template test-release manifests/charts/admin --debug
-
       - name: Validate dubbo-discovery chart template rendering
         run: helm template test-release manifests/charts/dubbo-control/dubbo-discovery --debug
-
-      - name: Validate nacos chart template rendering
-        run: helm template test-release manifests/charts/dubbo-control/register-discovery/nacos --debug
-
-      - name: Validate zookeeper chart template rendering
-        run: helm template test-release manifests/charts/dubbo-control/register-discovery/zookeeper --debug

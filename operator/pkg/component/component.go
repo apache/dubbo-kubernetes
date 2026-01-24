@@ -25,10 +25,8 @@ import (
 type Name string
 
 const (
-	BaseComponentName              Name = "Base"
-	NacosRegisterComponentName     Name = "Nacos"
-	ZookeeperRegisterComponentName Name = "Zookeeper"
-	DubboDiscoveryComponentName    Name = "Dubbo-Discovery"
+	BaseComponentName           Name = "Base"
+	DubboDiscoveryComponentName Name = "Dubbod"
 )
 
 type Component struct {
@@ -60,15 +58,6 @@ var AllComponents = []Component{
 		HelmValuesTreeRoot: "global",
 	},
 	{
-		UserFacingName:     AdminComponentName,
-		SpecName:           "admin",
-		ResourceType:       "Deployment",
-		ContainerName:      "dashboard",
-		Default:            true,
-		HelmSubDir:         "admin",
-		HelmValuesTreeRoot: "admin",
-	},
-	{
 		UserFacingName:     DubboDiscoveryComponentName,
 		SpecName:           "dubbo",
 		ResourceType:       "Deployment",
@@ -76,65 +65,30 @@ var AllComponents = []Component{
 		ContainerName:      "dubbo-discovery",
 		Default:            true,
 		HelmSubDir:         "dubbo-control/dubbo-discovery",
-		HelmValuesTreeRoot: "dubbo-discovery",
-	},
-	{
-		UserFacingName:     NacosRegisterComponentName,
-		SpecName:           "nacos",
-		ResourceType:       "StatefulSet",
-		ResourceName:       "register",
-		ContainerName:      "register-discovery",
-		Default:            true,
-		HelmSubDir:         "dubbo-control/register-discovery/nacos",
-		HelmValuesTreeRoot: "nacos",
-	},
-	{
-		UserFacingName:     ZookeeperRegisterComponentName,
-		SpecName:           "zookeeper",
-		ResourceType:       "StatefulSet",
-		ResourceName:       "register",
-		ContainerName:      "register-discovery",
-		Default:            true,
-		HelmSubDir:         "dubbo-control/register-discovery/zookeeper",
-		HelmValuesTreeRoot: "zookeeper",
+		HelmValuesTreeRoot: "global",
 	},
 }
 
 var (
 	userFacingCompNames = map[Name]string{
-		BaseComponentName:              "Dubbo Resource Core",
-		DubboDiscoveryComponentName:    "Dubbo Control Plane",
-		NacosRegisterComponentName:     "Nacos Register Plane",
-		ZookeeperRegisterComponentName: "Zookeeper Register Plane",
-		AdminComponentName:             "Admin Dashboard",
+		BaseComponentName:           "Dubbo Resource Core",
+		DubboDiscoveryComponentName: "Dubbo Control Plane",
 	}
 
 	Icons = map[Name]string{
-		BaseComponentName:              "🔮",
-		NacosRegisterComponentName:     "🔨",
-		ZookeeperRegisterComponentName: "🔧️",
-		AdminComponentName:             "🔭",
-		DubboDiscoveryComponentName:    "🪐",
+		BaseComponentName:           "🔮",
+		DubboDiscoveryComponentName: "🪐",
 	}
 )
 
 func (c Component) Get(merged values.Map) ([]apis.DefaultCompSpec, error) {
 	defaultNamespace := merged.GetPathString("metadata.namespace")
 	var defaultResp []apis.DefaultCompSpec
-	def := c.Default
-	if def {
-		defaultResp = []apis.DefaultCompSpec{{
-			RegisterComponentSpec: apis.RegisterComponentSpec{
-				Namespace: defaultNamespace,
-			}},
-		}
-	}
 	buildSpec := func(m values.Map) (apis.DefaultCompSpec, error) {
 		spec, err := values.ConvertMap[apis.DefaultCompSpec](m)
 		if err != nil {
 			return apis.DefaultCompSpec{}, fmt.Errorf("fail to convert %v: %v", c.SpecName, err)
 		}
-
 		if spec.Namespace == "" {
 			spec.Namespace = defaultNamespace
 		}
@@ -143,46 +97,6 @@ func (c Component) Get(merged values.Map) ([]apis.DefaultCompSpec, error) {
 		}
 		spec.Raw = m
 		return spec, nil
-	}
-	// List of components
-	if c.ContainerName == "dashboard" {
-		s, ok := merged.GetPathMap("spec.dashboard." + c.SpecName)
-		if !ok {
-			return defaultResp, nil
-		}
-		spec, err := buildSpec(s)
-		if err != nil {
-			return nil, err
-		}
-		if !(spec.Enabled.GetValueOrTrue()) {
-			return nil, nil
-		}
-	}
-	if c.ContainerName == "register-discovery" {
-		s, ok := merged.GetPathMap("spec.components.register." + c.SpecName)
-		if !ok {
-			return defaultResp, nil
-		}
-		spec, err := buildSpec(s)
-		if err != nil {
-			return nil, err
-		}
-		if !(spec.Enabled.GetValueOrTrue()) {
-			return nil, nil
-		}
-	}
-	if c.ContainerName == "dubbo-discovery" {
-		s, ok := merged.GetPathMap("spec.components.discovery." + c.SpecName)
-		if !ok {
-			return defaultResp, nil
-		}
-		spec, err := buildSpec(s)
-		if err != nil {
-			return nil, err
-		}
-		if !(spec.Enabled.GetValueOrTrue()) {
-			return nil, nil
-		}
 	}
 	// Single component
 	s, ok := merged.GetPathMap("spec.components." + c.SpecName)

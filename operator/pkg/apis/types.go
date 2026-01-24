@@ -43,8 +43,6 @@ type DubboOperatorSpec struct {
 	// Path or name for the profile.
 	// default profile is used if this field is unset.
 	Profile string `json:"profile,omitempty"`
-	// For admin dashboard.
-	Dashboard *DubboDashboardSpec `json:"dashboard,omitempty"`
 	// enablement and component-specific settings that are not internal to the component.
 	Components *DubboComponentSpec `json:"components,omitempty"`
 	// Overrides for default `values.yaml`. This is a validated pass-through to Helm templates.
@@ -54,21 +52,8 @@ type DubboOperatorSpec struct {
 type DubboComponentSpec struct {
 	// Used for Dubbo resources.
 	Base *BaseComponentSpec `json:"base,omitempty"`
-	// Using Zookeeper and Nacos as the registration plane.
-	Register *RegisterSpec `json:"register,omitempty"`
 	// Using Dubbo as the control plane.
 	Discovery *DiscoverySpec `json:"discovery,omitempty"`
-}
-
-type DubboDashboardSpec struct {
-	Admin *DashboardComponentSpec `json:"admin,omitempty"`
-}
-
-type RegisterSpec struct {
-	// Nacos component.
-	Nacos *RegisterComponentSpec `json:"nacos,omitempty"`
-	// Zookeeper component.
-	Zookeeper *RegisterComponentSpec `json:"zookeeper,omitempty"`
 }
 
 type DiscoverySpec struct {
@@ -81,31 +66,18 @@ type BaseComponentSpec struct {
 	Enabled *BoolValue `json:"enabled,omitempty"`
 }
 
-type DashboardComponentSpec struct {
-	// Selects whether this component is installed.
-	Enabled *BoolValue `json:"enabled,omitempty"`
-}
-
-type RegisterComponentSpec struct {
-	// Selects whether this component is installed.
-	Enabled *BoolValue `json:"enabled,omitempty"`
-	// Namespace for the component.
-	Namespace string `json:"namespace,omitempty"`
-	// Raw is the raw inputs. This allows distinguishing unset vs zero-values for KubernetesResources
-	Raw map[string]any `json:"-"`
-}
-
 type DiscoveryComponentSpec struct {
 	// Selects whether this component is installed.
 	Enabled *BoolValue `json:"enabled,omitempty"`
+}
+
+type DefaultCompSpec struct {
+	// Selects whether this component is installed.
+	Enabled *BoolValue `json:"enabled,omitempty"`
 	// Namespace for the component.
 	Namespace string `json:"namespace,omitempty"`
 	// Raw is the raw inputs. This allows distinguishing unset vs zero-values for KubernetesResources
 	Raw map[string]any `json:"-"`
-}
-
-type DefaultCompSpec struct {
-	RegisterComponentSpec
 }
 
 type BoolValue struct {
