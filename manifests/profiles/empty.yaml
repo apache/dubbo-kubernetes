@@ -19,12 +19,6 @@ spec:
   components:
     base:
       enabled: false
-    register:
-      nacos:
+    discovery:
+      dubbo:
         enabled: false
-      zookeeper:
-        enabled: false
-  dashboard:
-    admin:
-      enabled: false
-

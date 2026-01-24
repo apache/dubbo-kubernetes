@@ -253,17 +253,10 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 }
 
 var componentDependencies = map[component.Name][]component.Name{
-	component.DubboDiscoveryComponentName: {
-		component.AdminComponentName,
-	},
-	component.NacosRegisterComponentName:     {},
-	component.ZookeeperRegisterComponentName: {},
+	component.DubboDiscoveryComponentName: {},
 	component.BaseComponentName: {
 		component.DubboDiscoveryComponentName,
-		component.NacosRegisterComponentName,
-		component.ZookeeperRegisterComponentName,
 	},
-	component.AdminComponentName: {},
 }
 
 func dependenciesChannels() map[component.Name]chan struct{} {

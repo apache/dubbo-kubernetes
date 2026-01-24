@@ -22,22 +22,12 @@ spec:
   components:
     base:
       enabled: true
-    register:
-      nacos:
-        enabled: false
-      zookeeper:
-        enabled: false
     discovery:
       dubbo:
         enabled: true
-  dashboard:
-    admin:
-      enabled: false
   values:
     global: {}
     base: {}
-    nacos: {}
-    zookeeper: {}
 
 
 
