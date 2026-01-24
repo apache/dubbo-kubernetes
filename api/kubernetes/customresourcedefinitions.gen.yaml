@@ -5,7 +5,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-planet
+    app: dubbo
     chart: dubbo
     heritage: Tiller
     release: dubbo
@@ -139,7 +139,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-planet
+    app: dubbo
     chart: dubbo
     heritage: Tiller
     release: dubbo
@@ -258,7 +258,7 @@ metadata:
   annotations:
     "helm.sh/resource-policy": keep
   labels:
-    app: dubbo-planet
+    app: dubbo
     chart: dubbo
     dubbo: security
     heritage: Tiller

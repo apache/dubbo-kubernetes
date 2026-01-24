@@ -253,13 +253,13 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 }
 
 var componentDependencies = map[component.Name][]component.Name{
-	component.PlanetDiscoveryComponentName: {
+	component.DubboDiscoveryComponentName: {
 		component.AdminComponentName,
 	},
 	component.NacosRegisterComponentName:     {},
 	component.ZookeeperRegisterComponentName: {},
 	component.BaseComponentName: {
-		component.PlanetDiscoveryComponentName,
+		component.DubboDiscoveryComponentName,
 		component.NacosRegisterComponentName,
 		component.ZookeeperRegisterComponentName,
 	},

@@ -59,14 +59,14 @@ type Node struct {
 }
 
 type NodeMetadata struct {
-	Generator            string               `json:"GENERATOR,omitempty"`
-	ClusterID            cluster.ID           `json:"CLUSTER_ID,omitempty"`
-	Namespace            string               `json:"NAMESPACE,omitempty"`
-	StsPort              string               `json:"STS_PORT,omitempty"`
-	MetadataDiscovery    *StringBool          `json:"METADATA_DISCOVERY,omitempty"`
-	ProxyConfig          *NodeMetaProxyConfig `json:"PROXY_CONFIG,omitempty"`
-	PlanetSubjectAltName []string             `json:"PLANET_SAN,omitempty"`
-	XDSRootCert          string               `json:"-"`
+	Generator           string               `json:"GENERATOR,omitempty"`
+	ClusterID           cluster.ID           `json:"CLUSTER_ID,omitempty"`
+	Namespace           string               `json:"NAMESPACE,omitempty"`
+	StsPort             string               `json:"STS_PORT,omitempty"`
+	MetadataDiscovery   *StringBool          `json:"METADATA_DISCOVERY,omitempty"`
+	ProxyConfig         *NodeMetaProxyConfig `json:"PROXY_CONFIG,omitempty"`
+	DubboSubjectAltName []string             `json:"DUBBO_SAN,omitempty"`
+	XDSRootCert         string               `json:"-"`
 }
 
 type BootstrapNodeMetadata struct {

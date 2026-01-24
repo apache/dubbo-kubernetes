@@ -32,7 +32,7 @@ import (
 // +cue-gen:PeerAuthentication:versions:v1alpha3
 // +cue-gen:PeerAuthentication:storageVersion
 // +cue-gen:PeerAuthentication:annotations:helm.sh/resource-policy=keep
-// +cue-gen:PeerAuthentication:labels:app=dubbo-planet,chart=dubbo,dubbo=security,heritage=Tiller,release=dubbo
+// +cue-gen:PeerAuthentication:labels:app=dubbo,chart=dubbo,dubbo=security,heritage=Tiller,release=dubbo
 // +cue-gen:PeerAuthentication:subresource:status
 // +cue-gen:PeerAuthentication:scope:Namespaced
 // +cue-gen:PeerAuthentication:resource:categories=dubbo,security,shortNames=pa

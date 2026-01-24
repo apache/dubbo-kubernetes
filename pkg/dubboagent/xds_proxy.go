@@ -387,7 +387,7 @@ func (p *XdsProxy) handleUpstreamRequest(con *ProxyConnection) {
 			con.nodeMutex.RUnlock()
 
 			// For XDS, any first request (not just LDS) without Node should wait
-			// because planet-discovery needs Node in the first request to initialize connection
+			// because dubbo-discovery needs Node in the first request to initialize connection
 			if !nodeReceived.Load() && req.Node == nil && req.TypeUrl != model.HealthInfoType {
 				proxyLog.Debugf("connection #%d received first request without Node (TypeUrl=%s), waiting for Node information", con.conID, model.GetShortType(req.TypeUrl))
 				continue

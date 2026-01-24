@@ -28,7 +28,7 @@ spec:
       zookeeper:
         enabled: false
     discovery:
-      planet:
+      dubbo:
         enabled: true
   dashboard:
     admin:

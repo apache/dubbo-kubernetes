@@ -89,7 +89,7 @@ func newDiscoveryCommand() *cobra.Command {
 }
 
 func addFlags(c *cobra.Command) {
-	serverArgs = bootstrap.NewPlanetArgs(func(p *bootstrap.DubboArgs) {
+	serverArgs = bootstrap.NewDubboArgs(func(p *bootstrap.DubboArgs) {
 		p.CtrlZOptions = ctrlz.DefaultOptions()
 		p.InjectionOptions = bootstrap.InjectionOptions{
 			InjectionDirectory: "./var/lib/dubbo/inject",

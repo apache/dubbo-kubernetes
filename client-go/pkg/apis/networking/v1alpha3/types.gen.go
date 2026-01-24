@@ -34,7 +34,7 @@ import (
 // +cue-gen:DestinationRule:groupName:networking.dubbo.apache.org
 // +cue-gen:DestinationRule:versions:v1alpha3
 // +cue-gen:DestinationRule:annotations:helm.sh/resource-policy=keep
-// +cue-gen:DestinationRule:labels:app=dubbo-planet,chart=dubbo,heritage=Tiller,release=dubbo
+// +cue-gen:DestinationRule:labels:app=dubbo,chart=dubbo,heritage=Tiller,release=dubbo
 // +cue-gen:DestinationRule:subresource:status
 // +cue-gen:DestinationRule:scope:Namespaced
 // +cue-gen:DestinationRule:resource:categories=dubbo,networking,shortNames=dr
@@ -86,7 +86,7 @@ type DestinationRuleList struct {
 // +cue-gen:VirtualService:groupName:networking.dubbo.apache.org
 // +cue-gen:VirtualService:versions:v1alpha3
 // +cue-gen:VirtualService:annotations:helm.sh/resource-policy=keep
-// +cue-gen:VirtualService:labels:app=dubbo-planet,chart=dubbo,heritage=Tiller,release=dubbo
+// +cue-gen:VirtualService:labels:app=dubbo,chart=dubbo,heritage=Tiller,release=dubbo
 // +cue-gen:VirtualService:subresource:status
 // +cue-gen:VirtualService:scope:Namespaced
 // +cue-gen:VirtualService:resource:categories=dubbo,networking,shortNames=vs

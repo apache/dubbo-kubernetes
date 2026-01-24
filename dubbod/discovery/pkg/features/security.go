@@ -24,8 +24,8 @@ var (
 		"If enabled, dubbod will use a secret named cacerts to store its self-signed dubbo-"+
 			"generated root certificate.").Get()
 	EnableXDSIdentityCheck = env.Register(
-		"PLANET_ENABLE_XDS_IDENTITY_CHECK",
+		"DUBBO_ENABLE_XDS_IDENTITY_CHECK",
 		true,
-		"If enabled, planet will authorize XDS clients, to ensure they are acting only as namespaces they have permissions for.",
+		"If enabled, dubbo will authorize XDS clients, to ensure they are acting only as namespaces they have permissions for.",
 	).Get()
 )

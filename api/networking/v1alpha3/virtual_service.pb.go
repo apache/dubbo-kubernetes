@@ -49,7 +49,7 @@ const (
 // +cue-gen:VirtualService:groupName:networking.dubbo.apache.org
 // +cue-gen:VirtualService:versions:v1alpha3
 // +cue-gen:VirtualService:annotations:helm.sh/resource-policy=keep
-// +cue-gen:VirtualService:labels:app=dubbo-planet,chart=dubbo,heritage=Tiller,release=dubbo
+// +cue-gen:VirtualService:labels:app=dubbo,chart=dubbo,heritage=Tiller,release=dubbo
 // +cue-gen:VirtualService:subresource:status
 // +cue-gen:VirtualService:scope:Namespaced
 // +cue-gen:VirtualService:resource:categories=dubbo,networking,shortNames=vs

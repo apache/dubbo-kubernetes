@@ -61,7 +61,7 @@ spec:
         - --domain
         - $(POD_NAMESPACE).svc.cluster.local
         env:
-        - name: PLANET_CERT_PROVIDER
+        - name: DUBBO_CERT_PROVIDER
           value: dubbod
         - name: CA_ADDR
           value: dubbod.dubbo-system.svc:15012

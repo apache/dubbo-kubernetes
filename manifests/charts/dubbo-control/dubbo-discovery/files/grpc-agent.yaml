@@ -38,7 +38,7 @@ spec:
         postStart:
           exec:
             command:
-              - planet-agent
+              - dubbo-agent
               - wait
               - --url=http://localhost:15020/healthz/ready
       readinessProbe:
@@ -58,7 +58,7 @@ spec:
           value: /etc/dubbo/proxy/grpc-bootstrap.json
         - name: OUTPUT_CERTS
           value: /var/lib/dubbo/data
-        - name: PLANET_CERT_PROVIDER
+        - name: DUBBO_CERT_PROVIDER
           value: dubbod
         - name: DUBBO_META_CLUSTER_ID
           value: Kubernetes

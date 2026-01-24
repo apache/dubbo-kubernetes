@@ -18,7 +18,7 @@ package config
 
 import "strings"
 
-func GetPlanetSan(discoveryAddress string) string {
+func GetDubboSan(discoveryAddress string) string {
 	discHost := strings.Split(discoveryAddress, ":")[0]
 	// For local debugging - the discoveryAddress is set to localhost, but the cert issued for normal PA.
 	if discHost == "localhost" {

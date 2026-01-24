@@ -88,7 +88,7 @@ func NewForSchemas(client kube.Client, opts Option, schemas collection.Schemas) 
 		client:           client,
 		filtersByGVK:     opts.FiltersByGVK,
 		stop:             stop,
-		logger:           log.RegisterScope("crdclient", "Planet Kubernetes CRD controller"),
+		logger:           log.RegisterScope("crdclient", "Dubbo Kubernetes CRD controller"),
 	}
 
 	kopts := krt.NewOptionsBuilder(stop, "crdclient", opts.KrtDebugger)
@@ -108,11 +108,11 @@ func (cl *Client) Run(stop <-chan struct{}) {
 	}
 
 	t0 := time.Now()
-	cl.logger.Infof("Starting Planet Kubernetes CRD controller")
+	cl.logger.Infof("Starting Dubbo Kubernetes CRD controller")
 	if !kube.WaitForCacheSync("crdclient", stop, cl.informerSynced) {
-		cl.logger.Infof("Failed to sync Planet Kubernetes CRD controller cache")
+		cl.logger.Infof("Failed to sync Dubbo Kubernetes CRD controller cache")
 	} else {
-		cl.logger.Infof("Planet Kubernetes CRD controller synced in %v", time.Since(t0))
+		cl.logger.Infof("Dubbo Kubernetes CRD controller synced in %v", time.Since(t0))
 	}
 	<-stop
 	close(cl.stop)

@@ -47,7 +47,7 @@ type MetadataOptions struct {
 	InstanceIPs            []string
 	StsPort                int
 	ProxyConfig            *meshAPI.ProxyConfig
-	PlanetSubjectAltName   []string
+	DubboSubjectAltName    []string
 	CredentialSocketExists bool
 	XDSRootCert            string
 	annotationFilePath     string
@@ -125,7 +125,7 @@ func GetNodeMetaData(options MetadataOptions) (*model.Node, error) {
 	}
 
 	meta.ProxyConfig = (*model.NodeMetaProxyConfig)(options.ProxyConfig)
-	meta.PlanetSubjectAltName = options.PlanetSubjectAltName
+	meta.DubboSubjectAltName = options.DubboSubjectAltName
 	meta.XDSRootCert = options.XDSRootCert
 	if options.CredentialSocketExists {
 		untypedMeta[security.CredentialMetaDataName] = "true"

@@ -41,7 +41,7 @@ spec:
           env:
             - name: REVISION
               value: default
-            - name: PLANET_CERT_PROVIDER
+            - name: DUBBO_CERT_PROVIDER
               value: dubbod
             - name: CLUSTER_ID
               value: "Kubernetes"

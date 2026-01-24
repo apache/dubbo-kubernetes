@@ -110,7 +110,7 @@ type Options struct {
 	ServeOnlyFiles       bool
 	ProvCert             string
 	FileMountedCerts     bool
-	PlanetCertProvider   string
+	DubboCertProvider    string
 	OutputKeyCertToDir   string
 	CertChainFilePath    string
 	KeyFilePath          string

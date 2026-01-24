@@ -183,11 +183,11 @@ func setDefaultConfig(config *Config) Config {
 }
 
 func ConfigInitialRequests() []*discovery.DiscoveryRequest {
-	out := make([]*discovery.DiscoveryRequest, 0, len(collections.Planet.All())+1)
+	out := make([]*discovery.DiscoveryRequest, 0, len(collections.Dubbo.All())+1)
 	out = append(out, &discovery.DiscoveryRequest{
 		TypeUrl: gvk.MeshGlobalConfig.String(),
 	})
-	for _, sch := range collections.Planet.All() {
+	for _, sch := range collections.Dubbo.All() {
 		out = append(out, &discovery.DiscoveryRequest{
 			TypeUrl: sch.GroupVersionKind().String(),
 		})

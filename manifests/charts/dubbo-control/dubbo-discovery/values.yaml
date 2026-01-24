@@ -32,7 +32,7 @@ _internal_default_values_not_set:
   global:
     dubboNamespace: dubbo-system
 
-    planetCertProvider: dubbod
+    dubboCertProvider: dubbod
     proxy:
       image: ""
 

@@ -156,7 +156,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 
 	var bootstrapNode *core.Node
 	if a.cfg.GRPCBootstrapPath != "" {
-		log.Infof("Starting planet-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
+		log.Infof("Starting dubbo-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
 		node, err := a.generateGRPCBootstrapWithNode()
 		if err != nil {
 			return nil, fmt.Errorf("failed generating gRPC XDS bootstrap: %v", err)
@@ -279,7 +279,7 @@ func (a *Agent) FindRootCAForXDS() (string, error) {
 	} else if a.secOpts.FileMountedCerts {
 		// FileMountedCerts - Load it from Proxy Metadata.
 		rootCAPath = a.proxyConfig.ProxyMetadata[MetadataClientRootCert]
-	} else if a.secOpts.PlanetCertProvider == constants.CertProviderNone {
+	} else if a.secOpts.DubboCertProvider == constants.CertProviderNone {
 		return "", fmt.Errorf("root CA file for XDS required but configured provider as none")
 	} else {
 		rootCAPath = path.Join(DubboCACertPath, constants.CACertNamespaceConfigMapDataName)
@@ -319,7 +319,7 @@ func (a *Agent) FindRootCAForCA() (string, error) {
 		return "", nil
 	} else if a.cfg.CARootCerts != "" {
 		rootCAPath = a.cfg.CARootCerts
-	} else if a.secOpts.PlanetCertProvider == constants.CertProviderCustom {
+	} else if a.secOpts.DubboCertProvider == constants.CertProviderCustom {
 		rootCAPath = security.DefaultRootCertFilePath // ./etc/certs/root-cert.pem
 	} else if a.secOpts.ProvCert != "" {
 		// This was never completely correct - PROV_CERT are only intended for auth with CA_ADDR,
@@ -327,7 +327,7 @@ func (a *Agent) FindRootCAForCA() (string, error) {
 		// For VMs, the root cert file used to auth may be populated afterwards.
 		// Thus, return directly here and skip checking for existence.
 		return a.secOpts.ProvCert + "/root-cert.pem", nil
-	} else if a.secOpts.PlanetCertProvider == constants.CertProviderNone {
+	} else if a.secOpts.DubboCertProvider == constants.CertProviderNone {
 		return "", fmt.Errorf("root CA file for CA required but configured provider as none")
 	} else {
 		rootCAPath = path.Join(DubboCACertPath, constants.CACertNamespaceConfigMapDataName)
@@ -529,9 +529,9 @@ func (a *Agent) newSecretManager(createCaClient bool) (*cache.SecretManagerClien
 }
 
 func (a *Agent) generateNodeMetadata() (*model.Node, error) {
-	var planetSAN []string
+	var dubboSAN []string
 	if a.proxyConfig.ControlPlaneAuthPolicy == mesh.AuthenticationPolicy_MUTUAL_TLS {
-		planetSAN = []string{config.GetPlanetSan(a.proxyConfig.DiscoveryAddress)}
+		dubboSAN = []string{config.GetDubboSan(a.proxyConfig.DiscoveryAddress)}
 	}
 
 	credentialSocketExists, err := checkSocket(context.TODO(), security.CredentialNameSocketPath)
@@ -548,7 +548,7 @@ func (a *Agent) generateNodeMetadata() (*model.Node, error) {
 		InstanceIPs:            a.cfg.ProxyIPAddresses,
 		StsPort:                a.secOpts.STSPort,
 		ProxyConfig:            a.proxyConfig,
-		PlanetSubjectAltName:   planetSAN,
+		DubboSubjectAltName:    dubboSAN,
 		CredentialSocketExists: credentialSocketExists,
 		XDSRootCert:            a.cfg.XDSRootCerts,
 		MetadataDiscovery:      a.cfg.MetadataDiscovery,
