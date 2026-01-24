@@ -19,6 +19,5 @@ spec:
   components:
     base:
       enabled: false
-    discovery:
-      dubbo:
-        enabled: false
+    dubbo:
+      enabled: false

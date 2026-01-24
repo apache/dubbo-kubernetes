@@ -22,12 +22,9 @@ spec:
   components:
     base:
       enabled: true
-    discovery:
-      dubbo:
-        enabled: true
+    dubbo:
+      enabled: true
   values:
     global: {}
-    base: {}
-
 
 
