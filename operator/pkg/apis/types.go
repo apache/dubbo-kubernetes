@@ -53,11 +53,6 @@ type DubboComponentSpec struct {
 	// Used for Dubbo resources.
 	Base *BaseComponentSpec `json:"base,omitempty"`
 	// Using Dubbo as the control plane.
-	Discovery *DiscoverySpec `json:"discovery,omitempty"`
-}
-
-type DiscoverySpec struct {
-	// Dubbo component
 	Dubbo *DiscoveryComponentSpec `json:"dubbo,omitempty"`
 }
 

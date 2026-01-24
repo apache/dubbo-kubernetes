@@ -53,19 +53,18 @@ var AllComponents = []Component{
 		UserFacingName:     BaseComponentName,
 		SpecName:           "base",
 		ResourceType:       "Base",
-		Default:            true,
 		HelmSubDir:         "base",
+		Default:            true,
 		HelmValuesTreeRoot: "global",
 	},
 	{
-		UserFacingName:     DubboDiscoveryComponentName,
-		SpecName:           "dubbo",
-		ResourceType:       "Deployment",
-		ResourceName:       "dubbod",
-		ContainerName:      "dubbo-discovery",
-		Default:            true,
-		HelmSubDir:         "dubbo-control/dubbo-discovery",
-		HelmValuesTreeRoot: "global",
+		UserFacingName: DubboDiscoveryComponentName,
+		SpecName:       "dubbo",
+		ResourceType:   "Deployment",
+		ResourceName:   "dubbo",
+		ContainerName:  "dubbo-discovery",
+		Default:        true,
+		HelmSubDir:     "dubbo-control/dubbo-discovery",
 	},
 }
 
@@ -76,8 +75,8 @@ var (
 	}
 
 	Icons = map[Name]string{
-		BaseComponentName:           "🔮",
-		DubboDiscoveryComponentName: "🪐",
+		BaseComponentName:           "⚡️",
+		DubboDiscoveryComponentName: "⚡️",
 	}
 )
 
