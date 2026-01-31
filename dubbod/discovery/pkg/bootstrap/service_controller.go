@@ -82,3 +82,12 @@ func (s *Server) initKubeRegistry(args *DubboArgs) (err error) {
 		s.multiclusterController)
 	return
 }
+
+func hasKubeRegistry(registries []string) bool {
+	for _, r := range registries {
+		if provider.ID(r) == provider.Kubernetes {
+			return true
+		}
+	}
+	return false
+}

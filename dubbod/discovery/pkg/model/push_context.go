@@ -54,8 +54,6 @@ const (
 	ProxyUpdate            TriggerReason = "proxy"
 	ConfigUpdate           TriggerReason = "config"
 	DependentResource      TriggerReason = "depdendentresource"
-	// NetworksTrigger describes a push triggered for Networks change
-	NetworksTrigger TriggerReason = "networks"
 )
 
 var (
@@ -71,7 +69,6 @@ type PushContext struct {
 	// When enabled, this controller is responsible for translating Kubernetes
 	// Gateway API resources into internal Dubbo resources during push.
 	GatewayAPIController   GatewayController
-	networkMgr             *NetworkManager
 	clusterLocalHosts      ClusterLocalHosts
 	exportToDefaults       exportToDefaults
 	ServiceIndex           serviceIndex
@@ -356,8 +353,6 @@ func (ps *PushContext) InitContext(env *Environment, oldPushContext *PushContext
 	} else {
 		ps.updateContext(env, oldPushContext, pushReq)
 	}
-
-	ps.networkMgr = env.NetworkManager
 
 	ps.clusterLocalHosts = env.ClusterLocal().GetClusterLocalHosts()
 

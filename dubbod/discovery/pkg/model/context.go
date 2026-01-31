@@ -88,7 +88,6 @@ type Environment struct {
 	ConfigStore
 	mutex                sync.RWMutex
 	pushContext          *PushContext
-	NetworkManager       *NetworkManager
 	clusterLocalServices ClusterLocalProvider
 	DomainSuffix         string
 	EndpointIndex        *EndpointIndex
@@ -161,29 +160,6 @@ func (e *Environment) AddMeshHandler(h func()) {
 	}
 }
 
-// NetworkGateways returns all known network gateways from the underlying registries.
-// This is delegated to the embedded ServiceDiscovery if it implements NetworkGatewaysWatcher.
-func (e *Environment) NetworkGateways() []NetworkGateway {
-	if e == nil || e.ServiceDiscovery == nil {
-		return nil
-	}
-	if w, ok := e.ServiceDiscovery.(NetworkGatewaysWatcher); ok {
-		return w.NetworkGateways()
-	}
-	return nil
-}
-
-// AppendNetworkGatewayHandler registers a handler that is invoked when network gateways change
-// in any of the underlying service registries.
-func (e *Environment) AppendNetworkGatewayHandler(h func()) {
-	if e == nil || e.ServiceDiscovery == nil {
-		return
-	}
-	if w, ok := e.ServiceDiscovery.(NetworkGatewaysWatcher); ok {
-		w.AppendNetworkGatewayHandler(h)
-	}
-}
-
 func (e *Environment) GetDiscoveryAddress() (host.Name, string, error) {
 	proxyConfig := mesh.DefaultProxyConfig()
 	if e.Mesh().DefaultConfig != nil {
@@ -214,11 +190,6 @@ func (e *Environment) Init() {
 	}
 
 	e.clusterLocalServices = NewClusterLocalProvider(e)
-}
-
-func (e *Environment) InitNetworksManager(updater XDSUpdater) (err error) {
-	e.NetworkManager, err = NewNetworkManager(e, updater)
-	return
 }
 
 type Proxy struct {

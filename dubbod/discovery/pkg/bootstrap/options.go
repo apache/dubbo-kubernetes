@@ -28,6 +28,7 @@ import (
 var (
 	PodNamespace = env.Register("POD_NAMESPACE", constants.DubboSystemNamespace, "").Get()
 	PodName      = env.Register("POD_NAME", "", "").Get()
+	Revision     = env.Register("REVISION", "", "").Get()
 )
 
 type RegistryOptions struct {
@@ -73,6 +74,14 @@ type TLSOptions struct {
 	CipherSuits     []uint16 // This is the parsed cipher suites
 }
 
+func (p *DubboArgs) applyDefaults() {
+	p.Namespace = PodNamespace
+	p.PodName = PodName
+	p.Revision = Revision
+	p.KeepaliveOptions = keepalive.DefaultOption()
+	p.RegistryOptions.ClusterRegistriesNamespace = p.Namespace
+}
+
 func NewDubboArgs(initFuncs ...func(*DubboArgs)) *DubboArgs {
 	p := &DubboArgs{}
 
@@ -85,14 +94,4 @@ func NewDubboArgs(initFuncs ...func(*DubboArgs)) *DubboArgs {
 	}
 
 	return p
-}
-
-var Revision = env.Register("REVISION", "", "").Get()
-
-func (p *DubboArgs) applyDefaults() {
-	p.Namespace = PodNamespace
-	p.PodName = PodName
-	p.Revision = Revision
-	p.KeepaliveOptions = keepalive.DefaultOption()
-	p.RegistryOptions.ClusterRegistriesNamespace = p.Namespace
 }
