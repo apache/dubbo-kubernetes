@@ -1,4 +1,4 @@
-# Dubbod Helm Chart
+# Dubbo Discovery Helm Chart
 
 This chart installs an Base deployment.
 

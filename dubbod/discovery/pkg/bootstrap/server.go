@@ -219,11 +219,6 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	s.initMeshHandlers(nil)
 
 	s.environment.Init()
-	if err := s.environment.InitNetworksManager(s.XDSServer); err != nil {
-		return nil, err
-	}
-
-	// TODO MultiRootMesh
 
 	// Options based on the current 'defaults' in dubbo.
 	caOpts := &caOptions{
@@ -453,11 +448,11 @@ func (s *Server) initRegistryEventHandlers() {
 	log.Info("initializing registry event handlers")
 
 	if s.configController == nil {
-		log.Warnf("initRegistryEventHandlers: configController is nil, cannot register event handlers")
+		log.Warnf("configController is nil, cannot register event handlers")
 		return
 	}
 
-	log.Debugf("initRegistryEventHandlers: configController is available, registering event handlers")
+	log.Debugf("configController is available, registering event handlers")
 
 	configHandler := func(prev config.Config, curr config.Config, event model.Event) {
 		// Log ALL events at INFO level to ensure visibility
@@ -534,17 +529,17 @@ func (s *Server) initRegistryEventHandlers() {
 	if features.EnableGatewayAPI {
 		schemas = collections.DubboGatewayAPI().All()
 	}
-	log.Debugf("initRegistryEventHandlers: found %d schemas to register", len(schemas))
+	log.Debugf("found %d schemas to register", len(schemas))
 	registeredCount := 0
 	for _, schema := range schemas {
 		gvk := schema.GroupVersionKind()
 		schemaID := schema.Identifier()
-		log.Debugf("initRegistryEventHandlers: registering event handler for %s (GVK: %v)", schemaID, gvk)
+		log.Debugf("registering event handler for %s (GVK: %v)", schemaID, gvk)
 		s.configController.RegisterEventHandler(gvk, configHandler)
 		registeredCount++
-		log.Debugf("initRegistryEventHandlers: successfully registered event handler for %s (GVK: %v)", schemaID, gvk)
+		log.Debugf("successfully registered event handler for %s (GVK: %v)", schemaID, gvk)
 	}
-	log.Debugf("initRegistryEventHandlers: successfully registered event handlers for %d schemas", registeredCount)
+	log.Debugf("successfully registered event handlers for %d schemas", registeredCount)
 }
 
 func (s *Server) addReadinessProbe(name string, fn readinessProbe) {
