@@ -48,7 +48,6 @@ func NewClassController(kc kube.Client) *ClassController {
 }
 
 func (c *ClassController) Run(stop <-chan struct{}) {
-	// Ensure we initially reconcile the current state
 	c.queue.Add(types.NamespacedName{})
 	c.queue.Run(stop)
 }
@@ -85,7 +84,6 @@ func (c *ClassController) reconcileClass(class gateway.ObjectName) error {
 	if err != nil && !kerrors.IsConflict(err) {
 		return err
 	} else if err != nil && kerrors.IsConflict(err) {
-		// This is not really an error, just a race condition
 		log.Infof("Attempted to create GatewayClass/%v, but it was already created", class)
 	}
 	if err != nil {

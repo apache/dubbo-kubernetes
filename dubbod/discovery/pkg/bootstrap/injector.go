@@ -33,8 +33,8 @@ import (
 )
 
 const (
-	webhookName                  = "grpcxds-injector.dubbo.apache.org"
-	defaultInjectorConfigMapName = "dubbo-grpcxds-injector"
+	webhookName                  = "proxyless-injector.dubbo.apache.org"
+	defaultInjectorConfigMapName = "dubbo-proxyless-injector"
 )
 
 var injectionEnabled = env.Register("INJECT_ENABLED", true, "Enable mutating webhook handler.")
@@ -43,11 +43,10 @@ func (s *Server) initInjector(args *DubboArgs) (*inject.Webhook, error) {
 	// currently the constant: "./var/lib/dubbo/inject"
 	injectPath := args.InjectionOptions.InjectionDirectory
 	if injectPath == "" || !injectionEnabled.Get() {
-		log.Infof("Skipping grpcxds injector, injection path is missing or disabled.")
+		log.Infof("Skipping proxyxless injector, injection path is missing or disabled.")
 		return nil, nil
 	}
 
-	// If the injection config exists either locally or remotely, we will set up injection.
 	var watcher inject.Watcher
 	if _, err := os.Stat(filepath.Join(injectPath, "config")); !os.IsNotExist(err) {
 		configFile := filepath.Join(injectPath, "config")
@@ -61,18 +60,18 @@ func (s *Server) initInjector(args *DubboArgs) (*inject.Webhook, error) {
 		cms := s.kubeClient.Kube().CoreV1().ConfigMaps(args.Namespace)
 		if _, err := cms.Get(context.TODO(), configMapName, metav1.GetOptions{}); err != nil {
 			if errors.IsNotFound(err) {
-				log.Infof("Skipping grpcxds injector, template not found")
+				log.Infof("Skipping proxyless injector, template not found")
 				return nil, nil
 			}
 			return nil, err
 		}
 		watcher = inject.NewConfigMapWatcher(s.kubeClient, args.Namespace, configMapName, "config", "values")
 	} else {
-		log.Infof("Skipping grpcxds injector, template not found")
+		log.Infof("Skipping proxyless injector, template not found")
 		return nil, nil
 	}
 
-	log.Info("initializing grpcxds injector")
+	log.Info("initializing proxyless injector")
 
 	parameters := inject.WebhookParameters{
 		Watcher:      watcher,

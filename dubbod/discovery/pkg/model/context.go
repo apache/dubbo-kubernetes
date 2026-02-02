@@ -27,7 +27,6 @@ import (
 	"time"
 
 	networkutil "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/network"
-	"github.com/apache/dubbo-kubernetes/pkg/config"
 
 	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
@@ -98,7 +97,6 @@ type Environment struct {
 type GatewayController interface {
 	ConfigStoreController
 	Reconcile(ctx *PushContext)
-	SecretAllowed(ourKind config.GroupVersionKind, resourceName string, namespace string) bool
 }
 
 func NewEnvironment() *Environment {
@@ -184,7 +182,6 @@ func (e *Environment) ClusterLocal() ClusterLocalProvider {
 }
 
 func (e *Environment) Init() {
-	// Use a default DomainSuffix, if none was provided.
 	if len(e.DomainSuffix) == 0 {
 		e.DomainSuffix = constants.DefaultClusterLocalDomain
 	}
@@ -197,18 +194,17 @@ type Proxy struct {
 	XdsResourceGenerator XdsResourceGenerator
 	LastPushContext      *PushContext
 	LastPushTime         time.Time
-	// Type specifies the node type. First part of the ID.
-	Type             NodeType
-	WatchedResources map[string]*WatchedResource
-	ID               string
-	DNSDomain        string
-	Metadata         *NodeMetadata
-	IPAddresses      []string
-	XdsNode          *core.Node
-	ConfigNamespace  string
-	ServiceTargets   []ServiceTarget
-	ipMode           IPMode
-	GlobalUnicastIP  string
+	Type                 NodeType
+	WatchedResources     map[string]*WatchedResource
+	ID                   string
+	DNSDomain            string
+	Metadata             *NodeMetadata
+	IPAddresses          []string
+	XdsNode              *core.Node
+	ConfigNamespace      string
+	ServiceTargets       []ServiceTarget
+	ipMode               IPMode
+	GlobalUnicastIP      string
 }
 
 func (node *Proxy) GetWatchedResource(typeURL string) *WatchedResource {
@@ -269,7 +265,6 @@ func (node *Proxy) IsProxylessGrpc() bool {
 }
 
 func (node *Proxy) ShouldUpdateServiceTargets(updates sets.Set[ConfigKey]) bool {
-	// we only care for services which can actually select this proxy
 	for config := range updates {
 		if config.Kind == kind.ServiceEntry || config.Namespace == node.Metadata.Namespace {
 			return true
@@ -282,7 +277,6 @@ func (node *Proxy) ShouldUpdateServiceTargets(updates sets.Set[ConfigKey]) bool 
 func (node *Proxy) SetServiceTargets(serviceDiscovery ServiceDiscovery) {
 	instances := serviceDiscovery.GetProxyServiceTargets(node)
 
-	// Keep service instances in order of creation/hostname.
 	sort.SliceStable(instances, func(i, j int) bool {
 		if instances[i].Service != nil && instances[j].Service != nil {
 			if !instances[i].Service.CreationTime.Equal(instances[j].Service.CreationTime) {
@@ -355,13 +349,7 @@ func ParseServiceNodeWithMetadata(nodeID string, metadata *NodeMetadata) (*Proxy
 		}
 	}
 
-	// If IP address is empty in node ID, we still need to validate it
-	// For proxyless gRPC, IP address should be set, but we'll allow it to be set later
-	// if it's empty, we'll set it from pod IP when ServiceTargets are computed
 	if len(out.IPAddresses) == 0 {
-		// IP address will be set later when ServiceTargets are computed from pod IP
-		// For now, we allow empty IP for proxyless nodes to avoid failing initialization
-		// The IP will be populated when GetProxyServiceTargets is called
 		out.IPAddresses = []string{}
 	}
 
@@ -381,14 +369,10 @@ func GetProxyConfigNamespace(proxy *Proxy) string {
 		return ""
 	}
 
-	// First look for DUBBO_META_CONFIG_NAMESPACE
-	// All newer proxies (from Dubbo 1.1 onwards) are supposed to supply this
 	if len(proxy.Metadata.Namespace) > 0 {
 		return proxy.Metadata.Namespace
 	}
 
-	// if not found, for backward compatibility, extract the namespace from
-	// the proxy domain. this is a k8s specific hack and should be enabled
 	parts := strings.Split(proxy.DNSDomain, ".")
 	if len(parts) > 1 { // k8s will have namespace.<domain>
 		return parts[0]

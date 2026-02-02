@@ -1,0 +1,235 @@
+# Configuration for resource types.
+resources:
+  # Kubernetes specific configuration.
+  - kind: "CustomResourceDefinition"
+    plural: "customresourcedefinitions"
+    group: "apiextensions.k8s.io"
+    version: "v1"
+    clusterScoped: true
+    builtin: true
+    proto: "k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition"
+    protoPackage: "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
+  - kind: "MutatingWebhookConfiguration"
+    plural: "mutatingwebhookconfigurations"
+    group: "admissionregistration.k8s.io"
+    version: "v1"
+    clusterScoped: true
+    builtin: true
+    specless: true
+    proto: "k8s.io.api.admissionregistration.v1.MutatingWebhookConfiguration"
+    protoPackage: "k8s.io/api/admissionregistration/v1"
+
+  - kind: "ValidatingWebhookConfiguration"
+    plural: "validatingwebhookconfigurations"
+    group: "admissionregistration.k8s.io"
+    version: "v1"
+    clusterScoped: true
+    builtin: true
+    specless: true
+    proto: "k8s.io.api.admissionregistration.v1.ValidatingWebhookConfiguration"
+    protoPackage: "k8s.io/api/admissionregistration/v1"
+
+  - kind: "Deployment"
+    plural: "deployments"
+    group: "apps"
+    version: "v1"
+    builtin: true
+    proto: "k8s.io.api.apps.v1.DeploymentSpec"
+    protoPackage: "k8s.io/api/apps/v1"
+
+  - kind: "Endpoints"
+    plural: "endpoints"
+    version: "v1"
+    builtin: true
+    specless: true
+    proto: "k8s.io.api.core.v1.Endpoints"
+    protoPackage: "k8s.io/api/core/v1"
+
+  - kind: "EndpointSlice"
+    plural: "endpointslices"
+    group: "discovery.k8s.io"
+    version: "v1"
+    builtin: true
+    specless: true
+    proto: "k8s.io.api.discovery.v1.EndpointSlice"
+    protoPackage: "k8s.io/api/discovery/v1"
+
+  - kind: "Namespace"
+    plural: "namespaces"
+    version: "v1"
+    clusterScoped: true
+    builtin: true
+    proto: "k8s.io.api.core.v1.NamespaceSpec"
+    protoPackage: "k8s.io/api/core/v1"
+
+  - kind: "Node"
+    plural: "nodes"
+    version: "v1"
+    clusterScoped: true
+    builtin: true
+    proto: "k8s.io.api.core.v1.NodeSpec"
+    protoPackage: "k8s.io/api/core/v1"
+
+  - kind: "Pod"
+    plural: "pods"
+    version: "v1"
+    builtin: true
+    proto: "k8s.io.api.core.v1.PodSpec"
+    protoPackage: "k8s.io/api/core/v1"
+
+  - kind: "DaemonSet"
+    plural: "daemonsets"
+    group: "apps"
+    version: "v1"
+    builtin: true
+    proto: "k8s.io.api.apps.v1.DaemonSetSpec"
+    protoPackage: "k8s.io/api/apps/v1"
+
+  - kind: "StatefulSet"
+    plural: "statefulsets"
+    group: "apps"
+    version: "v1"
+    builtin: true
+    proto: "k8s.io.api.apps.v1.StatefulSetSpec"
+    protoPackage: "k8s.io/api/apps/v1"
+
+  - kind: "Secret"
+    plural: "secrets"
+    version: "v1"
+    builtin: true
+    specless: true
+    proto: "k8s.io.api.core.v1.Secret"
+    protoPackage: "k8s.io/api/core/v1"
+
+  - kind: "Service"
+    plural: "services"
+    version: "v1"
+    builtin: true
+    proto: "k8s.io.api.core.v1.ServiceSpec"
+    protoPackage: "k8s.io/api/core/v1"
+    statusProto: "k8s.io.api.core.v1.ServiceStatus"
+    statusProtoPackage: "k8s.io/api/core/v1"
+
+  - kind: "ConfigMap"
+    plural: "configmaps"
+    version: "v1"
+    builtin: true
+    specless: true
+    proto: "k8s.io.api.core.v1.ConfigMap"
+    protoPackage: "k8s.io/api/core/v1"
+
+  - kind: "ServiceAccount"
+    plural: "serviceaccounts"
+    version: "v1"
+    builtin: true
+    specless: true
+    proto: "k8s.io.api.core.v1.ServiceAccount"
+    protoPackage: "k8s.io/api/core/v1"
+
+  - kind: "Lease"
+    plural: "leases"
+    group: "coordination.k8s.io"
+    version: "v1"
+    builtin: true
+    proto: "k8s.io.api.coordination.v1.LeaseSpec"
+    protoPackage: "k8s.io/api/coordination/v1"
+
+  - kind: "HorizontalPodAutoscaler"
+    plural: "horizontalpodautoscalers"
+    group: "autoscaling"
+    version: "v2"
+    builtin: true
+    proto: "k8s.io.api.autoscaling.v2.HorizontalPodAutoscalerSpec"
+    protoPackage: "k8s.io/api/autoscaling/v2"
+    statusProto: "k8s.io.api.autoscaling.v2.HorizontalPodAutoscalerStatus"
+    statusProtoPackage: "k8s.io/api/autoscaling/v2"
+
+  - kind: "PodDisruptionBudget"
+    plural: "poddisruptionbudgets"
+    group: "policy"
+    version: "v1"
+    builtin: true
+    proto: "k8s.io.api.policy.v1.PodDisruptionBudgetSpec"
+    protoPackage: "k8s.io/api/policy/v1"
+    statusProto: "k8s.io.api.policy.v1.PodDisruptionBudgetStatus"
+    statusProtoPackage: "k8s.io/api/policy/v1"
+
+  - kind: "GatewayClass"
+    plural: "gatewayclasses"
+    group: "gateway.networking.k8s.io"
+    version: "v1"
+    versionAliases:
+    - "v1"
+    clusterScoped: true
+    protoPackage: "sigs.k8s.io/gateway-api/apis/v1"
+    proto: "k8s.io.gateway_api.api.v1alpha1.GatewayClassSpec"
+    statusProto: "k8s.io.gateway_api.api.v1alpha1.GatewayClassStatus"
+    statusProtoPackage: "sigs.k8s.io/gateway-api/apis/v1"
+
+  - kind: "Gateway"
+    identifier: KubernetesGateway
+    plural: "gateways"
+    group: "gateway.networking.k8s.io"
+    version: "v1"
+    versionAliases:
+    - "v1"
+    protoPackage: "sigs.k8s.io/gateway-api/apis/v1"
+    proto: "k8s.io.gateway_api.api.v1alpha1.GatewaySpec"
+    validate: "validation.EmptyValidate"
+    statusProto: "k8s.io.gateway_api.api.v1alpha1.HTTPRouteStatus"
+    statusProtoPackage: "sigs.k8s.io/gateway-api/apis/v1"
+
+  - kind: "HTTPRoute"
+    plural: "httproutes"
+    group: "gateway.networking.k8s.io"
+    version: "v1"
+    versionAliases:
+    - "v1"
+    protoPackage: "sigs.k8s.io/gateway-api/apis/v1"
+    proto: "k8s.io.gateway_api.api.v1alpha1.HTTPRouteSpec"
+    statusProto: "k8s.io.gateway_api.api.v1alpha1.HTTPRouteStatus"
+    statusProtoPackage: "sigs.k8s.io/gateway-api/apis/v1"
+
+  ## Dubbo resources
+  - kind: "VirtualService"
+    plural: "virtualservices"
+    group: "networking.dubbo.apache.org"
+    version: "v1alpha3"
+    versionAliases:
+      - "v1alpha3"
+    proto: "dubbo.networking.v1alpha3.VirtualService"
+    protoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
+
+  - kind: DestinationRule
+    plural: "destinationrules"
+    group: "networking.dubbo.apache.org"
+    version: "v1alpha3"
+    versionAliases:
+      - "v1alpha3"
+    proto: "dubbo.networking.v1alpha3.DestinationRule"
+    protoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
+
+  - kind: "MeshGlobalConfig"
+    plural: "meshglobalconfigs"
+    group: ""
+    version: "v1alpha1"
+    proto: "dubbo.mesh.v1alpha1.MeshGlobalConfig"
+    protoPackage: "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+    synthetic: true
+
+  - kind: PeerAuthentication
+    plural: "peerauthentications"
+    group: "security.dubbo.apache.org"
+    version: "v1alpha3"
+    versionAliases:
+    - "v1alpha3"
+    proto: "dubbo.security.v1alpha3.PeerAuthentication"
+    protoPackage: "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
+

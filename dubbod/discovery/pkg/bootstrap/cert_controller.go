@@ -131,7 +131,6 @@ func (s *Server) initDNSCertsK8SRA() error {
 
 	s.addStartFunc("dubbod server certificate rotation", func(stop <-chan struct{}) error {
 		go func() {
-			// Track TTL of DNS cert and renew cert in accordance to grace period.
 			s.RotateDNSCertForK8sCA(stop, "", signerName, true, SelfSignedCACertTTL.Get())
 		}()
 		return nil
@@ -163,15 +162,12 @@ func (s *Server) initDNSCertsDubbod() error {
 		}
 	}
 
-	// check if signing key file exists the cert dir and if the dubbo-generated file
-	// exists (only if USE_CACERTS_FOR_SELF_SIGNED_CA is enabled)
 	if !detectedSigningCABundle {
 		log.Infof("Use roots from dubbo-ca-secret")
 
 		caBundle = s.CA.GetCAKeyCertBundle().GetRootCertPem()
 		s.addStartFunc("dubbod server certificate rotation", func(stop <-chan struct{}) error {
 			go func() {
-				// regenerate dubbod key cert when root cert changes.
 				s.watchRootCertAndGenKeyCert(stop)
 			}()
 			return nil
@@ -180,10 +176,8 @@ func (s *Server) initDNSCertsDubbod() error {
 		log.Infof("Use roots from %v and watch", fileBundle.RootCertFile)
 
 		caBundle = s.CA.GetCAKeyCertBundle().GetRootCertPem()
-		// Similar code to dubbo-ca-secret: refresh the root cert, but in casecrets
 		s.addStartFunc("dubbod server certificate rotation", func(stop <-chan struct{}) error {
 			go func() {
-				// regenerate dubbod key cert when root cert changes.
 				s.watchRootCertAndGenKeyCert(stop)
 			}()
 			return nil
@@ -230,5 +224,6 @@ func (s *Server) updateRootCertAndGenKeyCert() error {
 	}
 
 	s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, caBundle)
+
 	return nil
 }

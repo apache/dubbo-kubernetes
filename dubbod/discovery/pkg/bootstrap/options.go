@@ -40,7 +40,6 @@ type RegistryOptions struct {
 }
 
 type InjectionOptions struct {
-	// Directory of injection related config files.
 	InjectionDirectory string
 }
 
@@ -66,12 +65,11 @@ type DiscoveryServerOptions struct {
 }
 
 type TLSOptions struct {
-	// CaCertFile and related are set using CLI flags.
 	CaCertFile      string
 	CertFile        string
 	KeyFile         string
 	TLSCipherSuites []string
-	CipherSuits     []uint16 // This is the parsed cipher suites
+	CipherSuits     []uint16
 }
 
 func (p *DubboArgs) applyDefaults() {
@@ -85,10 +83,8 @@ func (p *DubboArgs) applyDefaults() {
 func NewDubboArgs(initFuncs ...func(*DubboArgs)) *DubboArgs {
 	p := &DubboArgs{}
 
-	// Apply Default Values.
 	p.applyDefaults()
 
-	// Apply custom initialization functions.
 	for _, fn := range initFuncs {
 		fn(p)
 	}

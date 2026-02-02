@@ -202,7 +202,6 @@ func (f *informerFactory) WaitForCacheSync(stopCh <-chan struct{}) bool {
 }
 
 func (f *informerFactory) Shutdown() {
-	// Will return immediately if there is nothing to wait for.
 	defer f.wg.Wait()
 
 	f.lock.Lock()

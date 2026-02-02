@@ -21,5 +21,6 @@ import (
 )
 
 func (s *DiscoveryServer) authenticate(ctx context.Context) ([]string, error) {
+	// TODO
 	return nil, nil
 }

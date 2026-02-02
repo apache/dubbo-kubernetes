@@ -36,29 +36,29 @@ import (
 
 func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, req *model.PushRequest, routeNames []string) ([]*discovery.Resource, model.XdsLogDetails) {
 	resp := []*discovery.Resource{}
-	log.Infof("BuildHTTPRoutes: node=%s, isRouter=%v, routeNames=%v", node.ID, node.IsRouter(), routeNames)
+	log.Infof("node=%s, isRouter=%v, routeNames=%v", node.ID, node.IsRouter(), routeNames)
 	if len(routeNames) == 0 {
-		log.Warnf("BuildHTTPRoutes: no routeNames requested for node=%s", node.ID)
+		log.Warnf("no routeNames requested for node=%s", node.ID)
 	}
 	for _, routeName := range routeNames {
 		if rc := buildHTTPRoute(node, req.Push, routeName); rc != nil {
-			log.Infof("BuildHTTPRoutes: built route config for routeName=%s, VirtualHosts=%d", routeName, len(rc.VirtualHosts))
+			log.Infof("built route config for routeName=%s, VirtualHosts=%d", routeName, len(rc.VirtualHosts))
 			if len(rc.VirtualHosts) > 0 {
-				log.Infof("BuildHTTPRoutes: VirtualHost[0] domains=%v, routes=%d", rc.VirtualHosts[0].Domains, len(rc.VirtualHosts[0].Routes))
+				log.Infof("VirtualHost[0] domains=%v, routes=%d", rc.VirtualHosts[0].Domains, len(rc.VirtualHosts[0].Routes))
 			}
 			resp = append(resp, &discovery.Resource{
 				Name:     routeName,
 				Resource: protoconv.MessageToAny(rc),
 			})
 		} else {
-			log.Warnf("BuildHTTPRoutes: failed to build route config for routeName=%s", routeName)
+			log.Warnf("failed to build route config for routeName=%s", routeName)
 		}
 	}
 	return resp, model.DefaultXdsLogDetails
 }
 
 func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string) *route.RouteConfiguration {
-	log.Debugf("buildHTTPRoute: called with routeName=%s, node.ID=%s, node.Type=%v, node.IsRouter()=%v", routeName, node.ID, node.Type, node.IsRouter())
+	log.Debugf("called with routeName=%s, node.ID=%s, node.Type=%v, node.IsRouter()=%v", routeName, node.ID, node.Type, node.IsRouter())
 	// For Gateway Pod inbound listeners, routeName is just the port number (e.g., "80")
 	// For proxyless gRPC inbound routes, routeName is just the port number (e.g., "17070")
 	// For outbound routes, routeName is cluster format (outbound|port||hostname)
@@ -75,7 +75,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		// This is used by ApiListener to route traffic to the correct cluster
 		svc := push.ServiceForHostname(node, hostname)
 		if svc == nil {
-			log.Warnf("buildHTTPRoute: service not found for hostname %s", hostname)
+			log.Warnf("service not found for hostname %s", hostname)
 			return nil
 		}
 
@@ -106,7 +106,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		// The VirtualHost domains already include "*" which will match any hostname
 		httpRoutes := push.HTTPRouteForHost(host.Name("*"))
 		if len(httpRoutes) > 0 {
-			log.Infof("buildHTTPRoute: found %d HTTPRoute(s) for Gateway Pod (using wildcard match)", len(httpRoutes))
+			log.Infof("found %d HTTPRoute(s) for Gateway Pod (using wildcard match)", len(httpRoutes))
 			// For Gateway Pods, collect all HTTPRoute hostnames and add them to domains
 			httpRouteHostnames := make(map[string]bool)
 			for _, hr := range httpRoutes {
@@ -137,22 +137,22 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			}
 
 			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort); len(routes) > 0 {
-				log.Infof("buildHTTPRoute: built %d routes from Gateway API HTTPRoute", len(routes))
+				log.Infof("built %d routes from Gateway API HTTPRoute", len(routes))
 				outboundRoutes = routes
 			} else {
-				log.Warnf("buildHTTPRoute: HTTPRoute found but no routes built")
+				log.Warnf("HTTPRoute found but no routes built")
 			}
 		} else if vs := push.VirtualServiceForHost(host.Name(hostStr)); vs != nil {
 			// Fallback to VirtualService if no HTTPRoute found
-			log.Infof("buildHTTPRoute: found VirtualService for host %s with %d HTTP routes", hostStr, len(vs.Http))
+			log.Infof("found VirtualService for host %s with %d HTTP routes", hostStr, len(vs.Http))
 			if routes := buildRoutesFromVirtualService(vs, host.Name(hostStr), parsedPort); len(routes) > 0 {
-				log.Infof("buildHTTPRoute: built %d weighted routes from VirtualService for host %s", len(routes), hostStr)
+				log.Infof("built %d weighted routes from VirtualService for host %s", len(routes), hostStr)
 				outboundRoutes = routes
 			} else {
-				log.Warnf("buildHTTPRoute: VirtualService found but no routes built for host %s", hostStr)
+				log.Warnf("VirtualService found but no routes built for host %s", hostStr)
 			}
 		} else {
-			log.Debugf("buildHTTPRoute: no HTTPRoute or VirtualService found for host %s, using default route", hostStr)
+			log.Debugf("no HTTPRoute or VirtualService found for host %s, using default route", hostStr)
 		}
 
 		return &route.RouteConfiguration{
@@ -189,14 +189,14 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 	}
 	if node.IsRouter() || isGatewayPod {
 		if isGatewayPod && !node.IsRouter() {
-			log.Warnf("buildHTTPRoute: Gateway Pod detected but node.Type is not Router (node.Type=%v, node.ID=%s), treating as router anyway", node.Type, node.ID)
+			log.Warnf("Gateway Pod detected but node.Type is not Router (node.Type=%v, node.ID=%s), treating as router anyway", node.Type, node.ID)
 		}
-		log.Infof("buildHTTPRoute: Gateway Pod inbound listener, routeName=%s, port=%d, gateway=%s/%s", routeName, parsedPort, gatewayNamespace, gatewayName)
+		log.Infof("Gateway Pod inbound listener, routeName=%s, port=%d, gateway=%s/%s", routeName, parsedPort, gatewayNamespace, gatewayName)
 
 		// CRITICAL: Only apply HTTPRoute to the Gateway listener port (80)
 		// Other ports (15012, 15021, etc.) are service ports and should not use HTTPRoute
 		if parsedPort != 80 {
-			log.Debugf("buildHTTPRoute: Gateway Pod inbound listener port %d is not 80, skipping HTTPRoute (this is a service port, not Gateway listener)", parsedPort)
+			log.Debugf("Gateway Pod inbound listener port %d is not 80, skipping HTTPRoute (this is a service port, not Gateway listener)", parsedPort)
 			// Return empty route config for non-Gateway ports
 			return &route.RouteConfiguration{
 				Name: routeName,
@@ -219,17 +219,17 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		// For Gateway Pod inbound listener, we need ALL HTTPRoutes that could route traffic
 		// First try wildcard match to get HTTPRoutes with no hostnames or wildcard hostnames
 		allHTTPRoutes := push.HTTPRouteForHost(host.Name("*"))
-		log.Debugf("buildHTTPRoute: Gateway Pod inbound listener, found %d HTTPRoute(s) with wildcard match", len(allHTTPRoutes))
+		log.Debugf("Gateway Pod inbound listener, found %d HTTPRoute(s) with wildcard match", len(allHTTPRoutes))
 
 		// Filter HTTPRoutes by parentRef to match this Gateway
 		httpRoutes := filterHTTPRoutesByGateway(allHTTPRoutes, gatewayName, gatewayNamespace, parsedPort)
-		log.Debugf("buildHTTPRoute: Gateway Pod inbound listener, filtered to %d HTTPRoute(s) matching gateway %s/%s port %d", len(httpRoutes), gatewayNamespace, gatewayName, parsedPort)
+		log.Debugf("Gateway Pod inbound listener, filtered to %d HTTPRoute(s) matching gateway %s/%s port %d", len(httpRoutes), gatewayNamespace, gatewayName, parsedPort)
 
 		// For Gateway Pod, we also need to collect HTTPRoutes with specific hostnames
 		// because Gateway Pods route traffic based on HTTPRoute hostnames in the request
 		// We'll add all HTTPRoutes to the domains list so Envoy can match them
 		if len(httpRoutes) > 0 {
-			log.Infof("buildHTTPRoute: Gateway Pod inbound listener found %d HTTPRoute(s) for port %s", len(httpRoutes), routeName)
+			log.Infof("Gateway Pod inbound listener found %d HTTPRoute(s) for port %s", len(httpRoutes), routeName)
 			// Collect all HTTPRoute hostnames and add them to domains
 			httpRouteHostnames := make(map[string]bool)
 			for _, hr := range httpRoutes {
@@ -259,13 +259,13 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			}
 
 			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort); len(routes) > 0 {
-				log.Infof("buildHTTPRoute: Gateway Pod inbound listener built %d routes from HTTPRoute", len(routes))
+				log.Infof("Gateway Pod inbound listener built %d routes from HTTPRoute", len(routes))
 				outboundRoutes = routes
 			} else {
-				log.Warnf("buildHTTPRoute: Gateway Pod inbound listener HTTPRoute found but no routes built")
+				log.Warnf("Gateway Pod inbound listener HTTPRoute found but no routes built")
 			}
 		} else {
-			log.Warnf("buildHTTPRoute: Gateway Pod inbound listener no HTTPRoute found for port %s, returning empty route config", routeName)
+			log.Warnf("Gateway Pod inbound listener no HTTPRoute found for port %s, returning empty route config", routeName)
 			// Return empty route config - Gateway Pod must have HTTPRoute to route traffic
 			return &route.RouteConfiguration{
 				Name: routeName,
@@ -279,7 +279,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			}
 		}
 
-		log.Infof("buildHTTPRoute: Gateway Pod inbound listener returning route config with %d domains, %d routes", len(domains), len(outboundRoutes))
+		log.Infof("Gateway Pod inbound listener returning route config with %d domains, %d routes", len(domains), len(outboundRoutes))
 		return &route.RouteConfiguration{
 			Name: routeName,
 			VirtualHosts: []*route.VirtualHost{
@@ -349,26 +349,26 @@ func buildRoutesFromVirtualService(vs *networking.VirtualService, hostName host.
 
 func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name, defaultPort int) *route.Route {
 	if httpRoute == nil || len(httpRoute.Route) == 0 {
-		log.Warnf("buildRouteFromHTTPRoute: httpRoute is nil or has no routes")
+		log.Warnf("httpRoute is nil or has no routes")
 		return nil
 	}
-	log.Infof("buildRouteFromHTTPRoute: processing HTTPRoute with %d route destinations", len(httpRoute.Route))
+	log.Infof("processing HTTPRoute with %d route destinations", len(httpRoute.Route))
 	weights := make([]*route.WeightedCluster_ClusterWeight, 0, len(httpRoute.Route))
 	var totalWeight uint32
 	for i, dest := range httpRoute.Route {
 		if dest == nil {
-			log.Warnf("buildRouteFromHTTPRoute: route[%d] is nil", i)
+			log.Warnf("route[%d] is nil", i)
 			continue
 		}
 		destination := dest.Destination
 		if destination == nil {
-			log.Warnf("buildRouteFromHTTPRoute: route[%d] has nil Destination (weight=%d), creating default destination with host=%s",
+			log.Warnf("route[%d] has nil Destination (weight=%d), creating default destination with host=%s",
 				i, dest.Weight, hostName)
 			destination = &networking.Destination{
 				Host: string(hostName),
 			}
 		} else {
-			log.Debugf("buildRouteFromHTTPRoute: route[%d] Destination: host=%s, subset=%s, weight=%d",
+			log.Debugf("route[%d] Destination: host=%s, subset=%s, weight=%d",
 				i, destination.Host, destination.Subset, dest.Weight)
 		}
 		targetHost := destination.Host
@@ -383,7 +383,7 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 			weight = 1
 		}
 		totalWeight += uint32(weight)
-		log.Infof("buildRouteFromHTTPRoute: route[%d] -> cluster=%s, subset=%s, weight=%d, host=%s, port=%d",
+		log.Infof("route[%d] -> cluster=%s, subset=%s, weight=%d, host=%s, port=%d",
 			i, clusterName, subsetName, weight, targetHost, targetPort)
 		weights = append(weights, &route.WeightedCluster_ClusterWeight{
 			Name:   clusterName,
@@ -391,7 +391,7 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 		})
 	}
 	if len(weights) == 0 {
-		log.Warnf("buildRouteFromHTTPRoute: no valid weights generated")
+		log.Warnf("no valid weights generated")
 		return nil
 	}
 	weightedClusters := &route.WeightedCluster{
@@ -400,7 +400,7 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 	if totalWeight > 0 {
 		weightedClusters.TotalWeight = wrapperspb.UInt32(totalWeight)
 	}
-	log.Infof("buildRouteFromHTTPRoute: built WeightedCluster with %d clusters, totalWeight=%d", len(weights), totalWeight)
+	log.Infof("built WeightedCluster with %d clusters, totalWeight=%d", len(weights), totalWeight)
 
 	return &route.Route{
 		Match: &route.RouteMatch{
@@ -428,14 +428,14 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 	for _, hrConfig := range httpRoutes {
 		hrSpec, ok := hrConfig.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
 		if !ok {
-			log.Warnf("buildRoutesFromGatewayHTTPRoute: HTTPRoute %s/%s spec is not HTTPRouteSpec", hrConfig.Namespace, hrConfig.Name)
+			log.Warnf("HTTPRoute %s/%s spec is not HTTPRouteSpec", hrConfig.Namespace, hrConfig.Name)
 			continue
 		}
 
 		// Process each rule in the HTTPRoute
 		for ruleIdx, rule := range hrSpec.Rules {
 			if len(rule.BackendRefs) == 0 {
-				log.Debugf("buildRoutesFromGatewayHTTPRoute: HTTPRoute %s/%s rule[%d] has no backendRefs, skipping", hrConfig.Namespace, hrConfig.Name, ruleIdx)
+				log.Debugf("HTTPRoute %s/%s rule[%d] has no backendRefs, skipping", hrConfig.Namespace, hrConfig.Name, ruleIdx)
 				continue
 			}
 
@@ -471,7 +471,7 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 				}
 				totalWeight += weight
 
-				log.Debugf("buildRoutesFromGatewayHTTPRoute: HTTPRoute %s/%s rule[%d] backend[%d] -> cluster=%s, weight=%d, host=%s, port=%d",
+				log.Debugf("HTTPRoute %s/%s rule[%d] backend[%d] -> cluster=%s, weight=%d, host=%s, port=%d",
 					hrConfig.Namespace, hrConfig.Name, ruleIdx, backendIdx, clusterName, weight, backendHost, backendPort)
 
 				weights = append(weights, &route.WeightedCluster_ClusterWeight{
@@ -481,7 +481,7 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 			}
 
 			if len(weights) == 0 {
-				log.Warnf("buildRoutesFromGatewayHTTPRoute: HTTPRoute %s/%s rule[%d] has no valid backends", hrConfig.Namespace, hrConfig.Name, ruleIdx)
+				log.Warnf("HTTPRoute %s/%s rule[%d] has no valid backends", hrConfig.Namespace, hrConfig.Name, ruleIdx)
 				continue
 			}
 
@@ -506,7 +506,7 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 				},
 			}
 
-			log.Infof("buildRoutesFromGatewayHTTPRoute: HTTPRoute %s/%s rule[%d] -> built route with %d clusters, totalWeight=%d",
+			log.Infof("HTTPRoute %s/%s rule[%d] -> built route with %d clusters, totalWeight=%d",
 				hrConfig.Namespace, hrConfig.Name, ruleIdx, len(weights), totalWeight)
 			allRoutes = append(allRoutes, builtRoute)
 		}
@@ -520,7 +520,7 @@ func filterHTTPRoutesByGateway(httpRoutes []config.Config, gatewayName, gatewayN
 	if gatewayName == "" {
 		// If we can't determine the Gateway name, return all HTTPRoutes
 		// This is a fallback for when Gateway Pod doesn't have proper labels
-		log.Warnf("filterHTTPRoutesByGateway: gateway name is empty, returning all HTTPRoutes")
+		log.Warnf("gateway name is empty, returning all HTTPRoutes")
 		return httpRoutes
 	}
 
@@ -546,7 +546,7 @@ func filterHTTPRoutesByGateway(httpRoutes []config.Config, gatewayName, gatewayN
 				// If section name is specified, we should match it, but for now we accept all listeners
 				// TODO: Match listener name if specified
 				if parentRef.SectionName != nil {
-					log.Debugf("filterHTTPRoutesByGateway: HTTPRoute %s/%s matches Gateway %s/%s with listener %s",
+					log.Debugf("HTTPRoute %s/%s matches Gateway %s/%s with listener %s",
 						hr.Namespace, hr.Name, gatewayNamespace, gatewayName, *parentRef.SectionName)
 				}
 				matches = true
@@ -556,7 +556,7 @@ func filterHTTPRoutesByGateway(httpRoutes []config.Config, gatewayName, gatewayN
 
 		if matches {
 			filtered = append(filtered, hr)
-			log.Debugf("filterHTTPRoutesByGateway: HTTPRoute %s/%s matches Gateway %s/%s",
+			log.Debugf("HTTPRoute %s/%s matches Gateway %s/%s",
 				hr.Namespace, hr.Name, gatewayNamespace, gatewayName)
 		}
 	}
