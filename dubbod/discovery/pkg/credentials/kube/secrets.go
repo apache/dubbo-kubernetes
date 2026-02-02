@@ -64,7 +64,6 @@ func truncatedKeysMessage(data map[string][]byte) string {
 	return fmt.Sprintf("%s, and %d more...", strings.Join(keys[:3], ", "), len(keys)-3)
 }
 
-// ExtractRoot extracts the root certificate
 func ExtractRoot(data map[string][]byte) (certInfo *credentials.CertInfo, err error) {
 	ret := &credentials.CertInfo{}
 	if hasValue(data, GenericScrtCaCert) {
@@ -77,7 +76,6 @@ func ExtractRoot(data map[string][]byte) (certInfo *credentials.CertInfo, err er
 		ret.CRL = data[TLSSecretCrl]
 		return ret, nil
 	}
-	// No cert found. Try to generate a helpful error message
 	if hasKeys(data, GenericScrtCaCert) {
 		return nil, fmt.Errorf("found key %q, but it was empty", GenericScrtCaCert)
 	}

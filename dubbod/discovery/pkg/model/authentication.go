@@ -33,7 +33,6 @@ type MutualTLSMode int
 const (
 	MTLSUnknown MutualTLSMode = iota
 	MTLSDisable
-	MTLSPermissive
 	MTLSStrict
 )
 
@@ -91,8 +90,6 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 			}
 			if config.Namespace == policy.rootNamespace {
 				if mode == v1alpha3.PeerAuthentication_MutualTLS_UNSET {
-					policy.globalMutualTLSMode = MTLSPermissive
-				} else {
 					policy.globalMutualTLSMode = ConvertToMutualTLSMode(mode)
 				}
 			} else {
@@ -109,9 +106,7 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 	policy.namespaceMutualTLSMode = make(map[string]MutualTLSMode, len(foundNamespaceMTLS))
 
 	inheritedMTLSMode := policy.globalMutualTLSMode
-	if inheritedMTLSMode == MTLSUnknown {
-		inheritedMTLSMode = MTLSPermissive
-	}
+
 	for ns, mtlsMode := range foundNamespaceMTLS {
 		if mtlsMode == v1alpha3.PeerAuthentication_MutualTLS_UNSET {
 			policy.namespaceMutualTLSMode[ns] = inheritedMTLSMode
@@ -125,8 +120,6 @@ func ConvertToMutualTLSMode(mode v1alpha3.PeerAuthentication_MutualTLS_Mode) Mut
 	switch mode {
 	case v1alpha3.PeerAuthentication_MutualTLS_DISABLE:
 		return MTLSDisable
-	case v1alpha3.PeerAuthentication_MutualTLS_PERMISSIVE:
-		return MTLSPermissive
 	case v1alpha3.PeerAuthentication_MutualTLS_STRICT:
 		return MTLSStrict
 	default:

@@ -156,7 +156,6 @@ func (s *Server) createDubboRA(opts *caOptions) (ra.RegistrationAuthority, error
 			return nil, fmt.Errorf("failed to get file info: %v", err)
 		}
 
-		// File does not exist.
 		if certSignerDomain == "" {
 			log.Infof("CA cert file %q not found, using %q.", caCertFile, defaultCACertPath)
 			caCertFile = defaultCACertPath
@@ -230,15 +229,12 @@ func (s *Server) createDubboCA(opts *caOptions) (*ca.DubboCA, error) {
 			log.Infof("DubboGenerated %s secret found, use it as the CA certificate", ca.CACertsSecret)
 		}
 
-		// Either the secret is not mounted because it is named `dubbo-ca-secret`,
-		// or it is `cacerts` secret mounted with "dubbo-generated" key set.
 		caOpts, err = s.createSelfSignedCACertificateOptions(&fileBundle, opts)
 		if err != nil {
 			return nil, err
 		}
 		caOpts.OnRootCertUpdate = s.updateRootCertAndGenKeyCert
 	} else {
-		// The secret is mounted and the "dubbo-generated" key is not used.
 		log.Info("Use local CA certificate")
 
 		caOpts, err = ca.NewPluggedCertDubboCAOptions(fileBundle, workloadCertTTL.Get(), maxWorkloadCertTTL.Get(), caRSAKeySize.Get())
@@ -247,8 +243,6 @@ func (s *Server) createDubboCA(opts *caOptions) (*ca.DubboCA, error) {
 		}
 
 		if features.EnableCACRL {
-			// CRL is only supported for Plugged CA.
-			// If CRL file is present, read and notify it for initial replication
 			if len(fileBundle.CRLFile) > 0 {
 				log.Infof("CRL file %s found, notifying it for initial replication", fileBundle.CRLFile)
 				crlBytes, crlErr := os.ReadFile(fileBundle.CRLFile)
@@ -268,7 +262,6 @@ func (s *Server) createDubboCA(opts *caOptions) (*ca.DubboCA, error) {
 		return nil, fmt.Errorf("failed to create an dubbod CA: %v", err)
 	}
 
-	// Start root cert rotator in a separate goroutine.
 	dubboCA.Run(s.internalStop)
 	return dubboCA, nil
 }
@@ -335,7 +328,6 @@ func handleEvent(s *Server) {
 		return
 	}
 
-	// check if CA bundle is updated
 	newCABundle, err = os.ReadFile(fileBundle.RootCertFile)
 	if err != nil {
 		log.Errorf("failed reading root-cert.pem: %v", err)
@@ -344,10 +336,7 @@ func handleEvent(s *Server) {
 
 	currentCABundle := s.CA.GetCAKeyCertBundle().GetRootCertPem()
 
-	// Only updating intermediate CA is supported now
 	if !bytes.Equal(currentCABundle, newCABundle) {
-		// in order to support root ca rotation, or we are removing the old ca,
-		// we need to make the new CA bundle contain both old and new CA certs
 		if bytes.Contains(currentCABundle, newCABundle) ||
 			bytes.Contains(newCABundle, currentCABundle) {
 			log.Info("Updating new ROOT-CA")
@@ -359,14 +348,10 @@ func handleEvent(s *Server) {
 	}
 
 	if features.EnableCACRL {
-		// check if crl file is updated
 		if len(fileBundle.CRLFile) > 0 {
 			currentCRLData := s.CA.GetCAKeyCertBundle().GetCRLPem()
 			crlData, crlReadErr := os.ReadFile(fileBundle.CRLFile)
 			if crlReadErr != nil {
-				// handleEvent can be triggered either for key-cert bundle update or
-				// for crl file update. So, even if there is an error in reading crl file,
-				// we should log error and continue with key-cert bundle update.
 				log.Errorf("failed reading crl file: %v", crlReadErr)
 			}
 
@@ -395,7 +380,6 @@ func handleEvent(s *Server) {
 		return
 	}
 
-	// notify watcher to replicate new or updated crl data
 	if updateCRL {
 		s.dubbodCertBundleWatcher.SetAndNotifyCACRL(s.CA.GetCAKeyCertBundle().GetCRLPem())
 		log.Infof("Dubbod has detected the newly added CRL file and updated its CRL accordingly")
@@ -483,7 +467,6 @@ func checkCABundleCompleteness(signingKeyFile, signingCertFile, rootCertFile str
 func detectSigningCABundleAndCRL() (ca.SigningCAFileBundle, error) {
 	tlsSigningFile := path.Join(LocalCertDir.Get(), ca.TLSSecretCACertFile)
 
-	// looking for tls file format (tls.crt)
 	if _, err := os.Stat(tlsSigningFile); err == nil {
 		log.Info("Using kubernetes.io/tls secret type for signing ca files")
 		return ca.SigningCAFileBundle{
@@ -500,7 +483,6 @@ func detectSigningCABundleAndCRL() (ca.SigningCAFileBundle, error) {
 	}
 
 	log.Info("Using dubbod file format for signing ca files")
-	// default ca file format
 	signingCAFileBundle := ca.SigningCAFileBundle{
 		RootCertFile:    path.Join(LocalCertDir.Get(), ca.RootCertFile),
 		CertChainFiles:  []string{path.Join(LocalCertDir.Get(), ca.CertChainFile)},
@@ -509,7 +491,6 @@ func detectSigningCABundleAndCRL() (ca.SigningCAFileBundle, error) {
 	}
 
 	if features.EnableCACRL {
-		// load crl file if it exists
 		crlFilePath := path.Join(LocalCertDir.Get(), ca.CACRLFile)
 		if _, err := os.Stat(crlFilePath); err == nil {
 			log.Info("Detected CRL file")

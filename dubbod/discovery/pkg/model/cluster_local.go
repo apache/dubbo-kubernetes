@@ -88,37 +88,6 @@ func (c *clusterLocalProvider) onMeshUpdated(e *Environment) {
 		wildcard: make(map[host.Name]bool),
 	}
 
-	// ServiceSettings field is not available in current MeshGlobalConfig
-	// If needed, this functionality should be implemented when the field is added
-	// for _, serviceSettings := range e.Mesh().ServiceSettings {
-	// 	isClusterLocal := serviceSettings.GetSettings().GetClusterLocal()
-	// 	for _, h := range serviceSettings.GetHosts() {
-	// 		// If clusterLocal false, check to see if we should remove a default clusterLocal host.
-	// 		if !isClusterLocal {
-	// 			for i, defaultClusterLocalHost := range defaultClusterLocalHosts {
-	// 				if len(defaultClusterLocalHost) > 0 {
-	// 					if h == string(defaultClusterLocalHost) ||
-	// 						(defaultClusterLocalHost.IsWildCarded() &&
-	// 							strings.HasSuffix(h, string(defaultClusterLocalHost[1:]))) {
-	// 						// This default was explicitly overridden, so remove it.
-	// 						defaultClusterLocalHosts[i] = ""
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	//
-	// 	// Add hosts with their clusterLocal setting to sets.
-	// 	for _, h := range serviceSettings.GetHosts() {
-	// 		hostname := host.Name(h)
-	// 		if hostname.IsWildCarded() {
-	// 			hosts.wildcard[hostname] = isClusterLocal
-	// 		} else {
-	// 			hosts.specific[hostname] = isClusterLocal
-	// 		}
-	// 	}
-	// }
-
 	// Add any remaining defaults to the end of the list.
 	for _, defaultClusterLocalHost := range defaultClusterLocalHosts {
 		if len(defaultClusterLocalHost) > 0 {

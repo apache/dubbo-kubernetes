@@ -51,7 +51,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
-	"github.com/apache/dubbo-kubernetes/pkg/h2c"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
@@ -67,7 +66,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	grpcprom "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"go.uber.org/atomic"
-	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
@@ -76,7 +74,6 @@ import (
 )
 
 const (
-	// debounce file watcher events to minimize noise in logs
 	watchDebounceDelay = 100 * time.Millisecond
 )
 
@@ -92,7 +89,6 @@ type Server struct {
 	secureGrpcServer  *grpc.Server
 	secureGrpcAddress string
 
-	httpServer  *http.Server // debug, monitoring and readiness Server.
 	httpsServer *http.Server // webhooks HTTPS Server.
 	httpAddr    string
 	httpsAddr   string
@@ -199,10 +195,6 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	s.initServers(args)
 
-	if err := s.serveHTTP(); err != nil {
-		return nil, fmt.Errorf("error serving http: %v", err)
-	}
-
 	if err := s.initKubeClient(args); err != nil {
 		return nil, fmt.Errorf("error initializing kube client: %v", err)
 	}
@@ -220,7 +212,6 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 
 	s.environment.Init()
 
-	// Options based on the current 'defaults' in dubbo.
 	caOpts := &caOptions{
 		TrustDomain:      s.environment.Mesh().TrustDomain,
 		Namespace:        args.Namespace,
@@ -231,7 +222,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	if caOpts.ExternalCAType == ra.ExtCAK8s {
 		caOpts.ExternalCASigner = k8sSigner
 	}
-	// CA signing certificate must be created first if needed.
+
 	if err := s.maybeCreateCA(caOpts); err != nil {
 		return nil, err
 	}
@@ -260,7 +251,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		s.initSecureWebhookServer(args)
 		wh, err := s.initInjector(args)
 		if err != nil {
-			return nil, fmt.Errorf("error initializing grpcxds injector: %v", err)
+			return nil, fmt.Errorf("error initializing proxyless injector: %v", err)
 		}
 		s.readinessFlags.InjectorReady.Store(true)
 		s.webhookInfo.mu.Lock()
@@ -356,7 +347,6 @@ func (s *Server) startCA(caOpts *caOptions) {
 	if s.CA == nil && s.RA == nil {
 		return
 	}
-	// init the RA server if configured, else start init CA server
 	if s.RA != nil {
 		log.Infof("initializing CA server with RA")
 		s.initCAServer(s.RA, caOpts)
@@ -455,11 +445,9 @@ func (s *Server) initRegistryEventHandlers() {
 	log.Debugf("configController is available, registering event handlers")
 
 	configHandler := func(prev config.Config, curr config.Config, event model.Event) {
-		// Log ALL events at INFO level to ensure visibility
 		log.Infof("configHandler: received event %s for config %v (prev.Name=%s, curr.Name=%s, prev.Namespace=%s, curr.Namespace=%s)",
 			event, curr.GroupVersionKind, prev.Name, curr.Name, prev.Namespace, curr.Namespace)
 
-		// Handle delete events - use prev config if curr is empty
 		cfg := curr
 		if event == model.EventDelete && curr.Name == "" {
 			cfg = prev
@@ -655,35 +643,8 @@ func (s *Server) initControllers(args *DubboArgs) error {
 
 func (s *Server) initServers(args *DubboArgs) {
 	s.initGrpcServer(args.KeepaliveOptions)
-	multiplexGRPC := false
 	if args.ServerOptions.GRPCAddr != "" {
 		s.grpcAddress = args.ServerOptions.GRPCAddr
-	} else {
-		// This happens only if the GRPC port (15010) is disabled. We will multiplex
-		// it on the HTTP port. Does not impact the HTTPS gRPC or HTTPS.
-		log.Infof("multiplexing gRPC on http addr %v", args.ServerOptions.HTTPAddr)
-		multiplexGRPC = true
-	}
-	h2s := &http2.Server{
-		MaxConcurrentStreams: uint32(features.MaxConcurrentStreams),
-	}
-	multiplexHandler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("content-type"), "application/grpc") {
-			s.grpcServer.ServeHTTP(w, r)
-			return
-		}
-		s.httpMux.ServeHTTP(w, r)
-	}), h2s)
-	s.httpServer = &http.Server{
-		Addr:        args.ServerOptions.HTTPAddr,
-		Handler:     s.httpMux,
-		IdleTimeout: 90 * time.Second, // matches http.DefaultTransport keep-alive timeout
-		ReadTimeout: 30 * time.Second,
-	}
-	if multiplexGRPC {
-		s.httpServer.ReadTimeout = 0
-		s.httpServer.ReadHeaderTimeout = 30 * time.Second
-		s.httpServer.Handler = multiplexHandler
 	}
 }
 
@@ -737,9 +698,7 @@ func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain strin
 	return peerCertVerifier, nil
 }
 
-// maybeCreateCA creates and initializes the built-in CA if needed.
 func (s *Server) maybeCreateCA(caOpts *caOptions) error {
-	// CA signing certificate must be created only if CA is enabled.
 	if features.EnableCAServer {
 		log.Info("creating CA and initializing public key")
 		var err error
@@ -778,22 +737,6 @@ func (s *Server) WaitUntilCompletion() {
 	s.server.Wait()
 }
 
-func (s *Server) serveHTTP() error {
-	// At this point we are ready - start Http Listener so that it can respond to readiness events.
-	httpListener, err := net.Listen("tcp", s.httpServer.Addr)
-	if err != nil {
-		return err
-	}
-	go func() {
-		log.Infof("starting HTTP service at %s", httpListener.Addr())
-		if err := s.httpServer.Serve(httpListener); network.IsUnexpectedListenerError(err) {
-			log.Errorf("error serving http server: %v", err)
-		}
-	}()
-	s.httpAddr = httpListener.Addr().String()
-	return nil
-}
-
 // addStartFunc appends a function to be run. These are run synchronously in order,
 // so the function should start a go routine if it needs to do anything blocking
 func (s *Server) addStartFunc(name string, fn server.Component) {
@@ -828,7 +771,7 @@ func (s *Server) isK8SSigning() bool {
 }
 
 func (s *Server) cachesSynced() bool {
-	// TODO multiclusterController HasSynced
+	// TODO MulticlusterController HasSynced
 	if !s.ServiceController().HasSynced() {
 		return false
 	}
@@ -881,19 +824,14 @@ func (s *Server) waitForShutdown(stop <-chan struct{}) {
 			t.Stop()
 		}
 
-		// Stop HTTP services.
 		ctx, cancel := context.WithTimeout(context.Background(), s.shutdownDuration)
 		defer cancel()
-		if err := s.httpServer.Shutdown(ctx); err != nil {
-			log.Error(err)
-		}
 		if s.httpsServer != nil {
 			if err := s.httpsServer.Shutdown(ctx); err != nil {
 				log.Error(err)
 			}
 		}
 
-		// Shutdown the DiscoveryServer.
 		s.XDSServer.Shutdown()
 	}()
 }
@@ -969,7 +907,6 @@ func (s *Server) dubbodReadyHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) shouldStartNsController() bool {
 	if s.isK8SSigning() {
-		// Need to distribute the roots from MeshGlobalConfig
 		return true
 	}
 	if s.CA == nil {
@@ -1008,7 +945,6 @@ func getDNSNames(_ *DubboArgs, host string) []string {
 }
 
 func hasCustomTLSCerts(tlsOptions TLSOptions) (ok bool, tlsCertPath, tlsKeyPath, caCertPath string) {
-	// load from tls args as priority
 	if hasCustomTLSCertArgs(tlsOptions) {
 		return true, tlsOptions.CertFile, tlsOptions.KeyFile, tlsOptions.CaCertFile
 	}

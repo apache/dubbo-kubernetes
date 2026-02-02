@@ -26,9 +26,19 @@ var (
 	EmptyValidate = func(config.Config) (Warning, error) {
 		return nil, nil
 	}
+	validateFuncs = make(map[string]ValidateFunc)
 )
 
 type Warning = agent.Warning
 
 // ValidateFunc defines a validation func for an API proto.
 type ValidateFunc func(config config.Config) (Warning, error)
+
+func IsValidateFunc(name string) bool {
+	return GetValidateFunc(name) != nil
+}
+
+// GetValidateFunc returns the validation function with the given name, or null if it does not exist.
+func GetValidateFunc(name string) ValidateFunc {
+	return validateFuncs[name]
+}

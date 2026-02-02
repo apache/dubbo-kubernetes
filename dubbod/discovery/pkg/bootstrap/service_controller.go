@@ -31,7 +31,6 @@ func (s *Server) ServiceController() *aggregate.Controller {
 	return s.environment.ServiceDiscovery.(*aggregate.Controller)
 }
 
-// initServiceControllers creates and initializes the service controllers
 func (s *Server) initServiceControllers(args *DubboArgs) error {
 	serviceControllers := s.ServiceController()
 
@@ -54,7 +53,6 @@ func (s *Server) initServiceControllers(args *DubboArgs) error {
 		}
 	}
 
-	// Defer running of the service controllers.
 	s.addStartFunc("service controllers", func(stop <-chan struct{}) error {
 		go serviceControllers.Run(stop)
 		return nil

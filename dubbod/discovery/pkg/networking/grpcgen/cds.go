@@ -155,9 +155,9 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 		}
 		// TLS will be applied in applyDestinationRule after DestinationRule is found
 		if hasTLSInDR {
-			log.Infof("clusterBuilder.build: generated default cluster %s (required for DUBBO_MUTUAL TLS)", b.defaultClusterName)
+			log.Infof("generated default cluster %s (required for DUBBO_MUTUAL TLS)", b.defaultClusterName)
 		} else {
-			log.Infof("clusterBuilder.build: generated default cluster %s", b.defaultClusterName)
+			log.Infof("generated default cluster %s", b.defaultClusterName)
 		}
 	}
 
@@ -172,7 +172,7 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 		out = append(out, defaultCluster)
 	}
 	result := append(out, subsetClusters...)
-	log.Infof("clusterBuilder.build: generated %d clusters total (1 default + %d subsets) for %s",
+	log.Infof("generated %d clusters total (1 default + %d subsets) for %s",
 		len(result), len(subsetClusters), b.defaultClusterName)
 	return result
 }
@@ -198,10 +198,10 @@ func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
 
 func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (subsetClusters []*cluster.Cluster, newDefaultCluster *cluster.Cluster) {
 	if b.svc == nil || b.port == nil {
-		log.Warnf("applyDestinationRule: service or port is nil for %s", b.defaultClusterName)
+		log.Warnf("service or port is nil for %s", b.defaultClusterName)
 		return nil, nil
 	}
-	log.Infof("applyDestinationRule: looking for DestinationRule for service %s/%s (hostname=%s, port=%d)",
+	log.Infof("looking for DestinationRule for service %s/%s (hostname=%s, port=%d)",
 		b.svc.Attributes.Namespace, b.svc.Attributes.Name, b.hostname, b.portNum)
 	dr := b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.hostname)
 	if dr == nil {
@@ -210,7 +210,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 			dr = b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.svc.Hostname)
 		}
 		if dr == nil {
-			log.Warnf("applyDestinationRule: no DestinationRule found for %s/%s or %s", b.svc.Attributes.Namespace, b.hostname, b.svc.Hostname)
+			log.Warnf("no DestinationRule found for %s/%s or %s", b.svc.Attributes.Namespace, b.hostname, b.svc.Hostname)
 			return nil, nil
 		}
 	}
@@ -225,11 +225,11 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 
 	// If no subsets and no TLS, there's nothing to do
 	if len(dr.Subsets) == 0 && !hasTLS {
-		log.Warnf("applyDestinationRule: DestinationRule found for %s/%s but has no subsets and no TLS policy", b.svc.Attributes.Namespace, b.hostname)
+		log.Warnf("DestinationRule found for %s/%s but has no subsets and no TLS policy", b.svc.Attributes.Namespace, b.hostname)
 		return nil, nil
 	}
 
-	log.Infof("applyDestinationRule: found DestinationRule for %s/%s with %d subsets, defaultCluster requested=%v, hasTLS=%v",
+	log.Infof("found DestinationRule for %s/%s with %d subsets, defaultCluster requested=%v, hasTLS=%v",
 		b.svc.Attributes.Namespace, b.hostname, len(dr.Subsets), defaultCluster != nil, hasTLS)
 
 	// Apply TLS to default cluster if it exists and doesn't have TransportSocket yet
@@ -246,17 +246,17 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 			recheckTLS = (tlsMode == networking.ClientTLSSettings_DUBBO_MUTUAL || tlsModeStr == "DUBBO_MUTUAL")
 		}
 		if hasTLS || recheckTLS {
-			log.Infof("applyDestinationRule: applying TLS to default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
+			log.Infof("applying TLS to default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
 			b.applyTLSForCluster(defaultCluster, nil)
 		} else {
-			log.Debugf("applyDestinationRule: skipping TLS for default cluster %s (DestinationRule has no TrafficPolicy or TLS)", b.defaultClusterName)
+			log.Debugf("skipping TLS for default cluster %s (DestinationRule has no TrafficPolicy or TLS)", b.defaultClusterName)
 		}
 	} else if defaultCluster == nil && hasTLS {
 		// If default cluster was not generated in build() but DestinationRule has TLS,
 		// we need to generate it here to ensure TLS is applied
 		// This can happen if build() checked the first rule (without TLS) but applyDestinationRule
 		// found a different rule (with TLS) via firstDestinationRule's improved logic
-		log.Warnf("applyDestinationRule: default cluster was not generated in build() but DestinationRule has TLS, generating it now")
+		log.Warnf("default cluster was not generated in build() but DestinationRule has TLS, generating it now")
 		defaultCluster = b.edsCluster(b.defaultClusterName)
 		if defaultCluster.CommonLbConfig == nil {
 			defaultCluster.CommonLbConfig = &cluster.Cluster_CommonLbConfig{}
@@ -270,7 +270,7 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 				core.HealthStatus_DEGRADED,
 			},
 		}
-		log.Infof("applyDestinationRule: applying TLS to newly generated default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
+		log.Infof("applying TLS to newly generated default cluster %s (DestinationRule has DUBBO_MUTUAL)", b.defaultClusterName)
 		b.applyTLSForCluster(defaultCluster, nil)
 		return nil, defaultCluster // Return the newly generated default cluster
 	}
@@ -311,18 +311,18 @@ func (b *clusterBuilder) applyDestinationRule(defaultCluster *cluster.Cluster) (
 		}
 
 		if !shouldGenerate {
-			log.Debugf("applyDestinationRule: skipping subset cluster %s (not requested and default not requested)", clusterName)
+			log.Debugf("skipping subset cluster %s (not requested and default not requested)", clusterName)
 			continue
 		}
 
-		log.Infof("applyDestinationRule: generating subset cluster %s for subset %s", clusterName, subset.Name)
+		log.Infof("generating subset cluster %s for subset %s", clusterName, subset.Name)
 		subsetCluster := b.edsCluster(clusterName)
 		subsetCluster.CommonLbConfig = commonLbConfig
 		b.applyTLSForCluster(subsetCluster, subset)
 		subsetClusters = append(subsetClusters, subsetCluster)
 	}
 
-	log.Infof("applyDestinationRule: generated %d subset clusters for %s/%s", len(subsetClusters), b.svc.Attributes.Namespace, b.hostname)
+	log.Infof("generated %d subset clusters for %s/%s", len(subsetClusters), b.svc.Attributes.Namespace, b.hostname)
 	return subsetClusters, nil
 }
 
@@ -339,7 +339,7 @@ func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networki
 		dr = b.push.DestinationRuleForService(b.svc.Attributes.Namespace, b.svc.Hostname)
 	}
 	if dr == nil {
-		log.Warnf("applyTLSForCluster: no DestinationRule found for cluster %s (namespace=%s, hostname=%s, service hostname=%s)",
+		log.Warnf("no DestinationRule found for cluster %s (namespace=%s, hostname=%s, service hostname=%s)",
 			c.Name, b.svc.Attributes.Namespace, b.hostname, b.svc.Hostname)
 		return
 	}
@@ -347,19 +347,19 @@ func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networki
 	var policy *networking.TrafficPolicy
 	if subset != nil && subset.TrafficPolicy != nil {
 		policy = subset.TrafficPolicy
-		log.Infof("applyTLSForCluster: using TrafficPolicy from subset %s for cluster %s", subset.Name, c.Name)
+		log.Infof("using TrafficPolicy from subset %s for cluster %s", subset.Name, c.Name)
 	} else {
 		policy = dr.TrafficPolicy
 		if policy != nil {
-			log.Infof("applyTLSForCluster: using top-level TrafficPolicy for cluster %s", c.Name)
+			log.Infof("using top-level TrafficPolicy for cluster %s", c.Name)
 		}
 	}
 
 	if policy == nil || policy.Tls == nil {
 		if policy == nil {
-			log.Warnf("applyTLSForCluster: no TrafficPolicy found in DestinationRule for cluster %s", c.Name)
+			log.Warnf("no TrafficPolicy found in DestinationRule for cluster %s", c.Name)
 		} else {
-			log.Warnf("applyTLSForCluster: no TLS settings in TrafficPolicy for cluster %s", c.Name)
+			log.Warnf("no TLS settings in TrafficPolicy for cluster %s", c.Name)
 		}
 		return
 	}
@@ -367,28 +367,28 @@ func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networki
 	mode := policy.Tls.Mode
 	modeStr := policy.Tls.Mode.String()
 	if mode != networking.ClientTLSSettings_DUBBO_MUTUAL && modeStr != "DUBBO_MUTUAL" {
-		log.Debugf("applyTLSForCluster: TLS mode %v (%s) not supported for gRPC proxyless, skipping", mode, modeStr)
+		log.Debugf("TLS mode %v (%s) not supported for gRPC proxyless, skipping", mode, modeStr)
 		return
 	}
 
 	tlsContext := b.buildUpstreamTLSContext(c, policy.Tls)
 	if tlsContext == nil {
-		log.Warnf("applyTLSForCluster: failed to build TLS context for cluster %s", c.Name)
+		log.Warnf("failed to build TLS context for cluster %s", c.Name)
 		return
 	}
 
 	sni := tlsContext.Sni
 	if sni == "" {
-		log.Warnf("applyTLSForCluster: SNI is empty for cluster %s, this may cause TLS handshake failures", c.Name)
+		log.Warnf("SNI is empty for cluster %s, this may cause TLS handshake failures", c.Name)
 	} else {
-		log.Debugf("applyTLSForCluster: using SNI=%s for cluster %s", sni, c.Name)
+		log.Debugf("using SNI=%s for cluster %s", sni, c.Name)
 	}
 
 	c.TransportSocket = &core.TransportSocket{
 		Name:       "envoy.transport_sockets.tls",
 		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
 	}
-	log.Infof("applyTLSForCluster: applied %v TLS transport socket to cluster %s (SNI=%s)", mode, c.Name, sni)
+	log.Infof("applied %v TLS transport socket to cluster %s (SNI=%s)", mode, c.Name, sni)
 }
 
 // buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to gRPC xDS expectations,
@@ -417,7 +417,7 @@ func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings
 			} else {
 				// Last resort: use cluster name (not ideal but better than empty)
 				tlsContext.Sni = c.Name
-				log.Warnf("buildUpstreamTLSContext: using cluster name as SNI fallback for %s (should be service hostname)", c.Name)
+				log.Warnf("using cluster name as SNI fallback for %s (should be service hostname)", c.Name)
 			}
 		}
 	}

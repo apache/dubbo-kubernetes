@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 type InformerType int
@@ -44,6 +45,17 @@ type WriteAPI[T runtime.Object] interface {
 
 type WriteStatusAPI[T runtime.Object] interface {
 	UpdateStatus(ctx context.Context, object T, opts metav1.UpdateOptions) (T, error)
+}
+
+type ReadAPI[T runtime.Object, TL runtime.Object] interface {
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (T, error)
+	List(ctx context.Context, opts metav1.ListOptions) (TL, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+}
+
+type ReadWriteAPI[T runtime.Object, TL runtime.Object] interface {
+	ReadAPI[T, TL]
+	WriteAPI[T]
 }
 
 type DynamicObjectFilter interface {

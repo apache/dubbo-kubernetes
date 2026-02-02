@@ -80,7 +80,6 @@ func (s *Server) initK8SConfigStore(args *DubboArgs) error {
 		s.environment.GatewayAPIController = gwc
 		s.ConfigStores = append(s.ConfigStores, s.environment.GatewayAPIController)
 
-		// Use a channel to signal activation of per-revision status writer
 		activatePerRevisionStatusWriterCh := make(chan struct{})
 		s.checkAndRunNonRevisionLeaderElectionIfRequired(args, activatePerRevisionStatusWriterCh)
 
@@ -115,11 +114,6 @@ func (s *Server) initK8SConfigStore(args *DubboArgs) error {
 						if s.kubeClient.CrdWatcher().WaitForCRD(gvr.KubernetesGateway, leaderStop) {
 							controller := gateway.NewDeploymentController(s.kubeClient, s.clusterID, s.environment,
 								s.webhookInfo.getWebhookConfig, s.webhookInfo.addHandler, nil, args.Revision, args.Namespace)
-							// Start informers again. This fixes the case where informers for namespace do not start,
-							// as we create them only after acquiring the leader lock
-							// Note: stop here should be the overall pilot stop, NOT the leader election stop. We are
-							// basically lazy loading the informer, if we stop it when we lose the lock we will never
-							// recreate it again.
 							s.kubeClient.RunAndWait(stop)
 							// TODO tag watcher
 							controller.Run(leaderStop)
@@ -144,8 +138,6 @@ func (s *Server) initK8SConfigStore(args *DubboArgs) error {
 	return nil
 }
 
-// initConfigSources will process mesh config 'configSources' and initialize
-// associated configs.
 func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 	for _, configSource := range s.environment.Mesh().ConfigSources {
 		srcAddress, err := url.Parse(configSource.Address)
@@ -171,10 +163,6 @@ func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 			s.ConfigStores = append(s.ConfigStores, configController)
 			log.Infof("Started File configSource %s", configSource.Address)
 		case XDS:
-			// XDS config source support (legacy - MCP protocol removed)
-			// Note: MCP was a legacy protocol replaced by APIGenerator in Dubbo
-			// This XDS config source may not be needed for proxyless mesh
-			// TLS settings removed from ConfigSource - use insecure credentials
 			// TODO: Implement TLS support when needed
 			xdsClient, err := adsc.New(srcAddress.Host, &adsc.ADSConfig{
 				InitialDiscoveryRequests: adsc.ConfigInitialRequests(),
@@ -223,8 +211,6 @@ func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 func (s *Server) initConfigController(args *DubboArgs) error {
 	meshGlobalConfig := s.environment.Mesh()
 	if len(meshGlobalConfig.ConfigSources) > 0 {
-		// XDS config source support (legacy - MCP protocol removed)
-		// Note: MCP was a legacy protocol replaced by APIGenerator in Dubbo
 		if err := s.initConfigSources(args); err != nil {
 			return err
 		}
@@ -247,17 +233,14 @@ func (s *Server) initConfigController(args *DubboArgs) error {
 		}
 	}
 
-	// Wrap the config controller with a cache.
 	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
 	if err != nil {
 		return err
 	}
 	s.configController = aggregateConfigController
 
-	// Create the config store.
 	s.environment.ConfigStore = aggregateConfigController
 
-	// Defer starting the controller until after the service is created.
 	s.addStartFunc("config controller", func(stop <-chan struct{}) error {
 		go s.configController.Run(stop)
 		return nil
@@ -266,7 +249,6 @@ func (s *Server) initConfigController(args *DubboArgs) error {
 	return nil
 }
 
-// getRootCertFromSecret fetches a map of keys and values from a secret with name in namespace
 func (s *Server) getRootCertFromSecret(name, namespace string) (*dubboCredentials.CertInfo, error) {
 	secret, err := s.kubeClient.Kube().CoreV1().Secrets(namespace).Get(context.Background(), name, v1.GetOptions{})
 	if err != nil {
@@ -279,7 +261,6 @@ func (s *Server) checkAndRunNonRevisionLeaderElectionIfRequired(args *DubboArgs,
 	cm, err := s.kubeClient.Kube().CoreV1().ConfigMaps(args.Namespace).Get(context.Background(), leaderelection.GatewayStatusController, v1.GetOptions{})
 
 	if errors.IsNotFound(err) {
-		// ConfigMap does not exist, so per-revision leader election should be active
 		close(activateCh)
 		return
 	}
@@ -290,10 +271,8 @@ func (s *Server) checkAndRunNonRevisionLeaderElectionIfRequired(args *DubboArgs,
 		}
 		if err := json.Unmarshal([]byte(leaderAnn), &leaderInfo); err == nil {
 			if leaderInfo.HolderIdentity != "" {
-				// Non-revision leader election should run, per-revision should be waiting for activation
 				s.addTerminatingStartFunc("gateway status", func(stop <-chan struct{}) error {
 					secondStop := make(chan struct{})
-					// if stop closes, ensure secondStop closes too
 					go func() {
 						<-stop
 						select {
@@ -305,16 +284,12 @@ func (s *Server) checkAndRunNonRevisionLeaderElectionIfRequired(args *DubboArgs,
 					leaderelection.
 						NewLeaderElection(args.Namespace, args.PodName, leaderelection.GatewayStatusController, args.Revision, s.kubeClient).
 						AddRunFunction(func(leaderStop <-chan struct{}) {
-							// now that we have the leader lock, we can activate the per-revision status writer
-							// first close the activateCh channel if it is not already closed
 							log.Infof("Activating gateway status writer")
 							select {
 							case <-activateCh:
-								// Channel already closed, do nothing
 							default:
 								close(activateCh)
 							}
-							// now end this lease itself
 							select {
 							case <-secondStop:
 							default:
@@ -328,6 +303,5 @@ func (s *Server) checkAndRunNonRevisionLeaderElectionIfRequired(args *DubboArgs,
 			}
 		}
 	}
-	// If annotation missing or holderIdentity is blank, per-revision leader election should be active
 	close(activateCh)
 }

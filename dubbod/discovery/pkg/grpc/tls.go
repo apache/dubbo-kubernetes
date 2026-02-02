@@ -84,7 +84,6 @@ func getTLSDialOption(opts *TLSOptions) (grpc.DialOption, error) {
 	if opts.SAN != "" {
 		config.ServerName = opts.SAN
 	}
-	// Compliance for all gRPC clients (e.g. Citadel)..
 	sec_model.EnforceGoCompliance(&config)
 	transportCreds := credentials.NewTLS(&config)
 	return grpc.WithTransportCredentials(transportCreds), nil
