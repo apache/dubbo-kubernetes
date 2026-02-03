@@ -10,7 +10,6 @@ var (
 	DaemonSet                      = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
 	Deployment                     = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
 	DestinationRule                = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "destinationrules"}
-	DestinationRule_v1alpha3       = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "destinationrules"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 	GatewayClass                   = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"}
@@ -26,7 +25,6 @@ var (
 	Namespace                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 	Node                           = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "peerauthentications"}
-	PeerAuthentication_v1alpha3    = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "peerauthentications"}
 	Pod                            = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 	PodDisruptionBudget            = schema.GroupVersionResource{Group: "policy", Version: "v1", Resource: "poddisruptionbudgets"}
 	Secret                         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
@@ -35,7 +33,6 @@ var (
 	StatefulSet                    = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
 	ValidatingWebhookConfiguration = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}
 	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "virtualservices"}
-	VirtualService_v1alpha3        = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "virtualservices"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
@@ -49,8 +46,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case Deployment:
 		return false
 	case DestinationRule:
-		return false
-	case DestinationRule_v1alpha3:
 		return false
 	case EndpointSlice:
 		return false
@@ -80,8 +75,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 		return true
 	case PeerAuthentication:
 		return false
-	case PeerAuthentication_v1alpha3:
-		return false
 	case Pod:
 		return false
 	case PodDisruptionBudget:
@@ -97,8 +90,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case ValidatingWebhookConfiguration:
 		return true
 	case VirtualService:
-		return false
-	case VirtualService_v1alpha3:
 		return false
 	}
 	// shouldn't happen

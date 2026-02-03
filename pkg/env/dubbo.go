@@ -10,7 +10,7 @@ var (
 	// nolint: revive, stylecheck
 	REPO_ROOT Variable = "REPO_ROOT"
 
-	DubboRootDir = REPO_ROOT.ValueOrDefaultFunc(getDefaultDubboRootDir)
+	DubboSrc = REPO_ROOT.ValueOrDefaultFunc(getDefaultDubboSrc)
 )
 
 var (
@@ -21,6 +21,6 @@ var (
 	Root = filepath.Clean(filepath.Join(filepath.Dir(b), "../.."))
 )
 
-func getDefaultDubboRootDir() string {
+func getDefaultDubboSrc() string {
 	return Root
 }

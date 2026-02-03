@@ -416,17 +416,17 @@ func resolveServiceAliases(allServices []*Service, configsUpdated sets.Set[Confi
 		aliasesForService[concrete] = append(aliasesForService[concrete], alias)
 
 		aliasKey := ConfigKey{
-			Kind:      kind.ServiceEntry,
-			Name:      alias.Hostname.String(),
-			Namespace: alias.Namespace,
+			// Kind:      kind.ServiceEntry,
+			// Name:      alias.Hostname.String(),
+			// Namespace: alias.Namespace,
 		}
 		if configsUpdated.Contains(aliasKey) {
 			for _, svc := range allServices {
 				if svc.Hostname == concrete {
 					configsUpdated.Insert(ConfigKey{
-						Kind:      kind.ServiceEntry,
-						Name:      concrete.String(),
-						Namespace: svc.Attributes.Namespace,
+						// Kind:      kind.ServiceEntry,
+						// Name:      concrete.String(),
+						// Namespace: svc.Attributes.Namespace,
 					})
 				}
 			}
@@ -532,8 +532,9 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	// 1. ServiceEntry updates in ConfigsUpdated
 	// 2. Address changes
 	// 3. Actual service count changes from environment (for Kubernetes Service changes)
-	servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
-		len(pushReq.AddressesUpdated) > 0)
+	// servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
+	// 	len(pushReq.AddressesUpdated) > 0)
+	servicesChanged := pushReq != nil && len(pushReq.AddressesUpdated) > 0
 
 	// Check if virtualServices have changed base on:
 	// 1. VirtualService updates in ConfigsUpdated

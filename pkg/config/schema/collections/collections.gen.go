@@ -6,16 +6,15 @@
 package collections
 
 import (
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
-	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
-
 	"reflect"
 
 	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	githubcomapachedubbokubernetesapimetav1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
 	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
+	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -94,10 +93,7 @@ var (
 		Kind:       "DestinationRule",
 		Plural:     "destinationrules",
 		Version:    "v1alpha3",
-		VersionAliases: []string{
-			"v1alpha3",
-		},
-		Proto: "dubbo.networking.v1alpha3.DestinationRule", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		Proto:      "dubbo.networking.v1alpha3.DestinationRule", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
 		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
 		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
@@ -196,8 +192,8 @@ var (
 		VersionAliases: []string{
 			"v1",
 		},
-		Proto: "k8s.io.gateway_api.api.v1alpha1.GatewaySpec", StatusProto: "k8s.io.gateway_api.api.v1alpha1.HTTPRouteStatus",
-		ReflectType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.GatewaySpec{}).Elem(), StatusType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.HTTPRouteStatus{}).Elem(),
+		Proto: "k8s.io.gateway_api.api.v1alpha1.GatewaySpec", StatusProto: "k8s.io.gateway_api.api.v1alpha1.GatewayStatus",
+		ReflectType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.GatewaySpec{}).Elem(), StatusType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.GatewayStatus{}).Elem(),
 		ProtoPackage: "sigs.k8s.io/gateway-api/apis/v1", StatusPackage: "sigs.k8s.io/gateway-api/apis/v1",
 		ClusterScoped: false,
 		Synthetic:     false,
@@ -286,10 +282,7 @@ var (
 		Kind:       "PeerAuthentication",
 		Plural:     "peerauthentications",
 		Version:    "v1alpha3",
-		VersionAliases: []string{
-			"v1alpha3",
-		},
-		Proto: "dubbo.security.v1alpha3.PeerAuthentication", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		Proto:      "dubbo.security.v1alpha3.PeerAuthentication", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
 		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
 		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/security/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,
@@ -409,10 +402,7 @@ var (
 		Kind:       "VirtualService",
 		Plural:     "virtualservices",
 		Version:    "v1alpha3",
-		VersionAliases: []string{
-			"v1alpha3",
-		},
-		Proto: "dubbo.networking.v1alpha3.VirtualService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		Proto:      "dubbo.networking.v1alpha3.VirtualService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
 		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
 		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
 		ClusterScoped: false,

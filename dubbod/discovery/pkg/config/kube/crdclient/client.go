@@ -19,6 +19,7 @@ package crdclient
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"sync"
 	"time"
 
@@ -47,7 +48,7 @@ type Client struct {
 	kinds            map[config.GroupVersionKind]nsStore
 	kindsMu          sync.RWMutex
 	domainSuffix     string
-	schemasByCRDName map[string]collection.Schema
+	schemasByCRDName map[string]resource.Schema
 	schemas          collection.Schemas
 	client           kube.Client
 	filtersByGVK     map[config.GroupVersionKind]kubetypes.Filter
@@ -70,7 +71,7 @@ type Option struct {
 }
 
 func NewForSchemas(client kube.Client, opts Option, schemas collection.Schemas) *Client {
-	schemasByCRDName := map[string]collection.Schema{}
+	schemasByCRDName := map[string]resource.Schema{}
 	for _, s := range schemas.All() {
 		// From the spec: "Its name MUST be in the format <.spec.name>.<.spec.group>."
 		name := fmt.Sprintf("%s.%s", s.Plural(), s.Group())

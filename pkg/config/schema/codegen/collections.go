@@ -64,7 +64,7 @@ type inputs struct {
 }
 
 func buildInputs() (inputs, error) {
-	b, err := os.ReadFile(filepath.Join(env.DubboRootDir, "/pkg/config/schema/metadata.yaml"))
+	b, err := os.ReadFile(filepath.Join(env.DubboSrc, "/pkg/config/schema/metadata.yaml"))
 	if err != nil {
 		fmt.Printf("unable to read input file: %v", err)
 		return inputs{}, err
@@ -147,7 +147,7 @@ func toTypePath(r *ast.Resource) string {
 }
 
 func toGetter(protoPackage string) string {
-	if strings.Contains(protoPackage, "dubbo") {
+	if strings.Contains(protoPackage, "github.com/apache/dubbo-kubernetes") {
 		return "Dubbo"
 	} else if strings.Contains(protoPackage, "sigs.k8s.io/gateway-api") {
 		return "GatewayAPI"
@@ -180,9 +180,9 @@ func toImport(p string) string {
 func toDubboImport(protoPackage string, version string) string {
 	p := strings.Split(protoPackage, "/")
 	base := strings.Join(p[:len(p)-1], "")
-	imp := strings.ReplaceAll(strings.ReplaceAll(base, ".", ""), "-", "") + version
-	if strings.Contains(protoPackage, "dubbo.apache.org") {
-		return "api" + imp
+	dmp := strings.ReplaceAll(strings.ReplaceAll(base, ".", ""), "-", "") + version
+	if strings.Contains(protoPackage, "github.com/apache/dubbo-kubernetes") {
+		return "api" + dmp
 	}
-	return imp
+	return dmp
 }

@@ -60,9 +60,9 @@ func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.Push
 				names = append(names, listenerName)
 			}
 		}
-		log.Debugf("BuildListeners: wildcard request for %s, generating %d listeners from ServiceTargets: %v", node.ID, len(names), names)
+		log.Debugf("wildcard request for %s, generating %d listeners from ServiceTargets: %v", node.ID, len(names), names)
 	} else if len(names) > 0 {
-		log.Debugf("BuildListeners: specific request for %s, requested listeners: %v", node.ID, names)
+		log.Debugf("specific request for %s, requested listeners: %v", node.ID, names)
 	}
 
 	// If names is provided (non-empty), we MUST only generate those specific listeners
@@ -84,7 +84,7 @@ func (g *GrpcConfigGenerator) BuildListeners(node *model.Proxy, push *model.Push
 			if requestedSet.Contains(r.Name) {
 				filtered = append(filtered, r)
 			} else {
-				log.Debugf("BuildListeners: filtering out unrequested listener %s (requested: %v)", r.Name, names)
+				log.Debugf("filtering out unrequested listener %s (requested: %v)", r.Name, names)
 			}
 		}
 		return filtered
@@ -200,16 +200,13 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		// Check if this is a Gateway Pod by checking service name
 		// Gateway Pods typically have "gateway" in their service name
 		isGatewayPod := strings.Contains(strings.ToLower(si.Service.Attributes.Name), "gateway")
-		log.Debugf("buildInboundListeners: listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v",
+		log.Debugf(" listener %s, service=%s, isGatewayPod=%v, node.Type=%v, node.IsRouter()=%v",
 			name, si.Service.Attributes.Name, isGatewayPod, node.Type, node.IsRouter())
 
 		// - DestinationRule with DUBBO_MUTUAL only configures CLIENT-SIDE (outbound) mTLS
 		// - PeerAuthentication with STRICT configures SERVER-SIDE (inbound) mTLS
 		// Both are REQUIRED for mTLS to work. Server-side mTLS should ONLY be controlled by PeerAuthentication.
 		mode := push.InboundMTLSModeForProxy(node, uint32(listenPort))
-		if mode == model.MTLSPermissive {
-			log.Warnf("buildInboundListeners: PERMISSIVE mTLS is not supported for proxyless gRPC; defaulting to plaintext on listener %s", name)
-		}
 
 		// For proxyless gRPC inbound listeners, we need a FilterChain with HttpConnectionManager filter
 		// to satisfy gRPC client requirements. According to grpc-go issue #7691 and the error
@@ -222,9 +219,9 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		// This allows Gateway to route external traffic to backend services based on HTTPRoute rules
 		if node.IsRouter() || isGatewayPod {
 			if isGatewayPod && !node.IsRouter() {
-				log.Warnf("buildInboundListeners: Gateway Pod detected but node.Type is not Router (node.Type=%v, node.ID=%s), treating as router anyway", node.Type, node.ID)
+				log.Warnf(" Gateway Pod detected but node.Type is not Router (node.Type=%v, node.ID=%s), treating as router anyway", node.Type, node.ID)
 			}
-			log.Infof("buildInboundListeners: Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v, service=%s", name, routeName, node.ID, node.Type, si.Service.Attributes.Name)
+			log.Infof(" Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v, service=%s", name, routeName, node.ID, node.Type, si.Service.Attributes.Name)
 			// Gateway Pods need RDS to route traffic based on HTTPRoute
 			hcm = &hcmv3.HttpConnectionManager{
 				CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -248,7 +245,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 					},
 				},
 			}
-			log.Infof("buildInboundListeners: Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v", name, routeName, node.ID, node.Type)
+			log.Infof(" Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v", name, routeName, node.ID, node.Type)
 		} else {
 			// For regular service Pods, use inline RouteConfig with NonForwardingAction
 			// Use inline RouteConfig instead of RDS to avoid triggering additional RDS requests that cause push loops
@@ -286,7 +283,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 					},
 				},
 			}
-			log.Debugf("buildInboundListeners: regular service Pod using inline RouteConfig for listener %s", name)
+			log.Debugf(" regular service Pod using inline RouteConfig for listener %s", name)
 		}
 
 		// For Gateway Pods and regular service Pods, use FilterChain
@@ -309,14 +306,14 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			// When TransportSocket is present, only TLS connections can match this FilterChain
 			// No FilterChainMatch needed - gRPC proxyless will automatically match based on TransportSocket presence
 			filterChain.TransportSocket = ts
-			log.Infof("buildInboundListeners: applied STRICT mTLS transport socket to listener %s (mode=%v, requires client cert=true)", name, mode)
+			log.Infof(" applied STRICT mTLS transport socket to listener %s (mode=%v, requires client cert=true)", name, mode)
 		} else if mode == model.MTLSStrict {
-			log.Warnf("buildInboundListeners: expected to enable STRICT mTLS on listener %s but failed to build transport socket (mode=%v)", name, mode)
+			log.Warnf(" expected to enable STRICT mTLS on listener %s but failed to build transport socket (mode=%v)", name, mode)
 		} else {
 			// For plaintext mode, no TransportSocket means only plaintext connections can match
 			// No FilterChainMatch needed - gRPC proxyless will automatically match based on TransportSocket absence
 			// TLS connections will fail to match this FilterChain (no TransportSocket) and connection will fail
-			log.Debugf("buildInboundListeners: listener %s using plaintext (mode=%v) - clients using TLS will fail to connect", name, mode)
+			log.Debugf(" listener %s using plaintext (mode=%v) - clients using TLS will fail to connect", name, mode)
 		}
 
 		ll := &listener.Listener{

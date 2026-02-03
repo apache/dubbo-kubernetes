@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	admissionv1 "k8s.io/api/admission/v1"
 	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"net/http"
@@ -123,7 +124,7 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 
 	gvk := obj.GroupVersionKind()
 
-	s, exists := wh.schemas.FindByGroupKind(collection.FromKubernetesGVK(&gvk))
+	s, exists := wh.schemas.FindByGroupKind(resource.FromKubernetesGVK(&gvk))
 	if !exists {
 		log.Infof("unrecognized type %v", addDryRunMessageIfNeeded(obj.GroupVersionKind().String()))
 		return toAdmissionResponse(fmt.Errorf("unrecognized type %v", obj.GroupVersionKind()))

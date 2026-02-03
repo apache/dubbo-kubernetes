@@ -19,7 +19,6 @@ package xds
 import (
 	"context"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"strconv"
 	"sync"
 	"time"
@@ -393,9 +392,9 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 	if pushType == model.IncrementalPush || pushType == model.FullPush {
 		log.Debugf("service %s/%s triggering %v push [endpoints=%d]", namespace, serviceName, pushType, len(dubboEndpoints))
 		s.ConfigUpdate(&model.PushRequest{
-			Full:           pushType == model.FullPush,
-			ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
-			Reason:         model.NewReasonStats(model.EndpointUpdate),
+			// Full:           pushType == model.FullPush,
+			// ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
+			// Reason:         model.NewReasonStats(model.EndpointUpdate),
 		})
 	} else if pushType == model.NoPush {
 		// Even when UpdateServiceEndpoints returns NoPush, we may still need to push
@@ -406,9 +405,9 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 		if len(dubboEndpoints) == 0 {
 			log.Debugf("service %s/%s endpoints became empty [NoPush], forcing push to clear client cache", namespace, serviceName)
 			s.ConfigUpdate(&model.PushRequest{
-				Full:           false, // Incremental push
-				ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
-				Reason:         model.NewReasonStats(model.EndpointUpdate),
+				// Full:           false, // Incremental push
+				// ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
+				// Reason:         model.NewReasonStats(model.EndpointUpdate),
 			})
 		} else {
 			// Endpoints exist but NoPush was returned - this means health status didn't change

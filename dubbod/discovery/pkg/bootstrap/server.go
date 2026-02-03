@@ -445,7 +445,7 @@ func (s *Server) initRegistryEventHandlers() {
 	log.Debugf("configController is available, registering event handlers")
 
 	configHandler := func(prev config.Config, curr config.Config, event model.Event) {
-		log.Infof("configHandler: received event %s for config %v (prev.Name=%s, curr.Name=%s, prev.Namespace=%s, curr.Namespace=%s)",
+		log.Infof("received event %s for config %v (prev.Name=%s, curr.Name=%s, prev.Namespace=%s, curr.Namespace=%s)",
 			event, curr.GroupVersionKind, prev.Name, curr.Name, prev.Namespace, curr.Namespace)
 
 		cfg := curr
@@ -461,32 +461,32 @@ func (s *Server) initRegistryEventHandlers() {
 			schema, found = collections.DubboGatewayAPI().FindByGroupVersionKind(cfg.GroupVersionKind)
 		}
 		if !found {
-			log.Warnf("configHandler: schema not found for %v, skipping", cfg.GroupVersionKind)
+			log.Warnf("schema not found for %v, skipping", cfg.GroupVersionKind)
 			return
 		}
 
 		// Map GVK to kind.Kind using schema identifier
 		// This matches Dubbo's approach of using gvk.MustToKind, but we use schema.Identifier() instead
 		schemaID := schema.Identifier()
-		log.Infof("configHandler: processing config change, schema identifier=%s, GVK=%v, name=%s/%s, event=%s",
+		log.Infof("processing config change, schema identifier=%s, GVK=%v, name=%s/%s, event=%s",
 			schemaID, cfg.GroupVersionKind, cfg.Namespace, cfg.Name, event)
 
 		var configKind kind.Kind
 		switch schemaID {
 		case "DestinationRule":
 			configKind = kind.DestinationRule
-		case "virtualService", "VirtualService":
+		case "VirtualService":
 			configKind = kind.VirtualService
 		case "PeerAuthentication":
 			configKind = kind.PeerAuthentication
 		case "GatewayClass":
 			configKind = kind.GatewayClass
-		case "Gateway":
-			configKind = kind.Gateway
+		case "KubernetesGateway":
+			configKind = kind.KubernetesGateway
 		case "HTTPRoute":
 			configKind = kind.HTTPRoute
 		default:
-			log.Debugf("configHandler: unknown schema identifier %s for %v, skipping", schemaID, cfg.GroupVersionKind)
+			log.Debugf("unknown schema identifier %s for %v, skipping", schemaID, cfg.GroupVersionKind)
 			return
 		}
 
@@ -497,7 +497,7 @@ func (s *Server) initRegistryEventHandlers() {
 		}
 
 		// Log the config change
-		log.Infof("configHandler: %s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
+		log.Infof("%s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
 		// Some configs (DestinationRule/VirtualService/PeerAuthentication/HTTPRoute) require Full push to ensure
 		// PushContext is re-initialized and configuration is reloaded.

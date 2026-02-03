@@ -23,7 +23,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/cespare/xxhash/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -348,9 +347,9 @@ func (b *EndpointBuilder) DependentConfigs() []model.ConfigHash {
 	}
 	// Create ConfigKey for ServiceEntry and return its hash
 	configKey := model.ConfigKey{
-		Kind:      kind.ServiceEntry,
-		Name:      string(b.hostname),
-		Namespace: b.service.Attributes.Namespace,
+		// Kind:      kind.ServiceEntry,
+		// Name:      string(b.hostname),
+		// Namespace: b.service.Attributes.Namespace,
 	}
 	return []model.ConfigHash{configKey.HashCode()}
 }

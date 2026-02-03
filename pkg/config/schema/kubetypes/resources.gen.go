@@ -6,6 +6,8 @@ import (
 	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -31,6 +33,8 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Deployment, true
 	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
 		return gvk.DestinationRule, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
+		return gvk.DestinationRule, true
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return gvk.EndpointSlice, true
 	case *k8sioapicorev1.Endpoints:
@@ -55,6 +59,8 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Node, true
 	case *githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
 		return gvk.PeerAuthentication, true
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
+		return gvk.PeerAuthentication, true
 	case *k8sioapicorev1.Pod:
 		return gvk.Pod, true
 	case *k8sioapipolicyv1.PodDisruptionBudget:
@@ -70,6 +76,8 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
 	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
+		return gvk.VirtualService, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
 		return gvk.VirtualService, true
 	default:
 		return config.GroupVersionKind{}, false

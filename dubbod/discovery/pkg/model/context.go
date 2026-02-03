@@ -34,7 +34,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 	pm "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
@@ -266,7 +265,10 @@ func (node *Proxy) IsProxylessGrpc() bool {
 
 func (node *Proxy) ShouldUpdateServiceTargets(updates sets.Set[ConfigKey]) bool {
 	for config := range updates {
-		if config.Kind == kind.ServiceEntry || config.Namespace == node.Metadata.Namespace {
+		// if config.Kind == kind.ServiceEntry || config.Namespace == node.Metadata.Namespace {
+		// 	return true
+		// }
+		if config.Namespace == node.Metadata.Namespace {
 			return true
 		}
 	}
