@@ -60,10 +60,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Migrate Zookeeper, Nacos, Admin Helm Charts to the target repository.
-            Rename the Planet core component to Dubbo.
-            Remove some components from Dubboctl and update the operator component definition.
-            Update the readme description and optimize some known code logic.
+            Remove redundant code logic.
+            Switch from manually adding core resources to generating core resources.
           draft: false
           prerelease: true
 
