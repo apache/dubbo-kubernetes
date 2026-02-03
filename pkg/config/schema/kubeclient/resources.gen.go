@@ -17,8 +17,8 @@ import (
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
-	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
-	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -40,7 +40,7 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().AppsV1().DaemonSets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.Deployment:
 		return c.Kube().AppsV1().Deployments(namespace).(ktypes.WriteAPI[T])
-	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
 		return c.Dubbo().NetworkingV1alpha3().DestinationRules(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.WriteAPI[T])
@@ -62,7 +62,7 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Namespaces().(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Node:
 		return c.Kube().CoreV1().Nodes().(ktypes.WriteAPI[T])
-	case *githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Pod:
 		return c.Kube().CoreV1().Pods(namespace).(ktypes.WriteAPI[T])
@@ -78,7 +78,7 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.WriteAPI[T])
-	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
 		return c.Dubbo().NetworkingV1alpha3().VirtualServices(namespace).(ktypes.WriteAPI[T])
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
@@ -95,7 +95,7 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().AppsV1().DaemonSets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiappsv1.Deployment:
 		return c.Kube().AppsV1().Deployments(namespace).(ktypes.ReadWriteAPI[T, TL])
-	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
 		return c.Dubbo().NetworkingV1alpha3().DestinationRules(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.ReadWriteAPI[T, TL])
@@ -117,7 +117,7 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().CoreV1().Namespaces().(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Node:
 		return c.Kube().CoreV1().Nodes().(ktypes.ReadWriteAPI[T, TL])
-	case *githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Pod:
 		return c.Kube().CoreV1().Pods(namespace).(ktypes.ReadWriteAPI[T, TL])
@@ -133,7 +133,7 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.ReadWriteAPI[T, TL])
-	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
 		return c.Dubbo().NetworkingV1alpha3().VirtualServices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
@@ -151,7 +151,7 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	case gvr.Deployment:
 		return &k8sioapiappsv1.Deployment{}
 	case gvr.DestinationRule:
-		return &githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{}
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{}
 	case gvr.EndpointSlice:
 		return &k8sioapidiscoveryv1.EndpointSlice{}
 	case gvr.Endpoints:
@@ -173,7 +173,7 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	case gvr.Node:
 		return &k8sioapicorev1.Node{}
 	case gvr.PeerAuthentication:
-		return &githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{}
+		return &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{}
 	case gvr.Pod:
 		return &k8sioapicorev1.Pod{}
 	case gvr.PodDisruptionBudget:
@@ -189,7 +189,7 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
 	case gvr.VirtualService:
-		return &githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{}
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}

@@ -14,8 +14,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 
-	apidubboapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
-	apidubboapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
+	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 {{- range .Packages}}
 	{{.ImportName}} "{{.PackageName}}"
 {{- end}}
@@ -120,7 +120,7 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 {{- range .Entries }}
 	{{- if and (not .Resource.Synthetic) }}
 	gvk.{{.Resource.Identifier}}: func(r runtime.Object) config.Config {
-		obj := r.(*{{.Resource.Kind}})
+		obj := r.(*{{ .DubboClientImport }}.{{.Resource.Kind}})
 		return config.Config{
 		  Meta: config.Meta{
 		  	GroupVersionKind:  gvk.{{.Resource.Identifier}},

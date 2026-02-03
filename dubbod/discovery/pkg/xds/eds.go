@@ -95,7 +95,7 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 	// Despite this code existing on the SotW code path, sending these partial pushes is still allowed;
 	// see https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#grouping-resources-into-responses
 	if !req.Full || canSendPartialFullPushes(req) {
-		edsUpdatedServices = model.ConfigNamesOfKind(req.ConfigsUpdated, kind.ServiceEntry)
+		// edsUpdatedServices = model.ConfigNamesOfKind(req.ConfigsUpdated, kind.ServiceEntry)
 		if len(edsUpdatedServices) > 0 {
 			log.Debugf("edsUpdatedServices count=%d (Full=%v)", len(edsUpdatedServices), req.Full)
 		}
@@ -113,15 +113,15 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 			configKeys := make([]string, 0, len(req.ConfigsUpdated))
 			for ckey := range req.ConfigsUpdated {
 				configKeys = append(configKeys, fmt.Sprintf("%s/%s/%s", ckey.Kind, ckey.Namespace, ckey.Name))
-				if ckey.Kind == kind.ServiceEntry {
-					// Match ConfigsUpdated.Name with hostname
-					// Both should be FQDN (e.g., "consumer.grpc-app.svc.cluster.local")
-					if ckey.Name == hostname {
-						serviceWasUpdated = true
-						log.Debugf("service %s was updated, forcing regeneration", hostname)
-						break
-					}
+				// if ckey.Kind == kind.ServiceEntry {
+				// Match ConfigsUpdated.Name with hostname
+				// Both should be FQDN (e.g., "consumer.grpc-app.svc.cluster.local")
+				if ckey.Name == hostname {
+					serviceWasUpdated = true
+					log.Debugf("service %s was updated, forcing regeneration", hostname)
+					break
 				}
+				// }
 			}
 		}
 
@@ -165,7 +165,8 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 		if !shouldRegenerate && !req.Full && req.ConfigsUpdated != nil {
 			// For incremental pushes, check if any ServiceEntry in ConfigsUpdated matches this hostname
 			for ckey := range req.ConfigsUpdated {
-				if ckey.Kind == kind.ServiceEntry && ckey.Name == hostname {
+				// if ckey.Kind == kind.ServiceEntry && ckey.Name == hostname {
+				if ckey.Name == hostname {
 					shouldRegenerate = true
 					log.Debugf("forcing regeneration for cluster %s (hostname=%s) due to ConfigsUpdated", clusterName, hostname)
 					break
@@ -241,7 +242,8 @@ func (eds *EdsGenerator) buildEndpoints(proxy *model.Proxy, req *model.PushReque
 
 // buildDeltaEndpoints builds endpoints for delta XDS
 func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, []string, model.XdsLogDetails) {
-	edsUpdatedServices := model.ConfigNamesOfKind(req.ConfigsUpdated, kind.ServiceEntry)
+	// edsUpdatedServices := model.ConfigNamesOfKind(req.ConfigsUpdated, kind.ServiceEntry)
+	var edsUpdatedServices map[string]struct{}
 	var resources model.Resources
 	var removed []string
 	empty := 0
@@ -295,7 +297,8 @@ func (eds *EdsGenerator) buildDeltaEndpoints(proxy *model.Proxy, req *model.Push
 		if !shouldRegenerate && !req.Full && req.ConfigsUpdated != nil {
 			// For incremental pushes, check if any ServiceEntry in ConfigsUpdated matches this hostname
 			for ckey := range req.ConfigsUpdated {
-				if ckey.Kind == kind.ServiceEntry && ckey.Name == hostname {
+				// if ckey.Kind == kind.ServiceEntry && ckey.Name == hostname {
+				if ckey.Name == hostname {
 					shouldRegenerate = true
 					log.Debugf("forcing regeneration for cluster %s (hostname=%s) due to ConfigsUpdated", clusterName, hostname)
 					break
@@ -386,9 +389,9 @@ func canSendPartialFullPushes(req *model.PushRequest) bool {
 			// this happens when push requests are merged due to debounce
 			continue
 		}
-		if cfg.Kind != kind.ServiceEntry {
-			return false
-		}
+		// if cfg.Kind != kind.ServiceEntry {
+		// 	return false
+		// }
 	}
 	return true
 }

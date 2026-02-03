@@ -1,19 +1,35 @@
+//
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package resource
 
 import (
 	"errors"
 	"fmt"
-	"reflect"
-
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
+	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/hashicorp/go-multierror"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
-	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
+	"reflect"
 )
+
+var protoMessageType = protoregistry.GlobalTypes.FindMessageByName
 
 // Schema for a resource.
 type Schema interface {
@@ -67,6 +83,7 @@ type Schema interface {
 
 	// StatusKind returns the Kind of the status field. If unset, the field does not support status.
 	StatusKind() string
+
 	StatusPackage() string
 
 	// MustNewInstance calls NewInstance and panics if an error occurs.
@@ -134,6 +151,27 @@ type Builder struct {
 	ValidateProto validation.ValidateFunc
 }
 
+type schemaImpl struct {
+	clusterScoped  bool
+	builtin        bool
+	gvk            config.GroupVersionKind
+	versionAliases []string
+	plural         string
+	apiVersion     string
+	proto          string
+	goPackage      string
+	validateConfig validation.ValidateFunc
+	reflectType    reflect.Type
+	statusType     reflect.Type
+	statusPackage  string
+	identifier     string
+	synthetic      bool
+
+	variableName string
+	resource     Schema
+	name         config.GroupVersionKind
+}
+
 // Build a Schema instance.
 func (b Builder) Build() (Schema, error) {
 	s := b.BuildNoValidate()
@@ -181,23 +219,6 @@ func (b Builder) BuildNoValidate() Schema {
 		statusType:     b.StatusType,
 		statusPackage:  b.StatusPackage,
 	}
-}
-
-type schemaImpl struct {
-	clusterScoped  bool
-	builtin        bool
-	gvk            config.GroupVersionKind
-	versionAliases []string
-	plural         string
-	apiVersion     string
-	proto          string
-	goPackage      string
-	validateConfig validation.ValidateFunc
-	reflectType    reflect.Type
-	statusType     reflect.Type
-	statusPackage  string
-	identifier     string
-	synthetic      bool
 }
 
 func (s *schemaImpl) GroupVersionKind() config.GroupVersionKind {
@@ -365,5 +386,3 @@ func getProtoMessageType(protoMessageName string) reflect.Type {
 	}
 	return reflect.TypeOf(t.Zero().Interface())
 }
-
-var protoMessageType = protoregistry.GlobalTypes.FindMessageByName

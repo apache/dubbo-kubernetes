@@ -24,7 +24,8 @@ import (
 	"reflect"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
+
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
@@ -32,7 +33,7 @@ import (
 
 var log = dubbolog.RegisterScope("crdconversion", "crd conversion debugging")
 
-type ConversionFunc = func(s collection.Schema, js string) (config.Spec, error)
+type ConversionFunc = func(s resource.Schema, js string) (config.Spec, error)
 
 func parseInputsImpl(inputs string, withValidate bool) ([]config.Config, []DubboKind, error) {
 	var varr []config.Config
@@ -84,7 +85,7 @@ func ParseInputs(inputs string) ([]config.Config, []DubboKind, error) {
 	return parseInputsImpl(inputs, true)
 }
 
-func FromJSON(s collection.Schema, js string) (config.Spec, error) {
+func FromJSON(s resource.Schema, js string) (config.Spec, error) {
 	c, err := s.NewInstance()
 	if err != nil {
 		return nil, err
@@ -95,11 +96,11 @@ func FromJSON(s collection.Schema, js string) (config.Spec, error) {
 	return c, nil
 }
 
-func ConvertObject(schema collection.Schema, object DubboObject, domain string) (*config.Config, error) {
+func ConvertObject(schema resource.Schema, object DubboObject, domain string) (*config.Config, error) {
 	return ConvertObjectInternal(schema, object, domain, FromJSON)
 }
 
-func StatusJSONFromMap(schema collection.Schema, jsonMap *json.RawMessage) (config.Status, error) {
+func StatusJSONFromMap(schema resource.Schema, jsonMap *json.RawMessage) (config.Status, error) {
 	if jsonMap == nil {
 		return nil, nil
 	}
@@ -118,7 +119,7 @@ func StatusJSONFromMap(schema collection.Schema, jsonMap *json.RawMessage) (conf
 	return status, nil
 }
 
-func ConvertObjectInternal(schema collection.Schema, object DubboObject, domain string, convert ConversionFunc) (*config.Config, error) {
+func ConvertObjectInternal(schema resource.Schema, object DubboObject, domain string, convert ConversionFunc) (*config.Config, error) {
 	js, err := json.Marshal(object.GetSpec())
 	if err != nil {
 		return nil, err

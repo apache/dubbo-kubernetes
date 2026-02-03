@@ -80,7 +80,7 @@ func Run() error {
 			"Packages":     inp.Packages,
 			"PackageName":  "collections",
 			"FilePrefix":   "// +build !agent",
-			"CustomImport": "",
+			"CustomImport": `  ""`,
 		}),
 		writeTemplate("pkg/config/schema/collections/collections.agent.gen.go", collectionsTemplate, map[string]any{
 			"Entries":      agentEntries,
@@ -97,7 +97,7 @@ func writeTemplate(path, tmpl string, i any) error {
 	if err != nil {
 		return fmt.Errorf("apply template %v: %v", path, err)
 	}
-	dst := filepath.Join(env.DubboRootDir, path)
+	dst := filepath.Join(env.DubboSrc, path)
 	if err = os.WriteFile(dst, []byte(t), os.ModePerm); err != nil {
 		return fmt.Errorf("write template %v: %v", path, err)
 	}

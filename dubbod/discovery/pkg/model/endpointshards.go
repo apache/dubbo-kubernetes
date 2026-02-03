@@ -19,8 +19,6 @@ package model
 import (
 	"sync"
 
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
-
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -276,9 +274,9 @@ func (e *EndpointIndex) deleteServiceInner(shard ShardKey, serviceName, namespac
 
 func (e *EndpointIndex) clearCacheForService(svc, ns string) {
 	e.cache.Clear(sets.Set[ConfigKey]{{
-		Kind:      kind.ServiceEntry,
-		Name:      svc,
-		Namespace: ns,
+		// Kind:      kind.ServiceEntry,
+		// Name:      svc,
+		// Namespace: ns,
 	}: {}})
 }
 

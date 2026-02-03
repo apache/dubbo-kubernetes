@@ -15,7 +15,6 @@ var (
 	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
 	Deployment                     = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
 	DestinationRule                = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "DestinationRule"}
-	DestinationRule_v1alpha3       = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "DestinationRule"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
 	GatewayClass                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
@@ -31,7 +30,6 @@ var (
 	Namespace                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
 	Node                           = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Node"}
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "PeerAuthentication"}
-	PeerAuthentication_v1alpha3    = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "PeerAuthentication"}
 	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
 	PodDisruptionBudget            = config.GroupVersionKind{Group: "policy", Version: "v1", Kind: "PodDisruptionBudget"}
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
@@ -40,7 +38,6 @@ var (
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	ValidatingWebhookConfiguration = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "ValidatingWebhookConfiguration"}
 	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "VirtualService"}
-	VirtualService_v1alpha3        = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "VirtualService"}
 )
 
 // ToGVR converts a GVK to a GVR.
@@ -56,8 +53,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Deployment, true
 	case DestinationRule:
 		return gvr.DestinationRule, true
-	case DestinationRule_v1alpha3:
-		return gvr.DestinationRule_v1alpha3, true
 	case EndpointSlice:
 		return gvr.EndpointSlice, true
 	case Endpoints:
@@ -88,8 +83,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Node, true
 	case PeerAuthentication:
 		return gvr.PeerAuthentication, true
-	case PeerAuthentication_v1alpha3:
-		return gvr.PeerAuthentication_v1alpha3, true
 	case Pod:
 		return gvr.Pod, true
 	case PodDisruptionBudget:
@@ -106,8 +99,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.ValidatingWebhookConfiguration, true
 	case VirtualService:
 		return gvr.VirtualService, true
-	case VirtualService_v1alpha3:
-		return gvr.VirtualService_v1alpha3, true
 	}
 
 	return schema.GroupVersionResource{}, false
