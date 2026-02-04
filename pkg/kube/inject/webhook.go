@@ -283,7 +283,7 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 		return toAdmissionResponse(err)
 	}
 
-	log.Infof("Injection successful, patch size: %d bytes", len(patchBytes))
+	log.Infof("Injection Successfully, patch size: %d bytes", len(patchBytes))
 	reviewResponse := kube.AdmissionResponse{
 		Allowed: true,
 		Patch:   patchBytes,

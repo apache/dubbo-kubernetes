@@ -32,9 +32,9 @@ import (
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/caclient"
 	"github.com/apache/dubbo-kubernetes/pkg/channels"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagent/pixiu"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/pixiu"
 	"github.com/apache/dubbo-kubernetes/pkg/uds"
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -114,9 +114,9 @@ type XdsProxy struct {
 	initialHealthRequest      *discovery.DiscoveryRequest
 	initialDeltaHealthRequest *discovery.DeltaDiscoveryRequest
 	// Upstream connection for proxyless mode
-	bootstrapNode      *core.Node
-	proxylessConnMutex sync.RWMutex
-	proxylessConn      *ProxyConnection
+	bootstrapNode *core.Node
+	ConnMutex     sync.RWMutex
+	Conn          *ProxyConnection
 
 	pixiuConverter      *pixiu.ConfigConverter
 	pixiuConfigPath     string
@@ -181,9 +181,9 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 		// Wait for bootstrap Node to be set (with timeout)
 		// The Node is set synchronously after bootstrap file generation in agent.Run()
 		for i := 0; i < 50; i++ {
-			proxy.proxylessConnMutex.RLock()
+			proxy.ConnMutex.RLock()
 			nodeReady := proxy.bootstrapNode != nil
-			proxy.proxylessConnMutex.RUnlock()
+			proxy.ConnMutex.RUnlock()
 			if nodeReady {
 				break
 			}
@@ -193,9 +193,9 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 			case <-time.After(100 * time.Millisecond):
 			}
 		}
-		proxy.proxylessConnMutex.RLock()
+		proxy.ConnMutex.RLock()
 		nodeReady := proxy.bootstrapNode != nil
-		proxy.proxylessConnMutex.RUnlock()
+		proxy.ConnMutex.RUnlock()
 		if !nodeReady {
 			proxyLog.Warnf("Bootstrap Node not set after 5 seconds, proceeding anyway")
 		}
@@ -211,10 +211,10 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 			}
 
 			// Establish connection
-			connDone, err := proxy.establishProxylessConnection(ia)
+			connDone, err := proxy.establishConnection(ia)
 			if err != nil {
 				// Connection failed, log and retry with exponential backoff
-				proxyLog.Warnf("Failed to establish proxyless upstream connection: %v, retrying in %v", err, backoff)
+				proxyLog.Warnf("Failed to establish upstream connection: %v, retrying in %v", err, backoff)
 
 				select {
 				case <-proxy.stopChan:
@@ -230,13 +230,13 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 
 			// Connection successful, reset backoff
 			backoff = time.Second
-			proxyLog.Infof("Proxyless upstream connection connected successfully")
+			proxyLog.Infof("Upstream Connected Successfully")
 			// Wait for connection to terminate (connDone will be closed when connection dies)
 			select {
 			case <-proxy.stopChan:
 				return
 			case <-connDone:
-				proxyLog.Warnf("Proxyless connection terminated, will retry")
+				proxyLog.Warnf("connection terminated, will retry")
 			}
 		}
 	}()
@@ -294,7 +294,7 @@ func (p *XdsProxy) handleUpstream(ctx context.Context, con *ProxyConnection, xds
 		proxyLog.Errorf("connection #%d failed to create stream to upstream %s: %v", con.conID, p.dubbodAddress, err)
 		return err
 	}
-	proxyLog.Infof("connected to upstream XDS server: %s id=%d", p.dubbodAddress, con.conID)
+	proxyLog.Infof("Connected to upstream XDS server: %s id=%d", p.dubbodAddress, con.conID)
 
 	// Log when we start receiving responses
 	go func() {
@@ -712,26 +712,30 @@ func (p *XdsProxy) getTLSOptions(agent *Agent) (*dubbogrpc.TLSOptions, error) {
 }
 
 func (p *XdsProxy) SetBootstrapNode(node *core.Node) {
-	p.proxylessConnMutex.Lock()
+	p.ConnMutex.Lock()
 	p.bootstrapNode = node
-	p.proxylessConnMutex.Unlock()
+	p.ConnMutex.Unlock()
 }
 
-func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, error) {
-	p.proxylessConnMutex.Lock()
+func (p *XdsProxy) establishConnection(ia *Agent) (<-chan struct{}, error) {
+	p.ConnMutex.Lock()
 	node := p.bootstrapNode
 	// Clean up old connection if it exists
-	if p.proxylessConn != nil {
-		close(p.proxylessConn.stopChan)
-		p.proxylessConn = nil
+	if p.Conn != nil {
+		close(p.Conn.stopChan)
+		p.Conn = nil
 	}
-	p.proxylessConnMutex.Unlock()
+	p.ConnMutex.Unlock()
 
 	if node == nil {
 		return nil, fmt.Errorf("bootstrap node not available")
 	}
 
-	proxyLog.Infof("Connecting proxyless upstream connection with Node: %s", node.Id)
+	if ia.cfg.ProxyType == model.Proxyless {
+		proxyLog.Infof("Connecting proxyless upstream connection with Node: %s", node.Id)
+	} else if ia.cfg.ProxyType == model.Router {
+		proxyLog.Infof("Connecting router upstream connection with Node: %s", node.Id)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
@@ -757,7 +761,7 @@ func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, err
 		_ = upstreamConn.Close()
 		return nil, fmt.Errorf("failed to create upstream stream: %w", err)
 	}
-	proxyLog.Infof("connected to upstream XDS server (proxyless): %s", p.dubbodAddress)
+	proxyLog.Infof("Connected to upstream XDS server: %s", p.dubbodAddress)
 
 	conID := connectionNumber.Inc()
 	con := &ProxyConnection{
@@ -770,9 +774,9 @@ func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, err
 		node:          node,
 	}
 
-	p.proxylessConnMutex.Lock()
-	p.proxylessConn = con
-	p.proxylessConnMutex.Unlock()
+	p.ConnMutex.Lock()
+	p.Conn = con
+	p.ConnMutex.Unlock()
 
 	// Close upstream connection when connection terminates and signal done channel
 	go func() {
@@ -782,11 +786,11 @@ func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, err
 		case <-p.stopChan:
 		}
 		_ = upstreamConn.Close()
-		p.proxylessConnMutex.Lock()
-		if p.proxylessConn == con {
-			p.proxylessConn = nil
+		p.ConnMutex.Lock()
+		if p.Conn == con {
+			p.Conn = nil
 		}
-		p.proxylessConnMutex.Unlock()
+		p.ConnMutex.Unlock()
 		close(connDone)
 	}()
 
@@ -795,14 +799,14 @@ func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, err
 		TypeUrl: model.ListenerType,
 		Node:    node,
 	}
-	proxyLog.Infof("proxyless connection sending initial LDS request with Node: %s", node.Id)
+	proxyLog.Debugf("connection sending initial LDS request with Node: %s", node.Id)
 	if err := upstream.Send(ldsReq); err != nil {
 		_ = upstreamConn.Close()
-		p.proxylessConnMutex.Lock()
-		if p.proxylessConn == con {
-			p.proxylessConn = nil
+		p.ConnMutex.Lock()
+		if p.Conn == con {
+			p.Conn = nil
 		}
-		p.proxylessConnMutex.Unlock()
+		p.ConnMutex.Unlock()
 		close(connDone)
 		return nil, fmt.Errorf("failed to send initial LDS request: %w", err)
 	}
@@ -830,7 +834,7 @@ func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, err
 				upstreamErr(con, err)
 				return
 			}
-			proxyLog.Debugf("proxyless connection received response: TypeUrl=%s, Resources=%d",
+			proxyLog.Debugf("connection received response: TypeUrl=%s, Resources=%d",
 				model.GetShortType(resp.TypeUrl), len(resp.Resources))
 			// Send ACK
 			ackReq := &discovery.DiscoveryRequest{
@@ -874,58 +878,6 @@ func (p *XdsProxy) establishProxylessConnection(ia *Agent) (<-chan struct{}, err
 	// Return immediately - connection is connected and running in background
 	// The connDone channel will be closed when connection terminates
 	return connDone, nil
-}
-
-func (p *XdsProxy) close() {
-	close(p.stopChan)
-	p.proxylessConnMutex.Lock()
-	if p.proxylessConn != nil {
-		close(p.proxylessConn.stopChan)
-		p.proxylessConn = nil
-	}
-	p.proxylessConnMutex.Unlock()
-	if p.downstreamGrpcServer != nil {
-		p.downstreamGrpcServer.Stop()
-	}
-	if p.downstreamListener != nil {
-		_ = p.downstreamListener.Close()
-	}
-}
-
-func (con *ProxyConnection) sendRequest(req *discovery.DiscoveryRequest) {
-	con.requestsChan.Put(req)
-}
-
-func upstreamErr(con *ProxyConnection, err error) {
-	switch dubbogrpc.GRPCErrorType(err) {
-	case dubbogrpc.GracefulTermination:
-		err = nil
-		fallthrough
-	case dubbogrpc.ExpectedError:
-		proxyLog.Errorf("upstream terminated with status %v", err)
-	default:
-		proxyLog.Errorf("upstream terminated with unexpected error %v", err)
-	}
-	select {
-	case con.upstreamError <- err:
-	case <-con.stopChan:
-	}
-}
-
-func downstreamErr(con *ProxyConnection, err error) {
-	switch dubbogrpc.GRPCErrorType(err) {
-	case dubbogrpc.GracefulTermination:
-		err = nil
-		fallthrough
-	case dubbogrpc.ExpectedError:
-		proxyLog.Errorf("downstream terminated with status %v", err)
-	default:
-		proxyLog.Errorf("downstream terminated with unexpected error %v", err)
-	}
-	select {
-	case con.downstreamError <- err:
-	case <-con.stopChan:
-	}
 }
 
 // updatePixiuConfig updates Pixiu configuration from xDS responses
@@ -1001,4 +953,56 @@ func (p *XdsProxy) updatePixiuConfig(resp *discovery.DiscoveryResponse) {
 	}
 
 	proxyLog.Infof("Updated Pixiu config at %s", p.pixiuConfigPath)
+}
+
+func (p *XdsProxy) close() {
+	close(p.stopChan)
+	p.ConnMutex.Lock()
+	if p.Conn != nil {
+		close(p.Conn.stopChan)
+		p.Conn = nil
+	}
+	p.ConnMutex.Unlock()
+	if p.downstreamGrpcServer != nil {
+		p.downstreamGrpcServer.Stop()
+	}
+	if p.downstreamListener != nil {
+		_ = p.downstreamListener.Close()
+	}
+}
+
+func (con *ProxyConnection) sendRequest(req *discovery.DiscoveryRequest) {
+	con.requestsChan.Put(req)
+}
+
+func upstreamErr(con *ProxyConnection, err error) {
+	switch dubbogrpc.GRPCErrorType(err) {
+	case dubbogrpc.GracefulTermination:
+		err = nil
+		fallthrough
+	case dubbogrpc.ExpectedError:
+		proxyLog.Errorf("upstream terminated with status %v", err)
+	default:
+		proxyLog.Errorf("upstream terminated with unexpected error %v", err)
+	}
+	select {
+	case con.upstreamError <- err:
+	case <-con.stopChan:
+	}
+}
+
+func downstreamErr(con *ProxyConnection, err error) {
+	switch dubbogrpc.GRPCErrorType(err) {
+	case dubbogrpc.GracefulTermination:
+		err = nil
+		fallthrough
+	case dubbogrpc.ExpectedError:
+		proxyLog.Errorf("downstream terminated with status %v", err)
+	default:
+		proxyLog.Errorf("downstream terminated with unexpected error %v", err)
+	}
+	select {
+	case con.downstreamError <- err:
+	case <-con.stopChan:
+	}
 }

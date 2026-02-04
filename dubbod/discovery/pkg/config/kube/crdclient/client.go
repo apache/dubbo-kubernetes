@@ -156,7 +156,7 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	cl.logger.Debugf("addCRD: adding CRD %q", name)
 	s, f := cl.schemasByCRDName[name]
 	if !f {
-		cl.logger.Debugf("Added resource that we are not watching: %v", name)
+		cl.logger.Debugf("added resource that we are not watching: %v", name)
 		return
 	}
 	resourceGVK := s.GroupVersionKind()
@@ -201,23 +201,18 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 		ObjectTransform: transform,
 		FieldSelector:   fieldSelector,
 	}
-	cl.logger.Debugf("created filter for %v (namespaceFilter=%v, extraFilter=%v, fieldSelector=%v)", resourceGVK, namespaceFilter != nil, extraFilter != nil, fieldSelector)
+	if resourceGVK == gvk.KubernetesGateway {
+		filter.ObjectFilter = kubetypes.ComposeFilters(namespaceFilter, extraFilter)
+	}
 
 	var kc kclient.Untyped
 	if s.IsBuiltin() {
 		kc = kclient.NewUntypedInformer(cl.client, gvr, filter)
 	} else {
-		// For DestinationRule and VirtualService, we use Dynamic client which returns unstructured objects
-		// So we need to use DynamicInformer type to ensure the informer expects unstructured objects
-		informerType := kubetypes.StandardInformer
-		if resourceGVK == gvk.DestinationRule || resourceGVK == gvk.VirtualService || resourceGVK == gvk.PeerAuthentication {
-			informerType = kubetypes.DynamicInformer
-			cl.logger.Debugf("using DynamicInformer for %v (uses Dynamic client)", resourceGVK)
-		}
 		kc = kclient.NewDelayedInformer[controllers.Object](
 			cl.client,
 			gvr,
-			informerType,
+			kubetypes.StandardInformer,
 			filter,
 		)
 	}
@@ -226,58 +221,18 @@ func (cl *Client) addCRD(name string, opts krt.OptionsBuilder) {
 	collection := krt.MapCollection(wrappedClient, func(obj controllers.Object) config.Config {
 		cfg := translateFunc(obj)
 		cfg.Domain = cl.domainSuffix
-		// Only log at Debug level to avoid spam, but keep it available for diagnosis
-		cl.logger.Debugf("MapCollection translating object %s/%s to config for %v", obj.GetNamespace(), obj.GetName(), resourceGVK)
 		return cfg
 	}, opts.WithName("collection/"+resourceGVK.Kind)...)
 	index := krt.NewNamespaceIndex(collection)
-	// Register a debug handler to track all events from the wrappedClient (before MapCollection)
-	// This helps diagnose if events are being filtered before reaching the collection
-	wrappedClientDebugHandler := wrappedClient.RegisterBatch(func(o []krt.Event[controllers.Object]) {
-		if len(o) > 0 {
-			cl.logger.Debugf("wrappedClient event detected for %v: %d events", resourceGVK, len(o))
-			for i, event := range o {
-				var nameStr, nsStr string
-				if event.New != nil {
-					obj := *event.New
-					nameStr = obj.GetName()
-					nsStr = obj.GetNamespace()
-				} else if event.Old != nil {
-					obj := *event.Old
-					nameStr = obj.GetName()
-					nsStr = obj.GetNamespace()
-				}
-				cl.logger.Debugf("wrappedClient event[%d] %s for %v (name=%s/%s)",
-					i, event.Event, resourceGVK, nsStr, nameStr)
-			}
-		}
-	}, false)
-	// Register a debug handler to track all events from the collection
-	// This helps diagnose why new config changes might not trigger events
-	// Use false to match Dubbo's implementation - only process future events, not initial sync
-	debugHandler := collection.RegisterBatch(func(o []krt.Event[config.Config]) {
-		if len(o) > 0 {
-			cl.logger.Debugf("collection event detected for %v: %d events", resourceGVK, len(o))
-			for i, event := range o {
-				var nameStr, nsStr string
-				if event.New != nil {
-					nameStr = event.New.Name
-					nsStr = event.New.Namespace
-				} else if event.Old != nil {
-					nameStr = event.Old.Name
-					nsStr = event.Old.Namespace
-				}
-				cl.logger.Debugf("collection event[%d] %s for %v (name=%s/%s)",
-					i, event.Event, resourceGVK, nsStr, nameStr)
-			}
-		}
-	}, false)
 	cl.kinds[resourceGVK] = nsStore{
 		collection: collection,
 		index:      index,
 		handlers: []krt.HandlerRegistration{
-			wrappedClientDebugHandler,
-			debugHandler,
+			collection.RegisterBatch(func(o []krt.Event[config.Config]) {
+				// for _, event := range o {
+				// 	incrementEvent(resourceGVK.Kind, event.Event.String())
+				// }
+			}, false),
 		},
 	}
 }
@@ -294,55 +249,23 @@ func (cl *Client) Schemas() collection.Schemas {
 }
 
 func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler model.EventHandler) {
-	cl.kindsMu.Lock()
-	defer cl.kindsMu.Unlock()
-
-	c, ok := cl.kinds[kind]
-	if !ok {
-		cl.logger.Warnf("unknown type: %s", kind)
+	if c, ok := cl.kind(kind); ok {
+		c.handlers = append(c.handlers, c.collection.RegisterBatch(func(o []krt.Event[config.Config]) {
+			for _, event := range o {
+				switch event.Event {
+				case controllers.EventAdd:
+					handler(config.Config{}, *event.New, model.Event(event.Event))
+				case controllers.EventUpdate:
+					handler(*event.Old, *event.New, model.Event(event.Event))
+				case controllers.EventDelete:
+					handler(config.Config{}, *event.Old, model.Event(event.Event))
+				}
+			}
+		}, false))
 		return
 	}
 
-	cl.logger.Debugf("Registering handler for %v", kind)
-	handlerReg := c.collection.RegisterBatch(func(o []krt.Event[config.Config]) {
-		cl.logger.Debugf("batch handler triggered for %v with %d events", kind, len(o))
-		for i, event := range o {
-			var nameStr, nsStr string
-			if event.New != nil {
-				nameStr = event.New.Name
-				nsStr = event.New.Namespace
-			} else if event.Old != nil {
-				nameStr = event.Old.Name
-				nsStr = event.Old.Namespace
-			}
-			cl.logger.Debugf("processing event[%d] %s for %v (name=%s/%s)",
-				i, event.Event, kind, nsStr, nameStr)
-			switch event.Event {
-			case controllers.EventAdd:
-				if event.New != nil {
-					handler(config.Config{}, *event.New, model.Event(event.Event))
-				} else {
-					cl.logger.Warnf("EventAdd but event.New is nil, skipping")
-				}
-			case controllers.EventUpdate:
-				if event.Old != nil && event.New != nil {
-					handler(*event.Old, *event.New, model.Event(event.Event))
-				} else {
-					cl.logger.Warnf("EventUpdate but event.Old or event.New is nil, skipping")
-				}
-			case controllers.EventDelete:
-				if event.Old != nil {
-					handler(config.Config{}, *event.Old, model.Event(event.Event))
-				} else {
-					cl.logger.Warnf("EventDelete but event.Old is nil, skipping")
-				}
-			}
-		}
-	}, false)
-	// Update handlers slice to keep reference (though not strictly necessary for functionality)
-	c.handlers = append(c.handlers, handlerReg)
-	cl.kinds[kind] = c
-	cl.logger.Debugf("Successfully registered handler for %v", kind)
+	cl.logger.Warnf("unknown type: %s", kind)
 }
 
 func (cl *Client) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
@@ -421,43 +344,14 @@ func (cl *Client) Delete(typ config.GroupVersionKind, name, namespace string, re
 func (cl *Client) List(kind config.GroupVersionKind, namespace string) []config.Config {
 	h, f := cl.kind(kind)
 	if !f {
-		cl.logger.Warnf("unknown kind %v", kind)
 		return nil
 	}
 
-	// Check if collection is synced
-	if !h.collection.HasSynced() {
-		cl.logger.Warnf("collection for %v is not synced yet", kind)
-	}
-
-	var configs []config.Config
 	if namespace == metav1.NamespaceAll {
-		// Get all configs from collection
-		configs = h.collection.List()
-		cl.logger.Debugf("found %d configs for %v (namespace=all, synced=%v)",
-			len(configs), kind, h.collection.HasSynced())
-		if len(configs) > 0 {
-			for i, cfg := range configs {
-				cl.logger.Debugf("config[%d] %s/%s for %v", i, cfg.Namespace, cfg.Name, kind)
-			}
-		} else {
-			cl.logger.Debugf("collection returned 0 configs for %v (synced=%v), this may indicate informer is not watching correctly or resources are being filtered", kind, h.collection.HasSynced())
-		}
-		// Log collection type for diagnosis
-		cl.logger.Debugf("collection type is %T, HasSynced=%v", h.collection, h.collection.HasSynced())
-	} else {
-		configs = h.index.Lookup(namespace)
-		cl.logger.Debugf("found %d configs for %v in namespace %s (synced=%v)", len(configs), kind, namespace, h.collection.HasSynced())
-		if len(configs) > 0 {
-			for i, cfg := range configs {
-				cl.logger.Debugf("config[%d] %s/%s for %v", i, cfg.Namespace, cfg.Name, kind)
-			}
-		} else {
-			cl.logger.Debugf("found 0 configs for %v in namespace %s (synced=%v), checking if resources exist in cluster", kind, namespace, h.collection.HasSynced())
-		}
+		return h.collection.List()
 	}
 
-	return configs
+	return h.index.Lookup(namespace)
 }
 
 func getObjectMetadata(config config.Config) metav1.ObjectMeta {

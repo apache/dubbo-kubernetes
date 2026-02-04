@@ -46,7 +46,7 @@ spec:
       serviceAccountName: {{ .ServiceAccount }}
       containers:
       - name: dubbo-proxy
-        image: mfordjody/proxyadapter:0.3.2-debug
+        image: mfordjody/dubbo-proxy:0.3.5
         imagePullPolicy: Always
         ports:
         - containerPort: 15020
@@ -144,6 +144,11 @@ kind: Service
 metadata:
   name: {{ .DeploymentName }}
   namespace: {{ .Namespace }}
+  ownerReferences:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      name: {{.Name}}
+      uid: {{.UID}}
   labels:
     gateway.dubbo.apache.org/managed: {{ .ControllerLabel }}
     gateway.networking.k8s.io/gateway-name: {{ .Name }}

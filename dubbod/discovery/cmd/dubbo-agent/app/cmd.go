@@ -20,9 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/netip"
-
 	"github.com/apache/dubbo-kubernetes/pkg/log"
+	"net/netip"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/dubbo-agent/options"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/network"
@@ -65,7 +64,7 @@ func NewRootCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "proxy",
-		Short: "xDS proxy agent",
+		Short: "XDS proxy agent",
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,
 		},
@@ -99,6 +98,7 @@ func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 
 			agentOptions := options.NewAgentOptions(&proxyArgs, proxyConfig, sds)
 			agent := dubboagent.NewAgent(proxyConfig, agentOptions, secOpts)
+
 			ctx, cancel := context.WithCancelCause(context.Background())
 			defer cancel(errors.New("application shutdown"))
 			defer agent.Close()
@@ -110,9 +110,7 @@ func newProxyCommand(sds dubboagent.SDSServiceFactory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			wait()
-
 			return nil
 		},
 	}

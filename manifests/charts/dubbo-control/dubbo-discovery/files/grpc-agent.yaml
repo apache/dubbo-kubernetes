@@ -38,8 +38,7 @@ spec:
         postStart:
           exec:
             command:
-#              - dubbo-agent
-              - planet-agent
+              - dubbo-agent
               - wait
               - --url=http://localhost:15020/healthz/ready
       readinessProbe:

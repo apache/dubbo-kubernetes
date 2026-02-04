@@ -67,9 +67,9 @@ func (c *ConfigConverter) UpdateEndpoint(name string, e *endpoint.ClusterLoadAss
 // ConvertToPixiuConfig converts xDS configuration to Pixiu YAML configuration
 func (c *ConfigConverter) ConvertToPixiuConfig() ([]byte, error) {
 	pixiuConfig := &PixiuBootstrap{
-		StaticResources: PixiuStaticResources{
-			Listeners: []*PixiuListener{},
-			Clusters:  []*PixiuCluster{},
+		StaticResources: StaticResources{
+			Listeners: []*Listener{},
+			Clusters:  []*Cluster{},
 		},
 	}
 
@@ -97,11 +97,11 @@ func (c *ConfigConverter) ConvertToPixiuConfig() ([]byte, error) {
 }
 
 // convertListener converts Envoy listener to Pixiu listener
-func (c *ConfigConverter) convertListener(name string, l *listener.Listener) *PixiuListener {
+func (c *ConfigConverter) convertListener(name string, l *listener.Listener) *Listener {
 	// Only process listeners on port 80 (Gateway HTTP listener)
 	port := int(l.Address.GetSocketAddress().GetPortValue())
 	if port != 80 {
-		log.Debugf("Skipping listener %s on port %d (not Gateway port 80)", name, port)
+		pixiulog.Debugf("Skipping listener %s on port %d (not Gateway port 80)", name, port)
 		return nil
 	}
 
@@ -125,7 +125,7 @@ func (c *ConfigConverter) convertListener(name string, l *listener.Listener) *Pi
 	}
 
 	if hcmFilter == nil {
-		log.Debugf("Listener %s does not have HttpConnectionManager filter", name)
+		pixiulog.Debugf("Listener %s does not have HttpConnectionManager filter", name)
 		return nil
 	}
 
@@ -136,12 +136,12 @@ func (c *ConfigConverter) convertListener(name string, l *listener.Listener) *Pi
 		routeConfigName = inlineRoute.Name
 	}
 
-	pixiuListener := &PixiuListener{
+	pixiuListener := &Listener{
 		Name:        name,
-		Address:     PixiuAddress{},
+		Address:     Address{},
 		ProtocolStr: "http",
-		FilterChain: PixiuFilterChain{
-			Filters: []PixiuFilter{
+		FilterChain: FilterChain{
+			Filters: []Filter{
 				{
 					Name: "http",
 					Config: map[string]interface{}{
@@ -157,8 +157,8 @@ func (c *ConfigConverter) convertListener(name string, l *listener.Listener) *Pi
 	// Set address
 	addr := l.Address.GetSocketAddress()
 	if addr != nil {
-		pixiuListener.Address = PixiuAddress{
-			SocketAddress: PixiuSocketAddress{
+		pixiuListener.Address = Address{
+			SocketAddress: SocketAddress{
 				Address:   addr.Address,
 				PortValue: int(addr.GetPortValue()),
 			},
@@ -169,8 +169,8 @@ func (c *ConfigConverter) convertListener(name string, l *listener.Listener) *Pi
 }
 
 // convertCluster converts Envoy cluster to Pixiu cluster
-func (c *ConfigConverter) convertCluster(name string, cl *cluster.Cluster) *PixiuCluster {
-	pixiuCluster := &PixiuCluster{
+func (c *ConfigConverter) convertCluster(name string, cl *cluster.Cluster) *Cluster {
+	pixiuCluster := &Cluster{
 		Name:     name,
 		Type:     "EDS", // Pixiu supports EDS, STRICT_DNS, etc.
 		LbPolicy: "round_robin",
@@ -223,7 +223,7 @@ func (c *ConfigConverter) convertCluster(name string, cl *cluster.Cluster) *Pixi
 	// Convert health check
 	if cl.HealthChecks != nil && len(cl.HealthChecks) > 0 {
 		hc := cl.HealthChecks[0]
-		pixiuCluster.HealthCheck = &PixiuHealthCheck{
+		pixiuCluster.HealthCheck = &HealthCheck{
 			Timeout:            hc.Timeout.AsDuration().String(),
 			Interval:           hc.Interval.AsDuration().String(),
 			UnhealthyThreshold: int(hc.UnhealthyThreshold.GetValue()),
@@ -235,15 +235,15 @@ func (c *ConfigConverter) convertCluster(name string, cl *cluster.Cluster) *Pixi
 }
 
 // convertEndpoints converts Envoy endpoints to Pixiu endpoints
-func (c *ConfigConverter) convertEndpoints(assignment *endpoint.ClusterLoadAssignment) []PixiuEndpoint {
-	var endpoints []PixiuEndpoint
+func (c *ConfigConverter) convertEndpoints(assignment *endpoint.ClusterLoadAssignment) []Endpoint {
+	var endpoints []Endpoint
 
 	for _, localityLbEndpoints := range assignment.Endpoints {
 		for _, lbEndpoint := range localityLbEndpoints.LbEndpoints {
 			if socketAddress := lbEndpoint.GetEndpoint().Address.GetSocketAddress(); socketAddress != nil {
-				endpoints = append(endpoints, PixiuEndpoint{
-					Address: PixiuAddress{
-						SocketAddress: PixiuSocketAddress{
+				endpoints = append(endpoints, Endpoint{
+					Address: Address{
+						SocketAddress: SocketAddress{
 							Address:   socketAddress.Address,
 							PortValue: int(socketAddress.GetPortValue()),
 						},
@@ -254,67 +254,4 @@ func (c *ConfigConverter) convertEndpoints(assignment *endpoint.ClusterLoadAssig
 	}
 
 	return endpoints
-}
-
-// PixiuBootstrap represents Pixiu Bootstrap configuration
-type PixiuBootstrap struct {
-	StaticResources PixiuStaticResources `yaml:"static_resources" json:"static_resources"`
-}
-
-// PixiuStaticResources contains static resources
-type PixiuStaticResources struct {
-	Listeners []*PixiuListener `yaml:"listeners" json:"listeners"`
-	Clusters  []*PixiuCluster  `yaml:"clusters" json:"clusters"`
-}
-
-// PixiuListener represents a Pixiu listener
-type PixiuListener struct {
-	Name        string           `yaml:"name" json:"name"`
-	Address     PixiuAddress     `yaml:"address" json:"address"`
-	ProtocolStr string           `yaml:"protocol_type" json:"protocol_type"`
-	FilterChain PixiuFilterChain `yaml:"filter_chains" json:"filter_chains"`
-}
-
-// PixiuAddress represents network address
-type PixiuAddress struct {
-	SocketAddress PixiuSocketAddress `yaml:"socket_address" json:"socket_address"`
-}
-
-// PixiuSocketAddress represents socket address
-type PixiuSocketAddress struct {
-	Address   string `yaml:"address" json:"address"`
-	PortValue int    `yaml:"port_value" json:"port_value"`
-}
-
-// PixiuFilterChain represents filter chain
-type PixiuFilterChain struct {
-	Filters []PixiuFilter `yaml:"filters" json:"filters"`
-}
-
-// PixiuFilter represents a filter
-type PixiuFilter struct {
-	Name   string                 `yaml:"name" json:"name"`
-	Config map[string]interface{} `yaml:"config" json:"config"`
-}
-
-// PixiuCluster represents a Pixiu cluster
-type PixiuCluster struct {
-	Name        string            `yaml:"name" json:"name"`
-	Type        string            `yaml:"type" json:"type"`
-	LbPolicy    string            `yaml:"lb_policy" json:"lb_policy"`
-	Endpoints   []PixiuEndpoint   `yaml:"endpoints" json:"endpoints"`
-	HealthCheck *PixiuHealthCheck `yaml:"health_check,omitempty" json:"health_check,omitempty"`
-}
-
-// PixiuEndpoint represents an endpoint
-type PixiuEndpoint struct {
-	Address PixiuAddress `yaml:"address" json:"address"`
-}
-
-// PixiuHealthCheck represents health check configuration
-type PixiuHealthCheck struct {
-	Timeout            string `yaml:"timeout" json:"timeout"`
-	Interval           string `yaml:"interval" json:"interval"`
-	UnhealthyThreshold int    `yaml:"unhealthy_threshold" json:"unhealthy_threshold"`
-	HealthyThreshold   int    `yaml:"healthy_threshold" json:"healthy_threshold"`
 }
