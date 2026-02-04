@@ -46,6 +46,10 @@ Projects are distributed across the code directory repositories:
 
 - [dubbo/operator](./operator). — Provides user friendly options for operating the service mesh.
 
+## Contributing
+
+Refer to [CONTRIBUTING.md](./CONTRIBUTING.md)
+
 ## License
 
 Apache License 2.0, see [LICENSE](https://github.com/apache/dubbo-kubernetes/blob/master/LICENSE).
