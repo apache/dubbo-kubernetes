@@ -19,7 +19,7 @@ spec:
       serviceAccountName: dubbod
       containers:
         - name: discovery
-          image: "mfordjody/planet:0.3.0-debug"
+          image: "mfordjody/dubbo-discovery:0.3.5"
           imagePullPolicy: Always
           args:
             - "discovery"

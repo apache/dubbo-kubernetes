@@ -26,6 +26,8 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 
+	"github.com/apache/dubbo-kubernetes/pkg/maps"
+	"github.com/apache/dubbo-kubernetes/pkg/util/gogoprotomarshal"
 	gogojsonpb "github.com/gogo/protobuf/jsonpb" // nolint: depguard
 	gogoproto "github.com/gogo/protobuf/proto"   // nolint: depguard
 	"google.golang.org/protobuf/proto"
@@ -33,11 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubetypes "k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/yaml"
-
-	"github.com/apache/dubbo-kubernetes/pkg/maps"
-	"github.com/apache/dubbo-kubernetes/pkg/util/gogoprotomarshal"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
 // Meta is metadata attached to each configuration unit.
@@ -125,19 +122,6 @@ func LabelsInRevision(lbls map[string]string, rev string) bool {
 	return configEnv == rev
 }
 
-func LabelsInRevisionOrTags(lbls map[string]string, rev string, tags sets.Set[string]) bool {
-	if LabelsInRevision(lbls, rev) {
-		return true
-	}
-	configEnv := lbls["dubbo.apache.org/rev"]
-	// Otherwise, only return true if revisions equal
-	return tags.Contains(configEnv)
-}
-
-func ObjectInRevision(o *Config, rev string) bool {
-	return LabelsInRevision(o.Labels, rev)
-}
-
 // Spec defines the spec for the config. In order to use below helper methods,
 // this must be one of:
 // * golang/protobuf Message
@@ -145,38 +129,8 @@ func ObjectInRevision(o *Config, rev string) bool {
 // * Able to marshal/unmarshal using json
 type Spec any
 
-func ToMap(s Spec) (map[string]any, error) {
-	js, err := ToJSON(s)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal from json bytes to go map
-	var data map[string]any
-	err = json.Unmarshal(js, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-func ToRaw(s Spec) (json.RawMessage, error) {
-	js, err := ToJSON(s)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal from json bytes to go map
-	return js, nil
-}
-
 func ToJSON(s Spec) ([]byte, error) {
 	return toJSON(s, false)
-}
-
-func ToPrettyJSON(s Spec) ([]byte, error) {
-	return toJSON(s, true)
 }
 
 func toJSON(s Spec, pretty bool) ([]byte, error) {
@@ -199,26 +153,6 @@ func toJSON(s Spec, pretty bool) ([]byte, error) {
 
 type deepCopier interface {
 	DeepCopyInterface() any
-}
-
-func ApplyYAML(s Spec, yml string) error {
-	js, err := yaml.YAMLToJSON([]byte(yml))
-	if err != nil {
-		return err
-	}
-	return ApplyJSON(s, string(js))
-}
-
-func ApplyJSONStrict(s Spec, js string) error {
-	// gogo protobuf
-	if pb, ok := s.(gogoproto.Message); ok {
-		err := gogoprotomarshal.ApplyJSONStrict(js, pb)
-		return err
-	}
-
-	d := json.NewDecoder(bytes.NewReader([]byte(js)))
-	d.DisallowUnknownFields()
-	return d.Decode(&s)
 }
 
 func ApplyJSON(s Spec, js string) error {

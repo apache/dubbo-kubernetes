@@ -24,11 +24,10 @@ import (
 	"path/filepath"
 )
 
-var log = dubbolog.RegisterScope("gateway", "pixiu gateway proxy")
+var pixiulog = dubbolog.RegisterScope("gateway", "pixiu gateway debugging")
 
 type Proxy interface {
 	Run(<-chan error) error
-	Drain(skipExit bool) error
 	Cleanup()
 	UpdateConfig(config []byte) error
 }
@@ -39,48 +38,40 @@ type ProxyConfig struct {
 	BinaryPath    string
 }
 
-type pixiuProxy struct {
+type pixiu struct {
 	ProxyConfig
 }
 
 func NewProxy(cfg ProxyConfig) Proxy {
-	return &pixiuProxy{
+	return &pixiu{
 		ProxyConfig: cfg,
 	}
 }
 
-func (p *pixiuProxy) Drain(skipExit bool) error {
-	return nil
-}
-
-func (p *pixiuProxy) UpdateConfig(config []byte) error {
+func (p *pixiu) UpdateConfig(config []byte) error {
 	if err := os.WriteFile(p.ConfigPath, config, 0o666); err != nil {
 		return fmt.Errorf("failed to write gateway config: %v", err)
 	}
-	log.Infof("updated gateway config at %s", p.ConfigPath)
+	pixiulog.Infof("updated gateway config at %s", p.ConfigPath)
 	return nil
 }
 
-func (p *pixiuProxy) Cleanup() {
+func (p *pixiu) Cleanup() {
 	if p.ConfigCleanup {
 		if err := os.Remove(p.ConfigPath); err != nil {
-			log.Warnf("Failed to delete config file %s: %v", p.ConfigPath, err)
+			pixiulog.Warnf("Failed to delete config file %s: %v", p.ConfigPath, err)
 		}
 	}
 }
 
-func (p *pixiuProxy) Run(abort <-chan error) error {
+func (p *pixiu) Run(abort <-chan error) error {
 	if err := os.MkdirAll(filepath.Dir(p.ConfigPath), 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %v", err)
 	}
 
-	args := []string{
-		"gateway",
-		"start",
-		"-c", p.ConfigPath,
-	}
+	args := []string{"gateway", "start", "-c", p.ConfigPath}
 
-	log.Infof("pixiu command: %s %v", p.BinaryPath, args)
+	pixiulog.Infof("Pixiu command: %s %v", p.BinaryPath, args)
 
 	cmd := exec.Command(p.BinaryPath, args...)
 	cmd.Env = os.Environ()
@@ -100,9 +91,9 @@ func (p *pixiuProxy) Run(abort <-chan error) error {
 
 	select {
 	case err := <-abort:
-		log.Warnf("aborting gateway")
+		pixiulog.Warnf("Aborting proxy")
 		if errKill := cmd.Process.Kill(); errKill != nil {
-			log.Warnf("killing gateway caused an error %v", errKill)
+			pixiulog.Warnf("killing proxy caused an error %v", errKill)
 		}
 		return err
 	case err := <-done:

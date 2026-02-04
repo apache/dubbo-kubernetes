@@ -15,7 +15,7 @@
 
 _internal_default_values_not_set:
   hub: ""
-  tag: 0.3.0
+  tag: 0.3.5
   image: planet
 
   resources:

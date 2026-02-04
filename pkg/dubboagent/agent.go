@@ -40,8 +40,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/dubboagent/grpcxds"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagent/pixiu"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/pixiu"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"google.golang.org/grpc"
@@ -156,7 +156,6 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 
 	var bootstrapNode *core.Node
 	if a.cfg.GRPCBootstrapPath != "" {
-		log.Infof("Starting dubbo-agent with GRPC bootstrap path: %s", a.cfg.GRPCBootstrapPath)
 		node, err := a.generateGRPCBootstrapWithNode()
 		if err != nil {
 			return nil, fmt.Errorf("failed generating gRPC XDS bootstrap: %v", err)
@@ -181,6 +180,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	} else {
 		log.Warn("GRPC_XDS_BOOTSTRAP not set, bootstrap file will not be generated")
 	}
+
 	if a.proxyConfig.ControlPlaneAuthPolicy != mesh.AuthenticationPolicy_NONE {
 		rootCAForXDS, err := a.FindRootCAForXDS()
 		if err != nil {
@@ -216,7 +216,6 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
-		log.Infof("Opening status port %d", a.proxyConfig.StatusPort)
 		if err := a.statusSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("status server error: %v", err)
 		}
@@ -233,9 +232,26 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		if err := a.initializePixiuAgent(ctx); err != nil {
 			return nil, fmt.Errorf("failed to initialize Pixiu agent: %v", err)
 		}
+
+		a.wg.Add(1)
+		go func() {
+			defer a.wg.Done()
+			a.pixiuAgent.Run(ctx)
+		}()
+	} else if a.WaitForSigterm() {
+		// wait for SIGTERM and perform graceful shutdown
+		a.wg.Add(1)
+		go func() {
+			defer a.wg.Done()
+			<-ctx.Done()
+		}()
 	}
 
 	return a.wg.Wait, nil
+}
+
+func (a *Agent) WaitForSigterm() bool {
+	return a.cfg.ProxyType == model.Router
 }
 
 func (a *Agent) Close() {
@@ -477,13 +493,15 @@ func (a *Agent) generateGRPCBootstrapWithNode() (*model.Node, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve absolute path for bootstrap file: %v", err)
 	}
-	log.Infof("Generating gRPC bootstrap file at: %s (absolute: %s)", bootstrapPath, absBootstrapPath)
+	log.Debugf("Generating gRPC bootstrap file at: %s (absolute: %s)", bootstrapPath, absBootstrapPath)
 
 	// generate metadata
 	node, err := a.generateNodeMetadata()
 	if err != nil {
 		return nil, fmt.Errorf("failed generating node metadata: %v", err)
 	}
+
+	log.Infof("Dubbo SAN: %v", node.Metadata.DubboSubjectAltName)
 
 	// GRPC bootstrap requires this. Original implementation injected this via env variable, but
 	// this interfere with envoy, we should be able to use both envoy for TCP/HTTP and proxyless.
@@ -505,7 +523,7 @@ func (a *Agent) generateGRPCBootstrapWithNode() (*model.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("gRPC bootstrap file generated successfully at: %s", absBootstrapPath)
+	log.Debugf("gRPC bootstrap file generated successfully at: %s", absBootstrapPath)
 	return node, nil
 }
 
@@ -629,8 +647,7 @@ func checkSocket(ctx context.Context, socketPath string) (bool, error) {
 	return true, nil
 }
 
-// initializePixiuAgent initializes and starts Pixiu agent for router mode
-func (a *Agent) initializePixiuAgent(ctx context.Context) error {
+func (a *Agent) initializePixiuAgent(_ context.Context) error {
 	configPath := os.Getenv("PROXY_CONFIG_PATH")
 	if configPath == "" {
 		configPath = "/etc/pixiu/config/pixiu.yaml"
@@ -639,21 +656,19 @@ func (a *Agent) initializePixiuAgent(ctx context.Context) error {
 	binaryPath := os.Getenv("PROXY_BINARY_PATH")
 	if binaryPath == "" {
 		possiblePaths := []string{
-			"/usr/local/bin/pixiugateway",
-			"pixiugateway",
+			"/usr/local/bin/pixiu-gateway",
+			"pixiu-gateway",
 		}
 
 		found := false
 		for _, path := range possiblePaths {
 			if strings.Contains(path, "/") {
-				// Check absolute path
 				if _, err := os.Stat(path); err == nil {
 					binaryPath = path
 					found = true
 					break
 				}
 			} else {
-				// Check in PATH
 				if fullPath, err := exec.LookPath(path); err == nil {
 					binaryPath = fullPath
 					found = true
@@ -663,7 +678,7 @@ func (a *Agent) initializePixiuAgent(ctx context.Context) error {
 		}
 
 		if !found {
-			return fmt.Errorf("gateway binary pixiugateway not found. Please set PROXY_BINARY_PATH environment variable or ensure pixiu binary is installed at /usr/local/bin/pixiugateway")
+			return fmt.Errorf("gateway binary pixiu not found. Please set PROXY_BINARY_PATH environment variable or ensure pixiu binary is installed at /usr/local/bin/pixiu-gateway")
 		}
 	}
 
@@ -675,11 +690,11 @@ func (a *Agent) initializePixiuAgent(ctx context.Context) error {
 		return fmt.Errorf("failed to create proxy config directory: %v", err)
 	}
 
-	pixiuProxy := pixiu.NewProxy(pixiu.ProxyConfig{
+	pixiuOptions := pixiu.ProxyConfig{
 		ConfigPath:    configPath,
 		ConfigCleanup: false, // Don't cleanup config file
 		BinaryPath:    binaryPath,
-	})
+	}
 
 	terminationDrainDuration := 45 * time.Second // Default drain duration
 	if a.proxyConfig.DrainDuration != nil {
@@ -687,14 +702,8 @@ func (a *Agent) initializePixiuAgent(ctx context.Context) error {
 	}
 	minDrainDuration := 5 * time.Second
 
+	pixiuProxy := pixiu.NewProxy(pixiuOptions)
 	a.pixiuAgent = pixiu.NewAgent(pixiuProxy, terminationDrainDuration, minDrainDuration)
 
-	a.wg.Add(1)
-	go func() {
-		defer a.wg.Done()
-		a.pixiuAgent.Run(ctx)
-	}()
-
-	log.Infof("pixiu agent initialized for router mode, config path: %s, binary: %s", configPath, binaryPath)
 	return nil
 }

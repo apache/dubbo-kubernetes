@@ -8,12 +8,12 @@ metadata:
     dubbo.apache.org/rev: default
 data:
   config: |-
-    defaultTemplates: [grpc-agent]
+    defaultTemplates: [kube-gateway]
     policy: enabled
     templates:
       grpc-agent: |
 {{ .Files.Get "files/grpc-agent.yaml" | trim | indent 8 }}
       gateway: |
-{{ .Files.Get "files/gateway.yaml" | trim | indent 8 }}
+{{ .Files.Get "files/kube-gateway.yaml" | trim | indent 8 }}
   values: |-
 

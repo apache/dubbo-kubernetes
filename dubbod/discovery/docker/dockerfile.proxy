@@ -15,6 +15,6 @@
 
 FROM gcr.io/distroless/static:debug
 COPY bin/dubbo-agent /usr/local/bin/dubbo-agent
-COPY bin/pixiugateway /usr/local/bin/pixiugateway
+COPY bin/pixiu-gateway /usr/local/bin/pixiu-gateway
 USER 9999:9999
 ENTRYPOINT ["/usr/local/bin/dubbo-agent"]

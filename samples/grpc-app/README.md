@@ -105,7 +105,7 @@ spec:
 EOF
 ```
 
-Now, send a set of 10 requests to verify the traffic distribution:
+Now, send a set of 5 requests to verify the traffic distribution:
 
 ```bash
 grpcurl -plaintext -d '{"url": "xds:///provider.grpc-app.svc.cluster.local:7070","count": 5}' localhost:17171 echo.EchoTestService/ForwardEcho
@@ -174,7 +174,7 @@ To enable server-side mTLS, apply a `PeerAuthentication` policy. The following p
 
 ```bash
 cat <<EOF | kubectl apply -f -
-apiVersion: security.dubbo.apache.org/v1
+apiVersion: security.dubbo.apache.org/v1alpha3
 kind: PeerAuthentication
 metadata:
   name: provider-mtls
