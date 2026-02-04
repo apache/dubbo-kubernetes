@@ -19,23 +19,32 @@
 
 <h2 align="center">Dubbo Service Mesh for Kubernetes</h2>
 
-Implement an open-source service mesh for Dubbo in a Kubernetes cluster, integrate applications directly into the service mesh through the SDK, secure, connect, and observe services in a unified, lighter, and more efficient way, and support load balancing and service-to-service authentication.
+Dubbo gRPC open source service mesh implemented for the underlying cluster management platform can directly receive policies from the control plane and obtain features such as load balancing, service discovery, and observability without requiring a sidecar proxy.
+- For more detailed information on how to use it, please visit [dubbo.apache.org](https://cn.dubbo.apache.org/zh-cn/overview/mesh/)
 
-## Project Core
+## Introduction
 
-- **api** — API definitions for Dubbo.
-- **client-go** — Go client library for the Dubbo API.
-- **dubboctl** — Command-line tool that provides control plane management.
-- **dubbod** — The control plane, communicating based on gRPC and xDS APIs.
-- **operator** — Provides user-friendly options for operating the service mesh.
+Dubbo’s control plane provides an abstraction layer over the underlying cluster management platform.
 
-## Quick Start
+Dubbo component composition:
 
-Please refer to [official website](https://cn.dubbo.apache.org/zh-cn/overview/mesh/)
+- **dubbo-go-pixiu** - Handle ingress/egress traffic between services inside the cluster and external services.
 
-## Contributing
+- **dubbod** — Dubbo xDS control plane. It provides service discovery, configuration and certificate issuance.
 
-Refer to [CONTRIBUTING.md](https://github.com/apache/dubbo-kubernetes/blob/master/CONTRIBUTING.md)
+## Directory Repositories
+
+Projects are distributed across the code directory repositories:
+
+- [dubbo/api](./api). — Defines the component level APIs for the Dubbo control plane.
+
+- [dubbo/client-go](./client-go). — Defines the Kubernetes clients automatically generated for Dubbo control plane resources.
+
+- [dubbo/dubboctl](./dubboctl). — Provides command line tools for control plane management and other operations.
+
+- [dubbo/dubbod](./dubbod) — The main code directory for the Dubbo control plane.
+
+- [dubbo/operator](./operator). — Provides user friendly options for operating the service mesh.
 
 ## License
 
