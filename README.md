@@ -28,9 +28,9 @@ Dubbo’s control plane provides an abstraction layer over the underlying cluste
 
 Dubbo component composition:
 
-- **dubbo-go-pixiu** - Handle ingress/egress traffic between services inside the cluster and external services.
-
 - **dubbod** — Dubbo xDS control plane. It provides service discovery, configuration and certificate issuance.
+
+- **dubbo-go-pixiu** — Used for ingress/egress traffic between services in the cluster and external services.
 
 ## Directory Repositories
 
