@@ -60,10 +60,11 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Remove redundant code logic.
-            Switch from manually adding core resources to generating core resources.
+            Fixed 502 errors in traffic gateway requests
+            Removed some samples from the samples folder; added an httpbin sample.
+            Optimized some known features.
           draft: false
-          prerelease: true
+          prerelease: false
 
   build_and_upload:
     name: Build and Upload Binaries

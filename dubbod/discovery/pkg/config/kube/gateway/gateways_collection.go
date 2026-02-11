@@ -17,9 +17,9 @@
 package gateway
 
 import (
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model/kstatus"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model/kstatus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gateway "sigs.k8s.io/gateway-api/apis/v1"
 )
