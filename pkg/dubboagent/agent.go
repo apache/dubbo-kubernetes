@@ -656,8 +656,8 @@ func (a *Agent) initializePixiuAgent(_ context.Context) error {
 	binaryPath := os.Getenv("PROXY_BINARY_PATH")
 	if binaryPath == "" {
 		possiblePaths := []string{
-			"/usr/local/bin/pixiu-gateway",
-			"pixiu-gateway",
+			"/usr/local/bin/pixiu-proxy",
+			"pixiu-proxy",
 		}
 
 		found := false
@@ -678,7 +678,7 @@ func (a *Agent) initializePixiuAgent(_ context.Context) error {
 		}
 
 		if !found {
-			return fmt.Errorf("gateway binary pixiu not found. Please set PROXY_BINARY_PATH environment variable or ensure pixiu binary is installed at /usr/local/bin/pixiu-gateway")
+			return fmt.Errorf("gateway binary pixiu not found.")
 		}
 	}
 

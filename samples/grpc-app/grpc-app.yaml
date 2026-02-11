@@ -51,7 +51,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: mfordjody/grpc-provider:dev-debug
+          image: dubboregistry/grpc-provider:master
           imagePullPolicy: Always
           ports:
             - containerPort: 17070
@@ -120,7 +120,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: mfordjody/grpc-provider:dev-debug
+          image: dubboregistry/grpc-provider:master
           imagePullPolicy: Always
           ports:
             - containerPort: 17070
@@ -188,7 +188,7 @@ spec:
       containers:
         - name: app
           # Replace with your own image containing the consumer binary
-          image: mfordjody/grpc-consumer:dev-debug
+          image: dubboregistry/grpc-consumer:master
           imagePullPolicy: Always
           ports:
             - containerPort: 17171

@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 )
 
-var pixiulog = dubbolog.RegisterScope("gateway", "pixiu gateway debugging")
+var pixiulog = dubbolog.RegisterScope("gateway", "pixiu proxy debugging")
 
 type Proxy interface {
 	Run(<-chan error) error

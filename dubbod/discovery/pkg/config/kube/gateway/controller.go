@@ -62,7 +62,9 @@ type Controller struct {
 	inputs         Inputs
 }
 
-type Outputs struct{}
+type Outputs struct {
+	Gateways krt.Collection[Gateway]
+}
 
 type Inputs struct {
 	Services   krt.Collection[*corev1.Service]
@@ -99,11 +101,23 @@ func NewController(kc kube.Client, waitForCRD func(class schema.GroupVersionReso
 		HTTPRoutes:     buildClient[*gateway.HTTPRoute](c, kc, gvr.HTTPRoute, opts, "informer/HTTPRoutes"),
 	}
 
-	GatewayClassStatus, _ := GatewayClassesCollection(inputs.GatewayClasses, opts)
+	GatewayClassStatus, GatewayClasses := GatewayClassesCollection(inputs.GatewayClasses, opts)
 	status.RegisterStatus(c.status, GatewayClassStatus, GetStatus)
 
+	GatewaysStatus, Gateways := GatewaysCollection(
+		inputs.Gateways,
+		GatewayClasses,
+		opts,
+	)
+
+	GatewayFinalStatus := FinalGatewayStatusCollection(GatewaysStatus, opts)
+	status.RegisterStatus(c.status, GatewayFinalStatus, GetStatus)
+
 	handlers := []krt.HandlerRegistration{}
-	outputs := Outputs{}
+	outputs := Outputs{
+		Gateways: Gateways,
+	}
+
 	c.outputs = outputs
 	c.handlers = handlers
 	c.inputs = inputs
