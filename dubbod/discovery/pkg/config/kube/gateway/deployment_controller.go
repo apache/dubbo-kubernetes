@@ -727,7 +727,6 @@ func (d *DeploymentController) generatePixiuConfig(gw *gateway.Gateway, httpRout
 						Name: "dgp.filter.httpconnectionmanager",
 						Config: map[string]interface{}{
 							"route_config": map[string]interface{}{
-								"name":   fmt.Sprintf("route-%s", listener.Name),
 								"routes": d.convertHTTPRoutesToPixiuRoutes(httpRoutes, listener),
 							},
 							"http_filters": []map[string]interface{}{
@@ -759,6 +758,24 @@ func (d *DeploymentController) generatePixiuConfig(gw *gateway.Gateway, httpRout
 					backendPort = int(*backendRef.Port)
 				}
 
+				// Prefer Service ClusterIP to avoid DNS dependency inside the gateway pod.
+				backendAddr := fmt.Sprintf("%s.%s.svc.cluster.local", backendName, backendNamespace)
+				if d.services != nil {
+					if svc := d.services.Get(backendName, backendNamespace); svc != nil {
+						if ip := svc.Spec.ClusterIP; ip != "" && ip != corev1.ClusterIPNone {
+							backendAddr = ip
+						}
+					}
+				}
+				// Fallback: if informer filtering prevented us from seeing the Service, read it directly.
+				if backendAddr == fmt.Sprintf("%s.%s.svc.cluster.local", backendName, backendNamespace) && d.client != nil {
+					if svc, err := d.client.Kube().CoreV1().Services(backendNamespace).Get(context.Background(), backendName, metav1.GetOptions{}); err == nil {
+						if ip := svc.Spec.ClusterIP; ip != "" && ip != corev1.ClusterIPNone {
+							backendAddr = ip
+						}
+					}
+				}
+
 				clusterName := fmt.Sprintf("%s-%s-%d", backendNamespace, backendName, backendPort)
 				if _, exists := clusterMap[clusterName]; !exists {
 					clusterMap[clusterName] = &PixiuCluster{
@@ -769,7 +786,7 @@ func (d *DeploymentController) generatePixiuConfig(gw *gateway.Gateway, httpRout
 							{
 								ID: 1,
 								SocketAddress: PixiuSocketAddress{
-									Address: fmt.Sprintf("%s.%s.svc.cluster.local", backendName, backendNamespace),
+									Address: backendAddr,
 									Port:    backendPort,
 								},
 							},
@@ -844,6 +861,11 @@ func (d *DeploymentController) convertHTTPRoutesToPixiuRoutes(httpRoutes []*gate
 							pathMatch["regex"] = match.Path.Value
 						}
 					}
+
+					if match.Method == nil {
+						pathMatch["methods"] = []string{}
+					}
+
 					route["match"] = pathMatch
 				}
 

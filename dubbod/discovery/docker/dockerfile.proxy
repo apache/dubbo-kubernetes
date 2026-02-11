@@ -13,8 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/static:debug
-COPY bin/dubbo-agent /usr/local/bin/dubbo-agent
-COPY bin/pixiu-gateway /usr/local/bin/pixiu-gateway
-USER 9999:9999
+FROM golang:1.25 AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /src
+
+ENV CGO_ENABLED=0 \
+    GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH}
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN go build -v -trimpath -ldflags="-s -w" \
+    -o /out/dubbo-agent \
+    ./dubbod/discovery/cmd/dubbo-agent/main.go
+
+RUN git clone --depth=1 https://github.com/apache/dubbo-go-pixiu.git && \
+    cd dubbo-go-pixiu && \
+    go build -v -trimpath -ldflags="-s -w" \
+    -o /out/pixiu-proxy \
+    ./cmd/pixiu/pixiu.go
+
+FROM scratch
+
+COPY --from=builder /out/dubbo-agent /usr/local/bin/dubbo-agent
+COPY --from=builder /out/pixiu-proxy /usr/local/bin/pixiu-proxy
+
+USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/dubbo-agent"]
