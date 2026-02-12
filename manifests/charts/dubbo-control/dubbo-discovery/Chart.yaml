@@ -24,8 +24,8 @@ keywords:
   - dubbo
   - dubbod
   - dubbo-discovery
-version: 0.1.2
-appVersion: 1.0.0
+version: 0.3.5
+appVersion: "latest"
 maintainers:
   - name: mfordjody
     email: zhongxjian@apache.org
