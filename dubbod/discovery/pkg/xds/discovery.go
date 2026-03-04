@@ -36,6 +36,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+var periodicRefreshMetrics = 10 * time.Second
+
 var processStartTime = time.Now()
 
 type DiscoveryServer struct {
@@ -104,6 +106,7 @@ func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
 func (s *DiscoveryServer) Start(stopCh <-chan struct{}) {
 	go s.handleUpdates(stopCh)
 	go s.sendPushes(stopCh)
+	go s.periodicRefreshMetrics(stopCh)
 	go s.Cache.Run(stopCh)
 }
 
@@ -302,6 +305,29 @@ func doSendPushes(stopCh <-chan struct{}, semaphore chan struct{}, queue *PushQu
 					log.Infof("Client closed connection %v", client.ID())
 				}
 			}()
+		}
+	}
+}
+
+func (s *DiscoveryServer) periodicRefreshMetrics(stopCh <-chan struct{}) {
+	ticker := time.NewTicker(periodicRefreshMetrics)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			push := s.globalPushContext()
+			model.LastPushMutex.Lock()
+			if model.LastPushStatus != push {
+				model.LastPushStatus = push
+				push.UpdateMetrics()
+				out, _ := model.LastPushStatus.StatusJSON()
+				if string(out) != "{}" {
+					log.Infof("Push Status: %s", string(out))
+				}
+			}
+			model.LastPushMutex.Unlock()
+		case <-stopCh:
+			return
 		}
 	}
 }

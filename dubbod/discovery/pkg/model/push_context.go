@@ -18,6 +18,7 @@ package model
 
 import (
 	"cmp"
+	"encoding/json"
 	"sort"
 	"strings"
 	"sync"
@@ -1153,14 +1154,11 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 	return nil
 }
 
-func ConfigNamesOfKind(configs sets.Set[ConfigKey], k kind.Kind) sets.String {
-	ret := sets.New[string]()
-
-	for conf := range configs {
-		if conf.Kind == k {
-			ret.Insert(conf.Name)
-		}
+func (ps *PushContext) StatusJSON() ([]byte, error) {
+	if ps == nil {
+		return []byte{'{', '}'}, nil
 	}
-
-	return ret
+	ps.proxyStatusMutex.RLock()
+	defer ps.proxyStatusMutex.RUnlock()
+	return json.MarshalIndent(ps.ProxyStatus, "", "    ")
 }
