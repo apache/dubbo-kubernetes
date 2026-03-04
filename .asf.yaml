@@ -20,7 +20,7 @@ notifications:
     jira_options: link label
 
 github:
-  homepage: "https://dubbo-kubernetes.github.io/dsm-docs/"
+  homepage: "https://dubbo-kubernetes.github.io/"
   description: "Dubbo Service Mesh for Kubernetes."
   features:
     # Enable wiki for documentation
