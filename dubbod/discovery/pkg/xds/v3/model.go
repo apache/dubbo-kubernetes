@@ -30,3 +30,7 @@ const (
 func GetShortType(typeURL string) string {
 	return model.GetShortType(typeURL)
 }
+
+func GetMetricType(typeURL string) string {
+	return model.GetMetricType(typeURL)
+}
