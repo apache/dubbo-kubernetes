@@ -81,6 +81,10 @@ func (b BuildInfo) FormatDetailedProductInfo() string {
 	)
 }
 
+func (b BuildInfo) String() string {
+	return fmt.Sprintf("%s-%s-%s", b.Version, b.GitTag, shortCommit(b.GitCommit))
+}
+
 func (b BuildInfo) AsMap() map[string]string {
 	res := map[string]string{
 		"product":    b.Product,

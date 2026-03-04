@@ -46,3 +46,22 @@ func GetShortType(typeURL string) string {
 		return typeURL
 	}
 }
+
+func GetMetricType(typeURL string) string {
+	switch typeURL {
+	case ClusterType:
+		return "cds"
+	case ListenerType:
+		return "lds"
+	case RouteType:
+		return "rds"
+	case EndpointType:
+		return "eds"
+	case SecretType:
+		return "sds"
+	case ProxyConfigType:
+		return "pcds"
+	default:
+		return typeURL
+	}
+}

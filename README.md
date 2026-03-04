@@ -20,7 +20,7 @@
 <h2 align="center">Dubbo Service Mesh for Kubernetes</h2>
 
 Dubbo gRPC open source service mesh implemented for the underlying cluster management platform can directly receive policies from the control plane and obtain features such as load balancing, service discovery, and observability without requiring a sidecar proxy.
-- For more detailed information on how to use it, please visit [dsm-docs](https://dubbo-kubernetes.github.io/dsm-docs/)
+- For more detailed information on how to use it, please visit [dubbo-kubernetes.io](https://dubbo-kubernetes.github.io/)
 
 ## Introduction
 

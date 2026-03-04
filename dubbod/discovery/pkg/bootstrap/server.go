@@ -94,6 +94,9 @@ type Server struct {
 	httpsAddr   string
 	httpMux     *http.ServeMux
 	httpsMux    *http.ServeMux // webhooks
+	
+	monitoringMux   *http.ServeMux
+	metricsExporter http.Handler
 
 	ConfigStores     []model.ConfigStoreController
 	configController model.ConfigStoreController
@@ -177,6 +180,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		server:                  server.New(),
 		clusterID:               getClusterID(args),
 		httpMux:                 http.NewServeMux(),
+		monitoringMux:           http.NewServeMux(),
 		dubbodCertBundleWatcher: keycertbundle.NewWatcher(),
 		fileWatcher:             filewatcher.NewWatcher(),
 		internalStop:            make(chan struct{}),
@@ -232,6 +236,11 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	InitGenerators(s.XDSServer, configGen)
+	
+	// Initialize monitoring server
+	if err := s.initMonitor(args.ServerOptions.HTTPAddr); err != nil {
+		return nil, fmt.Errorf("error initializing monitoring: %v", err)
+	}
 
 	dubbodHost, _, err := e.GetDiscoveryAddress()
 	if err != nil {

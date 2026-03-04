@@ -166,16 +166,16 @@ func Receive(ctx ConnectionContext) {
 		req, err := con.stream.Recv()
 		if err != nil {
 			if dubbogrpc.GRPCErrorType(err) != dubbogrpc.UnexpectedError {
-				log.Infof("%q %s terminated", con.peerAddr, con.conID)
+				xdsLog.Infof("%q %s terminated", con.peerAddr, con.conID)
 				return
 			}
 			con.errorChan <- err
-			log.Errorf("%q %s terminated with error: %v", con.peerAddr, con.conID, err)
+			xdsLog.Errorf("%q %s terminated with error: %v", con.peerAddr, con.conID, err)
 			return
 		}
 		if firstRequest {
 			if req.TypeUrl == model.HealthInfoType {
-				log.Warnf("%q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
+				xdsLog.Warnf("%q %s send health check probe before normal xDS request", con.peerAddr, con.conID)
 				continue
 			}
 			firstRequest = false
@@ -195,13 +195,13 @@ func Receive(ctx ConnectionContext) {
 		if len(req.ResourceNames) > 0 {
 			resourceNamesStr = " [" + strings.Join(req.ResourceNames, ", ") + "]"
 		}
-		log.Infof("%s: RAW REQ %s resources:%d nonce:%s%s",
+		xdsLog.Infof("%s: RAW REQ %s resources:%d nonce:%s%s",
 			model.GetShortType(req.TypeUrl), con.conID, len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
 
 		select {
 		case con.reqChan <- req:
 		case <-con.stream.Context().Done():
-			log.Infof("%q %s terminated with stream closed", con.peerAddr, con.conID)
+			xdsLog.Infof("%q %s terminated with stream closed", con.peerAddr, con.conID)
 			return
 		}
 	}
@@ -209,8 +209,14 @@ func Receive(ctx ConnectionContext) {
 
 func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
 	conn := ctx.XdsConnection()
+	startTime := time.Now()
 	err := conn.stream.Send(res)
+	sendDuration := time.Since(startTime)
+	
 	if err == nil {
+		// Record send time metric
+		RecordSendTime(sendDuration)
+		
 		if res.Nonce != "" {
 			ctx.Watcher().UpdateWatchedResource(res.TypeUrl, func(wr *WatchedResource) *WatchedResource {
 				if wr == nil {
@@ -221,6 +227,9 @@ func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
 				return wr
 			})
 		}
+	} else {
+		// Record send error
+		RecordSendError(res.TypeUrl, err)
 	}
 	return err
 }
@@ -266,7 +275,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 
 	if request.ErrorDetail != nil {
 		errCode := codes.Code(request.ErrorDetail.Code)
-		log.Warnf("%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
+		Log.Warnf("%s: ACK ERROR %s %s:%s", stype, id, errCode.String(), request.ErrorDetail.GetMessage())
 		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
 			wr.LastError = request.ErrorDetail.GetMessage()
 			return wr
@@ -275,7 +284,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	}
 
 	if shouldUnsubscribe(request) {
-		log.Debugf("%s: UNSUBSCRIBE %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+		Log.Debugf("%s: UNSUBSCRIBE %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
 		w.DeleteWatchedResource(request.TypeUrl)
 		return false, emptyResourceDelta
 	}
@@ -290,7 +299,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		// No previous info - this is a new request
 		if request.ResponseNonce == "" {
 			// Initial request with no nonce
-			log.Debugf("%s: INIT %s %s", stype, id, request.VersionInfo)
+			Log.Debugf("%s: INIT %s %s", stype, id, request.VersionInfo)
 			w.NewWatchedResource(request.TypeUrl, request.ResourceNames)
 			return true, emptyResourceDelta
 		}
@@ -299,7 +308,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		// they're likely stale/expired requests that should be ignored
 		// Only treat as reconnect if this is the first request we see with a nonce
 		// For subsequent requests with nonces we don't recognize, treat as expired
-		log.Debugf("%s: REQ %s Unknown nonce (no previous info): %s, treating as expired/stale", stype, id, request.ResponseNonce)
+		Log.Debugf("%s: REQ %s Unknown nonce (no previous info): %s, treating as expired/stale", stype, id, request.ResponseNonce)
 		// Create the watched resource but don't respond - let the client retry with empty nonce
 		w.NewWatchedResource(request.TypeUrl, request.ResourceNames)
 		return false, emptyResourceDelta
@@ -308,7 +317,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// We have previous info - check nonce match
 	if request.ResponseNonce == "" {
 		// Client sent empty nonce but we have previous info - this is a new request
-		log.Debugf("%s: INIT (empty nonce) %s %s", stype, id, request.VersionInfo)
+		Log.Debugf("%s: INIT (empty nonce) %s %s", stype, id, request.VersionInfo)
 		w.NewWatchedResource(request.TypeUrl, request.ResourceNames)
 		return true, emptyResourceDelta
 	}
@@ -323,7 +332,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		// as a resource change rather than an ACK so the new clusters get a response.
 		previousResourcesCopy := previousInfo.ResourceNames.Copy()
 		if !newResources.Equals(previousResourcesCopy) && len(newResources) > 0 {
-			log.Infof("%s: REQ %s nonce mismatch (got %s, sent %s) but resources changed -> responding",
+			Log.Infof("%s: REQ %s nonce mismatch (got %s, sent %s) but resources changed -> responding",
 				stype, id, request.ResponseNonce, previousInfo.NonceSent)
 			added := newResources.Difference(previousResourcesCopy)
 			w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
@@ -346,11 +355,11 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		// Expired/stale nonce - don't respond, just log at debug level
 		if previousInfo.NonceSent == "" {
 			// We never sent a nonce, but client sent one - this is unusual but treat as expired
-			log.Debugf("%s: REQ %s Expired nonce received %s, but we never sent any nonce", stype,
+			Log.Debugf("%s: REQ %s Expired nonce received %s, but we never sent any nonce", stype,
 				id, request.ResponseNonce)
 		} else {
 			// Normal case: client sent stale nonce
-			log.Debugf("%s: REQ %s Expired nonce received %s, sent %s", stype,
+			Log.Debugf("%s: REQ %s Expired nonce received %s, sent %s", stype,
 				id, request.ResponseNonce, previousInfo.NonceSent)
 		}
 		return false, emptyResourceDelta
@@ -387,7 +396,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		// Check if this is proxyless by attempting to get the proxy from watcher
 		// For now, we'll check if this is a proxyless scenario by the context
 		// If previous resources existed and client sends empty names with matching nonce, it's an ACK
-		log.Debugf("%s: wildcard request after specific resources (prev: %d resources, nonce: %s), treating as ACK",
+		Log.Debugf("%s: wildcard request after specific resources (prev: %d resources, nonce: %s), treating as ACK",
 			stype, len(previousResources), previousInfo.NonceSent)
 		// Update ResourceNames to keep previous resources (don't clear them)
 		w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
@@ -405,15 +414,15 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// We should always respond "alwaysRespond" marked requests to let xDS clients finish warming
 	// even though Nonce match and it looks like an ACK.
 	if alwaysRespond {
-		log.Infof("%s: FORCE RESPONSE %s for warming.", stype, id)
+		Log.Infof("%s: FORCE RESPONSE %s for warming.", stype, id)
 		return true, emptyResourceDelta
 	}
 
 	if len(removed) == 0 && len(added) == 0 {
-		log.Debugf("%s: ACK %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
+		Log.Debugf("%s: ACK %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
 		return false, emptyResourceDelta
 	}
-	log.Debugf("%s: RESOURCE CHANGE added %v removed %v %s %s %s", stype,
+	Log.Debugf("%s: RESOURCE CHANGE added %v removed %v %s %s %s", stype,
 		added, removed, id, request.VersionInfo, request.ResponseNonce)
 
 	// For non wildcard resource, if no new resources are subscribed, it means we do not need to push.

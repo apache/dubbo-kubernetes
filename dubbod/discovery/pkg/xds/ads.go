@@ -101,10 +101,19 @@ func (s *DiscoveryServer) AdsPushAll(req *model.PushRequest) {
 		log.Infof("XDS: Pushing Services:%d ConnectedEndpoints:%d Version:%s",
 			totalService, connectedEndpoints, req.Push.PushVersion)
 
+		// Record services metric
+		monServices.Record(float64(totalService))
+
 		if req.ConfigsUpdated == nil {
 			req.ConfigsUpdated = make(sets.Set[model.ConfigKey])
 		}
 	}
+
+	// Record push triggers
+	if req.Reason != nil {
+		recordPushTriggers(req.Reason)
+	}
+
 	s.StartPush(req)
 }
 
@@ -128,6 +137,11 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 	s.addCon(con.ID(), con)
 	currentCount := s.adsClientCount()
 	log.Infof("new connection for node:%s (total connections: %d)", con.ID(), currentCount)
+	
+	// Record XDS client connection
+	version := "unknown"
+	recordXDSClients(version, 1)
+	
 	defer con.MarkInitialized()
 
 	if err := s.initializeProxy(con); err != nil {
@@ -150,6 +164,13 @@ func (s *DiscoveryServer) closeConnection(con *Connection) {
 	if con.ID() == "" {
 		return
 	}
+	
+	// Record XDS client disconnection
+	if con.proxy != nil {
+		version := "unknown"
+		recordXDSClients(version, -1)
+	}
+	
 	s.removeCon(con.ID())
 }
 
