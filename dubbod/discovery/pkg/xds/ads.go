@@ -137,11 +137,11 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 	s.addCon(con.ID(), con)
 	currentCount := s.adsClientCount()
 	log.Infof("new connection for node:%s (total connections: %d)", con.ID(), currentCount)
-	
+
 	// Record XDS client connection
 	version := "unknown"
 	recordXDSClients(version, 1)
-	
+
 	defer con.MarkInitialized()
 
 	if err := s.initializeProxy(con); err != nil {
@@ -164,13 +164,13 @@ func (s *DiscoveryServer) closeConnection(con *Connection) {
 	if con.ID() == "" {
 		return
 	}
-	
+
 	// Record XDS client disconnection
 	if con.proxy != nil {
 		version := "unknown"
 		recordXDSClients(version, -1)
 	}
-	
+
 	s.removeCon(con.ID())
 }
 

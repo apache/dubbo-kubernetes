@@ -212,11 +212,11 @@ func Send(ctx ConnectionContext, res *discovery.DiscoveryResponse) error {
 	startTime := time.Now()
 	err := conn.stream.Send(res)
 	sendDuration := time.Since(startTime)
-	
+
 	if err == nil {
 		// Record send time metric
 		RecordSendTime(sendDuration)
-		
+
 		if res.Nonce != "" {
 			ctx.Watcher().UpdateWatchedResource(res.TypeUrl, func(wr *WatchedResource) *WatchedResource {
 				if wr == nil {
