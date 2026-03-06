@@ -43,7 +43,7 @@ var (
 		return time.Since(serverStart).Seconds()
 	})
 
-	versionTag   = monitoring.CreateLabel("version")
+	versionTag    = monitoring.CreateLabel("version")
 	dubbodVersion = monitoring.NewGauge(
 		"dubbod_info",
 		"Dubbod version and build information.",

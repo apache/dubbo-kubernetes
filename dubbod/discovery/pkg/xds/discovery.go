@@ -121,16 +121,16 @@ func (s *DiscoveryServer) Shutdown() {
 
 func (s *DiscoveryServer) initPushContext(req *model.PushRequest, oldPushContext *model.PushContext, version string) *model.PushContext {
 	startTime := time.Now()
-	
+
 	push := model.NewPushContext()
 	push.PushVersion = version
 	push.InitContext(s.Env, oldPushContext, req)
 	s.dropCacheForRequest(req)
 	s.Env.SetPushContext(push)
-	
+
 	// Record push context init time
 	pushContextInitTime.Record(time.Since(startTime).Seconds())
-	
+
 	return push
 }
 
@@ -178,10 +178,10 @@ func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceO
 	push := func(req *model.PushRequest, debouncedEvents int, startDebounce time.Time) {
 		pushFn(req)
 		updateSent.Add(int64(debouncedEvents))
-		
+
 		// Record debounce time metric
 		debounceTime.Record(time.Since(startDebounce).Seconds())
-		
+
 		freeCh <- struct{}{}
 	}
 
@@ -290,12 +290,12 @@ func doSendPushes(stopCh <-chan struct{}, semaphore chan struct{}, queue *PushQu
 			if shuttingdown {
 				return
 			}
-			
+
 			// Record proxy queue time
 			if push != nil && !push.Start.IsZero() {
 				proxiesQueueTime.Record(time.Since(push.Start).Seconds())
 			}
-			
+
 			doneFunc := func() {
 				queue.MarkDone(client)
 				<-semaphore
@@ -371,7 +371,7 @@ func (s *DiscoveryServer) ConfigUpdate(req *model.PushRequest) {
 		s.Cache.ClearAll()
 	}
 	s.InboundUpdates.Inc()
-	
+
 	// Record inbound update metrics
 	if req.ConfigsUpdated != nil && len(req.ConfigsUpdated) > 0 {
 		recordInboundConfigUpdate()
@@ -441,10 +441,10 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 	// 3. Endpoint health status changes
 	if pushType == model.IncrementalPush || pushType == model.FullPush {
 		log.Debugf("service %s/%s triggering %v push [endpoints=%d]", namespace, serviceName, pushType, len(dubboEndpoints))
-		
+
 		// Record EDS update metric
 		recordInboundEDSUpdate()
-		
+
 		s.ConfigUpdate(&model.PushRequest{
 			// Full:           pushType == model.FullPush,
 			// ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),

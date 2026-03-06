@@ -94,7 +94,7 @@ type Server struct {
 	httpsAddr   string
 	httpMux     *http.ServeMux
 	httpsMux    *http.ServeMux // webhooks
-	
+
 	monitoringMux   *http.ServeMux
 	metricsExporter http.Handler
 
@@ -236,7 +236,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	InitGenerators(s.XDSServer, configGen)
-	
+
 	// Initialize monitoring server
 	if err := s.initMonitor(args.ServerOptions.HTTPAddr); err != nil {
 		return nil, fmt.Errorf("error initializing monitoring: %v", err)

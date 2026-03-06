@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	Log = log.RegisterScope("ads", "ads debugging")
+	Log    = log.RegisterScope("ads", "ads debugging")
 	xdsLog = Log
 
 	errTag  = monitoring.CreateLabel("err")
