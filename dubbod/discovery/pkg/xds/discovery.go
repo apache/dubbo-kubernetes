@@ -99,7 +99,7 @@ func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string
 }
 
 func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
-	// Register v3 server
+	// Register v1 server
 	discovery.RegisterAggregatedDiscoveryServiceServer(rpcs, s)
 }
 

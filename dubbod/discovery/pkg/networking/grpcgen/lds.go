@@ -30,9 +30,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
 	core "github.com/dubbo-kubernetes/xds-api/core/v1"
-	routerv3 "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/http/router"
-	hcmv3 "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/network/http_connection_manager"
-	tlsv3 "github.com/dubbo-kubernetes/xds-api/extensions/transport_sockets/tls/v1"
+	routerv1 "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/http/router"
+	hcmv1 "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/network/http_connection_manager"
+	tlsv1 "github.com/dubbo-kubernetes/xds-api/extensions/transport_sockets/tls/v1"
 	listener "github.com/dubbo-kubernetes/xds-api/listener/v1"
 	route "github.com/dubbo-kubernetes/xds-api/route/v1"
 	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
@@ -213,7 +213,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 		// "missing HttpConnectionManager filter", gRPC proxyless clients require HttpConnectionManager
 		// in the FilterChain for inbound listeners.
 		routeName := fmt.Sprintf("%d", listenPort)
-		var hcm *hcmv3.HttpConnectionManager
+		var hcm *hcmv1.HttpConnectionManager
 
 		// For Gateway Pods (router type), use RDS to get route configuration from HTTPRoute
 		// This allows Gateway to route external traffic to backend services based on HTTPRoute rules
@@ -223,11 +223,11 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			}
 			log.Infof(" Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v, service=%s", name, routeName, node.ID, node.Type, si.Service.Attributes.Name)
 			// Gateway Pods need RDS to route traffic based on HTTPRoute
-			hcm = &hcmv3.HttpConnectionManager{
-				CodecType:  hcmv3.HttpConnectionManager_AUTO,
+			hcm = &hcmv1.HttpConnectionManager{
+				CodecType:  hcmv1.HttpConnectionManager_AUTO,
 				StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
-				RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
-					Rds: &hcmv3.Rds{
+				RouteSpecifier: &hcmv1.HttpConnectionManager_Rds{
+					Rds: &hcmv1.Rds{
 						ConfigSource: &core.ConfigSource{
 							ConfigSourceSpecifier: &core.ConfigSource_Ads{
 								Ads: &core.AggregatedConfigSource{},
@@ -236,11 +236,11 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 						RouteConfigName: routeName,
 					},
 				},
-				HttpFilters: []*hcmv3.HttpFilter{
+				HttpFilters: []*hcmv1.HttpFilter{
 					{
 						Name: "filters.http.router",
-						ConfigType: &hcmv3.HttpFilter_TypedConfig{
-							TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
+						ConfigType: &hcmv1.HttpFilter_TypedConfig{
+							TypedConfig: protoconv.MessageToAny(&routerv1.Router{}),
 						},
 					},
 				},
@@ -250,10 +250,10 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			// For regular service Pods, use inline RouteConfig with NonForwardingAction
 			// Use inline RouteConfig instead of RDS to avoid triggering additional RDS requests that cause push loops
 			// For proxyless gRPC, inline configuration is preferred to minimize round-trips
-			hcm = &hcmv3.HttpConnectionManager{
-				CodecType:  hcmv3.HttpConnectionManager_AUTO,
+			hcm = &hcmv1.HttpConnectionManager{
+				CodecType:  hcmv1.HttpConnectionManager_AUTO,
 				StatPrefix: fmt.Sprintf("inbound_%d", listenPort),
-				RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
+				RouteSpecifier: &hcmv1.HttpConnectionManager_RouteConfig{
 					RouteConfig: &route.RouteConfiguration{
 						Name: routeName,
 						VirtualHosts: []*route.VirtualHost{
@@ -274,11 +274,11 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 						},
 					},
 				},
-				HttpFilters: []*hcmv3.HttpFilter{
+				HttpFilters: []*hcmv1.HttpFilter{
 					{
 						Name: "filters.http.router",
-						ConfigType: &hcmv3.HttpFilter_TypedConfig{
-							TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
+						ConfigType: &hcmv1.HttpFilter_TypedConfig{
+							TypedConfig: protoconv.MessageToAny(&routerv1.Router{}),
 						},
 					},
 				},
@@ -359,7 +359,7 @@ func buildDownstreamTransportSocket(mode model.MutualTLSMode) *core.TransportSoc
 	// For STRICT mTLS, we require client certificates and validate them
 	// The validation context is already configured in buildCommonTLSContext
 	// via the certificate provider instance (ROOTCA)
-	tlsContext := &tlsv3.DownstreamTlsContext{
+	tlsContext := &tlsv1.DownstreamTlsContext{
 		CommonTlsContext:         common,
 		RequireClientCertificate: wrapperspb.Bool(true),
 		// Note: gRPC proxyless uses certificate provider for validation
@@ -516,11 +516,11 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 			// For gRPC proxyless, outbound listeners MUST use ApiListener with RDS
 			// This is the correct pattern used by Dubbo for gRPC xDS clients
 			// Using FilterChain with inline RouteConfig causes the gRPC client to remain in IDLE state
-			hcm := &hcmv3.HttpConnectionManager{
-				CodecType:  hcmv3.HttpConnectionManager_AUTO,
+			hcm := &hcmv1.HttpConnectionManager{
+				CodecType:  hcmv1.HttpConnectionManager_AUTO,
 				StatPrefix: fmt.Sprintf("outbound_%d_%s", port, svc.Attributes.Name),
-				RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
-					Rds: &hcmv3.Rds{
+				RouteSpecifier: &hcmv1.HttpConnectionManager_Rds{
+					Rds: &hcmv1.Rds{
 						ConfigSource: &core.ConfigSource{
 							ConfigSourceSpecifier: &core.ConfigSource_Ads{
 								Ads: &core.AggregatedConfigSource{},
@@ -529,11 +529,11 @@ func buildOutboundListeners(node *model.Proxy, push *model.PushContext, filter l
 						RouteConfigName: routeName,
 					},
 				},
-				HttpFilters: []*hcmv3.HttpFilter{
+				HttpFilters: []*hcmv1.HttpFilter{
 					{
 						Name: "filters.http.router",
-						ConfigType: &hcmv3.HttpFilter_TypedConfig{
-							TypedConfig: protoconv.MessageToAny(&routerv3.Router{}),
+						ConfigType: &hcmv1.HttpFilter_TypedConfig{
+							TypedConfig: protoconv.MessageToAny(&routerv1.Router{}),
 						},
 					},
 				},

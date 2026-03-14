@@ -101,7 +101,7 @@ func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
 			ServerURI: serverURI,
 			// connect locally via agent
 			ChannelCreds:   []ChannelCreds{{Type: "insecure"}},
-			ServerFeatures: []string{"xds_v3"},
+			ServerFeatures: []string{"xds_v1"},
 		}},
 		Node: &core.Node{
 			Id:       opts.Node.ID,

@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v3"
+	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/monitoring"
 )
 
@@ -140,13 +140,13 @@ func isUnexpectedError(err error) bool {
 func recordSendError(xdsType string, err error) bool {
 	if isUnexpectedError(err) {
 		switch xdsType {
-		case v3.ListenerType:
+		case v1.ListenerType:
 			ldsSendErrPushes.Increment()
-		case v3.ClusterType:
+		case v1.ClusterType:
 			cdsSendErrPushes.Increment()
-		case v3.EndpointType:
+		case v1.EndpointType:
 			edsSendErrPushes.Increment()
-		case v3.RouteType:
+		case v1.RouteType:
 			rdsSendErrPushes.Increment()
 		}
 		return true
@@ -155,7 +155,7 @@ func recordSendError(xdsType string, err error) bool {
 }
 
 func recordPushTime(xdsType string, duration time.Duration) {
-	metricType := v3.GetMetricType(xdsType)
+	metricType := v1.GetMetricType(xdsType)
 	pushTime.With(typeTag.Value(metricType)).Record(duration.Seconds())
 	pushes.With(typeTag.Value(metricType)).Increment()
 }

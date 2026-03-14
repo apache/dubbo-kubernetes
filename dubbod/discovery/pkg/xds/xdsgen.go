@@ -24,7 +24,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v3"
+	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
@@ -33,7 +33,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	cluster "github.com/dubbo-kubernetes/xds-api/cluster/v1"
 	core "github.com/dubbo-kubernetes/xds-api/core/v1"
-	hcmv3 "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/network/http_connection_manager"
+	hcmv1 "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/network/http_connection_manager"
 	listener "github.com/dubbo-kubernetes/xds-api/listener/v1"
 	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
 )
@@ -95,9 +95,9 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			// Initial wildcard request - need to extract resource names from parent resources
 			// For CDS: extract cluster names from LDS
 			// For EDS: extract cluster names from CDS
-			if w.TypeUrl == v3.ClusterType {
+			if w.TypeUrl == v1.ClusterType {
 				// Extract cluster names from LDS response
-				ldsWatched := con.proxy.GetWatchedResource(v3.ListenerType)
+				ldsWatched := con.proxy.GetWatchedResource(v1.ListenerType)
 				if ldsWatched != nil && ldsWatched.NonceSent != "" {
 					// LDS has been sent, extract cluster names from it
 					// We need to regenerate LDS to extract cluster names, or store them
@@ -111,7 +111,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						Start:  con.proxy.LastPushTime,
 						Forced: false,
 					}
-					ldsGen := s.findGenerator(v3.ListenerType, con)
+					ldsGen := s.findGenerator(v1.ListenerType, con)
 					if ldsGen != nil {
 						ldsRes, _, _ := ldsGen.Generate(con.proxy, ldsWatched, ldsReq)
 						if len(ldsRes) > 0 {
@@ -125,9 +125,9 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						}
 					}
 				}
-			} else if w.TypeUrl == v3.EndpointType {
+			} else if w.TypeUrl == v1.EndpointType {
 				// Extract cluster names from CDS response
-				cdsWatched := con.proxy.GetWatchedResource(v3.ClusterType)
+				cdsWatched := con.proxy.GetWatchedResource(v1.ClusterType)
 				if cdsWatched != nil && cdsWatched.NonceSent != "" {
 					// CDS has been sent, extract EDS cluster names from it
 					log.Debugf("EDS wildcard request, extracting cluster names from CDS")
@@ -139,7 +139,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						Start:  con.proxy.LastPushTime,
 						Forced: false,
 					}
-					cdsGen := s.findGenerator(v3.ClusterType, con)
+					cdsGen := s.findGenerator(v1.ClusterType, con)
 					if cdsGen != nil {
 						cdsRes, _, _ := cdsGen.Generate(con.proxy, cdsWatched, cdsReq)
 						if len(cdsRes) > 0 {
@@ -153,11 +153,11 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						}
 					}
 				}
-			} else if w.TypeUrl == v3.RouteType {
+			} else if w.TypeUrl == v1.RouteType {
 				// Extract route names from LDS response for RDS wildcard requests
 				// RDS is not a wildcard type, so when client sends empty ResourceNames,
 				// we need to extract route names from LDS listeners that reference RDS
-				ldsWatched := con.proxy.GetWatchedResource(v3.ListenerType)
+				ldsWatched := con.proxy.GetWatchedResource(v1.ListenerType)
 				if ldsWatched != nil && ldsWatched.NonceSent != "" {
 					// LDS has been sent, extract route names from it
 					log.Debugf("RDS wildcard request, extracting route names from LDS")
@@ -169,7 +169,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						Start:  con.proxy.LastPushTime,
 						Forced: false,
 					}
-					ldsGen := s.findGenerator(v3.ListenerType, con)
+					ldsGen := s.findGenerator(v1.ListenerType, con)
 					if ldsGen != nil {
 						ldsRes, _, _ := ldsGen.Generate(con.proxy, ldsWatched, ldsReq)
 						if len(ldsRes) > 0 {
@@ -353,7 +353,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 		} else {
 			resourceNamesStr = " [empty]"
 		}
-		log.Infof("%s: %s for node:%s resources:%d size:%s%s%s", v3.GetShortType(w.TypeUrl), ptype, con.proxy.ID, len(res),
+		log.Infof("%s: %s for node:%s resources:%d size:%s%s%s", v1.GetShortType(w.TypeUrl), ptype, con.proxy.ID, len(res),
 			util.ByteCount(ResourceSize(res)), info, resourceNamesStr)
 	}
 
@@ -361,7 +361,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	// automatically trigger CDS and RDS push for the referenced clusters and routes
 	// ONLY if this is a direct request push (not a push from pushConnection which would cause loops)
 	// Only auto-push if CDS/RDS is not already being watched by the client (client will request it naturally)
-	if w.TypeUrl == v3.ListenerType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
+	if w.TypeUrl == v1.ListenerType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
 		// Only auto-push CDS/RDS if this is a direct request (not a full push from pushConnection)
 		// Check if this push was triggered by a direct client request using IsRequest()
 		isDirectRequest := req.IsRequest()
@@ -371,13 +371,13 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 
 			// Auto-push CDS for referenced clusters
 			if len(clusterNames) > 0 {
-				cdsWatched := con.proxy.GetWatchedResource(v3.ClusterType)
+				cdsWatched := con.proxy.GetWatchedResource(v1.ClusterType)
 				// Only auto-push CDS if client hasn't already requested it
 				// If client has already requested CDS (WatchedResource exists with ResourceNames),
 				// the client's request will handle it, so we don't need to auto-push
 				if cdsWatched == nil || cdsWatched.ResourceNames == nil || len(cdsWatched.ResourceNames) == 0 {
 					// Client hasn't requested CDS yet, auto-push to ensure client gets the cluster config
-					con.proxy.NewWatchedResource(v3.ClusterType, clusterNames)
+					con.proxy.NewWatchedResource(v1.ClusterType, clusterNames)
 					log.Debugf("LDS push completed, auto-pushing CDS for clusters: %v", clusterNames)
 					// Trigger CDS push directly without going through pushConnection to avoid loops
 					cdsReq := &model.PushRequest{
@@ -387,7 +387,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						Start:  con.proxy.LastPushTime,
 						Forced: false,
 					}
-					if err := s.pushXds(con, con.proxy.GetWatchedResource(v3.ClusterType), cdsReq); err != nil {
+					if err := s.pushXds(con, con.proxy.GetWatchedResource(v1.ClusterType), cdsReq); err != nil {
 						log.Warnf("failed to push CDS after LDS: %v", err)
 					}
 				} else {
@@ -398,11 +398,11 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 
 			// Auto-push RDS for referenced routes
 			if len(routeNames) > 0 {
-				rdsWatched := con.proxy.GetWatchedResource(v3.RouteType)
+				rdsWatched := con.proxy.GetWatchedResource(v1.RouteType)
 				// Only auto-push RDS if client hasn't already requested it
 				if rdsWatched == nil || rdsWatched.ResourceNames == nil || len(rdsWatched.ResourceNames) == 0 {
 					// Client hasn't requested RDS yet, auto-push to ensure client gets the route config
-					con.proxy.NewWatchedResource(v3.RouteType, routeNames)
+					con.proxy.NewWatchedResource(v1.RouteType, routeNames)
 					log.Debugf("LDS push completed, auto-pushing RDS for routes: %v", routeNames)
 					// Trigger RDS push directly without going through pushConnection to avoid loops
 					rdsReq := &model.PushRequest{
@@ -412,7 +412,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						Start:  con.proxy.LastPushTime,
 						Forced: false,
 					}
-					if err := s.pushXds(con, con.proxy.GetWatchedResource(v3.RouteType), rdsReq); err != nil {
+					if err := s.pushXds(con, con.proxy.GetWatchedResource(v1.RouteType), rdsReq); err != nil {
 						log.Warnf("failed to push RDS after LDS: %v", err)
 					}
 				} else {
@@ -430,9 +430,9 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 					}
 					if hasNewRoutes {
 						// Update RDS watched resource to include the new route names
-						con.proxy.UpdateWatchedResource(v3.RouteType, func(wr *model.WatchedResource) *model.WatchedResource {
+						con.proxy.UpdateWatchedResource(v1.RouteType, func(wr *model.WatchedResource) *model.WatchedResource {
 							if wr == nil {
-								wr = &model.WatchedResource{TypeUrl: v3.RouteType, ResourceNames: sets.New[string]()}
+								wr = &model.WatchedResource{TypeUrl: v1.RouteType, ResourceNames: sets.New[string]()}
 							}
 							existingNames := wr.ResourceNames
 							if existingNames == nil {
@@ -453,7 +453,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 							Start:  con.proxy.LastPushTime,
 							Forced: false,
 						}
-						if err := s.pushXds(con, con.proxy.GetWatchedResource(v3.RouteType), rdsReq); err != nil {
+						if err := s.pushXds(con, con.proxy.GetWatchedResource(v1.RouteType), rdsReq); err != nil {
 							log.Warnf("failed to push RDS after LDS: %v", err)
 						}
 					} else {
@@ -473,14 +473,14 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 	// 1. Update the watched resource to include the EDS cluster names (so when client requests EDS, we know what to send)
 	// 2. Wait for the client to request EDS naturally
 	// 3. When the client requests EDS, we will push it with the correct state
-	if w.TypeUrl == v3.ClusterType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
+	if w.TypeUrl == v1.ClusterType && con.proxy.IsProxylessGrpc() && len(res) > 0 {
 		// Extract EDS cluster names from CDS resources
 		edsClusterNames := extractEDSClusterNamesFromCDS(res)
 		if len(edsClusterNames) > 0 {
-			edsWatched := con.proxy.GetWatchedResource(v3.EndpointType)
+			edsWatched := con.proxy.GetWatchedResource(v1.EndpointType)
 			if edsWatched == nil {
 				// EDS not watched yet, create watched resource with cluster names
-				con.proxy.NewWatchedResource(v3.EndpointType, edsClusterNames)
+				con.proxy.NewWatchedResource(v1.EndpointType, edsClusterNames)
 				log.Debugf("CDS push completed, created EDS watched resource for clusters: %v (waiting for client request)", edsClusterNames)
 			} else {
 				// Check if any cluster names are missing from the watched set
@@ -497,9 +497,9 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 				}
 				if hasNewClusters {
 					// Update EDS watched resource to include the new cluster names
-					con.proxy.UpdateWatchedResource(v3.EndpointType, func(wr *model.WatchedResource) *model.WatchedResource {
+					con.proxy.UpdateWatchedResource(v1.EndpointType, func(wr *model.WatchedResource) *model.WatchedResource {
 						if wr == nil {
-							wr = &model.WatchedResource{TypeUrl: v3.EndpointType, ResourceNames: sets.New[string]()}
+							wr = &model.WatchedResource{TypeUrl: v1.EndpointType, ResourceNames: sets.New[string]()}
 						}
 						existingNames := wr.ResourceNames
 						if existingNames == nil {
@@ -587,7 +587,7 @@ func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource
 		}
 	}
 	if len(resp.RemovedResources) > 0 {
-		deltaLog.Infof("%v REMOVE for node:%s %v", v3.GetShortType(w.TypeUrl), con.ID(), resp.RemovedResources)
+		deltaLog.Infof("%v REMOVE for node:%s %v", v1.GetShortType(w.TypeUrl), con.ID(), resp.RemovedResources)
 	}
 
 	ptype := "PUSH"
@@ -610,7 +610,7 @@ func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource
 	case !req.Full:
 	default:
 		deltaLog.Infof("%s: %s%s for node:%s resources:%d removed:%d%s",
-			v3.GetShortType(w.TypeUrl), ptype, req.PushReason(), con.proxy.ID, len(res), len(resp.RemovedResources), info)
+			v1.GetShortType(w.TypeUrl), ptype, req.PushReason(), con.proxy.ID, len(res), len(resp.RemovedResources), info)
 	}
 
 	return nil
@@ -668,14 +668,14 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 		for _, fc := range ll.FilterChains {
 			for _, filter := range fc.Filters {
 				if filter.Name == "http_connection_manager" {
-					hcm := &hcmv3.HttpConnectionManager{}
+					hcm := &hcmv1.HttpConnectionManager{}
 					if err := filter.GetTypedConfig().UnmarshalTo(hcm); err != nil {
 						log.Debugf("failed to unmarshal HttpConnectionManager for listener %s: %v", r.Name, err)
 						continue
 					}
 					// Check if HttpConnectionManager uses RDS
 					if hcm.RouteSpecifier != nil {
-						if rds, ok := hcm.RouteSpecifier.(*hcmv3.HttpConnectionManager_Rds); ok && rds.Rds != nil {
+						if rds, ok := hcm.RouteSpecifier.(*hcmv1.HttpConnectionManager_Rds); ok && rds.Rds != nil {
 							routeName := rds.Rds.RouteConfigName
 							if routeName != "" {
 								routeNames.Insert(routeName)
@@ -690,7 +690,7 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 		// Check if this listener has ApiListener (used by gRPC proxyless for outbound)
 		if ll.ApiListener != nil && ll.ApiListener.ApiListener != nil {
 			// Unmarshal ApiListener to get HttpConnectionManager
-			hcm := &hcmv3.HttpConnectionManager{}
+			hcm := &hcmv1.HttpConnectionManager{}
 			if err := ll.ApiListener.ApiListener.UnmarshalTo(hcm); err != nil {
 				log.Debugf("failed to unmarshal ApiListener for listener %s: %v", r.Name, err)
 				continue
@@ -698,7 +698,7 @@ func extractRouteNamesFromLDS(listeners model.Resources) []string {
 
 			// Check if HttpConnectionManager uses RDS
 			if hcm.RouteSpecifier != nil {
-				if rds, ok := hcm.RouteSpecifier.(*hcmv3.HttpConnectionManager_Rds); ok && rds.Rds != nil {
+				if rds, ok := hcm.RouteSpecifier.(*hcmv1.HttpConnectionManager_Rds); ok && rds.Rds != nil {
 					// Found RDS reference, extract route name
 					routeName := rds.Rds.RouteConfigName
 					if routeName != "" {
