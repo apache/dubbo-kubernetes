@@ -30,7 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	cluster "github.com/dubbo-kubernetes/xds-api/cluster/v1"
 	core "github.com/dubbo-kubernetes/xds-api/core/v1"
-	tlsv3 "github.com/dubbo-kubernetes/xds-api/extensions/transport_sockets/tls/v1"
+	tlsv1 "github.com/dubbo-kubernetes/xds-api/extensions/transport_sockets/tls/v1"
 )
 
 type clusterBuilder struct {
@@ -393,13 +393,13 @@ func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networki
 
 // buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to gRPC xDS expectations,
 // reusing the common certificate-provider setup from buildCommonTLSContext.
-func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings *networking.ClientTLSSettings) *tlsv3.UpstreamTlsContext {
+func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings *networking.ClientTLSSettings) *tlsv1.UpstreamTlsContext {
 	common := buildCommonTLSContext()
 	if common == nil {
 		return nil
 	}
 
-	tlsContext := &tlsv3.UpstreamTlsContext{
+	tlsContext := &tlsv1.UpstreamTlsContext{
 		CommonTlsContext: common,
 	}
 	// SNI must be the service hostname, not the cluster name

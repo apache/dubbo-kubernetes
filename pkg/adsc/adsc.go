@@ -30,7 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v3"
+	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
@@ -318,7 +318,7 @@ func (a *ADSC) Run() error {
 
 	// Send the initial requests
 	for _, r := range a.cfg.InitialDiscoveryRequests {
-		if r.TypeUrl == v3.ClusterType {
+		if r.TypeUrl == v1.ClusterType {
 			a.watchTime = time.Now()
 		}
 		_ = a.Send(r)
@@ -354,12 +354,12 @@ func (a *ADSC) reconnect() {
 func (a *ADSC) ack(msg *discovery.DiscoveryResponse) {
 	var resources []string
 
-	if msg.TypeUrl == v3.EndpointType {
+	if msg.TypeUrl == v1.EndpointType {
 		for c := range a.edsClusters {
 			resources = append(resources, c)
 		}
 	}
-	if msg.TypeUrl == v3.RouteType {
+	if msg.TypeUrl == v1.RouteType {
 		for r := range a.routes {
 			resources = append(resources, r)
 		}
@@ -423,7 +423,7 @@ func (a *ADSC) handleReceive() {
 		// Process the resources.
 		a.VersionInfo[msg.TypeUrl] = msg.VersionInfo
 		switch msg.TypeUrl {
-		case v3.ListenerType:
+		case v1.ListenerType:
 			listeners := make([]*listener.Listener, 0, len(msg.Resources))
 			for _, rsc := range msg.Resources {
 				valBytes := rsc.Value
@@ -432,7 +432,7 @@ func (a *ADSC) handleReceive() {
 				listeners = append(listeners, ll)
 			}
 			a.handleLDS(listeners)
-		case v3.ClusterType:
+		case v1.ClusterType:
 			clusters := make([]*cluster.Cluster, 0, len(msg.Resources))
 			for _, rsc := range msg.Resources {
 				valBytes := rsc.Value
@@ -441,7 +441,7 @@ func (a *ADSC) handleReceive() {
 				clusters = append(clusters, cl)
 			}
 			a.handleCDS(clusters)
-		case v3.EndpointType:
+		case v1.EndpointType:
 			eds := make([]*endpoint.ClusterLoadAssignment, 0, len(msg.Resources))
 			for _, rsc := range msg.Resources {
 				valBytes := rsc.Value
@@ -450,7 +450,7 @@ func (a *ADSC) handleReceive() {
 				eds = append(eds, el)
 			}
 			a.handleEDS(eds)
-		case v3.RouteType:
+		case v1.RouteType:
 			routes := make([]*route.RouteConfiguration, 0, len(msg.Resources))
 			for _, rsc := range msg.Resources {
 				valBytes := rsc.Value
@@ -526,12 +526,12 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	if len(routes) > 0 {
-		a.sendResources(v3.RouteType, routes)
+		a.sendResources(v1.RouteType, routes)
 	}
 	a.httpListeners = lh
 
 	select {
-	case a.Updates <- v3.ListenerType:
+	case a.Updates <- v1.ListenerType:
 	default:
 	}
 }
@@ -567,7 +567,7 @@ func (a *ADSC) handleRDS(configurations []*route.RouteConfiguration) {
 	a.mutex.Unlock()
 
 	select {
-	case a.Updates <- v3.RouteType:
+	case a.Updates <- v1.RouteType:
 	default:
 	}
 }
@@ -593,7 +593,7 @@ func (a *ADSC) handleCDS(ll []*cluster.Cluster) {
 	log.Infof("CDS: %d size=%d", len(cn), cdsSize)
 
 	if len(cn) > 0 {
-		a.sendResources(v3.EndpointType, cn)
+		a.sendResources(v1.EndpointType, cn)
 	}
 
 	a.mutex.Lock()
@@ -602,7 +602,7 @@ func (a *ADSC) handleCDS(ll []*cluster.Cluster) {
 	a.clusters = cds
 
 	select {
-	case a.Updates <- v3.ClusterType:
+	case a.Updates <- v1.ClusterType:
 	default:
 	}
 }
@@ -620,7 +620,7 @@ func (a *ADSC) handleEDS(eds []*endpoint.ClusterLoadAssignment) {
 	log.Infof("eds: %d size=%d ep=%d", len(eds), edsSize, ep)
 	if a.initialLoad == 0 && !a.initialLds {
 		_ = a.stream.Send(&discovery.DiscoveryRequest{
-			TypeUrl: v3.ListenerType,
+			TypeUrl: v1.ListenerType,
 		})
 		a.initialLds = true
 	}
@@ -630,7 +630,7 @@ func (a *ADSC) handleEDS(eds []*endpoint.ClusterLoadAssignment) {
 	a.eds = la
 
 	select {
-	case a.Updates <- v3.EndpointType:
+	case a.Updates <- v1.EndpointType:
 	default:
 	}
 }

@@ -23,7 +23,7 @@ import (
 
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v3"
+	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
 	"github.com/google/uuid"
@@ -35,7 +35,7 @@ import (
 var deltaLog = dubbolog.RegisterScope("delta", "delta xds debugging")
 
 func (s *DiscoveryServer) forceEDSPush(con *Connection) error {
-	if dwr := con.proxy.GetWatchedResource(v3.EndpointType); dwr != nil {
+	if dwr := con.proxy.GetWatchedResource(v1.EndpointType); dwr != nil {
 		request := &model.PushRequest{
 			Full:   true,
 			Push:   con.proxy.LastPushContext,
@@ -43,7 +43,7 @@ func (s *DiscoveryServer) forceEDSPush(con *Connection) error {
 			Start:  con.proxy.LastPushTime,
 			Forced: true,
 		}
-		deltaLog.Infof("%s: FORCE %s PUSH for warming.", v3.GetShortType(v3.EndpointType), con.ID())
+		deltaLog.Infof("%s: FORCE %s PUSH for warming.", v1.GetShortType(v1.EndpointType), con.ID())
 		return s.pushDeltaXds(con, dwr, request)
 	}
 	return nil
@@ -138,7 +138,7 @@ func (s *DiscoveryServer) receiveDelta(con *Connection, identities []string) {
 			return
 		}
 		if firstRequest {
-			if req.TypeUrl == v3.HealthInfoType {
+			if req.TypeUrl == v1.HealthInfoType {
 				deltaLog.Warnf("%q %s send health check probe before normal xDS request", con.Peer(), con.ID())
 				continue
 			}
@@ -164,7 +164,7 @@ func (s *DiscoveryServer) receiveDelta(con *Connection, identities []string) {
 			unsubscribeStr = " unsubscribe:[" + strings.Join(req.ResourceNamesUnsubscribe, ", ") + "]"
 		}
 		deltaLog.Infof("%s: RAW DELTA REQ %s sub:%d%s nonce:%s%s",
-			v3.GetShortType(req.TypeUrl), con.ID(), len(req.ResourceNamesSubscribe), subscribeStr,
+			v1.GetShortType(req.TypeUrl), con.ID(), len(req.ResourceNamesSubscribe), subscribeStr,
 			req.ResponseNonce, unsubscribeStr)
 
 		select {
@@ -254,7 +254,7 @@ func deltaWatchedResources(existing sets.String, request *discovery.DeltaDiscove
 }
 
 func shouldRespondDelta(con *Connection, request *discovery.DeltaDiscoveryRequest) bool {
-	stype := v3.GetShortType(request.TypeUrl)
+	stype := v1.GetShortType(request.TypeUrl)
 
 	if request.ErrorDetail != nil {
 		errCode := codes.Code(request.ErrorDetail.Code)
@@ -336,7 +336,7 @@ func (conn *Connection) sendDelta(res *discovery.DeltaDiscoveryResponse, newReso
 	}
 	err := sendResonse()
 	if status.Convert(err).Code() == codes.DeadlineExceeded {
-		deltaLog.Infof("Timeout writing %s: %v", conn.ID(), v3.GetShortType(res.TypeUrl))
+		deltaLog.Infof("Timeout writing %s: %v", conn.ID(), v1.GetShortType(res.TypeUrl))
 	}
 	return err
 }

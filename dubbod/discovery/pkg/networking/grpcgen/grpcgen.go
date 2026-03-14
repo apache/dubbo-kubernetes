@@ -18,9 +18,9 @@ package grpcgen
 
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v3"
+	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
-	tlsv3 "github.com/dubbo-kubernetes/xds-api/extensions/transport_sockets/tls/v1"
+	tlsv1 "github.com/dubbo-kubernetes/xds-api/extensions/transport_sockets/tls/v1"
 )
 
 var log = dubbolog.RegisterScope("grpcgen", "xDS Generator for Proxyless gRPC")
@@ -37,14 +37,14 @@ func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResou
 	}
 
 	switch w.TypeUrl {
-	case v3.ListenerType:
+	case v1.ListenerType:
 		// Pass requested names to BuildListeners to ensure consistent behavior
 		// When requestedNames is empty (wildcard), BuildListeners generates all listeners
 		// When requestedNames is non-empty, BuildListeners only generates requested listeners
 		return g.BuildListeners(proxy, req.Push, requestedNames), model.DefaultXdsLogDetails, nil
-	case v3.ClusterType:
+	case v1.ClusterType:
 		return g.BuildClusters(proxy, req.Push, requestedNames), model.DefaultXdsLogDetails, nil
-	case v3.RouteType:
+	case v1.RouteType:
 		resources, logDetails := g.BuildHTTPRoutes(proxy, req, requestedNames)
 		return resources, logDetails, nil
 	}
@@ -55,17 +55,17 @@ func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResou
 // buildCommonTLSContext creates a TLS context that matches gRPC xDS expectations.
 // - Uses certificate provider "default" for workload certs and root CA
 // - Does not configure explicit SAN matches (left to future hardening)
-func buildCommonTLSContext() *tlsv3.CommonTlsContext {
-	return &tlsv3.CommonTlsContext{
+func buildCommonTLSContext() *tlsv1.CommonTlsContext {
+	return &tlsv1.CommonTlsContext{
 		// Workload certificate provider instance (SPIFFE workload cert chain)
-		TlsCertificateCertificateProviderInstance: &tlsv3.CommonTlsContext_CertificateProviderInstance{
+		TlsCertificateCertificateProviderInstance: &tlsv1.CommonTlsContext_CertificateProviderInstance{
 			InstanceName:    "default",
 			CertificateName: "default",
 		},
 		// Root CA provider instance
-		ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
-			CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
-				ValidationContextCertificateProviderInstance: &tlsv3.CommonTlsContext_CertificateProviderInstance{
+		ValidationContextType: &tlsv1.CommonTlsContext_CombinedValidationContext{
+			CombinedValidationContext: &tlsv1.CommonTlsContext_CombinedCertificateValidationContext{
+				ValidationContextCertificateProviderInstance: &tlsv1.CommonTlsContext_CertificateProviderInstance{
 					InstanceName:    "default",
 					CertificateName: "ROOTCA",
 				},
@@ -73,7 +73,7 @@ func buildCommonTLSContext() *tlsv3.CommonTlsContext {
 				// The certificate provider instance (ROOTCA) provides the root CA for validation
 				// For gRPC proxyless, we rely on the certificate provider for root CA validation
 				// SAN matching can be added later if needed for stricter validation
-				DefaultValidationContext: &tlsv3.CertificateValidationContext{
+				DefaultValidationContext: &tlsv1.CertificateValidationContext{
 					// Trust the root CA from the certificate provider
 					// The certificate provider instance "default" with "ROOTCA" will provide
 					// the root CA certificates for validating peer certificates

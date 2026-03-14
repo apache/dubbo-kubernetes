@@ -138,7 +138,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v1
         with:
           version: '3.13.0'
 

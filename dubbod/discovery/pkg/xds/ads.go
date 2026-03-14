@@ -26,7 +26,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/maps"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
-	v3 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v3"
+	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	core "github.com/dubbo-kubernetes/xds-api/core/v1"
@@ -323,8 +323,8 @@ func (s *DiscoveryServer) pushConnection(con *Connection, pushEv *Event) error {
 }
 
 func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *Connection) error {
-	stype := v3.GetShortType(req.TypeUrl)
-	if req.TypeUrl == v3.HealthInfoType {
+	stype := v1.GetShortType(req.TypeUrl)
+	if req.TypeUrl == v1.HealthInfoType {
 		return nil
 	}
 
@@ -414,11 +414,11 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 }
 
 func (s *DiscoveryServer) processDeltaRequest(req *discovery.DeltaDiscoveryRequest, con *Connection) error {
-	stype := v3.GetShortType(req.TypeUrl)
+	stype := v1.GetShortType(req.TypeUrl)
 	deltaLog.Infof("%s: REQ %s resources sub:%d unsub:%d nonce:%s", stype,
 		con.ID(), len(req.ResourceNamesSubscribe), len(req.ResourceNamesUnsubscribe), req.ResponseNonce)
 
-	if req.TypeUrl == v3.HealthInfoType {
+	if req.TypeUrl == v1.HealthInfoType {
 		return nil
 	}
 
@@ -444,7 +444,7 @@ func (s *DiscoveryServer) processDeltaRequest(req *discovery.DeltaDiscoveryReque
 	if err != nil {
 		return err
 	}
-	if req.TypeUrl != v3.ClusterType {
+	if req.TypeUrl != v1.ClusterType {
 		return nil
 	}
 	return s.forceEDSPush(con)
@@ -465,10 +465,10 @@ func newDeltaConnection(peerAddr string, stream DeltaDiscoveryStream) *Connectio
 }
 
 var PushOrder = []string{
-	v3.ClusterType,
-	v3.EndpointType,
-	v3.ListenerType,
-	v3.RouteType,
+	v1.ClusterType,
+	v1.EndpointType,
+	v1.ListenerType,
+	v1.RouteType,
 }
 
 var KnownOrderedTypeUrls = sets.New(PushOrder...)
