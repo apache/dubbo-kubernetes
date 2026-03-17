@@ -259,6 +259,7 @@ require (
 )
 
 replace (
+	github.com/dubbo-kubernetes/xds-api => ../xds-api
 	github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.0
 	github.com/docker/cli => github.com/docker/cli v23.0.1+incompatible
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
