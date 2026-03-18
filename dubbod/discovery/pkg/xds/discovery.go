@@ -98,37 +98,9 @@ func NewDiscoveryServer(env *model.Environment, clusterAliases map[string]string
 	return out
 }
 
-// envoyADSServiceDesc is a copy of the xds-api ServiceDesc with the envoy v3
-// service name, so that grpc-go proxyless xDS clients (which hard-code
-// "/envoy.service.discovery.v3.AggregatedDiscoveryService/...") can reach the
-// same handlers without introducing any envoy/go-control-plane dependency.
-var envoyADSServiceDesc = grpc.ServiceDesc{
-	ServiceName: "envoy.service.discovery.v3.AggregatedDiscoveryService",
-	HandlerType: (*discovery.AggregatedDiscoveryServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamAggregatedResources",
-			Handler:       discovery.StreamAggregatedResourcesHandler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "DeltaAggregatedResources",
-			Handler:       discovery.DeltaAggregatedResourcesHandler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
-	Metadata: "service/discovery/v1/ads.proto",
-}
-
 func (s *DiscoveryServer) Register(rpcs *grpc.Server) {
 	// Register under the native xds-api service name
 	discovery.RegisterAggregatedDiscoveryServiceServer(rpcs, s)
-	// Also register under the envoy v3 service name so that grpc-go proxyless
-	// xDS clients (which hard-code envoy.service.discovery.v3.*) can connect.
-	rpcs.RegisterService(&envoyADSServiceDesc, s)
 }
 
 func (s *DiscoveryServer) Start(stopCh <-chan struct{}) {
