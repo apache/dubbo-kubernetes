@@ -36,7 +36,7 @@ require (
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/docker-credential-helpers v0.9.3
 	github.com/docker/go-connections v0.5.0
-	github.com/dubbo-kubernetes/xds-api v0.0.0-20260228103100-7a9ab7bac3bb
+	github.com/dubbo-kubernetes/xds-api v0.0.0-20260318022345-fca131fda8ec
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
