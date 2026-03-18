@@ -36,7 +36,7 @@ require (
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/docker-credential-helpers v0.9.3
 	github.com/docker/go-connections v0.5.0
-	github.com/dubbo-kubernetes/xds-api v0.0.0-20260228103100-7a9ab7bac3bb
+	github.com/dubbo-kubernetes/xds-api v0.0.0-20260318022345-fca131fda8ec
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
@@ -259,7 +259,6 @@ require (
 )
 
 replace (
-	github.com/dubbo-kubernetes/xds-api => ../xds-api
 	github.com/containers/image/v5 => github.com/containers/image/v5 v5.34.0
 	github.com/docker/cli => github.com/docker/cli v23.0.1+incompatible
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
