@@ -18,11 +18,11 @@ package pixiu
 
 import (
 	"fmt"
-	cluster "github.com/dubbo-kubernetes/xds-api/cluster/v1"
-	endpoint "github.com/dubbo-kubernetes/xds-api/endpoint/v1"
-	hcm "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/network/http_connection_manager"
-	listener "github.com/dubbo-kubernetes/xds-api/listener/v1"
-	route "github.com/dubbo-kubernetes/xds-api/route/v1"
+	cluster "github.com/dubbo-inherent/xds-api/cluster/v1"
+	endpoint "github.com/dubbo-inherent/xds-api/endpoint/v1"
+	hcm "github.com/dubbo-inherent/xds-api/extensions/filters/v1/network/http_connection_manager"
+	listener "github.com/dubbo-inherent/xds-api/listener/v1"
+	route "github.com/dubbo-inherent/xds-api/route/v1"
 	"gopkg.in/yaml.v3"
 )
 

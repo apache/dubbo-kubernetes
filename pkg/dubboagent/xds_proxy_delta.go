@@ -23,8 +23,8 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/channels"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
-	core "github.com/dubbo-kubernetes/xds-api/core/v1"
-	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
+	core "github.com/dubbo-inherent/xds-api/core/v1"
+	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
 	"go.uber.org/atomic"
 	google_rpc "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"

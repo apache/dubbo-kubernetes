@@ -24,8 +24,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/endpoints"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	endpoint "github.com/dubbo-kubernetes/xds-api/endpoint/v1"
-	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
+	endpoint "github.com/dubbo-inherent/xds-api/endpoint/v1"
+	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
 )
 
 type EdsGenerator struct {

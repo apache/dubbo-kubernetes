@@ -20,8 +20,8 @@ notifications:
     jira_options: link label
 
 github:
-  homepage: "https://dubbo-kubernetes.github.io/"
-  description: "Dubbo Service Mesh for Kubernetes."
+  homepage: "https://dubbo-inherent.github.io/"
+  description: "Dubbo Inherent Mesh for Kubernetes."
   features:
     # Enable wiki for documentation
     wiki: false

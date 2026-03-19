@@ -22,14 +22,14 @@ import (
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
-	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
+	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
 
 	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	route "github.com/dubbo-kubernetes/xds-api/route/v1"
-	matcher "github.com/dubbo-kubernetes/xds-api/type/matcher/v1"
+	route "github.com/dubbo-inherent/xds-api/route/v1"
+	matcher "github.com/dubbo-inherent/xds-api/type/matcher/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )

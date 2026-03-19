@@ -28,7 +28,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	core "github.com/dubbo-kubernetes/xds-api/core/v1"
+	core "github.com/dubbo-inherent/xds-api/core/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
 )

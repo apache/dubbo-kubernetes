@@ -25,10 +25,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/cespare/xxhash/v2"
-	// core "github.com/dubbo-kubernetes/xds-api/core/v1"
-	core "github.com/dubbo-kubernetes/xds-api/core/v1"
-	// endpoint "github.com/dubbo-kubernetes/xds-api/endpoint/v1"
-	endpoint "github.com/dubbo-kubernetes/xds-api/endpoint/v1"
+	// core "github.com/dubbo-inherent/xds-api/core/v1"
+	core "github.com/dubbo-inherent/xds-api/core/v1"
+	// endpoint "github.com/dubbo-inherent/xds-api/endpoint/v1"
+	endpoint "github.com/dubbo-inherent/xds-api/endpoint/v1"
 
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
