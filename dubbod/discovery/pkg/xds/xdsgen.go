@@ -31,11 +31,11 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	dubboversion "github.com/apache/dubbo-kubernetes/pkg/version"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
-	cluster "github.com/dubbo-kubernetes/xds-api/cluster/v1"
-	core "github.com/dubbo-kubernetes/xds-api/core/v1"
-	hcmv1 "github.com/dubbo-kubernetes/xds-api/extensions/filters/v1/network/http_connection_manager"
-	listener "github.com/dubbo-kubernetes/xds-api/listener/v1"
-	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
+	cluster "github.com/dubbo-inherent/xds-api/cluster/v1"
+	core "github.com/dubbo-inherent/xds-api/core/v1"
+	hcmv1 "github.com/dubbo-inherent/xds-api/extensions/filters/v1/network/http_connection_manager"
+	listener "github.com/dubbo-inherent/xds-api/listener/v1"
+	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
 )
 
 type DubboControlPlaneInstance struct {

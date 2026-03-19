@@ -24,8 +24,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	// discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
-	discovery "github.com/dubbo-kubernetes/xds-api/service/discovery/v1"
+	// discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
+	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 )
 
