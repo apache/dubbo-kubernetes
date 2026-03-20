@@ -93,6 +93,8 @@ type ProxyConnection struct {
 }
 
 type XdsProxy struct {
+	discovery.UnimplementedAggregatedDiscoveryServiceServer
+
 	stopChan                  chan struct{}
 	downstreamGrpcServer      *grpc.Server
 	downstreamListener        net.Listener

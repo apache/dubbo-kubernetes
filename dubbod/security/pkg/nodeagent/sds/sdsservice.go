@@ -40,6 +40,8 @@ var sdsServiceLog = log.RegisterScope("sds", "SDS service debugging")
 var connectionNumber = int64(0)
 
 type sdsservice struct {
+	sds.UnimplementedSecretDiscoveryServiceServer
+
 	st security.SecretManager
 
 	stop       chan struct{}
