@@ -39,10 +39,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
-	// core "github.com/dubbo-inherent/xds-api/core/v1"
-	core "github.com/dubbo-inherent/xds-api/core/v1"
-	// discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
-	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
+	// core "github.com/kdubbo/xds-api/core/v1"
+	core "github.com/kdubbo/xds-api/core/v1"
+	// discovery "github.com/kdubbo/xds-api/service/discovery/v1"
+	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )

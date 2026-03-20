@@ -36,7 +36,6 @@ require (
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/docker-credential-helpers v0.9.3
 	github.com/docker/go-connections v0.5.0
-	github.com/dubbo-inherent/xds-api v0.0.0-20260319085810-1bb2ae75ee3e
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
@@ -57,6 +56,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/heroku/color v0.0.6
 	github.com/howardjohn/celpp v0.1.0
+	github.com/kdubbo/xds-api v0.0.0-20260320064637-6053c9f4bc27
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1
@@ -73,8 +73,8 @@ require (
 	golang.org/x/time v0.12.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217
-	google.golang.org/grpc v1.79.1
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7
+	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.6

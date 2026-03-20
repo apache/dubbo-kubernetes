@@ -38,7 +38,7 @@ Projects are distributed across the code directory repositories:
 
 - [dubbo/api](./api). — Defines the component level APIs for the Dubbo control plane.
 
-- [dubbo/xds-api](https://github.com/dubbo-kubernetes/xds-api). — Define the xDS API for the Dubbo control plane.
+- [dubbo/xds-api](https://github.com/kdubbo/xds-api). — Define the xDS API for the Dubbo control plane.
 
 - [dubbo/client-go](./client-go). — Defines the Kubernetes clients automatically generated for Dubbo control plane resources.
 

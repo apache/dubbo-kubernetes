@@ -20,8 +20,8 @@ notifications:
     jira_options: link label
 
 github:
-  homepage: "https://dubbo-inherent.github.io/"
-  description: "Dubbo Inherent Mesh for Kubernetes."
+  homepage: "https://kdubbo.github.io"
+  description: "Embed gRPC, use xDS, build inherent mesh."
   features:
     # Enable wiki for documentation
     wiki: false

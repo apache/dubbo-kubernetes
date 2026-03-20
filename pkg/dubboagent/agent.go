@@ -43,7 +43,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/pixiu"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
-	core "github.com/dubbo-inherent/xds-api/core/v1"
+	core "github.com/kdubbo/xds-api/core/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/structpb"

@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
-	core "github.com/dubbo-inherent/xds-api/core/v1"
+	core "github.com/kdubbo/xds-api/core/v1"
 	"strconv"
 
 	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"

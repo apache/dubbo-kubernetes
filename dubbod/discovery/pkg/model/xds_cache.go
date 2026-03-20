@@ -22,8 +22,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	// discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
-	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
+	// discovery "github.com/kdubbo/xds-api/service/discovery/v1"
+	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 )
 
 type XdsCacheImpl struct {
