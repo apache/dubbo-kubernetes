@@ -21,16 +21,16 @@ import (
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
-	discovery "github.com/dubbo-inherent/xds-api/service/discovery/v1"
+	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 
 	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	cluster "github.com/dubbo-inherent/xds-api/cluster/v1"
-	core "github.com/dubbo-inherent/xds-api/core/v1"
-	tlsv1 "github.com/dubbo-inherent/xds-api/extensions/transport_sockets/tls/v1"
+	cluster "github.com/kdubbo/xds-api/cluster/v1"
+	core "github.com/kdubbo/xds-api/core/v1"
+	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 )
 
 type clusterBuilder struct {

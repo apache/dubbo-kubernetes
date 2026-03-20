@@ -28,7 +28,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
-	core "github.com/dubbo-inherent/xds-api/core/v1"
+	core "github.com/kdubbo/xds-api/core/v1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
