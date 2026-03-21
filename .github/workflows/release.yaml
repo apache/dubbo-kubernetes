@@ -60,9 +60,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Fixed 502 errors in traffic gateway requests
-            Removed some samples from the samples folder; added an httpbin sample.
-            Optimized some known features.
+            Remove envoy go-control-plane replace it with xds api.
+            Add xds metrics.
+            Remove dubboctl seek subcommand.
+            Update description and content.
           draft: false
           prerelease: false
 
