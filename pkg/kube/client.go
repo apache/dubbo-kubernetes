@@ -23,7 +23,7 @@ import (
 	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	"time"
 
-	dubboclient "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
+	dubboclient "github.com/kdubbo/client-go/pkg/clientset/versioned"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
