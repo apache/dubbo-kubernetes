@@ -18,7 +18,7 @@ package kubeclient
 
 import (
 	"context"
-	dubboclient "github.com/apache/dubbo-kubernetes/client-go/pkg/clientset/versioned"
+	dubboclient "github.com/kdubbo/client-go/pkg/clientset/versioned"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/informerfactory"
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
