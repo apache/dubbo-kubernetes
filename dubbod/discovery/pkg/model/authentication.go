@@ -19,12 +19,12 @@ package model
 import (
 	"crypto/md5"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	"github.com/kdubbo/api/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"strings"
 	"time"
 
-	typev1alpha3 "github.com/apache/dubbo-kubernetes/api/type/v1alpha3"
+	typev1alpha3 "github.com/kdubbo/api/type/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 )
 

@@ -25,8 +25,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/apache/dubbo-kubernetes/api/annotation"
-	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/kdubbo/api/annotation"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

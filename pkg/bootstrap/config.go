@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	meshAPI "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	meshAPI "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/security"

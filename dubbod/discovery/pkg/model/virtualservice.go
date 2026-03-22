@@ -17,7 +17,7 @@
 package model
 
 import (
-	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 )
 

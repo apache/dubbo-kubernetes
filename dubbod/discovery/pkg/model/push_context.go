@@ -24,12 +24,12 @@ import (
 	"sync"
 	"time"
 
-	networking "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"

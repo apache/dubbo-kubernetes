@@ -36,7 +36,7 @@ Dubbo component composition:
 Projects are distributed across the code directory repositories:
 
 
-- [dubbo/api](./api). — Defines the component level APIs for the Dubbo control plane.
+- [dubbo/api](https://github.com/kdubbo/api). — Defines the component level APIs for the Dubbo control plane.
 
 - [dubbo/xds-api](https://github.com/kdubbo/xds-api). — Define the xDS API for the Dubbo control plane.
 

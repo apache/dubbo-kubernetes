@@ -28,7 +28,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
-	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/caclient"
 	"github.com/apache/dubbo-kubernetes/pkg/channels"

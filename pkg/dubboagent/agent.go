@@ -34,7 +34,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/dubbo-agent/config"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 
-	mesh "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	mesh "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"

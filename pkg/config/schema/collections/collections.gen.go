@@ -8,10 +8,10 @@ package collections
 import (
 	"reflect"
 
-	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	githubcomapachedubbokubernetesapimetav1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
-	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
-	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
+	githubcomapachedubbokubernetesapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
+	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
+	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
@@ -95,7 +95,7 @@ var (
 		Version:    "v1alpha3",
 		Proto:      "dubbo.networking.v1alpha3.DestinationRule", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
 		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
@@ -224,7 +224,7 @@ var (
 		Version:       "v1alpha1",
 		Proto:         "dubbo.mesh.v1alpha1.MeshGlobalConfig",
 		ReflectType:   reflect.TypeOf(&githubcomapachedubbokubernetesapimeshv1alpha1.MeshGlobalConfig{}).Elem(),
-		ProtoPackage:  "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1",
+		ProtoPackage:  "github.com/kdubbo/api/mesh/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     true,
 		Builtin:       false,
@@ -284,7 +284,7 @@ var (
 		Version:    "v1alpha3",
 		Proto:      "dubbo.security.v1alpha3.PeerAuthentication", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
 		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/security/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
+		ProtoPackage: "github.com/kdubbo/api/security/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
@@ -404,7 +404,7 @@ var (
 		Version:    "v1alpha3",
 		Proto:      "dubbo.networking.v1alpha3.VirtualService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
 		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3", StatusPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1",
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,

@@ -17,7 +17,7 @@
 package kube
 
 import (
-	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"

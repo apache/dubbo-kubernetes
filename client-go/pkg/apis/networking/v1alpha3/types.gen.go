@@ -19,8 +19,8 @@
 package v1alpha3
 
 import (
-	v1alpha1 "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
-	networkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+	v1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
+	networkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
