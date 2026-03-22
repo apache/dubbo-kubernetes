@@ -17,7 +17,7 @@
 package meshwatcher
 
 import (
-	meshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"

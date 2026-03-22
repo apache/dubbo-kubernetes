@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	pb "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	pb "github.com/kdubbo/api/security/v1alpha3"
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 

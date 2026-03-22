@@ -21,7 +21,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	"time"
 
-	pb "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	pb "github.com/kdubbo/api/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	caerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"

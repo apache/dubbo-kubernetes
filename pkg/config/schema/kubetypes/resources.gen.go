@@ -3,9 +3,9 @@
 package kubetypes
 
 import (
-	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
-	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
-	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
+	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
+	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"

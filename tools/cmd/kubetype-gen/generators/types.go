@@ -64,7 +64,7 @@ func statusOverrideFromComments(commentLines []string) (string, string, bool) {
 		statusOverridSplit := strings.Split(statusOverrideLine, ":")
 		if len(statusOverridSplit) == 2 {
 			overrideName := statusOverridSplit[1]
-			return strings.TrimSpace(overrideName), "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1", true
+			return strings.TrimSpace(overrideName), "github.com/kdubbo/api/meta/v1alpha1", true
 		} else if len(statusOverridSplit) == 3 {
 			overrideName := statusOverridSplit[1]
 			overridePackage := statusOverridSplit[2]
@@ -83,7 +83,7 @@ func (g *typesGenerator) GenerateType(c *generator.Context, t *types.Type, w io.
 		"TypeMeta":    c.Universe.Type(types.Name{Name: "TypeMeta", Package: "k8s.io/apimachinery/pkg/apis/meta/v1"}),
 		"ObjectMeta":  c.Universe.Type(types.Name{Name: "ObjectMeta", Package: "k8s.io/apimachinery/pkg/apis/meta/v1"}),
 		"ListMeta":    c.Universe.Type(types.Name{Name: "ListMeta", Package: "k8s.io/apimachinery/pkg/apis/meta/v1"}),
-		"DubboStatus": c.Universe.Type(types.Name{Name: "DubboStatus", Package: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"}),
+		"DubboStatus": c.Universe.Type(types.Name{Name: "DubboStatus", Package: "github.com/kdubbo/api/meta/v1alpha1"}),
 	}
 	for _, kubeType := range kubeTypes {
 		localM := m

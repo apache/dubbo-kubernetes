@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"

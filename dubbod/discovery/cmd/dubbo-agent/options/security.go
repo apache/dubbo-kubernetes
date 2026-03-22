@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	serviceRouteIndex "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	serviceRouteIndex "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/credentialfetcher"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/cafile"

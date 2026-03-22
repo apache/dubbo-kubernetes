@@ -17,7 +17,7 @@
 package mesh
 
 import (
-	"github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+	"github.com/kdubbo/api/mesh/v1alpha1"
 )
 
 // Holder of a mesh configuration.
