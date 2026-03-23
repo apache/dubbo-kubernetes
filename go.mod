@@ -178,6 +178,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kdubbo/api v0.0.0-20260322192101-bf9af0bbaf5e // indirect
+	github.com/kdubbo/client-go v0.0.0-20260322200550-82e70d319918 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
@@ -265,7 +266,6 @@ replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker => github.com/docker/docker v23.0.1+incompatible
 	github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.20.2
-	github.com/kdubbo/client-go => ../client-go
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
 )
