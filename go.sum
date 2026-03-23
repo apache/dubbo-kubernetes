@@ -360,6 +360,8 @@ github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 h1:Z9n2FFNU
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51/go.mod h1:CzGEWj7cYgsdH8dAjBGEr58BoE7ScuLd+fwFZ44+/x8=
 github.com/kdubbo/api v0.0.0-20260322192101-bf9af0bbaf5e h1:mAYnaUnTLOUCNMiZmoUz6f48e6zgBknHZXM9tBD3a+g=
 github.com/kdubbo/api v0.0.0-20260322192101-bf9af0bbaf5e/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
+github.com/kdubbo/client-go v0.0.0-20260322200550-82e70d319918 h1:kuYcq5hiqz0NWARGWJruULeIJx981tNJS3Taryx8qeg=
+github.com/kdubbo/client-go v0.0.0-20260322200550-82e70d319918/go.mod h1:pyJE9XEtRt+hlHAJdi9mxD9f1v9cDZCGJzDe4gK+TMw=
 github.com/kdubbo/xds-api v0.0.0-20260320064637-6053c9f4bc27 h1:k/TocMoUpZjxy9Iv9j8XGjobs3hI06Hz0u6azpOY9CE=
 github.com/kdubbo/xds-api v0.0.0-20260320064637-6053c9f4bc27/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=
