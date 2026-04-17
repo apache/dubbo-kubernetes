@@ -26,8 +26,8 @@ import (
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
-	operator "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
-	operatorvalidate "github.com/apache/dubbo-kubernetes/operator/pkg/apis/validation"
+	operator "github.com/apache/dubbo-kubernetes/dubbooperator/pkg/apis"
+	operatorvalidate "github.com/apache/dubbo-kubernetes/dubbooperator/pkg/apis/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/hashicorp/go-multierror"

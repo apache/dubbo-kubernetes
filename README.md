@@ -1,8 +1,4 @@
-<p align="center">
-  <a href="https://dubbo.apache.org">
-    <img src="logo/dubbo-transparentbackground-unframed.svg" alt="Apache Dubbo" title="Apache Dubbo" width="240" height="320" >
-  </a>
-</p>
+<h1 align="center">Apache Kdubbo</h1>
 
 <p align="center">
   <a href="https://pkg.go.dev/github.com/apache/dubbo-kubernetes">
@@ -17,13 +13,12 @@
   <img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" />
 </p>
 
-<h2 align="center">Dubbo Inherent Mesh for Kubernetes</h2>
-
 Dubbo inherent mesh implemented for the underlying cluster management platform can directly receive policies from the control plane and obtain features such as load balancing, service discovery, and observability without requiring a sidecar proxy.
 
 ## Introduction
 
-> ⚠️ Current version is in the **Alpha** phase. The `0.5.0` release will be the first **RC** phase.
+> [!WARNING]
+> Current version is in the **Alpha** phase. The `0.5.0` release will be the first **RC** phase.
 
 Dubbo’s control plane provides an abstraction layer over the underlying cluster management platform.
 
@@ -33,10 +28,9 @@ Dubbo component composition:
 
 - **dubbo-go-pixiu** — Used for ingress/egress traffic between services in the cluster and external services.
 
-## Directory Repositories
+## Repositories
 
 Projects are distributed across the code directory repositories:
-
 
 - [dubbo/api](https://github.com/kdubbo/api). — Defines the component level APIs for the Dubbo control plane.
 
@@ -48,7 +42,7 @@ Projects are distributed across the code directory repositories:
 
 - [dubbo/dubbod](./dubbod) — The main code directory for the Dubbo control plane.
 
-- [dubbo/operator](./operator). — Provides user friendly options for operating the service mesh.
+- [dubbo/operator](./dubbooperator). — Provides user friendly options for operating the service mesh.
 
 ## Contributing
 

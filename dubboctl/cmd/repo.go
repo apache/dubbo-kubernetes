@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/util"
-	"github.com/apache/dubbo-kubernetes/operator/cmd/cluster"
+	"github.com/apache/dubbo-kubernetes/dubbooperator/cmd/cluster"
 	"github.com/spf13/cobra"
 )
 

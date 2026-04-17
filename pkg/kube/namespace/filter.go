@@ -27,13 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	meshapi "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	meshapi "github.com/kdubbo/api/mesh/v1alpha1"
 
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 )
@@ -296,7 +296,7 @@ func LabelSelectorAsSelector(ps *meshapi.LabelSelector) (labels.Selector, error)
 		case metav1.LabelSelectorOpDoesNotExist:
 			op = selection.DoesNotExist
 		default:
-			return nil, fmt.Errorf("%q is not a valid label selector operator", expr.Operator)
+			return nil, fmt.Errorf("%q is not a valid label selector dubbooperator", expr.Operator)
 		}
 		r, err := labels.NewRequirement(expr.Key, op, append([]string(nil), expr.Values...))
 		if err != nil {
