@@ -58,7 +58,7 @@ const (
 const (
 	// selfSignedCA means the Dubbo CA uses a self signed certificate.
 	selfSignedCA caTypes = iota
-	// pluggedCertCA means the Dubbo CA uses a operator-specified key/cert.
+	// pluggedCertCA means the Dubbo CA uses a dubbooperator-specified key/cert.
 	pluggedCertCA
 )
 

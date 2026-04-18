@@ -1,0 +1,157 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: dubbo-proxyless-injector
+  labels:
+    app: dubbod
+    dubbo.apache.org/rev: default
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    failurePolicy: Fail
+    name: rev.namespace.proxyless-injector.dubbo.apache.org
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo.apache.org/rev
+          operator: In
+          values:
+            - default
+        - key: dubbo-injection
+          operator: DoesNotExist
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.apache.org/inject
+          operator: NotIn
+          values:
+            - "false"
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    failurePolicy: Fail
+    name: rev.object.proxyless-injector.dubbo.apache.org
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo.apache.org/rev
+          operator: DoesNotExist
+        - key: dubbo-injection
+          operator: DoesNotExist
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.apache.org/inject
+          operator: NotIn
+          values:
+            - "false"
+        - key: dubbo.apache.org/rev
+          operator: In
+          values:
+            - default
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    name: namespace.proxyless-injector.dubbo.apache.org
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo-injection
+          operator: In
+          values:
+            - enabled
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.apache.org/inject
+          operator: NotIn
+          values:
+            - "false"
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: /inject
+        port: 443
+    name: object.proxyless-injector.dubbo.apache.org
+    namespaceSelector:
+      matchExpressions:
+        - key: dubbo-injection
+          operator: DoesNotExist
+    objectSelector:
+      matchExpressions:
+        - key: proxyless.dubbo.apache.org/inject
+          operator: In
+          values:
+            - "true"
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None

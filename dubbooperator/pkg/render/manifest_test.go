@@ -1,4 +1,3 @@
-//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.
@@ -14,29 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cli
+package render
 
-import (
-	"github.com/apache/dubbo-kubernetes/dubbooperator/pkg/util/ptr"
-	"github.com/spf13/pflag"
-)
+import "testing"
 
-const (
-	KubeConfigFlag = "kubeconfig"
-	ContextFlag    = "context"
-)
-
-type RootFlags struct {
-	kubeconfig *string
-	Context    *string
-}
-
-func AddRootFlags(flags *pflag.FlagSet) *RootFlags {
-	rootFlags := &RootFlags{
-		kubeconfig: ptr.Of[string](""),
-		Context:    ptr.Of[string](""),
+func TestGenerateManifestUsesEmbeddedInstallerAssets(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
 	}
-	flags.StringVarP(rootFlags.kubeconfig, KubeConfigFlag, "c", "", "Kubernetes configuration file")
-	flags.StringVar(rootFlags.Context, ContextFlag, "", "Kubernetes configuration context")
-	return rootFlags
+	if len(manifests) == 0 {
+		t.Fatal("GenerateManifest() returned zero manifest sets")
+	}
 }

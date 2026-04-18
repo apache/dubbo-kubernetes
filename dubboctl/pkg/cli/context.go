@@ -17,7 +17,7 @@
 package cli
 
 import (
-	"github.com/apache/dubbo-kubernetes/operator/pkg/util/ptr"
+	"github.com/apache/dubbo-kubernetes/dubbooperator/pkg/util/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"k8s.io/client-go/rest"
 )

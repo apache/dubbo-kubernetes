@@ -143,13 +143,13 @@ jobs:
           version: '3.13.0'
 
       - name: Lint base chart
-        run: helm lint manifests/charts/base
+        run: helm lint dubboinstaller/charts/base
 
-      - name: Lint dubbo-discovery chart
-        run: helm lint manifests/charts/dubbo-control/dubbo-discovery
+      - name: Lint dubbod chart
+        run: helm lint dubboinstaller/charts/dubbod
 
       - name: Validate base chart template rendering
-        run: helm template test-release manifests/charts/base --debug
+        run: helm template test-release dubboinstaller/charts/base --debug
 
-      - name: Validate dubbo-discovery chart template rendering
-        run: helm template test-release manifests/charts/dubbo-control/dubbo-discovery --debug
+      - name: Validate dubbod chart template rendering
+        run: helm template test-release dubboinstaller/charts/dubbod --debug

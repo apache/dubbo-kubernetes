@@ -17,8 +17,9 @@ Dubbo inherent mesh implemented for the underlying cluster management platform c
 
 ## Introduction
 
-> ⚠ Current version is in the **Alpha** phase. The `0.5.0` release will be the first **RC** phase.
-
+> [!WARNING]
+> Current version is in the **Alpha** phase. The `0.5.0` release will be the first **RC** phase.
+> 
 Dubbo’s control plane provides an abstraction layer over the underlying cluster management platform.
 
 Dubbo component composition:
@@ -41,7 +42,7 @@ Projects are distributed across the code directory repositories:
 
 - [dubbo/dubbod](./dubbod) — The main code directory for the Dubbo control plane.
 
-- [dubbo/operator](./operator). — Provides user friendly options for operating the service mesh.
+- [dubbo/operator](./dubbooperator). — Provides user friendly options for operating the service mesh.
 
 ## Contributing
 

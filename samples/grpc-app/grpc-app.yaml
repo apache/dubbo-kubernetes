@@ -44,7 +44,7 @@ spec:
     metadata:
       annotations:
         proxyless.dubbo.apache.org/inject: "true"
-        inject.dubbo.apache.org/templates: grpc-agent
+        inject.dubbo.apache.org/templates: grpc-engine
       labels:
         app: provider
         version: v1
@@ -113,7 +113,7 @@ spec:
     metadata:
       annotations:
         proxyless.dubbo.apache.org/inject: "true"
-        inject.dubbo.apache.org/templates: grpc-agent
+        inject.dubbo.apache.org/templates: grpc-engine
       labels:
         app: provider
         version: v2
@@ -181,7 +181,7 @@ spec:
     metadata:
       annotations:
         proxyless.dubbo.apache.org/inject: "true"
-        inject.dubbo.apache.org/templates: grpc-agent
+        inject.dubbo.apache.org/templates: grpc-engine
       labels:
         app: consumer
     spec:
