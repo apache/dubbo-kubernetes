@@ -19,7 +19,7 @@ Dubbo inherent mesh implemented for the underlying cluster management platform c
 
 > [!WARNING]
 > Current version is in the **Alpha** phase. The `0.5.0` release will be the first **RC** phase.
-
+> 
 Dubbo’s control plane provides an abstraction layer over the underlying cluster management platform.
 
 Dubbo component composition:
