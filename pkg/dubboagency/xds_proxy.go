@@ -14,33 +14,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dubboagent
+package dubboagency
 
 import (
 	"context"
 	"fmt"
 	"math"
 	"net"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/caclient"
 	"github.com/apache/dubbo-kubernetes/pkg/channels"
 	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
-	"github.com/apache/dubbo-kubernetes/pkg/pixiu"
 	"github.com/apache/dubbo-kubernetes/pkg/uds"
-	cluster "github.com/kdubbo/xds-api/cluster/v1"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	core "github.com/kdubbo/xds-api/core/v1"
-	endpoint "github.com/kdubbo/xds-api/endpoint/v1"
-	listener "github.com/kdubbo/xds-api/listener/v1"
-	route "github.com/kdubbo/xds-api/route/v1"
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 	"go.uber.org/atomic"
 	google_rpc "google.golang.org/genproto/googleapis/rpc/status"
@@ -119,10 +113,6 @@ type XdsProxy struct {
 	bootstrapNode *core.Node
 	ConnMutex     sync.RWMutex
 	Conn          *ProxyConnection
-
-	pixiuConverter      *pixiu.ConfigConverter
-	pixiuConfigPath     string
-	pixiuConverterMutex sync.RWMutex
 }
 
 func initXdsProxy(ia *Agent) (*XdsProxy, error) {
@@ -144,17 +134,6 @@ func initXdsProxy(ia *Agent) (*XdsProxy, error) {
 	// Initialize dial options immediately, required for connecting to upstream
 	if err = proxy.initDubbodDialOptions(ia); err != nil {
 		return nil, fmt.Errorf("failed to init dubbod dial options: %v", err)
-	}
-
-	// Initialize Pixiu converter for router mode (Gateway Pods)
-	if ia.cfg.ProxyType == model.Router {
-		proxy.pixiuConverter = pixiu.NewConfigConverter()
-		// Get Pixiu config path from environment variable or use default
-		proxy.pixiuConfigPath = os.Getenv("PROXY_CONFIG_PATH")
-		if proxy.pixiuConfigPath == "" {
-			proxy.pixiuConfigPath = "/etc/pixiu/config/pixiu.yaml"
-		}
-		proxyLog.Infof("Initialized Pixiu converter for router mode, config path: %s", proxy.pixiuConfigPath)
 	}
 
 	proxyLog.Infof("Initializing with upstream address %q and cluster %q", proxy.dubbodAddress, proxy.clusterID)
@@ -559,11 +538,6 @@ func (p *XdsProxy) handleUpstreamResponse(con *ProxyConnection) {
 				}
 			}
 
-			// Update Pixiu config for router mode (Gateway Pods)
-			if p.pixiuConverter != nil {
-				p.updatePixiuConfig(resp)
-			}
-
 			// Forward all non-internal responses to downstream (gRPC client)
 			proxyLog.Debugf("connection #%d forwarding response to downstream: TypeUrl=%s, Resources=%d, VersionInfo=%s",
 				con.conID, model.GetShortType(resp.TypeUrl), len(resp.Resources), resp.VersionInfo)
@@ -878,81 +852,6 @@ func (p *XdsProxy) establishConnection(ia *Agent) (<-chan struct{}, error) {
 	// Return immediately - connection is connected and running in background
 	// The connDone channel will be closed when connection terminates
 	return connDone, nil
-}
-
-// updatePixiuConfig updates Pixiu configuration from xDS responses
-func (p *XdsProxy) updatePixiuConfig(resp *discovery.DiscoveryResponse) {
-	if p.pixiuConverter == nil {
-		return
-	}
-
-	p.pixiuConverterMutex.Lock()
-	defer p.pixiuConverterMutex.Unlock()
-
-	// Process different xDS resource types
-	switch resp.TypeUrl {
-	case model.ListenerType:
-		for _, resource := range resp.Resources {
-			var l listener.Listener
-			if err := resource.UnmarshalTo(&l); err != nil {
-				proxyLog.Warnf("Failed to unmarshal listener: %v", err)
-				continue
-			}
-			p.pixiuConverter.UpdateListener(l.Name, &l)
-			proxyLog.Debugf("Updated Pixiu listener: %s", l.Name)
-		}
-	case model.RouteType:
-		for _, resource := range resp.Resources {
-			var r route.RouteConfiguration
-			if err := resource.UnmarshalTo(&r); err != nil {
-				proxyLog.Warnf("Failed to unmarshal route: %v", err)
-				continue
-			}
-			p.pixiuConverter.UpdateRoute(r.Name, &r)
-			proxyLog.Debugf("Updated Pixiu route: %s", r.Name)
-		}
-	case model.ClusterType:
-		for _, resource := range resp.Resources {
-			var c cluster.Cluster
-			if err := resource.UnmarshalTo(&c); err != nil {
-				proxyLog.Warnf("Failed to unmarshal cluster: %v", err)
-				continue
-			}
-			p.pixiuConverter.UpdateCluster(c.Name, &c)
-			proxyLog.Debugf("Updated Pixiu cluster: %s", c.Name)
-		}
-	case model.EndpointType:
-		for _, resource := range resp.Resources {
-			var e endpoint.ClusterLoadAssignment
-			if err := resource.UnmarshalTo(&e); err != nil {
-				proxyLog.Warnf("Failed to unmarshal endpoint: %v", err)
-				continue
-			}
-			p.pixiuConverter.UpdateEndpoint(e.ClusterName, &e)
-			proxyLog.Debugf("Updated Pixiu endpoint: %s", e.ClusterName)
-		}
-	}
-
-	// Convert to Pixiu config and write to file
-	configData, err := p.pixiuConverter.ConvertToPixiuConfig()
-	if err != nil {
-		proxyLog.Errorf("Failed to convert to Pixiu config: %v", err)
-		return
-	}
-
-	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(p.pixiuConfigPath), 0755); err != nil {
-		proxyLog.Errorf("Failed to create Pixiu config directory: %v", err)
-		return
-	}
-
-	// Write config file
-	if err := os.WriteFile(p.pixiuConfigPath, configData, 0644); err != nil {
-		proxyLog.Errorf("Failed to write Pixiu config: %v", err)
-		return
-	}
-
-	proxyLog.Infof("Updated Pixiu config at %s", p.pixiuConfigPath)
 }
 
 func (p *XdsProxy) close() {

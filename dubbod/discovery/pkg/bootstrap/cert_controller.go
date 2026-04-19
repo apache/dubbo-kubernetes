@@ -27,6 +27,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/k8s/chiron"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
+	pkiutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	certutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
@@ -147,7 +148,7 @@ func (s *Server) initDNSCertsDubbod() error {
 	if err != nil {
 		return fmt.Errorf("failed generating dubbod key cert %v", err)
 	}
-	log.Infof("Generating dubbod-signed cert for %v:\n %s", s.dnsNames, certChain)
+	log.Infof("Generating dubbod-signed cert for %v: %s", s.dnsNames, certificateChainSummary(certChain))
 
 	fileBundle, err := detectSigningCABundleAndCRL()
 	if err != nil {
@@ -193,6 +194,26 @@ func (s *Server) initDNSCertsDubbod() error {
 	}
 	s.dubbodCertBundleWatcher.SetAndNotify(keyPEM, certChain, caBundle)
 	return nil
+}
+
+func certificateChainSummary(certPEM []byte) string {
+	certs, _, err := pkiutil.ParsePemEncodedCertificateChain(certPEM)
+	if err != nil {
+		return fmt.Sprintf("bundle_bytes=%d parse_error=%v", len(certPEM), err)
+	}
+
+	parts := make([]string, 0, len(certs))
+	for i, cert := range certs {
+		parts = append(parts, fmt.Sprintf(
+			"cert[%d]{subject=%q issuer=%q serial=%x not_after=%q}",
+			i,
+			cert.Subject.String(),
+			cert.Issuer.String(),
+			cert.SerialNumber,
+			cert.NotAfter.Format(time.RFC3339),
+		))
+	}
+	return strings.Join(parts, ", ")
 }
 
 func (s *Server) watchRootCertAndGenKeyCert(stop <-chan struct{}) {

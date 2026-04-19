@@ -41,7 +41,9 @@ import (
 )
 
 const (
-	firstRetryBackOffDuration = 50 * time.Millisecond
+	firstRetryBackOffDuration   = 50 * time.Millisecond
+	workloadSecretRotationRatio = 4
+	workloadSecretRotationBase  = 5
 )
 
 var cacheLog = dubbolog.RegisterScope("cache", "cache debugging")
@@ -340,7 +342,8 @@ func (sc *SecretManagerClient) registerSecret(item security.SecretItem) {
 		return
 	}
 	sc.cache.SetWorkload(&item)
-	cacheLog.Debugf("Scheduled certificate for rotation, resource=%s", item.ResourceName)
+	delay := workloadSecretRotationDelay(item)
+	cacheLog.Debugf("Scheduled certificate for rotation, resource=%s, delay=%v", item.ResourceName, delay)
 	sc.queue.PushDelayed(func() error {
 		// In case `UpdateConfigTrustBundle` called, it will resign workload cert.
 		// Check if this is a stale scheduled rotating task.
@@ -352,7 +355,20 @@ func (sc *SecretManagerClient) registerSecret(item security.SecretItem) {
 			}
 		}
 		return nil
-	}, 0)
+	}, delay)
+}
+
+func workloadSecretRotationDelay(item security.SecretItem) time.Duration {
+	lifetime := item.ExpireTime.Sub(item.CreatedTime)
+	if lifetime <= 0 {
+		return 0
+	}
+	rotateAt := item.CreatedTime.Add(lifetime * workloadSecretRotationRatio / workloadSecretRotationBase)
+	delay := time.Until(rotateAt)
+	if delay < 0 {
+		return 0
+	}
+	return delay
 }
 
 func (sc *SecretManagerClient) mergeTrustAnchorBytes(caCerts []byte) []byte {

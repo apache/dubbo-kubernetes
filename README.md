@@ -26,8 +26,6 @@ Dubbo component composition:
 
 - **dubbod** — Dubbo xDS control plane. It provides service discovery, configuration and certificate issuance.
 
-- **dubbo-go-pixiu** — Used for ingress/egress traffic between services in the cluster and external services.
-
 ## Repositories
 
 Projects are distributed across the code directory repositories:

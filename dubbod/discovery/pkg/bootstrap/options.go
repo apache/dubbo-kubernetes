@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/env"
 	"github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"os"
 )
 
 var (
@@ -73,9 +74,9 @@ type TLSOptions struct {
 }
 
 func (p *DubboArgs) applyDefaults() {
-	p.Namespace = PodNamespace
-	p.PodName = PodName
-	p.Revision = Revision
+	p.Namespace = lookupEnvOrDefault("POD_NAMESPACE", constants.DubboSystemNamespace)
+	p.PodName = lookupEnvOrDefault("POD_NAME", "")
+	p.Revision = lookupEnvOrDefault("REVISION", "")
 	p.KeepaliveOptions = keepalive.DefaultOption()
 	p.RegistryOptions.ClusterRegistriesNamespace = p.Namespace
 }
@@ -90,4 +91,11 @@ func NewDubboArgs(initFuncs ...func(*DubboArgs)) *DubboArgs {
 	}
 
 	return p
+}
+
+func lookupEnvOrDefault(name, defaultValue string) string {
+	if value, ok := os.LookupEnv(name); ok {
+		return value
+	}
+	return defaultValue
 }
