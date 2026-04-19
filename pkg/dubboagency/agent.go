@@ -14,15 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dubboagent
+package dubboagency
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/dubbo-kubernetes/dubbod/agency/config"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -31,18 +31,16 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/dubbo-agent/config"
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 
-	mesh "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/cache"
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
 	"github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagent/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
-	"github.com/apache/dubbo-kubernetes/pkg/pixiu"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
+	mesh "github.com/kdubbo/api/mesh/v1alpha1"
 	core "github.com/kdubbo/xds-api/core/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -90,9 +88,6 @@ type Agent struct {
 	xdsProxy    *XdsProxy
 	fileWatcher filewatcher.FileWatcher
 	statusSrv   *http.Server
-
-	// Pixiu agent for router mode (Gateway Pods)
-	pixiuAgent *pixiu.Agent
 
 	wg sync.WaitGroup
 }
@@ -227,18 +222,7 @@ func (a *Agent) Run(ctx context.Context) (func(), error) {
 		a.xdsProxy.SetBootstrapNode(bootstrapNode)
 	}
 
-	// Initialize and start Pixiu for router mode (Gateway Pods)
-	if a.cfg.ProxyType == model.Router {
-		if err := a.initializePixiuAgent(ctx); err != nil {
-			return nil, fmt.Errorf("failed to initialize Pixiu agent: %v", err)
-		}
-
-		a.wg.Add(1)
-		go func() {
-			defer a.wg.Done()
-			a.pixiuAgent.Run(ctx)
-		}()
-	} else if a.WaitForSigterm() {
+	if a.WaitForSigterm() {
 		// wait for SIGTERM and perform graceful shutdown
 		a.wg.Add(1)
 		go func() {
@@ -642,65 +626,4 @@ func checkSocket(ctx context.Context, socketPath string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (a *Agent) initializePixiuAgent(_ context.Context) error {
-	configPath := os.Getenv("PROXY_CONFIG_PATH")
-	if configPath == "" {
-		configPath = "/etc/pixiu/config/pixiu.yaml"
-	}
-
-	binaryPath := os.Getenv("PROXY_BINARY_PATH")
-	if binaryPath == "" {
-		possiblePaths := []string{
-			"/usr/local/bin/pixiu-proxy",
-			"pixiu-proxy",
-		}
-
-		found := false
-		for _, path := range possiblePaths {
-			if strings.Contains(path, "/") {
-				if _, err := os.Stat(path); err == nil {
-					binaryPath = path
-					found = true
-					break
-				}
-			} else {
-				if fullPath, err := exec.LookPath(path); err == nil {
-					binaryPath = fullPath
-					found = true
-					break
-				}
-			}
-		}
-
-		if !found {
-			return fmt.Errorf("gateway binary pixiu not found.")
-		}
-	}
-
-	if _, err := os.Stat(binaryPath); err != nil {
-		return fmt.Errorf("gateway binary not found at %s: %v", binaryPath, err)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		return fmt.Errorf("failed to create proxy config directory: %v", err)
-	}
-
-	pixiuOptions := pixiu.ProxyConfig{
-		ConfigPath:    configPath,
-		ConfigCleanup: false, // Don't cleanup config file
-		BinaryPath:    binaryPath,
-	}
-
-	terminationDrainDuration := 45 * time.Second // Default drain duration
-	if a.proxyConfig.DrainDuration != nil {
-		terminationDrainDuration = a.proxyConfig.DrainDuration.AsDuration()
-	}
-	minDrainDuration := 5 * time.Second
-
-	pixiuProxy := pixiu.NewProxy(pixiuOptions)
-	a.pixiuAgent = pixiu.NewAgent(pixiuProxy, terminationDrainDuration, minDrainDuration)
-
-	return nil
 }

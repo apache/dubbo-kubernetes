@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	admissionv1 "k8s.io/api/admission/v1"
 	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -32,6 +33,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	opconfig "github.com/apache/dubbo-kubernetes/dubbooperator/pkg/apis"
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
@@ -48,10 +50,7 @@ import (
 )
 
 const (
-	watchDebounceDelay   = 100 * time.Millisecond
-	grpcBootstrapPath    = "/etc/dubbo/proxy/grpc-bootstrap.json"
-	proxyVolumeMountPath = "/etc/dubbo/proxy"
-	proxyVolumeName      = "dubbo-xds"
+	watchDebounceDelay = 100 * time.Millisecond
 )
 
 var webhookLog = dubbolog.RegisterScope("webhook", "webhook debugging")
@@ -374,8 +373,10 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 
 	overwriteClusterInfo(pod, req)
 
-	// Add GRPC_XDS_BOOTSTRAP env and volume mount to all application containers (non-proxy containers)
-	addApplicationContainerConfig(pod)
+	if shouldInjectProxylessGRPC(req) {
+		// Add proxyless gRPC env and shared bootstrap/cert volume to application containers.
+		addApplicationContainerConfig(pod, req)
+	}
 
 	if err := reorderPod(pod, req); err != nil {
 		return err
@@ -384,71 +385,156 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	return nil
 }
 
-// addApplicationContainerConfig adds GRPC_XDS_BOOTSTRAP environment variable and
-// /etc/dubbo/proxy volume mount to all application containers (non-proxy containers)
-// to enable them to connect to the XDS proxy via UDS socket
-func addApplicationContainerConfig(pod *corev1.Pod) {
-	// Ensure the volume exists in pod spec
-	hasProxyVolume := false
-	for _, vol := range pod.Spec.Volumes {
-		if vol.Name == proxyVolumeName {
-			hasProxyVolume = true
+func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
+	discoveryAddress := ""
+	trustDomain := constants.DefaultClusterLocalDomain
+	if req.meshGlobalConfig != nil {
+		if cfg := req.meshGlobalConfig.GetDefaultConfig(); cfg != nil {
+			discoveryAddress = cfg.GetDiscoveryAddress()
+		}
+		if req.meshGlobalConfig.GetTrustDomain() != "" {
+			trustDomain = req.meshGlobalConfig.GetTrustDomain()
+		}
+	}
+	if discoveryAddress == "" && req.proxyConfig != nil {
+		discoveryAddress = req.proxyConfig.GetDiscoveryAddress()
+	}
+
+	secretName := ProxylessGRPCSecretName(pod.Name)
+	desiredVolume := corev1.Volume{
+		Name: ProxylessXDSVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  secretName,
+				DefaultMode: func() *int32 { v := int32(0o420); return &v }(),
+			},
+		},
+	}
+	updated := false
+	for i := range pod.Spec.Volumes {
+		if pod.Spec.Volumes[i].Name == ProxylessXDSVolumeName {
+			pod.Spec.Volumes[i] = desiredVolume
+			updated = true
 			break
 		}
 	}
-	if !hasProxyVolume {
-		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
-			Name: proxyVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium: corev1.StorageMediumMemory,
-				},
-			},
-		})
+	if !updated {
+		pod.Spec.Volumes = append(pod.Spec.Volumes, desiredVolume)
 	}
 
-	// Add env and volume mount to all non-proxy containers
 	for i := range pod.Spec.Containers {
 		container := &pod.Spec.Containers[i]
-		// Skip proxy container and validation container
-		// Note: Using string literal to avoid import cycle - ProxyContainerName is defined in inject.go
 		if container.Name == "dubbo-proxy" || container.Name == "dubbo-validation" {
 			continue
 		}
 
-		// Add GRPC_XDS_BOOTSTRAP environment variable if not already present
-		hasGRPCBootstrapEnv := false
-		for _, env := range container.Env {
-			if env.Name == "GRPC_XDS_BOOTSTRAP" {
-				hasGRPCBootstrapEnv = true
-				break
-			}
-		}
-		if !hasGRPCBootstrapEnv {
-			container.Env = append(container.Env, corev1.EnvVar{
-				Name:  "GRPC_XDS_BOOTSTRAP",
-				Value: grpcBootstrapPath,
-			})
-			webhookLog.Infof("Injection: Added GRPC_XDS_BOOTSTRAP=%s env to application container %s", grpcBootstrapPath, container.Name)
-		}
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "GRPC_XDS_BOOTSTRAP",
+			Value: ProxylessGRPCBootstrapPath,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT",
+			Value: "true",
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "DUBBO_GRPC_XDS_CREDENTIALS",
+			Value: "true",
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "DUBBO_GRPC_XDS_RESOLVER",
+			Value: "xds:///",
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "DUBBO_META_GENERATOR",
+			Value: "grpc",
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "DUBBO_META_CLUSTER_ID",
+			Value: constants.DefaultClusterName,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name: "DUBBO_META_NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+			},
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "CA_ADDR",
+			Value: discoveryAddress,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "DUBBO_META_MESH_ID",
+			Value: trustDomain,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  "TRUST_DOMAIN",
+			Value: trustDomain,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name: "POD_NAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
+			},
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name: "POD_NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+			},
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name: "INSTANCE_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"},
+			},
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name: "SERVICE_ACCOUNT",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
+			},
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name: "HOST_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.hostIP"},
+			},
+		})
 
-		// Add volume mount for /etc/dubbo/proxy if not already present
 		hasProxyVolumeMount := false
 		for _, vm := range container.VolumeMounts {
-			if vm.Name == proxyVolumeName {
+			if vm.Name == ProxylessXDSVolumeName {
 				hasProxyVolumeMount = true
 				break
 			}
 		}
 		if !hasProxyVolumeMount {
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-				Name:      proxyVolumeName,
-				MountPath: proxyVolumeMountPath,
-				ReadOnly:  false,
+				Name:      ProxylessXDSVolumeName,
+				MountPath: ProxylessXDSMountPath,
+				ReadOnly:  true,
 			})
-			webhookLog.Infof("Injection: Added /etc/dubbo/proxy volume mount to application container %s", container.Name)
+			webhookLog.Infof("Injection: Added %s volume mount to application container %s", ProxylessXDSMountPath, container.Name)
 		}
 	}
+}
+
+func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {
+	for _, env := range envs {
+		if env.Name == desired.Name {
+			return envs
+		}
+	}
+	return append(envs, desired)
+}
+
+func shouldInjectProxylessGRPC(req InjectionParameters) bool {
+	for _, templateName := range selectTemplates(req) {
+		if templateName == ProxylessGRPCTemplateName {
+			return true
+		}
+	}
+	return false
 }
 
 func reorderPod(pod *corev1.Pod, req InjectionParameters) error {

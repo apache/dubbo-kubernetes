@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
@@ -38,6 +37,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
+	"github.com/kdubbo/api/mesh/v1alpha1"
 	cluster "github.com/kdubbo/xds-api/cluster/v1"
 	endpoint "github.com/kdubbo/xds-api/endpoint/v1"
 	listener "github.com/kdubbo/xds-api/listener/v1"

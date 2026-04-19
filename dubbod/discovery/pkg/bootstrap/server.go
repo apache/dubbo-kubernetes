@@ -30,7 +30,6 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/status"
 
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/keycertbundle"
@@ -65,6 +64,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/fsnotify/fsnotify"
 	grpcprom "github.com/grpc-ecosystem/go-grpc-prometheus"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -127,8 +127,9 @@ type Server struct {
 
 	krtDebugger *krt.DebugHandler
 
-	RWConfigStore model.ConfigStoreController
-	statusManager *status.Manager
+	RWConfigStore                   model.ConfigStoreController
+	proxylessGRPCWorkloadController *proxylessGRPCWorkloadController
+	statusManager                   *status.Manager
 }
 
 type readinessFlags struct {
@@ -548,6 +549,9 @@ func (s *Server) initReadinessProbes() {
 		"discovery": func() bool {
 			return s.XDSServer.IsServerReady()
 		},
+		"proxyless grpc workloads": func() bool {
+			return s.proxylessGRPCWorkloadController == nil || s.proxylessGRPCWorkloadController.HasSynced()
+		},
 		"proxyless injector": func() bool {
 			return s.readinessFlags.InjectorReady.Load()
 		},
@@ -646,6 +650,9 @@ func (s *Server) initControllers(args *DubboArgs) error {
 	}
 	if err := s.initServiceControllers(args); err != nil {
 		return fmt.Errorf("error initializing service controllers: %v", err)
+	}
+	if err := s.initProxylessGRPCWorkloads(); err != nil {
+		return fmt.Errorf("error initializing proxyless grpc workloads: %v", err)
 	}
 	return nil
 }
@@ -785,6 +792,9 @@ func (s *Server) cachesSynced() bool {
 		return false
 	}
 	if !s.configController.HasSynced() {
+		return false
+	}
+	if s.proxylessGRPCWorkloadController != nil && !s.proxylessGRPCWorkloadController.HasSynced() {
 		return false
 	}
 	return true

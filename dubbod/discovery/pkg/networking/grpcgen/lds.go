@@ -26,7 +26,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagent/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/wellknown"
 	core "github.com/kdubbo/xds-api/core/v1"

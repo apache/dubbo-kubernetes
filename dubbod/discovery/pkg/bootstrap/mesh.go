@@ -19,15 +19,18 @@ package bootstrap
 import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"os"
+	"reflect"
+	"strings"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/kubemesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/filewatcher"
+	dubbokeepalive "github.com/apache/dubbo-kubernetes/pkg/keepalive"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -39,9 +42,8 @@ func (s *Server) initMeshGlobalConfiguration(args *DubboArgs, fileWatcher filewa
 	col := s.getMeshGlobalConfiguration(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
 	s.environment.Watcher = meshwatcher.ConfigAdapter(col)
-	log.Infof("mesh global configuration: %s", meshwatcher.PrettyFormatOfMeshGlobalConfig(s.environment.Mesh()))
-	argsdump, _ := yaml.Marshal(args)
-	log.Infof("flags: \n%s", argsdump)
+	log.Infof("mesh global configuration: %s", compactMeshGlobalConfig(s.environment.Mesh()))
+	log.Infof("flags: %s", compactDubboArgs(args))
 }
 
 func (s *Server) getMeshGlobalConfiguration(args *DubboArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshGlobalConfigResource] {
@@ -88,4 +90,177 @@ func getMeshGlobalConfigMapName(revision string) string {
 		return name
 	}
 	return name + "-" + revision
+}
+
+func compactMeshGlobalConfig(cfg *meshv1alpha1.MeshGlobalConfig) string {
+	if cfg == nil {
+		return "<nil>"
+	}
+
+	parts := []string{
+		formatDurationField("connect_timeout", cfg.GetConnectTimeout()),
+		formatStringField("trust_domain", cfg.GetTrustDomain()),
+		formatStringField("root_namespace", cfg.GetRootNamespace()),
+		formatDurationField("dns_refresh_rate", cfg.GetDnsRefreshRate()),
+		formatStringSliceField("service_export_to", cfg.GetDefaultServiceExportTo()),
+		formatStringSliceField("virtual_service_export_to", cfg.GetDefaultVirtualServiceExportTo()),
+		formatStringSliceField("destination_rule_export_to", cfg.GetDefaultDestinationRuleExportTo()),
+	}
+
+	if defaultCfg := cfg.GetDefaultConfig(); defaultCfg != nil {
+		parts = append(parts,
+			formatStringField("config_path", defaultCfg.GetConfigPath()),
+			formatStringField("discovery_address", defaultCfg.GetDiscoveryAddress()),
+			formatEnumField("control_plane_auth_policy", defaultCfg.GetControlPlaneAuthPolicy().String()),
+			formatInt32Field("status_port", defaultCfg.GetStatusPort()),
+		)
+	}
+
+	return compactParts(parts...)
+}
+
+func compactDubboArgs(args *DubboArgs) string {
+	if args == nil {
+		return "<nil>"
+	}
+
+	parts := []string{
+		formatStringField("mesh_file", args.MeshGlobalConfigFile),
+		formatQuotedField("namespace", args.Namespace),
+		formatQuotedField("pod_name", args.PodName),
+		formatQuotedField("revision", args.Revision),
+		formatStringSliceField("registries", args.RegistryOptions.Registries),
+		formatQuotedField("cluster_registries_namespace", args.RegistryOptions.ClusterRegistriesNamespace),
+		formatQuotedField("kubeconfig", args.RegistryOptions.KubeConfig),
+		formatQuotedField("config_dir", args.RegistryOptions.FileDir),
+		formatStringField("injection_dir", args.InjectionOptions.InjectionDirectory),
+		formatStringField("ctrlz", ctrlzAddress(args)),
+		formatCompositeField("server", serverAddressSummary(args)),
+		formatCompositeField("kube", kubeOptionsSummary(args)),
+		formatCompositeField("keepalive", keepaliveSummary(args)),
+	}
+
+	return compactParts(parts...)
+}
+
+func ctrlzAddress(args *DubboArgs) string {
+	if args == nil || args.CtrlZOptions == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", args.CtrlZOptions.Address, args.CtrlZOptions.Port)
+}
+
+func serverAddressSummary(args *DubboArgs) string {
+	if args == nil {
+		return ""
+	}
+	return compactParts(
+		formatStringField("http", args.ServerOptions.HTTPAddr),
+		formatStringField("https", args.ServerOptions.HTTPSAddr),
+		formatStringField("grpc", args.ServerOptions.GRPCAddr),
+		formatStringField("secure_grpc", args.ServerOptions.SecureGRPCAddr),
+	)
+}
+
+func kubeOptionsSummary(args *DubboArgs) string {
+	if args == nil {
+		return ""
+	}
+	return compactParts(
+		formatEnumField("cluster_id", string(args.RegistryOptions.KubeOptions.ClusterID)),
+		formatStringField("domain", args.RegistryOptions.KubeOptions.DomainSuffix),
+		formatFloat32Field("qps", args.RegistryOptions.KubeOptions.KubernetesAPIQPS),
+		formatIntField("burst", args.RegistryOptions.KubeOptions.KubernetesAPIBurst),
+		formatIntField("cluster_aliases", len(args.RegistryOptions.KubeOptions.ClusterAliases)),
+	)
+}
+
+func keepaliveSummary(args *DubboArgs) string {
+	if args == nil || args.KeepaliveOptions == nil {
+		return ""
+	}
+	maxAge := args.KeepaliveOptions.MaxServerConnectionAge.String()
+	if args.KeepaliveOptions.MaxServerConnectionAge == dubbokeepalive.Infinity {
+		maxAge = "infinity"
+	}
+	return compactParts(
+		formatEnumField("time", args.KeepaliveOptions.Time.String()),
+		formatEnumField("timeout", args.KeepaliveOptions.Timeout.String()),
+		formatEnumField("max_age", maxAge),
+		formatEnumField("max_age_grace", args.KeepaliveOptions.MaxServerConnectionAgeGrace.String()),
+	)
+}
+
+func compactParts(parts ...string) string {
+	nonEmpty := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			nonEmpty = append(nonEmpty, part)
+		}
+	}
+	return strings.Join(nonEmpty, " ")
+}
+
+func formatStringField(name, value string) string {
+	if value == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s=%s", name, value)
+}
+
+func formatQuotedField(name, value string) string {
+	return fmt.Sprintf("%s=%q", name, value)
+}
+
+func formatEnumField(name, value string) string {
+	if value == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s=%s", name, value)
+}
+
+func formatCompositeField(name, value string) string {
+	if value == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s={%s}", name, value)
+}
+
+func formatDurationField(name string, value interface{ String() string }) string {
+	if value == nil {
+		return ""
+	}
+	rv := reflect.ValueOf(value)
+	if rv.Kind() == reflect.Pointer && rv.IsNil() {
+		return ""
+	}
+	return fmt.Sprintf("%s=%s", name, value.String())
+}
+
+func formatStringSliceField(name string, values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s=[%s]", name, strings.Join(values, ","))
+}
+
+func formatIntField(name string, value int) string {
+	if value == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s=%d", name, value)
+}
+
+func formatInt32Field(name string, value int32) string {
+	if value == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s=%d", name, value)
+}
+
+func formatFloat32Field(name string, value float32) string {
+	if value == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s=%g", name, value)
 }

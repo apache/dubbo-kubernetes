@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/cmd"
 	"os"
+	"strings"
 	"time"
 
 	caerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
@@ -148,7 +149,7 @@ func loadSelfSignedCaSecret(client corev1.CoreV1Interface, namespace string, caC
 		); err != nil {
 			return fmt.Errorf("failed to create CA KeyCertBundle (%v)", err)
 		}
-		pkiCaLog.Infof("Using existing public key: \n%v", string(rootCerts))
+		pkiCaLog.Infof("Using existing public key summary: %s", certificateSummary(rootCerts))
 	}
 	return err
 }
@@ -235,10 +236,15 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 			secret := BuildSecret(caCertName, namespace, nil, nil, pemCert, pemCert, pemKey, dubboCASecretType)
 			_, err = client.Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 			if err != nil {
+				if apierror.IsMethodNotSupported(err) {
+					pkiCaLog.Warnf("Server rejected creating secret %s/%s, continuing with in-memory self-signed CA: %v", namespace, caCertName, err)
+					pkiCaLog.Infof("Using self-generated public key summary: %s", certificateSummary(rootCerts))
+					return nil
+				}
 				pkiCaLog.Errorf("Failed to create secret %s (%v)", caCertName, err)
 				return err
 			}
-			pkiCaLog.Infof("Using self-generated public key: %v", string(rootCerts))
+			pkiCaLog.Infof("Using self-generated public key summary: %s", certificateSummary(rootCerts))
 			return nil
 		}
 		return err
@@ -246,6 +252,26 @@ func NewSelfSignedDubboCAOptions(ctx context.Context,
 	pkiCaLog.Infof("Set secret name for self-signed CA cert rotator to %s", caCertName)
 	caOpts.RotatorConfig.secretName = caCertName
 	return caOpts, err
+}
+
+func certificateSummary(certPEM []byte) string {
+	certs, _, err := util.ParsePemEncodedCertificateChain(certPEM)
+	if err != nil {
+		return fmt.Sprintf("bundle_bytes=%d parse_error=%v", len(certPEM), err)
+	}
+
+	parts := make([]string, 0, len(certs))
+	for i, cert := range certs {
+		parts = append(parts, fmt.Sprintf(
+			"cert[%d]{subject=%q issuer=%q serial=%x not_after=%q}",
+			i,
+			cert.Subject.String(),
+			cert.Issuer.String(),
+			cert.SerialNumber,
+			cert.NotAfter.Format(time.RFC3339),
+		))
+	}
+	return strings.Join(parts, ", ")
 }
 
 func NewPluggedCertDubboCAOptions(fileBundle SigningCAFileBundle, defaultCertTTL, maxCertTTL time.Duration, caRSAKeySize int) (caOpts *DubboCAOptions, err error) {

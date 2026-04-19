@@ -82,8 +82,8 @@ func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
 		return nil, fmt.Errorf("failed extracting xds metadata: %v", err)
 	}
 
-	//	// TODO direct to CP should use secure channel (most likely JWT + TLS, but possibly allow mTLS)
 	serverURI := opts.DiscoveryAddress
+	channelCreds := []ChannelCreds{{Type: "tls"}}
 	if opts.XdsUdsPath != "" {
 		// Convert to absolute path for unix socket
 		absPath, err := filepath.Abs(opts.XdsUdsPath)
@@ -94,14 +94,28 @@ func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
 		// gRPC client library expects unix://path format (two slashes) for absolute paths
 		// Note: unix:///path (three slashes) is also valid but unix://path is more standard
 		serverURI = fmt.Sprintf("unix://%s", absPath)
+		channelCreds = []ChannelCreds{{Type: "insecure"}}
+	} else if opts.CertDir != "" {
+		refresh, err := protomarshal.Marshal(durationpb.New(15 * time.Minute))
+		if err != nil {
+			return nil, err
+		}
+		channelCreds = []ChannelCreds{{
+			Type: "tls",
+			Config: FileWatcherCertProviderConfig{
+				PrivateKeyFile:    path.Join(opts.CertDir, "key.pem"),
+				CertificateFile:   path.Join(opts.CertDir, "cert-chain.pem"),
+				CACertificateFile: path.Join(opts.CertDir, "root-cert.pem"),
+				RefreshDuration:   refresh,
+			},
+		}}
 	}
 
 	bootstrap := Bootstrap{
 		XDSServers: []XdsServer{{
-			ServerURI: serverURI,
-			// connect locally via agent
-			ChannelCreds:   []ChannelCreds{{Type: "insecure"}},
-			ServerFeatures: []string{"xds_v1"},
+			ServerURI:      serverURI,
+			ChannelCreds:   channelCreds,
+			ServerFeatures: []string{"xds_v3"},
 		}},
 		Node: &core.Node{
 			Id:       opts.Node.ID,

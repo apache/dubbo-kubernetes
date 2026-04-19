@@ -30,19 +30,12 @@ RUN go mod download -x
 COPY . .
 
 RUN go build -v -trimpath -ldflags="-s -w" \
-    -o /out/dubbo-agent \
-    ./dubbod/discovery/cmd/dubbo-agent/main.go
-
-RUN git clone --depth=1 https://github.com/apache/dubbo-go-pixiu.git && \
-    cd dubbo-go-pixiu && \
-    go build -v -trimpath -ldflags="-s -w" \
-    -o /out/pixiu-proxy \
-    ./cmd/pixiu/pixiu.go
+    -o /out/dubbod \
+    ./dubbod/discovery/cmd/dubbo-discover/main.go
 
 FROM scratch
 
-COPY --from=builder /out/dubbo-agent /usr/local/bin/dubbo-agent
-COPY --from=builder /out/pixiu-proxy /usr/local/bin/pixiu-proxy
+COPY --from=builder /out/dubbod /usr/local/bin/dubbod
 
 USER 65532:65532
-ENTRYPOINT ["/usr/local/bin/dubbo-agent"]
+ENTRYPOINT ["/usr/local/bin/dubbod"]

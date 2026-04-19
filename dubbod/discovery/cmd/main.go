@@ -17,12 +17,19 @@
 package main
 
 import (
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/dubbo-discover/app"
+	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/nodeagent/sds"
+	"github.com/apache/dubbo-kubernetes/pkg/dubboagency"
+	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"os"
+
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/app"
 )
 
 func main() {
-	rootCmd := app.NewRootCommand()
+	rootCmd := app.NewRootCommand(
+		func(options *security.Options, workloadSecretCache security.SecretManager) dubboagency.SDSService {
+			return sds.NewServer(options, workloadSecretCache)
+		})
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(-1)
 	}

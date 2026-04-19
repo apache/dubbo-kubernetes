@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubboagency"
 	serviceRouteIndex "github.com/kdubbo/api/mesh/v1alpha1"
-	dubboagent "github.com/apache/dubbo-kubernetes/pkg/dubboagent"
 )
 
 const xdsHeaderPrefix = "XDS_HEADER_"
