@@ -72,6 +72,7 @@ func (s *Server) initMonitor(addr string) error {
 		if err != nil {
 			return fmt.Errorf("unable to listen on socket: %v", err)
 		}
+		s.httpAddr = listener.Addr().String()
 
 		addMonitor(s.monitoringMux)
 

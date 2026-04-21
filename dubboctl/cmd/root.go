@@ -144,6 +144,8 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.AddCommand(imageCmd)
 	hideFlags(imageCmd, ChartFlag)
 
+	rootCmd.AddCommand(GuiCmd())
+
 	rootCmd.AddCommand(version.NewVersionCommand())
 
 	return rootCmd
