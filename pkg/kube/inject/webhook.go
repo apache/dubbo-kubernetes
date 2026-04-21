@@ -406,7 +406,7 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secretName,
-				DefaultMode: func() *int32 { v := int32(0o420); return &v }(),
+				DefaultMode: func() *int32 { v := int32(420); return &v }(),
 			},
 		},
 	}

@@ -23,5 +23,18 @@ import (
 var InjectionFuncmap = createInjectionFuncmap()
 
 func createInjectionFuncmap() template.FuncMap {
-	return template.FuncMap{}
+	return template.FuncMap{
+		"proxylessGRPCSecretName":       ProxylessGRPCSecretName,
+		"proxylessGRPCDiscoveryAddress": ProxylessGRPCDiscoveryAddress,
+		"proxylessGRPCTrustDomain":      ProxylessGRPCTrustDomain,
+		"proxylessGRPCBootstrapPath": func() string {
+			return ProxylessGRPCBootstrapPath
+		},
+		"proxylessXDSVolumeName": func() string {
+			return ProxylessXDSVolumeName
+		},
+		"proxylessXDSMountPath": func() string {
+			return ProxylessXDSMountPath
+		},
+	}
 }
