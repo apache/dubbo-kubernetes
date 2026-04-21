@@ -15,15 +15,13 @@
 
 metadata:
   annotations:
-    dubbo.apache.org/rev: {{ .Revision | default "default" }}
+    dubbo.apache.org/rev: default
 spec:
   containers:
-{{- range .Spec.Containers }}
-{{- if and (ne .Name "dubbo-proxy") (ne .Name "dubbo-validation") }}
-  - name: {{ .Name | quote }}
+  - name: app
     env:
     - name: GRPC_XDS_BOOTSTRAP
-      value: {{ proxylessGRPCBootstrapPath | quote }}
+      value: /etc/dubbo/proxy/grpc-bootstrap.json
     - name: GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT
       value: "true"
     - name: DUBBO_GRPC_XDS_CREDENTIALS
@@ -33,17 +31,17 @@ spec:
     - name: DUBBO_META_GENERATOR
       value: "grpc"
     - name: DUBBO_META_CLUSTER_ID
-      value: "Kubernetes"
+      value: Kubernetes
     - name: DUBBO_META_NAMESPACE
       valueFrom:
         fieldRef:
           fieldPath: metadata.namespace
     - name: CA_ADDR
-      value: {{ proxylessGRPCDiscoveryAddress $.MeshGlobalConfig $.ProxyConfig | quote }}
+      value: dubbod.dubbo-system.svc:15012
     - name: DUBBO_META_MESH_ID
-      value: {{ proxylessGRPCTrustDomain $.MeshGlobalConfig | quote }}
+      value: cluster.local
     - name: TRUST_DOMAIN
-      value: {{ proxylessGRPCTrustDomain $.MeshGlobalConfig | quote }}
+      value: cluster.local
     - name: POD_NAME
       valueFrom:
         fieldRef:
@@ -65,13 +63,11 @@ spec:
         fieldRef:
           fieldPath: status.hostIP
     volumeMounts:
-    - name: {{ proxylessXDSVolumeName | quote }}
-      mountPath: {{ proxylessXDSMountPath | quote }}
+    - name: dubbo-xds
+      mountPath: /etc/dubbo/proxy
       readOnly: true
-{{- end }}
-{{- end }}
   volumes:
-  - name: {{ proxylessXDSVolumeName | quote }}
+  - name: dubbo-xds
     secret:
-      secretName: {{ proxylessGRPCSecretName .ObjectMeta.Name | quote }}
+      secretName: dubbo-xds
       defaultMode: 420

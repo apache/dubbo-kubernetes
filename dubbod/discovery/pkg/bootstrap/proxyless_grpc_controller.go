@@ -146,14 +146,14 @@ func (c *proxylessGRPCWorkloadController) enqueueAllPods() {
 
 func (c *proxylessGRPCWorkloadController) reconcile(key types.NamespacedName) error {
 	pod := c.pods.Get(key.Name, key.Namespace)
-	if pod == nil || !shouldManageProxylessGRPCPod(pod) || pod.DeletionTimestamp != nil {
+	if pod == nil {
 		c.clearRotation(key)
 		return c.deleteSecret(key)
 	}
-	if pod.Status.PodIP == "" {
-		return nil
+	if !shouldManageProxylessGRPCPod(pod) || pod.DeletionTimestamp != nil {
+		c.clearRotation(key)
+		return c.deleteSecretForPod(pod)
 	}
-
 	desired, expireAt, err := c.buildSecret(pod)
 	if err != nil {
 		return err
@@ -194,7 +194,7 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod) (*corev1.
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      inject.ProxylessGRPCSecretName(pod.Name),
+			Name:      inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta),
 			Namespace: pod.Namespace,
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: "v1",
@@ -234,17 +234,21 @@ func (c *proxylessGRPCWorkloadController) buildBootstrapJSON(pod *corev1.Pod) ([
 	if domainSuffix == "" {
 		domainSuffix = constants.DefaultClusterLocalDomain
 	}
+	podIP := pod.Status.PodIP
+	if podIP == "" {
+		podIP = "0.0.0.0"
+	}
 
 	serviceNode := strings.Join([]string{
 		string(pkgmodel.Proxyless),
-		pod.Status.PodIP,
+		podIP,
 		pod.Name + "." + pod.Namespace,
 		fmt.Sprintf("%s.svc.%s", pod.Namespace, domainSuffix),
 	}, serviceNodeSeparator)
 
 	node, err := pkgbootstrap.GetNodeMetaData(pkgbootstrap.MetadataOptions{
 		ID:          serviceNode,
-		InstanceIPs: []string{pod.Status.PodIP},
+		InstanceIPs: []string{podIP},
 		ProxyConfig: proxyConfig,
 		Envs: []string{
 			"DUBBO_META_GENERATOR=grpc",
@@ -254,7 +258,7 @@ func (c *proxylessGRPCWorkloadController) buildBootstrapJSON(pod *corev1.Pod) ([
 			"TRUST_DOMAIN=" + trustDomain,
 			"POD_NAME=" + pod.Name,
 			"POD_NAMESPACE=" + pod.Namespace,
-			"INSTANCE_IP=" + pod.Status.PodIP,
+			"INSTANCE_IP=" + podIP,
 			"SERVICE_ACCOUNT=" + serviceAccount,
 		},
 	})
@@ -365,6 +369,12 @@ func shouldManageProxylessGRPCPod(pod *corev1.Pod) bool {
 func (c *proxylessGRPCWorkloadController) deleteSecret(key types.NamespacedName) error {
 	err := c.server.kubeClient.Kube().CoreV1().Secrets(key.Namespace).Delete(context.Background(),
 		inject.ProxylessGRPCSecretName(key.Name), metav1.DeleteOptions{})
+	return controllers.IgnoreNotFound(err)
+}
+
+func (c *proxylessGRPCWorkloadController) deleteSecretForPod(pod *corev1.Pod) error {
+	err := c.server.kubeClient.Kube().CoreV1().Secrets(pod.Namespace).Delete(context.Background(),
+		inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta), metav1.DeleteOptions{})
 	return controllers.IgnoreNotFound(err)
 }
 

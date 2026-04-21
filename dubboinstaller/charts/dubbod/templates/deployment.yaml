@@ -33,7 +33,7 @@ spec:
       serviceAccountName: dubbod
       containers:
         - name: discovery
-          image: "kdubbo/dubbod:0.3.7"
+          image: "kdubbo/dubbod:debug"
           imagePullPolicy: Always
           args:
             - "discovery"
@@ -43,6 +43,9 @@ spec:
             - containerPort: 8080
               protocol: TCP
               name: http-debug
+            - containerPort: 15080
+              protocol: TCP
+              name: gui
             - containerPort: 15010
               protocol: TCP
               name: grpc-xds
@@ -88,4 +91,3 @@ spec:
           name: dubbo-ca-root-cert
           optional: true
         name: dubbo-csr-ca-configmap
-

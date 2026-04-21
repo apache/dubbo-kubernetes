@@ -371,6 +371,7 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 		pod.Labels = map[string]string{}
 	}
 
+	removeTemplateOnlyContainers(pod, injectedPod, req.pod)
 	overwriteClusterInfo(pod, req)
 
 	if shouldInjectProxylessGRPC(req) {
@@ -383,6 +384,39 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	}
 
 	return nil
+}
+
+func removeTemplateOnlyContainers(pod *corev1.Pod, injectedPod corev1.Pod, originalPod *corev1.Pod) {
+	if originalPod == nil {
+		return
+	}
+
+	originalContainers := map[string]struct{}{}
+	for _, container := range originalPod.Spec.Containers {
+		originalContainers[container.Name] = struct{}{}
+	}
+
+	templateOnlyContainers := map[string]struct{}{}
+	for _, container := range injectedPod.Spec.Containers {
+		if container.Image != "" {
+			continue
+		}
+		if _, found := originalContainers[container.Name]; !found {
+			templateOnlyContainers[container.Name] = struct{}{}
+		}
+	}
+	if len(templateOnlyContainers) == 0 {
+		return
+	}
+
+	containers := pod.Spec.Containers[:0]
+	for _, container := range pod.Spec.Containers {
+		if _, remove := templateOnlyContainers[container.Name]; remove {
+			continue
+		}
+		containers = append(containers, container)
+	}
+	pod.Spec.Containers = containers
 }
 
 func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
@@ -400,7 +434,11 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
 		discoveryAddress = req.proxyConfig.GetDiscoveryAddress()
 	}
 
-	secretName := ProxylessGRPCSecretName(pod.Name)
+	meta := pod.ObjectMeta
+	if req.pod != nil {
+		meta = req.pod.ObjectMeta
+	}
+	secretName := ProxylessGRPCSecretNameForMeta(meta)
 	desiredVolume := corev1.Volume{
 		Name: ProxylessXDSVolumeName,
 		VolumeSource: corev1.VolumeSource{
