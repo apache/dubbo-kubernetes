@@ -17,17 +17,7 @@
 package app
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	options "github.com/apache/dubbo-kubernetes/dubbod/agency/options"
-	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/network"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagency"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/config"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
-	"github.com/apache/dubbo-kubernetes/pkg/model"
-	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
-	"net/netip"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
@@ -38,17 +28,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	localHostIPv4 = "127.0.0.1"
-	localHostIPv6 = "::1"
-)
-
 var (
 	serverArgs *bootstrap.DubboArgs
-	proxyArgs  options.ProxyArgs
 )
 
-func NewRootCommand(sds dubboagency.SDSServiceFactory) *cobra.Command {
+func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:          "dubbo-discovery",
 		Short:        "Dubbo Control Plane.",
@@ -64,12 +48,10 @@ func NewRootCommand(sds dubboagency.SDSServiceFactory) *cobra.Command {
 		},
 	}
 	discoveryCmd := newDiscoveryCommand()
-	proxyCmd := newProxyCommand(sds)
-	addFlags(discoveryCmd, proxyCmd)
+	addFlags(discoveryCmd)
 	rootCmd.AddCommand(discoveryCmd)
 
 	cmd.AddFlags(rootCmd)
-	rootCmd.AddCommand(proxyCmd)
 	rootCmd.AddCommand(waitCmd)
 
 	return rootCmd
@@ -110,123 +92,13 @@ func newDiscoveryCommand() *cobra.Command {
 	}
 }
 
-func newProxyCommand(sds dubboagency.SDSServiceFactory) *cobra.Command {
-	return &cobra.Command{
-		Use:   "proxy",
-		Short: "XDS proxy agent",
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
-		},
-		RunE: func(c *cobra.Command, args []string) error {
-			cmd.PrintFlags(c.Flags())
-
-			err := initProxy(args)
-			if err != nil {
-				return err
-			}
-
-			proxyConfig, err := config.ConstructProxyConfig(proxyArgs.MeshGlobalConfigFile, options.ProxyConfigEnv)
-			if err != nil {
-				return fmt.Errorf("failed to get proxy config: %v", err)
-			}
-
-			if out, err := protomarshal.ToYAML(proxyConfig); err != nil {
-				log.Infof("Failed to serialize to YAML: %v", err)
-			} else {
-				log.Infof("Effective config: %s", out)
-			}
-
-			secOpts, err := options.NewSecurityOptions(proxyConfig, proxyArgs.StsPort, proxyArgs.TokenManagerPlugin)
-			if err != nil {
-				return err
-			}
-
-			if proxyArgs.TemplateFile != "" && proxyConfig.CustomConfigFile == "" {
-				proxyConfig.ProxyBootstrapTemplatePath = proxyArgs.TemplateFile
-			}
-
-			agentOptions := options.NewAgentOptions(&proxyArgs, proxyConfig, sds)
-			agent := dubboagency.NewAgent(proxyConfig, agentOptions, secOpts)
-
-			ctx, cancel := context.WithCancelCause(context.Background())
-			defer cancel(errors.New("application shutdown"))
-			defer agent.Close()
-
-			// On SIGINT or SIGTERM, cancel the context, triggering a graceful shutdown
-			go cmd.WaitSignalFunc(cancel)
-
-			wait, err := agent.Run(ctx)
-			if err != nil {
-				return err
-			}
-			wait()
-			return nil
-		},
-	}
-}
-
-func initProxy(args []string) error {
-	proxyArgs.Type = model.Proxyless
-	if len(args) > 0 {
-		proxyArgs.Type = model.NodeType(args[0])
-		if !model.IsApplicationNodeType(proxyArgs.Type) {
-			return fmt.Errorf("invalid proxy Type: %s", string(proxyArgs.Type))
-		}
-	}
-
-	podIP, _ := netip.ParseAddr(options.InstanceIPVar.Get()) // protobuf encoding of IP_ADDRESS type
-	if podIP.IsValid() {
-		proxyArgs.IPAddresses = []string{podIP.String()}
-	}
-
-	proxyAddrs := make([]string, 0)
-	if ipAddrs, ok := network.GetPrivateIPs(context.Background()); ok {
-		proxyAddrs = append(proxyAddrs, ipAddrs...)
-	}
-
-	if len(proxyAddrs) == 0 {
-		proxyAddrs = append(proxyAddrs, localHostIPv4, localHostIPv6)
-	}
-
-	proxyArgs.IPAddresses = append(proxyArgs.IPAddresses, proxyAddrs...)
-	log.Debugf("Proxy IPAddresses: %v", proxyArgs.IPAddresses)
-
-	proxyArgs.DiscoverIPMode()
-
-	proxyArgs.ID = proxyArgs.PodName + "." + proxyArgs.PodNamespace
-
-	proxyArgs.DNSDomain = getDNSDomain(proxyArgs.PodNamespace, proxyArgs.DNSDomain)
-	log.WithLabels("ips", proxyArgs.IPAddresses, "type", proxyArgs.Type, "id", proxyArgs.ID, "domain", proxyArgs.DNSDomain).Info("Proxy role")
-	return nil
-}
-
-func getDNSDomain(podNamespace, domain string) string {
-	if len(domain) == 0 {
-		domain = podNamespace + ".svc." + constants.DefaultClusterLocalDomain
-	}
-	return domain
-}
-
-func addFlags(c *cobra.Command, proxyCmd *cobra.Command) {
+func addFlags(c *cobra.Command) {
 	serverArgs = bootstrap.NewDubboArgs(func(p *bootstrap.DubboArgs) {
 		p.CtrlZOptions = ctrlz.DefaultOptions()
 		p.InjectionOptions = bootstrap.InjectionOptions{
 			InjectionDirectory: "./var/lib/dubbo/inject",
 		}
 	})
-	proxyArgs = options.NewProxyArgs()
-	proxyCmd.PersistentFlags().StringVar(&proxyArgs.DNSDomain,
-		"domain",
-		"",
-		"DNS domain suffix. If not provided uses ${POD_NAMESPACE}.svc.cluster.local")
-	proxyCmd.PersistentFlags().IntVar(&proxyArgs.StsPort,
-		"stsPort",
-		0,
-		"HTTP Port on which to serve Security Token Service (STS). If zero, STS service will not be provided.")
-	proxyCmd.PersistentFlags().StringVar(&proxyArgs.TemplateFile,
-		"templateFile",
-		"",
-		"Go template bootstrap config")
 	c.PersistentFlags().StringSliceVar(&serverArgs.RegistryOptions.Registries,
 		"registries",
 		[]string{string(provider.Kubernetes)},

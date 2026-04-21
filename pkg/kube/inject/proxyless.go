@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/kdubbo/api/annotation"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 )
 
 const (
@@ -54,4 +56,23 @@ func ProxylessGRPCSecretName(podName string) string {
 	}
 
 	return fmt.Sprintf("%s%s-%s", prefix, base, suffix)
+}
+
+func ProxylessGRPCDiscoveryAddress(meshGlobalConfig *meshv1alpha1.MeshGlobalConfig, proxyConfig *meshv1alpha1.ProxyConfig) string {
+	if meshGlobalConfig != nil {
+		if cfg := meshGlobalConfig.GetDefaultConfig(); cfg != nil && cfg.GetDiscoveryAddress() != "" {
+			return cfg.GetDiscoveryAddress()
+		}
+	}
+	if proxyConfig != nil {
+		return proxyConfig.GetDiscoveryAddress()
+	}
+	return ""
+}
+
+func ProxylessGRPCTrustDomain(meshGlobalConfig *meshv1alpha1.MeshGlobalConfig) string {
+	if meshGlobalConfig != nil && meshGlobalConfig.GetTrustDomain() != "" {
+		return meshGlobalConfig.GetTrustDomain()
+	}
+	return constants.DefaultClusterLocalDomain
 }
