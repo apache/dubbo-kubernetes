@@ -59,9 +59,11 @@ type DubboArgs struct {
 
 type DiscoveryServerOptions struct {
 	HTTPAddr       string
+	GUIAddr        string
 	HTTPSAddr      string
 	GRPCAddr       string
 	SecureGRPCAddr string
+	GUIPath        string
 	TLSOptions     TLSOptions
 }
 

@@ -255,6 +255,14 @@ func addFlags(c *cobra.Command, proxyCmd *cobra.Command) {
 		"httpAddr",
 		":8080",
 		"Discovery service HTTP address")
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GUIAddr,
+		"guiAddr",
+		":15080",
+		"Embedded GUI HTTP address")
+	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GUIPath,
+		"guiPath",
+		"/gui",
+		"Embedded GUI base path on the HTTP address")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.HTTPSAddr,
 		"httpsAddr",
 		":15017",

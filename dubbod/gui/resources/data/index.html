@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="{{ .BasePath }}/" />
+  <title>Dashboard</title>
+  <link rel="icon" type="image/png" href="./dubbo-logo.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- 引入 React 和 htm (无构建环境的最佳实践) -->
+  <script type="module">
+    import { h, Component, render } from 'https://esm.sh/preact';
+    import { useState, useEffect, useMemo } from 'https://esm.sh/preact/hooks';
+    import htm from 'https://esm.sh/htm';
+
+    // 初始化 html 模板标签
+    window.html = htm.bind(h);
+    window.useState = useState;
+    window.useEffect = useEffect;
+    window.useMemo = useMemo;
+    window.render = render;
+  </script>
+
+  <script id="dubbod-gui-config" type="application/json">{{ .ConfigJSON }}</script>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

@@ -91,8 +91,10 @@ type Server struct {
 
 	httpsServer *http.Server // webhooks HTTPS Server.
 	httpAddr    string
+	guiAddr     string
 	httpsAddr   string
 	httpMux     *http.ServeMux
+	guiMux      *http.ServeMux
 	httpsMux    *http.ServeMux // webhooks
 
 	monitoringMux   *http.ServeMux
@@ -107,6 +109,9 @@ type Server struct {
 
 	internalStop     chan struct{}
 	shutdownDuration time.Duration
+	namespace        string
+	podName          string
+	guiPath          string
 
 	caServer                *caserver.Server
 	cacertsWatcher          *fsnotify.Watcher
@@ -181,10 +186,13 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		server:                  server.New(),
 		clusterID:               getClusterID(args),
 		httpMux:                 http.NewServeMux(),
+		guiMux:                  http.NewServeMux(),
 		monitoringMux:           http.NewServeMux(),
 		dubbodCertBundleWatcher: keycertbundle.NewWatcher(),
 		fileWatcher:             filewatcher.NewWatcher(),
 		internalStop:            make(chan struct{}),
+		namespace:               args.Namespace,
+		podName:                 args.PodName,
 		readinessProbes:         make(map[string]readinessProbe),
 		readinessFlags:          &readinessFlags{},
 		webhookInfo:             &webhookInfo{},
@@ -237,6 +245,13 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	}
 
 	InitGenerators(s.XDSServer, configGen)
+
+	if err := s.initGUI(args); err != nil {
+		return nil, fmt.Errorf("error initializing gui: %v", err)
+	}
+	if err := s.initGUIServer(args.ServerOptions.GUIAddr); err != nil {
+		return nil, fmt.Errorf("error initializing gui server: %v", err)
+	}
 
 	// Initialize monitoring server
 	if err := s.initMonitor(args.ServerOptions.HTTPAddr); err != nil {
