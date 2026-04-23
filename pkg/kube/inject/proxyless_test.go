@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
@@ -35,6 +36,9 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+	}
+	if strings.Contains(string(templateBytes), "{{") || strings.Contains(string(templateBytes), "}}") {
+		t.Fatalf("grpc-engine.yaml contains template delimiters")
 	}
 	templates, err := ParseTemplates(RawTemplates{
 		ProxylessGRPCTemplateName: string(templateBytes),
@@ -83,25 +87,95 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 	}
 
 	if len(injectedPod.Spec.Containers) != 1 {
-		t.Fatalf("template containers = %d, want 1 application container overlay", len(injectedPod.Spec.Containers))
+		t.Fatalf("template containers = %d, want 1 hard-coded application container overlay", len(injectedPod.Spec.Containers))
 	}
-	assertDirectXDSConnection(t, injectedPod, pod.Name)
+	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
+		t.Fatalf("postProcessPod() failed: %v", err)
+	}
 
 	if len(mergedPod.Spec.Containers) != 1 {
 		t.Fatalf("containers = %d, want 1 application container", len(mergedPod.Spec.Containers))
 	}
-	assertDirectXDSConnection(t, mergedPod, pod.Name)
+	assertDirectXDSConnection(t, mergedPod, "app", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
 }
 
-func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, podName string) {
+func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing.T) {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("runtime.Caller() failed")
+	}
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "dubboinstaller/charts/dubbod/files/grpc-engine.yaml")
+	templateBytes, err := os.ReadFile(templatePath)
+	if err != nil {
+		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+	}
+	templates, err := ParseTemplates(RawTemplates{
+		ProxylessGRPCTemplateName: string(templateBytes),
+	})
+	if err != nil {
+		t.Fatalf("ParseTemplates() failed: %v", err)
+	}
+	valuesConfig, err := NewValuesConfig("{}")
+	if err != nil {
+		t.Fatalf("NewValuesConfig() failed: %v", err)
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "nginx-95575cc5d-",
+			Namespace:    "app",
+			Annotations: map[string]string{
+				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+			},
+		},
+		Spec: corev1.PodSpec{
+			ServiceAccountName: "nginx",
+			Containers: []corev1.Container{{
+				Name:  "nginx",
+				Image: "nginx:1.27-alpine",
+			}},
+		},
+	}
+	req := InjectionParameters{
+		pod:          pod,
+		templates:    templates,
+		valuesConfig: valuesConfig,
+		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
+			TrustDomain: "cluster.local",
+			DefaultConfig: &meshv1alpha1.ProxyConfig{
+				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+			},
+		},
+	}
+
+	mergedPod, injectedPod, err := RunTemplate(req)
+	if err != nil {
+		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
+		t.Fatalf("postProcessPod() failed: %v", err)
+	}
+	if len(mergedPod.Spec.Containers) != 1 {
+		t.Fatalf("containers = %d, want original nginx container only", len(mergedPod.Spec.Containers))
+	}
+	assertDirectXDSConnection(t, mergedPod, "nginx", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
+	if got := mergedPod.Spec.Volumes[0].Secret.SecretName; got == ProxylessGRPCSecretName("") {
+		t.Fatalf("secret name = %q, want generateName-based secret", got)
+	}
+}
+
+func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, secretName string) {
 	t.Helper()
 
 	container := pod.Spec.Containers[0]
-	if container.Name != "app" {
-		t.Fatalf("container name = %q, want app", container.Name)
+	if container.Name != containerName {
+		t.Fatalf("container name = %q, want %q", container.Name, containerName)
 	}
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
+	}
+	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
+		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
 	}
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
 		t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
@@ -133,7 +207,7 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, podName string) {
 	if pod.Spec.Volumes[0].Secret == nil {
 		t.Fatalf("volume secret = nil, want SecretVolumeSource")
 	}
-	if got, want := pod.Spec.Volumes[0].Secret.SecretName, ProxylessGRPCSecretName(podName); got != want {
+	if got, want := pod.Spec.Volumes[0].Secret.SecretName, secretName; got != want {
 		t.Fatalf("secret name = %q, want %q", got, want)
 	}
 	if pod.Spec.Volumes[0].Secret.DefaultMode == nil {
@@ -184,13 +258,16 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	if vol.Secret == nil {
 		t.Fatalf("volume secret = nil, want SecretVolumeSource")
 	}
-	if got, want := vol.Secret.SecretName, ProxylessGRPCSecretName(pod.Name); got != want {
+	if got, want := vol.Secret.SecretName, ProxylessGRPCSecretNameForMeta(pod.ObjectMeta); got != want {
 		t.Fatalf("secret name = %q, want %q", got, want)
 	}
 
 	container := pod.Spec.Containers[0]
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
+	}
+	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
+		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
 	}
 	if !hasEnv(container.Env, "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT", "true") {
 		t.Fatalf("GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT env missing")
@@ -206,10 +283,36 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	}
 }
 
+func TestEnsureProxylessGRPCTemplateAnnotation(t *testing.T) {
+	pod := &corev1.Pod{}
+	ensureProxylessGRPCTemplateAnnotation(pod)
+	if got := pod.Annotations[ProxylessInjectTemplatesAnnoName]; got != ProxylessGRPCTemplateName {
+		t.Fatalf("template annotation = %q, want %q", got, ProxylessGRPCTemplateName)
+	}
+
+	ensureProxylessGRPCTemplateAnnotation(pod)
+	if got := pod.Annotations[ProxylessInjectTemplatesAnnoName]; got != ProxylessGRPCTemplateName {
+		t.Fatalf("template annotation after second call = %q, want %q", got, ProxylessGRPCTemplateName)
+	}
+
+	pod.Annotations[ProxylessInjectTemplatesAnnoName] = "custom"
+	ensureProxylessGRPCTemplateAnnotation(pod)
+	if got, want := pod.Annotations[ProxylessInjectTemplatesAnnoName], "custom,"+ProxylessGRPCTemplateName; got != want {
+		t.Fatalf("template annotation = %q, want %q", got, want)
+	}
+}
+
 func TestProxylessGRPCSecretNameFitsKubernetesLengthLimit(t *testing.T) {
 	name := ProxylessGRPCSecretName("grpc-provider-012345678901234567890123456789012345678901234567890123")
 	if len(name) > 63 {
 		t.Fatalf("secret name length = %d, want <= 63", len(name))
+	}
+}
+
+func TestProxylessGRPCSecretNameForMetaPrefersGenerateName(t *testing.T) {
+	meta := metav1.ObjectMeta{Name: "nginx-95575cc5d-kh98x", GenerateName: "nginx-95575cc5d-"}
+	if got, want := ProxylessGRPCSecretNameForMeta(meta), ProxylessGRPCSecretName(meta.GenerateName); got != want {
+		t.Fatalf("secret name = %q, want %q", got, want)
 	}
 }
 

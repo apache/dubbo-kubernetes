@@ -31,7 +31,7 @@ COPY . .
 
 RUN go build -v -trimpath -ldflags="-s -w" \
     -o /out/dubbod \
-    ./dubbod/discovery/cmd/dubbo-discover/main.go
+    ./dubbod/discovery/cmd/main.go
 
 FROM scratch
 

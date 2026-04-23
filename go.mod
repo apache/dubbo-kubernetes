@@ -56,7 +56,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/heroku/color v0.0.6
 	github.com/howardjohn/celpp v0.1.0
-	github.com/kdubbo/xds-api v0.0.0-20260320064637-6053c9f4bc27
+	github.com/kdubbo/xds-api v0.0.0-20260423094330-4e01ed7e8f82
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1

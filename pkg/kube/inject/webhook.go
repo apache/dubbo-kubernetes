@@ -371,10 +371,12 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 		pod.Labels = map[string]string{}
 	}
 
+	removeTemplateOnlyContainers(pod, injectedPod, req.pod)
 	overwriteClusterInfo(pod, req)
 
 	if shouldInjectProxylessGRPC(req) {
 		// Add proxyless gRPC env and shared bootstrap/cert volume to application containers.
+		ensureProxylessGRPCTemplateAnnotation(pod)
 		addApplicationContainerConfig(pod, req)
 	}
 
@@ -383,6 +385,39 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	}
 
 	return nil
+}
+
+func removeTemplateOnlyContainers(pod *corev1.Pod, injectedPod corev1.Pod, originalPod *corev1.Pod) {
+	if originalPod == nil {
+		return
+	}
+
+	originalContainers := map[string]struct{}{}
+	for _, container := range originalPod.Spec.Containers {
+		originalContainers[container.Name] = struct{}{}
+	}
+
+	templateOnlyContainers := map[string]struct{}{}
+	for _, container := range injectedPod.Spec.Containers {
+		if container.Image != "" {
+			continue
+		}
+		if _, found := originalContainers[container.Name]; !found {
+			templateOnlyContainers[container.Name] = struct{}{}
+		}
+	}
+	if len(templateOnlyContainers) == 0 {
+		return
+	}
+
+	containers := pod.Spec.Containers[:0]
+	for _, container := range pod.Spec.Containers {
+		if _, remove := templateOnlyContainers[container.Name]; remove {
+			continue
+		}
+		containers = append(containers, container)
+	}
+	pod.Spec.Containers = containers
 }
 
 func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
@@ -400,7 +435,11 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
 		discoveryAddress = req.proxyConfig.GetDiscoveryAddress()
 	}
 
-	secretName := ProxylessGRPCSecretName(pod.Name)
+	meta := pod.ObjectMeta
+	if req.pod != nil {
+		meta = req.pod.ObjectMeta
+	}
+	secretName := ProxylessGRPCSecretNameForMeta(meta)
 	desiredVolume := corev1.Volume{
 		Name: ProxylessXDSVolumeName,
 		VolumeSource: corev1.VolumeSource{
@@ -431,6 +470,10 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
 			Name:  "GRPC_XDS_BOOTSTRAP",
 			Value: ProxylessGRPCBootstrapPath,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  ProxylessGRPCConfigEnvName,
+			Value: ProxylessGRPCConfigPath,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
 			Name:  "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT",
@@ -517,6 +560,23 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) {
 			webhookLog.Infof("Injection: Added %s volume mount to application container %s", ProxylessXDSMountPath, container.Name)
 		}
 	}
+}
+
+func ensureProxylessGRPCTemplateAnnotation(pod *corev1.Pod) {
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	templates := pod.Annotations[ProxylessInjectTemplatesAnnoName]
+	for _, templateName := range strings.Split(templates, ",") {
+		if strings.TrimSpace(templateName) == ProxylessGRPCTemplateName {
+			return
+		}
+	}
+	if strings.TrimSpace(templates) == "" {
+		pod.Annotations[ProxylessInjectTemplatesAnnoName] = ProxylessGRPCTemplateName
+		return
+	}
+	pod.Annotations[ProxylessInjectTemplatesAnnoName] = templates + "," + ProxylessGRPCTemplateName
 }
 
 func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {

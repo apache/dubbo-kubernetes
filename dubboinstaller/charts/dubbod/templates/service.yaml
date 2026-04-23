@@ -34,3 +34,21 @@ spec:
       protocol: TCP
   selector:
     app: dubbod
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dubbod-gui
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+spec:
+  type: NodePort
+  ports:
+    - port: 15080
+      name: gui
+      targetPort: 15080
+      nodePort: 30080
+      protocol: TCP
+  selector:
+    app: dubbod

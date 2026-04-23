@@ -61,6 +61,7 @@ type DiscoveryServer struct {
 	Generators          map[string]model.XdsResourceGenerator
 	pushVersion         atomic.Uint64
 	Authenticators      []security.Authenticator
+	RuntimeConfigUpdate func(*model.PushRequest)
 }
 
 type DebounceOptions struct {
@@ -147,6 +148,7 @@ func (s *DiscoveryServer) Push(req *model.PushRequest) {
 		req.Push = s.globalPushContext()
 		s.dropCacheForRequest(req)
 		s.AdsPushAll(req)
+		s.notifyRuntimeConfigUpdate(req)
 		return
 	}
 
@@ -161,6 +163,13 @@ func (s *DiscoveryServer) Push(req *model.PushRequest) {
 	push := s.initPushContext(req, oldPushContext, versionLocal)
 	req.Push = push
 	s.AdsPushAll(req)
+	s.notifyRuntimeConfigUpdate(req)
+}
+
+func (s *DiscoveryServer) notifyRuntimeConfigUpdate(req *model.PushRequest) {
+	if s.RuntimeConfigUpdate != nil {
+		s.RuntimeConfigUpdate(req)
+	}
 }
 
 func debounce(ch chan *model.PushRequest, stopCh <-chan struct{}, opts DebounceOptions, pushFn func(req *model.PushRequest), updateSent *atomic.Int64) {
