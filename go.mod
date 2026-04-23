@@ -41,7 +41,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.13.1
-	github.com/go-jose/go-jose/v4 v4.1.3
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/glog v1.2.5
 	github.com/golang/protobuf v1.5.4
