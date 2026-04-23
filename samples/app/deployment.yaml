@@ -37,22 +37,94 @@ spec:
     targetPort: 80
     protocol: TCP
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-v1
+  namespace: app
+data:
+  index.html: |
+    nginx v1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-v2
+  namespace: app
+data:
+  index.html: |
+    nginx v2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: runtime-client
+  namespace: app
+data:
+  request.py: |
+    import json
+    import os
+    import sys
+    import urllib.request
+
+    cfg_path = os.environ.get("DUBBO_GRPC_XDS_CONFIG", "/etc/dubbo/proxy/dubbo-grpc-xds.json")
+    host = os.environ.get("DUBBO_SERVICE_HOST", "nginx.app.svc.cluster.local")
+    port = int(os.environ.get("DUBBO_SERVICE_PORT", "80"))
+    count = int(os.environ.get("REQUEST_COUNT", "20"))
+    if len(sys.argv) > 1:
+        count = int(sys.argv[1])
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+
+    route = next((r for r in cfg.get("routes", []) if r.get("host") == host and int(r.get("port", 0)) == port), None)
+    if route is None:
+        raise SystemExit(f"route not found for {host}:{port} in {cfg_path}")
+
+    weighted = []
+    for destination in route.get("destinations", []):
+        endpoints = destination.get("endpoints", [])
+        if not endpoints:
+            continue
+        weight = int(destination.get("weight", 0))
+        if weight <= 0:
+            continue
+        weighted.extend([destination] * weight)
+    if not weighted:
+        raise SystemExit(f"route {host}:{port} has no endpoints")
+
+    endpoint_index = {}
+    for i in range(count):
+        destination = weighted[i % len(weighted)]
+        subset = destination.get("subset", "")
+        endpoints = destination.get("endpoints", [])
+        idx = endpoint_index.get(subset, 0)
+        endpoint_index[subset] = idx + 1
+        endpoint = endpoints[idx % len(endpoints)]
+        url = f"http://{endpoint['address']}:{endpoint['port']}/"
+        req = urllib.request.Request(url, headers={"Host": host})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            print(resp.read().decode("utf-8").strip())
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx
+  name: nginx-v1
   namespace: app
   labels:
     app: nginx
+    version: v1
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: nginx
+      version: v1
   template:
     metadata:
       labels:
         app: nginx
+        version: v1
     spec:
       serviceAccountName: nginx
       containers:
@@ -63,6 +135,10 @@ spec:
         - name: http
           containerPort: 80
           protocol: TCP
+        volumeMounts:
+        - name: nginx-index
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
         env:
         - name: SERVICE_VERSION
           valueFrom:
@@ -90,3 +166,115 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 2
           failureThreshold: 3
+      volumes:
+      - name: nginx-index
+        configMap:
+          name: nginx-v1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-v2
+  namespace: app
+  labels:
+    app: nginx
+    version: v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: nginx
+        version: v2
+    spec:
+      serviceAccountName: nginx
+      containers:
+      - name: app
+        image: nginx:1.27-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        volumeMounts:
+        - name: nginx-index
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+        env:
+        - name: SERVICE_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['version']
+        - name: SERVICE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_PORT
+          value: "80"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+      volumes:
+      - name: nginx-index
+        configMap:
+          name: nginx-v2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-consumer
+  namespace: app
+  labels:
+    app: nginx-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-consumer
+  template:
+    metadata:
+      labels:
+        app: nginx-consumer
+        role: consumer
+    spec:
+      serviceAccountName: nginx
+      containers:
+      - name: app
+        image: python:3.12-alpine
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - sleep 365d
+        volumeMounts:
+        - name: runtime-client
+          mountPath: /client
+          readOnly: true
+        env:
+        - name: DUBBO_SERVICE_HOST
+          value: nginx.app.svc.cluster.local
+        - name: DUBBO_SERVICE_PORT
+          value: "80"
+        - name: REQUEST_COUNT
+          value: "100"
+      volumes:
+      - name: runtime-client
+        configMap:
+          name: runtime-client

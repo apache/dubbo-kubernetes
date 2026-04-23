@@ -364,6 +364,8 @@ github.com/kdubbo/client-go v0.0.0-20260322200550-82e70d319918 h1:kuYcq5hiqz0NWA
 github.com/kdubbo/client-go v0.0.0-20260322200550-82e70d319918/go.mod h1:pyJE9XEtRt+hlHAJdi9mxD9f1v9cDZCGJzDe4gK+TMw=
 github.com/kdubbo/xds-api v0.0.0-20260320064637-6053c9f4bc27 h1:k/TocMoUpZjxy9Iv9j8XGjobs3hI06Hz0u6azpOY9CE=
 github.com/kdubbo/xds-api v0.0.0-20260320064637-6053c9f4bc27/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
+github.com/kdubbo/xds-api v0.0.0-20260423094330-4e01ed7e8f82 h1:pZBmQ8vP6gW1502ANOxx00rUtSsZNdijldFNwFgJSYo=
+github.com/kdubbo/xds-api v0.0.0-20260423094330-4e01ed7e8f82/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=
 github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=

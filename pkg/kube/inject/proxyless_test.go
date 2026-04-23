@@ -174,6 +174,9 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
 	}
+	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
+		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
+	}
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
 		t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
 	}
@@ -263,6 +266,9 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
 	}
+	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
+		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
+	}
 	if !hasEnv(container.Env, "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT", "true") {
 		t.Fatalf("GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT env missing")
 	}
@@ -274,6 +280,25 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	}
 	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
 		t.Fatalf("proxyless xds mount missing")
+	}
+}
+
+func TestEnsureProxylessGRPCTemplateAnnotation(t *testing.T) {
+	pod := &corev1.Pod{}
+	ensureProxylessGRPCTemplateAnnotation(pod)
+	if got := pod.Annotations[ProxylessInjectTemplatesAnnoName]; got != ProxylessGRPCTemplateName {
+		t.Fatalf("template annotation = %q, want %q", got, ProxylessGRPCTemplateName)
+	}
+
+	ensureProxylessGRPCTemplateAnnotation(pod)
+	if got := pod.Annotations[ProxylessInjectTemplatesAnnoName]; got != ProxylessGRPCTemplateName {
+		t.Fatalf("template annotation after second call = %q, want %q", got, ProxylessGRPCTemplateName)
+	}
+
+	pod.Annotations[ProxylessInjectTemplatesAnnoName] = "custom"
+	ensureProxylessGRPCTemplateAnnotation(pod)
+	if got, want := pod.Annotations[ProxylessInjectTemplatesAnnoName], "custom,"+ProxylessGRPCTemplateName; got != want {
+		t.Fatalf("template annotation = %q, want %q", got, want)
 	}
 }
 
