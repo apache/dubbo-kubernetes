@@ -31,6 +31,7 @@ const (
 	ProxylessXDSMountPath          = "/etc/dubbo/proxy"
 	ProxylessGRPCBootstrapFileName = "grpc-bootstrap.json"
 	ProxylessGRPCBootstrapPath     = ProxylessXDSMountPath + "/" + ProxylessGRPCBootstrapFileName
+	ProxylessXDSAddressEnvName     = "XDS_ADDRESS"
 	ProxylessGRPCConfigEnvName     = "DUBBO_GRPC_XDS_CONFIG"
 	ProxylessGRPCConfigFileName    = "dubbo-grpc-xds.json"
 	ProxylessGRPCConfigPath        = ProxylessXDSMountPath + "/" + ProxylessGRPCConfigFileName

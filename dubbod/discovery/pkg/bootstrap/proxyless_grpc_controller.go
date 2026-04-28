@@ -104,11 +104,6 @@ func newProxylessGRPCWorkloadController(s *Server) *proxylessGRPCWorkloadControl
 		pod := controllers.Extract[*corev1.Pod](o)
 		return shouldManageProxylessGRPCPod(pod)
 	}))
-	if s.XDSServer != nil {
-		s.XDSServer.RuntimeConfigUpdate = func(*discoverymodel.PushRequest) {
-			c.enqueueAllPods()
-		}
-	}
 
 	return c
 }
@@ -290,12 +285,6 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *
 		return nil, time.Time{}, err
 	}
 
-	services, routes := c.buildRuntimeTrafficConfig()
-	runtimeJSON, err := buildRuntimeConfigJSON(workload, services, routes)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-
 	certChain, keyPEM, rootCert, expireAt, reusedCert := reusableWorkloadCertificate(current)
 	if !reusedCert {
 		certChain, keyPEM, rootCert, expireAt, err = c.issueWorkloadCertificate(pod)
@@ -318,7 +307,6 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
 			inject.ProxylessGRPCBootstrapFileName:      bootstrapJSON,
-			inject.ProxylessGRPCConfigFileName:         runtimeJSON,
 			constants.CertChainFilename:                certChain,
 			constants.KeyFilename:                      keyPEM,
 			constants.CACertNamespaceConfigMapDataName: rootCert,

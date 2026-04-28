@@ -267,11 +267,11 @@ func (a *Agent) FindRootCAForXDS() (string, error) {
 		rootCAPath = a.cfg.XDSRootCerts
 	} else if fileExists(security.DefaultRootCertFilePath) {
 		// Old style - mounted cert. This is used for XDS auth only,
-		// not connecting to CA_ADDR because this mode uses external
+		// not connecting to CA_ADDRESS because this mode uses external
 		// agent (Secret refresh, etc)
 		return security.DefaultRootCertFilePath, nil
 	} else if a.secOpts.ProvCert != "" {
-		// This was never completely correct - PROV_CERT are only intended for auth with CA_ADDR,
+		// This was never completely correct - PROV_CERT are only intended for auth with CA_ADDRESS,
 		// and should not be involved in determining the root CA.
 		// For VMs, the root cert file used to auth may be populated afterwards.
 		// Thus, return directly here and skip checking for existence.
@@ -321,7 +321,7 @@ func (a *Agent) FindRootCAForCA() (string, error) {
 	} else if a.secOpts.DubboCertProvider == constants.CertProviderCustom {
 		rootCAPath = security.DefaultRootCertFilePath // ./etc/certs/root-cert.pem
 	} else if a.secOpts.ProvCert != "" {
-		// This was never completely correct - PROV_CERT are only intended for auth with CA_ADDR,
+		// This was never completely correct - PROV_CERT are only intended for auth with CA_ADDRESS,
 		// and should not be involved in determining the root CA.
 		// For VMs, the root cert file used to auth may be populated afterwards.
 		// Thus, return directly here and skip checking for existence.

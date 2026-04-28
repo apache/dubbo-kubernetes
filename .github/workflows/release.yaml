@@ -60,10 +60,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Remove envoy go-control-plane replace it with xds api.
-            Add xds metrics.
-            Remove dubboctl seek subcommand.
-            Update description and content.
+            Refactor the intrusive application design to a non-intrusive process design.
+            Modify relevant architectural code logic.
+            Update relevant core content.
           draft: false
           prerelease: false
 
