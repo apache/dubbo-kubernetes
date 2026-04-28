@@ -60,9 +60,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Refactor the intrusive application design to a non-intrusive process design.
-            Modify relevant architectural code logic.
-            Update relevant core content.
+            Refactored the intrusive application design to a non-intrusive process design.
+            Modified relevant architectural code logic.
+            Updated relevant core content.
+            Removed the dubbo-go-pixiu delegate gateway.
           draft: false
           prerelease: false
 
