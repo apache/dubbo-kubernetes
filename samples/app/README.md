@@ -1,6 +1,10 @@
-# App Sample
+# 示例说明
 
-## Install
+## 准备
+
+先构建并更新 `kdubbo/dubbod:debug` 镜像，再执行下面命令。
+
+## 安装
 
 ```bash
 kubectl create ns app --dry-run=client -o yaml | kubectl apply -f -
@@ -9,10 +13,11 @@ kubectl apply -f samples/app/deployment.yaml
 kubectl -n app rollout status deploy/nginx-v1 --timeout=180s
 kubectl -n app rollout status deploy/nginx-v2 --timeout=180s
 kubectl -n app rollout status deploy/nginx-consumer --timeout=180s
-kubectl -n app get po --show-labels
 ```
 
-## Traffic Rules
+`dubbo-injection=enabled` 开启后，会自动注入 `grpc-engine`。`nginx-consumer` 使用 `kdubbo/dubbod` 镜像，会自动启动 `xds-client --watch`。
+
+## 配置流量规则
 
 ```bash
 cat <<EOF | kubectl apply -f -
@@ -46,46 +51,51 @@ spec:
     - destination:
         host: nginx.app.svc.cluster.local
         subset: v1
-      weight: 10
+      weight: 20
     - destination:
         host: nginx.app.svc.cluster.local
         subset: v2
-      weight: 90
+      weight: 80
 EOF
 ```
 
-## Consumer Bootstrap Test
+## 查看 xDS 推送结果
 
 ```bash
-kubectl -n app exec deploy/nginx-consumer -- sh -c \
-  'echo GRPC_XDS_BOOTSTRAP=$GRPC_XDS_BOOTSTRAP; echo DUBBO_GRPC_XDS_CONFIG=$DUBBO_GRPC_XDS_CONFIG; test -s /etc/dubbo/proxy/grpc-bootstrap.json && echo bootstrap-present; test -s /etc/dubbo/proxy/dubbo-grpc-xds.json && echo runtime-config-present'
+kubectl -n app logs -f deploy/nginx-consumer
 ```
 
-Expected output includes:
+日志里会看到类似输出：
 
 ```text
-GRPC_XDS_BOOTSTRAP=/etc/dubbo/proxy/grpc-bootstrap.json
-DUBBO_GRPC_XDS_CONFIG=/etc/dubbo/proxy/dubbo-grpc-xds.json
-bootstrap-present
-runtime-config-present
+nginx.app.svc.cluster.local:80 v1=23 endpoints=1,v2=77 endpoints=1
 ```
 
-## Runtime Config Test
+应用容器会拿到这些关键变量：
+
+- `GRPC_XDS_BOOTSTRAP`
+- `XDS_ADDRESS`
+- `CA_ADDRESS`
+
+## 验证流量结果
 
 ```bash
-kubectl -n app exec deploy/nginx-consumer -- python /client/request.py 100 | sort | uniq -c
+kubectl -n app exec deploy/nginx-consumer -- dubbod xds-client 100 | sort | uniq -c
 ```
 
-Expected output should be close to the configured 10/90 split:
+`xds-client` 现在是逐请求选路，不再先算好固定数量再批量发送。
 
-```text
-  10 nginx v1
-  90 nginx v2
+## 在线更新验证
+
+先在一个终端里持续发请求：
+
+```bash
+kubectl -n app exec deploy/nginx-consumer -- dubbod xds-client --request-interval 200ms 200
 ```
 
-The consumer reads `DUBBO_GRPC_XDS_CONFIG=/etc/dubbo/proxy/dubbo-grpc-xds.json`, selects endpoints and weights from the control-plane generated runtime config, and calls provider Pod IPs directly. It does not rely on Envoy, Istio, or grpc-go xDS.
+再在另一个终端里修改 `VirtualService` 权重。`nginx-consumer` 不需要重启，同一个 `xds-client` 进程会继续使用同一条 xDS stream，后续请求会按新权重切换。
 
-## Uninstall
+## 清理
 
 ```bash
 kubectl -n app delete destinationrule nginx-versions --ignore-not-found=true

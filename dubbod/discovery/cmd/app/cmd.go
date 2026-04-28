@@ -53,6 +53,7 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.AddFlags(rootCmd)
 	rootCmd.AddCommand(waitCmd)
+	rootCmd.AddCommand(newXDSClientCommand())
 
 	return rootCmd
 }

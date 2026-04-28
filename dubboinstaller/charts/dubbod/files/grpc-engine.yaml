@@ -23,8 +23,8 @@ spec:
     env:
     - name: GRPC_XDS_BOOTSTRAP
       value: /etc/dubbo/proxy/grpc-bootstrap.json
-    - name: DUBBO_GRPC_XDS_CONFIG
-      value: /etc/dubbo/proxy/dubbo-grpc-xds.json
+    - name: XDS_ADDRESS
+      value: dubbod.dubbo-system.svc:15012
     - name: GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT
       value: "true"
     - name: DUBBO_GRPC_XDS_CREDENTIALS
@@ -39,7 +39,7 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: metadata.namespace
-    - name: CA_ADDR
+    - name: CA_ADDRESS
       value: dubbod.dubbo-system.svc:15012
     - name: DUBBO_META_MESH_ID
       value: cluster.local
@@ -65,6 +65,11 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: status.hostIP
+{{- if and (gt (len .Spec.Containers) 0) (contains "kdubbo/dubbod" ((index .Spec.Containers 0).Image | default "")) }}
+    args:
+    - xds-client
+    - --watch
+{{- end }}
     volumeMounts:
     - name: dubbo-xds
       mountPath: /etc/dubbo/proxy

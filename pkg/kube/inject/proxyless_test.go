@@ -37,9 +37,6 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
 	}
-	if strings.Contains(string(templateBytes), "{{") || strings.Contains(string(templateBytes), "}}") {
-		t.Fatalf("grpc-engine.yaml contains template delimiters")
-	}
 	templates, err := ParseTemplates(RawTemplates{
 		ProxylessGRPCTemplateName: string(templateBytes),
 	})
@@ -174,8 +171,8 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
 	}
-	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
-		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
+	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:15012") {
+		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)
 	}
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
 		t.Fatalf("DUBBO_GRPC_XDS_RESOLVER env missing")
@@ -183,8 +180,8 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
 		t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
 	}
-	if !hasEnv(container.Env, "CA_ADDR", "dubbod.dubbo-system.svc:15012") {
-		t.Fatalf("CA_ADDR env missing")
+	if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:15012") {
+		t.Fatalf("CA_ADDRESS env missing")
 	}
 	if !hasEnv(container.Env, "TRUST_DOMAIN", "cluster.local") {
 		t.Fatalf("TRUST_DOMAIN env missing")
@@ -218,6 +215,16 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	}
 }
 
+func assertNoArgs(t *testing.T, pod *corev1.Pod) {
+	t.Helper()
+	if len(pod.Spec.Containers) == 0 {
+		t.Fatalf("containers = 0, want at least 1")
+	}
+	if len(pod.Spec.Containers[0].Args) != 0 {
+		t.Fatalf("args = %v, want no launcher args", pod.Spec.Containers[0].Args)
+	}
+}
+
 func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -246,7 +253,9 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 		},
 	}
 
-	addApplicationContainerConfig(pod, req)
+	if err := addApplicationContainerConfig(pod, req); err != nil {
+		t.Fatalf("addApplicationContainerConfig() failed: %v", err)
+	}
 
 	if len(pod.Spec.Volumes) != 1 {
 		t.Fatalf("volumes = %d, want 1", len(pod.Spec.Volumes))
@@ -266,8 +275,8 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
 	}
-	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
-		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
+	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:15012") {
+		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)
 	}
 	if !hasEnv(container.Env, "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT", "true") {
 		t.Fatalf("GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT env missing")
@@ -281,6 +290,135 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
 		t.Fatalf("proxyless xds mount missing")
 	}
+}
+
+func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing.T) {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("runtime.Caller() failed")
+	}
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "dubboinstaller/charts/dubbod/files/grpc-engine.yaml")
+	templateBytes, err := os.ReadFile(templatePath)
+	if err != nil {
+		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+	}
+	templates, err := ParseTemplates(RawTemplates{
+		ProxylessGRPCTemplateName: string(templateBytes),
+	})
+	if err != nil {
+		t.Fatalf("ParseTemplates() failed: %v", err)
+	}
+	valuesConfig, err := NewValuesConfig("{}")
+	if err != nil {
+		t.Fatalf("NewValuesConfig() failed: %v", err)
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nginx-consumer-6d4c7b8c9f-abcde",
+			Namespace: "app",
+			Annotations: map[string]string{
+				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+			},
+		},
+		Spec: corev1.PodSpec{
+			ServiceAccountName: "nginx",
+			Containers: []corev1.Container{{
+				Name:  "app",
+				Image: "kdubbo/dubbod:debug",
+			}},
+		},
+	}
+	req := InjectionParameters{
+		pod:          pod,
+		templates:    templates,
+		valuesConfig: valuesConfig,
+		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
+			TrustDomain: "cluster.local",
+			DefaultConfig: &meshv1alpha1.ProxyConfig{
+				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+			},
+		},
+		proxyConfig: &meshv1alpha1.ProxyConfig{
+			DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+		},
+	}
+
+	mergedPod, injectedPod, err := RunTemplate(req)
+	if err != nil {
+		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
+		t.Fatalf("postProcessPod() failed: %v", err)
+	}
+
+	container := mergedPod.Spec.Containers[0]
+	wantArgs := []string{"xds-client", "--watch"}
+	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
+		t.Fatalf("args = %v, want %v", container.Args, wantArgs)
+	}
+}
+
+func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t *testing.T) {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("runtime.Caller() failed")
+	}
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "dubboinstaller/charts/dubbod/files/grpc-engine.yaml")
+	templateBytes, err := os.ReadFile(templatePath)
+	if err != nil {
+		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+	}
+	templates, err := ParseTemplates(RawTemplates{
+		ProxylessGRPCTemplateName: string(templateBytes),
+	})
+	if err != nil {
+		t.Fatalf("ParseTemplates() failed: %v", err)
+	}
+	valuesConfig, err := NewValuesConfig("{}")
+	if err != nil {
+		t.Fatalf("NewValuesConfig() failed: %v", err)
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nginx-v1-6d4c7b8c9f-abcde",
+			Namespace: "app",
+			Annotations: map[string]string{
+				ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+			},
+		},
+		Spec: corev1.PodSpec{
+			ServiceAccountName: "nginx",
+			Containers: []corev1.Container{{
+				Name:  "app",
+				Image: "nginx:1.27-alpine",
+			}},
+		},
+	}
+	req := InjectionParameters{
+		pod:          pod,
+		templates:    templates,
+		valuesConfig: valuesConfig,
+		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
+			TrustDomain: "cluster.local",
+			DefaultConfig: &meshv1alpha1.ProxyConfig{
+				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+			},
+		},
+		proxyConfig: &meshv1alpha1.ProxyConfig{
+			DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+		},
+	}
+
+	mergedPod, injectedPod, err := RunTemplate(req)
+	if err != nil {
+		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
+		t.Fatalf("postProcessPod() failed: %v", err)
+	}
+	assertNoArgs(t, mergedPod)
 }
 
 func TestEnsureProxylessGRPCTemplateAnnotation(t *testing.T) {

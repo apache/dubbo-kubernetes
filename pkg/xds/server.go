@@ -283,13 +283,27 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		return false, emptyResourceDelta
 	}
 
+	previousInfo := w.GetWatchedResource(request.TypeUrl)
 	if shouldUnsubscribe(request) {
+		if previousInfo != nil && request.ResponseNonce != "" && request.ResponseNonce == previousInfo.NonceSent {
+			Log.Debugf("%s: ACK %s %s %s without resource names, preserving previous watch",
+				stype, id, request.VersionInfo, request.ResponseNonce)
+			w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
+				if wr == nil {
+					return nil
+				}
+				wr.LastError = ""
+				wr.NonceAcked = request.ResponseNonce
+				wr.AlwaysRespond = false
+				return wr
+			})
+			return false, emptyResourceDelta
+		}
 		Log.Debugf("%s: UNSUBSCRIBE %s %s %s", stype, id, request.VersionInfo, request.ResponseNonce)
 		w.DeleteWatchedResource(request.TypeUrl)
 		return false, emptyResourceDelta
 	}
 
-	previousInfo := w.GetWatchedResource(request.TypeUrl)
 	// This can happen in two cases:
 	// 1. When an xDS client (gRPC xDS client, etc.) starts for the first time, it sends an initial Discovery request.
 	// 2. When an xDS client reconnects to a new control plane that does not have information about this typeUrl

@@ -59,7 +59,7 @@ var (
 		"Path where gRPC expects to read a bootstrap file. Agent will generate one if set.").Get()
 
 	caProviderEnv = env.Register("CA_PROVIDER", "Aegis", "name of authentication provider").Get()
-	caEndpointEnv = env.Register("CA_ADDR", "", "Address of the spiffe certificate provider. Defaults to discoveryAddress").Get()
+	caEndpointEnv = env.Register("CA_ADDRESS", "", "Address of the spiffe certificate provider. Defaults to discoveryAddress").Get()
 
 	clusterIDVar        = env.Register("DUBBO_META_CLUSTER_ID", "", "")
 	fileMountedCertsEnv = env.Register("FILE_MOUNTED_CERTS", false, "").Get()
