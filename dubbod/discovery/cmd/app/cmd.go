@@ -34,7 +34,7 @@ var (
 )
 
 const (
-	startupLogScope = "setup"
+	executeLogScope = "setup"
 	waitLogScope    = "wait"
 	xclientLogScope = "xclient"
 )
@@ -54,9 +54,9 @@ func NewRootCommand() *cobra.Command {
 			return nil
 		},
 	}
-	startupCmd := newStartupCommand()
-	addFlags(startupCmd)
-	rootCmd.AddCommand(startupCmd)
+	executeCmd := newExecuteCommand()
+	addFlags(executeCmd)
+	rootCmd.AddCommand(executeCmd)
 
 	cmd.AddFlags(rootCmd)
 	rootCmd.AddCommand(waitCmd)
@@ -65,17 +65,17 @@ func NewRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func newStartupCommand() *cobra.Command {
+func newExecuteCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "startup",
-		Short: "start the Dubbo Control Plane.",
+		Use:   "execute",
+		Short: "execute the Dubbo Control Plane.",
 		Args:  cobra.ExactArgs(0),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
 			UnknownFlags: true,
 		},
 		PreRunE: func(c *cobra.Command, args []string) error {
-			dubbolog.SetDefaultScope(startupLogScope)
+			dubbolog.SetDefaultScope(executeLogScope)
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {

@@ -608,7 +608,7 @@ func (s *Server) initMeshHandlers(changeHandler func(_ *meshv1alpha1.MeshGlobalS
 
 func (s *Server) initKubeClient(args *DubboArgs) error {
 	if s.kubeClient != nil {
-		// Already initialized by startup arguments
+		// Already initialized by command arguments.
 		return nil
 	}
 	hasK8SConfigStore := false

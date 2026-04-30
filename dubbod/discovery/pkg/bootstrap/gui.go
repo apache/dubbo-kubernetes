@@ -253,7 +253,7 @@ func (s *Server) guiLogsHandler(writer http.ResponseWriter, request *http.Reques
 		if name == "" {
 			name = "dubbod"
 		}
-		response, err = s.deploymentLogs(request.Context(), "dubbod", namespace, name, "startup", tailLines)
+		response, err = s.deploymentLogs(request.Context(), "dubbod", namespace, name, "execute", tailLines)
 	case "gateway":
 		if namespace == "" || name == "" {
 			writeGUIError(writer, http.StatusBadRequest, "gateway logs require namespace and name")

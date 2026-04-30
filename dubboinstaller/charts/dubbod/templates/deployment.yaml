@@ -38,11 +38,11 @@ spec:
     spec:
       serviceAccountName: dubbod
       containers:
-        - name: startup
+        - name: execute
           image: "kdubbo/dubbod:debug"
           imagePullPolicy: Always
           args:
-            - "startup"
+            - "execute"
             - --domain
             - cluster.local
             - --guiAddr

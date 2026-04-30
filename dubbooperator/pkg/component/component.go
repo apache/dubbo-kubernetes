@@ -62,7 +62,7 @@ var AllComponents = []Component{
 		SpecName:       "dubbod",
 		ResourceType:   "Deployment",
 		ResourceName:   "dubbod",
-		ContainerName:  "startup",
+		ContainerName:  "execute",
 		Default:        true,
 		HelmSubDir:     "dubbod",
 	},
