@@ -1,10 +1,8 @@
+// Copyright Istio Authors
 //
-// Licensed to the Apache Software Foundation (ASF) under one or more
-// contributor license agreements.  See the NOTICE file distributed with
-// this work for additional information regarding copyright ownership.
-// The ASF licenses this file to You under the Apache License, Version 2.0
-// (the "License"); you may not use this file except in compliance with
-// the License.  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -18,10 +16,15 @@ package krt
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 )
 
+// NewStatusManyCollection builds a ManyCollection that outputs an additional *status* message about the original input.
+// For example: with a Service input and []Endpoint output, I might report (ServiceStatus, []Endpoint) where ServiceStatus counts
+// the number of attached endpoints.
+// Two collections will be output: the status collection and the original output collection.
 func NewStatusManyCollection[I controllers.Object, IStatus, O any](
 	c Collection[I],
 	hf TransformationMultiStatus[I, IStatus, O],
@@ -99,5 +102,13 @@ func (c ObjectWithStatus[I, IStatus]) ResourceName() string {
 }
 
 func (c ObjectWithStatus[I, IStatus]) Equals(o ObjectWithStatus[I, IStatus]) bool {
+	// Check the resource is identical.
+	// Typically, this will generate more events than needed.
+	// The object may change for reasons we don't care about, such as things not impacting generation (labels, annotations),
+	// or other writes to status.
+	// Downstream of the collection, a user should suppress events where the status in the cluster (o.Obj) and the desired status (o.Status)
+	// are not equal.
+	// In theory, we could do this here but there is not a good way to get the o.Obj.Status since there is no common interface
+	// for GetStatus()
 	return Equal(c.Obj, o.Obj) && Equal(c.Status, o.Status)
 }

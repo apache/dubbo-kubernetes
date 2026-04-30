@@ -78,9 +78,58 @@ func (s *DiscoveryServer) AllClients() []*Connection {
 
 func (s *DiscoveryServer) StartPush(req *model.PushRequest) {
 	req.Start = time.Now()
-	for _, p := range s.AllClients() {
+	for _, p := range s.clientsForPush(req) {
 		s.pushQueue.Enqueue(p, req)
 	}
+}
+
+func (s *DiscoveryServer) clientsForPush(req *model.PushRequest) []*Connection {
+	if req == nil || req.Full {
+		return s.AllClients()
+	}
+	services, targeted := edsUpdatedServicesForRequest(req)
+	if !targeted {
+		return s.AllClients()
+	}
+	s.adsClientsMutex.RLock()
+	defer s.adsClientsMutex.RUnlock()
+	filtered := make([]*Connection, 0, min(len(s.adsClients), 64))
+	for _, client := range s.adsClients {
+		if connectionWatchesAnyService(client, services) {
+			filtered = append(filtered, client)
+		}
+	}
+	return filtered
+}
+
+func connectionWatchesAnyService(con *Connection, services sets.String) bool {
+	if con == nil || con.proxy == nil || len(services) == 0 {
+		return true
+	}
+
+	con.proxy.RLock()
+	isProxylessGRPC := con.proxy.Metadata != nil && con.proxy.Metadata.Generator == "grpc"
+	watched := con.proxy.WatchedResources[v1.EndpointType]
+	if !isProxylessGRPC {
+		con.proxy.RUnlock()
+		return true
+	}
+	if watched == nil || len(watched.ResourceNames) == 0 {
+		con.proxy.RUnlock()
+		return true
+	}
+	resourceNames := make([]string, 0, len(watched.ResourceNames))
+	for clusterName := range watched.ResourceNames {
+		resourceNames = append(resourceNames, clusterName)
+	}
+	con.proxy.RUnlock()
+
+	for _, clusterName := range resourceNames {
+		if services.Contains(model.ParseSubsetKeyHostname(clusterName)) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *DiscoveryServer) adsClientCount() int {
@@ -136,7 +185,7 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 
 	s.addCon(con.ID(), con)
 	currentCount := s.adsClientCount()
-	log.Infof("new connection for node:%s (total connections: %d)", con.ID(), currentCount)
+	log.Debugf("new connection for node:%s (total connections: %d)", con.ID(), currentCount)
 
 	// Record XDS client connection
 	version := "unknown"
@@ -148,14 +197,6 @@ func (s *DiscoveryServer) initConnection(node *core.Node, con *Connection, ident
 		s.closeConnection(con)
 		return err
 	}
-
-	// Trigger a ConfigUpdate to ensure ConnectedEndpoints count is updated in subsequent XDS: Pushing logs.
-	// The push will be debounced, so this is safe to call.
-	s.ConfigUpdate(&model.PushRequest{
-		Full:   true,
-		Forced: false,
-		Reason: model.NewReasonStats(model.ProxyUpdate),
-	})
 
 	return nil
 }
@@ -347,10 +388,10 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 	}
 
 	if shouldRespond {
-		log.Infof("%s: REQ %s resources:%d nonce:%s%s (will respond)", stype,
+		log.Debugf("%s: REQ %s resources:%d nonce:%s%s (will respond)", stype,
 			con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
 	} else {
-		log.Infof("%s: REQ %s resources:%d nonce:%s%s (ACK/ignored)", stype,
+		log.Debugf("%s: REQ %s resources:%d nonce:%s%s (ACK/ignored)", stype,
 			con.ID(), len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
 	}
 
@@ -385,7 +426,7 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 	} else {
 		pushResourceNamesStr = " resources:0 [wildcard]"
 	}
-	log.Infof("%s: PUSH request for node:%s%s", stype, con.ID(), pushResourceNamesStr)
+	log.Debugf("%s: PUSH request for node:%s%s", stype, con.ID(), pushResourceNamesStr)
 
 	// Don't set Forced=true for regular proxy requests to avoid unnecessary ServiceTargets recomputation
 	// Only set Forced for debug requests or when explicitly needed
@@ -415,7 +456,7 @@ func (s *DiscoveryServer) processRequest(req *discovery.DiscoveryRequest, con *C
 
 func (s *DiscoveryServer) processDeltaRequest(req *discovery.DeltaDiscoveryRequest, con *Connection) error {
 	stype := v1.GetShortType(req.TypeUrl)
-	deltaLog.Infof("%s: REQ %s resources sub:%d unsub:%d nonce:%s", stype,
+	deltaLog.Debugf("%s: REQ %s resources sub:%d unsub:%d nonce:%s", stype,
 		con.ID(), len(req.ResourceNamesSubscribe), len(req.ResourceNamesUnsubscribe), req.ResponseNonce)
 
 	if req.TypeUrl == v1.HealthInfoType {

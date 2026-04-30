@@ -24,10 +24,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	route "github.com/kdubbo/xds-api/route/v1"
 	matcher "github.com/kdubbo/xds-api/type/matcher/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -36,15 +36,15 @@ import (
 
 func (g *GrpcConfigGenerator) BuildHTTPRoutes(node *model.Proxy, req *model.PushRequest, routeNames []string) ([]*discovery.Resource, model.XdsLogDetails) {
 	resp := []*discovery.Resource{}
-	log.Infof("node=%s, isRouter=%v, routeNames=%v", node.ID, node.IsRouter(), routeNames)
+	log.Debugf("node=%s, isRouter=%v, routeNames=%v", node.ID, node.IsRouter(), routeNames)
 	if len(routeNames) == 0 {
 		log.Warnf("no routeNames requested for node=%s", node.ID)
 	}
 	for _, routeName := range routeNames {
 		if rc := buildHTTPRoute(node, req.Push, routeName); rc != nil {
-			log.Infof("built route config for routeName=%s, VirtualHosts=%d", routeName, len(rc.VirtualHosts))
+			log.Debugf("built route config for routeName=%s, VirtualHosts=%d", routeName, len(rc.VirtualHosts))
 			if len(rc.VirtualHosts) > 0 {
-				log.Infof("VirtualHost[0] domains=%v, routes=%d", rc.VirtualHosts[0].Domains, len(rc.VirtualHosts[0].Routes))
+				log.Debugf("VirtualHost[0] domains=%v, routes=%d", rc.VirtualHosts[0].Domains, len(rc.VirtualHosts[0].Routes))
 			}
 			resp = append(resp, &discovery.Resource{
 				Name:     routeName,
@@ -350,7 +350,7 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 		log.Warnf("httpRoute is nil or has no routes")
 		return nil
 	}
-	log.Infof("processing HTTPRoute with %d route destinations", len(httpRoute.Route))
+	log.Debugf("processing HTTPRoute with %d route destinations", len(httpRoute.Route))
 	weights := make([]*route.WeightedCluster_ClusterWeight, 0, len(httpRoute.Route))
 	var totalWeight uint32
 	for i, dest := range httpRoute.Route {
@@ -381,7 +381,7 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 			weight = 1
 		}
 		totalWeight += uint32(weight)
-		log.Infof("route[%d] -> cluster=%s, subset=%s, weight=%d, host=%s, port=%d",
+		log.Debugf("route[%d] -> cluster=%s, subset=%s, weight=%d, host=%s, port=%d",
 			i, clusterName, subsetName, weight, targetHost, targetPort)
 		weights = append(weights, &route.WeightedCluster_ClusterWeight{
 			Name:   clusterName,
@@ -398,7 +398,7 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 	if totalWeight > 0 {
 		weightedClusters.TotalWeight = wrapperspb.UInt32(totalWeight)
 	}
-	log.Infof("built WeightedCluster with %d clusters, totalWeight=%d", len(weights), totalWeight)
+	log.Debugf("built WeightedCluster with %d clusters, totalWeight=%d", len(weights), totalWeight)
 
 	return &route.Route{
 		Match: &route.RouteMatch{

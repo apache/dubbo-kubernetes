@@ -171,6 +171,9 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
 	}
+	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
+		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
+	}
 	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:15012") {
 		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)
 	}
@@ -274,6 +277,9 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	container := pod.Spec.Containers[0]
 	if !hasEnv(container.Env, "GRPC_XDS_BOOTSTRAP", ProxylessGRPCBootstrapPath) {
 		t.Fatalf("GRPC_XDS_BOOTSTRAP env missing")
+	}
+	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
+		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
 	}
 	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:15012") {
 		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)

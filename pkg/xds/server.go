@@ -166,7 +166,7 @@ func Receive(ctx ConnectionContext) {
 		req, err := con.stream.Recv()
 		if err != nil {
 			if dubbogrpc.GRPCErrorType(err) != dubbogrpc.UnexpectedError {
-				xdsLog.Infof("%q %s terminated", con.peerAddr, con.conID)
+				xdsLog.Debugf("%q %s terminated", con.peerAddr, con.conID)
 				return
 			}
 			con.errorChan <- err
@@ -195,13 +195,13 @@ func Receive(ctx ConnectionContext) {
 		if len(req.ResourceNames) > 0 {
 			resourceNamesStr = " [" + strings.Join(req.ResourceNames, ", ") + "]"
 		}
-		xdsLog.Infof("%s: RAW REQ %s resources:%d nonce:%s%s",
+		xdsLog.Debugf("%s: RAW REQ %s resources:%d nonce:%s%s",
 			model.GetShortType(req.TypeUrl), con.conID, len(req.ResourceNames), req.ResponseNonce, resourceNamesStr)
 
 		select {
 		case con.reqChan <- req:
 		case <-con.stream.Context().Done():
-			xdsLog.Infof("%q %s terminated with stream closed", con.peerAddr, con.conID)
+			xdsLog.Debugf("%q %s terminated with stream closed", con.peerAddr, con.conID)
 			return
 		}
 	}
@@ -346,7 +346,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 		// as a resource change rather than an ACK so the new clusters get a response.
 		previousResourcesCopy := previousInfo.ResourceNames.Copy()
 		if !newResources.Equals(previousResourcesCopy) && len(newResources) > 0 {
-			Log.Infof("%s: REQ %s nonce mismatch (got %s, sent %s) but resources changed -> responding",
+			Log.Debugf("%s: REQ %s nonce mismatch (got %s, sent %s) but resources changed -> responding",
 				stype, id, request.ResponseNonce, previousInfo.NonceSent)
 			added := newResources.Difference(previousResourcesCopy)
 			w.UpdateWatchedResource(request.TypeUrl, func(wr *WatchedResource) *WatchedResource {
@@ -428,7 +428,7 @@ func ShouldRespond(w Watcher, id string, request *discovery.DiscoveryRequest) (b
 	// We should always respond "alwaysRespond" marked requests to let xDS clients finish warming
 	// even though Nonce match and it looks like an ACK.
 	if alwaysRespond {
-		Log.Infof("%s: FORCE RESPONSE %s for warming.", stype, id)
+		Log.Debugf("%s: FORCE RESPONSE %s for warming.", stype, id)
 		return true, emptyResourceDelta
 	}
 

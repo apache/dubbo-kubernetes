@@ -28,7 +28,6 @@ data:
     templates:
       grpc-engine: |
 {{ .Files.Get "files/grpc-engine.yaml" | trim | indent 8 }}
-{{/*      kube-gateway: |*/}}
-{{/*{{ .Files.Get "files/kube-gateway.yaml" | trim | indent 8 }}*/}}
+      gateway: |
+{{ .Files.Get "files/kube-gateway.yaml" | trim | indent 8 }}
   values: |-
-

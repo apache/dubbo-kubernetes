@@ -1,10 +1,8 @@
+// Copyright Istio Authors
 //
-// Licensed to the Apache Software Foundation (ASF) under one or more
-// contributor license agreements.  See the NOTICE file distributed with
-// this work for additional information regarding copyright ownership.
-// The ASF licenses this file to You under the Apache License, Version 2.0
-// (the "License"); you may not use this file except in compliance with
-// the License.  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -27,18 +25,13 @@ type DebugHandler struct {
 	mu               sync.RWMutex
 }
 
+func (p *DebugHandler) MarshalJSON() ([]byte, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return json.Marshal(p.debugCollections)
+}
+
 var GlobalDebugHandler = new(DebugHandler)
-
-type DebugCollection struct {
-	name string
-	dump func() CollectionDump
-	uid  collectionUID
-}
-
-type InputDump struct {
-	Outputs      []string `json:"outputs,omitempty"`
-	Dependencies []string `json:"dependencies,omitempty"`
-}
 
 type CollectionDump struct {
 	// Map of output key -> output
@@ -50,11 +43,14 @@ type CollectionDump struct {
 	// Synced returns whether the collection is synced or not
 	Synced bool `json:"synced"`
 }
-
-func (p *DebugHandler) MarshalJSON() ([]byte, error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return json.Marshal(p.debugCollections)
+type InputDump struct {
+	Outputs      []string `json:"outputs,omitempty"`
+	Dependencies []string `json:"dependencies,omitempty"`
+}
+type DebugCollection struct {
+	name string
+	dump func() CollectionDump
+	uid  collectionUID
 }
 
 func (p DebugCollection) MarshalJSON() ([]byte, error) {
@@ -63,15 +59,6 @@ func (p DebugCollection) MarshalJSON() ([]byte, error) {
 		"name":  p.name,
 		"state": p.dump(),
 	})
-}
-
-// nolint: unused // (not true, not sure why it thinks it is!)
-func eraseMap[T any](l map[Key[T]]T) map[string]any {
-	nm := make(map[string]any, len(l))
-	for k, v := range l {
-		nm[string(k)] = v
-	}
-	return nm
 }
 
 // maybeRegisterCollectionForDebugging registers the collection in the debugger, if one is enabled
@@ -87,4 +74,13 @@ func maybeRegisterCollectionForDebugging[T any](c Collection[T], handler *DebugH
 		dump: cc.dump,
 		uid:  cc.uid(),
 	})
+}
+
+// nolint: unused // (not true, not sure why it thinks it is!)
+func eraseMap[T any](l map[Key[T]]T) map[string]any {
+	nm := make(map[string]any, len(l))
+	for k, v := range l {
+		nm[string(k)] = v
+	}
+	return nm
 }

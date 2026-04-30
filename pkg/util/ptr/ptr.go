@@ -22,6 +22,14 @@ func Of[T any](t T) *T {
 	return &t
 }
 
+func OrEmpty[T any](t *T) T {
+	if t != nil {
+		return *t
+	}
+	var empty T
+	return empty
+}
+
 func Empty[T any]() T {
 	var empty T
 	return empty

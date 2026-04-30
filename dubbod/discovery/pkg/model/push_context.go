@@ -24,12 +24,11 @@ import (
 	"sync"
 	"time"
 
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
@@ -40,6 +39,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"go.uber.org/atomic"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -172,6 +172,7 @@ func NewPushContext() *PushContext {
 		virtualServiceIndex:  newVirtualServiceIndex(),
 		destinationRuleIndex: newDestinationRuleIndex(),
 		serviceAccounts:      map[serviceAccountKey][]string{},
+		ProxyStatus:          map[string]map[string]ProxyPushStatus{},
 	}
 }
 
@@ -229,6 +230,17 @@ func (r ReasonStats) Merge(other ReasonStats) {
 	}
 }
 
+func (r ReasonStats) Copy() ReasonStats {
+	if len(r) == 0 {
+		return nil
+	}
+	out := make(ReasonStats, len(r))
+	for reason, count := range r {
+		out[reason] = count
+	}
+	return out
+}
+
 func (r ReasonStats) Count() int {
 	var ret int
 	for _, count := range r {
@@ -266,31 +278,87 @@ func (pr *PushRequest) Merge(other *PushRequest) *PushRequest {
 		pr.Push = other.Push
 	}
 
+	if pr.Start.IsZero() {
+		pr.Start = other.Start
+	}
+
 	if pr.ConfigsUpdated == nil {
-		pr.ConfigsUpdated = other.ConfigsUpdated
+		if other.ConfigsUpdated != nil {
+			pr.ConfigsUpdated = other.ConfigsUpdated.Copy()
+		}
 	} else {
 		pr.ConfigsUpdated.Merge(other.ConfigsUpdated)
 	}
 
 	if pr.AddressesUpdated == nil {
-		pr.AddressesUpdated = other.AddressesUpdated
+		if other.AddressesUpdated != nil {
+			pr.AddressesUpdated = other.AddressesUpdated.Copy()
+		}
 	} else {
 		pr.AddressesUpdated.Merge(other.AddressesUpdated)
 	}
 
+	pr.Delta = mergeResourceDelta(pr.Delta, other.Delta)
+
 	return pr
+}
+
+func mergeResourceDelta(first, second ResourceDelta) ResourceDelta {
+	out := copyResourceDelta(first)
+	if len(second.Subscribed) > 0 {
+		if out.Subscribed == nil {
+			out.Subscribed = second.Subscribed.Copy()
+		} else {
+			out.Subscribed.Merge(second.Subscribed)
+		}
+	}
+	if len(second.Unsubscribed) > 0 {
+		if out.Unsubscribed == nil {
+			out.Unsubscribed = second.Unsubscribed.Copy()
+		} else {
+			out.Unsubscribed.Merge(second.Unsubscribed)
+		}
+	}
+	return out
+}
+
+func copyResourceDelta(delta ResourceDelta) ResourceDelta {
+	out := ResourceDelta{}
+	if delta.Subscribed != nil {
+		out.Subscribed = delta.Subscribed.Copy()
+	}
+	if delta.Unsubscribed != nil {
+		out.Unsubscribed = delta.Unsubscribed.Copy()
+	}
+	return out
+}
+
+func (pr *PushRequest) Copy() *PushRequest {
+	if pr == nil {
+		return nil
+	}
+	out := *pr
+	out.Reason = pr.Reason.Copy()
+	if pr.ConfigsUpdated != nil {
+		out.ConfigsUpdated = pr.ConfigsUpdated.Copy()
+	}
+	if pr.AddressesUpdated != nil {
+		out.AddressesUpdated = pr.AddressesUpdated.Copy()
+	}
+	out.Delta = copyResourceDelta(pr.Delta)
+	return &out
 }
 
 func (pr *PushRequest) CopyMerge(other *PushRequest) *PushRequest {
 	if pr == nil {
-		return other
+		return other.Copy()
 	}
 	if other == nil {
-		return pr
+		return pr.Copy()
 	}
 
-	merged := &PushRequest{}
-	return merged
+	merged := pr.Copy()
+	return merged.Merge(other)
 }
 
 func (pr *PushRequest) IsProxyUpdate() bool {
@@ -1039,7 +1107,7 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 			if hasTLS {
 				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 			}
-			log.Infof("found DestinationRule in namespace-local index for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
+			log.Debugf("found DestinationRule in namespace-local index for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
 				namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
 			return dr
 		}
@@ -1056,7 +1124,7 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 			if hasTLS {
 				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 			}
-			log.Infof("found DestinationRule in exported rules from namespace %s for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
+			log.Debugf("found DestinationRule in exported rules from namespace %s for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
 				ns, namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
 			return dr
 		}
@@ -1071,13 +1139,13 @@ func (ps *PushContext) DestinationRuleForService(namespace string, hostname host
 			if hasTLS {
 				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 			}
-			log.Infof("found DestinationRule in root namespace for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
+			log.Debugf("found DestinationRule in root namespace for %s/%s with %d subsets (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s)",
 				namespace, hostname, len(dr.Subsets), dr.TrafficPolicy != nil, hasTLS, tlsMode)
 			return dr
 		}
 	}
 
-	log.Warnf("no DestinationRule found for %s/%s", namespace, hostname)
+	log.Debugf("no DestinationRule found for %s/%s", namespace, hostname)
 	return nil
 }
 
@@ -1104,7 +1172,7 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 		return nil
 	}
 	if rules := csr.specificSubRules[hostname]; len(rules) > 0 {
-		log.Infof("found %d rules for hostname %s", len(rules), hostname)
+		log.Debugf("found %d rules for hostname %s", len(rules), hostname)
 		// The first rule should contain the merged result if merge was successful.
 		// However, if merge failed (e.g., EnableEnhancedDestinationRuleMerge is disabled),
 		// we need to check all rules and prefer the one with TLS configuration.
@@ -1124,7 +1192,7 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 					bestRuleHasTLS = hasTLS
 				} else if hasTLS && !bestRuleHasTLS {
 					// Prefer rule with TLS over rule without TLS
-					log.Infof("found rule %d with TLS for hostname %s, preferring it over rule 0", i, hostname)
+					log.Debugf("found rule %d with TLS for hostname %s, preferring it over rule 0", i, hostname)
 					bestRule = dr
 					bestRuleHasTLS = hasTLS
 				}
@@ -1135,7 +1203,7 @@ func firstDestinationRule(csr *consolidatedSubRules, hostname host.Name) *networ
 			if bestRuleHasTLS {
 				tlsMode = bestRule.TrafficPolicy.Tls.Mode.String()
 			}
-			log.Infof("returning DestinationRule for hostname %s (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s, has %d subsets)",
+			log.Debugf("returning DestinationRule for hostname %s (has TrafficPolicy: %v, has TLS: %v, TLS mode: %s, has %d subsets)",
 				hostname, bestRule.TrafficPolicy != nil, bestRuleHasTLS, tlsMode, len(bestRule.Subsets))
 			return bestRule
 		} else {
@@ -1160,5 +1228,8 @@ func (ps *PushContext) StatusJSON() ([]byte, error) {
 	}
 	ps.proxyStatusMutex.RLock()
 	defer ps.proxyStatusMutex.RUnlock()
+	if len(ps.ProxyStatus) == 0 {
+		return []byte{'{', '}'}, nil
+	}
 	return json.MarshalIndent(ps.ProxyStatus, "", "    ")
 }

@@ -58,6 +58,8 @@ var (
 		"Gateway API controller name. dubbod will only reconcile Gateway API resources referencing a GatewayClass with this controller name").Get()
 	GatewayAPIDefaultGatewayClass = env.Register("DUBBO_GATEWAY_API_DEFAULT_GATEWAYCLASS_NAME", "dubbo",
 		"Name of the default GatewayClass").Get()
+	DxgateImage = env.Register("DUBBO_DXGATE_IMAGE", "kdubbo/dxgate:latest",
+		"Container image used for managed Dubbo Gateway API data-plane deployments").Get()
 	StatusMaxWorkers = env.Register("DUBBO_STATUS_MAX_WORKERS", 100, "The maximum number of workers"+
 		" for status update").Get()
 )

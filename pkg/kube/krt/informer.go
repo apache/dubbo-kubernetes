@@ -1,10 +1,8 @@
+// Copyright Istio Authors
 //
-// Licensed to the Apache Software Foundation (ASF) under one or more
-// contributor license agreements.  See the NOTICE file distributed with
-// this work for additional information regarding copyright ownership.
-// The ASF licenses this file to You under the Apache License, Version 2.0
-// (the "License"); you may not use this file except in compliance with
-// the License.  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -18,34 +16,123 @@ package krt
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 
-	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	klabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
+	istiolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	klabels "k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 )
-
-var _ internalCollection[controllers.Object] = &informer[controllers.Object]{}
 
 type informer[I controllers.ComparableObject] struct {
 	inf            kclient.Informer[I]
+	log            *istiolog.Logger
 	collectionName string
 	id             collectionUID
-	eventHandlers  *handlers[I]
-	augmentation   func(a any) any
-	synced         chan struct{}
-	baseSyncer     Syncer
-	metadata       Metadata
+
+	eventHandlers *handlers[I]
+	augmentation  func(a any) any
+	synced        chan struct{}
+	baseSyncer    Syncer
+	metadata      Metadata
 }
 
-type informerIndex[I any] struct {
-	idx kclient.RawIndexer
+// nolint: unused // (not true, its to implement an interface)
+func (i *informer[I]) augment(a any) any {
+	if i.augmentation != nil {
+		return i.augmentation(a)
+	}
+	return a
+}
+
+var _ internalCollection[controllers.Object] = &informer[controllers.Object]{}
+
+// nolint: unused // (not true, its to implement an interface)
+func (i *informer[I]) _internalHandler() {}
+
+func (i *informer[I]) Synced() Syncer {
+	return channelSyncer{
+		name:   i.collectionName,
+		synced: i.synced,
+	}
+}
+
+func (i *informer[I]) HasSynced() bool {
+	return i.baseSyncer.HasSynced()
+}
+
+func (i *informer[I]) WaitUntilSynced(stop <-chan struct{}) bool {
+	return i.baseSyncer.WaitUntilSynced(stop)
+}
+
+// nolint: unused // (not true, its to implement an interface)
+func (i *informer[I]) dump() CollectionDump {
+	return CollectionDump{
+		Outputs: eraseMap(slices.GroupUnique(i.inf.List(metav1.NamespaceAll, klabels.Everything()), getTypedKey)),
+		Synced:  i.HasSynced(),
+	}
+}
+
+func (i *informer[I]) name() string {
+	return i.collectionName
+}
+
+// nolint: unused // (not true, its to implement an interface)
+func (i *informer[I]) uid() collectionUID {
+	return i.id
+}
+
+func (i *informer[I]) List() []I {
+	res := i.inf.List(metav1.NamespaceAll, klabels.Everything())
+	return res
+}
+
+func (i *informer[I]) GetKey(k string) *I {
+	// ns, n := splitKeyFunc(string(k))
+	// Internal optimization: we know kclient will eventually lookup "ns/name"
+	// We also have a key in this format.
+	// Rather than split and rejoin it later, just pass it as the name
+	// This is depending on "unstable" implementation details, but we own both libraries and tests would catch any issues.
+	if got := i.inf.Get(k, ""); !controllers.IsNil(got) {
+		return &got
+	}
+	return nil
+}
+
+func (i *informer[I]) Metadata() Metadata {
+	return i.metadata
+}
+
+func (i *informer[I]) Register(f func(o Event[I])) HandlerRegistration {
+	return registerHandlerAsBatched[I](i, f)
+}
+
+func (i *informer[I]) RegisterBatch(f func(o []Event[I]), runExistingState bool) HandlerRegistration {
+	// Note: runExistingState is NOT respected here.
+	// Informer doesn't expose a way to do that. However, due to the runtime model of informers, this isn't a dealbreaker;
+	// the handlers are all called async, so we don't end up with the same deadlocks we would have in the other collection types.
+	// While this is quite kludgy, this is an internal interface so its not too bad.
+	synced := i.inf.AddEventHandler(informerEventHandler[I](func(o Event[I], initialSync bool) {
+		f([]Event[I]{o})
+	}))
+	base := i.baseSyncer
+	handler := pollSyncer{
+		name: fmt.Sprintf("%v handler", i.name()),
+		f:    synced.HasSynced,
+	}
+	sync := multiSyncer{syncers: []Syncer{base, handler}}
+	return informerHandlerRegistration{
+		Syncer: sync,
+		remove: func() {
+			i.inf.ShutdownHandler(synced)
+		},
+	}
 }
 
 type informerHandlerRegistration struct {
@@ -53,46 +140,28 @@ type informerHandlerRegistration struct {
 	remove func()
 }
 
-func NewInformer[I controllers.ComparableObject](c kube.Client, opts ...CollectionOption) Collection[I] {
-	return NewInformerFiltered[I](c, kubetypes.Filter{}, opts...)
+func (i informerHandlerRegistration) UnregisterHandler() {
+	i.remove()
 }
 
-func NewInformerFiltered[I controllers.ComparableObject](c kube.Client, filter kubetypes.Filter, opts ...CollectionOption) Collection[I] {
-	return WrapClient[I](kclient.NewFiltered[I](c, filter), opts...)
+// nolint: unused // (not true)
+type informerIndex[I any] struct {
+	idx kclient.RawIndexer
 }
 
-func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...CollectionOption) Collection[I] {
-	o := buildCollectionOptions(opts...)
-	if o.name == "" {
-		o.name = fmt.Sprintf("Informer[%v]", ptr.TypeName[I]())
-	}
-	h := &informer[I]{
-		inf:            c,
-		collectionName: o.name,
-		id:             nextUID(),
-		eventHandlers:  &handlers[I]{},
-		augmentation:   o.augmentation,
-		synced:         make(chan struct{}),
-	}
-	h.baseSyncer = channelSyncer{
-		name:   h.collectionName,
-		synced: h.synced,
-	}
+// nolint: unused // (not true)
+func (ii *informerIndex[I]) Lookup(key string) []I {
+	return slices.Map(ii.idx.Lookup(key), func(i any) I {
+		return i.(I)
+	})
+}
 
-	if o.metadata != nil {
-		h.metadata = o.metadata
+// nolint: unused // (not true)
+func (i *informer[I]) index(name string, extract func(o I) []string) indexer[I] {
+	idx := i.inf.Index(name, extract)
+	return &informerIndex[I]{
+		idx: idx,
 	}
-	go func() {
-		defer c.ShutdownHandlers()
-		if !kube.WaitForCacheSync(o.name, o.stop, c.HasSyncedIgnoringHandlers) {
-			return
-		}
-		close(h.synced)
-		log.Infof("%v synced", h.name())
-
-		<-o.stop
-	}()
-	return h
 }
 
 func informerEventHandler[I controllers.ComparableObject](handler func(o Event[I], initialSync bool)) cache.ResourceEventHandler {
@@ -119,129 +188,63 @@ func informerEventHandler[I controllers.ComparableObject](handler func(o Event[I
 	}
 }
 
-func (i informerHandlerRegistration) UnregisterHandler() {
-	i.remove()
-}
-
-func (i *informer[I]) name() string {
-	return i.collectionName
-}
-
-func (i *informer[I]) WaitUntilSynced(stop <-chan struct{}) bool {
-	return i.baseSyncer.WaitUntilSynced(stop)
-}
-
-func (i *informer[I]) Synced() Syncer {
-	return channelSyncer{
-		name:   i.collectionName,
-		synced: i.synced,
+// WrapClient is the base entrypoint that enables the creation
+// of a collection from an API Server client.
+//
+// Generic types can use kclient.NewDynamic to create an
+// informer for a Collection of type controllers.Object
+func WrapClient[I controllers.ComparableObject](c kclient.Informer[I], opts ...CollectionOption) Collection[I] {
+	o := buildCollectionOptions(opts...)
+	if o.name == "" {
+		o.name = fmt.Sprintf("Informer[%v]", ptr.TypeName[I]())
 	}
-}
-
-func (i *informer[I]) HasSynced() bool {
-	return i.baseSyncer.HasSynced()
-}
-
-func (i *informer[I]) Metadata() Metadata {
-	return i.metadata
-}
-
-func (i *informer[I]) GetKey(k string) *I {
-	if got := i.inf.Get(k, ""); !controllers.IsNil(got) {
-		return &got
+	h := &informer[I]{
+		inf:            c,
+		log:            log.WithLabels("owner", o.name),
+		collectionName: o.name,
+		id:             nextUID(),
+		eventHandlers:  &handlers[I]{},
+		augmentation:   o.augmentation,
+		synced:         make(chan struct{}),
 	}
-	return nil
-}
+	h.baseSyncer = channelSyncer{
+		name:   h.collectionName,
+		synced: h.synced,
+	}
 
-func (i *informer[I]) List() []I {
-	res := i.inf.List(metav1.NamespaceAll, klabels.Everything())
-	return res
-}
+	if o.metadata != nil {
+		h.metadata = o.metadata
+	}
 
-func (i *informer[I]) Register(f func(o Event[I])) HandlerRegistration {
-	return registerHandlerAsBatched[I](i, f)
-}
-
-func (i *informer[I]) RegisterBatch(f func(o []Event[I]), runExistingState bool) HandlerRegistration {
-	synced := i.inf.AddEventHandler(informerEventHandler[I](func(o Event[I], initialSync bool) {
-		if runExistingState || !initialSync {
-			// Log all events to help diagnose missing events
-			var nameStr, nsStr string
-			if o.New != nil {
-				if objWithNs, ok := any(*o.New).(interface {
-					GetNamespace() string
-					GetName() string
-				}); ok {
-					nsStr = objWithNs.GetNamespace()
-					nameStr = objWithNs.GetName()
-				}
-			} else if o.Old != nil {
-				if objWithNs, ok := any(*o.Old).(interface {
-					GetNamespace() string
-					GetName() string
-				}); ok {
-					nsStr = objWithNs.GetNamespace()
-					nameStr = objWithNs.GetName()
-				}
-			}
-			log.Debugf("informer.RegisterBatch: processing event %s for %s/%s (initialSync=%v, runExistingState=%v)", o.Event, nsStr, nameStr, initialSync, runExistingState)
-			f([]Event[I]{o})
-		} else {
-			// Log skipped events to help diagnose
-			var nameStr, nsStr string
-			if o.New != nil {
-				if objWithNs, ok := any(*o.New).(interface {
-					GetNamespace() string
-					GetName() string
-				}); ok {
-					nsStr = objWithNs.GetNamespace()
-					nameStr = objWithNs.GetName()
-				}
-			}
-			log.Debugf("informer.RegisterBatch: skipping initial sync event for %s/%s (initialSync=%v, runExistingState=%v)", nsStr, nameStr, initialSync, runExistingState)
+	go func() {
+		defer c.ShutdownHandlers()
+		// First, wait for the informer to populate. We ignore handlers which have their own syncing
+		if !kube.WaitForCacheSync(o.name, o.stop, c.HasSyncedIgnoringHandlers) {
+			return
 		}
-	}))
-	base := i.baseSyncer
-	handler := pollSyncer{
-		name: fmt.Sprintf("%v handler", i.name()),
-		f:    synced.HasSynced,
-	}
-	sync := multiSyncer{syncers: []Syncer{base, handler}}
-	return informerHandlerRegistration{
-		Syncer: sync,
-		remove: func() {
-			i.inf.ShutdownHandler(synced)
-		},
-	}
+		close(h.synced)
+		h.log.Infof("%v synced", h.name())
+
+		<-o.stop
+	}()
+	maybeRegisterCollectionForDebugging(h, o.debugger)
+	return h
 }
 
-func (i *informer[I]) uid() collectionUID {
-	return i.id
+// NewInformer creates a Collection[I] sourced from
+// the results of kube.Client querying resources of type I
+// from the API Server.
+//
+// Resources must have their GVR and GVK registered in the
+// kube.Client before this method is called, otherwise
+// NewInformer will panic.
+func NewInformer[I controllers.ComparableObject](c kube.Client, opts ...CollectionOption) Collection[I] {
+	return NewInformerFiltered[I](c, kubetypes.Filter{}, opts...)
 }
 
-func (i *informer[I]) dump() CollectionDump {
-	return CollectionDump{
-		Outputs: eraseMap(slices.GroupUnique(i.inf.List(metav1.NamespaceAll, klabels.Everything()), getTypedKey)),
-		Synced:  i.HasSynced(),
-	}
-}
-
-func (i *informer[I]) augment(a any) any {
-	if i.augmentation != nil {
-		return i.augmentation(a)
-	}
-	return a
-}
-
-func (i *informer[I]) index(name string, extract func(o I) []string) indexer[I] {
-	idx := i.inf.Index(name, extract)
-	return &informerIndex[I]{
-		idx: idx,
-	}
-}
-
-func (ii *informerIndex[I]) Lookup(key string) []I {
-	return slices.Map(ii.idx.Lookup(key), func(i any) I {
-		return i.(I)
-	})
+// NewInformerFiltered takes an argument that filters the
+// results from the kube.Client. Otherwise, behaves
+// the same as NewInformer
+func NewInformerFiltered[I controllers.ComparableObject](c kube.Client, filter kubetypes.Filter, opts ...CollectionOption) Collection[I] {
+	return WrapClient[I](kclient.NewFiltered[I](c, filter), opts...)
 }
