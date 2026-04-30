@@ -13,6 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultProxy := $defaultGlobal.proxy | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $proxy := $global.proxy | default dict }}
+{{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
+{{- $revision := .Values.revision | default "default" }}
+{{- $statusPort := coalesce $global.statusPort $defaultGlobal.statusPort 26020 }}
+{{- $original := omit .Values "_internal_default_values_not_set" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,7 +29,14 @@ metadata:
   namespace: dubbo-system
   labels:
     app: dubbod
-    dubbo.apache.org/rev: default
+    dubbo.apache.org/rev: {{ $revision }}
 data:
   merged-values: |-
+    revision: {{ $revision | quote }}
+    global:
+      dubboNamespace: "dubbo-system"
+      proxy:
+        clusterDomain: {{ $clusterDomain | quote }}
+      statusPort: {{ $statusPort }}
   original-values: |-
+{{ $original | toYaml | nindent 4 }}

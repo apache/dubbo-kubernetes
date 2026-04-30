@@ -36,7 +36,7 @@ func createAegis(opts *security.Options, a RootCertProvider) (security.Client, e
 	var tlsOpts *aegis.TLSOptions
 	var err error
 
-	if strings.HasSuffix(opts.CAEndpoint, ":15010") {
+	if strings.HasSuffix(opts.CAEndpoint, ":26010") {
 		log.Warn("Debug mode or IP-secure network")
 	} else {
 		tlsOpts = &aegis.TLSOptions{}

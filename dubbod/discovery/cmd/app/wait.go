@@ -86,5 +86,5 @@ func init() {
 	waitCmd.PersistentFlags().IntVar(&timeoutSeconds, "timeoutSeconds", 60, "maximum number of seconds to wait for adapter to be ready")
 	waitCmd.PersistentFlags().IntVar(&requestTimeoutMillis, "requestTimeoutMillis", 500, "number of milliseconds to wait for response")
 	waitCmd.PersistentFlags().IntVar(&periodMillis, "periodMillis", 500, "number of milliseconds to wait between attempts")
-	waitCmd.PersistentFlags().StringVar(&url, "url", "http://localhost:15020/healthz/ready", "URL to use in requests")
+	waitCmd.PersistentFlags().StringVar(&url, "url", "http://localhost:26020/healthz/ready", "URL to use in requests")
 }

@@ -489,7 +489,7 @@ func (d *DeploymentController) buildDxgateBootstrapConfig(namespace, serviceName
 		systemNamespace = constants.DubboSystemNamespace
 	}
 	return buildDxgateBootstrapConfig(
-		fmt.Sprintf("http://dubbod.%s.svc:15010", systemNamespace),
+		fmt.Sprintf("http://dubbod.%s.svc:26010", systemNamespace),
 		dxgateListenerNames(namespace, serviceName, d.domainSuffix(), ports),
 		string(d.clusterID),
 		d.domainSuffix(),

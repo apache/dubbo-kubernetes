@@ -21,11 +21,11 @@ import (
 	"os"
 	"time"
 
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/hashicorp/go-multierror"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"sigs.k8s.io/yaml"
 )
@@ -146,8 +146,8 @@ func DefaultMeshGlobalConfig() *meshv1alpha1.MeshGlobalConfig {
 func DefaultProxyConfig() *meshv1alpha1.ProxyConfig {
 	return &meshv1alpha1.ProxyConfig{
 		ConfigPath:             constants.ConfigPathDir,
-		DiscoveryAddress:       "dubbod.dubbo-system.svc:15012",
+		DiscoveryAddress:       "dubbod.dubbo-system.svc:26012",
 		ControlPlaneAuthPolicy: meshv1alpha1.AuthenticationPolicy_MUTUAL_TLS,
-		StatusPort:             15020,
+		StatusPort:             26020,
 	}
 }

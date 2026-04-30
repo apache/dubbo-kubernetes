@@ -12,17 +12,17 @@ func TestBuildGUIURLs(t *testing.T) {
 	}{
 		{
 			name:            "default host and path",
-			address:         "http://127.0.0.1:15080",
+			address:         "http://127.0.0.1:26080",
 			path:            "/gui",
-			wantGUI:         "http://127.0.0.1:15080/gui/",
-			wantOverviewURL: "http://127.0.0.1:15080/gui/api/overview",
+			wantGUI:         "http://127.0.0.1:26080/gui/",
+			wantOverviewURL: "http://127.0.0.1:26080/gui/api/overview",
 		},
 		{
 			name:            "host without scheme",
-			address:         "127.0.0.1:15080",
+			address:         "127.0.0.1:26080",
 			path:            "dashboard",
-			wantGUI:         "http://127.0.0.1:15080/dashboard/",
-			wantOverviewURL: "http://127.0.0.1:15080/dashboard/api/overview",
+			wantGUI:         "http://127.0.0.1:26080/dashboard/",
+			wantOverviewURL: "http://127.0.0.1:26080/dashboard/api/overview",
 		},
 	}
 

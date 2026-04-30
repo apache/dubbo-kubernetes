@@ -127,7 +127,7 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 		podIP:            "10.0.0.1",
 		serviceAccount:   "nginx",
 		trustDomain:      "cluster.local",
-		discoveryAddress: "dubbod.dubbo-system.svc:15012",
+		discoveryAddress: "dubbod.dubbo-system.svc:26012",
 	}
 
 	data, err := buildRuntimeConfigJSON(workload, nil, nil)

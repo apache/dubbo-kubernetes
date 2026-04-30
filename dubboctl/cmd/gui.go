@@ -22,7 +22,7 @@ type guiArgs struct {
 
 func GuiCmd() *cobra.Command {
 	args := &guiArgs{
-		address: "http://127.0.0.1:15080",
+		address: "http://127.0.0.1:26080",
 		path:    "/gui",
 		open:    true,
 		wait:    30 * time.Second,

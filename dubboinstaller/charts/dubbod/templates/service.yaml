@@ -22,15 +22,15 @@ metadata:
     app: dubbod
 spec:
   ports:
-    - port: 15010
+    - port: 26010
       name: grpc-xds
       protocol: TCP
-    - port: 15012
+    - port: 26012
       name: https-dns
       protocol: TCP
     - port: 443
       name: https-webhook
-      targetPort: 15017
+      targetPort: 26017
       protocol: TCP
   selector:
     app: dubbod
@@ -45,9 +45,9 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - port: 15080
+    - port: 26080
       name: gui
-      targetPort: 15080
+      targetPort: 26080
       nodePort: 30080
       protocol: TCP
   selector:

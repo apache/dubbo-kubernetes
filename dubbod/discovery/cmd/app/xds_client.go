@@ -117,7 +117,7 @@ func newXDSClientCommand() *cobra.Command {
 	opts := &xdsClientOptions{
 		host:           firstNonEmpty(os.Getenv("DUBBO_SERVICE_HOST"), host),
 		port:           firstIntFromEnv(int(port), "DUBBO_SERVICE_PORT"),
-		xdsAddress:     firstNonEmpty(os.Getenv("XDS_ADDRESS"), "dubbod.dubbo-system.svc:15010"),
+		xdsAddress:     firstNonEmpty(os.Getenv("XDS_ADDRESS"), "dubbod.dubbo-system.svc:26010"),
 		bootstrapPath:  os.Getenv("GRPC_XDS_BOOTSTRAP"),
 		namespace:      namespace,
 		podName:        firstNonEmpty(os.Getenv("POD_NAME"), os.Getenv("HOSTNAME"), "xds-client"),
@@ -262,7 +262,7 @@ func adsDialConfig(opts *xdsClientOptions) (*corev1.Node, string, []grpc.DialOpt
 		return nil, "", nil, err
 	}
 	creds := grpc.WithTransportCredentials(insecure.NewCredentials())
-	if !opts.insecure && strings.HasSuffix(opts.xdsAddress, ":15012") {
+	if !opts.insecure && strings.HasSuffix(opts.xdsAddress, ":26012") {
 		creds = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12}))
 	}
 	return node, opts.xdsAddress, []grpc.DialOption{creds}, nil

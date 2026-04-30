@@ -130,7 +130,7 @@ func addFlags(c *cobra.Command) {
 		"Discovery service HTTP address")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GUIAddr,
 		"guiAddr",
-		":15080",
+		":26080",
 		"Embedded GUI HTTP address")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GUIPath,
 		"guiPath",
@@ -138,15 +138,15 @@ func addFlags(c *cobra.Command) {
 		"Embedded GUI base path on the HTTP address")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.HTTPSAddr,
 		"httpsAddr",
-		":15017",
+		":26017",
 		"Injection and validation service HTTPS address")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.GRPCAddr,
 		"grpcAddr",
-		":15010",
+		":26010",
 		"Discovery service gRPC address")
 	c.PersistentFlags().StringVar(&serverArgs.ServerOptions.SecureGRPCAddr,
 		"secureGRPCAddr",
-		":15012",
+		":26012",
 		"Discovery service secured gRPC address")
 	c.PersistentFlags().StringVar(&serverArgs.RegistryOptions.FileDir,
 		"configDir",
