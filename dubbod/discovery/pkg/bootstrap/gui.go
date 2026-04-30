@@ -161,16 +161,16 @@ func (s *Server) initGUIServer(addr string) error {
 		}
 
 		go func() {
-			log.Infof("starting gui server at %s", listener.Addr())
+			log.Infof("starting GUI Server at %s", listener.Addr())
 			if err := guiServer.Serve(listener); err != nil && err != http.ErrServerClosed {
-				log.Errorf("error serving gui server: %v", err)
+				log.Errorf("error serving GUI Server: %v", err)
 			}
 		}()
 
 		go func() {
 			<-stop
 			if err := guiServer.Close(); err != nil {
-				log.Errorf("error closing gui server: %v", err)
+				log.Errorf("error closing GUI Server: %v", err)
 			}
 		}()
 
