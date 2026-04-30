@@ -62,7 +62,7 @@ var AllComponents = []Component{
 		SpecName:       "dubbod",
 		ResourceType:   "Deployment",
 		ResourceName:   "dubbod",
-		ContainerName:  "startup",
+		ContainerName:  "execute",
 		Default:        true,
 		HelmSubDir:     "dubbod",
 	},
@@ -71,7 +71,7 @@ var AllComponents = []Component{
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:           "Dubbo Resource Core",
-		DubboDiscoveryComponentName: "Dubbo Control Plane",
+		DubboDiscoveryComponentName: "Dubbo control plane",
 	}
 
 	Icons = map[Name]string{

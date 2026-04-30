@@ -1,5 +1,5 @@
 /**
- * Dubbo Control Plane GUI (React/Preact No-Build)
+ * Dubbo control plane GUI (React/Preact No-Build)
  * Kuma Style Re-implementation.
  */
 
@@ -197,7 +197,7 @@ const App = () => {
             <div className="fade-in">
               <h1 style=${{fontSize: '24px', fontWeight: 700, marginBottom: '24px'}}>Home</h1>
 
-              <h2 style=${{fontSize: '16px', fontWeight: 600, marginBottom: '16px', marginTop: '16px'}}>Dubbo Control Plane</h2>
+              <h2 style=${{fontSize: '16px', fontWeight: 600, marginBottom: '16px', marginTop: '16px'}}>Dubbo control plane</h2>
               <div className="k-table-container">
                 <table className="k-table">
                   <thead>

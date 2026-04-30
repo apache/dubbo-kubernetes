@@ -16,7 +16,7 @@ kubectl -n dubbo-system rollout status deploy/grafana --timeout=180s
 kubectl -n dubbo-system port-forward svc/grafana 3000:3000
 ```
 
-浏览器打开 `http://127.0.0.1:3000`，进入 `Dubbo / Dubbo Control Plane Observability` 仪表盘。
+浏览器打开 `http://127.0.0.1:3000`，进入 `Dubbo / Dubbo control plane Observability` 仪表盘。
 
 ## 验证 Prometheus
 
