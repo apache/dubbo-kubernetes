@@ -19,8 +19,11 @@ package gateway
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -30,6 +33,7 @@ import (
 	klabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gateway "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -99,6 +103,8 @@ type DeploymentController struct {
 	deployments     kclient.Client[*appsv1.Deployment]
 	services        kclient.Client[*corev1.Service]
 	serviceAccounts kclient.Client[*corev1.ServiceAccount]
+	configMaps      kclient.Client[*corev1.ConfigMap]
+	httpRoutes      kclient.Client[*gateway.HTTPRoute]
 	namespaces      kclient.Client[*corev1.Namespace]
 	tagWatcher      TagWatcher
 	revision        string
@@ -192,6 +198,17 @@ func NewDeploymentController(
 	dc.serviceAccounts.AddEventHandler(parentHandler)
 	dc.clients[gvr.ServiceAccount] = NewUntypedWrapper(dc.serviceAccounts)
 
+	dc.configMaps = kclient.NewFiltered[*corev1.ConfigMap](client, filter)
+	dc.configMaps.AddEventHandler(parentHandler)
+	dc.clients[gvr.ConfigMap] = NewUntypedWrapper(dc.configMaps)
+
+	dc.httpRoutes = kclient.NewFiltered[*gateway.HTTPRoute](client, filter)
+	dc.httpRoutes.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
+		for _, gw := range dc.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
+			dc.queue.AddObject(gw)
+		}
+	}))
+
 	// Namespace is a cluster-scoped resource, use New instead of NewFiltered
 	dc.namespaces = kclient.New[*corev1.Namespace](client)
 	dc.namespaces.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
@@ -239,6 +256,8 @@ func (d *DeploymentController) Run(stop <-chan struct{}) {
 		d.deployments.HasSynced,
 		d.services.HasSynced,
 		d.serviceAccounts.HasSynced,
+		d.configMaps.HasSynced,
+		d.httpRoutes.HasSynced,
 		d.gateways.HasSynced,
 		d.gatewayClasses.HasSynced,
 	)
@@ -252,6 +271,8 @@ func (d *DeploymentController) Run(stop <-chan struct{}) {
 		d.deployments,
 		d.services,
 		d.serviceAccounts,
+		d.configMaps,
+		d.httpRoutes,
 		d.gateways,
 		d.gatewayClasses,
 	)
@@ -311,16 +332,31 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 
 	// Extract service ports from Gateway listeners
 	ports := extractServicePorts(gw)
+	if len(ports) == 0 {
+		log.Infof("gateway has no supported HTTP listeners, skipping dxgate deployment")
+		return nil
+	}
+	bootstrapConfig, bootstrapConfigHash, err := d.buildDxgateBootstrapConfig(gw.Namespace, defaultName, ports)
+	if err != nil {
+		log.Errorf("failed building dxgate bootstrap config: %v", err)
+		return err
+	}
 
 	input := TemplateInput{
-		Gateway:         &gw,
-		GatewayClass:    string(gw.Spec.GatewayClassName),
-		DeploymentName:  defaultName,
-		ServiceAccount:  defaultName,
-		Ports:           ports,
-		ServiceType:     serviceType,
-		Revision:        d.revision,
-		ControllerLabel: gi.controllerLabel,
+		Gateway:             &gw,
+		GatewayClass:        string(gw.Spec.GatewayClassName),
+		DeploymentName:      defaultName,
+		ServiceAccount:      defaultName,
+		Ports:               ports,
+		ServiceType:         serviceType,
+		Revision:            d.revision,
+		ControllerLabel:     gi.controllerLabel,
+		BootstrapConfig:     bootstrapConfig,
+		BootstrapConfigHash: bootstrapConfigHash,
+		DxgateImage:         features.DxgateImage,
+		SystemNamespace:     d.systemNamespace,
+		ClusterID:           string(d.clusterID),
+		DomainSuffix:        d.domainSuffix(),
 	}
 
 	log.Debugf("rendering template %q for gateway %s/%s", gi.templates, gw.Namespace, gw.Name)
@@ -357,6 +393,401 @@ type TemplateInput struct {
 	ServiceType     corev1.ServiceType
 	Revision        string
 	ControllerLabel string
+
+	BootstrapConfig     string
+	BootstrapConfigHash string
+	RuntimeConfig       string
+	RuntimeConfigHash   string
+	DxgateImage         string
+	SystemNamespace     string
+	ClusterID           string
+	DomainSuffix        string
+}
+
+type dxgateBootstrapConfig struct {
+	XDSAddress    string   `json:"xds_address" yaml:"xds_address"`
+	ListenerNames []string `json:"listener_names" yaml:"listener_names"`
+	ClusterID     string   `json:"cluster_id" yaml:"cluster_id"`
+	DNSDomain     string   `json:"dns_domain" yaml:"dns_domain"`
+}
+
+type dxgateRuntimeConfig struct {
+	Version   string           `json:"version" yaml:"version"`
+	Listeners []dxgateListener `json:"listeners" yaml:"listeners"`
+	Clusters  []dxgateCluster  `json:"clusters" yaml:"clusters"`
+	Secrets   []dxgateSecret   `json:"secrets" yaml:"secrets"`
+}
+
+type dxgateListener struct {
+	Name         string              `json:"name" yaml:"name"`
+	Bind         string              `json:"bind" yaml:"bind"`
+	Protocol     string              `json:"protocol" yaml:"protocol"`
+	VirtualHosts []dxgateVirtualHost `json:"virtual_hosts" yaml:"virtual_hosts"`
+	TLSSecret    *string             `json:"tls_secret,omitempty" yaml:"tls_secret,omitempty"`
+}
+
+type dxgateVirtualHost struct {
+	Name    string        `json:"name" yaml:"name"`
+	Domains []string      `json:"domains" yaml:"domains"`
+	Routes  []dxgateRoute `json:"routes" yaml:"routes"`
+}
+
+type dxgateRoute struct {
+	Name             string                  `json:"name" yaml:"name"`
+	Matches          []dxgateRouteMatch      `json:"matches" yaml:"matches"`
+	WeightedClusters []dxgateWeightedCluster `json:"weighted_clusters" yaml:"weighted_clusters"`
+}
+
+type dxgateRouteMatch struct {
+	Path    dxgatePathMatch     `json:"path" yaml:"path"`
+	Headers []dxgateHeaderMatch `json:"headers" yaml:"headers"`
+}
+
+type dxgatePathMatch struct {
+	Type  string `json:"type" yaml:"type"`
+	Value string `json:"value" yaml:"value"`
+}
+
+type dxgateHeaderMatch struct {
+	Name  string `json:"name" yaml:"name"`
+	Value string `json:"value" yaml:"value"`
+}
+
+type dxgateWeightedCluster struct {
+	Name   string `json:"name" yaml:"name"`
+	Weight uint32 `json:"weight" yaml:"weight"`
+}
+
+type dxgateCluster struct {
+	Name      string           `json:"name" yaml:"name"`
+	Endpoints []dxgateEndpoint `json:"endpoints" yaml:"endpoints"`
+}
+
+type dxgateEndpoint struct {
+	Address  string  `json:"address" yaml:"address"`
+	Port     uint16  `json:"port" yaml:"port"`
+	Healthy  bool    `json:"healthy" yaml:"healthy"`
+	NodeName *string `json:"node_name,omitempty" yaml:"node_name,omitempty"`
+}
+
+type dxgateSecret struct {
+	Name                string `json:"name" yaml:"name"`
+	CertificateChainPEM string `json:"certificate_chain_pem" yaml:"certificate_chain_pem"`
+	PrivateKeyPEM       string `json:"private_key_pem" yaml:"private_key_pem"`
+}
+
+func (d *DeploymentController) domainSuffix() string {
+	if d.env != nil && d.env.DomainSuffix != "" {
+		return d.env.DomainSuffix
+	}
+	return constants.DefaultClusterLocalDomain
+}
+
+func (d *DeploymentController) buildDxgateBootstrapConfig(namespace, serviceName string, ports []corev1.ServicePort) (string, string, error) {
+	systemNamespace := d.systemNamespace
+	if systemNamespace == "" {
+		systemNamespace = constants.DubboSystemNamespace
+	}
+	return buildDxgateBootstrapConfig(
+		fmt.Sprintf("http://dubbod.%s.svc:15012", systemNamespace),
+		dxgateListenerNames(namespace, serviceName, d.domainSuffix(), ports),
+		string(d.clusterID),
+		d.domainSuffix(),
+	)
+}
+
+func buildDxgateBootstrapConfig(xdsAddress string, listenerNames []string, clusterID, dnsDomain string) (string, string, error) {
+	if xdsAddress == "" {
+		return "", "", fmt.Errorf("dxgate bootstrap xDS address is empty")
+	}
+	if clusterID == "" {
+		clusterID = string(cluster.ID("Kubernetes"))
+	}
+	if dnsDomain == "" {
+		dnsDomain = constants.DefaultClusterLocalDomain
+	}
+	cfg := dxgateBootstrapConfig{
+		XDSAddress:    xdsAddress,
+		ListenerNames: listenerNames,
+		ClusterID:     clusterID,
+		DNSDomain:     dnsDomain,
+	}
+	rendered, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", "", fmt.Errorf("marshal dxgate bootstrap config: %v", err)
+	}
+	rendered = append(rendered, '\n')
+	sum := sha256.Sum256(rendered)
+	return string(rendered), hex.EncodeToString(sum[:]), nil
+}
+
+func dxgateListenerNames(namespace, serviceName, domainSuffix string, ports []corev1.ServicePort) []string {
+	if domainSuffix == "" {
+		domainSuffix = constants.DefaultClusterLocalDomain
+	}
+	out := make([]string, 0, len(ports))
+	for _, port := range ports {
+		out = append(out, fmt.Sprintf("%s.%s.svc.%s:%d", serviceName, namespace, domainSuffix, port.Port))
+	}
+	sort.Strings(out)
+	return out
+}
+
+func (d *DeploymentController) buildDxgateRuntimeConfig(gw gateway.Gateway) (string, string, error) {
+	routes := d.httpRoutes.List(metav1.NamespaceAll, klabels.Everything())
+	return buildDxgateRuntimeConfig(gw, routes, d.domainSuffix())
+}
+
+func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, domainSuffix string) (string, string, error) {
+	if domainSuffix == "" {
+		domainSuffix = constants.DefaultClusterLocalDomain
+	}
+
+	sort.Slice(routes, func(i, j int) bool {
+		if routes[i].Namespace != routes[j].Namespace {
+			return routes[i].Namespace < routes[j].Namespace
+		}
+		return routes[i].Name < routes[j].Name
+	})
+
+	cfg := dxgateRuntimeConfig{
+		Version: dxgateRuntimeVersion(gw, routes),
+		Listeners: []dxgateListener{
+			{
+				Name:         "http-80",
+				Bind:         "0.0.0.0:80",
+				Protocol:     "http",
+				VirtualHosts: []dxgateVirtualHost{},
+			},
+		},
+		Clusters: []dxgateCluster{},
+		Secrets:  []dxgateSecret{},
+	}
+
+	clusterNames := map[string]struct{}{}
+	for _, hr := range routes {
+		if !httpRouteReferencesGateway(hr, &gw) {
+			continue
+		}
+		vh, clusters := buildDxgateVirtualHost(gw, hr, domainSuffix)
+		if len(vh.Routes) == 0 {
+			continue
+		}
+		cfg.Listeners[0].VirtualHosts = append(cfg.Listeners[0].VirtualHosts, vh)
+		for _, cluster := range clusters {
+			if _, found := clusterNames[cluster.Name]; found {
+				continue
+			}
+			clusterNames[cluster.Name] = struct{}{}
+			cfg.Clusters = append(cfg.Clusters, cluster)
+		}
+	}
+
+	rendered, err := yaml.Marshal(cfg)
+	if err != nil {
+		return "", "", fmt.Errorf("marshal dxgate runtime config: %v", err)
+	}
+	sum := sha256.Sum256(rendered)
+	return string(rendered), hex.EncodeToString(sum[:]), nil
+}
+
+func dxgateRuntimeVersion(gw gateway.Gateway, routes []*gateway.HTTPRoute) string {
+	parts := []string{
+		fmt.Sprintf("gateway/%s/%s/%s", gw.Namespace, gw.Name, gw.ResourceVersion),
+	}
+	for _, hr := range routes {
+		if httpRouteReferencesGateway(hr, &gw) {
+			parts = append(parts, fmt.Sprintf("httproute/%s/%s/%s", hr.Namespace, hr.Name, hr.ResourceVersion))
+		}
+	}
+	return strings.Join(parts, ";")
+}
+
+func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, domainSuffix string) (dxgateVirtualHost, []dxgateCluster) {
+	vh := dxgateVirtualHost{
+		Name:    fmt.Sprintf("%s-%s", hr.Namespace, hr.Name),
+		Domains: dxgateRouteDomains(gw, hr),
+		Routes:  []dxgateRoute{},
+	}
+	clusters := []dxgateCluster{}
+
+	for ruleIdx, rule := range hr.Spec.Rules {
+		for matchIdx, match := range dxgateMatches(rule.Matches) {
+			route := dxgateRoute{
+				Name:             fmt.Sprintf("%s-%s-%d-%d", hr.Namespace, hr.Name, ruleIdx, matchIdx),
+				Matches:          []dxgateRouteMatch{match},
+				WeightedClusters: []dxgateWeightedCluster{},
+			}
+			for backendIdx, backendRef := range rule.BackendRefs {
+				if !isServiceBackend(backendRef) || backendRef.Port == nil {
+					continue
+				}
+				weight := uint32(1)
+				if backendRef.Weight != nil {
+					if *backendRef.Weight == 0 {
+						continue
+					}
+					weight = uint32(*backendRef.Weight)
+				}
+
+				backendNamespace := hr.Namespace
+				if backendRef.Namespace != nil {
+					backendNamespace = string(*backendRef.Namespace)
+				}
+				port := uint16(*backendRef.Port)
+				clusterName := fmt.Sprintf("%s-%s-%d-%d", hr.Namespace, hr.Name, ruleIdx, backendIdx)
+
+				route.WeightedClusters = append(route.WeightedClusters, dxgateWeightedCluster{
+					Name:   clusterName,
+					Weight: weight,
+				})
+				clusters = append(clusters, dxgateCluster{
+					Name: clusterName,
+					Endpoints: []dxgateEndpoint{
+						{
+							Address: fmt.Sprintf("%s.%s.svc.%s", backendRef.Name, backendNamespace, domainSuffix),
+							Port:    port,
+							Healthy: true,
+						},
+					},
+				})
+			}
+			if len(route.WeightedClusters) > 0 {
+				vh.Routes = append(vh.Routes, route)
+			}
+		}
+	}
+	return vh, clusters
+}
+
+func dxgateRouteDomains(gw gateway.Gateway, hr *gateway.HTTPRoute) []string {
+	domains := map[string]struct{}{}
+	for _, hostname := range hr.Spec.Hostnames {
+		if hostname != "" {
+			domains[string(hostname)] = struct{}{}
+		}
+	}
+	if len(domains) == 0 {
+		for _, listener := range gw.Spec.Listeners {
+			if listener.Protocol != gateway.HTTPProtocolType || listener.Hostname == nil || *listener.Hostname == "" {
+				continue
+			}
+			domains[string(*listener.Hostname)] = struct{}{}
+		}
+	}
+	if len(domains) == 0 {
+		return []string{"*"}
+	}
+	out := make([]string, 0, len(domains))
+	for domain := range domains {
+		out = append(out, domain)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func dxgateMatches(matches []gateway.HTTPRouteMatch) []dxgateRouteMatch {
+	if len(matches) == 0 {
+		return []dxgateRouteMatch{defaultDxgateRouteMatch()}
+	}
+	out := make([]dxgateRouteMatch, 0, len(matches))
+	for _, match := range matches {
+		out = append(out, dxgateRouteMatch{
+			Path:    dxgatePath(match.Path),
+			Headers: dxgateHeaders(match.Headers),
+		})
+	}
+	return out
+}
+
+func defaultDxgateRouteMatch() dxgateRouteMatch {
+	return dxgateRouteMatch{
+		Path: dxgatePathMatch{
+			Type:  "prefix",
+			Value: "/",
+		},
+		Headers: []dxgateHeaderMatch{},
+	}
+}
+
+func dxgatePath(path *gateway.HTTPPathMatch) dxgatePathMatch {
+	if path == nil {
+		return defaultDxgateRouteMatch().Path
+	}
+	value := "/"
+	if path.Value != nil && *path.Value != "" {
+		value = *path.Value
+	}
+	if path.Type != nil && *path.Type == gateway.PathMatchExact {
+		return dxgatePathMatch{Type: "exact", Value: value}
+	}
+	return dxgatePathMatch{Type: "prefix", Value: value}
+}
+
+func dxgateHeaders(headers []gateway.HTTPHeaderMatch) []dxgateHeaderMatch {
+	out := make([]dxgateHeaderMatch, 0, len(headers))
+	for _, header := range headers {
+		if header.Type != nil && *header.Type != gateway.HeaderMatchExact {
+			continue
+		}
+		out = append(out, dxgateHeaderMatch{
+			Name:  string(header.Name),
+			Value: header.Value,
+		})
+	}
+	return out
+}
+
+func httpRouteReferencesGateway(hr *gateway.HTTPRoute, gw *gateway.Gateway) bool {
+	if hr == nil || gw == nil {
+		return false
+	}
+	for _, parentRef := range hr.Spec.ParentRefs {
+		if parentRef.Group != nil && string(*parentRef.Group) != gateway.GroupName {
+			continue
+		}
+		if parentRef.Kind != nil && string(*parentRef.Kind) != "Gateway" {
+			continue
+		}
+		namespace := hr.Namespace
+		if parentRef.Namespace != nil {
+			namespace = string(*parentRef.Namespace)
+		}
+		if string(parentRef.Name) != gw.Name || namespace != gw.Namespace {
+			continue
+		}
+		if !parentRefMatchesHTTPListener(parentRef, gw) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func parentRefMatchesHTTPListener(parentRef gateway.ParentReference, gw *gateway.Gateway) bool {
+	for _, listener := range gw.Spec.Listeners {
+		if listener.Protocol != gateway.HTTPProtocolType {
+			continue
+		}
+		if parentRef.SectionName != nil && *parentRef.SectionName != listener.Name {
+			continue
+		}
+		if parentRef.Port != nil && int32(*parentRef.Port) != listener.Port {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func isServiceBackend(ref gateway.HTTPBackendRef) bool {
+	if ref.Group != nil && string(*ref.Group) != "" {
+		return false
+	}
+	if ref.Kind != nil && string(*ref.Kind) != "" && string(*ref.Kind) != "Service" {
+		return false
+	}
+	return true
 }
 
 func (d *DeploymentController) render(templateName string, mi TemplateInput) ([]string, error) {
@@ -480,15 +911,11 @@ func getDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix boo
 }
 
 func extractServicePorts(gw gateway.Gateway) []corev1.ServicePort {
-	svcPorts := make([]corev1.ServicePort, 0, len(gw.Spec.Listeners)+1)
-	tcp := "tcp"
-	svcPorts = append(svcPorts, corev1.ServicePort{
-		Name:        "status-port",
-		Port:        int32(15021),
-		AppProtocol: &tcp,
-	})
-
+	svcPorts := make([]corev1.ServicePort, 0, len(gw.Spec.Listeners))
 	for i, l := range gw.Spec.Listeners {
+		if l.Protocol != gateway.HTTPProtocolType {
+			continue
+		}
 		name := string(l.Name)
 		if name == "" {
 			name = fmt.Sprintf("%s-%d", strings.ToLower(string(l.Protocol)), i)
@@ -497,6 +924,7 @@ func extractServicePorts(gw gateway.Gateway) []corev1.ServicePort {
 		svcPorts = append(svcPorts, corev1.ServicePort{
 			Name:        name,
 			Port:        l.Port,
+			TargetPort:  intstr.FromString("http"),
 			AppProtocol: &appProtocol,
 		})
 	}

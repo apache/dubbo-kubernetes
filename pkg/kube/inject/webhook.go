@@ -474,6 +474,10 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 			Value: ProxylessGRPCBootstrapPath,
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  ProxylessGRPCConfigEnvName,
+			Value: ProxylessGRPCConfigPath,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
 			Name:  ProxylessXDSAddressEnvName,
 			Value: discoveryAddress,
 		})

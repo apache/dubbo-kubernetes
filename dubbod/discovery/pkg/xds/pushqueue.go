@@ -30,6 +30,12 @@ type PushQueue struct {
 	shuttingDown bool
 }
 
+type pushQueueStats struct {
+	Pending    int `json:"pending"`
+	Queued     int `json:"queued"`
+	Processing int `json:"processing"`
+}
+
 func NewPushQueue() *PushQueue {
 	return &PushQueue{
 		pending:    make(map[*Connection]*model.PushRequest),
@@ -104,4 +110,17 @@ func (p *PushQueue) ShutDown() {
 	defer p.cond.L.Unlock()
 	p.shuttingDown = true
 	p.cond.Broadcast()
+}
+
+func (p *PushQueue) Stats() pushQueueStats {
+	if p == nil {
+		return pushQueueStats{}
+	}
+	p.cond.L.Lock()
+	defer p.cond.L.Unlock()
+	return pushQueueStats{
+		Pending:    len(p.pending),
+		Queued:     len(p.queue),
+		Processing: len(p.processing),
+	}
 }

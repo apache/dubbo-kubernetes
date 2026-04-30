@@ -17,6 +17,7 @@
 package log
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -226,11 +227,13 @@ func FindScope(name string) *Scope {
 
 // log writes a log message if the level is enabled
 func (l *Logger) log(level Level, format string, args ...interface{}) {
+	l.logMessage(level, formatMessage(format, args...), false)
+}
+
+func (l *Logger) logMessage(level Level, msg string, preserveNewlines bool) {
 	if l.scope.GetOutputLevel() < level {
 		return
 	}
-
-	msg := formatMessage(format, args...)
 
 	// Append labels to message if present
 	l.scope.labelsMu.RLock()
@@ -243,7 +246,11 @@ func (l *Logger) log(level Level, format string, args ...interface{}) {
 			}
 		}
 		if len(labelParts) > 0 {
-			msg = msg + " " + strings.Join(labelParts, " ")
+			if preserveNewlines {
+				msg = appendToFirstLine(msg, " "+strings.Join(labelParts, " "))
+			} else {
+				msg = msg + " " + strings.Join(labelParts, " ")
+			}
 		}
 	}
 	l.scope.labelsMu.RUnlock()
@@ -267,11 +274,17 @@ func (l *Logger) log(level Level, format string, args ...interface{}) {
 
 	// Append summary if there were duplicates
 	if summary != "" {
-		msg = msg + " " + summary
+		if preserveNewlines {
+			msg = appendToFirstLine(msg, " "+summary)
+		} else {
+			msg = msg + " " + summary
+		}
 		// Clean any newlines that might have been introduced
-		msg = strings.TrimRight(msg, "\n\r")
-		msg = strings.ReplaceAll(msg, "\n", " ")
-		msg = strings.ReplaceAll(msg, "\r", " ")
+		if !preserveNewlines {
+			msg = strings.TrimRight(msg, "\n\r")
+			msg = strings.ReplaceAll(msg, "\n", " ")
+			msg = strings.ReplaceAll(msg, "\r", " ")
+		}
 	}
 
 	output := l.scope.GetOutput()
@@ -286,7 +299,11 @@ func (l *Logger) log(level Level, format string, args ...interface{}) {
 
 	if usePretty {
 		prettyFormatter := GetPrettyFormatter()
-		logLine = prettyFormatter.Format(time.Now().UTC(), levelName, scopeName, msg)
+		if preserveNewlines {
+			logLine = formatPrettyBlockLine(prettyFormatter, time.Now().UTC(), levelName, scopeName, msg)
+		} else {
+			logLine = prettyFormatter.Format(time.Now().UTC(), levelName, scopeName, msg)
+		}
 	} else {
 		// Use standard format by default, or klog format if configured
 		logFormatMu.RLock()
@@ -295,21 +312,70 @@ func (l *Logger) log(level Level, format string, args ...interface{}) {
 
 		if format == FormatKlog {
 			// Use klog format with caller information
-			logLine = formatKlogLine(level, scopeName, msg, callerSkip)
+			if preserveNewlines {
+				logLine = formatBlockLine(formatKlogLine(level, scopeName, firstLine(msg), callerSkip), restLines(msg))
+			} else {
+				logLine = formatKlogLine(level, scopeName, msg, callerSkip)
+			}
 		} else {
 			// Use standard format (default) with fixed-width timestamp
 			timestamp := formatFixedWidthTimestamp(time.Now().UTC())
-			logLine = formatStandardLine(timestamp, levelName, scopeName, msg)
+			if preserveNewlines {
+				logLine = formatBlockLine(formatStandardLine(timestamp, levelName, scopeName, firstLine(msg)), restLines(msg))
+			} else {
+				logLine = formatStandardLine(timestamp, levelName, scopeName, msg)
+			}
 		}
 	}
 
-	// Ensure logLine has exactly one newline at the end, no more, no less
-	// Remove ALL newlines and carriage returns, then add exactly one newline
+	// Ensure logLine has exactly one newline at the end, no more, no less.
 	logLine = strings.TrimRight(logLine, "\n\r \t")
 	if logLine != "" {
 		logLine = logLine + "\n"
 		_, _ = output.Write([]byte(logLine))
 	}
+}
+
+func appendToFirstLine(msg, suffix string) string {
+	if idx := strings.IndexByte(msg, '\n'); idx >= 0 {
+		return msg[:idx] + suffix + msg[idx:]
+	}
+	return msg + suffix
+}
+
+func firstLine(msg string) string {
+	if idx := strings.IndexByte(msg, '\n'); idx >= 0 {
+		return msg[:idx]
+	}
+	return msg
+}
+
+func restLines(msg string) string {
+	if idx := strings.IndexByte(msg, '\n'); idx >= 0 && idx+1 < len(msg) {
+		return msg[idx+1:]
+	}
+	return ""
+}
+
+func formatBlockLine(header, rest string) string {
+	if rest == "" {
+		return header
+	}
+	return header + "\n" + rest
+}
+
+func formatPrettyBlockLine(formatter *PrettyFormatter, ts time.Time, level, scope, msg string) string {
+	return formatBlockLine(formatter.Format(ts, level, scope, firstLine(msg)), restLines(msg))
+}
+
+// Enabled reports whether messages at level would be emitted for this logger.
+func (l *Logger) Enabled(level Level) bool {
+	return l.scope.GetOutputLevel() >= level
+}
+
+// DebugEnabled reports whether debug-level messages would be emitted for this logger.
+func (l *Logger) DebugEnabled() bool {
+	return l.Enabled(DebugLevel)
 }
 
 // Error logs an error message
@@ -340,6 +406,20 @@ func (l *Logger) Info(args ...interface{}) {
 // Infof logs a formatted info message
 func (l *Logger) Infof(format string, args ...interface{}) {
 	l.log(InfoLevel, format, args...)
+}
+
+// InfoJSON logs a title followed by an indented JSON document.
+func (l *Logger) InfoJSON(title string, value interface{}) {
+	l.logJSON(InfoLevel, title, value)
+}
+
+func (l *Logger) logJSON(level Level, title string, value interface{}) {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		l.logMessage(level, fmt.Sprintf("%s: %v", sanitizeLogLine(title), value), false)
+		return
+	}
+	l.logMessage(level, sanitizeLogLine(title)+":\n"+string(data), true)
 }
 
 // Debug logs a debug message
@@ -390,6 +470,10 @@ func formatMessage(format string, args ...interface{}) string {
 	} else {
 		msg = fmt.Sprintf(format, args...)
 	}
+	return sanitizeLogLine(msg)
+}
+
+func sanitizeLogLine(msg string) string {
 	// Remove any trailing newlines or carriage returns to prevent blank lines
 	msg = strings.TrimRight(msg, "\n\r")
 	// Replace any internal newlines with spaces to keep everything on one line
@@ -426,6 +510,11 @@ func Info(args ...interface{}) {
 // Infof logs a formatted info message using the default scope
 func Infof(format string, args ...interface{}) {
 	getDefaultLogger().Infof(format, args...)
+}
+
+// InfoJSON logs a title followed by an indented JSON document using the default scope.
+func InfoJSON(title string, value interface{}) {
+	getDefaultLogger().InfoJSON(title, value)
 }
 
 // Warn logs a warning message using the default scope

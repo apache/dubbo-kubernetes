@@ -18,12 +18,14 @@ package bootstrap
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestShouldManageProxylessGRPCPod(t *testing.T) {
@@ -47,6 +49,16 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 				Env: []corev1.EnvVar{{
 					Name:  "GRPC_XDS_BOOTSTRAP",
 					Value: inject.ProxylessGRPCBootstrapPath,
+				}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "default injected pod marked by runtime config env",
+			pod: &corev1.Pod{Spec: corev1.PodSpec{Containers: []corev1.Container{{
+				Env: []corev1.EnvVar{{
+					Name:  inject.ProxylessGRPCConfigEnvName,
+					Value: inject.ProxylessGRPCConfigPath,
 				}},
 			}}}},
 			want: true,
@@ -79,6 +91,31 @@ func TestShouldManageProxylessGRPCPod(t *testing.T) {
 				t.Fatalf("shouldManageProxylessGRPCPod() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestBuildProxylessGRPCSecretIncludesRuntimeConfig(t *testing.T) {
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:      "nginx",
+		Namespace: "app",
+		UID:       "pod-uid",
+	}}
+
+	secret := buildProxylessGRPCSecret(pod, []byte("bootstrap"), []byte("runtime"), []byte("cert"), []byte("key"), []byte("root"))
+	if secret.Name != inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta) {
+		t.Fatalf("secret name = %q, want proxyless secret name", secret.Name)
+	}
+	if got := string(secret.Data[inject.ProxylessGRPCBootstrapFileName]); got != "bootstrap" {
+		t.Fatalf("bootstrap data = %q, want bootstrap", got)
+	}
+	if got := string(secret.Data[inject.ProxylessGRPCConfigFileName]); got != "runtime" {
+		t.Fatalf("runtime config data = %q, want runtime", got)
+	}
+	if got := string(secret.Data[constants.CACertNamespaceConfigMapDataName]); got != "root" {
+		t.Fatalf("root cert data = %q, want root", got)
+	}
+	if len(secret.OwnerReferences) != 1 || secret.OwnerReferences[0].UID != pod.UID {
+		t.Fatalf("owner references = %+v, want pod owner", secret.OwnerReferences)
 	}
 }
 
@@ -129,5 +166,53 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	}
 	if got.Workload.PodIP != workload.podIP {
 		t.Fatalf("podIP = %q, want %q", got.Workload.PodIP, workload.podIP)
+	}
+}
+
+func TestNextRotationTime(t *testing.T) {
+	now := time.Now()
+	rotations := map[types.NamespacedName]time.Time{
+		{Name: "late", Namespace: "app"}:  now.Add(time.Hour),
+		{Name: "early", Namespace: "app"}: now.Add(time.Minute),
+	}
+
+	got, found := nextRotationTime(rotations)
+	if !found {
+		t.Fatalf("nextRotationTime() found = false, want true")
+	}
+	if !got.Equal(now.Add(time.Minute)) {
+		t.Fatalf("nextRotationTime() = %v, want %v", got, now.Add(time.Minute))
+	}
+
+	if _, found := nextRotationTime(nil); found {
+		t.Fatalf("nextRotationTime(nil) found = true, want false")
+	}
+}
+
+func TestScheduleRotationTracksEarliestTimer(t *testing.T) {
+	now := time.Now()
+	controller := &proxylessGRPCWorkloadController{
+		rotations: make(map[types.NamespacedName]time.Time),
+	}
+	defer controller.stopAllTimers()
+
+	late := types.NamespacedName{Name: "late", Namespace: "app"}
+	early := types.NamespacedName{Name: "early", Namespace: "app"}
+	controller.scheduleRotation(late, now.Add(100*time.Hour))
+	controller.scheduleRotation(early, now.Add(10*time.Hour))
+
+	controller.rotationMu.Lock()
+	next := controller.nextRotation
+	controller.rotationMu.Unlock()
+	if next.Before(now.Add(7*time.Hour)) || next.After(now.Add(9*time.Hour)) {
+		t.Fatalf("nextRotation = %v, want around 8h from now", next.Sub(now))
+	}
+
+	controller.clearRotation(early)
+	controller.rotationMu.Lock()
+	next = controller.nextRotation
+	controller.rotationMu.Unlock()
+	if next.Before(now.Add(79*time.Hour)) || next.After(now.Add(81*time.Hour)) {
+		t.Fatalf("nextRotation after clearing earliest = %v, want around 80h from now", next.Sub(now))
 	}
 }

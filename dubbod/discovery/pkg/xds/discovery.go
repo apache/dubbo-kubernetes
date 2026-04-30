@@ -30,6 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 	"go.uber.org/atomic"
 	"golang.org/x/time/rate"
@@ -344,12 +345,11 @@ func (s *DiscoveryServer) periodicRefreshMetrics(stopCh <-chan struct{}) {
 			model.LastPushMutex.Lock()
 			if model.LastPushStatus != push {
 				model.LastPushStatus = push
-				push.UpdateMetrics()
-				out, _ := model.LastPushStatus.StatusJSON()
-				if string(out) != "{}" {
-					log.Infof("Push Status: %s", string(out))
-				}
 			}
+			if push != nil {
+				push.UpdateMetrics()
+			}
+			log.InfoJSON("Push Status", s.pushStatusReport(push))
 			model.LastPushMutex.Unlock()
 		case <-stopCh:
 			return
@@ -455,9 +455,9 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 		recordInboundEDSUpdate()
 
 		s.ConfigUpdate(&model.PushRequest{
-			// Full:           pushType == model.FullPush,
-			// ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
-			// Reason:         model.NewReasonStats(model.EndpointUpdate),
+			Full:           pushType == model.FullPush,
+			ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.Service, Name: serviceName, Namespace: namespace}),
+			Reason:         model.NewReasonStats(model.EndpointUpdate),
 		})
 	} else if pushType == model.NoPush {
 		// Even when UpdateServiceEndpoints returns NoPush, we may still need to push
@@ -468,9 +468,9 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 		if len(dubboEndpoints) == 0 {
 			log.Debugf("service %s/%s endpoints became empty [NoPush], forcing push to clear client cache", namespace, serviceName)
 			s.ConfigUpdate(&model.PushRequest{
-				// Full:           false, // Incremental push
-				// ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.ServiceEntry, Name: serviceName, Namespace: namespace}),
-				// Reason:         model.NewReasonStats(model.EndpointUpdate),
+				Full:           false,
+				ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.Service, Name: serviceName, Namespace: namespace}),
+				Reason:         model.NewReasonStats(model.EndpointUpdate),
 			})
 		} else {
 			// Endpoints exist but NoPush was returned - this means health status didn't change

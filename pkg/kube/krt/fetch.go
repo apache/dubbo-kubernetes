@@ -1,10 +1,8 @@
+// Copyright Istio Authors
 //
-// Licensed to the Apache Software Foundation (ASF) under one or more
-// contributor license agreements.  See the NOTICE file distributed with
-// this work for additional information regarding copyright ownership.
-// The ASF licenses this file to You under the Apache License, Version 2.0
-// (the "License"); you may not use this file except in compliance with
-// the License.  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -32,6 +30,13 @@ func FetchOne[T any](ctx HandlerContext, c Collection[T], opts ...FetchOption) *
 	}
 }
 
+// FetchOrList runs a query against the provided collection and subscribes to updates if ctx is set.
+// If unset, this will just be a one time list operation.
+func FetchOrList[T any](ctx HandlerContext, cc Collection[T], opts ...FetchOption) []T {
+	return fetch[T](ctx, cc, true, opts...)
+}
+
+// Fetch runs a query against the provided collection and subscribes to updates.
 func Fetch[T any](ctx HandlerContext, cc Collection[T], opts ...FetchOption) []T {
 	return fetch[T](ctx, cc, false, opts...)
 }
@@ -46,6 +51,7 @@ func fetch[T any](ctx HandlerContext, cc Collection[T], allowMissingContext bool
 	for _, o := range opts {
 		o(d)
 	}
+	var parent string
 	if ctx != nil {
 		h := ctx.(registerDependency)
 		// Important: register before we List(), so we cannot miss any events
@@ -57,6 +63,7 @@ func fetch[T any](ctx HandlerContext, cc Collection[T], allowMissingContext bool
 			// rerunning the same collection's recomputation at the same time (once for the initial event, then for the initial registration).
 			return c.RegisterBatch(ff, false)
 		})
+		parent = h.name()
 	} else if !allowMissingContext {
 		panic("Fetch() requires a valid context")
 	}
@@ -80,9 +87,19 @@ func fetch[T any](ctx HandlerContext, cc Collection[T], allowMissingContext bool
 		// Otherwise get everything
 		list = c.List()
 	}
-	list = slices.FilterInPlace(list, func(i T) bool {
-		o := c.augment(i)
-		return d.filter.Matches(o, true)
-	})
+	if d.filter.needsPostFilter() {
+		list = slices.FilterInPlace(list, func(i T) bool {
+			o := c.augment(i)
+			return d.filter.Matches(o, true)
+		})
+	}
+	if log.DebugEnabled() {
+		log.WithLabels(
+			"parent", parent,
+			"fetch", c.name(),
+			"filter", d.filter,
+			"size", len(list),
+		).Debugf("Fetch")
+	}
 	return list
 }

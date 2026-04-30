@@ -1,10 +1,8 @@
+// Copyright Istio Authors
 //
-// Licensed to the Apache Software Foundation (ASF) under one or more
-// contributor license agreements.  See the NOTICE file distributed with
-// this work for additional information regarding copyright ownership.
-// The ASF licenses this file to You under the Apache License, Version 2.0
-// (the "License"); you may not use this file except in compliance with
-// the License.  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -16,34 +14,25 @@
 
 package krt
 
-import "github.com/apache/dubbo-kubernetes/pkg/kube"
+import (
+	"github.com/apache/dubbo-kubernetes/pkg/kube"
+)
 
 type Syncer interface {
 	WaitUntilSynced(stop <-chan struct{}) bool
 	HasSynced() bool
 }
 
-type pollSyncer struct {
-	name string
-	f    func() bool
-}
-
-type multiSyncer struct {
-	syncers []Syncer
-}
-
-type channelSyncer struct {
-	name   string
-	synced <-chan struct{}
-}
-
-type alwaysSynced struct{}
-
 var (
 	_ Syncer = channelSyncer{}
 	_ Syncer = pollSyncer{}
 	_ Syncer = multiSyncer{}
 )
+
+type channelSyncer struct {
+	name   string
+	synced <-chan struct{}
+}
 
 func (c channelSyncer) WaitUntilSynced(stop <-chan struct{}) bool {
 	return waitForCacheSync(c.name, stop, c.synced)
@@ -58,12 +47,31 @@ func (c channelSyncer) HasSynced() bool {
 	}
 }
 
+type pollSyncer struct {
+	name string
+	f    func() bool
+}
+
 func (c pollSyncer) WaitUntilSynced(stop <-chan struct{}) bool {
 	return kube.WaitForCacheSync(c.name, stop, c.f)
 }
 
 func (c pollSyncer) HasSynced() bool {
 	return c.f()
+}
+
+type alwaysSynced struct{}
+
+func (c alwaysSynced) WaitUntilSynced(stop <-chan struct{}) bool {
+	return true
+}
+
+func (c alwaysSynced) HasSynced() bool {
+	return true
+}
+
+type multiSyncer struct {
+	syncers []Syncer
 }
 
 func (c multiSyncer) WaitUntilSynced(stop <-chan struct{}) bool {
@@ -81,13 +89,5 @@ func (c multiSyncer) HasSynced() bool {
 			return false
 		}
 	}
-	return true
-}
-
-func (c alwaysSynced) WaitUntilSynced(stop <-chan struct{}) bool {
-	return true
-}
-
-func (c alwaysSynced) HasSynced() bool {
 	return true
 }

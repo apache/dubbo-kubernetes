@@ -16,6 +16,7 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -55,6 +56,11 @@ import (
 const (
 	proxylessGRPCControllerName = "proxyless grpc workloads"
 	serviceNodeSeparator        = "~"
+
+	proxylessGRPCManagedPodIndex     = "proxyless-grpc-managed"
+	proxylessGRPCManagedPodIndexKey  = "true"
+	proxylessGRPCBundleRequeueBatch  = 250
+	proxylessGRPCBundleRequeuePeriod = 100 * time.Millisecond
 )
 
 var proxylessGRPCLog = log.RegisterScope("proxylessgrpc", "proxyless grpc workload controller")
@@ -62,13 +68,17 @@ var proxylessGRPCLog = log.RegisterScope("proxylessgrpc", "proxyless grpc worklo
 type proxylessGRPCWorkloadController struct {
 	server *Server
 	pods   kclient.Client[*corev1.Pod]
-	queue  controllers.Queue
+	// managedPods keeps bundle/cert updates from scanning every Pod in the cluster.
+	managedPods kclient.RawIndexer
+	queue       controllers.Queue
 
 	bundleWatcherID int32
 	bundleWatcherCh chan struct{}
 
-	timerMu sync.Mutex
-	timers  map[types.NamespacedName]*time.Timer
+	rotationMu    sync.Mutex
+	rotations     map[types.NamespacedName]time.Time
+	rotationTimer *time.Timer
+	nextRotation  time.Time
 }
 
 func (s *Server) initProxylessGRPCWorkloads() error {
@@ -91,8 +101,14 @@ func newProxylessGRPCWorkloadController(s *Server) *proxylessGRPCWorkloadControl
 		pods: kclient.NewFiltered[*corev1.Pod](s.kubeClient, kclient.Filter{
 			ObjectFilter: s.kubeClient.ObjectFilter(),
 		}),
-		timers: make(map[types.NamespacedName]*time.Timer),
+		rotations: make(map[types.NamespacedName]time.Time),
 	}
+	c.managedPods = c.pods.Index(proxylessGRPCManagedPodIndex, func(pod *corev1.Pod) []string {
+		if shouldManageProxylessGRPCPod(pod) {
+			return []string{proxylessGRPCManagedPodIndexKey}
+		}
+		return nil
+	})
 	c.queue = controllers.NewQueue(proxylessGRPCControllerName,
 		controllers.WithReconciler(func(key types.NamespacedName) error {
 			return c.reconcile(key)
@@ -137,17 +153,66 @@ func (c *proxylessGRPCWorkloadController) watchBundleChanges(stop <-chan struct{
 			if !ok {
 				return
 			}
-			c.enqueueAllPods()
+			c.enqueueManagedPodsBatched(stop)
 		}
 	}
 }
 
 func (c *proxylessGRPCWorkloadController) enqueueAllPods() {
-	for _, pod := range c.pods.List(metav1.NamespaceAll, labels.Everything()) {
-		if shouldManageProxylessGRPCPod(pod) {
-			c.queue.AddObject(pod)
+	for _, key := range c.managedPodKeys() {
+		c.queue.Add(key)
+	}
+}
+
+func (c *proxylessGRPCWorkloadController) enqueueManagedPodsBatched(stop <-chan struct{}) {
+	keys := c.managedPodKeys()
+	for start := 0; start < len(keys); start += proxylessGRPCBundleRequeueBatch {
+		end := start + proxylessGRPCBundleRequeueBatch
+		if end > len(keys) {
+			end = len(keys)
+		}
+		for _, key := range keys[start:end] {
+			c.queue.Add(key)
+		}
+		if end == len(keys) {
+			return
+		}
+		timer := time.NewTimer(proxylessGRPCBundleRequeuePeriod)
+		select {
+		case <-stop:
+			timer.Stop()
+			return
+		case <-timer.C:
 		}
 	}
+}
+
+func (c *proxylessGRPCWorkloadController) managedPodKeys() []types.NamespacedName {
+	var pods []*corev1.Pod
+	if c.managedPods != nil {
+		for _, item := range c.managedPods.Lookup(proxylessGRPCManagedPodIndexKey) {
+			pod, ok := item.(*corev1.Pod)
+			if ok && pod != nil {
+				pods = append(pods, pod)
+			}
+		}
+	} else if c.pods != nil {
+		pods = c.pods.List(metav1.NamespaceAll, labels.Everything())
+	}
+
+	keys := make([]types.NamespacedName, 0, len(pods))
+	for _, pod := range pods {
+		if shouldManageProxylessGRPCPod(pod) {
+			keys = append(keys, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace})
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].Namespace != keys[j].Namespace {
+			return keys[i].Namespace < keys[j].Namespace
+		}
+		return keys[i].Name < keys[j].Name
+	})
+	return keys
 }
 
 func (c *proxylessGRPCWorkloadController) reconcile(key types.NamespacedName) error {
@@ -285,7 +350,12 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *
 		return nil, time.Time{}, err
 	}
 
-	certChain, keyPEM, rootCert, expireAt, reusedCert := reusableWorkloadCertificate(current)
+	runtimeConfigJSON, err := buildRuntimeConfigJSON(workload, nil, nil)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	certChain, keyPEM, rootCert, expireAt, reusedCert := reusableWorkloadCertificate(current, c.activeRootCert())
 	if !reusedCert {
 		certChain, keyPEM, rootCert, expireAt, err = c.issueWorkloadCertificate(pod)
 		if err != nil {
@@ -293,7 +363,12 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *
 		}
 	}
 
-	secret := &corev1.Secret{
+	secret := buildProxylessGRPCSecret(pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert)
+	return secret, expireAt, nil
+}
+
+func buildProxylessGRPCSecret(pod *corev1.Pod, bootstrapJSON, runtimeConfigJSON, certChain, keyPEM, rootCert []byte) *corev1.Secret {
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta),
 			Namespace: pod.Namespace,
@@ -307,16 +382,15 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
 			inject.ProxylessGRPCBootstrapFileName:      bootstrapJSON,
+			inject.ProxylessGRPCConfigFileName:         runtimeConfigJSON,
 			constants.CertChainFilename:                certChain,
 			constants.KeyFilename:                      keyPEM,
 			constants.CACertNamespaceConfigMapDataName: rootCert,
 		},
 	}
-
-	return secret, expireAt, nil
 }
 
-func reusableWorkloadCertificate(secret *corev1.Secret) ([]byte, []byte, []byte, time.Time, bool) {
+func reusableWorkloadCertificate(secret *corev1.Secret, activeRootCert []byte) ([]byte, []byte, []byte, time.Time, bool) {
 	if secret == nil || len(secret.Data) == 0 {
 		return nil, nil, nil, time.Time{}, false
 	}
@@ -324,6 +398,9 @@ func reusableWorkloadCertificate(secret *corev1.Secret) ([]byte, []byte, []byte,
 	keyPEM := secret.Data[constants.KeyFilename]
 	rootCert := secret.Data[constants.CACertNamespaceConfigMapDataName]
 	if len(certChain) == 0 || len(keyPEM) == 0 || len(rootCert) == 0 {
+		return nil, nil, nil, time.Time{}, false
+	}
+	if len(activeRootCert) > 0 && !bytes.Equal(rootCert, activeRootCert) {
 		return nil, nil, nil, time.Time{}, false
 	}
 	expireAt, err := util.ParseCertAndGetExpiryTimestamp(certChain)
@@ -738,6 +815,14 @@ func (c *proxylessGRPCWorkloadController) activeAuthority() caserver.Certificate
 	return c.server.CA
 }
 
+func (c *proxylessGRPCWorkloadController) activeRootCert() []byte {
+	authority := c.activeAuthority()
+	if authority == nil || authority.GetCAKeyCertBundle() == nil {
+		return nil
+	}
+	return authority.GetCAKeyCertBundle().GetRootCertPem()
+}
+
 func concatPEM(certs []string) []byte {
 	if len(certs) == 0 {
 		return nil
@@ -767,6 +852,9 @@ func shouldManageProxylessGRPCPod(pod *corev1.Pod) bool {
 			if envVar.Name == "GRPC_XDS_BOOTSTRAP" && envVar.Value == inject.ProxylessGRPCBootstrapPath {
 				return true
 			}
+			if envVar.Name == inject.ProxylessGRPCConfigEnvName && envVar.Value == inject.ProxylessGRPCConfigPath {
+				return true
+			}
 		}
 	}
 	for _, volume := range pod.Spec.Volumes {
@@ -790,32 +878,92 @@ func (c *proxylessGRPCWorkloadController) deleteSecretForPod(pod *corev1.Pod) er
 }
 
 func (c *proxylessGRPCWorkloadController) scheduleRotation(key types.NamespacedName, expireAt time.Time) {
-	c.clearRotation(key)
-	delay := workloadRotationDelay(time.Now(), expireAt)
-	timer := time.AfterFunc(delay, func() {
-		c.queue.Add(key)
-	})
-	c.timerMu.Lock()
-	c.timers[key] = timer
-	c.timerMu.Unlock()
+	now := time.Now()
+	rotateAt := now.Add(workloadRotationDelay(now, expireAt))
+	c.rotationMu.Lock()
+	defer c.rotationMu.Unlock()
+	oldRotateAt, hadOld := c.rotations[key]
+	c.rotations[key] = rotateAt
+	if c.rotationTimer == nil || rotateAt.Before(c.nextRotation) || (hadOld && oldRotateAt.Equal(c.nextRotation)) {
+		c.resetRotationTimerLocked(now)
+	}
 }
 
 func (c *proxylessGRPCWorkloadController) clearRotation(key types.NamespacedName) {
-	c.timerMu.Lock()
-	defer c.timerMu.Unlock()
-	if timer, found := c.timers[key]; found {
-		timer.Stop()
-		delete(c.timers, key)
+	c.rotationMu.Lock()
+	defer c.rotationMu.Unlock()
+	oldRotateAt, hadOld := c.rotations[key]
+	delete(c.rotations, key)
+	if hadOld && oldRotateAt.Equal(c.nextRotation) {
+		c.resetRotationTimerLocked(time.Now())
 	}
 }
 
 func (c *proxylessGRPCWorkloadController) stopAllTimers() {
-	c.timerMu.Lock()
-	defer c.timerMu.Unlock()
-	for key, timer := range c.timers {
-		timer.Stop()
-		delete(c.timers, key)
+	c.rotationMu.Lock()
+	defer c.rotationMu.Unlock()
+	if c.rotationTimer != nil {
+		c.rotationTimer.Stop()
+		c.rotationTimer = nil
 	}
+	c.nextRotation = time.Time{}
+	for key := range c.rotations {
+		delete(c.rotations, key)
+	}
+}
+
+func (c *proxylessGRPCWorkloadController) resetRotationTimerLocked(now time.Time) {
+	if c.rotationTimer != nil {
+		c.rotationTimer.Stop()
+		c.rotationTimer = nil
+	}
+	next, found := nextRotationTime(c.rotations)
+	if !found {
+		c.nextRotation = time.Time{}
+		return
+	}
+	c.nextRotation = next
+	delay := next.Sub(now)
+	if delay < 0 {
+		delay = 0
+	}
+	c.rotationTimer = time.AfterFunc(delay, c.flushDueRotations)
+}
+
+func (c *proxylessGRPCWorkloadController) flushDueRotations() {
+	now := time.Now()
+	due := make([]types.NamespacedName, 0)
+	c.rotationMu.Lock()
+	for key, rotateAt := range c.rotations {
+		if !rotateAt.After(now) {
+			due = append(due, key)
+			delete(c.rotations, key)
+		}
+	}
+	c.resetRotationTimerLocked(now)
+	c.rotationMu.Unlock()
+
+	sort.Slice(due, func(i, j int) bool {
+		if due[i].Namespace != due[j].Namespace {
+			return due[i].Namespace < due[j].Namespace
+		}
+		return due[i].Name < due[j].Name
+	})
+	for _, key := range due {
+		c.queue.Add(key)
+	}
+}
+
+func nextRotationTime(rotations map[types.NamespacedName]time.Time) (time.Time, bool) {
+	var next time.Time
+	found := false
+	for _, rotateAt := range rotations {
+		if !found || rotateAt.Before(next) {
+			next = rotateAt
+			found = true
+		}
+	}
+	return next, found
 }
 
 func workloadRotationDelay(now, expireAt time.Time) time.Duration {

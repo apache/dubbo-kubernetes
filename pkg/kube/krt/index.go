@@ -1,10 +1,8 @@
+// Copyright Istio Authors
 //
-// Licensed to the Apache Software Foundation (ASF) under one or more
-// contributor license agreements.  See the NOTICE file distributed with
-// this work for additional information regarding copyright ownership.
-// The ASF licenses this file to You under the Apache License, Version 2.0
-// (the "License"); you may not use this file except in compliance with
-// the License.  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -18,11 +16,13 @@ package krt
 
 import (
 	"fmt"
+
+	"k8s.io/client-go/tools/cache"
+
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	"k8s.io/client-go/tools/cache"
 )
 
 type Index[K comparable, O any] interface {
@@ -38,23 +38,27 @@ type IndexObject[K comparable, O any] struct {
 	Objects []O
 }
 
-type index[K comparable, O any] struct {
-	uid collectionUID
-	indexer[O]
-	c       Collection[O]
-	extract func(o O) []K
+func (i IndexObject[K, O]) ResourceName() string {
+	return toString(i.Key)
 }
 
-type indexCollection[K comparable, O any] struct {
-	idx      index[K, O]
-	id       collectionUID
-	metadata Metadata
-	// nolint: unused // (not true, its to implement an interface)
-	collectionName string
-	fromKey        func(string) any
+// NewNamespaceIndex is a small helper to index a collection by namespace
+func NewNamespaceIndex[O Namespacer](c Collection[O]) Index[string, O] {
+	return NewIndex(c, cache.NamespaceIndex, func(o O) []string {
+		return []string{o.GetNamespace()}
+	})
 }
 
-func NewIndex[K comparable, O any](c Collection[O], name string, extract func(o O) []K) Index[K, O] {
+// NewIndex creates a simple index, keyed by key K, over a collection for O. This is similar to
+// Informer.AddIndex, but is easier to use and can be added after an informer has already started.
+// Different collection implementations may reuse existing indexes with the same name.
+// Informer collections will always share the same underlying index, other collections only share indexes if
+// they are created on the same collection instance.
+func NewIndex[K comparable, O any](
+	c Collection[O],
+	name string,
+	extract func(o O) []K,
+) Index[K, O] {
 	idx := c.(internalCollection[O]).index(name, func(o O) []string {
 		return slices.Map(extract(o), func(e K) string {
 			return toString(e)
@@ -69,13 +73,30 @@ func NewIndex[K comparable, O any](c Collection[O], name string, extract func(o 
 	}
 }
 
-// NewNamespaceIndex is a small helper to index a collection by namespace
-func NewNamespaceIndex[O Namespacer](c Collection[O]) Index[string, O] {
-	return NewIndex(c, cache.NamespaceIndex, func(o O) []string {
-		return []string{o.GetNamespace()}
-	})
+type index[K comparable, O any] struct {
+	uid collectionUID
+	indexer[O]
+	c       Collection[O]
+	extract func(o O) []K
 }
 
+func WithIndexCollectionFromString[K any](f func(string) K) CollectionOption {
+	return func(c *collectionOptions) {
+		c.indexCollectionFromString = func(s string) any {
+			return f(s)
+		}
+	}
+}
+
+// AsCollection does a best-effort approximation of turning an index into a Collection. This is intended to be used as a
+// primary input with NewCollection or similar transformations.
+// This has some limitations that impact usage *outside* of NewCollection:
+// * List() is not allowed.
+// * Building an index is not allowed
+// * Events are not 100% precise; only Add and Delete events are triggered. Updates will be `Add` events.
+// The intended use case for this is to do merging within a collection (like a SQL 'group by').
+// WARNING: when merging, its critical the output key includes the merge key. Otherwise, you may end up with multiple
+// input keys mapping to the same output key, corrupting krt state.
 func (i index[K, O]) AsCollection(opts ...CollectionOption) Collection[IndexObject[K, O]] {
 	o := buildCollectionOptions(opts...)
 
@@ -83,6 +104,7 @@ func (i index[K, O]) AsCollection(opts ...CollectionOption) Collection[IndexObje
 		idx:            i,
 		id:             nextUID(),
 		collectionName: fmt.Sprintf("index/%s", o.name),
+		fromKey:        o.indexCollectionFromString,
 	}
 	if c.fromKey == nil {
 		if _, ok := any(ptr.Empty[K]()).(string); !ok {
@@ -96,6 +118,7 @@ func (i index[K, O]) AsCollection(opts ...CollectionOption) Collection[IndexObje
 	if o.metadata != nil {
 		c.metadata = o.metadata
 	}
+	maybeRegisterCollectionForDebugging(c, o.debugger)
 	return c
 }
 
@@ -125,6 +148,23 @@ func (i index[K, O]) Lookup(k K) []O {
 		return nil
 	}
 	return i.indexer.Lookup(toString(k))
+}
+
+func toString(rk any) string {
+	tk, ok := rk.(string)
+	if !ok {
+		return rk.(fmt.Stringer).String()
+	}
+	return tk
+}
+
+type indexCollection[K comparable, O any] struct {
+	idx      index[K, O]
+	id       collectionUID
+	metadata Metadata
+	// nolint: unused // (not true, its to implement an interface)
+	collectionName string
+	fromKey        func(string) any
 }
 
 // nolint: unused // (not true, its to implement an interface)
@@ -238,16 +278,4 @@ func (i indexCollection[K, O]) RegisterBatch(f func(o []Event[IndexObject[K, O]]
 		}
 		f(downstream)
 	}, runExistingState)
-}
-
-func (i IndexObject[K, O]) ResourceName() string {
-	return toString(i.Key)
-}
-
-func toString(rk any) string {
-	tk, ok := rk.(string)
-	if !ok {
-		return rk.(fmt.Stringer).String()
-	}
-	return tk
 }

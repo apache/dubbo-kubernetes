@@ -1,10 +1,8 @@
+// Copyright Istio Authors
 //
-// Licensed to the Apache Software Foundation (ASF) under one or more
-// contributor license agreements.  See the NOTICE file distributed with
-// this work for additional information regarding copyright ownership.
-// The ASF licenses this file to You under the Apache License, Version 2.0
-// (the "License"); you may not use this file except in compliance with
-// the License.  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -18,11 +16,14 @@ package krt
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 )
 
+// MapCollection is just a light facade on top of another collection
+// that uses a map function to trasform T into U
+// The transformation function MUST keep the name consistent
 type mapCollection[T any, U any] struct {
 	collectionName string
 	id             collectionUID
@@ -31,31 +32,25 @@ type mapCollection[T any, U any] struct {
 	metadata       Metadata
 }
 
+var _ Collection[int] = &mapCollection[bool, int]{}
+
+// nolint: unused // (not true, used in func declared to implement an interface)
 type mappedIndexer[T any, U any] struct {
 	indexer indexer[T]
 	mapFunc func(T) U
 }
 
-func MapCollection[T, U any](collection Collection[T], mapFunc func(T) U, opts ...CollectionOption) Collection[U] {
-	o := buildCollectionOptions(opts...)
-	if o.name == "" {
-		o.name = fmt.Sprintf("Map[%v]", ptr.TypeName[T]())
+// nolint: unused // (not true, its to implement an interface)
+func (m *mappedIndexer[T, U]) Lookup(k string) []U {
+	keys := m.indexer.Lookup(k)
+	res := make([]U, 0, len(keys))
+	for _, obj := range keys {
+		res = append(res, m.mapFunc(obj))
 	}
-	ic := collection.(internalCollection[T])
-	metadata := o.metadata
-	if metadata == nil {
-		metadata = ic.Metadata()
-	}
-	m := &mapCollection[T, U]{
-		collectionName: o.name,
-		id:             nextUID(),
-		collection:     ic,
-		mapFunc:        mapFunc,
-		metadata:       metadata,
-	}
-	maybeRegisterCollectionForDebugging[U](m, o.debugger)
-	return m
+	return res
 }
+
+var _ Collection[int] = &mapCollection[bool, int]{}
 
 func (m *mapCollection[T, U]) GetKey(k string) *U {
 	if obj := m.collection.GetKey(k); obj != nil {
@@ -78,53 +73,6 @@ func (m *mapCollection[T, U]) List() []U {
 				panic(fmt.Sprintf("Input and output key must be the same for MapCollection %q %q", ok, nk))
 			}
 		}
-	}
-	return res
-}
-
-func (m *mapCollection[T, U]) HasSynced() bool {
-	return m.collection.HasSynced()
-}
-
-func (m *mapCollection[T, U]) WaitUntilSynced(stop <-chan struct{}) bool {
-	return m.collection.WaitUntilSynced(stop)
-}
-
-func (m *mapCollection[T, U]) name() string { return m.collectionName }
-
-// nolint: unused // (not true, its to implement an interface)
-func (m *mapCollection[T, U]) uid() collectionUID { return m.id }
-
-// nolint: unused // (not true, its to implement an interface)
-func (m *mapCollection[T, U]) dump() CollectionDump {
-	return CollectionDump{
-		Outputs:         eraseMap(slices.GroupUnique(m.List(), getTypedKey)),
-		Synced:          m.HasSynced(),
-		InputCollection: m.collection.name(),
-	}
-}
-
-func (m *mapCollection[T, U]) augment(a any) any {
-	// not supported in this collection type
-	return a
-}
-
-func (m *mapCollection[T, U]) index(name string, extract func(o U) []string) indexer[U] {
-	t := func(o T) []string {
-		return extract(m.mapFunc(o))
-	}
-	idxs := m.collection.index(name, t)
-	return &mappedIndexer[T, U]{
-		indexer: idxs,
-		mapFunc: m.mapFunc,
-	}
-}
-
-func (m *mappedIndexer[T, U]) Lookup(k string) []U {
-	keys := m.indexer.Lookup(k)
-	res := make([]U, 0, len(keys))
-	for _, obj := range keys {
-		res = append(res, m.mapFunc(obj))
 	}
 	return res
 }
@@ -154,4 +102,70 @@ func (m *mapCollection[T, U]) RegisterBatch(handler func([]Event[U]), runExistin
 
 func (m *mapCollection[T, U]) Metadata() Metadata {
 	return m.metadata
+}
+
+// nolint: unused // (not true, its to implement an interface)
+func (m *mapCollection[T, U]) augment(a any) any {
+	// not supported in this collection type
+	return a
+}
+
+// nolint: unused // (not true, its to implement an interface)
+func (m *mapCollection[T, U]) name() string { return m.collectionName }
+
+// nolint: unused // (not true, its to implement an interface)
+func (m *mapCollection[T, U]) uid() collectionUID { return m.id }
+
+// nolint: unused // (not true, its to implement an interface)
+func (m *mapCollection[T, U]) dump() CollectionDump {
+	return CollectionDump{
+		Outputs:         eraseMap(slices.GroupUnique(m.List(), getTypedKey)),
+		Synced:          m.HasSynced(),
+		InputCollection: m.collection.name(),
+	}
+}
+
+// nolint: unused // (not true, its to implement an interface)
+func (m *mapCollection[T, U]) index(name string, extract func(o U) []string) indexer[U] {
+	t := func(o T) []string {
+		return extract(m.mapFunc(o))
+	}
+	idxs := m.collection.index(name, t)
+	return &mappedIndexer[T, U]{
+		indexer: idxs,
+		mapFunc: m.mapFunc,
+	}
+}
+
+func (m *mapCollection[T, U]) HasSynced() bool {
+	return m.collection.HasSynced()
+}
+
+func (m *mapCollection[T, U]) WaitUntilSynced(stop <-chan struct{}) bool {
+	return m.collection.WaitUntilSynced(stop)
+}
+
+func MapCollection[T, U any](
+	collection Collection[T],
+	mapFunc func(T) U,
+	opts ...CollectionOption,
+) Collection[U] {
+	o := buildCollectionOptions(opts...)
+	if o.name == "" {
+		o.name = fmt.Sprintf("Map[%v]", ptr.TypeName[T]())
+	}
+	ic := collection.(internalCollection[T])
+	metadata := o.metadata
+	if metadata == nil {
+		metadata = ic.Metadata()
+	}
+	m := &mapCollection[T, U]{
+		collectionName: o.name,
+		id:             nextUID(),
+		collection:     ic,
+		mapFunc:        mapFunc,
+		metadata:       metadata,
+	}
+	maybeRegisterCollectionForDebugging[U](m, o.debugger)
+	return m
 }
