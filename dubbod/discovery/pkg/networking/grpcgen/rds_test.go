@@ -87,8 +87,8 @@ func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*mo
 	env := model.NewEnvironment()
 	env.ConfigStore = store
 	env.ServiceDiscovery = staticServiceDiscovery{services: services}
-	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshGlobalConfigResource{
-		MeshGlobalConfig: mesh.DefaultMeshGlobalConfig(),
+	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshGlobalSetupResource{
+		MeshGlobalSetup: mesh.DefaultMeshGlobalSetup(),
 	}, true))
 	env.Init()
 

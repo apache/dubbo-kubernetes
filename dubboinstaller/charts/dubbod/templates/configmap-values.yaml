@@ -16,11 +16,15 @@
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
 {{- $defaultGlobal := $defaults.global | default dict }}
 {{- $defaultProxy := $defaultGlobal.proxy | default dict }}
+{{- $defaultGUI := $defaultGlobal.gui | default dict }}
 {{- $global := .Values.global | default dict }}
 {{- $proxy := $global.proxy | default dict }}
+{{- $gui := $global.gui | default dict }}
 {{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce $global.statusPort $defaultGlobal.statusPort 26020 }}
+{{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
+{{- $guiNodePort := int (coalesce $gui.nodePort $defaultGUI.nodePort 30080) }}
 {{- $original := omit .Values "_internal_default_values_not_set" }}
 apiVersion: v1
 kind: ConfigMap
@@ -37,6 +41,9 @@ data:
       dubboNamespace: "dubbo-system"
       proxy:
         clusterDomain: {{ $clusterDomain | quote }}
+      gui:
+        port: {{ $guiPort }}
+        nodePort: {{ $guiNodePort }}
       statusPort: {{ $statusPort }}
   original-values: |-
 {{ $original | toYaml | nindent 4 }}

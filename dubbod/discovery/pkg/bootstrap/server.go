@@ -212,7 +212,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		return nil, fmt.Errorf("error initializing kube client: %v", err)
 	}
 
-	s.initMeshGlobalConfiguration(args, s.fileWatcher)
+	s.initMeshGlobalSetup(args, s.fileWatcher)
 
 	if s.kubeClient != nil {
 		// Build a namespace watcher. This must have no filter, since this is our input to the filter itself.
@@ -593,7 +593,7 @@ func (s *Server) initMulticluster(args *DubboArgs) {
 	})
 }
 
-func (s *Server) initMeshHandlers(changeHandler func(_ *meshv1alpha1.MeshGlobalConfig)) {
+func (s *Server) initMeshHandlers(changeHandler func(_ *meshv1alpha1.MeshGlobalSetup)) {
 	log.Info("initializing mesh handlers")
 	// When the mesh config or networks change, do a full push.
 	s.environment.AddMeshHandler(func() {
@@ -614,15 +614,15 @@ func (s *Server) initKubeClient(args *DubboArgs) error {
 	hasK8SConfigStore := false
 	if args.RegistryOptions.FileDir == "" {
 		// If file dir is set - config controller will just use file.
-		if _, err := os.Stat(args.MeshGlobalConfigFile); !os.IsNotExist(err) {
-			meshGlobalConfig, err := mesh.ReadMeshGlobalConfig(args.MeshGlobalConfigFile)
+		if _, err := os.Stat(args.MeshGlobalSetupFile); !os.IsNotExist(err) {
+			meshGlobalSetup, err := mesh.ReadMeshGlobalSetup(args.MeshGlobalSetupFile)
 			if err != nil {
 				return fmt.Errorf("failed reading mesh config: %v", err)
 			}
-			if len(meshGlobalConfig.ConfigSources) == 0 && args.RegistryOptions.KubeConfig != "" {
+			if len(meshGlobalSetup.ConfigSources) == 0 && args.RegistryOptions.KubeConfig != "" {
 				hasK8SConfigStore = true
 			}
-			for _, cs := range meshGlobalConfig.ConfigSources {
+			for _, cs := range meshGlobalSetup.ConfigSources {
 				if cs.Address == string(Kubernetes)+"://" {
 					hasK8SConfigStore = true
 					break
@@ -707,7 +707,7 @@ func (s *Server) createPeerCertVerifier(tlsOptions TLSOptions, trustDomain strin
 		if s.RA != nil {
 			if strings.HasPrefix(features.DubboCertProvider, constants.CertProviderKubernetesSignerPrefix) {
 				signerName := strings.TrimPrefix(features.DubboCertProvider, constants.CertProviderKubernetesSignerPrefix)
-				caBundle, _ := s.RA.GetRootCertFromMeshGlobalConfig(signerName)
+				caBundle, _ := s.RA.GetRootCertFromMeshGlobalSetup(signerName)
 				rootCertBytes = append(rootCertBytes, caBundle...)
 			} else {
 				rootCertBytes = append(rootCertBytes, s.RA.GetCAKeyCertBundle().GetRootCertPem()...)

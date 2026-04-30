@@ -25,11 +25,18 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/cmd"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/ctrlz"
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/spf13/cobra"
 )
 
 var (
 	serverArgs *bootstrap.DubboArgs
+)
+
+const (
+	startupLogScope = "setup"
+	waitLogScope    = "wait"
+	xclientLogScope = "xclient"
 )
 
 func NewRootCommand() *cobra.Command {
@@ -47,27 +54,28 @@ func NewRootCommand() *cobra.Command {
 			return nil
 		},
 	}
-	discoveryCmd := newDiscoveryCommand()
-	addFlags(discoveryCmd)
-	rootCmd.AddCommand(discoveryCmd)
+	startupCmd := newStartupCommand()
+	addFlags(startupCmd)
+	rootCmd.AddCommand(startupCmd)
 
 	cmd.AddFlags(rootCmd)
 	rootCmd.AddCommand(waitCmd)
-	rootCmd.AddCommand(newXDSClientCommand())
+	rootCmd.AddCommand(newXClientCommand())
 
 	return rootCmd
 }
 
-func newDiscoveryCommand() *cobra.Command {
+func newStartupCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "discovery",
-		Short: "dubbo discovery service.",
+		Use:   "startup",
+		Short: "start the Dubbo Control Plane.",
 		Args:  cobra.ExactArgs(0),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
 			UnknownFlags: true,
 		},
 		PreRunE: func(c *cobra.Command, args []string) error {
+			dubbolog.SetDefaultScope(startupLogScope)
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
@@ -112,10 +120,10 @@ func addFlags(c *cobra.Command) {
 		"kubeconfig",
 		"",
 		"Use a Kubernetes configuration file instead of in-cluster configuration")
-	c.PersistentFlags().StringVar(&serverArgs.MeshGlobalConfigFile,
-		"meshGlobalConfig",
+	c.PersistentFlags().StringVar(&serverArgs.MeshGlobalSetupFile,
+		"meshGlobalSetup",
 		"./etc/dubbo/config/mesh",
-		"File name for Dubbo mesh global configuration. If not specified, a default mesh will be used.")
+		"File name for Dubbo mesh global setup. If not specified, a default mesh will be used.")
 	c.PersistentFlags().Float32Var(&serverArgs.RegistryOptions.KubeOptions.KubernetesAPIQPS,
 		"kubernetesApiQPS",
 		80.0,

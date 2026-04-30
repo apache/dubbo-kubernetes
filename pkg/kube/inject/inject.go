@@ -25,9 +25,9 @@ import (
 	"strings"
 	"text/template"
 
+	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
 	"github.com/kdubbo/api/annotation"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
-	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -76,7 +76,7 @@ type TemplateData struct {
 	ObjectMeta       metav1.ObjectMeta
 	Spec             corev1.PodSpec
 	ProxyConfig      *meshv1alpha1.ProxyConfig
-	MeshGlobalConfig *meshv1alpha1.MeshGlobalConfig
+	MeshGlobalSetup  *meshv1alpha1.MeshGlobalSetup
 	Values           map[string]any
 	Revision         string
 	NativeSidecars   bool
@@ -93,7 +93,7 @@ type InjectionStatus struct {
 
 func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod *corev1.Pod, err error) {
 	metadata := &params.pod.ObjectMeta
-	meshGlobalConfig := params.meshGlobalConfig
+	meshGlobalSetup := params.meshGlobalSetup
 
 	if err := validateAnnotations(metadata.GetAnnotations()); err != nil {
 		log.Errorf("Injection failed due to invalid annotations: %v", err)
@@ -111,7 +111,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		ObjectMeta:       strippedPod.ObjectMeta,
 		Spec:             strippedPod.Spec,
 		ProxyConfig:      params.proxyConfig,
-		MeshGlobalConfig: meshGlobalConfig,
+		MeshGlobalSetup:  meshGlobalSetup,
 		Values:           params.valuesConfig.asMap,
 		Revision:         params.revision,
 		ProxyImage:       getProxyImage(params.valuesConfig.asMap, "dubboregistry/dubbo-proxy:0.3.6"),

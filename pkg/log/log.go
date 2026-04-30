@@ -146,7 +146,7 @@ var (
 	globalMu          sync.Mutex
 	usePrettyLog      bool = false
 	prettyLogMu       sync.RWMutex
-	defaultScope      = "default"
+	defaultScope      = "log"
 	defaultLogger     *Logger
 	defaultLoggerOnce sync.Once
 	levelTag          = monitoring.CreateLabel("level")
@@ -423,6 +423,11 @@ func (l *Logger) InfoJSON(title string, value interface{}) {
 	l.logJSON(InfoLevel, title, value)
 }
 
+// DebugJSON logs a title followed by an indented JSON document.
+func (l *Logger) DebugJSON(title string, value interface{}) {
+	l.logJSON(DebugLevel, title, value)
+}
+
 func (l *Logger) logJSON(level Level, title string, value interface{}) {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
@@ -525,6 +530,11 @@ func Infof(format string, args ...interface{}) {
 // InfoJSON logs a title followed by an indented JSON document using the default scope.
 func InfoJSON(title string, value interface{}) {
 	getDefaultLogger().InfoJSON(title, value)
+}
+
+// DebugJSON logs a title followed by an indented JSON document using the default scope.
+func DebugJSON(title string, value interface{}) {
+	getDefaultLogger().DebugJSON(title, value)
 }
 
 // Warn logs a warning message using the default scope

@@ -23,7 +23,6 @@ import (
 	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	"time"
 
-	dubboclient "github.com/kdubbo/client-go/pkg/clientset/versioned"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
@@ -31,6 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/lazy"
 	"github.com/apache/dubbo-kubernetes/pkg/sleep"
+	dubboclient "github.com/kdubbo/client-go/pkg/clientset/versioned"
 	"go.uber.org/atomic"
 	kubeExtClient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"

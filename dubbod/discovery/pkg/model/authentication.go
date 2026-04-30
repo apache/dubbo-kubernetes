@@ -19,13 +19,13 @@ package model
 import (
 	"crypto/md5"
 	"fmt"
-	"github.com/kdubbo/api/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	"github.com/kdubbo/api/security/v1alpha3"
 	"strings"
 	"time"
 
-	typev1alpha3 "github.com/kdubbo/api/type/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
+	typev1alpha3 "github.com/kdubbo/api/type/v1alpha3"
 )
 
 type MutualTLSMode int
@@ -68,7 +68,7 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 	sortConfigByCreationTime(configs)
 
 	foundNamespaceMTLS := make(map[string]v1alpha3.PeerAuthentication_MutualTLS_Mode)
-	seenNamespaceOrMeshGlobalConfig := make(map[string]time.Time)
+	seenNamespaceOrMeshGlobalSetup := make(map[string]time.Time)
 	versions := []string{}
 
 	for _, config := range configs {
@@ -76,13 +76,13 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 		spec := config.Spec.(*v1alpha3.PeerAuthentication)
 		selector := spec.GetSelector()
 		if selector == nil || len(selector.MatchLabels) == 0 {
-			if t, ok := seenNamespaceOrMeshGlobalConfig[config.Namespace]; ok {
+			if t, ok := seenNamespaceOrMeshGlobalSetup[config.Namespace]; ok {
 				log.Warnf(
 					"Namespace/mesh-level PeerAuthentication is already defined for %q at time %v. Ignore %q which was created at time %v",
 					config.Namespace, t, config.Name, config.CreationTimestamp)
 				continue
 			}
-			seenNamespaceOrMeshGlobalConfig[config.Namespace] = config.CreationTimestamp
+			seenNamespaceOrMeshGlobalSetup[config.Namespace] = config.CreationTimestamp
 
 			mode := v1alpha3.PeerAuthentication_MutualTLS_UNSET
 			if spec.Mtls != nil {

@@ -9,6 +9,7 @@ const CONFIG = (() => {
 })();
 
 const API_URL = new URL("api/overview", document.baseURI).toString();
+const LOGS_URL = new URL("api/logs", document.baseURI).toString();
 
 // --- Icons (SVG as HTML) ---
 const Icons = {
@@ -37,6 +38,48 @@ const Badge = ({ children, type, style }) => html`
   <span className=${`k-badge k-badge-${type || 'neutral'}`} style=${style}>${children}</span>
 `;
 
+const ComponentLink = ({ children, onClick }) => html`
+  <button type="button" className="k-component-link" onClick=${onClick}>${children}</button>
+`;
+
+const LogsDrawer = ({ state, onClose, onRefresh }) => {
+  if (!state) return null;
+  const pods = state.data?.pods || [];
+  return html`
+    <div className="k-log-overlay">
+      <div className="k-log-drawer">
+        <div className="k-log-header">
+          <div>
+            <div className="k-log-title">${state.title}</div>
+            <div className="k-log-subtitle">${state.namespace || '-'} ${state.kind || ''}</div>
+          </div>
+          <div className="k-log-actions">
+            <button type="button" className="k-icon-button" onClick=${onRefresh} title="Refresh">↻</button>
+            <button type="button" className="k-icon-button" onClick=${onClose} title="Close">×</button>
+          </div>
+        </div>
+        <div className="k-log-body">
+          ${state.loading && html`<div className="k-log-loading">Loading logs...</div>`}
+          ${state.error && html`<div className="k-log-error">${state.error}</div>`}
+          ${!state.loading && !state.error && pods.length === 0 && html`<div className="k-log-empty">No pods found.</div>`}
+          ${!state.loading && !state.error && pods.map(p => html`
+            <section className="k-log-pod" key=${`${p.name}/${p.container}`}>
+              <div className="k-log-pod-header">
+                <div>
+                  <span className="k-log-pod-name">${p.name}</span>
+                  <span className="k-log-container">${p.container}</span>
+                </div>
+                <${Badge} type=${p.ready ? 'success' : 'warning'}>${p.phase || 'unknown'}</${Badge}>
+              </div>
+              <pre className="k-log-pre">${p.error || p.logs || 'No logs returned.'}</pre>
+            </section>
+          `)}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
 const CustomDropdown = ({ options, value, onChange }) => {
   return html`
     <div className="k-dropdown">
@@ -61,6 +104,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [filter, setFilter] = useState('');
   const [selectedHostname, setSelectedHostname] = useState(null);
+  const [logsState, setLogsState] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -88,6 +132,31 @@ const App = () => {
       [s.name, s.hostname, s.namespace].some(v => v?.toLowerCase().includes(f))
     );
   }, [data, filter]);
+
+  const openLogs = async (target) => {
+    const next = { ...target, loading: true, data: null, error: null };
+    setLogsState(next);
+    try {
+      const url = new URL(LOGS_URL);
+      url.searchParams.set('kind', target.kind);
+      url.searchParams.set('namespace', target.namespace || '');
+      url.searchParams.set('name', target.name || '');
+      const res = await fetch(url.toString());
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.error || `HTTP ${res.status}`);
+      }
+      setLogsState({ ...next, loading: false, data: payload });
+    } catch (e) {
+      setLogsState({ ...next, loading: false, error: e.message || String(e) });
+    }
+  };
+
+  const refreshLogs = () => {
+    if (logsState) {
+      openLogs(logsState);
+    }
+  };
 
   if (!data) {
     return html`<div className="k-app"><div className="k-content"><div className="k-skeleton" style=${{height: '100%'}}></div></div></div>`;
@@ -146,7 +215,7 @@ const App = () => {
                       return html`
                         <tr>
                           <td>
-                            <div style=${{fontWeight: 600}}>dubbod</div>
+                            <${ComponentLink} onClick=${() => openLogs({ kind: 'dubbod', name: 'dubbod', namespace: ns, title: 'dubbod' })}>dubbod</${ComponentLink}>
                           </td>
                           <td>
                             <span style=${{fontSize: '13px', color: 'var(--text)', fontWeight: 500}}>${ready} / ${total}</span>
@@ -173,28 +242,32 @@ const App = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${(() => {
-                      const total = (data.gatewayInstances || []).length;
-                      const ready = (data.gatewayInstances || []).filter(i => i.isReady).length;
-                      const ns = total > 0 ? data.gatewayInstances[0].namespace : '-';
-                      const gc = total > 0 && data.gatewayInstances[0].gatewayClass ? data.gatewayInstances[0].gatewayClass : '-';
-                      return html`
-                        <tr>
-                          <td>
-                            <div style=${{fontWeight: 600}}>kube-gateway</div>
-                          </td>
-                          <td>
-                            <span style=${{fontSize: '13px', color: total > 0 ? 'var(--text)' : 'var(--text-muted)', fontWeight: 500}}>${ready} / ${total}</span>
-                          </td>
-                          <td>
-                            <span style=${{fontSize: '13px', color: 'var(--text-muted)'}}>${ns}</span>
-                          </td>
-                          <td>
-                            <span style=${{fontSize: '13px', color: 'var(--text-muted)'}}>${gc}</span>
-                          </td>
-                        </tr>
-                      `;
-                    })()}
+                    ${(data.gatewayInstances || []).length === 0 && html`
+                      <tr>
+                        <td>
+                          <div style=${{fontWeight: 600, color: 'var(--text-muted)'}}>No managed gateway deployments</div>
+                        </td>
+                        <td><span style=${{fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500}}>0 / 0</span></td>
+                        <td><span style=${{fontSize: '13px', color: 'var(--text-muted)'}}>-</span></td>
+                        <td><span style=${{fontSize: '13px', color: 'var(--text-muted)'}}>-</span></td>
+                      </tr>
+                    `}
+                    ${(data.gatewayInstances || []).map(g => html`
+                      <tr key=${`${g.namespace}/${g.name}`}>
+                        <td>
+                          <${ComponentLink} onClick=${() => openLogs({ kind: 'gateway', name: g.name, namespace: g.namespace, title: g.name })}>${g.name}</${ComponentLink}>
+                        </td>
+                        <td>
+                          <span style=${{fontSize: '13px', color: g.isReady ? 'var(--text)' : 'var(--text-muted)', fontWeight: 500}}>${g.readyReplicas || 0} / ${g.desiredReplicas || 0}</span>
+                        </td>
+                        <td>
+                          <span style=${{fontSize: '13px', color: 'var(--text-muted)'}}>${g.namespace || '-'}</span>
+                        </td>
+                        <td>
+                          <span style=${{fontSize: '13px', color: 'var(--text-muted)'}}>${g.gatewayClass || '-'}</span>
+                        </td>
+                      </tr>
+                    `)}
                   </tbody>
                 </table>
               </div>
@@ -271,7 +344,7 @@ const App = () => {
                 <table className="k-table">
                   <thead>
                     <tr>
-                      <th>Kind (VirtualService / MeshGlobalConfig)</th>
+                      <th>Kind (VirtualService / MeshGlobalSetup)</th>
                       <th>Count</th>
                       <th>Description</th>
                     </tr>
@@ -291,6 +364,7 @@ const App = () => {
           `}
         </div>
       </main>
+      <${LogsDrawer} state=${logsState} onClose=${() => setLogsState(null)} onRefresh=${refreshLogs} />
     </div>
   `;
 };

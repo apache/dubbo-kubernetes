@@ -17,38 +17,38 @@
 package meshwatcher
 
 import (
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
-// MeshGlobalConfigResource holds the current MeshGlobalConfig state
-type MeshGlobalConfigResource struct {
-	*meshv1alpha1.MeshGlobalConfig
+// MeshGlobalSetupResource holds the current MeshGlobalSetup state
+type MeshGlobalSetupResource struct {
+	*meshv1alpha1.MeshGlobalSetup
 }
 
 type adapter struct {
-	krt.Singleton[MeshGlobalConfigResource]
+	krt.Singleton[MeshGlobalSetupResource]
 }
 
 var _ mesh.Watcher = adapter{}
 
 type WatcherCollection interface {
 	mesh.Watcher
-	krt.Singleton[MeshGlobalConfigResource]
+	krt.Singleton[MeshGlobalSetupResource]
 }
 
-func (a adapter) Mesh() *meshv1alpha1.MeshGlobalConfig {
+func (a adapter) Mesh() *meshv1alpha1.MeshGlobalSetup {
 	// Just get the value; we know there is always one set due to the way the collection is setup.
 	v := a.Singleton.Get()
-	return v.MeshGlobalConfig
+	return v.MeshGlobalSetup
 }
 
 func (a adapter) AddMeshHandler(h func()) *mesh.WatcherHandlerRegistration {
 	// Do not run initial state to match existing semantics
-	colReg := a.Singleton.AsCollection().RegisterBatch(func(o []krt.Event[MeshGlobalConfigResource]) {
+	colReg := a.Singleton.AsCollection().RegisterBatch(func(o []krt.Event[MeshGlobalSetupResource]) {
 		h()
 	}, false)
 	reg := mesh.NewWatcherHandlerRegistration(func() {
@@ -62,17 +62,17 @@ func (a adapter) DeleteMeshHandler(registration *mesh.WatcherHandlerRegistration
 	registration.Remove()
 }
 
-func (m MeshGlobalConfigResource) ResourceName() string { return "MeshGlobalConfigResource" }
+func (m MeshGlobalSetupResource) ResourceName() string { return "MeshGlobalSetupResource" }
 
-func (m MeshGlobalConfigResource) Equals(other MeshGlobalConfigResource) bool {
-	return proto.Equal(m.MeshGlobalConfig, other.MeshGlobalConfig)
+func (m MeshGlobalSetupResource) Equals(other MeshGlobalSetupResource) bool {
+	return proto.Equal(m.MeshGlobalSetup, other.MeshGlobalSetup)
 }
 
-func ConfigAdapter(configuration krt.Singleton[MeshGlobalConfigResource]) WatcherCollection {
+func ConfigAdapter(configuration krt.Singleton[MeshGlobalSetupResource]) WatcherCollection {
 	return adapter{configuration}
 }
 
-func PrettyFormatOfMeshGlobalConfig(meshGlobalConfig *meshv1alpha1.MeshGlobalConfig) string {
-	meshGlobalConfigDump, _ := protomarshal.ToYAML(meshGlobalConfig)
-	return meshGlobalConfigDump
+func PrettyFormatOfMeshGlobalSetup(meshGlobalSetup *meshv1alpha1.MeshGlobalSetup) string {
+	meshGlobalSetupDump, _ := protomarshal.ToYAML(meshGlobalSetup)
+	return meshGlobalSetupDump
 }

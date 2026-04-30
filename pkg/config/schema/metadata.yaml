@@ -197,25 +197,25 @@ resources:
     group: "networking.dubbo.apache.org"
     version: "v1alpha3"
     proto: "dubbo.networking.v1alpha3.VirtualService"
-    protoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+    protoPackage: "github.com/kdubbo/api/networking/v1alpha3"
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
-    statusProtoPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
 
   - kind: DestinationRule
     plural: "destinationrules"
     group: "networking.dubbo.apache.org"
     version: "v1alpha3"
     proto: "dubbo.networking.v1alpha3.DestinationRule"
-    protoPackage: "github.com/apache/dubbo-kubernetes/api/networking/v1alpha3"
+    protoPackage: "github.com/kdubbo/api/networking/v1alpha3"
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
-    statusProtoPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
 
-  - kind: "MeshGlobalConfig"
-    plural: "meshglobalconfigs"
+  - kind: "MeshGlobalSetup"
+    plural: "meshglobalsetups"
     group: ""
     version: "v1alpha1"
-    proto: "dubbo.mesh.v1alpha1.MeshGlobalConfig"
-    protoPackage: "github.com/apache/dubbo-kubernetes/api/mesh/v1alpha1"
+    proto: "dubbo.mesh.v1alpha1.MeshGlobalSetup"
+    protoPackage: "github.com/kdubbo/api/mesh/v1alpha1"
     synthetic: true
 
   - kind: PeerAuthentication
@@ -223,7 +223,6 @@ resources:
     group: "security.dubbo.apache.org"
     version: "v1alpha3"
     proto: "dubbo.security.v1alpha3.PeerAuthentication"
-    protoPackage: "github.com/apache/dubbo-kubernetes/api/security/v1alpha3"
+    protoPackage: "github.com/kdubbo/api/security/v1alpha3"
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
-    statusProtoPackage: "github.com/apache/dubbo-kubernetes/api/meta/v1alpha1"
-
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"

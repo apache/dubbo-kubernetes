@@ -18,7 +18,7 @@ const (
 	HorizontalPodAutoscaler
 	KubernetesGateway
 	Lease
-	MeshGlobalConfig
+	MeshGlobalSetup
 	MutatingWebhookConfiguration
 	Namespace
 	Node
@@ -63,8 +63,8 @@ func (k Kind) String() string {
 		return "KubernetesGateway"
 	case Lease:
 		return "Lease"
-	case MeshGlobalConfig:
-		return "MeshGlobalConfig"
+	case MeshGlobalSetup:
+		return "MeshGlobalSetup"
 	case MutatingWebhookConfiguration:
 		return "MutatingWebhookConfiguration"
 	case Namespace:
@@ -124,8 +124,8 @@ func FromString(s string) Kind {
 		return KubernetesGateway
 	case "Lease":
 		return Lease
-	case "MeshGlobalConfig":
-		return MeshGlobalConfig
+	case "MeshGlobalSetup":
+		return MeshGlobalSetup
 	case "MutatingWebhookConfiguration":
 		return MutatingWebhookConfiguration
 	case "Namespace":

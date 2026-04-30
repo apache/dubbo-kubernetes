@@ -8,11 +8,14 @@ import (
 	"net/http"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	klabels "k8s.io/apimachinery/pkg/labels"
 
 	discoverymodel "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/gui"
@@ -23,29 +26,32 @@ import (
 )
 
 type guiOverview struct {
-	Product     string            `json:"product"`
-	Version     string            `json:"version"`
-	Cluster     string            `json:"clusterId"`
-	Namespace   string            `json:"namespace"`
-	PodName     string            `json:"podName,omitempty"`
-	Mesh        guiOverviewMesh   `json:"mesh"`
-	Server      guiOverviewServer `json:"server"`
-	Status      guiOverviewStatus `json:"status"`
-	Counts      guiOverviewCounts `json:"counts"`
-	ConfigKinds []guiConfigKind   `json:"configKinds"`
-	Registries  []guiRegistry         `json:"registries"`
-	Services         []guiService          `json:"services"`
-	Instances        []guiDubbodInstance   `json:"instances"`
-	GatewayInstances []guiDubbodInstance   `json:"gatewayInstances"`
-	UpdatedAt        time.Time             `json:"updatedAt"`
+	Product          string              `json:"product"`
+	Version          string              `json:"version"`
+	Cluster          string              `json:"clusterId"`
+	Namespace        string              `json:"namespace"`
+	PodName          string              `json:"podName,omitempty"`
+	Mesh             guiOverviewMesh     `json:"mesh"`
+	Server           guiOverviewServer   `json:"server"`
+	Status           guiOverviewStatus   `json:"status"`
+	Counts           guiOverviewCounts   `json:"counts"`
+	ConfigKinds      []guiConfigKind     `json:"configKinds"`
+	Registries       []guiRegistry       `json:"registries"`
+	Services         []guiService        `json:"services"`
+	Instances        []guiDubbodInstance `json:"instances"`
+	GatewayInstances []guiDubbodInstance `json:"gatewayInstances"`
+	UpdatedAt        time.Time           `json:"updatedAt"`
 }
 
 type guiDubbodInstance struct {
-	Name         string `json:"name"`
-	Namespace    string `json:"namespace"`
-	IP           string `json:"ip"`
-	IsReady      bool   `json:"isReady"`
-	GatewayClass string `json:"gatewayClass,omitempty"`
+	Name            string `json:"name"`
+	Namespace       string `json:"namespace"`
+	IP              string `json:"ip"`
+	IsReady         bool   `json:"isReady"`
+	GatewayClass    string `json:"gatewayClass,omitempty"`
+	GatewayName     string `json:"gatewayName,omitempty"`
+	ReadyReplicas   int32  `json:"readyReplicas,omitempty"`
+	DesiredReplicas int32  `json:"desiredReplicas,omitempty"`
 }
 
 type guiOverviewMesh struct {
@@ -112,6 +118,23 @@ type guiService struct {
 	MeshExternal    bool   `json:"meshExternal"`
 }
 
+type guiLogsResponse struct {
+	Kind      string      `json:"kind"`
+	Name      string      `json:"name"`
+	Namespace string      `json:"namespace"`
+	Pods      []guiPodLog `json:"pods"`
+	UpdatedAt time.Time   `json:"updatedAt"`
+}
+
+type guiPodLog struct {
+	Name      string `json:"name"`
+	Container string `json:"container"`
+	Phase     string `json:"phase"`
+	Ready     bool   `json:"ready"`
+	Logs      string `json:"logs,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
 func (s *Server) initGUI(args *DubboArgs) error {
 	s.guiPath = gui.NormalizeBasePath(args.ServerOptions.GUIPath)
 
@@ -123,9 +146,11 @@ func (s *Server) initGUI(args *DubboArgs) error {
 	}
 
 	overviewPath := s.guiOverviewPath()
+	logsPath := s.guiLogsPath()
 	if s.guiPath == "/" {
-		s.guiMux.Handle("/", handler)
 		s.guiMux.HandleFunc(overviewPath, s.guiOverviewHandler)
+		s.guiMux.HandleFunc(logsPath, s.guiLogsHandler)
+		s.guiMux.Handle("/", handler)
 		return nil
 	}
 
@@ -136,6 +161,7 @@ func (s *Server) initGUI(args *DubboArgs) error {
 		http.Redirect(writer, request, s.guiPath+"/", http.StatusTemporaryRedirect)
 	})
 	s.guiMux.HandleFunc(overviewPath, s.guiOverviewHandler)
+	s.guiMux.HandleFunc(logsPath, s.guiLogsHandler)
 	s.guiMux.Handle(s.guiPath+"/", handler)
 
 	return nil
@@ -184,6 +210,10 @@ func (s *Server) guiOverviewPath() string {
 	return path.Join(s.guiPath, "api/overview")
 }
 
+func (s *Server) guiLogsPath() string {
+	return path.Join(s.guiPath, "api/logs")
+}
+
 func (s *Server) guiOverviewHandler(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		writer.WriteHeader(http.StatusMethodNotAllowed)
@@ -194,6 +224,163 @@ func (s *Server) guiOverviewHandler(writer http.ResponseWriter, request *http.Re
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
 	_ = encoder.Encode(s.buildGUIOverview())
+}
+
+func (s *Server) guiLogsHandler(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if s.kubeClient == nil {
+		writeGUIError(writer, http.StatusServiceUnavailable, "kubernetes client is unavailable")
+		return
+	}
+
+	kind := strings.TrimSpace(request.URL.Query().Get("kind"))
+	namespace := strings.TrimSpace(request.URL.Query().Get("namespace"))
+	name := strings.TrimSpace(request.URL.Query().Get("name"))
+	tailLines := guiLogTailLines(request.URL.Query().Get("tail"))
+
+	var response guiLogsResponse
+	var err error
+	switch kind {
+	case "dubbod":
+		if namespace == "" {
+			namespace = s.namespace
+		}
+		if name == "" {
+			name = "dubbod"
+		}
+		response, err = s.deploymentLogs(request.Context(), "dubbod", namespace, name, "startup", tailLines)
+	case "gateway":
+		if namespace == "" || name == "" {
+			writeGUIError(writer, http.StatusBadRequest, "gateway logs require namespace and name")
+			return
+		}
+		response, err = s.deploymentLogs(request.Context(), "gateway", namespace, name, "dxgate", tailLines)
+	default:
+		writeGUIError(writer, http.StatusBadRequest, "unknown log kind")
+		return
+	}
+	if err != nil {
+		writeGUIError(writer, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	encoder := json.NewEncoder(writer)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(response)
+}
+
+func writeGUIError(writer http.ResponseWriter, status int, message string) {
+	writer.WriteHeader(status)
+	_ = json.NewEncoder(writer).Encode(map[string]string{"error": message})
+}
+
+func guiLogTailLines(raw string) int64 {
+	const (
+		defaultTailLines int64 = 200
+		maxTailLines     int64 = 2000
+	)
+	if raw == "" {
+		return defaultTailLines
+	}
+	n, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || n <= 0 {
+		return defaultTailLines
+	}
+	if n > maxTailLines {
+		return maxTailLines
+	}
+	return n
+}
+
+func (s *Server) deploymentLogs(ctx context.Context, kind, namespace, name, preferredContainer string, tailLines int64) (guiLogsResponse, error) {
+	deployment, err := s.kubeClient.Kube().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return guiLogsResponse{}, fmt.Errorf("get deployment %s/%s: %v", namespace, name, err)
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(deployment.Spec.Selector)
+	if err != nil {
+		return guiLogsResponse{}, fmt.Errorf("build pod selector for deployment %s/%s: %v", namespace, name, err)
+	}
+	if selector.Empty() {
+		selector = klabels.SelectorFromSet(deployment.Spec.Template.Labels)
+	}
+
+	pods, err := s.kubeClient.Kube().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+	if err != nil {
+		return guiLogsResponse{}, fmt.Errorf("list pods for deployment %s/%s: %v", namespace, name, err)
+	}
+	sort.SliceStable(pods.Items, func(i, j int) bool {
+		return pods.Items[i].Name < pods.Items[j].Name
+	})
+
+	out := guiLogsResponse{
+		Kind:      kind,
+		Name:      name,
+		Namespace: namespace,
+		Pods:      make([]guiPodLog, 0, len(pods.Items)),
+		UpdatedAt: time.Now().UTC(),
+	}
+	for _, pod := range pods.Items {
+		out.Pods = append(out.Pods, s.podLogs(ctx, pod, preferredContainer, tailLines)...)
+	}
+	return out, nil
+}
+
+func (s *Server) podLogs(ctx context.Context, pod corev1.Pod, preferredContainer string, tailLines int64) []guiPodLog {
+	containers := guiLogContainers(pod, preferredContainer)
+	out := make([]guiPodLog, 0, len(containers))
+	for _, container := range containers {
+		entry := guiPodLog{
+			Name:      pod.Name,
+			Container: container,
+			Phase:     string(pod.Status.Phase),
+			Ready:     podReady(pod),
+		}
+		raw, err := s.kubeClient.Kube().CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
+			Container:  container,
+			TailLines:  &tailLines,
+			Timestamps: true,
+		}).DoRaw(ctx)
+		if err != nil {
+			entry.Error = err.Error()
+		} else {
+			entry.Logs = string(raw)
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
+func guiLogContainers(pod corev1.Pod, preferredContainer string) []string {
+	if preferredContainer != "" {
+		for _, container := range pod.Spec.Containers {
+			if container.Name == preferredContainer {
+				return []string{preferredContainer}
+			}
+		}
+	}
+	out := make([]string, 0, len(pod.Spec.Containers))
+	for _, container := range pod.Spec.Containers {
+		out = append(out, container.Name)
+	}
+	return out
+}
+
+func podReady(pod corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) buildGUIOverview() guiOverview {
@@ -277,7 +464,7 @@ func (s *Server) buildGUIOverview() guiOverview {
 
 func (s *Server) buildGUIDubbodInstances() []guiDubbodInstance {
 	instances := make([]guiDubbodInstance, 0)
-	
+
 	if s.kubeClient != nil {
 		pods, err := s.kubeClient.Kube().CoreV1().Pods(s.namespace).List(context.TODO(), metav1.ListOptions{
 			LabelSelector: "app=dubbo-control-plane",
@@ -322,30 +509,36 @@ func (s *Server) buildGUIGatewayInstances() []guiDubbodInstance {
 	instances := make([]guiDubbodInstance, 0)
 
 	if s.kubeClient != nil {
-		pods, err := s.kubeClient.Kube().CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
-			LabelSelector: "gateway.dubbo.apache.org/managed",
+		deployments, err := s.kubeClient.Kube().AppsV1().Deployments("").List(context.TODO(), metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/name=dxgate,app.kubernetes.io/managed-by=dubbod",
 		})
-		if err == nil && len(pods.Items) > 0 {
-			for _, pod := range pods.Items {
-				ready := false
-				for _, cond := range pod.Status.Conditions {
-					if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-						ready = true
-						break
-					}
-				}
-				instances = append(instances, guiDubbodInstance{
-					Name:         pod.Name,
-					Namespace:    pod.Namespace,
-					IP:           pod.Status.PodIP,
-					IsReady:      ready,
-					GatewayClass: "dubbo",
-				})
+		if err == nil && len(deployments.Items) > 0 {
+			for _, deployment := range deployments.Items {
+				instances = append(instances, guiGatewayInstanceFromDeployment(deployment))
 			}
 		}
 	}
 
 	return instances
+}
+
+func guiGatewayInstanceFromDeployment(deployment appsv1.Deployment) guiDubbodInstance {
+	desired := int32(1)
+	if deployment.Spec.Replicas != nil {
+		desired = *deployment.Spec.Replicas
+	}
+	ready := deployment.Status.ReadyReplicas
+	gatewayName := deployment.Labels["gateway.networking.k8s.io/gateway-name"]
+
+	return guiDubbodInstance{
+		Name:            deployment.Name,
+		Namespace:       deployment.Namespace,
+		IsReady:         desired > 0 && ready >= desired,
+		GatewayClass:    "dubbo",
+		GatewayName:     gatewayName,
+		ReadyReplicas:   ready,
+		DesiredReplicas: desired,
+	}
 }
 
 func (s *Server) buildGUIRegistries() []guiRegistry {

@@ -25,7 +25,7 @@ var (
 	KubernetesGateway              = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
 	KubernetesGateway_v1           = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
 	Lease                          = config.GroupVersionKind{Group: "coordination.k8s.io", Version: "v1", Kind: "Lease"}
-	MeshGlobalConfig               = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshGlobalConfig"}
+	MeshGlobalSetup                = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshGlobalSetup"}
 	MutatingWebhookConfiguration   = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "MutatingWebhookConfiguration"}
 	Namespace                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
 	Node                           = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Node"}
@@ -73,8 +73,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.KubernetesGateway_v1, true
 	case Lease:
 		return gvr.Lease, true
-	case MeshGlobalConfig:
-		return gvr.MeshGlobalConfig, true
+	case MeshGlobalSetup:
+		return gvr.MeshGlobalSetup, true
 	case MutatingWebhookConfiguration:
 		return gvr.MutatingWebhookConfiguration, true
 	case Namespace:
@@ -130,8 +130,8 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.KubernetesGateway
 	case Lease:
 		return kind.Lease
-	case MeshGlobalConfig:
-		return kind.MeshGlobalConfig
+	case MeshGlobalSetup:
+		return kind.MeshGlobalSetup
 	case MutatingWebhookConfiguration:
 		return kind.MutatingWebhookConfiguration
 	case Namespace:
@@ -198,8 +198,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return KubernetesGateway, true
 	case gvr.Lease:
 		return Lease, true
-	case gvr.MeshGlobalConfig:
-		return MeshGlobalConfig, true
+	case gvr.MeshGlobalSetup:
+		return MeshGlobalSetup, true
 	case gvr.MutatingWebhookConfiguration:
 		return MutatingWebhookConfiguration, true
 	case gvr.Namespace:

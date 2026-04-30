@@ -45,7 +45,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: httpbin-gateway
+  name: dxgate-gateway
 spec:
   gatewayClassName: dubbo
   listeners:
@@ -59,7 +59,7 @@ metadata:
   name: httpbin
 spec:
   parentRefs:
-    - name: httpbin-gateway
+    - name: dxgate-gateway
       sectionName: http
   rules:
     - matches:

@@ -14,8 +14,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 
-	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/networking/v1alpha3"
-	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/apache/dubbo-kubernetes/client-go/pkg/apis/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
+	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 {{- range .Packages}}
 	{{.ImportName}} "{{.PackageName}}"
 {{- end}}

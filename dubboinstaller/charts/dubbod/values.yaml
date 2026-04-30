@@ -46,6 +46,10 @@ _internal_default_values_not_set:
 
     statusPort: 26020
 
+    gui:
+      port: 26080
+      nodePort: 30080
+
     caAddress: ""
 
     configValidation: true

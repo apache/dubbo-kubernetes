@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultGUI := $defaultGlobal.gui | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $gui := $global.gui | default dict }}
+{{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,18 +38,20 @@ spec:
     spec:
       serviceAccountName: dubbod
       containers:
-        - name: discovery
+        - name: startup
           image: "kdubbo/dubbod:debug"
           imagePullPolicy: Always
           args:
-            - "discovery"
+            - "startup"
             - --domain
             - cluster.local
+            - --guiAddr
+            - ":{{ $guiPort }}"
           ports:
             - containerPort: 8080
               protocol: TCP
               name: http-debug
-            - containerPort: 26080
+            - containerPort: {{ $guiPort }}
               protocol: TCP
               name: gui
             - containerPort: 26010

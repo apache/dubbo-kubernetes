@@ -209,8 +209,8 @@ func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 }
 
 func (s *Server) initConfigController(args *DubboArgs) error {
-	meshGlobalConfig := s.environment.Mesh()
-	if len(meshGlobalConfig.ConfigSources) > 0 {
+	meshGlobalSetup := s.environment.Mesh()
+	if len(meshGlobalSetup.ConfigSources) > 0 {
 		if err := s.initConfigSources(args); err != nil {
 			return err
 		}

@@ -43,9 +43,7 @@ require (
 	github.com/go-git/go-git/v5 v5.13.1
 	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/glog v1.2.5
 	github.com/golang/protobuf v1.5.4
-	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.6
 	github.com/google/uuid v1.6.0
@@ -55,7 +53,8 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/heroku/color v0.0.6
-	github.com/howardjohn/celpp v0.1.0
+	github.com/kdubbo/api v0.0.0-20260430152956-c0ec9648793f
+	github.com/kdubbo/client-go v0.0.0-20260322200550-82e70d319918
 	github.com/kdubbo/xds-api v0.0.0-20260423094330-4e01ed7e8f82
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
@@ -72,7 +71,6 @@ require (
 	golang.org/x/term v0.38.0
 	golang.org/x/time v0.12.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
@@ -80,19 +78,15 @@ require (
 	helm.sh/helm/v3 v3.18.6
 	k8s.io/api v0.34.1
 	k8s.io/apiextensions-apiserver v0.34.1
-	k8s.io/gengo v0.0.0-20251215205346-5ee0d033ba5b
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.33.3
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
-	sigs.k8s.io/controller-tools v0.19.0
 	sigs.k8s.io/gateway-api v1.4.1
 	sigs.k8s.io/mcs-api v0.2.0
-	sigs.k8s.io/structured-merge-diff/v4 v4.6.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
-	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
@@ -112,7 +106,6 @@ require (
 	github.com/ProtonMail/go-crypto v1.1.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.26.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.27.12 // indirect
@@ -158,12 +151,10 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.2 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
-	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.26.0 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250607225305-033d6d78b36a // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
@@ -177,8 +168,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
-	github.com/kdubbo/api v0.0.0-20260322192101-bf9af0bbaf5e // indirect
-	github.com/kdubbo/client-go v0.0.0-20260322200550-82e70d319918 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
@@ -238,14 +227,13 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
-	golang.org/x/tools v0.39.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

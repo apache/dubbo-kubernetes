@@ -57,7 +57,7 @@ func NewDiscoveryNamespacesFilter(namespaces kclient.Client[*corev1.Namespace], 
 		discoveryNamespaces: sets.New[string](),
 	}
 	mesh.AddMeshHandler(func() {
-		// DiscoverySelectors field is not available in current MeshGlobalConfig
+		// DiscoverySelectors field is not available in current MeshGlobalSetup
 		// If needed, this functionality should be implemented when the field is added
 		var selectors []*meshapi.LabelSelector
 		f.selectorsChanged(selectors, true)
@@ -101,7 +101,7 @@ func NewDiscoveryNamespacesFilter(namespaces kclient.Client[*corev1.Namespace], 
 	// Start namespaces and wait for it to be ready now. This is required for subsequent users, so we want to block
 	namespaces.Start(stop)
 	kube.WaitForCacheSync("discovery filter", stop, namespaces.HasSynced)
-	// DiscoverySelectors field is not available in current MeshGlobalConfig
+	// DiscoverySelectors field is not available in current MeshGlobalSetup
 	// If needed, this functionality should be implemented when the field is added
 	var selectors []*meshapi.LabelSelector
 	f.selectorsChanged(selectors, false)

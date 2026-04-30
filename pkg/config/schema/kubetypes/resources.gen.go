@@ -3,13 +3,13 @@
 package kubetypes
 
 import (
-	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
-	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
-	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
-	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
-	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	githubcomkdubboapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
+	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
+	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
+	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -31,7 +31,7 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.DaemonSet, true
 	case *k8sioapiappsv1.Deployment:
 		return gvk.Deployment, true
-	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
+	case *githubcomkdubboapinetworkingv1alpha3.DestinationRule:
 		return gvk.DestinationRule, true
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
 		return gvk.DestinationRule, true
@@ -49,15 +49,15 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.KubernetesGateway, true
 	case *k8sioapicoordinationv1.Lease:
 		return gvk.Lease, true
-	case *githubcomapachedubbokubernetesapimeshv1alpha1.MeshGlobalConfig:
-		return gvk.MeshGlobalConfig, true
+	case *githubcomkdubboapimeshv1alpha1.MeshGlobalSetup:
+		return gvk.MeshGlobalSetup, true
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return gvk.MutatingWebhookConfiguration, true
 	case *k8sioapicorev1.Namespace:
 		return gvk.Namespace, true
 	case *k8sioapicorev1.Node:
 		return gvk.Node, true
-	case *githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
+	case *githubcomkdubboapisecurityv1alpha3.PeerAuthentication:
 		return gvk.PeerAuthentication, true
 	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication:
 		return gvk.PeerAuthentication, true
@@ -75,7 +75,7 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.StatefulSet, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
-	case *githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
+	case *githubcomkdubboapinetworkingv1alpha3.VirtualService:
 		return gvk.VirtualService, true
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
 		return gvk.VirtualService, true
