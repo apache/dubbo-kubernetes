@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultProxy := $defaultGlobal.proxy | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $proxy := $global.proxy | default dict }}
+{{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
+{{- $revision := .Values.revision | default "default" }}
+{{- $statusPort := coalesce $global.statusPort $defaultGlobal.statusPort 26020 }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,10 +28,11 @@ metadata:
   namespace: dubbo-system
   labels:
     app: dubbod
-    dubbo.apache.org/rev: default
+    dubbo.apache.org/rev: {{ $revision }}
 data:
   mesh: |-
     defaultConfig:
-      discoveryAddress: dubbod.dubbo-system.svc:15012
+      discoveryAddress: dubbod.dubbo-system.svc:26012
+      statusPort: {{ $statusPort }}
     rootNamespace: dubbo-system
-    trustDomain: cluster.local
+    trustDomain: {{ $clusterDomain }}

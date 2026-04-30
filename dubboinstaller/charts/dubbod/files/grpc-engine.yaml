@@ -24,7 +24,7 @@ spec:
     - name: GRPC_XDS_BOOTSTRAP
       value: /etc/dubbo/proxy/grpc-bootstrap.json
     - name: XDS_ADDRESS
-      value: dubbod.dubbo-system.svc:15012
+      value: dubbod.dubbo-system.svc:26012
     - name: GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT
       value: "true"
     - name: DUBBO_GRPC_XDS_CREDENTIALS
@@ -40,7 +40,7 @@ spec:
         fieldRef:
           fieldPath: metadata.namespace
     - name: CA_ADDRESS
-      value: dubbod.dubbo-system.svc:15012
+      value: dubbod.dubbo-system.svc:26012
     - name: DUBBO_META_MESH_ID
       value: cluster.local
     - name: TRUST_DOMAIN

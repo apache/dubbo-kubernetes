@@ -193,7 +193,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 		log.Infof("Gateway Pod inbound listener, routeName=%s, port=%d, gateway=%s/%s", routeName, parsedPort, gatewayNamespace, gatewayName)
 
 		// CRITICAL: Only apply HTTPRoute to the Gateway listener port (80)
-		// Other ports (15012, 15021, etc.) are service ports and should not use HTTPRoute
+		// Other ports (26012, 26021, etc.) are service ports and should not use HTTPRoute
 		if parsedPort != 80 {
 			log.Debugf("Gateway Pod inbound listener port %d is not 80, skipping HTTPRoute (this is a service port, not Gateway listener)", parsedPort)
 			// Return empty route config for non-Gateway ports

@@ -73,7 +73,7 @@ spec:
         - name: DXGATE_HTTP_ADDR
           value: 0.0.0.0:8080
         - name: DXGATE_ADMIN_ADDR
-          value: 0.0.0.0:15021
+          value: 0.0.0.0:26021
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -94,7 +94,7 @@ spec:
         - name: http
           containerPort: 8080
         - name: admin
-          containerPort: 15021
+          containerPort: 26021
         readinessProbe:
           httpGet:
             path: /readyz

@@ -28,7 +28,7 @@ func TestGenerateBootstrapUsesTLSForDirectDiscovery(t *testing.T) {
 			ID:       "proxyless~10.0.0.1~app.default~default.svc.cluster.local",
 			Metadata: &pkgmodel.BootstrapNodeMetadata{},
 		},
-		DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+		DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 		CertDir:          "/etc/dubbo/proxy",
 	})
 	if err != nil {

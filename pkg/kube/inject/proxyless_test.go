@@ -70,11 +70,11 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 			},
 		},
 		proxyConfig: &meshv1alpha1.ProxyConfig{
-			DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 		},
 	}
 
@@ -140,7 +140,7 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 			},
 		},
 	}
@@ -174,7 +174,7 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
 		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
 	}
-	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:15012") {
+	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
 		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)
 	}
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_RESOLVER", "xds:///") {
@@ -183,7 +183,7 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
 		t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
 	}
-	if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:15012") {
+	if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:26012") {
 		t.Fatalf("CA_ADDRESS env missing")
 	}
 	if !hasEnv(container.Env, "TRUST_DOMAIN", "cluster.local") {
@@ -248,11 +248,11 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 			},
 		},
 		proxyConfig: &meshv1alpha1.ProxyConfig{
-			DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 		},
 	}
 
@@ -281,7 +281,7 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	if !hasEnv(container.Env, ProxylessGRPCConfigEnvName, ProxylessGRPCConfigPath) {
 		t.Fatalf("%s env missing", ProxylessGRPCConfigEnvName)
 	}
-	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:15012") {
+	if !hasEnv(container.Env, ProxylessXDSAddressEnvName, "dubbod.dubbo-system.svc:26012") {
 		t.Fatalf("%s env missing", ProxylessXDSAddressEnvName)
 	}
 	if !hasEnv(container.Env, "GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT", "true") {
@@ -342,11 +342,11 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 			},
 		},
 		proxyConfig: &meshv1alpha1.ProxyConfig{
-			DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 		},
 	}
 
@@ -409,11 +409,11 @@ func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t
 		meshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 			},
 		},
 		proxyConfig: &meshv1alpha1.ProxyConfig{
-			DiscoveryAddress: "dubbod.dubbo-system.svc:15012",
+			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 		},
 	}
 

@@ -43,16 +43,16 @@ spec:
             - containerPort: 8080
               protocol: TCP
               name: http-debug
-            - containerPort: 15080
+            - containerPort: 26080
               protocol: TCP
               name: gui
-            - containerPort: 15010
+            - containerPort: 26010
               protocol: TCP
               name: grpc-xds
-            - containerPort: 15012
+            - containerPort: 26012
               protocol: TCP
               name: tls-xds
-            - containerPort: 15017
+            - containerPort: 26017
               protocol: TCP
               name: https-webhooks
           env:

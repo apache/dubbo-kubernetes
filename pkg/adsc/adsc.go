@@ -511,7 +511,7 @@ func (a *ADSC) handleLDS(ll []*listener.Listener) {
 
 			// Getting from config is too painful..
 			port := l.Address.GetSocketAddress().GetPortValue()
-			if port == 15002 {
+			if port == 26002 {
 				routes = append(routes, "http_proxy")
 			} else {
 				routes = append(routes, fmt.Sprintf("%d", port))

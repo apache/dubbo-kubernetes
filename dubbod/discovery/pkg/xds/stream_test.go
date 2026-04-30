@@ -120,7 +120,7 @@ func newProxylessXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fa
 	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshGlobalConfigResource{
 		MeshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
-				DiscoveryAddress: "127.0.0.1:15010",
+				DiscoveryAddress: "127.0.0.1:26010",
 			},
 			RootNamespace: "dubbo-system",
 		},
@@ -140,7 +140,7 @@ func newProxylessXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fa
 	}
 
 	stream := newFakeADSStream()
-	con := newConnection("127.0.0.1:15010", stream)
+	con := newConnection("127.0.0.1:26010", stream)
 	con.s = server
 	con.proxy = &model.Proxy{
 		ID:        "pod-1",
