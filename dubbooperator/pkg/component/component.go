@@ -71,7 +71,7 @@ var AllComponents = []Component{
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:           "Dubbo Resource Core",
-		DubboDiscoveryComponentName: "Dubbo Control Plane",
+		DubboDiscoveryComponentName: "Dubbo control plane",
 	}
 
 	Icons = map[Name]string{

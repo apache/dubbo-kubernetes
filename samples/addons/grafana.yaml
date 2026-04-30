@@ -683,7 +683,7 @@ data:
               "refId": "B"
             }
           ],
-          "title": "Control Plane Stage P99",
+          "title": "control plane stage P99",
           "type": "timeseries"
         },
         {
@@ -821,7 +821,7 @@ data:
         "to": "now"
       },
       "timezone": "browser",
-      "title": "Dubbo Control Plane Observability",
+      "title": "Dubbo control plane Observability",
       "uid": "dubbod-observability",
       "version": 1,
       "weekStart": ""

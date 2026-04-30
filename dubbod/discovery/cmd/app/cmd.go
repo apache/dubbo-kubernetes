@@ -42,8 +42,8 @@ const (
 func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:          "dubbo-discovery",
-		Short:        "Dubbo Control Plane.",
-		Long:         "Dubbo Control Plane provides mesh-wide traffic management, security and policy capabilities in the Dubbo Service Mesh.",
+		Short:        "Dubbo control plane.",
+		Long:         "Dubbo control plane provides mesh-wide traffic management, security and policy capabilities in the Dubbo Service Mesh.",
 		SilenceUsage: true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
@@ -68,7 +68,7 @@ func NewRootCommand() *cobra.Command {
 func newExecuteCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "execute",
-		Short: "execute the Dubbo Control Plane.",
+		Short: "execute the Dubbo control plane.",
 		Args:  cobra.ExactArgs(0),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			// Allow unknown flags for backward-compatibility.
