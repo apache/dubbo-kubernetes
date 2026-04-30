@@ -199,7 +199,7 @@ func TestBuildDxgateRuntimeConfigFiltersUnattachedHTTPRoutes(t *testing.T) {
 
 func TestBuildDxgateBootstrapConfig(t *testing.T) {
 	raw, hash, err := buildDxgateBootstrapConfig(
-		"http://dubbod.dubbo-system.svc:15012",
+		"http://dubbod.dubbo-system.svc:15010",
 		[]string{"public-dubbo.app.svc.cluster.local:80"},
 		"Kubernetes",
 		"cluster.local",
@@ -215,7 +215,7 @@ func TestBuildDxgateBootstrapConfig(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
 		t.Fatal(err)
 	}
-	if cfg.XDSAddress != "http://dubbod.dubbo-system.svc:15012" {
+	if cfg.XDSAddress != "http://dubbod.dubbo-system.svc:15010" {
 		t.Fatalf("unexpected xDS address: %s", cfg.XDSAddress)
 	}
 	if diff := cmp.Diff([]string{"public-dubbo.app.svc.cluster.local:80"}, cfg.ListenerNames); diff != "" {
@@ -270,7 +270,7 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 		Ports:               []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromString("http")}},
 		ServiceType:         corev1.ServiceTypeLoadBalancer,
 		Revision:            "default",
-		BootstrapConfig:     "{\n  \"xds_address\": \"http://dubbod.dubbo-system.svc:15012\",\n  \"listener_names\": [\n    \"public-dubbo.app.svc.cluster.local:80\"\n  ],\n  \"cluster_id\": \"Kubernetes\",\n  \"dns_domain\": \"cluster.local\"\n}\n",
+		BootstrapConfig:     "{\n  \"xds_address\": \"http://dubbod.dubbo-system.svc:15010\",\n  \"listener_names\": [\n    \"public-dubbo.app.svc.cluster.local:80\"\n  ],\n  \"cluster_id\": \"Kubernetes\",\n  \"dns_domain\": \"cluster.local\"\n}\n",
 		BootstrapConfigHash: "abc123",
 		DxgateImage:         "kdubbo/dxgate:test",
 		SystemNamespace:     "dubbo-system",
@@ -292,7 +292,7 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if strings.Contains(strings.Join(rendered, "\n---\n"), "{{") {
 		t.Fatalf("hardcoded gateway template still contains template delimiters:\n%s", strings.Join(rendered, "\n---\n"))
 	}
-	if !strings.Contains(rendered[0], "bootstrap.json") || !strings.Contains(rendered[0], `"xds_address": "http://dubbod.dubbo-system.svc:15012"`) {
+	if !strings.Contains(rendered[0], "bootstrap.json") || !strings.Contains(rendered[0], `"xds_address": "http://dubbod.dubbo-system.svc:15010"`) {
 		t.Fatalf("configmap did not render dxgate bootstrap:\n%s", rendered[0])
 	}
 	if !strings.Contains(rendered[2], "image: kdubbo/dxgate:test") {

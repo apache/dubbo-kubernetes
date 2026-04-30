@@ -99,50 +99,50 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 			defaultSingleClusterRoute(routeName),
 		}
 
-		// First try Gateway API HTTPRoute
-		// For Gateway Pods, we need to match HTTPRoute hostnames
-		// Since Gateway Pods receive traffic with arbitrary hostnames (from HTTP requests),
-		// we need to use wildcard "*" to match all HTTPRoutes
-		// The VirtualHost domains already include "*" which will match any hostname
-		httpRoutes := push.HTTPRouteForHost(host.Name("*"))
-		if len(httpRoutes) > 0 {
-			log.Infof("found %d HTTPRoute(s) for Gateway Pod (using wildcard match)", len(httpRoutes))
-			// For Gateway Pods, collect all HTTPRoute hostnames and add them to domains
-			httpRouteHostnames := make(map[string]bool)
-			for _, hr := range httpRoutes {
-				hrSpec, ok := hr.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
-				if !ok {
-					continue
-				}
-				if len(hrSpec.Hostnames) == 0 {
-					// No hostnames means match all
-					httpRouteHostnames["*"] = true
-				} else {
-					for _, hostname := range hrSpec.Hostnames {
-						hostnameStr := string(hostname)
-						if hostnameStr == "" || hostnameStr == "*" {
-							httpRouteHostnames["*"] = true
-						} else {
-							httpRouteHostnames[hostnameStr] = true
+		if node.IsRouter() {
+			// Gateway routers use Gateway API HTTPRoute; service-to-service proxyless clients
+			// must not let an unrelated north-south HTTPRoute shadow their VirtualService.
+			httpRoutes := push.HTTPRouteForHost(host.Name("*"))
+			if len(httpRoutes) == 0 {
+				log.Debugf("no HTTPRoute found for router host %s, using default route", hostStr)
+			} else {
+				log.Infof("found %d HTTPRoute(s) for Gateway Pod (using wildcard match)", len(httpRoutes))
+				// For Gateway Pods, collect all HTTPRoute hostnames and add them to domains
+				httpRouteHostnames := make(map[string]bool)
+				for _, hr := range httpRoutes {
+					hrSpec, ok := hr.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
+					if !ok {
+						continue
+					}
+					if len(hrSpec.Hostnames) == 0 {
+						// No hostnames means match all
+						httpRouteHostnames["*"] = true
+					} else {
+						for _, hostname := range hrSpec.Hostnames {
+							hostnameStr := string(hostname)
+							if hostnameStr == "" || hostnameStr == "*" {
+								httpRouteHostnames["*"] = true
+							} else {
+								httpRouteHostnames[hostnameStr] = true
+							}
 						}
 					}
 				}
-			}
-			for hostnameStr := range httpRouteHostnames {
-				if hostnameStr != "*" {
-					domains = append(domains, hostnameStr)
-					domains = append(domains, fmt.Sprintf("%s:%d", hostnameStr, parsedPort))
+				for hostnameStr := range httpRouteHostnames {
+					if hostnameStr != "*" {
+						domains = append(domains, hostnameStr)
+						domains = append(domains, fmt.Sprintf("%s:%d", hostnameStr, parsedPort))
+					}
+				}
+
+				if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort); len(routes) > 0 {
+					log.Infof("built %d routes from Gateway API HTTPRoute", len(routes))
+					outboundRoutes = routes
+				} else {
+					log.Warnf("HTTPRoute found but no routes built")
 				}
 			}
-
-			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name("*"), parsedPort); len(routes) > 0 {
-				log.Infof("built %d routes from Gateway API HTTPRoute", len(routes))
-				outboundRoutes = routes
-			} else {
-				log.Warnf("HTTPRoute found but no routes built")
-			}
 		} else if vs := push.VirtualServiceForHost(host.Name(hostStr)); vs != nil {
-			// Fallback to VirtualService if no HTTPRoute found
 			log.Infof("found VirtualService for host %s with %d HTTP routes", hostStr, len(vs.Http))
 			if routes := buildRoutesFromVirtualService(vs, host.Name(hostStr), parsedPort); len(routes) > 0 {
 				log.Infof("built %d weighted routes from VirtualService for host %s", len(routes), hostStr)
