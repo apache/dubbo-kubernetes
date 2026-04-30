@@ -60,12 +60,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Fixed known issues with KRT
-            Fixed known issues with proxyless gRPC
-            Fixed known issues with XDS
-            Fixed missing content in Helm templates and other issues
-            Added load testing and e2e testing
-            Added and modified related content
+            Fixed known GUI issues
+            Renamed some core content
+            Added observability tools and metrics data
+            Supplemented relevant e2e testing
           draft: false
           prerelease: true
 
