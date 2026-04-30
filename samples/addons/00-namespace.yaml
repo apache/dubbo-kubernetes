@@ -14,48 +14,6 @@
 # limitations under the License.
 
 apiVersion: v1
-kind: Service
+kind: Namespace
 metadata:
-  name: dubbod
-  namespace: dubbo-system
-  labels:
-    app: dubbod
-  annotations:
-    prometheus.io/path: /metrics
-    prometheus.io/port: "8080"
-    prometheus.io/scrape: "true"
-spec:
-  ports:
-    - port: 8080
-      name: http-monitoring
-      protocol: TCP
-    - port: 26010
-      name: grpc-xds
-      protocol: TCP
-    - port: 26012
-      name: https-dns
-      protocol: TCP
-    - port: 443
-      name: https-webhook
-      targetPort: 26017
-      protocol: TCP
-  selector:
-    app: dubbod
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: dubbod-gui
-  namespace: dubbo-system
-  labels:
-    app: dubbod
-spec:
-  type: NodePort
-  ports:
-    - port: 26080
-      name: gui
-      targetPort: 26080
-      nodePort: 30080
-      protocol: TCP
-  selector:
-    app: dubbod
+  name: dubbo-system

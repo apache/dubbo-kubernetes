@@ -334,6 +334,11 @@ type distribution struct {
 }
 
 func newDistribution(name, description string, bounds []float64, opts ...Options) Metric {
+	o := &options{}
+	for _, opt := range opts {
+		opt(o)
+	}
+
 	d := &distribution{
 		name:        name,
 		description: description,
@@ -345,12 +350,18 @@ func newDistribution(name, description string, bounds []float64, opts ...Options
 			Name:    name,
 			Help:    description,
 			Buckets: bounds,
-		}, []string{})
+		}, o.labels)
 
 		registryLock.Lock()
 		registry.MustRegister(d.histogram)
 		registryLock.Unlock()
 	})
+
+	if len(o.labels) > 0 {
+		return &distributionMetric{
+			parent: d,
+		}
+	}
 
 	return &distributionMetric{
 		parent:    d,
@@ -377,6 +388,9 @@ func (dm *distributionMetric) Name() string {
 }
 
 func (dm *distributionMetric) Record(value float64) {
+	if dm.histogram == nil {
+		return
+	}
 	dm.histogram.Observe(value)
 }
 
@@ -389,27 +403,9 @@ func (dm *distributionMetric) With(labelValues ...LabelValue) Metric {
 		return dm
 	}
 
-	// Create new histogram vec with labels if needed
-	labelNames := make([]string, len(labelValues))
 	labels := make(prometheus.Labels)
-	for i, lv := range labelValues {
-		labelNames[i] = lv.Name
+	for _, lv := range labelValues {
 		labels[lv.Name] = lv.Value
-	}
-
-	// Check if we need to recreate the histogram with labels
-	if dm.labels == nil {
-		newHist := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    dm.parent.name,
-			Help:    dm.parent.description,
-			Buckets: dm.parent.bounds,
-		}, labelNames)
-
-		registryLock.Lock()
-		registry.MustRegister(newHist)
-		registryLock.Unlock()
-
-		dm.parent.histogram = newHist
 	}
 
 	return &distributionMetric{

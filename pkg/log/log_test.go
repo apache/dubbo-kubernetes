@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/apache/dubbo-kubernetes/pkg/monitoring"
 )
 
 func TestInfoJSONWritesIndentedJSONBlock(t *testing.T) {
@@ -54,4 +56,35 @@ func TestInfoJSONWritesIndentedJSONBlock(t *testing.T) {
 	if parsed["pushVersion"] != "v1" {
 		t.Fatalf("pushVersion = %#v, want v1", parsed["pushVersion"])
 	}
+}
+
+func TestLogMessagesMetricRecordsLevelAndScope(t *testing.T) {
+	var out bytes.Buffer
+	logger := RegisterScope("log-metric-test", "log metric test")
+	logger.Scope().SetOutput(&out)
+
+	logger.Warn("metric event")
+
+	families, err := monitoring.GetRegistry().Gather()
+	if err != nil {
+		t.Fatalf("gather metrics: %v", err)
+	}
+	for _, family := range families {
+		if family.GetName() != "dubbod_log_messages_total" {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			labels := map[string]string{}
+			for _, label := range metric.GetLabel() {
+				labels[label.GetName()] = label.GetValue()
+			}
+			if labels["level"] == "warn" && labels["scope"] == "log-metric-test" {
+				if metric.GetGauge().GetValue() < 1 {
+					t.Fatalf("dubbod_log_messages_total = %v, want >= 1", metric.GetGauge().GetValue())
+				}
+				return
+			}
+		}
+	}
+	t.Fatal("dubbod_log_messages_total with level=warn scope=log-metric-test not found")
 }
