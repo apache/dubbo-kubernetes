@@ -15,7 +15,11 @@
 
 package render
 
-import "testing"
+import (
+	"testing"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
 
 func TestGenerateManifestUsesEmbeddedInstallerAssets(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
@@ -25,4 +29,47 @@ func TestGenerateManifestUsesEmbeddedInstallerAssets(t *testing.T) {
 	if len(manifests) == 0 {
 		t.Fatal("GenerateManifest() returned zero manifest sets")
 	}
+}
+
+func TestGenerateManifestExposesDubbodPrometheusScrapeEndpoint(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+
+	for _, set := range manifests {
+		for _, m := range set.Manifests {
+			if m.GetKind() != "Service" || m.GetName() != "dubbod" || m.GetNamespace() != "dubbo-system" {
+				continue
+			}
+			annotations := m.GetAnnotations()
+			if annotations["prometheus.io/scrape"] != "true" {
+				t.Fatalf("prometheus.io/scrape = %q, want true", annotations["prometheus.io/scrape"])
+			}
+			if annotations["prometheus.io/path"] != "/metrics" {
+				t.Fatalf("prometheus.io/path = %q, want /metrics", annotations["prometheus.io/path"])
+			}
+			if annotations["prometheus.io/port"] != "8080" {
+				t.Fatalf("prometheus.io/port = %q, want 8080", annotations["prometheus.io/port"])
+			}
+
+			ports, ok, err := unstructured.NestedSlice(m.Object, "spec", "ports")
+			if err != nil || !ok {
+				t.Fatalf("spec.ports missing: ok=%v err=%v", ok, err)
+			}
+			for _, port := range ports {
+				p, ok := port.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				name, _, _ := unstructured.NestedString(p, "name")
+				number, _, _ := unstructured.NestedInt64(p, "port")
+				if name == "http-monitoring" && number == 8080 {
+					return
+				}
+			}
+			t.Fatal("dubbod Service missing http-monitoring port 8080")
+		}
+	}
+	t.Fatal("dubbod Service not rendered")
 }

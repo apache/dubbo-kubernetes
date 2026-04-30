@@ -24,6 +24,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/monitoring"
 )
 
 // Level represents the logging level
@@ -147,6 +149,13 @@ var (
 	defaultScope      = "default"
 	defaultLogger     *Logger
 	defaultLoggerOnce sync.Once
+	levelTag          = monitoring.CreateLabel("level")
+	scopeTag          = monitoring.CreateLabel("scope")
+	logMessages       = monitoring.NewSum(
+		"dubbod_log_messages_total",
+		"Total log messages emitted by level and scope.",
+		monitoring.WithLabels("level", "scope"),
+	)
 )
 
 // RegisterScope creates and registers a new logging scope
@@ -257,6 +266,7 @@ func (l *Logger) logMessage(level Level, msg string, preserveNewlines bool) {
 
 	levelName := levelNames[level]
 	scopeName := l.scope.Name()
+	logMessages.With(levelTag.Value(levelName), scopeTag.Value(scopeName)).Increment()
 
 	// Check deduplication
 	dedup := GetDeduplicator()
