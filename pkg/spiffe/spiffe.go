@@ -308,7 +308,7 @@ func genSpiffeURI(td, ns, serviceAccount string) (string, error) {
 	return URIPrefix + sanitizeTrustDomain(td) + "/ns/" + ns + "/sa/" + serviceAccount, err
 }
 
-func MustGenSpiffeURI(meshCfg *meshv1alpha1.MeshGlobalConfig, ns, serviceAccount string) string {
+func MustGenSpiffeURI(meshCfg *meshv1alpha1.MeshGlobalSetup, ns, serviceAccount string) string {
 	uri, err := genSpiffeURI(meshCfg.GetTrustDomain(), ns, serviceAccount)
 	if err != nil {
 	}

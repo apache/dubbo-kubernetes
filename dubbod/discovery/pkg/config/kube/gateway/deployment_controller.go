@@ -28,6 +28,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	klabels "k8s.io/apimachinery/pkg/labels"
@@ -62,6 +63,8 @@ type classInfo struct {
 	disableNameSuffix      bool
 	addressType            gateway.AddressType
 }
+
+const defaultDxgateGatewayName = "dxgate-gateway"
 
 var builtinClasses = getBuiltinClasses()
 
@@ -328,6 +331,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 	log.Infof("reconciling")
 
 	defaultName := getDefaultName(gw.Name, &gw.Spec, gi.disableNameSuffix)
+	legacyName := getLegacyDefaultName(gw.Name, &gw.Spec, gi.disableNameSuffix)
 	serviceType := gi.defaultServiceType
 
 	// Extract service ports from Gateway listeners
@@ -359,6 +363,9 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		DomainSuffix:        d.domainSuffix(),
 	}
 
+	log.Infof("desired dxgate deployment=%s/%s gatewayClass=%s serviceType=%s ports=%s image=%s",
+		gw.Namespace, defaultName, input.GatewayClass, serviceType, formatGatewayServicePorts(ports), input.DxgateImage)
+
 	log.Debugf("rendering template %q for gateway %s/%s", gi.templates, gw.Namespace, gw.Name)
 	rendered, err := d.render(gi.templates, input)
 	if err != nil {
@@ -378,6 +385,10 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 			log.Errorf("apply failed for resource %d/%d: %v", i+1, len(rendered), err)
 			return fmt.Errorf("apply failed: %v", err)
 		}
+	}
+
+	if err := d.cleanupLegacyGatewayResources(context.TODO(), log, gw.Namespace, legacyName, defaultName); err != nil {
+		log.Warnf("failed cleaning up legacy dxgate resources %s/%s: %v", gw.Namespace, legacyName, err)
 	}
 
 	log.Infof("gateway updated successfully")
@@ -531,6 +542,14 @@ func dxgateListenerNames(namespace, serviceName, domainSuffix string, ports []co
 	}
 	sort.Strings(out)
 	return out
+}
+
+func formatGatewayServicePorts(ports []corev1.ServicePort) string {
+	out := make([]string, 0, len(ports))
+	for _, port := range ports {
+		out = append(out, fmt.Sprintf("%s:%d->%s", port.Name, port.Port, port.TargetPort.String()))
+	}
+	return strings.Join(out, ",")
 }
 
 func (d *DeploymentController) buildDxgateRuntimeConfig(gw gateway.Gateway) (string, string, error) {
@@ -882,6 +901,111 @@ func (d *DeploymentController) canManage(gvr schema.GroupVersionResource, name, 
 	return managed, obj.GetResourceVersion()
 }
 
+func (d *DeploymentController) cleanupLegacyGatewayResources(ctx context.Context, log *dubbolog.Logger, namespace, legacyName, currentName string) error {
+	if d.client == nil || legacyName == "" || legacyName == currentName {
+		return nil
+	}
+
+	var errs []string
+	for _, cleanup := range []struct {
+		kind string
+		name string
+		fn   func(context.Context, string, string) error
+	}{
+		{kind: "ConfigMap", name: legacyName + "-bootstrap", fn: d.deleteManagedConfigMap},
+		{kind: "ServiceAccount", name: legacyName, fn: d.deleteManagedServiceAccount},
+		{kind: "Deployment", name: legacyName, fn: d.deleteManagedDeployment},
+		{kind: "Service", name: legacyName, fn: d.deleteManagedService},
+	} {
+		if err := cleanup.fn(ctx, namespace, cleanup.name); err != nil {
+			errs = append(errs, fmt.Sprintf("%s/%s: %v", cleanup.kind, cleanup.name, err))
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("%s", strings.Join(errs, "; "))
+	}
+
+	log.Debugf("checked legacy dxgate resources %s/%s", namespace, legacyName)
+	return nil
+}
+
+func (d *DeploymentController) deleteManagedConfigMap(ctx context.Context, namespace, name string) error {
+	obj, err := d.client.Kube().CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !isManagedGatewayResource(obj.Labels) {
+		return nil
+	}
+	err = d.client.Kube().CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func (d *DeploymentController) deleteManagedServiceAccount(ctx context.Context, namespace, name string) error {
+	obj, err := d.client.Kube().CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !isManagedGatewayResource(obj.Labels) {
+		return nil
+	}
+	err = d.client.Kube().CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func (d *DeploymentController) deleteManagedDeployment(ctx context.Context, namespace, name string) error {
+	obj, err := d.client.Kube().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !isManagedGatewayResource(obj.Labels) {
+		return nil
+	}
+	err = d.client.Kube().AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func (d *DeploymentController) deleteManagedService(ctx context.Context, namespace, name string) error {
+	obj, err := d.client.Kube().CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !isManagedGatewayResource(obj.Labels) {
+		return nil
+	}
+	err = d.client.Kube().CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func isManagedGatewayResource(labels map[string]string) bool {
+	_, ok := labels["gateway.dubbo.apache.org/managed"]
+	return ok
+}
+
 func (d *DeploymentController) HandleTagChange(newTags any) {
 	for _, gw := range d.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
 		d.queue.AddObject(gw)
@@ -903,7 +1027,11 @@ func IsManaged(gw *gateway.GatewaySpec) bool {
 	return false
 }
 
-func getDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix bool) string {
+func getDefaultName(_ string, _ *gateway.GatewaySpec, _ bool) string {
+	return defaultDxgateGatewayName
+}
+
+func getLegacyDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuffix bool) string {
 	if disableNameSuffix {
 		return name
 	}

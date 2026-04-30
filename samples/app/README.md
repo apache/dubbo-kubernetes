@@ -15,7 +15,7 @@ kubectl -n app rollout status deploy/nginx-v2 --timeout=180s
 kubectl -n app rollout status deploy/nginx-consumer --timeout=180s
 ```
 
-`dubbo-injection=enabled` 开启后，会自动注入 `grpc-engine`。`nginx-consumer` 使用 `kdubbo/dubbod` 镜像，会自动启动 `xds-client --watch`。
+`dubbo-injection=enabled` 开启后，会自动注入 `grpc-engine`。`nginx-consumer` 使用 `kdubbo/dubbod` 镜像，会自动启动 `xclient --watch`。
 
 ## 配置流量规则
 
@@ -80,20 +80,20 @@ nginx.app.svc.cluster.local:80 v1=23 endpoints=1,v2=77 endpoints=1
 ## 验证流量结果
 
 ```bash
-kubectl -n app exec deploy/nginx-consumer -- dubbod xds-client 100 | sort | uniq -c
+kubectl -n app exec deploy/nginx-consumer -- dubbod xclient 100 | sort | uniq -c
 ```
 
-`xds-client` 现在是逐请求选路，不再先算好固定数量再批量发送。
+`xclient` 现在是逐请求选路，不再先算好固定数量再批量发送。
 
 ## 在线更新验证
 
 先在一个终端里持续发请求：
 
 ```bash
-kubectl -n app exec deploy/nginx-consumer -- dubbod xds-client --request-interval 200ms 200
+kubectl -n app exec deploy/nginx-consumer -- dubbod xclient --request-interval 200ms 200
 ```
 
-再在另一个终端里修改 `VirtualService` 权重。`nginx-consumer` 不需要重启，同一个 `xds-client` 进程会继续使用同一条 xDS stream，后续请求会按新权重切换。
+再在另一个终端里修改 `VirtualService` 权重。`nginx-consumer` 不需要重启，同一个 `xclient` 进程会继续使用同一条 xDS stream，后续请求会按新权重切换。
 
 ## 清理
 

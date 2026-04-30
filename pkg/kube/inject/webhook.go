@@ -64,7 +64,7 @@ var (
 type Webhook struct {
 	mu           sync.RWMutex
 	watcher      Watcher
-	meshConfig   *meshv1alpha1.MeshGlobalConfig
+	meshConfig   *meshv1alpha1.MeshGlobalSetup
 	env          *model.Environment
 	Config       *Config
 	valuesConfig ValuesConfig
@@ -94,7 +94,7 @@ type InjectionParameters struct {
 	templates           map[string]*template.Template
 	defaultTemplate     []string
 	aliases             map[string][]string
-	meshGlobalConfig    *meshv1alpha1.MeshGlobalConfig
+	meshGlobalSetup     *meshv1alpha1.MeshGlobalSetup
 	proxyConfig         *meshv1alpha1.ProxyConfig
 	valuesConfig        ValuesConfig
 	revision            string
@@ -264,7 +264,7 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 		templates:           wh.Config.Templates,
 		defaultTemplate:     wh.Config.DefaultTemplates,
 		aliases:             wh.Config.Aliases,
-		meshGlobalConfig:    wh.meshConfig,
+		meshGlobalSetup:     wh.meshConfig,
 		proxyConfig:         proxyConfig,
 		valuesConfig:        wh.valuesConfig,
 		injectedAnnotations: wh.Config.InjectedAnnotations,
@@ -425,12 +425,12 @@ func removeTemplateOnlyContainers(pod *corev1.Pod, injectedPod corev1.Pod, origi
 func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) error {
 	discoveryAddress := ""
 	trustDomain := constants.DefaultClusterLocalDomain
-	if req.meshGlobalConfig != nil {
-		if cfg := req.meshGlobalConfig.GetDefaultConfig(); cfg != nil {
+	if req.meshGlobalSetup != nil {
+		if cfg := req.meshGlobalSetup.GetDefaultConfig(); cfg != nil {
 			discoveryAddress = cfg.GetDiscoveryAddress()
 		}
-		if req.meshGlobalConfig.GetTrustDomain() != "" {
-			trustDomain = req.meshGlobalConfig.GetTrustDomain()
+		if req.meshGlobalSetup.GetTrustDomain() != "" {
+			trustDomain = req.meshGlobalSetup.GetTrustDomain()
 		}
 	}
 	if discoveryAddress == "" && req.proxyConfig != nil {

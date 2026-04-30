@@ -17,13 +17,13 @@
 package kube
 
 import (
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -31,7 +31,7 @@ func ServiceHostname(name, namespace, domainSuffix string) host.Name {
 	return host.Name(name + "." + namespace + "." + "svc" + "." + domainSuffix) // Format: "%s.%s.svc.%s"
 }
 
-func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.ID, mesh *meshv1alpha1.MeshGlobalConfig) *model.Service {
+func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.ID, mesh *meshv1alpha1.MeshGlobalSetup) *model.Service {
 	addrs := []string{constants.UnspecifiedIP}
 	resolution := model.ClientSideLB
 	externalName := ""
@@ -88,6 +88,6 @@ func convertPort(port corev1.ServicePort) *model.Port {
 	}
 }
 
-func SecureNamingSAN(pod *corev1.Pod, mesh *meshv1alpha1.MeshGlobalConfig) string {
+func SecureNamingSAN(pod *corev1.Pod, mesh *meshv1alpha1.MeshGlobalSetup) string {
 	return spiffe.MustGenSpiffeURI(mesh, pod.Namespace, pod.Spec.ServiceAccountName)
 }

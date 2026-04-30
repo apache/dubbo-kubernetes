@@ -117,8 +117,8 @@ func newProxylessXDSTestServer(t *testing.T) (*DiscoveryServer, *Connection, *fa
 	env := model.NewEnvironment()
 	env.ServiceDiscovery = testServiceDiscovery{}
 	env.ConfigStore = testConfigStore{}
-	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshGlobalConfigResource{
-		MeshGlobalConfig: &meshv1alpha1.MeshGlobalConfig{
+	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshGlobalSetupResource{
+		MeshGlobalSetup: &meshv1alpha1.MeshGlobalSetup{
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
 				DiscoveryAddress: "127.0.0.1:26010",
 			},

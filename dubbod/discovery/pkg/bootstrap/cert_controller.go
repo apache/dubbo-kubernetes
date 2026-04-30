@@ -112,14 +112,14 @@ func (s *Server) initDNSCertsK8SRA() error {
 	if err != nil {
 		return fmt.Errorf("failed generating key and cert by kubernetes: %v", err)
 	}
-	caBundle, err = s.RA.GetRootCertFromMeshGlobalConfig(signerName)
+	caBundle, err = s.RA.GetRootCertFromMeshGlobalSetup(signerName)
 	if err != nil {
 		return err
 	}
 
-	// MeshGlobalConfig:Add callback for mesh global config update
+	// MeshGlobalSetup:Add callback for mesh global setup update
 	s.environment.AddMeshHandler(func() {
-		newCaBundle, _ := s.RA.GetRootCertFromMeshGlobalConfig(signerName)
+		newCaBundle, _ := s.RA.GetRootCertFromMeshGlobalSetup(signerName)
 		if newCaBundle != nil && !bytes.Equal(newCaBundle, s.dubbodCertBundleWatcher.GetKeyCertBundle().CABundle) {
 			newCertChain, newKeyPEM, _, err := chiron.GenKeyCertK8sCA(s.kubeClient.Kube(),
 				strings.Join(s.dnsNames, ","), "", signerName, true, SelfSignedCACertTTL.Get())

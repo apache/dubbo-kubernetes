@@ -163,7 +163,7 @@ func toTypePath(r *ast.Resource) string {
 }
 
 func toGetter(protoPackage string) string {
-	if strings.Contains(protoPackage, "github.com/apache/dubbo-kubernetes") {
+	if isDubboAPI(protoPackage) {
 		return "Dubbo"
 	} else if strings.Contains(protoPackage, "sigs.k8s.io/gateway-api") {
 		return "GatewayAPI"
@@ -171,6 +171,11 @@ func toGetter(protoPackage string) string {
 		return "Ext"
 	}
 	return "Kube"
+}
+
+func isDubboAPI(protoPackage string) bool {
+	return strings.Contains(protoPackage, "github.com/apache/dubbo-kubernetes/api") ||
+		strings.Contains(protoPackage, "github.com/kdubbo/api")
 }
 
 func toGroup(protoPackage string, version string) string {
@@ -194,10 +199,14 @@ func toImport(p string) string {
 }
 
 func toDubboImport(protoPackage string, version string) string {
-	p := strings.Split(protoPackage, "/")
+	aliasPackage := protoPackage
+	if strings.Contains(aliasPackage, "github.com/kdubbo/api") {
+		aliasPackage = strings.Replace(aliasPackage, "github.com/kdubbo/api", "github.com/apache/dubbo-kubernetes/api", 1)
+	}
+	p := strings.Split(aliasPackage, "/")
 	base := strings.Join(p[:len(p)-1], "")
 	dmp := strings.ReplaceAll(strings.ReplaceAll(base, ".", ""), "-", "") + version
-	if strings.Contains(protoPackage, "github.com/apache/dubbo-kubernetes") {
+	if isDubboAPI(protoPackage) {
 		return "api" + dmp
 	}
 	return dmp

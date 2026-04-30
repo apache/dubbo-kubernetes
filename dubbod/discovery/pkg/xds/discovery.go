@@ -349,7 +349,7 @@ func (s *DiscoveryServer) periodicRefreshMetrics(stopCh <-chan struct{}) {
 			if push != nil {
 				push.UpdateMetrics()
 			}
-			log.InfoJSON("Push Status", s.pushStatusReport(push))
+			log.DebugJSON("Push Status", s.pushStatusReport(push))
 			model.LastPushMutex.Unlock()
 		case <-stopCh:
 			return

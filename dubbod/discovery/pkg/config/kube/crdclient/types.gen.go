@@ -14,9 +14,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 
-	githubcomapachedubbokubernetesapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
-	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
-	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
+	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
+	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
+	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -35,7 +35,7 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 	case gvk.DestinationRule:
 		return c.Dubbo().NetworkingV1alpha3().DestinationRules(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.DestinationRule)),
 		}, metav1.CreateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Create(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
@@ -55,12 +55,12 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
 		}, metav1.CreateOptions{})
 	case gvk.VirtualService:
 		return c.Dubbo().NetworkingV1alpha3().VirtualServices(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.VirtualService)),
 		}, metav1.CreateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -72,7 +72,7 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 	case gvk.DestinationRule:
 		return c.Dubbo().NetworkingV1alpha3().DestinationRules(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.DestinationRule)),
 		}, metav1.UpdateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Update(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
@@ -92,12 +92,12 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
 		}, metav1.UpdateOptions{})
 	case gvk.VirtualService:
 		return c.Dubbo().NetworkingV1alpha3().VirtualServices(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService)),
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.VirtualService)),
 		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -109,7 +109,7 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 	case gvk.DestinationRule:
 		return c.Dubbo().NetworkingV1alpha3().DestinationRules(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus)),
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().UpdateStatus(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
@@ -129,12 +129,12 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus)),
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
 	case gvk.VirtualService:
 		return c.Dubbo().NetworkingV1alpha3().VirtualServices(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus)),
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -149,11 +149,11 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 	case gvk.DestinationRule:
 		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.DestinationRule)),
 		}
 		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule)),
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.DestinationRule)),
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
@@ -209,11 +209,11 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 	case gvk.PeerAuthentication:
 		oldRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication)),
+			Spec:       *(orig.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
 		}
 		modRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication)),
+			Spec:       *(mod.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {
@@ -224,11 +224,11 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 	case gvk.VirtualService:
 		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService)),
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.VirtualService)),
 		}
 		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{
 			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService)),
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.VirtualService)),
 		}
 		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
 		if err != nil {

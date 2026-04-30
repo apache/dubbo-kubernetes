@@ -63,7 +63,7 @@ var (
 )
 
 type PushContext struct {
-	Mesh            *meshv1alpha1.MeshGlobalConfig `json:"-"`
+	Mesh            *meshv1alpha1.MeshGlobalSetup `json:"-"`
 	initializeMutex sync.Mutex
 	InitDone        atomic.Bool
 	// GatewayAPIController holds a reference to the Gateway API controller.

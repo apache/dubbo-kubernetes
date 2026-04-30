@@ -20,6 +20,7 @@ metadata:
   namespace: {{ .Gateway.Namespace }}
   labels:
     app.kubernetes.io/name: dxgate
+    app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
 data:
@@ -33,6 +34,7 @@ metadata:
   namespace: {{ .Gateway.Namespace }}
   labels:
     app.kubernetes.io/name: dxgate
+    app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
 automountServiceAccountToken: false
@@ -44,6 +46,7 @@ metadata:
   namespace: {{ .Gateway.Namespace }}
   labels:
     app.kubernetes.io/name: dxgate
+    app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
 spec:
@@ -51,12 +54,14 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: dxgate
-      gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
+      app.kubernetes.io/instance: {{ .DeploymentName }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: dxgate
+        app.kubernetes.io/instance: {{ .DeploymentName }}
         app.kubernetes.io/managed-by: dubbod
+        gateway.dubbo.apache.org/managed: dubbo.apache.org-gateway-controller
         gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
       annotations:
         dubbo.apache.org/rev: {{ .Revision | quote }}
@@ -141,13 +146,14 @@ metadata:
   namespace: {{ .Gateway.Namespace }}
   labels:
     app.kubernetes.io/name: dxgate
+    app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
 spec:
   type: {{ .ServiceType }}
   selector:
     app.kubernetes.io/name: dxgate
-    gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
+    app.kubernetes.io/instance: {{ .DeploymentName }}
   ports:
 {{- range .Ports }}
   - name: {{ .Name }}

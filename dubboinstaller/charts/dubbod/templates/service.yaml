@@ -13,6 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultGUI := $defaultGlobal.gui | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $gui := $global.gui | default dict }}
+{{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
+{{- $guiNodePort := int (coalesce $gui.nodePort $defaultGUI.nodePort 30080) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -52,10 +59,10 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - port: 26080
+    - port: {{ $guiPort }}
       name: gui
-      targetPort: 26080
-      nodePort: 30080
+      targetPort: {{ $guiPort }}
+      nodePort: {{ $guiNodePort }}
       protocol: TCP
   selector:
     app: dubbod

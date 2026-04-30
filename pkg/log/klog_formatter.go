@@ -144,7 +144,7 @@ func formatFixedWidthTimestamp(t time.Time) string {
 
 // formatStandardLine formats a log line in standard format with column alignment
 // Format: timestamp level scope message (aligned columns, single space between logical fields)
-// Example: 2025-11-07T08:02:28.610950444Z info  default      FLAG: --clusterAliases="[]"
+// Example: 2025-11-07T08:02:28.610950444Z info  setup        FLAG: --clusterAliases="[]"
 // Note: Padding spaces are used for column alignment, but logical fields are separated by single space
 func formatStandardLine(timestamp, level, scope, message string) string {
 	// Ensure message has no newlines (should already be cleaned by formatMessage, but double-check)

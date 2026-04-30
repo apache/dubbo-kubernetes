@@ -8,13 +8,13 @@ package collections
 import (
 	"reflect"
 
-	githubcomapachedubbokubernetesapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
-	githubcomapachedubbokubernetesapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
-	githubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
-	githubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
+	githubcomkdubboapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
+	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
+	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
+	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -94,7 +94,7 @@ var (
 		Plural:     "destinationrules",
 		Version:    "v1alpha3",
 		Proto:      "dubbo.networking.v1alpha3.DestinationRule", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
 		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
@@ -216,14 +216,14 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
-	MeshGlobalConfig = resource.Builder{
-		Identifier:    "MeshGlobalConfig",
+	MeshGlobalSetup = resource.Builder{
+		Identifier:    "MeshGlobalSetup",
 		Group:         "",
-		Kind:          "MeshGlobalConfig",
-		Plural:        "meshglobalconfigs",
+		Kind:          "MeshGlobalSetup",
+		Plural:        "meshglobalsetups",
 		Version:       "v1alpha1",
-		Proto:         "dubbo.mesh.v1alpha1.MeshGlobalConfig",
-		ReflectType:   reflect.TypeOf(&githubcomapachedubbokubernetesapimeshv1alpha1.MeshGlobalConfig{}).Elem(),
+		Proto:         "dubbo.mesh.v1alpha1.MeshGlobalSetup",
+		ReflectType:   reflect.TypeOf(&githubcomkdubboapimeshv1alpha1.MeshGlobalSetup{}).Elem(),
 		ProtoPackage:  "github.com/kdubbo/api/mesh/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     true,
@@ -283,7 +283,7 @@ var (
 		Plural:     "peerauthentications",
 		Version:    "v1alpha3",
 		Proto:      "dubbo.security.v1alpha3.PeerAuthentication", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
+		ReflectType: reflect.TypeOf(&githubcomkdubboapisecurityv1alpha3.PeerAuthentication{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
 		ProtoPackage: "github.com/kdubbo/api/security/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
@@ -403,7 +403,7 @@ var (
 		Plural:     "virtualservices",
 		Version:    "v1alpha3",
 		Proto:      "dubbo.networking.v1alpha3.VirtualService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&githubcomapachedubbokubernetesapimetav1alpha1.DubboStatus{}).Elem(),
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
 		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
@@ -425,7 +425,7 @@ var (
 		MustAdd(HorizontalPodAutoscaler).
 		MustAdd(KubernetesGateway).
 		MustAdd(Lease).
-		MustAdd(MeshGlobalConfig).
+		MustAdd(MeshGlobalSetup).
 		MustAdd(MutatingWebhookConfiguration).
 		MustAdd(Namespace).
 		MustAdd(Node).

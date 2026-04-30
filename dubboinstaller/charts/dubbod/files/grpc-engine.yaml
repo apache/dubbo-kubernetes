@@ -67,7 +67,7 @@ spec:
           fieldPath: status.hostIP
 {{- if and (gt (len .Spec.Containers) 0) (contains "kdubbo/dubbod" ((index .Spec.Containers 0).Image | default "")) }}
     args:
-    - xds-client
+    - xclient
     - --watch
 {{- end }}
     volumeMounts:

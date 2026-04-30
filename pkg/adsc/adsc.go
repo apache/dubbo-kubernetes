@@ -109,7 +109,7 @@ type ADSC struct {
 	// Last received message, by type
 	Received map[string]*discovery.DiscoveryResponse
 	mutex    sync.RWMutex
-	Mesh     *v1alpha1.MeshGlobalConfig
+	Mesh     *v1alpha1.MeshGlobalSetup
 	Store    model.ConfigStore
 	cfg      *ADSConfig
 	// initialLoad tracks the time to receive the initial configuration.
@@ -184,7 +184,7 @@ func setDefaultConfig(config *Config) Config {
 func ConfigInitialRequests() []*discovery.DiscoveryRequest {
 	out := make([]*discovery.DiscoveryRequest, 0, len(collections.Dubbo.All())+1)
 	out = append(out, &discovery.DiscoveryRequest{
-		TypeUrl: gvk.MeshGlobalConfig.String(),
+		TypeUrl: gvk.MeshGlobalSetup.String(),
 	})
 	for _, sch := range collections.Dubbo.All() {
 		out = append(out, &discovery.DiscoveryRequest{
@@ -408,10 +408,10 @@ func (a *ADSC) handleReceive() {
 			a.cfg.ResponseHandler.HandleResponse(a, msg)
 		}
 
-		if msg.TypeUrl == gvk.MeshGlobalConfig.String() &&
+		if msg.TypeUrl == gvk.MeshGlobalSetup.String() &&
 			len(msg.Resources) > 0 {
 			rsc := msg.Resources[0]
-			m := &v1alpha1.MeshGlobalConfig{}
+			m := &v1alpha1.MeshGlobalSetup{}
 			err = proto.Unmarshal(rsc.Value, m)
 			if err != nil {
 				log.Errorf("Failed to unmarshal mesh config: %v", err)

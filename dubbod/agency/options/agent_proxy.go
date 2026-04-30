@@ -26,8 +26,8 @@ type ProxyArgs struct {
 
 	TokenManagerPlugin string
 
-	MeshGlobalConfigFile string
-	TemplateFile         string
+	MeshGlobalSetupFile string
+	TemplateFile        string
 
 	PodName      string
 	PodNamespace string

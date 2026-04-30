@@ -36,6 +36,10 @@ var (
 	waitCmd = &cobra.Command{
 		Use:   "wait",
 		Short: "Waits until the xDS adapter is ready",
+		PreRunE: func(c *cobra.Command, args []string) error {
+			log.SetDefaultScope(waitLogScope)
+			return nil
+		},
 		RunE: func(c *cobra.Command, args []string) error {
 			client := &http.Client{
 				Timeout: time.Duration(requestTimeoutMillis) * time.Millisecond,

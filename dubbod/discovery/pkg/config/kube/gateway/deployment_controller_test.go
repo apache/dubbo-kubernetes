@@ -245,6 +245,23 @@ func TestExtractServicePortsTargetsDxgateContainerPorts(t *testing.T) {
 	}
 }
 
+func TestGetDefaultNameUsesFixedDxgateGatewayName(t *testing.T) {
+	spec := &gatewayv1.GatewaySpec{GatewayClassName: "dubbo"}
+	if got := getDefaultName("httpbin-gateway", spec, false); got != "dxgate-gateway" {
+		t.Fatalf("default name = %q, want dxgate-gateway", got)
+	}
+	if got := getDefaultName("foo-gateway", spec, true); got != "dxgate-gateway" {
+		t.Fatalf("default name with suffix disabled = %q, want dxgate-gateway", got)
+	}
+}
+
+func TestGetLegacyDefaultNameKeepsOldGatewayDerivedName(t *testing.T) {
+	spec := &gatewayv1.GatewaySpec{GatewayClassName: "dubbo"}
+	if got := getLegacyDefaultName("httpbin-gateway", spec, false); got != "httpbin-gateway-dubbo" {
+		t.Fatalf("legacy default name = %q, want httpbin-gateway-dubbo", got)
+	}
+}
+
 func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	templatePath := filepath.Join("..", "..", "..", "..", "..", "..", "dubboinstaller", "charts", "dubbod", "files", "kube-gateway.yaml")
 	raw, err := os.ReadFile(templatePath)
@@ -301,7 +318,13 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[2], "DXGATE_BOOTSTRAP") || strings.Contains(rendered[2], "DXGATE_STATIC_CONFIG") {
 		t.Fatalf("deployment did not switch from static config to bootstrap:\n%s", rendered[2])
 	}
+	if !strings.Contains(rendered[2], "app.kubernetes.io/instance: public-dubbo") {
+		t.Fatalf("deployment did not render stable dxgate instance label:\n%s", rendered[2])
+	}
 	if !strings.Contains(rendered[3], "targetPort: http") {
 		t.Fatalf("service did not target dxgate http port:\n%s", rendered[3])
+	}
+	if !strings.Contains(rendered[3], "app.kubernetes.io/instance: public-dubbo") {
+		t.Fatalf("service did not render stable dxgate instance selector:\n%s", rendered[3])
 	}
 }

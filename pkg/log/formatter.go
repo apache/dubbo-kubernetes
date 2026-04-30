@@ -90,7 +90,7 @@ func NewFormatter() *Formatter {
 					return &LogEntry{
 						Timestamp: timestamp,
 						Level:     matches[2],
-						Scope:     "default",
+						Scope:     "log",
 						Message:   matches[3],
 						Original:  strings.Join(matches, " "),
 					}

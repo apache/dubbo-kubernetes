@@ -30,11 +30,11 @@ import (
 )
 
 const (
-	MeshGlobalConfigKey = "mesh"
+	MeshGlobalSetupKey = "mesh"
 )
 
-// NewConfigMapSource builds a MeshGlobalConfigSource reading from ConfigMap "name" with key "key".
-func NewConfigMapSource(client kube.Client, namespace, name, key string, opts krt.OptionsBuilder) meshwatcher.MeshGlobalConfigSource {
+// NewConfigMapSource builds a MeshGlobalSetupSource reading from ConfigMap "name" with key "key".
+func NewConfigMapSource(client kube.Client, namespace, name, key string, opts krt.OptionsBuilder) meshwatcher.MeshGlobalSetupSource {
 	clt := kclient.NewFiltered[*v1.ConfigMap](client, kclient.Filter{
 		Namespace:     namespace,
 		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
@@ -44,11 +44,11 @@ func NewConfigMapSource(client kube.Client, namespace, name, key string, opts kr
 	cmKey := types.NamespacedName{Namespace: namespace, Name: name}.String()
 	return krt.NewSingleton(func(ctx krt.HandlerContext) *string {
 		cm := ptr.Flatten(krt.FetchOne(ctx, cms, krt.FilterKey(cmKey)))
-		return meshGlobalConfigMapData(cm, key)
+		return meshGlobalSetupMapData(cm, key)
 	}, opts.WithName(fmt.Sprintf("ConfigMap_%s_%s", name, key))...)
 }
 
-func meshGlobalConfigMapData(cm *v1.ConfigMap, key string) *string {
+func meshGlobalSetupMapData(cm *v1.ConfigMap, key string) *string {
 	if cm == nil {
 		return nil
 	}

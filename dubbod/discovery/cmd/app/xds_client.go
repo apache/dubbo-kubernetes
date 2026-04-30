@@ -33,6 +33,7 @@ import (
 	pkgbootstrap "github.com/apache/dubbo-kubernetes/pkg/bootstrap"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	meshconfig "github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
 	v1 "github.com/apache/dubbo-kubernetes/pkg/model"
 	clusterv1 "github.com/kdubbo/xds-api/cluster/v1"
 	corev1 "github.com/kdubbo/xds-api/core/v1"
@@ -109,7 +110,7 @@ type sampleADSClient struct {
 	errs      chan error
 }
 
-func newXDSClientCommand() *cobra.Command {
+func newXClientCommand() *cobra.Command {
 	namespace := firstNonEmpty(os.Getenv("POD_NAMESPACE"), "default")
 	trustDomain := firstNonEmpty(os.Getenv("TRUST_DOMAIN"), constants.DefaultClusterLocalDomain)
 	domainSuffix := firstNonEmpty(os.Getenv("DOMAIN_SUFFIX"), trustDomain, constants.DefaultClusterLocalDomain)
@@ -120,7 +121,7 @@ func newXDSClientCommand() *cobra.Command {
 		xdsAddress:     firstNonEmpty(os.Getenv("XDS_ADDRESS"), "dubbod.dubbo-system.svc:26010"),
 		bootstrapPath:  os.Getenv("GRPC_XDS_BOOTSTRAP"),
 		namespace:      namespace,
-		podName:        firstNonEmpty(os.Getenv("POD_NAME"), os.Getenv("HOSTNAME"), "xds-client"),
+		podName:        firstNonEmpty(os.Getenv("POD_NAME"), os.Getenv("HOSTNAME"), "xclient"),
 		podIP:          firstNonEmpty(os.Getenv("INSTANCE_IP"), os.Getenv("POD_IP"), "127.0.0.1"),
 		serviceAccount: firstNonEmpty(os.Getenv("SERVICE_ACCOUNT"), "default"),
 		trustDomain:    trustDomain,
@@ -132,9 +133,13 @@ func newXDSClientCommand() *cobra.Command {
 	}
 
 	c := &cobra.Command{
-		Use:   "xds-client [count]",
+		Use:   "xclient [count]",
 		Short: "run a no-proxy ADS stream client for service-to-service sample traffic",
 		Args:  cobra.MaximumNArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			log.SetDefaultScope(xclientLogScope)
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
 				count, err := strconv.Atoi(args[0])

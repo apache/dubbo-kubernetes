@@ -20,7 +20,7 @@ var (
 	KubernetesGateway              = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"}
 	KubernetesGateway_v1           = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"}
 	Lease                          = schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "leases"}
-	MeshGlobalConfig               = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshglobalconfigs"}
+	MeshGlobalSetup                = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshglobalsetups"}
 	MutatingWebhookConfiguration   = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "mutatingwebhookconfigurations"}
 	Namespace                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 	Node                           = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}

@@ -19,6 +19,7 @@ package log
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -55,6 +56,49 @@ func TestInfoJSONWritesIndentedJSONBlock(t *testing.T) {
 	}
 	if parsed["pushVersion"] != "v1" {
 		t.Fatalf("pushVersion = %#v, want v1", parsed["pushVersion"])
+	}
+}
+
+func TestDebugJSONRequiresDebugLevel(t *testing.T) {
+	var out bytes.Buffer
+	logger := RegisterScope("json-debug-block-test", "json debug block test")
+	logger.Scope().SetOutput(&out)
+
+	logger.DebugJSON("Push Status", map[string]interface{}{
+		"pushVersion": "v1",
+	})
+	if out.Len() != 0 {
+		t.Fatalf("DebugJSON wrote at info level: %q", out.String())
+	}
+
+	logger.Scope().SetOutputLevel(DebugLevel)
+	logger.DebugJSON("Push Status", map[string]interface{}{
+		"pushVersion": "v1",
+	})
+	line := out.String()
+	if !strings.Contains(line, "Push Status:\n{") {
+		t.Fatalf("log line = %q, want title followed by JSON object", line)
+	}
+}
+
+func TestPackageDefaultScopeIsLog(t *testing.T) {
+	SetDefaultScope("log")
+	var out bytes.Buffer
+	scope := FindScope("log")
+	if scope == nil {
+		t.Fatal("scope log was not registered")
+	}
+	defer scope.SetOutput(os.Stderr)
+	scope.SetOutput(&out)
+
+	Info("scope check")
+
+	got := out.String()
+	if !strings.Contains(got, " log ") {
+		t.Fatalf("log output = %q, want log scope", got)
+	}
+	if strings.Contains(got, " default ") {
+		t.Fatalf("log output still uses default scope: %q", got)
 	}
 }
 

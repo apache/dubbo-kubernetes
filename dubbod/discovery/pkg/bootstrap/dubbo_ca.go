@@ -184,11 +184,11 @@ func (s *Server) createDubboRA(opts *caOptions) (ra.RegistrationAuthority, error
 	if err != nil {
 		return nil, err
 	}
-	raServer.SetCACertificatesFromMeshGlobalConfig(s.environment.Mesh().CaCertificates)
+	raServer.SetCACertificatesFromMeshGlobalSetup(s.environment.Mesh().CaCertificates)
 	s.environment.AddMeshHandler(func() {
-		meshGlobalConfig := s.environment.Mesh()
-		caCertificates := meshGlobalConfig.CaCertificates
-		s.RA.SetCACertificatesFromMeshGlobalConfig(caCertificates)
+		meshGlobalSetup := s.environment.Mesh()
+		caCertificates := meshGlobalSetup.CaCertificates
+		s.RA.SetCACertificatesFromMeshGlobalSetup(caCertificates)
 	})
 	return raServer, err
 }

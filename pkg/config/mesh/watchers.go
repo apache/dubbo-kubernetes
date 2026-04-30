@@ -22,7 +22,7 @@ import (
 
 // Holder of a mesh configuration.
 type Holder interface {
-	Mesh() *v1alpha1.MeshGlobalConfig
+	Mesh() *v1alpha1.MeshGlobalSetup
 }
 
 // Watcher is a Holder whose mesh config can be updated asynchronously.

@@ -28,7 +28,6 @@ import (
 
 	networkutil "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/network"
 
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -39,6 +38,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	// core "github.com/kdubbo/xds-api/core/v1"
 	core "github.com/kdubbo/xds-api/core/v1"
 	// discovery "github.com/kdubbo/xds-api/service/discovery/v1"
@@ -147,7 +147,7 @@ func (e *Environment) SetPushContext(pc *PushContext) {
 	e.pushContext = pc
 }
 
-func (e *Environment) Mesh() *meshv1alpha1.MeshGlobalConfig {
+func (e *Environment) Mesh() *meshv1alpha1.MeshGlobalSetup {
 	if e != nil && e.Watcher != nil {
 		return e.Watcher.Mesh()
 	}
@@ -175,7 +175,7 @@ func (e *Environment) GetDiscoveryAddress() (host.Name, string, error) {
 	return host.Name(hostname), port, nil
 }
 
-func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map[string]string, meshGlobalConfig *meshv1alpha1.MeshGlobalConfig) *meshv1alpha1.ProxyConfig {
+func (e *Environment) GetProxyConfigOrDefault(ns string, labels, annotations map[string]string, meshGlobalSetup *meshv1alpha1.MeshGlobalSetup) *meshv1alpha1.ProxyConfig {
 	return mesh.DefaultProxyConfig()
 }
 

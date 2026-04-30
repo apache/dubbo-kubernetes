@@ -17,12 +17,12 @@
 package core
 
 import (
-	serviceRouteIndex "github.com/kdubbo/api/mesh/v1alpha1"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
+	serviceRouteIndex "github.com/kdubbo/api/mesh/v1alpha1"
 )
 
 type ConfigGenerator interface {
-	serviceRouteIndexChanged(mesh *serviceRouteIndex.MeshGlobalConfig)
+	serviceRouteIndexChanged(mesh *serviceRouteIndex.MeshGlobalSetup)
 }
 
 type ConfigGeneratorImpl struct {
@@ -35,6 +35,6 @@ func NewConfigGenerator(cache model.XdsCache) *ConfigGeneratorImpl {
 	}
 }
 
-func (configgen *ConfigGeneratorImpl) serviceRouteIndexChanged(_ *serviceRouteIndex.MeshGlobalConfig) {
+func (configgen *ConfigGeneratorImpl) serviceRouteIndexChanged(_ *serviceRouteIndex.MeshGlobalSetup) {
 	return
 }

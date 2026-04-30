@@ -45,16 +45,16 @@ type InjectionOptions struct {
 }
 
 type DubboArgs struct {
-	ServerOptions        DiscoveryServerOptions
-	RegistryOptions      RegistryOptions
-	InjectionOptions     InjectionOptions
-	MeshGlobalConfigFile string
-	PodName              string
-	Namespace            string
-	CtrlZOptions         *ctrlz.Options
-	KeepaliveOptions     *keepalive.Options
-	KrtDebugger          *krt.DebugHandler `json:"-"`
-	Revision             string
+	ServerOptions       DiscoveryServerOptions
+	RegistryOptions     RegistryOptions
+	InjectionOptions    InjectionOptions
+	MeshGlobalSetupFile string
+	PodName             string
+	Namespace           string
+	CtrlZOptions        *ctrlz.Options
+	KeepaliveOptions    *keepalive.Options
+	KrtDebugger         *krt.DebugHandler `json:"-"`
+	Revision            string
 }
 
 type DiscoveryServerOptions struct {
