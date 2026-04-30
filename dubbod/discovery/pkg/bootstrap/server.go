@@ -250,7 +250,7 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 		return nil, fmt.Errorf("error initializing gui: %v", err)
 	}
 	if err := s.initGUIServer(args.ServerOptions.GUIAddr); err != nil {
-		return nil, fmt.Errorf("error initializing gui server: %v", err)
+		return nil, fmt.Errorf("error initializing GUI Server: %v", err)
 	}
 
 	// Initialize monitoring server
