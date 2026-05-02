@@ -25,8 +25,8 @@ var (
 	ValidationWebhookConfigName = env.Register("VALIDATION_WEBHOOK_CONFIG_NAME", "dubbo-dubbo-system",
 		"If not empty, the controller will automatically patch validatingwebhookconfiguration when the CA certificate changes. "+
 			"Only works in kubernetes environment.").Get()
-	SharedMeshGlobalSetup = env.Register("SHARED_MESH_CONFIG", "",
-		"Additional config map to load for shared MeshGlobalSetup settings. The standard mesh config will take precedence.").Get()
+	SharedMeshConfig = env.Register("SHARED_MESH_CONFIG", "",
+		"Additional config map to load for shared MeshConfig settings. The standard mesh config will take precedence.").Get()
 	InformerWatchNamespace = env.Register("DUBBO_WATCH_NAMESPACE", "",
 		"If set, limit Kubernetes watches to a single namespace. "+
 			"Warning: only a single namespace can be set.").Get()

@@ -120,10 +120,10 @@ func addFlags(c *cobra.Command) {
 		"kubeconfig",
 		"",
 		"Use a Kubernetes configuration file instead of in-cluster configuration")
-	c.PersistentFlags().StringVar(&serverArgs.MeshGlobalSetupFile,
-		"meshGlobalSetup",
+	c.PersistentFlags().StringVar(&serverArgs.MeshConfigFile,
+		"meshConfig",
 		"./etc/dubbo/config/mesh",
-		"File name for Dubbo mesh global setup. If not specified, a default mesh will be used.")
+		"File name for Dubbo mesh config. If not specified, a default mesh will be used.")
 	c.PersistentFlags().Float32Var(&serverArgs.RegistryOptions.KubeOptions.KubernetesAPIQPS,
 		"kubernetesApiQPS",
 		80.0,

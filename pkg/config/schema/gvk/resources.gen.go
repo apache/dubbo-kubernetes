@@ -14,7 +14,6 @@ var (
 	CustomResourceDefinition       = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
 	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
 	Deployment                     = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
-	DestinationRule                = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "DestinationRule"}
 	EndpointSlice                  = config.GroupVersionKind{Group: "discovery.k8s.io", Version: "v1", Kind: "EndpointSlice"}
 	Endpoints                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Endpoints"}
 	GatewayClass                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
@@ -25,7 +24,8 @@ var (
 	KubernetesGateway              = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
 	KubernetesGateway_v1           = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
 	Lease                          = config.GroupVersionKind{Group: "coordination.k8s.io", Version: "v1", Kind: "Lease"}
-	MeshGlobalSetup                = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshGlobalSetup"}
+	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
+	MeshService                    = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "MeshService"}
 	MutatingWebhookConfiguration   = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "MutatingWebhookConfiguration"}
 	Namespace                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
 	Node                           = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Node"}
@@ -37,7 +37,6 @@ var (
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	ValidatingWebhookConfiguration = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "ValidatingWebhookConfiguration"}
-	VirtualService                 = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "VirtualService"}
 )
 
 // ToGVR converts a GVK to a GVR.
@@ -51,8 +50,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.DaemonSet, true
 	case Deployment:
 		return gvr.Deployment, true
-	case DestinationRule:
-		return gvr.DestinationRule, true
 	case EndpointSlice:
 		return gvr.EndpointSlice, true
 	case Endpoints:
@@ -73,8 +70,10 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.KubernetesGateway_v1, true
 	case Lease:
 		return gvr.Lease, true
-	case MeshGlobalSetup:
-		return gvr.MeshGlobalSetup, true
+	case MeshConfig:
+		return gvr.MeshConfig, true
+	case MeshService:
+		return gvr.MeshService, true
 	case MutatingWebhookConfiguration:
 		return gvr.MutatingWebhookConfiguration, true
 	case Namespace:
@@ -97,8 +96,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.StatefulSet, true
 	case ValidatingWebhookConfiguration:
 		return gvr.ValidatingWebhookConfiguration, true
-	case VirtualService:
-		return gvr.VirtualService, true
 	}
 
 	return schema.GroupVersionResource{}, false
@@ -114,8 +111,6 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.DaemonSet
 	case Deployment:
 		return kind.Deployment
-	case DestinationRule:
-		return kind.DestinationRule
 	case EndpointSlice:
 		return kind.EndpointSlice
 	case Endpoints:
@@ -130,8 +125,10 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.KubernetesGateway
 	case Lease:
 		return kind.Lease
-	case MeshGlobalSetup:
-		return kind.MeshGlobalSetup
+	case MeshConfig:
+		return kind.MeshConfig
+	case MeshService:
+		return kind.MeshService
 	case MutatingWebhookConfiguration:
 		return kind.MutatingWebhookConfiguration
 	case Namespace:
@@ -154,8 +151,6 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.StatefulSet
 	case ValidatingWebhookConfiguration:
 		return kind.ValidatingWebhookConfiguration
-	case VirtualService:
-		return kind.VirtualService
 	}
 
 	panic("unknown kind: " + g.String())
@@ -182,8 +177,6 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return DaemonSet, true
 	case gvr.Deployment:
 		return Deployment, true
-	case gvr.DestinationRule:
-		return DestinationRule, true
 	case gvr.EndpointSlice:
 		return EndpointSlice, true
 	case gvr.Endpoints:
@@ -198,8 +191,10 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return KubernetesGateway, true
 	case gvr.Lease:
 		return Lease, true
-	case gvr.MeshGlobalSetup:
-		return MeshGlobalSetup, true
+	case gvr.MeshConfig:
+		return MeshConfig, true
+	case gvr.MeshService:
+		return MeshService, true
 	case gvr.MutatingWebhookConfiguration:
 		return MutatingWebhookConfiguration, true
 	case gvr.Namespace:
@@ -222,8 +217,6 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return StatefulSet, true
 	case gvr.ValidatingWebhookConfiguration:
 		return ValidatingWebhookConfiguration, true
-	case gvr.VirtualService:
-		return VirtualService, true
 	}
 
 	return config.GroupVersionKind{}, false

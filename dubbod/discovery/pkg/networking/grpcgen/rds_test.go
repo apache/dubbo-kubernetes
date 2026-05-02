@@ -37,7 +37,7 @@ import (
 func TestBuildHTTPRouteProxylessOutboundPrefersVirtualServiceOverGatewayHTTPRoute(t *testing.T) {
 	push := newRDSTestPushContext(t, []config.Config{
 		newWildcardHTTPRouteConfig("httpbin", "default", 8000),
-		newWeightedVirtualServiceConfig("nginx-weights", "app", "nginx.app.svc.cluster.local"),
+		newWeightedMeshServiceConfig("nginx-weights", "app", "nginx.app.svc.cluster.local"),
 	}, []*model.Service{
 		newRDSTestService("nginx", "app", "nginx.app.svc.cluster.local", 80),
 		newRDSTestService("httpbin", "default", "httpbin.default.svc.cluster.local", 8000),
@@ -87,8 +87,8 @@ func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*mo
 	env := model.NewEnvironment()
 	env.ConfigStore = store
 	env.ServiceDiscovery = staticServiceDiscovery{services: services}
-	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshGlobalSetupResource{
-		MeshGlobalSetup: mesh.DefaultMeshGlobalSetup(),
+	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshConfigResource{
+		MeshConfig: mesh.DefaultMeshConfig(),
 	}, true))
 	env.Init()
 
@@ -97,26 +97,28 @@ func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*mo
 	return push
 }
 
-func newWeightedVirtualServiceConfig(name, namespace, hostname string) config.Config {
+func newWeightedMeshServiceConfig(name, namespace, hostname string) config.Config {
 	return config.Config{
 		Meta: config.Meta{
-			GroupVersionKind: gvk.VirtualService,
+			GroupVersionKind: gvk.MeshService,
 			Name:             name,
 			Namespace:        namespace,
 			Domain:           "cluster.local",
 		},
-		Spec: &networking.VirtualService{
+		Spec: &networking.MeshService{
 			Hosts: []string{hostname},
-			Http: []*networking.HTTPRoute{
+			Routes: []*networking.MeshServiceRoute{
 				{
-					Route: []*networking.HTTPRouteDestination{
+					Service: []*networking.ServiceDestination{
 						{
-							Destination: &networking.Destination{Host: hostname, Subset: "v1"},
-							Weight:      20,
+							Name:   "v1",
+							Host:   hostname,
+							Weight: 20,
 						},
 						{
-							Destination: &networking.Destination{Host: hostname, Subset: "v2"},
-							Weight:      80,
+							Name:   "v2",
+							Host:   hostname,
+							Weight: 80,
 						},
 					},
 				},

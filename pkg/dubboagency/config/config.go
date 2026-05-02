@@ -27,7 +27,7 @@ import (
 )
 
 // ConstructProxyConfig returns proxyConfig
-func ConstructProxyConfig(meshGlobalSetupFile, proxyConfigEnv string) (*meshv1alpha1.ProxyConfig, error) {
+func ConstructProxyConfig(meshConfigFile, proxyConfigEnv string) (*meshv1alpha1.ProxyConfig, error) {
 	annotations, err := bootstrap.ReadPodAnnotations("")
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -37,31 +37,31 @@ func ConstructProxyConfig(meshGlobalSetupFile, proxyConfigEnv string) (*meshv1al
 		}
 	}
 	var fileMeshContents string
-	if fileExists(meshGlobalSetupFile) {
-		contents, err := os.ReadFile(meshGlobalSetupFile)
+	if fileExists(meshConfigFile) {
+		contents, err := os.ReadFile(meshConfigFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read mesh config file %v: %v", meshGlobalSetupFile, err)
+			return nil, fmt.Errorf("failed to read mesh config file %v: %v", meshConfigFile, err)
 		}
 		fileMeshContents = string(contents)
 	}
-	meshGlobalSetup, err := getMeshGlobalSetup(fileMeshContents, annotations["proxy.dubbo.apache.org/config"], proxyConfigEnv)
+	meshConfig, err := getMeshConfig(fileMeshContents, annotations["proxy.dubbo.apache.org/config"], proxyConfigEnv)
 	if err != nil {
 		return nil, err
 	}
 	proxyConfig := mesh.DefaultProxyConfig()
-	if meshGlobalSetup.DefaultConfig != nil {
-		proxyConfig = meshGlobalSetup.DefaultConfig
+	if meshConfig.DefaultConfig != nil {
+		proxyConfig = meshConfig.DefaultConfig
 	}
 	// TODO ResolveAddr
-	// TODO ValidateMeshGlobalSetupProxyConfig
+	// TODO ValidateMeshConfigProxyConfig
 	return proxyConfig, nil
 }
 
-func getMeshGlobalSetup(fileOverride, annotationOverride, proxyConfigEnv string) (*meshv1alpha1.MeshGlobalSetup, error) {
-	mc := mesh.DefaultMeshGlobalSetup()
+func getMeshConfig(fileOverride, annotationOverride, proxyConfigEnv string) (*meshv1alpha1.MeshConfig, error) {
+	mc := mesh.DefaultMeshConfig()
 	if fileOverride != "" {
-		log.Infof("Apply mesh global setup from file %v", fileOverride)
-		fileMesh, err := mesh.ApplyMeshGlobalSetup(fileOverride, mc)
+		log.Infof("Apply mesh config from file %v", fileOverride)
+		fileMesh, err := mesh.ApplyMeshConfig(fileOverride, mc)
 		if err != nil || fileMesh == nil {
 			return nil, fmt.Errorf("failed to unmarshal mesh config from file [%v]: %v", fileOverride, err)
 		}

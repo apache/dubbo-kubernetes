@@ -22,7 +22,7 @@ import (
 )
 
 type ConfigGenerator interface {
-	serviceRouteIndexChanged(mesh *serviceRouteIndex.MeshGlobalSetup)
+	serviceRouteIndexChanged(mesh *serviceRouteIndex.MeshConfig)
 }
 
 type ConfigGeneratorImpl struct {
@@ -35,6 +35,6 @@ func NewConfigGenerator(cache model.XdsCache) *ConfigGeneratorImpl {
 	}
 }
 
-func (configgen *ConfigGeneratorImpl) serviceRouteIndexChanged(_ *serviceRouteIndex.MeshGlobalSetup) {
+func (configgen *ConfigGeneratorImpl) serviceRouteIndexChanged(_ *serviceRouteIndex.MeshConfig) {
 	return
 }

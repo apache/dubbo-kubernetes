@@ -21,6 +21,9 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	raerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
@@ -28,8 +31,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/slices"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	clientset "k8s.io/client-go/kubernetes"
-	"strings"
-	"time"
 )
 
 type CaExternalType string
@@ -41,8 +42,8 @@ const (
 
 type RegistrationAuthority interface {
 	caserver.CertificateAuthority
-	SetCACertificatesFromMeshGlobalSetup([]*meshv1alpha1.MeshGlobalSetup_CertificateData)
-	GetRootCertFromMeshGlobalSetup(signerName string) ([]byte, error)
+	SetCACertificatesFromMeshConfig([]*meshv1alpha1.MeshConfig_CertificateData)
+	GetRootCertFromMeshConfig(signerName string) ([]byte, error)
 }
 
 type DubboRAOptions struct {
@@ -80,19 +81,19 @@ func (r *KubernetesRA) SignWithCertChain(csrPEM []byte, certOpts ca.CertOpts) ([
 		cert = append(cert, chainPem...)
 	}
 	respCertChain := []string{string(cert)}
-	var possibleRootCert, rootCertFromMeshGlobalSetup, rootCertFromCertChain []byte
+	var possibleRootCert, rootCertFromMeshConfig, rootCertFromCertChain []byte
 	certSigner := r.certSignerDomain + "/" + certOpts.CertSigner
 	if len(r.GetCAKeyCertBundle().GetRootCertPem()) == 0 {
 		rootCertFromCertChain, err = util.FindRootCertFromCertificateChainBytes(cert)
 		if err != nil {
 			pkiRaLog.Infof("failed to find root cert from signed cert-chain (%v)", err.Error())
 		}
-		rootCertFromMeshGlobalSetup, err = r.GetRootCertFromMeshGlobalSetup(certSigner)
+		rootCertFromMeshConfig, err = r.GetRootCertFromMeshConfig(certSigner)
 		if err != nil {
 			pkiRaLog.Infof("failed to find root cert from mesh config (%v)", err.Error())
 		}
-		if rootCertFromMeshGlobalSetup != nil {
-			possibleRootCert = rootCertFromMeshGlobalSetup
+		if rootCertFromMeshConfig != nil {
+			possibleRootCert = rootCertFromMeshConfig
 		} else if rootCertFromCertChain != nil {
 			possibleRootCert = rootCertFromCertChain
 		}
@@ -113,10 +114,10 @@ func (r *KubernetesRA) GetCAKeyCertBundle() *util.KeyCertBundle {
 	return r.keyCertBundle
 }
 
-func (r *KubernetesRA) GetRootCertFromMeshGlobalSetup(signerName string) ([]byte, error) {
+func (r *KubernetesRA) GetRootCertFromMeshConfig(signerName string) ([]byte, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	caCertificates := r.caCertificatesFromMeshGlobalSetup
+	caCertificates := r.caCertificatesFromMeshConfig
 	if len(caCertificates) == 0 {
 		return nil, fmt.Errorf("no caCertificates defined in mesh config")
 	}
@@ -134,7 +135,7 @@ func (r *KubernetesRA) GetRootCertFromMeshGlobalSetup(signerName string) ([]byte
 	return nil, fmt.Errorf("failed to find root cert for signer: %v in mesh config", signerName)
 }
 
-func (r *KubernetesRA) SetCACertificatesFromMeshGlobalSetup(caCertificates []*meshv1alpha1.MeshGlobalSetup_CertificateData) {
+func (r *KubernetesRA) SetCACertificatesFromMeshConfig(caCertificates []*meshv1alpha1.MeshConfig_CertificateData) {
 	r.mutex.Lock()
 	for _, pemCert := range caCertificates {
 		// TODO:  take care of spiffe bundle format as well
@@ -143,7 +144,7 @@ func (r *KubernetesRA) SetCACertificatesFromMeshGlobalSetup(caCertificates []*me
 		if len(certSigners) != 0 {
 			certSigner := strings.Join(certSigners, ",")
 			if cert != "" {
-				r.caCertificatesFromMeshGlobalSetup[certSigner] = cert
+				r.caCertificatesFromMeshConfig[certSigner] = cert
 			}
 		}
 	}

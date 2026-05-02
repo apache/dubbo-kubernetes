@@ -18,11 +18,12 @@ package bootstrap
 
 import (
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/kubemesh"
@@ -34,37 +35,37 @@ import (
 )
 
 const (
-	defaultMeshGlobalSetupMapName = "dubbo"
+	defaultMeshConfigMapName = "dubbo"
 )
 
-func (s *Server) initMeshGlobalSetup(args *DubboArgs, fileWatcher filewatcher.FileWatcher) {
-	log.Infof("initializing mesh global setup %v", args.MeshGlobalSetupFile)
-	col := s.getMeshGlobalSetup(args, fileWatcher)
+func (s *Server) initMeshConfig(args *DubboArgs, fileWatcher filewatcher.FileWatcher) {
+	log.Infof("initializing mesh config %v", args.MeshConfigFile)
+	col := s.getMeshConfig(args, fileWatcher)
 	col.AsCollection().WaitUntilSynced(s.internalStop)
 	s.environment.Watcher = meshwatcher.ConfigAdapter(col)
-	log.Infof("mesh global setup: %s", compactMeshGlobalSetup(s.environment.Mesh()))
+	log.Infof("mesh config: %s", compactMeshConfig(s.environment.Mesh()))
 	log.Infof("flags: %s", compactDubboArgs(args))
 }
 
-func (s *Server) getMeshGlobalSetup(args *DubboArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshGlobalSetupResource] {
+func (s *Server) getMeshConfig(args *DubboArgs, fileWatcher filewatcher.FileWatcher) krt.Singleton[meshwatcher.MeshConfigResource] {
 	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
-	sources := s.getConfigurationSources(args, fileWatcher, args.MeshGlobalSetupFile, kubemesh.MeshGlobalSetupKey)
+	sources := s.getConfigurationSources(args, fileWatcher, args.MeshConfigFile, kubemesh.MeshConfigKey)
 	if len(sources) == 0 {
-		fmt.Printf("\nUsing default mesh - missing file %s and no k8s client\n", args.MeshGlobalSetupFile)
+		fmt.Printf("\nUsing default mesh - missing file %s and no k8s client\n", args.MeshConfigFile)
 	}
 	return meshwatcher.NewCollection(opts, sources...)
 }
 
-func (s *Server) getConfigurationSources(args *DubboArgs, fileWatcher filewatcher.FileWatcher, file string, cmKey string) []meshwatcher.MeshGlobalSetupSource {
+func (s *Server) getConfigurationSources(args *DubboArgs, fileWatcher filewatcher.FileWatcher, file string, cmKey string) []meshwatcher.MeshConfigSource {
 	opts := krt.NewOptionsBuilder(s.internalStop, "", args.KrtDebugger)
-	var userMeshGlobalSetup *meshwatcher.MeshGlobalSetupSource
-	if features.SharedMeshGlobalSetup != "" && s.kubeClient != nil {
-		userMeshGlobalSetup = ptr.Of(kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, features.SharedMeshGlobalSetup, cmKey, opts))
+	var userMeshConfig *meshwatcher.MeshConfigSource
+	if features.SharedMeshConfig != "" && s.kubeClient != nil {
+		userMeshConfig = ptr.Of(kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, features.SharedMeshConfig, cmKey, opts))
 	}
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
 		fileSource, err := meshwatcher.NewFileSource(fileWatcher, file, opts)
 		if err == nil {
-			return toSources(fileSource, userMeshGlobalSetup)
+			return toSources(fileSource, userMeshConfig)
 		}
 	}
 
@@ -72,27 +73,27 @@ func (s *Server) getConfigurationSources(args *DubboArgs, fileWatcher filewatche
 		return nil
 	}
 
-	configMapName := getMeshGlobalSetupMapName("")
+	configMapName := getMeshConfigMapName("")
 	primary := kubemesh.NewConfigMapSource(s.kubeClient, args.Namespace, configMapName, cmKey, opts)
-	return toSources(primary, userMeshGlobalSetup)
+	return toSources(primary, userMeshConfig)
 }
 
-func toSources(base meshwatcher.MeshGlobalSetupSource, user *meshwatcher.MeshGlobalSetupSource) []meshwatcher.MeshGlobalSetupSource {
+func toSources(base meshwatcher.MeshConfigSource, user *meshwatcher.MeshConfigSource) []meshwatcher.MeshConfigSource {
 	if user != nil {
-		return []meshwatcher.MeshGlobalSetupSource{*user, base}
+		return []meshwatcher.MeshConfigSource{*user, base}
 	}
-	return []meshwatcher.MeshGlobalSetupSource{base}
+	return []meshwatcher.MeshConfigSource{base}
 }
 
-func getMeshGlobalSetupMapName(revision string) string {
-	name := defaultMeshGlobalSetupMapName
+func getMeshConfigMapName(revision string) string {
+	name := defaultMeshConfigMapName
 	if revision == "" || revision == "default" {
 		return name
 	}
 	return name + "-" + revision
 }
 
-func compactMeshGlobalSetup(cfg *meshv1alpha1.MeshGlobalSetup) string {
+func compactMeshConfig(cfg *meshv1alpha1.MeshConfig) string {
 	if cfg == nil {
 		return "<nil>"
 	}
@@ -125,7 +126,7 @@ func compactDubboArgs(args *DubboArgs) string {
 	}
 
 	parts := []string{
-		formatStringField("mesh_file", args.MeshGlobalSetupFile),
+		formatStringField("mesh_file", args.MeshConfigFile),
 		formatQuotedField("namespace", args.Namespace),
 		formatQuotedField("pod_name", args.PodName),
 		formatQuotedField("revision", args.Revision),

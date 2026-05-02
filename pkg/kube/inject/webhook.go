@@ -21,15 +21,16 @@ import (
 	"errors"
 	"fmt"
 
-	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
-	admissionv1 "k8s.io/api/admission/v1"
-	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"text/template"
 	"time"
+
+	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	admissionv1 "k8s.io/api/admission/v1"
+	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	opconfig "github.com/apache/dubbo-kubernetes/dubbooperator/pkg/apis"
@@ -64,7 +65,7 @@ var (
 type Webhook struct {
 	mu           sync.RWMutex
 	watcher      Watcher
-	meshConfig   *meshv1alpha1.MeshGlobalSetup
+	meshConfig   *meshv1alpha1.MeshConfig
 	env          *model.Environment
 	Config       *Config
 	valuesConfig ValuesConfig
@@ -94,7 +95,7 @@ type InjectionParameters struct {
 	templates           map[string]*template.Template
 	defaultTemplate     []string
 	aliases             map[string][]string
-	meshGlobalSetup     *meshv1alpha1.MeshGlobalSetup
+	meshConfig          *meshv1alpha1.MeshConfig
 	proxyConfig         *meshv1alpha1.ProxyConfig
 	valuesConfig        ValuesConfig
 	revision            string
@@ -264,7 +265,7 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 		templates:           wh.Config.Templates,
 		defaultTemplate:     wh.Config.DefaultTemplates,
 		aliases:             wh.Config.Aliases,
-		meshGlobalSetup:     wh.meshConfig,
+		meshConfig:          wh.meshConfig,
 		proxyConfig:         proxyConfig,
 		valuesConfig:        wh.valuesConfig,
 		injectedAnnotations: wh.Config.InjectedAnnotations,
@@ -425,12 +426,12 @@ func removeTemplateOnlyContainers(pod *corev1.Pod, injectedPod corev1.Pod, origi
 func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) error {
 	discoveryAddress := ""
 	trustDomain := constants.DefaultClusterLocalDomain
-	if req.meshGlobalSetup != nil {
-		if cfg := req.meshGlobalSetup.GetDefaultConfig(); cfg != nil {
+	if req.meshConfig != nil {
+		if cfg := req.meshConfig.GetDefaultConfig(); cfg != nil {
 			discoveryAddress = cfg.GetDiscoveryAddress()
 		}
-		if req.meshGlobalSetup.GetTrustDomain() != "" {
-			trustDomain = req.meshGlobalSetup.GetTrustDomain()
+		if req.meshConfig.GetTrustDomain() != "" {
+			trustDomain = req.meshConfig.GetTrustDomain()
 		}
 	}
 	if discoveryAddress == "" && req.proxyConfig != nil {

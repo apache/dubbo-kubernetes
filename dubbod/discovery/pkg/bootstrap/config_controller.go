@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+
 	configaggregate "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/aggregate"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/kube/crdclient"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/kube/file"
@@ -39,7 +41,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/url"
 )
 
 type ConfigSourceAddressScheme string
@@ -209,8 +210,8 @@ func (s *Server) initConfigSources(args *DubboArgs) (err error) {
 }
 
 func (s *Server) initConfigController(args *DubboArgs) error {
-	meshGlobalSetup := s.environment.Mesh()
-	if len(meshGlobalSetup.ConfigSources) > 0 {
+	meshConfig := s.environment.Mesh()
+	if len(meshConfig.ConfigSources) > 0 {
 		if err := s.initConfigSources(args); err != nil {
 			return err
 		}

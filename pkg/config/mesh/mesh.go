@@ -30,15 +30,15 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func ReadMeshGlobalSetup(filename string) (*meshv1alpha1.MeshGlobalSetup, error) {
+func ReadMeshConfig(filename string) (*meshv1alpha1.MeshConfig, error) {
 	yaml, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, multierror.Prefix(err, "cannot read mesh config file")
 	}
-	return ApplyMeshGlobalSetupDefaults(string(yaml))
+	return ApplyMeshConfigDefaults(string(yaml))
 }
 
-func ApplyMeshGlobalSetup(yaml string, defaultConfig *meshv1alpha1.MeshGlobalSetup) (*meshv1alpha1.MeshGlobalSetup, error) {
+func ApplyMeshConfig(yaml string, defaultConfig *meshv1alpha1.MeshConfig) (*meshv1alpha1.MeshConfig, error) {
 	prevProxyConfig := defaultConfig.DefaultConfig
 	prevTrustDomainAliases := defaultConfig.TrustDomainAliases
 
@@ -65,16 +65,16 @@ func ApplyMeshGlobalSetup(yaml string, defaultConfig *meshv1alpha1.MeshGlobalSet
 	}
 
 	defaultConfig.TrustDomainAliases = sets.SortedList(sets.New(append(defaultConfig.TrustDomainAliases, prevTrustDomainAliases...)...))
-	// TODO ValidationMeshGlobalSetup
+	// TODO ValidationMeshConfig
 	return defaultConfig, nil
 }
 
-func ApplyMeshGlobalSetupDefaults(yaml string) (*meshv1alpha1.MeshGlobalSetup, error) {
-	return ApplyMeshGlobalSetup(yaml, DefaultMeshGlobalSetup())
+func ApplyMeshConfigDefaults(yaml string) (*meshv1alpha1.MeshConfig, error) {
+	return ApplyMeshConfig(yaml, DefaultMeshConfig())
 }
 
-func ApplyProxyConfig(yaml string, meshGlobalSetup *meshv1alpha1.MeshGlobalSetup) (*meshv1alpha1.MeshGlobalSetup, error) {
-	mc := protomarshal.Clone(meshGlobalSetup)
+func ApplyProxyConfig(yaml string, meshConfig *meshv1alpha1.MeshConfig) (*meshv1alpha1.MeshConfig, error) {
+	mc := protomarshal.Clone(meshConfig)
 	pc, err := MergeProxyConfig(yaml, mc.DefaultConfig)
 	if err != nil {
 		return nil, err
@@ -126,9 +126,9 @@ func mergeMap(original map[string]string, merger map[string]string) map[string]s
 	return original
 }
 
-func DefaultMeshGlobalSetup() *meshv1alpha1.MeshGlobalSetup {
+func DefaultMeshConfig() *meshv1alpha1.MeshConfig {
 	proxyConfig := DefaultProxyConfig()
-	return &meshv1alpha1.MeshGlobalSetup{
+	return &meshv1alpha1.MeshConfig{
 		TrustDomain:        constants.DefaultClusterLocalDomain,
 		TrustDomainAliases: []string{},
 		Certificates:       []*meshv1alpha1.Certificate{},

@@ -34,7 +34,7 @@ func TestPushQueueEnqueueMergesPendingRequest(t *testing.T) {
 	})
 	queue.Enqueue(con, &model.PushRequest{
 		Reason:         model.NewReasonStats(model.ConfigUpdate),
-		ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.DestinationRule, Name: "nginx", Namespace: "app"}),
+		ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.MeshService, Name: "nginx", Namespace: "app"}),
 		Full:           true,
 	})
 

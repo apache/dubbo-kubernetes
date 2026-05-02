@@ -87,21 +87,6 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
-	DestinationRule = resource.Builder{
-		Identifier: "DestinationRule",
-		Group:      "networking.dubbo.apache.org",
-		Kind:       "DestinationRule",
-		Plural:     "destinationrules",
-		Version:    "v1alpha3",
-		Proto:      "dubbo.networking.v1alpha3.DestinationRule", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.DestinationRule{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
-		ClusterScoped: false,
-		Synthetic:     false,
-		Builtin:       false,
-		ValidateProto: validation.EmptyValidate,
-	}.MustBuild()
-
 	EndpointSlice = resource.Builder{
 		Identifier:    "EndpointSlice",
 		Group:         "discovery.k8s.io",
@@ -216,17 +201,32 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
-	MeshGlobalSetup = resource.Builder{
-		Identifier:    "MeshGlobalSetup",
+	MeshConfig = resource.Builder{
+		Identifier:    "MeshConfig",
 		Group:         "",
-		Kind:          "MeshGlobalSetup",
-		Plural:        "meshglobalsetups",
+		Kind:          "MeshConfig",
+		Plural:        "meshconfigs",
 		Version:       "v1alpha1",
-		Proto:         "dubbo.mesh.v1alpha1.MeshGlobalSetup",
-		ReflectType:   reflect.TypeOf(&githubcomkdubboapimeshv1alpha1.MeshGlobalSetup{}).Elem(),
+		Proto:         "dubbo.mesh.v1alpha1.MeshConfig",
+		ReflectType:   reflect.TypeOf(&githubcomkdubboapimeshv1alpha1.MeshConfig{}).Elem(),
 		ProtoPackage:  "github.com/kdubbo/api/mesh/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     true,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+
+	MeshService = resource.Builder{
+		Identifier: "MeshService",
+		Group:      "networking.dubbo.apache.org",
+		Kind:       "MeshService",
+		Plural:     "meshservices",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.networking.v1alpha3.MeshService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.MeshService{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
 		Builtin:       false,
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
@@ -396,28 +396,12 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
-	VirtualService = resource.Builder{
-		Identifier: "VirtualService",
-		Group:      "networking.dubbo.apache.org",
-		Kind:       "VirtualService",
-		Plural:     "virtualservices",
-		Version:    "v1alpha3",
-		Proto:      "dubbo.networking.v1alpha3.VirtualService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.VirtualService{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
-		ClusterScoped: false,
-		Synthetic:     false,
-		Builtin:       false,
-		ValidateProto: validation.EmptyValidate,
-	}.MustBuild()
-
 	// All contains all collections in the system.
 	All = collection.NewSchemasBuilder().
 		MustAdd(ConfigMap).
 		MustAdd(CustomResourceDefinition).
 		MustAdd(DaemonSet).
 		MustAdd(Deployment).
-		MustAdd(DestinationRule).
 		MustAdd(EndpointSlice).
 		MustAdd(Endpoints).
 		MustAdd(GatewayClass).
@@ -425,7 +409,8 @@ var (
 		MustAdd(HorizontalPodAutoscaler).
 		MustAdd(KubernetesGateway).
 		MustAdd(Lease).
-		MustAdd(MeshGlobalSetup).
+		MustAdd(MeshConfig).
+		MustAdd(MeshService).
 		MustAdd(MutatingWebhookConfiguration).
 		MustAdd(Namespace).
 		MustAdd(Node).
@@ -437,7 +422,6 @@ var (
 		MustAdd(ServiceAccount).
 		MustAdd(StatefulSet).
 		MustAdd(ValidatingWebhookConfiguration).
-		MustAdd(VirtualService).
 		Build()
 
 	// Kube contains only kubernetes collections.
@@ -467,28 +451,25 @@ var (
 
 	// Dubbo contains only collections used by Dubbo.
 	Dubbo = collection.NewSchemasBuilder().
-		MustAdd(DestinationRule).
+		MustAdd(MeshService).
 		MustAdd(PeerAuthentication).
-		MustAdd(VirtualService).
 		Build()
 
 	// dubboGatewayAPI contains only collections used by Dubbo, including the full Gateway API.
 	dubboGatewayAPI = collection.NewSchemasBuilder().
-			MustAdd(DestinationRule).
 			MustAdd(GatewayClass).
 			MustAdd(HTTPRoute).
 			MustAdd(KubernetesGateway).
+			MustAdd(MeshService).
 			MustAdd(PeerAuthentication).
-			MustAdd(VirtualService).
 			Build()
 
 	// dubboStableGatewayAPI contains only collections used by Dubbo, including beta+ Gateway API.
 	dubboStableGatewayAPI = collection.NewSchemasBuilder().
-				MustAdd(DestinationRule).
 				MustAdd(GatewayClass).
 				MustAdd(HTTPRoute).
 				MustAdd(KubernetesGateway).
+				MustAdd(MeshService).
 				MustAdd(PeerAuthentication).
-				MustAdd(VirtualService).
 				Build()
 )

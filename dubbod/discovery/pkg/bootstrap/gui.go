@@ -86,8 +86,7 @@ type guiOverviewCounts struct {
 	EndpointServices    int `json:"endpointServices"`
 	XDSConnections      int `json:"xdsConnections"`
 	Registries          int `json:"registries"`
-	DestinationRules    int `json:"destinationRules"`
-	VirtualServices     int `json:"virtualServices"`
+	MeshServices        int `json:"meshServices"`
 	PeerAuthentications int `json:"peerAuthentications"`
 	HTTPRoutes          int `json:"httpRoutes"`
 	GatewayClasses      int `json:"gatewayClasses"`
@@ -446,12 +445,11 @@ func (s *Server) buildGUIOverview() guiOverview {
 			EndpointServices:    len(s.environment.EndpointIndex.AllServices()),
 			XDSConnections:      len(s.XDSServer.AllClients()),
 			Registries:          len(registries),
-			DestinationRules:    configKinds[0].Count,
-			VirtualServices:     configKinds[1].Count,
-			PeerAuthentications: configKinds[2].Count,
-			HTTPRoutes:          configKinds[3].Count,
-			GatewayClasses:      configKinds[4].Count,
-			Gateways:            configKinds[5].Count,
+			MeshServices:        configKinds[0].Count,
+			PeerAuthentications: configKinds[1].Count,
+			HTTPRoutes:          configKinds[2].Count,
+			GatewayClasses:      configKinds[3].Count,
+			Gateways:            configKinds[4].Count,
 		},
 		ConfigKinds:      configKinds,
 		Registries:       registries,
@@ -565,14 +563,9 @@ func (s *Server) buildGUIRegistries() []guiRegistry {
 func (s *Server) buildGUIConfigKinds() []guiConfigKind {
 	return []guiConfigKind{
 		{
-			Kind:        "DestinationRule",
-			Count:       s.countConfigs(gvk.DestinationRule),
-			Description: "Traffic policy and subset routing intent.",
-		},
-		{
-			Kind:        "VirtualService",
-			Count:       s.countConfigs(gvk.VirtualService),
-			Description: "Traffic routing and service composition.",
+			Kind:        "MeshService",
+			Count:       s.countConfigs(gvk.MeshService),
+			Description: "Service-to-service routing and traffic policy.",
 		},
 		{
 			Kind:        "PeerAuthentication",
