@@ -207,4 +207,4 @@ spec:
       containers:
       - name: app
         image: kdubbo/dubbod:debug
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent

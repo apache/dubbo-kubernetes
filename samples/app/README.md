@@ -20,34 +20,9 @@ kubectl -n app rollout status deploy/nginx-consumer --timeout=180s
 ## 配置流量规则
 
 ```bash
-cat <<EOF | kubectl apply -f -
-apiVersion: networking.dubbo.apache.org/v1alpha3
-kind: MeshService
-metadata:
-  name: nginx-routing
-  namespace: app
-spec:
-  hosts:
-  - nginx.app.svc.cluster.local
-  visibleTo:
-  - "."
-  routes:
-  - service:
-    - name: v1
-      host: nginx.app.svc.cluster.local
-      labels:
-        version: v1
-      port:
-        number: 80
-      weight: 20
-    - name: v2
-      host: nginx.app.svc.cluster.local
-      labels:
-        version: v2
-      port:
-        number: 80
-      weight: 80
-EOF
+kubectl -n app delete virtualservice nginx-weights --ignore-not-found=true
+kubectl -n app delete destinationrule nginx-versions --ignore-not-found=true
+kubectl apply -f samples/app/meshservice.yaml
 ```
 
 ## 查看 xDS 推送结果
@@ -90,6 +65,8 @@ kubectl -n app exec deploy/nginx-consumer -- dubbod xclient --request-interval 2
 
 ```bash
 kubectl -n app delete meshservice nginx-routing --ignore-not-found=true
+kubectl -n app delete virtualservice nginx-weights --ignore-not-found=true
+kubectl -n app delete destinationrule nginx-versions --ignore-not-found=true
 kubectl delete -f samples/app/deployment.yaml --ignore-not-found=true
 kubectl delete ns app
 ```
