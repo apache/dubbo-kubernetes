@@ -10,7 +10,6 @@ const (
 	DNSName
 	DaemonSet
 	Deployment
-	DestinationRule
 	EndpointSlice
 	Endpoints
 	GatewayClass
@@ -18,7 +17,8 @@ const (
 	HorizontalPodAutoscaler
 	KubernetesGateway
 	Lease
-	MeshGlobalSetup
+	MeshConfig
+	MeshService
 	MutatingWebhookConfiguration
 	Namespace
 	Node
@@ -30,7 +30,6 @@ const (
 	ServiceAccount
 	StatefulSet
 	ValidatingWebhookConfiguration
-	VirtualService
 )
 
 func (k Kind) String() string {
@@ -47,8 +46,6 @@ func (k Kind) String() string {
 		return "DaemonSet"
 	case Deployment:
 		return "Deployment"
-	case DestinationRule:
-		return "DestinationRule"
 	case EndpointSlice:
 		return "EndpointSlice"
 	case Endpoints:
@@ -63,8 +60,10 @@ func (k Kind) String() string {
 		return "KubernetesGateway"
 	case Lease:
 		return "Lease"
-	case MeshGlobalSetup:
-		return "MeshGlobalSetup"
+	case MeshConfig:
+		return "MeshConfig"
+	case MeshService:
+		return "MeshService"
 	case MutatingWebhookConfiguration:
 		return "MutatingWebhookConfiguration"
 	case Namespace:
@@ -87,8 +86,6 @@ func (k Kind) String() string {
 		return "StatefulSet"
 	case ValidatingWebhookConfiguration:
 		return "ValidatingWebhookConfiguration"
-	case VirtualService:
-		return "VirtualService"
 	default:
 		return "Unknown"
 	}
@@ -108,8 +105,6 @@ func FromString(s string) Kind {
 		return DaemonSet
 	case "Deployment":
 		return Deployment
-	case "DestinationRule":
-		return DestinationRule
 	case "EndpointSlice":
 		return EndpointSlice
 	case "Endpoints":
@@ -124,8 +119,10 @@ func FromString(s string) Kind {
 		return KubernetesGateway
 	case "Lease":
 		return Lease
-	case "MeshGlobalSetup":
-		return MeshGlobalSetup
+	case "MeshConfig":
+		return MeshConfig
+	case "MeshService":
+		return MeshService
 	case "MutatingWebhookConfiguration":
 		return MutatingWebhookConfiguration
 	case "Namespace":
@@ -148,8 +145,6 @@ func FromString(s string) Kind {
 		return StatefulSet
 	case "ValidatingWebhookConfiguration":
 		return ValidatingWebhookConfiguration
-	case "VirtualService":
-		return VirtualService
 	default:
 		return Unknown
 	}

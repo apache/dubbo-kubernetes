@@ -30,9 +30,9 @@ import (
 
 var log = dubbolog.RegisterScope("meshwatcher", "mesh watcher debugging")
 
-type MeshGlobalSetupSource = krt.Singleton[string]
+type MeshConfigSource = krt.Singleton[string]
 
-func NewFileSource(fileWatcher filewatcher.FileWatcher, filename string, opts krt.OptionsBuilder) (MeshGlobalSetupSource, error) {
+func NewFileSource(fileWatcher filewatcher.FileWatcher, filename string, opts krt.OptionsBuilder) (MeshConfigSource, error) {
 	return krtfiles.NewFileSingleton[string](fileWatcher, filename, func(filename string) (string, error) {
 		b, err := os.ReadFile(filename)
 		if err != nil {
@@ -42,13 +42,13 @@ func NewFileSource(fileWatcher filewatcher.FileWatcher, filename string, opts kr
 	}, opts.WithName("Mesh_File_"+path.Base(filename))...)
 }
 
-func NewCollection(opts krt.OptionsBuilder, sources ...MeshGlobalSetupSource) krt.Singleton[MeshGlobalSetupResource] {
+func NewCollection(opts krt.OptionsBuilder, sources ...MeshConfigSource) krt.Singleton[MeshConfigResource] {
 	if len(sources) > 2 {
 		panic("currently only 2 sources are supported")
 	}
-	return krt.NewSingleton[MeshGlobalSetupResource](
-		func(ctx krt.HandlerContext) *MeshGlobalSetupResource {
-			meshCfg := mesh.DefaultMeshGlobalSetup()
+	return krt.NewSingleton[MeshConfigResource](
+		func(ctx krt.HandlerContext) *MeshConfigResource {
+			meshCfg := mesh.DefaultMeshConfig()
 
 			for _, attempt := range sources {
 				s := krt.FetchOne(ctx, attempt.AsCollection())
@@ -56,19 +56,19 @@ func NewCollection(opts krt.OptionsBuilder, sources ...MeshGlobalSetupSource) kr
 					log.Debugf("mesh configuration source missing")
 					continue
 				}
-				n, err := mesh.ApplyMeshGlobalSetup(*s, meshCfg)
+				n, err := mesh.ApplyMeshConfig(*s, meshCfg)
 				if err != nil {
 					if len(sources) == 1 {
-						log.Errorf("invalid mesh global setup, using last known state: %v", err)
+						log.Errorf("invalid mesh config, using last known state: %v", err)
 						ctx.DiscardResult()
-						return &MeshGlobalSetupResource{mesh.DefaultMeshGlobalSetup()}
+						return &MeshConfigResource{mesh.DefaultMeshConfig()}
 					}
-					log.Errorf("invalid mesh global setup, ignoring: %v", err)
+					log.Errorf("invalid mesh config, ignoring: %v", err)
 					continue
 				}
 				meshCfg = n
 			}
-			return &MeshGlobalSetupResource{meshCfg}
-		}, opts.WithName("MeshGlobalSetup")...,
+			return &MeshConfigResource{meshCfg}
+		}, opts.WithName("MeshConfig")...,
 	)
 }

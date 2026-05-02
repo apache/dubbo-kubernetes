@@ -9,7 +9,6 @@ var (
 	CustomResourceDefinition       = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
 	DaemonSet                      = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
 	Deployment                     = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	DestinationRule                = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "destinationrules"}
 	EndpointSlice                  = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
 	Endpoints                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 	GatewayClass                   = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"}
@@ -20,7 +19,8 @@ var (
 	KubernetesGateway              = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"}
 	KubernetesGateway_v1           = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gateways"}
 	Lease                          = schema.GroupVersionResource{Group: "coordination.k8s.io", Version: "v1", Resource: "leases"}
-	MeshGlobalSetup                = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshglobalsetups"}
+	MeshConfig                     = schema.GroupVersionResource{Group: "", Version: "v1alpha1", Resource: "meshconfigs"}
+	MeshService                    = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "meshservices"}
 	MutatingWebhookConfiguration   = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "mutatingwebhookconfigurations"}
 	Namespace                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 	Node                           = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
@@ -32,7 +32,6 @@ var (
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 	StatefulSet                    = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
 	ValidatingWebhookConfiguration = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}
-	VirtualService                 = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "virtualservices"}
 )
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
@@ -44,8 +43,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case DaemonSet:
 		return false
 	case Deployment:
-		return false
-	case DestinationRule:
 		return false
 	case EndpointSlice:
 		return false
@@ -66,6 +63,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case KubernetesGateway_v1:
 		return false
 	case Lease:
+		return false
+	case MeshService:
 		return false
 	case MutatingWebhookConfiguration:
 		return true
@@ -89,8 +88,6 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 		return false
 	case ValidatingWebhookConfiguration:
 		return true
-	case VirtualService:
-		return false
 	}
 	// shouldn't happen
 	return false

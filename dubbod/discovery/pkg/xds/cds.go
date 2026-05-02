@@ -34,11 +34,10 @@ func cdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) (*model.PushReques
 	}
 
 	// with TLS configuration (DUBBO_MUTUAL), CDS must be pushed to update cluster TransportSocket.
-	// Even if req.Full is false, we need to check if DestinationRule was updated, as it affects cluster TLS config.
+	// Even if req.Full is false, check MeshService because it carries the derived destination policy.
 	if req != nil && req.ConfigsUpdated != nil {
-		// Check if DestinationRule was updated - this requires CDS push to update cluster TransportSocket
-		if model.HasConfigsOfKind(req.ConfigsUpdated, kind.DestinationRule) {
-			log.Debugf("DestinationRule updated, CDS push required to update cluster TLS config")
+		if model.HasConfigsOfKind(req.ConfigsUpdated, kind.MeshService) {
+			log.Debugf("MeshService updated, CDS push required to update cluster TLS config")
 			return req, true
 		}
 	}
@@ -58,7 +57,7 @@ func (c CdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req
 	return nil, model.DefaultXdsLogDetails, nil
 }
 
-// GenerateDeltas for CDS currently only builds deltas when services change. todo implement changes for DestinationRule, etc
+// GenerateDeltas for CDS currently only builds deltas when services change. todo implement changes for MeshService, etc
 func (c CdsGenerator) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest,
 	w *model.WatchedResource,
 ) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {

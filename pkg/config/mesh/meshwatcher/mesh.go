@@ -24,31 +24,31 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// MeshGlobalSetupResource holds the current MeshGlobalSetup state
-type MeshGlobalSetupResource struct {
-	*meshv1alpha1.MeshGlobalSetup
+// MeshConfigResource holds the current MeshConfig state
+type MeshConfigResource struct {
+	*meshv1alpha1.MeshConfig
 }
 
 type adapter struct {
-	krt.Singleton[MeshGlobalSetupResource]
+	krt.Singleton[MeshConfigResource]
 }
 
 var _ mesh.Watcher = adapter{}
 
 type WatcherCollection interface {
 	mesh.Watcher
-	krt.Singleton[MeshGlobalSetupResource]
+	krt.Singleton[MeshConfigResource]
 }
 
-func (a adapter) Mesh() *meshv1alpha1.MeshGlobalSetup {
+func (a adapter) Mesh() *meshv1alpha1.MeshConfig {
 	// Just get the value; we know there is always one set due to the way the collection is setup.
 	v := a.Singleton.Get()
-	return v.MeshGlobalSetup
+	return v.MeshConfig
 }
 
 func (a adapter) AddMeshHandler(h func()) *mesh.WatcherHandlerRegistration {
 	// Do not run initial state to match existing semantics
-	colReg := a.Singleton.AsCollection().RegisterBatch(func(o []krt.Event[MeshGlobalSetupResource]) {
+	colReg := a.Singleton.AsCollection().RegisterBatch(func(o []krt.Event[MeshConfigResource]) {
 		h()
 	}, false)
 	reg := mesh.NewWatcherHandlerRegistration(func() {
@@ -62,17 +62,17 @@ func (a adapter) DeleteMeshHandler(registration *mesh.WatcherHandlerRegistration
 	registration.Remove()
 }
 
-func (m MeshGlobalSetupResource) ResourceName() string { return "MeshGlobalSetupResource" }
+func (m MeshConfigResource) ResourceName() string { return "MeshConfigResource" }
 
-func (m MeshGlobalSetupResource) Equals(other MeshGlobalSetupResource) bool {
-	return proto.Equal(m.MeshGlobalSetup, other.MeshGlobalSetup)
+func (m MeshConfigResource) Equals(other MeshConfigResource) bool {
+	return proto.Equal(m.MeshConfig, other.MeshConfig)
 }
 
-func ConfigAdapter(configuration krt.Singleton[MeshGlobalSetupResource]) WatcherCollection {
+func ConfigAdapter(configuration krt.Singleton[MeshConfigResource]) WatcherCollection {
 	return adapter{configuration}
 }
 
-func PrettyFormatOfMeshGlobalSetup(meshGlobalSetup *meshv1alpha1.MeshGlobalSetup) string {
-	meshGlobalSetupDump, _ := protomarshal.ToYAML(meshGlobalSetup)
-	return meshGlobalSetupDump
+func PrettyFormatOfMeshConfig(meshConfig *meshv1alpha1.MeshConfig) string {
+	meshConfigDump, _ := protomarshal.ToYAML(meshConfig)
+	return meshConfigDump
 }

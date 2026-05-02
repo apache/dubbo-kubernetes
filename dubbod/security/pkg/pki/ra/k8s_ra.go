@@ -18,6 +18,9 @@ package ra
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/k8s/chiron"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	raerror "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/error"
@@ -25,20 +28,18 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	cert "k8s.io/api/certificates/v1"
 	clientset "k8s.io/client-go/kubernetes"
-	"sync"
-	"time"
 )
 
 var pkiRaLog = log.RegisterScope("pkira", "Dubbod RA log")
 
 // KubernetesRA integrated with an external CA using Kubernetes CSR API
 type KubernetesRA struct {
-	csrInterface                      clientset.Interface
-	keyCertBundle                     *util.KeyCertBundle
-	raOpts                            *DubboRAOptions
-	caCertificatesFromMeshGlobalSetup map[string]string
-	certSignerDomain                  string
-	// mutex protects the R/W to caCertificatesFromMeshGlobalSetup.
+	csrInterface                 clientset.Interface
+	keyCertBundle                *util.KeyCertBundle
+	raOpts                       *DubboRAOptions
+	caCertificatesFromMeshConfig map[string]string
+	certSignerDomain             string
+	// mutex protects the R/W to caCertificatesFromMeshConfig.
 	mutex sync.RWMutex
 }
 
@@ -48,11 +49,11 @@ func NewKubernetesRA(raOpts *DubboRAOptions) (*KubernetesRA, error) {
 		return nil, raerror.NewError(raerror.CAInitFail, fmt.Errorf("error processing Certificate Bundle for Kubernetes RA"))
 	}
 	dubboRA := &KubernetesRA{
-		csrInterface:                      raOpts.K8sClient,
-		raOpts:                            raOpts,
-		keyCertBundle:                     keyCertBundle,
-		certSignerDomain:                  raOpts.CertSignerDomain,
-		caCertificatesFromMeshGlobalSetup: make(map[string]string),
+		csrInterface:                 raOpts.K8sClient,
+		raOpts:                       raOpts,
+		keyCertBundle:                keyCertBundle,
+		certSignerDomain:             raOpts.CertSignerDomain,
+		caCertificatesFromMeshConfig: make(map[string]string),
 	}
 	return dubboRA, nil
 }

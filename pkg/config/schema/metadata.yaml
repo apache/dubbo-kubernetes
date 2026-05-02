@@ -192,29 +192,20 @@ resources:
     statusProtoPackage: "sigs.k8s.io/gateway-api/apis/v1"
 
   ## Dubbo resources
-  - kind: "VirtualService"
-    plural: "virtualservices"
+  - kind: "MeshService"
+    plural: "meshservices"
     group: "networking.dubbo.apache.org"
     version: "v1alpha3"
-    proto: "dubbo.networking.v1alpha3.VirtualService"
+    proto: "dubbo.networking.v1alpha3.MeshService"
     protoPackage: "github.com/kdubbo/api/networking/v1alpha3"
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
     statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
 
-  - kind: DestinationRule
-    plural: "destinationrules"
-    group: "networking.dubbo.apache.org"
-    version: "v1alpha3"
-    proto: "dubbo.networking.v1alpha3.DestinationRule"
-    protoPackage: "github.com/kdubbo/api/networking/v1alpha3"
-    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
-    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
-
-  - kind: "MeshGlobalSetup"
-    plural: "meshglobalsetups"
+  - kind: "MeshConfig"
+    plural: "meshconfigs"
     group: ""
     version: "v1alpha1"
-    proto: "dubbo.mesh.v1alpha1.MeshGlobalSetup"
+    proto: "dubbo.mesh.v1alpha1.MeshConfig"
     protoPackage: "github.com/kdubbo/api/mesh/v1alpha1"
     synthetic: true
 

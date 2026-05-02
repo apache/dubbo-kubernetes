@@ -22,12 +22,13 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 
 	jose "github.com/go-jose/go-jose/v4"
 
@@ -308,7 +309,7 @@ func genSpiffeURI(td, ns, serviceAccount string) (string, error) {
 	return URIPrefix + sanitizeTrustDomain(td) + "/ns/" + ns + "/sa/" + serviceAccount, err
 }
 
-func MustGenSpiffeURI(meshCfg *meshv1alpha1.MeshGlobalSetup, ns, serviceAccount string) string {
+func MustGenSpiffeURI(meshCfg *meshv1alpha1.MeshConfig, ns, serviceAccount string) string {
 	uri, err := genSpiffeURI(meshCfg.GetTrustDomain(), ns, serviceAccount)
 	if err != nil {
 	}

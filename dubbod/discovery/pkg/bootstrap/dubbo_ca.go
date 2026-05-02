@@ -20,6 +20,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"time"
+
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/cmd"
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
@@ -33,9 +37,6 @@ import (
 	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
-	"path"
-	"time"
 )
 
 type caOptions struct {
@@ -184,11 +185,11 @@ func (s *Server) createDubboRA(opts *caOptions) (ra.RegistrationAuthority, error
 	if err != nil {
 		return nil, err
 	}
-	raServer.SetCACertificatesFromMeshGlobalSetup(s.environment.Mesh().CaCertificates)
+	raServer.SetCACertificatesFromMeshConfig(s.environment.Mesh().CaCertificates)
 	s.environment.AddMeshHandler(func() {
-		meshGlobalSetup := s.environment.Mesh()
-		caCertificates := meshGlobalSetup.CaCertificates
-		s.RA.SetCACertificatesFromMeshGlobalSetup(caCertificates)
+		meshConfig := s.environment.Mesh()
+		caCertificates := meshConfig.CaCertificates
+		s.RA.SetCACertificatesFromMeshConfig(caCertificates)
 	})
 	return raServer, err
 }

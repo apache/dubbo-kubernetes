@@ -22,39 +22,30 @@ kubectl -n app rollout status deploy/nginx-consumer --timeout=180s
 ```bash
 cat <<EOF | kubectl apply -f -
 apiVersion: networking.dubbo.apache.org/v1alpha3
-kind: DestinationRule
+kind: MeshService
 metadata:
-  name: nginx-versions
-  namespace: app
-spec:
-  host: nginx.app.svc.cluster.local
-  subsets:
-  - name: v1
-    labels:
-      version: v1
-  - name: v2
-    labels:
-      version: v2
-EOF
-
-cat <<EOF | kubectl apply -f -
-apiVersion: networking.dubbo.apache.org/v1alpha3
-kind: VirtualService
-metadata:
-  name: nginx-weights
+  name: nginx-routing
   namespace: app
 spec:
   hosts:
   - nginx.app.svc.cluster.local
-  http:
-  - route:
-    - destination:
-        host: nginx.app.svc.cluster.local
-        subset: v1
+  visibleTo:
+  - "."
+  routes:
+  - service:
+    - name: v1
+      host: nginx.app.svc.cluster.local
+      labels:
+        version: v1
+      port:
+        number: 80
       weight: 20
-    - destination:
-        host: nginx.app.svc.cluster.local
-        subset: v2
+    - name: v2
+      host: nginx.app.svc.cluster.local
+      labels:
+        version: v2
+      port:
+        number: 80
       weight: 80
 EOF
 ```
@@ -93,13 +84,12 @@ kubectl -n app exec deploy/nginx-consumer -- dubbod xclient 100 | sort | uniq -c
 kubectl -n app exec deploy/nginx-consumer -- dubbod xclient --request-interval 200ms 200
 ```
 
-再在另一个终端里修改 `VirtualService` 权重。`nginx-consumer` 不需要重启，同一个 `xclient` 进程会继续使用同一条 xDS stream，后续请求会按新权重切换。
+再在另一个终端里修改 `MeshService` 权重。`nginx-consumer` 不需要重启，同一个 `xclient` 进程会继续使用同一条 xDS stream，后续请求会按新权重切换。
 
 ## 清理
 
 ```bash
-kubectl -n app delete destinationrule nginx-versions --ignore-not-found=true
-kubectl -n app delete virtualservice nginx-weights --ignore-not-found=true
+kubectl -n app delete meshservice nginx-routing --ignore-not-found=true
 kubectl delete -f samples/app/deployment.yaml --ignore-not-found=true
 kubectl delete ns app
 ```

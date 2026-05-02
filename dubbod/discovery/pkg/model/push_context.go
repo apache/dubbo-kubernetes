@@ -63,7 +63,7 @@ var (
 )
 
 type PushContext struct {
-	Mesh            *meshv1alpha1.MeshGlobalSetup `json:"-"`
+	Mesh            *meshv1alpha1.MeshConfig `json:"-"`
 	initializeMutex sync.Mutex
 	InitDone        atomic.Bool
 	// GatewayAPIController holds a reference to the Gateway API controller.
@@ -588,7 +588,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	ps.initServiceRegistry(env, nil)
 	// Initialize Kubernetes Gateway API resources if the controller is enabled.
 	// This mirrors Dubbo's behavior, where Gateway API is translated into
-	// internal Gateway and VirtualService resources during push context creation.
+	// internal Gateway and MeshService resources during push context creation.
 	ps.initKubernetesGateways(env)
 	ps.initVirtualServices(env)
 	ps.initHTTPRoutes(env)
@@ -605,45 +605,30 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	// 	len(pushReq.AddressesUpdated) > 0)
 	servicesChanged := pushReq != nil && len(pushReq.AddressesUpdated) > 0
 
-	// Check if virtualServices have changed base on:
-	// 1. VirtualService updates in ConfigsUpdated
+	// Check if meshServices have changed based on:
+	// 1. MeshService updates in ConfigsUpdated
 	// 2. Full push (Full: true) - always re-initialize on full push
-	virtualServicesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.VirtualService) ||
+	meshServicesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.MeshService) ||
 		len(pushReq.AddressesUpdated) > 0)
 
 	if pushReq != nil {
-		virtualServiceCount := 0
+		meshServiceCount := 0
 		for cfg := range pushReq.ConfigsUpdated {
-			if cfg.Kind == kind.VirtualService {
-				virtualServiceCount++
+			if cfg.Kind == kind.MeshService {
+				meshServiceCount++
 			}
 		}
-		if virtualServiceCount > 0 {
-			log.Debugf("detected %d VirtualService config changes", virtualServiceCount)
+		if meshServiceCount > 0 {
+			log.Debugf("detected %d MeshService config changes", meshServiceCount)
 		}
 	}
 
-	// Check if destinationrules have changed base on:
-	// 1. DestinationRule updates in ConfigsUpdated
-	// 2. Full push (Full: true) - always re-initialize on full push
-	destinationRuleChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.DestinationRule) ||
-		len(pushReq.AddressesUpdated) > 0)
-
 	if pushReq != nil {
-		destinationRuleCount := 0
-		for cfg := range pushReq.ConfigsUpdated {
-			if cfg.Kind == kind.DestinationRule {
-				destinationRuleCount++
-			}
-		}
-		if destinationRuleCount > 0 {
-			log.Debugf("detected %d DestinationRule config changes", destinationRuleCount)
-		}
 		if pushReq.Full {
-			log.Debugf("Full push requested, will re-initialize DestinationRule and VirtualService indexes")
+			log.Debugf("Full push requested, will re-initialize MeshService-derived indexes")
 		}
-		log.Debugf("destinationRuleChanged=%v, virtualServicesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
-			destinationRuleChanged, virtualServicesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
+		log.Debugf("meshServicesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
+			meshServicesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
 	}
 
 	// Also check if the actual number of services has changed
@@ -681,11 +666,11 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 
 	httpRoutesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.HTTPRoute)
 
-	if virtualServicesChanged {
-		log.Debugf("VirtualServices changed, re-initializing VirtualService index")
+	if meshServicesChanged {
+		log.Debugf("MeshServices changed, re-initializing VirtualService index")
 		ps.initVirtualServices(env)
 	} else {
-		log.Debugf("VirtualServices unchanged, reusing old VirtualService index")
+		log.Debugf("MeshServices unchanged, reusing old VirtualService index")
 		ps.virtualServiceIndex = oldPushContext.virtualServiceIndex
 	}
 
@@ -697,11 +682,11 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.httpRouteIndex = oldPushContext.httpRouteIndex
 	}
 
-	if destinationRuleChanged {
-		log.Debugf("DestinationRules changed, re-initializing DestinationRule index")
+	if meshServicesChanged {
+		log.Debugf("MeshServices changed, re-initializing DestinationRule index")
 		ps.initDestinationRules(env)
 	} else {
-		log.Debugf("DestinationRules unchanged, reusing old DestinationRule index")
+		log.Debugf("MeshServices unchanged, reusing old DestinationRule index")
 		ps.destinationRuleIndex = oldPushContext.destinationRuleIndex
 	}
 
@@ -801,17 +786,20 @@ func (ps *PushContext) GetAllServices() []*Service {
 }
 
 func (ps *PushContext) initVirtualServices(env *Environment) {
-	log.Debugf("starting VirtualService initialization")
+	log.Debugf("starting MeshService route initialization")
 	ps.virtualServiceIndex.referencedDestinations = map[string]sets.String{}
-	virtualservices := env.List(gvk.VirtualService, NamespaceAll)
-	log.Debugf("found %d VirtualService configs", len(virtualservices))
-	vsroutes := make([]config.Config, len(virtualservices))
+	meshservices := env.List(gvk.MeshService, NamespaceAll)
+	log.Debugf("found %d MeshService configs", len(meshservices))
+	vsroutes := make([]config.Config, len(meshservices))
 
-	for i, r := range virtualservices {
-		vsroutes[i] = resolveVirtualServiceShortnames(r)
-		if vs, ok := r.Spec.(*networking.VirtualService); ok {
-			log.Debugf("VirtualService %s/%s with hosts %v and %d HTTP routes",
+	for i, r := range meshservices {
+		vsroutes[i] = meshServiceToVirtualServiceConfig(r)
+		if vs, ok := vsroutes[i].Spec.(*networking.VirtualService); ok {
+			log.Debugf("MeshService %s/%s produced hosts %v and %d HTTP routes",
 				r.Namespace, r.Name, vs.Hosts, len(vs.Http))
+		} else if ms, ok := r.Spec.(*networking.MeshService); ok {
+			log.Debugf("MeshService %s/%s with hosts %v and %d routes",
+				r.Namespace, r.Name, ms.Hosts, len(ms.Routes))
 		}
 	}
 
@@ -1030,20 +1018,20 @@ func (ps *PushContext) setDestinationRules(configs []config.Config) {
 }
 
 func (ps *PushContext) initDestinationRules(env *Environment) {
-	configs := env.List(gvk.DestinationRule, NamespaceAll)
-	log.Debugf("initDestinationRules: found %d DestinationRule configs", len(configs))
+	configs := env.List(gvk.MeshService, NamespaceAll)
+	log.Debugf("initDestinationRules: found %d MeshService configs", len(configs))
 
 	// values returned from ConfigStore.List are immutable.
 	// Therefore, we make a copy
 	subRules := make([]config.Config, len(configs))
 	for i := range subRules {
-		subRules[i] = configs[i]
-		if dr, ok := configs[i].Spec.(*networking.DestinationRule); ok {
+		subRules[i] = meshServiceToDestinationRuleConfig(configs[i])
+		if dr, ok := subRules[i].Spec.(*networking.DestinationRule); ok {
 			tlsMode := "none"
 			if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
 				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
 			}
-			log.Debugf("initDestinationRules: DestinationRule %s/%s for host %s with %d subsets, TLS mode: %s",
+			log.Debugf("initDestinationRules: MeshService %s/%s for host %s with %d subsets, TLS mode: %s",
 				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 		}
 	}

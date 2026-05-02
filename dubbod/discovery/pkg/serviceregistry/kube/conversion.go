@@ -31,7 +31,7 @@ func ServiceHostname(name, namespace, domainSuffix string) host.Name {
 	return host.Name(name + "." + namespace + "." + "svc" + "." + domainSuffix) // Format: "%s.%s.svc.%s"
 }
 
-func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.ID, mesh *meshv1alpha1.MeshGlobalSetup) *model.Service {
+func ConvertService(svc corev1.Service, domainSuffix string, clusterID cluster.ID, mesh *meshv1alpha1.MeshConfig) *model.Service {
 	addrs := []string{constants.UnspecifiedIP}
 	resolution := model.ClientSideLB
 	externalName := ""
@@ -88,6 +88,6 @@ func convertPort(port corev1.ServicePort) *model.Port {
 	}
 }
 
-func SecureNamingSAN(pod *corev1.Pod, mesh *meshv1alpha1.MeshGlobalSetup) string {
+func SecureNamingSAN(pod *corev1.Pod, mesh *meshv1alpha1.MeshConfig) string {
 	return spiffe.MustGenSpiffeURI(mesh, pod.Namespace, pod.Spec.ServiceAccountName)
 }

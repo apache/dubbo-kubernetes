@@ -47,7 +47,7 @@ func TestEdsUpdatedServicesForRequestTargetsServiceOnlyPush(t *testing.T) {
 func TestEdsUpdatedServicesForRequestFallsBackForUntargetedConfig(t *testing.T) {
 	req := &model.PushRequest{
 		ConfigsUpdated: sets.New(model.ConfigKey{
-			Kind:      kind.DestinationRule,
+			Kind:      kind.MeshService,
 			Name:      "nginx",
 			Namespace: "app",
 		}),

@@ -41,7 +41,7 @@ func TestPushRequestCopyMergePreservesQueuedUpdates(t *testing.T) {
 	}
 	incoming := &PushRequest{
 		Reason:           NewReasonStats(ConfigUpdate),
-		ConfigsUpdated:   sets.New(ConfigKey{Kind: kind.DestinationRule, Name: "nginx", Namespace: "app"}),
+		ConfigsUpdated:   sets.New(ConfigKey{Kind: kind.MeshService, Name: "nginx", Namespace: "app"}),
 		AddressesUpdated: sets.New("10.0.0.2"),
 		Full:             true,
 		Forced:           true,

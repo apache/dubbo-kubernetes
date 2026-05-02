@@ -67,7 +67,7 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 		pod:          pod,
 		templates:    templates,
 		valuesConfig: valuesConfig,
-		meshGlobalSetup: &meshv1alpha1.MeshGlobalSetup{
+		meshConfig: &meshv1alpha1.MeshConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
 				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
@@ -137,7 +137,7 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 		pod:          pod,
 		templates:    templates,
 		valuesConfig: valuesConfig,
-		meshGlobalSetup: &meshv1alpha1.MeshGlobalSetup{
+		meshConfig: &meshv1alpha1.MeshConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
 				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
@@ -245,7 +245,7 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	}
 
 	req := InjectionParameters{
-		meshGlobalSetup: &meshv1alpha1.MeshGlobalSetup{
+		meshConfig: &meshv1alpha1.MeshConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
 				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
@@ -339,7 +339,7 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 		pod:          pod,
 		templates:    templates,
 		valuesConfig: valuesConfig,
-		meshGlobalSetup: &meshv1alpha1.MeshGlobalSetup{
+		meshConfig: &meshv1alpha1.MeshConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
 				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
@@ -406,7 +406,7 @@ func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t
 		pod:          pod,
 		templates:    templates,
 		valuesConfig: valuesConfig,
-		meshGlobalSetup: &meshv1alpha1.MeshGlobalSetup{
+		meshConfig: &meshv1alpha1.MeshConfig{
 			TrustDomain: "cluster.local",
 			DefaultConfig: &meshv1alpha1.ProxyConfig{
 				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",

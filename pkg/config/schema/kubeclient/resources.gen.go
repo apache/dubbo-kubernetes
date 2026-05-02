@@ -40,8 +40,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().AppsV1().DaemonSets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.Deployment:
 		return c.Kube().AppsV1().Deployments(namespace).(ktypes.WriteAPI[T])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
-		return c.Dubbo().NetworkingV1alpha3().DestinationRules(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Endpoints:
@@ -56,6 +54,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicoordinationv1.Lease:
 		return c.Kube().CoordinationV1().Leases(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService:
+		return c.Dubbo().NetworkingV1alpha3().MeshServices(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Namespace:
@@ -78,8 +78,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.WriteAPI[T])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
-		return c.Dubbo().NetworkingV1alpha3().VirtualServices(namespace).(ktypes.WriteAPI[T])
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
 	}
@@ -95,8 +93,6 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().AppsV1().DaemonSets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiappsv1.Deployment:
 		return c.Kube().AppsV1().Deployments(namespace).(ktypes.ReadWriteAPI[T, TL])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
-		return c.Dubbo().NetworkingV1alpha3().DestinationRules(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return c.Kube().DiscoveryV1().EndpointSlices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Endpoints:
@@ -111,6 +107,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicoordinationv1.Lease:
 		return c.Kube().CoordinationV1().Leases(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService:
+		return c.Dubbo().NetworkingV1alpha3().MeshServices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Namespace:
@@ -133,8 +131,6 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.ReadWriteAPI[T, TL])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
-		return c.Dubbo().NetworkingV1alpha3().VirtualServices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
 	}
@@ -150,8 +146,6 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapiappsv1.DaemonSet{}
 	case gvr.Deployment:
 		return &k8sioapiappsv1.Deployment{}
-	case gvr.DestinationRule:
-		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule{}
 	case gvr.EndpointSlice:
 		return &k8sioapidiscoveryv1.EndpointSlice{}
 	case gvr.Endpoints:
@@ -166,6 +160,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &sigsk8siogatewayapiapisv1.Gateway{}
 	case gvr.Lease:
 		return &k8sioapicoordinationv1.Lease{}
+	case gvr.MeshService:
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService{}
 	case gvr.MutatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration{}
 	case gvr.Namespace:
@@ -188,8 +184,6 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapiappsv1.StatefulSet{}
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
-	case gvr.VirtualService:
-		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService{}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}
@@ -227,13 +221,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AppsV1().Deployments(opts.Namespace).Watch(context.Background(), options)
-		}
-	case gvr.DestinationRule:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().NetworkingV1alpha3().DestinationRules(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().NetworkingV1alpha3().DestinationRules(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.EndpointSlice:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
@@ -283,6 +270,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoordinationV1().Leases(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.MeshService:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().NetworkingV1alpha3().MeshServices(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().NetworkingV1alpha3().MeshServices(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.MutatingWebhookConfiguration:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
@@ -360,13 +354,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Watch(context.Background(), options)
-		}
-	case gvr.VirtualService:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().NetworkingV1alpha3().VirtualServices(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().NetworkingV1alpha3().VirtualServices(opts.Namespace).Watch(context.Background(), options)
 		}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))

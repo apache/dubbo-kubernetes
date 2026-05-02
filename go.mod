@@ -257,3 +257,7 @@ replace (
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
 )
+
+replace github.com/kdubbo/api => ../api
+
+replace github.com/kdubbo/client-go => ../client-go

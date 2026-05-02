@@ -31,10 +31,6 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.DaemonSet, true
 	case *k8sioapiappsv1.Deployment:
 		return gvk.Deployment, true
-	case *githubcomkdubboapinetworkingv1alpha3.DestinationRule:
-		return gvk.DestinationRule, true
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.DestinationRule:
-		return gvk.DestinationRule, true
 	case *k8sioapidiscoveryv1.EndpointSlice:
 		return gvk.EndpointSlice, true
 	case *k8sioapicorev1.Endpoints:
@@ -49,8 +45,12 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.KubernetesGateway, true
 	case *k8sioapicoordinationv1.Lease:
 		return gvk.Lease, true
-	case *githubcomkdubboapimeshv1alpha1.MeshGlobalSetup:
-		return gvk.MeshGlobalSetup, true
+	case *githubcomkdubboapimeshv1alpha1.MeshConfig:
+		return gvk.MeshConfig, true
+	case *githubcomkdubboapinetworkingv1alpha3.MeshService:
+		return gvk.MeshService, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService:
+		return gvk.MeshService, true
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return gvk.MutatingWebhookConfiguration, true
 	case *k8sioapicorev1.Namespace:
@@ -75,10 +75,6 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.StatefulSet, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
-	case *githubcomkdubboapinetworkingv1alpha3.VirtualService:
-		return gvk.VirtualService, true
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.VirtualService:
-		return gvk.VirtualService, true
 	default:
 		return config.GroupVersionKind{}, false
 	}

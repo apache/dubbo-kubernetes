@@ -18,6 +18,7 @@ package kubemesh
 
 import (
 	"fmt"
+
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
@@ -30,11 +31,11 @@ import (
 )
 
 const (
-	MeshGlobalSetupKey = "mesh"
+	MeshConfigKey = "mesh"
 )
 
-// NewConfigMapSource builds a MeshGlobalSetupSource reading from ConfigMap "name" with key "key".
-func NewConfigMapSource(client kube.Client, namespace, name, key string, opts krt.OptionsBuilder) meshwatcher.MeshGlobalSetupSource {
+// NewConfigMapSource builds a MeshConfigSource reading from ConfigMap "name" with key "key".
+func NewConfigMapSource(client kube.Client, namespace, name, key string, opts krt.OptionsBuilder) meshwatcher.MeshConfigSource {
 	clt := kclient.NewFiltered[*v1.ConfigMap](client, kclient.Filter{
 		Namespace:     namespace,
 		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
@@ -44,11 +45,11 @@ func NewConfigMapSource(client kube.Client, namespace, name, key string, opts kr
 	cmKey := types.NamespacedName{Namespace: namespace, Name: name}.String()
 	return krt.NewSingleton(func(ctx krt.HandlerContext) *string {
 		cm := ptr.Flatten(krt.FetchOne(ctx, cms, krt.FilterKey(cmKey)))
-		return meshGlobalSetupMapData(cm, key)
+		return meshConfigMapData(cm, key)
 	}, opts.WithName(fmt.Sprintf("ConfigMap_%s_%s", name, key))...)
 }
 
-func meshGlobalSetupMapData(cm *v1.ConfigMap, key string) *string {
+func meshConfigMapData(cm *v1.ConfigMap, key string) *string {
 	if cm == nil {
 		return nil
 	}
