@@ -28,8 +28,7 @@ func meshServiceToVirtualServiceConfig(msConfig config.Config) config.Config {
 		return r
 	}
 	vs := &networking.VirtualService{
-		Hosts:    append([]string(nil), ms.Hosts...),
-		ExportTo: append([]string(nil), ms.VisibleTo...),
+		Hosts: append([]string(nil), ms.Hosts...),
 	}
 	for _, route := range ms.Routes {
 		if route == nil || len(route.Service) == 0 {
@@ -69,7 +68,6 @@ func meshServiceToDestinationRuleConfig(msConfig config.Config) config.Config {
 	dr := &networking.DestinationRule{
 		Host:          firstMeshServiceHost(ms, r.Meta),
 		TrafficPolicy: ms.TrafficPolicy,
-		ExportTo:      append([]string(nil), ms.VisibleTo...),
 	}
 	seen := setsString{}
 	for _, route := range ms.Routes {

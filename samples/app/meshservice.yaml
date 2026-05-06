@@ -21,8 +21,6 @@ metadata:
 spec:
   hosts:
   - nginx.app.svc.cluster.local
-  visibleTo:
-  - "."
   routes:
   - service:
     - name: v1

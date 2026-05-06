@@ -232,11 +232,6 @@ spec:
                         x-kubernetes-int-or-string: true
                     type: object
                 type: object
-              visibleTo:
-                description: Namespaces that can see this mesh service.
-                items:
-                  type: string
-                type: array
             type: object
           status:
             properties:
