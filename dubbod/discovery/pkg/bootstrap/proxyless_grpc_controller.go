@@ -32,6 +32,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	configlabels "github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	meshconfig "github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
@@ -46,6 +47,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	pkiutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	caserver "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,6 +90,15 @@ func (s *Server) initProxylessGRPCWorkloads() error {
 
 	controller := newProxylessGRPCWorkloadController(s)
 	s.proxylessGRPCWorkloadController = controller
+	if s.XDSServer != nil {
+		previous := s.XDSServer.RuntimeConfigUpdate
+		s.XDSServer.RuntimeConfigUpdate = func(req *discoverymodel.PushRequest) {
+			if previous != nil {
+				previous(req)
+			}
+			controller.handleRuntimeConfigUpdate(req)
+		}
+	}
 	s.addStartFunc(proxylessGRPCControllerName, func(stop <-chan struct{}) error {
 		go controller.Run(stop)
 		return nil
@@ -162,6 +173,32 @@ func (c *proxylessGRPCWorkloadController) enqueueAllPods() {
 	for _, key := range c.managedPodKeys() {
 		c.queue.Add(key)
 	}
+}
+
+func (c *proxylessGRPCWorkloadController) handleRuntimeConfigUpdate(req *discoverymodel.PushRequest) {
+	if !proxylessGRPCRuntimeConfigNeedsUpdate(req) {
+		return
+	}
+	c.enqueueAllPods()
+}
+
+func proxylessGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool {
+	if req == nil {
+		return false
+	}
+	if req.Full || req.Forced || len(req.AddressesUpdated) > 0 {
+		return true
+	}
+	for cfg := range req.ConfigsUpdated {
+		switch cfg.Kind {
+		case kind.MeshService, kind.PeerAuthentication, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
+			return true
+		}
+	}
+	if req.Reason.Has(discoverymodel.EndpointUpdate) || req.Reason.Has(discoverymodel.HeadlessEndpointUpdate) || req.Reason.Has(discoverymodel.GlobalUpdate) {
+		return true
+	}
+	return false
 }
 
 func (c *proxylessGRPCWorkloadController) enqueueManagedPodsBatched(stop <-chan struct{}) {
@@ -313,8 +350,9 @@ type proxylessGRPCServiceRuntimeConfig struct {
 }
 
 type proxylessGRPCPortRuntimeConfig struct {
-	Name string `json:"name,omitempty"`
-	Port int    `json:"port"`
+	Name     string `json:"name,omitempty"`
+	Port     int    `json:"port"`
+	MTLSMode string `json:"mtlsMode,omitempty"`
 }
 
 type proxylessGRPCRouteRuntimeConfig struct {
@@ -327,6 +365,7 @@ type proxylessGRPCDestinationRuntimeConfig struct {
 	Host      string                               `json:"host"`
 	Subset    string                               `json:"subset,omitempty"`
 	Weight    int                                  `json:"weight"`
+	TLSMode   string                               `json:"tlsMode,omitempty"`
 	Endpoints []proxylessGRPCEndpointRuntimeConfig `json:"endpoints,omitempty"`
 }
 
@@ -350,7 +389,8 @@ func (c *proxylessGRPCWorkloadController) buildSecret(pod *corev1.Pod, current *
 		return nil, time.Time{}, err
 	}
 
-	runtimeConfigJSON, err := buildRuntimeConfigJSON(workload, nil, nil)
+	services, routes := c.buildRuntimeTrafficConfig()
+	runtimeConfigJSON, err := buildRuntimeConfigJSON(workload, services, routes)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -555,7 +595,7 @@ func (c *proxylessGRPCWorkloadController) buildRuntimeTrafficConfig() ([]proxyle
 		if svc == nil {
 			continue
 		}
-		serviceConfigs = append(serviceConfigs, buildRuntimeServiceConfig(endpoints, svc))
+		serviceConfigs = append(serviceConfigs, buildRuntimeServiceConfig(push, endpoints, svc))
 		for _, port := range svc.Ports {
 			if port == nil {
 				continue
@@ -566,7 +606,7 @@ func (c *proxylessGRPCWorkloadController) buildRuntimeTrafficConfig() ([]proxyle
 	return serviceConfigs, routeConfigs
 }
 
-func buildRuntimeServiceConfig(endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service) proxylessGRPCServiceRuntimeConfig {
+func buildRuntimeServiceConfig(push *discoverymodel.PushContext, endpointIndex *discoverymodel.EndpointIndex, svc *discoverymodel.Service) proxylessGRPCServiceRuntimeConfig {
 	cfg := proxylessGRPCServiceRuntimeConfig{
 		Host:      string(svc.Hostname),
 		Namespace: svc.Attributes.Namespace,
@@ -576,7 +616,11 @@ func buildRuntimeServiceConfig(endpointIndex *discoverymodel.EndpointIndex, svc 
 		if port == nil {
 			continue
 		}
-		cfg.Ports = append(cfg.Ports, proxylessGRPCPortRuntimeConfig{Name: port.Name, Port: port.Port})
+		cfg.Ports = append(cfg.Ports, proxylessGRPCPortRuntimeConfig{
+			Name:     port.Name,
+			Port:     port.Port,
+			MTLSMode: runtimeInboundMTLSMode(push, svc.Attributes.Namespace, port.Port),
+		})
 		cfg.Endpoints = append(cfg.Endpoints, runtimeEndpointsForService(endpointIndex, svc, port.Port, nil)...)
 	}
 	sortRuntimeEndpoints(cfg.Endpoints)
@@ -593,6 +637,7 @@ func buildRuntimeRouteConfig(push *discoverymodel.PushContext, endpointIndex *di
 		cfg.Destinations = []proxylessGRPCDestinationRuntimeConfig{{
 			Host:      string(svc.Hostname),
 			Weight:    100,
+			TLSMode:   runtimeDestinationTLSMode(push, svc.Attributes.Namespace, svc.Hostname, ""),
 			Endpoints: runtimeEndpointsForService(endpointIndex, svc, port, nil),
 		}}
 		return cfg
@@ -628,6 +673,7 @@ func buildRuntimeRouteConfig(push *discoverymodel.PushContext, endpointIndex *di
 				Host:      targetHost,
 				Subset:    subset,
 				Weight:    int(weighted.Weight),
+				TLSMode:   runtimeDestinationTLSMode(push, targetSvc.Attributes.Namespace, targetSvc.Hostname, subset),
 				Endpoints: endpoints,
 			})
 		}
@@ -636,6 +682,7 @@ func buildRuntimeRouteConfig(push *discoverymodel.PushContext, endpointIndex *di
 		cfg.Destinations = []proxylessGRPCDestinationRuntimeConfig{{
 			Host:      string(svc.Hostname),
 			Weight:    100,
+			TLSMode:   runtimeDestinationTLSMode(push, svc.Attributes.Namespace, svc.Hostname, ""),
 			Endpoints: runtimeEndpointsForService(endpointIndex, svc, port, nil),
 		}}
 	}
@@ -657,6 +704,52 @@ func runtimeSubsetSelector(push *discoverymodel.PushContext, namespace string, h
 		}
 	}
 	return nil, false
+}
+
+func runtimeDestinationTLSMode(push *discoverymodel.PushContext, namespace string, hostname host.Name, subset string) string {
+	if push == nil {
+		return ""
+	}
+	rule := push.DestinationRuleForService(namespace, hostname)
+	if rule == nil {
+		return ""
+	}
+	if subset != "" {
+		for _, ss := range rule.Subsets {
+			if ss.Name == subset {
+				if ss.TrafficPolicy != nil {
+					return runtimeTrafficPolicyTLSMode(ss.TrafficPolicy)
+				}
+				break
+			}
+		}
+	}
+	return runtimeTrafficPolicyTLSMode(rule.TrafficPolicy)
+}
+
+func runtimeTrafficPolicyTLSMode(policy *networking.TrafficPolicy) string {
+	if policy == nil || policy.Tls == nil {
+		return ""
+	}
+	return policy.Tls.Mode.String()
+}
+
+func runtimeInboundMTLSMode(push *discoverymodel.PushContext, namespace string, port int) string {
+	if push == nil || push.AuthenticationPolicies == nil || port <= 0 {
+		return ""
+	}
+	return runtimeMutualTLSModeString(push.AuthenticationPolicies.EffectiveMutualTLSMode(namespace, nil, uint32(port)))
+}
+
+func runtimeMutualTLSModeString(mode discoverymodel.MutualTLSMode) string {
+	switch mode {
+	case discoverymodel.MTLSDisable:
+		return "DISABLE"
+	case discoverymodel.MTLSStrict:
+		return "STRICT"
+	default:
+		return ""
+	}
 }
 
 func normalizeRuntimeRouteWeights(destinations []proxylessGRPCDestinationRuntimeConfig) {

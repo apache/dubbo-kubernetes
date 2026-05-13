@@ -20,9 +20,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/memory"
+	discoverymodel "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/config/host"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
+	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
+	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
+	security "github.com/kdubbo/api/security/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -169,6 +183,80 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	}
 }
 
+func TestBuildRuntimeTrafficConfigCapturesProxylessSecurity(t *testing.T) {
+	hostname := host.Name("provider.grpc-app.svc.cluster.local")
+	svc := newProxylessRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
+	push := newProxylessRuntimeTestPushContext(t, []config.Config{
+		newProxylessMTLSMeshServiceConfig("provider-mtls", "grpc-app", hostname),
+		newProxylessStrictPeerAuthenticationConfig("grpc-app-strict-mtls", "grpc-app"),
+	}, []*discoverymodel.Service{svc})
+
+	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
+	if len(serviceConfig.Ports) != 1 {
+		t.Fatalf("ports = %d, want 1", len(serviceConfig.Ports))
+	}
+	if got := serviceConfig.Ports[0].MTLSMode; got != "STRICT" {
+		t.Fatalf("mtlsMode = %q, want STRICT", got)
+	}
+
+	routeConfig := buildRuntimeRouteConfig(push, nil, svc, 17070)
+	if len(routeConfig.Destinations) != 2 {
+		t.Fatalf("destinations = %d, want 2", len(routeConfig.Destinations))
+	}
+	wantWeights := map[string]int{"v1": 50, "v2": 50}
+	for _, destination := range routeConfig.Destinations {
+		if destination.TLSMode != "DUBBO_MUTUAL" {
+			t.Fatalf("destination %s tlsMode = %q, want DUBBO_MUTUAL", destination.Subset, destination.TLSMode)
+		}
+		if wantWeights[destination.Subset] != destination.Weight {
+			t.Fatalf("destination %s weight = %d, want %d", destination.Subset, destination.Weight, wantWeights[destination.Subset])
+		}
+	}
+}
+
+func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *discoverymodel.PushRequest
+		want bool
+	}{
+		{
+			name: "full push",
+			req:  &discoverymodel.PushRequest{Full: true},
+			want: true,
+		},
+		{
+			name: "meshservice",
+			req: &discoverymodel.PushRequest{
+				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.MeshService, Name: "provider-mtls", Namespace: "grpc-app"}),
+			},
+			want: true,
+		},
+		{
+			name: "peerauthentication",
+			req: &discoverymodel.PushRequest{
+				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.PeerAuthentication, Name: "strict", Namespace: "grpc-app"}),
+			},
+			want: true,
+		},
+		{
+			name: "unrelated configmap",
+			req: &discoverymodel.PushRequest{
+				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.ConfigMap, Name: "ui", Namespace: "dubbo-system"}),
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := proxylessGRPCRuntimeConfigNeedsUpdate(tt.req); got != tt.want {
+				t.Fatalf("proxylessGRPCRuntimeConfigNeedsUpdate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestNextRotationTime(t *testing.T) {
 	now := time.Now()
 	rotations := map[types.NamespacedName]time.Time{
@@ -187,6 +275,117 @@ func TestNextRotationTime(t *testing.T) {
 	if _, found := nextRotationTime(nil); found {
 		t.Fatalf("nextRotationTime(nil) found = true, want false")
 	}
+}
+
+func newProxylessRuntimeTestPushContext(t *testing.T, configs []config.Config, services []*discoverymodel.Service) *discoverymodel.PushContext {
+	t.Helper()
+
+	store := memory.Make(collections.DubboGatewayAPI())
+	for _, cfg := range configs {
+		if _, err := store.Create(cfg); err != nil {
+			t.Fatalf("create config %s/%s: %v", cfg.Namespace, cfg.Name, err)
+		}
+	}
+
+	env := discoverymodel.NewEnvironment()
+	env.ConfigStore = store
+	env.ServiceDiscovery = proxylessRuntimeStaticServiceDiscovery{services: services}
+	env.Watcher = meshwatcher.ConfigAdapter(krt.NewStatic(&meshwatcher.MeshConfigResource{
+		MeshConfig: mesh.DefaultMeshConfig(),
+	}, true))
+	env.Init()
+
+	push := discoverymodel.NewPushContext()
+	push.InitContext(env, nil, nil)
+	return push
+}
+
+func newProxylessRuntimeTestService(name, namespace, hostname string, port int) *discoverymodel.Service {
+	return &discoverymodel.Service{
+		Hostname: host.Name(hostname),
+		Ports: discoverymodel.PortList{
+			{
+				Name:     "grpc",
+				Port:     port,
+				Protocol: protocol.HTTP2,
+			},
+		},
+		Attributes: discoverymodel.ServiceAttributes{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+func newProxylessMTLSMeshServiceConfig(name, namespace string, hostname host.Name) config.Config {
+	return config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.MeshService,
+			Name:             name,
+			Namespace:        namespace,
+			Domain:           "cluster.local",
+		},
+		Spec: &networking.MeshService{
+			Hosts: []string{string(hostname)},
+			TrafficPolicy: &networking.TrafficPolicy{
+				Tls: &networking.ClientTLSSettings{
+					Mode: networking.ClientTLSSettings_DUBBO_MUTUAL,
+				},
+			},
+			Routes: []*networking.MeshServiceRoute{{
+				Service: []*networking.ServiceDestination{{
+					Name:   "v1",
+					Host:   string(hostname),
+					Labels: map[string]string{"version": "v1"},
+					Port:   &networking.ServicePort{Number: 17070},
+					Weight: 50,
+				}, {
+					Name:   "v2",
+					Host:   string(hostname),
+					Labels: map[string]string{"version": "v2"},
+					Port:   &networking.ServicePort{Number: 17070},
+					Weight: 50,
+				}},
+			}},
+		},
+	}
+}
+
+func newProxylessStrictPeerAuthenticationConfig(name, namespace string) config.Config {
+	return config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.PeerAuthentication,
+			Name:             name,
+			Namespace:        namespace,
+			Domain:           "cluster.local",
+		},
+		Spec: &security.PeerAuthentication{
+			Mtls: &security.PeerAuthentication_MutualTLS{
+				Mode: security.PeerAuthentication_MutualTLS_STRICT,
+			},
+		},
+	}
+}
+
+type proxylessRuntimeStaticServiceDiscovery struct {
+	services []*discoverymodel.Service
+}
+
+func (s proxylessRuntimeStaticServiceDiscovery) Services() []*discoverymodel.Service {
+	return s.services
+}
+
+func (s proxylessRuntimeStaticServiceDiscovery) GetService(hostname host.Name) *discoverymodel.Service {
+	for _, svc := range s.services {
+		if svc.Hostname == hostname {
+			return svc
+		}
+	}
+	return nil
+}
+
+func (s proxylessRuntimeStaticServiceDiscovery) GetProxyServiceTargets(*discoverymodel.Proxy) []discoverymodel.ServiceTarget {
+	return nil
 }
 
 func TestScheduleRotationTracksEarliestTimer(t *testing.T) {
