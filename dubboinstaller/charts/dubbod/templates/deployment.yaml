@@ -40,7 +40,7 @@ spec:
       containers:
         - name: execute
           image: "kdubbo/dubbod:debug"
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           args:
             - "execute"
             - --domain

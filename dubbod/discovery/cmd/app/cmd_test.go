@@ -32,7 +32,7 @@ func TestRootCommandRegistersRenamedCommands(t *testing.T) {
 		commands[command.Name()] = true
 	}
 
-	for _, name := range []string{"execute", "xclient"} {
+	for _, name := range []string{"execute", "xclient", "xserver"} {
 		if !commands[name] {
 			t.Fatalf("expected command %q to be registered; commands=%v", name, commands)
 		}
@@ -47,7 +47,7 @@ func TestRootCommandRegistersRenamedCommands(t *testing.T) {
 func TestCommandsSetLogScopes(t *testing.T) {
 	defer func() {
 		log.SetDefaultScope("log")
-		for _, name := range []string{"log", executeLogScope, waitLogScope, xclientLogScope} {
+		for _, name := range []string{"log", executeLogScope, waitLogScope, xclientLogScope, xserverLogScope} {
 			if scope := log.FindScope(name); scope != nil {
 				scope.SetOutput(os.Stderr)
 			}
@@ -62,6 +62,7 @@ func TestCommandsSetLogScopes(t *testing.T) {
 		{command: "execute", scope: "setup"},
 		{command: "wait", scope: "wait"},
 		{command: "xclient", scope: "xclient"},
+		{command: "xserver", scope: "xserver"},
 	} {
 		t.Run(tt.command, func(t *testing.T) {
 			var out bytes.Buffer

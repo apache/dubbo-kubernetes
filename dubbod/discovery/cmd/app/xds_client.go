@@ -39,6 +39,7 @@ import (
 	corev1 "github.com/kdubbo/xds-api/core/v1"
 	endpointv1 "github.com/kdubbo/xds-api/endpoint/v1"
 	hcmv1 "github.com/kdubbo/xds-api/extensions/filters/v1/network/http_connection_manager"
+	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 	xdsresolver "github.com/kdubbo/xds-api/grpc/resolver"
 	listenerv1 "github.com/kdubbo/xds-api/listener/v1"
 	routev1 "github.com/kdubbo/xds-api/route/v1"
@@ -85,7 +86,11 @@ type xdsDestination struct {
 	Host      string        `json:"host"`
 	Subset    string        `json:"subset,omitempty"`
 	Weight    uint32        `json:"weight"`
+	TLSMode   string        `json:"tlsMode,omitempty"`
+	SNI       string        `json:"sni,omitempty"`
 	Endpoints []xdsEndpoint `json:"endpoints,omitempty"`
+
+	tlsContext *tlsv1.UpstreamTlsContext
 }
 
 type xdsRouteSnapshot struct {
@@ -102,12 +107,15 @@ type sampleADSClient struct {
 	host   string
 	port   int
 
-	mu        sync.RWMutex
-	subs      map[string][]string
-	route     map[string]uint32
-	endpoints map[string][]xdsEndpoint
-	updates   chan struct{}
-	errs      chan error
+	mu            sync.RWMutex
+	subs          map[string][]string
+	route         map[string]uint32
+	endpoints     map[string][]xdsEndpoint
+	clusterTLS    map[string]*tlsv1.UpstreamTlsContext
+	updates       chan struct{}
+	errs          chan error
+	bootstrapPath string
+	bootstrap     *xdsresolver.BootstrapConfig
 }
 
 func newXClientCommand() *cobra.Command {
@@ -232,17 +240,19 @@ func newSampleADSClient(ctx context.Context, opts *xdsClientOptions) (*sampleADS
 		return nil, fmt.Errorf("open ADS stream: %w", err)
 	}
 	return &sampleADSClient{
-		conn:      conn,
-		stream:    stream,
-		node:      node,
-		target:    opts.target,
-		host:      opts.host,
-		port:      opts.port,
-		subs:      map[string][]string{},
-		route:     map[string]uint32{},
-		endpoints: map[string][]xdsEndpoint{},
-		updates:   make(chan struct{}, 1),
-		errs:      make(chan error, 1),
+		conn:          conn,
+		stream:        stream,
+		node:          node,
+		target:        opts.target,
+		host:          opts.host,
+		port:          opts.port,
+		subs:          map[string][]string{},
+		route:         map[string]uint32{},
+		endpoints:     map[string][]xdsEndpoint{},
+		clusterTLS:    map[string]*tlsv1.UpstreamTlsContext{},
+		updates:       make(chan struct{}, 1),
+		errs:          make(chan error, 1),
+		bootstrapPath: opts.bootstrapPath,
 	}, nil
 }
 
@@ -410,10 +420,16 @@ func (c *sampleADSClient) handleResponse(resp *discovery.DiscoveryResponse) erro
 			return c.subscribe(v1.ClusterType, clusters)
 		}
 	case v1.ClusterType:
-		edsNames, err := edsNamesFromClusters(resp.Resources)
+		edsNames, clusterTLS, err := edsNamesAndTLSFromClusters(resp.Resources)
 		if err != nil {
 			return err
 		}
+		c.mu.Lock()
+		for clusterName, tlsContext := range clusterTLS {
+			c.clusterTLS[clusterName] = tlsContext
+		}
+		c.mu.Unlock()
+		c.notify()
 		if len(edsNames) > 0 {
 			return c.subscribe(v1.EndpointType, edsNames)
 		}
@@ -478,7 +494,7 @@ func (c *sampleADSClient) readySnapshot(expected map[string]uint32) (xdsRouteSna
 			continue
 		}
 		eps := append([]xdsEndpoint(nil), c.endpoints[clusterName]...)
-		dest := destinationFromCluster(clusterName, weight, eps)
+		dest := destinationFromCluster(clusterName, weight, eps, c.clusterTLS[clusterName])
 		snapshot.Destinations = append(snapshot.Destinations, dest)
 	}
 	sort.Slice(snapshot.Destinations, func(i, j int) bool {
@@ -569,13 +585,15 @@ func routeWeightsFromRoutes(resources []*anypb.Any) (map[string]uint32, []string
 	return weights, sortedUnique(clusters), nil
 }
 
-func edsNamesFromClusters(resources []*anypb.Any) ([]string, error) {
+func edsNamesAndTLSFromClusters(resources []*anypb.Any) ([]string, map[string]*tlsv1.UpstreamTlsContext, error) {
 	out := make([]string, 0, len(resources))
+	clusterTLS := map[string]*tlsv1.UpstreamTlsContext{}
 	for _, resource := range resources {
 		c := &clusterv1.Cluster{}
 		if err := proto.Unmarshal(resource.Value, c); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		clusterTLS[c.Name] = upstreamTLSContextFromCluster(c)
 		serviceName := c.GetName()
 		if eds := c.GetEdsClusterConfig(); eds != nil && eds.GetServiceName() != "" {
 			serviceName = eds.GetServiceName()
@@ -584,7 +602,22 @@ func edsNamesFromClusters(resources []*anypb.Any) ([]string, error) {
 			out = append(out, serviceName)
 		}
 	}
-	return sortedUnique(out), nil
+	return sortedUnique(out), clusterTLS, nil
+}
+
+func upstreamTLSContextFromCluster(c *clusterv1.Cluster) *tlsv1.UpstreamTlsContext {
+	if c == nil || c.TransportSocket == nil {
+		return nil
+	}
+	typedConfig := c.TransportSocket.GetTypedConfig()
+	if typedConfig == nil {
+		return nil
+	}
+	upstreamTLS := &tlsv1.UpstreamTlsContext{}
+	if err := anypb.UnmarshalTo(typedConfig, upstreamTLS, proto.UnmarshalOptions{}); err != nil {
+		return nil
+	}
+	return upstreamTLS
 }
 
 func endpointsFromAssignments(resources []*anypb.Any) (map[string][]xdsEndpoint, error) {
@@ -622,12 +655,16 @@ func endpointsFromAssignments(resources []*anypb.Any) (map[string][]xdsEndpoint,
 	return out, nil
 }
 
-func destinationFromCluster(clusterName string, weight uint32, endpoints []xdsEndpoint) xdsDestination {
+func destinationFromCluster(clusterName string, weight uint32, endpoints []xdsEndpoint, tlsContext *tlsv1.UpstreamTlsContext) xdsDestination {
 	parts := strings.Split(clusterName, "|")
-	dest := xdsDestination{Cluster: clusterName, Weight: weight, Endpoints: endpoints}
+	dest := xdsDestination{Cluster: clusterName, Weight: weight, Endpoints: endpoints, tlsContext: tlsContext}
 	if len(parts) == 4 {
 		dest.Host = parts[3]
 		dest.Subset = parts[2]
+	}
+	if tlsContext != nil {
+		dest.TLSMode = "DUBBO_MUTUAL"
+		dest.SNI = tlsContext.Sni
 	}
 	return dest
 }
@@ -638,7 +675,7 @@ func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot
 		return err
 	}
 	currentSignature := snapshotSignature(snapshot)
-	client := &http.Client{Timeout: requestTimeout}
+	clients := newSampleRequestClients(adsClient, requestTimeout)
 	for i := 0; i < count; i++ {
 		if updated, ok := adsClient.readySnapshot(nil); ok {
 			updatedSignature := snapshotSignature(updated)
@@ -651,17 +688,21 @@ func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot
 				}
 			}
 		}
-		_, endpoint, err := picker.Next()
+		destination, endpoint, err := picker.Next()
+		if err != nil {
+			return err
+		}
+		httpClient, scheme, err := clients.clientForDestination(destination)
 		if err != nil {
 			return err
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-			fmt.Sprintf("http://%s/", net.JoinHostPort(endpoint.Address, strconv.Itoa(int(endpoint.Port)))), nil)
+			fmt.Sprintf("%s://%s/", scheme, net.JoinHostPort(endpoint.Address, strconv.Itoa(int(endpoint.Port)))), nil)
 		if err != nil {
 			return err
 		}
 		req.Host = snapshot.Host
-		resp, err := client.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return err
 		}
@@ -684,6 +725,70 @@ func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot
 		}
 	}
 	return nil
+}
+
+type sampleRequestClients struct {
+	adsClient      *sampleADSClient
+	requestTimeout time.Duration
+	plaintext      *http.Client
+	tlsClients     map[string]*http.Client
+}
+
+func newSampleRequestClients(adsClient *sampleADSClient, requestTimeout time.Duration) *sampleRequestClients {
+	return &sampleRequestClients{
+		adsClient:      adsClient,
+		requestTimeout: requestTimeout,
+		plaintext:      &http.Client{Timeout: requestTimeout},
+		tlsClients:     map[string]*http.Client{},
+	}
+}
+
+func (c *sampleRequestClients) clientForDestination(destination xdsDestination) (*http.Client, string, error) {
+	if destination.tlsContext == nil {
+		return c.plaintext, "http", nil
+	}
+	bootstrap, err := c.adsClient.bootstrapConfig()
+	if err != nil {
+		return nil, "", err
+	}
+	tlsConfig, err := xdsresolver.DataPlaneTLSConfigFromBootstrap(bootstrap, destination.tlsContext, destination.Host)
+	if err != nil {
+		return nil, "", err
+	}
+	key := destination.TLSMode + "|" + destination.SNI
+	if key == "|" {
+		key = destination.Cluster
+	}
+	if cached := c.tlsClients[key]; cached != nil {
+		return cached, "https", nil
+	}
+	client := &http.Client{
+		Timeout: c.requestTimeout,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+	c.tlsClients[key] = client
+	return client, "https", nil
+}
+
+func (c *sampleADSClient) bootstrapConfig() (*xdsresolver.BootstrapConfig, error) {
+	if c.bootstrap != nil {
+		return c.bootstrap, nil
+	}
+	path := c.bootstrapPath
+	if path == "" {
+		path = os.Getenv("GRPC_XDS_BOOTSTRAP")
+	}
+	if path == "" {
+		return nil, fmt.Errorf("data-plane mTLS requires GRPC_XDS_BOOTSTRAP or --bootstrap")
+	}
+	bootstrap, err := xdsresolver.ParseBootstrap(path)
+	if err != nil {
+		return nil, err
+	}
+	c.bootstrap = bootstrap
+	return c.bootstrap, nil
 }
 
 func activeDestinations(snapshot xdsRouteSnapshot) []xdsDestination {

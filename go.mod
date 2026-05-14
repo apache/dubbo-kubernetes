@@ -55,7 +55,7 @@ require (
 	github.com/heroku/color v0.0.6
 	github.com/kdubbo/api v0.0.0-20260513025923-86f2ad63c4ab
 	github.com/kdubbo/client-go v0.0.0-20260506035847-a9460155f65d
-	github.com/kdubbo/xds-api v0.0.0-20260513025923-effbe30b748a
+	github.com/kdubbo/xds-api v0.0.0-20260513100730-a07294e322cc
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1

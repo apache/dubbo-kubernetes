@@ -83,17 +83,18 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 		t.Fatalf("RunTemplate() failed: %v", err)
 	}
 
-	if len(injectedPod.Spec.Containers) != 1 {
-		t.Fatalf("template containers = %d, want 1 hard-coded application container overlay", len(injectedPod.Spec.Containers))
+	if len(injectedPod.Spec.Containers) != 2 {
+		t.Fatalf("template containers = %d, want app overlay plus xserver", len(injectedPod.Spec.Containers))
 	}
 	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
 
-	if len(mergedPod.Spec.Containers) != 1 {
-		t.Fatalf("containers = %d, want 1 application container", len(mergedPod.Spec.Containers))
+	if len(mergedPod.Spec.Containers) != 2 {
+		t.Fatalf("containers = %d, want application container plus xserver", len(mergedPod.Spec.Containers))
 	}
 	assertDirectXDSConnection(t, mergedPod, "app", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
+	assertXServerContainer(t, mergedPod)
 }
 
 func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing.T) {
@@ -152,10 +153,11 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
-	if len(mergedPod.Spec.Containers) != 1 {
-		t.Fatalf("containers = %d, want original nginx container only", len(mergedPod.Spec.Containers))
+	if len(mergedPod.Spec.Containers) != 2 {
+		t.Fatalf("containers = %d, want original nginx container plus xserver", len(mergedPod.Spec.Containers))
 	}
 	assertDirectXDSConnection(t, mergedPod, "nginx", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
+	assertXServerContainer(t, mergedPod)
 	if got := mergedPod.Spec.Volumes[0].Secret.SecretName; got == ProxylessGRPCSecretName("") {
 		t.Fatalf("secret name = %q, want generateName-based secret", got)
 	}
@@ -225,6 +227,24 @@ func assertNoArgs(t *testing.T, pod *corev1.Pod) {
 	}
 	if len(pod.Spec.Containers[0].Args) != 0 {
 		t.Fatalf("args = %v, want no launcher args", pod.Spec.Containers[0].Args)
+	}
+}
+
+func assertXServerContainer(t *testing.T, pod *corev1.Pod) {
+	t.Helper()
+	container := FindContainer(ProxylessXServerContainerName, pod.Spec.Containers)
+	if container == nil {
+		t.Fatalf("%s container missing", ProxylessXServerContainerName)
+	}
+	if container.Image != "kdubbo/dubbod:debug" {
+		t.Fatalf("xserver image = %q, want kdubbo/dubbod:debug", container.Image)
+	}
+	wantArgs := []string{"xserver", "--listen", ":25080", "--upstream", "127.0.0.1:80"}
+	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
+		t.Fatalf("xserver args = %v, want %v", container.Args, wantArgs)
+	}
+	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
+		t.Fatalf("xserver proxyless xds mount missing")
 	}
 }
 
