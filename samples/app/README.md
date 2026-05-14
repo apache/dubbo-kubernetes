@@ -15,13 +15,11 @@ kubectl -n app rollout status deploy/nginx-v2 --timeout=180s
 kubectl -n app rollout status deploy/nginx-consumer --timeout=180s
 ```
 
-`dubbo-injection=enabled` 开启后，会自动注入 `grpc-engine`。`xclient` 只主动发起请求，不监听端口；服务端 Pod 会注入 `xserver` 接收 mTLS 并转发到本地 nginx，Service 会被准入层改到 `targetPort: 25080`，样例 NetworkPolicy 会禁止从其他 Pod 直连 nginx `80`。
+`dubbo-injection=enabled` 开启后，会自动注入 `grpc-engine`。`xclient` 只主动发起请求，不监听端口；服务端 Pod 会注入 `xserver` 接收 mTLS 并转发到本地 nginx，Service 会被准入层改到 `targetPort: 15080`，样例 NetworkPolicy 会禁止从其他 Pod 直连 nginx `80`。
 
 ## 配置流量规则
 
 ```bash
-kubectl -n app delete virtualservice nginx-weights --ignore-not-found=true
-kubectl -n app delete destinationrule nginx-versions --ignore-not-found=true
 kubectl apply -f samples/app/meshservice.yaml
 ```
 
@@ -52,7 +50,7 @@ kubectl -n app exec deploy/nginx-consumer -- \
   dubbod xclient --expect v1=50,v2=50 100 | sort | uniq -c
 ```
 
-`--print-route` 里应看到 `tlsMode: DUBBO_MUTUAL`，endpoint 端口应为 `25080`。
+`--print-route` 里应看到 `tlsMode: DUBBO_MUTUAL`，endpoint 端口应为 `15080`。
 
 确认 Service 也指向 `xserver`：
 
@@ -63,7 +61,7 @@ kubectl -n app run plain-curl --rm -i --restart=Never \
   curl -sv --max-time 5 http://nginx.app.svc.cluster.local/
 ```
 
-第一条应输出 `25080`，第二条不能返回 `nginx v1` 或 `nginx v2`。
+第一条应输出 `15080`，第二条不能返回 `nginx v1` 或 `nginx v2`。
 
 ## 在线更新验证
 
@@ -79,8 +77,6 @@ kubectl -n app exec deploy/nginx-consumer -- dubbod xclient --request-interval 2
 
 ```bash
 kubectl -n app delete meshservice nginx-routing --ignore-not-found=true
-kubectl -n app delete virtualservice nginx-weights --ignore-not-found=true
-kubectl -n app delete destinationrule nginx-versions --ignore-not-found=true
 kubectl delete -f samples/app/deployment.yaml --ignore-not-found=true
 kubectl delete ns app
 ```

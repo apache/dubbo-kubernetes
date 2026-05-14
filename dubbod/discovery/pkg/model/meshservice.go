@@ -30,27 +30,14 @@ func meshServiceToVirtualServiceConfig(msConfig config.Config) config.Config {
 	vs := &networking.VirtualService{
 		Hosts: append([]string(nil), ms.Hosts...),
 	}
-	httpRoute := &networking.HTTPRoute{}
-	for _, route := range ms.Routes {
-		if route == nil || len(route.Service) == 0 {
+	for _, rule := range ms.Rules {
+		if rule == nil {
 			continue
 		}
-		for _, svc := range route.Service {
-			if svc == nil {
-				continue
-			}
-			httpRoute.Route = append(httpRoute.Route, &networking.HTTPRouteDestination{
-				Destination: &networking.Destination{
-					Host:   destinationHostForService(ms, svc, msConfig.Meta),
-					Subset: destinationSubsetForService(svc),
-				},
-				Weight: svc.Weight,
-			})
-		}
+		appendMeshServiceHTTPRoutes(&vs.Http, ms, msConfig.Meta, rule.Route, rule.Match)
+		appendMeshServiceHTTPRoutes(&vs.Http, ms, msConfig.Meta, rule.Routes, nil)
 	}
-	if len(httpRoute.Route) > 0 {
-		vs.Http = append(vs.Http, httpRoute)
-	}
+	appendMeshServiceHTTPRoutes(&vs.Http, ms, msConfig.Meta, ms.Routes, nil)
 	r.Spec = vs
 	return resolveVirtualServiceShortnames(r)
 }
@@ -80,35 +67,30 @@ func meshServiceToDestinationRuleConfigs(msConfig config.Config) []config.Config
 		return dr
 	}
 
-	for _, route := range ms.Routes {
-		if route == nil {
-			continue
+	forEachMeshServiceDestination(ms, func(svc *networking.ServiceDestination) {
+		if svc == nil {
+			return
 		}
-		for _, svc := range route.Service {
-			if svc == nil {
-				continue
+		if serviceDestinationUsesLabels(svc) {
+			dr := ruleForHost(hostForLabelDestination(ms, svc))
+			if dr == nil || svc.Name == "" || hasSubset(dr, svc.Name) {
+				return
 			}
-			if serviceDestinationUsesLabels(svc) {
-				dr := ruleForHost(hostForLabelDestination(ms, svc))
-				if dr == nil || svc.Name == "" || hasSubset(dr, svc.Name) {
-					continue
-				}
-				dr.Subsets = append(dr.Subsets, &networking.Subset{
-					Name:          svc.Name,
-					Labels:        cloneStringMap(svc.Labels),
-					TrafficPolicy: svc.TrafficPolicy,
-				})
-				continue
-			}
-			if svc.TrafficPolicy != nil {
-				if dr := ruleForHost(destinationHostForService(ms, svc, r.Meta)); dr != nil {
-					dr.TrafficPolicy = svc.TrafficPolicy
-				}
-			} else if ms.TrafficPolicy != nil {
-				ruleForHost(destinationHostForService(ms, svc, r.Meta))
-			}
+			dr.Subsets = append(dr.Subsets, &networking.Subset{
+				Name:          svc.Name,
+				Labels:        cloneStringMap(svc.Labels),
+				TrafficPolicy: svc.TrafficPolicy,
+			})
+			return
 		}
-	}
+		if svc.TrafficPolicy != nil {
+			if dr := ruleForHost(destinationHostForService(ms, svc, r.Meta)); dr != nil {
+				dr.TrafficPolicy = svc.TrafficPolicy
+			}
+		} else if ms.TrafficPolicy != nil {
+			ruleForHost(destinationHostForService(ms, svc, r.Meta))
+		}
+	})
 
 	if len(order) == 0 {
 		if host := firstMeshServiceHost(ms, r.Meta); host != "" {
@@ -133,6 +115,54 @@ func meshServiceToDestinationRuleConfigs(msConfig config.Config) []config.Config
 	return out
 }
 
+func appendMeshServiceHTTPRoutes(out *[]*networking.HTTPRoute, ms *networking.MeshService, meta config.Meta, routes []*networking.MeshServiceRoute, matches []*networking.HTTPMatchRequest) {
+	httpRoute := &networking.HTTPRoute{
+		Match: append([]*networking.HTTPMatchRequest(nil), matches...),
+	}
+	for _, route := range routes {
+		if route == nil {
+			continue
+		}
+		for _, svc := range route.Service {
+			if svc == nil {
+				continue
+			}
+			httpRoute.Route = append(httpRoute.Route, &networking.HTTPRouteDestination{
+				Destination: &networking.Destination{
+					Host:   destinationHostForService(ms, svc, meta),
+					Subset: destinationSubsetForService(svc),
+				},
+				Weight: svc.Weight,
+			})
+		}
+	}
+	if len(httpRoute.Route) > 0 {
+		*out = append(*out, httpRoute)
+	}
+}
+
+func forEachMeshServiceDestination(ms *networking.MeshService, visit func(*networking.ServiceDestination)) {
+	for _, rule := range ms.Rules {
+		if rule == nil {
+			continue
+		}
+		forEachMeshServiceRouteDestination(rule.Route, visit)
+		forEachMeshServiceRouteDestination(rule.Routes, visit)
+	}
+	forEachMeshServiceRouteDestination(ms.Routes, visit)
+}
+
+func forEachMeshServiceRouteDestination(routes []*networking.MeshServiceRoute, visit func(*networking.ServiceDestination)) {
+	for _, route := range routes {
+		if route == nil {
+			continue
+		}
+		for _, svc := range route.Service {
+			visit(svc)
+		}
+	}
+}
+
 func meshServiceToDestinationRuleConfig(msConfig config.Config) config.Config {
 	rules := meshServiceToDestinationRuleConfigs(msConfig)
 	if len(rules) == 0 {
@@ -147,15 +177,14 @@ func firstMeshServiceHost(ms *networking.MeshService, meta config.Meta) string {
 			return string(ResolveShortnameToFQDN(h, meta))
 		}
 	}
-	for _, route := range ms.Routes {
-		if route == nil {
-			continue
+	host := ""
+	forEachMeshServiceDestination(ms, func(svc *networking.ServiceDestination) {
+		if host == "" && svc != nil && svc.Host != "" {
+			host = string(ResolveShortnameToFQDN(svc.Host, meta))
 		}
-		for _, svc := range route.Service {
-			if svc != nil && svc.Host != "" {
-				return string(ResolveShortnameToFQDN(svc.Host, meta))
-			}
-		}
+	})
+	if host != "" {
+		return host
 	}
 	return ""
 }

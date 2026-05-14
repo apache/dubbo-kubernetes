@@ -36,7 +36,7 @@ const (
 	ProxylessGRPCConfigFileName    = "dubbo-grpc-xds.json"
 	ProxylessGRPCConfigPath        = ProxylessXDSMountPath + "/" + ProxylessGRPCConfigFileName
 	ProxylessXServerContainerName  = "dubbo-xserver"
-	ProxylessXServerPort           = 25080
+	ProxylessXServerPort           = 15080
 )
 
 var ProxylessInjectTemplatesAnnoName = annotation.OrgApacheDubboInjectTemplates.Name

@@ -142,8 +142,8 @@ func TestInjectServiceCreatesXServerTargetPortPatch(t *testing.T) {
 	if resp.PatchType == nil || *resp.PatchType != "JSONPatch" {
 		t.Fatalf("PatchType = %v, want JSONPatch", resp.PatchType)
 	}
-	if !strings.Contains(string(resp.Patch), `"value":25080`) {
-		t.Fatalf("patch = %s, want targetPort 25080", string(resp.Patch))
+	if !strings.Contains(string(resp.Patch), `"value":15080`) {
+		t.Fatalf("patch = %s, want targetPort 15080", string(resp.Patch))
 	}
 }
 

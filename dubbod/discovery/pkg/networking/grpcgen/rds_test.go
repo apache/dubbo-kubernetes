@@ -74,6 +74,51 @@ func TestBuildHTTPRouteProxylessOutboundPrefersVirtualServiceOverGatewayHTTPRout
 	}
 }
 
+func TestBuildHTTPRouteFromMeshServiceRulesPreservesMatchesAndFallback(t *testing.T) {
+	push := newRDSTestPushContext(t, []config.Config{
+		newMatchedMeshServiceConfig("product-routing", "default", "product.default.svc.cluster.local"),
+	}, []*model.Service{
+		newRDSTestService("product", "default", "product.default.svc.cluster.local", 80),
+	})
+
+	rc := buildHTTPRoute(
+		&model.Proxy{ID: "consumer.default", Type: model.Proxyless},
+		push,
+		"outbound|80||product.default.svc.cluster.local",
+	)
+	if rc == nil {
+		t.Fatal("buildHTTPRoute() returned nil")
+	}
+	routes := rc.VirtualHosts[0].Routes
+	if len(routes) != 2 {
+		t.Fatalf("routes = %d, want matched route plus fallback", len(routes))
+	}
+	if got := routes[0].GetMatch().GetPrefix(); got != "/product" {
+		t.Fatalf("first route prefix = %q, want /product", got)
+	}
+	headers := routes[0].GetMatch().GetHeaders()
+	if len(headers) != 1 || headers[0].GetName() != "end-user" || headers[0].GetExactMatch() != "jason" {
+		t.Fatalf("first route headers = %v, want end-user exact jason", headers)
+	}
+
+	first := weightedClustersByName(t, routes[0])
+	wantFirst := map[string]uint32{
+		"outbound|80|v1|product.default.svc.cluster.local": 100,
+	}
+	if !reflect.DeepEqual(first, wantFirst) {
+		t.Fatalf("first route weighted clusters = %v, want %v", first, wantFirst)
+	}
+
+	fallback := weightedClustersByName(t, routes[1])
+	wantFallback := map[string]uint32{
+		"outbound|80|v2|product.default.svc.cluster.local": 20,
+		"outbound|80|v3|product.default.svc.cluster.local": 80,
+	}
+	if !reflect.DeepEqual(fallback, wantFallback) {
+		t.Fatalf("fallback weighted clusters = %v, want %v", fallback, wantFallback)
+	}
+}
+
 func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*model.Service) *model.PushContext {
 	t.Helper()
 
@@ -123,6 +168,53 @@ func newWeightedMeshServiceConfig(name, namespace, hostname string) config.Confi
 					},
 				},
 			},
+		},
+	}
+}
+
+func newMatchedMeshServiceConfig(name, namespace, hostname string) config.Config {
+	return config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.MeshService,
+			Name:             name,
+			Namespace:        namespace,
+			Domain:           "cluster.local",
+		},
+		Spec: &networking.MeshService{
+			Hosts: []string{hostname},
+			Rules: []*networking.MeshServiceRule{{
+				Match: []*networking.HTTPMatchRequest{{
+					Uri: &networking.StringMatch{
+						MatchType: &networking.StringMatch_Prefix{Prefix: "/product"},
+					},
+					Headers: map[string]*networking.StringMatch{
+						"end-user": {
+							MatchType: &networking.StringMatch_Exact{Exact: "jason"},
+						},
+					},
+				}},
+				Route: []*networking.MeshServiceRoute{{
+					Service: []*networking.ServiceDestination{{
+						Name:   "v1",
+						Host:   hostname,
+						Labels: map[string]string{"version": "v1"},
+						Weight: 100,
+					}},
+				}},
+				Routes: []*networking.MeshServiceRoute{{
+					Service: []*networking.ServiceDestination{{
+						Name:   "v2",
+						Host:   hostname,
+						Labels: map[string]string{"version": "v2"},
+						Weight: 20,
+					}, {
+						Name:   "v3",
+						Host:   hostname,
+						Labels: map[string]string{"version": "v3"},
+						Weight: 80,
+					}},
+				}},
+			}},
 		},
 	}
 }

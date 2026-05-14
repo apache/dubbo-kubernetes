@@ -75,6 +75,69 @@ func TestMeshServiceToVirtualServiceConfigKeepsLabelSubsetRoute(t *testing.T) {
 	}
 }
 
+func TestMeshServiceToVirtualServiceConfigBuildsMatchedRouteBeforeFallback(t *testing.T) {
+	cfg := config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.MeshService,
+			Name:             "product-routing",
+			Namespace:        "default",
+			Domain:           "cluster.local",
+		},
+		Spec: &networking.MeshService{
+			Hosts: []string{"product.default.svc.cluster.local"},
+			Rules: []*networking.MeshServiceRule{{
+				Match: []*networking.HTTPMatchRequest{{
+					Uri: &networking.StringMatch{
+						MatchType: &networking.StringMatch_Prefix{Prefix: "/product"},
+					},
+					Headers: map[string]*networking.StringMatch{
+						"end-user": {
+							MatchType: &networking.StringMatch_Exact{Exact: "jason"},
+						},
+					},
+				}},
+				Route: []*networking.MeshServiceRoute{{
+					Service: []*networking.ServiceDestination{{
+						Name:   "v1",
+						Host:   "product.default.svc.cluster.local",
+						Labels: map[string]string{"version": "v1"},
+						Weight: 100,
+					}},
+				}},
+				Routes: []*networking.MeshServiceRoute{{
+					Service: []*networking.ServiceDestination{{
+						Name:   "v2",
+						Host:   "product.default.svc.cluster.local",
+						Labels: map[string]string{"version": "v2"},
+						Weight: 20,
+					}, {
+						Name:   "v3",
+						Host:   "product.default.svc.cluster.local",
+						Labels: map[string]string{"version": "v3"},
+						Weight: 80,
+					}},
+				}},
+			}},
+		},
+	}
+
+	got := meshServiceToVirtualServiceConfig(cfg).Spec.(*networking.VirtualService)
+	if len(got.Http) != 2 {
+		t.Fatalf("http routes = %d, want matched route plus fallback", len(got.Http))
+	}
+	if got.Http[0].GetMatch()[0].GetUri().GetPrefix() != "/product" {
+		t.Fatalf("first route uri match = %v, want /product prefix", got.Http[0].GetMatch())
+	}
+	if got.Http[0].GetMatch()[0].GetHeaders()["end-user"].GetExact() != "jason" {
+		t.Fatalf("first route header match = %v, want end-user exact jason", got.Http[0].GetMatch())
+	}
+	if len(got.Http[1].GetMatch()) != 0 {
+		t.Fatalf("fallback route match = %v, want empty", got.Http[1].GetMatch())
+	}
+	assertHTTPDestination(t, got.Http[0].Route[0], "product.default.svc.cluster.local", "v1", 100)
+	assertHTTPDestination(t, got.Http[1].Route[1], "product.default.svc.cluster.local", "v3", 80)
+}
+
 func TestMeshServiceToDestinationRuleConfigsBuildsServiceTrafficPolicies(t *testing.T) {
 	cfg := newModelTestMeshService("reviews-routing", "default", "reviews.default.svc.cluster.local", []*networking.MeshServiceRoute{{
 		Service: []*networking.ServiceDestination{

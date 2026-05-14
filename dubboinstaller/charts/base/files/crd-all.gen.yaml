@@ -51,7 +51,7 @@ spec:
                   type: string
                 type: array
               routes:
-                description: Ordered route entries.
+                description: Ordered fallback route entries.
                 items:
                   properties:
                     service:
@@ -110,15 +110,40 @@ spec:
                   type: object
                 type: array
               rules:
-                description: Match rules for selecting traffic.
-                properties:
-                  match:
-                    description: Multiple match entries are ORed; fields inside one
-                      match entry are ANDed.
-                    items:
-                      properties:
-                        headers:
-                          additionalProperties:
+                description: Ordered routing rules.
+                items:
+                  properties:
+                    match:
+                      description: Match conditions for the primary route entries.
+                      items:
+                        properties:
+                          headers:
+                            additionalProperties:
+                              oneOf:
+                              - not:
+                                  anyOf:
+                                  - required:
+                                    - exact
+                                  - required:
+                                    - prefix
+                                  - required:
+                                    - regex
+                              - required:
+                                - exact
+                              - required:
+                                - prefix
+                              - required:
+                                - regex
+                              properties:
+                                exact:
+                                  type: string
+                                prefix:
+                                  type: string
+                                regex:
+                                  type: string
+                              type: object
+                            type: object
+                          host:
                             oneOf:
                             - not:
                                 anyOf:
@@ -142,37 +167,7 @@ spec:
                               regex:
                                 type: string
                             type: object
-                          type: object
-                        method:
-                          oneOf:
-                          - not:
-                              anyOf:
-                              - required:
-                                - exact
-                              - required:
-                                - prefix
-                              - required:
-                                - regex
-                          - required:
-                            - exact
-                          - required:
-                            - prefix
-                          - required:
-                            - regex
-                          properties:
-                            exact:
-                              type: string
-                            prefix:
-                              type: string
-                            regex:
-                              type: string
-                          type: object
-                        port:
-                          maximum: 4294967295
-                          minimum: 0
-                          type: integer
-                        queryParams:
-                          additionalProperties:
+                          method:
                             oneOf:
                             - not:
                                 anyOf:
@@ -196,34 +191,184 @@ spec:
                               regex:
                                 type: string
                             type: object
-                          type: object
-                        uri:
-                          oneOf:
-                          - not:
-                              anyOf:
+                          port:
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          queryParams:
+                            additionalProperties:
+                              oneOf:
+                              - not:
+                                  anyOf:
+                                  - required:
+                                    - exact
+                                  - required:
+                                    - prefix
+                                  - required:
+                                    - regex
                               - required:
                                 - exact
                               - required:
                                 - prefix
                               - required:
                                 - regex
-                          - required:
-                            - exact
-                          - required:
-                            - prefix
-                          - required:
-                            - regex
-                          properties:
-                            exact:
-                              type: string
-                            prefix:
-                              type: string
-                            regex:
-                              type: string
-                          type: object
-                      type: object
-                    type: array
-                type: object
+                              properties:
+                                exact:
+                                  type: string
+                                prefix:
+                                  type: string
+                                regex:
+                                  type: string
+                              type: object
+                            type: object
+                          uri:
+                            oneOf:
+                            - not:
+                                anyOf:
+                                - required:
+                                  - exact
+                                - required:
+                                  - prefix
+                                - required:
+                                  - regex
+                            - required:
+                              - exact
+                            - required:
+                              - prefix
+                            - required:
+                              - regex
+                            properties:
+                              exact:
+                                type: string
+                              prefix:
+                                type: string
+                              regex:
+                                type: string
+                            type: object
+                        type: object
+                      type: array
+                    route:
+                      description: Primary route entries used when match conditions
+                        are satisfied.
+                      items:
+                        properties:
+                          service:
+                            description: One route entry can split traffic across
+                              multiple service destinations.
+                            items:
+                              properties:
+                                host:
+                                  description: Host is the host addressed by this
+                                    route policy.
+                                  type: string
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  description: Labels select a subset of endpoints
+                                    behind host.
+                                  type: object
+                                name:
+                                  description: Name is the target Kubernetes Service
+                                    for service-based traffic splitting.
+                                  type: string
+                                port:
+                                  properties:
+                                    name:
+                                      type: string
+                                    number:
+                                      maximum: 4294967295
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                                trafficPolicy:
+                                  properties:
+                                    tls:
+                                      description: TLS related settings for connections
+                                        to the upstream service.
+                                      properties:
+                                        mode:
+                                          description: |-
+                                            Indicates whether connections to this port should be secured using TLS.
+
+                                            Valid Options: DISABLE, MUTUAL, DUBBO_MUTUAL
+                                          enum:
+                                          - DISABLE
+                                          - MUTUAL
+                                          - DUBBO_MUTUAL
+                                          type: string
+                                      type: object
+                                  type: object
+                                weight:
+                                  format: int32
+                                  type: integer
+                              required:
+                              - host
+                              type: object
+                            type: array
+                        type: object
+                      type: array
+                    routes:
+                      description: Fallback route entries used after primary match-specific
+                        routes.
+                      items:
+                        properties:
+                          service:
+                            description: One route entry can split traffic across
+                              multiple service destinations.
+                            items:
+                              properties:
+                                host:
+                                  description: Host is the host addressed by this
+                                    route policy.
+                                  type: string
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  description: Labels select a subset of endpoints
+                                    behind host.
+                                  type: object
+                                name:
+                                  description: Name is the target Kubernetes Service
+                                    for service-based traffic splitting.
+                                  type: string
+                                port:
+                                  properties:
+                                    name:
+                                      type: string
+                                    number:
+                                      maximum: 4294967295
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                                trafficPolicy:
+                                  properties:
+                                    tls:
+                                      description: TLS related settings for connections
+                                        to the upstream service.
+                                      properties:
+                                        mode:
+                                          description: |-
+                                            Indicates whether connections to this port should be secured using TLS.
+
+                                            Valid Options: DISABLE, MUTUAL, DUBBO_MUTUAL
+                                          enum:
+                                          - DISABLE
+                                          - MUTUAL
+                                          - DUBBO_MUTUAL
+                                          type: string
+                                      type: object
+                                  type: object
+                                weight:
+                                  format: int32
+                                  type: integer
+                              required:
+                              - host
+                              type: object
+                            type: array
+                        type: object
+                      type: array
+                  type: object
+                type: array
               trafficPolicy:
                 description: Default traffic policy for every destination in this
                   MeshService.
