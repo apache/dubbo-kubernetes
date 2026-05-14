@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 )
 
 func TestAutoDiscoverServiceTargetSingleService(t *testing.T) {
@@ -200,6 +202,47 @@ func TestRunSampleRequestsUsesUpdatedSnapshotOnSameStream(t *testing.T) {
 	lines := strings.Fields(string(output))
 	if !contains(lines, "v1") || !contains(lines, "v2") {
 		t.Fatalf("output = %q, want both v1 and v2 responses after live route update", string(output))
+	}
+}
+
+func TestSampleRequestClientsDoNotBypassMTLS(t *testing.T) {
+	clients := newSampleRequestClients(&sampleADSClient{}, time.Second)
+	destination := xdsDestination{
+		Cluster: "outbound|80|v1|nginx.app.svc.cluster.local",
+		Host:    "nginx.app.svc.cluster.local",
+		TLSMode: "DUBBO_MUTUAL",
+		SNI:     "nginx.app.svc.cluster.local",
+		tlsContext: &tlsv1.UpstreamTlsContext{
+			Sni: "nginx.app.svc.cluster.local",
+		},
+	}
+
+	_, _, err := clients.clientForDestination(destination)
+	if err == nil {
+		t.Fatalf("clientForDestination() error = nil, want bootstrap error for mTLS route")
+	}
+	if !strings.Contains(err.Error(), "data-plane mTLS requires GRPC_XDS_BOOTSTRAP or --bootstrap") {
+		t.Fatalf("error = %q, want bootstrap requirement", err.Error())
+	}
+}
+
+func TestDestinationFromClusterExposesTLSContext(t *testing.T) {
+	tlsContext := &tlsv1.UpstreamTlsContext{Sni: "nginx.app.svc.cluster.local"}
+	destination := destinationFromCluster(
+		"outbound|80|v1|nginx.app.svc.cluster.local",
+		50,
+		[]xdsEndpoint{{Address: "10.0.0.1", Port: 80}},
+		tlsContext,
+	)
+
+	if destination.TLSMode != "DUBBO_MUTUAL" {
+		t.Fatalf("TLSMode = %q, want DUBBO_MUTUAL", destination.TLSMode)
+	}
+	if destination.SNI != "nginx.app.svc.cluster.local" {
+		t.Fatalf("SNI = %q, want nginx host", destination.SNI)
+	}
+	if destination.tlsContext != tlsContext {
+		t.Fatalf("tlsContext was not preserved")
 	}
 }
 

@@ -115,7 +115,7 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 		MeshConfig:       meshConfig,
 		Values:           params.valuesConfig.asMap,
 		Revision:         params.revision,
-		ProxyImage:       getProxyImage(params.valuesConfig.asMap, "dubboregistry/dubbo-proxy:0.3.6"),
+		ProxyImage:       getProxyImage(params.valuesConfig.asMap, "kdubbo/dubbod:debug"),
 		CompliancePolicy: common_features.CompliancePolicy,
 	}
 

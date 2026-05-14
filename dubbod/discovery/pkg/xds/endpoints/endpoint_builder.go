@@ -23,8 +23,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/cespare/xxhash/v2"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	// core "github.com/kdubbo/xds-api/core/v1"
 	core "github.com/kdubbo/xds-api/core/v1"
 	// endpoint "github.com/kdubbo/xds-api/endpoint/v1"
@@ -82,14 +84,6 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 	svcPort := b.servicePort(b.port)
 	if svcPort == nil {
 		return buildEmptyClusterLoadAssignment(b.clusterName)
-	}
-
-	// Get endpoints from the endpoint index
-	allServices := endpointIndex.AllServices()
-	if len(allServices) > 0 {
-		log.Infof("EndpointIndex contains %d services: %v", len(allServices), allServices)
-	} else {
-		log.Warnf("EndpointIndex is empty - no services registered")
 	}
 
 	shards, ok := endpointIndex.ShardsForService(string(b.hostname), b.service.Attributes.Namespace)
@@ -267,7 +261,7 @@ func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbE
 		return nil
 	}
 
-	address := util.BuildAddress(ep.Addresses[0], ep.EndpointPort)
+	address := util.BuildAddress(ep.Addresses[0], b.endpointPort(ep))
 	if address == nil {
 		return nil
 	}
@@ -296,6 +290,45 @@ func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbE
 			Value: 1,
 		},
 	}
+}
+
+func (b *EndpointBuilder) endpointPort(ep *model.DubboEndpoint) uint32 {
+	if b.useXServerEndpointPort() {
+		return inject.ProxylessXServerPort
+	}
+	return ep.EndpointPort
+}
+
+func (b *EndpointBuilder) useXServerEndpointPort() bool {
+	if b == nil || b.proxy == nil || !b.proxy.IsProxylessGrpc() || b.push == nil || b.service == nil {
+		return false
+	}
+	return b.destinationUsesDUBBOMutual()
+}
+
+func (b *EndpointBuilder) destinationUsesDUBBOMutual() bool {
+	rule := b.push.DestinationRuleForService(b.service.Attributes.Namespace, b.hostname)
+	if rule == nil && b.service.Hostname != "" && b.service.Hostname != b.hostname {
+		rule = b.push.DestinationRuleForService(b.service.Attributes.Namespace, b.service.Hostname)
+	}
+	if rule == nil {
+		return false
+	}
+	if b.subsetName != "" {
+		for _, subset := range rule.Subsets {
+			if subset.Name == b.subsetName && subset.TrafficPolicy != nil {
+				return trafficPolicyUsesDUBBOMutual(subset.TrafficPolicy)
+			}
+		}
+	}
+	return trafficPolicyUsesDUBBOMutual(rule.TrafficPolicy)
+}
+
+func trafficPolicyUsesDUBBOMutual(policy *networking.TrafficPolicy) bool {
+	if policy == nil || policy.Tls == nil {
+		return false
+	}
+	return policy.Tls.Mode == networking.ClientTLSSettings_DUBBO_MUTUAL || policy.Tls.Mode.String() == "DUBBO_MUTUAL"
 }
 
 func buildEmptyClusterLoadAssignment(clusterName string) *endpoint.ClusterLoadAssignment {

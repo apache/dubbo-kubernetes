@@ -63,9 +63,11 @@ spec:
         app.kubernetes.io/managed-by: dubbod
         gateway.dubbo.apache.org/managed: dubbo.apache.org-gateway-controller
         gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
+        proxyless.dubbo.apache.org/inject: "true"
       annotations:
         dubbo.apache.org/rev: {{ .Revision | quote }}
         gateway.dubbo.apache.org/bootstrap-hash: {{ .BootstrapConfigHash | quote }}
+        inject.dubbo.apache.org/templates: grpc-engine
     spec:
       serviceAccountName: {{ .ServiceAccount }}
       containers:
@@ -149,6 +151,7 @@ metadata:
     app.kubernetes.io/instance: {{ .DeploymentName }}
     app.kubernetes.io/managed-by: dubbod
     gateway.networking.k8s.io/gateway-name: {{ .Gateway.Name }}
+    proxyless.dubbo.apache.org/inject: "false"
 spec:
   type: {{ .ServiceType }}
   selector:

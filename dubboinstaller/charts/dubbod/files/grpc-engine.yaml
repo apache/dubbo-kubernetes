@@ -74,6 +74,27 @@ spec:
     - name: dubbo-xds
       mountPath: /etc/dubbo/proxy
       readOnly: true
+{{- $appPort := 80 }}
+{{- if and (gt (len .Spec.Containers) 0) (gt (len ((index .Spec.Containers 0).Ports)) 0) }}
+{{- $appPort = int ((index ((index .Spec.Containers 0).Ports) 0).ContainerPort) }}
+{{- end }}
+  - name: dubbo-xserver
+    image: {{ .ProxyImage | quote }}
+    imagePullPolicy: IfNotPresent
+    args:
+    - xserver
+    - --listen
+    - :25080
+    - --upstream
+    - 127.0.0.1:{{ $appPort }}
+    ports:
+    - name: xserver
+      containerPort: 25080
+      protocol: TCP
+    volumeMounts:
+    - name: dubbo-xds
+      mountPath: /etc/dubbo/proxy
+      readOnly: true
   volumes:
   - name: dubbo-xds
     secret:

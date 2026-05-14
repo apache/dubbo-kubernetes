@@ -45,6 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/yaml"
@@ -230,6 +231,20 @@ func (wh *Webhook) serveInject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.AdmissionResponse {
+	if ar == nil || ar.Request == nil {
+		return toAdmissionResponse(errors.New("admission request is nil"))
+	}
+	switch ar.Request.Kind.Kind {
+	case "Pod":
+		return wh.injectPod(ar, path)
+	case "Service":
+		return wh.injectService(ar, path)
+	default:
+		return &kube.AdmissionResponse{Allowed: true}
+	}
+}
+
+func (wh *Webhook) injectPod(ar *kube.AdmissionReview, path string) *kube.AdmissionResponse {
 	log := webhookLog.WithLabels("path", path)
 	req := ar.Request
 	var pod corev1.Pod
@@ -284,6 +299,55 @@ func (wh *Webhook) inject(ar *kube.AdmissionReview, path string) *kube.Admission
 	}
 
 	log.Infof("Injection Successfully, patch size: %d bytes", len(patchBytes))
+	reviewResponse := kube.AdmissionResponse{
+		Allowed: true,
+		Patch:   patchBytes,
+		PatchType: func() *string {
+			pt := "JSONPatch"
+			return &pt
+		}(),
+	}
+	return &reviewResponse
+}
+
+func (wh *Webhook) injectService(ar *kube.AdmissionReview, path string) *kube.AdmissionResponse {
+	log := webhookLog.WithLabels("path", path)
+	req := ar.Request
+	var svc corev1.Service
+	if err := json.Unmarshal(req.Object.Raw, &svc); err != nil {
+		log.Errorf("Could not unmarshal raw service object: %v %s", err, string(req.Object.Raw))
+		return toAdmissionResponse(err)
+	}
+	if svc.Namespace == "" {
+		svc.Namespace = req.Namespace
+	}
+
+	log = log.WithLabels("service", svc.Namespace+"/"+svc.Name)
+	log.Infof("Process proxyless service request")
+
+	wh.mu.RLock()
+	required := injectRequired(IgnoredNamespaces.UnsortedList(), wh.Config, &corev1.PodSpec{}, svc.ObjectMeta)
+	wh.mu.RUnlock()
+	if !required {
+		log.Infof("Skipping service due to policy check")
+		return &kube.AdmissionResponse{Allowed: true}
+	}
+
+	originalService, err := json.Marshal(svc)
+	if err != nil {
+		return toAdmissionResponse(err)
+	}
+	if !rewriteProxylessServiceTargetPorts(&svc) {
+		return &kube.AdmissionResponse{Allowed: true}
+	}
+
+	patchBytes, err := createServicePatch(&svc, originalService)
+	if err != nil {
+		log.Errorf("Service injection failed: %v", err)
+		return toAdmissionResponse(err)
+	}
+
+	log.Infof("Service injection successfully, patch size: %d bytes", len(patchBytes))
 	reviewResponse := kube.AdmissionResponse{
 		Allowed: true,
 		Patch:   patchBytes,
@@ -609,6 +673,7 @@ func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
 	// Proxy container should be last to ensure `kubectl exec` and similar commands
 	// continue to default to the user's container
 	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, MoveLast)
+	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxylessXServerContainerName, MoveLast)
 	return nil
 }
 
@@ -622,6 +687,38 @@ func createPatch(pod *corev1.Pod, original []byte) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(p)
+}
+
+func createServicePatch(svc *corev1.Service, original []byte) ([]byte, error) {
+	reinjected, err := json.Marshal(svc)
+	if err != nil {
+		return nil, err
+	}
+	p, err := jsonpatch.CreatePatch(original, reinjected)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(p)
+}
+
+func rewriteProxylessServiceTargetPorts(svc *corev1.Service) bool {
+	if svc.Spec.Type == corev1.ServiceTypeExternalName || len(svc.Spec.Selector) == 0 {
+		return false
+	}
+
+	changed := false
+	for i := range svc.Spec.Ports {
+		port := &svc.Spec.Ports[i]
+		if port.Protocol != "" && port.Protocol != corev1.ProtocolTCP {
+			continue
+		}
+		if port.TargetPort.Type == intstr.Int && port.TargetPort.IntVal == ProxylessXServerPort {
+			continue
+		}
+		port.TargetPort = intstr.FromInt(ProxylessXServerPort)
+		changed = true
+	}
+	return changed
 }
 
 func applyOverlayYAML(target *corev1.Pod, overlayYAML []byte) (*corev1.Pod, error) {

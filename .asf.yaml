@@ -21,7 +21,7 @@ notifications:
 
 github:
   homepage: "https://kdubbo.github.io"
-  description: "Embed gRPC, use xDS, build inherent mesh."
+  description: "Build a native mesh using gRPC and xDS."
   features:
     # Enable wiki for documentation
     wiki: false

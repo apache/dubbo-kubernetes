@@ -37,6 +37,7 @@ const (
 	executeLogScope = "setup"
 	waitLogScope    = "wait"
 	xclientLogScope = "xclient"
+	xserverLogScope = "xserver"
 )
 
 func NewRootCommand() *cobra.Command {
@@ -61,6 +62,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddFlags(rootCmd)
 	rootCmd.AddCommand(waitCmd)
 	rootCmd.AddCommand(newXClientCommand())
+	rootCmd.AddCommand(newXServerCommand())
 
 	return rootCmd
 }

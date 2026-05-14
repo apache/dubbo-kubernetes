@@ -55,6 +55,15 @@ webhooks:
           - CREATE
         resources:
           - pods
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - services
     sideEffects: None
   - admissionReviewVersions:
       - v1
@@ -92,6 +101,15 @@ webhooks:
           - CREATE
         resources:
           - pods
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - services
     sideEffects: None
   - admissionReviewVersions:
       - v1
@@ -124,6 +142,15 @@ webhooks:
           - CREATE
         resources:
           - pods
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - services
     sideEffects: None
   - admissionReviewVersions:
       - v1
@@ -154,4 +181,13 @@ webhooks:
           - CREATE
         resources:
           - pods
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - services
     sideEffects: None
