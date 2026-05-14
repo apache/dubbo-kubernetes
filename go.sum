@@ -335,12 +335,10 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 h1:Z9n2FFNUXsshfwJMBgNA0RU6/i7WVaAegv3PtuIHPMs=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51/go.mod h1:CzGEWj7cYgsdH8dAjBGEr58BoE7ScuLd+fwFZ44+/x8=
-github.com/kdubbo/api v0.0.0-20260513025923-86f2ad63c4ab h1:HJdyq0CIsepvNZlGW/mWg78FreoVF4E9HXi8dlpXfAQ=
-github.com/kdubbo/api v0.0.0-20260513025923-86f2ad63c4ab/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
-github.com/kdubbo/client-go v0.0.0-20260506035847-a9460155f65d h1:YYS3OfwT5mfqIgf17yFqCjio9NGHNIURNh1OvjLCujs=
-github.com/kdubbo/client-go v0.0.0-20260506035847-a9460155f65d/go.mod h1:VoiR0j6MxAcabmLL3dyz5vC3ShxCc3gKUjEcju3QeiE=
-github.com/kdubbo/xds-api v0.0.0-20260513025923-effbe30b748a h1:Quuv4Y8zq6ttf0qEFhwPbDBPTH/jfqKjkHEvkd2/oEE=
-github.com/kdubbo/xds-api v0.0.0-20260513025923-effbe30b748a/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
+github.com/kdubbo/api v0.0.0-20260514062138-033465da4c7b h1:XmmyQAFHBzqzGsV0Sh1siQ0F6Jii86bxRzwiTebh4L8=
+github.com/kdubbo/api v0.0.0-20260514062138-033465da4c7b/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
+github.com/kdubbo/client-go v0.0.0-20260514062239-0461c56dc08a h1:mXwrjvVcb4VlMRLaBArvV9ux3iinhKnS1AmvUSGMmPo=
+github.com/kdubbo/client-go v0.0.0-20260514062239-0461c56dc08a/go.mod h1:i/PsGuMarvUDQUmYEHrBkz+WjQJRCGGHQ+Ik88rlo2g=
 github.com/kdubbo/xds-api v0.0.0-20260513100730-a07294e322cc h1:dhfVaVHjt9RmNjeq8qcOWZPLSvRT3BHEbDyUeFiAkJg=
 github.com/kdubbo/xds-api v0.0.0-20260513100730-a07294e322cc/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=

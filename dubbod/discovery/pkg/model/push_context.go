@@ -1022,17 +1022,22 @@ func (ps *PushContext) initDestinationRules(env *Environment) {
 	log.Debugf("initDestinationRules: found %d MeshService configs", len(configs))
 
 	// values returned from ConfigStore.List are immutable.
-	// Therefore, we make a copy
-	subRules := make([]config.Config, len(configs))
-	for i := range subRules {
-		subRules[i] = meshServiceToDestinationRuleConfig(configs[i])
-		if dr, ok := subRules[i].Spec.(*networking.DestinationRule); ok {
-			tlsMode := "none"
-			if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
-				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+	// Therefore, we make copies.
+	subRules := make([]config.Config, 0, len(configs))
+	for i := range configs {
+		rules := meshServiceToDestinationRuleConfigs(configs[i])
+		for j := range rules {
+			subRules = append(subRules, rules[j])
+		}
+		for _, rule := range rules {
+			if dr, ok := rule.Spec.(*networking.DestinationRule); ok {
+				tlsMode := "none"
+				if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
+					tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+				}
+				log.Debugf("initDestinationRules: MeshService %s/%s for host %s with %d subsets, TLS mode: %s",
+					configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 			}
-			log.Debugf("initDestinationRules: MeshService %s/%s for host %s with %d subsets, TLS mode: %s",
-				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 		}
 	}
 

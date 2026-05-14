@@ -63,8 +63,8 @@ func TestBuildHTTPRouteProxylessOutboundPrefersVirtualServiceOverGatewayHTTPRout
 
 	got := weightedClustersByName(t, rc.VirtualHosts[0].Routes[0])
 	want := map[string]uint32{
-		"outbound|80|v1|nginx.app.svc.cluster.local": 20,
-		"outbound|80|v2|nginx.app.svc.cluster.local": 80,
+		"outbound|80||nginx-v1.app.svc.cluster.local": 20,
+		"outbound|80||nginx-v2.app.svc.cluster.local": 80,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("weighted clusters = %v, want %v", got, want)
@@ -111,12 +111,12 @@ func newWeightedMeshServiceConfig(name, namespace, hostname string) config.Confi
 				{
 					Service: []*networking.ServiceDestination{
 						{
-							Name:   "v1",
+							Name:   "nginx-v1",
 							Host:   hostname,
 							Weight: 20,
 						},
 						{
-							Name:   "v2",
+							Name:   "nginx-v2",
 							Host:   hostname,
 							Weight: 80,
 						},

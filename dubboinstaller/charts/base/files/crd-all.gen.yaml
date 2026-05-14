@@ -56,16 +56,22 @@ spec:
                   properties:
                     service:
                       description: One route entry can split traffic across multiple
-                        services.
+                        service destinations.
                       items:
                         properties:
                           host:
+                            description: Host is the host addressed by this route
+                              policy.
                             type: string
                           labels:
                             additionalProperties:
                               type: string
+                            description: Labels select a subset of endpoints behind
+                              host.
                             type: object
                           name:
+                            description: Name is the target Kubernetes Service for
+                              service-based traffic splitting.
                             type: string
                           port:
                             properties:
@@ -87,8 +93,11 @@ spec:
                                       Indicates whether connections to this port should be secured using TLS.
 
                                       Valid Options: DISABLE, MUTUAL, DUBBO_MUTUAL
+                                    enum:
+                                    - DISABLE
+                                    - MUTUAL
+                                    - DUBBO_MUTUAL
                                     type: string
-                                    x-kubernetes-int-or-string: true
                                 type: object
                             type: object
                           weight:
@@ -228,8 +237,11 @@ spec:
                           Indicates whether connections to this port should be secured using TLS.
 
                           Valid Options: DISABLE, MUTUAL, DUBBO_MUTUAL
+                        enum:
+                        - DISABLE
+                        - MUTUAL
+                        - DUBBO_MUTUAL
                         type: string
-                        x-kubernetes-int-or-string: true
                     type: object
                 type: object
             type: object
@@ -314,8 +326,12 @@ spec:
                       Defines the mTLS mode used for peer authentication.
 
                       Valid Options: DISABLE, PERMISSIVE, STRICT
+                    enum:
+                    - UNSET
+                    - DISABLE
+                    - PERMISSIVE
+                    - STRICT
                     type: string
-                    x-kubernetes-int-or-string: true
                 type: object
               portLevelMtls:
                 additionalProperties:
@@ -325,8 +341,12 @@ spec:
                         Defines the mTLS mode used for peer authentication.
 
                         Valid Options: DISABLE, PERMISSIVE, STRICT
+                      enum:
+                      - UNSET
+                      - DISABLE
+                      - PERMISSIVE
+                      - STRICT
                       type: string
-                      x-kubernetes-int-or-string: true
                   type: object
                 description: Port specific mutual TLS settings.
                 minProperties: 1
