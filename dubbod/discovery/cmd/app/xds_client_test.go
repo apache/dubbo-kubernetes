@@ -246,6 +246,30 @@ func TestDestinationFromClusterExposesTLSContext(t *testing.T) {
 	}
 }
 
+func TestSubsetWeightsUsesServiceNameWhenSubsetIsEmpty(t *testing.T) {
+	weights := subsetWeights(xdsRouteSnapshot{
+		Destinations: []xdsDestination{
+			{Host: "reviews-1.default.svc.cluster.local", Weight: 20},
+			{Host: "reviews-2.default.svc.cluster.local", Weight: 80},
+		},
+	})
+	if len(weights) != 2 || weights["reviews-1"] != 20 || weights["reviews-2"] != 80 {
+		t.Fatalf("weights = %v, want reviews-1=20 and reviews-2=80", weights)
+	}
+}
+
+func TestSubsetWeightsKeepsSubsetName(t *testing.T) {
+	weights := subsetWeights(xdsRouteSnapshot{
+		Destinations: []xdsDestination{
+			{Host: "reviews.default.svc.cluster.local", Subset: "v1", Weight: 20},
+			{Host: "reviews.default.svc.cluster.local", Subset: "v2", Weight: 80},
+		},
+	})
+	if len(weights) != 2 || weights["v1"] != 20 || weights["v2"] != 80 {
+		t.Fatalf("weights = %v, want v1=20 and v2=80", weights)
+	}
+}
+
 func endpointForServer(t *testing.T, server *httptest.Server) xdsEndpoint {
 	t.Helper()
 	parsed, err := neturl.Parse(server.URL)

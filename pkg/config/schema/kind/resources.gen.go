@@ -5,6 +5,7 @@ package kind
 const (
 	Unknown Kind = iota
 	Address
+	AuthorizationPolicy
 	ConfigMap
 	CustomResourceDefinition
 	DNSName
@@ -25,6 +26,7 @@ const (
 	PeerAuthentication
 	Pod
 	PodDisruptionBudget
+	RequestAuthentication
 	Secret
 	Service
 	ServiceAccount
@@ -36,6 +38,8 @@ func (k Kind) String() string {
 	switch k {
 	case Address:
 		return "Address"
+	case AuthorizationPolicy:
+		return "AuthorizationPolicy"
 	case ConfigMap:
 		return "ConfigMap"
 	case CustomResourceDefinition:
@@ -76,6 +80,8 @@ func (k Kind) String() string {
 		return "Pod"
 	case PodDisruptionBudget:
 		return "PodDisruptionBudget"
+	case RequestAuthentication:
+		return "RequestAuthentication"
 	case Secret:
 		return "Secret"
 	case Service:
@@ -95,6 +101,8 @@ func FromString(s string) Kind {
 	switch s {
 	case "Address":
 		return Address
+	case "AuthorizationPolicy":
+		return AuthorizationPolicy
 	case "ConfigMap":
 		return ConfigMap
 	case "CustomResourceDefinition":
@@ -135,6 +143,8 @@ func FromString(s string) Kind {
 		return Pod
 	case "PodDisruptionBudget":
 		return PodDisruptionBudget
+	case "RequestAuthentication":
+		return RequestAuthentication
 	case "Secret":
 		return Secret
 	case "Service":

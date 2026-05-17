@@ -53,9 +53,9 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/heroku/color v0.0.6
-	github.com/kdubbo/api v0.0.0-20260513025923-86f2ad63c4ab
-	github.com/kdubbo/client-go v0.0.0-20260506035847-a9460155f65d
-	github.com/kdubbo/xds-api v0.0.0-20260513100730-a07294e322cc
+	github.com/kdubbo/api v0.0.0-20260514125132-e21515234c56
+	github.com/kdubbo/client-go v0.0.0-20260514125254-aa566bd2f6d5
+	github.com/kdubbo/xds-api v0.0.0-20260514125138-34014b8f6d6b
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1
@@ -257,3 +257,9 @@ replace (
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
 )
+
+replace github.com/kdubbo/client-go => ../client-go
+
+replace github.com/kdubbo/api => ../api
+
+replace github.com/kdubbo/xds-api => ../xds-api

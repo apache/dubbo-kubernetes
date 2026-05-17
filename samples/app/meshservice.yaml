@@ -13,4 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-_internal_default_values_not_set: {}
+apiVersion: networking.dubbo.apache.org/v1alpha3
+kind: MeshService
+metadata:
+  name: nginx-routing
+  namespace: app
+spec:
+  hosts:
+  - nginx.app.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DUBBO_MUTUAL
+  rules:
+  - routes:
+    - service:
+      - name: v1
+        host: nginx.app.svc.cluster.local
+        labels:
+          version: v1
+        weight: 50
+      - name: v2
+        host: nginx.app.svc.cluster.local
+        labels:
+          version: v2
+        weight: 50

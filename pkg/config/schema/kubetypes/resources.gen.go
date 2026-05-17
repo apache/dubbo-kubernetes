@@ -23,6 +23,10 @@ import (
 
 func getGvk(obj any) (config.GroupVersionKind, bool) {
 	switch obj.(type) {
+	case *githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy:
+		return gvk.AuthorizationPolicy, true
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
+		return gvk.AuthorizationPolicy, true
 	case *k8sioapicorev1.ConfigMap:
 		return gvk.ConfigMap, true
 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
@@ -65,6 +69,10 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Pod, true
 	case *k8sioapipolicyv1.PodDisruptionBudget:
 		return gvk.PodDisruptionBudget, true
+	case *githubcomkdubboapisecurityv1alpha3.RequestAuthentication:
+		return gvk.RequestAuthentication, true
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication:
+		return gvk.RequestAuthentication, true
 	case *k8sioapicorev1.Secret:
 		return gvk.Secret, true
 	case *k8sioapicorev1.Service:

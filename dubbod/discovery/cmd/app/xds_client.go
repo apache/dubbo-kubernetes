@@ -890,9 +890,22 @@ func parseExpectedWeights(value string) (map[string]uint32, error) {
 func subsetWeights(snapshot xdsRouteSnapshot) map[string]uint32 {
 	out := map[string]uint32{}
 	for _, dest := range snapshot.Destinations {
-		out[dest.Subset] = dest.Weight
+		out[destinationWeightKey(dest)] = dest.Weight
 	}
 	return out
+}
+
+func destinationWeightKey(dest xdsDestination) string {
+	if dest.Subset != "" {
+		return dest.Subset
+	}
+	if dest.Host != "" {
+		if service, _, found := strings.Cut(dest.Host, "."); found && service != "" {
+			return service
+		}
+		return dest.Host
+	}
+	return dest.Cluster
 }
 
 func weightsMatch(got, want map[string]uint32) bool {
@@ -910,11 +923,7 @@ func weightsMatch(got, want map[string]uint32) bool {
 func routeSummary(snapshot xdsRouteSnapshot) string {
 	parts := make([]string, 0, len(snapshot.Destinations))
 	for _, dest := range snapshot.Destinations {
-		label := dest.Subset
-		if label == "" {
-			label = dest.Cluster
-		}
-		parts = append(parts, fmt.Sprintf("%s=%d endpoints=%d", label, dest.Weight, len(dest.Endpoints)))
+		parts = append(parts, fmt.Sprintf("%s=%d endpoints=%d", destinationWeightKey(dest), dest.Weight, len(dest.Endpoints)))
 	}
 	return fmt.Sprintf("%s:%d %s", snapshot.Host, snapshot.Port, strings.Join(parts, ","))
 }

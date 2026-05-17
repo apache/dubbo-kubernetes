@@ -18,6 +18,7 @@ package grpcgen
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -338,14 +339,38 @@ func buildRoutesFromVirtualService(vs *networking.VirtualService, hostName host.
 		if httpRoute == nil {
 			continue
 		}
-		if built := buildRouteFromHTTPRoute(httpRoute, hostName, defaultPort); built != nil {
-			routes = append(routes, built)
-		}
+		routes = append(routes, buildRoutesFromHTTPRoute(httpRoute, hostName, defaultPort)...)
 	}
 	return routes
 }
 
-func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name, defaultPort int) *route.Route {
+func buildRoutesFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name, defaultPort int) []*route.Route {
+	action := buildRouteActionFromHTTPRoute(httpRoute, hostName, defaultPort)
+	if action == nil {
+		return nil
+	}
+	matches := httpRoute.GetMatch()
+	if len(matches) == 0 {
+		return []*route.Route{{
+			Match: defaultRouteMatch(),
+			Action: &route.Route_Route{
+				Route: action,
+			},
+		}}
+	}
+	routes := make([]*route.Route, 0, len(matches))
+	for _, match := range matches {
+		routes = append(routes, &route.Route{
+			Match: buildRouteMatchFromMeshServiceMatch(match),
+			Action: &route.Route_Route{
+				Route: action,
+			},
+		})
+	}
+	return routes
+}
+
+func buildRouteActionFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name, defaultPort int) *route.RouteAction {
 	if httpRoute == nil || len(httpRoute.Route) == 0 {
 		log.Warnf("httpRoute is nil or has no routes")
 		return nil
@@ -400,20 +425,92 @@ func buildRouteFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name
 	}
 	log.Debugf("built WeightedCluster with %d clusters, totalWeight=%d", len(weights), totalWeight)
 
-	return &route.Route{
-		Match: &route.RouteMatch{
-			PathSpecifier: &route.RouteMatch_Prefix{
-				Prefix: "/",
-			},
-		},
-		Action: &route.Route_Route{
-			Route: &route.RouteAction{
-				ClusterSpecifier: &route.RouteAction_WeightedClusters{
-					WeightedClusters: weightedClusters,
-				},
-			},
+	return &route.RouteAction{
+		ClusterSpecifier: &route.RouteAction_WeightedClusters{
+			WeightedClusters: weightedClusters,
 		},
 	}
+}
+
+func defaultRouteMatch() *route.RouteMatch {
+	return &route.RouteMatch{
+		PathSpecifier: &route.RouteMatch_Prefix{
+			Prefix: "/",
+		},
+	}
+}
+
+func buildRouteMatchFromMeshServiceMatch(match *networking.HTTPMatchRequest) *route.RouteMatch {
+	if match == nil {
+		return defaultRouteMatch()
+	}
+	routeMatch := &route.RouteMatch{}
+	applyRoutePathSpecifier(routeMatch, match.GetUri())
+	if routeMatch.PathSpecifier == nil {
+		routeMatch.PathSpecifier = &route.RouteMatch_Prefix{Prefix: "/"}
+	}
+
+	headers := make([]*route.HeaderMatcher, 0, len(match.GetHeaders())+2)
+	for _, key := range sortedStringMatchKeys(match.GetHeaders()) {
+		if header := headerMatcherFromStringMatch(key, match.GetHeaders()[key]); header != nil {
+			headers = append(headers, header)
+		}
+	}
+	if header := headerMatcherFromStringMatch(":method", match.GetMethod()); header != nil {
+		headers = append(headers, header)
+	}
+	if header := headerMatcherFromStringMatch(":authority", match.GetHost()); header != nil {
+		headers = append(headers, header)
+	}
+	if len(headers) > 0 {
+		routeMatch.Headers = headers
+	}
+	return routeMatch
+}
+
+func sortedStringMatchKeys(values map[string]*networking.StringMatch) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func applyRoutePathSpecifier(routeMatch *route.RouteMatch, match *networking.StringMatch) {
+	if match == nil {
+		return
+	}
+	switch m := match.MatchType.(type) {
+	case *networking.StringMatch_Exact:
+		routeMatch.PathSpecifier = &route.RouteMatch_Path{Path: m.Exact}
+	case *networking.StringMatch_Prefix:
+		routeMatch.PathSpecifier = &route.RouteMatch_Prefix{Prefix: m.Prefix}
+	case *networking.StringMatch_Regex:
+		routeMatch.PathSpecifier = &route.RouteMatch_SafeRegex{
+			SafeRegex: &matcher.RegexMatcher{Regex: m.Regex},
+		}
+	}
+}
+
+func headerMatcherFromStringMatch(name string, match *networking.StringMatch) *route.HeaderMatcher {
+	if match == nil {
+		return nil
+	}
+	header := &route.HeaderMatcher{Name: name}
+	switch m := match.MatchType.(type) {
+	case *networking.StringMatch_Exact:
+		header.HeaderMatchSpecifier = &route.HeaderMatcher_ExactMatch{ExactMatch: m.Exact}
+	case *networking.StringMatch_Prefix:
+		header.HeaderMatchSpecifier = &route.HeaderMatcher_PrefixMatch{PrefixMatch: m.Prefix}
+	case *networking.StringMatch_Regex:
+		header.HeaderMatchSpecifier = &route.HeaderMatcher_SafeRegexMatch{
+			SafeRegexMatch: &matcher.RegexMatcher{Regex: m.Regex},
+		}
+	default:
+		return nil
+	}
+	return header
 }
 
 // buildRoutesFromGatewayHTTPRoute converts Gateway API HTTPRoute resources to XDS Route configurations

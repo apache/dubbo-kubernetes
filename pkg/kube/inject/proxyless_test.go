@@ -239,7 +239,7 @@ func assertXServerContainer(t *testing.T, pod *corev1.Pod) {
 	if container.Image != "kdubbo/dubbod:debug" {
 		t.Fatalf("xserver image = %q, want kdubbo/dubbod:debug", container.Image)
 	}
-	wantArgs := []string{"xserver", "--listen", ":25080", "--upstream", "127.0.0.1:80"}
+	wantArgs := []string{"xserver", "--listen", ":15080", "--upstream", "127.0.0.1:80"}
 	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
 		t.Fatalf("xserver args = %v, want %v", container.Args, wantArgs)
 	}

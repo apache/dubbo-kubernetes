@@ -75,6 +75,73 @@ func TestPeerAuthenticationStrictBuildsDownstreamMTLSListener(t *testing.T) {
 	assertCommonTLSContext(t, tlsContext.GetCommonTlsContext())
 }
 
+func TestPeerAuthenticationPermissiveBuildsPlaintextAndMTLSFilterChains(t *testing.T) {
+	svc := newRDSTestService("nginx", "app", "nginx.app.svc.cluster.local", 80)
+	proxy := newMTLSTestProxy()
+	proxy.ServiceTargets = []model.ServiceTarget{{
+		Service: svc,
+		Port: model.ServiceInstancePort{
+			ServicePort: svc.Ports[0],
+			TargetPort:  80,
+		},
+	}}
+	push := newRDSTestPushContext(t, []config.Config{
+		newPeerAuthenticationConfig("app-permissive-mtls", "app", security.PeerAuthentication_MutualTLS_PERMISSIVE),
+	}, []*model.Service{svc})
+
+	listenerName := grpcxds.ServerListenerNamePrefix + "0.0.0.0:80"
+	resources := (&GrpcConfigGenerator{}).BuildListeners(proxy, push, []string{listenerName})
+	l := findListener(t, resources, listenerName)
+	if len(l.GetFilterChains()) != 2 {
+		t.Fatalf("filter chains = %d, want plaintext plus mTLS", len(l.GetFilterChains()))
+	}
+
+	mtlsChain := l.GetFilterChains()[0]
+	if mtlsChain.GetTransportSocket() == nil {
+		t.Fatalf("mTLS filter chain has no transport socket")
+	}
+	if got := mtlsChain.GetFilterChainMatch().GetTransportProtocol(); got != "tls" {
+		t.Fatalf("mTLS filter chain transport protocol = %q, want tls", got)
+	}
+	tlsContext := &tlsv1.DownstreamTlsContext{}
+	if err := mtlsChain.GetTransportSocket().GetTypedConfig().UnmarshalTo(tlsContext); err != nil {
+		t.Fatalf("unmarshal downstream tls context: %v", err)
+	}
+	if tlsContext.GetRequireClientCertificate() == nil || !tlsContext.GetRequireClientCertificate().GetValue() {
+		t.Fatalf("RequireClientCertificate = %v, want true", tlsContext.GetRequireClientCertificate())
+	}
+
+	plaintextChain := l.GetFilterChains()[1]
+	if plaintextChain.GetTransportSocket() != nil {
+		t.Fatalf("plaintext filter chain has transport socket")
+	}
+}
+
+func TestRootNamespacePeerAuthenticationBuildsGlobalStrictListener(t *testing.T) {
+	svc := newRDSTestService("nginx", "app", "nginx.app.svc.cluster.local", 80)
+	proxy := newMTLSTestProxy()
+	proxy.ServiceTargets = []model.ServiceTarget{{
+		Service: svc,
+		Port: model.ServiceInstancePort{
+			ServicePort: svc.Ports[0],
+			TargetPort:  80,
+		},
+	}}
+	push := newRDSTestPushContext(t, []config.Config{
+		newPeerAuthenticationConfig("default", "dubbo-system", security.PeerAuthentication_MutualTLS_STRICT),
+	}, []*model.Service{svc})
+
+	listenerName := grpcxds.ServerListenerNamePrefix + "0.0.0.0:80"
+	resources := (&GrpcConfigGenerator{}).BuildListeners(proxy, push, []string{listenerName})
+	l := findListener(t, resources, listenerName)
+	if len(l.GetFilterChains()) != 1 {
+		t.Fatalf("filter chains = %d, want 1", len(l.GetFilterChains()))
+	}
+	if l.GetFilterChains()[0].GetTransportSocket() == nil {
+		t.Fatalf("global STRICT listener %s has no transport socket", listenerName)
+	}
+}
+
 func newMTLSTestProxy() *model.Proxy {
 	return &model.Proxy{
 		ID:              "proxyless~10.0.0.1~nginx-consumer.app~app.svc.cluster.local",
@@ -122,6 +189,10 @@ func newMTLSMeshServiceConfig(name, namespace string, hostname host.Name) config
 }
 
 func newStrictPeerAuthenticationConfig(name, namespace string) config.Config {
+	return newPeerAuthenticationConfig(name, namespace, security.PeerAuthentication_MutualTLS_STRICT)
+}
+
+func newPeerAuthenticationConfig(name, namespace string, mode security.PeerAuthentication_MutualTLS_Mode) config.Config {
 	return config.Config{
 		Meta: config.Meta{
 			GroupVersionKind: gvk.PeerAuthentication,
@@ -131,7 +202,7 @@ func newStrictPeerAuthenticationConfig(name, namespace string) config.Config {
 		},
 		Spec: &security.PeerAuthentication{
 			Mtls: &security.PeerAuthentication_MutualTLS{
-				Mode: security.PeerAuthentication_MutualTLS_STRICT,
+				Mode: mode,
 			},
 		},
 	}

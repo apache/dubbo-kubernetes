@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "n": "uHlC4pmCnZxuVKZzqQDNuN9ytndtN6xwRlPlc6QS79taJ8nZiyF-Aoky7oSc79e7MG4RoYfGt9dS6upswl-yRsPUdyzPEEdhSS7SkdG_s1EnwGhe98KLJsBfN-K94WTX470dh0xqqM9tr3D3uQEWXFo--L4maCoaNVDX3_F-zsjVFEvKfcBU2LZSt6EINSJtjgixdDokpwyW3ieJ-z8F_vCHldcCBss28R8YADhTDakqfPvGk_8yrChQafUa-wPK0DbUYiNi9wLB4mwJxWVOBxZmgGzQPfpjp15IObOQ8465NUG_uxzbu39GTEzxkF3osuwHVI_Lp0Ixs5NDHfWkQw",
+      "e": "AQAB",
+      "kid": "testing@secure.dubbo.apache.org",
+      "use": "sig",
+      "alg": "RS256"
+    }
+  ]
+}

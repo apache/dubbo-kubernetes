@@ -84,12 +84,12 @@ spec:
     args:
     - xserver
     - --listen
-    - :25080
+    - :15080
     - --upstream
     - 127.0.0.1:{{ $appPort }}
     ports:
     - name: xserver
-      containerPort: 25080
+      containerPort: 15080
       protocol: TCP
     volumeMounts:
     - name: dubbo-xds

@@ -690,19 +690,25 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 		ps.destinationRuleIndex = oldPushContext.destinationRuleIndex
 	}
 
-	authnPoliciesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.PeerAuthentication))
+	authnPoliciesChanged := pushReq != nil && (pushReq.Full || authPolicyKindsChanged(pushReq.ConfigsUpdated))
 	if authnPoliciesChanged || oldPushContext == nil || oldPushContext.AuthenticationPolicies == nil {
-		log.Debugf("PeerAuthentication changed (full=%v, configsUpdatedContainingPeerAuth=%v), rebuilding authentication policies",
+		log.Debugf("security authentication policy changed (full=%v, configsUpdatedContainingSecurityPolicy=%v), rebuilding authentication policies",
 			pushReq != nil && pushReq.Full, func() bool {
 				if pushReq == nil {
 					return false
 				}
-				return HasConfigsOfKind(pushReq.ConfigsUpdated, kind.PeerAuthentication)
+				return authPolicyKindsChanged(pushReq.ConfigsUpdated)
 			}())
 		ps.initAuthenticationPolicies(env)
 	} else {
 		ps.AuthenticationPolicies = oldPushContext.AuthenticationPolicies
 	}
+}
+
+func authPolicyKindsChanged(configs sets.Set[ConfigKey]) bool {
+	return HasConfigsOfKind(configs, kind.PeerAuthentication) ||
+		HasConfigsOfKind(configs, kind.RequestAuthentication) ||
+		HasConfigsOfKind(configs, kind.AuthorizationPolicy)
 }
 
 func (ps *PushContext) initAuthenticationPolicies(env *Environment) {
@@ -725,6 +731,20 @@ func (ps *PushContext) InboundMTLSModeForProxy(proxy *Proxy, port uint32) Mutual
 		namespace = proxy.ConfigNamespace
 	}
 	return ps.AuthenticationPolicies.EffectiveMutualTLSMode(namespace, nil, port)
+}
+
+func (ps *PushContext) RequestAuthenticationsForWorkload(namespace string, workloadLabels map[string]string) []config.Config {
+	if ps == nil || ps.AuthenticationPolicies == nil {
+		return nil
+	}
+	return ps.AuthenticationPolicies.RequestAuthenticationsForWorkload(namespace, workloadLabels)
+}
+
+func (ps *PushContext) AuthorizationPoliciesForWorkload(namespace string, workloadLabels map[string]string) []config.Config {
+	if ps == nil || ps.AuthenticationPolicies == nil {
+		return nil
+	}
+	return ps.AuthenticationPolicies.AuthorizationPoliciesForWorkload(namespace, workloadLabels)
 }
 
 // initKubernetesGateways initializes Kubernetes Gateway API objects by delegating
@@ -1022,17 +1042,22 @@ func (ps *PushContext) initDestinationRules(env *Environment) {
 	log.Debugf("initDestinationRules: found %d MeshService configs", len(configs))
 
 	// values returned from ConfigStore.List are immutable.
-	// Therefore, we make a copy
-	subRules := make([]config.Config, len(configs))
-	for i := range subRules {
-		subRules[i] = meshServiceToDestinationRuleConfig(configs[i])
-		if dr, ok := subRules[i].Spec.(*networking.DestinationRule); ok {
-			tlsMode := "none"
-			if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
-				tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+	// Therefore, we make copies.
+	subRules := make([]config.Config, 0, len(configs))
+	for i := range configs {
+		rules := meshServiceToDestinationRuleConfigs(configs[i])
+		for j := range rules {
+			subRules = append(subRules, rules[j])
+		}
+		for _, rule := range rules {
+			if dr, ok := rule.Spec.(*networking.DestinationRule); ok {
+				tlsMode := "none"
+				if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
+					tlsMode = dr.TrafficPolicy.Tls.Mode.String()
+				}
+				log.Debugf("initDestinationRules: MeshService %s/%s for host %s with %d subsets, TLS mode: %s",
+					configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 			}
-			log.Debugf("initDestinationRules: MeshService %s/%s for host %s with %d subsets, TLS mode: %s",
-				configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
 		}
 	}
 

@@ -82,15 +82,17 @@ type guiOverviewStatus struct {
 }
 
 type guiOverviewCounts struct {
-	Services            int `json:"services"`
-	EndpointServices    int `json:"endpointServices"`
-	XDSConnections      int `json:"xdsConnections"`
-	Registries          int `json:"registries"`
-	MeshServices        int `json:"meshServices"`
-	PeerAuthentications int `json:"peerAuthentications"`
-	HTTPRoutes          int `json:"httpRoutes"`
-	GatewayClasses      int `json:"gatewayClasses"`
-	Gateways            int `json:"gateways"`
+	Services               int `json:"services"`
+	EndpointServices       int `json:"endpointServices"`
+	XDSConnections         int `json:"xdsConnections"`
+	Registries             int `json:"registries"`
+	MeshServices           int `json:"meshServices"`
+	PeerAuthentications    int `json:"peerAuthentications"`
+	RequestAuthentications int `json:"requestAuthentications"`
+	AuthorizationPolicies  int `json:"authorizationPolicies"`
+	HTTPRoutes             int `json:"httpRoutes"`
+	GatewayClasses         int `json:"gatewayClasses"`
+	Gateways               int `json:"gateways"`
 }
 
 type guiRegistry struct {
@@ -441,15 +443,17 @@ func (s *Server) buildGUIOverview() guiOverview {
 			ValidationReady: s.kubeClient == nil || s.readinessFlags.configValidationReady.Load(),
 		},
 		Counts: guiOverviewCounts{
-			Services:            len(services),
-			EndpointServices:    len(s.environment.EndpointIndex.AllServices()),
-			XDSConnections:      len(s.XDSServer.AllClients()),
-			Registries:          len(registries),
-			MeshServices:        configKinds[0].Count,
-			PeerAuthentications: configKinds[1].Count,
-			HTTPRoutes:          configKinds[2].Count,
-			GatewayClasses:      configKinds[3].Count,
-			Gateways:            configKinds[4].Count,
+			Services:               len(services),
+			EndpointServices:       len(s.environment.EndpointIndex.AllServices()),
+			XDSConnections:         len(s.XDSServer.AllClients()),
+			Registries:             len(registries),
+			MeshServices:           s.countConfigs(gvk.MeshService),
+			PeerAuthentications:    s.countConfigs(gvk.PeerAuthentication),
+			RequestAuthentications: s.countConfigs(gvk.RequestAuthentication),
+			AuthorizationPolicies:  s.countConfigs(gvk.AuthorizationPolicy),
+			HTTPRoutes:             s.countConfigs(gvk.HTTPRoute),
+			GatewayClasses:         s.countConfigs(gvk.GatewayClass),
+			Gateways:               s.countConfigs(gvk.KubernetesGateway),
 		},
 		ConfigKinds:      configKinds,
 		Registries:       registries,
@@ -571,6 +575,16 @@ func (s *Server) buildGUIConfigKinds() []guiConfigKind {
 			Kind:        "PeerAuthentication",
 			Count:       s.countConfigs(gvk.PeerAuthentication),
 			Description: "mTLS posture and workload identity policy.",
+		},
+		{
+			Kind:        "RequestAuthentication",
+			Count:       s.countConfigs(gvk.RequestAuthentication),
+			Description: "JWT request authentication policy.",
+		},
+		{
+			Kind:        "AuthorizationPolicy",
+			Count:       s.countConfigs(gvk.AuthorizationPolicy),
+			Description: "Request authorization policy.",
 		},
 		{
 			Kind:        "HTTPRoute",

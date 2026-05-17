@@ -27,6 +27,21 @@ import (
 )
 
 var (
+	AuthorizationPolicy = resource.Builder{
+		Identifier: "AuthorizationPolicy",
+		Group:      "security.dubbo.apache.org",
+		Kind:       "AuthorizationPolicy",
+		Plural:     "authorizationpolicies",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.security.v1alpha3.AuthorizationPolicy", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/security/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+
 	ConfigMap = resource.Builder{
 		Identifier:    "ConfigMap",
 		Group:         "",
@@ -321,6 +336,21 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	RequestAuthentication = resource.Builder{
+		Identifier: "RequestAuthentication",
+		Group:      "security.dubbo.apache.org",
+		Kind:       "RequestAuthentication",
+		Plural:     "requestauthentications",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.security.v1alpha3.RequestAuthentication", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapisecurityv1alpha3.RequestAuthentication{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/security/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+
 	Secret = resource.Builder{
 		Identifier:    "Secret",
 		Group:         "",
@@ -398,6 +428,7 @@ var (
 
 	// All contains all collections in the system.
 	All = collection.NewSchemasBuilder().
+		MustAdd(AuthorizationPolicy).
 		MustAdd(ConfigMap).
 		MustAdd(CustomResourceDefinition).
 		MustAdd(DaemonSet).
@@ -417,6 +448,7 @@ var (
 		MustAdd(PeerAuthentication).
 		MustAdd(Pod).
 		MustAdd(PodDisruptionBudget).
+		MustAdd(RequestAuthentication).
 		MustAdd(Secret).
 		MustAdd(Service).
 		MustAdd(ServiceAccount).
@@ -451,25 +483,31 @@ var (
 
 	// Dubbo contains only collections used by Dubbo.
 	Dubbo = collection.NewSchemasBuilder().
+		MustAdd(AuthorizationPolicy).
 		MustAdd(MeshService).
 		MustAdd(PeerAuthentication).
+		MustAdd(RequestAuthentication).
 		Build()
 
 	// dubboGatewayAPI contains only collections used by Dubbo, including the full Gateway API.
 	dubboGatewayAPI = collection.NewSchemasBuilder().
+			MustAdd(AuthorizationPolicy).
 			MustAdd(GatewayClass).
 			MustAdd(HTTPRoute).
 			MustAdd(KubernetesGateway).
 			MustAdd(MeshService).
 			MustAdd(PeerAuthentication).
+			MustAdd(RequestAuthentication).
 			Build()
 
 	// dubboStableGatewayAPI contains only collections used by Dubbo, including beta+ Gateway API.
 	dubboStableGatewayAPI = collection.NewSchemasBuilder().
+				MustAdd(AuthorizationPolicy).
 				MustAdd(GatewayClass).
 				MustAdd(HTTPRoute).
 				MustAdd(KubernetesGateway).
 				MustAdd(MeshService).
 				MustAdd(PeerAuthentication).
+				MustAdd(RequestAuthentication).
 				Build()
 )

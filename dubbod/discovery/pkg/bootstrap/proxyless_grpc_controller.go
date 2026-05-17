@@ -191,7 +191,7 @@ func proxylessGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool
 	}
 	for cfg := range req.ConfigsUpdated {
 		switch cfg.Kind {
-		case kind.MeshService, kind.PeerAuthentication, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
+		case kind.MeshService, kind.PeerAuthentication, kind.RequestAuthentication, kind.AuthorizationPolicy, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
 			return true
 		}
 	}
@@ -764,6 +764,8 @@ func runtimeMutualTLSModeString(mode discoverymodel.MutualTLSMode) string {
 	switch mode {
 	case discoverymodel.MTLSDisable:
 		return "DISABLE"
+	case discoverymodel.MTLSPermissive:
+		return "PERMISSIVE"
 	case discoverymodel.MTLSStrict:
 		return "STRICT"
 	default:

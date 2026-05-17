@@ -21,3 +21,13 @@ const (
 	// HTTPConnectionManager network filter
 	HTTPConnectionManager = "filters.network.http_connection_manager"
 )
+
+// HTTP filter names
+const (
+	// JWTAuthentication validates JWT tokens when they are present.
+	JWTAuthentication = "filters.http.jwt_authn"
+	// HTTPRoleBasedAccessControl enforces request authorization policies.
+	HTTPRoleBasedAccessControl = "filters.http.rbac"
+	// HTTPRouter forwards the request after earlier HTTP filters have accepted it.
+	HTTPRouter = "filters.http.router"
+)
