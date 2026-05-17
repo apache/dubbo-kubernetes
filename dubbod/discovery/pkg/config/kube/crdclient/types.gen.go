@@ -32,6 +32,11 @@ import (
 
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
+	case gvk.AuthorizationPolicy:
+		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy)),
+		}, metav1.CreateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Create(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: objMeta,
@@ -57,6 +62,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
 		}, metav1.CreateOptions{})
+	case gvk.RequestAuthentication:
+		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
+		}, metav1.CreateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -64,6 +74,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 
 func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
+	case gvk.AuthorizationPolicy:
+		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy)),
+		}, metav1.UpdateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Update(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: objMeta,
@@ -89,6 +104,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
 		}, metav1.UpdateOptions{})
+	case gvk.RequestAuthentication:
+		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
+		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -96,6 +116,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 
 func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
 	switch cfg.GroupVersionKind {
+	case gvk.AuthorizationPolicy:
+		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().UpdateStatus(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: objMeta,
@@ -121,6 +146,11 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
+	case gvk.RequestAuthentication:
+		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
 	}
@@ -131,6 +161,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		return nil, fmt.Errorf("gvk mismatch: %v, modified: %v", orig.GroupVersionKind, mod.GroupVersionKind)
 	}
 	switch orig.GroupVersionKind {
+	case gvk.AuthorizationPolicy:
+		oldRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.GatewayClass:
 		oldRes := &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: origMeta,
@@ -206,6 +251,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.RequestAuthentication:
+		oldRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", orig.GroupVersionKind)
 	}
@@ -217,6 +277,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		deleteOptions.Preconditions = &metav1.Preconditions{ResourceVersion: resourceVersion}
 	}
 	switch typ {
+	case gvk.AuthorizationPolicy:
+		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Delete(context.TODO(), name, deleteOptions)
 	case gvk.HTTPRoute:
@@ -227,12 +289,33 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.Dubbo().NetworkingV1alpha3().MeshServices(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.RequestAuthentication:
+		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
 		return fmt.Errorf("unsupported type: %v", typ)
 	}
 }
 
 var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.Config{
+	gvk.AuthorizationPolicy: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.AuthorizationPolicy,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
+		}
+	},
 	gvk.ConfigMap: func(r runtime.Object) config.Config {
 		obj := r.(*k8sioapicorev1.ConfigMap)
 		return config.Config{
@@ -550,6 +633,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.PodDisruptionBudget,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
+		}
+	},
+	gvk.RequestAuthentication: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.RequestAuthentication,
 				Name:              obj.Name,
 				Namespace:         obj.Namespace,
 				Labels:            obj.Labels,

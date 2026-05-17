@@ -214,6 +214,22 @@ func TestBuildRuntimeTrafficConfigCapturesProxylessSecurity(t *testing.T) {
 	}
 }
 
+func TestBuildRuntimeTrafficConfigCapturesPermissivePeerAuthentication(t *testing.T) {
+	hostname := host.Name("provider.grpc-app.svc.cluster.local")
+	svc := newProxylessRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
+	push := newProxylessRuntimeTestPushContext(t, []config.Config{
+		newProxylessPeerAuthenticationConfig("grpc-app-permissive-mtls", "grpc-app", security.PeerAuthentication_MutualTLS_PERMISSIVE),
+	}, []*discoverymodel.Service{svc})
+
+	serviceConfig := buildRuntimeServiceConfig(push, nil, svc)
+	if len(serviceConfig.Ports) != 1 {
+		t.Fatalf("ports = %d, want 1", len(serviceConfig.Ports))
+	}
+	if got := serviceConfig.Ports[0].MTLSMode; got != "PERMISSIVE" {
+		t.Fatalf("mtlsMode = %q, want PERMISSIVE", got)
+	}
+}
+
 func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 	tests := []struct {
 		name string
@@ -236,6 +252,20 @@ func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 			name: "peerauthentication",
 			req: &discoverymodel.PushRequest{
 				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.PeerAuthentication, Name: "strict", Namespace: "grpc-app"}),
+			},
+			want: true,
+		},
+		{
+			name: "requestauthentication",
+			req: &discoverymodel.PushRequest{
+				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.RequestAuthentication, Name: "jwt", Namespace: "grpc-app"}),
+			},
+			want: true,
+		},
+		{
+			name: "authorizationpolicy",
+			req: &discoverymodel.PushRequest{
+				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.AuthorizationPolicy, Name: "require-jwt", Namespace: "grpc-app"}),
 			},
 			want: true,
 		},
@@ -352,6 +382,10 @@ func newProxylessMTLSMeshServiceConfig(name, namespace string, hostname host.Nam
 }
 
 func newProxylessStrictPeerAuthenticationConfig(name, namespace string) config.Config {
+	return newProxylessPeerAuthenticationConfig(name, namespace, security.PeerAuthentication_MutualTLS_STRICT)
+}
+
+func newProxylessPeerAuthenticationConfig(name, namespace string, mode security.PeerAuthentication_MutualTLS_Mode) config.Config {
 	return config.Config{
 		Meta: config.Meta{
 			GroupVersionKind: gvk.PeerAuthentication,
@@ -361,7 +395,7 @@ func newProxylessStrictPeerAuthenticationConfig(name, namespace string) config.C
 		},
 		Spec: &security.PeerAuthentication{
 			Mtls: &security.PeerAuthentication_MutualTLS{
-				Mode: security.PeerAuthentication_MutualTLS_STRICT,
+				Mode: mode,
 			},
 		},
 	}

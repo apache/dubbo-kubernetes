@@ -34,11 +34,13 @@ type MutualTLSMode int
 const (
 	MTLSUnknown MutualTLSMode = iota
 	MTLSDisable
+	MTLSPermissive
 	MTLSStrict
 )
 
 type AuthenticationPolicies struct {
 	requestAuthentications map[string][]config.Config
+	authorizationPolicies  map[string][]config.Config
 	peerAuthentications    map[string][]config.Config
 	globalMutualTLSMode    MutualTLSMode
 	rootNamespace          string
@@ -49,19 +51,37 @@ type AuthenticationPolicies struct {
 func initAuthenticationPolicies(env *Environment) *AuthenticationPolicies {
 	policy := &AuthenticationPolicies{
 		requestAuthentications: map[string][]config.Config{},
+		authorizationPolicies:  map[string][]config.Config{},
 		peerAuthentications:    map[string][]config.Config{},
 		globalMutualTLSMode:    MTLSUnknown,
 		rootNamespace:          env.Mesh().GetRootNamespace(),
 	}
 
-	policy.addPeerAuthentication(sortConfigByCreationTime(env.List(gvk.PeerAuthentication, NamespaceAll)))
+	requestAuthentications := sortConfigByCreationTime(env.List(gvk.RequestAuthentication, NamespaceAll))
+	authorizationPolicies := sortConfigByCreationTime(env.List(gvk.AuthorizationPolicy, NamespaceAll))
+	peerAuthentications := sortConfigByCreationTime(env.List(gvk.PeerAuthentication, NamespaceAll))
+
+	policy.addRequestAuthentication(requestAuthentications)
+	policy.addAuthorizationPolicy(authorizationPolicies)
+	policy.addPeerAuthentication(peerAuthentications)
+	policy.aggregateVersion = authPolicyAggregateVersion(requestAuthentications, authorizationPolicies, peerAuthentications)
 
 	return policy
 }
 
 func (policy *AuthenticationPolicies) addRequestAuthentication(configs []config.Config) {
 	for _, config := range configs {
-		policy.requestAuthentications[config.Namespace] = append(policy.requestAuthentications[config.Namespace], config)
+		if _, ok := config.Spec.(*v1alpha3.RequestAuthentication); ok {
+			policy.requestAuthentications[config.Namespace] = append(policy.requestAuthentications[config.Namespace], config)
+		}
+	}
+}
+
+func (policy *AuthenticationPolicies) addAuthorizationPolicy(configs []config.Config) {
+	for _, config := range configs {
+		if _, ok := config.Spec.(*v1alpha3.AuthorizationPolicy); ok {
+			policy.authorizationPolicies[config.Namespace] = append(policy.authorizationPolicies[config.Namespace], config)
+		}
 	}
 }
 
@@ -70,10 +90,8 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 
 	foundNamespaceMTLS := make(map[string]v1alpha3.PeerAuthentication_MutualTLS_Mode)
 	seenNamespaceOrMeshConfig := make(map[string]time.Time)
-	versions := []string{}
 
 	for _, config := range configs {
-		versions = append(versions, config.UID+"."+config.ResourceVersion)
 		spec := config.Spec.(*v1alpha3.PeerAuthentication)
 		selector := spec.GetSelector()
 		if selector == nil || len(selector.MatchLabels) == 0 {
@@ -90,9 +108,7 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 				mode = spec.Mtls.Mode
 			}
 			if config.Namespace == policy.rootNamespace {
-				if mode == v1alpha3.PeerAuthentication_MutualTLS_UNSET {
-					policy.globalMutualTLSMode = ConvertToMutualTLSMode(mode)
-				}
+				policy.globalMutualTLSMode = ConvertToMutualTLSMode(mode)
 			} else {
 				foundNamespaceMTLS[config.Namespace] = mode
 			}
@@ -100,9 +116,6 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 
 		policy.peerAuthentications[config.Namespace] = append(policy.peerAuthentications[config.Namespace], config)
 	}
-
-	// Not security sensitive code
-	policy.aggregateVersion = fmt.Sprintf("%x", md5.Sum([]byte(strings.Join(versions, ";"))))
 
 	policy.namespaceMutualTLSMode = make(map[string]MutualTLSMode, len(foundNamespaceMTLS))
 
@@ -117,10 +130,23 @@ func (policy *AuthenticationPolicies) addPeerAuthentication(configs []config.Con
 	}
 }
 
+func authPolicyAggregateVersion(groups ...[]config.Config) string {
+	versions := []string{}
+	for _, configs := range groups {
+		for _, cfg := range configs {
+			versions = append(versions, cfg.GroupVersionKind.String()+"."+cfg.Namespace+"."+cfg.Name+"."+cfg.UID+"."+cfg.ResourceVersion)
+		}
+	}
+	// Not security sensitive code.
+	return fmt.Sprintf("%x", md5.Sum([]byte(strings.Join(versions, ";"))))
+}
+
 func ConvertToMutualTLSMode(mode v1alpha3.PeerAuthentication_MutualTLS_Mode) MutualTLSMode {
 	switch mode {
 	case v1alpha3.PeerAuthentication_MutualTLS_DISABLE:
 		return MTLSDisable
+	case v1alpha3.PeerAuthentication_MutualTLS_PERMISSIVE:
+		return MTLSPermissive
 	case v1alpha3.PeerAuthentication_MutualTLS_STRICT:
 		return MTLSStrict
 	default:
@@ -153,6 +179,48 @@ func (policy *AuthenticationPolicies) EffectiveMutualTLSMode(namespace string, w
 	}
 
 	return MTLSUnknown
+}
+
+func (policy *AuthenticationPolicies) RequestAuthenticationsForWorkload(namespace string, workloadLabels map[string]string) []config.Config {
+	if policy == nil {
+		return nil
+	}
+	return policy.matchingWorkloadSecurityConfigs(policy.requestAuthentications, namespace, workloadLabels, func(spec any) *typev1alpha3.WorkloadSelector {
+		if req, ok := spec.(*v1alpha3.RequestAuthentication); ok {
+			return req.GetSelector()
+		}
+		return nil
+	})
+}
+
+func (policy *AuthenticationPolicies) AuthorizationPoliciesForWorkload(namespace string, workloadLabels map[string]string) []config.Config {
+	if policy == nil {
+		return nil
+	}
+	return policy.matchingWorkloadSecurityConfigs(policy.authorizationPolicies, namespace, workloadLabels, func(spec any) *typev1alpha3.WorkloadSelector {
+		if authz, ok := spec.(*v1alpha3.AuthorizationPolicy); ok {
+			return authz.GetSelector()
+		}
+		return nil
+	})
+}
+
+func (policy *AuthenticationPolicies) matchingWorkloadSecurityConfigs(configsByNamespace map[string][]config.Config, namespace string, workloadLabels map[string]string, selector func(any) *typev1alpha3.WorkloadSelector) []config.Config {
+	var out []config.Config
+	appendMatches := func(configs []config.Config) {
+		for _, cfg := range configs {
+			if selectorMatchesWorkload(selector(cfg.Spec), workloadLabels) {
+				out = append(out, cfg)
+			}
+		}
+	}
+	if namespace != "" {
+		appendMatches(configsByNamespace[namespace])
+	}
+	if policy.rootNamespace != "" && policy.rootNamespace != namespace {
+		appendMatches(configsByNamespace[policy.rootNamespace])
+	}
+	return out
 }
 
 func (policy *AuthenticationPolicies) matchingPeerAuthentication(namespace string, workloadLabels map[string]string, port uint32) MutualTLSMode {

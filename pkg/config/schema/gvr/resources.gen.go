@@ -5,6 +5,7 @@ package gvr
 import "k8s.io/apimachinery/pkg/runtime/schema"
 
 var (
+	AuthorizationPolicy            = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "authorizationpolicies"}
 	ConfigMap                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
 	CustomResourceDefinition       = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
 	DaemonSet                      = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
@@ -27,6 +28,7 @@ var (
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "peerauthentications"}
 	Pod                            = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 	PodDisruptionBudget            = schema.GroupVersionResource{Group: "policy", Version: "v1", Resource: "poddisruptionbudgets"}
+	RequestAuthentication          = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "requestauthentications"}
 	Secret                         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
@@ -36,6 +38,8 @@ var (
 
 func IsClusterScoped(g schema.GroupVersionResource) bool {
 	switch g {
+	case AuthorizationPolicy:
+		return false
 	case ConfigMap:
 		return false
 	case CustomResourceDefinition:
@@ -77,6 +81,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case Pod:
 		return false
 	case PodDisruptionBudget:
+		return false
+	case RequestAuthentication:
 		return false
 	case Secret:
 		return false

@@ -14,42 +14,16 @@
 # limitations under the License.
 
 _internal_default_values_not_set:
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2048Mi
-
-  injectorWebhook:
-    defaultTemplates: []
-    templates: {}
-
   revision: ""
 
   global:
-    dubboNamespace: dubbo-system
-
-    dubboCertProvider: dubbod
     proxy:
-      image: ""
-
-      autoInject: enabled
-
       clusterDomain: "cluster.local"
-
-      resources:
-        requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
-          cpu: 200m
-          memory: 512Mi
 
     statusPort: 26020
 
     gui:
       port: 26080
       nodePort: 30080
-
-    caAddress: ""
 
     configValidation: true

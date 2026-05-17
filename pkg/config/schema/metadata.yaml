@@ -192,6 +192,15 @@ resources:
     statusProtoPackage: "sigs.k8s.io/gateway-api/apis/v1"
 
   ## Dubbo resources
+  - kind: AuthorizationPolicy
+    plural: "authorizationpolicies"
+    group: "security.dubbo.apache.org"
+    version: "v1alpha3"
+    proto: "dubbo.security.v1alpha3.AuthorizationPolicy"
+    protoPackage: "github.com/kdubbo/api/security/v1alpha3"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
+
   - kind: "MeshService"
     plural: "meshservices"
     group: "networking.dubbo.apache.org"
@@ -214,6 +223,15 @@ resources:
     group: "security.dubbo.apache.org"
     version: "v1alpha3"
     proto: "dubbo.security.v1alpha3.PeerAuthentication"
+    protoPackage: "github.com/kdubbo/api/security/v1alpha3"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
+
+  - kind: RequestAuthentication
+    plural: "requestauthentications"
+    group: "security.dubbo.apache.org"
+    version: "v1alpha3"
+    proto: "dubbo.security.v1alpha3.RequestAuthentication"
     protoPackage: "github.com/kdubbo/api/security/v1alpha3"
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
     statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"

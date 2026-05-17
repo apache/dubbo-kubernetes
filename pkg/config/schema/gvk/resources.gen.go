@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "AuthorizationPolicy"}
 	ConfigMap                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
 	CustomResourceDefinition       = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
 	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
@@ -32,6 +33,7 @@ var (
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "PeerAuthentication"}
 	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
 	PodDisruptionBudget            = config.GroupVersionKind{Group: "policy", Version: "v1", Kind: "PodDisruptionBudget"}
+	RequestAuthentication          = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "RequestAuthentication"}
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
@@ -42,6 +44,8 @@ var (
 // ToGVR converts a GVK to a GVR.
 func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 	switch g {
+	case AuthorizationPolicy:
+		return gvr.AuthorizationPolicy, true
 	case ConfigMap:
 		return gvr.ConfigMap, true
 	case CustomResourceDefinition:
@@ -86,6 +90,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Pod, true
 	case PodDisruptionBudget:
 		return gvr.PodDisruptionBudget, true
+	case RequestAuthentication:
+		return gvr.RequestAuthentication, true
 	case Secret:
 		return gvr.Secret, true
 	case Service:
@@ -103,6 +109,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 
 func MustToKind(g config.GroupVersionKind) kind.Kind {
 	switch g {
+	case AuthorizationPolicy:
+		return kind.AuthorizationPolicy
 	case ConfigMap:
 		return kind.ConfigMap
 	case CustomResourceDefinition:
@@ -141,6 +149,8 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.Pod
 	case PodDisruptionBudget:
 		return kind.PodDisruptionBudget
+	case RequestAuthentication:
+		return kind.RequestAuthentication
 	case Secret:
 		return kind.Secret
 	case Service:
@@ -169,6 +179,8 @@ func MustToGVR(g config.GroupVersionKind) schema.GroupVersionResource {
 // FromGVR converts a GVR to a GVK.
 func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 	switch g {
+	case gvr.AuthorizationPolicy:
+		return AuthorizationPolicy, true
 	case gvr.ConfigMap:
 		return ConfigMap, true
 	case gvr.CustomResourceDefinition:
@@ -207,6 +219,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Pod, true
 	case gvr.PodDisruptionBudget:
 		return PodDisruptionBudget, true
+	case gvr.RequestAuthentication:
+		return RequestAuthentication, true
 	case gvr.Secret:
 		return Secret, true
 	case gvr.Service:

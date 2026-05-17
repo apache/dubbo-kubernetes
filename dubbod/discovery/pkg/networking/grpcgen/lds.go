@@ -236,14 +236,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 						RouteConfigName: routeName,
 					},
 				},
-				HttpFilters: []*hcmv1.HttpFilter{
-					{
-						Name: "filters.http.router",
-						ConfigType: &hcmv1.HttpFilter_TypedConfig{
-							TypedConfig: protoconv.MessageToAny(&routerv1.Router{}),
-						},
-					},
-				},
+				HttpFilters: buildInboundHTTPFilters(push, si),
 			}
 			log.Infof(" Gateway Pod (router) using RDS for listener %s, routeName=%s, node.ID=%s, node.Type=%v", name, routeName, node.ID, node.Type)
 		} else {
@@ -274,14 +267,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 						},
 					},
 				},
-				HttpFilters: []*hcmv1.HttpFilter{
-					{
-						Name: "filters.http.router",
-						ConfigType: &hcmv1.HttpFilter_TypedConfig{
-							TypedConfig: protoconv.MessageToAny(&routerv1.Router{}),
-						},
-					},
-				},
+				HttpFilters: buildInboundHTTPFilters(push, si),
 			}
 			log.Debugf(" regular service Pod using inline RouteConfig for listener %s", name)
 		}
@@ -301,20 +287,8 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 			},
 		}
 
-		if ts := buildDownstreamTransportSocket(mode); ts != nil {
-			// For STRICT mTLS mode, set TransportSocket to require TLS connections
-			// When TransportSocket is present, only TLS connections can match this FilterChain
-			// No FilterChainMatch needed - gRPC proxyless will automatically match based on TransportSocket presence
-			filterChain.TransportSocket = ts
-			log.Infof(" applied STRICT mTLS transport socket to listener %s (mode=%v, requires client cert=true)", name, mode)
-		} else if mode == model.MTLSStrict {
-			log.Warnf(" expected to enable STRICT mTLS on listener %s but failed to build transport socket (mode=%v)", name, mode)
-		} else {
-			// For plaintext mode, no TransportSocket means only plaintext connections can match
-			// No FilterChainMatch needed - gRPC proxyless will automatically match based on TransportSocket absence
-			// TLS connections will fail to match this FilterChain (no TransportSocket) and connection will fail
-			log.Debugf(" listener %s using plaintext (mode=%v) - clients using TLS will fail to connect", name, mode)
-		}
+		filterChains := buildInboundFilterChains(filterChain, mode)
+		logInboundMTLSMode(name, mode, len(filterChains))
 
 		ll := &listener.Listener{
 			Name: name,
@@ -327,7 +301,7 @@ func buildInboundListeners(node *model.Proxy, push *model.PushContext, names []s
 				},
 			}},
 			// Create FilterChain with HttpConnectionManager filter for proxyless gRPC
-			FilterChains: []*listener.FilterChain{filterChain},
+			FilterChains: filterChains,
 			// the following must not be set or the client will NACK
 			ListenerFilters: nil,
 			UseOriginalDst:  nil,
@@ -368,6 +342,50 @@ func buildDownstreamTransportSocket(mode model.MutualTLSMode) *core.TransportSoc
 	return &core.TransportSocket{
 		Name:       "transport_sockets.tls",
 		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
+	}
+}
+
+func buildInboundFilterChains(plaintext *listener.FilterChain, mode model.MutualTLSMode) []*listener.FilterChain {
+	switch mode {
+	case model.MTLSStrict:
+		if ts := buildDownstreamTransportSocket(model.MTLSStrict); ts != nil {
+			plaintext.TransportSocket = ts
+		}
+		return []*listener.FilterChain{plaintext}
+	case model.MTLSPermissive:
+		if ts := buildDownstreamTransportSocket(model.MTLSStrict); ts != nil {
+			mtls := cloneInboundFilterChain(plaintext)
+			mtls.Name = "mtls"
+			mtls.FilterChainMatch = &listener.FilterChainMatch{
+				TransportProtocol:    "tls",
+				ApplicationProtocols: []string{"h2"},
+			}
+			mtls.TransportSocket = ts
+			return []*listener.FilterChain{mtls, plaintext}
+		}
+	}
+	return []*listener.FilterChain{plaintext}
+}
+
+func cloneInboundFilterChain(in *listener.FilterChain) *listener.FilterChain {
+	if in == nil {
+		return &listener.FilterChain{}
+	}
+	out := *in
+	if len(in.Filters) > 0 {
+		out.Filters = append([]*listener.Filter(nil), in.Filters...)
+	}
+	return &out
+}
+
+func logInboundMTLSMode(name string, mode model.MutualTLSMode, filterChainCount int) {
+	switch mode {
+	case model.MTLSStrict:
+		log.Infof(" applied STRICT mTLS transport socket to listener %s (filterChains=%d, requires client cert=true)", name, filterChainCount)
+	case model.MTLSPermissive:
+		log.Infof(" applied PERMISSIVE mTLS listener %s (filterChains=%d, plaintext and mTLS accepted)", name, filterChainCount)
+	default:
+		log.Debugf(" listener %s using plaintext (mode=%v)", name, mode)
 	}
 }
 

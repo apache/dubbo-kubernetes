@@ -427,6 +427,149 @@ metadata:
     dubbo: security
     heritage: Tiller
     release: dubbo
+  name: authorizationpolicys.security.dubbo.apache.org
+spec:
+  group: security.dubbo.apache.org
+  names:
+    categories:
+    - dubbo
+    - security
+    kind: AuthorizationPolicy
+    listKind: AuthorizationPolicyList
+    plural: authorizationpolicys
+    shortNames:
+    - ap
+    singular: authorizationpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The authorization action.
+      jsonPath: .spec.action
+      name: Action
+      type: string
+    - description: 'CreationTimestamp is a timestamp representing the server time
+        when this object was created. It is not guaranteed to be set in happens-before
+        order across separate operations. Clients may not set this value. It is represented
+        in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
+        lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            description: 'Authorization policy configuration for workloads. See more
+              details at: '
+            properties:
+              action:
+                description: |-
+                  The action to take if a request matches the rules.
+
+                  Valid Options: ALLOW, DENY
+                enum:
+                - ALLOW
+                - DENY
+                type: string
+              rules:
+                description: Authorization rules.
+                items:
+                  properties:
+                    from:
+                      description: Sources of a request.
+                      items:
+                        properties:
+                          source:
+                            description: Source attributes.
+                            properties:
+                              requestPrincipals:
+                                description: Request identities derived from validated
+                                  JWT issuer and subject.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                      type: array
+                    when:
+                      description: Additional conditions that must match.
+                      items:
+                        properties:
+                          key:
+                            description: Attribute key.
+                            type: string
+                          notValues:
+                            description: Disallowed values.
+                            items:
+                              type: string
+                            type: array
+                          values:
+                            description: Allowed values.
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      type: array
+                  type: object
+                type: array
+              selector:
+                description: The selector determines the workloads to apply the authorization
+                  policy on.
+                properties:
+                  matchLabels:
+                    additionalProperties:
+                      maxLength: 63
+                      type: string
+                      x-kubernetes-validations:
+                      - message: wildcard not allowed in label value match
+                        rule: '!self.contains("*")'
+                    maxProperties: 4096
+                    type: object
+                    x-kubernetes-validations:
+                    - message: wildcard not allowed in label key match
+                      rule: self.all(key, !key.contains("*"))
+                    - message: key must not be empty
+                      rule: self.all(key, key.size() != 0)
+                type: object
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    "helm.sh/resource-policy": keep
+  labels:
+    app: dubbo
+    chart: dubbo
+    dubbo: security
+    heritage: Tiller
+    release: dubbo
   name: peerauthentications.security.dubbo.apache.org
 spec:
   group: security.dubbo.apache.org
@@ -523,6 +666,136 @@ spec:
             - message: portLevelMtls requires selector
               rule: 'has(self.portLevelMtls) ? (((has(self.selector) && has(self.selector.matchLabels))
                 ? self.selector.matchLabels : {}).size() > 0) : true'
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    "helm.sh/resource-policy": keep
+  labels:
+    app: dubbo
+    chart: dubbo
+    dubbo: security
+    heritage: Tiller
+    release: dubbo
+  name: requestauthentications.security.dubbo.apache.org
+spec:
+  group: security.dubbo.apache.org
+  names:
+    categories:
+    - dubbo
+    - security
+    kind: RequestAuthentication
+    listKind: RequestAuthenticationList
+    plural: requestauthentications
+    shortNames:
+    - ra
+    singular: requestauthentication
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: JWT issuers accepted by this policy.
+      jsonPath: .spec.jwtRules[*].issuer
+      name: Issuer
+      type: string
+    - description: 'CreationTimestamp is a timestamp representing the server time
+        when this object was created. It is not guaranteed to be set in happens-before
+        order across separate operations. Clients may not set this value. It is represented
+        in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
+        lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            description: 'Request authentication configuration for workloads. See
+              more details at: '
+            properties:
+              jwtRules:
+                description: Rules to validate JWT tokens found in the request.
+                items:
+                  properties:
+                    audiences:
+                      description: Audiences accepted by this rule.
+                      items:
+                        type: string
+                      type: array
+                    fromHeaders:
+                      description: JWT locations in request headers.
+                      items:
+                        properties:
+                          name:
+                            description: Header name.
+                            type: string
+                          prefix:
+                            description: Optional prefix stripped before JWT validation.
+                            type: string
+                        type: object
+                      type: array
+                    fromParams:
+                      description: JWT locations in query parameters.
+                      items:
+                        type: string
+                      type: array
+                    issuer:
+                      description: Identifies the issuer that issued the JWT.
+                      type: string
+                    jwks:
+                      description: Inline JSON Web Key Set.
+                      type: string
+                    jwksUri:
+                      description: URL of the JSON Web Key Set used to validate tokens.
+                      type: string
+                  type: object
+                type: array
+              selector:
+                description: The selector determines the workloads to apply the request
+                  authentication on.
+                properties:
+                  matchLabels:
+                    additionalProperties:
+                      maxLength: 63
+                      type: string
+                      x-kubernetes-validations:
+                      - message: wildcard not allowed in label value match
+                        rule: '!self.contains("*")'
+                    maxProperties: 4096
+                    type: object
+                    x-kubernetes-validations:
+                    - message: wildcard not allowed in label key match
+                      rule: self.all(key, !key.contains("*"))
+                    - message: key must not be empty
+                      rule: self.all(key, key.size() != 0)
+                type: object
+            type: object
           status:
             properties:
               conditions:

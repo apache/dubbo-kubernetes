@@ -32,6 +32,8 @@ import (
 
 func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.WriteAPI[T] {
 	switch any(ptr.Empty[T]()).(type) {
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
+		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ConfigMap:
 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
@@ -68,6 +70,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Pods(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapipolicyv1.PodDisruptionBudget:
 		return c.Kube().PolicyV1().PodDisruptionBudgets(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication:
+		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Secret:
 		return c.Kube().CoreV1().Secrets(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Service:
@@ -85,6 +89,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 
 func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.ReadWriteAPI[T, TL] {
 	switch any(ptr.Empty[T]()).(type) {
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
+		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.ConfigMap:
 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
@@ -121,6 +127,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().CoreV1().Pods(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapipolicyv1.PodDisruptionBudget:
 		return c.Kube().PolicyV1().PodDisruptionBudgets(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication:
+		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Secret:
 		return c.Kube().CoreV1().Secrets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Service:
@@ -138,6 +146,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 
 func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	switch g {
+	case gvr.AuthorizationPolicy:
+		return &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{}
 	case gvr.ConfigMap:
 		return &k8sioapicorev1.ConfigMap{}
 	case gvr.CustomResourceDefinition:
@@ -174,6 +184,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapicorev1.Pod{}
 	case gvr.PodDisruptionBudget:
 		return &k8sioapipolicyv1.PodDisruptionBudget{}
+	case gvr.RequestAuthentication:
+		return &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{}
 	case gvr.Secret:
 		return &k8sioapicorev1.Secret{}
 	case gvr.Service:
@@ -194,6 +206,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 	var w func(options metav1.ListOptions) (watch.Interface, error)
 
 	switch g {
+	case gvr.AuthorizationPolicy:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(opts.Namespace).Watch(context.Background(), options)
+		}
 	case gvr.ConfigMap:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			return c.Kube().CoreV1().ConfigMaps(opts.Namespace).List(context.Background(), options)
@@ -319,6 +338,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().PolicyV1().PodDisruptionBudgets(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.RequestAuthentication:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().SecurityV1alpha3().RequestAuthentications(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().SecurityV1alpha3().RequestAuthentications(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.Secret:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

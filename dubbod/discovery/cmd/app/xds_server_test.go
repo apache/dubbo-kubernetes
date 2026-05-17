@@ -60,7 +60,9 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	defer cancel()
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- serveXServer(ctx, listener, tlsConfig, upstreamAddr, time.Second, time.Second)
+		errCh <- serveXServer(ctx, listener, tlsConfig, upstreamAddr, func() xserverMTLSMode {
+			return xserverMTLSModeStrict
+		}, time.Second, time.Second)
 	}()
 	t.Cleanup(func() {
 		cancel()
@@ -75,6 +77,11 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	})
 
 	url := "https://" + listener.Addr().String() + "/"
+	_, err = (&http.Client{Timeout: time.Second}).Get("http://" + listener.Addr().String() + "/")
+	if err == nil {
+		t.Fatalf("plaintext request succeeded in STRICT mode, want failure")
+	}
+
 	_, err = (&http.Client{Timeout: time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{
 		InsecureSkipVerify: true,
 	}}}).Get(url)
@@ -100,6 +107,112 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	}
 	if got, want := string(body), "nginx v1\n"; got != want {
 		t.Fatalf("body = %q, want %q", got, want)
+	}
+}
+
+func TestXServerPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
+	caCert, caKey := newTestCA(t)
+	serverCert, serverKey := newSignedCert(t, caCert, caKey, "xserver")
+	clientCert, clientKey := newSignedCert(t, caCert, caKey, "xclient")
+	dir := t.TempDir()
+	writePEM(t, filepath.Join(dir, "root-cert.pem"), "CERTIFICATE", caCert.Raw)
+	writePEM(t, filepath.Join(dir, "cert-chain.pem"), "CERTIFICATE", serverCert.Raw)
+	writePEM(t, filepath.Join(dir, "key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(serverKey))
+	writePEM(t, filepath.Join(dir, "client-cert.pem"), "CERTIFICATE", clientCert.Raw)
+	writePEM(t, filepath.Join(dir, "client-key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(clientKey))
+
+	tlsConfig, err := xserverTLSConfigFromBootstrap(&xdsresolver.BootstrapConfig{
+		CertProviders: map[string]xdsresolver.FileWatcherCertConfig{
+			"default": {
+				CertificateFile:   filepath.Join(dir, "cert-chain.pem"),
+				PrivateKeyFile:    filepath.Join(dir, "key.pem"),
+				CACertificateFile: filepath.Join(dir, "root-cert.pem"),
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("xserverTLSConfigFromBootstrap() failed: %v", err)
+	}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = fmt.Fprintln(w, "nginx v1")
+	}))
+	defer upstream.Close()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen() failed: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- serveXServer(ctx, listener, tlsConfig, upstream.Listener.Addr().String(), func() xserverMTLSMode {
+			return xserverMTLSModePermissive
+		}, time.Second, time.Second)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case err := <-errCh:
+			if err != nil {
+				t.Fatalf("serveXServer() error = %v", err)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("serveXServer() did not stop")
+		}
+	})
+
+	plainResp, err := (&http.Client{Timeout: time.Second}).Get("http://" + listener.Addr().String() + "/")
+	if err != nil {
+		t.Fatalf("plaintext request failed: %v", err)
+	}
+	defer plainResp.Body.Close()
+	plainBody, err := io.ReadAll(plainResp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll(plaintext) failed: %v", err)
+	}
+	if got, want := string(plainBody), "nginx v1\n"; got != want {
+		t.Fatalf("plaintext body = %q, want %q", got, want)
+	}
+
+	cert, err := tls.LoadX509KeyPair(filepath.Join(dir, "client-cert.pem"), filepath.Join(dir, "client-key.pem"))
+	if err != nil {
+		t.Fatalf("tls.LoadX509KeyPair() failed: %v", err)
+	}
+	mtlsResp, err := (&http.Client{Timeout: time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert},
+	}}}).Get("https://" + listener.Addr().String() + "/")
+	if err != nil {
+		t.Fatalf("mTLS request failed: %v", err)
+	}
+	defer mtlsResp.Body.Close()
+	mtlsBody, err := io.ReadAll(mtlsResp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll(mTLS) failed: %v", err)
+	}
+	if got, want := string(mtlsBody), "nginx v1\n"; got != want {
+		t.Fatalf("mTLS body = %q, want %q", got, want)
+	}
+}
+
+func TestXServerMTLSModeFromRuntimeConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dubbo-grpc-xds.json")
+	if err := os.WriteFile(path, []byte(`{
+  "services": [
+    {"ports": [{"port": 80, "mtlsMode": "PERMISSIVE"}]},
+    {"ports": [{"port": 8080, "mtlsMode": "STRICT"}]}
+  ]
+}`), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() failed: %v", err)
+	}
+
+	if got, ok := xserverMTLSModeFromRuntimeConfig(path, 80); !ok || got != xserverMTLSModePermissive {
+		t.Fatalf("mode for 80 = %q, %v; want PERMISSIVE, true", got, ok)
+	}
+	if got, ok := xserverMTLSModeFromRuntimeConfig(path, 8080); !ok || got != xserverMTLSModeStrict {
+		t.Fatalf("mode for 8080 = %q, %v; want STRICT, true", got, ok)
 	}
 }
 
