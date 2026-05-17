@@ -60,10 +60,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Fixed known GUI issues
-            Renamed some core content
-            Added observability tools and metrics data
-            Supplemented relevant e2e testing
+            Added MeshService features
+            Added security infrastructure capabilities
+            Added new subcommands to dubboctl
+            Fixed known issues
           draft: false
           prerelease: true
 
