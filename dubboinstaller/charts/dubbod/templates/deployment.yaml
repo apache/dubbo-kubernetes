@@ -16,9 +16,23 @@
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
 {{- $defaultGlobal := $defaults.global | default dict }}
 {{- $defaultGUI := $defaultGlobal.gui | default dict }}
+{{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
+{{- $defaultRemoteAccess := $defaultMulticluster.remoteAccess | default dict }}
+{{- $defaultEastWestGateway := $defaultMulticluster.eastWestGateway | default dict }}
 {{- $global := .Values.global | default dict }}
 {{- $gui := $global.gui | default dict }}
+{{- $multicluster := $global.multicluster | default dict }}
+{{- $remoteAccess := $multicluster.remoteAccess | default dict }}
+{{- $eastWestGateway := $multicluster.eastWestGateway | default dict }}
 {{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
+{{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
+{{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
+{{- $eastWestGatewayEntries := list }}
+{{- $defaultEastWestGatewayPort := int (coalesce $eastWestGateway.port $defaultEastWestGateway.port 15443) }}
+{{- range $gateway := $eastWestGateways }}
+{{- $gatewayPort := int (coalesce $gateway.port $defaultEastWestGatewayPort) }}
+{{- $eastWestGatewayEntries = append $eastWestGatewayEntries (printf "%s=%s:%d" $gateway.clusterName $gateway.address $gatewayPort) }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -68,6 +82,14 @@ spec:
               value: default
             - name: DUBBO_CERT_PROVIDER
               value: dubbod
+{{- if gt (len $remoteAccessCertificateHosts) 0 }}
+            - name: DUBBOD_CUSTOM_HOST
+              value: {{ join "," $remoteAccessCertificateHosts | quote }}
+{{- end }}
+{{- if gt (len $eastWestGatewayEntries) 0 }}
+            - name: DUBBO_EASTWEST_GATEWAYS
+              value: {{ join "," $eastWestGatewayEntries | quote }}
+{{- end }}
             - name: CLUSTER_ID
               value: "Kubernetes"
             - name: POD_NAME

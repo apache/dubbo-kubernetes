@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -65,6 +66,14 @@ type classInfo struct {
 }
 
 const defaultDxgateGatewayName = "dxgate-gateway"
+
+const (
+	eastWestGatewayAnnotation   = "gateway.dubbo.apache.org/eastwest"
+	serviceTypeAnnotation       = "gateway.dubbo.apache.org/service-type"
+	serviceTargetPortAnnotation = "gateway.dubbo.apache.org/target-port"
+	serviceNodePortAnnotation   = "gateway.dubbo.apache.org/node-port"
+	xdsAddressAnnotation        = "gateway.dubbo.apache.org/xds-address"
+)
 
 var builtinClasses = getBuiltinClasses()
 
@@ -332,7 +341,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 
 	defaultName := getDefaultName(gw.Name, &gw.Spec, gi.disableNameSuffix)
 	legacyName := getLegacyDefaultName(gw.Name, &gw.Spec, gi.disableNameSuffix)
-	serviceType := gi.defaultServiceType
+	serviceType := serviceTypeForGateway(gw, gi.defaultServiceType)
 
 	// Extract service ports from Gateway listeners
 	ports := extractServicePorts(gw)
@@ -340,7 +349,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		log.Infof("gateway has no supported HTTP listeners, skipping dxgate deployment")
 		return nil
 	}
-	bootstrapConfig, bootstrapConfigHash, err := d.buildDxgateBootstrapConfig(gw.Namespace, defaultName, ports)
+	bootstrapConfig, bootstrapConfigHash, err := d.buildDxgateBootstrapConfig(gw, defaultName, ports)
 	if err != nil {
 		log.Errorf("failed building dxgate bootstrap config: %v", err)
 		return err
@@ -494,14 +503,18 @@ func (d *DeploymentController) domainSuffix() string {
 	return constants.DefaultClusterLocalDomain
 }
 
-func (d *DeploymentController) buildDxgateBootstrapConfig(namespace, serviceName string, ports []corev1.ServicePort) (string, string, error) {
+func (d *DeploymentController) buildDxgateBootstrapConfig(gw gateway.Gateway, serviceName string, ports []corev1.ServicePort) (string, string, error) {
 	systemNamespace := d.systemNamespace
 	if systemNamespace == "" {
 		systemNamespace = constants.DubboSystemNamespace
 	}
+	xdsAddress := fmt.Sprintf("http://dubbod.%s.svc:26010", systemNamespace)
+	if gw.Annotations[xdsAddressAnnotation] != "" {
+		xdsAddress = gw.Annotations[xdsAddressAnnotation]
+	}
 	return buildDxgateBootstrapConfig(
-		fmt.Sprintf("http://dubbod.%s.svc:26010", systemNamespace),
-		dxgateListenerNames(namespace, serviceName, d.domainSuffix(), ports),
+		xdsAddress,
+		dxgateListenerNames(gw.Namespace, serviceName, d.domainSuffix(), ports),
 		string(d.clusterID),
 		d.domainSuffix(),
 	)
@@ -1038,8 +1051,20 @@ func getLegacyDefaultName(name string, kgw *gateway.GatewaySpec, disableNameSuff
 	return fmt.Sprintf("%v-%v", name, kgw.GatewayClassName)
 }
 
+func serviceTypeForGateway(gw gateway.Gateway, fallback corev1.ServiceType) corev1.ServiceType {
+	if value := gw.Annotations[serviceTypeAnnotation]; value != "" {
+		switch corev1.ServiceType(value) {
+		case corev1.ServiceTypeClusterIP, corev1.ServiceTypeNodePort, corev1.ServiceTypeLoadBalancer:
+			return corev1.ServiceType(value)
+		}
+	}
+	return fallback
+}
+
 func extractServicePorts(gw gateway.Gateway) []corev1.ServicePort {
 	svcPorts := make([]corev1.ServicePort, 0, len(gw.Spec.Listeners))
+	targetPort := gatewayServiceTargetPort(gw)
+	nodePort := gatewayServiceNodePort(gw)
 	for i, l := range gw.Spec.Listeners {
 		if l.Protocol != gateway.HTTPProtocolType {
 			continue
@@ -1049,14 +1074,47 @@ func extractServicePorts(gw gateway.Gateway) []corev1.ServicePort {
 			name = fmt.Sprintf("%s-%d", strings.ToLower(string(l.Protocol)), i)
 		}
 		appProtocol := strings.ToLower(string(l.Protocol))
-		svcPorts = append(svcPorts, corev1.ServicePort{
+		port := corev1.ServicePort{
 			Name:        name,
 			Port:        l.Port,
-			TargetPort:  intstr.FromString("http"),
+			TargetPort:  targetPort,
 			AppProtocol: &appProtocol,
-		})
+		}
+		if nodePort > 0 {
+			port.NodePort = nodePort
+		}
+		svcPorts = append(svcPorts, port)
 	}
 	return svcPorts
+}
+
+func gatewayServiceTargetPort(gw gateway.Gateway) intstr.IntOrString {
+	if port, ok := positiveIntAnnotation(gw, serviceTargetPortAnnotation); ok {
+		return intstr.FromInt(port)
+	}
+	if gw.Annotations[eastWestGatewayAnnotation] == "true" {
+		return intstr.FromInt(inject.ProxylessXServerPort)
+	}
+	return intstr.FromString("http")
+}
+
+func gatewayServiceNodePort(gw gateway.Gateway) int32 {
+	port, ok := positiveIntAnnotation(gw, serviceNodePortAnnotation)
+	if !ok {
+		return 0
+	}
+	return int32(port)
+}
+
+func positiveIntAnnotation(gw gateway.Gateway, name string) (int, bool) {
+	if gw.Annotations == nil || gw.Annotations[name] == "" {
+		return 0, false
+	}
+	port, err := strconv.Atoi(gw.Annotations[name])
+	if err != nil || port <= 0 {
+		return 0, false
+	}
+	return port, true
 }
 
 // splitYAML splits a YAML document into individual resources

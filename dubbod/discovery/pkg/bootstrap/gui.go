@@ -438,7 +438,7 @@ func (s *Server) buildGUIOverview() guiOverview {
 			CachesSynced:    s.cachesSynced(),
 			ServicesSynced:  s.ServiceController().HasSynced(),
 			ConfigSynced:    s.configController != nil && s.configController.HasSynced(),
-			ProxylessSynced: s.proxylessGRPCWorkloadController == nil || s.proxylessGRPCWorkloadController.HasSynced(),
+			ProxylessSynced: s.proxylessGRPCWorkloadsSynced(),
 			InjectorReady:   s.kubeClient == nil || s.readinessFlags.InjectorReady.Load(),
 			ValidationReady: s.kubeClient == nil || s.readinessFlags.configValidationReady.Load(),
 		},

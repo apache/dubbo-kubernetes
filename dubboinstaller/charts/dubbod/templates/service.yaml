@@ -16,10 +16,19 @@
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
 {{- $defaultGlobal := $defaults.global | default dict }}
 {{- $defaultGUI := $defaultGlobal.gui | default dict }}
+{{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
+{{- $defaultRemoteAccess := $defaultMulticluster.remoteAccess | default dict }}
 {{- $global := .Values.global | default dict }}
 {{- $gui := $global.gui | default dict }}
+{{- $multicluster := $global.multicluster | default dict }}
+{{- $remoteAccess := $multicluster.remoteAccess | default dict }}
 {{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
 {{- $guiNodePort := int (coalesce $gui.nodePort $defaultGUI.nodePort 30080) }}
+{{- $remoteAccessEnabled := coalesce $remoteAccess.enabled $defaultRemoteAccess.enabled false }}
+{{- $remoteAccessServiceType := coalesce $remoteAccess.serviceType $defaultRemoteAccess.serviceType "LoadBalancer" }}
+{{- $remoteAccessGRPCPort := int (coalesce $remoteAccess.grpcPort $defaultRemoteAccess.grpcPort 26010) }}
+{{- $remoteAccessXDSPort := int (coalesce $remoteAccess.xdsPort $defaultRemoteAccess.xdsPort 26012) }}
+{{- $remoteAccessWebhookPort := int (coalesce $remoteAccess.webhookPort $defaultRemoteAccess.webhookPort 443) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -66,3 +75,32 @@ spec:
       protocol: TCP
   selector:
     app: dubbod
+{{- if $remoteAccessEnabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dubbod-remote
+  namespace: dubbo-system
+  labels:
+    app: dubbod
+spec:
+  type: {{ $remoteAccessServiceType }}
+  ports:
+{{- if gt $remoteAccessGRPCPort 0 }}
+    - port: {{ $remoteAccessGRPCPort }}
+      name: grpc-xds
+      targetPort: 26010
+      protocol: TCP
+{{- end }}
+    - port: {{ $remoteAccessXDSPort }}
+      name: tls-xds
+      targetPort: 26012
+      protocol: TCP
+    - port: {{ $remoteAccessWebhookPort }}
+      name: https-webhook
+      targetPort: 26017
+      protocol: TCP
+  selector:
+    app: dubbod
+{{- end }}

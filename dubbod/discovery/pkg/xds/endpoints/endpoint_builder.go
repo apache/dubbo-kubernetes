@@ -19,11 +19,14 @@ package endpoints
 import (
 	"fmt"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"github.com/cespare/xxhash/v2"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
@@ -77,6 +80,14 @@ func (b *EndpointBuilder) ServiceFound() bool {
 // BuildClusterLoadAssignment converts the shards for this EndpointBuilder's Service
 // into a ClusterLoadAssignment. Used for EDS.
 func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.EndpointIndex) *endpoint.ClusterLoadAssignment {
+	gateways, err := multicluster.ParseEastWestGateways(features.EastWestGatewayRegistry)
+	if err != nil {
+		log.Warnf("invalid %s value %q: %v", multicluster.EastWestGatewayEnvName, features.EastWestGatewayRegistry, err)
+	}
+	return b.BuildClusterLoadAssignmentWithGateways(endpointIndex, gateways)
+}
+
+func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *model.EndpointIndex, gateways map[cluster.ID]multicluster.EastWestGateway) *endpoint.ClusterLoadAssignment {
 	if !b.ServiceFound() {
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
@@ -145,7 +156,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 			b.hostname, b.port, svcPort.Name, portNamesList)
 	}
 
-	for _, eps := range shards.Shards {
+	for shard, eps := range shards.Shards {
 		for _, ep := range eps {
 			totalEndpoints++
 			// Filter by port name
@@ -171,8 +182,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
 				continue
 			}
 
-			// Build LbEndpoint
-			lbEp := b.buildLbEndpoint(ep)
+			lbEp := b.buildLbEndpointForCluster(ep, shard.Cluster, gateways)
 			if lbEp == nil {
 				buildFailedCount++
 				filteredCount++
@@ -256,12 +266,19 @@ func (b *EndpointBuilder) matchesSubset(epLabels labels.Instance) bool {
 	return selector.SubsetOf(epLabels)
 }
 
-func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbEndpoint {
+func (b *EndpointBuilder) buildLbEndpointForCluster(ep *model.DubboEndpoint, endpointCluster cluster.ID, gateways map[cluster.ID]multicluster.EastWestGateway) *endpoint.LbEndpoint {
 	if len(ep.Addresses) == 0 {
 		return nil
 	}
 
-	address := util.BuildAddress(ep.Addresses[0], b.endpointPort(ep))
+	endpointAddress := ep.Addresses[0]
+	endpointPort := b.endpointPort(ep)
+	if gateway, ok := b.eastWestGatewayForCluster(endpointCluster, gateways); ok {
+		endpointAddress = gateway.Address
+		endpointPort = gateway.Port
+	}
+
+	address := util.BuildAddress(endpointAddress, endpointPort)
 	if address == nil {
 		return nil
 	}
@@ -290,6 +307,17 @@ func (b *EndpointBuilder) buildLbEndpoint(ep *model.DubboEndpoint) *endpoint.LbE
 			Value: 1,
 		},
 	}
+}
+
+func (b *EndpointBuilder) eastWestGatewayForCluster(endpointCluster cluster.ID, gateways map[cluster.ID]multicluster.EastWestGateway) (multicluster.EastWestGateway, bool) {
+	if endpointCluster == "" || len(gateways) == 0 {
+		return multicluster.EastWestGateway{}, false
+	}
+	if b.proxy != nil && b.proxy.Metadata != nil && b.proxy.Metadata.ClusterID == endpointCluster {
+		return multicluster.EastWestGateway{}, false
+	}
+	gateway, ok := gateways[endpointCluster]
+	return gateway, ok
 }
 
 func (b *EndpointBuilder) endpointPort(ep *model.DubboEndpoint) uint32 {
@@ -348,7 +376,14 @@ func (b *EndpointBuilder) Cacheable() bool {
 func (b *EndpointBuilder) Key() any {
 	// EDS cache expects uint64 key, not string
 	// Hash the cluster name to uint64 to match the cache type
-	return xxhash.Sum64String(b.clusterName)
+	return xxhash.Sum64String(b.clusterName + "|" + string(b.proxyClusterID()) + "|" + features.EastWestGatewayRegistry)
+}
+
+func (b *EndpointBuilder) proxyClusterID() cluster.ID {
+	if b == nil || b.proxy == nil || b.proxy.Metadata == nil {
+		return ""
+	}
+	return b.proxy.Metadata.ClusterID
 }
 
 // Type implements model.XdsCacheEntry

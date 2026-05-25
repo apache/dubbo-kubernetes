@@ -76,6 +76,121 @@ func TestGenerateManifestExposesDubbodPrometheusScrapeEndpoint(t *testing.T) {
 	t.Fatal("dubbod Service not rendered")
 }
 
+func TestGenerateManifestRemoteAccessServiceIsOptional(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+	if hasManifest(manifests, "Service", "dubbod-remote") {
+		t.Fatal("dubbod-remote rendered while remote access is disabled")
+	}
+
+	manifests, _, err = GenerateManifest(nil, []string{
+		"values.global.multicluster.remoteAccess.enabled=true",
+		"values.global.multicluster.remoteAccess.serviceType=NodePort",
+		"values.global.multicluster.remoteAccess.grpcPort=32010",
+		"values.global.multicluster.remoteAccess.xdsPort=26112",
+		"values.global.multicluster.remoteAccess.webhookPort=30443",
+	}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() with remote access error = %v", err)
+	}
+	service := findManifest(t, manifests, "Service", "dubbod-remote")
+	serviceType, _, _ := unstructured.NestedString(service.Object, "spec", "type")
+	if serviceType != "NodePort" {
+		t.Fatalf("dubbod-remote service type = %q, want NodePort", serviceType)
+	}
+	grpcPort, _, _ := unstructured.NestedInt64(findPort(t, service, "grpc-xds"), "port")
+	xdsPort, _, _ := unstructured.NestedInt64(findPort(t, service, "tls-xds"), "port")
+	webhookPort, _, _ := unstructured.NestedInt64(findPort(t, service, "https-webhook"), "port")
+	if grpcPort != 32010 || xdsPort != 26112 || webhookPort != 30443 {
+		t.Fatalf("dubbod-remote ports = %d/%d/%d, want 32010/26112/30443", grpcPort, xdsPort, webhookPort)
+	}
+}
+
+func TestGenerateManifestRemoteAccessCertificateHosts(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, []string{
+		"values.global.multicluster.remoteAccess.enabled=true",
+		"values.global.multicluster.remoteAccess.certificateHosts[0]=192.168.15.164",
+		"values.global.multicluster.remoteAccess.certificateHosts[1]=dubbod.example.internal",
+	}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() with remote access certificate hosts error = %v", err)
+	}
+
+	deployment := findManifest(t, manifests, "Deployment", "dubbod")
+	containers, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
+	if err != nil || !ok || len(containers) == 0 {
+		t.Fatalf("deployment containers missing: ok=%v err=%v", ok, err)
+	}
+	execute := containers[0].(map[string]interface{})
+	env, ok, err := unstructured.NestedSlice(execute, "env")
+	if err != nil || !ok {
+		t.Fatalf("deployment env missing: ok=%v err=%v", ok, err)
+	}
+	for _, item := range env {
+		entry, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _, _ := unstructured.NestedString(entry, "name")
+		if name != "DUBBOD_CUSTOM_HOST" {
+			continue
+		}
+		value, _, _ := unstructured.NestedString(entry, "value")
+		if value != "192.168.15.164,dubbod.example.internal" {
+			t.Fatalf("DUBBOD_CUSTOM_HOST = %q", value)
+		}
+		return
+	}
+	t.Fatal("dubbod deployment missing DUBBOD_CUSTOM_HOST")
+}
+
+func TestGenerateManifestEastWestGatewayConfig(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, []string{
+		"values.global.multicluster.eastWestGateway.enabled=true",
+		"values.global.multicluster.eastWestGateway.serviceType=NodePort",
+		"values.global.multicluster.eastWestGateway.port=15443",
+		"values.global.multicluster.eastWestGateway.targetPort=15080",
+		"values.global.multicluster.eastWestGateway.nodePort=32443",
+		"values.global.multicluster.eastWestGateway.xdsAddress=http://192.168.15.164:32010",
+		"values.global.multicluster.eastWestGateway.gateways[0].clusterName=remote",
+		"values.global.multicluster.eastWestGateway.gateways[0].address=192.168.15.155",
+		"values.global.multicluster.eastWestGateway.gateways[0].port=15443",
+	}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() with east-west gateway error = %v", err)
+	}
+
+	gateway := findManifest(t, manifests, "Gateway", "dubbod-eastwest-gateway")
+	if got := gateway.GetAnnotations()["gateway.dubbo.apache.org/service-type"]; got != "NodePort" {
+		t.Fatalf("east-west gateway service-type annotation = %q, want NodePort", got)
+	}
+	if got := gateway.GetAnnotations()["gateway.dubbo.apache.org/target-port"]; got != "15080" {
+		t.Fatalf("east-west gateway target-port annotation = %q, want 15080", got)
+	}
+	if got := gateway.GetAnnotations()["gateway.dubbo.apache.org/node-port"]; got != "32443" {
+		t.Fatalf("east-west gateway node-port annotation = %q, want 32443", got)
+	}
+	if got := gateway.GetAnnotations()["gateway.dubbo.apache.org/xds-address"]; got != "http://192.168.15.164:32010" {
+		t.Fatalf("east-west gateway xds-address annotation = %q, want override", got)
+	}
+	listeners, ok, err := unstructured.NestedSlice(gateway.Object, "spec", "listeners")
+	if err != nil || !ok || len(listeners) != 1 {
+		t.Fatalf("gateway listeners missing: ok=%v err=%v", ok, err)
+	}
+	listener := listeners[0].(map[string]interface{})
+	port, _, _ := unstructured.NestedInt64(listener, "port")
+	if port != 15443 {
+		t.Fatalf("east-west listener port = %d, want 15443", port)
+	}
+
+	deployment := findManifest(t, manifests, "Deployment", "dubbod")
+	if got := deploymentEnvValue(t, deployment, "DUBBO_EASTWEST_GATEWAYS"); got != "remote=192.168.15.155:15443" {
+		t.Fatalf("DUBBO_EASTWEST_GATEWAYS = %q", got)
+	}
+}
+
 func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, []string{
 		"values.global.gui.port=26081",
@@ -177,6 +292,33 @@ func TestGenerateManifestRejectsRemovedInstallSurface(t *testing.T) {
 			}
 		})
 	}
+}
+
+func deploymentEnvValue(t *testing.T, deployment manifest.Manifest, name string) string {
+	t.Helper()
+	containers, ok, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "containers")
+	if err != nil || !ok || len(containers) == 0 {
+		t.Fatalf("deployment containers missing: ok=%v err=%v", ok, err)
+	}
+	execute := containers[0].(map[string]interface{})
+	env, ok, err := unstructured.NestedSlice(execute, "env")
+	if err != nil || !ok {
+		t.Fatalf("deployment env missing: ok=%v err=%v", ok, err)
+	}
+	for _, item := range env {
+		entry, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		gotName, _, _ := unstructured.NestedString(entry, "name")
+		if gotName != name {
+			continue
+		}
+		value, _, _ := unstructured.NestedString(entry, "value")
+		return value
+	}
+	t.Fatalf("deployment missing env %s", name)
+	return ""
 }
 
 func findManifest(t *testing.T, manifests []manifest.ManifestSet, kind, name string) manifest.Manifest {

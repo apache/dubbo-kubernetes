@@ -162,5 +162,8 @@ spec:
   - name: {{ .Name }}
     port: {{ .Port }}
     targetPort: {{ .TargetPort }}
+{{- if gt (int .NodePort) 0 }}
+    nodePort: {{ .NodePort }}
+{{- end }}
     protocol: {{ .Protocol | default "TCP" }}
 {{- end }}

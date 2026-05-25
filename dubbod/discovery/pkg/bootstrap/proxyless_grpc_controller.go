@@ -38,6 +38,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
 	pkgmodel "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/spiffe"
@@ -69,6 +70,7 @@ var proxylessGRPCLog = log.RegisterScope("proxylessgrpc", "proxyless grpc worklo
 
 type proxylessGRPCWorkloadController struct {
 	server *Server
+	client kubelib.Client
 	pods   kclient.Client[*corev1.Pod]
 	// managedPods keeps bundle/cert updates from scanning every Pod in the cluster.
 	managedPods kclient.RawIndexer
@@ -83,13 +85,43 @@ type proxylessGRPCWorkloadController struct {
 	nextRotation  time.Time
 }
 
+type proxylessGRPCClusterController struct {
+	controller *proxylessGRPCWorkloadController
+	stop       chan struct{}
+}
+
+func (c *proxylessGRPCClusterController) Close() {
+	if c.stop != nil {
+		close(c.stop)
+	}
+}
+
+func (c *proxylessGRPCClusterController) HasSynced() bool {
+	return c.controller == nil || c.controller.HasSynced()
+}
+
 func (s *Server) initProxylessGRPCWorkloads() error {
 	if s.kubeClient == nil {
 		return nil
 	}
 
-	controller := newProxylessGRPCWorkloadController(s)
+	controller := newProxylessGRPCWorkloadController(s, s.kubeClient)
 	s.proxylessGRPCWorkloadController = controller
+	if s.multiclusterController != nil {
+		s.proxylessGRPCRemoteControllers = multicluster.BuildMultiClusterComponent(s.multiclusterController,
+			func(cluster *multicluster.Cluster) *proxylessGRPCClusterController {
+				if cluster.ID == s.clusterID {
+					return &proxylessGRPCClusterController{}
+				}
+				remote := newProxylessGRPCWorkloadController(s, cluster.Client)
+				wrapped := &proxylessGRPCClusterController{
+					controller: remote,
+					stop:       make(chan struct{}),
+				}
+				go remote.Run(wrapped.stop)
+				return wrapped
+			})
+	}
 	if s.XDSServer != nil {
 		previous := s.XDSServer.RuntimeConfigUpdate
 		s.XDSServer.RuntimeConfigUpdate = func(req *discoverymodel.PushRequest) {
@@ -97,6 +129,13 @@ func (s *Server) initProxylessGRPCWorkloads() error {
 				previous(req)
 			}
 			controller.handleRuntimeConfigUpdate(req)
+			if s.proxylessGRPCRemoteControllers != nil {
+				for _, remote := range s.proxylessGRPCRemoteControllers.All() {
+					if remote.controller != nil {
+						remote.controller.handleRuntimeConfigUpdate(req)
+					}
+				}
+			}
 		}
 	}
 	s.addStartFunc(proxylessGRPCControllerName, func(stop <-chan struct{}) error {
@@ -106,11 +145,19 @@ func (s *Server) initProxylessGRPCWorkloads() error {
 	return nil
 }
 
-func newProxylessGRPCWorkloadController(s *Server) *proxylessGRPCWorkloadController {
+func (s *Server) proxylessGRPCWorkloadsSynced() bool {
+	if s.proxylessGRPCWorkloadController != nil && !s.proxylessGRPCWorkloadController.HasSynced() {
+		return false
+	}
+	return s.proxylessGRPCRemoteControllers == nil || s.proxylessGRPCRemoteControllers.HasSynced()
+}
+
+func newProxylessGRPCWorkloadController(s *Server, client kubelib.Client) *proxylessGRPCWorkloadController {
 	c := &proxylessGRPCWorkloadController{
 		server: s,
-		pods: kclient.NewFiltered[*corev1.Pod](s.kubeClient, kclient.Filter{
-			ObjectFilter: s.kubeClient.ObjectFilter(),
+		client: client,
+		pods: kclient.NewFiltered[*corev1.Pod](client, kclient.Filter{
+			ObjectFilter: client.ObjectFilter(),
 		}),
 		rotations: make(map[types.NamespacedName]time.Time),
 	}
@@ -262,7 +309,7 @@ func (c *proxylessGRPCWorkloadController) reconcile(key types.NamespacedName) er
 		c.clearRotation(key)
 		return c.deleteSecretForPod(pod)
 	}
-	secrets := c.server.kubeClient.Kube().CoreV1().Secrets(pod.Namespace)
+	secrets := c.client.Kube().CoreV1().Secrets(pod.Namespace)
 	secretName := inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta)
 	current, err := secrets.Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
@@ -303,7 +350,9 @@ type proxylessGRPCWorkloadContext struct {
 	podIP            string
 	serviceAccount   string
 	trustDomain      string
+	clusterID        string
 	discoveryAddress string
+	caAddress        string
 }
 
 type proxylessGRPCRuntimeConfig struct {
@@ -454,6 +503,8 @@ func reusableWorkloadCertificate(secret *corev1.Secret, activeRootCert []byte) (
 }
 
 func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) (*proxylessGRPCWorkloadContext, error) {
+	pod = c.latestPodForWorkloadContext(pod)
+
 	trustDomain := constants.DefaultClusterLocalDomain
 	if meshCfg := c.server.environment.Mesh(); meshCfg != nil && meshCfg.GetTrustDomain() != "" {
 		trustDomain = meshCfg.GetTrustDomain()
@@ -476,6 +527,12 @@ func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) 
 	if podIP == "" {
 		podIP = "0.0.0.0"
 	}
+	clusterID := podEnvValue(pod, "DUBBO_META_CLUSTER_ID", constants.DefaultClusterName)
+	discoveryAddress := podEnvValue(pod, inject.ProxylessXDSAddressEnvName, proxyConfig.GetDiscoveryAddress())
+	caAddress := podEnvValue(pod, "CA_ADDRESS", discoveryAddress)
+	proxyConfigCopy := *proxyConfig
+	proxyConfig = &proxyConfigCopy
+	proxyConfig.DiscoveryAddress = discoveryAddress
 
 	nodeID := strings.Join([]string{
 		string(pkgmodel.Proxyless),
@@ -490,7 +547,7 @@ func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) 
 		ProxyConfig: proxyConfig,
 		Envs: []string{
 			"DUBBO_META_GENERATOR=grpc",
-			"DUBBO_META_CLUSTER_ID=" + constants.DefaultClusterName,
+			"DUBBO_META_CLUSTER_ID=" + clusterID,
 			"DUBBO_META_NAMESPACE=" + pod.Namespace,
 			"DUBBO_META_MESH_ID=" + trustDomain,
 			"TRUST_DOMAIN=" + trustDomain,
@@ -512,8 +569,50 @@ func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) 
 		podIP:            podIP,
 		serviceAccount:   serviceAccount,
 		trustDomain:      trustDomain,
-		discoveryAddress: proxyConfig.GetDiscoveryAddress(),
+		clusterID:        clusterID,
+		discoveryAddress: discoveryAddress,
+		caAddress:        caAddress,
 	}, nil
+}
+
+func (c *proxylessGRPCWorkloadController) latestPodForWorkloadContext(pod *corev1.Pod) *corev1.Pod {
+	if pod == nil || c.client == nil || hasConcretePodEnv(pod, "DUBBO_META_CLUSTER_ID") || hasConcretePodEnv(pod, inject.ProxylessXDSAddressEnvName) {
+		return pod
+	}
+	latest, err := c.client.Kube().CoreV1().Pods(pod.Namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
+	if err != nil {
+		proxylessGRPCLog.Warnf("failed to refresh pod before building workload context: %s/%s: %v", pod.Namespace, pod.Name, err)
+		return pod
+	}
+	return latest
+}
+
+func hasConcretePodEnv(pod *corev1.Pod, name string) bool {
+	if pod == nil {
+		return false
+	}
+	for _, container := range pod.Spec.Containers {
+		for _, env := range container.Env {
+			if env.Name == name && env.Value != "" && env.ValueFrom == nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func podEnvValue(pod *corev1.Pod, name, fallback string) string {
+	if pod == nil {
+		return fallback
+	}
+	for _, container := range pod.Spec.Containers {
+		for _, env := range container.Env {
+			if env.Name == name && env.Value != "" && env.ValueFrom == nil {
+				return env.Value
+			}
+		}
+	}
+	return fallback
 }
 
 func buildBootstrapJSON(workload *proxylessGRPCWorkloadContext) ([]byte, error) {
@@ -539,7 +638,7 @@ func buildRuntimeConfigJSON(workload *proxylessGRPCWorkloadContext, services []p
 			"DUBBO_GRPC_XDS_CREDENTIALS":             "true",
 			"DUBBO_GRPC_XDS_RESOLVER":                "xds:///",
 			"DUBBO_META_GENERATOR":                   "grpc",
-			"DUBBO_META_CLUSTER_ID":                  constants.DefaultClusterName,
+			"DUBBO_META_CLUSTER_ID":                  workload.clusterID,
 			"DUBBO_META_NAMESPACE":                   workload.podNamespace,
 			"DUBBO_META_MESH_ID":                     workload.trustDomain,
 			"TRUST_DOMAIN":                           workload.trustDomain,
@@ -547,6 +646,8 @@ func buildRuntimeConfigJSON(workload *proxylessGRPCWorkloadContext, services []p
 			"POD_NAMESPACE":                          workload.podNamespace,
 			"INSTANCE_IP":                            workload.podIP,
 			"SERVICE_ACCOUNT":                        workload.serviceAccount,
+			inject.ProxylessXDSAddressEnvName:        workload.discoveryAddress,
+			"CA_ADDRESS":                             workload.caAddress,
 		},
 		Bootstrap: proxylessGRPCBootstrapRuntimeConfig{
 			Path:             inject.ProxylessGRPCBootstrapPath,
@@ -567,7 +668,7 @@ func buildRuntimeConfigJSON(workload *proxylessGRPCWorkloadContext, services []p
 			PodIP:          workload.podIP,
 			ServiceAccount: workload.serviceAccount,
 			TrustDomain:    workload.trustDomain,
-			ClusterID:      constants.DefaultClusterName,
+			ClusterID:      workload.clusterID,
 		},
 		Services: services,
 		Routes:   routes,
@@ -980,13 +1081,13 @@ func shouldManageProxylessGRPCPod(pod *corev1.Pod) bool {
 }
 
 func (c *proxylessGRPCWorkloadController) deleteSecret(key types.NamespacedName) error {
-	err := c.server.kubeClient.Kube().CoreV1().Secrets(key.Namespace).Delete(context.Background(),
+	err := c.client.Kube().CoreV1().Secrets(key.Namespace).Delete(context.Background(),
 		inject.ProxylessGRPCSecretName(key.Name), metav1.DeleteOptions{})
 	return controllers.IgnoreNotFound(err)
 }
 
 func (c *proxylessGRPCWorkloadController) deleteSecretForPod(pod *corev1.Pod) error {
-	err := c.server.kubeClient.Kube().CoreV1().Secrets(pod.Namespace).Delete(context.Background(),
+	err := c.client.Kube().CoreV1().Secrets(pod.Namespace).Delete(context.Background(),
 		inject.ProxylessGRPCSecretNameForMeta(pod.ObjectMeta), metav1.DeleteOptions{})
 	return controllers.IgnoreNotFound(err)
 }
