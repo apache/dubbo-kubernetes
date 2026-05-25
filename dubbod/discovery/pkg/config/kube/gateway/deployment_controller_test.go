@@ -226,6 +226,36 @@ func TestBuildDxgateBootstrapConfig(t *testing.T) {
 	}
 }
 
+func TestDeploymentControllerBuildDxgateBootstrapConfigUsesXDSAddressAnnotation(t *testing.T) {
+	controller := &DeploymentController{
+		clusterID:       "remote",
+		systemNamespace: "dubbo-system",
+	}
+	raw, _, err := controller.buildDxgateBootstrapConfig(gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "eastwest",
+			Namespace: "dubbo-system",
+			Annotations: map[string]string{
+				xdsAddressAnnotation: "http://192.168.15.164:32010",
+			},
+		},
+	}, "dxgate-gateway", []corev1.ServicePort{{Name: "http-eastwest", Port: 15443, TargetPort: intstr.FromInt(15080)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg dxgateBootstrapConfig
+	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.XDSAddress != "http://192.168.15.164:32010" {
+		t.Fatalf("xdsAddress = %q, want annotation", cfg.XDSAddress)
+	}
+	if cfg.ClusterID != "remote" {
+		t.Fatalf("clusterID = %q, want remote", cfg.ClusterID)
+	}
+}
+
 func TestExtractServicePortsTargetsDxgateContainerPorts(t *testing.T) {
 	gw := gatewayv1.Gateway{
 		Spec: gatewayv1.GatewaySpec{
@@ -242,6 +272,45 @@ func TestExtractServicePortsTargetsDxgateContainerPorts(t *testing.T) {
 	}
 	if ports[0].Name != "http" || ports[0].Port != 8080 || ports[0].TargetPort.String() != "http" {
 		t.Fatalf("unexpected http service port: %#v", ports[0])
+	}
+}
+
+func TestExtractServicePortsTargetsXServerForEastWestGateway(t *testing.T) {
+	gw := gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				eastWestGatewayAnnotation: "true",
+				serviceNodePortAnnotation: "32443",
+			},
+		},
+		Spec: gatewayv1.GatewaySpec{
+			Listeners: []gatewayv1.Listener{
+				{Name: "http-eastwest", Protocol: gatewayv1.HTTPProtocolType, Port: 15443},
+			},
+		},
+	}
+
+	ports := extractServicePorts(gw)
+	if len(ports) != 1 {
+		t.Fatalf("ports = %d, want 1", len(ports))
+	}
+	if ports[0].TargetPort.IntValue() != 15080 {
+		t.Fatalf("targetPort = %s, want 15080", ports[0].TargetPort.String())
+	}
+	if ports[0].NodePort != 32443 {
+		t.Fatalf("nodePort = %d, want 32443", ports[0].NodePort)
+	}
+}
+
+func TestServiceTypeForGatewayUsesAnnotation(t *testing.T) {
+	gw := gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{serviceTypeAnnotation: "NodePort"},
+		},
+	}
+
+	if got := serviceTypeForGateway(gw, corev1.ServiceTypeLoadBalancer); got != corev1.ServiceTypeNodePort {
+		t.Fatalf("serviceType = %s, want NodePort", got)
 	}
 }
 

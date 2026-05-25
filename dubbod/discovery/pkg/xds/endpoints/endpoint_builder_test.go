@@ -5,6 +5,7 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/memory"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
@@ -14,6 +15,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	endpoint "github.com/kdubbo/xds-api/endpoint/v1"
 )
@@ -63,6 +65,71 @@ func TestBuildClusterLoadAssignmentKeepsAppPortWithoutDUBBOMutual(t *testing.T) 
 	}
 }
 
+func TestBuildClusterLoadAssignmentUsesEastWestGatewayForRemoteShard(t *testing.T) {
+	hostname := host.Name("nginx.app.svc.cluster.local")
+	svc := newEndpointTestService("nginx", "app", string(hostname), 80)
+	push := newEndpointTestPushContext(t, nil, []*model.Service{svc})
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{Cluster: cluster.ID("remote")}, string(hostname), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"192.168.219.71"},
+		EndpointPort:    80,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 80)
+	proxy := newEndpointTestProxy()
+	proxy.Metadata.ClusterID = cluster.ID("primary")
+	builder := NewEndpointBuilder(clusterName, proxy, push)
+	cla := builder.BuildClusterLoadAssignmentWithGateways(index, map[cluster.ID]multicluster.EastWestGateway{
+		cluster.ID("remote"): {Cluster: cluster.ID("remote"), Address: "192.168.15.155", Port: 15443},
+	})
+
+	if got := firstEndpointAddress(t, cla); got != "192.168.15.155" {
+		t.Fatalf("endpoint address = %q, want east-west gateway", got)
+	}
+	if got := firstEndpointPort(t, cla); got != 15443 {
+		t.Fatalf("endpoint port = %d, want east-west gateway port", got)
+	}
+}
+
+func TestBuildClusterLoadAssignmentKeepsLocalShardPodIPWhenGatewayConfigured(t *testing.T) {
+	hostname := host.Name("nginx.app.svc.cluster.local")
+	svc := newEndpointTestService("nginx", "app", string(hostname), 80)
+	push := newEndpointTestPushContext(t, nil, []*model.Service{svc})
+	index := model.NewEndpointIndex(model.DisabledCache{})
+	index.UpdateServiceEndpoints(model.ShardKey{Cluster: cluster.ID("primary")}, string(hostname), "app", []*model.DubboEndpoint{{
+		Addresses:       []string{"10.0.0.1"},
+		EndpointPort:    80,
+		ServicePortName: "http",
+		HealthStatus:    model.Healthy,
+	}}, false)
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 80)
+	proxy := newEndpointTestProxy()
+	proxy.Metadata.ClusterID = cluster.ID("primary")
+	builder := NewEndpointBuilder(clusterName, proxy, push)
+	cla := builder.BuildClusterLoadAssignmentWithGateways(index, map[cluster.ID]multicluster.EastWestGateway{
+		cluster.ID("primary"): {Cluster: cluster.ID("primary"), Address: "192.168.15.164", Port: 15443},
+	})
+
+	if got := firstEndpointAddress(t, cla); got != "10.0.0.1" {
+		t.Fatalf("endpoint address = %q, want local pod IP", got)
+	}
+	if got := firstEndpointPort(t, cla); got != 80 {
+		t.Fatalf("endpoint port = %d, want local endpoint port", got)
+	}
+}
+
+func firstEndpointAddress(t *testing.T, cla *endpoint.ClusterLoadAssignment) string {
+	t.Helper()
+	localities := cla.GetEndpoints()
+	if len(localities) == 0 || len(localities[0].GetLbEndpoints()) == 0 {
+		t.Fatalf("CLA has no endpoints")
+	}
+	return localities[0].GetLbEndpoints()[0].GetEndpoint().GetAddress().GetSocketAddress().GetAddress()
+}
+
 func firstEndpointPort(t *testing.T, cla *endpoint.ClusterLoadAssignment) uint32 {
 	t.Helper()
 	localities := cla.GetEndpoints()
@@ -100,6 +167,7 @@ func newEndpointTestProxy() *model.Proxy {
 		Metadata: &model.NodeMetadata{
 			Generator: "grpc",
 			Namespace: "app",
+			ClusterID: cluster.ID("primary"),
 		},
 	}
 }

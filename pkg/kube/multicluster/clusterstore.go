@@ -19,16 +19,61 @@ package multicluster
 import (
 	"sync"
 
+	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
 type ClusterStore struct {
 	sync.RWMutex
-	clusters sets.String
+	clusters map[cluster.ID]*Cluster
+}
+
+func NewClusterStore() *ClusterStore {
+	return &ClusterStore{
+		clusters: make(map[cluster.ID]*Cluster),
+	}
+}
+
+func (c *ClusterStore) Get(id cluster.ID) (*Cluster, bool) {
+	c.RLock()
+	defer c.RUnlock()
+	cluster, ok := c.clusters[id]
+	return cluster, ok
+}
+
+func (c *ClusterStore) Store(cluster *Cluster) {
+	c.Lock()
+	defer c.Unlock()
+	c.clusters[cluster.ID] = cluster
+}
+
+func (c *ClusterStore) Delete(id cluster.ID) (*Cluster, bool) {
+	c.Lock()
+	defer c.Unlock()
+	cluster, ok := c.clusters[id]
+	if ok {
+		delete(c.clusters, id)
+	}
+	return cluster, ok
+}
+
+func (c *ClusterStore) IDs() sets.String {
+	c.RLock()
+	defer c.RUnlock()
+	out := sets.New[string]()
+	for id := range c.clusters {
+		out.Insert(string(id))
+	}
+	return out
 }
 
 func (c *ClusterStore) HasSynced() bool {
 	c.RLock()
 	defer c.RUnlock()
+	for _, cluster := range c.clusters {
+		if !cluster.HasSynced() {
+			return false
+		}
+	}
 	return true
 }

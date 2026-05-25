@@ -134,6 +134,7 @@ type Server struct {
 
 	RWConfigStore                   model.ConfigStoreController
 	proxylessGRPCWorkloadController *proxylessGRPCWorkloadController
+	proxylessGRPCRemoteControllers  *multicluster.Component[*proxylessGRPCClusterController]
 	statusManager                   *status.Manager
 }
 
@@ -668,6 +669,7 @@ func (s *Server) initControllers(args *DubboArgs) error {
 	if err := s.initConfigController(args); err != nil {
 		return fmt.Errorf("error initializing config controller: %v", err)
 	}
+	s.initMulticlusterGatewayDeploymentControllers(args)
 	if err := s.initServiceControllers(args); err != nil {
 		return fmt.Errorf("error initializing service controllers: %v", err)
 	}
@@ -814,7 +816,7 @@ func (s *Server) cachesSynced() bool {
 	if !s.configController.HasSynced() {
 		return false
 	}
-	if s.proxylessGRPCWorkloadController != nil && !s.proxylessGRPCWorkloadController.HasSynced() {
+	if !s.proxylessGRPCWorkloadsSynced() {
 		return false
 	}
 	return true

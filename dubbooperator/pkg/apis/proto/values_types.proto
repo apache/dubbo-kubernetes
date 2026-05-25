@@ -42,6 +42,52 @@ message GlobalConfig {
   GUIConfig gui = 3;
 
   bool configValidation = 4;
+
+  MulticlusterConfig multicluster = 5;
+}
+
+message RemoteAccessConfig {
+  bool enabled = 1;
+
+  string serviceType = 2;
+
+  int64 xdsPort = 3;
+
+  int64 webhookPort = 4;
+
+  repeated string certificateHosts = 5;
+
+  int64 grpcPort = 6;
+}
+
+message EastWestGatewayEndpoint {
+  string clusterName = 1;
+
+  string address = 2;
+
+  int64 port = 3;
+}
+
+message EastWestGatewayConfig {
+  bool enabled = 1;
+
+  string serviceType = 2;
+
+  int64 port = 3;
+
+  int64 targetPort = 4;
+
+  int64 nodePort = 5;
+
+  repeated EastWestGatewayEndpoint gateways = 6;
+
+  string xdsAddress = 7;
+}
+
+message MulticlusterConfig {
+  RemoteAccessConfig remoteAccess = 1;
+
+  EastWestGatewayConfig eastWestGateway = 2;
 }
 
 message Values {

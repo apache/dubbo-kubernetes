@@ -141,7 +141,9 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 		podIP:            "10.0.0.1",
 		serviceAccount:   "nginx",
 		trustDomain:      "cluster.local",
-		discoveryAddress: "dubbod.dubbo-system.svc:26012",
+		clusterID:        "remote",
+		discoveryAddress: "192.168.15.164:32049",
+		caAddress:        "192.168.15.164:32049",
 	}
 
 	data, err := buildRuntimeConfigJSON(workload, nil, nil)
@@ -169,6 +171,15 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	if got.Bootstrap.DiscoveryAddress != workload.discoveryAddress {
 		t.Fatalf("discoveryAddress = %q, want %q", got.Bootstrap.DiscoveryAddress, workload.discoveryAddress)
 	}
+	if got.Env["DUBBO_META_CLUSTER_ID"] != workload.clusterID {
+		t.Fatalf("DUBBO_META_CLUSTER_ID = %q, want %q", got.Env["DUBBO_META_CLUSTER_ID"], workload.clusterID)
+	}
+	if got.Env[inject.ProxylessXDSAddressEnvName] != workload.discoveryAddress {
+		t.Fatalf("%s = %q, want %q", inject.ProxylessXDSAddressEnvName, got.Env[inject.ProxylessXDSAddressEnvName], workload.discoveryAddress)
+	}
+	if got.Env["CA_ADDRESS"] != workload.caAddress {
+		t.Fatalf("CA_ADDRESS = %q, want %q", got.Env["CA_ADDRESS"], workload.caAddress)
+	}
 	if got.Certificates.Provider != grpcxds.FileWatcherCertProviderName {
 		t.Fatalf("cert provider = %q, want %q", got.Certificates.Provider, grpcxds.FileWatcherCertProviderName)
 	}
@@ -180,6 +191,53 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	}
 	if got.Workload.PodIP != workload.podIP {
 		t.Fatalf("podIP = %q, want %q", got.Workload.PodIP, workload.podIP)
+	}
+	if got.Workload.ClusterID != workload.clusterID {
+		t.Fatalf("clusterId = %q, want %q", got.Workload.ClusterID, workload.clusterID)
+	}
+}
+
+func TestBuildWorkloadContextUsesInjectedRemoteValues(t *testing.T) {
+	controller := &proxylessGRPCWorkloadController{
+		server: &Server{
+			environment: &discoverymodel.Environment{
+				DomainSuffix: constants.DefaultClusterLocalDomain,
+			},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nginx",
+			Namespace: "app",
+		},
+		Spec: corev1.PodSpec{
+			ServiceAccountName: "nginx",
+			Containers: []corev1.Container{{
+				Name: "app",
+				Env: []corev1.EnvVar{
+					{Name: "DUBBO_META_CLUSTER_ID", Value: "remote"},
+					{Name: inject.ProxylessXDSAddressEnvName, Value: "192.168.15.164:32049"},
+					{Name: "CA_ADDRESS", Value: "192.168.15.164:32049"},
+				},
+			}},
+		},
+		Status: corev1.PodStatus{
+			PodIP: "10.0.0.1",
+		},
+	}
+
+	workload, err := controller.buildWorkloadContext(pod)
+	if err != nil {
+		t.Fatalf("buildWorkloadContext() failed: %v", err)
+	}
+	if workload.clusterID != "remote" {
+		t.Fatalf("clusterID = %q, want remote", workload.clusterID)
+	}
+	if workload.discoveryAddress != "192.168.15.164:32049" {
+		t.Fatalf("discoveryAddress = %q, want 192.168.15.164:32049", workload.discoveryAddress)
+	}
+	if workload.caAddress != "192.168.15.164:32049" {
+		t.Fatalf("caAddress = %q, want 192.168.15.164:32049", workload.caAddress)
 	}
 }
 

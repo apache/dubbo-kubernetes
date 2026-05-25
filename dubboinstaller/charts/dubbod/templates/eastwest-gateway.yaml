@@ -1,0 +1,57 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
+{{- $defaultEastWestGateway := $defaultMulticluster.eastWestGateway | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $multicluster := $global.multicluster | default dict }}
+{{- $eastWestGateway := $multicluster.eastWestGateway | default dict }}
+{{- $eastWestGatewayEnabled := coalesce $eastWestGateway.enabled $defaultEastWestGateway.enabled false }}
+{{- if $eastWestGatewayEnabled }}
+{{- $serviceType := coalesce $eastWestGateway.serviceType $defaultEastWestGateway.serviceType "LoadBalancer" }}
+{{- $port := int (coalesce $eastWestGateway.port $defaultEastWestGateway.port 15443) }}
+{{- $targetPort := int (coalesce $eastWestGateway.targetPort $defaultEastWestGateway.targetPort 15080) }}
+{{- $nodePort := int (coalesce $eastWestGateway.nodePort $defaultEastWestGateway.nodePort 0) }}
+{{- $xdsAddress := coalesce $eastWestGateway.xdsAddress $defaultEastWestGateway.xdsAddress "" }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: dubbod-eastwest-gateway
+  namespace: dubbo-system
+  labels:
+    app: dubbod-eastwest-gateway
+    gateway.dubbo.apache.org/eastwest: "true"
+  annotations:
+    gateway.dubbo.apache.org/eastwest: "true"
+    gateway.dubbo.apache.org/service-type: {{ $serviceType | quote }}
+    gateway.dubbo.apache.org/target-port: {{ $targetPort | quote }}
+{{- if $xdsAddress }}
+    gateway.dubbo.apache.org/xds-address: {{ $xdsAddress | quote }}
+{{- end }}
+{{- if gt $nodePort 0 }}
+    gateway.dubbo.apache.org/node-port: {{ $nodePort | quote }}
+{{- end }}
+spec:
+  gatewayClassName: dubbo
+  listeners:
+  - name: http-eastwest
+    protocol: HTTP
+    port: {{ $port }}
+    allowedRoutes:
+      namespaces:
+        from: All
+{{- end }}

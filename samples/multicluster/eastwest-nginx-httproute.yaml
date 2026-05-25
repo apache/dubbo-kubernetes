@@ -13,34 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-_internal_default_values_not_set:
-  revision: ""
-
-  global:
-    proxy:
-      clusterDomain: "cluster.local"
-
-    statusPort: 26020
-
-    gui:
-      port: 26080
-      nodePort: 30080
-
-    configValidation: true
-
-    multicluster:
-      remoteAccess:
-        enabled: false
-        serviceType: "LoadBalancer"
-        grpcPort: 26010
-        xdsPort: 26012
-        webhookPort: 443
-        certificateHosts: []
-      eastWestGateway:
-        enabled: false
-        serviceType: "LoadBalancer"
-        port: 15443
-        targetPort: 15080
-        nodePort: 0
-        gateways: []
-        xdsAddress: ""
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: nginx-eastwest
+  namespace: app
+spec:
+  parentRefs:
+  - name: dubbod-eastwest-gateway
+    namespace: dubbo-system
+    sectionName: http-eastwest
+  hostnames:
+  - nginx.app.svc.cluster.local
+  rules:
+  - backendRefs:
+    - name: nginx
+      port: 80

@@ -318,6 +318,55 @@ func TestAddApplicationContainerConfigInjectsProxylessGRPCContract(t *testing.T)
 	}
 }
 
+func TestAddApplicationContainerConfigOverridesRemoteClusterEnvs(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "grpc-provider",
+			Namespace: "grpc-app",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name: "app",
+			}},
+		},
+	}
+	req := InjectionParameters{
+		meshConfig: &meshv1alpha1.MeshConfig{
+			DefaultConfig: &meshv1alpha1.ProxyConfig{
+				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
+			},
+		},
+		proxyEnvs: map[string]string{
+			ProxylessXDSAddressEnvName: "192.168.15.164:32049",
+			"CA_ADDRESS":               "192.168.15.164:32049",
+			"DUBBO_META_CLUSTER_ID":    "remote",
+		},
+	}
+	if err := addApplicationContainerConfig(pod, req); err != nil {
+		t.Fatalf("addApplicationContainerConfig() failed: %v", err)
+	}
+	container := pod.Spec.Containers[0]
+	for name, want := range req.proxyEnvs {
+		if !hasEnv(container.Env, name, want) {
+			t.Fatalf("%s env missing override %q", name, want)
+		}
+	}
+}
+
+func TestParseInjectEnvsForRemoteClusterPath(t *testing.T) {
+	got := parseInjectEnvs("/inject/DUBBO_META_CLUSTER_ID/remote/XDS_ADDRESS/192.168.15.164:32049/CA_ADDRESS/192.168.15.164:32049")
+	want := map[string]string{
+		"DUBBO_META_CLUSTER_ID": "remote",
+		"XDS_ADDRESS":           "192.168.15.164:32049",
+		"CA_ADDRESS":            "192.168.15.164:32049",
+	}
+	for name, value := range want {
+		if got[name] != value {
+			t.Fatalf("%s = %q, want %q", name, got[name], value)
+		}
+	}
+}
+
 func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing.T) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -368,6 +417,11 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 		proxyConfig: &meshv1alpha1.ProxyConfig{
 			DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
 		},
+		proxyEnvs: map[string]string{
+			ProxylessXDSAddressEnvName: "192.168.15.164:32049",
+			"CA_ADDRESS":               "192.168.15.164:32049",
+			"DUBBO_META_CLUSTER_ID":    "remote",
+		},
 	}
 
 	mergedPod, injectedPod, err := RunTemplate(req)
@@ -382,6 +436,11 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 	wantArgs := []string{"xclient", "--watch"}
 	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
 		t.Fatalf("args = %v, want %v", container.Args, wantArgs)
+	}
+	for name, want := range req.proxyEnvs {
+		if !hasEnv(container.Env, name, want) {
+			t.Fatalf("%s env missing override %q", name, want)
+		}
 	}
 }
 

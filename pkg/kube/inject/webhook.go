@@ -614,6 +614,9 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.hostIP"},
 			},
 		})
+		if len(req.proxyEnvs) > 0 {
+			updateClusterEnvs(container, req.proxyEnvs)
+		}
 
 		hasProxyVolumeMount := false
 		for _, vm := range container.VolumeMounts {
@@ -819,6 +822,7 @@ func parseInjectEnvs(path string) map[string]string {
 			webhookLog.Warnf("Add number of inject env entries, ignore the last key %s\n", k)
 			break
 		}
+		newEnvs[k] = res[i+1]
 	}
 
 	return newEnvs

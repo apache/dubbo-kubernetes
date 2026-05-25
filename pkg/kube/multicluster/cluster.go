@@ -18,6 +18,8 @@ package multicluster
 
 import (
 	"crypto/sha256"
+	"sync"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
@@ -34,6 +36,7 @@ type Cluster struct {
 
 	initialSync        *atomic.Bool
 	initialSyncTimeout *atomic.Bool
+	closeOnce          sync.Once
 }
 
 func (c *Cluster) HasSynced() bool {
@@ -44,6 +47,41 @@ func (c *Cluster) HasSynced() bool {
 		return true
 	}
 	return c.initialSync.Load() || c.initialSyncTimeout.Load()
+}
+
+func NewRemoteCluster(id cluster.ID, client kube.Client, kubeConfigSha [sha256.Size]byte) *Cluster {
+	return &Cluster{
+		ID:                 id,
+		Client:             client,
+		kubeConfigSha:      kubeConfigSha,
+		stop:               make(chan struct{}),
+		initialSync:        atomic.NewBool(false),
+		initialSyncTimeout: atomic.NewBool(false),
+	}
+}
+
+func (c *Cluster) Start(syncTimeout time.Duration) {
+	if syncTimeout > 0 {
+		time.AfterFunc(syncTimeout, func() {
+			if !c.initialSync.Load() && !c.Closed() {
+				c.initialSyncTimeout.Store(true)
+			}
+		})
+	}
+	go func() {
+		if c.Client.RunAndWait(c.stop) {
+			c.initialSync.Store(true)
+		}
+	}()
+}
+
+func (c *Cluster) Close() {
+	c.closeOnce.Do(func() {
+		close(c.stop)
+		if c.Client != nil {
+			c.Client.Shutdown()
+		}
+	})
 }
 
 func (c *Cluster) Closed() bool {
