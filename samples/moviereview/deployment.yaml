@@ -1,0 +1,365 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: moviereview
+  namespace: moviereview
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: moviereview
+  labels:
+    app: frontend
+spec:
+  type: NodePort
+  selector:
+    app: moviepage
+  ports:
+  - name: http
+    port: 80
+    targetPort: 9080
+    nodePort: 30080
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moviepage
+  namespace: moviereview
+  labels:
+    app: moviepage
+spec:
+  selector:
+    app: moviepage
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: details
+  namespace: moviereview
+  labels:
+    app: details
+spec:
+  selector:
+    app: details
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews
+  namespace: moviereview
+  labels:
+    app: reviews
+spec:
+  selector:
+    app: reviews
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratings
+  namespace: moviereview
+  labels:
+    app: ratings
+spec:
+  selector:
+    app: ratings
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+    protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moviepage
+  namespace: moviereview
+  labels:
+    app: moviepage
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moviepage
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: moviepage
+        version: v1
+    spec:
+      serviceAccountName: moviereview
+      containers:
+      - name: app
+        image: kdubbo/moviereview-moviepage:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 9080
+          protocol: TCP
+        env:
+        - name: DETAILS_URL
+          value: http://details:9080/details
+        - name: REVIEWS_URL
+          value: http://reviews:9080/reviews
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: details
+  namespace: moviereview
+  labels:
+    app: details
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: details
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: details
+        version: v1
+    spec:
+      serviceAccountName: moviereview
+      containers:
+      - name: app
+        image: kdubbo/moviereview-details:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 9080
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings
+  namespace: moviereview
+  labels:
+    app: ratings
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ratings
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: ratings
+        version: v1
+    spec:
+      serviceAccountName: moviereview
+      containers:
+      - name: app
+        image: kdubbo/moviereview-ratings:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 9080
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-v1
+  namespace: moviereview
+  labels:
+    app: reviews
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v1
+    spec:
+      serviceAccountName: moviereview
+      containers:
+      - name: app
+        image: kdubbo/moviereview-reviews-v1:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 9080
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-v2
+  namespace: moviereview
+  labels:
+    app: reviews
+    version: v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v2
+    spec:
+      serviceAccountName: moviereview
+      containers:
+      - name: app
+        image: kdubbo/moviereview-reviews-v2:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 9080
+          protocol: TCP
+        env:
+        - name: RATINGS_URL
+          value: http://ratings:9080/ratings
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-v3
+  namespace: moviereview
+  labels:
+    app: reviews
+    version: v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews
+      version: v3
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v3
+    spec:
+      serviceAccountName: moviereview
+      containers:
+      - name: app
+        image: kdubbo/moviereview-reviews-v3:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 9080
+          protocol: TCP
+        env:
+        - name: RATINGS_URL
+          value: http://ratings:9080/ratings
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9080
+          initialDelaySeconds: 10
+          periodSeconds: 10

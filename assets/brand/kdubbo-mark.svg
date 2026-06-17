@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Apache Kdubbo mark</title>
+  <desc id="desc">A clean vector mark for a Kubernetes-native Dubbo control plane that sends policy directly to application runtimes without sidecar proxies.</desc>
+  <defs>
+    <style>
+      .boundary { fill: none; stroke: #2f6bff; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; }
+      .route { fill: none; stroke: #101828; stroke-width: 36; stroke-linecap: round; stroke-linejoin: round; }
+      .route-accent { fill: none; stroke: #6941c6; stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; }
+      .plane { fill: #101828; }
+      .plane-accent { fill: #00a7d8; }
+      .workload { fill: #ffffff; stroke: #00a7d8; stroke-width: 20; }
+      .cutout { fill: #ffffff; }
+    </style>
+  </defs>
+  <path class="boundary" d="M256 54 417 147v186L256 426 95 333V147z"/>
+  <path class="route" d="M176 154v204"/>
+  <path class="route" d="M178 256 345 148"/>
+  <path class="route" d="M178 256 345 364"/>
+  <path class="route-accent" d="M210 256 334 176"/>
+  <path class="route-accent" d="M210 256 334 336"/>
+  <circle class="workload" cx="354" cy="144" r="37"/>
+  <circle class="workload" cx="354" cy="368" r="37"/>
+  <circle class="workload" cx="176" cy="256" r="42"/>
+  <rect class="plane" x="123" y="96" width="150" height="70" rx="20"/>
+  <rect class="plane-accent" x="150" y="121" width="70" height="20" rx="10"/>
+  <circle class="cutout" cx="354" cy="144" r="13"/>
+  <circle class="cutout" cx="354" cy="368" r="13"/>
+  <circle class="cutout" cx="176" cy="256" r="14"/>
+</svg>

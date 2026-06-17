@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 240" role="img" aria-labelledby="title desc">
+  <title id="title">Apache Kdubbo logo</title>
+  <desc id="desc">Apache Kdubbo product logo for a Kubernetes-native Dubbo control plane with direct policy delivery to application runtimes.</desc>
+  <defs>
+    <style>
+      .boundary { fill: none; stroke: #2f6bff; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+      .route { fill: none; stroke: #101828; stroke-width: 15; stroke-linecap: round; stroke-linejoin: round; }
+      .route-accent { fill: none; stroke: #6941c6; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .plane { fill: #101828; }
+      .plane-accent { fill: #00a7d8; }
+      .workload { fill: #ffffff; stroke: #00a7d8; stroke-width: 8; }
+      .cutout { fill: #ffffff; }
+      .apache { fill: #667085; font-family: Inter, "Avenir Next", "Helvetica Neue", Arial, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: 2.8px; }
+      .name { fill: #101828; font-family: Inter, "Avenir Next", "Helvetica Neue", Arial, sans-serif; font-size: 82px; font-weight: 800; letter-spacing: 0; }
+      .tagline { fill: #475467; font-family: Inter, "Avenir Next", "Helvetica Neue", Arial, sans-serif; font-size: 24px; font-weight: 600; letter-spacing: 0; }
+    </style>
+  </defs>
+  <g transform="translate(48 28)">
+    <path class="boundary" d="M93 10 167 53v86l-74 43-74-43V53z"/>
+    <path class="route" d="M56 56v92"/>
+    <path class="route" d="M57 102 133 53"/>
+    <path class="route" d="M57 102 133 151"/>
+    <path class="route-accent" d="M71 102 128 65"/>
+    <path class="route-accent" d="M71 102 128 139"/>
+    <circle class="workload" cx="138" cy="51" r="18"/>
+    <circle class="workload" cx="138" cy="153" r="18"/>
+    <circle class="workload" cx="56" cy="102" r="20"/>
+    <rect class="plane" x="32" y="29" width="68" height="32" rx="9"/>
+    <rect class="plane-accent" x="44" y="40" width="32" height="10" rx="5"/>
+    <circle class="cutout" cx="138" cy="51" r="6"/>
+    <circle class="cutout" cx="138" cy="153" r="6"/>
+    <circle class="cutout" cx="56" cy="102" r="7"/>
+  </g>
+  <text class="apache" x="252" y="70">APACHE</text>
+  <text class="name" x="250" y="142">Kdubbo</text>
+  <text class="tagline" x="254" y="184">Sidecarless Dubbo control plane for Kubernetes</text>
+</svg>
