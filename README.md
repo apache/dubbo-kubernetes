@@ -1,8 +1,5 @@
-<h1 align="center">
-  <img src="assets/brand/kdubbo-logo.svg" alt="Apache Kdubbo" width="420" />
-</h1>
+# Apache Kdubbo
 
-<p align="center">
   <a href="https://pkg.go.dev/github.com/apache/dubbo-kubernetes">
     <img src="https://pkg.go.dev/badge/github.com/apache/dubbo-kubernetes.svg" />
   </a>
@@ -13,7 +10,6 @@
     <img src="https://codecov.io/gh/apache/dubbo-kubernetes/branch/master/graph/badge.svg" />
   </a>
   <img src="https://img.shields.io/badge/license-Apache--2.0-green.svg" />
-</p>
 
 Dubbo inherent mesh implemented for the underlying cluster management platform can directly receive policies from the control plane and obtain features such as load balancing, service discovery, and observability without requiring a sidecar proxy.
 
