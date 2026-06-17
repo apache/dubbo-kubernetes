@@ -1,4 +1,6 @@
-<h1 align="center">Apache Kdubbo</h1>
+<h1 align="center">
+  <img src="assets/brand/kdubbo-logo.svg" alt="Apache Kdubbo" width="420" />
+</h1>
 
 <p align="center">
   <a href="https://pkg.go.dev/github.com/apache/dubbo-kubernetes">

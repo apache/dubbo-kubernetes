@@ -1,4 +1,3 @@
-//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.
@@ -14,32 +13,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package main
 
-import "github.com/apache/dubbo-kubernetes/pkg/dubboagency"
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+)
 
-// ProxyArgs provides all of the configuration parameters for the Saku proxy.
-type ProxyArgs struct {
-	dubboagency.Proxy
-	Concurrency int
-	StsPort     int
-
-	TokenManagerPlugin string
-
-	MeshConfigFile string
-	TemplateFile   string
-
-	PodName      string
-	PodNamespace string
+type rating struct {
+	MovieID string `json:"movieId"`
+	Stars   int    `json:"stars"`
 }
 
-func NewProxyArgs() ProxyArgs {
-	p := ProxyArgs{}
-	p.applyDefaults()
-	return p
+func main() {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok\n"))
+	})
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" && r.URL.Path != "/ratings" {
+			http.NotFound(w, r)
+			return
+		}
+		movieID := r.URL.Query().Get("movieId")
+		if movieID == "" {
+			movieID = "movie-1"
+		}
+		writeJSON(w, rating{MovieID: movieID, Stars: 5})
+	})
+	log.Fatal(http.ListenAndServe(":9080", nil))
 }
 
-func (node *ProxyArgs) applyDefaults() {
-	node.PodName = PodNameVar.Get()
-	node.PodNamespace = PodNamespaceVar.Get()
+func writeJSON(w http.ResponseWriter, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(value)
 }

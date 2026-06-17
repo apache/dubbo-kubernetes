@@ -18,10 +18,14 @@ package config
 
 import "strings"
 
+const (
+	local = "localhost"
+)
+
 func GetDubboSan(discoveryAddress string) string {
 	discHost := strings.Split(discoveryAddress, ":")[0]
 	// For local debugging - the discoveryAddress is set to localhost, but the cert issued for normal PA.
-	if discHost == "localhost" {
+	if discHost == local {
 		discHost = "dubbod.dubbo-system.svc"
 	}
 	return discHost
