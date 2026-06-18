@@ -1,4 +1,4 @@
-# Apache Kdubbo
+# Apache Kdubbo (dubbo-mesh)
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/apache/dubbo-kubernetes.svg)](https://pkg.go.dev/github.com/apache/dubbo-kubernetes)
 [![Go Report Card](https://goreportcard.com/badge/github.com/apache/dubbo-kubernetes)](https://goreportcard.com/report/github.com/apache/dubbo-kubernetes)
@@ -29,11 +29,11 @@ Projects are distributed across the code directory repositories:
 
 - [dubbo/client-go](https://github.com/kdubbo/client-go). — Defines the Kubernetes clients automatically generated for Dubbo control plane resources.
 
-- [dubbo/dubboctl](./dubboctl). — Provides command line tools for control plane management and other operations.
+- [dubbo/cli](./cli). — Provides dubboctl command line tools for control plane management and other operations.
 
 - [dubbo/dubbod](./dubbod) — The main code directory for the Dubbo control plane.
 
-- [dubbo/operator](./dubbooperator). — Provides user friendly options for operating the service mesh.
+- [dubbo/operator](./operator). — Provides user friendly options for operating the service mesh.
 
 ## Contributing
 

@@ -1,0 +1,146 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = 'proto3';
+
+package dubbo.operator.v1alpha1;
+
+import "google/protobuf/wrappers.proto";
+
+// Package-wide variables from generator "generated".
+option go_package = "dubbo.apache.org/dubbo/operator/pkg/apis";
+
+message GUIConfig {
+  int64 port = 1;
+
+  int64 nodePort = 2;
+}
+
+message ProxyConfig {
+  string clusterDomain = 1;
+}
+
+message ProxylessConfig {
+  MeshCNIConfig cni = 1;
+}
+
+message MeshCNIConfig {
+  bool enabled = 1;
+
+  string image = 2;
+
+  string binDir = 3;
+
+  string confDir = 4;
+
+  string stateDir = 5;
+
+  int64 xserverPort = 6;
+
+  string managedLabel = 7;
+
+  string managedLabelValue = 8;
+
+  string iptablesPath = 9;
+
+  string ipsetPath = 10;
+
+  string refreshInterval = 11;
+}
+
+message GlobalConfig {
+  ProxyConfig proxy = 1;
+
+  int64 statusPort = 2;
+
+  GUIConfig gui = 3;
+
+  bool configValidation = 4;
+
+  MulticlusterConfig multicluster = 5;
+
+  ProxylessConfig proxyless = 6;
+}
+
+message RemoteAccessConfig {
+  bool enabled = 1;
+
+  string serviceType = 2;
+
+  int64 xdsPort = 3;
+
+  int64 webhookPort = 4;
+
+  repeated string certificateHosts = 5;
+
+  int64 grpcPort = 6;
+}
+
+message EastWestGatewayEndpoint {
+  string clusterName = 1;
+
+  string address = 2;
+
+  int64 port = 3;
+}
+
+message EastWestGatewayConfig {
+  bool enabled = 1;
+
+  string serviceType = 2;
+
+  int64 port = 3;
+
+  int64 targetPort = 4;
+
+  int64 nodePort = 5;
+
+  repeated EastWestGatewayEndpoint gateways = 6;
+
+  string xdsAddress = 7;
+}
+
+message MulticlusterConfig {
+  RemoteAccessConfig remoteAccess = 1;
+
+  EastWestGatewayConfig eastWestGateway = 2;
+}
+
+message Values {
+  // Global configuration for dubbo components.
+  GlobalConfig global = 1;
+
+  // Revision for rendered control plane resources.
+  string revision = 2;
+}
+
+// IntOrString is a type that can hold an int32 or a string.  When used in
+// JSON or YAML marshalling and unmarshalling, it produces or consumes the
+// inner type.  This allows you to have, for example, a JSON field that can
+// accept a name or number.
+// TODO: Rename to Int32OrString
+//
+// +protobuf=true
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+// +k8s:openapi-gen=true
+message IntOrString {
+  int64 type = 1;
+
+  google.protobuf.Int32Value intVal = 2;
+
+  google.protobuf.StringValue strVal = 3;
+}

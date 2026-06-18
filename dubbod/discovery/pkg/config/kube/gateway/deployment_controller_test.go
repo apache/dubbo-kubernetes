@@ -332,7 +332,7 @@ func TestGetLegacyDefaultNameKeepsOldGatewayDerivedName(t *testing.T) {
 }
 
 func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
-	templatePath := filepath.Join("..", "..", "..", "..", "..", "..", "dubboinstaller", "charts", "dubbod", "files", "kube-gateway.yaml")
+	templatePath := filepath.Join("..", "..", "..", "..", "..", "..", "manifests", "charts", "dubbod", "files", "kube-gateway.yaml")
 	raw, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatal(err)

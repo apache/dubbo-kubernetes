@@ -33,7 +33,7 @@ import (
 	kubeApiAdmissionv1beta1 "k8s.io/api/admission/v1beta1"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
-	opconfig "github.com/apache/dubbo-kubernetes/dubbooperator/pkg/apis"
+	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
