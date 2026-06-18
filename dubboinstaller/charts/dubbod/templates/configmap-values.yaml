@@ -16,15 +16,26 @@
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
 {{- $defaultGlobal := $defaults.global | default dict }}
 {{- $defaultProxy := $defaultGlobal.proxy | default dict }}
+{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
+{{- $defaultCNI := $defaultProxyless.cni | default dict }}
 {{- $defaultGUI := $defaultGlobal.gui | default dict }}
 {{- $global := .Values.global | default dict }}
 {{- $proxy := $global.proxy | default dict }}
+{{- $proxyless := $global.proxyless | default dict }}
+{{- $cni := $proxyless.cni | default dict }}
 {{- $gui := $global.gui | default dict }}
 {{- $clusterDomain := coalesce $proxy.clusterDomain $defaultProxy.clusterDomain "cluster.local" }}
 {{- $revision := .Values.revision | default "default" }}
 {{- $statusPort := coalesce $global.statusPort $defaultGlobal.statusPort 26020 }}
 {{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
 {{- $guiNodePort := int (coalesce $gui.nodePort $defaultGUI.nodePort 30080) }}
+{{- $cniEnabled := false }}
+{{- if hasKey $defaultCNI "enabled" }}
+{{- $cniEnabled = $defaultCNI.enabled }}
+{{- end }}
+{{- if hasKey $cni "enabled" }}
+{{- $cniEnabled = $cni.enabled }}
+{{- end }}
 {{- $original := omit .Values "_internal_default_values_not_set" }}
 apiVersion: v1
 kind: ConfigMap
@@ -40,6 +51,19 @@ data:
     global:
       proxy:
         clusterDomain: {{ $clusterDomain | quote }}
+      proxyless:
+        cni:
+          enabled: {{ $cniEnabled }}
+          image: {{ coalesce $cni.image $defaultCNI.image "kdubbo/dubbod:debug" | quote }}
+          binDir: {{ coalesce $cni.binDir $defaultCNI.binDir "/opt/cni/bin" | quote }}
+          confDir: {{ coalesce $cni.confDir $defaultCNI.confDir "/etc/cni/net.d" | quote }}
+          stateDir: {{ coalesce $cni.stateDir $defaultCNI.stateDir "/var/run/dubbo-cni" | quote }}
+          xserverPort: {{ int (coalesce $cni.xserverPort $defaultCNI.xserverPort 15080) }}
+          managedLabel: {{ coalesce $cni.managedLabel $defaultCNI.managedLabel "proxyless.dubbo.apache.org/managed" | quote }}
+          managedLabelValue: {{ coalesce $cni.managedLabelValue $defaultCNI.managedLabelValue "true" | quote }}
+          iptablesPath: {{ coalesce $cni.iptablesPath $defaultCNI.iptablesPath "iptables" | quote }}
+          ipsetPath: {{ coalesce $cni.ipsetPath $defaultCNI.ipsetPath "ipset" | quote }}
+          refreshInterval: {{ coalesce $cni.refreshInterval $defaultCNI.refreshInterval "1m" | quote }}
       gui:
         port: {{ $guiPort }}
         nodePort: {{ $guiNodePort }}

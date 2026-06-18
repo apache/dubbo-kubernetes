@@ -20,6 +20,20 @@ _internal_default_values_not_set:
     proxy:
       clusterDomain: "cluster.local"
 
+    proxyless:
+      cni:
+        enabled: true
+        image: "kdubbo/dubbod:debug"
+        binDir: "/opt/cni/bin"
+        confDir: "/etc/cni/net.d"
+        stateDir: "/var/run/dubbo-cni"
+        xserverPort: 15080
+        managedLabel: "proxyless.dubbo.apache.org/managed"
+        managedLabelValue: "true"
+        iptablesPath: "iptables"
+        ipsetPath: "ipset"
+        refreshInterval: "1m"
+
     statusPort: 26020
 
     gui:

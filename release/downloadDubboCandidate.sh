@@ -4,7 +4,7 @@ set -e
 # Determines the operating system.
 OS="${TARGET_OS:-$(uname)}"
 if [ "${OS}" = "Darwin" ] ; then
-  OSEXT="osx"
+  OSEXT="darwin"
 else
   OSEXT="linux"
 fi
@@ -12,18 +12,34 @@ fi
 # Package type, default to dubbo
 PACKAGE_TYPE="${PACKAGE_TYPE:-dubbo}"
 
+latest_dubbo_version_from_api() {
+  curl -fsSL \
+    -H "Accept: application/vnd.github+json" \
+    https://api.github.com/repos/apache/dubbo-kubernetes/releases 2>/dev/null | \
+    sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | \
+    grep -viE '(alpha|beta|rc)' | \
+    head -1
+}
+
+latest_dubbo_version_from_atom() {
+  curl -fsSL https://github.com/apache/dubbo-kubernetes/releases.atom 2>/dev/null | \
+    sed -n 's/.*<title>\([^<][^<]*\)<\/title>.*/\1/p' | \
+    grep -v '^Release notes from ' | \
+    grep -viE '(alpha|beta|rc)' | \
+    head -1
+}
+
 # Determine the latest Dubbo version by version number ignoring alpha, beta, and rc versions.
 if [ "${DUBBO_VERSION}" = "" ] ; then
-  DUBBO_VERSION="$(curl -s https://api.github.com/repos/apache/dubbo-kubernetes/releases | \
-                       grep '"tag_name":' | \
-                       grep -vE '(alpha|beta|rc)' | \
-                       head -1 | \
-                       sed -E 's/.*"([^"]+)".*/\1/')"
+  DUBBO_VERSION="$(latest_dubbo_version_from_api)"
+  if [ "${DUBBO_VERSION}" = "" ] ; then
+    DUBBO_VERSION="$(latest_dubbo_version_from_atom)"
+  fi
   DUBBO_VERSION="${DUBBO_VERSION##*/}"
 fi
 
 if [ "${DUBBO_VERSION}" = "" ] ; then
-  printf "Unable to get latest Dubbo version.\n"
+  printf "Unable to get latest Dubbo version. Please specify DUBBO_VERSION.\n"
   exit 1;
 fi
 

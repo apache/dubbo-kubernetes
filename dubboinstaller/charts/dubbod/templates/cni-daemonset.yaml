@@ -1,0 +1,124 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
+{{- $defaultCNI := $defaultProxyless.cni | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $proxyless := $global.proxyless | default dict }}
+{{- $cni := $proxyless.cni | default dict }}
+{{- $enabled := false }}
+{{- if hasKey $defaultCNI "enabled" }}
+{{- $enabled = $defaultCNI.enabled }}
+{{- end }}
+{{- if hasKey $cni "enabled" }}
+{{- $enabled = $cni.enabled }}
+{{- end }}
+{{- if $enabled }}
+{{- $image := coalesce $cni.image $defaultCNI.image "kdubbo/dubbod:debug" }}
+{{- $binDir := coalesce $cni.binDir $defaultCNI.binDir "/opt/cni/bin" }}
+{{- $confDir := coalesce $cni.confDir $defaultCNI.confDir "/etc/cni/net.d" }}
+{{- $stateDir := coalesce $cni.stateDir $defaultCNI.stateDir "/var/run/dubbo-cni" }}
+{{- $xserverPort := int (coalesce $cni.xserverPort $defaultCNI.xserverPort 15080) }}
+{{- $managedLabel := coalesce $cni.managedLabel $defaultCNI.managedLabel "proxyless.dubbo.apache.org/managed" }}
+{{- $managedLabelValue := coalesce $cni.managedLabelValue $defaultCNI.managedLabelValue "true" }}
+{{- $iptablesPath := coalesce $cni.iptablesPath $defaultCNI.iptablesPath "iptables" }}
+{{- $ipsetPath := coalesce $cni.ipsetPath $defaultCNI.ipsetPath "ipset" }}
+{{- $refreshInterval := coalesce $cni.refreshInterval $defaultCNI.refreshInterval "1m" }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dubbo-cni-node
+  namespace: dubbo-system
+  labels:
+    app: dubbo-cni
+    dubbo.apache.org/rev: default
+spec:
+  selector:
+    matchLabels:
+      app: dubbo-cni
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: dubbo-cni
+        dubbo.apache.org/rev: default
+    spec:
+      serviceAccountName: dubbod
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: install-cni
+          image: {{ $image | quote }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /usr/local/bin/dubbo-cni
+          args:
+            - install
+            - --watch
+            - --bin-dir={{ $binDir }}
+            - --conf-dir={{ $confDir }}
+            - --state-dir={{ $stateDir }}
+            - --kubeconfig={{ printf "%s/dubbo-cni-kubeconfig" $confDir }}
+            - --token-file={{ printf "%s/token" $stateDir }}
+            - --ca-file={{ printf "%s/ca.crt" $stateDir }}
+            - --xserver-port={{ $xserverPort }}
+            - --managed-label={{ $managedLabel }}
+            - --managed-label-value={{ $managedLabelValue }}
+            - --iptables-path={{ $iptablesPath }}
+            - --ipset-path={{ $ipsetPath }}
+            - --refresh-interval={{ $refreshInterval }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /usr/local/bin/dubbo-cni
+                  - uninstall
+                  - --bin-dir={{ $binDir }}
+                  - --conf-dir={{ $confDir }}
+                  - --state-dir={{ $stateDir }}
+                  - --kubeconfig={{ printf "%s/dubbo-cni-kubeconfig" $confDir }}
+                  - --token-file={{ printf "%s/token" $stateDir }}
+                  - --ca-file={{ printf "%s/ca.crt" $stateDir }}
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: cni-bin-dir
+              mountPath: {{ $binDir | quote }}
+            - name: cni-conf-dir
+              mountPath: {{ $confDir | quote }}
+            - name: cni-state-dir
+              mountPath: {{ $stateDir | quote }}
+      volumes:
+        - name: cni-bin-dir
+          hostPath:
+            path: {{ $binDir | quote }}
+            type: DirectoryOrCreate
+        - name: cni-conf-dir
+          hostPath:
+            path: {{ $confDir | quote }}
+            type: DirectoryOrCreate
+        - name: cni-state-dir
+          hostPath:
+            path: {{ $stateDir | quote }}
+            type: DirectoryOrCreate
+{{- end }}

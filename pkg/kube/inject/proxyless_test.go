@@ -525,6 +525,14 @@ func TestEnsureProxylessGRPCTemplateAnnotation(t *testing.T) {
 	}
 }
 
+func TestEnsureProxylessManagedLabel(t *testing.T) {
+	pod := &corev1.Pod{}
+	ensureProxylessManagedLabel(pod)
+	if got := pod.Labels[ProxylessManagedLabel]; got != ProxylessManagedLabelValue {
+		t.Fatalf("managed label = %q, want %q", got, ProxylessManagedLabelValue)
+	}
+}
+
 func TestProxylessGRPCSecretNameFitsKubernetesLengthLimit(t *testing.T) {
 	name := ProxylessGRPCSecretName("grpc-provider-012345678901234567890123456789012345678901234567890123")
 	if len(name) > 63 {

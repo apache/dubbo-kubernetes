@@ -442,6 +442,7 @@ func postProcessPod(pod *corev1.Pod, injectedPod corev1.Pod, req InjectionParame
 	if shouldInjectProxylessGRPC(req) {
 		// Add proxyless gRPC env and shared bootstrap/cert volume to application containers.
 		ensureProxylessGRPCTemplateAnnotation(pod)
+		ensureProxylessManagedLabel(pod)
 		if err := addApplicationContainerConfig(pod, req); err != nil {
 			return err
 		}
@@ -652,6 +653,13 @@ func ensureProxylessGRPCTemplateAnnotation(pod *corev1.Pod) {
 		return
 	}
 	pod.Annotations[ProxylessInjectTemplatesAnnoName] = templates + "," + ProxylessGRPCTemplateName
+}
+
+func ensureProxylessManagedLabel(pod *corev1.Pod) {
+	if pod.Labels == nil {
+		pod.Labels = map[string]string{}
+	}
+	pod.Labels[ProxylessManagedLabel] = ProxylessManagedLabelValue
 }
 
 func ensureEnvVar(envs []corev1.EnvVar, desired corev1.EnvVar) []corev1.EnvVar {
