@@ -40,6 +40,21 @@ func TestGenerateBootstrapUsesTLSForDirectDiscovery(t *testing.T) {
 	if got, want := bootstrap.XDSServers[0].ServerFeatures[0], "xds_v3"; got != want {
 		t.Fatalf("server feature = %q, want %q", got, want)
 	}
+	if bootstrap.Keepalive == nil {
+		t.Fatalf("keepalive config is nil")
+	}
+	if !bootstrap.Keepalive.Enabled {
+		t.Fatalf("keepalive enabled = false, want true")
+	}
+	if got, want := bootstrap.Keepalive.Time, DefaultKeepaliveTime.String(); got != want {
+		t.Fatalf("keepalive time = %q, want %q", got, want)
+	}
+	if got, want := bootstrap.Keepalive.Timeout, DefaultKeepaliveTimeout.String(); got != want {
+		t.Fatalf("keepalive timeout = %q, want %q", got, want)
+	}
+	if !bootstrap.Keepalive.PermitWithoutStream {
+		t.Fatalf("keepalive permit_without_stream = false, want true")
+	}
 
 	cfg, ok := bootstrap.XDSServers[0].ChannelCreds[0].Config.(FileWatcherCertProviderConfig)
 	if !ok {

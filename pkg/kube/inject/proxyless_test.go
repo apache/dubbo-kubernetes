@@ -185,6 +185,18 @@ func assertDirectXDSConnection(t *testing.T, pod *corev1.Pod, containerName, sec
 	if !hasEnv(container.Env, "DUBBO_GRPC_XDS_CREDENTIALS", "true") {
 		t.Fatalf("DUBBO_GRPC_XDS_CREDENTIALS env missing")
 	}
+	if !hasEnv(container.Env, ProxylessGRPCKeepaliveEnvName, ProxylessGRPCKeepaliveValue) {
+		t.Fatalf("%s env missing", ProxylessGRPCKeepaliveEnvName)
+	}
+	if !hasEnv(container.Env, ProxylessGRPCKeepaliveTimeEnv, ProxylessGRPCKeepaliveTime) {
+		t.Fatalf("%s env missing", ProxylessGRPCKeepaliveTimeEnv)
+	}
+	if !hasEnv(container.Env, ProxylessGRPCKeepaliveTimeoutEnv, ProxylessGRPCKeepaliveTimeout) {
+		t.Fatalf("%s env missing", ProxylessGRPCKeepaliveTimeoutEnv)
+	}
+	if !hasEnv(container.Env, ProxylessGRPCKeepalivePermitWithoutStreamEnv, ProxylessGRPCKeepaliveValue) {
+		t.Fatalf("%s env missing", ProxylessGRPCKeepalivePermitWithoutStreamEnv)
+	}
 	if !hasEnv(container.Env, "CA_ADDRESS", "dubbod.dubbo-system.svc:26012") {
 		t.Fatalf("CA_ADDRESS env missing")
 	}

@@ -361,6 +361,7 @@ type proxylessGRPCRuntimeConfig struct {
 	Env          map[string]string                   `json:"env"`
 	Bootstrap    proxylessGRPCBootstrapRuntimeConfig `json:"bootstrap"`
 	Certificates proxylessGRPCCertRuntimeConfig      `json:"certificates"`
+	Keepalive    proxylessGRPCKeepaliveRuntimeConfig `json:"keepalive"`
 	Workload     proxylessGRPCWorkloadRuntimeConfig  `json:"workload"`
 	Services     []proxylessGRPCServiceRuntimeConfig `json:"services,omitempty"`
 	Routes       []proxylessGRPCRouteRuntimeConfig   `json:"routes,omitempty"`
@@ -378,6 +379,13 @@ type proxylessGRPCCertRuntimeConfig struct {
 	CertChain  string `json:"certChain"`
 	PrivateKey string `json:"privateKey"`
 	RootCert   string `json:"rootCert"`
+}
+
+type proxylessGRPCKeepaliveRuntimeConfig struct {
+	Enabled             bool   `json:"enabled"`
+	Time                string `json:"time"`
+	Timeout             string `json:"timeout"`
+	PermitWithoutStream bool   `json:"permitWithoutStream"`
 }
 
 type proxylessGRPCWorkloadRuntimeConfig struct {
@@ -632,22 +640,26 @@ func buildRuntimeConfigJSON(workload *proxylessGRPCWorkloadContext, services []p
 		Version: proxylessGRPCRuntimeConfigVersion,
 		Mode:    "proxyless-grpc",
 		Env: map[string]string{
-			"GRPC_XDS_BOOTSTRAP":                     inject.ProxylessGRPCBootstrapPath,
-			inject.ProxylessGRPCConfigEnvName:        inject.ProxylessGRPCConfigPath,
-			"GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT": "true",
-			"DUBBO_GRPC_XDS_CREDENTIALS":             "true",
-			"DUBBO_GRPC_XDS_RESOLVER":                "xds:///",
-			"DUBBO_META_GENERATOR":                   "grpc",
-			"DUBBO_META_CLUSTER_ID":                  workload.clusterID,
-			"DUBBO_META_NAMESPACE":                   workload.podNamespace,
-			"DUBBO_META_MESH_ID":                     workload.trustDomain,
-			"TRUST_DOMAIN":                           workload.trustDomain,
-			"POD_NAME":                               workload.podName,
-			"POD_NAMESPACE":                          workload.podNamespace,
-			"INSTANCE_IP":                            workload.podIP,
-			"SERVICE_ACCOUNT":                        workload.serviceAccount,
-			inject.ProxylessXDSAddressEnvName:        workload.discoveryAddress,
-			"CA_ADDRESS":                             workload.caAddress,
+			"GRPC_XDS_BOOTSTRAP":                                inject.ProxylessGRPCBootstrapPath,
+			inject.ProxylessGRPCConfigEnvName:                   inject.ProxylessGRPCConfigPath,
+			"GRPC_XDS_EXPERIMENTAL_SECURITY_SUPPORT":            "true",
+			"DUBBO_GRPC_XDS_CREDENTIALS":                        "true",
+			"DUBBO_GRPC_XDS_RESOLVER":                           "xds:///",
+			inject.ProxylessGRPCKeepaliveEnvName:                inject.ProxylessGRPCKeepaliveValue,
+			inject.ProxylessGRPCKeepaliveTimeEnv:                inject.ProxylessGRPCKeepaliveTime,
+			inject.ProxylessGRPCKeepaliveTimeoutEnv:             inject.ProxylessGRPCKeepaliveTimeout,
+			inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv: inject.ProxylessGRPCKeepaliveValue,
+			"DUBBO_META_GENERATOR":                              "grpc",
+			"DUBBO_META_CLUSTER_ID":                             workload.clusterID,
+			"DUBBO_META_NAMESPACE":                              workload.podNamespace,
+			"DUBBO_META_MESH_ID":                                workload.trustDomain,
+			"TRUST_DOMAIN":                                      workload.trustDomain,
+			"POD_NAME":                                          workload.podName,
+			"POD_NAMESPACE":                                     workload.podNamespace,
+			"INSTANCE_IP":                                       workload.podIP,
+			"SERVICE_ACCOUNT":                                   workload.serviceAccount,
+			inject.ProxylessXDSAddressEnvName:                   workload.discoveryAddress,
+			"CA_ADDRESS":                                        workload.caAddress,
 		},
 		Bootstrap: proxylessGRPCBootstrapRuntimeConfig{
 			Path:             inject.ProxylessGRPCBootstrapPath,
@@ -660,6 +672,12 @@ func buildRuntimeConfigJSON(workload *proxylessGRPCWorkloadContext, services []p
 			CertChain:  inject.ProxylessXDSMountPath + "/" + constants.CertChainFilename,
 			PrivateKey: inject.ProxylessXDSMountPath + "/" + constants.KeyFilename,
 			RootCert:   inject.ProxylessXDSMountPath + "/" + constants.CACertNamespaceConfigMapDataName,
+		},
+		Keepalive: proxylessGRPCKeepaliveRuntimeConfig{
+			Enabled:             true,
+			Time:                inject.ProxylessGRPCKeepaliveTime,
+			Timeout:             inject.ProxylessGRPCKeepaliveTimeout,
+			PermitWithoutStream: true,
 		},
 		Workload: proxylessGRPCWorkloadRuntimeConfig{
 			NodeID:         workload.nodeID,

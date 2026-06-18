@@ -560,6 +560,22 @@ func addApplicationContainerConfig(pod *corev1.Pod, req InjectionParameters) err
 			Value: "xds:///",
 		})
 		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  ProxylessGRPCKeepaliveEnvName,
+			Value: ProxylessGRPCKeepaliveValue,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  ProxylessGRPCKeepaliveTimeEnv,
+			Value: ProxylessGRPCKeepaliveTime,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  ProxylessGRPCKeepaliveTimeoutEnv,
+			Value: ProxylessGRPCKeepaliveTimeout,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
+			Name:  ProxylessGRPCKeepalivePermitWithoutStreamEnv,
+			Value: ProxylessGRPCKeepaliveValue,
+		})
+		container.Env = ensureEnvVar(container.Env, corev1.EnvVar{
 			Name:  "DUBBO_META_GENERATOR",
 			Value: "grpc",
 		})

@@ -174,6 +174,30 @@ func TestBuildRuntimeConfigJSON(t *testing.T) {
 	if got.Env["DUBBO_META_CLUSTER_ID"] != workload.clusterID {
 		t.Fatalf("DUBBO_META_CLUSTER_ID = %q, want %q", got.Env["DUBBO_META_CLUSTER_ID"], workload.clusterID)
 	}
+	if got.Env[inject.ProxylessGRPCKeepaliveEnvName] != inject.ProxylessGRPCKeepaliveValue {
+		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepaliveEnvName, got.Env[inject.ProxylessGRPCKeepaliveEnvName], inject.ProxylessGRPCKeepaliveValue)
+	}
+	if got.Env[inject.ProxylessGRPCKeepaliveTimeEnv] != inject.ProxylessGRPCKeepaliveTime {
+		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepaliveTimeEnv, got.Env[inject.ProxylessGRPCKeepaliveTimeEnv], inject.ProxylessGRPCKeepaliveTime)
+	}
+	if got.Env[inject.ProxylessGRPCKeepaliveTimeoutEnv] != inject.ProxylessGRPCKeepaliveTimeout {
+		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepaliveTimeoutEnv, got.Env[inject.ProxylessGRPCKeepaliveTimeoutEnv], inject.ProxylessGRPCKeepaliveTimeout)
+	}
+	if got.Env[inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv] != inject.ProxylessGRPCKeepaliveValue {
+		t.Fatalf("%s = %q, want %q", inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv, got.Env[inject.ProxylessGRPCKeepalivePermitWithoutStreamEnv], inject.ProxylessGRPCKeepaliveValue)
+	}
+	if !got.Keepalive.Enabled {
+		t.Fatalf("keepalive enabled = false, want true")
+	}
+	if got.Keepalive.Time != inject.ProxylessGRPCKeepaliveTime {
+		t.Fatalf("keepalive time = %q, want %q", got.Keepalive.Time, inject.ProxylessGRPCKeepaliveTime)
+	}
+	if got.Keepalive.Timeout != inject.ProxylessGRPCKeepaliveTimeout {
+		t.Fatalf("keepalive timeout = %q, want %q", got.Keepalive.Timeout, inject.ProxylessGRPCKeepaliveTimeout)
+	}
+	if !got.Keepalive.PermitWithoutStream {
+		t.Fatalf("keepalive permitWithoutStream = false, want true")
+	}
 	if got.Env[inject.ProxylessXDSAddressEnvName] != workload.discoveryAddress {
 		t.Fatalf("%s = %q, want %q", inject.ProxylessXDSAddressEnvName, got.Env[inject.ProxylessXDSAddressEnvName], workload.discoveryAddress)
 	}

@@ -31,6 +31,14 @@ spec:
       value: "true"
     - name: DUBBO_GRPC_XDS_RESOLVER
       value: "xds:///"
+    - name: DUBBO_GRPC_KEEPALIVE
+      value: "true"
+    - name: GRPC_KEEPALIVE_INTERVAL
+      value: "30s"
+    - name: GRPC_KEEPALIVE_TIMEOUT
+      value: "10s"
+    - name: GRPC_KEEPALIVE_PERMIT_WITHOUT_STREAM
+      value: "true"
     - name: DUBBO_META_GENERATOR
       value: "grpc"
     - name: DUBBO_META_CLUSTER_ID
