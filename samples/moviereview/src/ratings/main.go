@@ -23,7 +23,7 @@ import (
 
 type rating struct {
 	MovieID string `json:"movieId"`
-	Stars   int    `json:"stars"`
+	Score   string `json:"score"`
 }
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 		if movieID == "" {
 			movieID = "movie-1"
 		}
-		writeJSON(w, rating{MovieID: movieID, Stars: 5})
+		writeJSON(w, rating{MovieID: movieID, Score: "9.0"})
 	})
 	log.Fatal(http.ListenAndServe(":9080", nil))
 }
