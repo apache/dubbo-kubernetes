@@ -74,7 +74,6 @@ const server = http.createServer(async (req, res) => {
         version: "v3",
         items: ["评论样式更醒目。", "这个版本也调用 ratings 服务。"],
         rating,
-        starColor: "#dc2626",
       }),
     );
   } catch (err) {

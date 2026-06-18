@@ -49,7 +49,6 @@ def reviews():
                 "这个版本会调用 ratings 服务。"
             ],
             "rating": rating(),
-            "starColor": "#111827",
         }
     )
 

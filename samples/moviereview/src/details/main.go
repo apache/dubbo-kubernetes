@@ -26,6 +26,10 @@ type movieDetails struct {
 	Year     int      `json:"year"`
 	Director string   `json:"director"`
 	Genres   []string `json:"genres"`
+	Runtime  string   `json:"runtime"`
+	Language string   `json:"language"`
+	Region   string   `json:"region"`
+	MovieID  string   `json:"movieId"`
 	Summary  string   `json:"summary"`
 }
 
@@ -43,6 +47,10 @@ func main() {
 			Year:     2019,
 			Director: "Deng Chao",
 			Genres:   []string{"Drama", "Family"},
+			Runtime:  "147 min",
+			Language: "Mandarin",
+			Region:   "China",
+			MovieID:  "movie-1",
 			Summary:  "A father and son story used here as a small, normal microservice domain.",
 		})
 	})
