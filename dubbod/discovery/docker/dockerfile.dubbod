@@ -33,9 +33,14 @@ RUN go build -v -trimpath -ldflags="-s -w" \
     -o /out/dubbod \
     ./dubbod/discovery/cmd/main.go
 
+RUN go build -v -trimpath -ldflags="-s -w" \
+    -o /out/dubbo-cni \
+    ./dubbo-cni/main.go
+
 FROM scratch
 
 COPY --from=builder /out/dubbod /usr/local/bin/dubbod
+COPY --from=builder /out/dubbo-cni /usr/local/bin/dubbo-cni
 
 USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/dubbod"]

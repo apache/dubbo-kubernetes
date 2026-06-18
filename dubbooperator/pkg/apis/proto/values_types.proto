@@ -34,6 +34,34 @@ message ProxyConfig {
   string clusterDomain = 1;
 }
 
+message ProxylessConfig {
+  MeshCNIConfig cni = 1;
+}
+
+message MeshCNIConfig {
+  bool enabled = 1;
+
+  string image = 2;
+
+  string binDir = 3;
+
+  string confDir = 4;
+
+  string stateDir = 5;
+
+  int64 xserverPort = 6;
+
+  string managedLabel = 7;
+
+  string managedLabelValue = 8;
+
+  string iptablesPath = 9;
+
+  string ipsetPath = 10;
+
+  string refreshInterval = 11;
+}
+
 message GlobalConfig {
   ProxyConfig proxy = 1;
 
@@ -44,6 +72,8 @@ message GlobalConfig {
   bool configValidation = 4;
 
   MulticlusterConfig multicluster = 5;
+
+  ProxylessConfig proxyless = 6;
 }
 
 message RemoteAccessConfig {

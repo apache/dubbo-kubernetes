@@ -191,6 +191,73 @@ func TestGenerateManifestEastWestGatewayConfig(t *testing.T) {
 	}
 }
 
+func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+	if !hasManifest(manifests, "DaemonSet", "dubbo-cni-node") {
+		t.Fatal("dubbo-cni-node not rendered by default")
+	}
+
+	manifests, _, err = GenerateManifest(nil, []string{"values.global.proxyless.cni.enabled=false"}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() with proxyless CNI disabled error = %v", err)
+	}
+	if hasManifest(manifests, "DaemonSet", "dubbo-cni-node") {
+		t.Fatal("dubbo-cni-node rendered while proxyless CNI is explicitly disabled")
+	}
+
+	manifests, _, err = GenerateManifest(nil, []string{
+		"values.global.proxyless.cni.enabled=true",
+		"values.global.proxyless.cni.image=kdubbo/dubbod:cni-test",
+		"values.global.proxyless.cni.binDir=/var/lib/cni/bin",
+		"values.global.proxyless.cni.confDir=/var/lib/cni/net.d",
+		"values.global.proxyless.cni.stateDir=/run/dubbo-cni",
+		"values.global.proxyless.cni.xserverPort=16080",
+		"values.global.proxyless.cni.ipsetPath=/usr/sbin/ipset",
+		"values.global.proxyless.cni.refreshInterval=30s",
+	}, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() with proxyless CNI error = %v", err)
+	}
+	daemonSet := findManifest(t, manifests, "DaemonSet", "dubbo-cni-node")
+	containers, ok, err := unstructured.NestedSlice(daemonSet.Object, "spec", "template", "spec", "containers")
+	if err != nil || !ok || len(containers) == 0 {
+		t.Fatalf("daemonset containers missing: ok=%v err=%v", ok, err)
+	}
+	installer := containers[0].(map[string]interface{})
+	image, _, _ := unstructured.NestedString(installer, "image")
+	if image != "kdubbo/dubbod:cni-test" {
+		t.Fatalf("CNI installer image = %q, want kdubbo/dubbod:cni-test", image)
+	}
+	args, ok, err := unstructured.NestedStringSlice(installer, "args")
+	if err != nil || !ok {
+		t.Fatalf("installer args missing: ok=%v err=%v", ok, err)
+	}
+	for _, want := range []string{
+		"--bin-dir=/var/lib/cni/bin",
+		"--conf-dir=/var/lib/cni/net.d",
+		"--state-dir=/run/dubbo-cni",
+		"--xserver-port=16080",
+		"--ipset-path=/usr/sbin/ipset",
+		"--refresh-interval=30s",
+	} {
+		if !containsString(args, want) {
+			t.Fatalf("installer args missing %q: %v", want, args)
+		}
+	}
+	volumes, ok, err := unstructured.NestedSlice(daemonSet.Object, "spec", "template", "spec", "volumes")
+	if err != nil || !ok {
+		t.Fatalf("daemonset volumes missing: ok=%v err=%v", ok, err)
+	}
+	for _, want := range []string{"/var/lib/cni/bin", "/var/lib/cni/net.d", "/run/dubbo-cni"} {
+		if !hasHostPathVolume(volumes, want) {
+			t.Fatalf("daemonset missing hostPath volume %s", want)
+		}
+	}
+}
+
 func TestGenerateManifestSetOverridesHelmValues(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, []string{
 		"values.global.gui.port=26081",
@@ -375,6 +442,29 @@ func hasContainerPort(ports []interface{}, name string, number int64) bool {
 		gotName, _, _ := unstructured.NestedString(p, "name")
 		gotNumber, _, _ := unstructured.NestedInt64(p, "containerPort")
 		if gotName == name && gotNumber == number {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
+}
+
+func hasHostPathVolume(volumes []interface{}, path string) bool {
+	for _, item := range volumes {
+		volume, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		got, _, _ := unstructured.NestedString(volume, "hostPath", "path")
+		if got == path {
 			return true
 		}
 	}
