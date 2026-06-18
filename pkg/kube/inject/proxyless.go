@@ -26,19 +26,26 @@ import (
 )
 
 const (
-	ProxylessGRPCTemplateName      = "grpc-engine"
-	ProxylessXDSVolumeName         = "dubbo-xds"
-	ProxylessXDSMountPath          = "/etc/dubbo/proxy"
-	ProxylessGRPCBootstrapFileName = "grpc-bootstrap.json"
-	ProxylessGRPCBootstrapPath     = ProxylessXDSMountPath + "/" + ProxylessGRPCBootstrapFileName
-	ProxylessXDSAddressEnvName     = "XDS_ADDRESS"
-	ProxylessGRPCConfigEnvName     = "DUBBO_GRPC_XDS_CONFIG"
-	ProxylessGRPCConfigFileName    = "dubbo-grpc-xds.json"
-	ProxylessGRPCConfigPath        = ProxylessXDSMountPath + "/" + ProxylessGRPCConfigFileName
-	ProxylessXServerContainerName  = "dubbo-xserver"
-	ProxylessXServerPort           = 15080
-	ProxylessManagedLabel          = "proxyless.dubbo.apache.org/managed"
-	ProxylessManagedLabelValue     = "true"
+	ProxylessGRPCTemplateName                    = "grpc-engine"
+	ProxylessXDSVolumeName                       = "dubbo-xds"
+	ProxylessXDSMountPath                        = "/etc/dubbo/proxy"
+	ProxylessGRPCBootstrapFileName               = "grpc-bootstrap.json"
+	ProxylessGRPCBootstrapPath                   = ProxylessXDSMountPath + "/" + ProxylessGRPCBootstrapFileName
+	ProxylessXDSAddressEnvName                   = "XDS_ADDRESS"
+	ProxylessGRPCConfigEnvName                   = "DUBBO_GRPC_XDS_CONFIG"
+	ProxylessGRPCKeepaliveEnvName                = "DUBBO_GRPC_KEEPALIVE"
+	ProxylessGRPCKeepaliveTimeEnv                = "GRPC_KEEPALIVE_INTERVAL"
+	ProxylessGRPCKeepaliveTimeoutEnv             = "GRPC_KEEPALIVE_TIMEOUT"
+	ProxylessGRPCKeepalivePermitWithoutStreamEnv = "GRPC_KEEPALIVE_PERMIT_WITHOUT_STREAM"
+	ProxylessGRPCKeepaliveValue                  = "true"
+	ProxylessGRPCKeepaliveTime                   = "30s"
+	ProxylessGRPCKeepaliveTimeout                = "10s"
+	ProxylessGRPCConfigFileName                  = "dubbo-grpc-xds.json"
+	ProxylessGRPCConfigPath                      = ProxylessXDSMountPath + "/" + ProxylessGRPCConfigFileName
+	ProxylessXServerContainerName                = "dubbo-xserver"
+	ProxylessXServerPort                         = 15080
+	ProxylessManagedLabel                        = "proxyless.dubbo.apache.org/managed"
+	ProxylessManagedLabelValue                   = "true"
 )
 
 var ProxylessInjectTemplatesAnnoName = annotation.OrgApacheDubboInjectTemplates.Name

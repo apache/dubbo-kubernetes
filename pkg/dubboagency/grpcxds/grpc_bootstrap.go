@@ -37,12 +37,15 @@ const (
 	ServerListenerNamePrefix    = "xds.dubbo.apache.org/grpc/lds/inbound/"
 	ServerListenerNameTemplate  = ServerListenerNamePrefix + "%s"
 	FileWatcherCertProviderName = "file_watcher"
+	DefaultKeepaliveTime        = 30 * time.Second
+	DefaultKeepaliveTimeout     = 10 * time.Second
 )
 
 type Bootstrap struct {
 	XDSServers                 []XdsServer                    `json:"xds_servers,omitempty"`
 	Node                       *core.Node                     `json:"node,omitempty"`
 	CertProviders              map[string]CertificateProvider `json:"certificate_providers,omitempty"`
+	Keepalive                  *KeepaliveConfig               `json:"dubbo_grpc_keepalive,omitempty"`
 	ServerListenerNameTemplate string                         `json:"server_listener_resource_name_template,omitempty"`
 }
 
@@ -74,6 +77,22 @@ type XdsServer struct {
 	ServerURI      string         `json:"server_uri,omitempty"`
 	ChannelCreds   []ChannelCreds `json:"channel_creds,omitempty"`
 	ServerFeatures []string       `json:"server_features,omitempty"`
+}
+
+type KeepaliveConfig struct {
+	Enabled             bool   `json:"enabled"`
+	Time                string `json:"time"`
+	Timeout             string `json:"timeout"`
+	PermitWithoutStream bool   `json:"permit_without_stream"`
+}
+
+func DefaultKeepaliveConfig() *KeepaliveConfig {
+	return &KeepaliveConfig{
+		Enabled:             true,
+		Time:                DefaultKeepaliveTime.String(),
+		Timeout:             DefaultKeepaliveTimeout.String(),
+		PermitWithoutStream: true,
+	}
 }
 
 func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
@@ -122,6 +141,7 @@ func GenerateBootstrap(opts GenerateBootstrapOptions) (*Bootstrap, error) {
 			Locality: opts.Node.Locality,
 			Metadata: xdsMeta,
 		},
+		Keepalive:                  DefaultKeepaliveConfig(),
 		ServerListenerNameTemplate: ServerListenerNameTemplate,
 	}
 
