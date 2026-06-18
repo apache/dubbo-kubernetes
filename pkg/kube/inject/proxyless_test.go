@@ -32,7 +32,7 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 	if !ok {
 		t.Fatalf("runtime.Caller() failed")
 	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "dubboinstaller/charts/dubbod/files/grpc-engine.yaml")
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
@@ -102,7 +102,7 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 	if !ok {
 		t.Fatalf("runtime.Caller() failed")
 	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "dubboinstaller/charts/dubbod/files/grpc-engine.yaml")
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
@@ -384,7 +384,7 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 	if !ok {
 		t.Fatalf("runtime.Caller() failed")
 	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "dubboinstaller/charts/dubbod/files/grpc-engine.yaml")
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
@@ -461,7 +461,7 @@ func TestInstallerGRPCEngineTemplateDoesNotConfigureXDSClientForNonDubbodImage(t
 	if !ok {
 		t.Fatalf("runtime.Caller() failed")
 	}
-	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "dubboinstaller/charts/dubbod/files/grpc-engine.yaml")
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
 	templateBytes, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("failed to read grpc-engine.yaml: %v", err)

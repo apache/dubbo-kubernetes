@@ -176,11 +176,11 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/dubboctl
+          mkdir -p build/cli
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/dubboctl/
-          mv bin/dubboctl* build/dubboctl/
-          ls -ln build/dubboctl/
+          cp README.md LICENSE build/cli/
+          mv bin/dubboctl* build/cli/
+          ls -ln build/cli/
 
       - name: Dubbo Build binary
         env:
@@ -188,18 +188,18 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/dubboctl
+          mkdir -p build/cli
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make clone-sample GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
-          mv bin/dubboctl* build/dubboctl/
+          mv bin/dubboctl* build/cli/
           mv bin/samples/ build/
-          ls -ln build/dubboctl/ ; ls -ln build/
+          ls -ln build/cli/ ; ls -ln build/
 
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
-          cp build/dubboctl/dubboctl build/dubboctl/dubboctl.exe
+          cp build/cli/dubboctl build/cli/dubboctl.exe
 
       - name: dubboctl Package files
         id: package_ctl
@@ -208,9 +208,9 @@ jobs:
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           DIRNAME=dubboctl-${VERSION}
           mkdir -p ${DIRNAME}/bin
-          cp build/dubboctl/dubboctl ${DIRNAME}/bin
+          cp build/cli/dubboctl ${DIRNAME}/bin
           ls -ln ${DIRNAME}/bin
-          cp build/dubboctl/README.md build/dubboctl/LICENSE ${DIRNAME}
+          cp build/cli/README.md build/cli/LICENSE ${DIRNAME}
           ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -r ${FILENAME}.zip ${DIRNAME}/bin
@@ -227,7 +227,7 @@ jobs:
           FILENAME=dubbo-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           DIRNAME=dubbo-${VERSION}
           mkdir -p ${DIRNAME}/bin
-          cp build/dubboctl/dubboctl ${DIRNAME}/bin/
+          cp build/cli/dubboctl ${DIRNAME}/bin/
           cp build/README.md build/LICENSE ${DIRNAME}
           cp -r build/samples ${DIRNAME}
           ls -Rlh ${DIRNAME}

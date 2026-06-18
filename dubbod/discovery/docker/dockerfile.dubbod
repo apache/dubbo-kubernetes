@@ -35,7 +35,7 @@ RUN go build -v -trimpath -ldflags="-s -w" \
 
 RUN go build -v -trimpath -ldflags="-s -w" \
     -o /out/dubbo-cni \
-    ./dubbo-cni/main.go
+    ./cni/main.go
 
 FROM scratch
 
