@@ -18,8 +18,7 @@ name: Dubbo Kubernetes Release
 on:
   push:
     tags:
-      - '[0-9]*.[0-9]*.[0-9]*'
-      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - 'v*'
 
 permissions:
   contents: write
@@ -32,117 +31,41 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Generate Release Notes
-        run: |
-          python3 tools/release_notes/generate_release_notes.py \
-            --tag "${GITHUB_REF_NAME}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --release-body release-notes.md
-
-      - name: Create or Update GitHub Release
-        id: create_release
+      - name: Check if Release Exists
+        id: check
         uses: actions/github-script@v7
         with:
+          result-encoding: string
           script: |
-            const fs = require('fs');
             const tag = context.ref.replace('refs/tags/', '');
-            const body = fs.readFileSync('release-notes.md', 'utf8');
-            let release;
             try {
-              release = await github.rest.repos.getReleaseByTag({
+              await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                tag,
+                tag: tag,
               });
-              release = await github.rest.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: release.data.id,
-                name: tag,
-                body,
-                draft: false,
-                prerelease: true,
-              });
+              return "exists";
             } catch (e) {
-              if (e.status !== 404) throw e;
-              release = await github.rest.repos.createRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag_name: tag,
-                name: tag,
-                body,
-                draft: false,
-                prerelease: true,
-              });
+              if (e.status === 404) return "not_found";
+              throw e;
             }
-            core.setOutput('upload_url', release.data.upload_url);
 
-      - name: Upload Release Notes Artifact
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release
+        id: create_release
+        if: steps.check.outputs.result == 'not_found'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: release-notes
-          path: release-notes.md
-          retention-days: 30
-
-  sync_kdubbo_docs:
-    name: Sync Kdubbo Docs Release Notes
-    needs: create_release
-    runs-on: ubuntu-latest
-    env:
-      KDUBBO_DOCS_TOKEN: ${{ secrets.KDUBBO_DOCS_TOKEN }}
-      KDUBBO_DOCS_REPOSITORY: ${{ vars.KDUBBO_DOCS_REPOSITORY || 'kdubbo/kdubbo.github.io' }}
-
-    steps:
-      - name: Require docs token
-        run: |
-          if [ -z "${KDUBBO_DOCS_TOKEN}" ]; then
-            echo "::error::KDUBBO_DOCS_TOKEN is required to push release notes to ${KDUBBO_DOCS_REPOSITORY}"
-            exit 1
-          fi
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Checkout kdubbo docs
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.KDUBBO_DOCS_REPOSITORY }}
-          token: ${{ env.KDUBBO_DOCS_TOKEN }}
-          path: kdubbo-docs
-
-      - name: Generate kdubbo docs release notes
-        run: |
-          python3 tools/release_notes/generate_release_notes.py \
-            --tag "${GITHUB_REF_NAME}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --docs-root kdubbo-docs/docs \
-            --release-body release-notes.md
-
-      - name: Verify kdubbo docs
-        working-directory: kdubbo-docs
-        run: |
-          python3 -m pip install -r requirements.txt
-          python3 -m mkdocs build --strict --site-dir /tmp/kdubbo-site-build
-
-      - name: Commit kdubbo docs release notes
-        working-directory: kdubbo-docs
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/latest/release
-          if git diff --cached --quiet; then
-            echo "No kdubbo docs release note changes to commit."
-            exit 0
-          fi
-          git commit -m "docs: add ${GITHUB_REF_NAME} release notes"
-          git push
+          tag_name: ${{ github.ref_name }}
+          release_name: "${{ github.ref_name }}"
+          body: |
+            Added multi-cluster functionality.
+            Added microservice examples.
+            Added mesh CNI.
+            Fixed and optimized known issues.
+          draft: false
+          prerelease: true
 
   build_and_upload:
     name: Build and Upload Binaries
@@ -176,11 +99,11 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/cli
+          mkdir -p build/dubboctl
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
-          cp README.md LICENSE build/cli/
-          mv bin/dubboctl* build/cli/
-          ls -ln build/cli/
+          cp README.md LICENSE build/dubboctl/
+          mv bin/dubboctl* build/dubboctl/
+          ls -ln build/dubboctl/
 
       - name: Dubbo Build binary
         env:
@@ -188,18 +111,18 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GIT_VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p build/cli
+          mkdir -p build/dubboctl
           make build-dubboctl GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           make clone-sample GOOS=${GOOS} GOARCH=${GOARCH} GIT_VERSION=${GIT_VERSION}
           cp README.md LICENSE build/
-          mv bin/dubboctl* build/cli/
+          mv bin/dubboctl* build/dubboctl/
           mv bin/samples/ build/
-          ls -ln build/cli/ ; ls -ln build/
+          ls -ln build/dubboctl/ ; ls -ln build/
 
       - name: Dubboctl Rename windows
         if: matrix.goos == 'windows'
         run: |
-          cp build/cli/dubboctl build/cli/dubboctl.exe
+          cp build/dubboctl/dubboctl build/dubboctl/dubboctl.exe
 
       - name: dubboctl Package files
         id: package_ctl
@@ -208,9 +131,9 @@ jobs:
           FILENAME=dubboctl-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           DIRNAME=dubboctl-${VERSION}
           mkdir -p ${DIRNAME}/bin
-          cp build/cli/dubboctl ${DIRNAME}/bin
+          cp build/dubboctl/dubboctl ${DIRNAME}/bin
           ls -ln ${DIRNAME}/bin
-          cp build/cli/README.md build/cli/LICENSE ${DIRNAME}
+          cp build/dubboctl/README.md build/dubboctl/LICENSE ${DIRNAME}
           ls -Rlh ${DIRNAME}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip -r ${FILENAME}.zip ${DIRNAME}/bin
@@ -227,7 +150,7 @@ jobs:
           FILENAME=dubbo-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
           DIRNAME=dubbo-${VERSION}
           mkdir -p ${DIRNAME}/bin
-          cp build/cli/dubboctl ${DIRNAME}/bin/
+          cp build/dubboctl/dubboctl ${DIRNAME}/bin/
           cp build/README.md build/LICENSE ${DIRNAME}
           cp -r build/samples ${DIRNAME}
           ls -Rlh ${DIRNAME}
