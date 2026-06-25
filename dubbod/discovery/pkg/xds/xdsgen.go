@@ -535,6 +535,14 @@ func (s *DiscoveryServer) pushDeltaXds(con *Connection, w *model.WatchedResource
 	}
 
 	var logFiltered string
+	if !req.Delta.IsEmpty() {
+		logFiltered = " filtered:" + strconv.Itoa(len(w.ResourceNames)-len(req.Delta.Subscribed))
+		w = &model.WatchedResource{
+			TypeUrl:       w.TypeUrl,
+			ResourceNames: req.Delta.Subscribed,
+		}
+	}
+
 	var res model.Resources
 	var deletedRes model.DeletedResources
 	var logdata model.XdsLogDetails

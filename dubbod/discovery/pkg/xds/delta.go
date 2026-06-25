@@ -20,6 +20,7 @@ import (
 	"errors"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	"strings"
+	"time"
 
 	dubbogrpc "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/grpc"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
@@ -335,7 +336,19 @@ func (conn *Connection) sendDelta(res *discovery.DeltaDiscoveryResponse, newReso
 		return conn.deltaStream.Send(res)
 	}
 	err := sendResonse()
-	if status.Convert(err).Code() == codes.DeadlineExceeded {
+	if err == nil {
+		conn.proxy.UpdateWatchedResource(res.TypeUrl, func(wr *model.WatchedResource) *model.WatchedResource {
+			if wr == nil {
+				wr = &model.WatchedResource{TypeUrl: res.TypeUrl}
+			}
+			if newResourceNames != nil {
+				wr.ResourceNames = newResourceNames
+			}
+			wr.NonceSent = res.Nonce
+			wr.LastSendTime = time.Now()
+			return wr
+		})
+	} else if status.Convert(err).Code() == codes.DeadlineExceeded {
 		deltaLog.Infof("Timeout writing %s: %v", conn.ID(), v1.GetShortType(res.TypeUrl))
 	}
 	return err

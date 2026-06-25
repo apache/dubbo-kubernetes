@@ -19,13 +19,17 @@ package grpcgen
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 )
 
 var log = dubbolog.RegisterScope("grpcgen", "xDS Generator for Proxyless gRPC")
 
 type GrpcConfigGenerator struct{}
+
+var _ model.XdsDeltaResourceGenerator = &GrpcConfigGenerator{}
 
 func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
 	// Extract requested resource names from WatchedResource
@@ -50,6 +54,63 @@ func (g *GrpcConfigGenerator) Generate(proxy *model.Proxy, w *model.WatchedResou
 	}
 
 	return nil, model.DefaultXdsLogDetails, nil
+}
+
+func (g *GrpcConfigGenerator) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest, w *model.WatchedResource) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
+	if w == nil {
+		return nil, nil, model.DefaultXdsLogDetails, false, nil
+	}
+	if w.TypeUrl != v1.ClusterType || !grpcCanUseDeltaClusters(req) {
+		resources, logDetails, err := g.Generate(proxy, w, req)
+		return resources, nil, logDetails, false, err
+	}
+
+	changedNames := grpcDeltaClusterNames(w, req)
+	if len(changedNames) == 0 {
+		return nil, nil, model.DefaultXdsLogDetails, true, nil
+	}
+	resources := g.BuildClusters(proxy, req.Push, sets.SortedList(changedNames))
+
+	built := sets.NewWithLength[string](len(resources))
+	for _, resource := range resources {
+		if resource != nil {
+			built.Insert(resource.Name)
+		}
+	}
+	removed := changedNames.Copy()
+	for name := range built {
+		removed.Delete(name)
+	}
+
+	logDetails := model.DefaultXdsLogDetails
+	logDetails.Incremental = true
+	return resources, sets.SortedList(removed), logDetails, true, nil
+}
+
+func grpcCanUseDeltaClusters(req *model.PushRequest) bool {
+	if req == nil || req.Forced || len(req.ConfigsUpdated) == 0 {
+		return false
+	}
+	for cfg := range req.ConfigsUpdated {
+		if cfg.Kind != kind.Service || cfg.Name == "" {
+			return false
+		}
+	}
+	return true
+}
+
+func grpcDeltaClusterNames(w *model.WatchedResource, req *model.PushRequest) sets.String {
+	updatedServices := sets.New[string]()
+	for cfg := range req.ConfigsUpdated {
+		updatedServices.Insert(cfg.Name)
+	}
+	changed := sets.New[string]()
+	for clusterName := range w.ResourceNames {
+		if updatedServices.Contains(model.ParseSubsetKeyHostname(clusterName)) {
+			changed.Insert(clusterName)
+		}
+	}
+	return changed
 }
 
 // buildCommonTLSContext creates a TLS context that matches gRPC xDS expectations.
