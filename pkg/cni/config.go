@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	defaultCNIVersion   = "1.0.0"
+	defaultCNIVersion   = "1.0.0" // 无用版本
 	defaultStateDir     = "/var/run/dubbo-cni"
 	defaultIPTablesPath = "iptables"
 	defaultIPSetPath    = "ipset"

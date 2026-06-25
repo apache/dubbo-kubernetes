@@ -30,11 +30,13 @@ import (
 )
 
 const (
-	defaultCNIBinDir          = "/opt/cni/bin"
-	defaultCNIConfDir         = "/etc/cni/net.d"
-	defaultInstallerInterval  = time.Minute
-	defaultKubeConfigFileName = "dubbo-cni-kubeconfig"
-	installBackupSuffix       = ".dubbo-cni.bak"
+	defaultCNIBinDir               = "/opt/cni/bin"
+	defaultCNIConfDir              = "/etc/cni/net.d"
+	defaultServiceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultServiceAccountCAPath    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	defaultInstallerInterval       = time.Minute
+	defaultKubeConfigFileName      = "dubbo-cni-kubeconfig"
+	installBackupSuffix            = ".dubbo-cni.bak"
 )
 
 type InstallerOptions struct {
@@ -60,8 +62,8 @@ func DefaultInstallerOptions() InstallerOptions {
 		BinDir:                  defaultCNIBinDir,
 		ConfDir:                 defaultCNIConfDir,
 		StateDir:                defaultStateDir,
-		ServiceAccountTokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
-		ServiceAccountCAPath:    "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		ServiceAccountTokenPath: defaultServiceAccountTokenPath,
+		ServiceAccountCAPath:    defaultServiceAccountCAPath,
 		ManagedLabel:            inject.ProxylessManagedLabel,
 		ManagedLabelValue:       inject.ProxylessManagedLabelValue,
 		IPTablesPath:            defaultIPTablesPath,
