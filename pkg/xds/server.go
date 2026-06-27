@@ -267,6 +267,9 @@ func (conn *Connection) StopCh() chan struct{} {
 }
 
 func (conn *Connection) StreamDone() <-chan struct{} {
+	if conn.stream == nil {
+		return conn.stop
+	}
 	return conn.stream.Context().Done()
 }
 

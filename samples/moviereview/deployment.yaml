@@ -34,7 +34,7 @@ spec:
   - name: http
     port: 80
     targetPort: 9080
-    nodePort: 30080
+    nodePort: 19080
     protocol: TCP
 ---
 apiVersion: v1

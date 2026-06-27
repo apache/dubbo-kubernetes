@@ -18,26 +18,34 @@ package sds
 
 import (
 	"context"
-	"github.com/apache/dubbo-kubernetes/pkg/log"
+	"fmt"
+	"io"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/backoff"
+	"github.com/apache/dubbo-kubernetes/pkg/log"
+	xdsmodel "github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/security"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 	"github.com/apache/dubbo-kubernetes/pkg/xds"
 	core "github.com/kdubbo/xds-api/core/v1"
+	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 	sds "github.com/kdubbo/xds-api/service/secret/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var sdsServiceLog = log.RegisterScope("sds", "SDS service debugging")
 
 var connectionNumber = int64(0)
+var deltaNonceNumber = int64(0)
+var versionNumber = int64(0)
 
 type sdsservice struct {
 	sds.UnimplementedSecretDiscoveryServiceServer
@@ -117,11 +125,81 @@ func (s *sdsservice) StreamSecrets(stream sds.SecretDiscoveryService_StreamSecre
 }
 
 func (s *sdsservice) DeltaSecrets(stream sds.SecretDiscoveryService_DeltaSecretsServer) error {
-	return status.Error(codes.Unimplemented, "DeltaSecrets not implemented")
+	ctx := &Context{
+		BaseConnection: xds.NewConnection("", nil),
+		s:              s,
+		w:              &Watch{},
+	}
+	reqCh := make(chan *discovery.DeltaDiscoveryRequest, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(reqCh)
+		for {
+			req, err := stream.Recv()
+			if err != nil {
+				errCh <- err
+				return
+			}
+			select {
+			case reqCh <- req:
+			case <-stream.Context().Done():
+				errCh <- stream.Context().Err()
+				return
+			}
+		}
+	}()
+
+	initialized := false
+	for {
+		select {
+		case req, ok := <-reqCh:
+			if !ok {
+				err := <-errCh
+				if err == io.EOF {
+					return nil
+				}
+				return err
+			}
+			if !initialized {
+				if req.Node == nil || req.Node.Id == "" {
+					return status.New(codes.InvalidArgument, "missing node information").Err()
+				}
+				if err := ctx.Initialize(req.Node); err != nil {
+					return err
+				}
+				defer ctx.Close()
+				initialized = true
+			}
+			shouldRespond, delta := ctx.shouldRespondDelta(req)
+			if !shouldRespond {
+				continue
+			}
+			resourceNames := ctx.deltaResourceNames(req.TypeUrl, delta)
+			if err := ctx.sendDelta(stream, req.TypeUrl, resourceNames, delta.Unsubscribed.UnsortedList()); err != nil {
+				return err
+			}
+		case ev := <-ctx.XdsConnection().PushCh():
+			secretName := ev.(string)
+			if !ctx.w.requested(secretName) {
+				continue
+			}
+			if err := ctx.sendDelta(stream, xdsmodel.SecretType, []string{secretName}, nil); err != nil {
+				return err
+			}
+		case <-stream.Context().Done():
+			if initialized {
+				ctx.Close()
+			}
+			return stream.Context().Err()
+		}
+	}
 }
 
-func (s *sdsservice) FetchSecrets(ctx context.Context, discReq *discovery.DiscoveryRequest) (*discovery.DiscoveryResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "FetchSecrets not implemented")
+func (s *sdsservice) FetchSecrets(_ context.Context, discReq *discovery.DiscoveryRequest) (*discovery.DiscoveryResponse, error) {
+	if discReq == nil {
+		return nil, status.New(codes.InvalidArgument, "missing discovery request").Err()
+	}
+	return s.generate(discReq.ResourceNames)
 }
 
 // register adds the SDS handle to the grpc server
@@ -130,7 +208,197 @@ func (s *sdsservice) register(rpcs *grpc.Server) {
 }
 
 func (s *sdsservice) generate(resourceNames []string) (*discovery.DiscoveryResponse, error) {
-	return &discovery.DiscoveryResponse{}, nil
+	resources := make([]*anypb.Any, 0, len(resourceNames))
+	for _, resourceName := range resourceNames {
+		secret, err := s.st.GenerateSecret(resourceName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate secret for %s: %v", resourceName, err)
+		}
+		if secret == nil {
+			return nil, fmt.Errorf("failed to generate secret for %s: secret is nil", resourceName)
+		}
+		res, err := anypb.New(toXdsSecret(secret, resourceName))
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal secret for %s: %v", resourceName, err)
+		}
+		resources = append(resources, res)
+	}
+	version := strconv.FormatInt(atomic.AddInt64(&versionNumber, 1), 10)
+	return &discovery.DiscoveryResponse{
+		TypeUrl:     xdsmodel.SecretType,
+		VersionInfo: version,
+		Nonce:       version,
+		Resources:   resources,
+	}, nil
+}
+
+func toXdsSecret(item *security.SecretItem, requestedName string) *tlsv1.Secret {
+	name := item.ResourceName
+	if name == "" {
+		name = requestedName
+	}
+	secret := &tlsv1.Secret{Name: name}
+	if name == security.RootCertReqResourceName {
+		secret.Type = &tlsv1.Secret_ValidationContext{
+			ValidationContext: &tlsv1.CertificateValidationContext{
+				TrustedCa: inlineBytes(item.RootCert),
+			},
+		}
+		return secret
+	}
+	if cfg, ok := security.SdsCertificateConfigFromResourceName(name); ok && cfg.IsRootCertificate() {
+		secret.Type = &tlsv1.Secret_ValidationContext{
+			ValidationContext: &tlsv1.CertificateValidationContext{
+				TrustedCa: inlineBytes(item.RootCert),
+			},
+		}
+		return secret
+	}
+	secret.Type = &tlsv1.Secret_TlsCertificate{
+		TlsCertificate: &tlsv1.TlsCertificate{
+			CertificateChain: inlineBytes(item.CertificateChain),
+			PrivateKey:       inlineBytes(item.PrivateKey),
+		},
+	}
+	return secret
+}
+
+func inlineBytes(value []byte) *core.DataSource {
+	return &core.DataSource{
+		Specifier: &core.DataSource_InlineBytes{
+			InlineBytes: value,
+		},
+	}
+}
+
+func (c *Context) shouldRespondDelta(req *discovery.DeltaDiscoveryRequest) (bool, xds.ResourceDelta) {
+	if req.ErrorDetail != nil {
+		errCode := codes.Code(req.ErrorDetail.Code)
+		sdsServiceLog.Warnf("%s: ACK ERROR %s %s:%s", xdsmodel.GetShortType(req.TypeUrl), c.XdsConnection().ID(), errCode.String(), req.ErrorDetail.GetMessage())
+		c.w.UpdateWatchedResource(req.TypeUrl, func(wr *xds.WatchedResource) *xds.WatchedResource {
+			if wr == nil {
+				wr = &xds.WatchedResource{TypeUrl: req.TypeUrl}
+			}
+			wr.LastError = req.ErrorDetail.GetMessage()
+			return wr
+		})
+		return false, xds.ResourceDelta{}
+	}
+
+	previous := c.w.GetWatchedResource(req.TypeUrl)
+	if previous == nil {
+		names, _ := deltaWatchedSecrets(nil, req)
+		c.w.NewWatchedResource(req.TypeUrl, names.UnsortedList())
+		return true, xds.ResourceDelta{Subscribed: names, Unsubscribed: sets.New(req.ResourceNamesUnsubscribe...)}
+	}
+
+	if req.ResponseNonce != "" && req.ResponseNonce != previous.NonceSent {
+		sdsServiceLog.Debugf("%s: REQ %s expired nonce received %s, sent %s",
+			xdsmodel.GetShortType(req.TypeUrl), c.XdsConnection().ID(), req.ResponseNonce, previous.NonceSent)
+		return false, xds.ResourceDelta{}
+	}
+
+	spontaneousReq := req.ResponseNonce == ""
+	var subChanged bool
+	var alwaysRespond bool
+	var subscribed sets.String
+	c.w.UpdateWatchedResource(req.TypeUrl, func(wr *xds.WatchedResource) *xds.WatchedResource {
+		if wr == nil {
+			wr = &xds.WatchedResource{TypeUrl: req.TypeUrl}
+		}
+		before := wr.ResourceNames
+		wr.ResourceNames, subChanged = deltaWatchedSecrets(wr.ResourceNames, req)
+		subscribed = wr.ResourceNames.Difference(before)
+		if !spontaneousReq {
+			wr.LastError = ""
+			wr.NonceAcked = req.ResponseNonce
+		}
+		alwaysRespond = wr.AlwaysRespond
+		wr.AlwaysRespond = false
+		return wr
+	})
+
+	if !subChanged {
+		if alwaysRespond {
+			return true, xds.ResourceDelta{}
+		}
+		return false, xds.ResourceDelta{}
+	}
+	return true, xds.ResourceDelta{
+		Subscribed:   subscribed,
+		Unsubscribed: sets.New(req.ResourceNamesUnsubscribe...),
+	}
+}
+
+func deltaWatchedSecrets(existing sets.String, req *discovery.DeltaDiscoveryRequest) (sets.String, bool) {
+	out := sets.New[string]()
+	if existing != nil {
+		out = existing.Copy()
+	}
+	before := out.Copy()
+	out.InsertAll(req.ResourceNamesSubscribe...)
+	for name := range req.InitialResourceVersions {
+		out.Insert(name)
+	}
+	out.DeleteAll(req.ResourceNamesUnsubscribe...)
+	return out, !out.Equals(before)
+}
+
+func (c *Context) deltaResourceNames(typeURL string, delta xds.ResourceDelta) []string {
+	if len(delta.Subscribed) > 0 {
+		return delta.Subscribed.UnsortedList()
+	}
+	if len(delta.Unsubscribed) > 0 {
+		return nil
+	}
+	wr := c.w.GetWatchedResource(typeURL)
+	if wr == nil || wr.ResourceNames == nil {
+		return nil
+	}
+	return wr.ResourceNames.UnsortedList()
+}
+
+func (c *Context) sendDelta(stream sds.SecretDiscoveryService_DeltaSecretsServer, typeURL string, resourceNames []string, removed []string) error {
+	res, err := c.s.generate(resourceNames)
+	if err != nil {
+		return err
+	}
+	nonce := strconv.FormatInt(atomic.AddInt64(&deltaNonceNumber, 1), 10)
+	resp := &discovery.DeltaDiscoveryResponse{
+		SystemVersionInfo: res.VersionInfo,
+		TypeUrl:           typeURL,
+		RemovedResources:  removed,
+		Nonce:             nonce,
+		ControlPlane:      res.ControlPlane,
+	}
+	if resp.SystemVersionInfo == "" {
+		resp.SystemVersionInfo = nonce
+	}
+	if res.TypeUrl != "" {
+		resp.TypeUrl = res.TypeUrl
+	}
+	for i, resource := range res.Resources {
+		name := ""
+		if i < len(resourceNames) {
+			name = resourceNames[i]
+		}
+		resp.Resources = append(resp.Resources, &discovery.Resource{
+			Name:     name,
+			Resource: resource,
+		})
+	}
+	if err := stream.Send(resp); err != nil {
+		return err
+	}
+	c.w.UpdateWatchedResource(resp.TypeUrl, func(wr *xds.WatchedResource) *xds.WatchedResource {
+		if wr == nil {
+			wr = &xds.WatchedResource{TypeUrl: resp.TypeUrl}
+		}
+		wr.NonceSent = resp.Nonce
+		wr.LastSendTime = time.Now()
+		return wr
+	})
+	return nil
 }
 
 func (s *sdsservice) push(secretName string) {
