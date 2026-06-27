@@ -55,7 +55,7 @@ require (
 	github.com/heroku/color v0.0.6
 	github.com/kdubbo/api v0.0.0-20260514125132-e21515234c56
 	github.com/kdubbo/client-go v0.0.0-20260514125254-aa566bd2f6d5
-	github.com/kdubbo/xds-api v0.0.0-20260618170142-573d9453aff2
+	github.com/kdubbo/xds-api v0.0.0-20260627135022-d265dbcbd12f
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1
@@ -254,7 +254,6 @@ replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker => github.com/docker/docker v23.0.1+incompatible
 	github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.20.2
-	github.com/kdubbo/xds-api => ../xds-api
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
 )
