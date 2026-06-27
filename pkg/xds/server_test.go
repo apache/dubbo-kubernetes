@@ -17,6 +17,7 @@ package xds
 
 import (
 	"testing"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -54,6 +55,23 @@ func (w *testWatcher) UpdateWatchedResource(url string, updateFn func(*WatchedRe
 
 func (w *testWatcher) GetID() string {
 	return "test"
+}
+
+func TestStreamDoneHandlesNilStream(t *testing.T) {
+	conn := NewConnection("", nil)
+
+	select {
+	case <-conn.StreamDone():
+		t.Fatalf("StreamDone closed before StopCh")
+	default:
+	}
+
+	close(conn.StopCh())
+	select {
+	case <-conn.StreamDone():
+	case <-time.After(time.Second):
+		t.Fatalf("StreamDone did not close after StopCh")
+	}
 }
 
 func TestShouldRespondPreservesNonceAckWithoutResourceNames(t *testing.T) {
