@@ -29,10 +29,10 @@ func TestIsInjectedPod(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "xserver container",
+			name: "grpc-inbound container",
 			pod: corev1.Pod{
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Name: inject.ProxylessXServerContainerName}},
+					Containers: []corev1.Container{{Name: inject.ProxylessGRPCInboundContainerName}},
 				},
 			},
 			want: true,
@@ -80,14 +80,14 @@ func TestPrintInjectedPods(t *testing.T) {
 		},
 		Spec: corev1.PodSpec{
 			NodeName:   "node-a",
-			Containers: []corev1.Container{{Name: "app"}, {Name: inject.ProxylessXServerContainerName}},
+			Containers: []corev1.Container{{Name: "app"}, {Name: inject.ProxylessGRPCInboundContainerName}},
 		},
 		Status: corev1.PodStatus{
 			Phase: corev1.PodRunning,
 			PodIP: "10.0.0.7",
 			ContainerStatuses: []corev1.ContainerStatus{
 				{Name: "app", Ready: true, RestartCount: 1},
-				{Name: inject.ProxylessXServerContainerName, Ready: true},
+				{Name: inject.ProxylessGRPCInboundContainerName, Ready: true},
 			},
 		},
 	}

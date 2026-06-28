@@ -84,17 +84,17 @@ func TestInstallerGRPCEngineTemplateInjectsDirectXDSConnection(t *testing.T) {
 	}
 
 	if len(injectedPod.Spec.Containers) != 2 {
-		t.Fatalf("template containers = %d, want app overlay plus xserver", len(injectedPod.Spec.Containers))
+		t.Fatalf("template containers = %d, want app overlay plus grpc-inbound", len(injectedPod.Spec.Containers))
 	}
 	if err := postProcessPod(mergedPod, *injectedPod, req); err != nil {
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
 
 	if len(mergedPod.Spec.Containers) != 2 {
-		t.Fatalf("containers = %d, want application container plus xserver", len(mergedPod.Spec.Containers))
+		t.Fatalf("containers = %d, want application container plus grpc-inbound", len(mergedPod.Spec.Containers))
 	}
 	assertDirectXDSConnection(t, mergedPod, "app", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
-	assertXServerContainer(t, mergedPod)
+	assertGRPCInboundContainer(t, mergedPod)
 }
 
 func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing.T) {
@@ -154,10 +154,10 @@ func TestInstallerGRPCEngineTemplateUsesGenerateNameForDeploymentPods(t *testing
 		t.Fatalf("postProcessPod() failed: %v", err)
 	}
 	if len(mergedPod.Spec.Containers) != 2 {
-		t.Fatalf("containers = %d, want original nginx container plus xserver", len(mergedPod.Spec.Containers))
+		t.Fatalf("containers = %d, want original nginx container plus grpc-inbound", len(mergedPod.Spec.Containers))
 	}
 	assertDirectXDSConnection(t, mergedPod, "nginx", ProxylessGRPCSecretNameForMeta(pod.ObjectMeta))
-	assertXServerContainer(t, mergedPod)
+	assertGRPCInboundContainer(t, mergedPod)
 	if got := mergedPod.Spec.Volumes[0].Secret.SecretName; got == ProxylessGRPCSecretName("") {
 		t.Fatalf("secret name = %q, want generateName-based secret", got)
 	}
@@ -242,21 +242,21 @@ func assertNoArgs(t *testing.T, pod *corev1.Pod) {
 	}
 }
 
-func assertXServerContainer(t *testing.T, pod *corev1.Pod) {
+func assertGRPCInboundContainer(t *testing.T, pod *corev1.Pod) {
 	t.Helper()
-	container := FindContainer(ProxylessXServerContainerName, pod.Spec.Containers)
+	container := FindContainer(ProxylessGRPCInboundContainerName, pod.Spec.Containers)
 	if container == nil {
-		t.Fatalf("%s container missing", ProxylessXServerContainerName)
+		t.Fatalf("%s container missing", ProxylessGRPCInboundContainerName)
 	}
 	if container.Image != "kdubbo/dubbod:debug" {
-		t.Fatalf("xserver image = %q, want kdubbo/dubbod:debug", container.Image)
+		t.Fatalf("grpc-inbound image = %q, want kdubbo/dubbod:debug", container.Image)
 	}
-	wantArgs := []string{"xserver", "--listen", ":15080", "--upstream", "127.0.0.1:80"}
+	wantArgs := []string{"grpc-inbound", "--listen", ":15080", "--upstream", "127.0.0.1:80"}
 	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
-		t.Fatalf("xserver args = %v, want %v", container.Args, wantArgs)
+		t.Fatalf("grpc-inbound args = %v, want %v", container.Args, wantArgs)
 	}
 	if !hasMount(container.VolumeMounts, ProxylessXDSVolumeName, ProxylessXDSMountPath, true) {
-		t.Fatalf("xserver proxyless xds mount missing")
+		t.Fatalf("grpc-inbound proxyless xds mount missing")
 	}
 }
 
@@ -445,7 +445,7 @@ func TestInstallerGRPCEngineTemplateConfiguresXDSClientForDubbodImage(t *testing
 	}
 
 	container := mergedPod.Spec.Containers[0]
-	wantArgs := []string{"xclient", "--watch"}
+	wantArgs := []string{"grpc-outbound", "--watch"}
 	if strings.Join(container.Args, ",") != strings.Join(wantArgs, ",") {
 		t.Fatalf("args = %v, want %v", container.Args, wantArgs)
 	}

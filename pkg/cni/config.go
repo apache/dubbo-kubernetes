@@ -42,7 +42,7 @@ type NetConf struct {
 	KubeConfig        string          `json:"kubeconfig,omitempty"`
 	ManagedLabel      string          `json:"managedLabel,omitempty"`
 	ManagedLabelValue string          `json:"managedLabelValue,omitempty"`
-	XServerPort       int             `json:"xserverPort,omitempty"`
+	GRPCInboundPort   int             `json:"grpcInboundPort,omitempty"`
 	StateDir          string          `json:"stateDir,omitempty"`
 	IPTablesPath      string          `json:"iptablesPath,omitempty"`
 	IPSetPath         string          `json:"ipsetPath,omitempty"`
@@ -69,8 +69,8 @@ func ParseNetConf(data []byte) (NetConf, error) {
 	if conf.ManagedLabelValue == "" {
 		conf.ManagedLabelValue = inject.ProxylessManagedLabelValue
 	}
-	if conf.XServerPort == 0 {
-		conf.XServerPort = inject.ProxylessXServerPort
+	if conf.GRPCInboundPort == 0 {
+		conf.GRPCInboundPort = inject.ProxylessGRPCInboundPort
 	}
 	if conf.IPTablesPath == "" {
 		conf.IPTablesPath = defaultIPTablesPath

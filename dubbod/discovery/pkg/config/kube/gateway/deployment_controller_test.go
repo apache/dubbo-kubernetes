@@ -275,7 +275,7 @@ func TestExtractServicePortsTargetsDxgateContainerPorts(t *testing.T) {
 	}
 }
 
-func TestExtractServicePortsTargetsXServerForEastWestGateway(t *testing.T) {
+func TestExtractServicePortsTargetsGRPCInboundForEastWestGateway(t *testing.T) {
 	gw := gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{

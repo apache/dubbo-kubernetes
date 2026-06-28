@@ -27,7 +27,7 @@ _internal_default_values_not_set:
         binDir: "/opt/cni/bin"
         confDir: "/etc/cni/net.d"
         stateDir: "/var/run/dubbo-cni"
-        xserverPort: 15080
+        grpcInboundPort: 15080
         managedLabel: "proxyless.dubbo.apache.org/managed"
         managedLabelValue: "true"
         iptablesPath: "iptables"

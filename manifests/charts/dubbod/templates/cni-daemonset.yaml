@@ -32,7 +32,7 @@
 {{- $binDir := coalesce $cni.binDir $defaultCNI.binDir "/opt/cni/bin" }}
 {{- $confDir := coalesce $cni.confDir $defaultCNI.confDir "/etc/cni/net.d" }}
 {{- $stateDir := coalesce $cni.stateDir $defaultCNI.stateDir "/var/run/dubbo-cni" }}
-{{- $xserverPort := int (coalesce $cni.xserverPort $defaultCNI.xserverPort 15080) }}
+{{- $grpcInboundPort := int (coalesce $cni.grpcInboundPort $defaultCNI.grpcInboundPort 15080) }}
 {{- $managedLabel := coalesce $cni.managedLabel $defaultCNI.managedLabel "proxyless.dubbo.apache.org/managed" }}
 {{- $managedLabelValue := coalesce $cni.managedLabelValue $defaultCNI.managedLabelValue "true" }}
 {{- $iptablesPath := coalesce $cni.iptablesPath $defaultCNI.iptablesPath "iptables" }}
@@ -76,7 +76,7 @@ spec:
             - --kubeconfig={{ printf "%s/dubbo-cni-kubeconfig" $confDir }}
             - --token-file={{ printf "%s/token" $stateDir }}
             - --ca-file={{ printf "%s/ca.crt" $stateDir }}
-            - --xserver-port={{ $xserverPort }}
+            - --grpc-inbound-port={{ $grpcInboundPort }}
             - --managed-label={{ $managedLabel }}
             - --managed-label-value={{ $managedLabelValue }}
             - --iptables-path={{ $iptablesPath }}

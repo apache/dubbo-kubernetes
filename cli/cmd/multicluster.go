@@ -136,7 +136,7 @@ func generateEastWestGatewayCmd() *cobra.Command {
 		namespace:   "dubbo-system",
 		serviceType: "LoadBalancer",
 		port:        15443,
-		targetPort:  inject.ProxylessXServerPort,
+		targetPort:  inject.ProxylessGRPCInboundPort,
 	}
 	command := &cobra.Command{
 		Use:   "generate-eastwest-gateway",
@@ -160,7 +160,7 @@ func generateEastWestGatewayCmd() *cobra.Command {
 	flags.StringVarP(&args.namespace, "namespace", "n", args.namespace, "Gateway namespace")
 	flags.StringVar(&args.serviceType, "service-type", args.serviceType, "Managed gateway Service type")
 	flags.Int32Var(&args.port, "port", args.port, "Externally reachable east-west Gateway port")
-	flags.IntVar(&args.targetPort, "target-port", args.targetPort, "Injected xserver target port used by the managed gateway Service")
+	flags.IntVar(&args.targetPort, "target-port", args.targetPort, "Injected grpc-inbound target port used by the managed gateway Service")
 	flags.Int32Var(&args.nodePort, "node-port", 0, "Optional managed gateway Service nodePort")
 	flags.StringVar(&args.xdsAddress, "xds-address", "", "ADS address used by the remote dxgate data plane")
 	_ = command.MarkFlagRequired("xds-address")

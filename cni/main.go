@@ -129,7 +129,7 @@ func installerFlagSet(name string, opts *cni.InstallerOptions) *flag.FlagSet {
 	flags.StringVar(&opts.ManagedLabelValue, "managed-label-value", opts.ManagedLabelValue, "label value that marks mesh-managed Pods")
 	flags.StringVar(&opts.IPTablesPath, "iptables-path", opts.IPTablesPath, "iptables binary used by the CNI plugin")
 	flags.StringVar(&opts.IPSetPath, "ipset-path", opts.IPSetPath, "ipset binary used by the CNI plugin")
-	flags.IntVar(&opts.XServerPort, "xserver-port", opts.XServerPort, "xserver inbound port")
+	flags.IntVar(&opts.GRPCInboundPort, "grpc-inbound-port", opts.GRPCInboundPort, "grpc-inbound inbound port")
 	return flags
 }
 

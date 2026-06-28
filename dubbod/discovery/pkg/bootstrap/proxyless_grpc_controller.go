@@ -823,7 +823,7 @@ func rewriteRuntimeEndpointPortsForTLS(endpoints []proxylessGRPCEndpointRuntimeC
 	out := make([]proxylessGRPCEndpointRuntimeConfig, len(endpoints))
 	copy(out, endpoints)
 	for i := range out {
-		out[i].Port = inject.ProxylessXServerPort
+		out[i].Port = inject.ProxylessGRPCInboundPort
 	}
 	return out
 }

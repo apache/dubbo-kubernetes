@@ -54,7 +54,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type xdsClientOptions struct {
+type grpcOutboundOptions struct {
 	host            string
 	port            int
 	path            string
@@ -126,19 +126,19 @@ type sampleADSClient struct {
 	bootstrap     *xdsresolver.BootstrapConfig
 }
 
-func newXClientCommand() *cobra.Command {
+func newGRPCOutboundCommand() *cobra.Command {
 	namespace := firstNonEmpty(os.Getenv("POD_NAMESPACE"), "default")
 	trustDomain := firstNonEmpty(os.Getenv("TRUST_DOMAIN"), constants.DefaultClusterLocalDomain)
 	domainSuffix := firstNonEmpty(os.Getenv("DOMAIN_SUFFIX"), trustDomain, constants.DefaultClusterLocalDomain)
 	host, port, hostErr := autoDiscoverServiceTarget(os.Environ(), namespace, domainSuffix)
-	opts := &xdsClientOptions{
+	opts := &grpcOutboundOptions{
 		host:           firstNonEmpty(os.Getenv("DUBBO_SERVICE_HOST"), host),
 		port:           firstIntFromEnv(int(port), "DUBBO_SERVICE_PORT"),
 		path:           firstNonEmpty(os.Getenv("REQUEST_PATH"), "/"),
 		xdsAddress:     firstNonEmpty(os.Getenv("XDS_ADDRESS"), "dubbod.dubbo-system.svc:26010"),
 		bootstrapPath:  os.Getenv("GRPC_XDS_BOOTSTRAP"),
 		namespace:      namespace,
-		podName:        firstNonEmpty(os.Getenv("POD_NAME"), os.Getenv("HOSTNAME"), "xclient"),
+		podName:        firstNonEmpty(os.Getenv("POD_NAME"), os.Getenv("HOSTNAME"), "grpc-outbound"),
 		podIP:          firstNonEmpty(os.Getenv("INSTANCE_IP"), os.Getenv("POD_IP"), "127.0.0.1"),
 		serviceAccount: firstNonEmpty(os.Getenv("SERVICE_ACCOUNT"), "default"),
 		trustDomain:    trustDomain,
@@ -150,11 +150,11 @@ func newXClientCommand() *cobra.Command {
 	}
 
 	c := &cobra.Command{
-		Use:   "xclient [count]",
+		Use:   "grpc-outbound [count]",
 		Short: "run a no-proxy ADS stream client for service-to-service sample traffic",
 		Args:  cobra.MaximumNArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			log.SetDefaultScope(xclientLogScope)
+			log.SetDefaultScope(grpcOutboundLogScope)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -195,7 +195,7 @@ func newXClientCommand() *cobra.Command {
 	return c
 }
 
-func (o *xdsClientOptions) run(ctx context.Context) error {
+func (o *grpcOutboundOptions) run(ctx context.Context) error {
 	if o.host == "" {
 		return fmt.Errorf("target host is required; set --host or DUBBO_SERVICE_HOST, or expose exactly one Service in the namespace before starting the pod")
 	}
@@ -241,7 +241,7 @@ func (o *xdsClientOptions) run(ctx context.Context) error {
 	return runSampleRequests(ctx, client, snapshot, o.count, o.requestInterval, o.requestTimeout)
 }
 
-func newSampleADSClient(ctx context.Context, opts *xdsClientOptions) (*sampleADSClient, error) {
+func newSampleADSClient(ctx context.Context, opts *grpcOutboundOptions) (*sampleADSClient, error) {
 	node, addr, dialOpts, err := adsDialConfig(opts)
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func newSampleADSClient(ctx context.Context, opts *xdsClientOptions) (*sampleADS
 	}, nil
 }
 
-func adsDialConfig(opts *xdsClientOptions) (*corev1.Node, string, []grpc.DialOption, error) {
+func adsDialConfig(opts *grpcOutboundOptions) (*corev1.Node, string, []grpc.DialOption, error) {
 	if opts.bootstrapPath != "" {
 		if bootstrap, err := xdsresolver.ParseBootstrap(opts.bootstrapPath); err == nil {
 			creds, err := xdsresolver.TransportCredentialsFromBootstrap(bootstrap)
@@ -302,7 +302,7 @@ func adsDialConfig(opts *xdsClientOptions) (*corev1.Node, string, []grpc.DialOpt
 	return node, opts.xdsAddress, []grpc.DialOption{creds}, nil
 }
 
-func buildADSNode(opts *xdsClientOptions) (*corev1.Node, error) {
+func buildADSNode(opts *grpcOutboundOptions) (*corev1.Node, error) {
 	proxyConfig := meshconfig.DefaultProxyConfig()
 	proxyConfig.DiscoveryAddress = opts.xdsAddress
 	nodeID := strings.Join([]string{

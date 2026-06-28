@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	meshInboundChain = "DUBBO-XSERVER-INBOUND"
-	meshPodIPSet     = "DUBBO-XSERVER-PODS"
+	meshInboundChain = "DUBBO-GRPC-INBOUND"
+	meshPodIPSet     = "DUBBO-GRPC-INBOUND-PODS"
 )
 
 type CommandRunner interface {
@@ -40,20 +40,20 @@ func (execCommandRunner) Run(ctx context.Context, name string, args ...string) (
 }
 
 type IPTablesRuleManager struct {
-	path        string
-	ipsetPath   string
-	xserverPort int
-	dryRun      bool
-	runner      CommandRunner
+	path            string
+	ipsetPath       string
+	grpcInboundPort int
+	dryRun          bool
+	runner          CommandRunner
 }
 
 func NewIPTablesRuleManager(conf NetConf) *IPTablesRuleManager {
 	return &IPTablesRuleManager{
-		path:        conf.IPTablesPath,
-		ipsetPath:   conf.IPSetPath,
-		xserverPort: conf.XServerPort,
-		dryRun:      conf.DryRun,
-		runner:      execCommandRunner{},
+		path:            conf.IPTablesPath,
+		ipsetPath:       conf.IPSetPath,
+		grpcInboundPort: conf.GRPCInboundPort,
+		dryRun:          conf.DryRun,
+		runner:          execCommandRunner{},
 	}
 }
 
@@ -97,11 +97,11 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 			return err
 		}
 	}
-	allowXServer := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(m.xserverPort), "-j", "RETURN"}
+	allowGRPCInbound := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(m.grpcInboundPort), "-j", "RETURN"}
 	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-j", "REJECT"}
-	m.deleteRepeated(ctx, allowXServer...)
+	m.deleteRepeated(ctx, allowGRPCInbound...)
 	m.deleteRepeated(ctx, rejectOtherTCP...)
-	if err := m.appendRule(ctx, allowXServer...); err != nil {
+	if err := m.appendRule(ctx, allowGRPCInbound...); err != nil {
 		return err
 	}
 	return m.appendRule(ctx, rejectOtherTCP...)

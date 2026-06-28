@@ -321,13 +321,13 @@ func (b *EndpointBuilder) eastWestGatewayForCluster(endpointCluster cluster.ID, 
 }
 
 func (b *EndpointBuilder) endpointPort(ep *model.DubboEndpoint) uint32 {
-	if b.useXServerEndpointPort() {
-		return inject.ProxylessXServerPort
+	if b.useGRPCInboundEndpointPort() {
+		return inject.ProxylessGRPCInboundPort
 	}
 	return ep.EndpointPort
 }
 
-func (b *EndpointBuilder) useXServerEndpointPort() bool {
+func (b *EndpointBuilder) useGRPCInboundEndpointPort() bool {
 	if b == nil || b.proxy == nil || !b.proxy.IsProxylessGrpc() || b.push == nil || b.service == nil {
 		return false
 	}

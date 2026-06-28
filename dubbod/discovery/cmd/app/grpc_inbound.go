@@ -36,7 +36,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type xdsServerOptions struct {
+type grpcInboundOptions struct {
 	listen         string
 	upstream       string
 	bootstrapPath  string
@@ -46,30 +46,30 @@ type xdsServerOptions struct {
 	connectTimeout time.Duration
 }
 
-type xserverMTLSMode string
+type grpcInboundMTLSMode string
 
 const (
-	xserverMTLSModeDisable    xserverMTLSMode = "DISABLE"
-	xserverMTLSModePermissive xserverMTLSMode = "PERMISSIVE"
-	xserverMTLSModeStrict     xserverMTLSMode = "STRICT"
+	grpcInboundMTLSModeDisable    grpcInboundMTLSMode = "DISABLE"
+	grpcInboundMTLSModePermissive grpcInboundMTLSMode = "PERMISSIVE"
+	grpcInboundMTLSModeStrict     grpcInboundMTLSMode = "STRICT"
 )
 
-func newXServerCommand() *cobra.Command {
-	opts := &xdsServerOptions{
-		listen:         firstNonEmpty(os.Getenv("DUBBO_XSERVER_LISTEN"), fmt.Sprintf(":%d", inject.ProxylessXServerPort)),
-		upstream:       firstNonEmpty(os.Getenv("DUBBO_XSERVER_UPSTREAM"), "127.0.0.1:80"),
+func newGRPCInboundCommand() *cobra.Command {
+	opts := &grpcInboundOptions{
+		listen:         firstNonEmpty(os.Getenv("DUBBO_GRPC_INBOUND_LISTEN"), fmt.Sprintf(":%d", inject.ProxylessGRPCInboundPort)),
+		upstream:       firstNonEmpty(os.Getenv("DUBBO_GRPC_INBOUND_UPSTREAM"), "127.0.0.1:80"),
 		bootstrapPath:  os.Getenv("GRPC_XDS_BOOTSTRAP"),
 		runtimeConfig:  firstNonEmpty(os.Getenv(inject.ProxylessGRPCConfigEnvName), inject.ProxylessGRPCConfigPath),
-		mtlsMode:       os.Getenv("DUBBO_XSERVER_MTLS_MODE"),
-		acceptTimeout:  durationSecondsFromEnv("DUBBO_XSERVER_ACCEPT_TIMEOUT", 0),
-		connectTimeout: durationSecondsFromEnv("DUBBO_XSERVER_CONNECT_TIMEOUT", 5*time.Second),
+		mtlsMode:       os.Getenv("DUBBO_GRPC_INBOUND_MTLS_MODE"),
+		acceptTimeout:  durationSecondsFromEnv("DUBBO_GRPC_INBOUND_ACCEPT_TIMEOUT", 0),
+		connectTimeout: durationSecondsFromEnv("DUBBO_GRPC_INBOUND_CONNECT_TIMEOUT", 5*time.Second),
 	}
 	c := &cobra.Command{
-		Use:   "xserver",
+		Use:   "grpc-inbound",
 		Short: "run an inbound mTLS data-plane proxy for proxyless workloads",
 		Args:  cobra.NoArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			log.SetDefaultScope(xserverLogScope)
+			log.SetDefaultScope(grpcInboundLogScope)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -86,33 +86,33 @@ func newXServerCommand() *cobra.Command {
 	return c
 }
 
-func (o *xdsServerOptions) run(ctx context.Context) error {
+func (o *grpcInboundOptions) run(ctx context.Context) error {
 	if o.bootstrapPath == "" {
-		return fmt.Errorf("xserver requires GRPC_XDS_BOOTSTRAP or --bootstrap")
+		return fmt.Errorf("grpc-inbound requires GRPC_XDS_BOOTSTRAP or --bootstrap")
 	}
 	if o.listen == "" {
-		return fmt.Errorf("xserver listen address is required")
+		return fmt.Errorf("grpc-inbound listen address is required")
 	}
 	if o.upstream == "" {
-		return fmt.Errorf("xserver upstream address is required")
+		return fmt.Errorf("grpc-inbound upstream address is required")
 	}
 	bootstrap, err := xdsresolver.ParseBootstrap(o.bootstrapPath)
 	if err != nil {
 		return err
 	}
-	tlsConfig, err := xserverTLSConfigFromBootstrap(bootstrap)
+	tlsConfig, err := grpcInboundTLSConfigFromBootstrap(bootstrap)
 	if err != nil {
 		return err
 	}
 	lis, err := net.Listen("tcp", o.listen)
 	if err != nil {
-		return fmt.Errorf("listen xserver %s: %w", o.listen, err)
+		return fmt.Errorf("listen grpc-inbound %s: %w", o.listen, err)
 	}
 	defer lis.Close()
-	return serveXServer(ctx, lis, tlsConfig, o.upstream, o.effectiveMTLSMode, o.acceptTimeout, o.connectTimeout)
+	return serveGRPCInbound(ctx, lis, tlsConfig, o.upstream, o.effectiveMTLSMode, o.acceptTimeout, o.connectTimeout)
 }
 
-func xserverTLSConfigFromBootstrap(bootstrap *xdsresolver.BootstrapConfig) (*tls.Config, error) {
+func grpcInboundTLSConfigFromBootstrap(bootstrap *xdsresolver.BootstrapConfig) (*tls.Config, error) {
 	if bootstrap == nil {
 		return nil, fmt.Errorf("bootstrap config is nil")
 	}
@@ -121,22 +121,22 @@ func xserverTLSConfigFromBootstrap(bootstrap *xdsresolver.BootstrapConfig) (*tls
 		return nil, fmt.Errorf("certificate_providers[default] not found")
 	}
 	if cfg.CertificateFile == "" || cfg.PrivateKeyFile == "" {
-		return nil, fmt.Errorf("xserver mTLS requires certificate_file and private_key_file")
+		return nil, fmt.Errorf("grpc-inbound mTLS requires certificate_file and private_key_file")
 	}
 	if cfg.CACertificateFile == "" {
-		return nil, fmt.Errorf("xserver mTLS requires ca_certificate_file")
+		return nil, fmt.Errorf("grpc-inbound mTLS requires ca_certificate_file")
 	}
 	cert, err := tls.LoadX509KeyPair(cfg.CertificateFile, cfg.PrivateKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("load xserver certificate/key: %w", err)
+		return nil, fmt.Errorf("load grpc-inbound certificate/key: %w", err)
 	}
 	rootPEM, err := os.ReadFile(cfg.CACertificateFile)
 	if err != nil {
-		return nil, fmt.Errorf("read xserver CA certificate %s: %w", cfg.CACertificateFile, err)
+		return nil, fmt.Errorf("read grpc-inbound CA certificate %s: %w", cfg.CACertificateFile, err)
 	}
 	clientCAs := x509.NewCertPool()
 	if !clientCAs.AppendCertsFromPEM(rootPEM) {
-		return nil, fmt.Errorf("parse xserver CA certificate %s: no certificates found", cfg.CACertificateFile)
+		return nil, fmt.Errorf("parse grpc-inbound CA certificate %s: no certificates found", cfg.CACertificateFile)
 	}
 	return &tls.Config{
 		MinVersion:   tls.VersionTLS12,
@@ -146,7 +146,7 @@ func xserverTLSConfigFromBootstrap(bootstrap *xdsresolver.BootstrapConfig) (*tls
 	}, nil
 }
 
-func serveXServer(ctx context.Context, lis net.Listener, tlsConfig *tls.Config, upstream string, mode func() xserverMTLSMode, acceptTimeout, connectTimeout time.Duration) error {
+func serveGRPCInbound(ctx context.Context, lis net.Listener, tlsConfig *tls.Config, upstream string, mode func() grpcInboundMTLSMode, acceptTimeout, connectTimeout time.Duration) error {
 	go func() {
 		<-ctx.Done()
 		_ = lis.Close()
@@ -161,11 +161,11 @@ func serveXServer(ctx context.Context, lis net.Listener, tlsConfig *tls.Config, 
 				return err
 			}
 		}
-		go proxyXServerConnection(conn, tlsConfig, upstream, mode(), acceptTimeout, connectTimeout)
+		go proxyGRPCInboundConnection(conn, tlsConfig, upstream, mode(), acceptTimeout, connectTimeout)
 	}
 }
 
-func proxyXServerConnection(inbound net.Conn, tlsConfig *tls.Config, upstream string, mode xserverMTLSMode, acceptTimeout, connectTimeout time.Duration) {
+func proxyGRPCInboundConnection(inbound net.Conn, tlsConfig *tls.Config, upstream string, mode grpcInboundMTLSMode, acceptTimeout, connectTimeout time.Duration) {
 	defer inbound.Close()
 	if acceptTimeout > 0 {
 		_ = inbound.SetDeadline(time.Now().Add(acceptTimeout))
@@ -178,7 +178,7 @@ func proxyXServerConnection(inbound net.Conn, tlsConfig *tls.Config, upstream st
 	}
 	buffered := &bufferedConn{Conn: inbound, reader: reader}
 	if isTLSClientHello(first[0]) {
-		if mode == xserverMTLSModeDisable {
+		if mode == grpcInboundMTLSModeDisable {
 			return
 		}
 		tlsConn := tls.Server(buffered, tlsConfig)
@@ -187,7 +187,7 @@ func proxyXServerConnection(inbound net.Conn, tlsConfig *tls.Config, upstream st
 		}
 		inbound = tlsConn
 	} else {
-		if mode == xserverMTLSModeStrict {
+		if mode == grpcInboundMTLSModeStrict {
 			return
 		}
 		inbound = buffered
@@ -216,24 +216,24 @@ func isTLSClientHello(first byte) bool {
 	return first == 0x16
 }
 
-func (o *xdsServerOptions) effectiveMTLSMode() xserverMTLSMode {
-	if mode, ok := parseXServerMTLSMode(o.mtlsMode); ok {
+func (o *grpcInboundOptions) effectiveMTLSMode() grpcInboundMTLSMode {
+	if mode, ok := parseGRPCInboundMTLSMode(o.mtlsMode); ok {
 		return mode
 	}
-	if mode, ok := xserverMTLSModeFromRuntimeConfig(o.runtimeConfig, upstreamPort(o.upstream)); ok {
+	if mode, ok := grpcInboundMTLSModeFromRuntimeConfig(o.runtimeConfig, upstreamPort(o.upstream)); ok {
 		return mode
 	}
-	return xserverMTLSModePermissive
+	return grpcInboundMTLSModePermissive
 }
 
-func parseXServerMTLSMode(mode string) (xserverMTLSMode, bool) {
+func parseGRPCInboundMTLSMode(mode string) (grpcInboundMTLSMode, bool) {
 	switch strings.ToUpper(strings.TrimSpace(mode)) {
-	case string(xserverMTLSModeDisable):
-		return xserverMTLSModeDisable, true
-	case string(xserverMTLSModePermissive):
-		return xserverMTLSModePermissive, true
-	case string(xserverMTLSModeStrict):
-		return xserverMTLSModeStrict, true
+	case string(grpcInboundMTLSModeDisable):
+		return grpcInboundMTLSModeDisable, true
+	case string(grpcInboundMTLSModePermissive):
+		return grpcInboundMTLSModePermissive, true
+	case string(grpcInboundMTLSModeStrict):
+		return grpcInboundMTLSModeStrict, true
 	default:
 		return "", false
 	}
@@ -251,7 +251,7 @@ func upstreamPort(upstream string) int {
 	return out
 }
 
-func xserverMTLSModeFromRuntimeConfig(path string, port int) (xserverMTLSMode, bool) {
+func grpcInboundMTLSModeFromRuntimeConfig(path string, port int) (grpcInboundMTLSMode, bool) {
 	if path == "" {
 		return "", false
 	}
@@ -278,22 +278,22 @@ func xserverMTLSModeFromRuntimeConfig(path string, port int) (xserverMTLSMode, b
 			if port != 0 && svcPort.Port != port {
 				continue
 			}
-			mode, ok := parseXServerMTLSMode(svcPort.MTLSMode)
+			mode, ok := parseGRPCInboundMTLSMode(svcPort.MTLSMode)
 			if !ok {
 				continue
 			}
-			if mode == xserverMTLSModeStrict {
-				return xserverMTLSModeStrict, true
+			if mode == grpcInboundMTLSModeStrict {
+				return grpcInboundMTLSModeStrict, true
 			}
-			foundPermissive = foundPermissive || mode == xserverMTLSModePermissive
-			foundDisable = foundDisable || mode == xserverMTLSModeDisable
+			foundPermissive = foundPermissive || mode == grpcInboundMTLSModePermissive
+			foundDisable = foundDisable || mode == grpcInboundMTLSModeDisable
 		}
 	}
 	if foundPermissive {
-		return xserverMTLSModePermissive, true
+		return grpcInboundMTLSModePermissive, true
 	}
 	if foundDisable {
-		return xserverMTLSModeDisable, true
+		return grpcInboundMTLSModeDisable, true
 	}
 	return "", false
 }

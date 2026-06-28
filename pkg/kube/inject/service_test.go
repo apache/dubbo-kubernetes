@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func TestRewriteProxylessServiceTargetPortsRoutesTCPServiceToXServer(t *testing.T) {
+func TestRewriteProxylessServiceTargetPortsRoutesTCPServiceToGRPCInbound(t *testing.T) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "nginx", Namespace: "app"},
 		Spec: corev1.ServiceSpec{
@@ -44,8 +44,8 @@ func TestRewriteProxylessServiceTargetPortsRoutesTCPServiceToXServer(t *testing.
 		t.Fatalf("rewriteProxylessServiceTargetPorts() = false, want true")
 	}
 	for _, port := range svc.Spec.Ports {
-		if got := port.TargetPort.IntVal; got != ProxylessXServerPort {
-			t.Fatalf("port %s targetPort = %d, want %d", port.Name, got, ProxylessXServerPort)
+		if got := port.TargetPort.IntVal; got != ProxylessGRPCInboundPort {
+			t.Fatalf("port %s targetPort = %d, want %d", port.Name, got, ProxylessGRPCInboundPort)
 		}
 	}
 }
@@ -110,7 +110,7 @@ func TestRewriteProxylessServiceTargetPortsSkipsNonTCPPorts(t *testing.T) {
 	}
 }
 
-func TestInjectServiceCreatesXServerTargetPortPatch(t *testing.T) {
+func TestInjectServiceCreatesGRPCInboundTargetPortPatch(t *testing.T) {
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "nginx", Namespace: "app"},
 		Spec: corev1.ServiceSpec{

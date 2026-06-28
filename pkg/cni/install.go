@@ -54,7 +54,7 @@ type InstallerOptions struct {
 	ManagedLabelValue       string
 	IPTablesPath            string
 	IPSetPath               string
-	XServerPort             int
+	GRPCInboundPort         int
 }
 
 func DefaultInstallerOptions() InstallerOptions {
@@ -68,7 +68,7 @@ func DefaultInstallerOptions() InstallerOptions {
 		ManagedLabelValue:       inject.ProxylessManagedLabelValue,
 		IPTablesPath:            defaultIPTablesPath,
 		IPSetPath:               defaultIPSetPath,
-		XServerPort:             inject.ProxylessXServerPort,
+		GRPCInboundPort:         inject.ProxylessGRPCInboundPort,
 	}
 }
 
@@ -124,8 +124,8 @@ func (o *InstallerOptions) applyDefaults(requireAPIServer bool) error {
 	if o.IPSetPath == "" {
 		o.IPSetPath = defaults.IPSetPath
 	}
-	if o.XServerPort == 0 {
-		o.XServerPort = defaults.XServerPort
+	if o.GRPCInboundPort == 0 {
+		o.GRPCInboundPort = defaults.GRPCInboundPort
 	}
 	if requireAPIServer && o.APIServer == "" {
 		return fmt.Errorf("kubernetes API server is required")
@@ -391,7 +391,7 @@ func pluginConfig(opts InstallerOptions) map[string]any {
 		"kubernetes":        map[string]any{"kubeconfig": opts.KubeConfigPath},
 		"managedLabel":      opts.ManagedLabel,
 		"managedLabelValue": opts.ManagedLabelValue,
-		"xserverPort":       opts.XServerPort,
+		"grpcInboundPort":   opts.GRPCInboundPort,
 		"stateDir":          opts.StateDir,
 		"iptablesPath":      opts.IPTablesPath,
 		"ipsetPath":         opts.IPSetPath,

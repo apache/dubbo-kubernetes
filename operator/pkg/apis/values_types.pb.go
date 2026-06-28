@@ -185,7 +185,7 @@ type MeshCNIConfig struct {
 	BinDir            string                 `protobuf:"bytes,3,opt,name=binDir,proto3" json:"binDir,omitempty"`
 	ConfDir           string                 `protobuf:"bytes,4,opt,name=confDir,proto3" json:"confDir,omitempty"`
 	StateDir          string                 `protobuf:"bytes,5,opt,name=stateDir,proto3" json:"stateDir,omitempty"`
-	XserverPort       int64                  `protobuf:"varint,6,opt,name=xserverPort,proto3" json:"xserverPort,omitempty"`
+	GrpcInboundPort   int64                  `protobuf:"varint,6,opt,name=grpcInboundPort,proto3" json:"grpcInboundPort,omitempty"`
 	ManagedLabel      string                 `protobuf:"bytes,7,opt,name=managedLabel,proto3" json:"managedLabel,omitempty"`
 	ManagedLabelValue string                 `protobuf:"bytes,8,opt,name=managedLabelValue,proto3" json:"managedLabelValue,omitempty"`
 	IptablesPath      string                 `protobuf:"bytes,9,opt,name=iptablesPath,proto3" json:"iptablesPath,omitempty"`
@@ -260,9 +260,9 @@ func (x *MeshCNIConfig) GetStateDir() string {
 	return ""
 }
 
-func (x *MeshCNIConfig) GetXserverPort() int64 {
+func (x *MeshCNIConfig) GetGrpcInboundPort() int64 {
 	if x != nil {
-		return x.XserverPort
+		return x.GrpcInboundPort
 	}
 	return 0
 }
@@ -808,14 +808,14 @@ const file_values_types_proto_rawDesc = "" +
 	"\vProxyConfig\x12$\n" +
 	"\rclusterDomain\x18\x01 \x01(\tR\rclusterDomain\"K\n" +
 	"\x0fProxylessConfig\x128\n" +
-	"\x03cni\x18\x01 \x01(\v2&.dubbo.operator.v1alpha1.MeshCNIConfigR\x03cni\"\xed\x02\n" +
+	"\x03cni\x18\x01 \x01(\v2&.dubbo.operator.v1alpha1.MeshCNIConfigR\x03cni\"\xf5\x02\n" +
 	"\rMeshCNIConfig\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x14\n" +
 	"\x05image\x18\x02 \x01(\tR\x05image\x12\x16\n" +
 	"\x06binDir\x18\x03 \x01(\tR\x06binDir\x12\x18\n" +
 	"\aconfDir\x18\x04 \x01(\tR\aconfDir\x12\x1a\n" +
-	"\bstateDir\x18\x05 \x01(\tR\bstateDir\x12 \n" +
-	"\vxserverPort\x18\x06 \x01(\x03R\vxserverPort\x12\"\n" +
+	"\bstateDir\x18\x05 \x01(\tR\bstateDir\x12(\n" +
+	"\x0fgrpcInboundPort\x18\x06 \x01(\x03R\x0fgrpcInboundPort\x12\"\n" +
 	"\fmanagedLabel\x18\a \x01(\tR\fmanagedLabel\x12,\n" +
 	"\x11managedLabelValue\x18\b \x01(\tR\x11managedLabelValue\x12\"\n" +
 	"\fiptablesPath\x18\t \x01(\tR\fiptablesPath\x12\x1c\n" +

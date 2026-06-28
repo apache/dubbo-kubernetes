@@ -49,7 +49,7 @@ message MeshCNIConfig {
 
   string stateDir = 5;
 
-  int64 xserverPort = 6;
+  int64 grpcInboundPort = 6;
 
   string managedLabel = 7;
 

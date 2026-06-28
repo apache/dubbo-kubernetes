@@ -107,7 +107,7 @@ func isInjectedPod(pod corev1.Pod) bool {
 		return true
 	}
 	for _, container := range allContainers(pod) {
-		if container.Name == inject.ProxylessXServerContainerName {
+		if container.Name == inject.ProxylessGRPCInboundContainerName {
 			return true
 		}
 		for _, env := range container.Env {
