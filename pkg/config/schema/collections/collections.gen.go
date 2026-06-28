@@ -13,7 +13,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	githubcomkdubboapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
-	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -231,21 +230,6 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
-	MeshService = resource.Builder{
-		Identifier: "MeshService",
-		Group:      "networking.dubbo.apache.org",
-		Kind:       "MeshService",
-		Plural:     "meshservices",
-		Version:    "v1alpha3",
-		Proto:      "dubbo.networking.v1alpha3.MeshService", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
-		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.MeshService{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
-		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
-		ClusterScoped: false,
-		Synthetic:     false,
-		Builtin:       false,
-		ValidateProto: validation.EmptyValidate,
-	}.MustBuild()
-
 	MutatingWebhookConfiguration = resource.Builder{
 		Identifier:    "MutatingWebhookConfiguration",
 		Group:         "admissionregistration.k8s.io",
@@ -441,7 +425,6 @@ var (
 		MustAdd(KubernetesGateway).
 		MustAdd(Lease).
 		MustAdd(MeshConfig).
-		MustAdd(MeshService).
 		MustAdd(MutatingWebhookConfiguration).
 		MustAdd(Namespace).
 		MustAdd(Node).
@@ -484,7 +467,6 @@ var (
 	// Dubbo contains only collections used by Dubbo.
 	Dubbo = collection.NewSchemasBuilder().
 		MustAdd(AuthorizationPolicy).
-		MustAdd(MeshService).
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
 		Build()
@@ -495,7 +477,6 @@ var (
 			MustAdd(GatewayClass).
 			MustAdd(HTTPRoute).
 			MustAdd(KubernetesGateway).
-			MustAdd(MeshService).
 			MustAdd(PeerAuthentication).
 			MustAdd(RequestAuthentication).
 			Build()
@@ -506,7 +487,6 @@ var (
 				MustAdd(GatewayClass).
 				MustAdd(HTTPRoute).
 				MustAdd(KubernetesGateway).
-				MustAdd(MeshService).
 				MustAdd(PeerAuthentication).
 				MustAdd(RequestAuthentication).
 				Build()

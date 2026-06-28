@@ -19,7 +19,6 @@ const (
 	KubernetesGateway
 	Lease
 	MeshConfig
-	MeshService
 	MutatingWebhookConfiguration
 	Namespace
 	Node
@@ -66,8 +65,6 @@ func (k Kind) String() string {
 		return "Lease"
 	case MeshConfig:
 		return "MeshConfig"
-	case MeshService:
-		return "MeshService"
 	case MutatingWebhookConfiguration:
 		return "MutatingWebhookConfiguration"
 	case Namespace:
@@ -129,8 +126,6 @@ func FromString(s string) Kind {
 		return Lease
 	case "MeshConfig":
 		return MeshConfig
-	case "MeshService":
-		return MeshService
 	case "MutatingWebhookConfiguration":
 		return MutatingWebhookConfiguration
 	case "Namespace":

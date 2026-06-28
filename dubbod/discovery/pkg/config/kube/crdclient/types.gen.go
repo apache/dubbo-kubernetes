@@ -15,9 +15,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 
 	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
-	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
-	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -51,11 +49,6 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		return c.GatewayAPI().GatewayV1().Gateways(cfg.Namespace).Create(context.TODO(), &sigsk8siogatewayapiapisv1.Gateway{
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.GatewaySpec)),
-		}, metav1.CreateOptions{})
-	case gvk.MeshService:
-		return c.Dubbo().NetworkingV1alpha3().MeshServices(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService{
-			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.MeshService)),
 		}, metav1.CreateOptions{})
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
@@ -94,11 +87,6 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1.GatewaySpec)),
 		}, metav1.UpdateOptions{})
-	case gvk.MeshService:
-		return c.Dubbo().NetworkingV1alpha3().MeshServices(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService{
-			ObjectMeta: objMeta,
-			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.MeshService)),
-		}, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
@@ -135,11 +123,6 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 		return c.GatewayAPI().GatewayV1().Gateways(cfg.Namespace).UpdateStatus(context.TODO(), &sigsk8siogatewayapiapisv1.Gateway{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*sigsk8siogatewayapiapisv1.GatewayStatus)),
-		}, metav1.UpdateOptions{})
-	case gvk.MeshService:
-		return c.Dubbo().NetworkingV1alpha3().MeshServices(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService{
-			ObjectMeta: objMeta,
-			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
@@ -221,21 +204,6 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.GatewayAPI().GatewayV1().Gateways(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
-	case gvk.MeshService:
-		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService{
-			ObjectMeta: origMeta,
-			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.MeshService)),
-		}
-		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService{
-			ObjectMeta: modMeta,
-			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.MeshService)),
-		}
-		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
-		if err != nil {
-			return nil, err
-		}
-		return c.Dubbo().NetworkingV1alpha3().MeshServices(orig.Namespace).
-			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.PeerAuthentication:
 		oldRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: origMeta,
@@ -285,8 +253,6 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.GatewayAPI().GatewayV1().HTTPRoutes(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.KubernetesGateway:
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).Delete(context.TODO(), name, deleteOptions)
-	case gvk.MeshService:
-		return c.Dubbo().NetworkingV1alpha3().MeshServices(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.RequestAuthentication:
@@ -516,25 +482,6 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				Generation:        obj.Generation,
 			},
 			Spec: &obj.Spec,
-		}
-	},
-	gvk.MeshService: func(r runtime.Object) config.Config {
-		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService)
-		return config.Config{
-			Meta: config.Meta{
-				GroupVersionKind:  gvk.MeshService,
-				Name:              obj.Name,
-				Namespace:         obj.Namespace,
-				Labels:            obj.Labels,
-				Annotations:       obj.Annotations,
-				ResourceVersion:   obj.ResourceVersion,
-				CreationTimestamp: obj.CreationTimestamp.Time,
-				OwnerReferences:   obj.OwnerReferences,
-				UID:               string(obj.UID),
-				Generation:        obj.Generation,
-			},
-			Spec:   &obj.Spec,
-			Status: &obj.Status,
 		}
 	},
 	gvk.MutatingWebhookConfiguration: func(r runtime.Object) config.Config {

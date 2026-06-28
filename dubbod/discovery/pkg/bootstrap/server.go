@@ -501,8 +501,6 @@ func (s *Server) initRegistryEventHandlers() {
 		switch schemaID {
 		case "AuthorizationPolicy":
 			configKind = kind.AuthorizationPolicy
-		case "MeshService":
-			configKind = kind.MeshService
 		case "PeerAuthentication":
 			configKind = kind.PeerAuthentication
 		case "RequestAuthentication":
@@ -527,12 +525,11 @@ func (s *Server) initRegistryEventHandlers() {
 		// Log the config change
 		log.Infof("%s event for %s/%s/%s", event, configKey.Kind, configKey.Namespace, configKey.Name)
 
-		// Some configs (MeshService/security policies/HTTPRoute) require Full push to ensure
+		// Some configs (security policies/HTTPRoute) require Full push to ensure
 		// PushContext is re-initialized and configuration is reloaded.
 		// Security policies must rebuild AuthenticationPolicies to update inbound mTLS/JWT/authz filters.
 		// HTTPRoute must rebuild HTTPRoute index to enable Gateway API routing.
-		needsFullPush := configKind == kind.MeshService ||
-			configKind == kind.PeerAuthentication ||
+		needsFullPush := configKind == kind.PeerAuthentication ||
 			configKind == kind.RequestAuthentication ||
 			configKind == kind.AuthorizationPolicy ||
 			configKind == kind.HTTPRoute

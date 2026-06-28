@@ -43,7 +43,6 @@ webhooks:
       - UPDATE
       apiGroups:
       - security.dubbo.apache.org
-      - networking.dubbo.apache.org
       apiVersions:
       - "*"
       resources:

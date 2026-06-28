@@ -69,7 +69,7 @@ func (s *Server) initKubeRegistry(args *DubboArgs) (err error) {
 	args.RegistryOptions.KubeOptions.XDSUpdater = s.XDSServer
 	args.RegistryOptions.KubeOptions.MeshWatcher = s.environment.Watcher
 	args.RegistryOptions.KubeOptions.SystemNamespace = args.Namespace
-	args.RegistryOptions.KubeOptions.MeshServiceController = s.ServiceController()
+	args.RegistryOptions.KubeOptions.ServiceController = s.ServiceController()
 	kubecontroller.NewMulticluster(args.PodName,
 		args.RegistryOptions.KubeOptions,
 		s.dubbodCertBundleWatcher,

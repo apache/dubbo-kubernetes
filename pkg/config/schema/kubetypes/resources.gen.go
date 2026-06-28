@@ -6,9 +6,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	githubcomkdubboapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
-	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
-	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -51,10 +49,6 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Lease, true
 	case *githubcomkdubboapimeshv1alpha1.MeshConfig:
 		return gvk.MeshConfig, true
-	case *githubcomkdubboapinetworkingv1alpha3.MeshService:
-		return gvk.MeshService, true
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService:
-		return gvk.MeshService, true
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return gvk.MutatingWebhookConfiguration, true
 	case *k8sioapicorev1.Namespace:

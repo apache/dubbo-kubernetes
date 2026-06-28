@@ -86,7 +86,6 @@ type guiOverviewCounts struct {
 	EndpointServices       int `json:"endpointServices"`
 	XDSConnections         int `json:"xdsConnections"`
 	Registries             int `json:"registries"`
-	MeshServices           int `json:"meshServices"`
 	PeerAuthentications    int `json:"peerAuthentications"`
 	RequestAuthentications int `json:"requestAuthentications"`
 	AuthorizationPolicies  int `json:"authorizationPolicies"`
@@ -447,7 +446,6 @@ func (s *Server) buildGUIOverview() guiOverview {
 			EndpointServices:       len(s.environment.EndpointIndex.AllServices()),
 			XDSConnections:         len(s.XDSServer.AllClients()),
 			Registries:             len(registries),
-			MeshServices:           s.countConfigs(gvk.MeshService),
 			PeerAuthentications:    s.countConfigs(gvk.PeerAuthentication),
 			RequestAuthentications: s.countConfigs(gvk.RequestAuthentication),
 			AuthorizationPolicies:  s.countConfigs(gvk.AuthorizationPolicy),
@@ -566,11 +564,6 @@ func (s *Server) buildGUIRegistries() []guiRegistry {
 
 func (s *Server) buildGUIConfigKinds() []guiConfigKind {
 	return []guiConfigKind{
-		{
-			Kind:        "MeshService",
-			Count:       s.countConfigs(gvk.MeshService),
-			Description: "Service-to-service routing and traffic policy.",
-		},
 		{
 			Kind:        "PeerAuthentication",
 			Count:       s.countConfigs(gvk.PeerAuthentication),

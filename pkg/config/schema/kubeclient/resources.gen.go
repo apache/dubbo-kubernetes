@@ -17,7 +17,6 @@ import (
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
-	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -56,8 +55,6 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicoordinationv1.Lease:
 		return c.Kube().CoordinationV1().Leases(namespace).(ktypes.WriteAPI[T])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService:
-		return c.Dubbo().NetworkingV1alpha3().MeshServices(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.Namespace:
@@ -113,8 +110,6 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicoordinationv1.Lease:
 		return c.Kube().CoordinationV1().Leases(namespace).(ktypes.ReadWriteAPI[T, TL])
-	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService:
-		return c.Dubbo().NetworkingV1alpha3().MeshServices(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.Namespace:
@@ -170,8 +165,6 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &sigsk8siogatewayapiapisv1.Gateway{}
 	case gvr.Lease:
 		return &k8sioapicoordinationv1.Lease{}
-	case gvr.MeshService:
-		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.MeshService{}
 	case gvr.MutatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration{}
 	case gvr.Namespace:
@@ -289,13 +282,6 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoordinationV1().Leases(opts.Namespace).Watch(context.Background(), options)
-		}
-	case gvr.MeshService:
-		l = func(options metav1.ListOptions) (runtime.Object, error) {
-			return c.Dubbo().NetworkingV1alpha3().MeshServices(opts.Namespace).List(context.Background(), options)
-		}
-		w = func(options metav1.ListOptions) (watch.Interface, error) {
-			return c.Dubbo().NetworkingV1alpha3().MeshServices(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.MutatingWebhookConfiguration:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

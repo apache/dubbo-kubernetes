@@ -12,37 +12,10 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh/meshwatcher"
 	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	endpoint "github.com/kdubbo/xds-api/endpoint/v1"
 )
-
-func TestBuildClusterLoadAssignmentUsesXServerPortForDUBBOMutual(t *testing.T) {
-	hostname := host.Name("nginx.app.svc.cluster.local")
-	svc := newEndpointTestService("nginx", "app", string(hostname), 80)
-	push := newEndpointTestPushContext(t, []config.Config{
-		newEndpointTestMTLSMeshService("nginx-routing", "app", hostname),
-	}, []*model.Service{svc})
-	index := model.NewEndpointIndex(model.DisabledCache{})
-	index.UpdateServiceEndpoints(model.ShardKey{}, string(hostname), "app", []*model.DubboEndpoint{{
-		Addresses:       []string{"10.0.0.1"},
-		EndpointPort:    80,
-		ServicePortName: "http",
-		Labels:          map[string]string{"version": "v1"},
-		HealthStatus:    model.Healthy,
-	}}, false)
-
-	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "v1", hostname, 80)
-	builder := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push)
-	cla := builder.BuildClusterLoadAssignment(index)
-
-	if got := firstEndpointPort(t, cla); got != inject.ProxylessXServerPort {
-		t.Fatalf("endpoint port = %d, want xserver port %d", got, inject.ProxylessXServerPort)
-	}
-}
 
 func TestBuildClusterLoadAssignmentKeepsAppPortWithoutDUBBOMutual(t *testing.T) {
 	hostname := host.Name("nginx.app.svc.cluster.local")
@@ -183,32 +156,6 @@ func newEndpointTestService(name, namespace, hostname string, port int) *model.S
 		Attributes: model.ServiceAttributes{
 			Name:      name,
 			Namespace: namespace,
-		},
-	}
-}
-
-func newEndpointTestMTLSMeshService(name, namespace string, hostname host.Name) config.Config {
-	return config.Config{
-		Meta: config.Meta{
-			GroupVersionKind: gvk.MeshService,
-			Name:             name,
-			Namespace:        namespace,
-			Domain:           "cluster.local",
-		},
-		Spec: &networking.MeshService{
-			Hosts: []string{string(hostname)},
-			TrafficPolicy: &networking.TrafficPolicy{
-				Tls: &networking.ClientTLSSettings{Mode: networking.ClientTLSSettings_DUBBO_MUTUAL},
-			},
-			Routes: []*networking.MeshServiceRoute{{
-				Service: []*networking.ServiceDestination{{
-					Name:   "v1",
-					Host:   string(hostname),
-					Labels: map[string]string{"version": "v1"},
-					Port:   &networking.ServicePort{Number: 80},
-					Weight: 100,
-				}},
-			}},
 		},
 	}
 }
