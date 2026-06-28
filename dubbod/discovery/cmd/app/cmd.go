@@ -93,6 +93,9 @@ func newExecuteCommand() *cobra.Command {
 			if err := discoveryServer.Start(stop); err != nil {
 				return fmt.Errorf("failed to start discovery service: %v", err)
 			}
+			if err := startXDSTestGRPCServer(stop); err != nil {
+				return fmt.Errorf("failed to start xDS test gRPC server: %v", err)
+			}
 
 			// Wait for signal - when received, immediately exit
 			cmd.WaitSignal(stop)

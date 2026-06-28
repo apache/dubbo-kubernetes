@@ -17,6 +17,7 @@ import (
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 	routev1 "github.com/kdubbo/xds-api/route/v1"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -245,6 +246,41 @@ func TestRunSampleRequestsUsesRequestPathAndHeaders(t *testing.T) {
 	}
 }
 
+func TestRunSampleRequestsUsesRouteTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(50 * time.Millisecond)
+		_, _ = w.Write([]byte("late"))
+	}))
+	defer server.Close()
+
+	endpoint := endpointForServer(t, server)
+	snapshot := xdsRouteSnapshot{
+		Host:    "reviews.moviereview.svc.cluster.local",
+		Port:    9080,
+		Timeout: "1ms",
+		Destinations: []xdsDestination{{
+			Cluster:   "outbound|9080|v1|reviews.moviereview.svc.cluster.local",
+			Host:      "reviews.moviereview.svc.cluster.local",
+			Subset:    "v1",
+			Weight:    100,
+			Endpoints: []xdsEndpoint{endpoint},
+		}},
+	}
+	client := &sampleADSClient{
+		host:         snapshot.Host,
+		port:         snapshot.Port,
+		path:         "/",
+		route:        map[string]uint32{snapshot.Destinations[0].Cluster: 100},
+		routeTimeout: time.Millisecond,
+		endpoints:    map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: []xdsEndpoint{endpoint}},
+	}
+
+	err := runSampleRequests(context.Background(), client, snapshot, 1, 0, time.Second)
+	if err == nil || !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Fatalf("runSampleRequests() error = %v, want context deadline exceeded", err)
+	}
+}
+
 func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 	resources := []*anypb.Any{mustAnyRouteConfig(t, &routev1.RouteConfiguration{
 		VirtualHosts: []*routev1.VirtualHost{{
@@ -274,7 +310,7 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		}},
 	})}
 
-	weights, _, err := routeWeightsFromRoutes(resources, "/", http.Header{"End-User": []string{"terminal-user"}})
+	weights, _, _, err := routeWeightsFromRoutes(resources, "/", http.Header{"End-User": []string{"terminal-user"}})
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
 	}
@@ -282,7 +318,7 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		t.Fatalf("terminal-user weights = %v, want v1=100 only", weights)
 	}
 
-	weights, _, err = routeWeightsFromRoutes(resources, "/", nil)
+	weights, _, _, err = routeWeightsFromRoutes(resources, "/", nil)
 	if err != nil {
 		t.Fatalf("routeWeightsFromRoutes() fallback error = %v", err)
 	}
@@ -290,6 +326,38 @@ func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
 		weights["outbound|9080|v2|reviews.moviereview.svc.cluster.local"] != 20 ||
 		weights["outbound|9080|v3|reviews.moviereview.svc.cluster.local"] != 80 {
 		t.Fatalf("fallback weights = %v, want v2=20 and v3=80", weights)
+	}
+}
+
+func TestRouteWeightsFromRoutesReadsRequestTimeout(t *testing.T) {
+	resources := []*anypb.Any{mustAnyRouteConfig(t, &routev1.RouteConfiguration{
+		VirtualHosts: []*routev1.VirtualHost{{
+			Routes: []*routev1.Route{{
+				Match: &routev1.RouteMatch{PathSpecifier: &routev1.RouteMatch_Prefix{Prefix: "/reviews"}},
+				Action: &routev1.Route_Route{
+					Route: &routev1.RouteAction{
+						ClusterSpecifier: &routev1.RouteAction_WeightedClusters{
+							WeightedClusters: &routev1.WeightedCluster{Clusters: []*routev1.WeightedCluster_ClusterWeight{{
+								Name:   "outbound|9080|v1|reviews.moviereview.svc.cluster.local",
+								Weight: wrapperspb.UInt32(100),
+							}}},
+						},
+						Timeout: durationpb.New(500 * time.Millisecond),
+					},
+				},
+			}},
+		}},
+	})}
+
+	weights, _, timeout, err := routeWeightsFromRoutes(resources, "/reviews", nil)
+	if err != nil {
+		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
+	}
+	if got := weights["outbound|9080|v1|reviews.moviereview.svc.cluster.local"]; got != 100 {
+		t.Fatalf("weights = %v, want v1=100", weights)
+	}
+	if timeout != 500*time.Millisecond {
+		t.Fatalf("timeout = %v, want 500ms", timeout)
 	}
 }
 

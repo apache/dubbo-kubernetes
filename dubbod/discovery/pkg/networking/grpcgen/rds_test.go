@@ -18,6 +18,7 @@ package grpcgen
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/memory"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
@@ -105,6 +106,32 @@ func TestBuildHTTPRouteProxylessOutboundUsesServiceAttachedHTTPRoute(t *testing.
 	}
 	if !reflect.DeepEqual(fallback, wantFallback) {
 		t.Fatalf("fallback weighted clusters = %v, want %v", fallback, wantFallback)
+	}
+}
+
+func TestBuildHTTPRouteSetsGatewayAPIRequestTimeout(t *testing.T) {
+	cfg := newServiceAttachedHTTPRouteConfig("reviews-timeout", "moviereview", "reviews", 9080)
+	spec := cfg.Spec.(*gatewayv1.HTTPRouteSpec)
+	spec.Rules[0].Timeouts = &gatewayv1.HTTPRouteTimeouts{
+		Request: ptrTo(gatewayv1.Duration("500ms")),
+	}
+	push := newRDSTestPushContext(t, []config.Config{cfg}, []*model.Service{
+		newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v1", "moviereview", "reviews-v1.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v2", "moviereview", "reviews-v2.moviereview.svc.cluster.local", 9080),
+	})
+
+	rc := buildHTTPRoute(
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
+		push,
+		"outbound|9080||reviews.moviereview.svc.cluster.local",
+	)
+	if rc == nil {
+		t.Fatal("buildHTTPRoute() returned nil")
+	}
+	timeout := rc.VirtualHosts[0].Routes[0].GetRoute().GetTimeout()
+	if timeout == nil || timeout.AsDuration() != 500*time.Millisecond {
+		t.Fatalf("timeout = %v, want 500ms", timeout)
 	}
 }
 

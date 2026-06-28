@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/apache/dubbo-kubernetes/dubbod/discovery/cmd/app/testproto;testproto";
+
+service XDSTestService {
+  rpc ForwardHTTP(ForwardHTTPRequest) returns (ForwardHTTPResponse);
+}
+
+message ForwardHTTPRequest {
+  string url = 1;
+  string path = 2;
+  int32 count = 3;
+  repeated string headers = 4;
+  string request_interval = 5;
+  string expect = 6;
+  string request_timeout = 7;
+  string wait_timeout = 8;
+  string namespace = 9;
+  string service_account = 10;
+}
+
+message ForwardHTTPResponse {
+  repeated string output = 1;
+}
