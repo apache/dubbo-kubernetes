@@ -26,7 +26,6 @@ var (
 	KubernetesGateway_v1           = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway"}
 	Lease                          = config.GroupVersionKind{Group: "coordination.k8s.io", Version: "v1", Kind: "Lease"}
 	MeshConfig                     = config.GroupVersionKind{Group: "", Version: "v1alpha1", Kind: "MeshConfig"}
-	MeshService                    = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "MeshService"}
 	MutatingWebhookConfiguration   = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "MutatingWebhookConfiguration"}
 	Namespace                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
 	Node                           = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Node"}
@@ -76,8 +75,6 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Lease, true
 	case MeshConfig:
 		return gvr.MeshConfig, true
-	case MeshService:
-		return gvr.MeshService, true
 	case MutatingWebhookConfiguration:
 		return gvr.MutatingWebhookConfiguration, true
 	case Namespace:
@@ -135,8 +132,6 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.Lease
 	case MeshConfig:
 		return kind.MeshConfig
-	case MeshService:
-		return kind.MeshService
 	case MutatingWebhookConfiguration:
 		return kind.MutatingWebhookConfiguration
 	case Namespace:
@@ -205,8 +200,6 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Lease, true
 	case gvr.MeshConfig:
 		return MeshConfig, true
-	case gvr.MeshService:
-		return MeshService, true
 	case gvr.MutatingWebhookConfiguration:
 		return MutatingWebhookConfiguration, true
 	case gvr.Namespace:

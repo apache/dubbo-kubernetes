@@ -26,7 +26,7 @@ import (
 )
 
 type kubeController struct {
-	MeshServiceController *aggregate.Controller
+	ServiceController *aggregate.Controller
 	*Controller
 	stop chan struct{}
 }
@@ -83,9 +83,9 @@ func NewMulticluster(
 		options.ConfigCluster = configCluster
 		kubeRegistry := NewController(client, options)
 		kubeController := &kubeController{
-			MeshServiceController: opts.MeshServiceController,
-			Controller:            kubeRegistry,
-			stop:                  stop,
+			ServiceController: opts.ServiceController,
+			Controller:        kubeRegistry,
+			stop:              stop,
 		}
 		mc.initializeCluster(cluster, kubeController, kubeRegistry, options, configCluster, stop)
 		return kubeController
@@ -100,7 +100,7 @@ func (m *Multicluster) initializeCluster(cluster *multicluster.Cluster, kubeCont
 	client := cluster.Client
 
 	// run after WorkloadHandler is added
-	m.opts.MeshServiceController.AddRegistryAndRun(kubeRegistry, clusterStopCh)
+	m.opts.ServiceController.AddRegistryAndRun(kubeRegistry, clusterStopCh)
 
 	go func() {
 		var shouldLead bool

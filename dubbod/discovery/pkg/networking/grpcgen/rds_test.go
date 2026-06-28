@@ -29,15 +29,13 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	route "github.com/kdubbo/xds-api/route/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func TestBuildHTTPRouteProxylessOutboundPrefersVirtualServiceOverGatewayHTTPRoute(t *testing.T) {
+func TestBuildHTTPRouteProxylessOutboundIgnoresGatewayAttachedHTTPRoute(t *testing.T) {
 	push := newRDSTestPushContext(t, []config.Config{
 		newWildcardHTTPRouteConfig("httpbin", "default", 8000),
-		newWeightedMeshServiceConfig("nginx-weights", "app", "nginx.app.svc.cluster.local"),
 	}, []*model.Service{
 		newRDSTestService("nginx", "app", "nginx.app.svc.cluster.local", 80),
 		newRDSTestService("httpbin", "default", "httpbin.default.svc.cluster.local", 8000),
@@ -61,30 +59,24 @@ func TestBuildHTTPRouteProxylessOutboundPrefersVirtualServiceOverGatewayHTTPRout
 		t.Fatalf("routes = %d, want 1", len(rc.VirtualHosts[0].Routes))
 	}
 
-	got := weightedClustersByName(t, rc.VirtualHosts[0].Routes[0])
-	want := map[string]uint32{
-		"outbound|80||nginx-v1.app.svc.cluster.local": 20,
-		"outbound|80||nginx-v2.app.svc.cluster.local": 80,
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("weighted clusters = %v, want %v", got, want)
-	}
-	if _, found := got["outbound|8000||httpbin.default.svc.cluster.local"]; found {
-		t.Fatalf("proxyless outbound route used Gateway HTTPRoute backend: %v", got)
+	if got := rc.VirtualHosts[0].Routes[0].GetRoute().GetCluster(); got != "outbound|80||nginx.app.svc.cluster.local" {
+		t.Fatalf("route cluster = %q, want default nginx cluster", got)
 	}
 }
 
-func TestBuildHTTPRouteFromMeshServiceRulesPreservesMatchesAndFallback(t *testing.T) {
+func TestBuildHTTPRouteProxylessOutboundUsesServiceAttachedHTTPRoute(t *testing.T) {
 	push := newRDSTestPushContext(t, []config.Config{
-		newMatchedMeshServiceConfig("product-routing", "default", "product.default.svc.cluster.local"),
+		newServiceAttachedHTTPRouteConfig("reviews-routing", "moviereview", "reviews", 9080),
 	}, []*model.Service{
-		newRDSTestService("product", "default", "product.default.svc.cluster.local", 80),
+		newRDSTestService("reviews", "moviereview", "reviews.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v1", "moviereview", "reviews-v1.moviereview.svc.cluster.local", 9080),
+		newRDSTestService("reviews-v2", "moviereview", "reviews-v2.moviereview.svc.cluster.local", 9080),
 	})
 
 	rc := buildHTTPRoute(
-		&model.Proxy{ID: "consumer.default", Type: model.Proxyless},
+		&model.Proxy{ID: "moviepage.moviereview", Type: model.Proxyless},
 		push,
-		"outbound|80||product.default.svc.cluster.local",
+		"outbound|9080||reviews.moviereview.svc.cluster.local",
 	)
 	if rc == nil {
 		t.Fatal("buildHTTPRoute() returned nil")
@@ -93,9 +85,7 @@ func TestBuildHTTPRouteFromMeshServiceRulesPreservesMatchesAndFallback(t *testin
 	if len(routes) != 2 {
 		t.Fatalf("routes = %d, want matched route plus fallback", len(routes))
 	}
-	if got := routes[0].GetMatch().GetPrefix(); got != "/product" {
-		t.Fatalf("first route prefix = %q, want /product", got)
-	}
+
 	headers := routes[0].GetMatch().GetHeaders()
 	if len(headers) != 1 || headers[0].GetName() != "end-user" || headers[0].GetExactMatch() != "jason" {
 		t.Fatalf("first route headers = %v, want end-user exact jason", headers)
@@ -103,7 +93,7 @@ func TestBuildHTTPRouteFromMeshServiceRulesPreservesMatchesAndFallback(t *testin
 
 	first := weightedClustersByName(t, routes[0])
 	wantFirst := map[string]uint32{
-		"outbound|80|v1|product.default.svc.cluster.local": 100,
+		"outbound|9080||reviews-v2.moviereview.svc.cluster.local": 100,
 	}
 	if !reflect.DeepEqual(first, wantFirst) {
 		t.Fatalf("first route weighted clusters = %v, want %v", first, wantFirst)
@@ -111,8 +101,7 @@ func TestBuildHTTPRouteFromMeshServiceRulesPreservesMatchesAndFallback(t *testin
 
 	fallback := weightedClustersByName(t, routes[1])
 	wantFallback := map[string]uint32{
-		"outbound|80|v2|product.default.svc.cluster.local": 20,
-		"outbound|80|v3|product.default.svc.cluster.local": 80,
+		"outbound|9080||reviews-v1.moviereview.svc.cluster.local": 100,
 	}
 	if !reflect.DeepEqual(fallback, wantFallback) {
 		t.Fatalf("fallback weighted clusters = %v, want %v", fallback, wantFallback)
@@ -140,83 +129,6 @@ func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*mo
 	push := model.NewPushContext()
 	push.InitContext(env, nil, nil)
 	return push
-}
-
-func newWeightedMeshServiceConfig(name, namespace, hostname string) config.Config {
-	return config.Config{
-		Meta: config.Meta{
-			GroupVersionKind: gvk.MeshService,
-			Name:             name,
-			Namespace:        namespace,
-			Domain:           "cluster.local",
-		},
-		Spec: &networking.MeshService{
-			Hosts: []string{hostname},
-			Routes: []*networking.MeshServiceRoute{
-				{
-					Service: []*networking.ServiceDestination{
-						{
-							Name:   "nginx-v1",
-							Host:   hostname,
-							Weight: 20,
-						},
-						{
-							Name:   "nginx-v2",
-							Host:   hostname,
-							Weight: 80,
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func newMatchedMeshServiceConfig(name, namespace, hostname string) config.Config {
-	return config.Config{
-		Meta: config.Meta{
-			GroupVersionKind: gvk.MeshService,
-			Name:             name,
-			Namespace:        namespace,
-			Domain:           "cluster.local",
-		},
-		Spec: &networking.MeshService{
-			Hosts: []string{hostname},
-			Rules: []*networking.MeshServiceRule{{
-				Match: []*networking.HTTPMatchRequest{{
-					Uri: &networking.StringMatch{
-						MatchType: &networking.StringMatch_Prefix{Prefix: "/product"},
-					},
-					Headers: map[string]*networking.StringMatch{
-						"end-user": {
-							MatchType: &networking.StringMatch_Exact{Exact: "jason"},
-						},
-					},
-				}},
-				Route: []*networking.MeshServiceRoute{{
-					Service: []*networking.ServiceDestination{{
-						Name:   "v1",
-						Host:   hostname,
-						Labels: map[string]string{"version": "v1"},
-						Weight: 100,
-					}},
-				}},
-				Routes: []*networking.MeshServiceRoute{{
-					Service: []*networking.ServiceDestination{{
-						Name:   "v2",
-						Host:   hostname,
-						Labels: map[string]string{"version": "v2"},
-						Weight: 20,
-					}, {
-						Name:   "v3",
-						Host:   hostname,
-						Labels: map[string]string{"version": "v3"},
-						Weight: 80,
-					}},
-				}},
-			}},
-		},
-	}
 }
 
 func newWildcardHTTPRouteConfig(backendName, backendNamespace string, backendPort int32) config.Config {
@@ -249,6 +161,69 @@ func newWildcardHTTPRouteConfig(backendName, backendNamespace string, backendPor
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+}
+
+func newServiceAttachedHTTPRouteConfig(name, namespace, parentName string, parentPort int32) config.Config {
+	group := gatewayv1.Group("")
+	kind := gatewayv1.Kind("Service")
+	port := gatewayv1.PortNumber(parentPort)
+	weight := int32(100)
+	pathType := gatewayv1.PathMatchPathPrefix
+	pathValue := "/"
+	headerType := gatewayv1.HeaderMatchExact
+	return config.Config{
+		Meta: config.Meta{
+			GroupVersionKind: gvk.HTTPRoute,
+			Name:             name,
+			Namespace:        namespace,
+			Domain:           "cluster.local",
+		},
+		Spec: &gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{
+					Group: &group,
+					Kind:  &kind,
+					Name:  gatewayv1.ObjectName(parentName),
+					Port:  &port,
+				}},
+			},
+			Rules: []gatewayv1.HTTPRouteRule{
+				{
+					Matches: []gatewayv1.HTTPRouteMatch{{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  &pathType,
+							Value: &pathValue,
+						},
+						Headers: []gatewayv1.HTTPHeaderMatch{{
+							Type:  &headerType,
+							Name:  gatewayv1.HTTPHeaderName("end-user"),
+							Value: "jason",
+						}},
+					}},
+					BackendRefs: []gatewayv1.HTTPBackendRef{{
+						BackendRef: gatewayv1.BackendRef{
+							BackendObjectReference: gatewayv1.BackendObjectReference{
+								Name: gatewayv1.ObjectName("reviews-v2"),
+								Port: &port,
+							},
+							Weight: &weight,
+						},
+					}},
+				},
+				{
+					BackendRefs: []gatewayv1.HTTPBackendRef{{
+						BackendRef: gatewayv1.BackendRef{
+							BackendObjectReference: gatewayv1.BackendObjectReference{
+								Name: gatewayv1.ObjectName("reviews-v1"),
+								Port: &port,
+							},
+							Weight: &weight,
+						},
+					}},
 				},
 			},
 		},

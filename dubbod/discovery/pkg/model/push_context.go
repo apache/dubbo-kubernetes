@@ -587,12 +587,8 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	log.Debug("creating new PushContext (full initialization)")
 	ps.initServiceRegistry(env, nil)
 	// Initialize Kubernetes Gateway API resources if the controller is enabled.
-	// This mirrors Dubbo's behavior, where Gateway API is translated into
-	// internal Gateway and MeshService resources during push context creation.
 	ps.initKubernetesGateways(env)
-	ps.initVirtualServices(env)
 	ps.initHTTPRoutes(env)
-	ps.initDestinationRules(env)
 	ps.initAuthenticationPolicies(env)
 }
 
@@ -604,32 +600,6 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	// servicesChanged := pushReq != nil && (HasConfigsOfKind(pushReq.ConfigsUpdated, kind.ServiceEntry) ||
 	// 	len(pushReq.AddressesUpdated) > 0)
 	servicesChanged := pushReq != nil && len(pushReq.AddressesUpdated) > 0
-
-	// Check if meshServices have changed based on:
-	// 1. MeshService updates in ConfigsUpdated
-	// 2. Full push (Full: true) - always re-initialize on full push
-	meshServicesChanged := pushReq != nil && (pushReq.Full || HasConfigsOfKind(pushReq.ConfigsUpdated, kind.MeshService) ||
-		len(pushReq.AddressesUpdated) > 0)
-
-	if pushReq != nil {
-		meshServiceCount := 0
-		for cfg := range pushReq.ConfigsUpdated {
-			if cfg.Kind == kind.MeshService {
-				meshServiceCount++
-			}
-		}
-		if meshServiceCount > 0 {
-			log.Debugf("detected %d MeshService config changes", meshServiceCount)
-		}
-	}
-
-	if pushReq != nil {
-		if pushReq.Full {
-			log.Debugf("Full push requested, will re-initialize MeshService-derived indexes")
-		}
-		log.Debugf("meshServicesChanged=%v, pushReq.ConfigsUpdated size=%d, Full=%v",
-			meshServicesChanged, len(pushReq.ConfigsUpdated), pushReq != nil && pushReq.Full)
-	}
 
 	// Also check if the actual number of services has changed
 	// This handles cases where Kubernetes Services are added/removed without ServiceEntry updates
@@ -666,28 +636,12 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 
 	httpRoutesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.HTTPRoute)
 
-	if meshServicesChanged {
-		log.Debugf("MeshServices changed, re-initializing VirtualService index")
-		ps.initVirtualServices(env)
-	} else {
-		log.Debugf("MeshServices unchanged, reusing old VirtualService index")
-		ps.virtualServiceIndex = oldPushContext.virtualServiceIndex
-	}
-
 	if httpRoutesChanged {
 		log.Debugf("HTTPRoutes changed, re-initializing HTTPRoute index")
 		ps.initHTTPRoutes(env)
 	} else {
 		log.Debugf("HTTPRoutes unchanged, reusing old HTTPRoute index")
 		ps.httpRouteIndex = oldPushContext.httpRouteIndex
-	}
-
-	if meshServicesChanged {
-		log.Debugf("MeshServices changed, re-initializing DestinationRule index")
-		ps.initDestinationRules(env)
-	} else {
-		log.Debugf("MeshServices unchanged, reusing old DestinationRule index")
-		ps.destinationRuleIndex = oldPushContext.destinationRuleIndex
 	}
 
 	authnPoliciesChanged := pushReq != nil && (pushReq.Full || authPolicyKindsChanged(pushReq.ConfigsUpdated))
@@ -803,39 +757,6 @@ func (ps *PushContext) servicesExportedToNamespace(ns string) []*Service {
 
 func (ps *PushContext) GetAllServices() []*Service {
 	return ps.servicesExportedToNamespace(NamespaceAll)
-}
-
-func (ps *PushContext) initVirtualServices(env *Environment) {
-	log.Debugf("starting MeshService route initialization")
-	ps.virtualServiceIndex.referencedDestinations = map[string]sets.String{}
-	meshservices := env.List(gvk.MeshService, NamespaceAll)
-	log.Debugf("found %d MeshService configs", len(meshservices))
-	vsroutes := make([]config.Config, len(meshservices))
-
-	for i, r := range meshservices {
-		vsroutes[i] = meshServiceToVirtualServiceConfig(r)
-		if vs, ok := vsroutes[i].Spec.(*networking.VirtualService); ok {
-			log.Debugf("MeshService %s/%s produced hosts %v and %d HTTP routes",
-				r.Namespace, r.Name, vs.Hosts, len(vs.Http))
-		} else if ms, ok := r.Spec.(*networking.MeshService); ok {
-			log.Debugf("MeshService %s/%s with hosts %v and %d routes",
-				r.Namespace, r.Name, ms.Hosts, len(ms.Routes))
-		}
-	}
-
-	hostToRoutes := make(map[host.Name][]config.Config)
-	for i := range vsroutes {
-		vs := vsroutes[i].Spec.(*networking.VirtualService)
-		for idx, h := range vs.Hosts {
-			resolvedHost := string(ResolveShortnameToFQDN(h, vsroutes[i].Meta))
-			vs.Hosts[idx] = resolvedHost
-			hostName := host.Name(resolvedHost)
-			hostToRoutes[hostName] = append(hostToRoutes[hostName], vsroutes[i])
-			log.Debugf("indexed VirtualService %s/%s for hostname %s", vsroutes[i].Namespace, vsroutes[i].Name, hostName)
-		}
-	}
-	ps.virtualServiceIndex.hostToRoutes = hostToRoutes
-	log.Debugf("indexed VirtualServices for %d hostnames", len(hostToRoutes))
 }
 
 func (ps *PushContext) initHTTPRoutes(env *Environment) {
@@ -1035,33 +956,6 @@ func (ps *PushContext) setDestinationRules(configs []config.Config) {
 		}
 		log.Debugf("root namespace has %d DestinationRules with %d specific hostnames", totalRootRules, len(rootNamespaceLocalDestRules.specificSubRules))
 	}
-}
-
-func (ps *PushContext) initDestinationRules(env *Environment) {
-	configs := env.List(gvk.MeshService, NamespaceAll)
-	log.Debugf("initDestinationRules: found %d MeshService configs", len(configs))
-
-	// values returned from ConfigStore.List are immutable.
-	// Therefore, we make copies.
-	subRules := make([]config.Config, 0, len(configs))
-	for i := range configs {
-		rules := meshServiceToDestinationRuleConfigs(configs[i])
-		for j := range rules {
-			subRules = append(subRules, rules[j])
-		}
-		for _, rule := range rules {
-			if dr, ok := rule.Spec.(*networking.DestinationRule); ok {
-				tlsMode := "none"
-				if dr.TrafficPolicy != nil && dr.TrafficPolicy.Tls != nil {
-					tlsMode = dr.TrafficPolicy.Tls.Mode.String()
-				}
-				log.Debugf("initDestinationRules: MeshService %s/%s for host %s with %d subsets, TLS mode: %s",
-					configs[i].Namespace, configs[i].Name, dr.Host, len(dr.Subsets), tlsMode)
-			}
-		}
-	}
-
-	ps.setDestinationRules(subRules)
 }
 
 func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {

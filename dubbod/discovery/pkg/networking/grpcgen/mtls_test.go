@@ -5,40 +5,13 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
-	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	cluster "github.com/kdubbo/xds-api/cluster/v1"
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
 	listener "github.com/kdubbo/xds-api/listener/v1"
 )
-
-func TestMeshServiceDUBBOMutualBuildsUpstreamTLS(t *testing.T) {
-	hostname := host.Name("nginx.app.svc.cluster.local")
-	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 80)
-	push := newRDSTestPushContext(t, []config.Config{
-		newMTLSMeshServiceConfig("nginx-mtls", "app", hostname),
-	}, []*model.Service{
-		newRDSTestService("nginx", "app", string(hostname), 80),
-	})
-
-	resources := (&GrpcConfigGenerator{}).BuildClusters(newMTLSTestProxy(), push, []string{clusterName})
-	c := findCluster(t, resources, clusterName)
-	if c.GetTransportSocket() == nil {
-		t.Fatalf("cluster %s has no transport socket", clusterName)
-	}
-
-	tlsContext := &tlsv1.UpstreamTlsContext{}
-	if err := c.GetTransportSocket().GetTypedConfig().UnmarshalTo(tlsContext); err != nil {
-		t.Fatalf("unmarshal upstream tls context: %v", err)
-	}
-	if tlsContext.GetSni() != string(hostname) {
-		t.Fatalf("SNI = %q, want %q", tlsContext.GetSni(), hostname)
-	}
-	assertCommonTLSContext(t, tlsContext.GetCommonTlsContext())
-}
 
 func TestPeerAuthenticationStrictBuildsDownstreamMTLSListener(t *testing.T) {
 	svc := newRDSTestService("nginx", "app", "nginx.app.svc.cluster.local", 80)
@@ -150,40 +123,6 @@ func newMTLSTestProxy() *model.Proxy {
 		ConfigNamespace: "app",
 		Metadata: &model.NodeMetadata{
 			Namespace: "app",
-		},
-	}
-}
-
-func newMTLSMeshServiceConfig(name, namespace string, hostname host.Name) config.Config {
-	return config.Config{
-		Meta: config.Meta{
-			GroupVersionKind: gvk.MeshService,
-			Name:             name,
-			Namespace:        namespace,
-			Domain:           "cluster.local",
-		},
-		Spec: &networking.MeshService{
-			Hosts: []string{string(hostname)},
-			TrafficPolicy: &networking.TrafficPolicy{
-				Tls: &networking.ClientTLSSettings{
-					Mode: networking.ClientTLSSettings_DUBBO_MUTUAL,
-				},
-			},
-			Routes: []*networking.MeshServiceRoute{{
-				Service: []*networking.ServiceDestination{{
-					Name:   "v1",
-					Host:   string(hostname),
-					Labels: map[string]string{"version": "v1"},
-					Port:   &networking.ServicePort{Number: 80},
-					Weight: 50,
-				}, {
-					Name:   "v2",
-					Host:   string(hostname),
-					Labels: map[string]string{"version": "v2"},
-					Port:   &networking.ServicePort{Number: 80},
-					Weight: 50,
-				}},
-			}},
 		},
 	}
 }

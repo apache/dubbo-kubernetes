@@ -136,19 +136,19 @@ func (c *Controller) syncPods() error {
 }
 
 type Options struct {
-	KubernetesAPIQPS      float32
-	KubernetesAPIBurst    int
-	DomainSuffix          string
-	XDSUpdater            model.XDSUpdater
-	MeshWatcher           meshwatcher.WatcherCollection
-	ClusterID             cluster.ID
-	ClusterAliases        map[string]string
-	SystemNamespace       string
-	MeshServiceController *aggregate.Controller
-	KrtDebugger           *krt.DebugHandler
-	SyncTimeout           time.Duration
-	Revision              string
-	ConfigCluster         bool
+	KubernetesAPIQPS   float32
+	KubernetesAPIBurst int
+	DomainSuffix       string
+	XDSUpdater         model.XDSUpdater
+	MeshWatcher        meshwatcher.WatcherCollection
+	ClusterID          cluster.ID
+	ClusterAliases     map[string]string
+	SystemNamespace    string
+	ServiceController  *aggregate.Controller
+	KrtDebugger        *krt.DebugHandler
+	SyncTimeout        time.Duration
+	Revision           string
+	ConfigCluster      bool
 }
 
 func (c *Controller) Services() []*model.Service {

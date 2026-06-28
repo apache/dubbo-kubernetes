@@ -35,7 +35,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -269,7 +268,6 @@ func TestBuildRuntimeTrafficConfigCapturesProxylessSecurity(t *testing.T) {
 	hostname := host.Name("provider.grpc-app.svc.cluster.local")
 	svc := newProxylessRuntimeTestService("provider", "grpc-app", string(hostname), 17070)
 	push := newProxylessRuntimeTestPushContext(t, []config.Config{
-		newProxylessMTLSMeshServiceConfig("provider-mtls", "grpc-app", hostname),
 		newProxylessStrictPeerAuthenticationConfig("grpc-app-strict-mtls", "grpc-app"),
 	}, []*discoverymodel.Service{svc})
 
@@ -282,17 +280,12 @@ func TestBuildRuntimeTrafficConfigCapturesProxylessSecurity(t *testing.T) {
 	}
 
 	routeConfig := buildRuntimeRouteConfig(push, nil, svc, 17070)
-	if len(routeConfig.Destinations) != 2 {
-		t.Fatalf("destinations = %d, want 2", len(routeConfig.Destinations))
+	if len(routeConfig.Destinations) != 1 {
+		t.Fatalf("destinations = %d, want 1", len(routeConfig.Destinations))
 	}
-	wantWeights := map[string]int{"v1": 50, "v2": 50}
-	for _, destination := range routeConfig.Destinations {
-		if destination.TLSMode != "DUBBO_MUTUAL" {
-			t.Fatalf("destination %s tlsMode = %q, want DUBBO_MUTUAL", destination.Subset, destination.TLSMode)
-		}
-		if wantWeights[destination.Subset] != destination.Weight {
-			t.Fatalf("destination %s weight = %d, want %d", destination.Subset, destination.Weight, wantWeights[destination.Subset])
-		}
+	destination := routeConfig.Destinations[0]
+	if destination.Host != string(hostname) || destination.Weight != 100 || destination.TLSMode != "" {
+		t.Fatalf("destination = %+v, want default host weight 100 without outbound TLS policy", destination)
 	}
 }
 
@@ -324,9 +317,9 @@ func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "meshservice",
+			name: "httproute",
 			req: &discoverymodel.PushRequest{
-				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.MeshService, Name: "provider-mtls", Namespace: "grpc-app"}),
+				ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.HTTPRoute, Name: "provider-routing", Namespace: "grpc-app"}),
 			},
 			want: true,
 		},
@@ -425,40 +418,6 @@ func newProxylessRuntimeTestService(name, namespace, hostname string, port int) 
 		Attributes: discoverymodel.ServiceAttributes{
 			Name:      name,
 			Namespace: namespace,
-		},
-	}
-}
-
-func newProxylessMTLSMeshServiceConfig(name, namespace string, hostname host.Name) config.Config {
-	return config.Config{
-		Meta: config.Meta{
-			GroupVersionKind: gvk.MeshService,
-			Name:             name,
-			Namespace:        namespace,
-			Domain:           "cluster.local",
-		},
-		Spec: &networking.MeshService{
-			Hosts: []string{string(hostname)},
-			TrafficPolicy: &networking.TrafficPolicy{
-				Tls: &networking.ClientTLSSettings{
-					Mode: networking.ClientTLSSettings_DUBBO_MUTUAL,
-				},
-			},
-			Routes: []*networking.MeshServiceRoute{{
-				Service: []*networking.ServiceDestination{{
-					Name:   "v1",
-					Host:   string(hostname),
-					Labels: map[string]string{"version": "v1"},
-					Port:   &networking.ServicePort{Number: 17070},
-					Weight: 50,
-				}, {
-					Name:   "v2",
-					Host:   string(hostname),
-					Labels: map[string]string{"version": "v2"},
-					Port:   &networking.ServicePort{Number: 17070},
-					Weight: 50,
-				}},
-			}},
 		},
 	}
 }

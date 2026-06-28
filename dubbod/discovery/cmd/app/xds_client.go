@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -56,6 +57,9 @@ import (
 type xdsClientOptions struct {
 	host            string
 	port            int
+	path            string
+	headers         []string
+	requestHeaders  http.Header
 	target          string
 	xdsAddress      string
 	bootstrapPath   string
@@ -100,12 +104,14 @@ type xdsRouteSnapshot struct {
 }
 
 type sampleADSClient struct {
-	conn   *grpc.ClientConn
-	stream discovery.AggregatedDiscoveryService_StreamAggregatedResourcesClient
-	node   *corev1.Node
-	target string
-	host   string
-	port   int
+	conn           *grpc.ClientConn
+	stream         discovery.AggregatedDiscoveryService_StreamAggregatedResourcesClient
+	node           *corev1.Node
+	target         string
+	host           string
+	port           int
+	path           string
+	requestHeaders http.Header
 
 	mu            sync.RWMutex
 	subs          map[string][]string
@@ -126,6 +132,7 @@ func newXClientCommand() *cobra.Command {
 	opts := &xdsClientOptions{
 		host:           firstNonEmpty(os.Getenv("DUBBO_SERVICE_HOST"), host),
 		port:           firstIntFromEnv(int(port), "DUBBO_SERVICE_PORT"),
+		path:           firstNonEmpty(os.Getenv("REQUEST_PATH"), "/"),
 		xdsAddress:     firstNonEmpty(os.Getenv("XDS_ADDRESS"), "dubbod.dubbo-system.svc:26010"),
 		bootstrapPath:  os.Getenv("GRPC_XDS_BOOTSTRAP"),
 		namespace:      namespace,
@@ -164,6 +171,8 @@ func newXClientCommand() *cobra.Command {
 	}
 	c.Flags().StringVar(&opts.host, "host", opts.host, "service DNS name to call")
 	c.Flags().IntVar(&opts.port, "port", opts.port, "service port to call")
+	c.Flags().StringVar(&opts.path, "path", opts.path, "HTTP request path")
+	c.Flags().StringArrayVar(&opts.headers, "header", nil, "HTTP request header in key=value form; may be repeated")
 	c.Flags().StringVar(&opts.target, "target", opts.target, "xDS LDS target; defaults to host:port")
 	c.Flags().StringVar(&opts.xdsAddress, "xds-address", opts.xdsAddress, "ADS server address used when no bootstrap file is present")
 	c.Flags().StringVar(&opts.bootstrapPath, "bootstrap", opts.bootstrapPath, "gRPC xDS bootstrap file")
@@ -191,6 +200,12 @@ func (o *xdsClientOptions) run(ctx context.Context) error {
 	if o.target == "" {
 		o.target = net.JoinHostPort(o.host, strconv.Itoa(o.port))
 	}
+	o.path = normalizeRequestPath(o.path)
+	requestHeaders, err := parseRequestHeaders(o.headers)
+	if err != nil {
+		return err
+	}
+	o.requestHeaders = requestHeaders
 	expected, err := parseExpectedWeights(o.expect)
 	if err != nil {
 		return err
@@ -240,19 +255,21 @@ func newSampleADSClient(ctx context.Context, opts *xdsClientOptions) (*sampleADS
 		return nil, fmt.Errorf("open ADS stream: %w", err)
 	}
 	return &sampleADSClient{
-		conn:          conn,
-		stream:        stream,
-		node:          node,
-		target:        opts.target,
-		host:          opts.host,
-		port:          opts.port,
-		subs:          map[string][]string{},
-		route:         map[string]uint32{},
-		endpoints:     map[string][]xdsEndpoint{},
-		clusterTLS:    map[string]*tlsv1.UpstreamTlsContext{},
-		updates:       make(chan struct{}, 1),
-		errs:          make(chan error, 1),
-		bootstrapPath: opts.bootstrapPath,
+		conn:           conn,
+		stream:         stream,
+		node:           node,
+		target:         opts.target,
+		host:           opts.host,
+		port:           opts.port,
+		path:           opts.path,
+		requestHeaders: opts.requestHeaders,
+		subs:           map[string][]string{},
+		route:          map[string]uint32{},
+		endpoints:      map[string][]xdsEndpoint{},
+		clusterTLS:     map[string]*tlsv1.UpstreamTlsContext{},
+		updates:        make(chan struct{}, 1),
+		errs:           make(chan error, 1),
+		bootstrapPath:  opts.bootstrapPath,
 	}, nil
 }
 
@@ -408,7 +425,7 @@ func (c *sampleADSClient) handleResponse(resp *discovery.DiscoveryResponse) erro
 			return c.subscribe(v1.RouteType, routeNames)
 		}
 	case v1.RouteType:
-		weights, clusters, err := routeWeightsFromRoutes(resp.Resources)
+		weights, clusters, err := routeWeightsFromRoutes(resp.Resources, c.path, c.requestHeaders)
 		if err != nil {
 			return err
 		}
@@ -547,7 +564,7 @@ func routeNamesFromListeners(resources []*anypb.Any) ([]string, error) {
 	return sortedUnique(out), nil
 }
 
-func routeWeightsFromRoutes(resources []*anypb.Any) (map[string]uint32, []string, error) {
+func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestHeaders http.Header) (map[string]uint32, []string, error) {
 	weights := map[string]uint32{}
 	for _, resource := range resources {
 		rc := &routev1.RouteConfiguration{}
@@ -556,33 +573,95 @@ func routeWeightsFromRoutes(resources []*anypb.Any) (map[string]uint32, []string
 		}
 		for _, vh := range rc.GetVirtualHosts() {
 			for _, rt := range vh.GetRoutes() {
-				action := rt.GetRoute()
-				if action == nil {
+				if !routeMatchesRequest(rt.GetMatch(), requestPath, requestHeaders) {
 					continue
 				}
-				if clusterName := action.GetCluster(); clusterName != "" {
-					weights[clusterName] += 1
-				}
-				if weighted := action.GetWeightedClusters(); weighted != nil {
-					for _, clusterWeight := range weighted.GetClusters() {
-						if clusterWeight.GetName() == "" {
-							continue
-						}
-						weight := uint32(1)
-						if clusterWeight.GetWeight() != nil {
-							weight = clusterWeight.GetWeight().GetValue()
-						}
-						weights[clusterWeight.GetName()] += weight
-					}
-				}
+				addRouteActionWeights(weights, rt.GetRoute())
+				return weights, sortedWeightClusterNames(weights), nil
 			}
 		}
 	}
+	return weights, sortedWeightClusterNames(weights), nil
+}
+
+func addRouteActionWeights(weights map[string]uint32, action *routev1.RouteAction) {
+	if action == nil {
+		return
+	}
+	if clusterName := action.GetCluster(); clusterName != "" {
+		weights[clusterName] += 1
+	}
+	if weighted := action.GetWeightedClusters(); weighted != nil {
+		for _, clusterWeight := range weighted.GetClusters() {
+			if clusterWeight.GetName() == "" {
+				continue
+			}
+			weight := uint32(1)
+			if clusterWeight.GetWeight() != nil {
+				weight = clusterWeight.GetWeight().GetValue()
+			}
+			weights[clusterWeight.GetName()] += weight
+		}
+	}
+}
+
+func sortedWeightClusterNames(weights map[string]uint32) []string {
 	clusters := make([]string, 0, len(weights))
 	for clusterName := range weights {
 		clusters = append(clusters, clusterName)
 	}
-	return weights, sortedUnique(clusters), nil
+	return sortedUnique(clusters)
+}
+
+func routeMatchesRequest(match *routev1.RouteMatch, requestPath string, requestHeaders http.Header) bool {
+	if match == nil {
+		return true
+	}
+	switch spec := match.PathSpecifier.(type) {
+	case *routev1.RouteMatch_Path:
+		if requestPath != spec.Path {
+			return false
+		}
+	case *routev1.RouteMatch_Prefix:
+		if !strings.HasPrefix(requestPath, spec.Prefix) {
+			return false
+		}
+	case *routev1.RouteMatch_SafeRegex:
+		if spec.SafeRegex == nil {
+			return false
+		}
+		ok, err := regexp.MatchString(spec.SafeRegex.Regex, requestPath)
+		if err != nil || !ok {
+			return false
+		}
+	}
+	for _, header := range match.GetHeaders() {
+		if !headerMatchesRequest(header, requestHeaders) {
+			return false
+		}
+	}
+	return true
+}
+
+func headerMatchesRequest(match *routev1.HeaderMatcher, requestHeaders http.Header) bool {
+	if match == nil {
+		return true
+	}
+	value := requestHeaders.Get(match.GetName())
+	switch spec := match.HeaderMatchSpecifier.(type) {
+	case *routev1.HeaderMatcher_ExactMatch:
+		return value == spec.ExactMatch
+	case *routev1.HeaderMatcher_PrefixMatch:
+		return strings.HasPrefix(value, spec.PrefixMatch)
+	case *routev1.HeaderMatcher_SafeRegexMatch:
+		if spec.SafeRegexMatch == nil {
+			return false
+		}
+		ok, err := regexp.MatchString(spec.SafeRegexMatch.Regex, value)
+		return err == nil && ok
+	default:
+		return value != ""
+	}
 }
 
 func edsNamesAndTLSFromClusters(resources []*anypb.Any) ([]string, map[string]*tlsv1.UpstreamTlsContext, error) {
@@ -697,11 +776,16 @@ func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot
 			return err
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-			fmt.Sprintf("%s://%s/", scheme, net.JoinHostPort(endpoint.Address, strconv.Itoa(int(endpoint.Port)))), nil)
+			fmt.Sprintf("%s://%s%s", scheme, net.JoinHostPort(endpoint.Address, strconv.Itoa(int(endpoint.Port))), adsClient.path), nil)
 		if err != nil {
 			return err
 		}
 		req.Host = snapshot.Host
+		for name, values := range adsClient.requestHeaders {
+			for _, value := range values {
+				req.Header.Add(name, value)
+			}
+		}
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			return err
@@ -885,6 +969,30 @@ func parseExpectedWeights(value string) (map[string]uint32, error) {
 		out[strings.TrimSpace(parts[0])] = uint32(weight)
 	}
 	return out, nil
+}
+
+func normalizeRequestPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "/"
+	}
+	if !strings.HasPrefix(path, "/") {
+		return "/" + path
+	}
+	return path
+}
+
+func parseRequestHeaders(values []string) (http.Header, error) {
+	headers := http.Header{}
+	for _, value := range values {
+		key, headerValue, ok := strings.Cut(value, "=")
+		key = strings.TrimSpace(key)
+		if !ok || key == "" {
+			return nil, fmt.Errorf("invalid --header item %q, want key=value", value)
+		}
+		headers.Add(key, strings.TrimSpace(headerValue))
+	}
+	return headers, nil
 }
 
 func subsetWeights(snapshot xdsRouteSnapshot) map[string]uint32 {

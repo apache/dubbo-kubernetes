@@ -18,7 +18,6 @@ package grpcgen
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -28,7 +27,6 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	route "github.com/kdubbo/xds-api/route/v1"
 	matcher "github.com/kdubbo/xds-api/type/matcher/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -102,7 +100,7 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 
 		if node.IsRouter() {
 			// Gateway routers use Gateway API HTTPRoute; service-to-service proxyless clients
-			// must not let an unrelated north-south HTTPRoute shadow their VirtualService.
+			// must not let an unrelated north-south HTTPRoute shadow their service route.
 			httpRoutes := push.HTTPRouteForHost(host.Name("*"))
 			if len(httpRoutes) == 0 {
 				log.Debugf("no HTTPRoute found for router host %s, using default route", hostStr)
@@ -143,16 +141,16 @@ func buildHTTPRoute(node *model.Proxy, push *model.PushContext, routeName string
 					log.Warnf("HTTPRoute found but no routes built")
 				}
 			}
-		} else if vs := push.VirtualServiceForHost(host.Name(hostStr)); vs != nil {
-			log.Infof("found VirtualService for host %s with %d HTTP routes", hostStr, len(vs.Http))
-			if routes := buildRoutesFromVirtualService(vs, host.Name(hostStr), parsedPort); len(routes) > 0 {
-				log.Infof("built %d weighted routes from VirtualService for host %s", len(routes), hostStr)
+		} else if httpRoutes := filterHTTPRoutesByService(push.HTTPRouteForHost(host.Name(hostStr)), svc, parsedPort); len(httpRoutes) > 0 {
+			log.Infof("found %d service-attached HTTPRoute(s) for host %s", len(httpRoutes), hostStr)
+			if routes := buildRoutesFromGatewayHTTPRoute(httpRoutes, host.Name(hostStr), parsedPort); len(routes) > 0 {
+				log.Infof("built %d routes from service-attached HTTPRoute for host %s", len(routes), hostStr)
 				outboundRoutes = routes
 			} else {
-				log.Warnf("VirtualService found but no routes built for host %s", hostStr)
+				log.Warnf("service-attached HTTPRoute found but no routes built for host %s", hostStr)
 			}
 		} else {
-			log.Debugf("no HTTPRoute or VirtualService found for host %s, using default route", hostStr)
+			log.Debugf("no service-attached HTTPRoute found for host %s, using default route", hostStr)
 		}
 
 		return &route.RouteConfiguration{
@@ -330,187 +328,12 @@ func defaultSingleClusterRoute(clusterName string) *route.Route {
 	}
 }
 
-func buildRoutesFromVirtualService(vs *networking.VirtualService, hostName host.Name, defaultPort int) []*route.Route {
-	if vs == nil || len(vs.Http) == 0 {
-		return nil
-	}
-	var routes []*route.Route
-	for _, httpRoute := range vs.Http {
-		if httpRoute == nil {
-			continue
-		}
-		routes = append(routes, buildRoutesFromHTTPRoute(httpRoute, hostName, defaultPort)...)
-	}
-	return routes
-}
-
-func buildRoutesFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name, defaultPort int) []*route.Route {
-	action := buildRouteActionFromHTTPRoute(httpRoute, hostName, defaultPort)
-	if action == nil {
-		return nil
-	}
-	matches := httpRoute.GetMatch()
-	if len(matches) == 0 {
-		return []*route.Route{{
-			Match: defaultRouteMatch(),
-			Action: &route.Route_Route{
-				Route: action,
-			},
-		}}
-	}
-	routes := make([]*route.Route, 0, len(matches))
-	for _, match := range matches {
-		routes = append(routes, &route.Route{
-			Match: buildRouteMatchFromMeshServiceMatch(match),
-			Action: &route.Route_Route{
-				Route: action,
-			},
-		})
-	}
-	return routes
-}
-
-func buildRouteActionFromHTTPRoute(httpRoute *networking.HTTPRoute, hostName host.Name, defaultPort int) *route.RouteAction {
-	if httpRoute == nil || len(httpRoute.Route) == 0 {
-		log.Warnf("httpRoute is nil or has no routes")
-		return nil
-	}
-	log.Debugf("processing HTTPRoute with %d route destinations", len(httpRoute.Route))
-	weights := make([]*route.WeightedCluster_ClusterWeight, 0, len(httpRoute.Route))
-	var totalWeight uint32
-	for i, dest := range httpRoute.Route {
-		if dest == nil {
-			log.Warnf("route[%d] is nil", i)
-			continue
-		}
-		destination := dest.Destination
-		if destination == nil {
-			log.Warnf("route[%d] has nil Destination (weight=%d), creating default destination with host=%s",
-				i, dest.Weight, hostName)
-			destination = &networking.Destination{
-				Host: string(hostName),
-			}
-		} else {
-			log.Debugf("route[%d] Destination: host=%s, subset=%s, weight=%d",
-				i, destination.Host, destination.Subset, dest.Weight)
-		}
-		targetHost := destination.Host
-		if targetHost == "" {
-			targetHost = string(hostName)
-		}
-		targetPort := defaultPort
-		subsetName := destination.Subset
-		clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, subsetName, host.Name(targetHost), targetPort)
-		weight := dest.Weight
-		if weight <= 0 {
-			weight = 1
-		}
-		totalWeight += uint32(weight)
-		log.Debugf("route[%d] -> cluster=%s, subset=%s, weight=%d, host=%s, port=%d",
-			i, clusterName, subsetName, weight, targetHost, targetPort)
-		weights = append(weights, &route.WeightedCluster_ClusterWeight{
-			Name:   clusterName,
-			Weight: wrapperspb.UInt32(uint32(weight)),
-		})
-	}
-	if len(weights) == 0 {
-		log.Warnf("no valid weights generated")
-		return nil
-	}
-	weightedClusters := &route.WeightedCluster{
-		Clusters: weights,
-	}
-	if totalWeight > 0 {
-		weightedClusters.TotalWeight = wrapperspb.UInt32(totalWeight)
-	}
-	log.Debugf("built WeightedCluster with %d clusters, totalWeight=%d", len(weights), totalWeight)
-
-	return &route.RouteAction{
-		ClusterSpecifier: &route.RouteAction_WeightedClusters{
-			WeightedClusters: weightedClusters,
-		},
-	}
-}
-
 func defaultRouteMatch() *route.RouteMatch {
 	return &route.RouteMatch{
 		PathSpecifier: &route.RouteMatch_Prefix{
 			Prefix: "/",
 		},
 	}
-}
-
-func buildRouteMatchFromMeshServiceMatch(match *networking.HTTPMatchRequest) *route.RouteMatch {
-	if match == nil {
-		return defaultRouteMatch()
-	}
-	routeMatch := &route.RouteMatch{}
-	applyRoutePathSpecifier(routeMatch, match.GetUri())
-	if routeMatch.PathSpecifier == nil {
-		routeMatch.PathSpecifier = &route.RouteMatch_Prefix{Prefix: "/"}
-	}
-
-	headers := make([]*route.HeaderMatcher, 0, len(match.GetHeaders())+2)
-	for _, key := range sortedStringMatchKeys(match.GetHeaders()) {
-		if header := headerMatcherFromStringMatch(key, match.GetHeaders()[key]); header != nil {
-			headers = append(headers, header)
-		}
-	}
-	if header := headerMatcherFromStringMatch(":method", match.GetMethod()); header != nil {
-		headers = append(headers, header)
-	}
-	if header := headerMatcherFromStringMatch(":authority", match.GetHost()); header != nil {
-		headers = append(headers, header)
-	}
-	if len(headers) > 0 {
-		routeMatch.Headers = headers
-	}
-	return routeMatch
-}
-
-func sortedStringMatchKeys(values map[string]*networking.StringMatch) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func applyRoutePathSpecifier(routeMatch *route.RouteMatch, match *networking.StringMatch) {
-	if match == nil {
-		return
-	}
-	switch m := match.MatchType.(type) {
-	case *networking.StringMatch_Exact:
-		routeMatch.PathSpecifier = &route.RouteMatch_Path{Path: m.Exact}
-	case *networking.StringMatch_Prefix:
-		routeMatch.PathSpecifier = &route.RouteMatch_Prefix{Prefix: m.Prefix}
-	case *networking.StringMatch_Regex:
-		routeMatch.PathSpecifier = &route.RouteMatch_SafeRegex{
-			SafeRegex: &matcher.RegexMatcher{Regex: m.Regex},
-		}
-	}
-}
-
-func headerMatcherFromStringMatch(name string, match *networking.StringMatch) *route.HeaderMatcher {
-	if match == nil {
-		return nil
-	}
-	header := &route.HeaderMatcher{Name: name}
-	switch m := match.MatchType.(type) {
-	case *networking.StringMatch_Exact:
-		header.HeaderMatchSpecifier = &route.HeaderMatcher_ExactMatch{ExactMatch: m.Exact}
-	case *networking.StringMatch_Prefix:
-		header.HeaderMatchSpecifier = &route.HeaderMatcher_PrefixMatch{PrefixMatch: m.Prefix}
-	case *networking.StringMatch_Regex:
-		header.HeaderMatchSpecifier = &route.HeaderMatcher_SafeRegexMatch{
-			SafeRegexMatch: &matcher.RegexMatcher{Regex: m.Regex},
-		}
-	default:
-		return nil
-	}
-	return header
 }
 
 // buildRoutesFromGatewayHTTPRoute converts Gateway API HTTPRoute resources to XDS Route configurations
@@ -657,6 +480,58 @@ func filterHTTPRoutesByGateway(httpRoutes []config.Config, gatewayName, gatewayN
 	}
 
 	return filtered
+}
+
+func filterHTTPRoutesByService(httpRoutes []config.Config, svc *model.Service, port int) []config.Config {
+	if svc == nil {
+		return nil
+	}
+	var filtered []config.Config
+	for _, hr := range httpRoutes {
+		hrSpec, ok := hr.Spec.(*sigsk8siogatewayapiapisv1.HTTPRouteSpec)
+		if !ok {
+			continue
+		}
+		if httpRouteReferencesService(hrSpec, hr.Namespace, svc, port) {
+			filtered = append(filtered, hr)
+			log.Debugf("HTTPRoute %s/%s matches Service %s/%s port %d",
+				hr.Namespace, hr.Name, svc.Attributes.Namespace, svc.Attributes.Name, port)
+		}
+	}
+	return filtered
+}
+
+func httpRouteReferencesService(hrSpec *sigsk8siogatewayapiapisv1.HTTPRouteSpec, routeNamespace string, svc *model.Service, port int) bool {
+	for _, parentRef := range hrSpec.ParentRefs {
+		if !isServiceParentRef(parentRef) {
+			continue
+		}
+		refNamespace := routeNamespace
+		if parentRef.Namespace != nil {
+			refNamespace = string(*parentRef.Namespace)
+		}
+		if refNamespace != svc.Attributes.Namespace || string(parentRef.Name) != svc.Attributes.Name {
+			continue
+		}
+		if parentRef.Port != nil && int32(*parentRef.Port) != int32(port) {
+			continue
+		}
+		if parentRef.SectionName != nil {
+			svcPort, found := svc.Ports.GetByPort(port)
+			if !found || svcPort.Name != string(*parentRef.SectionName) {
+				continue
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func isServiceParentRef(parentRef sigsk8siogatewayapiapisv1.ParentReference) bool {
+	if parentRef.Kind == nil || string(*parentRef.Kind) != "Service" {
+		return false
+	}
+	return parentRef.Group == nil || string(*parentRef.Group) == ""
 }
 
 // buildRouteMatchFromHTTPRouteMatches converts Gateway API HTTPRouteMatch to XDS RouteMatch

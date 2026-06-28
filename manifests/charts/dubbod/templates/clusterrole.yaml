@@ -18,7 +18,7 @@ kind: ClusterRole
 metadata:
   name: dubbod-clusterrole-dubbo-system
 rules:
-  - apiGroups: [ "security.dubbo.apache.org", "networking.dubbo.apache.org" ]
+  - apiGroups: [ "security.dubbo.apache.org" ]
     verbs: [ "get", "watch", "list" ]
     resources: [ "*" ]
   - apiGroups: ["admissionregistration.k8s.io"]

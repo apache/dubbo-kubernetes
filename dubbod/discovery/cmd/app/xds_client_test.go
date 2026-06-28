@@ -15,6 +15,9 @@ import (
 	"time"
 
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
+	routev1 "github.com/kdubbo/xds-api/route/v1"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestAutoDiscoverServiceTargetSingleService(t *testing.T) {
@@ -205,6 +208,91 @@ func TestRunSampleRequestsUsesUpdatedSnapshotOnSameStream(t *testing.T) {
 	}
 }
 
+func TestRunSampleRequestsUsesRequestPathAndHeaders(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/reviews" {
+			t.Fatalf("path = %q, want /reviews", r.URL.Path)
+		}
+		if got := r.Header.Get("end-user"); got != "terminal-user" {
+			t.Fatalf("end-user header = %q, want terminal-user", got)
+		}
+		_, _ = fmt.Fprintln(w, "reviews v1")
+	}))
+	defer server.Close()
+
+	endpoint := endpointForServer(t, server)
+	snapshot := xdsRouteSnapshot{
+		Host: "reviews.moviereview.svc.cluster.local",
+		Port: 9080,
+		Destinations: []xdsDestination{{
+			Cluster:   "outbound|9080|v1|reviews.moviereview.svc.cluster.local",
+			Subset:    "v1",
+			Weight:    1,
+			Endpoints: []xdsEndpoint{endpoint},
+		}},
+	}
+	client := &sampleADSClient{
+		host:           snapshot.Host,
+		port:           snapshot.Port,
+		path:           "/reviews",
+		requestHeaders: http.Header{"End-User": []string{"terminal-user"}},
+		route:          map[string]uint32{snapshot.Destinations[0].Cluster: 1},
+		endpoints:      map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: []xdsEndpoint{endpoint}},
+	}
+
+	if err := runSampleRequests(context.Background(), client, snapshot, 1, 0, time.Second); err != nil {
+		t.Fatalf("runSampleRequests() error = %v", err)
+	}
+}
+
+func TestRouteWeightsFromRoutesFiltersHeaderMatchedRoute(t *testing.T) {
+	resources := []*anypb.Any{mustAnyRouteConfig(t, &routev1.RouteConfiguration{
+		VirtualHosts: []*routev1.VirtualHost{{
+			Routes: []*routev1.Route{
+				{
+					Match: &routev1.RouteMatch{
+						PathSpecifier: &routev1.RouteMatch_Prefix{Prefix: "/"},
+						Headers: []*routev1.HeaderMatcher{{
+							Name: "end-user",
+							HeaderMatchSpecifier: &routev1.HeaderMatcher_ExactMatch{
+								ExactMatch: "terminal-user",
+							},
+						}},
+					},
+					Action: weightedRouteAction(map[string]uint32{
+						"outbound|9080|v1|reviews.moviereview.svc.cluster.local": 100,
+					}),
+				},
+				{
+					Match: &routev1.RouteMatch{PathSpecifier: &routev1.RouteMatch_Prefix{Prefix: "/"}},
+					Action: weightedRouteAction(map[string]uint32{
+						"outbound|9080|v2|reviews.moviereview.svc.cluster.local": 20,
+						"outbound|9080|v3|reviews.moviereview.svc.cluster.local": 80,
+					}),
+				},
+			},
+		}},
+	})}
+
+	weights, _, err := routeWeightsFromRoutes(resources, "/", http.Header{"End-User": []string{"terminal-user"}})
+	if err != nil {
+		t.Fatalf("routeWeightsFromRoutes() error = %v", err)
+	}
+	if got := weights["outbound|9080|v1|reviews.moviereview.svc.cluster.local"]; got != 100 || len(weights) != 1 {
+		t.Fatalf("terminal-user weights = %v, want v1=100 only", weights)
+	}
+
+	weights, _, err = routeWeightsFromRoutes(resources, "/", nil)
+	if err != nil {
+		t.Fatalf("routeWeightsFromRoutes() fallback error = %v", err)
+	}
+	if len(weights) != 2 ||
+		weights["outbound|9080|v2|reviews.moviereview.svc.cluster.local"] != 20 ||
+		weights["outbound|9080|v3|reviews.moviereview.svc.cluster.local"] != 80 {
+		t.Fatalf("fallback weights = %v, want v2=20 and v3=80", weights)
+	}
+}
+
 func TestSampleRequestClientsDoNotBypassMTLS(t *testing.T) {
 	clients := newSampleRequestClients(&sampleADSClient{}, time.Second)
 	destination := xdsDestination{
@@ -294,4 +382,30 @@ func contains(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func mustAnyRouteConfig(t *testing.T, rc *routev1.RouteConfiguration) *anypb.Any {
+	t.Helper()
+	out, err := anypb.New(rc)
+	if err != nil {
+		t.Fatalf("anypb.New() error = %v", err)
+	}
+	return out
+}
+
+func weightedRouteAction(weights map[string]uint32) *routev1.Route_Route {
+	clusters := make([]*routev1.WeightedCluster_ClusterWeight, 0, len(weights))
+	for name, weight := range weights {
+		clusters = append(clusters, &routev1.WeightedCluster_ClusterWeight{
+			Name:   name,
+			Weight: wrapperspb.UInt32(weight),
+		})
+	}
+	return &routev1.Route_Route{
+		Route: &routev1.RouteAction{
+			ClusterSpecifier: &routev1.RouteAction_WeightedClusters{
+				WeightedClusters: &routev1.WeightedCluster{Clusters: clusters},
+			},
+		},
+	}
 }

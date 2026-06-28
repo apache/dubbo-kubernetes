@@ -34,7 +34,7 @@ spec:
   - name: http
     port: 80
     targetPort: 9080
-    nodePort: 19080
+    nodePort: 30980
     protocol: TCP
 ---
 apiVersion: v1
@@ -79,6 +79,60 @@ metadata:
 spec:
   selector:
     app: reviews
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews-v1
+  namespace: moviereview
+  labels:
+    app: reviews
+    version: v1
+spec:
+  selector:
+    app: reviews
+    version: v1
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews-v2
+  namespace: moviereview
+  labels:
+    app: reviews
+    version: v2
+spec:
+  selector:
+    app: reviews
+    version: v2
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews-v3
+  namespace: moviereview
+  labels:
+    app: reviews
+    version: v3
+spec:
+  selector:
+    app: reviews
+    version: v3
   ports:
   - name: http
     port: 9080
@@ -138,13 +192,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -180,13 +234,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -222,13 +276,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -264,13 +318,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -309,13 +363,13 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 10
           periodSeconds: 10
 ---
@@ -354,12 +408,12 @@ spec:
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 9080
+            port: 15080
           initialDelaySeconds: 10
           periodSeconds: 10

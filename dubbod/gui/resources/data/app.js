@@ -344,7 +344,7 @@ const App = () => {
                 <table className="k-table">
                   <thead>
                     <tr>
-	                      <th>Kind (MeshService / MeshConfig)</th>
+	                      <th>Kind (Gateway API / Policy)</th>
                       <th>Count</th>
                       <th>Description</th>
                     </tr>
