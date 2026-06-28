@@ -214,7 +214,7 @@ func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
 		"values.global.proxyless.cni.binDir=/var/lib/cni/bin",
 		"values.global.proxyless.cni.confDir=/var/lib/cni/net.d",
 		"values.global.proxyless.cni.stateDir=/run/dubbo-cni",
-		"values.global.proxyless.cni.xserverPort=16080",
+		"values.global.proxyless.cni.grpcInboundPort=16080",
 		"values.global.proxyless.cni.ipsetPath=/usr/sbin/ipset",
 		"values.global.proxyless.cni.refreshInterval=30s",
 	}, nil, nil)
@@ -239,7 +239,7 @@ func TestGenerateManifestProxylessCNIIsGlobalByDefault(t *testing.T) {
 		"--bin-dir=/var/lib/cni/bin",
 		"--conf-dir=/var/lib/cni/net.d",
 		"--state-dir=/run/dubbo-cni",
-		"--xserver-port=16080",
+		"--grpc-inbound-port=16080",
 		"--ipset-path=/usr/sbin/ipset",
 		"--refresh-interval=30s",
 	} {

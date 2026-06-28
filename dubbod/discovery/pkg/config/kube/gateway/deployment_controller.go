@@ -1093,7 +1093,7 @@ func gatewayServiceTargetPort(gw gateway.Gateway) intstr.IntOrString {
 		return intstr.FromInt(port)
 	}
 	if gw.Annotations[eastWestGatewayAnnotation] == "true" {
-		return intstr.FromInt(inject.ProxylessXServerPort)
+		return intstr.FromInt(inject.ProxylessGRPCInboundPort)
 	}
 	return intstr.FromString("http")
 }

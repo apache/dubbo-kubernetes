@@ -700,7 +700,7 @@ func reorderPod(pod *corev1.Pod, req InjectionParameters) error {
 	// Proxy container should be last to ensure `kubectl exec` and similar commands
 	// continue to default to the user's container
 	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxyContainerName, MoveLast)
-	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxylessXServerContainerName, MoveLast)
+	pod.Spec.Containers = modifyContainers(pod.Spec.Containers, ProxylessGRPCInboundContainerName, MoveLast)
 	return nil
 }
 
@@ -739,10 +739,10 @@ func rewriteProxylessServiceTargetPorts(svc *corev1.Service) bool {
 		if port.Protocol != "" && port.Protocol != corev1.ProtocolTCP {
 			continue
 		}
-		if port.TargetPort.Type == intstr.Int && port.TargetPort.IntVal == ProxylessXServerPort {
+		if port.TargetPort.Type == intstr.Int && port.TargetPort.IntVal == ProxylessGRPCInboundPort {
 			continue
 		}
-		port.TargetPort = intstr.FromInt(ProxylessXServerPort)
+		port.TargetPort = intstr.FromInt(ProxylessGRPCInboundPort)
 		changed = true
 	}
 	return changed

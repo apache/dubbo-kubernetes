@@ -22,10 +22,10 @@ import (
 	xdsresolver "github.com/kdubbo/xds-api/grpc/resolver"
 )
 
-func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
+func TestGRPCInboundRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	caCert, caKey := newTestCA(t)
-	serverCert, serverKey := newSignedCert(t, caCert, caKey, "xserver")
-	clientCert, clientKey := newSignedCert(t, caCert, caKey, "xclient")
+	serverCert, serverKey := newSignedCert(t, caCert, caKey, "grpc-inbound")
+	clientCert, clientKey := newSignedCert(t, caCert, caKey, "grpc-outbound")
 	dir := t.TempDir()
 	writePEM(t, filepath.Join(dir, "root-cert.pem"), "CERTIFICATE", caCert.Raw)
 	writePEM(t, filepath.Join(dir, "cert-chain.pem"), "CERTIFICATE", serverCert.Raw)
@@ -33,7 +33,7 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	writePEM(t, filepath.Join(dir, "client-cert.pem"), "CERTIFICATE", clientCert.Raw)
 	writePEM(t, filepath.Join(dir, "client-key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(clientKey))
 
-	tlsConfig, err := xserverTLSConfigFromBootstrap(&xdsresolver.BootstrapConfig{
+	tlsConfig, err := grpcInboundTLSConfigFromBootstrap(&xdsresolver.BootstrapConfig{
 		CertProviders: map[string]xdsresolver.FileWatcherCertConfig{
 			"default": {
 				CertificateFile:   filepath.Join(dir, "cert-chain.pem"),
@@ -43,7 +43,7 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("xserverTLSConfigFromBootstrap() failed: %v", err)
+		t.Fatalf("grpcInboundTLSConfigFromBootstrap() failed: %v", err)
 	}
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -60,8 +60,8 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	defer cancel()
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- serveXServer(ctx, listener, tlsConfig, upstreamAddr, func() xserverMTLSMode {
-			return xserverMTLSModeStrict
+		errCh <- serveGRPCInbound(ctx, listener, tlsConfig, upstreamAddr, func() grpcInboundMTLSMode {
+			return grpcInboundMTLSModeStrict
 		}, time.Second, time.Second)
 	}()
 	t.Cleanup(func() {
@@ -69,10 +69,10 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 		select {
 		case err := <-errCh:
 			if err != nil {
-				t.Fatalf("serveXServer() error = %v", err)
+				t.Fatalf("serveGRPCInbound() error = %v", err)
 			}
 		case <-time.After(time.Second):
-			t.Fatalf("serveXServer() did not stop")
+			t.Fatalf("serveGRPCInbound() did not stop")
 		}
 	})
 
@@ -110,10 +110,10 @@ func TestXServerRequiresClientCertificateAndProxiesHTTP(t *testing.T) {
 	}
 }
 
-func TestXServerPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
+func TestGRPCInboundPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 	caCert, caKey := newTestCA(t)
-	serverCert, serverKey := newSignedCert(t, caCert, caKey, "xserver")
-	clientCert, clientKey := newSignedCert(t, caCert, caKey, "xclient")
+	serverCert, serverKey := newSignedCert(t, caCert, caKey, "grpc-inbound")
+	clientCert, clientKey := newSignedCert(t, caCert, caKey, "grpc-outbound")
 	dir := t.TempDir()
 	writePEM(t, filepath.Join(dir, "root-cert.pem"), "CERTIFICATE", caCert.Raw)
 	writePEM(t, filepath.Join(dir, "cert-chain.pem"), "CERTIFICATE", serverCert.Raw)
@@ -121,7 +121,7 @@ func TestXServerPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 	writePEM(t, filepath.Join(dir, "client-cert.pem"), "CERTIFICATE", clientCert.Raw)
 	writePEM(t, filepath.Join(dir, "client-key.pem"), "RSA PRIVATE KEY", x509.MarshalPKCS1PrivateKey(clientKey))
 
-	tlsConfig, err := xserverTLSConfigFromBootstrap(&xdsresolver.BootstrapConfig{
+	tlsConfig, err := grpcInboundTLSConfigFromBootstrap(&xdsresolver.BootstrapConfig{
 		CertProviders: map[string]xdsresolver.FileWatcherCertConfig{
 			"default": {
 				CertificateFile:   filepath.Join(dir, "cert-chain.pem"),
@@ -131,7 +131,7 @@ func TestXServerPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("xserverTLSConfigFromBootstrap() failed: %v", err)
+		t.Fatalf("grpcInboundTLSConfigFromBootstrap() failed: %v", err)
 	}
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -147,8 +147,8 @@ func TestXServerPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 	defer cancel()
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- serveXServer(ctx, listener, tlsConfig, upstream.Listener.Addr().String(), func() xserverMTLSMode {
-			return xserverMTLSModePermissive
+		errCh <- serveGRPCInbound(ctx, listener, tlsConfig, upstream.Listener.Addr().String(), func() grpcInboundMTLSMode {
+			return grpcInboundMTLSModePermissive
 		}, time.Second, time.Second)
 	}()
 	t.Cleanup(func() {
@@ -156,10 +156,10 @@ func TestXServerPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 		select {
 		case err := <-errCh:
 			if err != nil {
-				t.Fatalf("serveXServer() error = %v", err)
+				t.Fatalf("serveGRPCInbound() error = %v", err)
 			}
 		case <-time.After(time.Second):
-			t.Fatalf("serveXServer() did not stop")
+			t.Fatalf("serveGRPCInbound() did not stop")
 		}
 	})
 
@@ -197,7 +197,7 @@ func TestXServerPermissiveAcceptsPlaintextAndMTLS(t *testing.T) {
 	}
 }
 
-func TestXServerMTLSModeFromRuntimeConfig(t *testing.T) {
+func TestGRPCInboundMTLSModeFromRuntimeConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "dubbo-grpc-xds.json")
 	if err := os.WriteFile(path, []byte(`{
   "services": [
@@ -208,10 +208,10 @@ func TestXServerMTLSModeFromRuntimeConfig(t *testing.T) {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
 
-	if got, ok := xserverMTLSModeFromRuntimeConfig(path, 80); !ok || got != xserverMTLSModePermissive {
+	if got, ok := grpcInboundMTLSModeFromRuntimeConfig(path, 80); !ok || got != grpcInboundMTLSModePermissive {
 		t.Fatalf("mode for 80 = %q, %v; want PERMISSIVE, true", got, ok)
 	}
-	if got, ok := xserverMTLSModeFromRuntimeConfig(path, 8080); !ok || got != xserverMTLSModeStrict {
+	if got, ok := grpcInboundMTLSModeFromRuntimeConfig(path, 8080); !ok || got != grpcInboundMTLSModeStrict {
 		t.Fatalf("mode for 8080 = %q, %v; want STRICT, true", got, ok)
 	}
 }

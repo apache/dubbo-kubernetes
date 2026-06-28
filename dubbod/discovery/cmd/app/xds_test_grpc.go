@@ -67,7 +67,7 @@ func startXDSTestGRPCServer(stop <-chan struct{}) error {
 }
 
 func (s *xdsTestGRPCServer) ForwardHTTP(ctx context.Context, req *testproto.ForwardHTTPRequest) (*testproto.ForwardHTTPResponse, error) {
-	opts, err := xdsOptionsFromForwardHTTPRequest(req)
+	opts, err := grpcOutboundOptionsFromForwardHTTPRequest(req)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -94,7 +94,7 @@ func (s *xdsTestGRPCServer) ForwardHTTP(ctx context.Context, req *testproto.Forw
 	return &testproto.ForwardHTTPResponse{Output: output}, nil
 }
 
-func xdsOptionsFromForwardHTTPRequest(req *testproto.ForwardHTTPRequest) (*xdsClientOptions, error) {
+func grpcOutboundOptionsFromForwardHTTPRequest(req *testproto.ForwardHTTPRequest) (*grpcOutboundOptions, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request is required")
 	}
@@ -124,7 +124,7 @@ func xdsOptionsFromForwardHTTPRequest(req *testproto.ForwardHTTPRequest) (*xdsCl
 	if count <= 0 {
 		count = 1
 	}
-	return &xdsClientOptions{
+	return &grpcOutboundOptions{
 		host:            host,
 		port:            port,
 		path:            normalizeRequestPath(req.GetPath()),
@@ -132,7 +132,7 @@ func xdsOptionsFromForwardHTTPRequest(req *testproto.ForwardHTTPRequest) (*xdsCl
 		target:          net.JoinHostPort(host, strconv.Itoa(port)),
 		xdsAddress:      firstNonEmpty(os.Getenv("XDS_TEST_XDS_ADDRESS"), "127.0.0.1:26010"),
 		namespace:       namespace,
-		podName:         firstNonEmpty(os.Getenv("POD_NAME"), os.Getenv("HOSTNAME"), "xclient"),
+		podName:         firstNonEmpty(os.Getenv("POD_NAME"), os.Getenv("HOSTNAME"), "grpc-outbound"),
 		podIP:           firstNonEmpty(os.Getenv("INSTANCE_IP"), os.Getenv("POD_IP"), "127.0.0.1"),
 		serviceAccount:  serviceAccount,
 		trustDomain:     firstNonEmpty(os.Getenv("TRUST_DOMAIN"), constants.DefaultClusterLocalDomain),

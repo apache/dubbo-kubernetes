@@ -42,8 +42,8 @@ const (
 	ProxylessGRPCKeepaliveTimeout                = "10s"
 	ProxylessGRPCConfigFileName                  = "dubbo-grpc-xds.json"
 	ProxylessGRPCConfigPath                      = ProxylessXDSMountPath + "/" + ProxylessGRPCConfigFileName
-	ProxylessXServerContainerName                = "dubbo-xserver"
-	ProxylessXServerPort                         = 15080
+	ProxylessGRPCInboundContainerName            = "dubbo-grpc-inbound"
+	ProxylessGRPCInboundPort                     = 15080
 	ProxylessManagedLabel                        = "proxyless.dubbo.apache.org/managed"
 	ProxylessManagedLabelValue                   = "true"
 )

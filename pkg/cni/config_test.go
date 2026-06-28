@@ -34,8 +34,8 @@ func TestParseNetConfDefaults(t *testing.T) {
 		t.Fatalf("managed label = %s/%s, want %s/%s", conf.ManagedLabel, conf.ManagedLabelValue,
 			inject.ProxylessManagedLabel, inject.ProxylessManagedLabelValue)
 	}
-	if conf.XServerPort != inject.ProxylessXServerPort {
-		t.Fatalf("xserverPort = %d, want %d", conf.XServerPort, inject.ProxylessXServerPort)
+	if conf.GRPCInboundPort != inject.ProxylessGRPCInboundPort {
+		t.Fatalf("grpcInboundPort = %d, want %d", conf.GRPCInboundPort, inject.ProxylessGRPCInboundPort)
 	}
 	if conf.IPTablesPath != defaultIPTablesPath || conf.IPSetPath != defaultIPSetPath {
 		t.Fatalf("iptables/ipset path = %s/%s, want %s/%s", conf.IPTablesPath, conf.IPSetPath, defaultIPTablesPath, defaultIPSetPath)

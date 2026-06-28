@@ -75,7 +75,7 @@ spec:
           fieldPath: status.hostIP
 {{- if and (gt (len .Spec.Containers) 0) (contains "kdubbo/dubbod" ((index .Spec.Containers 0).Image | default "")) }}
     args:
-    - xclient
+    - grpc-outbound
     - --watch
 {{- end }}
     volumeMounts:
@@ -86,17 +86,17 @@ spec:
 {{- if and (gt (len .Spec.Containers) 0) (gt (len ((index .Spec.Containers 0).Ports)) 0) }}
 {{- $appPort = int ((index ((index .Spec.Containers 0).Ports) 0).ContainerPort) }}
 {{- end }}
-  - name: dubbo-xserver
+  - name: dubbo-grpc-inbound
     image: {{ .ProxyImage | quote }}
     imagePullPolicy: IfNotPresent
     args:
-    - xserver
+    - grpc-inbound
     - --listen
     - :15080
     - --upstream
     - 127.0.0.1:{{ $appPort }}
     ports:
-    - name: xserver
+    - name: grpc-inbound
       containerPort: 15080
       protocol: TCP
     volumeMounts:
