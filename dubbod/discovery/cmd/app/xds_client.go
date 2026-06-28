@@ -100,6 +100,7 @@ type xdsDestination struct {
 type xdsRouteSnapshot struct {
 	Host         string           `json:"host"`
 	Port         int              `json:"port"`
+	Timeout      string           `json:"timeout,omitempty"`
 	Destinations []xdsDestination `json:"destinations"`
 }
 
@@ -116,6 +117,7 @@ type sampleADSClient struct {
 	mu            sync.RWMutex
 	subs          map[string][]string
 	route         map[string]uint32
+	routeTimeout  time.Duration
 	endpoints     map[string][]xdsEndpoint
 	clusterTLS    map[string]*tlsv1.UpstreamTlsContext
 	updates       chan struct{}
@@ -425,12 +427,13 @@ func (c *sampleADSClient) handleResponse(resp *discovery.DiscoveryResponse) erro
 			return c.subscribe(v1.RouteType, routeNames)
 		}
 	case v1.RouteType:
-		weights, clusters, err := routeWeightsFromRoutes(resp.Resources, c.path, c.requestHeaders)
+		weights, clusters, timeout, err := routeWeightsFromRoutes(resp.Resources, c.path, c.requestHeaders)
 		if err != nil {
 			return err
 		}
 		c.mu.Lock()
 		c.route = weights
+		c.routeTimeout = timeout
 		c.mu.Unlock()
 		c.notify()
 		if len(clusters) > 0 {
@@ -506,6 +509,9 @@ func (c *sampleADSClient) readySnapshot(expected map[string]uint32) (xdsRouteSna
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	snapshot := xdsRouteSnapshot{Host: c.host, Port: c.port}
+	if c.routeTimeout > 0 {
+		snapshot.Timeout = c.routeTimeout.String()
+	}
 	for clusterName, weight := range c.route {
 		if weight == 0 {
 			continue
@@ -564,24 +570,32 @@ func routeNamesFromListeners(resources []*anypb.Any) ([]string, error) {
 	return sortedUnique(out), nil
 }
 
-func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestHeaders http.Header) (map[string]uint32, []string, error) {
+func routeWeightsFromRoutes(resources []*anypb.Any, requestPath string, requestHeaders http.Header) (map[string]uint32, []string, time.Duration, error) {
 	weights := map[string]uint32{}
 	for _, resource := range resources {
 		rc := &routev1.RouteConfiguration{}
 		if err := proto.Unmarshal(resource.Value, rc); err != nil {
-			return nil, nil, err
+			return nil, nil, 0, err
 		}
 		for _, vh := range rc.GetVirtualHosts() {
 			for _, rt := range vh.GetRoutes() {
 				if !routeMatchesRequest(rt.GetMatch(), requestPath, requestHeaders) {
 					continue
 				}
-				addRouteActionWeights(weights, rt.GetRoute())
-				return weights, sortedWeightClusterNames(weights), nil
+				action := rt.GetRoute()
+				addRouteActionWeights(weights, action)
+				return weights, sortedWeightClusterNames(weights), routeActionTimeout(action), nil
 			}
 		}
 	}
-	return weights, sortedWeightClusterNames(weights), nil
+	return weights, sortedWeightClusterNames(weights), 0, nil
+}
+
+func routeActionTimeout(action *routev1.RouteAction) time.Duration {
+	if action == nil || action.GetTimeout() == nil {
+		return 0
+	}
+	return action.GetTimeout().AsDuration()
 }
 
 func addRouteActionWeights(weights map[string]uint32, action *routev1.RouteAction) {
@@ -749,12 +763,18 @@ func destinationFromCluster(clusterName string, weight uint32, endpoints []xdsEn
 }
 
 func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot xdsRouteSnapshot, count int, requestInterval, requestTimeout time.Duration) error {
+	_, err := runSampleRequestsWithOutput(ctx, adsClient, snapshot, count, requestInterval, requestTimeout, os.Stdout)
+	return err
+}
+
+func runSampleRequestsWithOutput(ctx context.Context, adsClient *sampleADSClient, snapshot xdsRouteSnapshot, count int, requestInterval, requestTimeout time.Duration, writer io.Writer) ([]string, error) {
 	picker, err := newSmoothWeightedPicker(snapshot)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	currentSignature := snapshotSignature(snapshot)
 	clients := newSampleRequestClients(adsClient, requestTimeout)
+	output := make([]string, 0, count)
 	for i := 0; i < count; i++ {
 		if updated, ok := adsClient.readySnapshot(nil); ok {
 			updatedSignature := snapshotSignature(updated)
@@ -763,22 +783,28 @@ func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot
 				currentSignature = updatedSignature
 				picker, err = newSmoothWeightedPicker(snapshot)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
 		destination, endpoint, err := picker.Next()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		httpClient, scheme, err := clients.clientForDestination(destination)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		requestCtx := ctx
+		cancel := func() {}
+		if timeout, ok := routeTimeoutDuration(snapshot.Timeout); ok {
+			requestCtx, cancel = context.WithTimeout(ctx, timeout)
+		}
+		req, err := http.NewRequestWithContext(requestCtx, http.MethodGet,
 			fmt.Sprintf("%s://%s%s", scheme, net.JoinHostPort(endpoint.Address, strconv.Itoa(int(endpoint.Port))), adsClient.path), nil)
 		if err != nil {
-			return err
+			cancel()
+			return nil, err
 		}
 		req.Host = snapshot.Host
 		for name, values := range adsClient.requestHeaders {
@@ -788,14 +814,20 @@ func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot
 		}
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			return err
+			cancel()
+			return nil, err
 		}
 		body, readErr := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
+		cancel()
 		if readErr != nil {
-			return readErr
+			return nil, readErr
 		}
-		fmt.Println(strings.TrimSpace(string(body)))
+		line := strings.TrimSpace(string(body))
+		output = append(output, line+"\n")
+		if writer != nil {
+			fmt.Fprintln(writer, line)
+		}
 		if requestInterval > 0 && i+1 < count {
 			timer := time.NewTimer(requestInterval)
 			select {
@@ -803,12 +835,23 @@ func runSampleRequests(ctx context.Context, adsClient *sampleADSClient, snapshot
 				if !timer.Stop() {
 					<-timer.C
 				}
-				return ctx.Err()
+				return output, ctx.Err()
 			case <-timer.C:
 			}
 		}
 	}
-	return nil
+	return output, nil
+}
+
+func routeTimeoutDuration(value string) (time.Duration, bool) {
+	if value == "" {
+		return 0, false
+	}
+	timeout, err := time.ParseDuration(value)
+	if err != nil || timeout <= 0 {
+		return 0, false
+	}
+	return timeout, true
 }
 
 type sampleRequestClients struct {
@@ -1033,7 +1076,11 @@ func routeSummary(snapshot xdsRouteSnapshot) string {
 	for _, dest := range snapshot.Destinations {
 		parts = append(parts, fmt.Sprintf("%s=%d endpoints=%d", destinationWeightKey(dest), dest.Weight, len(dest.Endpoints)))
 	}
-	return fmt.Sprintf("%s:%d %s", snapshot.Host, snapshot.Port, strings.Join(parts, ","))
+	timeout := ""
+	if snapshot.Timeout != "" {
+		timeout = " timeout=" + snapshot.Timeout
+	}
+	return fmt.Sprintf("%s:%d%s %s", snapshot.Host, snapshot.Port, timeout, strings.Join(parts, ","))
 }
 
 func sortedUnique(values []string) []string {

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
@@ -29,6 +30,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	route "github.com/kdubbo/xds-api/route/v1"
 	matcher "github.com/kdubbo/xds-api/type/matcher/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -413,14 +415,21 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 			// Build route match from HTTPRoute matches
 			routeMatch := buildRouteMatchFromHTTPRouteMatches(rule.Matches)
 
+			routeAction := &route.RouteAction{
+				ClusterSpecifier: &route.RouteAction_WeightedClusters{
+					WeightedClusters: weightedClusters,
+				},
+			}
+			if rule.Timeouts != nil {
+				if timeout := gatewayAPIDurationToProto(rule.Timeouts.Request); timeout != nil {
+					routeAction.Timeout = timeout
+				}
+			}
+
 			builtRoute := &route.Route{
 				Match: routeMatch,
 				Action: &route.Route_Route{
-					Route: &route.RouteAction{
-						ClusterSpecifier: &route.RouteAction_WeightedClusters{
-							WeightedClusters: weightedClusters,
-						},
-					},
+					Route: routeAction,
 				},
 			}
 
@@ -431,6 +440,18 @@ func buildRoutesFromGatewayHTTPRoute(httpRoutes []config.Config, hostName host.N
 	}
 
 	return allRoutes
+}
+
+func gatewayAPIDurationToProto(duration *sigsk8siogatewayapiapisv1.Duration) *durationpb.Duration {
+	if duration == nil {
+		return nil
+	}
+	parsed, err := time.ParseDuration(string(*duration))
+	if err != nil {
+		log.Warnf("invalid HTTPRoute timeout duration %q: %v", *duration, err)
+		return nil
+	}
+	return durationpb.New(parsed)
 }
 
 // filterHTTPRoutesByGateway filters HTTPRoutes by parentRef to match the given Gateway
