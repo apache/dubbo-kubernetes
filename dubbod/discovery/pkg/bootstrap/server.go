@@ -511,6 +511,8 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind = kind.KubernetesGateway
 		case "HTTPRoute":
 			configKind = kind.HTTPRoute
+		case "BackendTLSPolicy":
+			configKind = kind.BackendTLSPolicy
 		case "CircuitBreakerPolicy":
 			configKind = kind.CircuitBreakerPolicy
 		default:
@@ -535,6 +537,7 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind == kind.RequestAuthentication ||
 			configKind == kind.AuthorizationPolicy ||
 			configKind == kind.HTTPRoute ||
+			configKind == kind.BackendTLSPolicy ||
 			configKind == kind.CircuitBreakerPolicy
 
 		// Trigger ConfigUpdate to push changes to all connected proxies

@@ -75,6 +75,7 @@ type PushContext struct {
 	ServiceIndex           serviceIndex
 	virtualServiceIndex    virtualServiceIndex
 	httpRouteIndex         httpRouteIndex
+	backendTLSPolicyIndex  backendTLSPolicyIndex
 	destinationRuleIndex   destinationRuleIndex
 	serviceAccounts        map[serviceAccountKey][]string
 	AuthenticationPolicies *AuthenticationPolicies
@@ -155,6 +156,14 @@ type httpRouteIndex struct {
 	hostToRoutes map[host.Name][]config.Config
 }
 
+type backendTLSPolicyIndex struct {
+	serviceTLS map[string]BackendTLSSettings
+}
+
+type BackendTLSSettings struct {
+	SNI string
+}
+
 type destinationRuleIndex struct {
 	namespaceLocal      map[string]*consolidatedSubRules
 	exportedByNamespace map[string]*consolidatedSubRules
@@ -168,11 +177,12 @@ type consolidatedSubRules struct {
 
 func NewPushContext() *PushContext {
 	return &PushContext{
-		ServiceIndex:         newServiceIndex(),
-		virtualServiceIndex:  newVirtualServiceIndex(),
-		destinationRuleIndex: newDestinationRuleIndex(),
-		serviceAccounts:      map[serviceAccountKey][]string{},
-		ProxyStatus:          map[string]map[string]ProxyPushStatus{},
+		ServiceIndex:          newServiceIndex(),
+		virtualServiceIndex:   newVirtualServiceIndex(),
+		backendTLSPolicyIndex: backendTLSPolicyIndex{serviceTLS: map[string]BackendTLSSettings{}},
+		destinationRuleIndex:  newDestinationRuleIndex(),
+		serviceAccounts:       map[serviceAccountKey][]string{},
+		ProxyStatus:           map[string]map[string]ProxyPushStatus{},
 	}
 }
 
@@ -589,6 +599,7 @@ func (ps *PushContext) createNewContext(env *Environment) {
 	// Initialize Kubernetes Gateway API resources if the controller is enabled.
 	ps.initKubernetesGateways(env)
 	ps.initHTTPRoutes(env)
+	ps.initBackendTLSPolicies(env)
 	ps.initAuthenticationPolicies(env)
 }
 
@@ -642,6 +653,15 @@ func (ps *PushContext) updateContext(env *Environment, oldPushContext *PushConte
 	} else {
 		log.Debugf("HTTPRoutes unchanged, reusing old HTTPRoute index")
 		ps.httpRouteIndex = oldPushContext.httpRouteIndex
+	}
+
+	backendTLSPoliciesChanged := pushReq != nil && HasConfigsOfKind(pushReq.ConfigsUpdated, kind.BackendTLSPolicy)
+	if backendTLSPoliciesChanged {
+		log.Debugf("BackendTLSPolicies changed, re-initializing BackendTLSPolicy index")
+		ps.initBackendTLSPolicies(env)
+	} else {
+		log.Debugf("BackendTLSPolicies unchanged, reusing old BackendTLSPolicy index")
+		ps.backendTLSPolicyIndex = oldPushContext.backendTLSPolicyIndex
 	}
 
 	authnPoliciesChanged := pushReq != nil && (pushReq.Full || authPolicyKindsChanged(pushReq.ConfigsUpdated))
@@ -854,6 +874,62 @@ func (ps *PushContext) HTTPRouteForHost(hostname host.Name) []config.Config {
 
 	log.Infof("found %d HTTPRoute(s) for hostname %s", len(routes), hostname)
 	return routes
+}
+
+func (ps *PushContext) initBackendTLSPolicies(env *Environment) {
+	policies := sortConfigByCreationTime(env.List(gvk.BackendTLSPolicy, NamespaceAll))
+	serviceTLS := map[string]BackendTLSSettings{}
+	for _, cfg := range policies {
+		spec, ok := cfg.Spec.(*sigsk8siogatewayapiapisv1.BackendTLSPolicySpec)
+		if !ok {
+			log.Debugf("BackendTLSPolicy %s/%s spec is not BackendTLSPolicySpec", cfg.Namespace, cfg.Name)
+			continue
+		}
+		if !supportsSystemBackendTLS(spec) {
+			continue
+		}
+		settings := BackendTLSSettings{SNI: string(spec.Validation.Hostname)}
+		for _, target := range spec.TargetRefs {
+			if !isBackendTLSPolicyServiceTarget(target) {
+				continue
+			}
+			key := backendTLSPolicyServiceKey(cfg.Namespace, string(target.Name))
+			if _, found := serviceTLS[key]; !found {
+				serviceTLS[key] = settings
+			}
+		}
+	}
+	ps.backendTLSPolicyIndex.serviceTLS = serviceTLS
+	log.Debugf("indexed BackendTLSPolicies for %d services", len(serviceTLS))
+}
+
+func (ps *PushContext) BackendTLSForService(namespace, name string) (BackendTLSSettings, bool) {
+	if ps == nil || ps.backendTLSPolicyIndex.serviceTLS == nil {
+		return BackendTLSSettings{}, false
+	}
+	settings, found := ps.backendTLSPolicyIndex.serviceTLS[backendTLSPolicyServiceKey(namespace, name)]
+	return settings, found
+}
+
+func supportsSystemBackendTLS(spec *sigsk8siogatewayapiapisv1.BackendTLSPolicySpec) bool {
+	if spec == nil || spec.Validation.Hostname == "" {
+		return false
+	}
+	wellKnown := spec.Validation.WellKnownCACertificates
+	return wellKnown != nil && *wellKnown == sigsk8siogatewayapiapisv1.WellKnownCACertificatesSystem
+}
+
+func isBackendTLSPolicyServiceTarget(target sigsk8siogatewayapiapisv1.LocalPolicyTargetReferenceWithSectionName) bool {
+	if target.SectionName != nil {
+		return false
+	}
+	group := strings.TrimSpace(string(target.Group))
+	kind := strings.TrimSpace(string(target.Kind))
+	return (group == "" || group == "core") && strings.EqualFold(kind, "Service")
+}
+
+func backendTLSPolicyServiceKey(namespace, name string) string {
+	return namespace + "/" + name
 }
 
 // sortConfigBySelectorAndCreationTime sorts the list of config objects based on creation time.

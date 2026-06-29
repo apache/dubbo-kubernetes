@@ -6,6 +6,8 @@ import "k8s.io/apimachinery/pkg/runtime/schema"
 
 var (
 	AuthorizationPolicy            = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "authorizationpolicies"}
+	BackendTLSPolicy               = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "backendtlspolicies"}
+	BackendTLSPolicy_v1            = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "backendtlspolicies"}
 	CircuitBreakerPolicy           = schema.GroupVersionResource{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Resource: "circuitbreakerpolicies"}
 	ConfigMap                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
 	CustomResourceDefinition       = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
@@ -39,6 +41,10 @@ var (
 func IsClusterScoped(g schema.GroupVersionResource) bool {
 	switch g {
 	case AuthorizationPolicy:
+		return false
+	case BackendTLSPolicy:
+		return false
+	case BackendTLSPolicy_v1:
 		return false
 	case CircuitBreakerPolicy:
 		return false

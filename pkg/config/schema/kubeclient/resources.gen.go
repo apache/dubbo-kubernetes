@@ -34,6 +34,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 	switch any(ptr.Empty[T]()).(type) {
 	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).(ktypes.WriteAPI[T])
+	case *sigsk8siogatewayapiapisv1.BackendTLSPolicy:
+		return c.GatewayAPI().GatewayV1().BackendTLSPolicies(namespace).(ktypes.WriteAPI[T])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy:
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ConfigMap:
@@ -91,6 +93,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 	switch any(ptr.Empty[T]()).(type) {
 	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *sigsk8siogatewayapiapisv1.BackendTLSPolicy:
+		return c.GatewayAPI().GatewayV1().BackendTLSPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy:
 		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.ConfigMap:
@@ -148,6 +152,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	switch g {
 	case gvr.AuthorizationPolicy:
 		return &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{}
+	case gvr.BackendTLSPolicy:
+		return &sigsk8siogatewayapiapisv1.BackendTLSPolicy{}
 	case gvr.CircuitBreakerPolicy:
 		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{}
 	case gvr.ConfigMap:
@@ -212,6 +218,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.BackendTLSPolicy:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.GatewayAPI().GatewayV1().BackendTLSPolicies(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.GatewayAPI().GatewayV1().BackendTLSPolicies(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.CircuitBreakerPolicy:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

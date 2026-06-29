@@ -38,6 +38,26 @@ func TestBuildClusterLoadAssignmentKeepsAppPortWithoutDUBBOMutual(t *testing.T) 
 	}
 }
 
+func TestBuildClusterLoadAssignmentUsesExternalNameDNS(t *testing.T) {
+	hostname := host.Name("httpbin-egress.app.svc.cluster.local")
+	svc := newEndpointTestService("httpbin-egress", "app", string(hostname), 443)
+	svc.Resolution = model.Alias
+	svc.Attributes.K8sAttributes.ExternalName = "httpbin.org"
+	push := newEndpointTestPushContext(t, nil, []*model.Service{svc})
+	index := model.NewEndpointIndex(model.DisabledCache{})
+
+	clusterName := model.BuildSubsetKey(model.TrafficDirectionOutbound, "", hostname, 443)
+	builder := NewEndpointBuilder(clusterName, newEndpointTestProxy(), push)
+	cla := builder.BuildClusterLoadAssignment(index)
+
+	if got := firstEndpointAddress(t, cla); got != "httpbin.org" {
+		t.Fatalf("endpoint address = %q, want external DNS name", got)
+	}
+	if got := firstEndpointPort(t, cla); got != 443 {
+		t.Fatalf("endpoint port = %d, want service port 443", got)
+	}
+}
+
 func TestBuildClusterLoadAssignmentUsesEastWestGatewayForRemoteShard(t *testing.T) {
 	hostname := host.Name("nginx.app.svc.cluster.local")
 	svc := newEndpointTestService("nginx", "app", string(hostname), 80)
