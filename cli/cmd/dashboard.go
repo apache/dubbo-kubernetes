@@ -88,7 +88,7 @@ func DashboardCmd(ctx cli.Context) *cobra.Command {
 			}
 
 			if args.wait > 0 {
-				if err := waitForDashboard(cmd.Context(), client.Kube(), dashboardNamespace, args.wait); err != nil {
+				if err := waitForDashboard(cmd.Context(), client.Kube(), dashboardNamespace, dashboardWaitDeploymentNames(files), args.wait); err != nil {
 					return err
 				}
 				if _, err := fmt.Fprintln(cmd.OutOrStdout(), "dashboard ready"); err != nil {
@@ -97,11 +97,17 @@ func DashboardCmd(ctx cli.Context) *cobra.Command {
 			}
 
 			_, err = fmt.Fprintf(cmd.OutOrStdout(), "prometheus: kubectl -n %s port-forward svc/prometheus 9090:9090\ngrafana: kubectl -n %s port-forward svc/grafana 3000:3000\n", dashboardNamespace, dashboardNamespace)
+			if err != nil {
+				return err
+			}
+			if dashboardHasTracing(files) {
+				_, err = fmt.Fprintf(cmd.OutOrStdout(), "tracing: kubectl -n %s port-forward svc/tracing 16686:16686\n", dashboardNamespace)
+			}
 			return err
 		},
 	}
 	command.Flags().StringVar(&args.manifests, "manifests", args.manifests, "Dashboard manifest file or samples/addons directory")
-	command.Flags().DurationVar(&args.wait, "wait", args.wait, "Maximum time to wait for Prometheus and Grafana deployments; 0 disables waiting")
+	command.Flags().DurationVar(&args.wait, "wait", args.wait, "Maximum time to wait for observability deployments; 0 disables waiting")
 	return command
 }
 
@@ -126,7 +132,29 @@ func dashboardManifestFiles(path string) ([]string, error) {
 	if _, err := os.Stat(grafana); err != nil {
 		return nil, fmt.Errorf("dashboard grafana manifest not found in %s", path)
 	}
-	return []string{prometheus, grafana}, nil
+	files := []string{prometheus, grafana}
+	tracing := filepath.Join(path, "tracing.yaml")
+	if _, err := os.Stat(tracing); err == nil {
+		files = append(files, tracing)
+	}
+	return files, nil
+}
+
+func dashboardHasTracing(files []string) bool {
+	for _, file := range files {
+		if filepath.Base(file) == "tracing.yaml" {
+			return true
+		}
+	}
+	return false
+}
+
+func dashboardWaitDeploymentNames(files []string) []string {
+	names := []string{"prometheus", "grafana"}
+	if dashboardHasTracing(files) {
+		names = append(names, "tracing")
+	}
+	return names
 }
 
 func applyManifestFile(ctx context.Context, client kube.CLIClient, file string) ([]appliedObject, error) {
@@ -226,8 +254,8 @@ func printAppliedDashboard(writer io.Writer, objects []appliedObject) error {
 	return nil
 }
 
-func waitForDashboard(ctx context.Context, client kubernetes.Interface, namespace string, timeout time.Duration) error {
-	for _, name := range []string{"prometheus", "grafana"} {
+func waitForDashboard(ctx context.Context, client kubernetes.Interface, namespace string, names []string, timeout time.Duration) error {
+	for _, name := range names {
 		if err := waitForAvailableDeployment(ctx, client, namespace, name, timeout); err != nil {
 			return err
 		}

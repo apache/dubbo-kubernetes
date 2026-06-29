@@ -238,7 +238,7 @@ func proxylessGRPCRuntimeConfigNeedsUpdate(req *discoverymodel.PushRequest) bool
 	}
 	for cfg := range req.ConfigsUpdated {
 		switch cfg.Kind {
-		case kind.HTTPRoute, kind.CircuitBreakerPolicy, kind.PeerAuthentication, kind.RequestAuthentication, kind.AuthorizationPolicy, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
+		case kind.HTTPRoute, kind.BackendTLSPolicy, kind.CircuitBreakerPolicy, kind.PeerAuthentication, kind.RequestAuthentication, kind.AuthorizationPolicy, kind.Service, kind.EndpointSlice, kind.Endpoints, kind.Pod, kind.Namespace:
 			return true
 		}
 	}

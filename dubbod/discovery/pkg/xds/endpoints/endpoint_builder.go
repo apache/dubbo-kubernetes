@@ -96,6 +96,9 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 	if svcPort == nil {
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
+	if externalName := b.service.Attributes.K8sAttributes.ExternalName; externalName != "" {
+		return buildDNSClusterLoadAssignment(b.clusterName, externalName, uint32(svcPort.Port))
+	}
 
 	shards, ok := endpointIndex.ShardsForService(string(b.hostname), b.service.Attributes.Namespace)
 	if !ok {
@@ -364,6 +367,33 @@ func buildEmptyClusterLoadAssignment(clusterName string) *endpoint.ClusterLoadAs
 	return &endpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
 		Endpoints:   []*endpoint.LocalityLbEndpoints{}, // Explicitly empty, not nil
+	}
+}
+
+func buildDNSClusterLoadAssignment(clusterName, address string, port uint32) *endpoint.ClusterLoadAssignment {
+	return &endpoint.ClusterLoadAssignment{
+		ClusterName: clusterName,
+		Endpoints: []*endpoint.LocalityLbEndpoints{
+			{
+				Locality: &core.Locality{},
+				LbEndpoints: []*endpoint.LbEndpoint{
+					{
+						HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+							Endpoint: &endpoint.Endpoint{
+								Address: util.BuildAddress(address, port),
+							},
+						},
+						HealthStatus: core.HealthStatus_HEALTHY,
+						LoadBalancingWeight: &wrapperspb.UInt32Value{
+							Value: 1,
+						},
+					},
+				},
+				LoadBalancingWeight: &wrapperspb.UInt32Value{
+					Value: 1,
+				},
+			},
+		},
 	}
 }
 

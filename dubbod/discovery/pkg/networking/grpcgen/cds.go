@@ -167,6 +167,12 @@ func (b *clusterBuilder) build() []*cluster.Cluster {
 	if newDefaultCluster != nil {
 		defaultCluster = newDefaultCluster
 	}
+	if b.node != nil && b.node.IsRouter() {
+		b.applyBackendTLSPolicy(defaultCluster)
+		for _, subsetCluster := range subsetClusters {
+			b.applyBackendTLSPolicy(subsetCluster)
+		}
+	}
 	out := make([]*cluster.Cluster, 0, 1+len(subsetClusters))
 	if defaultCluster != nil {
 		out = append(out, defaultCluster)
@@ -389,6 +395,28 @@ func (b *clusterBuilder) applyTLSForCluster(c *cluster.Cluster, subset *networki
 		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
 	}
 	log.Debugf("applied %v TLS transport socket to cluster %s (SNI=%s)", mode, c.Name, sni)
+}
+
+func (b *clusterBuilder) applyBackendTLSPolicy(c *cluster.Cluster) {
+	if c == nil || c.TransportSocket != nil || b.svc == nil || b.push == nil {
+		return
+	}
+	if b.svc.Resolution != model.Alias || b.svc.Attributes.K8sAttributes.ExternalName == "" {
+		return
+	}
+	settings, found := b.push.BackendTLSForService(b.svc.Attributes.Namespace, b.svc.Attributes.Name)
+	if !found || settings.SNI == "" {
+		return
+	}
+	tlsContext := &tlsv1.UpstreamTlsContext{
+		CommonTlsContext: &tlsv1.CommonTlsContext{},
+		Sni:              settings.SNI,
+	}
+	c.TransportSocket = &core.TransportSocket{
+		Name:       "transport_sockets.tls",
+		ConfigType: &core.TransportSocket_TypedConfig{TypedConfig: protoconv.MessageToAny(tlsContext)},
+	}
+	log.Debugf("applied BackendTLSPolicy simple TLS transport socket to cluster %s (SNI=%s)", c.Name, settings.SNI)
 }
 
 // buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to gRPC xDS expectations,

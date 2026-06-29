@@ -122,7 +122,7 @@ func TestBuildDxgateRuntimeConfigFromHTTPRoute(t *testing.T) {
 		},
 	}
 
-	raw, hash, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, nil, "cluster.local")
+	raw, hash, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, nil, nil, nil, "cluster.local")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestBuildDxgateRuntimeConfigAppliesCircuitBreakerPolicy(t *testing.T) {
 		},
 	}
 
-	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, policies, "cluster.local")
+	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, nil, nil, policies, "cluster.local")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +278,7 @@ func TestBuildDxgateRuntimeConfigFiltersUnattachedHTTPRoutes(t *testing.T) {
 		},
 	}
 
-	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, nil, "cluster.local")
+	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, nil, nil, nil, "cluster.local")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,6 +288,96 @@ func TestBuildDxgateRuntimeConfigFiltersUnattachedHTTPRoutes(t *testing.T) {
 	}
 	if len(cfg.Clusters) != 0 {
 		t.Fatalf("expected no clusters for unattached route, got %#v", cfg.Clusters)
+	}
+}
+
+func TestBuildDxgateRuntimeConfigExternalNameBackendTLS(t *testing.T) {
+	backendPort := gatewayv1.PortNumber(443)
+	hostname := gatewayv1.Hostname("httpbin-egress.app.svc.cluster.local")
+	wellKnown := gatewayv1.WellKnownCACertificatesSystem
+	gw := gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "egress", Namespace: "app", ResourceVersion: "10"},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "dubbo",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	route := &gatewayv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "httpbin", Namespace: "app", ResourceVersion: "20"},
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: "egress"}},
+			},
+			Hostnames: []gatewayv1.Hostname{hostname},
+			Rules: []gatewayv1.HTTPRouteRule{
+				{
+					BackendRefs: []gatewayv1.HTTPBackendRef{
+						{
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: "httpbin-egress",
+									Port: &backendPort,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "httpbin-egress", Namespace: "app"},
+		Spec: corev1.ServiceSpec{
+			Type:         corev1.ServiceTypeExternalName,
+			ExternalName: "httpbin.org",
+			Ports:        []corev1.ServicePort{{Name: "https", Port: 443}},
+		},
+	}
+	policy := &gatewayv1.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "httpbin-tls",
+			Namespace:         "app",
+			CreationTimestamp: metav1.NewTime(time.Unix(1, 0)),
+		},
+		Spec: gatewayv1.BackendTLSPolicySpec{
+			TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{
+				{
+					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
+						Group: gatewayv1.Group(""),
+						Kind:  gatewayv1.Kind("Service"),
+						Name:  gatewayv1.ObjectName("httpbin-egress"),
+					},
+				},
+			},
+			Validation: gatewayv1.BackendTLSPolicyValidation{
+				WellKnownCACertificates: &wellKnown,
+				Hostname:                gatewayv1.PreciseHostname("httpbin.org"),
+			},
+		},
+	}
+
+	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, []*corev1.Service{service}, []*gatewayv1.BackendTLSPolicy{policy}, nil, "cluster.local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg dxgateRuntimeConfig
+	if err := yaml.Unmarshal([]byte(raw), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Clusters) != 1 {
+		t.Fatalf("clusters = %d, want 1", len(cfg.Clusters))
+	}
+	cluster := cfg.Clusters[0]
+	if got := cluster.Endpoints[0].Address; got != "httpbin.org" {
+		t.Fatalf("endpoint address = %q, want external DNS name", got)
+	}
+	if cluster.TLS == nil {
+		t.Fatal("cluster tls is nil")
+	}
+	if cluster.TLS.Mode != "simple" || cluster.TLS.SNI != "httpbin.org" {
+		t.Fatalf("unexpected tls config: %#v", cluster.TLS)
 	}
 }
 
@@ -441,7 +531,7 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 			return inject.Config{Templates: templates}
 		},
 	}
-	rendered, err := controller.render("gateway", TemplateInput{
+	input := TemplateInput{
 		Gateway: &gatewayv1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app"},
 		},
@@ -456,7 +546,8 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 		SystemNamespace:     "dubbo-system",
 		ClusterID:           "Kubernetes",
 		DomainSuffix:        "cluster.local",
-	})
+	}
+	rendered, err := controller.render("gateway", input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -487,6 +578,14 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[2], "inject.dubbo.apache.org/templates: grpc-engine") {
 		t.Fatalf("deployment pod template did not request grpc-engine injection:\n%s", rendered[2])
 	}
+	if !strings.Contains(rendered[2], `prometheus.io/scrape: "true"`) ||
+		!strings.Contains(rendered[2], "prometheus.io/path: /metrics") ||
+		!strings.Contains(rendered[2], `prometheus.io/port: "26021"`) {
+		t.Fatalf("deployment pod template did not render prometheus scrape annotations:\n%s", rendered[2])
+	}
+	if strings.Contains(rendered[2], "DXGATE_OTEL_ENDPOINT") {
+		t.Fatalf("deployment rendered OTEL endpoint without annotation:\n%s", rendered[2])
+	}
 	if !strings.Contains(rendered[2], "app.kubernetes.io/instance: public-dubbo") {
 		t.Fatalf("deployment did not render stable dxgate instance label:\n%s", rendered[2])
 	}
@@ -498,5 +597,15 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	}
 	if !strings.Contains(rendered[3], "app.kubernetes.io/instance: public-dubbo") {
 		t.Fatalf("service did not render stable dxgate instance selector:\n%s", rendered[3])
+	}
+
+	input.OtelEndpoint = "http://tracing.dubbo-system.svc:4317"
+	rendered, err = controller.render("gateway", input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered[2], "DXGATE_OTEL_ENDPOINT") ||
+		!strings.Contains(rendered[2], `value: "http://tracing.dubbo-system.svc:4317"`) {
+		t.Fatalf("deployment did not render dxgate OTEL endpoint:\n%s", rendered[2])
 	}
 }

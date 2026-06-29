@@ -68,6 +68,9 @@ spec:
         dubbo.apache.org/rev: {{ .Revision | quote }}
         gateway.dubbo.apache.org/bootstrap-hash: {{ .BootstrapConfigHash | quote }}
         inject.dubbo.apache.org/templates: grpc-engine
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "26021"
     spec:
       serviceAccountName: {{ .ServiceAccount }}
       containers:
@@ -81,6 +84,10 @@ spec:
           value: 0.0.0.0:8080
         - name: DXGATE_ADMIN_ADDR
           value: 0.0.0.0:26021
+{{- if .OtelEndpoint }}
+        - name: DXGATE_OTEL_ENDPOINT
+          value: {{ .OtelEndpoint | quote }}
+{{- end }}
         - name: POD_NAME
           valueFrom:
             fieldRef:

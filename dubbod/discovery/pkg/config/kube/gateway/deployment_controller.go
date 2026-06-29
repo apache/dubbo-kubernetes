@@ -79,6 +79,7 @@ const (
 	serviceTargetPortAnnotation = "gateway.dubbo.apache.org/target-port"
 	serviceNodePortAnnotation   = "gateway.dubbo.apache.org/node-port"
 	xdsAddressAnnotation        = "gateway.dubbo.apache.org/xds-address"
+	otelEndpointAnnotation      = "gateway.dubbo.apache.org/otel-endpoint"
 )
 
 var builtinClasses = getBuiltinClasses()
@@ -124,6 +125,7 @@ type DeploymentController struct {
 	configMaps      kclient.Client[*corev1.ConfigMap]
 	httpRoutes      kclient.Client[*gateway.HTTPRoute]
 	circuitBreakers kclient.Client[*clientnetworking.CircuitBreakerPolicy]
+	backendTLS      kclient.Client[*gateway.BackendTLSPolicy]
 	namespaces      kclient.Client[*corev1.Namespace]
 	tagWatcher      TagWatcher
 	revision        string
@@ -207,6 +209,11 @@ func NewDeploymentController(
 
 	dc.services = kclient.NewFiltered[*corev1.Service](client, filter)
 	dc.services.AddEventHandler(parentHandler)
+	dc.services.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
+		for _, gw := range dc.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
+			dc.queue.AddObject(gw)
+		}
+	}))
 	dc.clients[gvr.Service] = NewUntypedWrapper(dc.services)
 
 	dc.deployments = kclient.NewFiltered[*appsv1.Deployment](client, filter)
@@ -230,6 +237,13 @@ func NewDeploymentController(
 
 	dc.circuitBreakers = kclient.NewFiltered[*clientnetworking.CircuitBreakerPolicy](client, filter)
 	dc.circuitBreakers.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
+		for _, gw := range dc.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
+			dc.queue.AddObject(gw)
+		}
+	}))
+
+	dc.backendTLS = kclient.NewFiltered[*gateway.BackendTLSPolicy](client, filter)
+	dc.backendTLS.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
 		for _, gw := range dc.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
 			dc.queue.AddObject(gw)
 		}
@@ -285,6 +299,7 @@ func (d *DeploymentController) Run(stop <-chan struct{}) {
 		d.configMaps.HasSynced,
 		d.httpRoutes.HasSynced,
 		d.circuitBreakers.HasSynced,
+		d.backendTLS.HasSynced,
 		d.gateways.HasSynced,
 		d.gatewayClasses.HasSynced,
 	)
@@ -301,6 +316,7 @@ func (d *DeploymentController) Run(stop <-chan struct{}) {
 		d.configMaps,
 		d.httpRoutes,
 		d.circuitBreakers,
+		d.backendTLS,
 		d.gateways,
 		d.gatewayClasses,
 	)
@@ -386,6 +402,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		SystemNamespace:     d.systemNamespace,
 		ClusterID:           string(d.clusterID),
 		DomainSuffix:        d.domainSuffix(),
+		OtelEndpoint:        strings.TrimSpace(gw.Annotations[otelEndpointAnnotation]),
 	}
 
 	log.Infof("desired dxgate deployment=%s/%s gatewayClass=%s serviceType=%s ports=%s image=%s",
@@ -438,6 +455,7 @@ type TemplateInput struct {
 	SystemNamespace     string
 	ClusterID           string
 	DomainSuffix        string
+	OtelEndpoint        string
 }
 
 type dxgateBootstrapConfig struct {
@@ -497,8 +515,14 @@ type dxgateWeightedCluster struct {
 type dxgateCluster struct {
 	Name           string                  `json:"name" yaml:"name"`
 	Endpoints      []dxgateEndpoint        `json:"endpoints" yaml:"endpoints"`
+	TLS            *dxgateUpstreamTLS      `json:"tls,omitempty" yaml:"tls,omitempty"`
 	CircuitBreaker *dxgateCircuitBreaker   `json:"circuit_breaker,omitempty" yaml:"circuit_breaker,omitempty"`
 	Outlier        *dxgateOutlierDetection `json:"outlier_detection,omitempty" yaml:"outlier_detection,omitempty"`
+}
+
+type dxgateUpstreamTLS struct {
+	Mode string `json:"mode" yaml:"mode"`
+	SNI  string `json:"sni,omitempty" yaml:"sni,omitempty"`
 }
 
 type dxgateCircuitBreaker struct {
@@ -601,7 +625,9 @@ func formatGatewayServicePorts(ports []corev1.ServicePort) string {
 
 func (d *DeploymentController) buildDxgateRuntimeConfig(gw gateway.Gateway) (string, string, error) {
 	routes := d.httpRoutes.List(metav1.NamespaceAll, klabels.Everything())
-	return buildDxgateRuntimeConfig(gw, routes, d.circuitBreakerPolicyConfigs(), d.domainSuffix())
+	services := d.services.List(metav1.NamespaceAll, klabels.Everything())
+	backendTLS := d.backendTLSPolicies()
+	return buildDxgateRuntimeConfig(gw, routes, services, backendTLS, d.circuitBreakerPolicyConfigs(), d.domainSuffix())
 }
 
 func (d *DeploymentController) circuitBreakerPolicyConfigs() []config.Config {
@@ -634,11 +660,20 @@ func (d *DeploymentController) circuitBreakerPolicyConfigs() []config.Config {
 	return nil
 }
 
-func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, policies []config.Config, domainSuffix string) (string, string, error) {
+func (d *DeploymentController) backendTLSPolicies() []*gateway.BackendTLSPolicy {
+	if d.backendTLS != nil {
+		return d.backendTLS.List(metav1.NamespaceAll, klabels.Everything())
+	}
+	return nil
+}
+
+func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, services []*corev1.Service, backendTLSPolicies []*gateway.BackendTLSPolicy, policies []config.Config, domainSuffix string) (string, string, error) {
 	if domainSuffix == "" {
 		domainSuffix = constants.DefaultClusterLocalDomain
 	}
 	circuitBreakers := circuitBreakerPoliciesByTarget(policies)
+	backendTLS := backendTLSPoliciesByTarget(backendTLSPolicies)
+	servicesByKey := servicesByNamespacedName(services)
 
 	sort.Slice(routes, func(i, j int) bool {
 		if routes[i].Namespace != routes[j].Namespace {
@@ -666,7 +701,7 @@ func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, p
 		if !httpRouteReferencesGateway(hr, &gw) {
 			continue
 		}
-		vh, clusters := buildDxgateVirtualHost(gw, hr, circuitBreakers, domainSuffix)
+		vh, clusters := buildDxgateVirtualHost(gw, hr, servicesByKey, backendTLS, circuitBreakers, domainSuffix)
 		if len(vh.Routes) == 0 {
 			continue
 		}
@@ -700,7 +735,7 @@ func dxgateRuntimeVersion(gw gateway.Gateway, routes []*gateway.HTTPRoute) strin
 	return strings.Join(parts, ";")
 }
 
-func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, circuitBreakers map[string]dxgateBackendCircuitBreaker, domainSuffix string) (dxgateVirtualHost, []dxgateCluster) {
+func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, services map[string]*corev1.Service, backendTLS map[string]*dxgateUpstreamTLS, circuitBreakers map[string]dxgateBackendCircuitBreaker, domainSuffix string) (dxgateVirtualHost, []dxgateCluster) {
 	vh := dxgateVirtualHost{
 		Name:    fmt.Sprintf("%s-%s", hr.Namespace, hr.Name),
 		Domains: dxgateRouteDomains(gw, hr),
@@ -733,7 +768,9 @@ func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, circuitBr
 				}
 				port := uint16(*backendRef.Port)
 				clusterName := fmt.Sprintf("%s-%s-%d-%d", hr.Namespace, hr.Name, ruleIdx, backendIdx)
-				policy := circuitBreakers[namespacedServiceKey(backendNamespace, string(backendRef.Name))]
+				backendKey := namespacedServiceKey(backendNamespace, string(backendRef.Name))
+				policy := circuitBreakers[backendKey]
+				upstreamTLS := backendTLS[backendKey]
 
 				route.WeightedClusters = append(route.WeightedClusters, dxgateWeightedCluster{
 					Name:   clusterName,
@@ -741,11 +778,12 @@ func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, circuitBr
 				})
 				clusters = append(clusters, dxgateCluster{
 					Name:           clusterName,
+					TLS:            upstreamTLS,
 					CircuitBreaker: policy.CircuitBreaker,
 					Outlier:        policy.Outlier,
 					Endpoints: []dxgateEndpoint{
 						{
-							Address: fmt.Sprintf("%s.%s.svc.%s", backendRef.Name, backendNamespace, domainSuffix),
+							Address: dxgateBackendAddress(backendNamespace, string(backendRef.Name), domainSuffix, services),
 							Port:    port,
 							Healthy: true,
 						},
@@ -758,6 +796,73 @@ func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, circuitBr
 		}
 	}
 	return vh, clusters
+}
+
+func servicesByNamespacedName(services []*corev1.Service) map[string]*corev1.Service {
+	out := map[string]*corev1.Service{}
+	for _, svc := range services {
+		if svc == nil {
+			continue
+		}
+		out[namespacedServiceKey(svc.Namespace, svc.Name)] = svc
+	}
+	return out
+}
+
+func dxgateBackendAddress(namespace, name, domainSuffix string, services map[string]*corev1.Service) string {
+	if svc := services[namespacedServiceKey(namespace, name)]; svc != nil && svc.Spec.Type == corev1.ServiceTypeExternalName && svc.Spec.ExternalName != "" {
+		return svc.Spec.ExternalName
+	}
+	return fmt.Sprintf("%s.%s.svc.%s", name, namespace, domainSuffix)
+}
+
+func backendTLSPoliciesByTarget(policies []*gateway.BackendTLSPolicy) map[string]*dxgateUpstreamTLS {
+	out := map[string]*dxgateUpstreamTLS{}
+	sort.Slice(policies, func(i, j int) bool {
+		if !policies[i].CreationTimestamp.Time.Equal(policies[j].CreationTimestamp.Time) {
+			return policies[i].CreationTimestamp.Time.Before(policies[j].CreationTimestamp.Time)
+		}
+		if policies[i].Namespace != policies[j].Namespace {
+			return policies[i].Namespace < policies[j].Namespace
+		}
+		return policies[i].Name < policies[j].Name
+	})
+	for _, policy := range policies {
+		if policy == nil || !supportsSystemBackendTLS(policy) {
+			continue
+		}
+		upstreamTLS := &dxgateUpstreamTLS{
+			Mode: "simple",
+			SNI:  string(policy.Spec.Validation.Hostname),
+		}
+		for _, target := range policy.Spec.TargetRefs {
+			if !isBackendTLSPolicyServiceTarget(target) {
+				continue
+			}
+			key := namespacedServiceKey(policy.Namespace, string(target.Name))
+			if _, found := out[key]; !found {
+				out[key] = upstreamTLS
+			}
+		}
+	}
+	return out
+}
+
+func supportsSystemBackendTLS(policy *gateway.BackendTLSPolicy) bool {
+	if policy.Spec.Validation.Hostname == "" {
+		return false
+	}
+	wellKnown := policy.Spec.Validation.WellKnownCACertificates
+	return wellKnown != nil && *wellKnown == gateway.WellKnownCACertificatesSystem
+}
+
+func isBackendTLSPolicyServiceTarget(target gateway.LocalPolicyTargetReferenceWithSectionName) bool {
+	if target.SectionName != nil {
+		return false
+	}
+	group := strings.TrimSpace(string(target.Group))
+	kind := strings.TrimSpace(string(target.Kind))
+	return (group == "" || group == "core") && strings.EqualFold(kind, "Service")
 }
 
 type dxgateBackendCircuitBreaker struct {

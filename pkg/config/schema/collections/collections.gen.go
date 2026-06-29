@@ -42,6 +42,24 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	BackendTLSPolicy = resource.Builder{
+		Identifier: "BackendTLSPolicy",
+		Group:      "gateway.networking.k8s.io",
+		Kind:       "BackendTLSPolicy",
+		Plural:     "backendtlspolicies",
+		Version:    "v1",
+		VersionAliases: []string{
+			"v1",
+		},
+		Proto: "k8s.io.gateway_api.api.v1alpha1.BackendTLSPolicySpec", StatusProto: "k8s.io.gateway_api.api.v1alpha1.PolicyStatus",
+		ReflectType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.BackendTLSPolicySpec{}).Elem(), StatusType: reflect.TypeOf(&sigsk8siogatewayapiapisv1.PolicyStatus{}).Elem(),
+		ProtoPackage: "sigs.k8s.io/gateway-api/apis/v1", StatusPackage: "sigs.k8s.io/gateway-api/apis/v1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+
 	CircuitBreakerPolicy = resource.Builder{
 		Identifier: "CircuitBreakerPolicy",
 		Group:      "networking.dubbo.apache.org",
@@ -429,6 +447,7 @@ var (
 	// All contains all collections in the system.
 	All = collection.NewSchemasBuilder().
 		MustAdd(AuthorizationPolicy).
+		MustAdd(BackendTLSPolicy).
 		MustAdd(CircuitBreakerPolicy).
 		MustAdd(ConfigMap).
 		MustAdd(CustomResourceDefinition).
@@ -458,6 +477,7 @@ var (
 
 	// Kube contains only kubernetes collections.
 	Kube = collection.NewSchemasBuilder().
+		MustAdd(BackendTLSPolicy).
 		MustAdd(ConfigMap).
 		MustAdd(CustomResourceDefinition).
 		MustAdd(DaemonSet).
@@ -492,6 +512,7 @@ var (
 	// dubboGatewayAPI contains only collections used by Dubbo, including the full Gateway API.
 	dubboGatewayAPI = collection.NewSchemasBuilder().
 			MustAdd(AuthorizationPolicy).
+			MustAdd(BackendTLSPolicy).
 			MustAdd(CircuitBreakerPolicy).
 			MustAdd(GatewayClass).
 			MustAdd(HTTPRoute).
@@ -503,6 +524,7 @@ var (
 	// dubboStableGatewayAPI contains only collections used by Dubbo, including beta+ Gateway API.
 	dubboStableGatewayAPI = collection.NewSchemasBuilder().
 				MustAdd(AuthorizationPolicy).
+				MustAdd(BackendTLSPolicy).
 				MustAdd(CircuitBreakerPolicy).
 				MustAdd(GatewayClass).
 				MustAdd(HTTPRoute).

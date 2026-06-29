@@ -27,6 +27,8 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.AuthorizationPolicy, true
 	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
 		return gvk.AuthorizationPolicy, true
+	case *sigsk8siogatewayapiapisv1.BackendTLSPolicy:
+		return gvk.BackendTLSPolicy, true
 	case *githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy:
 		return gvk.CircuitBreakerPolicy, true
 	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy:
