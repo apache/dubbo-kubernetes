@@ -40,6 +40,7 @@ func TestIPTablesRuleManagerAddsGRPCInboundBoundaryRules(t *testing.T) {
 		"-I FORWARD 1 -j DUBBO-GRPC-INBOUND",
 		"-I OUTPUT 1 -j DUBBO-GRPC-INBOUND",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 15080 -j RETURN",
+		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp --dport 26021 -j RETURN",
 		"-A DUBBO-GRPC-INBOUND -m set --match-set DUBBO-GRPC-INBOUND-PODS dst -p tcp -j REJECT",
 		"ipset add DUBBO-GRPC-INBOUND-PODS 10.244.0.12 -exist",
 	} {

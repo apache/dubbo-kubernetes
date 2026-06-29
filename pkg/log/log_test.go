@@ -123,8 +123,8 @@ func TestLogMessagesMetricRecordsLevelAndScope(t *testing.T) {
 				labels[label.GetName()] = label.GetValue()
 			}
 			if labels["level"] == "warn" && labels["scope"] == "log-metric-test" {
-				if metric.GetGauge().GetValue() < 1 {
-					t.Fatalf("dubbod_log_messages_total = %v, want >= 1", metric.GetGauge().GetValue())
+				if metric.GetCounter().GetValue() < 1 {
+					t.Fatalf("dubbod_log_messages_total = %v, want >= 1", metric.GetCounter().GetValue())
 				}
 				return
 			}
