@@ -11,6 +11,7 @@ import (
 
 var (
 	AuthorizationPolicy            = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "AuthorizationPolicy"}
+	CircuitBreakerPolicy           = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "CircuitBreakerPolicy"}
 	ConfigMap                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
 	CustomResourceDefinition       = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
 	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
@@ -45,6 +46,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 	switch g {
 	case AuthorizationPolicy:
 		return gvr.AuthorizationPolicy, true
+	case CircuitBreakerPolicy:
+		return gvr.CircuitBreakerPolicy, true
 	case ConfigMap:
 		return gvr.ConfigMap, true
 	case CustomResourceDefinition:
@@ -108,6 +111,8 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 	switch g {
 	case AuthorizationPolicy:
 		return kind.AuthorizationPolicy
+	case CircuitBreakerPolicy:
+		return kind.CircuitBreakerPolicy
 	case ConfigMap:
 		return kind.ConfigMap
 	case CustomResourceDefinition:
@@ -176,6 +181,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 	switch g {
 	case gvr.AuthorizationPolicy:
 		return AuthorizationPolicy, true
+	case gvr.CircuitBreakerPolicy:
+		return CircuitBreakerPolicy, true
 	case gvr.ConfigMap:
 		return ConfigMap, true
 	case gvr.CustomResourceDefinition:

@@ -22,9 +22,15 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/google/go-cmp/cmp"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -116,7 +122,7 @@ func TestBuildDxgateRuntimeConfigFromHTTPRoute(t *testing.T) {
 		},
 	}
 
-	raw, hash, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, "cluster.local")
+	raw, hash, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, nil, "cluster.local")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,6 +159,94 @@ func TestBuildDxgateRuntimeConfigFromHTTPRoute(t *testing.T) {
 	}
 }
 
+func TestBuildDxgateRuntimeConfigAppliesCircuitBreakerPolicy(t *testing.T) {
+	backendPort := gatewayv1.PortNumber(9080)
+	gw := gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app", ResourceVersion: "10"},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "dubbo",
+			Listeners: []gatewayv1.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+			},
+		},
+	}
+	route := &gatewayv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{Name: "reviews", Namespace: "app", ResourceVersion: "20"},
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: "public"}},
+			},
+			Rules: []gatewayv1.HTTPRouteRule{
+				{
+					BackendRefs: []gatewayv1.HTTPBackendRef{
+						{
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Name: "reviews",
+									Port: &backendPort,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	policies := []config.Config{
+		{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.CircuitBreakerPolicy,
+				Name:              "reviews-circuit-breaker",
+				Namespace:         "app",
+				CreationTimestamp: time.Unix(1, 0),
+			},
+			Spec: &networking.CircuitBreakerPolicy{
+				TargetRefs: []*networking.PolicyTargetReference{
+					{Kind: "Service", Name: "reviews"},
+				},
+				ConnectionPool: &networking.ConnectionPoolSettings{
+					MaxConnections:          1,
+					Http1MaxPendingRequests: 1,
+					Http2MaxRequests:        2,
+					MaxRetries:              3,
+				},
+				OutlierDetection: &networking.OutlierDetection{
+					Consecutive_5XxErrors: wrapperspb.UInt32(1),
+					Interval:              durationpb.New(time.Second),
+					BaseEjectionTime:      durationpb.New(30 * time.Second),
+					MaxEjectionPercent:    100,
+				},
+			},
+		},
+	}
+
+	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, policies, "cluster.local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg dxgateRuntimeConfig
+	if err := yaml.Unmarshal([]byte(raw), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Clusters) != 1 {
+		t.Fatalf("clusters = %d, want 1", len(cfg.Clusters))
+	}
+	cb := cfg.Clusters[0].CircuitBreaker
+	if cb == nil {
+		t.Fatal("cluster circuit_breaker is nil")
+	}
+	if cb.MaxConnections != 1 || cb.HTTP1MaxPendingRequests != 1 || cb.HTTP2MaxRequests != 2 || cb.MaxRetries != 3 {
+		t.Fatalf("unexpected circuit breaker: %#v", cb)
+	}
+	outlier := cfg.Clusters[0].Outlier
+	if outlier == nil {
+		t.Fatal("cluster outlier_detection is nil")
+	}
+	if outlier.Consecutive5xxErrors != 1 || outlier.Interval != "1s" || outlier.BaseEjectionTime != "30s" || outlier.MaxEjectionPercent != 100 {
+		t.Fatalf("unexpected outlier detection: %#v", outlier)
+	}
+}
+
 func TestBuildDxgateRuntimeConfigFiltersUnattachedHTTPRoutes(t *testing.T) {
 	backendPort := gatewayv1.PortNumber(8080)
 	gw := gatewayv1.Gateway{
@@ -184,7 +278,7 @@ func TestBuildDxgateRuntimeConfigFiltersUnattachedHTTPRoutes(t *testing.T) {
 		},
 	}
 
-	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, "cluster.local")
+	raw, _, err := buildDxgateRuntimeConfig(gw, []*gatewayv1.HTTPRoute{route}, nil, "cluster.local")
 	if err != nil {
 		t.Fatal(err)
 	}

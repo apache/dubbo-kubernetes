@@ -7,6 +7,157 @@ metadata:
   labels:
     app: dubbo
     chart: dubbo
+    dubbo: networking
+    heritage: Tiller
+    release: dubbo
+  name: circuitbreakerpolicies.networking.dubbo.apache.org
+spec:
+  group: networking.dubbo.apache.org
+  names:
+    categories:
+    - dubbo
+    - networking
+    kind: CircuitBreakerPolicy
+    listKind: CircuitBreakerPolicyList
+    plural: circuitbreakerpolicies
+    shortNames:
+    - cbp
+    singular: circuitbreakerpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Gateway API targets.
+      jsonPath: .spec.targetRefs[*].name
+      name: Targets
+      type: string
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created.
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            description: 'Gateway API policy attachment for backend circuit breaking.
+              See more details at: '
+            properties:
+              connectionPool:
+                description: Connection pool limits.
+                properties:
+                  http1MaxPendingRequests:
+                    description: Maximum queued requests waiting for an upstream connection.
+                    format: int32
+                    type: integer
+                  http2MaxRequests:
+                    description: Maximum concurrent requests for HTTP/2 or gRPC upstreams.
+                    format: int32
+                    type: integer
+                  maxConnections:
+                    description: Maximum concurrent upstream connections.
+                    format: int32
+                    type: integer
+                  maxRequestsPerConnection:
+                    description: Maximum requests before a connection is drained.
+                    format: int32
+                    type: integer
+                  maxRetries:
+                    description: Maximum retries allowed to the backend.
+                    format: int32
+                    type: integer
+                type: object
+              outlierDetection:
+                description: Outlier detection controls passive ejection of failing
+                  endpoints.
+                properties:
+                  baseEjectionTime:
+                    description: Minimum ejection time for an unhealthy endpoint.
+                    type: string
+                    x-kubernetes-validations:
+                    - message: must be a valid duration greater than 1ms
+                      rule: duration(self) >= duration('1ms')
+                  consecutive5xxErrors:
+                    description: Number of consecutive 5xx responses before an endpoint
+                      is considered an outlier.
+                    maximum: 4294967295
+                    minimum: 0
+                    nullable: true
+                    type: integer
+                  interval:
+                    description: Time between outlier detection sweeps.
+                    type: string
+                    x-kubernetes-validations:
+                    - message: must be a valid duration greater than 1ms
+                      rule: duration(self) >= duration('1ms')
+                  maxEjectionPercent:
+                    description: Maximum percentage of endpoints that can be ejected.
+                    format: int32
+                    type: integer
+                  minHealthPercent:
+                    description: Minimum healthy percentage before outlier detection
+                      is disabled.
+                    format: int32
+                    type: integer
+                type: object
+              targetRefs:
+                description: Gateway API policy targets.
+                items:
+                  properties:
+                    group:
+                      description: API group of the target.
+                      type: string
+                    kind:
+                      description: Kind of the target.
+                      type: string
+                    name:
+                      description: Name of the target object.
+                      type: string
+                    sectionName:
+                      description: Optional section name for future per-port attachment.
+                      type: string
+                  required:
+                  - kind
+                  - name
+                  type: object
+                type: array
+            required:
+            - targetRefs
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  type: object
+                type: array
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    "helm.sh/resource-policy": keep
+  labels:
+    app: dubbo
+    chart: dubbo
     dubbo: security
     heritage: Tiller
     release: dubbo
