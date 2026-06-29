@@ -6,6 +6,7 @@ const (
 	Unknown Kind = iota
 	Address
 	AuthorizationPolicy
+	CircuitBreakerPolicy
 	ConfigMap
 	CustomResourceDefinition
 	DNSName
@@ -39,6 +40,8 @@ func (k Kind) String() string {
 		return "Address"
 	case AuthorizationPolicy:
 		return "AuthorizationPolicy"
+	case CircuitBreakerPolicy:
+		return "CircuitBreakerPolicy"
 	case ConfigMap:
 		return "ConfigMap"
 	case CustomResourceDefinition:
@@ -100,6 +103,8 @@ func FromString(s string) Kind {
 		return Address
 	case "AuthorizationPolicy":
 		return AuthorizationPolicy
+	case "CircuitBreakerPolicy":
+		return CircuitBreakerPolicy
 	case "ConfigMap":
 		return ConfigMap
 	case "CustomResourceDefinition":

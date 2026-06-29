@@ -42,13 +42,19 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/cluster"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/kclient"
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
+	clientnetworking "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var logger = dubbolog.RegisterScope("gateway-deployment-controller", "gateway deployment controller debugging")
@@ -117,6 +123,7 @@ type DeploymentController struct {
 	serviceAccounts kclient.Client[*corev1.ServiceAccount]
 	configMaps      kclient.Client[*corev1.ConfigMap]
 	httpRoutes      kclient.Client[*gateway.HTTPRoute]
+	circuitBreakers kclient.Client[*clientnetworking.CircuitBreakerPolicy]
 	namespaces      kclient.Client[*corev1.Namespace]
 	tagWatcher      TagWatcher
 	revision        string
@@ -221,6 +228,13 @@ func NewDeploymentController(
 		}
 	}))
 
+	dc.circuitBreakers = kclient.NewFiltered[*clientnetworking.CircuitBreakerPolicy](client, filter)
+	dc.circuitBreakers.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
+		for _, gw := range dc.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
+			dc.queue.AddObject(gw)
+		}
+	}))
+
 	// Namespace is a cluster-scoped resource, use New instead of NewFiltered
 	dc.namespaces = kclient.New[*corev1.Namespace](client)
 	dc.namespaces.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
@@ -270,6 +284,7 @@ func (d *DeploymentController) Run(stop <-chan struct{}) {
 		d.serviceAccounts.HasSynced,
 		d.configMaps.HasSynced,
 		d.httpRoutes.HasSynced,
+		d.circuitBreakers.HasSynced,
 		d.gateways.HasSynced,
 		d.gatewayClasses.HasSynced,
 	)
@@ -285,6 +300,7 @@ func (d *DeploymentController) Run(stop <-chan struct{}) {
 		d.serviceAccounts,
 		d.configMaps,
 		d.httpRoutes,
+		d.circuitBreakers,
 		d.gateways,
 		d.gatewayClasses,
 	)
@@ -479,8 +495,26 @@ type dxgateWeightedCluster struct {
 }
 
 type dxgateCluster struct {
-	Name      string           `json:"name" yaml:"name"`
-	Endpoints []dxgateEndpoint `json:"endpoints" yaml:"endpoints"`
+	Name           string                  `json:"name" yaml:"name"`
+	Endpoints      []dxgateEndpoint        `json:"endpoints" yaml:"endpoints"`
+	CircuitBreaker *dxgateCircuitBreaker   `json:"circuit_breaker,omitempty" yaml:"circuit_breaker,omitempty"`
+	Outlier        *dxgateOutlierDetection `json:"outlier_detection,omitempty" yaml:"outlier_detection,omitempty"`
+}
+
+type dxgateCircuitBreaker struct {
+	MaxConnections           int32 `json:"max_connections,omitempty" yaml:"max_connections,omitempty"`
+	HTTP1MaxPendingRequests  int32 `json:"http1_max_pending_requests,omitempty" yaml:"http1_max_pending_requests,omitempty"`
+	HTTP2MaxRequests         int32 `json:"http2_max_requests,omitempty" yaml:"http2_max_requests,omitempty"`
+	MaxRequestsPerConnection int32 `json:"max_requests_per_connection,omitempty" yaml:"max_requests_per_connection,omitempty"`
+	MaxRetries               int32 `json:"max_retries,omitempty" yaml:"max_retries,omitempty"`
+}
+
+type dxgateOutlierDetection struct {
+	Consecutive5xxErrors uint32 `json:"consecutive_5xx_errors,omitempty" yaml:"consecutive_5xx_errors,omitempty"`
+	Interval             string `json:"interval,omitempty" yaml:"interval,omitempty"`
+	BaseEjectionTime     string `json:"base_ejection_time,omitempty" yaml:"base_ejection_time,omitempty"`
+	MaxEjectionPercent   int32  `json:"max_ejection_percent,omitempty" yaml:"max_ejection_percent,omitempty"`
+	MinHealthPercent     int32  `json:"min_health_percent,omitempty" yaml:"min_health_percent,omitempty"`
 }
 
 type dxgateEndpoint struct {
@@ -567,13 +601,44 @@ func formatGatewayServicePorts(ports []corev1.ServicePort) string {
 
 func (d *DeploymentController) buildDxgateRuntimeConfig(gw gateway.Gateway) (string, string, error) {
 	routes := d.httpRoutes.List(metav1.NamespaceAll, klabels.Everything())
-	return buildDxgateRuntimeConfig(gw, routes, d.domainSuffix())
+	return buildDxgateRuntimeConfig(gw, routes, d.circuitBreakerPolicyConfigs(), d.domainSuffix())
 }
 
-func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, domainSuffix string) (string, string, error) {
+func (d *DeploymentController) circuitBreakerPolicyConfigs() []config.Config {
+	if d.circuitBreakers != nil {
+		policies := d.circuitBreakers.List(metav1.NamespaceAll, klabels.Everything())
+		out := make([]config.Config, 0, len(policies))
+		for _, policy := range policies {
+			out = append(out, config.Config{
+				Meta: config.Meta{
+					GroupVersionKind:  gvk.CircuitBreakerPolicy,
+					Name:              policy.Name,
+					Namespace:         policy.Namespace,
+					Labels:            policy.Labels,
+					Annotations:       policy.Annotations,
+					ResourceVersion:   policy.ResourceVersion,
+					CreationTimestamp: policy.CreationTimestamp.Time,
+					OwnerReferences:   policy.OwnerReferences,
+					UID:               string(policy.UID),
+					Generation:        policy.Generation,
+				},
+				Spec:   policy.Spec.DeepCopy(),
+				Status: policy.Status.DeepCopy(),
+			})
+		}
+		return out
+	}
+	if d.env != nil {
+		return d.env.List(gvk.CircuitBreakerPolicy, model.NamespaceAll)
+	}
+	return nil
+}
+
+func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, policies []config.Config, domainSuffix string) (string, string, error) {
 	if domainSuffix == "" {
 		domainSuffix = constants.DefaultClusterLocalDomain
 	}
+	circuitBreakers := circuitBreakerPoliciesByTarget(policies)
 
 	sort.Slice(routes, func(i, j int) bool {
 		if routes[i].Namespace != routes[j].Namespace {
@@ -601,7 +666,7 @@ func buildDxgateRuntimeConfig(gw gateway.Gateway, routes []*gateway.HTTPRoute, d
 		if !httpRouteReferencesGateway(hr, &gw) {
 			continue
 		}
-		vh, clusters := buildDxgateVirtualHost(gw, hr, domainSuffix)
+		vh, clusters := buildDxgateVirtualHost(gw, hr, circuitBreakers, domainSuffix)
 		if len(vh.Routes) == 0 {
 			continue
 		}
@@ -635,7 +700,7 @@ func dxgateRuntimeVersion(gw gateway.Gateway, routes []*gateway.HTTPRoute) strin
 	return strings.Join(parts, ";")
 }
 
-func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, domainSuffix string) (dxgateVirtualHost, []dxgateCluster) {
+func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, circuitBreakers map[string]dxgateBackendCircuitBreaker, domainSuffix string) (dxgateVirtualHost, []dxgateCluster) {
 	vh := dxgateVirtualHost{
 		Name:    fmt.Sprintf("%s-%s", hr.Namespace, hr.Name),
 		Domains: dxgateRouteDomains(gw, hr),
@@ -668,13 +733,16 @@ func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, domainSuf
 				}
 				port := uint16(*backendRef.Port)
 				clusterName := fmt.Sprintf("%s-%s-%d-%d", hr.Namespace, hr.Name, ruleIdx, backendIdx)
+				policy := circuitBreakers[namespacedServiceKey(backendNamespace, string(backendRef.Name))]
 
 				route.WeightedClusters = append(route.WeightedClusters, dxgateWeightedCluster{
 					Name:   clusterName,
 					Weight: weight,
 				})
 				clusters = append(clusters, dxgateCluster{
-					Name: clusterName,
+					Name:           clusterName,
+					CircuitBreaker: policy.CircuitBreaker,
+					Outlier:        policy.Outlier,
 					Endpoints: []dxgateEndpoint{
 						{
 							Address: fmt.Sprintf("%s.%s.svc.%s", backendRef.Name, backendNamespace, domainSuffix),
@@ -690,6 +758,107 @@ func buildDxgateVirtualHost(gw gateway.Gateway, hr *gateway.HTTPRoute, domainSuf
 		}
 	}
 	return vh, clusters
+}
+
+type dxgateBackendCircuitBreaker struct {
+	CircuitBreaker *dxgateCircuitBreaker
+	Outlier        *dxgateOutlierDetection
+}
+
+func circuitBreakerPoliciesByTarget(policies []config.Config) map[string]dxgateBackendCircuitBreaker {
+	out := map[string]dxgateBackendCircuitBreaker{}
+	sort.Slice(policies, func(i, j int) bool {
+		if policies[i].CreationTimestamp != policies[j].CreationTimestamp {
+			return policies[i].CreationTimestamp.Before(policies[j].CreationTimestamp)
+		}
+		if policies[i].Namespace != policies[j].Namespace {
+			return policies[i].Namespace < policies[j].Namespace
+		}
+		return policies[i].Name < policies[j].Name
+	})
+	for _, cfg := range policies {
+		spec, ok := cfg.Spec.(*networking.CircuitBreakerPolicy)
+		if !ok || spec == nil {
+			continue
+		}
+		policy := dxgateCircuitBreakerFromPolicy(spec)
+		if policy.CircuitBreaker == nil && policy.Outlier == nil {
+			continue
+		}
+		for _, target := range spec.TargetRefs {
+			if !isCircuitBreakerServiceTarget(target) {
+				continue
+			}
+			key := namespacedServiceKey(cfg.Namespace, target.Name)
+			if _, found := out[key]; !found {
+				out[key] = policy
+			}
+		}
+	}
+	return out
+}
+
+func isCircuitBreakerServiceTarget(target *networking.PolicyTargetReference) bool {
+	if target == nil || target.Name == "" || target.SectionName != "" {
+		return false
+	}
+	group := strings.TrimSpace(target.Group)
+	kind := strings.TrimSpace(target.Kind)
+	return (group == "" || group == "core") && strings.EqualFold(kind, "Service")
+}
+
+func dxgateCircuitBreakerFromPolicy(policy *networking.CircuitBreakerPolicy) dxgateBackendCircuitBreaker {
+	out := dxgateBackendCircuitBreaker{}
+	if cp := policy.GetConnectionPool(); cp != nil {
+		cb := &dxgateCircuitBreaker{
+			MaxConnections:           positiveInt32(cp.GetMaxConnections()),
+			HTTP1MaxPendingRequests:  positiveInt32(cp.GetHttp1MaxPendingRequests()),
+			HTTP2MaxRequests:         positiveInt32(cp.GetHttp2MaxRequests()),
+			MaxRequestsPerConnection: positiveInt32(cp.GetMaxRequestsPerConnection()),
+			MaxRetries:               positiveInt32(cp.GetMaxRetries()),
+		}
+		if cb.MaxConnections > 0 || cb.HTTP1MaxPendingRequests > 0 || cb.HTTP2MaxRequests > 0 || cb.MaxRequestsPerConnection > 0 || cb.MaxRetries > 0 {
+			out.CircuitBreaker = cb
+		}
+	}
+	if od := policy.GetOutlierDetection(); od != nil {
+		outlier := &dxgateOutlierDetection{
+			Consecutive5xxErrors: uint32Value(od.GetConsecutive_5XxErrors()),
+			Interval:             durationString(od.GetInterval()),
+			BaseEjectionTime:     durationString(od.GetBaseEjectionTime()),
+			MaxEjectionPercent:   positiveInt32(od.GetMaxEjectionPercent()),
+			MinHealthPercent:     positiveInt32(od.GetMinHealthPercent()),
+		}
+		if outlier.Consecutive5xxErrors > 0 || outlier.Interval != "" || outlier.BaseEjectionTime != "" || outlier.MaxEjectionPercent > 0 || outlier.MinHealthPercent > 0 {
+			out.Outlier = outlier
+		}
+	}
+	return out
+}
+
+func positiveInt32(value int32) int32 {
+	if value <= 0 {
+		return 0
+	}
+	return value
+}
+
+func uint32Value(value *wrapperspb.UInt32Value) uint32 {
+	if value == nil {
+		return 0
+	}
+	return value.GetValue()
+}
+
+func durationString(value *durationpb.Duration) string {
+	if value == nil {
+		return ""
+	}
+	return value.AsDuration().String()
+}
+
+func namespacedServiceKey(namespace, name string) string {
+	return namespace + "/" + name
 }
 
 func dxgateRouteDomains(gw gateway.Gateway, hr *gateway.HTTPRoute) []string {

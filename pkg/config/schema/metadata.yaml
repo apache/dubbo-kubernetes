@@ -201,6 +201,15 @@ resources:
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
     statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
 
+  - kind: CircuitBreakerPolicy
+    plural: "circuitbreakerpolicies"
+    group: "networking.dubbo.apache.org"
+    version: "v1alpha3"
+    proto: "dubbo.networking.v1alpha3.CircuitBreakerPolicy"
+    protoPackage: "github.com/kdubbo/api/networking/v1alpha3"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
+
   - kind: "MeshConfig"
     plural: "meshconfigs"
     group: ""

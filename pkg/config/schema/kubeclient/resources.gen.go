@@ -17,6 +17,7 @@ import (
 	ktypes "github.com/apache/dubbo-kubernetes/pkg/kube/kubetypes"
 	"github.com/apache/dubbo-kubernetes/pkg/util/ptr"
 
+	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -33,6 +34,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 	switch any(ptr.Empty[T]()).(type) {
 	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy:
+		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ConfigMap:
 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
@@ -88,6 +91,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 	switch any(ptr.Empty[T]()).(type) {
 	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy:
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy:
+		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.ConfigMap:
 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
@@ -143,6 +148,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 	switch g {
 	case gvr.AuthorizationPolicy:
 		return &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{}
+	case gvr.CircuitBreakerPolicy:
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{}
 	case gvr.ConfigMap:
 		return &k8sioapicorev1.ConfigMap{}
 	case gvr.CustomResourceDefinition:
@@ -205,6 +212,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.CircuitBreakerPolicy:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.ConfigMap:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {

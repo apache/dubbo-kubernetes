@@ -13,6 +13,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	githubcomkdubboapimeshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
+	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -35,6 +36,21 @@ var (
 		Proto:      "dubbo.security.v1alpha3.AuthorizationPolicy", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
 		ReflectType: reflect.TypeOf(&githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
 		ProtoPackage: "github.com/kdubbo/api/security/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+
+	CircuitBreakerPolicy = resource.Builder{
+		Identifier: "CircuitBreakerPolicy",
+		Group:      "networking.dubbo.apache.org",
+		Kind:       "CircuitBreakerPolicy",
+		Plural:     "circuitbreakerpolicies",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.networking.v1alpha3.CircuitBreakerPolicy", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
 		ClusterScoped: false,
 		Synthetic:     false,
 		Builtin:       false,
@@ -413,6 +429,7 @@ var (
 	// All contains all collections in the system.
 	All = collection.NewSchemasBuilder().
 		MustAdd(AuthorizationPolicy).
+		MustAdd(CircuitBreakerPolicy).
 		MustAdd(ConfigMap).
 		MustAdd(CustomResourceDefinition).
 		MustAdd(DaemonSet).
@@ -467,6 +484,7 @@ var (
 	// Dubbo contains only collections used by Dubbo.
 	Dubbo = collection.NewSchemasBuilder().
 		MustAdd(AuthorizationPolicy).
+		MustAdd(CircuitBreakerPolicy).
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
 		Build()
@@ -474,6 +492,7 @@ var (
 	// dubboGatewayAPI contains only collections used by Dubbo, including the full Gateway API.
 	dubboGatewayAPI = collection.NewSchemasBuilder().
 			MustAdd(AuthorizationPolicy).
+			MustAdd(CircuitBreakerPolicy).
 			MustAdd(GatewayClass).
 			MustAdd(HTTPRoute).
 			MustAdd(KubernetesGateway).
@@ -484,6 +503,7 @@ var (
 	// dubboStableGatewayAPI contains only collections used by Dubbo, including beta+ Gateway API.
 	dubboStableGatewayAPI = collection.NewSchemasBuilder().
 				MustAdd(AuthorizationPolicy).
+				MustAdd(CircuitBreakerPolicy).
 				MustAdd(GatewayClass).
 				MustAdd(HTTPRoute).
 				MustAdd(KubernetesGateway).

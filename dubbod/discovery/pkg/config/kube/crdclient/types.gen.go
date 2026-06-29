@@ -15,7 +15,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 
 	githubcomkdubboapimetav1alpha1 "github.com/kdubbo/api/meta/v1alpha1"
+	githubcomkdubboapinetworkingv1alpha3 "github.com/kdubbo/api/networking/v1alpha3"
 	githubcomkdubboapisecurityv1alpha3 "github.com/kdubbo/api/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
@@ -34,6 +36,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy)),
+		}, metav1.CreateOptions{})
+	case gvk.CircuitBreakerPolicy:
+		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
 		}, metav1.CreateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Create(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
@@ -72,6 +79,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.AuthorizationPolicy)),
 		}, metav1.UpdateOptions{})
+	case gvk.CircuitBreakerPolicy:
+		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
+		}, metav1.UpdateOptions{})
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Update(context.TODO(), &sigsk8siogatewayapiapisv1.GatewayClass{
 			ObjectMeta: objMeta,
@@ -106,6 +118,11 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 	switch cfg.GroupVersionKind {
 	case gvk.AuthorizationPolicy:
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.AuthorizationPolicy{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
+	case gvk.CircuitBreakerPolicy:
+		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
@@ -158,6 +175,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.CircuitBreakerPolicy:
+		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.CircuitBreakerPolicy)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.GatewayClass:
 		oldRes := &sigsk8siogatewayapiapisv1.GatewayClass{
@@ -247,6 +279,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 	switch typ {
 	case gvk.AuthorizationPolicy:
 		return c.Dubbo().SecurityV1alpha3().AuthorizationPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.CircuitBreakerPolicy:
+		return c.Dubbo().NetworkingV1alpha3().CircuitBreakerPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.GatewayClass:
 		return c.GatewayAPI().GatewayV1().GatewayClasses().Delete(context.TODO(), name, deleteOptions)
 	case gvk.HTTPRoute:
@@ -268,6 +302,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 		return config.Config{
 			Meta: config.Meta{
 				GroupVersionKind:  gvk.AuthorizationPolicy,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
+		}
+	},
+	gvk.CircuitBreakerPolicy: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.CircuitBreakerPolicy)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.CircuitBreakerPolicy,
 				Name:              obj.Name,
 				Namespace:         obj.Namespace,
 				Labels:            obj.Labels,

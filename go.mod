@@ -254,6 +254,9 @@ replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker => github.com/docker/docker v23.0.1+incompatible
 	github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.20.2
+	github.com/kdubbo/api => ../api
+	github.com/kdubbo/client-go => ../client-go
+	github.com/kdubbo/xds-api => ../xds-api
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
 )

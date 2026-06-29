@@ -511,6 +511,8 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind = kind.KubernetesGateway
 		case "HTTPRoute":
 			configKind = kind.HTTPRoute
+		case "CircuitBreakerPolicy":
+			configKind = kind.CircuitBreakerPolicy
 		default:
 			log.Debugf("unknown schema identifier %s for %v, skipping", schemaID, cfg.GroupVersionKind)
 			return
@@ -532,7 +534,8 @@ func (s *Server) initRegistryEventHandlers() {
 		needsFullPush := configKind == kind.PeerAuthentication ||
 			configKind == kind.RequestAuthentication ||
 			configKind == kind.AuthorizationPolicy ||
-			configKind == kind.HTTPRoute
+			configKind == kind.HTTPRoute ||
+			configKind == kind.CircuitBreakerPolicy
 
 		// Trigger ConfigUpdate to push changes to all connected proxies
 		s.XDSServer.ConfigUpdate(&model.PushRequest{
