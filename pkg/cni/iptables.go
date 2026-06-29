@@ -26,6 +26,7 @@ import (
 const (
 	meshInboundChain = "DUBBO-GRPC-INBOUND"
 	meshPodIPSet     = "DUBBO-GRPC-INBOUND-PODS"
+	dxgateAdminPort  = 26021
 )
 
 type CommandRunner interface {
@@ -98,10 +99,15 @@ func (m *IPTablesRuleManager) ensureBase(ctx context.Context) error {
 		}
 	}
 	allowGRPCInbound := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(m.grpcInboundPort), "-j", "RETURN"}
+	allowDxgateAdmin := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "--dport", fmt.Sprint(dxgateAdminPort), "-j", "RETURN"}
 	rejectOtherTCP := []string{"-m", "set", "--match-set", meshPodIPSet, "dst", "-p", "tcp", "-j", "REJECT"}
 	m.deleteRepeated(ctx, allowGRPCInbound...)
+	m.deleteRepeated(ctx, allowDxgateAdmin...)
 	m.deleteRepeated(ctx, rejectOtherTCP...)
 	if err := m.appendRule(ctx, allowGRPCInbound...); err != nil {
+		return err
+	}
+	if err := m.appendRule(ctx, allowDxgateAdmin...); err != nil {
 		return err
 	}
 	return m.appendRule(ctx, rejectOtherTCP...)

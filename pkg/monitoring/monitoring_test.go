@@ -20,7 +20,53 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	dto "github.com/prometheus/client_model/go"
 )
+
+func TestNewSumWithoutLabelsExposesCounter(t *testing.T) {
+	name := fmt.Sprintf("test_sum_without_labels_total_%d", time.Now().UnixNano())
+	metric := NewSum(name, "Test scalar counter.")
+
+	metric.Increment()
+	metric.RecordInt(2)
+
+	family := findMetricFamily(t, name)
+	if family.GetType() != dto.MetricType_COUNTER {
+		t.Fatalf("metric type = %s, want COUNTER", family.GetType())
+	}
+	if got := family.GetMetric()[0].GetCounter().GetValue(); got != 3 {
+		t.Fatalf("counter value = %v, want 3", got)
+	}
+}
+
+func TestNewSumWithPredeclaredLabelsExposesCounterVec(t *testing.T) {
+	phaseTag := CreateLabel("phase")
+	name := fmt.Sprintf("test_sum_with_labels_total_%d", time.Now().UnixNano())
+	metric := NewSum(name, "Test labeled counter.", WithLabels("phase"))
+
+	metric.With(phaseTag.Value("push")).Increment()
+	metric.With(phaseTag.Value("send")).RecordInt(2)
+
+	assertCounterSeries(t, name, map[string]float64{
+		"push": 1,
+		"send": 2,
+	})
+}
+
+func TestNewSumWithDynamicLabelsExposesCounterVec(t *testing.T) {
+	typeTag := CreateLabel("type")
+	name := fmt.Sprintf("test_sum_with_dynamic_labels_total_%d", time.Now().UnixNano())
+	metric := NewSum(name, "Test dynamically labeled counter.")
+
+	metric.With(typeTag.Value("cds")).Increment()
+	metric.With(typeTag.Value("eds")).RecordInt(4)
+
+	assertCounterSeries(t, name, map[string]float64{
+		"cds": 1,
+		"eds": 4,
+	})
+}
 
 func TestDistributionWithLabelsRegistersOnce(t *testing.T) {
 	phaseTag := CreateLabel("phase")
@@ -35,17 +81,47 @@ func TestDistributionWithLabelsRegistersOnce(t *testing.T) {
 	metric.With(phaseTag.Value("push")).Record(0.2)
 	metric.With(phaseTag.Value("send")).Record(0.4)
 
+	family := findMetricFamily(t, name)
+	if got := len(family.GetMetric()); got != 2 {
+		t.Fatalf("metric series = %d, want 2", got)
+	}
+}
+
+func findMetricFamily(t *testing.T, name string) *dto.MetricFamily {
+	t.Helper()
 	families, err := GetRegistry().Gather()
 	if err != nil {
 		t.Fatalf("gather metrics: %v", err)
 	}
 	for _, family := range families {
 		if family.GetName() == name {
-			if got := len(family.GetMetric()); got != 2 {
-				t.Fatalf("metric series = %d, want 2", got)
-			}
-			return
+			return family
 		}
 	}
 	t.Fatalf("%s not gathered", name)
+	return nil
+}
+
+func assertCounterSeries(t *testing.T, name string, want map[string]float64) {
+	t.Helper()
+	family := findMetricFamily(t, name)
+	if family.GetType() != dto.MetricType_COUNTER {
+		t.Fatalf("metric type = %s, want COUNTER", family.GetType())
+	}
+	got := map[string]float64{}
+	for _, metric := range family.GetMetric() {
+		for _, label := range metric.GetLabel() {
+			if label.GetName() == "phase" || label.GetName() == "type" {
+				got[label.GetValue()] = metric.GetCounter().GetValue()
+			}
+		}
+	}
+	if len(got) != len(want) {
+		t.Fatalf("counter series = %#v, want %#v", got, want)
+	}
+	for label, value := range want {
+		if got[label] != value {
+			t.Fatalf("counter series %s = %v, want %v", label, got[label], value)
+		}
+	}
 }

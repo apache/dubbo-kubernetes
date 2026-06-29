@@ -138,7 +138,8 @@ type metric struct {
 	description string
 	valueType   prometheus.ValueType
 	labelNames  []string
-	vec         *prometheus.GaugeVec
+	counterVec  *prometheus.CounterVec
+	gaugeVec    *prometheus.GaugeVec
 	vecOnce     sync.Once
 	counter     prometheus.Counter
 	gauge       prometheus.Gauge
@@ -160,36 +161,20 @@ func newMetric(name, description string, valueType prometheus.ValueType, opts ..
 	// If labels are predefined, create the vector immediately
 	if len(o.labels) > 0 {
 		if valueType == prometheus.CounterValue {
-			m.vec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			m.counterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 				Name: name,
 				Help: description,
 			}, o.labels)
-		} else {
-			m.vec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-				Name: name,
-				Help: description,
-			}, o.labels)
-		}
-		registryLock.Lock()
-		registry.MustRegister(m.vec)
-		registryLock.Unlock()
-	} else {
-		// No predefined labels, create scalar metric
-		if valueType == prometheus.CounterValue {
-			m.counter = prometheus.NewCounter(prometheus.CounterOpts{
-				Name: name,
-				Help: description,
-			})
 			registryLock.Lock()
-			registry.MustRegister(m.counter)
+			registry.MustRegister(m.counterVec)
 			registryLock.Unlock()
 		} else {
-			m.gauge = prometheus.NewGauge(prometheus.GaugeOpts{
+			m.gaugeVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 				Name: name,
 				Help: description,
-			})
+			}, o.labels)
 			registryLock.Lock()
-			registry.MustRegister(m.gauge)
+			registry.MustRegister(m.gaugeVec)
 			registryLock.Unlock()
 		}
 	}
@@ -210,7 +195,32 @@ func (m *metric) Name() string {
 }
 
 func (m *metric) Record(value float64) {
+	if m.counterVec != nil || m.gaugeVec != nil {
+		return
+	}
+	m.vecOnce.Do(func() {
+		if m.valueType == prometheus.CounterValue {
+			m.counter = prometheus.NewCounter(prometheus.CounterOpts{
+				Name: m.name,
+				Help: m.description,
+			})
+			registryLock.Lock()
+			registry.MustRegister(m.counter)
+			registryLock.Unlock()
+		} else {
+			m.gauge = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: m.name,
+				Help: m.description,
+			})
+			registryLock.Lock()
+			registry.MustRegister(m.gauge)
+			registryLock.Unlock()
+		}
+	})
 	if m.counter != nil {
+		if value < 0 {
+			return
+		}
 		m.counter.Add(value)
 	} else if m.gauge != nil {
 		if value >= 0 {
@@ -227,14 +237,25 @@ func (m *metric) RecordInt(value int64) {
 
 func (m *metric) With(labelValues ...LabelValue) Metric {
 	// If vector already exists (predefined labels), use it directly
-	if m.vec != nil {
+	if m.counterVec != nil {
+		labels := make(prometheus.Labels)
+		for _, lv := range labelValues {
+			labels[lv.Name] = lv.Value
+		}
+		return &labeledMetric{
+			parent:  m,
+			counter: m.counterVec.With(labels),
+			labels:  labels,
+		}
+	}
+	if m.gaugeVec != nil {
 		labels := make(prometheus.Labels)
 		for _, lv := range labelValues {
 			labels[lv.Name] = lv.Value
 		}
 		return &labeledMetric{
 			parent: m,
-			gauge:  m.vec.With(labels),
+			gauge:  m.gaugeVec.With(labels),
 			labels: labels,
 		}
 	}
@@ -247,20 +268,22 @@ func (m *metric) With(labelValues ...LabelValue) Metric {
 		}
 
 		if m.valueType == prometheus.CounterValue {
-			m.vec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			m.counterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 				Name: m.name,
 				Help: m.description,
 			}, labelNames)
+			registryLock.Lock()
+			registry.MustRegister(m.counterVec)
+			registryLock.Unlock()
 		} else {
-			m.vec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			m.gaugeVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 				Name: m.name,
 				Help: m.description,
 			}, labelNames)
+			registryLock.Lock()
+			registry.MustRegister(m.gaugeVec)
+			registryLock.Unlock()
 		}
-
-		registryLock.Lock()
-		registry.MustRegister(m.vec)
-		registryLock.Unlock()
 	})
 
 	labels := make(prometheus.Labels)
@@ -269,16 +292,32 @@ func (m *metric) With(labelValues ...LabelValue) Metric {
 	}
 
 	return &labeledMetric{
-		parent: m,
-		gauge:  m.vec.With(labels),
-		labels: labels,
+		parent:  m,
+		counter: m.counterWith(labels),
+		gauge:   m.gaugeWith(labels),
+		labels:  labels,
 	}
 }
 
 type labeledMetric struct {
-	parent *metric
-	gauge  prometheus.Gauge
-	labels prometheus.Labels
+	parent  *metric
+	counter prometheus.Counter
+	gauge   prometheus.Gauge
+	labels  prometheus.Labels
+}
+
+func (m *metric) counterWith(labels prometheus.Labels) prometheus.Counter {
+	if m.counterVec == nil {
+		return nil
+	}
+	return m.counterVec.With(labels)
+}
+
+func (m *metric) gaugeWith(labels prometheus.Labels) prometheus.Gauge {
+	if m.gaugeVec == nil {
+		return nil
+	}
+	return m.gaugeVec.With(labels)
 }
 
 func (lm *labeledMetric) Increment() {
@@ -295,7 +334,10 @@ func (lm *labeledMetric) Name() string {
 
 func (lm *labeledMetric) Record(value float64) {
 	if lm.parent.valueType == prometheus.CounterValue {
-		lm.gauge.Add(value)
+		if lm.counter == nil || value < 0 {
+			return
+		}
+		lm.counter.Add(value)
 	} else {
 		if value >= 0 {
 			lm.gauge.Set(value)
@@ -320,7 +362,18 @@ func (lm *labeledMetric) With(labelValues ...LabelValue) Metric {
 
 	return &labeledMetric{
 		parent: lm.parent,
-		gauge:  lm.parent.vec.With(newLabels),
+		counter: func() prometheus.Counter {
+			if lm.parent.counterVec == nil {
+				return nil
+			}
+			return lm.parent.counterVec.With(newLabels)
+		}(),
+		gauge: func() prometheus.Gauge {
+			if lm.parent.gaugeVec == nil {
+				return nil
+			}
+			return lm.parent.gaugeVec.With(newLabels)
+		}(),
 		labels: newLabels,
 	}
 }

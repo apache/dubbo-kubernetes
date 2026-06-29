@@ -84,10 +84,20 @@ spec:
           value: 0.0.0.0:8080
         - name: DXGATE_ADMIN_ADDR
           value: 0.0.0.0:26021
+        - name: DXGATE_GATEWAY_NAME
+          value: {{ .Gateway.Name | quote }}
+        - name: DXGATE_OTEL_SERVICE_NAME
+          value: {{ .OtelServiceName | quote }}
+        - name: DXGATE_OTEL_SAMPLING_PERCENTAGE
+          value: {{ .OtelSampling | quote }}
 {{- if .OtelEndpoint }}
         - name: DXGATE_OTEL_ENDPOINT
           value: {{ .OtelEndpoint | quote }}
 {{- end }}
+        - name: DXGATE_ACCESS_LOG
+          value: {{ .AccessLog | quote }}
+        - name: DXGATE_ACCESS_LOG_FORMAT
+          value: {{ .AccessLogFormat | quote }}
         - name: POD_NAME
           valueFrom:
             fieldRef:

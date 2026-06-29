@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -80,6 +81,10 @@ const (
 	serviceNodePortAnnotation   = "gateway.dubbo.apache.org/node-port"
 	xdsAddressAnnotation        = "gateway.dubbo.apache.org/xds-address"
 	otelEndpointAnnotation      = "gateway.dubbo.apache.org/otel-endpoint"
+	otelSamplingAnnotation      = "gateway.dubbo.apache.org/otel-sampling-percentage"
+	otelServiceNameAnnotation   = "gateway.dubbo.apache.org/otel-service-name"
+	accessLogAnnotation         = "gateway.dubbo.apache.org/access-log"
+	accessLogFormatAnnotation   = "gateway.dubbo.apache.org/access-log-format"
 )
 
 var builtinClasses = getBuiltinClasses()
@@ -387,6 +392,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		return err
 	}
 
+	observability := observabilityConfigForGateway(gw)
 	input := TemplateInput{
 		Gateway:             &gw,
 		GatewayClass:        string(gw.Spec.GatewayClassName),
@@ -402,7 +408,11 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		SystemNamespace:     d.systemNamespace,
 		ClusterID:           string(d.clusterID),
 		DomainSuffix:        d.domainSuffix(),
-		OtelEndpoint:        strings.TrimSpace(gw.Annotations[otelEndpointAnnotation]),
+		OtelEndpoint:        observability.OtelEndpoint,
+		OtelServiceName:     observability.OtelServiceName,
+		OtelSampling:        observability.OtelSampling,
+		AccessLog:           observability.AccessLog,
+		AccessLogFormat:     observability.AccessLogFormat,
 	}
 
 	log.Infof("desired dxgate deployment=%s/%s gatewayClass=%s serviceType=%s ports=%s image=%s",
@@ -456,6 +466,65 @@ type TemplateInput struct {
 	ClusterID           string
 	DomainSuffix        string
 	OtelEndpoint        string
+	OtelServiceName     string
+	OtelSampling        string
+	AccessLog           string
+	AccessLogFormat     string
+}
+
+type gatewayObservabilityConfig struct {
+	OtelEndpoint    string
+	OtelServiceName string
+	OtelSampling    string
+	AccessLog       string
+	AccessLogFormat string
+}
+
+func observabilityConfigForGateway(gw gateway.Gateway) gatewayObservabilityConfig {
+	return gatewayObservabilityConfig{
+		OtelEndpoint:    strings.TrimSpace(gw.Annotations[otelEndpointAnnotation]),
+		OtelServiceName: gatewayOtelServiceName(gw),
+		OtelSampling:    gatewayOtelSampling(gw),
+		AccessLog:       gatewayAccessLog(gw),
+		AccessLogFormat: gatewayAccessLogFormat(gw),
+	}
+}
+
+func gatewayOtelServiceName(gw gateway.Gateway) string {
+	if value := strings.TrimSpace(gw.Annotations[otelServiceNameAnnotation]); value != "" {
+		return value
+	}
+	return fmt.Sprintf("dxgate.%s.%s", gw.Namespace, gw.Name)
+}
+
+func gatewayOtelSampling(gw gateway.Gateway) string {
+	value := strings.TrimSpace(gw.Annotations[otelSamplingAnnotation])
+	if value == "" {
+		return "100"
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) || parsed < 0 || parsed > 100 {
+		return "100"
+	}
+	return strconv.FormatFloat(parsed, 'f', -1, 64)
+}
+
+func gatewayAccessLog(gw gateway.Gateway) string {
+	switch strings.ToLower(strings.TrimSpace(gw.Annotations[accessLogAnnotation])) {
+	case "false", "0", "no", "off":
+		return "false"
+	default:
+		return "true"
+	}
+}
+
+func gatewayAccessLogFormat(gw gateway.Gateway) string {
+	switch strings.ToLower(strings.TrimSpace(gw.Annotations[accessLogFormatAnnotation])) {
+	case "json":
+		return "json"
+	default:
+		return "text"
+	}
 }
 
 type dxgateBootstrapConfig struct {
@@ -1366,10 +1435,7 @@ func gatewayServiceTargetPort(gw gateway.Gateway) intstr.IntOrString {
 	if port, ok := positiveIntAnnotation(gw, serviceTargetPortAnnotation); ok {
 		return intstr.FromInt(port)
 	}
-	if gw.Annotations[eastWestGatewayAnnotation] == "true" {
-		return intstr.FromInt(inject.ProxylessGRPCInboundPort)
-	}
-	return intstr.FromString("http")
+	return intstr.FromInt(inject.ProxylessGRPCInboundPort)
 }
 
 func gatewayServiceNodePort(gw gateway.Gateway) int32 {

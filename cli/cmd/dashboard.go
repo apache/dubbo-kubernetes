@@ -102,6 +102,12 @@ func DashboardCmd(ctx cli.Context) *cobra.Command {
 			}
 			if dashboardHasTracing(files) {
 				_, err = fmt.Fprintf(cmd.OutOrStdout(), "tracing: kubectl -n %s port-forward svc/tracing 16686:16686\n", dashboardNamespace)
+				if err != nil {
+					return err
+				}
+			}
+			if dashboardHasOpenTelemetry(files) {
+				_, err = fmt.Fprintf(cmd.OutOrStdout(), "opentelemetry: kubectl -n %s port-forward svc/opentelemetry-collector 4317:4317\n", dashboardNamespace)
 			}
 			return err
 		},
@@ -137,6 +143,10 @@ func dashboardManifestFiles(path string) ([]string, error) {
 	if _, err := os.Stat(tracing); err == nil {
 		files = append(files, tracing)
 	}
+	opentelemetry := filepath.Join(path, "opentelemetry.yaml")
+	if _, err := os.Stat(opentelemetry); err == nil {
+		files = append(files, opentelemetry)
+	}
 	return files, nil
 }
 
@@ -149,10 +159,22 @@ func dashboardHasTracing(files []string) bool {
 	return false
 }
 
+func dashboardHasOpenTelemetry(files []string) bool {
+	for _, file := range files {
+		if filepath.Base(file) == "opentelemetry.yaml" {
+			return true
+		}
+	}
+	return false
+}
+
 func dashboardWaitDeploymentNames(files []string) []string {
 	names := []string{"prometheus", "grafana"}
 	if dashboardHasTracing(files) {
 		names = append(names, "tracing")
+	}
+	if dashboardHasOpenTelemetry(files) {
+		names = append(names, "opentelemetry-collector")
 	}
 	return names
 }

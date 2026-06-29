@@ -440,7 +440,7 @@ func TestDeploymentControllerBuildDxgateBootstrapConfigUsesXDSAddressAnnotation(
 	}
 }
 
-func TestExtractServicePortsTargetsDxgateContainerPorts(t *testing.T) {
+func TestExtractServicePortsTargetsGRPCInbound(t *testing.T) {
 	gw := gatewayv1.Gateway{
 		Spec: gatewayv1.GatewaySpec{
 			Listeners: []gatewayv1.Listener{
@@ -454,7 +454,7 @@ func TestExtractServicePortsTargetsDxgateContainerPorts(t *testing.T) {
 	if len(ports) != 1 {
 		t.Fatalf("expected only the http listener port, got %#v", ports)
 	}
-	if ports[0].Name != "http" || ports[0].Port != 8080 || ports[0].TargetPort.String() != "http" {
+	if ports[0].Name != "http" || ports[0].Port != 8080 || ports[0].TargetPort.IntValue() != 15080 {
 		t.Fatalf("unexpected http service port: %#v", ports[0])
 	}
 }
@@ -498,6 +498,85 @@ func TestServiceTypeForGatewayUsesAnnotation(t *testing.T) {
 	}
 }
 
+func TestObservabilityConfigForGatewayDefaults(t *testing.T) {
+	cfg := observabilityConfigForGateway(gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app"},
+	})
+
+	if cfg.OtelEndpoint != "" {
+		t.Fatalf("otel endpoint = %q, want empty", cfg.OtelEndpoint)
+	}
+	if cfg.OtelServiceName != "dxgate.app.public" {
+		t.Fatalf("otel service name = %q", cfg.OtelServiceName)
+	}
+	if cfg.OtelSampling != "100" {
+		t.Fatalf("otel sampling = %q", cfg.OtelSampling)
+	}
+	if cfg.AccessLog != "true" {
+		t.Fatalf("access log = %q", cfg.AccessLog)
+	}
+	if cfg.AccessLogFormat != "text" {
+		t.Fatalf("access log format = %q", cfg.AccessLogFormat)
+	}
+}
+
+func TestObservabilityConfigForGatewayAnnotations(t *testing.T) {
+	cfg := observabilityConfigForGateway(gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "public",
+			Namespace: "app",
+			Annotations: map[string]string{
+				otelEndpointAnnotation:    " http://otel-collector.dubbo-system.svc:4317 ",
+				otelServiceNameAnnotation: "edge-gateway",
+				otelSamplingAnnotation:    "12.5",
+				accessLogAnnotation:       "false",
+				accessLogFormatAnnotation: "json",
+			},
+		},
+	})
+
+	if cfg.OtelEndpoint != "http://otel-collector.dubbo-system.svc:4317" {
+		t.Fatalf("otel endpoint = %q", cfg.OtelEndpoint)
+	}
+	if cfg.OtelServiceName != "edge-gateway" {
+		t.Fatalf("otel service name = %q", cfg.OtelServiceName)
+	}
+	if cfg.OtelSampling != "12.5" {
+		t.Fatalf("otel sampling = %q", cfg.OtelSampling)
+	}
+	if cfg.AccessLog != "false" {
+		t.Fatalf("access log = %q", cfg.AccessLog)
+	}
+	if cfg.AccessLogFormat != "json" {
+		t.Fatalf("access log format = %q", cfg.AccessLogFormat)
+	}
+}
+
+func TestObservabilityConfigForGatewayInvalidSamplingFallsBack(t *testing.T) {
+	for _, value := range []string{"abc", "-1", "101", "NaN", "+Inf"} {
+		cfg := observabilityConfigForGateway(gatewayv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "public",
+				Namespace: "app",
+				Annotations: map[string]string{
+					otelSamplingAnnotation:    value,
+					accessLogAnnotation:       "maybe",
+					accessLogFormatAnnotation: "yaml",
+				},
+			},
+		})
+		if cfg.OtelSampling != "100" {
+			t.Fatalf("otel sampling for %q = %q, want 100", value, cfg.OtelSampling)
+		}
+		if cfg.AccessLog != "true" {
+			t.Fatalf("access log for %q = %q, want true", value, cfg.AccessLog)
+		}
+		if cfg.AccessLogFormat != "text" {
+			t.Fatalf("access log format for %q = %q, want text", value, cfg.AccessLogFormat)
+		}
+	}
+}
+
 func TestGetDefaultNameUsesFixedDxgateGatewayName(t *testing.T) {
 	spec := &gatewayv1.GatewaySpec{GatewayClassName: "dubbo"}
 	if got := getDefaultName("httpbin-gateway", spec, false); got != "dxgate-gateway" {
@@ -537,7 +616,7 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 		},
 		DeploymentName:      "public-dubbo",
 		ServiceAccount:      "public-dubbo",
-		Ports:               []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromString("http")}},
+		Ports:               []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromInt(15080)}},
 		ServiceType:         corev1.ServiceTypeLoadBalancer,
 		Revision:            "default",
 		BootstrapConfig:     "{\n  \"xds_address\": \"http://dubbod.dubbo-system.svc:26010\",\n  \"listener_names\": [\n    \"public-dubbo.app.svc.cluster.local:80\"\n  ],\n  \"cluster_id\": \"Kubernetes\",\n  \"dns_domain\": \"cluster.local\"\n}\n",
@@ -546,6 +625,10 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 		SystemNamespace:     "dubbo-system",
 		ClusterID:           "Kubernetes",
 		DomainSuffix:        "cluster.local",
+		OtelServiceName:     "dxgate.app.public",
+		OtelSampling:        "100",
+		AccessLog:           "true",
+		AccessLogFormat:     "text",
 	}
 	rendered, err := controller.render("gateway", input)
 	if err != nil {
@@ -586,11 +669,26 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if strings.Contains(rendered[2], "DXGATE_OTEL_ENDPOINT") {
 		t.Fatalf("deployment rendered OTEL endpoint without annotation:\n%s", rendered[2])
 	}
+	for _, want := range []string{
+		"DXGATE_GATEWAY_NAME",
+		`value: "public"`,
+		"DXGATE_OTEL_SERVICE_NAME",
+		`value: "dxgate.app.public"`,
+		"DXGATE_OTEL_SAMPLING_PERCENTAGE",
+		`value: "100"`,
+		"DXGATE_ACCESS_LOG",
+		"DXGATE_ACCESS_LOG_FORMAT",
+		`value: "text"`,
+	} {
+		if !strings.Contains(rendered[2], want) {
+			t.Fatalf("deployment did not render observability env %q:\n%s", want, rendered[2])
+		}
+	}
 	if !strings.Contains(rendered[2], "app.kubernetes.io/instance: public-dubbo") {
 		t.Fatalf("deployment did not render stable dxgate instance label:\n%s", rendered[2])
 	}
-	if !strings.Contains(rendered[3], "targetPort: http") {
-		t.Fatalf("service did not target dxgate http port:\n%s", rendered[3])
+	if !strings.Contains(rendered[3], "targetPort: 15080") {
+		t.Fatalf("service did not target grpc-inbound port:\n%s", rendered[3])
 	}
 	if !strings.Contains(rendered[3], `proxyless.dubbo.apache.org/inject: "false"`) {
 		t.Fatalf("service did not opt out of proxyless targetPort rewriting:\n%s", rendered[3])
