@@ -53,13 +53,14 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/heroku/color v0.0.6
-	github.com/kdubbo/api v0.0.0-20260514125132-e21515234c56
-	github.com/kdubbo/client-go v0.0.0-20260514125254-aa566bd2f6d5
+	github.com/kdubbo/api v0.0.0-20260629012006-5a14128f12bf
+	github.com/kdubbo/client-go v0.0.0-20260629012006-6b48ad09b6be
 	github.com/kdubbo/xds-api v0.0.0-20260628124158-b93008db9162
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
+	github.com/prometheus/client_model v0.6.2
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
 	github.com/stoewer/go-strcase v1.3.0
@@ -206,7 +207,6 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8 // indirect
@@ -254,9 +254,6 @@ replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker => github.com/docker/docker v23.0.1+incompatible
 	github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.20.2
-	github.com/kdubbo/api => ../api
-	github.com/kdubbo/client-go => ../client-go
-	github.com/kdubbo/xds-api => ../xds-api
 	github.com/moby/buildkit => github.com/moby/buildkit v0.10.6
 	github.com/moby/dockerfile => github.com/moby/dockerfile v1.4.1
 )
