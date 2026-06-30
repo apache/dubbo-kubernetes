@@ -19,6 +19,7 @@ import (
 	k8sioapipolicyv1 "k8s.io/api/policy/v1"
 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
+	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func getGvk(obj any) (config.GroupVersionKind, bool) {
@@ -71,6 +72,8 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Pod, true
 	case *k8sioapipolicyv1.PodDisruptionBudget:
 		return gvk.PodDisruptionBudget, true
+	case *sigsk8siogatewayapiapisv1beta1.ReferenceGrant:
+		return gvk.ReferenceGrant, true
 	case *githubcomkdubboapisecurityv1alpha3.RequestAuthentication:
 		return gvk.RequestAuthentication, true
 	case *apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication:

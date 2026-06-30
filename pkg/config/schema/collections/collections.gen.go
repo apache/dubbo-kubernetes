@@ -24,6 +24,7 @@ import (
 	k8sioapipolicyv1 "k8s.io/api/policy/v1"
 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
+	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 var (
@@ -354,6 +355,24 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	ReferenceGrant = resource.Builder{
+		Identifier: "ReferenceGrant",
+		Group:      "gateway.networking.k8s.io",
+		Kind:       "ReferenceGrant",
+		Plural:     "referencegrants",
+		Version:    "v1beta1",
+		VersionAliases: []string{
+			"v1beta1",
+		},
+		Proto:         "k8s.io.gateway_api.api.v1alpha1.ReferenceGrantSpec",
+		ReflectType:   reflect.TypeOf(&sigsk8siogatewayapiapisv1beta1.ReferenceGrantSpec{}).Elem(),
+		ProtoPackage:  "sigs.k8s.io/gateway-api/apis/v1beta1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.EmptyValidate,
+	}.MustBuild()
+
 	RequestAuthentication = resource.Builder{
 		Identifier: "RequestAuthentication",
 		Group:      "security.dubbo.apache.org",
@@ -467,6 +486,7 @@ var (
 		MustAdd(PeerAuthentication).
 		MustAdd(Pod).
 		MustAdd(PodDisruptionBudget).
+		MustAdd(ReferenceGrant).
 		MustAdd(RequestAuthentication).
 		MustAdd(Secret).
 		MustAdd(Service).
@@ -494,6 +514,7 @@ var (
 		MustAdd(Node).
 		MustAdd(Pod).
 		MustAdd(PodDisruptionBudget).
+		MustAdd(ReferenceGrant).
 		MustAdd(Secret).
 		MustAdd(Service).
 		MustAdd(ServiceAccount).
@@ -518,6 +539,7 @@ var (
 			MustAdd(HTTPRoute).
 			MustAdd(KubernetesGateway).
 			MustAdd(PeerAuthentication).
+			MustAdd(ReferenceGrant).
 			MustAdd(RequestAuthentication).
 			Build()
 
@@ -530,6 +552,7 @@ var (
 				MustAdd(HTTPRoute).
 				MustAdd(KubernetesGateway).
 				MustAdd(PeerAuthentication).
+				MustAdd(ReferenceGrant).
 				MustAdd(RequestAuthentication).
 				Build()
 )

@@ -35,6 +35,8 @@ var (
 	PeerAuthentication             = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "PeerAuthentication"}
 	Pod                            = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}
 	PodDisruptionBudget            = config.GroupVersionKind{Group: "policy", Version: "v1", Kind: "PodDisruptionBudget"}
+	ReferenceGrant                 = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "ReferenceGrant"}
+	ReferenceGrant_v1beta1         = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "ReferenceGrant"}
 	RequestAuthentication          = config.GroupVersionKind{Group: "security.dubbo.apache.org", Version: "v1alpha3", Kind: "RequestAuthentication"}
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
@@ -96,6 +98,10 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Pod, true
 	case PodDisruptionBudget:
 		return gvr.PodDisruptionBudget, true
+	case ReferenceGrant:
+		return gvr.ReferenceGrant, true
+	case ReferenceGrant_v1beta1:
+		return gvr.ReferenceGrant_v1beta1, true
 	case RequestAuthentication:
 		return gvr.RequestAuthentication, true
 	case Secret:
@@ -157,6 +163,8 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.Pod
 	case PodDisruptionBudget:
 		return kind.PodDisruptionBudget
+	case ReferenceGrant:
+		return kind.ReferenceGrant
 	case RequestAuthentication:
 		return kind.RequestAuthentication
 	case Secret:
@@ -229,6 +237,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Pod, true
 	case gvr.PodDisruptionBudget:
 		return PodDisruptionBudget, true
+	case gvr.ReferenceGrant:
+		return ReferenceGrant, true
 	case gvr.RequestAuthentication:
 		return RequestAuthentication, true
 	case gvr.Secret:

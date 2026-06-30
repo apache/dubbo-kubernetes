@@ -30,6 +30,8 @@ var (
 	PeerAuthentication             = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "peerauthentications"}
 	Pod                            = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 	PodDisruptionBudget            = schema.GroupVersionResource{Group: "policy", Version: "v1", Resource: "poddisruptionbudgets"}
+	ReferenceGrant                 = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1beta1", Resource: "referencegrants"}
+	ReferenceGrant_v1beta1         = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1beta1", Resource: "referencegrants"}
 	RequestAuthentication          = schema.GroupVersionResource{Group: "security.dubbo.apache.org", Version: "v1alpha3", Resource: "requestauthentications"}
 	Secret                         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
@@ -87,6 +89,10 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case Pod:
 		return false
 	case PodDisruptionBudget:
+		return false
+	case ReferenceGrant:
+		return false
+	case ReferenceGrant_v1beta1:
 		return false
 	case RequestAuthentication:
 		return false

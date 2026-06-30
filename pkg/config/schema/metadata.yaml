@@ -202,6 +202,15 @@ resources:
     statusProto: "k8s.io.gateway_api.api.v1alpha1.PolicyStatus"
     statusProtoPackage: "sigs.k8s.io/gateway-api/apis/v1"
 
+  - kind: "ReferenceGrant"
+    plural: "referencegrants"
+    group: "gateway.networking.k8s.io"
+    version: "v1beta1"
+    versionAliases:
+    - "v1beta1"
+    protoPackage: "sigs.k8s.io/gateway-api/apis/v1beta1"
+    proto: "k8s.io.gateway_api.api.v1alpha1.ReferenceGrantSpec"
+
   ## Dubbo resources
   - kind: AuthorizationPolicy
     plural: "authorizationpolicies"

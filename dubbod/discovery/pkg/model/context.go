@@ -29,6 +29,7 @@ import (
 	networkutil "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/network"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/mesh"
@@ -100,6 +101,7 @@ type Environment struct {
 type GatewayController interface {
 	ConfigStoreController
 	Reconcile(ctx *PushContext)
+	SecretAllowed(ourKind config.GroupVersionKind, resourceName string, namespace string) bool
 }
 
 func NewEnvironment() *Environment {

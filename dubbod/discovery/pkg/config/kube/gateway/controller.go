@@ -41,6 +41,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gateway "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 var log = dubbolog.RegisterScope("gateway", "gateway-api controller")
@@ -55,24 +56,33 @@ type Controller struct {
 	gatewayContext krt.RecomputeProtected[*atomic.Pointer[Context]]
 	stop           chan struct{}
 	xdsUpdater     model.XDSUpdater
-	handlers       []krt.HandlerRegistration
 	outputs        Outputs
+	data           map[config.GroupVersionKind]kindStore
 	domainSuffix   string
 	status         *status.StatusCollections
 	inputs         Inputs
 }
 
 type Outputs struct {
-	Gateways krt.Collection[Gateway]
+	Gateways        krt.Collection[config.Config]
+	HTTPRoutes      krt.Collection[config.Config]
+	ReferenceGrants referenceGrantStore
+}
+
+type kindStore struct {
+	collection krt.Collection[config.Config]
+	index      krt.Index[string, config.Config]
+	handlers   []krt.HandlerRegistration
 }
 
 type Inputs struct {
 	Services   krt.Collection[*corev1.Service]
 	Namespaces krt.Collection[*corev1.Namespace]
 
-	GatewayClasses krt.Collection[*gateway.GatewayClass]
-	Gateways       krt.Collection[*gateway.Gateway]
-	HTTPRoutes     krt.Collection[*gateway.HTTPRoute]
+	GatewayClasses  krt.Collection[*gateway.GatewayClass]
+	Gateways        krt.Collection[*gateway.Gateway]
+	HTTPRoutes      krt.Collection[*gateway.HTTPRoute]
+	ReferenceGrants krt.Collection[*gatewayv1beta1.ReferenceGrant]
 }
 
 func NewController(kc kube.Client, waitForCRD func(class schema.GroupVersionResource, stop <-chan struct{}) bool, options controller.Options, xdsUpdater model.XDSUpdater) *Controller {
@@ -99,6 +109,13 @@ func NewController(kc kube.Client, waitForCRD func(class schema.GroupVersionReso
 		GatewayClasses: buildClient[*gateway.GatewayClass](c, kc, gvr.GatewayClass, opts, "informer/GatewayClasses"),
 		Gateways:       buildClient[*gateway.Gateway](c, kc, gvr.KubernetesGateway, opts, "informer/Gateways"),
 		HTTPRoutes:     buildClient[*gateway.HTTPRoute](c, kc, gvr.HTTPRoute, opts, "informer/HTTPRoutes"),
+		ReferenceGrants: buildClient[*gatewayv1beta1.ReferenceGrant](
+			c,
+			kc,
+			gvr.ReferenceGrant,
+			opts,
+			"informer/ReferenceGrants",
+		),
 	}
 
 	GatewayClassStatus, GatewayClasses := GatewayClassesCollection(inputs.GatewayClasses, opts)
@@ -113,16 +130,35 @@ func NewController(kc kube.Client, waitForCRD func(class schema.GroupVersionReso
 	GatewayFinalStatus := FinalGatewayStatusCollection(GatewaysStatus, opts)
 	status.RegisterStatus(c.status, GatewayFinalStatus, GetStatus)
 
-	handlers := []krt.HandlerRegistration{}
+	ReferenceGrants := newReferenceGrantStore(ReferenceGrantsCollection(inputs.ReferenceGrants, opts))
+
+	HTTPRoutes := krt.NewCollection(inputs.HTTPRoutes, func(ctx krt.HandlerContext, hr *gateway.HTTPRoute) *config.Config {
+		cfg := convertHTTPRouteToConfig(hr)
+		return &cfg
+	}, opts.WithName("HTTPRoutes")...)
+
 	outputs := Outputs{
-		Gateways: Gateways,
+		Gateways:        Gateways,
+		HTTPRoutes:      HTTPRoutes,
+		ReferenceGrants: ReferenceGrants,
+	}
+	data := map[config.GroupVersionKind]kindStore{
+		gvk.KubernetesGateway: newKindStore(Gateways),
+		gvk.HTTPRoute:         newKindStore(HTTPRoutes),
 	}
 
 	c.outputs = outputs
-	c.handlers = handlers
+	c.data = data
 	c.inputs = inputs
 
 	return c
+}
+
+func newKindStore(collection krt.Collection[config.Config]) kindStore {
+	return kindStore{
+		collection: collection,
+		index:      krt.NewNamespaceIndex(collection),
+	}
 }
 
 func (c *Controller) Reconcile(ps *model.PushContext) {
@@ -145,25 +181,23 @@ func (c *Controller) SetStatusWrite(enabled bool, statusManager *status.Manager)
 }
 
 func (c *Controller) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
+	if data, ok := c.data[typ]; ok {
+		if namespace == "" {
+			return data.collection.GetKey(name)
+		}
+		return data.collection.GetKey(namespace + "/" + name)
+	}
 	return nil
 }
 
 func (c *Controller) List(typ config.GroupVersionKind, namespace string) []config.Config {
-	switch typ {
-	case gvk.HTTPRoute:
-		// Convert HTTPRoute collection to config.Config list
-		httpRoutes := c.inputs.HTTPRoutes.List()
-		result := make([]config.Config, 0, len(httpRoutes))
-		for _, hr := range httpRoutes {
-			cfg := convertHTTPRouteToConfig(hr)
-			if namespace == "" || cfg.Namespace == namespace {
-				result = append(result, cfg)
-			}
+	if data, ok := c.data[typ]; ok {
+		if namespace == "" {
+			return data.collection.List()
 		}
-		return result
-	default:
-		return nil
+		return data.index.Lookup(namespace)
 	}
+	return nil
 }
 
 func convertHTTPRouteToConfig(hr *gateway.HTTPRoute) config.Config {
@@ -180,8 +214,8 @@ func convertHTTPRouteToConfig(hr *gateway.HTTPRoute) config.Config {
 			UID:               string(hr.UID),
 			Generation:        hr.Generation,
 		},
-		Spec:   &hr.Spec,
-		Status: &hr.Status,
+		Spec:   hr.Spec.DeepCopy(),
+		Status: hr.Status.DeepCopy(),
 	}
 }
 
@@ -206,36 +240,57 @@ func (c *Controller) Delete(typ config.GroupVersionKind, name, namespace string,
 }
 
 func (c *Controller) HasSynced() bool {
-	// Check if all input collections are synced
-	if !c.inputs.Services.HasSynced() {
+	if !collectionHasSynced(c.inputs.Services) ||
+		!collectionHasSynced(c.inputs.Namespaces) ||
+		!collectionHasSynced(c.inputs.GatewayClasses) ||
+		!collectionHasSynced(c.inputs.Gateways) ||
+		!collectionHasSynced(c.inputs.HTTPRoutes) ||
+		!collectionHasSynced(c.inputs.ReferenceGrants) {
 		return false
 	}
-	if !c.inputs.Namespaces.HasSynced() {
+
+	if c.outputs.ReferenceGrants.Collection != nil && !c.outputs.ReferenceGrants.Collection.HasSynced() {
 		return false
 	}
-	if !c.inputs.GatewayClasses.HasSynced() {
-		return false
-	}
-	if !c.inputs.Gateways.HasSynced() {
-		return false
-	}
-	if !c.inputs.HTTPRoutes.HasSynced() {
-		return false
-	}
-	for _, h := range c.handlers {
-		if !h.HasSynced() {
+
+	for _, data := range c.data {
+		if !data.collection.HasSynced() {
 			return false
+		}
+		for _, handler := range data.handlers {
+			if !handler.HasSynced() {
+				return false
+			}
 		}
 	}
 	return true
 }
 
+func collectionHasSynced[T any](collection krt.Collection[T]) bool {
+	return collection == nil || collection.HasSynced()
+}
+
 func (c *Controller) RegisterEventHandler(typ config.GroupVersionKind, handler model.EventHandler) {
-	// We do not do event handler registration this way, and instead directly call the XDS Updated.
+	if data, ok := c.data[typ]; ok {
+		data.handlers = append(data.handlers, data.collection.RegisterBatch(func(evs []krt.Event[config.Config]) {
+			for _, event := range evs {
+				switch event.Event {
+				case controllers.EventAdd:
+					handler(config.Config{}, *event.New, model.EventAdd)
+				case controllers.EventUpdate:
+					handler(*event.Old, *event.New, model.EventUpdate)
+				case controllers.EventDelete:
+					handler(config.Config{}, *event.Old, model.EventDelete)
+				}
+			}
+		}, false))
+		c.data[typ] = data
+	}
 }
 
 func (c *Controller) Schemas() collection.Schemas {
 	return collection.SchemasFor(
+		collections.KubernetesGateway,
 		collections.HTTPRoute,
 	)
 }
@@ -255,7 +310,7 @@ func (c *Controller) Run(stop <-chan struct{}) {
 }
 
 func (c *Controller) SecretAllowed(ourKind config.GroupVersionKind, resourceName string, namespace string) bool {
-	return true // TODO
+	return c.outputs.ReferenceGrants.SecretAllowed(nil, ourKind, resourceName, namespace)
 }
 
 func buildClient[I controllers.ComparableObject](
@@ -269,8 +324,8 @@ func buildClient[I controllers.ComparableObject](
 		ObjectFilter: kubetypes.ComposeFilters(kc.ObjectFilter(), c.inRevision),
 	}
 
-	// Gateway and HTTPRoute are not filtered by revision, they need to select tags as well
-	if res == gvr.KubernetesGateway || res == gvr.HTTPRoute {
+	// Gateway API resources select revisions through their parent/attachment semantics.
+	if res == gvr.KubernetesGateway || res == gvr.HTTPRoute || res == gvr.ReferenceGrant {
 		filter.ObjectFilter = kc.ObjectFilter()
 	}
 

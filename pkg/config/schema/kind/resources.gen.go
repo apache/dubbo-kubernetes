@@ -27,6 +27,7 @@ const (
 	PeerAuthentication
 	Pod
 	PodDisruptionBudget
+	ReferenceGrant
 	RequestAuthentication
 	Secret
 	Service
@@ -83,6 +84,8 @@ func (k Kind) String() string {
 		return "Pod"
 	case PodDisruptionBudget:
 		return "PodDisruptionBudget"
+	case ReferenceGrant:
+		return "ReferenceGrant"
 	case RequestAuthentication:
 		return "RequestAuthentication"
 	case Secret:
@@ -148,6 +151,8 @@ func FromString(s string) Kind {
 		return Pod
 	case "PodDisruptionBudget":
 		return PodDisruptionBudget
+	case "ReferenceGrant":
+		return ReferenceGrant
 	case "RequestAuthentication":
 		return RequestAuthentication
 	case "Secret":
