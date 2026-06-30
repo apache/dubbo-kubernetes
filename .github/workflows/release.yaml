@@ -60,10 +60,12 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: "${{ github.ref_name }}"
           body: |
-            Added multi-cluster functionality.
-            Added microservice examples.
-            Added mesh CNI.
-            Fixed and optimized known issues.
+            Refine the delta xDS framework.
+            Added timeout features for traffic management.
+            Added circuit-breaking capabilities for traffic management.
+            Added egress capability.
+            Refine and supplement observability features.
+            Enhance KRT-related capabilities.
           draft: false
           prerelease: true
 
