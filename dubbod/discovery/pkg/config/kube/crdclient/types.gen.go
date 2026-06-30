@@ -28,6 +28,7 @@ import (
 	k8sioapipolicyv1 "k8s.io/api/policy/v1"
 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	sigsk8siogatewayapiapisv1 "sigs.k8s.io/gateway-api/apis/v1"
+	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1.Object, error) {
@@ -66,6 +67,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
+		}, metav1.CreateOptions{})
+	case gvk.ReferenceGrant:
+		return c.GatewayAPI().GatewayV1beta1().ReferenceGrants(cfg.Namespace).Create(context.TODO(), &sigsk8siogatewayapiapisv1beta1.ReferenceGrant{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1beta1.ReferenceGrantSpec)),
 		}, metav1.CreateOptions{})
 	case gvk.RequestAuthentication:
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
@@ -113,6 +119,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.PeerAuthentication{
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.PeerAuthentication)),
+		}, metav1.UpdateOptions{})
+	case gvk.ReferenceGrant:
+		return c.GatewayAPI().GatewayV1beta1().ReferenceGrants(cfg.Namespace).Update(context.TODO(), &sigsk8siogatewayapiapisv1beta1.ReferenceGrant{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1beta1.ReferenceGrantSpec)),
 		}, metav1.UpdateOptions{})
 	case gvk.RequestAuthentication:
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
@@ -281,6 +292,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.ReferenceGrant:
+		oldRes := &sigsk8siogatewayapiapisv1beta1.ReferenceGrant{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*sigsk8siogatewayapiapisv1beta1.ReferenceGrantSpec)),
+		}
+		modRes := &sigsk8siogatewayapiapisv1beta1.ReferenceGrant{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*sigsk8siogatewayapiapisv1beta1.ReferenceGrantSpec)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.GatewayAPI().GatewayV1beta1().ReferenceGrants(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.RequestAuthentication:
 		oldRes := &apigithubcomapachedubbokubernetesapisecurityv1alpha3.RequestAuthentication{
 			ObjectMeta: origMeta,
@@ -321,6 +347,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.GatewayAPI().GatewayV1().Gateways(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.PeerAuthentication:
 		return c.Dubbo().SecurityV1alpha3().PeerAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.ReferenceGrant:
+		return c.GatewayAPI().GatewayV1beta1().ReferenceGrants(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.RequestAuthentication:
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
@@ -696,6 +724,24 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 			},
 			Spec:   &obj.Spec,
 			Status: &obj.Status,
+		}
+	},
+	gvk.ReferenceGrant: func(r runtime.Object) config.Config {
+		obj := r.(*sigsk8siogatewayapiapisv1beta1.ReferenceGrant)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.ReferenceGrant,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec: &obj.Spec,
 		}
 	},
 	gvk.RequestAuthentication: func(r runtime.Object) config.Config {

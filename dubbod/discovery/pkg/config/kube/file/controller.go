@@ -154,6 +154,7 @@ func (c *Controller) RegisterEventHandler(typ config.GroupVersionKind, handler m
 				}
 			}, false),
 		)
+		c.data[typ] = data
 	}
 }
 
@@ -183,7 +184,7 @@ func (c ConfigKind) ResourceName() string {
 		return c.GroupVersionKind.String() + "/" + c.Name
 	}
 
-	return c.GroupVersionKind.String() + "/" + c.Namespace + c.Name
+	return c.GroupVersionKind.String() + "/" + c.Namespace + "/" + c.Name
 }
 
 func (c ConfigKind) Equals(other ConfigKind) bool {

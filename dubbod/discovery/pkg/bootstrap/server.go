@@ -505,6 +505,8 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind = kind.PeerAuthentication
 		case "RequestAuthentication":
 			configKind = kind.RequestAuthentication
+		case "ReferenceGrant":
+			configKind = kind.ReferenceGrant
 		case "GatewayClass":
 			configKind = kind.GatewayClass
 		case "KubernetesGateway":
@@ -538,6 +540,7 @@ func (s *Server) initRegistryEventHandlers() {
 			configKind == kind.AuthorizationPolicy ||
 			configKind == kind.HTTPRoute ||
 			configKind == kind.BackendTLSPolicy ||
+			configKind == kind.ReferenceGrant ||
 			configKind == kind.CircuitBreakerPolicy
 
 		// Trigger ConfigUpdate to push changes to all connected proxies

@@ -19,9 +19,10 @@ package crdclient
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 	"sync"
 	"time"
+
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/resource"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
@@ -249,7 +250,8 @@ func (cl *Client) Schemas() collection.Schemas {
 }
 
 func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler model.EventHandler) {
-	if c, ok := cl.kind(kind); ok {
+	cl.kindsMu.Lock()
+	if c, ok := cl.kinds[kind]; ok {
 		c.handlers = append(c.handlers, c.collection.RegisterBatch(func(o []krt.Event[config.Config]) {
 			for _, event := range o {
 				switch event.Event {
@@ -262,8 +264,11 @@ func (cl *Client) RegisterEventHandler(kind config.GroupVersionKind, handler mod
 				}
 			}
 		}, false))
+		cl.kinds[kind] = c
+		cl.kindsMu.Unlock()
 		return
 	}
+	cl.kindsMu.Unlock()
 
 	cl.logger.Warnf("unknown type: %s", kind)
 }

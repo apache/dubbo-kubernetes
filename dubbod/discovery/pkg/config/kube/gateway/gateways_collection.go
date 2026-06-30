@@ -19,18 +19,11 @@ package gateway
 import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model/kstatus"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gateway "sigs.k8s.io/gateway-api/apis/v1"
 )
-
-type Gateway struct {
-	*config.Config `json:"config"`
-}
-
-func (g Gateway) ResourceName() string {
-	return config.NamespacedName(g.Config).String()
-}
 
 func GatewaysCollection(
 	gateways krt.Collection[*gateway.Gateway],
@@ -38,10 +31,9 @@ func GatewaysCollection(
 	opts krt.OptionsBuilder,
 ) (
 	krt.StatusCollection[*gateway.Gateway, gateway.GatewayStatus],
-	krt.Collection[Gateway],
+	krt.Collection[config.Config],
 ) {
-	statusCol, gw := krt.NewStatusManyCollection(gateways, func(ctx krt.HandlerContext, obj *gateway.Gateway) (*gateway.GatewayStatus, []Gateway) {
-		result := []Gateway{}
+	statusCol, gw := krt.NewStatusCollection(gateways, func(ctx krt.HandlerContext, obj *gateway.Gateway) (*gateway.GatewayStatus, *config.Config) {
 		kgw := obj.Spec
 		status := obj.Status.DeepCopy()
 		class := fetchClass(ctx, gatewayClasses, kgw.GatewayClassName)
@@ -56,16 +48,36 @@ func GatewaysCollection(
 		if classInfo.disableRouteGeneration {
 			// For now we still mark the Gateway as accepted, but let higher layers control route generation.
 			status = setGatewayConditions(status, obj.Generation, true, true)
-			return status, result
+			return status, nil
 		}
 
 		// Default behavior: GatewayClass is known and managed by this controller.
 		// Mark Accepted/Programmed to ensure status no longer stays at "Waiting for controller".
 		status = setGatewayConditions(status, obj.Generation, true, true)
-		return status, result
+		cfg := convertGatewayToConfig(obj)
+		return status, &cfg
 	}, opts.WithName("KubernetesGateway")...)
 
 	return statusCol, gw
+}
+
+func convertGatewayToConfig(gw *gateway.Gateway) config.Config {
+	return config.Config{
+		Meta: config.Meta{
+			GroupVersionKind:  gvk.KubernetesGateway,
+			Name:              gw.Name,
+			Namespace:         gw.Namespace,
+			Labels:            gw.Labels,
+			Annotations:       gw.Annotations,
+			ResourceVersion:   gw.ResourceVersion,
+			CreationTimestamp: gw.CreationTimestamp.Time,
+			OwnerReferences:   gw.OwnerReferences,
+			UID:               string(gw.UID),
+			Generation:        gw.Generation,
+		},
+		Spec:   gw.Spec.DeepCopy(),
+		Status: gw.Status.DeepCopy(),
+	}
 }
 
 func setGatewayConditions(
