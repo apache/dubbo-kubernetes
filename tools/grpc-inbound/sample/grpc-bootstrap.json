@@ -1,0 +1,28 @@
+{
+  "xds_servers": [
+    {
+      "server_uri": "unused:26010",
+      "channel_creds": [
+        {
+          "type": "insecure"
+        }
+      ],
+      "server_features": [
+        "xds_v3"
+      ]
+    }
+  ],
+  "node": {
+    "id": "proxyless~10.244.5.2~app-2.default~default.svc.cluster.local"
+  },
+  "certificate_providers": {
+    "default": {
+      "plugin_name": "file_watcher",
+      "config": {
+        "certificate_file": "tools/virtualfacility/grpc-inbound/sample/cert-chain.pem",
+        "private_key_file": "tools/virtualfacility/grpc-inbound/sample/key.pem",
+        "ca_certificate_file": "tools/virtualfacility/grpc-inbound/sample/root-cert.pem"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "services": [
+    {
+      "ports": [
+        {
+          "port": 8080,
+          "mtlsMode": "PERMISSIVE"
+        }
+      ]
+    }
+  ]
+}
