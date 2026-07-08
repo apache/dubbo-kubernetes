@@ -17,24 +17,27 @@ notifications:
     commits:      commits@dubbo.apache.org
     issues:       notifications@dubbo.apache.org
     pullrequests: notifications@dubbo.apache.org
-    jira_options: link label
 
 github:
   homepage: "https://kdubbo.github.io"
-  description: "Build a native mesh using gRPC and xDS."
+  description: "Build a native mesh using gRPC and xDS"
+  labels:
+    - dubbo
+    - consul
+    - kubernetes
+    - service-mesh
+    - microservice
+    - microservices
   features:
-    # Enable wiki for documentation
-    wiki: false
     # Enable issue management
     issues: true
     # Enable projects for project management boards
     projects: false
+    # Enable wiki for documentation
+    wiki: false
   protected_branches:
     master: {}
-      # only disable force push
-      # foo: bar
-  labels:
-    - dubbo
-    - kubernetes
-    - service-mesh
+    # only disable force push
+    # foo: bar
+
 
