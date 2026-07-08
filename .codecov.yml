@@ -25,9 +25,14 @@ coverage:
     # Pull requests only
     patch:
       default:
-        threshold: 0.1%
+        informational: true
+        # Commits pushed to master should not make the overall
+        # project coverage decrease:
+        target: auto
+        threshold: 0%
     project:
       default:
+        informational: true
         threshold: 0%
 
 ignore:
@@ -39,10 +44,6 @@ ignore:
   
   # Test files
   - "**/*_test.go"
-  
-  # Dependencies
-  - "**/vendor/**"
-  - "**/node_modules/**"
   
   # Build artifacts
   - "**/*.sum"

@@ -71,13 +71,17 @@ func (p Plugin) addOrCheck(ctx context.Context, env Env, conf NetConf) ([]byte, 
 		return out, nil
 	}
 	if p.PodInfoProvider == nil {
-		return nil, fmt.Errorf("pod info provider is required")
+		return out, nil
 	}
 	pod, err := p.PodInfoProvider.PodInfo(ctx, ref)
 	if err != nil {
-		return nil, err
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
+		// Ownership is not proven until the managed label is read.
+		return out, nil
 	}
-	if pod.Labels[conf.ManagedLabel] != conf.ManagedLabelValue {
+	if !isManagedPod(conf, pod) {
 		return out, nil
 	}
 	podIP := firstPodIP(conf, pod)
@@ -120,6 +124,13 @@ func (p Plugin) del(ctx context.Context, env Env) error {
 		}
 	}
 	return p.StateStore.Delete(env.ContainerID)
+}
+
+func isManagedPod(conf NetConf, pod PodInfo) bool {
+	if conf.ManagedLabel == "" {
+		return false
+	}
+	return pod.Labels[conf.ManagedLabel] == conf.ManagedLabelValue
 }
 
 func firstPodIP(conf NetConf, pod PodInfo) string {

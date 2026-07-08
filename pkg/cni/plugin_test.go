@@ -18,6 +18,7 @@ package cni
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
@@ -65,6 +66,54 @@ func TestPluginAddSkipsUnmanagedPod(t *testing.T) {
 		PodInfoProvider: fakePodInfoProvider{pod: PodInfo{Labels: map[string]string{"app": "nginx"}}},
 		RuleManager:     rules,
 		StateStore:      NewFileStateStore(t.TempDir()),
+	}
+
+	if _, err := plugin.Run(context.Background(), Env{
+		Command:     "ADD",
+		ContainerID: "container-a",
+		Args:        "K8S_POD_NAMESPACE=app;K8S_POD_NAME=nginx",
+	}, conf); err != nil {
+		t.Fatalf("Run(ADD) failed: %v", err)
+	}
+	if len(rules.added) != 0 {
+		t.Fatalf("added rules = %v, want none", rules.added)
+	}
+}
+
+func TestPluginAddSkipsWhenPodInfoIsUnavailable(t *testing.T) {
+	conf := testConf(t)
+	rules := &fakeRuleManager{}
+	plugin := Plugin{
+		PodInfoProvider: fakePodInfoProvider{err: errors.New("get pod app/nginx: Unauthorized")},
+		RuleManager:     rules,
+		StateStore:      NewFileStateStore(t.TempDir()),
+	}
+
+	out, err := plugin.Run(context.Background(), Env{
+		Command:     "ADD",
+		ContainerID: "container-a",
+		Args:        "K8S_POD_NAMESPACE=app;K8S_POD_NAME=nginx",
+	}, conf)
+	if err != nil {
+		t.Fatalf("Run(ADD) failed: %v", err)
+	}
+	if len(out) == 0 {
+		t.Fatal("Run(ADD) returned empty result")
+	}
+	if len(rules.added) != 0 {
+		t.Fatalf("added rules = %v, want none", rules.added)
+	}
+	if _, err := plugin.StateStore.Read("container-a"); !IsNotFound(err) {
+		t.Fatalf("state read err = %v, want not found", err)
+	}
+}
+
+func TestPluginAddSkipsWithoutPodInfoProvider(t *testing.T) {
+	conf := testConf(t)
+	rules := &fakeRuleManager{}
+	plugin := Plugin{
+		RuleManager: rules,
+		StateStore:  NewFileStateStore(t.TempDir()),
 	}
 
 	if _, err := plugin.Run(context.Background(), Env{

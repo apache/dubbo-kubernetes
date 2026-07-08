@@ -1,0 +1,58 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- $defaults := .Values._internal_default_values_not_set | default dict }}
+{{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
+{{- $defaultCNI := $defaultProxyless.cni | default dict }}
+{{- $global := .Values.global | default dict }}
+{{- $proxyless := $global.proxyless | default dict }}
+{{- $cni := $proxyless.cni | default dict }}
+{{- $enabled := false }}
+{{- if hasKey $defaultCNI "enabled" }}
+{{- $enabled = $defaultCNI.enabled }}
+{{- end }}
+{{- if hasKey $cni "enabled" }}
+{{- $enabled = $cni.enabled }}
+{{- end }}
+{{- if $enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dubbo-cni
+  namespace: dubbo-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dubbo-cni-clusterrole-dubbo-system
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dubbo-cni-clusterrole-dubbo-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dubbo-cni-clusterrole-dubbo-system
+subjects:
+  - kind: ServiceAccount
+    name: dubbo-cni
+    namespace: dubbo-system
+{{- end }}

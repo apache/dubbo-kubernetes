@@ -71,10 +71,9 @@ func main() {
 	}
 	if (env.Command == "ADD" || env.Command == "CHECK") && cni.EnvHasKubernetesPod(env) {
 		provider, err := cni.NewKubernetesPodInfoProvider(conf.KubeConfigPath())
-		if err != nil {
-			exitErr(err)
+		if err == nil {
+			plugin.PodInfoProvider = provider
 		}
-		plugin.PodInfoProvider = provider
 	}
 	out, err := plugin.Run(context.Background(), env, conf)
 	if err != nil {

@@ -19,9 +19,9 @@
     "default": {
       "plugin_name": "file_watcher",
       "config": {
-        "certificate_file": "tools/virtualfacility/grpc-inbound/sample/cert-chain.pem",
-        "private_key_file": "tools/virtualfacility/grpc-inbound/sample/key.pem",
-        "ca_certificate_file": "tools/virtualfacility/grpc-inbound/sample/root-cert.pem"
+        "certificate_file": "tools/grpc-inbound/sample/cert-chain.pem",
+        "private_key_file": "tools/grpc-inbound/sample/key.pem",
+        "ca_certificate_file": "tools/grpc-inbound/sample/root-cert.pem"
       }
     }
   }

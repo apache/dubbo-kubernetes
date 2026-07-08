@@ -57,8 +57,11 @@ spec:
       labels:
         app: dubbo-cni
         dubbo.apache.org/rev: default
+        proxyless.dubbo.apache.org/inject: "false"
     spec:
-      serviceAccountName: dubbod
+      serviceAccountName: dubbo-cni
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       tolerations:
         - operator: Exists
       containers:
