@@ -19,6 +19,11 @@ build-dubboctl:
 	-ldflags "-X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=$(GIT_VERSION)" \
     -o bin/dubboctl cli/main.go
 
+.PHONY: build-dubbod
+build-dubbod:
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
+    -o bin/dubbod dubbod/discovery/cmd/main.go
+
 .PHONY: build-dubbo-cni
 build-dubbo-cni:
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \

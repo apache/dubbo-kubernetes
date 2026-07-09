@@ -33,7 +33,7 @@ import (
 	configlabels "github.com/apache/dubbo-kubernetes/pkg/config/labels"
 	meshconfig "github.com/apache/dubbo-kubernetes/pkg/config/mesh"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	kubelib "github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"

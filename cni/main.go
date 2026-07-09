@@ -25,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/pkg/cni"
+	"github.com/apache/dubbo-kubernetes/cni/pkg/cni"
 )
 
 func main() {

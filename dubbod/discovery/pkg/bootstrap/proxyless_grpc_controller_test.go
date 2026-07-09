@@ -31,7 +31,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collections"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"

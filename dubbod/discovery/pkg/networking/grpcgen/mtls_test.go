@@ -6,7 +6,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
-	"github.com/apache/dubbo-kubernetes/pkg/dubboagency/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	cluster "github.com/kdubbo/xds-api/cluster/v1"
 	tlsv1 "github.com/kdubbo/xds-api/extensions/transport_sockets/tls/v1"
