@@ -44,6 +44,25 @@ webhooks:
       apiGroups:
       - security.dubbo.apache.org
       - networking.dubbo.apache.org
+      apiVersions:
+      - "*"
+      resources:
+      - "*"
+    sideEffects: None
+  - name: telemetry.validation.dubbo.apache.org
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      service:
+        name: dubbod
+        namespace: dubbo-system
+        path: "/validate"
+      caBundle: ""
+    failurePolicy: Ignore
+    rules:
+    - operations:
+      - CREATE
+      - UPDATE
+      apiGroups:
       - telemetry.dubbo.apache.org
       apiVersions:
       - "*"
