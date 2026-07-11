@@ -62,7 +62,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/pflag v1.0.10
 	github.com/stoewer/go-strcase v1.3.0
 	go.uber.org/atomic v1.11.0
 	golang.org/x/crypto v0.46.0
