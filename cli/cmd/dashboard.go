@@ -114,7 +114,33 @@ func DashboardCmd(ctx cli.Context) *cobra.Command {
 	}
 	command.Flags().StringVar(&args.manifests, "manifests", args.manifests, "Dashboard manifest file or samples/addons directory")
 	command.Flags().DurationVar(&args.wait, "wait", args.wait, "Maximum time to wait for observability deployments; 0 disables waiting")
+
+	command.AddCommand(dashboardTargetCmd(ctx, "grafana", "Open the Grafana dashboards", "grafana", 3000, 3000))
+	command.AddCommand(dashboardTargetCmd(ctx, "prometheus", "Open the Prometheus UI", "prometheus", 9090, 9090))
+	command.AddCommand(dashboardTargetCmd(ctx, "tracing", "Open the distributed tracing UI", "tracing", 16686, 16686))
+	command.AddCommand(dashboardTargetCmd(ctx, "otel", "Forward the OpenTelemetry collector OTLP gRPC port", "opentelemetry-collector", 4317, 4317))
 	return command
+}
+
+// dashboardTargetCmd builds a subcommand that port-forwards to one
+// observability addon. Installation is handled by the operator (for example
+// `dubboctl install --set profile=demo`); these subcommands only provide access.
+func dashboardTargetCmd(ctx cli.Context, name, short, serviceName string, localPort, podPort int) *cobra.Command {
+	port := localPort
+	cmd := &cobra.Command{
+		Use:   name,
+		Short: short,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			client, err := ctx.CLIClient()
+			if err != nil {
+				return err
+			}
+			return forwardToService(cmd.Context(), client, cmd.OutOrStdout(), dashboardNamespace, serviceName, port, podPort)
+		},
+	}
+	cmd.Flags().IntVarP(&port, "port", "p", localPort, "Local port to forward from")
+	return cmd
 }
 
 func dashboardManifestFiles(path string) ([]string, error) {

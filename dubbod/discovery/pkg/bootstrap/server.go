@@ -258,6 +258,9 @@ func NewServer(args *DubboArgs, initFuncs ...func(*Server)) (*Server, error) {
 	if err := s.initMonitor(args.ServerOptions.HTTPAddr); err != nil {
 		return nil, fmt.Errorf("error initializing monitoring: %v", err)
 	}
+	// Debug endpoints (/debug/syncz etc.) share the monitoring mux and power
+	// `dubboctl proxy-status`.
+	s.XDSServer.AppendDebugHandlers(s.monitoringMux)
 
 	dubbodHost, _, err := e.GetDiscoveryAddress()
 	if err != nil {

@@ -1,0 +1,46 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements. See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0.
+
+# Exactly one selectorless Telemetry is allowed in dubbo-system. It defines
+# the meshlevel defaults.
+apiVersion: telemetry.dubbo.apache.org/v1alpha1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: dubbo-system
+spec:
+  tracing:
+  - providers:
+    - name: localtrace
+    tags:
+    - name: foo
+      value: bar
+    randomSamplingPercentage: 100
+---
+# Fields present here replace the corresponding meshlevel field. Unspecified
+# fields, including providers and sampling, remain inherited.
+apiVersion: telemetry.dubbo.apache.org/v1alpha1
+kind: Telemetry
+metadata:
+  name: namespace-override
+  namespace: myapp
+spec:
+  tracing:
+  - tags:
+    - name: userId
+      value: unknown
+---
+# A selector applies the final workload-level override inside its namespace.
+apiVersion: telemetry.dubbo.apache.org/v1alpha1
+kind: Telemetry
+metadata:
+  name: workload-override
+  namespace: myapp
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  tracing:
+  - disableSpanReporting: true

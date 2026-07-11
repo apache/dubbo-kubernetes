@@ -114,9 +114,13 @@ func grpcDeltaClusterNames(w *model.WatchedResource, req *model.PushRequest) set
 }
 
 // buildCommonTLSContext creates a TLS context that matches gRPC xDS expectations.
-// - Uses certificate provider "default" for workload certs and root CA
-// - Does not configure explicit SAN matches (left to future hardening)
-func buildCommonTLSContext() *tlsv1.CommonTlsContext {
+//   - Uses certificate provider "default" for workload certs and root CA
+//   - sans, when non-empty, restricts accepted peer certificates to the given
+//     SPIFFE identities. Outbound clusters pass the target service's identities so
+//     a workload with a valid mesh certificate cannot impersonate another service.
+//     Inbound listeners pass nil: any authenticated mesh identity is accepted at
+//     the transport layer and fine-grained restrictions belong to AuthorizationPolicy.
+func buildCommonTLSContext(sans []string) *tlsv1.CommonTlsContext {
 	return &tlsv1.CommonTlsContext{
 		// Workload certificate provider instance (SPIFFE workload cert chain)
 		TlsCertificateCertificateProviderInstance: &tlsv1.CommonTlsContext_CertificateProviderInstance{
@@ -130,14 +134,11 @@ func buildCommonTLSContext() *tlsv1.CommonTlsContext {
 					InstanceName:    "default",
 					CertificateName: "ROOTCA",
 				},
-				// DefaultValidationContext: Configure basic certificate validation
-				// The certificate provider instance (ROOTCA) provides the root CA for validation
-				// For gRPC proxyless, we rely on the certificate provider for root CA validation
-				// SAN matching can be added later if needed for stricter validation
+				// The certificate provider instance (ROOTCA) provides the root CA
+				// used for chain validation; match_subject_alt_names pins the peer
+				// identity on top of that.
 				DefaultValidationContext: &tlsv1.CertificateValidationContext{
-					// Trust the root CA from the certificate provider
-					// The certificate provider instance "default" with "ROOTCA" will provide
-					// the root CA certificates for validating peer certificates
+					MatchSubjectAltNames: sans,
 				},
 			},
 		},

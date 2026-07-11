@@ -27,11 +27,14 @@ import (
 	"net/http"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/config/kube/crd"
+	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/collection"
+	schemagvk "github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/validation"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/hashicorp/go-multierror"
+	telemetry "github.com/kdubbo/api/telemetry/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -60,6 +63,7 @@ type admitFunc func(*kube.AdmissionRequest) *kube.AdmissionResponse
 
 type Options struct {
 	Schemas      collection.Schemas
+	Store        configLister
 	DomainSuffix string
 	Port         uint
 	Mux          *http.ServeMux
@@ -67,7 +71,12 @@ type Options struct {
 
 type Webhook struct {
 	schemas      collection.Schemas
+	store        configLister
 	domainSuffix string
+}
+
+type configLister interface {
+	List(typ config.GroupVersionKind, namespace string) []config.Config
 }
 
 // New creates a new instance of the admission webhook server.
@@ -77,6 +86,7 @@ func New(o Options) (*Webhook, error) {
 	}
 	wh := &Webhook{
 		schemas:      o.Schemas,
+		store:        o.Store,
 		domainSuffix: o.DomainSuffix,
 	}
 
@@ -144,11 +154,36 @@ func (wh *Webhook) validate(request *kube.AdmissionRequest) *kube.AdmissionRespo
 		}
 		return toAdmissionResponse(fmt.Errorf("configuration is invalid: %v", err))
 	}
+	if err := wh.validateMeshlevelUniqueness(*out); err != nil {
+		return toAdmissionResponse(fmt.Errorf("configuration is invalid: %v", err))
+	}
 
 	if _, err := checkFields(request.Object.Raw, request.Kind.Kind, request.Namespace, obj.Name); err != nil {
 		return toAdmissionResponse(err)
 	}
 	return &kube.AdmissionResponse{Allowed: true, Warnings: toKubeWarnings(warnings)}
+}
+
+func (wh *Webhook) validateMeshlevelUniqueness(out config.Config) error {
+	if wh.store == nil || out.GroupVersionKind != schemagvk.Telemetry ||
+		out.Namespace != constants.DubboSystemNamespace {
+		return nil
+	}
+	telemetrySpec, ok := out.Spec.(*telemetry.Telemetry)
+	if !ok || telemetrySpec.GetSelector() != nil {
+		return nil
+	}
+	for _, existing := range wh.store.List(schemagvk.Telemetry, constants.DubboSystemNamespace) {
+		if existing.Name == out.Name {
+			continue
+		}
+		existingSpec, ok := existing.Spec.(*telemetry.Telemetry)
+		if ok && existingSpec.GetSelector() == nil {
+			return fmt.Errorf("only one meshlevel Telemetry is allowed in namespace %q; %q already exists",
+				constants.DubboSystemNamespace, existing.Name)
+		}
+	}
+	return nil
 }
 
 func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {

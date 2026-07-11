@@ -26,9 +26,12 @@ import (
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/google/go-cmp/cmp"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
+	apitelemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	typeapi "github.com/kdubbo/api/type/v1alpha3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	corev1 "k8s.io/api/core/v1"
@@ -499,9 +502,9 @@ func TestServiceTypeForGatewayUsesAnnotation(t *testing.T) {
 }
 
 func TestObservabilityConfigForGatewayDefaults(t *testing.T) {
-	cfg := observabilityConfigForGateway(gatewayv1.Gateway{
+	cfg := resolveGatewayObservability(gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{Name: "public", Namespace: "app"},
-	})
+	}, "dubbo-system", nil)
 
 	if cfg.OtelEndpoint != "" {
 		t.Fatalf("otel endpoint = %q, want empty", cfg.OtelEndpoint)
@@ -520,28 +523,25 @@ func TestObservabilityConfigForGatewayDefaults(t *testing.T) {
 	}
 }
 
-func TestObservabilityConfigForGatewayAnnotations(t *testing.T) {
-	cfg := observabilityConfigForGateway(gatewayv1.Gateway{
+func TestObservabilityConfigForGatewayAccessLogAnnotations(t *testing.T) {
+	cfg := resolveGatewayObservability(gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "public",
 			Namespace: "app",
 			Annotations: map[string]string{
-				otelEndpointAnnotation:    " http://otel-collector.dubbo-system.svc:4317 ",
-				otelServiceNameAnnotation: "edge-gateway",
-				otelSamplingAnnotation:    "12.5",
 				accessLogAnnotation:       "false",
 				accessLogFormatAnnotation: "json",
 			},
 		},
-	})
+	}, "dubbo-system", nil)
 
-	if cfg.OtelEndpoint != "http://otel-collector.dubbo-system.svc:4317" {
+	if cfg.OtelEndpoint != "" {
 		t.Fatalf("otel endpoint = %q", cfg.OtelEndpoint)
 	}
-	if cfg.OtelServiceName != "edge-gateway" {
+	if cfg.OtelServiceName != "dxgate.app.public" {
 		t.Fatalf("otel service name = %q", cfg.OtelServiceName)
 	}
-	if cfg.OtelSampling != "12.5" {
+	if cfg.OtelSampling != "100" {
 		t.Fatalf("otel sampling = %q", cfg.OtelSampling)
 	}
 	if cfg.AccessLog != "false" {
@@ -552,28 +552,22 @@ func TestObservabilityConfigForGatewayAnnotations(t *testing.T) {
 	}
 }
 
-func TestObservabilityConfigForGatewayInvalidSamplingFallsBack(t *testing.T) {
-	for _, value := range []string{"abc", "-1", "101", "NaN", "+Inf"} {
-		cfg := observabilityConfigForGateway(gatewayv1.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "public",
-				Namespace: "app",
-				Annotations: map[string]string{
-					otelSamplingAnnotation:    value,
-					accessLogAnnotation:       "maybe",
-					accessLogFormatAnnotation: "yaml",
-				},
+func TestObservabilityConfigForGatewayInvalidAccessLogAnnotationsFallBack(t *testing.T) {
+	cfg := resolveGatewayObservability(gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "public",
+			Namespace: "app",
+			Annotations: map[string]string{
+				accessLogAnnotation:       "maybe",
+				accessLogFormatAnnotation: "yaml",
 			},
-		})
-		if cfg.OtelSampling != "100" {
-			t.Fatalf("otel sampling for %q = %q, want 100", value, cfg.OtelSampling)
-		}
-		if cfg.AccessLog != "true" {
-			t.Fatalf("access log for %q = %q, want true", value, cfg.AccessLog)
-		}
-		if cfg.AccessLogFormat != "text" {
-			t.Fatalf("access log format for %q = %q, want text", value, cfg.AccessLogFormat)
-		}
+		},
+	}, "dubbo-system", nil)
+	if cfg.AccessLog != "true" {
+		t.Fatalf("access log = %q, want true", cfg.AccessLog)
+	}
+	if cfg.AccessLogFormat != "text" {
+		t.Fatalf("access log format = %q, want text", cfg.AccessLogFormat)
 	}
 }
 
@@ -705,5 +699,50 @@ func TestKubeGatewayTemplateRendersDxgateResources(t *testing.T) {
 	if !strings.Contains(rendered[2], "DXGATE_OTEL_ENDPOINT") ||
 		!strings.Contains(rendered[2], `value: "http://tracing.dubbo-system.svc:4317"`) {
 		t.Fatalf("deployment did not render dxgate OTEL endpoint:\n%s", rendered[2])
+	}
+}
+
+func TestResolveGatewayObservabilityTelemetryHierarchy(t *testing.T) {
+	resources := []telemetryconfig.Resource{
+		{
+			Name: "mesh-default", Namespace: "dubbo-system", CreationTimestamp: time.Unix(1, 0),
+			Spec: &apitelemetry.Telemetry{Tracing: []*apitelemetry.Tracing{{
+				Providers:                []*apitelemetry.Tracing_TracingProvider{{Name: "localtrace"}},
+				Tags:                     []*apitelemetry.Tracing_Tag{{Name: "foo", Value: "bar"}},
+				RandomSamplingPercentage: wrapperspb.Double(100),
+			}}},
+		},
+		{
+			Name: "namespace-override", Namespace: "app", CreationTimestamp: time.Unix(2, 0),
+			Spec: &apitelemetry.Telemetry{Tracing: []*apitelemetry.Tracing{{
+				Tags:                     []*apitelemetry.Tracing_Tag{{Name: "userId", Value: "unknown"}},
+				RandomSamplingPercentage: wrapperspb.Double(25),
+			}}},
+		},
+	}
+	gw := gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{
+		Name: "public", Namespace: "app", Labels: map[string]string{"app": "frontend"},
+	}}
+
+	cfg := resolveGatewayObservability(gw, "dubbo-system", resources)
+	if want := "http://tracing.dubbo-system.svc:4317"; cfg.OtelEndpoint != want {
+		t.Fatalf("otel endpoint = %q, want %q", cfg.OtelEndpoint, want)
+	}
+	if cfg.OtelSampling != "25" {
+		t.Fatalf("otel sampling = %q, want 25", cfg.OtelSampling)
+	}
+	if cfg.OtelTags != `{"userId":"unknown"}` {
+		t.Fatalf("otel tags = %q", cfg.OtelTags)
+	}
+
+	resources = append(resources, telemetryconfig.Resource{
+		Name: "workload-override", Namespace: "app", CreationTimestamp: time.Unix(3, 0),
+		Spec: &apitelemetry.Telemetry{
+			Selector: &typeapi.WorkloadSelector{MatchLabels: map[string]string{"app": "frontend"}},
+			Tracing:  []*apitelemetry.Tracing{{DisableSpanReporting: wrapperspb.Bool(true)}},
+		},
+	})
+	if cfg := resolveGatewayObservability(gw, "dubbo-system", resources); cfg.OtelEndpoint != "" {
+		t.Fatalf("otel endpoint = %q, want empty when workload disables reporting", cfg.OtelEndpoint)
 	}
 }

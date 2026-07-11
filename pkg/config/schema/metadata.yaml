@@ -255,3 +255,12 @@ resources:
     protoPackage: "github.com/kdubbo/api/security/v1alpha3"
     statusProto: "dubbo.meta.v1alpha1.DubboStatus"
     statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"
+
+  - kind: Telemetry
+    plural: "telemetries"
+    group: "telemetry.dubbo.apache.org"
+    version: "v1alpha1"
+    proto: "dubbo.telemetry.v1alpha1.Telemetry"
+    protoPackage: "github.com/kdubbo/api/telemetry/v1alpha1"
+    statusProto: "dubbo.meta.v1alpha1.DubboStatus"
+    statusProtoPackage: "github.com/kdubbo/api/meta/v1alpha1"

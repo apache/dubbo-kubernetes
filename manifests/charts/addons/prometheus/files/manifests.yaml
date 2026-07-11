@@ -1,0 +1,246 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: dubbo-system
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: dubbo-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dubbo-prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: dubbo-observability
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dubbo-prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: dubbo-observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dubbo-prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: dubbo-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus
+  namespace: dubbo-system
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: dubbo-observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+    - /etc/prometheus/rules/*.yaml
+
+    scrape_configs:
+    - job_name: prometheus
+      static_configs:
+      - targets:
+        - localhost:9090
+
+    - job_name: dubbod
+      metrics_path: /metrics
+      static_configs:
+      - targets:
+        - dubbod.dubbo-system.svc:8080
+        labels:
+          app: dubbod
+          namespace: dubbo-system
+
+    - job_name: kubernetes-pods
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+        target_label: app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: dubbo-system
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: dubbo-observability
+data:
+  dubbo-alerts.yaml: |
+    groups:
+    - name: dubbo-observability
+      rules:
+      - alert: Dxgate5xxRateHigh
+        expr: sum by (namespace, gateway, route, cluster) (rate(dxgate_http_route_requests_total{status_code=~"5.."}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: dxgate 5xx responses are increasing
+          description: dxgate is returning 5xx responses for one or more Gateway routes.
+      - alert: DxgateP95LatencyHigh
+        expr: histogram_quantile(0.95, sum by (le, namespace, gateway, route, cluster) (rate(dxgate_http_route_latency_ms_bucket[5m]))) > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: dxgate P95 latency is above 1s
+          description: Gateway upstream latency is above the sample threshold.
+      - alert: DxgateNotReady
+        expr: up{app="dxgate"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: dxgate metrics target is down
+          description: Prometheus cannot scrape a dxgate pod or the pod is not ready.
+      - alert: DubbodXDSRejects
+        expr: sum(rate(dubbod_total_xds_rejects[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: xDS rejects are increasing
+          description: One or more data-plane clients rejected xDS resources from dubbod.
+      - alert: DubbodSDSError
+        expr: sum(rate(dubbod_sds_certificate_errors_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: SDS certificate errors are increasing
+          description: Workload certificate fetch or delivery is failing.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: dubbo-system
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: dubbo-observability
+spec:
+  ports:
+  - name: http
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app.kubernetes.io/name: prometheus
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: dubbo-system
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: dubbo-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+        app.kubernetes.io/part-of: dubbo-observability
+    spec:
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v3.5.0
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --web.enable-lifecycle
+        ports:
+        - name: http
+          containerPort: 9090
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/prometheus
+          readOnly: true
+        - name: rules
+          mountPath: /etc/prometheus/rules
+          readOnly: true
+        - name: storage
+          mountPath: /prometheus
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus
+      - name: rules
+        configMap:
+          name: prometheus-rules
+      - name: storage
+        emptyDir: {}

@@ -53,8 +53,8 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru/v2 v2.0.5
 	github.com/heroku/color v0.0.6
-	github.com/kdubbo/api v0.0.0-20260629012006-5a14128f12bf
-	github.com/kdubbo/client-go v0.0.0-20260629012006-6b48ad09b6be
+	github.com/kdubbo/api v0.0.0-20260711063406-ff5334e781fd
+	github.com/kdubbo/client-go v0.0.0-20260711063741-a336aba3d8e8
 	github.com/kdubbo/xds-api v0.0.0-20260628124158-b93008db9162
 	github.com/moby/term v0.5.2
 	github.com/ory/viper v1.7.5
@@ -158,6 +158,7 @@ require (
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250607225305-033d6d78b36a // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
+	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -185,6 +186,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/buildkit v0.23.2 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
+	github.com/moby/spdystream v0.5.0 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
@@ -195,6 +197,7 @@ require (
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/onsi/ginkgo/v2 v2.25.3 // indirect
 	github.com/onsi/gomega v1.38.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

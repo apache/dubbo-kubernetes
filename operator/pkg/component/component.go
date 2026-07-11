@@ -27,6 +27,10 @@ type Name string
 const (
 	BaseComponentName           Name = "Base"
 	DubboDiscoveryComponentName Name = "Dubbod"
+	PrometheusComponentName     Name = "Prometheus"
+	GrafanaComponentName        Name = "Grafana"
+	TracingComponentName        Name = "Tracing"
+	OtelCollectorComponentName  Name = "OtelCollector"
 )
 
 type Component struct {
@@ -66,17 +70,53 @@ var AllComponents = []Component{
 		Default:        true,
 		HelmSubDir:     "dubbod",
 	},
+	{
+		UserFacingName: PrometheusComponentName,
+		SpecName:       "prometheus",
+		ResourceType:   "Deployment",
+		ResourceName:   "prometheus",
+		HelmSubDir:     "addons/prometheus",
+	},
+	{
+		UserFacingName: GrafanaComponentName,
+		SpecName:       "grafana",
+		ResourceType:   "Deployment",
+		ResourceName:   "grafana",
+		HelmSubDir:     "addons/grafana",
+	},
+	{
+		UserFacingName: TracingComponentName,
+		SpecName:       "tracing",
+		ResourceType:   "Deployment",
+		ResourceName:   "tracing",
+		HelmSubDir:     "addons/tracing",
+	},
+	{
+		UserFacingName: OtelCollectorComponentName,
+		SpecName:       "otelCollector",
+		ResourceType:   "Deployment",
+		ResourceName:   "opentelemetry-collector",
+		HelmSubDir:     "addons/otel-collector",
+	},
 }
 
 var (
 	userFacingCompNames = map[Name]string{
 		BaseComponentName:           "Dubbo Resource Core",
 		DubboDiscoveryComponentName: "Dubbo control plane",
+		PrometheusComponentName:     "Prometheus metrics",
+		GrafanaComponentName:        "Grafana dashboards",
+		TracingComponentName:        "Distributed tracing",
+		OtelCollectorComponentName:  "OpenTelemetry collector",
 	}
 
 	Icons = map[Name]string{
 		BaseComponentName:           "⚡️",
 		DubboDiscoveryComponentName: "⚡️",
+		PrometheusComponentName:     "📊",
+		GrafanaComponentName:        "📈",
+		TracingComponentName:        "🔍",
+		OtelCollectorComponentName:  "📡",
 	}
 )
 

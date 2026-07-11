@@ -38,6 +38,29 @@ func IsValidateFunc(name string) bool {
 	return GetValidateFunc(name) != nil
 }
 
+// RegisterValidateFunc registers a validation function by name so that codegen
+// and the validation webhook can look it up. It returns the function to allow
+// assignment-style registration:
+//
+//	var ValidateFoo = RegisterValidateFunc("ValidateFoo", func(cfg config.Config) (Warning, error) { ... })
+func RegisterValidateFunc(name string, f ValidateFunc) ValidateFunc {
+	// Wrap the original validate function with an extra validate function if applicable.
+	validate := validateFunc(f)
+	validateFuncs[name] = validate
+	return validate
+}
+
+func validateFunc(f ValidateFunc) ValidateFunc {
+	return func(cfg config.Config) (Warning, error) {
+		warn, err := f(cfg)
+		// Validate name and namespace regardless of the schema.
+		if err2 := ValidateMetadata(cfg); err2 != nil {
+			err = AppendErrors(err, err2)
+		}
+		return warn, err
+	}
+}
+
 // GetValidateFunc returns the validation function with the given name, or null if it does not exist.
 func GetValidateFunc(name string) ValidateFunc {
 	return validateFuncs[name]

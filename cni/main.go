@@ -70,7 +70,7 @@ func main() {
 		StateStore:  cni.NewFileStateStore(conf.StateDirectory()),
 	}
 	if (env.Command == "ADD" || env.Command == "CHECK") && cni.EnvHasKubernetesPod(env) {
-		provider, err := cni.NewKubernetesPodInfoProvider(conf.KubeConfigPath())
+		provider, err := cni.NewK8sPodInfoProvider(conf.KubeConfigPath())
 		if err == nil {
 			plugin.PodInfoProvider = provider
 		}

@@ -37,6 +37,7 @@ var (
 	Service                        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	ServiceAccount                 = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 	StatefulSet                    = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
+	Telemetry                      = schema.GroupVersionResource{Group: "telemetry.dubbo.apache.org", Version: "v1alpha1", Resource: "telemetries"}
 	ValidatingWebhookConfiguration = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}
 )
 
@@ -103,6 +104,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
 	case ServiceAccount:
 		return false
 	case StatefulSet:
+		return false
+	case Telemetry:
 		return false
 	case ValidatingWebhookConfiguration:
 		return true

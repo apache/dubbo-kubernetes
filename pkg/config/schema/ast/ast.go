@@ -19,6 +19,7 @@ package ast
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 
@@ -79,8 +80,8 @@ func (m *Metadata) UnmarshalJSON(data []byte) error {
 	// Process resources.
 	for i, r := range m.Resources {
 		if r.Validate == "" {
-			validateFn := "Validate" + asResourceVariableName(r.Kind)
-			if !validation.IsValidateFunc(validateFn) {
+			validateFn := "validation.Validate" + asResourceVariableName(r.Kind)
+			if !validation.IsValidateFunc(strings.TrimPrefix(validateFn, "validation.")) {
 				validateFn = "validation.EmptyValidate"
 			}
 			m.Resources[i].Validate = validateFn

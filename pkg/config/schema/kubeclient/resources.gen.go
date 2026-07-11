@@ -19,6 +19,7 @@ import (
 
 	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapitelemetryv1alpha1 "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha1"
 	k8sioapiadmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8sioapiappsv1 "k8s.io/api/apps/v1"
 	k8sioapiautoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -85,6 +86,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.StatefulSet:
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry:
+		return c.Dubbo().TelemetryV1alpha1().Telemetries(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.WriteAPI[T])
 	default:
@@ -146,6 +149,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiappsv1.StatefulSet:
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry:
+		return c.Dubbo().TelemetryV1alpha1().Telemetries(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.ReadWriteAPI[T, TL])
 	default:
@@ -207,6 +212,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapicorev1.ServiceAccount{}
 	case gvr.StatefulSet:
 		return &k8sioapiappsv1.StatefulSet{}
+	case gvr.Telemetry:
+		return &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{}
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
 	default:
@@ -400,6 +407,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AppsV1().StatefulSets(opts.Namespace).Watch(context.Background(), options)
+		}
+	case gvr.Telemetry:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().TelemetryV1alpha1().Telemetries(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().TelemetryV1alpha1().Telemetries(opts.Namespace).Watch(context.Background(), options)
 		}
 	case gvr.ValidatingWebhookConfiguration:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
