@@ -23,6 +23,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/protoconv"
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
 
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/networking/util"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
@@ -196,9 +197,26 @@ func (b *clusterBuilder) edsCluster(name string) *cluster.Cluster {
 				},
 			},
 		},
-		// For gRPC proxyless, we need to set LbPolicy to ROUND_ROBIN
-		// This is the default load balancing policy for gRPC xDS clients
-		LbPolicy: cluster.Cluster_ROUND_ROBIN,
+		LbPolicy: defaultLbPolicy(),
+	}
+}
+
+// defaultLbPolicy resolves the mesh-wide default load balancing policy from the
+// DUBBO_DEFAULT_LB_POLICY environment variable, falling back to ROUND_ROBIN for
+// unknown values.
+func defaultLbPolicy() cluster.Cluster_LbPolicy {
+	switch strings.ToUpper(features.DefaultLoadBalancerPolicy) {
+	case "LEAST_REQUEST":
+		return cluster.Cluster_LEAST_REQUEST
+	case "RING_HASH":
+		return cluster.Cluster_RING_HASH
+	case "RANDOM":
+		return cluster.Cluster_RANDOM
+	case "ROUND_ROBIN", "":
+		return cluster.Cluster_ROUND_ROBIN
+	default:
+		log.Warnf("unknown DUBBO_DEFAULT_LB_POLICY %q, falling back to ROUND_ROBIN", features.DefaultLoadBalancerPolicy)
+		return cluster.Cluster_ROUND_ROBIN
 	}
 }
 
@@ -422,7 +440,19 @@ func (b *clusterBuilder) applyBackendTLSPolicy(c *cluster.Cluster) {
 // buildUpstreamTLSContext builds an UpstreamTlsContext that conforms to gRPC xDS expectations,
 // reusing the common certificate-provider setup from buildCommonTLSContext.
 func (b *clusterBuilder) buildUpstreamTLSContext(c *cluster.Cluster, tlsSettings *networking.ClientTLSSettings) *tlsv1.UpstreamTlsContext {
-	common := buildCommonTLSContext()
+	// Pin the upstream identity: only certificates whose SAN matches one of the
+	// target service's SPIFFE identities are accepted.
+	var sans []string
+	if b.svc != nil {
+		sans = b.push.ServiceAccounts(b.svc.Hostname, b.svc.Attributes.Namespace)
+		if len(sans) == 0 && b.hostname != b.svc.Hostname {
+			sans = b.push.ServiceAccounts(b.hostname, b.svc.Attributes.Namespace)
+		}
+		if len(sans) == 0 {
+			log.Warnf("no SPIFFE identities found for %s; upstream TLS for cluster %s will not verify peer SAN", b.svc.Hostname, c.Name)
+		}
+	}
+	common := buildCommonTLSContext(sans)
 	if common == nil {
 		return nil
 	}

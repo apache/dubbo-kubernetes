@@ -72,7 +72,7 @@ func TestBuildInboundHTTPFiltersAddsJWTAndAuthorizationBeforeRouter(t *testing.T
 	if got := jwtConfig.GetProviders()[0].GetIssuer(); got != "testing@secure.dubbo.apache.org" {
 		t.Fatalf("issuer = %q, want testing issuer", got)
 	}
-	if got := jwtConfig.GetProviders()[0].GetJwksUri(); got != "tools/jwt/samples/jwks.json" {
+	if got := jwtConfig.GetProviders()[0].GetJwksUri(); got != "https://secure.dubbo.apache.org/jwt/samples/jwks.json" {
 		t.Fatalf("jwksUri = %q, want local sample path", got)
 	}
 
@@ -109,7 +109,7 @@ func newRequestAuthenticationConfig() config.Config {
 			Selector: &typev1alpha3.WorkloadSelector{MatchLabels: map[string]string{"app": "httpbin"}},
 			JwtRules: []*security.JWTRule{{
 				Issuer:  "testing@secure.dubbo.apache.org",
-				JwksUri: "tools/jwt/samples/jwks.json",
+				JwksUri: "https://secure.dubbo.apache.org/jwt/samples/jwks.json",
 			}},
 		},
 	}
@@ -137,5 +137,70 @@ func newAuthorizationPolicyConfig() config.Config {
 				}},
 			}},
 		},
+	}
+}
+
+func TestBuildAuthorizationFiltersSplitsDenyAndAllow(t *testing.T) {
+	deny := config.Config{
+		Meta: config.Meta{GroupVersionKind: gvk.AuthorizationPolicy, Name: "deny-bad", Namespace: "foo"},
+		Spec: &security.AuthorizationPolicy{
+			Action: security.AuthorizationPolicy_DENY,
+			Rules: []*security.Rule{{
+				From: []*security.From{{
+					Source: &security.Source{RequestPrincipals: []string{"issuer/bad-subject"}},
+				}},
+			}},
+		},
+	}
+	allow := newAuthorizationPolicyConfig()
+
+	filters := buildAuthorizationFilters([]config.Config{deny, allow})
+	if len(filters) != 2 {
+		t.Fatalf("filters = %d, want deny + allow", len(filters))
+	}
+
+	denyConfig := &rbacv1.RBAC{}
+	if err := filters[0].GetTypedConfig().UnmarshalTo(denyConfig); err != nil {
+		t.Fatalf("unmarshal deny filter: %v", err)
+	}
+	if denyConfig.GetAction() != rbacv1.RBAC_DENY {
+		t.Fatalf("first filter action = %v, want DENY", denyConfig.GetAction())
+	}
+	if len(denyConfig.GetRules()) != 1 {
+		t.Fatalf("deny rules = %d, want 1", len(denyConfig.GetRules()))
+	}
+
+	allowConfig := &rbacv1.RBAC{}
+	if err := filters[1].GetTypedConfig().UnmarshalTo(allowConfig); err != nil {
+		t.Fatalf("unmarshal allow filter: %v", err)
+	}
+	if allowConfig.GetAction() != rbacv1.RBAC_ALLOW {
+		t.Fatalf("second filter action = %v, want ALLOW", allowConfig.GetAction())
+	}
+	if len(allowConfig.GetRules()) != 1 {
+		t.Fatalf("allow rules = %d, want 1", len(allowConfig.GetRules()))
+	}
+}
+
+func TestBuildAuthorizationFiltersEmptyAllowPolicyDeniesAll(t *testing.T) {
+	// An ALLOW policy with no rules matches nothing, which must still emit an
+	// ALLOW filter (with zero rules) so every request is rejected.
+	allow := config.Config{
+		Meta: config.Meta{GroupVersionKind: gvk.AuthorizationPolicy, Name: "deny-all", Namespace: "foo"},
+		Spec: &security.AuthorizationPolicy{Action: security.AuthorizationPolicy_ALLOW},
+	}
+	filters := buildAuthorizationFilters([]config.Config{allow})
+	if len(filters) != 1 {
+		t.Fatalf("filters = %d, want 1", len(filters))
+	}
+	rbacConfig := &rbacv1.RBAC{}
+	if err := filters[0].GetTypedConfig().UnmarshalTo(rbacConfig); err != nil {
+		t.Fatalf("unmarshal filter: %v", err)
+	}
+	if rbacConfig.GetAction() != rbacv1.RBAC_ALLOW {
+		t.Fatalf("action = %v, want ALLOW", rbacConfig.GetAction())
+	}
+	if len(rbacConfig.GetRules()) != 0 {
+		t.Fatalf("rules = %d, want 0", len(rbacConfig.GetRules()))
 	}
 }

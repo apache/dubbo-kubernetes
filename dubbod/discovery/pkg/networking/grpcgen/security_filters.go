@@ -37,9 +37,7 @@ func buildInboundHTTPFilters(push *model.PushContext, serviceTarget model.Servic
 	if jwt := buildJWTAuthenticationFilter(push.RequestAuthenticationsForWorkload(namespace, workloadLabels)); jwt != nil {
 		filters = append(filters, jwt)
 	}
-	if authz := buildAuthorizationFilter(push.AuthorizationPoliciesForWorkload(namespace, workloadLabels)); authz != nil {
-		filters = append(filters, authz)
-	}
+	filters = append(filters, buildAuthorizationFilters(push.AuthorizationPoliciesForWorkload(namespace, workloadLabels))...)
 	filters = append(filters, routerHTTPFilter())
 	return filters
 }
@@ -91,28 +89,48 @@ func jwtProviderFromRule(rule *security.JWTRule) *jwtv1.JwtProvider {
 	}
 }
 
-func buildAuthorizationFilter(configs []config.Config) *hcmv1.HttpFilter {
-	rules := []*rbacv1.Rule{}
-	action := rbacv1.RBAC_ALLOW
+// buildAuthorizationFilters translates AuthorizationPolicies into RBAC filters.
+// DENY policies and ALLOW policies must be evaluated independently: a request is
+// rejected if it matches any DENY rule, and — when at least one ALLOW policy
+// exists — rejected unless it matches an ALLOW rule. Emitting them as two
+// filters (DENY first) preserves those semantics; folding both actions into a
+// single filter would turn every ALLOW rule into a DENY rule.
+func buildAuthorizationFilters(configs []config.Config) []*hcmv1.HttpFilter {
+	denyRules := []*rbacv1.Rule{}
+	allowRules := []*rbacv1.Rule{}
+	hasAllowPolicy := false
 	for _, cfg := range configs {
 		spec, ok := cfg.Spec.(*security.AuthorizationPolicy)
 		if !ok || spec == nil {
 			continue
 		}
-		if spec.GetAction() == security.AuthorizationPolicy_DENY {
-			action = rbacv1.RBAC_DENY
-		}
+		rules := make([]*rbacv1.Rule, 0, len(spec.GetRules()))
 		for _, rule := range spec.GetRules() {
 			rules = append(rules, authorizationRuleFromAPI(rule))
 		}
+		if spec.GetAction() == security.AuthorizationPolicy_DENY {
+			denyRules = append(denyRules, rules...)
+		} else {
+			// An ALLOW policy with no rules matches nothing and therefore
+			// rejects every request; track policy presence separately from rules.
+			hasAllowPolicy = true
+			allowRules = append(allowRules, rules...)
+		}
 	}
-	if len(configs) == 0 {
-		return nil
+	filters := []*hcmv1.HttpFilter{}
+	if len(denyRules) > 0 {
+		filters = append(filters, typedHTTPFilter(wellknown.HTTPRoleBasedAccessControl, &rbacv1.RBAC{
+			Action: rbacv1.RBAC_DENY,
+			Rules:  denyRules,
+		}))
 	}
-	return typedHTTPFilter(wellknown.HTTPRoleBasedAccessControl, &rbacv1.RBAC{
-		Action: action,
-		Rules:  rules,
-	})
+	if hasAllowPolicy {
+		filters = append(filters, typedHTTPFilter(wellknown.HTTPRoleBasedAccessControl, &rbacv1.RBAC{
+			Action: rbacv1.RBAC_ALLOW,
+			Rules:  allowRules,
+		}))
+	}
+	return filters
 }
 
 func authorizationRuleFromAPI(rule *security.Rule) *rbacv1.Rule {
