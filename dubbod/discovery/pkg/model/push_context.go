@@ -1034,6 +1034,13 @@ func (ps *PushContext) setDestinationRules(configs []config.Config) {
 	}
 }
 
+// ServiceAccounts returns the SPIFFE identities associated with the workloads
+// backing the given service hostname in the given namespace. The returned list
+// is sorted and already expanded with trust domain aliases.
+func (ps *PushContext) ServiceAccounts(hostname host.Name, namespace string) []string {
+	return ps.serviceAccounts[serviceAccountKey{hostname: hostname, namespace: namespace}]
+}
+
 func (ps *PushContext) initServiceAccounts(env *Environment, services []*Service) {
 	for _, svc := range services {
 		var accounts sets.String

@@ -25,11 +25,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type KubernetesPodInfoProvider struct {
+type K8sPodInfoProvider struct {
 	client kubernetes.Interface
 }
 
-func NewKubernetesPodInfoProvider(kubeconfig string) (*KubernetesPodInfoProvider, error) {
+func NewK8sPodInfoProvider(kubeconfig string) (*K8sPodInfoProvider, error) {
 	var (
 		cfg *rest.Config
 		err error
@@ -46,10 +46,10 @@ func NewKubernetesPodInfoProvider(kubeconfig string) (*KubernetesPodInfoProvider
 	if err != nil {
 		return nil, fmt.Errorf("create Kubernetes client: %w", err)
 	}
-	return &KubernetesPodInfoProvider{client: client}, nil
+	return &K8sPodInfoProvider{client: client}, nil
 }
 
-func (p *KubernetesPodInfoProvider) PodInfo(ctx context.Context, ref PodRef) (PodInfo, error) {
+func (p *K8sPodInfoProvider) PodInfo(ctx context.Context, ref PodRef) (PodInfo, error) {
 	pod, err := p.client.CoreV1().Pods(ref.Namespace).Get(ctx, ref.Name, metav1.GetOptions{})
 	if err != nil {
 		return PodInfo{}, fmt.Errorf("get pod %s/%s: %w", ref.Namespace, ref.Name, err)

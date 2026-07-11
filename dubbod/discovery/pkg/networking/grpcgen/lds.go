@@ -324,7 +324,9 @@ func buildDownstreamTransportSocket(mode model.MutualTLSMode) *core.TransportSoc
 	if mode != model.MTLSStrict {
 		return nil
 	}
-	common := buildCommonTLSContext()
+	// Inbound accepts any authenticated mesh identity at the transport layer;
+	// per-caller restrictions are enforced by AuthorizationPolicy.
+	common := buildCommonTLSContext(nil)
 	if common == nil {
 		return nil
 	}

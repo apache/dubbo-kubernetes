@@ -27,4 +27,9 @@ var (
 
 	EnableXDSCaching = env.Register("DUBBO_ENABLE_XDS_CACHE", true,
 		"If true, DUBBO will cache XDS responses.").Get()
+
+	// DefaultLoadBalancerPolicy sets the LB policy applied to generated clusters.
+	// Accepted values: ROUND_ROBIN, LEAST_REQUEST, RING_HASH, RANDOM.
+	DefaultLoadBalancerPolicy = env.Register("DUBBO_DEFAULT_LB_POLICY", "ROUND_ROBIN",
+		"Default load balancing policy for generated clusters. One of ROUND_ROBIN, LEAST_REQUEST, RING_HASH, RANDOM.").Get()
 )
