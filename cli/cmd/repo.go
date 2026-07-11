@@ -85,7 +85,7 @@ func runAdd(cmd *cobra.Command, args []string, clientFactory ClientFactory) (err
 	// Preconditions
 	// If not confirming/prompting, assert the args were both provided.
 	if len(args) != 2 {
-		return fmt.Errorf("Usage: dubboctl repo add [<name>] [<url>]")
+		return fmt.Errorf("usage: dubboctl repo add [<name>] [<url>]")
 	}
 
 	// Extract Params

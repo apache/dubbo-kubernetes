@@ -295,7 +295,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 	fh := cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			var nameStr, nsStr string
-			if objWithNs, ok := any(obj).(interface {
+			if objWithNs, ok := obj.(interface {
 				GetNamespace() string
 				GetName() string
 			}); ok {
@@ -319,7 +319,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				var nameStr, nsStr string
-				if objWithNs, ok := any(obj).(interface {
+				if objWithNs, ok := obj.(interface {
 					GetNamespace() string
 					GetName() string
 				}); ok {
@@ -331,7 +331,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				var nameStr, nsStr string
-				if objWithNs, ok := any(newObj).(interface {
+				if objWithNs, ok := newObj.(interface {
 					GetNamespace() string
 					GetName() string
 				}); ok {
@@ -343,7 +343,7 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 			},
 			DeleteFunc: func(obj interface{}) {
 				var nameStr, nsStr string
-				if objWithNs, ok := any(obj).(interface {
+				if objWithNs, ok := obj.(interface {
 					GetNamespace() string
 					GetName() string
 				}); ok {
@@ -367,13 +367,12 @@ func (n *informerClient[T]) AddEventHandler(h cache.ResourceEventHandler) cache.
 
 func (n *informerClient[T]) Index(name string, extract func(o T) []string) RawIndexer {
 	if _, ok := n.informer.GetIndexer().GetIndexers()[name]; !ok {
-		if err := n.informer.AddIndexers(map[string]cache.IndexFunc{
+		_ = n.informer.AddIndexers(map[string]cache.IndexFunc{
 			name: func(obj any) ([]string, error) {
 				t := controllers.Extract[T](obj)
 				return extract(t), nil
 			},
-		}); err != nil {
-		}
+		})
 	}
 	ret := internalIndex{
 		key:     name,
@@ -445,9 +444,7 @@ func (a neverReady) HasSynced() bool {
 }
 
 func (i internalIndex) Lookup(key string) []any {
-	res, err := i.indexer.ByIndex(i.key, key)
-	if err != nil {
-	}
+	res, _ := i.indexer.ByIndex(i.key, key)
 	if i.filter != nil {
 		return slices.FilterInPlace(res, i.filter)
 	}

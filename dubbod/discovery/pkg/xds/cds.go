@@ -40,7 +40,7 @@ func cdsNeedsPush(req *model.PushRequest, proxy *model.Proxy) (*model.PushReques
 }
 
 func (c CdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req *model.PushRequest) (model.Resources, model.XdsLogDetails, error) {
-	req, needsPush := cdsNeedsPush(req, proxy)
+	_, needsPush := cdsNeedsPush(req, proxy)
 	if !needsPush {
 		return nil, model.DefaultXdsLogDetails, nil
 	}
@@ -51,7 +51,7 @@ func (c CdsGenerator) Generate(proxy *model.Proxy, w *model.WatchedResource, req
 func (c CdsGenerator) GenerateDeltas(proxy *model.Proxy, req *model.PushRequest,
 	w *model.WatchedResource,
 ) (model.Resources, model.DeletedResources, model.XdsLogDetails, bool, error) {
-	req, needsPush := cdsNeedsPush(req, proxy)
+	_, needsPush := cdsNeedsPush(req, proxy)
 	if !needsPush {
 		return nil, nil, model.DefaultXdsLogDetails, false, nil
 	}

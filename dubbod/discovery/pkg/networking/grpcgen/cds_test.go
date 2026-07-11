@@ -31,7 +31,7 @@ func TestBuildClustersExternalNameBackendTLSPolicyUsesSimpleTLS(t *testing.T) {
 	hostName := "httpbin-egress.app.svc.cluster.local"
 	service := newRDSTestService("httpbin-egress", "app", hostName, 443)
 	service.Resolution = model.Alias
-	service.Attributes.K8sAttributes.ExternalName = "httpbin.org"
+	service.Attributes.ExternalName = "httpbin.org"
 	push := newRDSTestPushContext(t, []config.Config{
 		newBackendTLSPolicyConfig("httpbin-tls", "app", "httpbin-egress", "httpbin.org"),
 	}, []*model.Service{service})

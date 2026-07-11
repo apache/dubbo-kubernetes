@@ -95,7 +95,8 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 			// Initial wildcard request - need to extract resource names from parent resources
 			// For CDS: extract cluster names from LDS
 			// For EDS: extract cluster names from CDS
-			if w.TypeUrl == v1.ClusterType {
+			switch w.TypeUrl {
+			case v1.ClusterType:
 				// Extract cluster names from LDS response
 				ldsWatched := con.proxy.GetWatchedResource(v1.ListenerType)
 				if ldsWatched != nil && ldsWatched.NonceSent != "" {
@@ -125,7 +126,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						}
 					}
 				}
-			} else if w.TypeUrl == v1.EndpointType {
+			case v1.EndpointType:
 				// Extract cluster names from CDS response
 				cdsWatched := con.proxy.GetWatchedResource(v1.ClusterType)
 				if cdsWatched != nil && cdsWatched.NonceSent != "" {
@@ -153,7 +154,7 @@ func (s *DiscoveryServer) pushXds(con *Connection, w *model.WatchedResource, req
 						}
 					}
 				}
-			} else if w.TypeUrl == v1.RouteType {
+			case v1.RouteType:
 				// Extract route names from LDS response for RDS wildcard requests
 				// RDS is not a wildcard type, so when client sends empty ResourceNames,
 				// we need to extract route names from LDS listeners that reference RDS

@@ -199,10 +199,7 @@ func toImport(p string) string {
 }
 
 func toDubboImport(protoPackage string, version string) string {
-	aliasPackage := protoPackage
-	if strings.Contains(aliasPackage, "github.com/kdubbo/api") {
-		aliasPackage = strings.Replace(aliasPackage, "github.com/kdubbo/api", "github.com/apache/dubbo-kubernetes/api", 1)
-	}
+	aliasPackage := strings.Replace(protoPackage, "github.com/kdubbo/api", "github.com/apache/dubbo-kubernetes/api", 1)
 	p := strings.Split(aliasPackage, "/")
 	base := strings.Join(p[:len(p)-1], "")
 	dmp := strings.ReplaceAll(strings.ReplaceAll(base, ".", ""), "-", "") + version

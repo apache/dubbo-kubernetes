@@ -534,7 +534,7 @@ func httpRouteReferencesService(hrSpec *sigsk8siogatewayapiapisv1.HTTPRouteSpec,
 		if refNamespace != svc.Attributes.Namespace || string(parentRef.Name) != svc.Attributes.Name {
 			continue
 		}
-		if parentRef.Port != nil && int32(*parentRef.Port) != int32(port) {
+		if parentRef.Port != nil && *parentRef.Port != int32(port) {
 			continue
 		}
 		if parentRef.SectionName != nil {

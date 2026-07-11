@@ -54,6 +54,9 @@ func Render(namespace string, directory string, dop values.Map) ([]manifest.Mani
 	path := pathJoin("charts", directory)
 	f := manifests.BuiltinDir("")
 	chrt, err := loadChart(f, path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load chart: %v", err)
+	}
 	output, warnings, err := renderChart(namespace, val, chrt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("render chart: %v", err)

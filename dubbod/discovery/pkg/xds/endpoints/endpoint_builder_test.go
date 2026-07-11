@@ -42,7 +42,7 @@ func TestBuildClusterLoadAssignmentUsesExternalNameDNS(t *testing.T) {
 	hostname := host.Name("httpbin-egress.app.svc.cluster.local")
 	svc := newEndpointTestService("httpbin-egress", "app", string(hostname), 443)
 	svc.Resolution = model.Alias
-	svc.Attributes.K8sAttributes.ExternalName = "httpbin.org"
+	svc.Attributes.ExternalName = "httpbin.org"
 	push := newEndpointTestPushContext(t, nil, []*model.Service{svc})
 	index := model.NewEndpointIndex(model.DisabledCache{})
 

@@ -75,7 +75,7 @@ func (r *Repositories) All() (repos []Repository, err error) {
 
 func (r *Repositories) Add(name, url string) (string, error) {
 	if r.path == "" {
-		return "", fmt.Errorf("repository %v not added.", name)
+		return "", fmt.Errorf("repository %v not added", name)
 	}
 
 	repo, err := NewRepository(name, url)
@@ -97,7 +97,7 @@ func (r *Repositories) Add(name, url string) (string, error) {
 
 func (r *Repositories) Remove(name string) error {
 	if r.path == "" {
-		return fmt.Errorf("repository %v not removed.", name)
+		return fmt.Errorf("repository %v not removed", name)
 	}
 	if name == "" {
 		return errors.New("name is required")

@@ -277,7 +277,7 @@ func (c *Controller) GetProxyServiceTargets(proxy *model.Proxy) []model.ServiceT
 			if kubeSvc != nil {
 				// Find the matching ServicePort in Kubernetes Service
 				for _, kubePort := range kubeSvc.Spec.Ports {
-					if kubePort.Name == port.Name && int32(kubePort.Port) == int32(port.Port) {
+					if kubePort.Name == port.Name && kubePort.Port == int32(port.Port) {
 						// Resolve targetPort from ServicePort.TargetPort
 						if kubePort.TargetPort.Type == intstr.Int {
 							// TargetPort is a number

@@ -37,7 +37,7 @@ import (
 )
 
 var (
-	errFiles    = errors.New(`error: you must specify resources by -f.`)
+	errFiles    = errors.New(`error: you must specify resources by -f`)
 	validFields = map[string]struct{}{
 		"apiVersion": {},
 		"kind":       {},

@@ -64,6 +64,9 @@ func MergeInputs(filenames []string, flags []string) (values.Map, error) {
 		} else {
 			b, err = os.ReadFile(strings.TrimSpace(fn))
 		}
+		if err != nil {
+			return nil, err
+		}
 
 		if err := checkDops(string(b)); err != nil {
 			return nil, fmt.Errorf("checkDops err:%v", err)

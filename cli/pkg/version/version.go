@@ -25,8 +25,7 @@ import (
 )
 
 func NewVersionCommand() *cobra.Command {
-	var versionCmd *cobra.Command
-	versionCmd = version.CobraCommandWithOptions()
+	versionCmd := version.CobraCommandWithOptions()
 	versionCmd.Flags().VisitAll(func(flag *pflag.Flag) {
 		if flag.Name == "short" {
 			err := flag.Value.Set("true")

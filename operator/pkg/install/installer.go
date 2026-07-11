@@ -86,7 +86,7 @@ func (i Installer) install(manifests []manifest.ManifestSet) error {
 	})...)
 	dependencyWaitCh := dependenciesChannels()
 	for _, mfs := range manifests {
-		mfs := mfs
+
 		c := mfs.Components
 		m := mfs.Manifests
 		disabledComponents.Delete(c)
@@ -220,7 +220,8 @@ func (i Installer) prune(manifests []manifest.ManifestSet) error {
 		if err != nil {
 			return err
 		}
-		objs, err := dc.List(context.Background(), metav1.ListOptions{
+		// Pruning is best-effort: resources we cannot list are skipped below.
+		objs, _ := dc.List(context.Background(), metav1.ListOptions{
 			LabelSelector: selector.String(),
 		})
 		if objs == nil {

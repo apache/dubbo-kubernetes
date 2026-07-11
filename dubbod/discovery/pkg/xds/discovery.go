@@ -382,7 +382,7 @@ func (s *DiscoveryServer) ConfigUpdate(req *model.PushRequest) {
 	s.InboundUpdates.Inc()
 
 	// Record inbound update metrics
-	if req.ConfigsUpdated != nil && len(req.ConfigsUpdated) > 0 {
+	if len(req.ConfigsUpdated) > 0 {
 		recordInboundConfigUpdate()
 	}
 
@@ -448,7 +448,8 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 	// 1. Endpoints become available (from empty to non-empty)
 	// 2. Endpoints become unavailable (from non-empty to empty)
 	// 3. Endpoint health status changes
-	if pushType == model.IncrementalPush || pushType == model.FullPush {
+	switch pushType {
+	case model.IncrementalPush, model.FullPush:
 		log.Debugf("service %s/%s triggering %v push [endpoints=%d]", namespace, serviceName, pushType, len(dubboEndpoints))
 
 		// Record EDS update metric
@@ -459,7 +460,7 @@ func (s *DiscoveryServer) EDSUpdate(shard model.ShardKey, serviceName string, na
 			ConfigsUpdated: sets.New(model.ConfigKey{Kind: kind.Service, Name: serviceName, Namespace: namespace}),
 			Reason:         model.NewReasonStats(model.EndpointUpdate),
 		})
-	} else if pushType == model.NoPush {
+	case model.NoPush:
 		// Even when UpdateServiceEndpoints returns NoPush, we may still need to push
 		// This happens when:
 		// 1. All old endpoints were unhealthy and new endpoints are also unhealthy (health status didn't change)
@@ -521,12 +522,11 @@ func reasonsUpdated(req *model.PushRequest) string {
 		reason0Cnt, reason1Cnt, idx int
 	)
 	for r, cnt := range req.Reason {
-		if idx == 0 {
+		switch idx {
+		case 0:
 			reason0, reason0Cnt = r, cnt
-		} else if idx == 1 {
+		case 1:
 			reason1, reason1Cnt = r, cnt
-		} else {
-			break
 		}
 		idx++
 	}

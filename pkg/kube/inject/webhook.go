@@ -259,8 +259,8 @@ func (wh *Webhook) injectPod(ar *kube.AdmissionReview, path string) *kube.Admiss
 	pod.ManagedFields = nil
 
 	podName := potentialPodName(pod.ObjectMeta)
-	if pod.ObjectMeta.Namespace == "" {
-		pod.ObjectMeta.Namespace = req.Namespace
+	if pod.Namespace == "" {
+		pod.Namespace = req.Namespace
 	}
 
 	log = log.WithLabels("pod", pod.Namespace+"/"+podName)

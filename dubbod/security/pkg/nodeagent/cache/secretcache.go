@@ -348,7 +348,7 @@ func (sc *SecretManagerClient) registerSecret(item security.SecretItem) {
 		// In case `UpdateConfigTrustBundle` called, it will resign workload cert.
 		// Check if this is a stale scheduled rotating task.
 		if cached := sc.cache.GetWorkload(); cached != nil {
-			if cached.CreatedTime == item.CreatedTime {
+			if cached.CreatedTime.Equal(item.CreatedTime) {
 				cacheLog.Debugf("Rotating certificate, resource=%s", item.ResourceName)
 				sc.cache.SetWorkload(nil)
 				sc.OnSecretUpdate(item.ResourceName)
@@ -638,7 +638,7 @@ func (sc *SecretManagerClient) handleFileWatch() {
 				return
 			}
 			// We only care about updates that change the file content
-			if !(isWrite(event) || isRemove(event) || isCreate(event)) {
+			if !isWrite(event) && !isRemove(event) && !isCreate(event) {
 				continue
 			}
 			sc.certMutex.RLock()

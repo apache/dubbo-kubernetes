@@ -223,9 +223,7 @@ func (c *Client) Deploy(ctx context.Context, dc *dubbo.DubboConfig, opts ...Depl
 
 	dc.Deploy.Namespace = result.Namespace
 
-	if result.Status == Deployed {
-		// TODO
-	}
+	// TODO: handle result.Status == Deployed
 
 	return dc, nil
 }

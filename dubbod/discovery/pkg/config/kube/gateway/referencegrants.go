@@ -84,7 +84,7 @@ func ReferenceGrantsCollection(
 			}
 			fromRef := Reference{
 				Kind:      fromKind,
-				Namespace: gatewayv1.Namespace(from.Namespace),
+				Namespace: from.Namespace,
 			}
 			for _, to := range obj.Spec.To {
 				toKind := normalizeReference(&to.Group, &to.Kind, config.GroupVersionKind{})

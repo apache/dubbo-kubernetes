@@ -389,7 +389,7 @@ func (d *deployConfig) deployPrompt(dc2 *dubbo.DubboConfig) (*deployConfig, erro
 		}
 	}
 
-	buildconfig, err := d.hubConfig.hubPrompt(dc2)
+	buildconfig, err := d.hubPrompt(dc2)
 	if err != nil {
 		return d, err
 	}

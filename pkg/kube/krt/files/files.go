@@ -190,7 +190,7 @@ func (m recursiveWatcher) watchRecursive(path string) error {
 			return err
 		}
 		if fi.IsDir() {
-			if err = m.Watcher.Add(walkPath); err != nil {
+			if err = m.Add(walkPath); err != nil {
 				return err
 			}
 		}

@@ -133,7 +133,7 @@ func newGRPCOutboundCommand() *cobra.Command {
 	host, port, hostErr := autoDiscoverServiceTarget(os.Environ(), namespace, domainSuffix)
 	opts := &grpcOutboundOptions{
 		host:           firstNonEmpty(os.Getenv("DUBBO_SERVICE_HOST"), host),
-		port:           firstIntFromEnv(int(port), "DUBBO_SERVICE_PORT"),
+		port:           firstIntFromEnv(port, "DUBBO_SERVICE_PORT"),
 		path:           firstNonEmpty(os.Getenv("REQUEST_PATH"), "/"),
 		xdsAddress:     firstNonEmpty(os.Getenv("XDS_ADDRESS"), "dubbod.dubbo-system.svc:26010"),
 		bootstrapPath:  os.Getenv("GRPC_XDS_BOOTSTRAP"),

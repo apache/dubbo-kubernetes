@@ -807,9 +807,9 @@ func (s *Server) initSDSServer() {
 	if !features.EnableXDSIdentityCheck {
 		// Make sure we have security
 		log.Warnf("skipping Kubernetes credential reader; DUBBO_ENABLE_XDS_IDENTITY_CHECK must be set to true for this feature.")
-	} else {
-		// TODO ConfigUpdated Multicluster get secret and configmap
+		return
 	}
+	// TODO ConfigUpdated Multicluster get secret and configmap
 }
 
 // isK8SSigning returns whether K8S (as a RA) is used to sign certs instead of private keys known by Dubbod

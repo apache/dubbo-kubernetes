@@ -368,7 +368,7 @@ func (v GenericVar[T]) IsSet() bool {
 }
 
 func (v GenericVar[T]) GetName() string {
-	return v.Var.Name
+	return v.Name
 }
 
 // specializedVar represents a var that can Get/Lookup

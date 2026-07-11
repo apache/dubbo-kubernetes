@@ -23,9 +23,9 @@ import (
 	core "github.com/kdubbo/xds-api/core/v1"
 	"strconv"
 
-	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	networkutil "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/util/network"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 )
 
 type (

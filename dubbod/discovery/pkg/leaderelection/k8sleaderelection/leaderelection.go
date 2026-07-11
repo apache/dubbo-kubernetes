@@ -164,7 +164,7 @@ func (le *LeaderElector) renew(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	wait.Until(func() {
-		// Check if context is already cancelled before starting renewal
+		// Check if context is already canceled before starting renewal
 		select {
 		case <-ctx.Done():
 			return
