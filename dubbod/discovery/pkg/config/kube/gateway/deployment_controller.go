@@ -1156,7 +1156,7 @@ func parentRefMatchesHTTPListener(parentRef gateway.ParentReference, gw *gateway
 		if parentRef.SectionName != nil && *parentRef.SectionName != listener.Name {
 			continue
 		}
-		if parentRef.Port != nil && int32(*parentRef.Port) != listener.Port {
+		if parentRef.Port != nil && *parentRef.Port != listener.Port {
 			continue
 		}
 		return true

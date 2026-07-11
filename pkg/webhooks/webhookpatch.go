@@ -143,8 +143,8 @@ func (w *WebhookCertPatcher) patchMutatingWebhookConfig(webhookConfigName string
 	}
 
 	if updated {
-		_, err := w.webhooks.Update(config)
-		if err != nil {
+		if _, err := w.webhooks.Update(config); err != nil {
+			return err
 		}
 	}
 

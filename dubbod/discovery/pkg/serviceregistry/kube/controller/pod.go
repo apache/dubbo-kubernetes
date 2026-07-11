@@ -134,7 +134,7 @@ func (pc *PodCache) onEvent(old, pod *v1.Pod, ev model.Event) error {
 			if !pc.deleteIP(ip, key) {
 				return nil
 			}
-			ev = model.EventDelete
+			// TODO: emit model.EventDelete once notifyWorkloadHandlers is implemented.
 		} else if shouldPodBeInEndpoints(pod) && IsPodReady(pod) {
 			labelUpdated := pc.labelFilter(old, pod)
 			pc.addPod(pod, ip, key, labelUpdated)

@@ -256,20 +256,11 @@ func (s *DiscoveryServer) computeProxyState(proxy *model.Proxy, request *model.P
 		proxy.SetServiceTargets(s.Env.ServiceDiscovery)
 	}
 
-	recomputeLabels := request == nil || request.IsProxyUpdate()
-	if recomputeLabels {
-	}
+	// TODO: recompute proxy labels when request == nil or request.IsProxyUpdate().
 
 	push := proxy.LastPushContext
-	if request == nil {
-	} else {
+	if request != nil {
 		push = request.Push
-		if request.Forced {
-		}
-		for conf := range request.ConfigsUpdated {
-			switch conf.Kind {
-			}
-		}
 	}
 
 	proxy.LastPushContext = push

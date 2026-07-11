@@ -80,12 +80,10 @@ func NewPusher(opts ...Opt) *Pusher {
 }
 
 func (p *Pusher) Push(ctx context.Context, dc *dubbo.DubboConfig) (digest string, err error) {
-	var output io.Writer
-
-	output = os.Stderr
+	var output io.Writer = os.Stderr
 
 	if dc.Image == "" {
-		return "", errors.New("Function has no associated image.  Has it been built?")
+		return "", errors.New("function has no associated image; has it been built?")
 	}
 
 	registry, err := getRegistry(dc.Image)
@@ -122,10 +120,7 @@ func (p *Pusher) daemonPush(ctx context.Context, dc *dubbo.DubboConfig, credenti
 	}
 	defer cli.Close()
 
-	ac := authConfig{
-		Username: credentials.Username,
-		Password: credentials.Password,
-	}
+	ac := authConfig(credentials)
 
 	b, err := json.Marshal(&ac)
 	if err != nil {

@@ -250,7 +250,7 @@ func MapFilter[E any, O any](s []E, f func(E) *O) []O {
 func Reference[E any](s []E) []*E {
 	res := make([]*E, 0, len(s))
 	for _, v := range s {
-		v := v
+
 		res = append(res, &v)
 	}
 	return res

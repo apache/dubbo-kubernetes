@@ -170,7 +170,7 @@ func TestRunSampleRequestsUsesUpdatedSnapshotOnSameStream(t *testing.T) {
 		host:      initial.Host,
 		port:      initial.Port,
 		route:     map[string]uint32{initial.Destinations[0].Cluster: 1},
-		endpoints: map[string][]xdsEndpoint{initial.Destinations[0].Cluster: []xdsEndpoint{v1Endpoint}},
+		endpoints: map[string][]xdsEndpoint{initial.Destinations[0].Cluster: {v1Endpoint}},
 	}
 
 	oldStdout := os.Stdout
@@ -192,7 +192,7 @@ func TestRunSampleRequestsUsesUpdatedSnapshotOnSameStream(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	client.mu.Lock()
 	client.route = map[string]uint32{updated.Destinations[0].Cluster: 1}
-	client.endpoints = map[string][]xdsEndpoint{updated.Destinations[0].Cluster: []xdsEndpoint{v2Endpoint}}
+	client.endpoints = map[string][]xdsEndpoint{updated.Destinations[0].Cluster: {v2Endpoint}}
 	client.mu.Unlock()
 
 	output, readErr := io.ReadAll(readPipe)
@@ -238,7 +238,7 @@ func TestRunSampleRequestsUsesRequestPathAndHeaders(t *testing.T) {
 		path:           "/reviews",
 		requestHeaders: http.Header{"End-User": []string{"terminal-user"}},
 		route:          map[string]uint32{snapshot.Destinations[0].Cluster: 1},
-		endpoints:      map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: []xdsEndpoint{endpoint}},
+		endpoints:      map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: {endpoint}},
 	}
 
 	if err := runSampleRequests(context.Background(), client, snapshot, 1, 0, time.Second); err != nil {
@@ -272,7 +272,7 @@ func TestRunSampleRequestsUsesRouteTimeout(t *testing.T) {
 		path:         "/",
 		route:        map[string]uint32{snapshot.Destinations[0].Cluster: 100},
 		routeTimeout: time.Millisecond,
-		endpoints:    map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: []xdsEndpoint{endpoint}},
+		endpoints:    map[string][]xdsEndpoint{snapshot.Destinations[0].Cluster: {endpoint}},
 	}
 
 	err := runSampleRequests(context.Background(), client, snapshot, 1, 0, time.Second)

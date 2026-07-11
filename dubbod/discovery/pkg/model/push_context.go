@@ -461,7 +461,7 @@ func resolveServiceAliases(allServices []*Service, configsUpdated sets.Set[Confi
 			Hostname:  s.Hostname,
 			Namespace: s.Attributes.Namespace,
 		}
-		rawAlias[nh] = host.Name(s.Attributes.K8sAttributes.ExternalName)
+		rawAlias[nh] = host.Name(s.Attributes.ExternalName)
 	}
 
 	unnamespacedRawAlias := make(map[host.Name]host.Name, len(rawAlias))
@@ -558,7 +558,7 @@ func (ps *PushContext) initServiceRegistry(env *Environment, configsUpdate sets.
 			ps.ServiceIndex.HostnameAndNamespace[s.Hostname] = map[string]*Service{}
 		}
 		if existing := ps.ServiceIndex.HostnameAndNamespace[s.Hostname][s.Attributes.Namespace]; existing != nil &&
-			!(existing.Attributes.ServiceRegistry != provider.Kubernetes && s.Attributes.ServiceRegistry == provider.Kubernetes) {
+			(existing.Attributes.ServiceRegistry == provider.Kubernetes || s.Attributes.ServiceRegistry != provider.Kubernetes) {
 			log.Debugf("Service %s/%s from registry %s ignored by %s/%s/%s", s.Attributes.Namespace, s.Hostname, s.Attributes.ServiceRegistry,
 				existing.Attributes.ServiceRegistry, existing.Attributes.Namespace, existing.Hostname)
 		} else {
@@ -958,9 +958,7 @@ func (ps *PushContext) setDestinationRules(configs []config.Config) {
 		rule := configs[i].Spec.(*networking.DestinationRule)
 
 		rule.Host = string(ResolveShortnameToFQDN(rule.Host, configs[i].Meta))
-		var exportToSet sets.Set[visibility.Instance]
-
-		exportToSet = sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
+		exportToSet := sets.NewWithLength[visibility.Instance](len(rule.ExportTo))
 		for _, e := range rule.ExportTo {
 			exportToSet.Insert(visibility.Instance(e))
 		}

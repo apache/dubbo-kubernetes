@@ -84,6 +84,7 @@ func (i *instance) Start(stop <-chan struct{}) error {
 			case next := <-i.components:
 				t0 := time.Now()
 				if err := next.task(stop); err != nil {
+					log.Warnf("post-start task failed: %v", err)
 				}
 				runtime := time.Since(t0)
 				if runtime > time.Second {

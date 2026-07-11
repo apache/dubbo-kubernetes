@@ -159,7 +159,7 @@ func newRDSTestPushContext(t *testing.T, configs []config.Config, services []*mo
 }
 
 func newWildcardHTTPRouteConfig(backendName, backendNamespace string, backendPort int32) config.Config {
-	port := gatewayv1.PortNumber(backendPort)
+	port := backendPort
 	weight := int32(1)
 	return config.Config{
 		Meta: config.Meta{
@@ -197,7 +197,7 @@ func newWildcardHTTPRouteConfig(backendName, backendNamespace string, backendPor
 func newServiceAttachedHTTPRouteConfig(name, namespace, parentName string, parentPort int32) config.Config {
 	group := gatewayv1.Group("")
 	kind := gatewayv1.Kind("Service")
-	port := gatewayv1.PortNumber(parentPort)
+	port := parentPort
 	weight := int32(100)
 	pathType := gatewayv1.PathMatchPathPrefix
 	pathValue := "/"

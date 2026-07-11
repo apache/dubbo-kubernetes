@@ -26,13 +26,21 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
-  GO_VERSION: '1.25'
+  GOLANGCI_LINT_VERSION: v2.6.2
 
 jobs:
-  unit-test:
-    name: Go Unit Tests
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
@@ -44,22 +52,64 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+
+      - name: Run shellcheck
+        run: make lint-shell
+
+  check:
+    name: Check Repo Hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.repository == 'apache/dubbo-kubernetes'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Verify dependencies
-        run: go mod verify
-
-      - name: Run unit tests
         run: |
-          go test ./... -gcflags=-l -coverprofile=coverage.txt -covermode=atomic -v
+          go mod download
+          go mod verify
+
+      - name: Check go.mod/go.sum are tidy
+        run: make check-tidy
+
+      - name: Check License Header
+        uses: apache/skywalking-eyes/header@v0.6.0
+
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.repository == 'apache/dubbo-kubernetes'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Run unit tests with race detector and coverage
+        run: make test-coverage
 
       - name: Upload test coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-coverage
-          path: "**/coverage.txt"
+          path: coverage.txt
           retention-days: 7
 
       - name: Upload coverage to Codecov
@@ -70,38 +120,23 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  lint:
-    name: Go Lint
-    runs-on: ubuntu-latest
-    if: github.repository == 'apache/dubbo-kubernetes'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run go fmt check
-        run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-            echo "The following files need formatting:"
-            gofmt -s -d .
-            exit 1
-          fi
-
   build:
-    name: Go Build
+    name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.repository == 'apache/dubbo-kubernetes'
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -112,44 +147,26 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Build all binaries
+        run: make build GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }}
 
-      - name: Build
+      - name: Compile tests (vet whole tree)
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: go build ./...
 
-  license-check:
-    name: License Header Check
+  helm:
+    name: Helm Charts
     runs-on: ubuntu-latest
-    if: github.repository == 'apache/dubbo-kubernetes'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check License Header
-        uses: apache/skywalking-eyes/header@main
-
-  helm-lint:
-    name: Helm Lint
-    runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.repository == 'apache/dubbo-kubernetes'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install Helm
-        uses: azure/setup-helm@v1
+        uses: azure/setup-helm@v4
         with:
-          version: '3.13.0'
+          version: 'v3.16.4'
 
-      - name: Lint base chart
-        run: helm lint manifests/charts/base
-
-      - name: Lint dubbod chart
-        run: helm lint manifests/charts/dubbod
-
-      - name: Validate base chart template rendering
-        run: helm template test-release manifests/charts/base --debug
-
-      - name: Validate dubbod chart template rendering
-        run: helm template test-release manifests/charts/dubbod --debug
+      - name: Lint and render charts
+        run: make lint-helm

@@ -245,7 +245,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 					matched := false
 					for _, kubePort := range kubeSvc.Spec.Ports {
 						// Try matching by port number (service port or targetPort)
-						portMatches := int32(kubePort.Port) == epSlicePortNum
+						portMatches := kubePort.Port == epSlicePortNum
 
 						// Also try matching by targetPort
 						var kubeTargetPort int32
@@ -272,7 +272,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 
 						if (portMatches || targetPortMatches) && (epSlicePortName == "" || nameMatches) {
 							// Found matching ServicePort
-							servicePortNum = int32(kubePort.Port)
+							servicePortNum = kubePort.Port
 							portName = kubePort.Name
 
 							// Resolve targetPortNum
@@ -312,9 +312,9 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 						// If we can't match by Service, try to find ServicePort by port number only
 						// This handles cases where EndpointSlice.Port.Name doesn't match but port number does
 						for _, kubePort := range kubeSvc.Spec.Ports {
-							if int32(kubePort.Port) == epSlicePortNum {
+							if kubePort.Port == epSlicePortNum {
 								// Found by port number, use Service.Port.Name
-								servicePortNum = int32(kubePort.Port)
+								servicePortNum = kubePort.Port
 								portName = kubePort.Name
 								// Resolve targetPortNum
 								if kubePort.TargetPort.Type == intstr.Int {
@@ -355,7 +355,7 @@ func (esc *endpointSliceController) updateEndpointCacheForSlice(hostName host.Na
 							} else {
 								// If EndpointSlice.Port.Name is also empty, try to get port name from Service by port number
 								for _, kubePort := range kubeSvc.Spec.Ports {
-									if int32(kubePort.Port) == epSlicePortNum {
+									if kubePort.Port == epSlicePortNum {
 										portName = kubePort.Name
 										log.Debugf("updateEndpointCacheForSlice: resolved portName='%s' from Service by port number %d", portName, epSlicePortNum)
 										break

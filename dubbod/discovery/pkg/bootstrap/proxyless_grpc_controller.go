@@ -48,7 +48,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/ca"
 	pkiutil "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/pki/util"
 	caserver "github.com/apache/dubbo-kubernetes/dubbod/security/pkg/server/ca"
+	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
+	"google.golang.org/protobuf/proto"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -538,8 +540,7 @@ func (c *proxylessGRPCWorkloadController) buildWorkloadContext(pod *corev1.Pod) 
 	clusterID := podEnvValue(pod, "DUBBO_META_CLUSTER_ID", constants.DefaultClusterName)
 	discoveryAddress := podEnvValue(pod, inject.ProxylessXDSAddressEnvName, proxyConfig.GetDiscoveryAddress())
 	caAddress := podEnvValue(pod, "CA_ADDRESS", discoveryAddress)
-	proxyConfigCopy := *proxyConfig
-	proxyConfig = &proxyConfigCopy
+	proxyConfig = proto.Clone(proxyConfig).(*meshv1alpha1.ProxyConfig)
 	proxyConfig.DiscoveryAddress = discoveryAddress
 
 	nodeID := strings.Join([]string{

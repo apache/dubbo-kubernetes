@@ -17,12 +17,12 @@
 package model
 
 import (
-	networking "github.com/kdubbo/api/networking/v1alpha3"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/features"
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/host"
 	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
+	networking "github.com/kdubbo/api/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -44,13 +44,11 @@ func (ps *PushContext) mergeDestinationRule(p *consolidatedSubRules, subRuleConf
 		appendSeparately := true
 		for _, mdr := range mdrList {
 			if features.EnableEnhancedDestinationRuleMerge {
-				if exportToSet.Equals(mdr.exportTo) {
-					appendSeparately = false
-				} else if len(mdr.exportTo) > 0 && exportToSet.SupersetOf(mdr.exportTo) {
-					// If the new exportTo is superset of existing, merge and also append as a standalone one
-					appendSeparately = true
-				} else {
-					// can not merge with existing one, append as a standalone one
+				// Merge when exportTo matches or the new exportTo is a superset of the
+				// existing one; otherwise append as a standalone entry.
+				canMerge := exportToSet.Equals(mdr.exportTo) ||
+					(len(mdr.exportTo) > 0 && exportToSet.SupersetOf(mdr.exportTo))
+				if !canMerge {
 					appendSeparately = true
 					continue
 				}

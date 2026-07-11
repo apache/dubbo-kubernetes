@@ -122,8 +122,7 @@ type createConfig struct {
 // accessing things like the current valid templates list, and uses the
 // current value of the config at time of prompting.
 func newCreateConfig(_ *cobra.Command, _ []string, _ ClientFactory) (cc createConfig, err error) {
-	var absolutePath string
-	absolutePath = cwd()
+	absolutePath := cwd()
 
 	cc = createConfig{
 		DirName:     viper.GetString("dirname"),

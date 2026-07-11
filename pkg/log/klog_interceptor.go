@@ -1,5 +1,4 @@
 //go:build !noklog
-// +build !noklog
 
 //
 // Licensed to the Apache Software Foundation (ASF) under one or more

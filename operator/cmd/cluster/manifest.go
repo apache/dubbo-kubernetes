@@ -137,31 +137,31 @@ func sortManifests(raw []manifest.ManifestSet) []string {
 func objectKindOrder(m manifest.Manifest) int {
 	o := m.Unstructured
 	gk := o.GroupVersionKind().Group + "/" + o.GroupVersionKind().Kind
-	switch {
+	switch gk {
 	// Create CRDs asap - both because they are slow and because we will likely create instances of them soon
-	case gk == "apiextensions.k8s.io/CustomResourceDefinition":
+	case "apiextensions.k8s.io/CustomResourceDefinition":
 		return -1000
 
 		// We need to create ServiceAccounts, Roles before we bind them with a RoleBinding
-	case gk == "/ServiceAccount" || gk == "rbac.authorization.k8s.io/ClusterRole":
+	case "/ServiceAccount", "rbac.authorization.k8s.io/ClusterRole":
 		return 1
-	case gk == "rbac.authorization.k8s.io/ClusterRoleBinding":
+	case "rbac.authorization.k8s.io/ClusterRoleBinding":
 		return 2
 
 		// Pods might need configmap or secrets - avoid backoff by creating them first
-	case gk == "/ConfigMap" || gk == "/Secrets":
+	case "/ConfigMap", "/Secrets":
 		return 100
 
 		// Create the pods after we've created other things they might be waiting for
-	case gk == "extensions/Deployment" || gk == "apps/Deployment":
+	case "extensions/Deployment", "apps/Deployment":
 		return 1000
 
 		// Autoscalers typically act on a deployment
-	case gk == "autoscaling/HorizontalPodAutoscaler":
+	case "autoscaling/HorizontalPodAutoscaler":
 		return 1001
 
 		// Create services late - after pods have been started
-	case gk == "/Service":
+	case "/Service":
 		return 10000
 
 	default:

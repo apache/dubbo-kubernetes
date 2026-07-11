@@ -396,8 +396,8 @@ func injectRequired(ignored []string, config *Config, podSpec *corev1.PodSpec, m
 
 func injectionStatus(pod *corev1.Pod) *InjectionStatus {
 	var statusBytes []byte
-	if pod.ObjectMeta.Annotations != nil {
-		if value, ok := pod.ObjectMeta.Annotations[annotation.OrgApacheDubboProxylessStatus.Name]; ok {
+	if pod.Annotations != nil {
+		if value, ok := pod.Annotations[annotation.OrgApacheDubboProxylessStatus.Name]; ok {
 			statusBytes = []byte(value)
 		}
 	}

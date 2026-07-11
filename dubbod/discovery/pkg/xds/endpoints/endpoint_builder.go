@@ -96,7 +96,7 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 	if svcPort == nil {
 		return buildEmptyClusterLoadAssignment(b.clusterName)
 	}
-	if externalName := b.service.Attributes.K8sAttributes.ExternalName; externalName != "" {
+	if externalName := b.service.Attributes.ExternalName; externalName != "" {
 		return buildDNSClusterLoadAssignment(b.clusterName, externalName, uint32(svcPort.Port))
 	}
 
@@ -197,13 +197,11 @@ func (b *EndpointBuilder) BuildClusterLoadAssignmentWithGateways(endpointIndex *
 	}
 
 	if len(lbEndpoints) == 0 {
-		logLevel := log.Debugf
 		// For proxyless gRPC, log empty endpoints at INFO level to help diagnose connection issues
 		// This helps identify when endpoints are not available vs when they're filtered out
+		logLevel := log.Infof // If no endpoints exist at all, this is informational
 		if totalEndpoints > 0 {
 			logLevel = log.Warnf // If endpoints exist but were filtered, this is a warning
-		} else {
-			logLevel = log.Infof // If no endpoints exist at all, this is informational
 		}
 		logLevel("no endpoints found for cluster %s (hostname=%s, port=%d, svcPort.Name='%s', svcPort.Port=%d, totalEndpoints=%d, filteredCount=%d, portNameMismatch=%d, unhealthy=%d, buildFailed=%d)",
 			b.clusterName, b.hostname, b.port, svcPort.Name, svcPort.Port, totalEndpoints, filteredCount, portNameMismatchCount, unhealthyCount, buildFailedCount)
@@ -295,8 +293,6 @@ func (b *EndpointBuilder) buildLbEndpointForCluster(ep *model.DubboEndpoint, end
 		healthStatus = core.HealthStatus_DRAINING
 	case model.Terminating:
 		healthStatus = core.HealthStatus_UNHEALTHY
-	default:
-		healthStatus = core.HealthStatus_HEALTHY
 	}
 
 	return &endpoint.LbEndpoint{

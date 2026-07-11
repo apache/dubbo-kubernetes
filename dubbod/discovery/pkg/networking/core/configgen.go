@@ -36,5 +36,4 @@ func NewConfigGenerator(cache model.XdsCache) *ConfigGeneratorImpl {
 }
 
 func (configgen *ConfigGeneratorImpl) serviceRouteIndexChanged(_ *serviceRouteIndex.MeshConfig) {
-	return
 }

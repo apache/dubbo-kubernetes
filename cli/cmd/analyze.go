@@ -143,7 +143,7 @@ func analyzeHTTPRoutes(ctx context.Context, client kube.CLIClient, namespace str
 				if ref.Port != nil {
 					portFound := false
 					for _, p := range svc.Spec.Ports {
-						if p.Port == int32(*ref.Port) {
+						if p.Port == *ref.Port {
 							portFound = true
 							break
 						}

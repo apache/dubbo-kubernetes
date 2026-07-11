@@ -36,6 +36,7 @@ import (
 	listener "github.com/kdubbo/xds-api/listener/v1"
 	route "github.com/kdubbo/xds-api/route/v1"
 	discovery "github.com/kdubbo/xds-api/service/discovery/v1"
+	"google.golang.org/protobuf/proto"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -373,11 +374,7 @@ func cloneInboundFilterChain(in *listener.FilterChain) *listener.FilterChain {
 	if in == nil {
 		return &listener.FilterChain{}
 	}
-	out := *in
-	if len(in.Filters) > 0 {
-		out.Filters = append([]*listener.Filter(nil), in.Filters...)
-	}
-	return &out
+	return proto.Clone(in).(*listener.FilterChain)
 }
 
 func logInboundMTLSMode(name string, mode model.MutualTLSMode, filterChainCount int) {

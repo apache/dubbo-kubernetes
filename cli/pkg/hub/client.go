@@ -36,7 +36,7 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 )
 
-var NoDockerAPIError = errors.New("docker API not available")
+var ErrNoDockerAPI = errors.New("docker API not available")
 
 func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerHostInRemote string, err error) {
 	var u *url.URL
@@ -60,7 +60,7 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 	}
 
 	if dockerHost == "" {
-		return nil, "", NoDockerAPIError
+		return nil, "", ErrNoDockerAPI
 	}
 
 	dockerHostInRemote = dockerHost

@@ -297,7 +297,7 @@ func (v *PeerCertVerifier) VerifyPeerCert(rawCerts [][]byte, _ [][]*x509.Certifi
 }
 
 func sanitizeTrustDomain(td string) string {
-	return strings.Replace(td, "@", ".", -1)
+	return strings.ReplaceAll(td, "@", ".")
 }
 
 func genSpiffeURI(td, ns, serviceAccount string) (string, error) {
@@ -310,8 +310,6 @@ func genSpiffeURI(td, ns, serviceAccount string) (string, error) {
 }
 
 func MustGenSpiffeURI(meshCfg *meshv1alpha1.MeshConfig, ns, serviceAccount string) string {
-	uri, err := genSpiffeURI(meshCfg.GetTrustDomain(), ns, serviceAccount)
-	if err != nil {
-	}
+	uri, _ := genSpiffeURI(meshCfg.GetTrustDomain(), ns, serviceAccount)
 	return uri
 }

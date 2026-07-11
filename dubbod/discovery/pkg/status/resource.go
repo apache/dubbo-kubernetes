@@ -34,7 +34,7 @@ type Resource struct {
 }
 
 func (r Resource) String() string {
-	return strings.Join([]string{r.Group, r.Version, r.GroupVersionResource.Resource, r.Namespace, r.Name, r.Generation}, "/")
+	return strings.Join([]string{r.Group, r.Version, r.Resource, r.Namespace, r.Name, r.Generation}, "/")
 }
 
 func (r *Resource) ToModelKey() string {

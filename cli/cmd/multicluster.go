@@ -247,7 +247,7 @@ func buildEastWestGatewayManifest(args eastWestGatewayArgs) (*gatewayv1.Gateway,
 			Listeners: []gatewayv1.Listener{{
 				Name:     gatewayv1.SectionName("http-eastwest"),
 				Protocol: gatewayv1.HTTPProtocolType,
-				Port:     gatewayv1.PortNumber(args.port),
+				Port:     args.port,
 				AllowedRoutes: &gatewayv1.AllowedRoutes{
 					Namespaces: &gatewayv1.RouteNamespaces{
 						From: ptrGatewayFrom(gatewayv1.NamespacesFromAll),

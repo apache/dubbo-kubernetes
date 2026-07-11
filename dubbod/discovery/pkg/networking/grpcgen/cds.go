@@ -419,7 +419,7 @@ func (b *clusterBuilder) applyBackendTLSPolicy(c *cluster.Cluster) {
 	if c == nil || c.TransportSocket != nil || b.svc == nil || b.push == nil {
 		return
 	}
-	if b.svc.Resolution != model.Alias || b.svc.Attributes.K8sAttributes.ExternalName == "" {
+	if b.svc.Resolution != model.Alias || b.svc.Attributes.ExternalName == "" {
 		return
 	}
 	settings, found := b.push.BackendTLSForService(b.svc.Attributes.Namespace, b.svc.Attributes.Name)

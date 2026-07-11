@@ -34,7 +34,7 @@ import (
 )
 
 // forwardToService port-forwards a local port to a running pod backing the
-// given service and blocks until the context is cancelled or an interrupt is
+// given service and blocks until the context is canceled or an interrupt is
 // received.
 func forwardToService(ctx context.Context, client kube.CLIClient, out io.Writer, namespace, serviceName string, localPort, podPort int) error {
 	pod, err := podForService(ctx, client, namespace, serviceName)

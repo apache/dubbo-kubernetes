@@ -18,13 +18,12 @@ package gateway
 
 import (
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
-	gateway "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 type GatewayClass struct {
 	Name       string
-	Controller gateway.GatewayController
+	Controller gatewayv1.GatewayController
 }
 
 func (g GatewayClass) ResourceName() string {
@@ -39,11 +38,11 @@ func getKnownControllerNames() []string {
 	return names
 }
 
-func GatewayClassesCollection(gatewayClasses krt.Collection[*gateway.GatewayClass], opts krt.OptionsBuilder) (
-	krt.StatusCollection[*gateway.GatewayClass, gatewayv1.GatewayClassStatus],
+func GatewayClassesCollection(gatewayClasses krt.Collection[*gatewayv1.GatewayClass], opts krt.OptionsBuilder) (
+	krt.StatusCollection[*gatewayv1.GatewayClass, gatewayv1.GatewayClassStatus],
 	krt.Collection[GatewayClass],
 ) {
-	return krt.NewStatusCollection(gatewayClasses, func(ctx krt.HandlerContext, obj *gateway.GatewayClass) (*gatewayv1.GatewayClassStatus, *GatewayClass) {
+	return krt.NewStatusCollection(gatewayClasses, func(ctx krt.HandlerContext, obj *gatewayv1.GatewayClass) (*gatewayv1.GatewayClassStatus, *GatewayClass) {
 		log.Infof("Processing GatewayClass %s with controller name %q", obj.Name, obj.Spec.ControllerName)
 		// Log all known controller names for debugging
 		for k := range classInfos {

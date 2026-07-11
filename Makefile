@@ -13,6 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+GIT_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo unknown)
+
+GOLANGCI_LINT_VERSION ?= v2.6.2
+GOTESTFLAGS ?= -race
+
+.PHONY: default
+default: build
+
+# ------------------------------------------------------------------------
+# Build
+# ------------------------------------------------------------------------
+
+.PHONY: build
+build: build-dubboctl build-dubbod build-dubbo-cni
+
 .PHONY: build-dubboctl
 build-dubboctl:
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
@@ -33,3 +50,92 @@ build-dubbo-cni:
 clone-sample:
 	mkdir -p bin
 	cp -r samples bin/samples
+
+# ------------------------------------------------------------------------
+# Test
+# ------------------------------------------------------------------------
+
+.PHONY: test
+test:
+	go test $(GOTESTFLAGS) ./...
+
+.PHONY: test-coverage
+test-coverage:
+	go test $(GOTESTFLAGS) -coverprofile=coverage.txt -covermode=atomic ./...
+
+# ------------------------------------------------------------------------
+# Lint / format
+# ------------------------------------------------------------------------
+
+.PHONY: lint
+lint: lint-go lint-shell
+
+.PHONY: lint-go
+lint-go:
+	@if ! command -v golangci-lint >/dev/null 2>&1; then \
+		echo "golangci-lint not found; install $(GOLANGCI_LINT_VERSION) from https://golangci-lint.run/welcome/install/"; \
+		exit 1; \
+	fi
+	golangci-lint run ./...
+
+.PHONY: lint-shell
+lint-shell:
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		find . -name '*.sh' -not -path './vendor/*' -not -path './bin/*' -print0 | xargs -0 -r shellcheck; \
+	else \
+		echo "shellcheck not found, skipping shell lint"; \
+	fi
+
+.PHONY: fmt
+fmt:
+	gofmt -s -w .
+
+.PHONY: check-fmt
+check-fmt:
+	@out="$$(gofmt -s -l .)"; \
+	if [ -n "$$out" ]; then \
+		echo "The following files need 'gofmt -s':"; \
+		echo "$$out"; \
+		exit 1; \
+	fi
+
+# ------------------------------------------------------------------------
+# Hygiene gates (CI runs these; they must leave the tree clean)
+# ------------------------------------------------------------------------
+
+.PHONY: tidy
+tidy:
+	go mod tidy
+
+.PHONY: check-clean-repo
+check-clean-repo:
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "The working tree is dirty after running generators/tidy:"; \
+		git status --porcelain; \
+		git diff; \
+		exit 1; \
+	fi
+
+.PHONY: check-tidy
+check-tidy: tidy check-clean-repo
+
+# ------------------------------------------------------------------------
+# Helm
+# ------------------------------------------------------------------------
+
+CHARTS := manifests/charts/base manifests/charts/dubbod
+
+.PHONY: lint-helm
+lint-helm:
+	@for chart in $(CHARTS); do \
+		helm lint $$chart || exit 1; \
+		helm template test-release $$chart >/dev/null || exit 1; \
+	done
+
+# ------------------------------------------------------------------------
+# Misc
+# ------------------------------------------------------------------------
+
+.PHONY: clean
+clean:
+	rm -rf bin coverage.txt
