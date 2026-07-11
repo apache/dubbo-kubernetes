@@ -35,6 +35,8 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	opconfig "github.com/apache/dubbo-kubernetes/operator/pkg/apis"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/multicluster"
 	"github.com/apache/dubbo-kubernetes/pkg/util/protomarshal"
@@ -101,6 +103,7 @@ type InjectionParameters struct {
 	valuesConfig        ValuesConfig
 	revision            string
 	proxyEnvs           map[string]string
+	telemetry           telemetryconfig.EffectiveTracing
 	injectedAnnotations map[string]string
 }
 
@@ -272,6 +275,15 @@ func (wh *Webhook) injectPod(ar *kube.AdmissionReview, path string) *kube.Admiss
 		}
 	}
 	proxyConfig := wh.env.GetProxyConfigOrDefault(pod.Namespace, pod.Labels, pod.Annotations, wh.meshConfig)
+	effectiveTelemetry := telemetryconfig.EffectiveTracing{}
+	if wh.env.ConfigStore != nil {
+		effectiveTelemetry = telemetryconfig.Resolve(
+			telemetryconfig.ResourcesFromConfigs(wh.env.List(gvk.Telemetry, model.NamespaceAll)),
+			constants.DubboSystemNamespace,
+			pod.Namespace,
+			pod.Labels,
+		)
+	}
 	deploy, typeMeta := kube.GetDeployMetaFromPod(&pod)
 	params := InjectionParameters{
 		pod:                 &pod,
@@ -285,6 +297,7 @@ func (wh *Webhook) injectPod(ar *kube.AdmissionReview, path string) *kube.Admiss
 		valuesConfig:        wh.valuesConfig,
 		injectedAnnotations: wh.Config.InjectedAnnotations,
 		proxyEnvs:           parseInjectEnvs(path),
+		telemetry:           effectiveTelemetry,
 		revision:            wh.revision,
 	}
 

@@ -19,6 +19,7 @@ import (
 
 	apigithubcomapachedubbokubernetesapinetworkingv1alpha3 "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
 	apigithubcomapachedubbokubernetesapisecurityv1alpha3 "github.com/kdubbo/client-go/pkg/apis/security/v1alpha3"
+	apigithubcomapachedubbokubernetesapitelemetryv1alpha1 "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha1"
 {{- range .Packages}}
 	{{.ImportName}} "{{.PackageName}}"
 {{- end}}

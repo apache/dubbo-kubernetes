@@ -54,6 +54,22 @@ type DubboComponentSpec struct {
 	Base *BaseComponentSpec `json:"base,omitempty"`
 	// Using dubbod as the control plane.
 	Dubbod *DiscoveryComponentSpec `json:"dubbod,omitempty"`
+	// Prometheus metrics collection addon.
+	Prometheus *AddonComponentSpec `json:"prometheus,omitempty"`
+	// Grafana dashboards addon.
+	Grafana *AddonComponentSpec `json:"grafana,omitempty"`
+	// Distributed tracing backend addon (Zipkin-compatible).
+	Tracing *AddonComponentSpec `json:"tracing,omitempty"`
+	// OpenTelemetry collector addon.
+	OtelCollector *AddonComponentSpec `json:"otelCollector,omitempty"`
+}
+
+// AddonComponentSpec configures an optional observability addon component.
+type AddonComponentSpec struct {
+	// Selects whether this component is installed.
+	Enabled *BoolValue `json:"enabled,omitempty"`
+	// Namespace to install the component into.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type BaseComponentSpec struct {

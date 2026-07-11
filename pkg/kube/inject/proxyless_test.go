@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -587,4 +588,110 @@ func hasMount(mounts []corev1.VolumeMount, name, path string, readOnly bool) boo
 		}
 	}
 	return false
+}
+
+func TestInstallerGRPCEngineTemplateInjectsTelemetryEnv(t *testing.T) {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("runtime.Caller() failed")
+	}
+	templatePath := filepath.Join(filepath.Dir(currentFile), "../../..", "manifests/charts/dubbod/files/grpc-engine.yaml")
+	templateBytes, err := os.ReadFile(templatePath)
+	if err != nil {
+		t.Fatalf("failed to read grpc-engine.yaml: %v", err)
+	}
+	templates, err := ParseTemplates(RawTemplates{
+		ProxylessGRPCTemplateName: string(templateBytes),
+	})
+	if err != nil {
+		t.Fatalf("ParseTemplates() failed: %v", err)
+	}
+	valuesConfig, err := NewValuesConfig("{}")
+	if err != nil {
+		t.Fatalf("NewValuesConfig() failed: %v", err)
+	}
+
+	newPod := func() *corev1.Pod {
+		return &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grpc-provider-6d4c7b8c9f-abcde",
+				Namespace: "grpc-app",
+				Annotations: map[string]string{
+					ProxylessInjectTemplatesAnnoName: ProxylessGRPCTemplateName,
+				},
+			},
+			Spec: corev1.PodSpec{
+				ServiceAccountName: "grpc-sa",
+				Containers:         []corev1.Container{{Name: "app"}},
+			},
+		}
+	}
+	newParams := func(effective telemetryconfig.EffectiveTracing) InjectionParameters {
+		return InjectionParameters{
+			pod:          newPod(),
+			templates:    templates,
+			valuesConfig: valuesConfig,
+			meshConfig:   &meshv1alpha1.MeshConfig{TrustDomain: "cluster.local"},
+			telemetry:    effective,
+			proxyConfig: &meshv1alpha1.ProxyConfig{
+				DiscoveryAddress: "dubbod.dubbo-system.svc:26012",
+			},
+		}
+	}
+	envValue := func(pod *corev1.Pod, name string) string {
+		app := FindContainer("app", pod.Spec.Containers)
+		if app == nil {
+			t.Fatalf("app container not found")
+		}
+		for _, e := range app.Env {
+			if e.Name == name {
+				return e.Value
+			}
+		}
+		return ""
+	}
+
+	sampling := 100.0
+	disabled := false
+	tracing := telemetryconfig.EffectiveTracing{
+		Configured:               true,
+		Providers:                []string{"localtrace"},
+		Tags:                     []telemetryconfig.Tag{{Name: "foo", Value: "bar"}},
+		RandomSamplingPercentage: &sampling,
+		DisableSpanReporting:     &disabled,
+	}
+	mergedPod, _, err := RunTemplate(newParams(tracing))
+	if err != nil {
+		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if got, want := envValue(mergedPod, "OTEL_EXPORTER_OTLP_ENDPOINT"), "http://tracing.dubbo-system.svc:4317"; got != want {
+		t.Fatalf("OTEL_EXPORTER_OTLP_ENDPOINT = %q, want %q", got, want)
+	}
+	if got := envValue(mergedPod, "OTEL_TRACES_EXPORTER"); got != "otlp" {
+		t.Fatalf("OTEL_TRACES_EXPORTER = %q, want otlp", got)
+	}
+	if got := envValue(mergedPod, "OTEL_TRACES_SAMPLER_ARG"); got != "1" {
+		t.Fatalf("OTEL_TRACES_SAMPLER_ARG = %q, want 1", got)
+	}
+	if got := envValue(mergedPod, "OTEL_RESOURCE_ATTRIBUTES"); got != "foo=bar" {
+		t.Fatalf("OTEL_RESOURCE_ATTRIBUTES = %q, want foo=bar", got)
+	}
+
+	mergedPod, _, err = RunTemplate(newParams(telemetryconfig.EffectiveTracing{}))
+	if err != nil {
+		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if got := envValue(mergedPod, "OTEL_EXPORTER_OTLP_ENDPOINT"); got != "" {
+		t.Fatalf("OTEL_EXPORTER_OTLP_ENDPOINT = %q, want empty without Telemetry", got)
+	}
+
+	disabled = true
+	tracing.DisableSpanReporting = &disabled
+	mergedPod, _, err = RunTemplate(newParams(tracing))
+	if err != nil {
+		t.Fatalf("RunTemplate() failed: %v", err)
+	}
+	if got := envValue(mergedPod, "OTEL_TRACES_EXPORTER"); got != "none" {
+		t.Fatalf("OTEL_TRACES_EXPORTER = %q, want none", got)
+	}
 }

@@ -238,6 +238,10 @@ func (conn *Connection) ID() string {
 	return conn.conID
 }
 
+func (conn *Connection) ConnectedAt() time.Time {
+	return conn.connectedAt
+}
+
 func (conn *Connection) SetID(id string) {
 	conn.conID = id
 }

@@ -26,6 +26,8 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 
+	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	common_features "github.com/apache/dubbo-kubernetes/pkg/features"
 	"github.com/kdubbo/api/annotation"
 	meshv1alpha1 "github.com/kdubbo/api/mesh/v1alpha1"
@@ -72,17 +74,21 @@ type Config struct {
 }
 
 type TemplateData struct {
-	TypeMeta         metav1.TypeMeta
-	DeploymentMeta   types.NamespacedName
-	ObjectMeta       metav1.ObjectMeta
-	Spec             corev1.PodSpec
-	ProxyConfig      *meshv1alpha1.ProxyConfig
-	MeshConfig       *meshv1alpha1.MeshConfig
-	Values           map[string]any
-	Revision         string
-	NativeSidecars   bool
-	ProxyImage       string
-	CompliancePolicy string
+	TypeMeta                  metav1.TypeMeta
+	DeploymentMeta            types.NamespacedName
+	ObjectMeta                metav1.ObjectMeta
+	Spec                      corev1.PodSpec
+	ProxyConfig               *meshv1alpha1.ProxyConfig
+	MeshConfig                *meshv1alpha1.MeshConfig
+	Values                    map[string]any
+	Revision                  string
+	NativeSidecars            bool
+	ProxyImage                string
+	CompliancePolicy          string
+	TracingDisabled           bool
+	TracingOTLPEndpoint       string
+	TracingSamplingRatio      string
+	TracingResourceAttributes string
 }
 
 type InjectionStatus struct {
@@ -107,16 +113,20 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 	}
 
 	data := TemplateData{
-		TypeMeta:         params.typeMeta,
-		DeploymentMeta:   params.deployMeta,
-		ObjectMeta:       strippedPod.ObjectMeta,
-		Spec:             strippedPod.Spec,
-		ProxyConfig:      params.proxyConfig,
-		MeshConfig:       meshConfig,
-		Values:           params.valuesConfig.asMap,
-		Revision:         params.revision,
-		ProxyImage:       getProxyImage(params.valuesConfig.asMap, "kdubbo/dubbod:debug"),
-		CompliancePolicy: common_features.CompliancePolicy,
+		TypeMeta:                  params.typeMeta,
+		DeploymentMeta:            params.deployMeta,
+		ObjectMeta:                strippedPod.ObjectMeta,
+		Spec:                      strippedPod.Spec,
+		ProxyConfig:               params.proxyConfig,
+		MeshConfig:                meshConfig,
+		Values:                    params.valuesConfig.asMap,
+		Revision:                  params.revision,
+		ProxyImage:                getProxyImage(params.valuesConfig.asMap, "kdubbo/dubbod:debug"),
+		CompliancePolicy:          common_features.CompliancePolicy,
+		TracingDisabled:           params.telemetry.Configured && params.telemetry.Disabled(),
+		TracingOTLPEndpoint:       tracingOTLPEndpoint(params.telemetry),
+		TracingSamplingRatio:      params.telemetry.SamplingRatioString(),
+		TracingResourceAttributes: params.telemetry.ResourceAttributes(),
 	}
 
 	if params.valuesConfig.asMap == nil {
@@ -147,6 +157,13 @@ func RunTemplate(params InjectionParameters) (mergedPod *corev1.Pod, templatePod
 	}
 
 	return mergedPod, templatePod, nil
+}
+
+func tracingOTLPEndpoint(tracing telemetryconfig.EffectiveTracing) string {
+	if !tracing.Configured || tracing.Disabled() {
+		return ""
+	}
+	return telemetryconfig.ProviderEndpoint(tracing.Provider(), constants.DubboSystemNamespace)
 }
 
 func FindContainer(name string, containers []corev1.Container) *corev1.Container {

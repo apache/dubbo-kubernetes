@@ -32,20 +32,20 @@ import (
 
 type manifestGenerateArgs struct {
 	// filenames is an array of paths to input DubboOperator CR files.
-	// filenames []string
+	filenames []string
 	// sets is a string with the format "path=value".
 	sets []string
 }
 
 func (a *manifestGenerateArgs) String() string {
 	var b strings.Builder
-	// b.WriteString("filenames:   " + fmt.Sprint(a.filenames) + "\n")
+	b.WriteString("filenames:   " + fmt.Sprint(a.filenames) + "\n")
 	b.WriteString("sets:           " + fmt.Sprint(a.sets) + "\n")
 	return b.String()
 }
 
 func addManifestGenerateFlags(cmd *cobra.Command, args *manifestGenerateArgs) {
-	// cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filenames", "f", nil, ``)
+	cmd.PersistentFlags().StringSliceVarP(&args.filenames, "filename", "f", nil, `Path to the file containing the DubboOperator custom resource.`)
 	cmd.PersistentFlags().StringArrayVarP(&args.sets, "set", "s", nil, `Override dubboOperator values, such as selecting profiles, etc.`)
 }
 
@@ -101,7 +101,7 @@ const (
 
 func manifestGenerate(kc kube.CLIClient, mgArgs *manifestGenerateArgs, cl clog.Logger) error {
 	setFlags := applyFlagAliases(mgArgs.sets)
-	manifests, _, err := render.GenerateManifest(nil, setFlags, cl, kc)
+	manifests, _, err := render.GenerateManifest(mgArgs.filenames, setFlags, cl, kc)
 	if err != nil {
 		return err
 	}

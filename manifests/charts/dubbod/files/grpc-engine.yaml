@@ -73,6 +73,27 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: status.hostIP
+{{- if .TracingDisabled }}
+    - name: OTEL_TRACES_EXPORTER
+      value: none
+{{- else if .TracingOTLPEndpoint }}
+    - name: OTEL_TRACES_EXPORTER
+      value: otlp
+    - name: OTEL_EXPORTER_OTLP_PROTOCOL
+      value: grpc
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: {{ .TracingOTLPEndpoint }}
+    - name: OTEL_SERVICE_NAME
+      value: {{ .DeploymentMeta.Name }}.{{ .DeploymentMeta.Namespace }}
+    - name: OTEL_TRACES_SAMPLER
+      value: parentbased_traceidratio
+    - name: OTEL_TRACES_SAMPLER_ARG
+      value: {{ .TracingSamplingRatio | quote }}
+{{- end }}
+{{- if .TracingResourceAttributes }}
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: {{ .TracingResourceAttributes | quote }}
+{{- end }}
 {{- if and (gt (len .Spec.Containers) 0) (contains "kdubbo/dubbod" ((index .Spec.Containers 0).Image | default "")) }}
     args:
     - grpc-outbound

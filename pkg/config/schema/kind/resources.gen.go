@@ -33,6 +33,7 @@ const (
 	Service
 	ServiceAccount
 	StatefulSet
+	Telemetry
 	ValidatingWebhookConfiguration
 )
 
@@ -96,6 +97,8 @@ func (k Kind) String() string {
 		return "ServiceAccount"
 	case StatefulSet:
 		return "StatefulSet"
+	case Telemetry:
+		return "Telemetry"
 	case ValidatingWebhookConfiguration:
 		return "ValidatingWebhookConfiguration"
 	default:
@@ -163,6 +166,8 @@ func FromString(s string) Kind {
 		return ServiceAccount
 	case "StatefulSet":
 		return StatefulSet
+	case "Telemetry":
+		return Telemetry
 	case "ValidatingWebhookConfiguration":
 		return ValidatingWebhookConfiguration
 	default:

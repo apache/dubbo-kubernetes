@@ -90,6 +90,10 @@ spec:
           value: {{ .OtelServiceName | quote }}
         - name: DXGATE_OTEL_SAMPLING_PERCENTAGE
           value: {{ .OtelSampling | quote }}
+{{- if .OtelTags }}
+        - name: DXGATE_OTEL_TAGS
+          value: {{ .OtelTags | quote }}
+{{- end }}
 {{- if .OtelEndpoint }}
         - name: DXGATE_OTEL_ENDPOINT
           value: {{ .OtelEndpoint | quote }}

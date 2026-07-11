@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,6 +46,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvr"
+	telemetryconfig "github.com/apache/dubbo-kubernetes/pkg/config/telemetry"
 	"github.com/apache/dubbo-kubernetes/pkg/kube"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
@@ -54,6 +54,7 @@ import (
 	dubbolog "github.com/apache/dubbo-kubernetes/pkg/log"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	clientnetworking "github.com/kdubbo/client-go/pkg/apis/networking/v1alpha3"
+	clienttelemetry "github.com/kdubbo/client-go/pkg/apis/telemetry/v1alpha1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -80,9 +81,6 @@ const (
 	serviceTargetPortAnnotation = "gateway.dubbo.apache.org/target-port"
 	serviceNodePortAnnotation   = "gateway.dubbo.apache.org/node-port"
 	xdsAddressAnnotation        = "gateway.dubbo.apache.org/xds-address"
-	otelEndpointAnnotation      = "gateway.dubbo.apache.org/otel-endpoint"
-	otelSamplingAnnotation      = "gateway.dubbo.apache.org/otel-sampling-percentage"
-	otelServiceNameAnnotation   = "gateway.dubbo.apache.org/otel-service-name"
 	accessLogAnnotation         = "gateway.dubbo.apache.org/access-log"
 	accessLogFormatAnnotation   = "gateway.dubbo.apache.org/access-log-format"
 )
@@ -130,6 +128,7 @@ type DeploymentController struct {
 	configMaps      kclient.Client[*corev1.ConfigMap]
 	httpRoutes      kclient.Client[*gateway.HTTPRoute]
 	circuitBreakers kclient.Client[*clientnetworking.CircuitBreakerPolicy]
+	telemetries     kclient.Client[*clienttelemetry.Telemetry]
 	backendTLS      kclient.Client[*gateway.BackendTLSPolicy]
 	namespaces      kclient.Client[*corev1.Namespace]
 	tagWatcher      TagWatcher
@@ -242,6 +241,13 @@ func NewDeploymentController(
 
 	dc.circuitBreakers = kclient.NewFiltered[*clientnetworking.CircuitBreakerPolicy](client, filter)
 	dc.circuitBreakers.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
+		for _, gw := range dc.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
+			dc.queue.AddObject(gw)
+		}
+	}))
+
+	dc.telemetries = kclient.NewFiltered[*clienttelemetry.Telemetry](client, filter)
+	dc.telemetries.AddEventHandler(controllers.ObjectHandler(func(o controllers.Object) {
 		for _, gw := range dc.gateways.List(metav1.NamespaceAll, klabels.Everything()) {
 			dc.queue.AddObject(gw)
 		}
@@ -392,7 +398,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		return err
 	}
 
-	observability := observabilityConfigForGateway(gw)
+	observability := d.observabilityConfigForGateway(gw)
 	input := TemplateInput{
 		Gateway:             &gw,
 		GatewayClass:        string(gw.Spec.GatewayClassName),
@@ -411,6 +417,7 @@ func (d *DeploymentController) configureGateway(log *dubbolog.Logger, gw gateway
 		OtelEndpoint:        observability.OtelEndpoint,
 		OtelServiceName:     observability.OtelServiceName,
 		OtelSampling:        observability.OtelSampling,
+		OtelTags:            observability.OtelTags,
 		AccessLog:           observability.AccessLog,
 		AccessLogFormat:     observability.AccessLogFormat,
 	}
@@ -468,6 +475,7 @@ type TemplateInput struct {
 	OtelEndpoint        string
 	OtelServiceName     string
 	OtelSampling        string
+	OtelTags            string
 	AccessLog           string
 	AccessLogFormat     string
 }
@@ -476,37 +484,38 @@ type gatewayObservabilityConfig struct {
 	OtelEndpoint    string
 	OtelServiceName string
 	OtelSampling    string
+	OtelTags        string
 	AccessLog       string
 	AccessLogFormat string
 }
 
-func observabilityConfigForGateway(gw gateway.Gateway) gatewayObservabilityConfig {
-	return gatewayObservabilityConfig{
-		OtelEndpoint:    strings.TrimSpace(gw.Annotations[otelEndpointAnnotation]),
-		OtelServiceName: gatewayOtelServiceName(gw),
-		OtelSampling:    gatewayOtelSampling(gw),
+// observabilityConfigForGateway resolves the meshlevel, namespace, and
+// workload Telemetry hierarchy for the managed gateway.
+func (d *DeploymentController) observabilityConfigForGateway(gw gateway.Gateway) gatewayObservabilityConfig {
+	items := d.telemetries.List(metav1.NamespaceAll, klabels.Everything())
+	return resolveGatewayObservability(gw, d.systemNamespace, telemetryconfig.ResourcesFromClient(items))
+}
+
+func resolveGatewayObservability(gw gateway.Gateway, meshNamespace string, resources []telemetryconfig.Resource) gatewayObservabilityConfig {
+	labels := map[string]string{
+		"app.kubernetes.io/name":                 "dxgate",
+		"gateway.networking.k8s.io/gateway-name": gw.Name,
+	}
+	for key, value := range gw.Labels {
+		labels[key] = value
+	}
+	effective := telemetryconfig.Resolve(resources, meshNamespace, gw.Namespace, labels)
+	cfg := gatewayObservabilityConfig{
+		OtelServiceName: fmt.Sprintf("dxgate.%s.%s", gw.Namespace, gw.Name),
+		OtelSampling:    effective.SamplingPercentageString(),
+		OtelTags:        effective.TagsJSON(),
 		AccessLog:       gatewayAccessLog(gw),
 		AccessLogFormat: gatewayAccessLogFormat(gw),
 	}
-}
-
-func gatewayOtelServiceName(gw gateway.Gateway) string {
-	if value := strings.TrimSpace(gw.Annotations[otelServiceNameAnnotation]); value != "" {
-		return value
+	if effective.Configured && !effective.Disabled() {
+		cfg.OtelEndpoint = telemetryconfig.ProviderEndpoint(effective.Provider(), meshNamespace)
 	}
-	return fmt.Sprintf("dxgate.%s.%s", gw.Namespace, gw.Name)
-}
-
-func gatewayOtelSampling(gw gateway.Gateway) string {
-	value := strings.TrimSpace(gw.Annotations[otelSamplingAnnotation])
-	if value == "" {
-		return "100"
-	}
-	parsed, err := strconv.ParseFloat(value, 64)
-	if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) || parsed < 0 || parsed > 100 {
-		return "100"
-	}
-	return strconv.FormatFloat(parsed, 'f', -1, 64)
+	return cfg
 }
 
 func gatewayAccessLog(gw gateway.Gateway) string {
