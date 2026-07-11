@@ -33,6 +33,30 @@ func TestGenerateManifestUsesEmbeddedInstallerAssets(t *testing.T) {
 	}
 }
 
+func TestTelemetryValidationWebhookDoesNotRequireRevisionLabel(t *testing.T) {
+	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("GenerateManifest() error = %v", err)
+	}
+	webhook := findManifest(t, manifests, "ValidatingWebhookConfiguration", "dubbo-validator-dubbo-system")
+	webhooks, ok, err := unstructured.NestedSlice(webhook.Object, "webhooks")
+	if err != nil || !ok {
+		t.Fatalf("webhooks missing: ok=%v err=%v", ok, err)
+	}
+	for _, raw := range webhooks {
+		entry := raw.(map[string]interface{})
+		name, _, _ := unstructured.NestedString(entry, "name")
+		if name != "telemetry.validation.dubbo.apache.org" {
+			continue
+		}
+		if _, found := entry["objectSelector"]; found {
+			t.Fatal("Telemetry validation webhook must match resources without revision labels")
+		}
+		return
+	}
+	t.Fatal("Telemetry validation webhook not rendered")
+}
+
 func TestGenerateManifestExposesDubbodPrometheusScrapeEndpoint(t *testing.T) {
 	manifests, _, err := GenerateManifest(nil, nil, nil, nil)
 	if err != nil {
