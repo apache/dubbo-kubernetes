@@ -1,0 +1,272 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Prow-style slash commands for issues and pull requests:
+#
+#   /assign [@user ...]    assign the issue/PR (self-assign needs no permission;
+#                          assigning others requires write access)
+#   /unassign [@user ...]  remove assignees
+#   /lgtm                  (PR only, write access, not the PR author) label the
+#                          PR with `lgtm`; if the commenter is an approver in
+#                          the root OWNERS file, the PR is squash-merged (or
+#                          auto-merge is enabled while checks are running) —
+#                          non-approvers only apply the label
+#   /lgtm cancel           remove the `lgtm` label and disable auto-merge
+#   /close                 close the issue/PR (author or write access)
+#   /reopen                reopen the issue/PR (author or write access)
+#   /retest                (PR only, write access) re-run failed workflow runs
+#                          for the PR head commit
+#
+# Bot identity: if the BOT_APP_ID / BOT_APP_PRIVATE_KEY secrets are configured
+# (a GitHub App whose avatar is the Apache Dubbo logo, registered through ASF
+# INFRA), all replies and merges are performed as that App, so comments show
+# the Apache logo. Without them the workflow falls back to the built-in
+# GITHUB_TOKEN and appears as github-actions[bot] — the avatar of the built-in
+# token cannot be customized.
+
+name: Slash Commands
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  command:
+    name: Handle Command
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: |
+      github.repository == 'apache/dubbo-kubernetes' &&
+      startsWith(github.event.comment.body, '/')
+    env:
+      BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
+    steps:
+      # Use a GitHub App identity (Apache logo avatar) when configured.
+      - name: Generate bot token
+        id: bot-token
+        if: env.BOT_APP_ID != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
+      - name: Dispatch command
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.bot-token.outputs.token || github.token }}
+          script: |
+            const {owner, repo} = context.repo;
+            const comment = context.payload.comment;
+            const issue = context.payload.issue;
+            const issueNumber = issue.number;
+            const commenter = comment.user.login;
+            const isPR = !!issue.pull_request;
+
+            const firstLine = (comment.body || '').trim().split(/\r?\n/)[0].trim();
+            const match = firstLine.match(/^\/(assign|unassign|lgtm|close|reopen|retest)\b(.*)$/);
+            if (!match) {
+              core.info(`No supported command in: ${firstLine}`);
+              return;
+            }
+            const command = match[1];
+            const args = match[2].trim();
+            core.info(`Command /${command} ${args} from @${commenter} on #${issueNumber}`);
+
+            const reply = async (body) => {
+              await github.rest.issues.createComment({owner, repo, issue_number: issueNumber, body});
+            };
+            const hasWriteAccess = async (username) => {
+              try {
+                const {data} = await github.rest.repos.getCollaboratorPermissionLevel({owner, repo, username});
+                return ['admin', 'maintain', 'write'].includes(data.permission);
+              } catch (e) {
+                return false;
+              }
+            };
+            const ack = async (content) => {
+              try {
+                await github.rest.reactions.createForIssueComment({owner, repo, comment_id: comment.id, content});
+              } catch (e) {
+                core.info(`reaction failed: ${e.message}`);
+              }
+            };
+            // Approvers come from the `approvers:` list in the root OWNERS
+            // file on the default branch; only they can merge via /lgtm.
+            const getApprovers = async () => {
+              try {
+                const {data} = await github.rest.repos.getContent({owner, repo, path: 'OWNERS'});
+                const text = Buffer.from(data.content, 'base64').toString('utf8');
+                const approvers = [];
+                let inApprovers = false;
+                for (const raw of text.split(/\r?\n/)) {
+                  const line = raw.replace(/#.*$/, '').trimEnd();
+                  if (/^approvers:\s*$/.test(line)) { inApprovers = true; continue; }
+                  if (/^\S/.test(line)) { inApprovers = false; }
+                  const item = line.match(/^\s*-\s*['"]?([A-Za-z0-9-]+)['"]?\s*$/);
+                  if (inApprovers && item) approvers.push(item[1].toLowerCase());
+                }
+                return approvers;
+              } catch (e) {
+                core.info(`OWNERS not readable: ${e.message}`);
+                return [];
+              }
+            };
+
+            switch (command) {
+              case 'assign':
+              case 'unassign': {
+                const targets = args
+                  ? args.split(/\s+/).map((u) => u.replace(/^@/, '')).filter(Boolean)
+                  : [commenter];
+                const touchesOthers = targets.some((t) => t.toLowerCase() !== commenter.toLowerCase());
+                if (touchesOthers && !(await hasWriteAccess(commenter))) {
+                  await reply(`@${commenter}: only collaborators with write access can ${command} other users.`);
+                  return;
+                }
+                try {
+                  if (command === 'assign') {
+                    await github.rest.issues.addAssignees({owner, repo, issue_number: issueNumber, assignees: targets});
+                  } else {
+                    await github.rest.issues.removeAssignees({owner, repo, issue_number: issueNumber, assignees: targets});
+                  }
+                  await ack('+1');
+                } catch (e) {
+                  await reply(`@${commenter}: failed to ${command} ${targets.map((t) => '@' + t).join(' ')}: ${e.message}\n\nNote: assignees must be collaborators or org members with read access.`);
+                }
+                return;
+              }
+
+              case 'lgtm': {
+                if (!isPR) {
+                  await reply(`@${commenter}: \`/lgtm\` can only be used on pull requests.`);
+                  return;
+                }
+                if (args.toLowerCase() === 'cancel') {
+                  if (!(await hasWriteAccess(commenter)) && commenter !== issue.user.login) {
+                    await reply(`@${commenter}: only collaborators with write access or the PR author can cancel lgtm.`);
+                    return;
+                  }
+                  try {
+                    await github.rest.issues.removeLabel({owner, repo, issue_number: issueNumber, name: 'lgtm'});
+                  } catch (e) {
+                    core.info(`label removal: ${e.message}`);
+                  }
+                  const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: issueNumber});
+                  if (pr.auto_merge) {
+                    await github.graphql(
+                      `mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id}) { pullRequest { number } } }`,
+                      {id: pr.node_id},
+                    );
+                  }
+                  await ack('+1');
+                  return;
+                }
+                if (commenter === issue.user.login) {
+                  await reply(`@${commenter}: you cannot \`/lgtm\` your own pull request.`);
+                  return;
+                }
+                if (!(await hasWriteAccess(commenter))) {
+                  await reply(`@${commenter}: only collaborators with write access can \`/lgtm\` a pull request.`);
+                  return;
+                }
+                try {
+                  await github.rest.issues.createLabel({owner, repo, name: 'lgtm', color: '15dd18', description: 'Looks good to me, ready to merge'});
+                } catch (e) {
+                  core.info(`label exists: ${e.message}`);
+                }
+                await github.rest.issues.addLabels({owner, repo, issue_number: issueNumber, labels: ['lgtm']});
+                await ack('+1');
+
+                const approvers = await getApprovers();
+                if (!approvers.includes(commenter.toLowerCase())) {
+                  const who = approvers.length
+                    ? approvers.map((a) => '@' + a).join(', ')
+                    : 'nobody (OWNERS file missing or empty)';
+                  await reply(`\`lgtm\` label added by @${commenter}. Merging requires \`/lgtm\` from an approver in the OWNERS file: ${who}.`);
+                  return;
+                }
+
+                const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: issueNumber});
+                if (pr.merged) {
+                  return;
+                }
+                try {
+                  await github.rest.pulls.merge({owner, repo, pull_number: issueNumber, merge_method: 'squash'});
+                  await reply(`Merged on behalf of @${commenter} via \`/lgtm\`.`);
+                } catch (mergeErr) {
+                  try {
+                    await github.graphql(
+                      `mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }`,
+                      {id: pr.node_id},
+                    );
+                    await reply(`\`lgtm\` recorded by @${commenter}. Auto-merge (squash) enabled — the PR will merge once required checks pass.`);
+                  } catch (autoErr) {
+                    await reply(`\`lgtm\` recorded by @${commenter}, but the PR could not be merged automatically:\n\n- merge: ${mergeErr.message}\n- auto-merge: ${autoErr.message}\n\nPlease merge manually once checks pass.`);
+                  }
+                }
+                return;
+              }
+
+              case 'close':
+              case 'reopen': {
+                if (commenter !== issue.user.login && !(await hasWriteAccess(commenter))) {
+                  await reply(`@${commenter}: only the author or collaborators with write access can ${command} this.`);
+                  return;
+                }
+                await github.rest.issues.update({
+                  owner, repo, issue_number: issueNumber,
+                  state: command === 'close' ? 'closed' : 'open',
+                });
+                await ack('+1');
+                return;
+              }
+
+              case 'retest': {
+                if (!isPR) {
+                  await reply(`@${commenter}: \`/retest\` can only be used on pull requests.`);
+                  return;
+                }
+                if (!(await hasWriteAccess(commenter)) && commenter !== issue.user.login) {
+                  await reply(`@${commenter}: only the PR author or collaborators with write access can \`/retest\`.`);
+                  return;
+                }
+                const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number: issueNumber});
+                const {data: runs} = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner, repo, head_sha: pr.head.sha, per_page: 100,
+                });
+                const failed = runs.workflow_runs.filter((r) =>
+                  r.status === 'completed' && ['failure', 'cancelled', 'timed_out'].includes(r.conclusion));
+                if (failed.length === 0) {
+                  await reply(`@${commenter}: no failed workflow runs found for ${pr.head.sha.substring(0, 7)}.`);
+                  return;
+                }
+                for (const run of failed) {
+                  try {
+                    await github.rest.actions.reRunWorkflowFailedJobs({owner, repo, run_id: run.id});
+                  } catch (e) {
+                    core.info(`re-run ${run.name}: ${e.message}`);
+                  }
+                }
+                await ack('rocket');
+                return;
+              }
+            }
