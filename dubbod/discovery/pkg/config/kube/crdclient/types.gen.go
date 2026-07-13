@@ -80,10 +80,20 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
 		}, metav1.CreateOptions{})
+	case gvk.ServiceEntry:
+		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceEntry)),
+		}, metav1.CreateOptions{})
 	case gvk.Telemetry:
 		return c.Dubbo().TelemetryV1alpha1().Telemetries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapitelemetryv1alpha1.Telemetry)),
+		}, metav1.CreateOptions{})
+	case gvk.WorkloadEntry:
+		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(cfg.Namespace).Create(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.WorkloadEntry)),
 		}, metav1.CreateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -137,10 +147,20 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapisecurityv1alpha3.RequestAuthentication)),
 		}, metav1.UpdateOptions{})
+	case gvk.ServiceEntry:
+		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceEntry)),
+		}, metav1.UpdateOptions{})
 	case gvk.Telemetry:
 		return c.Dubbo().TelemetryV1alpha1().Telemetries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
 			ObjectMeta: objMeta,
 			Spec:       *(cfg.Spec.(*githubcomkdubboapitelemetryv1alpha1.Telemetry)),
+		}, metav1.UpdateOptions{})
+	case gvk.WorkloadEntry:
+		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(cfg.Namespace).Update(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
+			ObjectMeta: objMeta,
+			Spec:       *(cfg.Spec.(*githubcomkdubboapinetworkingv1alpha3.WorkloadEntry)),
 		}, metav1.UpdateOptions{})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", cfg.GroupVersionKind)
@@ -189,8 +209,18 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
+	case gvk.ServiceEntry:
+		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
 	case gvk.Telemetry:
 		return c.Dubbo().TelemetryV1alpha1().Telemetries(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
+			ObjectMeta: objMeta,
+			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
+		}, metav1.UpdateOptions{})
+	case gvk.WorkloadEntry:
+		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(cfg.Namespace).UpdateStatus(context.TODO(), &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
 			ObjectMeta: objMeta,
 			Status:     *(cfg.Status.(*githubcomkdubboapimetav1alpha1.DubboStatus)),
 		}, metav1.UpdateOptions{})
@@ -339,6 +369,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 		}
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.ServiceEntry:
+		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceEntry)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.ServiceEntry)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	case gvk.Telemetry:
 		oldRes := &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{
 			ObjectMeta: origMeta,
@@ -353,6 +398,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
 			return nil, err
 		}
 		return c.Dubbo().TelemetryV1alpha1().Telemetries(orig.Namespace).
+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
+	case gvk.WorkloadEntry:
+		oldRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
+			ObjectMeta: origMeta,
+			Spec:       *(orig.Spec.(*githubcomkdubboapinetworkingv1alpha3.WorkloadEntry)),
+		}
+		modRes := &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{
+			ObjectMeta: modMeta,
+			Spec:       *(mod.Spec.(*githubcomkdubboapinetworkingv1alpha3.WorkloadEntry)),
+		}
+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
+		if err != nil {
+			return nil, err
+		}
+		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(orig.Namespace).
 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
 	default:
 		return nil, fmt.Errorf("unsupported type: %v", orig.GroupVersionKind)
@@ -383,8 +443,12 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string, 
 		return c.GatewayAPI().GatewayV1beta1().ReferenceGrants(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.RequestAuthentication:
 		return c.Dubbo().SecurityV1alpha3().RequestAuthentications(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.ServiceEntry:
+		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).Delete(context.TODO(), name, deleteOptions)
 	case gvk.Telemetry:
 		return c.Dubbo().TelemetryV1alpha1().Telemetries(namespace).Delete(context.TODO(), name, deleteOptions)
+	case gvk.WorkloadEntry:
+		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(namespace).Delete(context.TODO(), name, deleteOptions)
 	default:
 		return fmt.Errorf("unsupported type: %v", typ)
 	}
@@ -852,6 +916,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 			Spec: obj,
 		}
 	},
+	gvk.ServiceEntry: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.ServiceEntry,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
+		}
+	},
 	gvk.StatefulSet: func(r runtime.Object) config.Config {
 		obj := r.(*k8sioapiappsv1.StatefulSet)
 		return config.Config{
@@ -905,6 +988,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
 				Generation:        obj.Generation,
 			},
 			Spec: obj,
+		}
+	},
+	gvk.WorkloadEntry: func(r runtime.Object) config.Config {
+		obj := r.(*apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry)
+		return config.Config{
+			Meta: config.Meta{
+				GroupVersionKind:  gvk.WorkloadEntry,
+				Name:              obj.Name,
+				Namespace:         obj.Namespace,
+				Labels:            obj.Labels,
+				Annotations:       obj.Annotations,
+				ResourceVersion:   obj.ResourceVersion,
+				CreationTimestamp: obj.CreationTimestamp.Time,
+				OwnerReferences:   obj.OwnerReferences,
+				UID:               string(obj.UID),
+				Generation:        obj.Generation,
+			},
+			Spec:   &obj.Spec,
+			Status: &obj.Status,
 		}
 	},
 }

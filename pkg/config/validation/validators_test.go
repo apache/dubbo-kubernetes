@@ -295,6 +295,68 @@ func TestValidateCircuitBreakerPolicy(t *testing.T) {
 	}
 }
 
+func TestValidateServiceEntry(t *testing.T) {
+	valid := func() *networking.ServiceEntry {
+		return &networking.ServiceEntry{
+			Hosts:      []string{"api.example.com"},
+			Addresses:  []string{"240.0.0.1"},
+			Resolution: networking.ServiceEntry_STATIC,
+			Ports:      []*networking.ServicePort{{Name: "tcp", Number: 443, Protocol: "TCP"}},
+			Endpoints:  []*networking.WorkloadEntry{{Address: "10.0.0.1", Ports: map[string]uint32{"tcp": 8443}}},
+		}
+	}
+	cases := []struct {
+		name    string
+		mutate  func(*networking.ServiceEntry)
+		wantErr bool
+	}{
+		{name: "valid", mutate: func(*networking.ServiceEntry) {}, wantErr: false},
+		{name: "missing host", mutate: func(s *networking.ServiceEntry) { s.Hosts = nil }, wantErr: true},
+		{name: "bad address", mutate: func(s *networking.ServiceEntry) { s.Addresses = []string{"not-an-ip"} }, wantErr: true},
+		{name: "duplicate port", mutate: func(s *networking.ServiceEntry) {
+			s.Ports = append(s.Ports, &networking.ServicePort{Name: "tcp", Number: 443, Protocol: "TCP"})
+		}, wantErr: true},
+		{name: "unsupported protocol", mutate: func(s *networking.ServiceEntry) { s.Ports[0].Protocol = "SMTP" }, wantErr: true},
+		{name: "selector and endpoints", mutate: func(s *networking.ServiceEntry) {
+			s.WorkloadSelector = &typev1alpha3.WorkloadSelector{MatchLabels: map[string]string{"app": "api"}}
+		}, wantErr: true},
+		{name: "invalid endpoint", mutate: func(s *networking.ServiceEntry) { s.Endpoints[0].Address = "" }, wantErr: true},
+		{name: "invalid export", mutate: func(s *networking.ServiceEntry) { s.ExportTo = []string{"bad_namespace"} }, wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := valid()
+			tc.mutate(spec)
+			_, err := ValidateServiceEntry(makeConfig(spec))
+			if got := err != nil; got != tc.wantErr {
+				t.Fatalf("ValidateServiceEntry() error = %v, wantErr = %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateWorkloadEntry(t *testing.T) {
+	cases := []struct {
+		name    string
+		spec    *networking.WorkloadEntry
+		wantErr bool
+	}{
+		{name: "valid IP", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Ports: map[string]uint32{"grpc": 50051}}, wantErr: false},
+		{name: "valid DNS", spec: &networking.WorkloadEntry{Address: "vm.example.com"}, wantErr: false},
+		{name: "missing address", spec: &networking.WorkloadEntry{}, wantErr: true},
+		{name: "invalid port", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Ports: map[string]uint32{"grpc": 0}}, wantErr: true},
+		{name: "invalid labels", spec: &networking.WorkloadEntry{Address: "10.0.0.1", Labels: map[string]string{"bad key": "value"}}, wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ValidateWorkloadEntry(makeConfig(tc.spec))
+			if got := err != nil; got != tc.wantErr {
+				t.Fatalf("ValidateWorkloadEntry() error = %v, wantErr = %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateTelemetry(t *testing.T) {
 	cases := []struct {
 		name    string

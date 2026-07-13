@@ -84,12 +84,16 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
 		return c.Kube().CoreV1().Services(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
+		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiappsv1.StatefulSet:
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.WriteAPI[T])
 	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry:
 		return c.Dubbo().TelemetryV1alpha1().Telemetries(namespace).(ktypes.WriteAPI[T])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.WriteAPI[T])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry:
+		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(namespace).(ktypes.WriteAPI[T])
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
 	}
@@ -147,12 +151,16 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
 		return c.Kube().CoreV1().Services(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapicorev1.ServiceAccount:
 		return c.Kube().CoreV1().ServiceAccounts(namespace).(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
+		return c.Dubbo().NetworkingV1alpha3().ServiceEntries(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiappsv1.StatefulSet:
 		return c.Kube().AppsV1().StatefulSets(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry:
 		return c.Dubbo().TelemetryV1alpha1().Telemetries(namespace).(ktypes.ReadWriteAPI[T, TL])
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().(ktypes.ReadWriteAPI[T, TL])
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry:
+		return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(namespace).(ktypes.ReadWriteAPI[T, TL])
 	default:
 		panic(fmt.Sprintf("Unknown type %T", ptr.Empty[T]()))
 	}
@@ -210,12 +218,16 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
 		return &k8sioapicorev1.Service{}
 	case gvr.ServiceAccount:
 		return &k8sioapicorev1.ServiceAccount{}
+	case gvr.ServiceEntry:
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry{}
 	case gvr.StatefulSet:
 		return &k8sioapiappsv1.StatefulSet{}
 	case gvr.Telemetry:
 		return &apigithubcomapachedubbokubernetesapitelemetryv1alpha1.Telemetry{}
 	case gvr.ValidatingWebhookConfiguration:
 		return &k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration{}
+	case gvr.WorkloadEntry:
+		return &apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry{}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))
 	}
@@ -401,6 +413,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().CoreV1().ServiceAccounts(opts.Namespace).Watch(context.Background(), options)
 		}
+	case gvr.ServiceEntry:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().NetworkingV1alpha3().ServiceEntries(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().NetworkingV1alpha3().ServiceEntries(opts.Namespace).Watch(context.Background(), options)
+		}
 	case gvr.StatefulSet:
 		l = func(options metav1.ListOptions) (runtime.Object, error) {
 			return c.Kube().AppsV1().StatefulSets(opts.Namespace).List(context.Background(), options)
@@ -421,6 +440,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
 		}
 		w = func(options metav1.ListOptions) (watch.Interface, error) {
 			return c.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Watch(context.Background(), options)
+		}
+	case gvr.WorkloadEntry:
+		l = func(options metav1.ListOptions) (runtime.Object, error) {
+			return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(opts.Namespace).List(context.Background(), options)
+		}
+		w = func(options metav1.ListOptions) (watch.Interface, error) {
+			return c.Dubbo().NetworkingV1alpha3().WorkloadEntries(opts.Namespace).Watch(context.Background(), options)
 		}
 	default:
 		panic(fmt.Sprintf("Unknown type %v", g))

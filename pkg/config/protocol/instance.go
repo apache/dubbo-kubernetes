@@ -26,6 +26,12 @@ func (i Instance) String() string {
 }
 
 const (
+	// HTTP declares that the port carries HTTP/1.1 traffic.
+	HTTP Instance = "HTTP"
+	// TCP declares that the port carries opaque TCP traffic.
+	TCP Instance = "TCP"
+	// UDP declares that the port carries UDP traffic.
+	UDP Instance = "UDP"
 	// GRPC declares that the port carries gRPC traffic.
 	GRPC Instance = "GRPC"
 	// GRPCWeb declares that the port carries gRPC traffic.
@@ -44,6 +50,12 @@ const (
 // Parse from string ignoring case
 func Parse(s string) Instance {
 	switch strings.ToLower(s) {
+	case "http":
+		return HTTP
+	case "tcp":
+		return TCP
+	case "udp":
+		return UDP
 	case "grpc":
 		return GRPC
 	case "grpc-web":

@@ -22,6 +22,8 @@ type ID string
 const (
 	// Kubernetes is a service registry backed by k8s API server
 	Kubernetes ID = "Kubernetes"
+	// External is a service registry backed by declarative ServiceEntry resources.
+	External ID = "External"
 )
 
 func (id ID) String() string {

@@ -100,8 +100,16 @@ func (c *Controller) Services() []*model.Service {
 	for _, r := range c.GetRegistries() {
 		svcs := r.Services()
 		if r.Provider() != provider.Kubernetes {
-			index += len(svcs)
-			services = append(services, svcs...)
+			for _, s := range svcs {
+				if previous, found := smap[s.Hostname]; found && r.Provider() == provider.External {
+					services[previous] = services[previous].DeepCopy()
+					decorateService(services[previous], s)
+					continue
+				}
+				smap[s.Hostname] = index
+				index++
+				services = append(services, s)
+			}
 		} else {
 			for _, s := range svcs {
 				previous, ok := smap[s.Hostname]
@@ -138,7 +146,13 @@ func (c *Controller) GetService(hostname host.Name) *model.Service {
 			continue
 		}
 		if r.Provider() != provider.Kubernetes {
-			return service
+			if out == nil {
+				return service
+			}
+			if r.Provider() == provider.External {
+				decorateService(out, service)
+			}
+			return out
 		}
 		if out == nil {
 			out = service.DeepCopy()
@@ -148,6 +162,20 @@ func (c *Controller) GetService(hostname host.Name) *model.Service {
 		}
 	}
 	return out
+}
+
+func decorateService(dst, src *model.Service) {
+	accounts := make(map[string]struct{}, len(dst.ServiceAccounts)+len(src.ServiceAccounts))
+	for _, account := range dst.ServiceAccounts {
+		accounts[account] = struct{}{}
+	}
+	for _, account := range src.ServiceAccounts {
+		if _, found := accounts[account]; found {
+			continue
+		}
+		dst.ServiceAccounts = append(dst.ServiceAccounts, account)
+		accounts[account] = struct{}{}
+	}
 }
 
 func (c *Controller) GetRegistries() []serviceregistry.Instance {
