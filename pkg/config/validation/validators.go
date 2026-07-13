@@ -19,13 +19,18 @@ package validation
 import (
 	"fmt"
 	"math"
+	"net"
 	"strings"
 
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/constants"
+	"github.com/apache/dubbo-kubernetes/pkg/config/labels"
+	"github.com/apache/dubbo-kubernetes/pkg/config/protocol"
+	"github.com/apache/dubbo-kubernetes/pkg/config/visibility"
 	networking "github.com/kdubbo/api/networking/v1alpha3"
 	security "github.com/kdubbo/api/security/v1alpha3"
 	telemetry "github.com/kdubbo/api/telemetry/v1alpha1"
+	kvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
 // ValidateAuthorizationPolicy checks that an AuthorizationPolicy is well-formed.
@@ -207,6 +212,125 @@ var ValidateCircuitBreakerPolicy = validateFunc(
 		}
 		return v.Unwrap()
 	})
+
+// ValidateServiceEntry checks that a ServiceEntry can be converted into services and endpoints.
+var ValidateServiceEntry = RegisterValidateFunc("ValidateServiceEntry", func(cfg config.Config) (Warning, error) {
+	spec, ok := cfg.Spec.(*networking.ServiceEntry)
+	if !ok {
+		return nil, fmt.Errorf("cannot cast to ServiceEntry")
+	}
+	v := Validation{}
+	if len(spec.GetHosts()) == 0 {
+		v = appendValidation(v, fmt.Errorf("hosts must not be empty"))
+	}
+	for i, hostname := range spec.GetHosts() {
+		v = appendValidation(v, validateServiceEntryHost(fmt.Sprintf("hosts[%d]", i), hostname))
+	}
+	for i, address := range spec.GetAddresses() {
+		if net.ParseIP(address) == nil {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				v = appendValidation(v, fmt.Errorf("addresses[%d] %q must be an IP address or CIDR", i, address))
+			}
+		}
+	}
+	if len(spec.GetPorts()) == 0 {
+		v = appendValidation(v, fmt.Errorf("ports must not be empty"))
+	}
+	names := make(map[string]struct{}, len(spec.GetPorts()))
+	numbers := make(map[uint32]struct{}, len(spec.GetPorts()))
+	for i, port := range spec.GetPorts() {
+		if port == nil {
+			v = appendValidation(v, fmt.Errorf("ports[%d] must not be null", i))
+			continue
+		}
+		if port.GetName() == "" {
+			v = appendValidation(v, fmt.Errorf("ports[%d].name must not be empty", i))
+		} else if _, found := names[port.GetName()]; found {
+			v = appendValidation(v, fmt.Errorf("ports[%d].name %q is duplicated", i, port.GetName()))
+		}
+		names[port.GetName()] = struct{}{}
+		if port.GetNumber() == 0 || port.GetNumber() > 65535 {
+			v = appendValidation(v, fmt.Errorf("ports[%d].number must be between 1 and 65535", i))
+		} else if _, found := numbers[port.GetNumber()]; found {
+			v = appendValidation(v, fmt.Errorf("ports[%d].number %d is duplicated", i, port.GetNumber()))
+		}
+		numbers[port.GetNumber()] = struct{}{}
+		if port.GetTargetPort() > 65535 {
+			v = appendValidation(v, fmt.Errorf("ports[%d].targetPort must be between 1 and 65535 when set", i))
+		}
+		if protocol.Parse(port.GetProtocol()) == protocol.Unsupported {
+			v = appendValidation(v, fmt.Errorf("ports[%d].protocol %q is unsupported", i, port.GetProtocol()))
+		}
+	}
+	if spec.GetWorkloadSelector() != nil && len(spec.GetEndpoints()) > 0 {
+		v = appendValidation(v, fmt.Errorf("only one of workloadSelector or endpoints can be set"))
+	}
+	v = appendValidation(v, validateWorkloadSelector(spec.GetWorkloadSelector()))
+	for i, endpoint := range spec.GetEndpoints() {
+		v = appendValidation(v, validateWorkloadEntry(fmt.Sprintf("endpoints[%d]", i), endpoint))
+	}
+	seenExport := make(map[string]struct{}, len(spec.GetExportTo()))
+	for i, export := range spec.GetExportTo() {
+		if err := visibility.Instance(export).Validate(); err != nil {
+			v = appendValidation(v, fmt.Errorf("exportTo[%d]: %v", i, err))
+		}
+		if _, found := seenExport[export]; found {
+			v = appendValidation(v, fmt.Errorf("exportTo[%d] %q is duplicated", i, export))
+		}
+		seenExport[export] = struct{}{}
+	}
+	return v.Unwrap()
+})
+
+// ValidateWorkloadEntry checks that a WorkloadEntry can produce a routable endpoint.
+var ValidateWorkloadEntry = RegisterValidateFunc("ValidateWorkloadEntry", func(cfg config.Config) (Warning, error) {
+	spec, ok := cfg.Spec.(*networking.WorkloadEntry)
+	if !ok {
+		return nil, fmt.Errorf("cannot cast to WorkloadEntry")
+	}
+	v := Validation{}
+	v = appendValidation(v, validateWorkloadEntry("workloadEntry", spec))
+	return v.Unwrap()
+})
+
+func validateServiceEntryHost(field, value string) error {
+	if value == "" {
+		return fmt.Errorf("%s must not be empty", field)
+	}
+	if net.ParseIP(value) != nil {
+		return nil
+	}
+	hostname := strings.TrimPrefix(value, "*.")
+	if messages := kvalidation.IsDNS1123Subdomain(hostname); len(messages) > 0 {
+		return fmt.Errorf("%s %q is not a valid DNS name: %v", field, value, messages)
+	}
+	if strings.Contains(value, "*") && !strings.HasPrefix(value, "*.") {
+		return fmt.Errorf("%s %q has an invalid wildcard", field, value)
+	}
+	return nil
+}
+
+func validateWorkloadEntry(field string, workload *networking.WorkloadEntry) error {
+	if workload == nil {
+		return fmt.Errorf("%s must not be null", field)
+	}
+	var errs error
+	if err := validateServiceEntryHost(field+".address", workload.GetAddress()); err != nil {
+		errs = AppendErrors(errs, err)
+	}
+	for name, port := range workload.GetPorts() {
+		if name == "" {
+			errs = AppendErrors(errs, fmt.Errorf("%s.ports contains an empty name", field))
+		}
+		if port == 0 || port > 65535 {
+			errs = AppendErrors(errs, fmt.Errorf("%s.ports[%q] must be between 1 and 65535", field, name))
+		}
+	}
+	if err := labels.Instance(workload.GetLabels()).Validate(); err != nil {
+		errs = AppendErrors(errs, fmt.Errorf("%s.labels: %v", field, err))
+	}
+	return errs
+}
 
 // ValidateTelemetry checks that a Telemetry resource is well-formed.
 var ValidateTelemetry = RegisterValidateFunc("ValidateTelemetry",

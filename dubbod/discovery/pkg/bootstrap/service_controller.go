@@ -24,6 +24,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/aggregate"
 	kubecontroller "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/kube/controller"
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/provider"
+	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/serviceregistry/serviceentry"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
 )
 
@@ -52,6 +53,11 @@ func (s *Server) initServiceControllers(args *DubboArgs) error {
 			return fmt.Errorf("service registry %s is not supported", r)
 		}
 	}
+	serviceControllers.AddRegistryAndRun(serviceentry.NewController(serviceentry.Options{
+		ConfigController: s.configController,
+		XDSUpdater:       s.XDSServer,
+		ClusterID:        s.clusterID,
+	}), s.internalStop)
 
 	s.addStartFunc("service controllers", func(stop <-chan struct{}) error {
 		go serviceControllers.Run(stop)

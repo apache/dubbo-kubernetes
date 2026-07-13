@@ -434,6 +434,21 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	ServiceEntry = resource.Builder{
+		Identifier: "ServiceEntry",
+		Group:      "networking.dubbo.apache.org",
+		Kind:       "ServiceEntry",
+		Plural:     "serviceentries",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.networking.v1alpha3.ServiceEntry", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.ServiceEntry{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.ValidateServiceEntry,
+	}.MustBuild()
+
 	StatefulSet = resource.Builder{
 		Identifier:    "StatefulSet",
 		Group:         "apps",
@@ -479,6 +494,21 @@ var (
 		ValidateProto: validation.EmptyValidate,
 	}.MustBuild()
 
+	WorkloadEntry = resource.Builder{
+		Identifier: "WorkloadEntry",
+		Group:      "networking.dubbo.apache.org",
+		Kind:       "WorkloadEntry",
+		Plural:     "workloadentries",
+		Version:    "v1alpha3",
+		Proto:      "dubbo.networking.v1alpha3.WorkloadEntry", StatusProto: "dubbo.meta.v1alpha1.DubboStatus",
+		ReflectType: reflect.TypeOf(&githubcomkdubboapinetworkingv1alpha3.WorkloadEntry{}).Elem(), StatusType: reflect.TypeOf(&githubcomkdubboapimetav1alpha1.DubboStatus{}).Elem(),
+		ProtoPackage: "github.com/kdubbo/api/networking/v1alpha3", StatusPackage: "github.com/kdubbo/api/meta/v1alpha1",
+		ClusterScoped: false,
+		Synthetic:     false,
+		Builtin:       false,
+		ValidateProto: validation.ValidateWorkloadEntry,
+	}.MustBuild()
+
 	// All contains all collections in the system.
 	All = collection.NewSchemasBuilder().
 		MustAdd(AuthorizationPolicy).
@@ -507,9 +537,11 @@ var (
 		MustAdd(Secret).
 		MustAdd(Service).
 		MustAdd(ServiceAccount).
+		MustAdd(ServiceEntry).
 		MustAdd(StatefulSet).
 		MustAdd(Telemetry).
 		MustAdd(ValidatingWebhookConfiguration).
+		MustAdd(WorkloadEntry).
 		Build()
 
 	// Kube contains only kubernetes collections.
@@ -545,7 +577,9 @@ var (
 		MustAdd(CircuitBreakerPolicy).
 		MustAdd(PeerAuthentication).
 		MustAdd(RequestAuthentication).
+		MustAdd(ServiceEntry).
 		MustAdd(Telemetry).
+		MustAdd(WorkloadEntry).
 		Build()
 
 	// dubboGatewayAPI contains only collections used by Dubbo, including the full Gateway API.
@@ -559,7 +593,9 @@ var (
 			MustAdd(PeerAuthentication).
 			MustAdd(ReferenceGrant).
 			MustAdd(RequestAuthentication).
+			MustAdd(ServiceEntry).
 			MustAdd(Telemetry).
+			MustAdd(WorkloadEntry).
 			Build()
 
 	// dubboStableGatewayAPI contains only collections used by Dubbo, including beta+ Gateway API.
@@ -573,6 +609,8 @@ var (
 				MustAdd(PeerAuthentication).
 				MustAdd(ReferenceGrant).
 				MustAdd(RequestAuthentication).
+				MustAdd(ServiceEntry).
 				MustAdd(Telemetry).
+				MustAdd(WorkloadEntry).
 				Build()
 )

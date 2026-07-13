@@ -86,6 +86,10 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Service, true
 	case *k8sioapicorev1.ServiceAccount:
 		return gvk.ServiceAccount, true
+	case *githubcomkdubboapinetworkingv1alpha3.ServiceEntry:
+		return gvk.ServiceEntry, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.ServiceEntry:
+		return gvk.ServiceEntry, true
 	case *k8sioapiappsv1.StatefulSet:
 		return gvk.StatefulSet, true
 	case *githubcomkdubboapitelemetryv1alpha1.Telemetry:
@@ -94,6 +98,10 @@ func getGvk(obj any) (config.GroupVersionKind, bool) {
 		return gvk.Telemetry, true
 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
 		return gvk.ValidatingWebhookConfiguration, true
+	case *githubcomkdubboapinetworkingv1alpha3.WorkloadEntry:
+		return gvk.WorkloadEntry, true
+	case *apigithubcomapachedubbokubernetesapinetworkingv1alpha3.WorkloadEntry:
+		return gvk.WorkloadEntry, true
 	default:
 		return config.GroupVersionKind{}, false
 	}

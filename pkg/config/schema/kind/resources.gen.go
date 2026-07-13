@@ -32,9 +32,11 @@ const (
 	Secret
 	Service
 	ServiceAccount
+	ServiceEntry
 	StatefulSet
 	Telemetry
 	ValidatingWebhookConfiguration
+	WorkloadEntry
 )
 
 func (k Kind) String() string {
@@ -95,12 +97,16 @@ func (k Kind) String() string {
 		return "Service"
 	case ServiceAccount:
 		return "ServiceAccount"
+	case ServiceEntry:
+		return "ServiceEntry"
 	case StatefulSet:
 		return "StatefulSet"
 	case Telemetry:
 		return "Telemetry"
 	case ValidatingWebhookConfiguration:
 		return "ValidatingWebhookConfiguration"
+	case WorkloadEntry:
+		return "WorkloadEntry"
 	default:
 		return "Unknown"
 	}
@@ -164,12 +170,16 @@ func FromString(s string) Kind {
 		return Service
 	case "ServiceAccount":
 		return ServiceAccount
+	case "ServiceEntry":
+		return ServiceEntry
 	case "StatefulSet":
 		return StatefulSet
 	case "Telemetry":
 		return Telemetry
 	case "ValidatingWebhookConfiguration":
 		return ValidatingWebhookConfiguration
+	case "WorkloadEntry":
+		return WorkloadEntry
 	default:
 		return Unknown
 	}

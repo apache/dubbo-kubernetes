@@ -337,10 +337,10 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 h1:Z9n2FFNUXsshfwJMBgNA0RU6/i7WVaAegv3PtuIHPMs=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51/go.mod h1:CzGEWj7cYgsdH8dAjBGEr58BoE7ScuLd+fwFZ44+/x8=
-github.com/kdubbo/api v0.0.0-20260711063406-ff5334e781fd h1:oMbQY61FOOITVLKRdGX0EirWW3nZN26F+cwttj9DmSM=
-github.com/kdubbo/api v0.0.0-20260711063406-ff5334e781fd/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
-github.com/kdubbo/client-go v0.0.0-20260711063741-a336aba3d8e8 h1:mNvM3yB78CVgozJm4wZxIKK//mBJESofhD2Z0eHLoC0=
-github.com/kdubbo/client-go v0.0.0-20260711063741-a336aba3d8e8/go.mod h1:HDLiCm6am1zZTLGq+tNt7S/lZfpmU/zRdVJyOp0yymU=
+github.com/kdubbo/api v0.0.0-20260713105721-558a18fe4f33 h1://TxoBFL/igcCqokYHOcA5hA30J6LTpFusDYVQx48Nw=
+github.com/kdubbo/api v0.0.0-20260713105721-558a18fe4f33/go.mod h1:8BtJiIovg7QCPsCxXcw3gDf922VcvYq5ihOSvj49Rq8=
+github.com/kdubbo/client-go v0.0.0-20260713105923-9a87feab8d96 h1:co2FdpetF4dIozVHMatAd2yYPtKBqdpCgSbpdnXEkKw=
+github.com/kdubbo/client-go v0.0.0-20260713105923-9a87feab8d96/go.mod h1:NUl5DTlsovJaoYDj0SyHi263H+1Z11EXP7qnk6TPKjo=
 github.com/kdubbo/xds-api v0.0.0-20260628124158-b93008db9162 h1:8T6FM/7KYiX84f8wMNmWxZ4YMv+uONCkZqTKiM6m/M8=
 github.com/kdubbo/xds-api v0.0.0-20260628124158-b93008db9162/go.mod h1:o2HDUgL1ntaDbWomZ4cD2tt8jBamuG2qRtjXOa1zZ0Q=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=

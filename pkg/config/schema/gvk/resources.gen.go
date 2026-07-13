@@ -41,9 +41,11 @@ var (
 	Secret                         = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
 	Service                        = config.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"}
 	ServiceAccount                 = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ServiceAccount"}
+	ServiceEntry                   = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "ServiceEntry"}
 	StatefulSet                    = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"}
 	Telemetry                      = config.GroupVersionKind{Group: "telemetry.dubbo.apache.org", Version: "v1alpha1", Kind: "Telemetry"}
 	ValidatingWebhookConfiguration = config.GroupVersionKind{Group: "admissionregistration.k8s.io", Version: "v1", Kind: "ValidatingWebhookConfiguration"}
+	WorkloadEntry                  = config.GroupVersionKind{Group: "networking.dubbo.apache.org", Version: "v1alpha3", Kind: "WorkloadEntry"}
 )
 
 // ToGVR converts a GVK to a GVR.
@@ -111,12 +113,16 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
 		return gvr.Service, true
 	case ServiceAccount:
 		return gvr.ServiceAccount, true
+	case ServiceEntry:
+		return gvr.ServiceEntry, true
 	case StatefulSet:
 		return gvr.StatefulSet, true
 	case Telemetry:
 		return gvr.Telemetry, true
 	case ValidatingWebhookConfiguration:
 		return gvr.ValidatingWebhookConfiguration, true
+	case WorkloadEntry:
+		return gvr.WorkloadEntry, true
 	}
 
 	return schema.GroupVersionResource{}, false
@@ -176,12 +182,16 @@ func MustToKind(g config.GroupVersionKind) kind.Kind {
 		return kind.Service
 	case ServiceAccount:
 		return kind.ServiceAccount
+	case ServiceEntry:
+		return kind.ServiceEntry
 	case StatefulSet:
 		return kind.StatefulSet
 	case Telemetry:
 		return kind.Telemetry
 	case ValidatingWebhookConfiguration:
 		return kind.ValidatingWebhookConfiguration
+	case WorkloadEntry:
+		return kind.WorkloadEntry
 	}
 
 	panic("unknown kind: " + g.String())
@@ -252,12 +262,16 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
 		return Service, true
 	case gvr.ServiceAccount:
 		return ServiceAccount, true
+	case gvr.ServiceEntry:
+		return ServiceEntry, true
 	case gvr.StatefulSet:
 		return StatefulSet, true
 	case gvr.Telemetry:
 		return Telemetry, true
 	case gvr.ValidatingWebhookConfiguration:
 		return ValidatingWebhookConfiguration, true
+	case gvr.WorkloadEntry:
+		return WorkloadEntry, true
 	}
 
 	return config.GroupVersionKind{}, false
