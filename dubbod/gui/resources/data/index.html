@@ -4,25 +4,38 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <base href="{{ .BasePath }}/" />
-  <title>Dashboard</title>
+  <title>Dubbo Console</title>
   <link rel="icon" type="image/png" href="./dubbo-logo.png" />
   <link rel="stylesheet" href="./styles.css" />
+  <script>
+    // Apply persisted theme (or ?theme= override) before first paint to avoid a flash.
+    (() => {
+      try {
+        const param = new URLSearchParams(location.search).get('theme');
+        const theme = param || localStorage.getItem('dubbod-gui-theme');
+        if (theme === 'dark' || theme === 'light') {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (_) { /* storage unavailable */ }
+    })();
+  </script>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- 引入 React 和 htm (无构建环境的最佳实践) -->
   <script type="module">
-    import { h, Component, render } from 'https://esm.sh/preact';
-    import { useState, useEffect, useMemo } from 'https://esm.sh/preact/hooks';
+    import { h, Fragment, render } from 'https://esm.sh/preact';
+    import { useState, useEffect, useMemo, useRef, useCallback } from 'https://esm.sh/preact/hooks';
     import htm from 'https://esm.sh/htm';
 
-    // 初始化 html 模板标签
     window.html = htm.bind(h);
+    window.Fragment = Fragment;
+    window.render = render;
     window.useState = useState;
     window.useEffect = useEffect;
     window.useMemo = useMemo;
-    window.render = render;
+    window.useRef = useRef;
+    window.useCallback = useCallback;
   </script>
 
   <script id="dubbod-gui-config" type="application/json">{{ .ConfigJSON }}</script>

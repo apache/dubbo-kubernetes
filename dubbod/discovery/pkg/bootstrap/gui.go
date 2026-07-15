@@ -22,7 +22,9 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/log"
+	"github.com/apache/dubbo-kubernetes/pkg/monitoring"
 	"github.com/apache/dubbo-kubernetes/pkg/version"
+	dto "github.com/prometheus/client_model/go"
 )
 
 type guiOverview struct {
@@ -118,6 +120,31 @@ type guiService struct {
 	MeshExternal    bool   `json:"meshExternal"`
 }
 
+type guiMetricsResponse struct {
+	Families  []guiMetricFamily `json:"families"`
+	UpdatedAt time.Time         `json:"updatedAt"`
+}
+
+type guiMetricFamily struct {
+	Name    string            `json:"name"`
+	Help    string            `json:"help,omitempty"`
+	Type    string            `json:"type"`
+	Metrics []guiMetricSample `json:"metrics"`
+}
+
+type guiMetricSample struct {
+	Labels  map[string]string `json:"labels,omitempty"`
+	Value   *float64          `json:"value,omitempty"`
+	Count   *uint64           `json:"count,omitempty"`
+	Sum     *float64          `json:"sum,omitempty"`
+	Buckets []guiMetricBucket `json:"buckets,omitempty"`
+}
+
+type guiMetricBucket struct {
+	LE    float64 `json:"le"`
+	Count uint64  `json:"count"`
+}
+
 type guiLogsResponse struct {
 	Kind      string      `json:"kind"`
 	Name      string      `json:"name"`
@@ -147,9 +174,11 @@ func (s *Server) initGUI(args *DubboArgs) error {
 
 	overviewPath := s.guiOverviewPath()
 	logsPath := s.guiLogsPath()
+	metricsAPIPath := s.guiMetricsPath()
 	if s.guiPath == "/" {
 		s.guiMux.HandleFunc(overviewPath, s.guiOverviewHandler)
 		s.guiMux.HandleFunc(logsPath, s.guiLogsHandler)
+		s.guiMux.HandleFunc(metricsAPIPath, s.guiMetricsHandler)
 		s.guiMux.Handle("/", handler)
 		return nil
 	}
@@ -162,6 +191,7 @@ func (s *Server) initGUI(args *DubboArgs) error {
 	})
 	s.guiMux.HandleFunc(overviewPath, s.guiOverviewHandler)
 	s.guiMux.HandleFunc(logsPath, s.guiLogsHandler)
+	s.guiMux.HandleFunc(metricsAPIPath, s.guiMetricsHandler)
 	s.guiMux.Handle(s.guiPath+"/", handler)
 
 	return nil
@@ -212,6 +242,85 @@ func (s *Server) guiOverviewPath() string {
 
 func (s *Server) guiLogsPath() string {
 	return path.Join(s.guiPath, "api/logs")
+}
+
+func (s *Server) guiMetricsPath() string {
+	return path.Join(s.guiPath, "api/metrics")
+}
+
+func (s *Server) guiMetricsHandler(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+	families, err := monitoring.GetRegistry().Gather()
+	if err != nil {
+		writeGUIError(writer, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response := guiMetricsResponse{
+		Families:  make([]guiMetricFamily, 0, len(families)),
+		UpdatedAt: time.Now().UTC(),
+	}
+	for _, family := range families {
+		if family == nil {
+			continue
+		}
+		out := guiMetricFamily{
+			Name:    family.GetName(),
+			Help:    family.GetHelp(),
+			Type:    family.GetType().String(),
+			Metrics: make([]guiMetricSample, 0, len(family.GetMetric())),
+		}
+		for _, metric := range family.GetMetric() {
+			out.Metrics = append(out.Metrics, guiMetricSampleFrom(family.GetType(), metric))
+		}
+		response.Families = append(response.Families, out)
+	}
+
+	encoder := json.NewEncoder(writer)
+	_ = encoder.Encode(response)
+}
+
+func guiMetricSampleFrom(kind dto.MetricType, metric *dto.Metric) guiMetricSample {
+	sample := guiMetricSample{}
+	if labels := metric.GetLabel(); len(labels) > 0 {
+		sample.Labels = make(map[string]string, len(labels))
+		for _, pair := range labels {
+			sample.Labels[pair.GetName()] = pair.GetValue()
+		}
+	}
+
+	floatPtr := func(v float64) *float64 { return &v }
+	uintPtr := func(v uint64) *uint64 { return &v }
+
+	switch kind {
+	case dto.MetricType_COUNTER:
+		sample.Value = floatPtr(metric.GetCounter().GetValue())
+	case dto.MetricType_GAUGE:
+		sample.Value = floatPtr(metric.GetGauge().GetValue())
+	case dto.MetricType_UNTYPED:
+		sample.Value = floatPtr(metric.GetUntyped().GetValue())
+	case dto.MetricType_HISTOGRAM:
+		histogram := metric.GetHistogram()
+		sample.Count = uintPtr(histogram.GetSampleCount())
+		sample.Sum = floatPtr(histogram.GetSampleSum())
+		sample.Buckets = make([]guiMetricBucket, 0, len(histogram.GetBucket()))
+		for _, bucket := range histogram.GetBucket() {
+			sample.Buckets = append(sample.Buckets, guiMetricBucket{
+				LE:    bucket.GetUpperBound(),
+				Count: bucket.GetCumulativeCount(),
+			})
+		}
+	case dto.MetricType_SUMMARY:
+		summary := metric.GetSummary()
+		sample.Count = uintPtr(summary.GetSampleCount())
+		sample.Sum = floatPtr(summary.GetSampleSum())
+	}
+	return sample
 }
 
 func (s *Server) guiOverviewHandler(writer http.ResponseWriter, request *http.Request) {
