@@ -26,8 +26,8 @@ import (
 	pack "github.com/buildpacks/pack/pkg/client"
 	"github.com/buildpacks/pack/pkg/logging"
 	"github.com/buildpacks/pack/pkg/project/types"
-	"github.com/docker/docker/client"
 	"github.com/heroku/color"
+	"github.com/moby/moby/client"
 	"io"
 	"runtime"
 	"time"
@@ -113,7 +113,7 @@ func (b *Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) (err error) 
 	impl := b.impl
 	if impl == nil {
 		var (
-			cli        client.CommonAPIClient
+			cli        client.APIClient
 			dockerHost string
 		)
 

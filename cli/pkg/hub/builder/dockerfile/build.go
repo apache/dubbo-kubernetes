@@ -18,14 +18,14 @@ package dockerfile
 
 import (
 	"context"
+	"os"
+
 	"github.com/apache/dubbo-kubernetes/cli/pkg/hub"
 	"github.com/apache/dubbo-kubernetes/cli/pkg/sdk/dubbo"
 	"github.com/containers/storage/pkg/archive"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/jsonmessage"
 	"github.com/moby/term"
-	"os"
 )
 
 type Builder struct{}
@@ -39,7 +39,7 @@ func (b Builder) Build(ctx context.Context, dc *dubbo.DubboConfig) error {
 	if err != nil {
 		return err
 	}
-	buildOpts := types.ImageBuildOptions{
+	buildOpts := client.ImageBuildOptions{
 		Dockerfile: "Dockerfile",
 		Tags:       []string{dc.Image},
 	}

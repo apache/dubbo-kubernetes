@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/docker/cli/cli/connhelper"
-	"github.com/docker/docker/pkg/homedir"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -382,9 +381,13 @@ func createHostKeyCallback(hostKeyCallback HostKeyCallback) func(hostPort string
 			host, port = _h, _p
 		}
 
-		knownHosts := filepath.Join(homedir.Get(), ".ssh", "known_hosts")
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("resolve home directory: %w", err)
+		}
+		knownHosts := filepath.Join(homeDir, ".ssh", "known_hosts")
 
-		_, err := os.Stat(knownHosts)
+		_, err = os.Stat(knownHosts)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
 			if hostKeyCallback != nil && hostKeyCallback(hostPort, pubKey) == nil {
 				return nil

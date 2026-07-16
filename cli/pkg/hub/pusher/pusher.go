@@ -23,22 +23,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/cli/pkg/hub"
-	"github.com/apache/dubbo-kubernetes/cli/pkg/sdk/dubbo"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"golang.org/x/term"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"regexp"
+
+	"github.com/apache/dubbo-kubernetes/cli/pkg/hub"
+	"github.com/apache/dubbo-kubernetes/cli/pkg/sdk/dubbo"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/jsonmessage"
+	"golang.org/x/term"
 )
 
 type Opt func(*Pusher)
@@ -127,7 +127,7 @@ func (p *Pusher) daemonPush(ctx context.Context, dc *dubbo.DubboConfig, credenti
 		return "", err
 	}
 
-	opts := types.ImagePushOptions{RegistryAuth: base64.StdEncoding.EncodeToString(b)}
+	opts := client.ImagePushOptions{RegistryAuth: base64.StdEncoding.EncodeToString(b)}
 
 	r, err := cli.ImagePush(ctx, dc.Image, opts)
 	if err != nil {
@@ -227,7 +227,7 @@ func (n *Pusher) push(ctx context.Context, dc *dubbo.DubboConfig, credentials Cr
 
 type DockerClient interface {
 	daemon.Client
-	ImagePush(ctx context.Context, ref string, options types.ImagePushOptions) (io.ReadCloser, error)
+	ImagePush(ctx context.Context, ref string, options client.ImagePushOptions) (client.ImagePushResponse, error)
 	Close() error
 }
 
