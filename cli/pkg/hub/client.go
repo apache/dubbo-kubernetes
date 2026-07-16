@@ -32,13 +32,13 @@ import (
 
 	fnssh "github.com/apache/dubbo-kubernetes/cli/pkg/hub/ssh"
 	"github.com/docker/cli/cli/config"
-	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
+	"github.com/moby/moby/client"
 )
 
 var ErrNoDockerAPI = errors.New("docker API not available")
 
-func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerHostInRemote string, err error) {
+func NewClient(defaultHost string) (dockerClient client.APIClient, dockerHostInRemote string, err error) {
 	var u *url.URL
 
 	dockerHost := os.Getenv("DOCKER_HOST")
@@ -120,7 +120,7 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 
 	if closer, ok := contextDialer.(io.Closer); ok {
 		dockerClient = clientWithAdditionalCleanup{
-			CommonAPIClient: dockerClient,
+			APIClient: dockerClient,
 			cleanUp: func() {
 				_ = closer.Close()
 			},
@@ -131,13 +131,13 @@ func NewClient(defaultHost string) (dockerClient client.CommonAPIClient, dockerH
 }
 
 type clientWithAdditionalCleanup struct {
-	client.CommonAPIClient
+	client.APIClient
 	cleanUp func()
 }
 
 func (w clientWithAdditionalCleanup) Close() error {
 	defer w.cleanUp()
-	return w.CommonAPIClient.Close()
+	return w.APIClient.Close()
 }
 
 func newHttpClient() *http.Client {
