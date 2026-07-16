@@ -19,14 +19,29 @@ IGNORED_DOCKER_FINDINGS = {
 }
 
 IGNORED_DOCKER_SYMBOLS = {
+    ("github.com/docker/docker/api/types/mount", "init"),
     ("github.com/docker/docker/api/types/filters", "init"),
     ("github.com/docker/docker/api/types/registry", "init"),
     ("github.com/docker/docker/api/types/versions", "init"),
+    ("github.com/docker/docker/internal/lazyregexp", "FindStringSubmatch"),
+    ("github.com/docker/docker/internal/lazyregexp", "MatchString"),
     ("github.com/docker/docker/internal/lazyregexp", "New"),
+    ("github.com/docker/docker/internal/lazyregexp", "SubexpNames"),
     ("github.com/docker/docker/internal/lazyregexp", "build"),
     ("github.com/docker/docker/internal/lazyregexp", "init"),
+    ("github.com/docker/docker/internal/safepath", "init"),
+    ("github.com/docker/docker/internal/unix_noeintr", "init"),
     ("github.com/docker/docker/pkg/homedir", "init"),
+    ("github.com/docker/docker/pkg/idtools", "init"),
+    ("github.com/docker/docker/pkg/stringid", "init"),
     ("github.com/docker/docker/registry", "init"),
+    ("github.com/docker/docker/volume", "init"),
+    ("github.com/docker/docker/volume/mounts", "Error"),
+    ("github.com/docker/docker/volume/mounts", "NewLCOWParser"),
+    ("github.com/docker/docker/volume/mounts", "NewLinuxParser"),
+    ("github.com/docker/docker/volume/mounts", "NewWindowsParser"),
+    ("github.com/docker/docker/volume/mounts", "ParseMountRaw"),
+    ("github.com/docker/docker/volume/mounts", "init"),
 }
 
 
