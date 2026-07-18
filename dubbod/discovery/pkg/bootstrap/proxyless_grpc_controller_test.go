@@ -32,6 +32,7 @@ import (
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/gvk"
 	"github.com/apache/dubbo-kubernetes/pkg/config/schema/kind"
 	"github.com/apache/dubbo-kubernetes/pkg/grpcxds"
+	"github.com/apache/dubbo-kubernetes/pkg/kube/controllers"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/inject"
 	"github.com/apache/dubbo-kubernetes/pkg/kube/krt"
 	"github.com/apache/dubbo-kubernetes/pkg/util/sets"
@@ -362,6 +363,74 @@ func TestProxylessGRPCRuntimeConfigNeedsUpdate(t *testing.T) {
 	}
 }
 
+func TestHandleRuntimeConfigUpdateEnqueuesManagedPods(t *testing.T) {
+	managed := func(name, namespace string) *corev1.Pod {
+		return &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				inject.ProxylessInjectTemplatesAnnoName: inject.ProxylessGRPCTemplateName,
+			},
+		}}
+	}
+
+	reconciled := make(chan types.NamespacedName, 3)
+	controller := &proxylessGRPCWorkloadController{
+		managedPods: staticProxylessPodIndexer{items: []any{
+			managed("zeta", "team-b"),
+			"not-a-pod",
+			nil,
+			&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "unmanaged", Namespace: "team-a"}},
+			managed("alpha", "team-a"),
+		}},
+	}
+	controller.queue = controllers.NewQueue("proxyless runtime config test",
+		controllers.WithReconciler(func(key types.NamespacedName) error {
+			reconciled <- key
+			return nil
+		}),
+		controllers.WithMaxAttempts(1),
+	)
+
+	controller.handleRuntimeConfigUpdate(&discoverymodel.PushRequest{
+		ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.ConfigMap, Name: "unrelated"}),
+	})
+	controller.handleRuntimeConfigUpdate(&discoverymodel.PushRequest{
+		ConfigsUpdated: sets.New(discoverymodel.ConfigKey{Kind: kind.Service, Name: "provider", Namespace: "team-a"}),
+	})
+
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		controller.queue.Run(stop)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		close(stop)
+		<-done
+	})
+
+	want := []types.NamespacedName{
+		{Name: "alpha", Namespace: "team-a"},
+		{Name: "zeta", Namespace: "team-b"},
+	}
+	for i, expected := range want {
+		select {
+		case got := <-reconciled:
+			if got != expected {
+				t.Fatalf("reconciled key %d = %v, want %v", i, got, expected)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("timed out waiting for reconciled key %d", i)
+		}
+	}
+	select {
+	case got := <-reconciled:
+		t.Fatalf("unexpected reconciled key %v from unrelated update", got)
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
 func TestNextRotationTime(t *testing.T) {
 	now := time.Now()
 	rotations := map[types.NamespacedName]time.Time{
@@ -383,6 +452,11 @@ func TestNextRotationTime(t *testing.T) {
 }
 
 func newProxylessRuntimeTestPushContext(t *testing.T, configs []config.Config, services []*discoverymodel.Service) *discoverymodel.PushContext {
+	_, push := newProxylessRuntimeTestEnvironment(t, configs, services)
+	return push
+}
+
+func newProxylessRuntimeTestEnvironment(t *testing.T, configs []config.Config, services []*discoverymodel.Service) (*discoverymodel.Environment, *discoverymodel.PushContext) {
 	t.Helper()
 
 	store := memory.Make(collections.DubboGatewayAPI())
@@ -402,7 +476,8 @@ func newProxylessRuntimeTestPushContext(t *testing.T, configs []config.Config, s
 
 	push := discoverymodel.NewPushContext()
 	push.InitContext(env, nil, nil)
-	return push
+	env.SetPushContext(push)
+	return env, push
 }
 
 func newProxylessRuntimeTestService(name, namespace, hostname string, port int) *discoverymodel.Service {
@@ -444,6 +519,17 @@ func newProxylessPeerAuthenticationConfig(name, namespace string, mode security.
 
 type proxylessRuntimeStaticServiceDiscovery struct {
 	services []*discoverymodel.Service
+}
+
+type staticProxylessPodIndexer struct {
+	items []any
+}
+
+func (s staticProxylessPodIndexer) Lookup(key string) []any {
+	if key != proxylessGRPCManagedPodIndexKey {
+		return nil
+	}
+	return s.items
 }
 
 func (s proxylessRuntimeStaticServiceDiscovery) Services() []*discoverymodel.Service {

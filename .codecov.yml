@@ -25,14 +25,13 @@ coverage:
     # Pull requests only
     patch:
       default:
-        informational: true
-        # Commits pushed to master should not make the overall
-        # project coverage decrease:
-        target: auto
+        informational: false
+        target: 60%
         threshold: 0%
     project:
       default:
-        informational: true
+        informational: false
+        target: auto
         threshold: 0%
 
 ignore:

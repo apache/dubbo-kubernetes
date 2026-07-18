@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/model"
 	v1 "github.com/apache/dubbo-kubernetes/dubbod/discovery/pkg/xds/v1"
@@ -76,6 +77,111 @@ func TestClientsForPushProxylessLargeScaleTargetsWatchedService(t *testing.T) {
 		if !connectionWatchesAnyService(con, sets.New("svc-7.app.svc.cluster.local")) {
 			t.Fatalf("returned client %s does not watch targeted service", con.ID())
 		}
+	}
+}
+
+func TestPushConnectionExercisesProxylessPushPath(t *testing.T) {
+	server, con, stream := newProxylessXDSTestServer(t)
+	req := &model.PushRequest{
+		Full:   true,
+		Push:   con.proxy.LastPushContext,
+		Reason: model.NewReasonStats(model.ProxyRequest),
+		Start:  time.Now(),
+	}
+	proxyNeedsPushCalled := false
+	server.ProxyNeedsPush = func(gotProxy *model.Proxy, gotReq *model.PushRequest) (*model.PushRequest, bool) {
+		proxyNeedsPushCalled = true
+		if gotProxy != con.proxy || gotReq != req {
+			t.Fatalf("ProxyNeedsPush received proxy=%p request=%p, want proxy=%p request=%p", gotProxy, gotReq, con.proxy, req)
+		}
+		return gotReq, true
+	}
+
+	if err := server.pushConnection(con, &Event{pushRequest: req}); err != nil {
+		t.Fatalf("pushConnection() failed: %v", err)
+	}
+	if !proxyNeedsPushCalled {
+		t.Fatal("ProxyNeedsPush was not called")
+	}
+	responses := stream.takeAllResponses(t, 3)
+	assertResponseTypeOrder(t, responses, v1.ListenerType, v1.ClusterType, v1.RouteType)
+	if !con.proxy.LastPushTime.Equal(req.Start) {
+		t.Fatalf("LastPushTime = %v, want %v", con.proxy.LastPushTime, req.Start)
+	}
+}
+
+func TestPushConnectionSkipsUnreadyAndUnneededPushes(t *testing.T) {
+	t.Run("uninitialized connection", func(t *testing.T) {
+		server, _, stream := newProxylessXDSTestServer(t)
+		con := &Connection{}
+		if err := server.pushConnection(con, &Event{pushRequest: &model.PushRequest{Full: true}}); err != nil {
+			t.Fatalf("pushConnection() failed: %v", err)
+		}
+		stream.assertNoResponse(t)
+	})
+
+	t.Run("nil request", func(t *testing.T) {
+		server, con, stream := newProxylessXDSTestServer(t)
+		if err := server.pushConnection(con, &Event{}); err != nil {
+			t.Fatalf("pushConnection() failed: %v", err)
+		}
+		stream.assertNoResponse(t)
+	})
+
+	t.Run("proxy does not need push", func(t *testing.T) {
+		server, con, stream := newProxylessXDSTestServer(t)
+		server.ProxyNeedsPush = func(_ *model.Proxy, req *model.PushRequest) (*model.PushRequest, bool) {
+			return req, false
+		}
+		if err := server.pushConnection(con, &Event{pushRequest: &model.PushRequest{Push: con.proxy.LastPushContext}}); err != nil {
+			t.Fatalf("pushConnection() failed: %v", err)
+		}
+		stream.assertNoResponse(t)
+	})
+}
+
+func TestDiscoveryPushQueuesAndNotifies(t *testing.T) {
+	for _, full := range []bool{false, true} {
+		t.Run(fmt.Sprintf("full=%v", full), func(t *testing.T) {
+			server, con, _ := newProxylessXDSTestServer(t)
+			server.addCon("proxyless-1", con)
+
+			var notified *model.PushRequest
+			server.RuntimeConfigUpdate = func(req *model.PushRequest) {
+				notified = req
+			}
+			req := &model.PushRequest{
+				Full:   full,
+				Reason: model.NewReasonStats(model.ConfigUpdate),
+				ConfigsUpdated: sets.New(model.ConfigKey{
+					Kind:      kind.Service,
+					Name:      "nginx.app.svc.cluster.local",
+					Namespace: "app",
+				}),
+			}
+
+			server.Push(req)
+
+			queuedCon, queuedReq, shutdown := server.pushQueue.Dequeue()
+			if shutdown {
+				t.Fatal("push queue unexpectedly shut down")
+			}
+			if queuedCon != con || queuedReq != req {
+				t.Fatalf("queued connection/request = %p/%p, want %p/%p", queuedCon, queuedReq, con, req)
+			}
+			if req.Push == nil || req.Start.IsZero() {
+				t.Fatalf("Push() left request without context or start time: %+v", req)
+			}
+			if notified != req {
+				t.Fatalf("RuntimeConfigUpdate received %p, want %p", notified, req)
+			}
+			if full && req.Push.PushVersion == "test-version" {
+				t.Fatalf("full Push() reused old push version %q", req.Push.PushVersion)
+			}
+			if !full && req.Push != server.globalPushContext() {
+				t.Fatal("incremental Push() did not reuse the global push context")
+			}
+		})
 	}
 }
 
