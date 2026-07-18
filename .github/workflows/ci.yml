@@ -120,6 +120,24 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
+  performance:
+    name: Performance Scale Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.repository == 'apache/dubbo-kubernetes'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Exercise representative xDS push scale
+        run: make benchmark-smoke
+
   build:
     name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest
