@@ -17,7 +17,7 @@
 package cluster
 
 import (
-	"github.com/apache/dubbo-kubernetes/cli/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"
 
 	// "github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"

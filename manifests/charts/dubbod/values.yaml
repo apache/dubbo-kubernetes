@@ -16,6 +16,10 @@
 _internal_default_values_not_set:
   revision: ""
 
+  # Number of dubbod replicas. Set >= 2 for a highly available control plane;
+  # a PodDisruptionBudget (minAvailable: 1) is created automatically then.
+  replicaCount: 1
+
   global:
     proxy:
       clusterDomain: "cluster.local"

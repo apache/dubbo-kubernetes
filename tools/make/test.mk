@@ -13,10 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Thin entrypoint; the real targets live in tools/make/*.mk.
-# Run `make help` for the full target list.
+##@ Test
 
-include tools/make/common.mk
-include tools/make/build.mk
-include tools/make/test.mk
-include tools/make/lint.mk
+.PHONY: test
+test: ## Run unit tests (GOTESTFLAGS defaults to -race).
+	go test $(GOTESTFLAGS) ./...
+
+.PHONY: test-coverage
+test-coverage: ## Run unit tests and write coverage.txt.
+	go test $(GOTESTFLAGS) -coverprofile=coverage.txt -covermode=atomic ./...
+
+.PHONY: test-e2e
+test-e2e: ## Run the kind smoke test (needs docker, kind, kubectl, helm; knobs in tests/e2e/run.sh).
+	bash tests/e2e/run.sh

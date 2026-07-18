@@ -19,7 +19,7 @@ package cluster
 import (
 	"cmp"
 	"fmt"
-	"github.com/apache/dubbo-kubernetes/cli/pkg/cli"
+	"github.com/apache/dubbo-kubernetes/dubboctl/pkg/cli"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/manifest"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/render"
 	"github.com/apache/dubbo-kubernetes/operator/pkg/util/clog"

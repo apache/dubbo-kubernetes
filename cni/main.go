@@ -25,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/apache/dubbo-kubernetes/cni/pkg/cni"
+	"github.com/apache/dubbo-kubernetes/cni/pkg/nodeagent"
 )
 
 func main() {
@@ -49,13 +49,13 @@ func main() {
 		exitErr(fmt.Errorf("read stdin: %w", err))
 	}
 
-	conf, err := cni.ParseNetConf(stdin)
+	conf, err := nodeagent.ParseNetConf(stdin)
 	if err != nil {
 		exitErr(err)
 	}
-	env := cni.EnvFromOS()
+	env := nodeagent.EnvFromOS()
 	if env.Command == "VERSION" {
-		out, err := cni.Plugin{}.Run(context.Background(), env, conf)
+		out, err := nodeagent.Plugin{}.Run(context.Background(), env, conf)
 		if err != nil {
 			exitErr(err)
 		}
@@ -65,12 +65,12 @@ func main() {
 		return
 	}
 
-	plugin := cni.Plugin{
-		RuleManager: cni.NewIPTablesRuleManager(conf),
-		StateStore:  cni.NewFileStateStore(conf.StateDirectory()),
+	plugin := nodeagent.Plugin{
+		RuleManager: nodeagent.NewIPTablesRuleManager(conf),
+		StateStore:  nodeagent.NewFileStateStore(conf.StateDirectory()),
 	}
-	if (env.Command == "ADD" || env.Command == "CHECK") && cni.EnvHasKubernetesPod(env) {
-		provider, err := cni.NewK8sPodInfoProvider(conf.KubeConfigPath())
+	if (env.Command == "ADD" || env.Command == "CHECK") && nodeagent.EnvHasKubernetesPod(env) {
+		provider, err := nodeagent.NewK8sPodInfoProvider(conf.KubeConfigPath())
 		if err == nil {
 			plugin.PodInfoProvider = provider
 		}
@@ -87,33 +87,33 @@ func main() {
 }
 
 func runInstall(args []string) error {
-	opts := cni.DefaultInstallerOptions()
+	opts := nodeagent.DefaultInstallerOptions()
 	var watch bool
 	var interval time.Duration
 	flags := installerFlagSet("install", &opts)
 	flags.BoolVar(&watch, "watch", false, "keep installer running and refresh service account credentials")
-	flags.DurationVar(&interval, "refresh-interval", cni.DefaultInstallerInterval(), "credential refresh interval")
+	flags.DurationVar(&interval, "refresh-interval", nodeagent.DefaultInstallerInterval(), "credential refresh interval")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if watch {
-		return cni.InstallLoop(ctx, opts, interval)
+		return nodeagent.InstallLoop(ctx, opts, interval)
 	}
-	return cni.Install(ctx, opts)
+	return nodeagent.Install(ctx, opts)
 }
 
 func runUninstall(args []string) error {
-	opts := cni.DefaultInstallerOptions()
+	opts := nodeagent.DefaultInstallerOptions()
 	flags := installerFlagSet("uninstall", &opts)
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	return cni.Uninstall(opts)
+	return nodeagent.Uninstall(opts)
 }
 
-func installerFlagSet(name string, opts *cni.InstallerOptions) *flag.FlagSet {
+func installerFlagSet(name string, opts *nodeagent.InstallerOptions) *flag.FlagSet {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.StringVar(&opts.BinDir, "bin-dir", opts.BinDir, "host CNI binary directory")
 	flags.StringVar(&opts.ConfDir, "conf-dir", opts.ConfDir, "host CNI config directory")
