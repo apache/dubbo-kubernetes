@@ -60,3 +60,51 @@ func TestPushQueueEnqueueMergesPendingRequest(t *testing.T) {
 		t.Fatalf("ConfigsUpdated = %v, want both config keys", req.ConfigsUpdated)
 	}
 }
+
+func TestPushQueueRequeuesUpdatesArrivingDuringProcessing(t *testing.T) {
+	queue := NewPushQueue()
+	con := &Connection{}
+	initial := &model.PushRequest{
+		Reason: model.NewReasonStats(model.EndpointUpdate),
+	}
+	queue.Enqueue(con, initial)
+
+	gotCon, gotReq, shutdown := queue.Dequeue()
+	if shutdown || gotCon != con || gotReq != initial {
+		t.Fatalf("first Dequeue() = %p, %p, %v; want %p, %p, false", gotCon, gotReq, shutdown, con, initial)
+	}
+	queue.Enqueue(con, &model.PushRequest{
+		Full:   true,
+		Reason: model.NewReasonStats(model.ConfigUpdate),
+	})
+	if stats := queue.Stats(); stats.Processing != 1 || stats.Pending != 0 || stats.Queued != 0 {
+		t.Fatalf("Stats while processing = %+v, want processing=1 only", stats)
+	}
+
+	queue.MarkDone(con)
+	if stats := queue.Stats(); stats.Processing != 0 || stats.Pending != 1 || stats.Queued != 1 {
+		t.Fatalf("Stats after MarkDone = %+v, want one requeued request", stats)
+	}
+	_, merged, shutdown := queue.Dequeue()
+	if shutdown || !merged.Full || merged.Reason[model.ConfigUpdate] != 1 {
+		t.Fatalf("second Dequeue() = %+v, shutdown=%v; want full config update", merged, shutdown)
+	}
+}
+
+func TestPushQueueShutdownUnblocksDequeueAndRejectsEnqueue(t *testing.T) {
+	queue := NewPushQueue()
+	result := make(chan bool, 1)
+	go func() {
+		_, _, shutdown := queue.Dequeue()
+		result <- shutdown
+	}()
+
+	queue.ShutDown()
+	if shutdown := <-result; !shutdown {
+		t.Fatal("Dequeue() shutdown = false, want true")
+	}
+	queue.Enqueue(&Connection{}, &model.PushRequest{})
+	if stats := queue.Stats(); stats != (pushQueueStats{}) {
+		t.Fatalf("Stats after shutdown enqueue = %+v, want empty", stats)
+	}
+}
