@@ -17,6 +17,7 @@ FROM golang:1.25 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
+ARG GIT_VERSION=unknown
 
 WORKDIR /src
 
@@ -25,15 +26,26 @@ ENV CGO_ENABLED=0 \
     GOARCH=${TARGETARCH}
 
 COPY go.mod go.sum ./
-RUN go mod download -x
+RUN --mount=type=cache,target=/go/pkg/mod \
+    for attempt in 1 2 3; do \
+        if go mod download; then exit 0; fi; \
+        if [ "${attempt}" -eq 3 ]; then exit 1; fi; \
+        sleep "$((attempt * 5))"; \
+    done
 
 COPY . .
 
-RUN go build -v -trimpath -ldflags="-s -w" \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -v -trimpath \
+    -ldflags="-s -w -X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=${GIT_VERSION}" \
     -o /out/dubbod \
     ./dubbod/discovery/cmd/main.go
 
-RUN go build -v -trimpath -ldflags="-s -w" \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -v -trimpath \
+    -ldflags="-s -w -X github.com/apache/dubbo-kubernetes/pkg/version.gitTag=${GIT_VERSION}" \
     -o /out/dubbo-cni \
     ./cni/main.go
 

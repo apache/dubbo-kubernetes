@@ -1,23 +1,32 @@
 # Dubbod Helm Chart
 
-This chart installs an Dubbod deployment.
+This chart installs the Dubbod deployment.
 
-## Setup Repo Info
+## Installing a Versioned Release
 
 ```bash
-helm repo add dubbo https://charts.dubbo.apache.org
-helm repo update
+# Select a release whose Assets include the packaged charts.
+VERSION="<version>"
+kubectl create namespace dubbo-system
+helm upgrade --install dubbo-base \
+  "https://github.com/apache/dubbo-kubernetes/releases/download/${VERSION}/base-${VERSION}.tgz" \
+  --namespace dubbo-system
+helm upgrade --install dubbod \
+  "https://github.com/apache/dubbo-kubernetes/releases/download/${VERSION}/dubbod-${VERSION}.tgz" \
+  --namespace dubbo-system
 ```
 
-See [helm repo](https://helm.sh/docs/helm/helm_repo/) for command documentation.
+Release `0.4.3` predates packaged chart assets; the commands above apply to
+releases produced by the current release workflow.
 
-## Installing the Chart
-
-To install the chart with the release name dubbo:
+The packaged chart defaults to
+`ghcr.io/apache/dubbo-kubernetes/dubbod:${VERSION}`. Override the shared
+control-plane/CNI image when using a mirror or a locally loaded image:
 
 ```bash
-kubectl create namespace dubbo-system
-helm install dubbod dubbo/dubbod --namespace dubbo-system
+helm upgrade --install dubbod ./dubbod-${VERSION}.tgz \
+  --namespace dubbo-system \
+  --set-string global.proxyless.cni.image=registry.example.com/dubbod:${VERSION}
 ```
 
 ## Uninstalling the Chart

@@ -192,4 +192,6 @@ jobs:
           version: 'v0.30.0'
 
       - name: Run e2e smoke test
+        env:
+          UPGRADE_FROM_VERSION: '0.4.3'
         run: make test-e2e

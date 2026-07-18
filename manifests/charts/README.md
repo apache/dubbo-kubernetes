@@ -15,3 +15,8 @@ Both install paths render exactly these charts:
 Any manifest change must be made here; do not fork rendered output elsewhere.
 CI lints and renders both charts on every PR (`make lint-helm`), and the kind
 smoke test installs them end-to-end (`make test-e2e`).
+
+Every numeric release packages both charts with the release version and uploads
+the archives plus SHA-256 checksums to the matching GitHub Release. The dubbod
+chart's `appVersion` selects the same versioned
+`ghcr.io/apache/dubbo-kubernetes/dubbod` image by default.

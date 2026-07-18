@@ -13,19 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v2
-annotations:
-  licenses: Apache-2.0
-name: base
-home: https://github.com/apache/dubbo-kubernetes
-icon: https://avatars.githubusercontent.com/u/11751992?s=200&v=4
-description: Helm chart for deploying dubbo cluster resources and CRDs.
-version: 0.4.3
-appVersion: "0.4.3"
-maintainers:
-  - name: mfordjody
-    email: zhongxjian@apache.org
-sources:
-  - https://dubbo.apache.org
-  - https://github.com/kdubbo
-  - https://github.com/apache/dubbo-kubernetes
+.git
+.github
+.idea
+.vscode
+bin
+coverage.txt
+*.log
