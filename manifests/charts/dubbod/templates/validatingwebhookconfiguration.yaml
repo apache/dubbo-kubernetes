@@ -22,6 +22,11 @@ metadata:
     app: dubbod
     dubbo.apache.org/rev: {{ .Values.revision | default "default" }}
 webhooks:
+  # clientConfig.caBundle and failurePolicy are intentionally not set here:
+  # the running dubbod owns both fields (it injects the CA bundle and manages
+  # the failure policy). Declaring them in the chart makes Helm claim field
+  # ownership and every subsequent `helm upgrade` fails with a server-side
+  # apply conflict against the "dubbod" field manager.
   - name: rev.validation.dubbo.apache.org
     admissionReviewVersions: ["v1"]
     clientConfig:
@@ -29,8 +34,6 @@ webhooks:
         name: dubbod
         namespace: dubbo-system
         path: "/validate"
-      caBundle: ""
-    failurePolicy: Ignore
     objectSelector:
       matchExpressions:
       - key: dubbo.apache.org/rev
@@ -56,8 +59,6 @@ webhooks:
         name: dubbod
         namespace: dubbo-system
         path: "/validate"
-      caBundle: ""
-    failurePolicy: Ignore
     rules:
     - operations:
       - CREATE

@@ -170,3 +170,26 @@ jobs:
 
       - name: Lint and render charts
         run: make lint-helm
+
+  e2e:
+    name: E2E Smoke (kind)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    if: github.repository == 'apache/dubbo-kubernetes'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.16.4'
+
+      - name: Install kind
+        uses: helm/kind-action@v1
+        with:
+          install_only: true
+          version: 'v0.30.0'
+
+      - name: Run e2e smoke test
+        run: make test-e2e

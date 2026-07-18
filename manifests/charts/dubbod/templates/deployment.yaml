@@ -25,6 +25,7 @@
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
 {{- $eastWestGateway := $multicluster.eastWestGateway | default dict }}
 {{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
+{{- $replicaCount := int (coalesce .Values.replicaCount $defaults.replicaCount 1) }}
 {{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
 {{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
 {{- $eastWestGatewayEntries := list }}
@@ -42,6 +43,7 @@ metadata:
     app: dubbod
     dubbo.apache.org/rev: default
 spec:
+  replicas: {{ $replicaCount }}
   selector:
     matchLabels:
       app: dubbod
@@ -51,6 +53,15 @@ spec:
         app: dubbod
     spec:
       serviceAccountName: dubbod
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: dubbod
       containers:
         - name: execute
           image: "kdubbo/dubbod:debug"
