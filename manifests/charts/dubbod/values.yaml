@@ -27,7 +27,9 @@ _internal_default_values_not_set:
     proxyless:
       cni:
         enabled: true
-        image: "kdubbo/dubbod:debug"
+        # Shared control-plane/CNI image. An empty value resolves to
+        # ghcr.io/apache/dubbo-kubernetes/dubbod:<Chart.appVersion>.
+        image: ""
         binDir: "/opt/cni/bin"
         confDir: "/etc/cni/net.d"
         stateDir: "/var/run/dubbo-cni"

@@ -25,8 +25,8 @@ keywords:
   - dubbod
   - dubbo-discovery
   - dubbo-control-plane
-version: 0.3.9
-appVersion: "latest"
+version: 0.4.3
+appVersion: "0.4.3"
 maintainers:
   - name: mfordjody
     email: zhongxjian@apache.org

@@ -15,11 +15,15 @@
 
 {{- $defaults := .Values._internal_default_values_not_set | default dict }}
 {{- $defaultGlobal := $defaults.global | default dict }}
+{{- $defaultProxyless := $defaultGlobal.proxyless | default dict }}
+{{- $defaultCNI := $defaultProxyless.cni | default dict }}
 {{- $defaultGUI := $defaultGlobal.gui | default dict }}
 {{- $defaultMulticluster := $defaultGlobal.multicluster | default dict }}
 {{- $defaultRemoteAccess := $defaultMulticluster.remoteAccess | default dict }}
 {{- $defaultEastWestGateway := $defaultMulticluster.eastWestGateway | default dict }}
 {{- $global := .Values.global | default dict }}
+{{- $proxyless := $global.proxyless | default dict }}
+{{- $cni := $proxyless.cni | default dict }}
 {{- $gui := $global.gui | default dict }}
 {{- $multicluster := $global.multicluster | default dict }}
 {{- $remoteAccess := $multicluster.remoteAccess | default dict }}
@@ -29,6 +33,7 @@
 {{- $remoteAccessCertificateHosts := $remoteAccess.certificateHosts | default $defaultRemoteAccess.certificateHosts | default (list) }}
 {{- $eastWestGateways := $eastWestGateway.gateways | default $defaultEastWestGateway.gateways | default (list) }}
 {{- $eastWestGatewayEntries := list }}
+{{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
 {{- $defaultEastWestGatewayPort := int (coalesce $eastWestGateway.port $defaultEastWestGateway.port 15443) }}
 {{- range $gateway := $eastWestGateways }}
 {{- $gatewayPort := int (coalesce $gateway.port $defaultEastWestGatewayPort) }}
@@ -64,7 +69,7 @@ spec:
                     app: dubbod
       containers:
         - name: execute
-          image: "kdubbo/dubbod:debug"
+          image: {{ $image | quote }}
           imagePullPolicy: IfNotPresent
           args:
             - "execute"

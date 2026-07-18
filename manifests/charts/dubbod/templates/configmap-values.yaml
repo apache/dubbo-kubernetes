@@ -29,6 +29,7 @@
 {{- $statusPort := coalesce $global.statusPort $defaultGlobal.statusPort 26020 }}
 {{- $guiPort := int (coalesce $gui.port $defaultGUI.port 26080) }}
 {{- $guiNodePort := int (coalesce $gui.nodePort $defaultGUI.nodePort 30080) }}
+{{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
 {{- $cniEnabled := false }}
 {{- if hasKey $defaultCNI "enabled" }}
 {{- $cniEnabled = $defaultCNI.enabled }}
@@ -54,7 +55,7 @@ data:
       proxyless:
         cni:
           enabled: {{ $cniEnabled }}
-          image: {{ coalesce $cni.image $defaultCNI.image "kdubbo/dubbod:debug" | quote }}
+          image: {{ $image | quote }}
           binDir: {{ coalesce $cni.binDir $defaultCNI.binDir "/opt/cni/bin" | quote }}
           confDir: {{ coalesce $cni.confDir $defaultCNI.confDir "/etc/cni/net.d" | quote }}
           stateDir: {{ coalesce $cni.stateDir $defaultCNI.stateDir "/var/run/dubbo-cni" | quote }}

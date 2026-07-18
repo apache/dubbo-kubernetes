@@ -28,7 +28,7 @@
 {{- $enabled = $cni.enabled }}
 {{- end }}
 {{- if $enabled }}
-{{- $image := coalesce $cni.image $defaultCNI.image "kdubbo/dubbod:debug" }}
+{{- $image := coalesce $cni.image $defaultCNI.image (printf "ghcr.io/apache/dubbo-kubernetes/dubbod:%s" .Chart.AppVersion) }}
 {{- $binDir := coalesce $cni.binDir $defaultCNI.binDir "/opt/cni/bin" }}
 {{- $confDir := coalesce $cni.confDir $defaultCNI.confDir "/etc/cni/net.d" }}
 {{- $stateDir := coalesce $cni.stateDir $defaultCNI.stateDir "/var/run/dubbo-cni" }}

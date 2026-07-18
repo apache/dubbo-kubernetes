@@ -24,6 +24,9 @@
 #   CLUSTER_NAME    kind cluster name           (default: dubbo-e2e)
 #   IMAGE           dubbod image to build/load  (default: kdubbo/dubbod:debug)
 #   DUBBOD_REPLICAS control plane replicas      (default: 2, exercises HA)
+#   UPGRADE_FROM_VERSION previous release to install before upgrading (default: 0.4.3)
+#   UPGRADE_FROM_CHART   local previous chart path; skips release download
+#   UPGRADE_FROM_IMAGE   image expected by the previous chart (default: kdubbo/dubbod:debug)
 #   SKIP_BUILD      set to 1 to reuse an already-built ${IMAGE}
 #   KEEP_CLUSTER    set to 1 to keep the kind cluster after the run
 
@@ -33,9 +36,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLUSTER_NAME="${CLUSTER_NAME:-dubbo-e2e}"
 IMAGE="${IMAGE:-kdubbo/dubbod:debug}"
 DUBBOD_REPLICAS="${DUBBOD_REPLICAS:-2}"
+UPGRADE_FROM_VERSION="${UPGRADE_FROM_VERSION:-0.4.3}"
+UPGRADE_FROM_CHART="${UPGRADE_FROM_CHART:-}"
+UPGRADE_FROM_IMAGE="${UPGRADE_FROM_IMAGE:-kdubbo/dubbod:debug}"
 SYSTEM_NS="dubbo-system"
 APP_NS="e2e"
 KUBECTL=(kubectl --context "kind-${CLUSTER_NAME}")
+UPGRADE_TMP_DIR=""
+PREVIOUS_CHART=""
 
 log() { echo "--- $*"; }
 
@@ -53,12 +61,49 @@ cleanup() {
   if [[ "${KEEP_CLUSTER:-0}" != "1" ]]; then
     kind delete cluster --name "${CLUSTER_NAME}" || true
   fi
+  if [[ -n "${UPGRADE_TMP_DIR}" && "${UPGRADE_TMP_DIR}" == */dubbo-upgrade.* ]]; then
+    rm -rf -- "${UPGRADE_TMP_DIR}"
+  fi
 }
 trap cleanup EXIT
+
+prepare_previous_chart() {
+  if [[ -n "${UPGRADE_FROM_CHART}" ]]; then
+    [[ -e "${UPGRADE_FROM_CHART}" ]] || fail "previous chart not found: ${UPGRADE_FROM_CHART}"
+    PREVIOUS_CHART="${UPGRADE_FROM_CHART}"
+    return
+  fi
+
+  UPGRADE_TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/dubbo-upgrade.XXXXXX")"
+  local chart_asset="dubbod-${UPGRADE_FROM_VERSION}.tgz"
+  local release_url="https://github.com/apache/dubbo-kubernetes/releases/download/${UPGRADE_FROM_VERSION}"
+  if curl -fsSL --retry 3 "${release_url}/${chart_asset}" -o "${UPGRADE_TMP_DIR}/${chart_asset}" 2>/dev/null; then
+    log "using packaged chart from release ${UPGRADE_FROM_VERSION}"
+    curl -fsSL --retry 3 "${release_url}/${chart_asset}.sha256" \
+      -o "${UPGRADE_TMP_DIR}/${chart_asset}.sha256"
+    (cd "${UPGRADE_TMP_DIR}" && sha256sum -c "${chart_asset}.sha256")
+    PREVIOUS_CHART="${UPGRADE_TMP_DIR}/${chart_asset}"
+    return
+  fi
+
+  log "release ${UPGRADE_FROM_VERSION} predates packaged charts; using its tagged source chart"
+  local source_archive="${UPGRADE_TMP_DIR}/source.tar.gz"
+  curl -fsSL --retry 3 \
+    "https://github.com/apache/dubbo-kubernetes/archive/refs/tags/${UPGRADE_FROM_VERSION}.tar.gz" \
+    -o "${source_archive}"
+  tar -xzf "${source_archive}" -C "${UPGRADE_TMP_DIR}"
+  PREVIOUS_CHART="${UPGRADE_TMP_DIR}/dubbo-kubernetes-${UPGRADE_FROM_VERSION}/manifests/charts/dubbod"
+  [[ -f "${PREVIOUS_CHART}/Chart.yaml" ]] || fail "tagged release chart not found: ${PREVIOUS_CHART}"
+}
 
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   log "building ${IMAGE}"
   docker build -f "${ROOT}/dubbod/discovery/docker/dockerfile.dubbod" -t "${IMAGE}" "${ROOT}"
+fi
+
+if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
+  log "tagging ${IMAGE} as ${UPGRADE_FROM_IMAGE} for the previous chart"
+  docker tag "${IMAGE}" "${UPGRADE_FROM_IMAGE}"
 fi
 
 if ! kind get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
@@ -68,6 +113,9 @@ fi
 
 log "loading ${IMAGE} into kind"
 kind load docker-image "${IMAGE}" --name "${CLUSTER_NAME}"
+if [[ "${IMAGE}" != "${UPGRADE_FROM_IMAGE}" ]]; then
+  kind load docker-image "${UPGRADE_FROM_IMAGE}" --name "${CLUSTER_NAME}"
+fi
 
 log "installing Gateway API CRDs"
 # Pin to the sigs.k8s.io/gateway-api version in go.mod.
@@ -80,21 +128,38 @@ helm upgrade --install dubbo-base "${ROOT}/manifests/charts/base" \
   -n "${SYSTEM_NS}" --create-namespace
 
 install_dubbod() {
+  local chart="$1"
+  local image="$2"
   # The CNI daemonset needs privileged host access; keep the smoke test to the
   # control plane itself.
-  helm upgrade --install dubbod "${ROOT}/manifests/charts/dubbod" \
+  helm upgrade --install dubbod "${chart}" \
     --kube-context "kind-${CLUSTER_NAME}" \
     -n "${SYSTEM_NS}" \
     --set global.proxyless.cni.enabled=false \
+    --set-string global.proxyless.cni.image="${image}" \
     --set replicaCount="${DUBBOD_REPLICAS}"
 }
 
-log "installing dubbod chart (${DUBBOD_REPLICAS} replicas)"
-install_dubbod
+prepare_previous_chart
 
-log "waiting for dubbod rollout"
+log "installing dubbod ${UPGRADE_FROM_VERSION} chart (${DUBBOD_REPLICAS} replicas)"
+install_dubbod "${PREVIOUS_CHART}" "${UPGRADE_FROM_IMAGE}"
+
+log "waiting for previous dubbod rollout"
 "${KUBECTL[@]}" -n "${SYSTEM_NS}" rollout status deploy/dubbod --timeout=300s \
-  || fail "dubbod deployment did not become ready"
+  || fail "dubbod ${UPGRADE_FROM_VERSION} deployment did not become ready"
+
+log "upgrading dubbod ${UPGRADE_FROM_VERSION} to the current chart"
+install_dubbod "${ROOT}/manifests/charts/dubbod" "${IMAGE}" \
+  || fail "upgrade from dubbod ${UPGRADE_FROM_VERSION} to the current chart failed"
+"${KUBECTL[@]}" -n "${SYSTEM_NS}" rollout status deploy/dubbod --timeout=300s \
+  || fail "upgraded dubbod deployment did not become ready"
+
+HELM_REVISION="$(helm history dubbod --kube-context "kind-${CLUSTER_NAME}" -n "${SYSTEM_NS}" | awk 'END {print $1}')"
+[[ "${HELM_REVISION}" -ge 2 ]] || fail "helm release revision is ${HELM_REVISION}, want at least 2 after upgrade"
+DEPLOYED_IMAGE="$("${KUBECTL[@]}" -n "${SYSTEM_NS}" get deploy dubbod -o jsonpath='{.spec.template.spec.containers[0].image}')"
+[[ "${DEPLOYED_IMAGE}" == "${IMAGE}" ]] \
+  || fail "upgraded deployment image is ${DEPLOYED_IMAGE}, want ${IMAGE}"
 
 if [[ "${DUBBOD_REPLICAS}" -gt 1 ]]; then
   log "asserting PodDisruptionBudget exists for HA"
@@ -106,7 +171,8 @@ fi
 # hit server-side apply conflicts on the fields dubbod manages at runtime
 # (webhook caBundle / failurePolicy).
 log "re-running helm upgrade against the live control plane"
-install_dubbod || fail "helm upgrade over a running dubbod failed (SSA field conflict?)"
+install_dubbod "${ROOT}/manifests/charts/dubbod" "${IMAGE}" \
+  || fail "helm upgrade over a running dubbod failed (SSA field conflict?)"
 
 log "deploying sample workload (httpbin)"
 "${KUBECTL[@]}" create namespace "${APP_NS}" --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f -
