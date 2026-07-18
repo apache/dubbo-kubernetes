@@ -1,0 +1,66 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Performance Benchmarks
+
+on:
+  schedule:
+    - cron: '0 4 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Control-Plane Scale Matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.repository == 'apache/dubbo-kubernetes'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Capture benchmark environment
+        run: |
+          {
+            go version
+            go env GOOS GOARCH
+            uname -a
+            lscpu
+          } > benchmark-environment.txt
+
+      - name: Run benchmark matrix
+        run: make benchmark BENCHMARK_COUNT=5 BENCHMARK_TIME=1s BENCHMARK_CPU=1 | tee benchmark-results.txt
+
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-plane-benchmarks-${{ github.run_id }}
+          path: |
+            benchmark-environment.txt
+            benchmark-results.txt
+          retention-days: 30
